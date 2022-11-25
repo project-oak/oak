@@ -162,6 +162,11 @@
 <span id="162">162</span>
 <span id="163">163</span>
 <span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -182,13 +187,12 @@
     encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset},
     Mapper, PageTableFlags, Translator, ENCRYPTED_BIT_POSITION,
 };
-<span class="kw">use </span>lazy_static::lazy_static;
+<span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
     io::{GhcbIoFactory, PortFactoryWrapper},
     msr::{
-        change_snp_state_for_frame, get_sev_status, register_ghcb_location, PageAssignment,
-        RegisterGhcbGpaRequest, SevStatus,
+        change_snp_state_for_frame, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
     },
 };
 <span class="kw">use </span>spinning_top::Spinlock;
@@ -217,15 +221,21 @@
 <span class="kw">static </span><span class="kw-2">mut </span>GHCB_WRAPPER: GhcbAlignmentWrapper = GhcbAlignmentWrapper { ghcb: Ghcb::new() };
 
 <span class="kw">pub fn </span>get_ghcb_port_factory() -&gt; PortFactoryWrapper {
-    PortFactoryWrapper::Ghcb(GhcbIoFactory::new(<span class="kw-2">&amp;</span>GHCB_PROTOCOL))
+    PortFactoryWrapper::Ghcb(GhcbIoFactory::new(
+        GHCB_PROTOCOL.get().expect(<span class="string">&quot;ghcb not initialized&quot;</span>),
+    ))
 }
 
-<span class="comment">// TODO(#3403): Stop initializing lazily once we have an equivalent to `std::sync::OnceLock`.
-</span><span class="macro">lazy_static! </span>{
-    <span class="kw">pub static </span><span class="kw-2">ref </span>GHCB_PROTOCOL: Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;&gt; = {
-        <span class="kw">let </span>sev_status = get_sev_status().unwrap_or(SevStatus::empty());
-        Spinlock::new(init_ghcb_early(sev_status.contains(SevStatus::SNP_ACTIVE)))
-    };
+<span class="kw">pub static </span>GHCB_PROTOCOL: OnceCell&lt;Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;&gt;&gt; = OnceCell::new();
+
+<span class="doccomment">/// Initializes the GHCB.
+///
+/// Will panic if the GHCB has already been initalized.
+</span><span class="kw">pub fn </span>init(snp_enabled: bool) {
+    <span class="kw">let </span>ghcb_protocol = init_ghcb_early(snp_enabled);
+    <span class="kw">if </span>GHCB_PROTOCOL.set(Spinlock::new(ghcb_protocol)).is_err() {
+        <span class="macro">panic!</span>(<span class="string">&quot;ghcb already initialized&quot;</span>);
+    }
 }
 
 <span class="doccomment">/// Shares the page containing the GHCB with the hypervisor again.

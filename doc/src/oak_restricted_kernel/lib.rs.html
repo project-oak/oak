@@ -269,6 +269,11 @@
 <span id="269">269</span>
 <span id="270">270</span>
 <span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -364,7 +369,12 @@
     descriptors::init_gdt();
     interrupts::init_idt();
     <span class="kw">let </span>sev_status = get_sev_status().unwrap_or(SevStatus::empty());
-    logging::init_logging();
+    <span class="kw">let </span>sev_es_enabled = sev_status.contains(SevStatus::SEV_ES_ENABLED);
+    <span class="kw">let </span>sev_snp_enabled = sev_status.contains(SevStatus::SNP_ACTIVE);
+    <span class="kw">if </span>sev_es_enabled {
+        ghcb::init(sev_snp_enabled);
+    }
+    logging::init_logging(sev_es_enabled);
 
     <span class="comment">// We need to be done with the boot info struct before intializing memory. For example, the
     // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it&#39;s
@@ -376,7 +386,7 @@
 
     <span class="kw">let </span>protocol = info.protocol();
     <span class="macro">info!</span>(<span class="string">&quot;Boot protocol:  {}&quot;</span>, protocol);
-    <span class="kw">let </span>snp_pages = <span class="kw">if </span>sev_status.contains(SevStatus::SNP_ACTIVE) {
+    <span class="kw">let </span>snp_pages = <span class="kw">if </span>sev_snp_enabled {
         <span class="comment">// We have to get the physical addresses of the CPUID pages now while the identity mapping
         // is still in place, but we can only initialize the instances after the new page
         // mappings have been set up.
@@ -404,11 +414,11 @@
             .as_ptr()
     };
 
-    <span class="kw">if </span>sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+    <span class="kw">if </span>sev_es_enabled {
         <span class="comment">// Now that the page tables have been updated, we have to re-share the GHCB with the
         // hypervisor.
         </span>ghcb::reshare_ghcb(<span class="kw-2">&amp;mut </span>mapper);
-        <span class="kw">if </span>sev_status.contains(SevStatus::SNP_ACTIVE) {
+        <span class="kw">if </span>sev_snp_enabled {
             <span class="comment">// We must also initialise the CPUID and secrets pages and the guest message encryptor
             // when SEV-SNP is active. Panicking is OK at this point, because these pages are
             // required to support the full features and we don&#39;t want to run without them.
@@ -432,9 +442,9 @@
             .unwrap(),
     );
 
-    <span class="comment">// If we are running on SNP we have to mark the frames as shared in the RMP. It is OK to crash
-    // if we cannot mark the pages as shared in the RMP.
-    </span><span class="kw">if </span>sev_status.contains(SevStatus::SNP_ACTIVE) {
+    <span class="comment">// If we are running on SNP we have to mark the guest-host frames as shared in the RMP. It is OK
+    // to crash if we cannot mark the pages as shared in the RMP.
+    </span><span class="kw">if </span>sev_snp_enabled {
         <span class="comment">// TODO(#3414): Use the GHCB protocol when it is available.
         </span><span class="kw">for </span>frame <span class="kw">in </span>guest_host_frames {
             change_snp_state_for_frame(<span class="kw-2">&amp;</span>frame, PageAssignment::Shared)
@@ -475,7 +485,7 @@
         <span class="prelude-val">Ok</span>(<span class="kw-2">ref mut </span>acpi) =&gt; acpi.devices().unwrap(),
     };
 
-    <span class="kw">if </span>sev_status.contains(SevStatus::SNP_ACTIVE) {
+    <span class="kw">if </span>sev_snp_enabled {
         <span class="comment">// For now we just generate a sample attestation report and log the value.
         // TODO(#2842): Use attestation report in attestation behaviour.
         </span><span class="kw">let </span>report =

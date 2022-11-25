@@ -69,6 +69,10 @@
 <span id="69">69</span>
 <span id="70">70</span>
 <span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -85,7 +89,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>lazy_static::lazy_static;
+</span><span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>x86_64::{
     instructions::tables::load_tss,
     registers::segmentation::<span class="kw-2">*</span>,
@@ -104,40 +108,44 @@
     tss_selector: SegmentSelector,
 }
 
-<span class="macro">lazy_static! </span>{
-    <span class="kw">static </span><span class="kw-2">ref </span>TSS: TaskStateSegment = TaskStateSegment::new();
-    <span class="kw">static </span><span class="kw-2">ref </span>DESCRIPTORS: Descriptors = {
-        <span class="kw">let </span><span class="kw-2">mut </span>descriptors = Descriptors {
-            gdt: GlobalDescriptorTable::new(),
-            kernel_cs_selector: SegmentSelector::NULL,
-            kernel_ds_selector: SegmentSelector::NULL,
-            user_cs_selector: SegmentSelector::NULL,
-            user_ds_selector: SegmentSelector::NULL,
-            tss_selector: SegmentSelector::NULL,
-        };
-        descriptors.kernel_cs_selector =
-            descriptors.gdt.add_entry(Descriptor::kernel_code_segment());
-        descriptors.kernel_ds_selector =
-            descriptors.gdt.add_entry(Descriptor::kernel_data_segment());
-        descriptors.user_cs_selector = descriptors.gdt.add_entry(Descriptor::user_code_segment());
-        descriptors.user_ds_selector = descriptors.gdt.add_entry(Descriptor::user_data_segment());
-        descriptors.tss_selector = descriptors.gdt.add_entry(Descriptor::tss_segment(<span class="kw-2">&amp;</span>TSS));
-        descriptors
-    };
-}
+<span class="kw">static </span>TSS: TaskStateSegment = TaskStateSegment::new();
+<span class="kw">static </span>DESCRIPTORS: OnceCell&lt;Descriptors&gt; = OnceCell::new();
 
-<span class="kw">pub fn </span>init_gdt() {
-    DESCRIPTORS.gdt.load();
+<span class="doccomment">/// Initializes the Global Descriptor Table.
+///
+/// This function will panic if the GDT is already initialized.
+</span><span class="kw">pub fn </span>init_gdt() {
+    <span class="kw">let </span><span class="kw-2">mut </span>descriptors = Descriptors {
+        gdt: GlobalDescriptorTable::new(),
+        kernel_cs_selector: SegmentSelector::NULL,
+        kernel_ds_selector: SegmentSelector::NULL,
+        user_cs_selector: SegmentSelector::NULL,
+        user_ds_selector: SegmentSelector::NULL,
+        tss_selector: SegmentSelector::NULL,
+    };
+    descriptors.kernel_cs_selector = descriptors.gdt.add_entry(Descriptor::kernel_code_segment());
+    descriptors.kernel_ds_selector = descriptors.gdt.add_entry(Descriptor::kernel_data_segment());
+    descriptors.user_cs_selector = descriptors.gdt.add_entry(Descriptor::user_code_segment());
+    descriptors.user_ds_selector = descriptors.gdt.add_entry(Descriptor::user_data_segment());
+    descriptors.tss_selector = descriptors.gdt.add_entry(Descriptor::tss_segment(<span class="kw-2">&amp;</span>TSS));
+
+    <span class="comment">// Make sure the GDT was not previously initialized.
+    </span><span class="kw">if </span>DESCRIPTORS.set(descriptors).is_err() {
+        <span class="macro">panic!</span>(<span class="string">&quot;gdt is already initialized&quot;</span>);
+    }
+
+    <span class="kw">let </span>descriptors = DESCRIPTORS.get().unwrap();
+    descriptors.gdt.load();
 
     <span class="comment">// Safety: it&#39;s safe to load these segments as we&#39;ve initialized the GDT just above.
     </span><span class="kw">unsafe </span>{
-        CS::set_reg(DESCRIPTORS.kernel_cs_selector);
-        DS::set_reg(DESCRIPTORS.kernel_ds_selector);
-        ES::set_reg(DESCRIPTORS.kernel_ds_selector);
-        FS::set_reg(DESCRIPTORS.kernel_ds_selector);
-        GS::set_reg(DESCRIPTORS.kernel_ds_selector);
-        SS::set_reg(DESCRIPTORS.kernel_ds_selector);
-        load_tss(DESCRIPTORS.tss_selector);
+        CS::set_reg(descriptors.kernel_cs_selector);
+        DS::set_reg(descriptors.kernel_ds_selector);
+        ES::set_reg(descriptors.kernel_ds_selector);
+        FS::set_reg(descriptors.kernel_ds_selector);
+        GS::set_reg(descriptors.kernel_ds_selector);
+        SS::set_reg(descriptors.kernel_ds_selector);
+        load_tss(descriptors.tss_selector);
     }
 }
 </code></pre></div>

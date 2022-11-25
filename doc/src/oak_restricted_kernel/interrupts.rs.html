@@ -184,6 +184,7 @@
 <span id="184">184</span>
 <span id="185">185</span>
 <span id="186">186</span>
+<span id="187">187</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -202,8 +203,8 @@
 
 </span><span class="kw">use crate</span>::{shutdown, snp::CPUID_PAGE};
 <span class="kw">use </span>core::{arch::asm, ops::Deref};
-<span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>log::error;
+<span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_sev_guest::{
     interrupts::{mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame},
     msr::get_cpuid_for_vc_exception,
@@ -214,24 +215,7 @@
     VirtAddr,
 };
 
-<span class="macro">lazy_static! </span>{
-    <span class="kw">static </span><span class="kw-2">ref </span>IDT: InterruptDescriptorTable = {
-        <span class="kw">let </span><span class="kw-2">mut </span>idt = InterruptDescriptorTable::new();
-        idt.breakpoint.set_handler_fn(breakpoint_handler);                             <span class="comment">// vector 3
-        </span>idt.double_fault.set_handler_fn(double_fault_handler);                         <span class="comment">// vector 8
-        </span>idt.general_protection_fault.set_handler_fn(general_protection_fault_handler); <span class="comment">// vector 13
-        </span>idt.page_fault.set_handler_fn(page_fault_handler);                             <span class="comment">// vector 14
-
-        </span><span class="kw">let </span>vc_handler_address =
-            VirtAddr::new(vmm_communication_exception_handler <span class="kw">as </span>usize <span class="kw">as </span>u64);
-        <span class="comment">// Safety: we are passing a valid address of a function with the correct signature.
-        </span><span class="kw">unsafe </span>{
-            idt.vmm_communication_exception.set_handler_addr(vc_handler_address);      <span class="comment">// vector 29
-        </span>}
-
-        idt
-    };
-}
+<span class="kw">static </span>IDT: OnceCell&lt;InterruptDescriptorTable&gt; = OnceCell::new();
 
 <span class="attribute">#[naked]
 </span><span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>general_protection_fault_handler(<span class="kw">_</span>: InterruptStackFrame, <span class="kw">_</span>: u64) {
@@ -368,7 +352,25 @@
 );
 
 <span class="kw">pub fn </span>init_idt() {
-    IDT.load();
+    <span class="kw">let </span><span class="kw-2">mut </span>idt = InterruptDescriptorTable::new();
+    idt.breakpoint.set_handler_fn(breakpoint_handler); <span class="comment">// vector 3
+    </span>idt.double_fault.set_handler_fn(double_fault_handler); <span class="comment">// vector 8
+    </span>idt.general_protection_fault
+        .set_handler_fn(general_protection_fault_handler); <span class="comment">// vector 13
+    </span>idt.page_fault.set_handler_fn(page_fault_handler); <span class="comment">// vector 14
+
+    </span><span class="kw">let </span>vc_handler_address = VirtAddr::new(vmm_communication_exception_handler <span class="kw">as </span>usize <span class="kw">as </span>u64);
+    <span class="comment">// Safety: we are passing a valid address of a function with the correct signature.
+    </span><span class="kw">unsafe </span>{
+        idt.vmm_communication_exception
+            .set_handler_addr(vc_handler_address); <span class="comment">// vector 29
+    </span>}
+
+    <span class="comment">// Make sure the IDT was not previously initialized.
+    </span><span class="kw">if </span>IDT.set(idt).is_err() {
+        <span class="macro">panic!</span>(<span class="string">&quot;idt is already initialized&quot;</span>);
+    }
+    IDT.get().unwrap().load();
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_restricted_kernel" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

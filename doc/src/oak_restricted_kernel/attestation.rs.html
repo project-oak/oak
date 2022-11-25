@@ -84,6 +84,8 @@
 <span id="84">84</span>
 <span id="85">85</span>
 <span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -154,6 +156,8 @@
         .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t translate response address&quot;</span>))<span class="question-mark">?</span>;
 
     GHCB_PROTOCOL
+        .get()
+        .expect(<span class="string">&quot;ghcb not initialized&quot;</span>)
         .lock()
         .do_guest_message_request(request_address, response_address)
         .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;

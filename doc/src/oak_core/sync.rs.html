@@ -103,6 +103,11 @@
 <span id="103">103</span>
 <span id="104">104</span>
 <span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -145,7 +150,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; {
+    <span class="doccomment">/// Gets a reference to the inner value if the cell has been initialized.
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>T&gt; {
         <span class="kw">if </span>!<span class="self">self</span>.initialized.load(Ordering::Acquire) {
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
@@ -155,7 +161,11 @@
         </span><span class="prelude-val">Some</span>(<span class="kw">unsafe </span>{ (<span class="kw-2">*</span><span class="self">self</span>.value.get()).assume_init_ref() })
     }
 
-    <span class="kw">pub fn </span>set(<span class="kw-2">&amp;</span><span class="self">self</span>, value: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), T&gt; {
+    <span class="doccomment">/// Sets the inner value of the cell if it has not been initialized.
+    ///
+    /// If it has been initialized the inner value is not updated and the passed-in value is
+    /// returned in the error.
+    </span><span class="kw">pub fn </span>set(<span class="kw-2">&amp;</span><span class="self">self</span>, value: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), T&gt; {
         <span class="comment">// Do an initial check to see whether the value has been initialized.
         </span><span class="kw">if </span>!<span class="self">self</span>.initialized.load(Ordering::Acquire) {
             <span class="comment">// Lock to make sure we have exclusive access.
