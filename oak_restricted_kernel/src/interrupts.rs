@@ -164,13 +164,167 @@ mutable_interrupt_handler_with_error_code!(
     }
 );
 
+extern "x86-interrupt" fn divide_error_handler(stack_frame: InterruptStackFrame) {
+    error!("KERNEL PANIC: DIVIDE BY ZERO!");
+    error!(
+        "Instruction pointer: {:#016x}",
+        stack_frame.deref().instruction_pointer.as_u64()
+    );
+    shutdown::shutdown();
+}
+
+extern "x86-interrupt" fn nmi_handler(stack_frame: InterruptStackFrame) {
+    error!("KERNEL PANIC: NON-MASKABLE INTERRUPT!");
+    error!(
+        "Instruction pointer: {:#016x}",
+        stack_frame.deref().instruction_pointer.as_u64()
+    );
+    shutdown::shutdown();
+}
+
+extern "x86-interrupt" fn overflow_handler(stack_frame: InterruptStackFrame) {
+    error!("KERNEL PANIC: OVERFLOW!");
+    error!(
+        "Instruction pointer: {:#016x}",
+        stack_frame.deref().instruction_pointer.as_u64()
+    );
+    shutdown::shutdown();
+}
+
+extern "x86-interrupt" fn bound_range_handler(stack_frame: InterruptStackFrame) {
+    error!("KERNEL PANIC: BOUND RANGE EXCEEDED!");
+    error!(
+        "Instruction pointer: {:#016x}",
+        stack_frame.deref().instruction_pointer.as_u64()
+    );
+    shutdown::shutdown();
+}
+
+extern "x86-interrupt" fn invalid_opcode_handler(stack_frame: InterruptStackFrame) {
+    error!("KERNEL PANIC: INVALID OPCODE!");
+    error!(
+        "Instruction pointer: {:#016x}",
+        stack_frame.deref().instruction_pointer.as_u64()
+    );
+    shutdown::shutdown();
+}
+
+extern "x86-interrupt" fn device_not_available_handler(stack_frame: InterruptStackFrame) {
+    error!("KERNEL PANIC: DEVICE NOT AVAILABLE!");
+    error!(
+        "Instruction pointer: {:#016x}",
+        stack_frame.deref().instruction_pointer.as_u64()
+    );
+    shutdown::shutdown();
+}
+
+extern "x86-interrupt" fn invalid_tss_handler(stack_frame: InterruptStackFrame, error_code: u64) {
+    error!("KERNEL PANIC: INVALID TSS!");
+    error!(
+        "Instruction pointer: {:#016x}",
+        stack_frame.deref().instruction_pointer.as_u64()
+    );
+    error!("Error code: {:?}", error_code);
+    shutdown::shutdown();
+}
+
+extern "x86-interrupt" fn segment_not_present_handler(
+    stack_frame: InterruptStackFrame,
+    error_code: u64,
+) {
+    error!("KERNEL PANIC: SEGMENT NOT PRESENT!");
+    error!(
+        "Instruction pointer: {:#016x}",
+        stack_frame.deref().instruction_pointer.as_u64()
+    );
+    error!("Error code: {:?}", error_code);
+    shutdown::shutdown();
+}
+
+extern "x86-interrupt" fn stack_exception_handler(
+    stack_frame: InterruptStackFrame,
+    error_code: u64,
+) {
+    error!("KERNEL PANIC: STACK EXCEPTION!");
+    error!(
+        "Instruction pointer: {:#016x}",
+        stack_frame.deref().instruction_pointer.as_u64()
+    );
+    error!("Error code: {:?}", error_code);
+    shutdown::shutdown();
+}
+
+extern "x86-interrupt" fn x87_floating_point_handler(stack_frame: InterruptStackFrame) {
+    error!("KERNEL PANIC: X87 FLOATING POINT EXCEPTION!");
+    error!(
+        "Instruction pointer: {:#016x}",
+        stack_frame.deref().instruction_pointer.as_u64()
+    );
+    shutdown::shutdown();
+}
+
+extern "x86-interrupt" fn alignment_check_handler(
+    stack_frame: InterruptStackFrame,
+    error_code: u64,
+) {
+    error!("KERNEL PANIC: ALIGNMENT CHECK EXCEPTION!");
+    error!(
+        "Instruction pointer: {:#016x}",
+        stack_frame.deref().instruction_pointer.as_u64()
+    );
+    error!("Error code: {:?}", error_code);
+    shutdown::shutdown();
+}
+
+extern "x86-interrupt" fn machine_check_handler(stack_frame: InterruptStackFrame) -> ! {
+    error!("KERNEL PANIC: MACHINE CHECK EXCEPTION!");
+    error!(
+        "Instruction pointer: {:#016x}",
+        stack_frame.deref().instruction_pointer.as_u64()
+    );
+    shutdown::shutdown();
+}
+
+extern "x86-interrupt" fn simd_fp_handler(stack_frame: InterruptStackFrame) {
+    error!("KERNEL PANIC: SIMD FLOATING POINT EXCEPTION!");
+    error!(
+        "Instruction pointer: {:#016x}",
+        stack_frame.deref().instruction_pointer.as_u64()
+    );
+    shutdown::shutdown();
+}
+
 pub fn init_idt() {
+    // The full list if interrupts is processor-specific.
+    // For AMD, see Section 8.2 of the AMD64 Architecture Programmer's Manual, Volume 2 for more
+    // details.
     let mut idt = InterruptDescriptorTable::new();
+    idt.divide_error.set_handler_fn(divide_error_handler); // vector 0
+                                                           // skipping vector 1 (debug)
+    idt.non_maskable_interrupt.set_handler_fn(nmi_handler); // vector 2
     idt.breakpoint.set_handler_fn(breakpoint_handler); // vector 3
+    idt.overflow.set_handler_fn(overflow_handler); // vector 4
+    idt.bound_range_exceeded.set_handler_fn(bound_range_handler); // vector 5
+    idt.invalid_opcode.set_handler_fn(invalid_opcode_handler); // vector 6
+    idt.device_not_available
+        .set_handler_fn(device_not_available_handler); // vector 7
     idt.double_fault.set_handler_fn(double_fault_handler); // vector 8
+                                                           // vector 9 is reserved
+    idt.invalid_tss.set_handler_fn(invalid_tss_handler); // vector 10
+    idt.segment_not_present
+        .set_handler_fn(segment_not_present_handler); // vector 11
+    idt.stack_segment_fault
+        .set_handler_fn(stack_exception_handler); // vector 12
     idt.general_protection_fault
         .set_handler_fn(general_protection_fault_handler); // vector 13
     idt.page_fault.set_handler_fn(page_fault_handler); // vector 14
+                                                       // there is no vector 15
+    idt.x87_floating_point
+        .set_handler_fn(x87_floating_point_handler); // vector 16
+    idt.alignment_check.set_handler_fn(alignment_check_handler); // vector 17
+    idt.machine_check.set_handler_fn(machine_check_handler); // vector 18
+    idt.simd_floating_point.set_handler_fn(simd_fp_handler); // vector 19
+                                                             // there is no vector 20
 
     let vc_handler_address = VirtAddr::new(vmm_communication_exception_handler as usize as u64);
     // Safety: we are passing a valid address of a function with the correct signature.
