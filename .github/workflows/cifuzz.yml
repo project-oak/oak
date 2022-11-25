@@ -15,14 +15,14 @@ jobs:
         uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@master
         with:
           oss-fuzz-project-name: 'oak'
-          dry-run: false
+          dry-run: true
           language: rust
       - name: Run Fuzzers
         uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master
         with:
           oss-fuzz-project-name: 'oak'
           fuzz-seconds: 600
-          dry-run: false
+          dry-run: true
       - name: Upload Crash
         uses: actions/upload-artifact@v1
         if: failure() && steps.build.outcome == 'success'
