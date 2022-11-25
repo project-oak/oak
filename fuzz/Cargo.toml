@@ -16,9 +16,7 @@ hex = "*"
 libfuzzer-sys = "*"
 oak_functions_abi = { path = "../oak_functions_abi" }
 # TODO(#3503): Required for the failing target. Remove.
-oak_remote_attestation = { path = "../oak_remote_attestation", features = [
-  "ring-crypto"
-] }
+sha2 = "*"
 
 [build-dependencies]
 prost-build = "*"
