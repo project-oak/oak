@@ -46,8 +46,16 @@ jobs:
   generate_provenance_dry_run:
     if: github.event_name != 'push'
     runs-on: ubuntu-20.04
+    # Debug steps: Upload a fake provenance file, and name it
+    # ${{ inputs.attestation-name }}". This is the same name the SLSA
+    # generator uses to name the uploaded signed provenance.
     steps:
-      # Debug step: Print the input values passed to the workflow.
+      - name: write to file
+        run: echo -e "${{ inputs.base64-subject }}" >> ./provenance
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.attestation-name }}"
+          path: ./provenance
       - name: Print inputs
         run: |
           echo "Base64 Subject: ${{ inputs.base64-subject }}"

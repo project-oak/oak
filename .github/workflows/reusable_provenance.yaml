@@ -141,8 +141,7 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Download the DSSE document (post-merge only)
-        if: github.event_name == 'push'
+      - name: Download the DSSE document
         uses: actions/download-artifact@v3
         with:
           name: ${{ needs.build_binary.outputs.filename }}.intoto.jsonl
