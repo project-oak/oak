@@ -114,7 +114,7 @@ impl oak_virtio::Read for MmioConsoleChannel<'_> {
                 .map_err(|err| anyhow!("Virtio console read error: {:?}", err))?
             {
                 data[count] = char;
-                count = count + 1;
+                count += 1;
             } else {
                 // If we didn't have any data to read, try acking any pending interrupts. We don't
                 // have general support for interrupts yet, so we need to do it blindly here.

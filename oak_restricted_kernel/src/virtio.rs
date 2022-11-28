@@ -50,21 +50,6 @@ where
     }
 }
 
-#[cfg(feature = "virtio_console_channel")]
-pub fn get_console_channel<'a, X: Translator, A: Allocator>(
-    translator: &X,
-    alloc: &'a A,
-) -> Channel<oak_virtio::console::Console<'a, VirtioPciTransport, A>> {
-    let console = oak_virtio::console::Console::find_and_configure_device(
-        |vaddr: VirtAddr| translator.translate_virtual(vaddr),
-        |paddr: PhysAddr| translator.translate_physical(paddr),
-        alloc,
-    )
-    .expect("couldn't configure PCI virtio console device");
-    info!("Console device status: {}", console.get_status());
-    Channel { inner: console }
-}
-
 #[cfg(feature = "vsock_channel")]
 pub fn get_vsock_channel<'a, X: Translator, A: Allocator>(
     translator: &X,
