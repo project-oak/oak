@@ -4,12 +4,11 @@
 # be added to the config. See `./scripts/build_binary` for more information.
 repo = "https://github.com/project-oak/oak"
 command = [
-  "env",
-  "--chdir=oak_functions_freestanding_bin",
   "cargo",
   "build",
+  "--package=oak_functions_freestanding_bin",
   "--no-default-features",
   "--features=simple_io_channel",
   "--release"
 ]
-output_path = "./oak_functions_freestanding_bin/target/x86_64-unknown-none/release/oak_functions_freestanding_bin"
+output_path = "./target/x86_64-unknown-none/release/oak_functions_freestanding_bin"
