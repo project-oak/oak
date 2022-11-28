@@ -127,7 +127,8 @@ jobs:
     with:
       base64-subjects: '${{ needs.build_binary.outputs.digest }}'
       # Set a custom name for the provenance attestation.
-      attestation-name: '${{ needs.filename.outputs.filename }}.intoto.jsonl'
+      attestation-name:
+        '${{ needs.build_binary.outputs.filename }}.intoto.jsonl'
       # Upload the provenance.
       upload-assets: true
       # Build the generator from source.
@@ -146,7 +147,7 @@ jobs:
       - name: Download the DSSE document
         uses: actions/download-artifact@v3
         with:
-          name: ${{ needs.filename.outputs.filename }}.intoto.jsonl
+          name: ${{ needs.build_binary.outputs.filename }}.intoto.jsonl
 
       # See https://github.com/google/ent
       - name: Download Ent CLI
@@ -169,7 +170,7 @@ jobs:
       - name: Upload to Ent
         id: ent_upload
         run: |
-          echo "provenance_digest=$(ent put ${{ needs.filename.outputs.filename }}.intoto.jsonl)" >> $GITHUB_OUTPUT
+          echo "provenance_digest=$(ent put ${{ needs.build_binary.outputs.filename }}.intoto.jsonl)" >> $GITHUB_OUTPUT
 
   # Publishes a comment containing the digests of the generated artifact and its provenance.
   publish_comments:
