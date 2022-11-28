@@ -27,7 +27,7 @@ use strum_macros::{Display, EnumIter};
 
 #[derive(Debug, Display, Clone, PartialEq, EnumIter)]
 pub enum LauncherMode {
-    Crosvm,
+    Virtual,
     Native,
 }
 
@@ -35,7 +35,7 @@ impl LauncherMode {
     /// Get the crate name of respective enclave binary variant
     pub fn enclave_crate_name(&self) -> &'static str {
         match self {
-            LauncherMode::Crosvm => "oak_functions_freestanding_bin",
+            LauncherMode::Virtual => "oak_functions_freestanding_bin",
             LauncherMode::Native => "oak_functions_linux_fd_bin",
         }
     }
@@ -48,7 +48,7 @@ impl LauncherMode {
     /// Get the path to the respective enclave binary variant that should be launched
     pub fn enclave_binary_path(&self) -> String {
         match self {
-            LauncherMode::Crosvm => format!(
+            LauncherMode::Virtual => format!(
                 "{}/target/x86_64-unknown-none/debug/{}",
                 self.enclave_crate_path(),
                 self.enclave_crate_name()
@@ -60,10 +60,14 @@ impl LauncherMode {
     /// Get the subcommand for launching in this mode
     pub fn variant_subcommand(&self) -> Vec<String> {
         match self {
-            LauncherMode::Crosvm => vec![
-                "crosvm".to_string(),
+            LauncherMode::Virtual => vec![
+                "virtual".to_string(),
                 format!("--enclave-binary={}", &self.enclave_binary_path()),
                 format!("--vmm-binary={}", "/usr/local/cargo/bin/crosvm"),
+                format!(
+                    "--bios-binary={}",
+                    "./stage0/target/x86_64-unknown-none/release/oak_stage0.bin"
+                ),
             ],
             LauncherMode::Native => vec![
                 "native".to_string(),
@@ -88,7 +92,7 @@ fn option_covers_variant(opt: &BuildBaremetalVariantsOpt, variant: &LauncherMode
         None => true,
         Some(var) => match *variant {
             LauncherMode::Native => var == "native",
-            LauncherMode::Crosvm => var == "crosvm",
+            LauncherMode::Virtual => var == "virtual",
         },
     }
 }
@@ -111,6 +115,7 @@ fn run_variant(variant: LauncherMode) -> Step {
     Step::Multiple {
         name: format!("run {} variant", variant),
         steps: vec![
+            build_stage0(),
             build_binary("build Oak Functions loader", "./oak_functions_launcher"),
             build_binary(
                 "build Oak Functions enclave binary",
@@ -122,6 +127,24 @@ fn run_variant(variant: LauncherMode) -> Step {
                 foreground: Box::new(run_client("test_key", "^test_value$", 300)),
             },
         ],
+    }
+}
+
+fn build_stage0() -> Step {
+    Step::Single {
+        name: "build stage0".to_string(),
+        command: Cmd::new_in_dir(
+            "cargo",
+            vec![
+                "objcopy",
+                "--release",
+                "--",
+                "-O",
+                "binary",
+                "target/x86_64-unknown-none/release/oak_stage0.bin",
+            ],
+            Path::new("./stage0"),
+        ),
     }
 }
 

@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-pub mod crosvm;
 pub mod native;
+pub mod virtualized;
 
 use anyhow::Result;
 use async_trait::async_trait;
