@@ -1,13 +1,12 @@
+cargo-features = ["per-package-target"]
+
 [package]
 name = "oak_tensorflow_freestanding_bin"
 version = "0.1.0"
 authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
-
-[workspace]
-resolver = "2"
-members = ["."]
+default-target = "x86_64-unknown-none"
 
 [features]
 default = ["vsock_channel"]

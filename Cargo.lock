@@ -2434,6 +2434,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_echo_bin"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak_channel",
+ "oak_echo_service",
+ "oak_idl",
+ "oak_linux_boot_params",
+ "oak_restricted_kernel",
+ "static_assertions",
+]
+
+[[package]]
+name = "oak_echo_raw_bin"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak_channel",
+ "oak_idl",
+ "oak_linux_boot_params",
+ "oak_restricted_kernel",
+ "static_assertions",
+]
+
+[[package]]
 name = "oak_echo_service"
 version = "0.1.0"
 dependencies = [
@@ -2514,6 +2539,21 @@ dependencies = [
  "oak_remote_attestation_amd",
  "prost 0.11.2",
  "tokio",
+]
+
+[[package]]
+name = "oak_functions_freestanding_bin"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak_channel",
+ "oak_functions_freestanding",
+ "oak_idl",
+ "oak_linux_boot_params",
+ "oak_remote_attestation",
+ "oak_remote_attestation_amd",
+ "oak_restricted_kernel",
+ "static_assertions",
 ]
 
 [[package]]
@@ -2894,6 +2934,19 @@ dependencies = [
  "bitflags",
  "oak_sev_guest",
  "x86_64",
+]
+
+[[package]]
+name = "oak_tensorflow_freestanding_bin"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak_channel",
+ "oak_idl",
+ "oak_linux_boot_params",
+ "oak_restricted_kernel",
+ "oak_tensorflow_service",
+ "static_assertions",
 ]
 
 [[package]]

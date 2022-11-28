@@ -1,11 +1,10 @@
 repo = "https://github.com/project-oak/oak"
 command = [
-  "env",
-  "--chdir=testing/oak_echo_bin",
   "cargo",
   "build",
+  "--package=oak_echo_bin",
   "--no-default-features",
   "--features=simple_io_channel",
   "--release"
 ]
-output_path = "./testing/oak_echo_bin/target/x86_64-unknown-none/release/oak_echo_bin"
+output_path = "./target/x86_64-unknown-none/release/oak_echo_bin"
