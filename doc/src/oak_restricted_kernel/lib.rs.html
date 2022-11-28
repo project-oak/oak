@@ -482,7 +482,7 @@
     <span class="comment">// Init ACPI, if available.
     </span><span class="kw">match </span>acpi::Acpi::new(info) {
         <span class="prelude-val">Err</span>(<span class="kw-2">ref </span>err) =&gt; <span class="macro">log::warn!</span>(<span class="string">&quot;Failed to load ACPI tables: {}&quot;</span>, err),
-        <span class="prelude-val">Ok</span>(<span class="kw-2">ref mut </span>acpi) =&gt; acpi.devices().unwrap(),
+        <span class="prelude-val">Ok</span>(<span class="kw-2">ref mut </span>acpi) =&gt; acpi.print_devices().unwrap(),
     };
 
     <span class="kw">if </span>sev_snp_enabled {
