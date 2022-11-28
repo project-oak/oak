@@ -19,15 +19,19 @@
 
 use anyhow::Context;
 use clap::Parser;
-use instance::{virtualised, native, LaunchedInstance};
+use instance::{native, virtualised, LaunchedInstance};
 use std::{
     fs,
     io::{BufRead, BufReader},
     net::{Ipv6Addr, SocketAddr},
     os::unix::net::UnixStream,
     path::PathBuf,
+    sync::Arc,
 };
-use tokio::signal;
+use tokio::{
+    signal,
+    sync::{watch, Notify},
+};
 
 pub mod schema {
     #![allow(dead_code)]
@@ -90,6 +94,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
     env_logger::init();
 
+    let notify = Arc::new(Notify::new());
+    let listener = notify.clone();
+
     // Provide a way for the launched instance to send logs
     let logs_console: UnixStream = {
         // Create two linked consoles. Technically both can read/write, but we'll
@@ -97,12 +104,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let (console_writer, console_receiver) = UnixStream::pair()?;
 
         // Log everything sent by the writer.
-        tokio::spawn(async {
+        tokio::spawn(async move {
             let mut reader = BufReader::new(console_receiver);
 
             let mut line = String::new();
             while reader.read_line(&mut line).expect("couldn't read line") > 0 {
-                log::info!("console: {:?}", line);
+                println!("console: {:?}", line);
+                if line.contains("In main!") {
+                    log::info!("Guest is ready.");
+                    notify.notify_waiters();
+                }
                 line.clear();
             }
         });
@@ -148,6 +159,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         wasm_bytes.len()
     );
 
+    listener.notified().await;
+
     let request = schema::InitializeRequest {
         wasm_module: wasm_bytes,
         constant_response_size: cli.constant_response_size,
@@ -165,6 +178,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "obtained public key ({} bytes)",
         public_key_info.public_key.len()
     );
+
+    println!("before server");
 
     let server_future = server::server(
         SocketAddr::from((Ipv6Addr::UNSPECIFIED, cli.port)),

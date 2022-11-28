@@ -66,6 +66,7 @@ use crate::{
     mm::Translator,
     snp::{get_snp_page_addresses, init_snp_pages},
 };
+use ::acpi::InterruptModel;
 use alloc::{alloc::Allocator, boxed::Box};
 use core::{marker::Sync, panic::PanicInfo, str::FromStr};
 use linked_list_allocator::LockedHeap;
@@ -211,6 +212,10 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
         }
     };
 
+    if let InterruptModel::Apic(ref apic) = acpi.as_ref().unwrap().interrupt_model {
+        interrupts::init_apic(apic);
+    }
+
     if sev_status.contains(SevStatus::SNP_ACTIVE) {
         // For now we just generate a sample attestation report and log the value.
         // TODO(#2842): Use attestation report in attestation behaviour.
@@ -220,13 +225,15 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
         report.validate().expect("attestation report is invalid");
     }
 
-    get_channel(
+    let chan = get_channel(
         &kernel_args,
         mapper,
         GUEST_HOST_HEAP.get().unwrap(),
         sev_status,
         acpi.as_mut(),
-    )
+    );
+
+    chan
 }
 
 #[derive(EnumIter, EnumString)]

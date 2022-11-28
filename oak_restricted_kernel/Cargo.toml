@@ -44,6 +44,7 @@ static_assertions = { version = "*" }
 strum = { version = "*", default-features = false, features = ["derive"] }
 uart_16550 = { version = "*", optional = true }
 oak_virtio = { path = "../oak_virtio", optional = true }
+x2apic = "*"
 virtio-drivers = "*"
 x86_64 = "*"
 zerocopy = "*"

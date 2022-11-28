@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use acpi::{AcpiHandler, AcpiTables, AmlTable, PhysicalMapping};
+use acpi::{AcpiHandler, AcpiTables, AmlTable, InterruptModel, PhysicalMapping};
 use alloc::{boxed::Box, string::String, vec::Vec};
 use aml::{
     resource::{resource_descriptor_list, MemoryRangeDescriptor, Resource},
@@ -260,6 +260,7 @@ pub struct AcpiDevice {
 pub struct Acpi {
     tables: AcpiTables<Handler>,
     aml: AmlContext,
+    pub interrupt_model: InterruptModel,
 }
 
 impl Acpi {
@@ -267,6 +268,7 @@ impl Acpi {
         let mut acpi = Self {
             tables: find_acpi_tables(params)?,
             aml: AmlContext::new(Box::new(Handler {}), aml::DebugVerbosity::None),
+            interrupt_model: InterruptModel::Unknown,
         };
 
         // Parse the DSDT and all SSDTs.
@@ -287,6 +289,13 @@ impl Acpi {
                 )
             })?;
         }
+
+        let platform_info = acpi
+            .tables
+            .platform_info()
+            .map_err(|err| anyhow!("ACPI error: {:?}", err))?;
+
+        acpi.interrupt_model = platform_info.interrupt_model;
 
         acpi.aml
             .initialize_objects()
@@ -381,7 +390,7 @@ impl Acpi {
                 let resources = resource_descriptor_list(&crs)?;
                 for resource in resources {
                     match resource {
-                        Resource::Irq(irq) => log::info!("  IRQ: {}", irq.irq),
+                        Resource::Irq(irq) => log::info!("  IRQ: {:?}", irq),
                         Resource::AddressSpace(address) => {
                             log::info!("  Address space: {:?}", address)
                         }

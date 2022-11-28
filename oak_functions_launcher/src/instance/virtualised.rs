@@ -76,7 +76,7 @@ impl Instance {
         // should be treated as a failure)
         cmd.arg("-no-reboot");
         // Use the `microvm` machine as the basis, and ensure ACPI is enabled.
-        cmd.args(["-machine", "microvm,acpi=on"]);
+        cmd.args(["-machine", "microvm,acpi=on,pic=off,ioapic2=off"]);
         // Route first serial port to console.
         cmd.args([
             "-chardev",

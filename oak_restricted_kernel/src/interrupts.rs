@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-use crate::{shutdown, snp::CPUID_PAGE};
+use crate::{mm::Translator, shutdown, snp::CPUID_PAGE, ADDRESS_TRANSLATOR};
+use acpi::platform::interrupt::Apic;
 use core::{arch::asm, ops::Deref};
 use lazy_static::lazy_static;
 use log::error;
@@ -22,10 +23,14 @@ use oak_sev_guest::{
     interrupts::{mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame},
     msr::get_cpuid_for_vc_exception,
 };
+use x2apic::{
+    ioapic::{IoApic, IrqMode, RedirectionTableEntry},
+    lapic::LocalApicBuilder,
+};
 use x86_64::{
     registers::control::Cr2,
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
-    VirtAddr,
+    PhysAddr, VirtAddr,
 };
 
 lazy_static! {
@@ -183,4 +188,67 @@ mutable_interrupt_handler_with_error_code!(
 
 pub fn init_idt() {
     IDT.load();
+}
+
+pub fn init_apic(apic: &Apic) {
+    log::info!("APIC cfg: {:?}", apic);
+    let xapic_base_phys = PhysAddr::new(apic.local_apic_address);
+    let xapic_base_virt = ADDRESS_TRANSLATOR
+        .get()
+        .unwrap()
+        .translate_physical(xapic_base_phys)
+        .unwrap();
+
+    log::info!(
+        "Initializing LAPIC at phys addr: {:#018x}",
+        apic.local_apic_address
+    );
+
+    let mut lapic = LocalApicBuilder::new()
+        .timer_vector(0)
+        .error_vector(0)
+        .spurious_vector(0)
+        .set_xapic_base(xapic_base_virt.as_u64())
+        .build()
+        .unwrap();
+
+    unsafe {
+        lapic.enable();
+        log::info!(
+            "LAPIC id: {}, version: {} enabled",
+            lapic.id(),
+            lapic.version()
+        );
+    }
+
+    for io_apic_cfg in &apic.io_apics {
+        log::info!(
+            "Initializing IOAPIC at phys addr {:#018x}",
+            io_apic_cfg.address,
+        );
+        let ioapic_virt = ADDRESS_TRANSLATOR
+            .get()
+            .unwrap()
+            .translate_physical(PhysAddr::new(io_apic_cfg.address as u64))
+            .unwrap();
+        let mut ioapic = unsafe { IoApic::new(ioapic_virt.as_u64()) };
+        unsafe { ioapic.init(io_apic_cfg.global_system_interrupt_base.try_into().unwrap()) };
+
+        unsafe {
+            log::info!(
+                "IOAPIC id: {}, version: {}, interrupt offset: {} enabled",
+                ioapic.id(),
+                ioapic.version(),
+                io_apic_cfg.global_system_interrupt_base,
+            );
+
+            let mut entry = RedirectionTableEntry::default();
+            entry.set_mode(IrqMode::Fixed);
+            //entry.set_flags(IrqFlags::MASKED);
+            entry.set_dest(0); // CPU(s)
+            ioapic.set_table_entry(23, entry);
+
+            ioapic.enable_irq(23);
+        }
+    }
 }

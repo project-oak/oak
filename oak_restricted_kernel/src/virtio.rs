@@ -136,6 +136,8 @@ impl oak_virtio::Read for MmioConsoleChannel<'_> {
             {
                 data[count] = char;
                 count = count + 1;
+            } else {
+                console.ack_interrupt().unwrap();
             }
         }
 
