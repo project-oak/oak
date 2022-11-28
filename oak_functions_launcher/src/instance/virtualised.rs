@@ -47,6 +47,10 @@ pub struct Params {
     #[arg(long, value_parser = path_exists)]
     pub enclave_binary: PathBuf,
 
+    /// Path to the BIOS image to use.
+    #[arg(long, value_parser = path_exists)]
+    pub bios_binary: PathBuf,
+
     /// Port to use for debugging with gdb
     #[arg(long = "gdb")]
     pub gdb: Option<u16>,

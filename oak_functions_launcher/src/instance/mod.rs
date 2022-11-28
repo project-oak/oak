@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-pub mod crosvm;
+pub mod virtualised;
 pub mod native;
 
 use anyhow::Result;
