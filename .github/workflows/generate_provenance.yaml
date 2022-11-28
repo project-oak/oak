@@ -37,7 +37,7 @@ jobs:
     with:
       base64-subjects: '${{ inputs.base64-subject }}'
       # Set a custom name for the provenance attestation.
-      attestation-name: '${{ inputs.attestation-name }}.intoto.jsonl'
+      attestation-name: '${{ inputs.attestation-name }}'
       # Upload the provenance.
       upload-assets: true
       # Build the generator from source.
@@ -51,4 +51,4 @@ jobs:
       - name: Print inputs
         run: |
           echo "Base64 Subject: ${{ inputs.base64-subject }}"
-          echo "Attestation-name: ${{ inputs.attestation-name }}.intoto.jsonl"
+          echo "Attestation-name: ${{ inputs.attestation-name }}"
