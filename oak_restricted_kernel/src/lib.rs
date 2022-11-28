@@ -56,12 +56,15 @@ pub mod shutdown;
 #[cfg(feature = "simple_io_channel")]
 mod simpleio;
 mod snp;
-#[cfg(any(feature = "virtio_console_channel", feature = "vsock_channel"))]
+#[cfg(feature = "vsock_channel")]
 mod virtio;
+#[cfg(feature = "virtio_console_channel")]
+mod virtio_console;
 
 extern crate alloc;
 
 use crate::{
+    acpi::Acpi,
     mm::Translator,
     snp::{get_snp_page_addresses, init_snp_pages},
 };
@@ -204,9 +207,15 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     .unwrap();
 
     // Init ACPI, if available.
-    match acpi::Acpi::new(info) {
-        Err(ref err) => log::warn!("Failed to load ACPI tables: {}", err),
-        Ok(ref mut acpi) => acpi.print_devices().unwrap(),
+    let mut acpi = match acpi::Acpi::new(info) {
+        Err(ref err) => {
+            log::warn!("Failed to load ACPI tables: {}", err);
+            None
+        }
+        Ok(mut acpi) => {
+            acpi.print_devices().unwrap();
+            Some(acpi)
+        }
     };
 
     if sev_snp_enabled {
@@ -222,6 +231,7 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
         &kernel_args,
         mapper,
         GUEST_HOST_HEAP.get().unwrap(),
+        acpi.as_mut(),
         sev_status,
     )
 }
@@ -244,6 +254,7 @@ fn get_channel<'a, X: Translator, A: Allocator + Sync>(
     kernel_args: &args::Args,
     mapper: &X,
     alloc: &'a A,
+    acpi: Option<&mut Acpi>,
     sev_status: SevStatus,
 ) -> Box<dyn Channel + 'a> {
     // If we weren't told which channel to use, arbitrarily pick the first one in the `ChannelType`
@@ -256,7 +267,10 @@ fn get_channel<'a, X: Translator, A: Allocator + Sync>(
 
     match chan_type {
         #[cfg(feature = "virtio_console_channel")]
-        ChannelType::VirtioConsole => Box::new(virtio::get_console_channel(mapper, alloc)),
+        ChannelType::VirtioConsole => Box::new(virtio_console::get_console_channel(
+            mapper,
+            acpi.expect("ACPI not available; unable to use virtio console"),
+        )),
         #[cfg(feature = "vsock_channel")]
         ChannelType::VirtioVsock => Box::new(virtio::get_vsock_channel(mapper, alloc)),
         #[cfg(feature = "serial_channel")]
