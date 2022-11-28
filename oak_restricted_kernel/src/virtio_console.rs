@@ -17,7 +17,6 @@
 use crate::{
     acpi::{Acpi, AcpiDevice, VIRTIO_MMIO},
     mm::Translator,
-    virtio::Channel,
     ADDRESS_TRANSLATOR, GUEST_HOST_HEAP,
 };
 use alloc::{string::String, vec::Vec};
@@ -31,6 +30,7 @@ use core::{
     ptr::NonNull,
 };
 use log::info;
+use oak_channel::{Read, Write};
 use spinning_top::Spinlock;
 use virtio_drivers::{DeviceType, Hal, MmioTransport, Transport, VirtIOConsole};
 use x86_64::{PhysAddr, VirtAddr};
@@ -102,7 +102,7 @@ pub struct MmioConsoleChannel<'a> {
 unsafe impl Sync for MmioConsoleChannel<'_> {}
 unsafe impl Send for MmioConsoleChannel<'_> {}
 
-impl oak_virtio::Read for MmioConsoleChannel<'_> {
+impl Read for MmioConsoleChannel<'_> {
     fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let mut console = self.inner.lock();
 
@@ -126,7 +126,7 @@ impl oak_virtio::Read for MmioConsoleChannel<'_> {
     }
 }
 
-impl oak_virtio::Write for MmioConsoleChannel<'_> {
+impl Write for MmioConsoleChannel<'_> {
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut console = self.inner.lock();
 
@@ -166,7 +166,7 @@ fn find_memory_range(device: &AcpiDevice, ctx: &mut AmlContext) -> Option<(PhysA
 pub fn get_console_channel<'a>(
     translator: &impl Translator,
     acpi: &mut Acpi,
-) -> Channel<MmioConsoleChannel<'a>> {
+) -> MmioConsoleChannel<'a> {
     let devices = acpi.devices().unwrap();
 
     let virtio_devices: Vec<&AcpiDevice> = devices
@@ -198,12 +198,10 @@ pub fn get_console_channel<'a>(
             device.name,
             transport.vendor_id()
         );
-        return Channel {
-            inner: MmioConsoleChannel {
-                inner: Spinlock::new(
-                    VirtIOConsole::<OakHal, _>::new(transport).expect("error initializing console"),
-                ),
-            },
+        return MmioConsoleChannel {
+            inner: Spinlock::new(
+                VirtIOConsole::<OakHal, _>::new(transport).expect("error initializing console"),
+            ),
         };
     }
     panic!("No virtio console devices found");

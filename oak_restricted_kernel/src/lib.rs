@@ -56,7 +56,7 @@ pub mod shutdown;
 #[cfg(feature = "simple_io_channel")]
 mod simpleio;
 mod snp;
-#[cfg(any(feature = "virtio_console_channel", feature = "vsock_channel"))]
+#[cfg(feature = "vsock_channel")]
 mod virtio;
 #[cfg(feature = "virtio_console_channel")]
 mod virtio_console;

@@ -26,7 +26,7 @@ use x86_64::{PhysAddr, VirtAddr};
 const VSOCK_PORT: u32 = 1024;
 
 pub struct Channel<T> {
-    pub(crate) inner: T,
+    inner: T,
 }
 
 impl<T> Read for Channel<T>

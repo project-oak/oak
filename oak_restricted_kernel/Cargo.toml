@@ -8,7 +8,7 @@ license = "Apache-2.0"
 [features]
 c_interface = ["hashbrown", "libc"]
 default = ["vsock_channel"]
-virtio_console_channel = ["oak_virtio", "virtio-drivers"]
+virtio_console_channel = ["virtio-drivers"]
 vsock_channel = ["oak_virtio"]
 serial_channel = ["uart_16550"]
 simple_io_channel = ["oak_simple_io"]
