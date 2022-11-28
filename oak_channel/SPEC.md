@@ -1,13 +1,11 @@
-# Oak Baremetal Communication Protocol Specification
+# Oak Restricted Kernel Communication Protocol Specification
 
 This document serves as a specification of the protocol used for communication
-between the Untrusted Launcher and Trusted Runtime. The Trusted Runtime should
-be able to communicate with any implementation of the Untrusted Launcher that
-implements this specification.
+between the Untrusted Launcher (running on the host) and Enclave Binry built
+with the Restricted Kernel (running inside a guest VM).
 
-In the specification below the Trusted Runtime will henceforth be referred to
-the as the "service". The Untrusted Launcher will be referred to the as the
-"client".
+In the specification below the Enclave Binary will be referred to the as the
+"service". The Untrusted Launcher will be referred to the as the "client".
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",
 "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be
@@ -15,25 +13,26 @@ interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119).
 
 ## Layer Defintions
 
-Conceptually, the Oak Baremetal Communication Protocol is made up of three
-layers. The [Method Layer](#method-layer) uses microRPC to define the methods
-exposed by the service. It is responsible for encoding method parameters and
-return values. The [Message](#message-layer) takes encoded parameters / return
-values and wraps them as distinct messages that include metadata. The
-[Frame](#frame-layer) creates individual frames from messages, which are then
-sent over the transport channel.
+Conceptually, the Oak Restricted Kernel Communication Protocol is made up of
+three layers. The [Invocation Layer](#invocation-layer) uses protocol buffers
+(protobuf) to define the methods exposed by the service. It is responsible for
+encoding requests and responses that wrap input parameters and return values.
+The [Message Layer](#message-layer) provides a logical wrapper for the encoded
+requests and responses. The [Frame Layer](#frame-layer) converts messages into
+frames which are then sent over the transport channel.
 
-### Method Layer
+### Invocation Layer
 
-Methods define the functionality exposed by service. Each method has clearly
-defined parameters and return types. microRPC is used to define which methods
-are available, their id, parameter and return types. microRPC is also
-responsible for encoding method parameters and return values to bytes.
+Methods define the functionality exposed by service. Each method defines input
+parameters and return types. Protocol buffers (protobuf) is used to define which
+methods are available, the method ids, input parameters and return types. It
+uses standard protobuf encoding to convert the requests and responses into
+bytes.
 
 #### Invocation
 
-An invocation of a method. Each invocation consists of two parts: a request
-message sent by the client, followed by a response message sent by the service.
+Each method invocation consists of two parts: a request message sent by the
+client, followed by a response message sent by the service.
 
 ##### Initiating an invocation
 
@@ -44,30 +43,29 @@ The service MUST NOT send request messages.
 ##### Handling an invocation
 
 The service MUST respond to each request message with a single response message.
-It SHOULD respond to request messages in first-in-first-out order, but MAY
-prioritize some request messages. The service MAY send a response message before
-the request message has been received in its entirety. Sending a response
-message concludes the invocation.
+The service MAY send a response message before the request message has been
+received in its entirety, but MUST NOT send start sending a response before any
+part of the request message has been received. Sending a response message
+concludes the invocation.
 
 The client MUST NOT send response messages.
 
 ### Message Layer
 
-Messages are conceptual units to transport requests and responses.
+Messages are logical units used to transport requests and responses.
 
 There are exactly two messages types: request messages and response messages.
+Since the invocation layer is responsible for encoding requests and reponses, at
+the communication protocol level the encoding for request and response messages
+follow an identical format.
 
-#### Request Message
+#### Message
 
-A byte encoded request message MUST consist of the following fields:
+A byte encoded message MUST consist only of the encoded bytes:
 
 ```text
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                             length                            |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                         invocation_id                         |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                                                               |
 +                         body bytes...                         +
@@ -75,60 +73,17 @@ A byte encoded request message MUST consist of the following fields:
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
 ```
 
-<!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
-"length:32,invocation_id:32,body bytes...:64"  -->
-
-- `length`, u32, little endian
-
-  Length of the entire message, including this field.
-
-- `invocation_id`, u32, little endian
-
-  Identifies the invocation the request initiates.
+<!-- Diagram generated with https://www.luismg.com/protocol/, using the spec
+"body bytes...:64"  -->
 
 - `body`, variable length byte array
 
-  Byte encoded method parameters.
-
-#### Response Message
-
-A byte encoded response message MUST consist of the following fields:
-
-```text
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                             length                            |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                         invocation_id                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-+                         body bytes...                         +
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
-```
-
-<!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
-"length:32,invocation_id:32,body bytes...:64" -->
-
-- `length`, u32, little endian
-
-  Length of the entire message, including this field.
-
-- `invocation_id`, u32, little endian
-
-  MUST match the invocation_id of the relevant request message.
-
-- `body`, variable length byte array
-
-  For responses with an "Ok" status code the body MUST be the byte encoded
-  method return value. Else the body MUST be a (possibly empty) UTF-8 encoded
-  developer-facing error message.
+  Encoded byte content of the message.
 
 ### Frame Layer
 
-Messages are sent and received as frames. Each message is fragmented into a set
-of one or more frames.
+Messages are sent and received as frames with a maximum total length of 4,096
+bytes per frame. Each message is fragmented into a set of one or more frames.
 
 #### Frame
 
@@ -138,9 +93,13 @@ A byte encoded frame MUST consist of the following fields:
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                            padding                            |
+|                         invocation_id                         |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|             length            |             flags             |
+|                         message_length                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                          frame_number                         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                          body_length                          |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                                                               |
 +                         body bytes...                         +
@@ -148,139 +107,66 @@ A byte encoded frame MUST consist of the following fields:
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
 ```
 
-<!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
-"padding:32,length:16,flags:16,body bytes...:64" -->
+<!-- Diagram generated with https://www.luismg.com/protocol/, using the spec
+"invocation_id:32,message_length:32,frame_number:32,body_length:32,body bytes...:64" -->
 
-- `padding`, 4 bytes
+- `invocation_id`, u32, little endian
 
-  For future use.
+  The unique ID of the invocation that the frame's forms a part of. All the
+  frames that make up a message MUST have the same invocation ID. The invocation
+  ID of a response message MUST match the value of its related request message.
+  The invocation ID MUST be incremented for each method invocation, naturally
+  wrapping when the maximum value for the data type is reached.
 
-- `length`, u16, little endian
+- `message_length`, unsigned 32-bit little-endian integer
 
-  Length of the entire frame, including this field. The length of a frame MUST
-  NOT exceed 4,000 bytes.
+  The length of the overall message. This value MUST be larger or equal to
+  `body_length`. The message length for all frames that make up the message MUST
+  be the same.
 
-- `flags`, 2 bytes
+  The size of a single message MUST NOT exceed 2GiB.
 
-  - `flags[0]`
+- `frame_number`, unsigned 32-bit little-endian integer
 
-    - 7 (MSB): unused
-    - 6: unused
-    - 5: unused
-    - 4: unused
-    - 3: unused
-    - 2: unused
-    - 1: end flag. MUST be set in the last frame of a message
-    - 0 (LSB): start flag. MUST be set in the first frame of a message
+  The position of this frame within the overall message. The first frame MUST
+  start at number 0. Each frame's number MUST be 1 higher than the previous
+  frame. Frames for a single message MUST be sent in ascending order of the
+  frame number.
 
-  - `flags[1]`
+- `body_length`, unsigned 32-bit little-endian integer
 
-    - 7 (MSB): unused
-    - 6: unused
-    - 5: unused
-    - 4: unused
-    - 3: unused
-    - 2: unused
-    - 1: unused
-    - 0 (LSB): unused
+  The length of the body byte array of the rfram. This value must not exceed
+  4,080. The sum of the body lengths of all the frames in a message must equal
+  the message length.
 
 - `body`, variable length byte array
 
-  Byte fragment of an encoded message. In order to not exceed the maximum frame
-  length, this byte array MUST NOT exceed 3,936 bytes.
+  Byte fragment of an encoded message. This size of the byte array MUST NOT
+  exceed 4,080 bytes.
+
+The maximum total length of a single frame is 4,096 bytes.
 
 ## Interaction between the Layers
 
 ### Sending Messages
 
-To send a message, it MUST first be encoded into frames. The resulting frame set
-MUST be sent as an uninterrupted sequence.
+To send a message, it MUST first be encoded into frames.
+
+The byte representation of a message MUST be chunked into a set of frame bodies.
+The last frame body of the resulting set MAY be shorter than 4,080 bytes (the
+maximum length of a frame body). Any preceding frame bodies MUST be exactly
+4,080 bytes in length.
+
+A frame MUST then be formed from each frame body. The resulting frame set MUST
+be sent in sequential order of the frame number over the channel.
 
 ### Receiving Messages
 
 To receive a message the recipent incrementally reads frames from the
-communication channel. The recipent MAY start parsing a message before all of
-its frames have been received.
+communication channel. Messages are parsed from frames by appending the frame
+bodies in the order they are received. The recipient SHOULD validate the
+sequence of frame numbers to ensure that all frames are received in the right
+order.
 
-### Encoding Messages into Frames
-
-The byte representation of a message MUST be chunked into a set of frame bodies.
-The last frame body of the resulting set MAY be shorter than 3,936 bytes (the
-maximum size of a frame body). Any preceding frame bodies MUST be exactly 3,936
-bytes in length.
-
-A frame MUST then be formed from each frame body.
-
-Messages with a length of 3,936 bytes or less MUST be encoded as a single frame.
-
-### Parsing Messages from Frames
-
-Messages are parsed from frames by appending the frame bodies in the order they
-are received.
-
-## Examples for Illustration
-
-### Frame Flags
-
-For messages sent as more than two frames, the first frame would have the start
-flag set, all other flags would be unset. The last frame would have the end flag
-set, all other flags would be unset. Any frames in between would have no flags
-set.
-
-For small messages sent as a single frame, the start flag and the end flag would
-be set, all other flags would be unset.
-
-### Layers Diagram
-
-The diagram below shows a practial example of how the request half of an
-invocation would look like after being encoded as two frames.
-
-#### Frame 0
-
-```text
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                         frame padding                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|          frame length         |          frame flags          |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|             frame body [ request_message length ]             |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|          frame body [ request_message invocation_id ]         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|            frame body [ request_message method_id ]           |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|             frame body [ request_message padding ]            |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-+                                                               +
-|                                                               |
-+   frame body [ request_message body [ method parameters ] ]   +
-|                                                               |
-+                                                               +
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
-```
-
-<!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
-"frame padding:32,frame length:16,frame flags:16,frame body [ request_message length ]:32,frame body [ request_message invocation_id ]:32,frame body [ request_message method_id ]:32,frame body [ request_message padding ]:32,frame body [ request_message body [ method parameters ] ]:128" -->
-
-#### Frame 1
-
-```text
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                         frame padding                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|          frame length         |          frame flags          |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-+   frame body [ request_message body [ method parameters ] ]   +
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-```
-
-<!-- Diagram generated with https://www.luismg.com/protocol/, using the schema
-"frame padding:32,frame length:16,frame flags:16,frame body [ request_message body [ method parameters ] ]:64" -->
+The recipent MAY start parsing a message before all of its frames have been
+received.
