@@ -164,6 +164,29 @@
 <span id="164">164</span>
 <span id="165">165</span>
 <span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -193,7 +216,7 @@
 
 <span class="attribute">#[derive(Debug, Display, Clone, PartialEq, EnumIter)]
 </span><span class="kw">pub enum </span>LauncherMode {
-    Crosvm,
+    Virtual,
     Native,
 }
 
@@ -201,7 +224,7 @@
     <span class="doccomment">/// Get the crate name of respective enclave binary variant
     </span><span class="kw">pub fn </span>enclave_crate_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
-            LauncherMode::Crosvm =&gt; <span class="string">&quot;oak_functions_freestanding_bin&quot;</span>,
+            LauncherMode::Virtual =&gt; <span class="string">&quot;oak_functions_freestanding_bin&quot;</span>,
             LauncherMode::Native =&gt; <span class="string">&quot;oak_functions_linux_fd_bin&quot;</span>,
         }
     }
@@ -214,7 +237,7 @@
     <span class="doccomment">/// Get the path to the respective enclave binary variant that should be launched
     </span><span class="kw">pub fn </span>enclave_binary_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="kw">match </span><span class="self">self </span>{
-            LauncherMode::Crosvm =&gt; <span class="macro">format!</span>(
+            LauncherMode::Virtual =&gt; <span class="macro">format!</span>(
                 <span class="string">&quot;{}/target/x86_64-unknown-none/debug/{}&quot;</span>,
                 <span class="self">self</span>.enclave_crate_path(),
                 <span class="self">self</span>.enclave_crate_name()
@@ -226,10 +249,14 @@
     <span class="doccomment">/// Get the subcommand for launching in this mode
     </span><span class="kw">pub fn </span>variant_subcommand(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;String&gt; {
         <span class="kw">match </span><span class="self">self </span>{
-            LauncherMode::Crosvm =&gt; <span class="macro">vec!</span>[
-                <span class="string">&quot;crosvm&quot;</span>.to_string(),
+            LauncherMode::Virtual =&gt; <span class="macro">vec!</span>[
+                <span class="string">&quot;virtual&quot;</span>.to_string(),
                 <span class="macro">format!</span>(<span class="string">&quot;--enclave-binary={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_binary_path()),
                 <span class="macro">format!</span>(<span class="string">&quot;--vmm-binary={}&quot;</span>, <span class="string">&quot;/usr/local/cargo/bin/crosvm&quot;</span>),
+                <span class="macro">format!</span>(
+                    <span class="string">&quot;--bios-binary={}&quot;</span>,
+                    <span class="string">&quot;./stage0/target/x86_64-unknown-none/release/oak_stage0.bin&quot;
+                </span>),
             ],
             LauncherMode::Native =&gt; <span class="macro">vec!</span>[
                 <span class="string">&quot;native&quot;</span>.to_string(),
@@ -254,7 +281,7 @@
         <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
         <span class="prelude-val">Some</span>(var) =&gt; <span class="kw">match </span><span class="kw-2">*</span>variant {
             LauncherMode::Native =&gt; var == <span class="string">&quot;native&quot;</span>,
-            LauncherMode::Crosvm =&gt; var == <span class="string">&quot;crosvm&quot;</span>,
+            LauncherMode::Virtual =&gt; var == <span class="string">&quot;virtual&quot;</span>,
         },
     }
 }
@@ -277,6 +304,7 @@
     Step::Multiple {
         name: <span class="macro">format!</span>(<span class="string">&quot;run {} variant&quot;</span>, variant),
         steps: <span class="macro">vec!</span>[
+            build_stage0(),
             build_binary(<span class="string">&quot;build Oak Functions loader&quot;</span>, <span class="string">&quot;./oak_functions_launcher&quot;</span>),
             build_binary(
                 <span class="string">&quot;build Oak Functions enclave binary&quot;</span>,
@@ -288,6 +316,24 @@
                 foreground: Box::new(run_client(<span class="string">&quot;test_key&quot;</span>, <span class="string">&quot;^test_value$&quot;</span>, <span class="number">300</span>)),
             },
         ],
+    }
+}
+
+<span class="kw">fn </span>build_stage0() -&gt; Step {
+    Step::Single {
+        name: <span class="string">&quot;build stage0&quot;</span>.to_string(),
+        command: Cmd::new_in_dir(
+            <span class="string">&quot;cargo&quot;</span>,
+            <span class="macro">vec!</span>[
+                <span class="string">&quot;objcopy&quot;</span>,
+                <span class="string">&quot;--release&quot;</span>,
+                <span class="string">&quot;--&quot;</span>,
+                <span class="string">&quot;-O&quot;</span>,
+                <span class="string">&quot;binary&quot;</span>,
+                <span class="string">&quot;target/x86_64-unknown-none/release/oak_stage0.bin&quot;</span>,
+            ],
+            Path::new(<span class="string">&quot;./stage0&quot;</span>),
+        ),
     }
 }
 

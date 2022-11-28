@@ -209,7 +209,7 @@
 
 </span><span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>clap::Parser;
-<span class="kw">use </span>instance::{crosvm, native, LaunchedInstance};
+<span class="kw">use </span>instance::{native, virtualized, LaunchedInstance};
 <span class="kw">use </span>std::{
     fs,
     io::{BufRead, BufReader},
@@ -233,7 +233,7 @@
 <span class="attribute">#[derive(clap::Subcommand, Clone, Debug, PartialEq)]
 </span><span class="kw">enum </span>Mode {
     <span class="doccomment">/// Launch enclave in crosvm
-    </span>Crosvm(crosvm::Params),
+    </span>Virtual(virtualized::Params),
     <span class="doccomment">/// Launch an enclave binary directly as a child process
     </span>Native(native::Params),
 }
@@ -301,7 +301,7 @@
     };
 
     <span class="kw">let </span><span class="kw-2">mut </span>launched_instance: Box&lt;<span class="kw">dyn </span>LaunchedInstance&gt; = <span class="kw">match </span>cli.mode {
-        Mode::Crosvm(params) =&gt; Box::new(crosvm::Instance::start(params, logs_console)<span class="question-mark">?</span>),
+        Mode::Virtual(params) =&gt; Box::new(virtualized::Instance::start(params, logs_console)<span class="question-mark">?</span>),
         Mode::Native(params) =&gt; Box::new(native::Instance::start(params)<span class="question-mark">?</span>),
     };
 

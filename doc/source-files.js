@@ -12,7 +12,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_functions_client":["",[],["lib.rs","rekor.rs"]],\
 "oak_functions_extension":["",[],["lib.rs"]],\
 "oak_functions_freestanding":["",[["wasm",[],["mod.rs"]]],["lib.rs","logger.rs","remote_attestation.rs"]],\
-"oak_functions_launcher":["",[["instance",[],["crosvm.rs","mod.rs","native.rs"]]],["channel.rs","lookup.rs","main.rs","server.rs"]],\
+"oak_functions_launcher":["",[["instance",[],["mod.rs","native.rs","virtualized.rs"]]],["channel.rs","lookup.rs","main.rs","server.rs"]],\
 "oak_functions_linux_fd_bin":["",[],["main.rs"]],\
 "oak_functions_linux_vsock_bin":["",[],["channel.rs","main.rs"]],\
 "oak_functions_load_test":["",[],["main.rs"]],\
