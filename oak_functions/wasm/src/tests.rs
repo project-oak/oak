@@ -15,10 +15,11 @@
 //
 
 use crate::{
-    alloc_and_write_buffer, read_buffer, read_u32, write_buffer, write_u32, AbiPointer,
-    AbiPointerOffset, WasmHandler, WasmState,
+    alloc_and_write_buffer, read_buffer, write_buffer, write_u32, AbiPointer, AbiPointerOffset,
+    WasmHandler, WasmState,
 };
 use alloc::{string::ToString, vec};
+use byteorder::{ByteOrder, LittleEndian};
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingRequest, TestingResponse};
 use oak_functions_testing_extension::{TestingFactory, TestingLogger};
 
@@ -348,4 +349,16 @@ fn create_test_wasm_state() -> WasmState<TestingLogger> {
         .expect("Could not create WasmState.");
 
     wasm_state
+}
+
+// Read the u32 value at the `address` from the Wasm memory.
+// Only needed in tests.
+fn read_u32(
+    ctx: &mut impl wasmi::AsContext,
+    memory: &mut wasmi::Memory,
+    address: AbiPointer,
+) -> Result<u32, OakStatus> {
+    let address = read_buffer(ctx, memory, address, 4).map_err(|_err| OakStatus::ErrInvalidArgs)?;
+    let address = LittleEndian::read_u32(&address);
+    Ok(address)
 }
