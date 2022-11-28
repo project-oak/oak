@@ -1,5 +1,7 @@
-# Builds an artifact from the input build config, and uploads it to Ent. Then generates the SLSA provenance for it and uploads that to Ent too.
-# Returns (1) the name and digest of the generated artifact as a based64-encoded string, and (2) the digest of the provenance.
+# Builds an artifact from the input build config, and uploads it to Ent. Then
+# generates the SLSA provenance for it and uploads that to Ent too.
+# Returns (1) the name and digest of the generated artifact as a
+# based64-encoded string, and (2) the digest of the provenance.
 name: Build Provenance
 
 on:
@@ -114,31 +116,18 @@ jobs:
           # base64 --wrap=0 disables line wrapping, and encodes to base64 and outputs on a single line.
           echo "digest=$(sha256sum $(basename ${{ steps.artifact_path.outputs.artifact_path }}) | base64 --wrap=0)" >> $GITHUB_OUTPUT
 
-  # This job calls the generic SLSA workflow to generate provenance.
-  # See https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/generic/README.md
   generate_provenance:
-    # The `generator_generic_slsa3` workflow fails on `pull_request` events.
-    # So we check the Github event here before calling the workflow.
-    # Note that since `generator_generic_slsa3` is a reusable workflow it can
-    # only be referenced at the top-level `jobs.*.uses' key. As a result we
-    # cannot use `generator_generic_slsa3` within a step guarded by the if.
-    # Unfortunately, this limits the testability of the workflow.
-    if: github.event_name == 'push'
     needs: [build_binary]
     permissions:
       actions: read
       id-token: write
       contents: write
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.2.1
+    uses: ./.github/workflows/generate_provenance.yaml
     with:
-      base64-subjects: '${{ needs.build_binary.outputs.digest }}'
+      base64-subject: '${{ needs.build_binary.outputs.digest }}'
       # Set a custom name for the provenance attestation.
       attestation-name:
         '${{ needs.build_binary.outputs.filename }}.intoto.jsonl'
-      # Upload the provenance.
-      upload-assets: true
-      # Build the generator from source.
-      compile-generator: true
 
   # This job uploads the signed provenance from the previous step to Ent, and
   # publishes a comment about it on the PR.
@@ -149,14 +138,17 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-      - name: Download the DSSE document
+      - name: Download the DSSE document (post-merge only)
+        if: github.event_name == 'push'
         uses: actions/download-artifact@v3
         with:
           name: ${{ needs.build_binary.outputs.filename }}.intoto.jsonl
 
       # See https://github.com/google/ent
-      - name: Download Ent CLI
-        if: steps.cache-ent.outputs.cache-hit != 'true'
+      - name: Download Ent CLI (post-merge only)
+        if: |
+          github.event_name == 'push' &&
+          steps.cache-ent.outputs.cache-hit != 'true'
         env:
           ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
           ENT_DIGEST: sha256:944a34854a2bf9c5d32f3bffa93885ee1c7ef8ab0f4fcc30898a981050ae4233
@@ -172,10 +164,18 @@ jobs:
           api_key = '${{ secrets.ENT_API_KEY }}'
           EOF
 
-      - name: Upload to Ent
+      - name: Upload to Ent (post-merge only)
+        if: github.event_name == 'push'
         id: ent_upload
         run: |
           echo "provenance_digest=$(ent put ${{ needs.build_binary.outputs.filename }}.intoto.jsonl)" >> $GITHUB_OUTPUT
+
+      # Debug step: Print the values used in this workflow.
+      - name: Print inputs
+        if: github.event_name != 'push'
+        run: |
+          echo "filename: ${{ needs.build_binary.outputs.filename }}"
+          echo "provenance_digest=debug-placeholder-provenance-digest" >> $GITHUB_OUTPUT
 
   # Publishes a comment containing the digests of the generated artifact and its provenance.
   publish_comments:
@@ -231,3 +231,9 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: `${comment_contents}`});
+
+      # Debug step: Print the content of the ./comment file.
+      - name: Print ./comment
+        if: github.event_name != 'push'
+        run: |
+          head ./comment
