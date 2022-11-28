@@ -234,6 +234,50 @@ fn test_read_empty_buffer_in_wasm_memory() {
 }
 
 #[test]
+fn test_read_request() {
+    let wasm_state = &mut create_test_wasm_state();
+
+    let mut memory = wasm_state
+        .instance
+        .get_export(&wasm_state.store, "memory")
+        .unwrap()
+        .into_memory()
+        .unwrap();
+
+    let alloc = wasm_state
+        .instance
+        .get_export(&wasm_state.store, "alloc")
+        .unwrap()
+        .into_func()
+        .unwrap();
+
+    // Instead of calling read_request, we mimick the functionality here. This is not pretty,
+    // but the best I can do for now.
+    let request_bytes = wasm_state.get_request_bytes();
+
+    let dest_ptr_ptr: AbiPointer = 100;
+    let dest_len_ptr: AbiPointer = 150;
+
+    let oak_status = alloc_and_write_buffer(
+        &mut wasm_state.store,
+        &mut memory,
+        alloc,
+        request_bytes,
+        dest_ptr_ptr,
+        dest_len_ptr,
+    );
+
+    assert!(oak_status.is_ok());
+
+    // Actually read the request back.
+    let req_ptr = read_u32(&mut wasm_state.store, &mut memory, dest_ptr_ptr).unwrap();
+    let req_len = read_u32(&mut wasm_state.store, &mut memory, dest_len_ptr).unwrap();
+    let request_bytes = read_buffer(&mut wasm_state.store, &mut memory, req_ptr, req_len).unwrap();
+
+    assert_eq!(request_bytes, wasm_state.get_request_bytes())
+}
+
+#[test]
 fn test_invoke_extension() {
     let wasm_state = &mut create_test_wasm_state();
 

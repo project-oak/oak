@@ -173,7 +173,29 @@ where
             &mut store,
             // TODO(mschett): Check types of params with oak_functions_resolve_funcs.
             |mut caller: wasmi::Caller<'_, UserState<L>>, buf_ptr_ptr: u32, buf_len_ptr: u32| {
-                let oak_status = read_request(&mut caller, buf_ptr_ptr, buf_len_ptr);
+                let mut memory = caller
+                    .get_export("memory")
+                    // TODO(mschett): Fix unwrap.
+                    .unwrap()
+                    .into_memory()
+                    .expect("WasmState memory not attached!?");
+
+                // alloc call
+                let alloc = caller.get_export("alloc").unwrap().into_func().unwrap();
+
+                let request_bytes = caller.host_data().request_bytes.clone();
+
+                let oak_status = alloc_and_write_buffer(
+                    &mut caller,
+                    &mut memory,
+                    alloc,
+                    request_bytes,
+                    buf_ptr_ptr,
+                    buf_len_ptr,
+                );
+
+                // TODO(mschett)
+                // let oak_status = read_request(&mut caller, buf_ptr_ptr, buf_len_ptr);
                 from_oak_status_result(oak_status)
             },
         );
