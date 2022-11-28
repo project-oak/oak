@@ -138,7 +138,7 @@ jobs:
   # publishes a comment about it on the PR.
   upload_provenance:
     if: github.event_name == 'push'
-    needs: [generate_provenance]
+    needs: [build_binary, generate_provenance]
     outputs:
       provenance_digest: ${{ steps.ent_upload.outputs.provenance_digest }}
     runs-on: ubuntu-20.04
