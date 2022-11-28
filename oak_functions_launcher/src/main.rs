@@ -19,7 +19,7 @@
 
 use anyhow::Context;
 use clap::Parser;
-use instance::{native, virtualised, LaunchedInstance};
+use instance::{native, virtualized, LaunchedInstance};
 use std::{
     fs,
     io::{BufRead, BufReader},
@@ -43,7 +43,7 @@ mod server;
 #[derive(clap::Subcommand, Clone, Debug, PartialEq)]
 enum Mode {
     /// Launch enclave in crosvm
-    Virtual(virtualised::Params),
+    Virtual(virtualized::Params),
     /// Launch an enclave binary directly as a child process
     Native(native::Params),
 }
@@ -111,7 +111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let mut launched_instance: Box<dyn LaunchedInstance> = match cli.mode {
-        Mode::Virtual(params) => Box::new(virtualised::Instance::start(params, logs_console)?),
+        Mode::Virtual(params) => Box::new(virtualized::Instance::start(params, logs_console)?),
         Mode::Native(params) => Box::new(native::Instance::start(params)?),
     };
 
