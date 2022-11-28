@@ -20,7 +20,7 @@ use crate::{
     virtio::Channel,
     ADDRESS_TRANSLATOR, GUEST_HOST_HEAP,
 };
-use alloc::vec::Vec;
+use alloc::{string::String, vec::Vec};
 use aml::{
     resource::{MemoryRangeDescriptor, Resource},
     AmlContext,
@@ -163,13 +163,20 @@ fn find_memory_range(device: &AcpiDevice, ctx: &mut AmlContext) -> Option<(PhysA
     None
 }
 
-pub fn get_console_channel<'a, X: Translator>(
-    translator: &X,
+pub fn get_console_channel<'a>(
+    translator: &impl Translator,
     acpi: &mut Acpi,
 ) -> Channel<MmioConsoleChannel<'a>> {
-    for device in acpi.devices().unwrap().iter().filter(|&device| {
-        device.hid(&mut acpi.aml).ok().flatten().map(|s| s.as_str()) == Some(VIRTIO_MMIO)
-    }) {
+    let devices = acpi.devices().unwrap();
+
+    let virtio_devices: Vec<&AcpiDevice> = devices
+        .iter()
+        .filter(|device| {
+            device.hid(&mut acpi.aml).ok().flatten() == Some(String::from(VIRTIO_MMIO))
+        })
+        .collect();
+
+    for device in virtio_devices {
         let header = translator
             .translate_physical(
                 find_memory_range(device, &mut acpi.aml)
@@ -194,7 +201,7 @@ pub fn get_console_channel<'a, X: Translator>(
         return Channel {
             inner: MmioConsoleChannel {
                 inner: Spinlock::new(
-                    VirtIOConsole::<OakHal, _>::new(transport).expect("Error initializing console"),
+                    VirtIOConsole::<OakHal, _>::new(transport).expect("error initializing console"),
                 ),
             },
         };
