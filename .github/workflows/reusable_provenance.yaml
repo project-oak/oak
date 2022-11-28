@@ -133,9 +133,12 @@ jobs:
   # publishes a comment about it on the PR.
   upload_provenance:
     needs: [build_binary, generate_provenance]
-    outputs:
-      provenance_digest: ${{ steps.ent_upload.outputs.provenance_digest }}
     runs-on: ubuntu-20.04
+    permissions:
+      # Allow the job to update the repo with the latest provenance info and index.
+      contents: write
+      # Allow the job to add a comment to the PR.
+      pull-requests: write
 
     steps:
       - name: Download the DSSE document (post-merge only)
@@ -170,24 +173,6 @@ jobs:
         run: |
           echo "provenance_digest=$(ent put ${{ needs.build_binary.outputs.filename }}.intoto.jsonl)" >> $GITHUB_OUTPUT
 
-      # Debug step: Print the values used in this workflow.
-      - name: Print inputs
-        if: github.event_name != 'push'
-        run: |
-          echo "filename: ${{ needs.build_binary.outputs.filename }}"
-          echo "provenance_digest=debug-placeholder-provenance-digest" >> $GITHUB_OUTPUT
-
-  # Publishes a comment containing the digests of the generated artifact and its provenance.
-  publish_comments:
-    runs-on: ubuntu-20.04
-    needs: [upload_provenance, build_binary]
-    permissions:
-      # Allow the job to update the repo with the latest provenance info and index.
-      contents: write
-      # Allow the job to add a comment to the PR.
-      pull-requests: write
-
-    steps:
       # Add the artifact digest and name to the ./comment file.
       - name: Format artifact digest
         run: |
@@ -199,7 +184,7 @@ jobs:
       - name: Format provenance digest
         run: |
           echo -e "\n\nProvenance digest:\n\n\`\`\`" >> ./comment
-          echo ${{ needs.upload_provenance.outputs.provenance_digest }} | tee -a ./comment
+          echo ${{ steps.ent_upload.outputs.provenance_digest }} | tee -a ./comment
           echo -e "\`\`\`" >> ./comment
 
       # Post a comment on the PR containing the sha256 digests of the binary and its provenance.
@@ -232,8 +217,9 @@ jobs:
               repo: context.repo.repo,
               body: `${comment_contents}`});
 
-      # Debug step: Print the content of the ./comment file.
-      - name: Print ./comment
+      # Debug step: Print the content of the ./comment file & inputs to the workflow.
+      - name: Print ./comment & inputs
         if: github.event_name != 'push'
         run: |
           head ./comment
+          echo "filename: ${{ needs.build_binary.outputs.filename }}"
