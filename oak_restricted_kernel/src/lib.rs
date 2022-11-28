@@ -206,7 +206,7 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     // Init ACPI, if available.
     match acpi::Acpi::new(info) {
         Err(ref err) => log::warn!("Failed to load ACPI tables: {}", err),
-        Ok(ref mut acpi) => acpi.devices().unwrap(),
+        Ok(ref mut acpi) => acpi.print_devices().unwrap(),
     };
 
     if sev_snp_enabled {

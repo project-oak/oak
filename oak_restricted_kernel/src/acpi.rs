@@ -15,11 +15,11 @@
 //
 
 use acpi::{AcpiHandler, AcpiTables, AmlTable, PhysicalMapping};
-use alloc::{boxed::Box, string::String};
+use alloc::{boxed::Box, string::String, vec::Vec};
 use aml::{
     resource::{resource_descriptor_list, MemoryRangeDescriptor, Resource},
     value::Args,
-    AmlContext, AmlError, AmlName, AmlValue, LevelType,
+    AmlContext, AmlError, AmlName, AmlValue, LevelType, NamespaceLevel,
 };
 use anyhow::{anyhow, bail, Result};
 use core::ptr::NonNull;
@@ -249,6 +249,56 @@ fn name_from_eisa_id(eisa_id: u64) -> Result<String, AmlError> {
 
     Ok(str)
 }
+
+pub struct AcpiDevice {
+    name: AmlName,
+}
+
+impl AcpiDevice {
+    /// Return the value of the `_HID` object, if present.
+    ///
+    /// ACPI specifications require one of `_HID` or `_ADR` to be present.
+    /// See Section 6.1 of the ACPI spec for more details.
+    pub fn hid(&self, ctx: &mut AmlContext) -> Result<Option<String>> {
+        let hid = self.invoke("_HID", ctx);
+
+        if let Ok(hid) = hid {
+            // If the name is an integer, it's a compressed EISA identifier (yes, really)
+            let hid = match hid {
+                AmlValue::String(s) => Ok(s),
+                AmlValue::Integer(i) => name_from_eisa_id(i),
+                _ => Err(AmlError::InvalidNameSeg),
+            }
+            .map_err(|err| anyhow!("error parsing HID value: {:?}", err))?;
+            Ok(Some(hid))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Return the valuie of the `_CRS` object, if present.
+    ///
+    /// CRS stands for Current Resource Settings; see Section 6.2 of the ACPI spec for more details.
+    pub fn crs(&self, ctx: &mut AmlContext) -> Result<Option<Vec<Resource>>> {
+        let crs = self
+            .invoke("_CRS", ctx)
+            .map_err(|err| anyhow!("error resolving CRS: {:?}", err));
+
+        if let Ok(crs) = crs {
+            let resources = resource_descriptor_list(&crs)
+                .map_err(|err| anyhow!("error building resource descriptor list: {:?}", err))?;
+            Ok(Some(resources))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn invoke(&self, object: &str, ctx: &mut AmlContext) -> Result<AmlValue, AmlError> {
+        let object_name = AmlName::from_str(object)?;
+        ctx.invoke_method(&object_name.resolve(&self.name)?, Args::default())
+    }
+}
+
 pub struct Acpi {
     tables: AcpiTables<Handler>,
     aml: AmlContext,
@@ -287,67 +337,68 @@ impl Acpi {
         Ok(acpi)
     }
 
-    pub fn devices(&mut self) -> Result<()> {
+    pub fn devices(&mut self) -> Result<Vec<AcpiDevice>> {
+        self.walk(|_aml, name, _level| Ok(Some(AcpiDevice { name: name.clone() })))
+    }
+
+    fn walk<F, T>(&mut self, f: F) -> Result<Vec<T>>
+    where
+        F: Fn(&mut AmlContext, &AmlName, &NamespaceLevel) -> Result<Option<T>, AmlError>,
+    {
+        let mut results = Vec::new();
         self.aml
             .namespace
             .clone()
             .traverse(|name, level| match level.typ {
                 LevelType::Device => {
-                    let hid = self
-                        .aml
-                        .invoke_method(&AmlName::from_str("_HID")?.resolve(name)?, Args::default());
-
-                    if let Ok(hid) = hid {
-                        // If the name is an integer, it's a compressed EISA identifier (yes,
-                        // really)
-                        let hid = match hid {
-                            AmlValue::String(s) => Ok(s),
-                            AmlValue::Integer(i) => name_from_eisa_id(i),
-                            _ => Err(AmlError::InvalidNameSeg),
-                        }?;
-                        log::info!(
-                            "ACPI device: {} {:7} {}",
-                            name,
-                            hid,
-                            description(hid.as_str())
-                        );
-                    } else {
-                        log::info!("ACPI device: {} (no HID)", name);
+                    if let Some(result) = f(&mut self.aml, name, level)? {
+                        results.push(result);
                     }
-
-                    let crs = self
-                        .aml
-                        .invoke_method(&AmlName::from_str("_CRS")?.resolve(name)?, Args::default());
-
-                    if let Ok(crs) = crs {
-                        let resources = resource_descriptor_list(&crs)?;
-                        for resource in resources {
-                            match resource {
-                                Resource::Irq(irq) => log::info!("  IRQ: {}", irq.irq),
-                                Resource::AddressSpace(address) => {
-                                    log::info!("  Address space: {:?}", address)
-                                }
-                                Resource::MemoryRange(MemoryRangeDescriptor::FixedLocation {
-                                    is_writable: _,
-                                    base_address,
-                                    range_length,
-                                }) => log::info!(
-                                    "  Memory range: [{:#018x}..{:#018x})",
-                                    base_address,
-                                    base_address + range_length
-                                ),
-                                Resource::IOPort(port) => log::info!("  IO port: {:?}", port),
-                                Resource::Dma(dma) => log::info!("  DMA: {:?}", dma),
-                            }
-                        }
-                    }
-
                     Ok(true)
                 }
                 LevelType::Scope => Ok(true),
                 _ => Ok(false),
             })
-            .map_err(|err| anyhow!("failed to walk ACPI tables: {:?}", err))
+            .map_err(|err| anyhow!("failed to walk ACPI tables: {:?}", err))?;
+        Ok(results)
+    }
+
+    pub fn print_devices(&mut self) -> Result<()> {
+        for device in self.devices()? {
+            if let Some(hid) = device.hid(&mut self.aml)? {
+                log::info!(
+                    "ACPI device: {} {:7} {}",
+                    device.name,
+                    hid,
+                    description(hid.as_str())
+                );
+            } else {
+                log::info!("ACPI device: {} (no HID)", device.name);
+            }
+
+            if let Some(ref resources) = device.crs(&mut self.aml)? {
+                for resource in resources {
+                    match resource {
+                        Resource::Irq(irq) => log::info!("  IRQ: {}", irq.irq),
+                        Resource::AddressSpace(address) => {
+                            log::info!("  Address space: {:?}", address)
+                        }
+                        Resource::MemoryRange(MemoryRangeDescriptor::FixedLocation {
+                            is_writable: _,
+                            base_address,
+                            range_length,
+                        }) => log::info!(
+                            "  Memory range: [{:#018x}..{:#018x})",
+                            base_address,
+                            base_address + range_length
+                        ),
+                        Resource::IOPort(port) => log::info!("  IO port: {:?}", port),
+                        Resource::Dma(dma) => log::info!("  DMA: {:?}", dma),
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
 
