@@ -238,15 +238,6 @@ RUN cargo install --version=${binutils_version} cargo-binutils
 ARG wizer_version=1.4.0
 RUN cargo install --version=${wizer_version} wizer --all-features
 
-# Install crosvm.
-# We're not interested in most of the features in crosvm (e.g. wayland support), but GDB support would be nice.
-RUN cargo install \
-  --git=https://chromium.googlesource.com/chromiumos/platform/crosvm/ \
-  --rev=31f04e92709980a4ffc56b1631f8b4be437cc2fe \
-  crosvm \
-  --no-default-features \
-  --features=gdb
-
 # Where to install rust tooling
 ARG install_dir=${rustup_dir}/bin
 
