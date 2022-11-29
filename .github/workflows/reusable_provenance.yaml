@@ -140,7 +140,8 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Download the DSSE document
+      - name: Download the DSSE document (post-merge only)
+        if: github.event_name == 'push'
         uses: actions/download-artifact@v3
         with:
           name: ${{ needs.build_binary.outputs.attestation-name }}
