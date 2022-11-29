@@ -29,7 +29,7 @@ jobs:
   build_binary:
     outputs:
       digest: ${{ steps.hash.outputs.digest }}
-      filename: ${{ steps.filename.outputs.filename }}
+      attestation-name: ${{ steps.attestation-name.outputs.attestation-name }}
     runs-on: ubuntu-20.04
 
     steps:
@@ -62,10 +62,10 @@ jobs:
         run: |
           echo "artifact_path=$(tail -1 ${{ inputs.build-config-path }} | grep -oP 'output_path = \K(.*)')" >> $GITHUB_OUTPUT
 
-      - name: Get artifact filename
-        id: filename
+      - name: Create attestation-name
+        id: attestation-name
         run: |
-          echo "filename=$(basename ${{ steps.artifact_path.outputs.artifact_path }})" >> $GITHUB_OUTPUT
+          echo "attestation-name=$(basename ${{ steps.artifact_path.outputs.artifact_path }}).intoto.jsonl" >> $GITHUB_OUTPUT
 
       - name: Build the artifact
         run: |
@@ -126,8 +126,7 @@ jobs:
     with:
       base64-subject: '${{ needs.build_binary.outputs.digest }}'
       # Set a custom name for the provenance attestation.
-      attestation-name:
-        '${{ needs.build_binary.outputs.filename }}.intoto.jsonl'
+      attestation-name: '${{ needs.build_binary.outputs.attestation-name }}'
 
   # This job uploads the signed provenance from the previous step to Ent, and
   # publishes a comment about it on the PR.
@@ -145,7 +144,7 @@ jobs:
         if: github.event_name == 'push'
         uses: actions/download-artifact@v3
         with:
-          name: ${{ needs.build_binary.outputs.filename }}.intoto.jsonl
+          name: ${{ needs.build_binary.outputs.attestation-name }}
 
       # See https://github.com/google/ent
       - name: Download Ent CLI (post-merge only)
@@ -171,7 +170,7 @@ jobs:
         if: github.event_name == 'push'
         id: ent_upload
         run: |
-          echo "provenance_digest=$(ent put ${{ needs.build_binary.outputs.filename }}.intoto.jsonl)" >> $GITHUB_OUTPUT
+          echo "provenance_digest=$(ent put ${{ needs.build_binary.outputs.attestation-name }})" >> $GITHUB_OUTPUT
 
       # Add the artifact digest and name to the ./comment file.
       - name: Format artifact digest
@@ -222,4 +221,4 @@ jobs:
         if: github.event_name != 'push'
         run: |
           head ./comment
-          echo "filename: ${{ needs.build_binary.outputs.filename }}"
+          echo "attestation-name: ${{ needs.build_binary.outputs.attestation-name }}"
