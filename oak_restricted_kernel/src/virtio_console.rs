@@ -99,6 +99,7 @@ pub struct MmioConsoleChannel<'a> {
 }
 
 // Safety: for now, this is safe as we don't have threads in our kernel.
+// TODO(#3531): this will most likely break once we do add threads, though.
 unsafe impl Sync for MmioConsoleChannel<'_> {}
 unsafe impl Send for MmioConsoleChannel<'_> {}
 
