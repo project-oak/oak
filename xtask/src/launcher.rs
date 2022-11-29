@@ -63,7 +63,7 @@ impl LauncherMode {
             LauncherMode::Virtual => vec![
                 "virtual".to_string(),
                 format!("--enclave-binary={}", &self.enclave_binary_path()),
-                format!("--vmm-binary={}", "/usr/local/cargo/bin/crosvm"),
+                format!("--vmm-binary={}", "/usr/bin/qemu-system-x86_64"),
                 format!(
                     "--bios-binary={}",
                     "./stage0/target/x86_64-unknown-none/release/oak_stage0.bin"

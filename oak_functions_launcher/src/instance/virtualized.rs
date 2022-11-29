@@ -19,7 +19,6 @@ use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
 use command_fds::tokio::CommandFdAsyncExt;
-use futures::TryFutureExt;
 use log::info;
 use std::{
     net::Shutdown,
@@ -27,14 +26,6 @@ use std::{
     path::PathBuf,
     process::Stdio,
 };
-use tokio::time::{sleep, timeout, Duration};
-use vsock::VsockStream;
-
-// The guest VM context ID for virtio vsock connections.
-const VSOCK_GUEST_CID: u32 = 3;
-
-// The guest VM virtio vsock port.
-const VSOCK_GUEST_PORT: u32 = 1024;
 
 /// Parameters used for launching VM instances
 #[derive(Parser, Clone, Debug, PartialEq)]
@@ -58,46 +49,75 @@ pub struct Params {
 
 pub struct Instance {
     console: UnixStream,
+    comms: UnixStream,
     instance: tokio::process::Child,
 }
 
 impl Instance {
     pub fn start(params: Params, console: UnixStream) -> Result<Self> {
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
+        let (comms_guest, comms_host) = UnixStream::pair()?;
 
         cmd.stderr(Stdio::inherit());
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::inherit());
-        cmd.preserved_fds(vec![console.as_raw_fd()]);
+        cmd.preserved_fds(vec![console.as_raw_fd(), comms_guest.as_raw_fd()]);
 
-        // Construct the command-line arguments for `crosvm`.
-        cmd.arg("run");
-        // Don't bother running devices in sandboxed processes.
-        cmd.arg("--disable-sandbox");
-        // First serial port: this will be used by the console
+        // Construct the command-line arguments for `qemu`.
+        cmd.arg("-enable-kvm");
+        // Needed to expose advanced CPU features. Specifically RDRAND which is required for remote
+        // attestation.
+        cmd.args(["-cpu", "IvyBridge-IBRS,enforce"]);
+
+        // Disable a bunch of hardware we don't need.
+        cmd.arg("-nodefaults");
+        cmd.arg("-nographic");
+        // If the VM restarts, don't restart it (we're not expecting any restarts so any restart
+        // should be treated as a failure)
+        cmd.arg("-no-reboot");
+        // Use the `microvm` machine as the basis, and ensure ACPI is enabled.
+        cmd.args(["-machine", "microvm,acpi=on"]);
+        // Route first serial port to console.
         cmd.args([
-            "--serial",
-            format!(
-                "num=1,hardware=serial,type=file,path=/proc/self/fd/{},console,earlycon",
-                console.as_raw_fd()
-            )
-            .as_str(),
+            "-chardev",
+            format!("socket,id=consock,fd={}", console.as_raw_fd()).as_str(),
         ]);
-        cmd.args(["--cid", VSOCK_GUEST_CID.to_string().as_str()]);
-        cmd.args(["--params", "channel=virtio_vsock"]);
+        cmd.args(["-serial", "chardev:consock"]);
+        // Add the virtio device.
+        cmd.args([
+            "-chardev",
+            format!("socket,id=commsock,fd={}", comms_guest.as_raw_fd()).as_str(),
+        ]);
+        cmd.args(["-device", "virtio-serial-device,max_ports=1"]);
+        cmd.args(["-device", "virtconsole,chardev=commsock"]);
+        // Load the kernel ELF via the loader device.
+        cmd.args([
+            "-device",
+            format!("loader,file={}", params.enclave_binary.display()).as_str(),
+        ]);
+        // And yes, use stage0 as the BIOS.
+        cmd.args([
+            "-bios",
+            params
+                .bios_binary
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .as_str(),
+        ]);
 
         if let Some(gdb_port) = params.gdb {
             // Listen for a gdb connection on the provided port and wait for debugger before booting
-            cmd.args(["--gdb", format!("{}", gdb_port).as_str()]);
+            cmd.args(["-gdb", format!("tcp::{}", gdb_port).as_str()]);
+            cmd.arg("-S");
         }
-
-        cmd.arg(params.enclave_binary);
 
         info!("Executing: {:?}", cmd);
 
         Ok(Self {
             instance: cmd.spawn()?,
             console,
+            comms: comms_host,
         })
     }
 }
@@ -116,24 +136,6 @@ impl LaunchedInstance for Instance {
     }
 
     async fn create_comms_channel(&self) -> Result<Box<dyn oak_channel::Channel>> {
-        // The vsock channel can only be created after the VM is booted. Hence
-        // we try a few times to connect, in case the VM is currently starting
-        // up. If no connetion is established after a while, we timeout.
-        let task = tokio::spawn(async {
-            let stream: Box<dyn oak_channel::Channel> = loop {
-                match VsockStream::connect_with_cid_port(VSOCK_GUEST_CID, VSOCK_GUEST_PORT) {
-                    Ok(stream) => {
-                        break Box::new(stream);
-                    }
-                    Err(_error) => {
-                        sleep(Duration::from_millis(100)).await;
-                        continue;
-                    }
-                }
-            };
-            stream
-        })
-        .map_err(anyhow::Error::msg);
-        timeout(Duration::from_millis(1000), task).await?
+        Ok(Box::new(self.comms.try_clone()?))
     }
 }

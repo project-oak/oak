@@ -30,7 +30,7 @@ use crate::{mm::Translator, ADDRESS_TRANSLATOR};
 
 /// Table of well-known ACPI devices (or, rather, well-known to us)
 const ACPI_GED: &str = "ACPI0013";
-const VIRTIO_MMIO: &str = "LNRO0005";
+pub const VIRTIO_MMIO: &str = "LNRO0005";
 const SERIAL_PORT: &str = "PNP0501";
 const PCI_BUS: &str = "PNP0A03";
 const PCIE_BUS: &str = "PNP0A08";
@@ -251,7 +251,7 @@ fn name_from_eisa_id(eisa_id: u64) -> Result<String, AmlError> {
 }
 
 pub struct AcpiDevice {
-    name: AmlName,
+    pub name: AmlName,
 }
 
 impl AcpiDevice {
@@ -263,7 +263,7 @@ impl AcpiDevice {
         let hid = self.invoke("_HID", ctx);
 
         if let Ok(hid) = hid {
-            // If the name is an integer, it's a compressed EISA identifier (yes, really)
+            // If the name is an integer, it's a compressed EISA identifier (yes, really).
             let hid = match hid {
                 AmlValue::String(s) => Ok(s),
                 AmlValue::Integer(i) => name_from_eisa_id(i),
@@ -301,7 +301,7 @@ impl AcpiDevice {
 
 pub struct Acpi {
     tables: AcpiTables<Handler>,
-    aml: AmlContext,
+    pub aml: AmlContext,
 }
 
 impl Acpi {
