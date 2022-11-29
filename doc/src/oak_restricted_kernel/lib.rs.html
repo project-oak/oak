@@ -274,6 +274,20 @@
 <span id="274">274</span>
 <span id="275">275</span>
 <span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -332,12 +346,15 @@
 <span class="attribute">#[cfg(feature = <span class="string">&quot;simple_io_channel&quot;</span>)]
 </span><span class="kw">mod </span>simpleio;
 <span class="kw">mod </span>snp;
-<span class="attribute">#[cfg(any(feature = <span class="string">&quot;virtio_console_channel&quot;</span>, feature = <span class="string">&quot;vsock_channel&quot;</span>))]
+<span class="attribute">#[cfg(feature = <span class="string">&quot;vsock_channel&quot;</span>)]
 </span><span class="kw">mod </span>virtio;
+<span class="attribute">#[cfg(feature = <span class="string">&quot;virtio_console_channel&quot;</span>)]
+</span><span class="kw">mod </span>virtio_console;
 
 <span class="kw">extern crate </span>alloc;
 
 <span class="kw">use crate</span>::{
+    acpi::Acpi,
     mm::Translator,
     snp::{get_snp_page_addresses, init_snp_pages},
 };
@@ -480,9 +497,15 @@
     .unwrap();
 
     <span class="comment">// Init ACPI, if available.
-    </span><span class="kw">match </span>acpi::Acpi::new(info) {
-        <span class="prelude-val">Err</span>(<span class="kw-2">ref </span>err) =&gt; <span class="macro">log::warn!</span>(<span class="string">&quot;Failed to load ACPI tables: {}&quot;</span>, err),
-        <span class="prelude-val">Ok</span>(<span class="kw-2">ref mut </span>acpi) =&gt; acpi.print_devices().unwrap(),
+    </span><span class="kw">let </span><span class="kw-2">mut </span>acpi = <span class="kw">match </span>acpi::Acpi::new(info) {
+        <span class="prelude-val">Err</span>(<span class="kw-2">ref </span>err) =&gt; {
+            <span class="macro">log::warn!</span>(<span class="string">&quot;Failed to load ACPI tables: {}&quot;</span>, err);
+            <span class="prelude-val">None
+        </span>}
+        <span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>acpi) =&gt; {
+            acpi.print_devices().unwrap();
+            <span class="prelude-val">Some</span>(acpi)
+        }
     };
 
     <span class="kw">if </span>sev_snp_enabled {
@@ -498,6 +521,7 @@
         <span class="kw-2">&amp;</span>kernel_args,
         mapper,
         GUEST_HOST_HEAP.get().unwrap(),
+        acpi.as_mut(),
         sev_status,
     )
 }
@@ -520,6 +544,7 @@
     kernel_args: <span class="kw-2">&amp;</span>args::Args,
     mapper: <span class="kw-2">&amp;</span>X,
     alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A,
+    acpi: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Acpi&gt;,
     sev_status: SevStatus,
 ) -&gt; Box&lt;<span class="kw">dyn </span>Channel + <span class="lifetime">&#39;a</span>&gt; {
     <span class="comment">// If we weren&#39;t told which channel to use, arbitrarily pick the first one in the `ChannelType`
@@ -532,7 +557,10 @@
 
     <span class="kw">match </span>chan_type {
         <span class="attribute">#[cfg(feature = <span class="string">&quot;virtio_console_channel&quot;</span>)]
-        </span>ChannelType::VirtioConsole =&gt; Box::new(virtio::get_console_channel(mapper, alloc)),
+        </span>ChannelType::VirtioConsole =&gt; Box::new(virtio_console::get_console_channel(
+            mapper,
+            acpi.expect(<span class="string">&quot;ACPI not available; unable to use virtio console&quot;</span>),
+        )),
         <span class="attribute">#[cfg(feature = <span class="string">&quot;vsock_channel&quot;</span>)]
         </span>ChannelType::VirtioVsock =&gt; Box::new(virtio::get_vsock_channel(mapper, alloc)),
         <span class="attribute">#[cfg(feature = <span class="string">&quot;serial_channel&quot;</span>)]

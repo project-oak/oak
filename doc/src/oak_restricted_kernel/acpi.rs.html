@@ -454,7 +454,7 @@
 
 <span class="doccomment">/// Table of well-known ACPI devices (or, rather, well-known to us)
 </span><span class="kw">const </span>ACPI_GED: <span class="kw-2">&amp;</span>str = <span class="string">&quot;ACPI0013&quot;</span>;
-<span class="kw">const </span>VIRTIO_MMIO: <span class="kw-2">&amp;</span>str = <span class="string">&quot;LNRO0005&quot;</span>;
+<span class="kw">pub const </span>VIRTIO_MMIO: <span class="kw-2">&amp;</span>str = <span class="string">&quot;LNRO0005&quot;</span>;
 <span class="kw">const </span>SERIAL_PORT: <span class="kw-2">&amp;</span>str = <span class="string">&quot;PNP0501&quot;</span>;
 <span class="kw">const </span>PCI_BUS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;PNP0A03&quot;</span>;
 <span class="kw">const </span>PCIE_BUS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;PNP0A08&quot;</span>;
@@ -675,7 +675,7 @@
 }
 
 <span class="kw">pub struct </span>AcpiDevice {
-    name: AmlName,
+    <span class="kw">pub </span>name: AmlName,
 }
 
 <span class="kw">impl </span>AcpiDevice {
@@ -687,7 +687,7 @@
         <span class="kw">let </span>hid = <span class="self">self</span>.invoke(<span class="string">&quot;_HID&quot;</span>, ctx);
 
         <span class="kw">if let </span><span class="prelude-val">Ok</span>(hid) = hid {
-            <span class="comment">// If the name is an integer, it&#39;s a compressed EISA identifier (yes, really)
+            <span class="comment">// If the name is an integer, it&#39;s a compressed EISA identifier (yes, really).
             </span><span class="kw">let </span>hid = <span class="kw">match </span>hid {
                 AmlValue::String(s) =&gt; <span class="prelude-val">Ok</span>(s),
                 AmlValue::Integer(i) =&gt; name_from_eisa_id(i),
@@ -725,7 +725,7 @@
 
 <span class="kw">pub struct </span>Acpi {
     tables: AcpiTables&lt;Handler&gt;,
-    aml: AmlContext,
+    <span class="kw">pub </span>aml: AmlContext,
 }
 
 <span class="kw">impl </span>Acpi {

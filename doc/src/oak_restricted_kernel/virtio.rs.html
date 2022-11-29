@@ -67,21 +67,6 @@
 <span id="67">67</span>
 <span id="68">68</span>
 <span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
-<span id="83">83</span>
-<span id="84">84</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -132,21 +117,6 @@
     <span class="kw">fn </span>flush(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
         <span class="self">self</span>.inner.flush()
     }
-}
-
-<span class="attribute">#[cfg(feature = <span class="string">&quot;virtio_console_channel&quot;</span>)]
-</span><span class="kw">pub fn </span>get_console_channel&lt;<span class="lifetime">&#39;a</span>, X: Translator, A: Allocator&gt;(
-    translator: <span class="kw-2">&amp;</span>X,
-    alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A,
-) -&gt; Channel&lt;oak_virtio::console::Console&lt;<span class="lifetime">&#39;a</span>, VirtioPciTransport, A&gt;&gt; {
-    <span class="kw">let </span>console = oak_virtio::console::Console::find_and_configure_device(
-        |vaddr: VirtAddr| translator.translate_virtual(vaddr),
-        |paddr: PhysAddr| translator.translate_physical(paddr),
-        alloc,
-    )
-    .expect(<span class="string">&quot;couldn&#39;t configure PCI virtio console device&quot;</span>);
-    <span class="macro">info!</span>(<span class="string">&quot;Console device status: {}&quot;</span>, console.get_status());
-    Channel { inner: console }
 }
 
 <span class="attribute">#[cfg(feature = <span class="string">&quot;vsock_channel&quot;</span>)]
