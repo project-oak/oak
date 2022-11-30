@@ -549,6 +549,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71d96e3f3c0b6325d8ccd83c33b28acb183edcb6c67938ba104ec546854b0882"
 
 [[package]]
+name = "micro_rpc"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "micro_rpc_build",
+ "prost",
+]
+
+[[package]]
+name = "micro_rpc_build"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "prost-build",
+]
+
+[[package]]
 name = "multimap"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -590,7 +607,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitflags",
- "oak_idl",
+ "micro_rpc",
  "static_assertions",
 ]
 
@@ -630,12 +647,12 @@ dependencies = [
  "anyhow",
  "hashbrown",
  "log",
+ "micro_rpc",
+ "micro_rpc_build",
  "oak_functions_abi",
  "oak_functions_lookup",
  "oak_functions_wasm",
  "oak_functions_workload_logging",
- "oak_idl",
- "oak_idl_build",
  "oak_logger",
  "oak_remote_attestation",
  "prost",
@@ -646,9 +663,9 @@ name = "oak_functions_freestanding_bin"
 version = "0.1.0"
 dependencies = [
  "log",
+ "micro_rpc",
  "oak_channel",
  "oak_functions_freestanding",
- "oak_idl",
  "oak_linux_boot_params",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
@@ -692,23 +709,6 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_extension",
  "oak_logger",
-]
-
-[[package]]
-name = "oak_idl"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "oak_idl_build",
- "prost",
-]
-
-[[package]]
-name = "oak_idl_build"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "prost-build",
 ]
 
 [[package]]

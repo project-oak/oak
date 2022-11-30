@@ -30,7 +30,7 @@ use std::path::Path;
 ///
 /// For a service called `TestName`, `compile` generates the following objects:
 ///
-/// - a struct named `TestNameServer`, which implements the `oak_idl::InvocationHandler` trait,
+/// - a struct named `TestNameServer`, which implements the `micro_rpc::InvocationHandler` trait,
 ///   dispatching each request to the appropriate method on the underlying service implementation.
 /// - a trait named `TestName`, with a method for each method defined in the protobuf service, and
 ///   an additional default method named `serve` which returns an instance of `TestNameServer`; the
@@ -79,13 +79,13 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!("    service: S"),
         format!("}}"),
         format!(""),
-        format!("impl <S: {service_name}> ::oak_idl::Transport for {server_name}<S> {{"),
+        format!("impl <S: {service_name}> ::micro_rpc::Transport for {server_name}<S> {{"),
         format!("    fn invoke(&mut self, request_bytes: &[u8]) -> Result<::prost::alloc::vec::Vec<u8>, !> {{"),
         format!("        let response_bytes = self"),
         format!("            .invoke_inner(request_bytes)"),
         format!("            .map_or_else("),
-        format!("                ::oak_idl::error_response,"),
-        format!("                ::oak_idl::success_response,"),
+        format!("                ::micro_rpc::error_response,"),
+        format!("                ::micro_rpc::success_response,"),
         format!("            )"),
         format!("            .encode_to_vec();"),
         format!("        Ok(response_bytes)"),
@@ -94,11 +94,11 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!(""),
         format!("impl <S: {service_name}> {server_name}<S> {{"),
         // invoke_inner returns either a successful response body, or an error represented as Status.
-        format!("    fn invoke_inner(&mut self, request_bytes: &[u8]) -> Result<::prost::alloc::vec::Vec<u8>, ::oak_idl::Status> {{"),
-        format!("        let request = ::oak_idl::Request::decode(request_bytes).map_err(|err| {{"),
-        format!("            ::oak_idl::Status::new_with_message("),
-        format!("                ::oak_idl::StatusCode::Internal,"),
-        format!("                ::oak_idl::format!(\"Client failed to deserialize the response: {{:?}}\", err),"),
+        format!("    fn invoke_inner(&mut self, request_bytes: &[u8]) -> Result<::prost::alloc::vec::Vec<u8>, ::micro_rpc::Status> {{"),
+        format!("        let request = ::micro_rpc::Request::decode(request_bytes).map_err(|err| {{"),
+        format!("            ::micro_rpc::Status::new_with_message("),
+        format!("                ::micro_rpc::StatusCode::Internal,"),
+        format!("                ::micro_rpc::format!(\"Client failed to deserialize the response: {{:?}}\", err),"),
         format!("            )"),
         format!("        }})?;"),
         format!("        match request.method_id {{"),
@@ -114,8 +114,8 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
             .flatten(),
     );
     lines.extend(vec![
-        format!("            _ => Err(::oak_idl::Status::new("),
-        format!("                ::oak_idl::StatusCode::Unimplemented,"),
+        format!("            _ => Err(::micro_rpc::Status::new("),
+        format!("                ::micro_rpc::StatusCode::Unimplemented,"),
         format!("            ))"),
         format!("        }}"),
         format!("    }}"),
@@ -139,9 +139,9 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
 fn generate_service_client(service: &Service, asynchronous: bool) -> anyhow::Result<String> {
     let client_name = client_name(service, asynchronous);
     let transport_trait = if asynchronous {
-        "::oak_idl::AsyncTransport"
+        "::micro_rpc::AsyncTransport"
     } else {
-        "::oak_idl::Transport"
+        "::micro_rpc::Transport"
     };
     let mut lines = Vec::new();
     lines.extend(vec![
@@ -177,11 +177,11 @@ fn generate_client_method(method: &Method, asynchronous: bool) -> anyhow::Result
     let method_name = method_name(method);
     let fn_modifier = if asynchronous { "async " } else { "" };
     Ok(vec![
-        format!("    pub {fn_modifier}fn {method_name}(&mut self, request: &{request_type}) -> Result<Result<{response_type}, ::oak_idl::Status>, T::Error> {{"),
+        format!("    pub {fn_modifier}fn {method_name}(&mut self, request: &{request_type}) -> Result<Result<{response_type}, ::micro_rpc::Status>, T::Error> {{"),
         if asynchronous {
-            format!("        ::oak_idl::async_client_invoke(&mut self.transport, {method_id}, request).await")
+            format!("        ::micro_rpc::async_client_invoke(&mut self.transport, {method_id}, request).await")
         } else {
-            format!("        ::oak_idl::client_invoke(&mut self.transport, {method_id}, request)")
+            format!("        ::micro_rpc::client_invoke(&mut self.transport, {method_id}, request)")
         },
         format!("    }}"),
     ])
@@ -198,9 +198,9 @@ fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
     Ok(vec![
         format!("            {method_id} => {{"),
         format!("                let request = {request_type}::decode(request.body.as_ref()).map_err(|err| {{"),
-        format!("                    ::oak_idl::Status::new_with_message("),
-        format!("                        ::oak_idl::StatusCode::Internal,"),
-        format!("                        ::oak_idl::format!(\"Service failed to deserialize the request: {{:?}}\", err)"),
+        format!("                    ::micro_rpc::Status::new_with_message("),
+        format!("                        ::micro_rpc::StatusCode::Internal,"),
+        format!("                        ::micro_rpc::format!(\"Service failed to deserialize the request: {{:?}}\", err)"),
         format!("                    )"),
         format!("                }})?;"),
         format!("                let response = self.service.{method_name}(&request)?;"),
@@ -214,7 +214,7 @@ fn generate_service_method(method: &Method) -> Vec<String> {
     let method_name = method_name(method);
     let request_type = request_type(method);
     let response_type = response_type(method);
-    vec![format!("    fn {method_name}(&mut self, request: &{request_type}) -> Result<{response_type}, ::oak_idl::Status>;")]
+    vec![format!("    fn {method_name}(&mut self, request: &{request_type}) -> Result<{response_type}, ::micro_rpc::Status>;")]
 }
 
 /// Returns the value of the `method_id` comment on the method.

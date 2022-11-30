@@ -3,9 +3,9 @@
 Echo freestanding binary that can be run under
 [crosvm](https://chromium.googlesource.com/chromiumos/platform/crosvm/).
 
-Echo binary receives an IDL request containing bytes, and sends back an IDL
-response with the same bytes, without interpreting them.
+Echo binary receives a microRPC request containing bytes, and sends back a
+microRPC response with the same bytes, without interpreting them.
 
-This binary uses IDL to communicate between the Untrusted Launcher and the guest
-VM. The interface is defined here:
-[`schema.fbs`](testing/oak_echo_service/schema.fbs)
+This binary uses microRPC to communicate between the Untrusted Launcher and the
+guest VM. The interface is defined in
+[`oak_echo.proto`](testing/oak_echo_service/oak_echo.proto).

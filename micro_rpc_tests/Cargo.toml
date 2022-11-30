@@ -1,5 +1,5 @@
 [package]
-name = "oak_idl_tests"
+name = "micro_rpc_tests"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
@@ -9,9 +9,9 @@ license = "Apache-2.0"
 [dev-dependencies]
 async-trait = "*"
 maplit = "*"
-oak_idl = { path = "../oak_idl" }
+micro_rpc = { path = "../micro_rpc" }
 prost = "*"
 tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
-oak_idl_build = { path = "../oak_idl_build" }
+micro_rpc_build = { path = "../micro_rpc_build" }

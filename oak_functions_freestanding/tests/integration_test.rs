@@ -43,8 +43,8 @@ fn it_should_not_handle_user_requests_before_initialization() {
 
     assert_matches!(
         result,
-        Err(oak_idl::Status {
-            code: oak_idl::StatusCode::FailedPrecondition,
+        Err(micro_rpc::Status {
+            code: micro_rpc::StatusCode::FailedPrecondition,
             ..
         })
     );
@@ -89,8 +89,8 @@ fn it_should_only_initialize_once() {
 
     assert_matches!(
         result,
-        Err(oak_idl::Status {
-            code: oak_idl::StatusCode::FailedPrecondition,
+        Err(micro_rpc::Status {
+            code: micro_rpc::StatusCode::FailedPrecondition,
             ..
         })
     );

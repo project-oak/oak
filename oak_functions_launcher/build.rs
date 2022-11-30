@@ -15,7 +15,7 @@
 //
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    oak_idl_build::compile(
+    micro_rpc_build::compile(
         &[format!(
             "{}oak_functions_freestanding/proto/oak_functions.proto",
             env!("WORKSPACE_ROOT")

@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-const OUTPUTS: [&str; 1] = ["oak.protobuf_idl.tests.rs"];
+const OUTPUTS: [&str; 1] = ["micro_rpc.tests.rs"];
 
 #[test]
 fn generate() {

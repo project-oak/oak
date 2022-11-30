@@ -1,5 +1,7 @@
-# Oak Baremetal Runtime
+# Oak Functions
 
-No-std compatible implementation of the business logic of the Oak Runtime. The
-interface of the runtime is defined using the Oak IDL in `schema.rs`, the Rust
-code implements it using the Oak IDL.
+`no_std` compatible implementation of the business logic of the Oak Functions
+enclave binary.
+
+The interface of the service is defined via microRPC in
+[`oak_functions.proto`](/oak_functions_freestanding/proto/oak_functions.proto).

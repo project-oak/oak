@@ -62,7 +62,7 @@ impl OakFunctionsService {
 }
 
 impl<L: oak_logger::OakLogger> Handler for WasmHandler<L> {
-    fn handle(&mut self, request: &[u8]) -> anyhow::Result<oak_idl::Vec<u8>> {
+    fn handle(&mut self, request: &[u8]) -> anyhow::Result<micro_rpc::Vec<u8>> {
         let request = Request {
             body: request.to_vec(),
         };
@@ -75,11 +75,11 @@ impl schema::OakFunctions for OakFunctionsService {
     fn initialize(
         &mut self,
         initialization: &schema::InitializeRequest,
-    ) -> Result<schema::InitializeResponse, oak_idl::Status> {
+    ) -> Result<schema::InitializeResponse, micro_rpc::Status> {
         match &mut self.initialization_state {
             InitializationState::Initialized(_attestation_handler) => {
-                Err(oak_idl::Status::new_with_message(
-                    oak_idl::StatusCode::FailedPrecondition,
+                Err(micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::FailedPrecondition,
                     "already initialized",
                 ))
             }
@@ -90,8 +90,8 @@ impl schema::OakFunctions for OakFunctionsService {
                     self.lookup_data_manager.clone(),
                 )
                 .map_err(|err| {
-                    oak_idl::Status::new_with_message(
-                        oak_idl::StatusCode::Internal,
+                    micro_rpc::Status::new_with_message(
+                        micro_rpc::StatusCode::Internal,
                         format!("couldn't initialize Wasm handler: {:?}", err),
                     )
                 })?;
@@ -101,8 +101,8 @@ impl schema::OakFunctions for OakFunctionsService {
                         wasm_handler,
                     )
                     .map_err(|err| {
-                        oak_idl::Status::new_with_message(
-                            oak_idl::StatusCode::Internal,
+                        micro_rpc::Status::new_with_message(
+                            micro_rpc::StatusCode::Internal,
                             format!("couldn't create attestation handler: {:?}", err),
                         )
                     })?,
@@ -122,10 +122,10 @@ impl schema::OakFunctions for OakFunctionsService {
     fn invoke(
         &mut self,
         request_message: &schema::InvokeRequest,
-    ) -> Result<schema::InvokeResponse, oak_idl::Status> {
+    ) -> Result<schema::InvokeResponse, micro_rpc::Status> {
         match &mut self.initialization_state {
-            InitializationState::Uninitialized => Err(oak_idl::Status::new_with_message(
-                oak_idl::StatusCode::FailedPrecondition,
+            InitializationState::Uninitialized => Err(micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::FailedPrecondition,
                 "not initialized",
             )),
             InitializationState::Initialized(attestation_handler) => {
@@ -133,8 +133,8 @@ impl schema::OakFunctions for OakFunctionsService {
                     attestation_handler
                         .message(&request_message.body)
                         .map_err(|err| {
-                            oak_idl::Status::new_with_message(
-                                oak_idl::StatusCode::Internal,
+                            micro_rpc::Status::new_with_message(
+                                micro_rpc::StatusCode::Internal,
                                 format!("{:?}", err),
                             )
                         })?;
@@ -146,12 +146,12 @@ impl schema::OakFunctions for OakFunctionsService {
     fn update_lookup_data(
         &mut self,
         lookup_data: &schema::LookupData,
-    ) -> Result<schema::Empty, oak_idl::Status> {
+    ) -> Result<schema::Empty, micro_rpc::Status> {
         let data = lookup_data
             .items
             .iter()
             .map(|entry| Ok((entry.key.clone(), entry.value.clone())))
-            .collect::<Result<_, oak_idl::Status>>()?;
+            .collect::<Result<_, micro_rpc::Status>>()?;
 
         self.lookup_data_manager.update_data(data);
         Ok(schema::Empty {})

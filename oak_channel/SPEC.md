@@ -16,7 +16,7 @@ interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119).
 ## Layer Defintions
 
 Conceptually, the Oak Baremetal Communication Protocol is made up of three
-layers. The [Method Layer](#method-layer) uses the Oak IDL to define the methods
+layers. The [Method Layer](#method-layer) uses microRPC to define the methods
 exposed by the service. It is responsible for encoding method parameters and
 return values. The [Message](#message-layer) takes encoded parameters / return
 values and wraps them as distinct messages that include metadata. The
@@ -26,8 +26,8 @@ sent over the transport channel.
 ### Method Layer
 
 Methods define the functionality exposed by service. Each method has clearly
-defined parameters and return types. The Oak IDL is used to define which methods
-are available, their id, parameter and return types. The Oak IDL is also
+defined parameters and return types. microRPC is used to define which methods
+are available, their id, parameter and return types. microRPC is also
 responsible for encoding method parameters and return values to bytes.
 
 #### Invocation
