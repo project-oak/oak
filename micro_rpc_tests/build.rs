@@ -15,11 +15,11 @@
 //
 
 fn main() {
-    oak_idl_build::compile(
+    micro_rpc_build::compile(
         &[format!(
-            "{}oak_idl_tests/proto/test_schema.proto",
+            "{}micro_rpc_tests/proto/test_schema.proto",
             env!("WORKSPACE_ROOT")
         )],
-        &[format!("{}oak_idl_tests/proto", env!("WORKSPACE_ROOT"))],
+        &[format!("{}micro_rpc_tests/proto", env!("WORKSPACE_ROOT"))],
     );
 }

@@ -12,6 +12,6 @@ client = ["std"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
-oak_idl = { path = "../oak_idl" }
+micro_rpc = { path = "../micro_rpc" }
 static_assertions = "*"
 bitflags = "*"

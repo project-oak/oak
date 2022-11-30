@@ -359,6 +359,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "micro_rpc"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "micro_rpc_build",
+ "prost",
+]
+
+[[package]]
+name = "micro_rpc_build"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "prost-build",
+]
+
+[[package]]
 name = "multimap"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -370,7 +387,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitflags",
- "oak_idl",
+ "micro_rpc",
  "static_assertions",
 ]
 
@@ -387,9 +404,9 @@ name = "oak_echo_bin"
 version = "0.1.0"
 dependencies = [
  "log",
+ "micro_rpc",
  "oak_channel",
  "oak_echo_service",
- "oak_idl",
  "oak_linux_boot_params",
  "oak_restricted_kernel",
  "static_assertions",
@@ -401,26 +418,9 @@ version = "0.1.0"
 dependencies = [
  "hashbrown",
  "log",
- "oak_idl",
- "oak_idl_build",
+ "micro_rpc",
+ "micro_rpc_build",
  "prost",
-]
-
-[[package]]
-name = "oak_idl"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "oak_idl_build",
- "prost",
-]
-
-[[package]]
-name = "oak_idl_build"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "prost-build",
 ]
 
 [[package]]

@@ -24,7 +24,7 @@ const TFLITE_DIR: &str = "cc/tflite_micro";
 const TFLITE_LIBRARY_NAME: &str = "tflite_micro";
 
 fn main() {
-    oak_idl_build::compile(
+    micro_rpc_build::compile(
         &[format!(
             "{}oak_tensorflow_service/proto/oak_tensorflow.proto",
             env!("WORKSPACE_ROOT")

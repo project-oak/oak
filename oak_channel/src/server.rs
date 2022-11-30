@@ -19,8 +19,8 @@ use alloc::boxed::Box;
 use anyhow::Context;
 
 /// Starts a blocking server that listens for requests on the provided channel
-/// and responds to them using the provided [`oak_idl::Transport`].
-pub fn start_blocking_server<T: oak_idl::Transport<Error = !>>(
+/// and responds to them using the provided [`micro_rpc::Transport`].
+pub fn start_blocking_server<T: micro_rpc::Transport<Error = !>>(
     channel: Box<dyn Channel>,
     mut server: T,
 ) -> anyhow::Result<!> {

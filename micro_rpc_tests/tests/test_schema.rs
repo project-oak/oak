@@ -13,20 +13,20 @@
 // limitations under the License.
 //
 
-//! This crate contains tests for the `oak_idl_gen_structs` and `oak_idl_gen_services` crates. It
-//! needs to be separate from them in order to be able to invoke them at build time.
+//! This crate contains tests for the `micro_rpc_gen_structs` and `micro_rpc_gen_services` crates.
+//! It needs to be separate from them in order to be able to invoke them at build time.
 
 #![feature(never_type)]
 #![feature(unwrap_infallible)]
 
 extern crate alloc;
 
-use oak_idl::Transport;
+use micro_rpc::Transport;
 
 mod test_schema {
     #![allow(dead_code)]
     use prost::Message;
-    include!(concat!(env!("OUT_DIR"), "/oak.protobuf_idl.tests.rs"));
+    include!(concat!(env!("OUT_DIR"), "/micro_rpc.tests.rs"));
 }
 
 /// Test implementation of a fallible transport that always returns the same error.
@@ -47,21 +47,21 @@ impl test_schema::TestService for TestServiceImpl {
     fn lookup_data(
         &mut self,
         request: &test_schema::LookupDataRequest,
-    ) -> Result<test_schema::LookupDataResponse, oak_idl::Status> {
+    ) -> Result<test_schema::LookupDataResponse, micro_rpc::Status> {
         let h = maplit::hashmap! {
             vec![14, 12] => vec![19, 88]
         };
         h.get(&request.key)
             .map(|v| test_schema::LookupDataResponse { value: v.clone() })
             .ok_or_else(|| {
-                oak_idl::Status::new_with_message(oak_idl::StatusCode::NotFound, "not found")
+                micro_rpc::Status::new_with_message(micro_rpc::StatusCode::NotFound, "not found")
             })
     }
 
     fn log(
         &mut self,
         request: &test_schema::LogRequest,
-    ) -> Result<test_schema::LogResponse, oak_idl::Status> {
+    ) -> Result<test_schema::LogResponse, micro_rpc::Status> {
         eprintln!("log: {}", request.entry);
         Ok(test_schema::LogResponse {})
     }
@@ -95,8 +95,8 @@ fn test_lookup_data() {
         let request = test_schema::LookupDataRequest { key: vec![10, 00] };
         let response = client.lookup_data(&request).into_ok();
         assert_eq!(
-            Err(oak_idl::Status::new_with_message(
-                oak_idl::StatusCode::NotFound,
+            Err(micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::NotFound,
                 "not found"
             )),
             response
@@ -111,7 +111,7 @@ pub struct AsyncTestServiceServer<S: test_schema::TestService> {
 }
 
 #[async_trait::async_trait]
-impl<S: test_schema::TestService + std::marker::Send + std::marker::Sync> oak_idl::AsyncTransport
+impl<S: test_schema::TestService + std::marker::Send + std::marker::Sync> micro_rpc::AsyncTransport
     for AsyncTestServiceServer<S>
 {
     async fn invoke(&mut self, request_bytes: &[u8]) -> Result<alloc::vec::Vec<u8>, !> {
@@ -142,8 +142,8 @@ async fn test_async_lookup_data() {
         let request = test_schema::LookupDataRequest { key: vec![10, 00] };
         let response = client.lookup_data(&request).await.into_ok();
         assert_eq!(
-            Err(oak_idl::Status::new_with_message(
-                oak_idl::StatusCode::NotFound,
+            Err(micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::NotFound,
                 "not found"
             )),
             response

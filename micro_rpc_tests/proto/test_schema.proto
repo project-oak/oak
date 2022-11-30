@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-package oak.protobuf_idl.tests;
+package micro_rpc.tests;
 
 message LookupDataRequest {
   bytes key = 1;

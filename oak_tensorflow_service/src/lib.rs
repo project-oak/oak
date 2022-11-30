@@ -43,21 +43,21 @@ impl schema::Tensorflow for TensorflowService {
     fn initialize(
         &mut self,
         initialization: &schema::InitializeRequest,
-    ) -> Result<schema::InitializeResponse, oak_idl::Status> {
+    ) -> Result<schema::InitializeResponse, micro_rpc::Status> {
         self.tflite_model
             .initialize(&initialization.tensorflow_model)
-            .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
+            .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
         Ok(schema::InitializeResponse {})
     }
 
     fn invoke(
         &mut self,
         request_message: &schema::InvokeRequest,
-    ) -> Result<schema::InvokeResponse, oak_idl::Status> {
+    ) -> Result<schema::InvokeResponse, micro_rpc::Status> {
         let response = self
             .tflite_model
             .run(&request_message.body)
-            .map_err(|_err| oak_idl::Status::new(oak_idl::StatusCode::Internal))?;
+            .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
         Ok(schema::InvokeResponse { body: response })
     }
 }

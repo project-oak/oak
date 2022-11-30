@@ -31,9 +31,9 @@ tonic = "*"
 tonic-web = { version = "*", optional = true }
 oak_functions_abi = { path = "../oak_functions_abi" }
 oak_remote_attestation_noninteractive = { path = "../oak_remote_attestation_noninteractive" }
-oak_idl = { path = "../oak_idl" }
+micro_rpc = { path = "../micro_rpc" }
 oak_channel = { path = "../oak_channel", features = ["client"] }
 hashbrown = "*"
 
 [build-dependencies]
-oak_idl_build = { path = "../oak_idl_build" }
+micro_rpc_build = { path = "../micro_rpc_build" }

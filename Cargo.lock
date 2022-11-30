@@ -2229,6 +2229,35 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71d96e3f3c0b6325d8ccd83c33b28acb183edcb6c67938ba104ec546854b0882"
 
 [[package]]
+name = "micro_rpc"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "micro_rpc_build",
+ "prost 0.11.2",
+]
+
+[[package]]
+name = "micro_rpc_build"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "prost-build 0.11.2",
+]
+
+[[package]]
+name = "micro_rpc_tests"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "maplit",
+ "micro_rpc",
+ "micro_rpc_build",
+ "prost 0.11.2",
+ "tokio",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2421,7 +2450,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitflags",
- "oak_idl",
+ "micro_rpc",
  "static_assertions",
 ]
 
@@ -2440,8 +2469,8 @@ dependencies = [
  "async-trait",
  "hashbrown 0.13.1",
  "log",
- "oak_idl",
- "oak_idl_build",
+ "micro_rpc",
+ "micro_rpc_build",
  "prost 0.11.2",
 ]
 
@@ -2502,13 +2531,13 @@ dependencies = [
  "async-trait",
  "hashbrown 0.13.1",
  "log",
+ "micro_rpc",
+ "micro_rpc_build",
  "oak_functions_abi",
  "oak_functions_lookup",
  "oak_functions_test_utils",
  "oak_functions_wasm",
  "oak_functions_workload_logging",
- "oak_idl",
- "oak_idl_build",
  "oak_logger",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
@@ -2529,10 +2558,10 @@ dependencies = [
  "futures",
  "hashbrown 0.13.1",
  "log",
+ "micro_rpc",
+ "micro_rpc_build",
  "oak_channel",
  "oak_functions_abi",
- "oak_idl",
- "oak_idl_build",
  "oak_remote_attestation_noninteractive",
  "prost 0.11.2",
  "serde",
@@ -2731,35 +2760,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_idl"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "oak_idl_build",
- "prost 0.11.2",
-]
-
-[[package]]
-name = "oak_idl_build"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "prost-build 0.11.2",
-]
-
-[[package]]
-name = "oak_idl_tests"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "maplit",
- "oak_idl",
- "oak_idl_build",
- "prost 0.11.2",
- "tokio",
-]
-
-[[package]]
 name = "oak_linux_boot_params"
 version = "0.1.0"
 dependencies = [
@@ -2904,8 +2904,8 @@ dependencies = [
  "async-trait",
  "hashbrown 0.13.1",
  "log",
- "oak_idl",
- "oak_idl_build",
+ "micro_rpc",
+ "micro_rpc_build",
  "prost 0.11.2",
 ]
 

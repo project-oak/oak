@@ -15,11 +15,11 @@
 //
 
 fn main() {
-    oak_idl_build::compile(
+    micro_rpc_build::compile(
         &[format!(
-            "{}oak_idl/proto/messages.proto",
+            "{}micro_rpc/proto/messages.proto",
             env!("WORKSPACE_ROOT")
         )],
-        &[format!("{}oak_idl/proto", env!("WORKSPACE_ROOT"))],
+        &[format!("{}micro_rpc/proto", env!("WORKSPACE_ROOT"))],
     );
 }

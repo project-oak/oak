@@ -34,7 +34,7 @@ impl proto::Echo for EchoService {
     fn echo(
         &mut self,
         request: &proto::EchoRequest,
-    ) -> Result<proto::EchoResponse, oak_idl::Status> {
+    ) -> Result<proto::EchoResponse, micro_rpc::Status> {
         let request_body: &[u8] = request.body.as_ref();
         info!("Received a request, size: {}", request_body.len());
         let response_body = request_body;

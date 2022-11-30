@@ -9,11 +9,11 @@ license = "Apache-2.0"
 anyhow = { version = "*", default-features = false }
 log = "*"
 hashbrown = "*"
-oak_idl = { path = "../oak_idl" }
+micro_rpc = { path = "../micro_rpc" }
 prost = { version = "*", default-features = false, features = ["prost-derive"] }
 
 [build-dependencies]
-oak_idl_build = { path = "../oak_idl_build" }
+micro_rpc_build = { path = "../micro_rpc_build" }
 
 [dev-dependencies]
 async-trait = "*"

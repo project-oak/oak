@@ -19,14 +19,14 @@ pub struct LogResponse {}
 pub struct TestServiceServer<S> {
     service: S,
 }
-impl<S: TestService> ::oak_idl::Transport for TestServiceServer<S> {
+impl<S: TestService> ::micro_rpc::Transport for TestServiceServer<S> {
     fn invoke(
         &mut self,
         request_bytes: &[u8],
     ) -> Result<::prost::alloc::vec::Vec<u8>, !> {
         let response_bytes = self
             .invoke_inner(request_bytes)
-            .map_or_else(::oak_idl::error_response, ::oak_idl::success_response)
+            .map_or_else(::micro_rpc::error_response, ::micro_rpc::success_response)
             .encode_to_vec();
         Ok(response_bytes)
     }
@@ -35,12 +35,12 @@ impl<S: TestService> TestServiceServer<S> {
     fn invoke_inner(
         &mut self,
         request_bytes: &[u8],
-    ) -> Result<::prost::alloc::vec::Vec<u8>, ::oak_idl::Status> {
-        let request = ::oak_idl::Request::decode(request_bytes)
+    ) -> Result<::prost::alloc::vec::Vec<u8>, ::micro_rpc::Status> {
+        let request = ::micro_rpc::Request::decode(request_bytes)
             .map_err(|err| {
-                ::oak_idl::Status::new_with_message(
-                    ::oak_idl::StatusCode::Internal,
-                    ::oak_idl::format!(
+                ::micro_rpc::Status::new_with_message(
+                    ::micro_rpc::StatusCode::Internal,
+                    ::micro_rpc::format!(
                         "Client failed to deserialize the response: {:?}", err
                     ),
                 )
@@ -49,9 +49,9 @@ impl<S: TestService> TestServiceServer<S> {
             15 => {
                 let request = LookupDataRequest::decode(request.body.as_ref())
                     .map_err(|err| {
-                        ::oak_idl::Status::new_with_message(
-                            ::oak_idl::StatusCode::Internal,
-                            ::oak_idl::format!(
+                        ::micro_rpc::Status::new_with_message(
+                            ::micro_rpc::StatusCode::Internal,
+                            ::micro_rpc::format!(
                                 "Service failed to deserialize the request: {:?}", err
                             ),
                         )
@@ -63,9 +63,9 @@ impl<S: TestService> TestServiceServer<S> {
             16 => {
                 let request = LogRequest::decode(request.body.as_ref())
                     .map_err(|err| {
-                        ::oak_idl::Status::new_with_message(
-                            ::oak_idl::StatusCode::Internal,
-                            ::oak_idl::format!(
+                        ::micro_rpc::Status::new_with_message(
+                            ::micro_rpc::StatusCode::Internal,
+                            ::micro_rpc::format!(
                                 "Service failed to deserialize the request: {:?}", err
                             ),
                         )
@@ -74,7 +74,7 @@ impl<S: TestService> TestServiceServer<S> {
                 let response_body = response.encode_to_vec();
                 Ok(response_body)
             }
-            _ => Err(::oak_idl::Status::new(::oak_idl::StatusCode::Unimplemented)),
+            _ => Err(::micro_rpc::Status::new(::micro_rpc::StatusCode::Unimplemented)),
         }
     }
 }
@@ -82,49 +82,49 @@ pub trait TestService: Sized {
     fn lookup_data(
         &mut self,
         request: &LookupDataRequest,
-    ) -> Result<LookupDataResponse, ::oak_idl::Status>;
-    fn log(&mut self, request: &LogRequest) -> Result<LogResponse, ::oak_idl::Status>;
+    ) -> Result<LookupDataResponse, ::micro_rpc::Status>;
+    fn log(&mut self, request: &LogRequest) -> Result<LogResponse, ::micro_rpc::Status>;
     fn serve(self) -> TestServiceServer<Self> {
         TestServiceServer { service: self }
     }
 }
-pub struct TestServiceClient<T: ::oak_idl::Transport> {
+pub struct TestServiceClient<T: ::micro_rpc::Transport> {
     transport: T,
 }
-impl<T: ::oak_idl::Transport> TestServiceClient<T> {
+impl<T: ::micro_rpc::Transport> TestServiceClient<T> {
     pub fn new(transport: T) -> Self {
         Self { transport }
     }
     pub fn lookup_data(
         &mut self,
         request: &LookupDataRequest,
-    ) -> Result<Result<LookupDataResponse, ::oak_idl::Status>, T::Error> {
-        ::oak_idl::client_invoke(&mut self.transport, 15, request)
+    ) -> Result<Result<LookupDataResponse, ::micro_rpc::Status>, T::Error> {
+        ::micro_rpc::client_invoke(&mut self.transport, 15, request)
     }
     pub fn log(
         &mut self,
         request: &LogRequest,
-    ) -> Result<Result<LogResponse, ::oak_idl::Status>, T::Error> {
-        ::oak_idl::client_invoke(&mut self.transport, 16, request)
+    ) -> Result<Result<LogResponse, ::micro_rpc::Status>, T::Error> {
+        ::micro_rpc::client_invoke(&mut self.transport, 16, request)
     }
 }
-pub struct TestServiceAsyncClient<T: ::oak_idl::AsyncTransport> {
+pub struct TestServiceAsyncClient<T: ::micro_rpc::AsyncTransport> {
     transport: T,
 }
-impl<T: ::oak_idl::AsyncTransport> TestServiceAsyncClient<T> {
+impl<T: ::micro_rpc::AsyncTransport> TestServiceAsyncClient<T> {
     pub fn new(transport: T) -> Self {
         Self { transport }
     }
     pub async fn lookup_data(
         &mut self,
         request: &LookupDataRequest,
-    ) -> Result<Result<LookupDataResponse, ::oak_idl::Status>, T::Error> {
-        ::oak_idl::async_client_invoke(&mut self.transport, 15, request).await
+    ) -> Result<Result<LookupDataResponse, ::micro_rpc::Status>, T::Error> {
+        ::micro_rpc::async_client_invoke(&mut self.transport, 15, request).await
     }
     pub async fn log(
         &mut self,
         request: &LogRequest,
-    ) -> Result<Result<LogResponse, ::oak_idl::Status>, T::Error> {
-        ::oak_idl::async_client_invoke(&mut self.transport, 16, request).await
+    ) -> Result<Result<LogResponse, ::micro_rpc::Status>, T::Error> {
+        ::micro_rpc::async_client_invoke(&mut self.transport, 16, request).await
     }
 }

@@ -18,7 +18,7 @@ simple_io_channel = ["oak_restricted_kernel/simple_io_channel"]
 log = "*"
 oak_channel = { path = "../../oak_channel" }
 oak_restricted_kernel = { path = "../../oak_restricted_kernel", default-features = false }
-oak_idl = { path = "../../oak_idl" }
+micro_rpc = { path = "../../micro_rpc" }
 oak_linux_boot_params = { path = "../../linux_boot_params" }
 static_assertions = "*"
 
