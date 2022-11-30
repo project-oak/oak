@@ -406,7 +406,7 @@
 <span class="kw">impl </span>From&lt;StorageGetItemResponse&gt; <span class="kw">for </span>Vec&lt;u8&gt; {
     <span class="kw">fn </span>from(response: StorageGetItemResponse) -&gt; <span class="self">Self </span>{
         <span class="comment">// Temporary manual serialisation to avoid `bincode` when using `no_std`.
-        // TODO(#2975): Replace this with an IDL-based implemenation when the ABI is converted.
+        // TODO(#2975): Replace this with a microRPC implemenation when the ABI is converted.
         </span><span class="kw">match </span>response.value {
             <span class="prelude-val">None </span>=&gt; Vec::new(),
             <span class="prelude-val">Some</span>(value) =&gt; {
@@ -423,7 +423,7 @@
     <span class="kw">type </span>Error = anyhow::Error;
     <span class="kw">fn </span>try_from(buffer: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
         <span class="comment">// Temporary manual deserialisation to avoid `bincode` when using `no_std`.
-        // TODO(#2975): Replace this with an IDL-based implemenation when the ABI is converted.
+        // TODO(#2975): Replace this with a microRPC implemenation when the ABI is converted.
         </span><span class="kw">const </span>LENGTH_SIZE: usize = size_of::&lt;u64&gt;();
         <span class="comment">// The encoding represents the `None` value as an empty buffer. For a value of
         // `Some(Vec&lt;u8&gt;)` it adds a length-prefix that is also used for additional validation,

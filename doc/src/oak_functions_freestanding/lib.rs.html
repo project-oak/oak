@@ -221,7 +221,7 @@
 }
 
 <span class="kw">impl</span>&lt;L: oak_logger::OakLogger&gt; Handler <span class="kw">for </span>WasmHandler&lt;L&gt; {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;oak_idl::Vec&lt;u8&gt;&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;micro_rpc::Vec&lt;u8&gt;&gt; {
         <span class="kw">let </span>request = Request {
             body: request.to_vec(),
         };
@@ -234,11 +234,11 @@
     <span class="kw">fn </span>initialize(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         initialization: <span class="kw-2">&amp;</span>schema::InitializeRequest,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::InitializeResponse, oak_idl::Status&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::InitializeResponse, micro_rpc::Status&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.initialization_state {
             InitializationState::Initialized(_attestation_handler) =&gt; {
-                <span class="prelude-val">Err</span>(oak_idl::Status::new_with_message(
-                    oak_idl::StatusCode::FailedPrecondition,
+                <span class="prelude-val">Err</span>(micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::FailedPrecondition,
                     <span class="string">&quot;already initialized&quot;</span>,
                 ))
             }
@@ -249,8 +249,8 @@
                     <span class="self">self</span>.lookup_data_manager.clone(),
                 )
                 .map_err(|err| {
-                    oak_idl::Status::new_with_message(
-                        oak_idl::StatusCode::Internal,
+                    micro_rpc::Status::new_with_message(
+                        micro_rpc::StatusCode::Internal,
                         <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t initialize Wasm handler: {:?}&quot;</span>, err),
                     )
                 })<span class="question-mark">?</span>;
@@ -260,8 +260,8 @@
                         wasm_handler,
                     )
                     .map_err(|err| {
-                        oak_idl::Status::new_with_message(
-                            oak_idl::StatusCode::Internal,
+                        micro_rpc::Status::new_with_message(
+                            micro_rpc::StatusCode::Internal,
                             <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t create attestation handler: {:?}&quot;</span>, err),
                         )
                     })<span class="question-mark">?</span>,
@@ -281,10 +281,10 @@
     <span class="kw">fn </span>invoke(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request_message: <span class="kw-2">&amp;</span>schema::InvokeRequest,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::InvokeResponse, oak_idl::Status&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::InvokeResponse, micro_rpc::Status&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.initialization_state {
-            InitializationState::Uninitialized =&gt; <span class="prelude-val">Err</span>(oak_idl::Status::new_with_message(
-                oak_idl::StatusCode::FailedPrecondition,
+            InitializationState::Uninitialized =&gt; <span class="prelude-val">Err</span>(micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::FailedPrecondition,
                 <span class="string">&quot;not initialized&quot;</span>,
             )),
             InitializationState::Initialized(attestation_handler) =&gt; {
@@ -292,8 +292,8 @@
                     attestation_handler
                         .message(<span class="kw-2">&amp;</span>request_message.body)
                         .map_err(|err| {
-                            oak_idl::Status::new_with_message(
-                                oak_idl::StatusCode::Internal,
+                            micro_rpc::Status::new_with_message(
+                                micro_rpc::StatusCode::Internal,
                                 <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, err),
                             )
                         })<span class="question-mark">?</span>;
@@ -305,12 +305,12 @@
     <span class="kw">fn </span>update_lookup_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         lookup_data: <span class="kw-2">&amp;</span>schema::LookupData,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::Empty, oak_idl::Status&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::Empty, micro_rpc::Status&gt; {
         <span class="kw">let </span>data = lookup_data
             .items
             .iter()
             .map(|entry| <span class="prelude-val">Ok</span>((entry.key.clone(), entry.value.clone())))
-            .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, oak_idl::Status&gt;&gt;()<span class="question-mark">?</span>;
+            .collect::&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, micro_rpc::Status&gt;&gt;()<span class="question-mark">?</span>;
 
         <span class="self">self</span>.lookup_data_manager.update_data(data);
         <span class="prelude-val">Ok</span>(schema::Empty {})

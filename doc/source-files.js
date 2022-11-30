@@ -5,6 +5,8 @@ var sourcesIndex = JSON.parse('{\
 "location_utils":["",[],["lib.rs"]],\
 "lookup_data_checker":["",[],["main.rs"]],\
 "lookup_data_generator":["",[],["data.rs","lib.rs"]],\
+"micro_rpc":["",[],["lib.rs","status.rs"]],\
+"micro_rpc_build":["",[],["lib.rs"]],\
 "oak_channel":["",[],["client.rs","frame.rs","lib.rs","message.rs","server.rs"]],\
 "oak_core":["",[],["lib.rs","sync.rs"]],\
 "oak_echo_service":["",[],["lib.rs"]],\
@@ -26,8 +28,6 @@ var sourcesIndex = JSON.parse('{\
 "oak_functions_web_client":["",[],["grpc_web.rs","lib.rs"]],\
 "oak_functions_workload_logging":["",[],["lib.rs"]],\
 "oak_grpc_utils":["",[],["lib.rs"]],\
-"oak_idl":["",[],["lib.rs","status.rs"]],\
-"oak_idl_build":["",[],["lib.rs"]],\
 "oak_linux_boot_params":["",[],["lib.rs"]],\
 "oak_logger":["",[],["lib.rs"]],\
 "oak_remote_attestation":["",[["crypto",[],["mod.rs","ring_crypto.rs"]]],["handshaker.rs","lib.rs","message.rs"]],\
