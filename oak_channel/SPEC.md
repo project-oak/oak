@@ -167,9 +167,9 @@ number.
 
 To receive a message the recipent incrementally reads frames from the
 communication channel. The recipient parses a message from frames by appending
-the frame bodies in the order they are received. The recipient SHOULD validate
-the sequence of frame numbers to ensure that all frames are received in the
-right order.
+the frame bodies in the order they are received. The recipient MUST validate the
+sequence of frame numbers to ensure that all frames are received in the right
+order.
 
 The recipent MAY start parsing a message before fully receiving all of its
 frames.
