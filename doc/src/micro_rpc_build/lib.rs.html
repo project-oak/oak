@@ -271,9 +271,6 @@
 <span id="271">271</span>
 <span id="272">272</span>
 <span id="273">273</span>
-<span id="274">274</span>
-<span id="275">275</span>
-<span id="276">276</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -369,6 +366,9 @@
         <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;impl &lt;S: {service_name}&gt; {server_name}&lt;S&gt; {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;    pub fn new(service: S) -&gt; Self {{&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;        Self {{ service }}&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
         <span class="comment">// invoke_inner returns either a successful response body, or an error represented as Status.
         </span><span class="macro">format!</span>(<span class="string">&quot;    fn invoke_inner(&amp;mut self, request_bytes: &amp;[u8]) -&gt; Result&lt;::prost::alloc::vec::Vec&lt;u8&gt;, ::micro_rpc::Status&gt; {{&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;        let request = ::micro_rpc::Request::decode(request_bytes).map_err(|err| {{&quot;</span>),
@@ -400,13 +400,7 @@
         <span class="macro">format!</span>(<span class="string">&quot;pub trait {service_name}: Sized {{&quot;</span>),
     ]);
     lines.extend(service.methods.iter().flat_map(generate_service_method));
-    lines.extend(<span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">&quot;    fn serve(self) -&gt; {server_name}&lt;Self&gt; {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;        {server_name} {{ service : self }}&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;    }}&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>),
-    ]);
+    lines.extend(<span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;}}&quot;</span>), <span class="macro">format!</span>(<span class="string">&quot;&quot;</span>)]);
     <span class="prelude-val">Ok</span>(lines.into_iter().intersperse(<span class="string">&quot;\n&quot;</span>.to_string()).collect())
 }
 

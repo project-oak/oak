@@ -179,6 +179,9 @@
     }
 }
 <span class="kw">impl</span>&lt;S: Tensorflow&gt; TensorflowServer&lt;S&gt; {
+    <span class="kw">pub fn </span>new(service: S) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ service }
+    }
     <span class="kw">fn </span>invoke_inner(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request_bytes: <span class="kw-2">&amp;</span>[u8],
@@ -234,9 +237,6 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request: <span class="kw-2">&amp;</span>InvokeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, ::micro_rpc::Status&gt;;
-    <span class="kw">fn </span>serve(<span class="self">self</span>) -&gt; TensorflowServer&lt;<span class="self">Self</span>&gt; {
-        TensorflowServer { service: <span class="self">self </span>}
-    }
 }
 <span class="kw">pub struct </span>TensorflowClient&lt;T: ::micro_rpc::Transport&gt; {
     transport: T,

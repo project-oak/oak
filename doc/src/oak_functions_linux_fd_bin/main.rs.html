@@ -130,7 +130,7 @@
     ));
     oak_channel::server::start_blocking_server(
         channel,
-        oak_functions_freestanding::schema::OakFunctions::serve(service),
+        oak_functions_freestanding::schema::OakFunctionsServer::new(service),
     )
     .expect(<span class="string">&quot;server encountered an unrecoverable error&quot;</span>);
 }

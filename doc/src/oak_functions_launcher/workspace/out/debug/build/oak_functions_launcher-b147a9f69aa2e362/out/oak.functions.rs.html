@@ -187,8 +187,6 @@
 <span id="187">187</span>
 <span id="188">188</span>
 <span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
 </pre><pre class="rust"><code><span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InitializeRequest {
     <span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
@@ -249,6 +247,9 @@
     }
 }
 <span class="kw">impl</span>&lt;S: OakFunctions&gt; OakFunctionsServer&lt;S&gt; {
+    <span class="kw">pub fn </span>new(service: S) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ service }
+    }
     <span class="kw">fn </span>invoke_inner(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request_bytes: <span class="kw-2">&amp;</span>[u8],
@@ -322,11 +323,6 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request: <span class="kw-2">&amp;</span>LookupData,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Empty, ::micro_rpc::Status&gt;;
-    <span class="kw">fn </span>serve(<span class="self">self</span>) -&gt; OakFunctionsServer&lt;<span class="self">Self</span>&gt; {
-        OakFunctionsServer {
-            service: <span class="self">self</span>,
-        }
-    }
 }
 <span class="kw">pub struct </span>OakFunctionsClient&lt;T: ::micro_rpc::Transport&gt; {
     transport: T,
