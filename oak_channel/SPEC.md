@@ -174,11 +174,11 @@ the frame bodies in the order they are received.
 
 The recipient MUST perform the following validation on a received message:
 
-- The protocol version for all frames MUST be 1
-- All frames MUST have the same message length specified
-- All frames MUST have the same invocation ID specified
-- The body length of each frame MUST NOT exceed 4,080
-- If the frame is not the last frame of the message, the body length MUST be
+- the protocol version for all frames MUST be 1
+- all frames MUST have the same message length specified
+- all frames MUST have the same invocation ID specified
+- the body length of each frame MUST NOT exceed 4,080
+- if the frame is not the last frame of the message, the body length MUST be
   exactly 4,080
 - the frame number of the first frame of a message MUST be 0
 - the frame number of any subsequent frames for the same message MUST be 1
@@ -189,9 +189,9 @@ The recipient MUST perform the following validation on a received message:
 If any of these validations fail the recipient MUST treat the message as
 invalid:
 
-- If the recipient is the service it MUST send a corresponding response for the
+- if the recipient is the service it MUST send a corresponding response for the
   invocation indicating an error
-- If the recipient is the client it MUST discard the message and treat it as a
+- if the recipient is the client it MUST discard the message and treat it as a
   failed invocation
 
 The recipent MAY start parsing a message before fully receiving all of its
