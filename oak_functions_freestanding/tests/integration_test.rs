@@ -21,7 +21,7 @@ extern crate alloc;
 
 use core::assert_matches::assert_matches;
 use oak_functions_freestanding::{
-    schema::{self, OakFunctions},
+    schema::{self, OakFunctionsServer},
     OakFunctionsService,
 };
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
@@ -34,7 +34,7 @@ const LOOKUP_TEST_VALUE: &[u8] = b"test_value";
 #[test]
 fn it_should_not_handle_user_requests_before_initialization() {
     let service = OakFunctionsService::new(Arc::new(PlaceholderAmdAttestationGenerator));
-    let mut client = schema::OakFunctionsClient::new(OakFunctions::serve(service));
+    let mut client = schema::OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let request = schema::InvokeRequest {
         body: vec![1, 2, 3],
@@ -53,7 +53,7 @@ fn it_should_not_handle_user_requests_before_initialization() {
 #[test]
 fn it_should_handle_user_requests_after_initialization() {
     let service = OakFunctionsService::new(Arc::new(PlaceholderAmdAttestationGenerator));
-    let mut client = schema::OakFunctionsClient::new(OakFunctions::serve(service));
+    let mut client = schema::OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
@@ -75,7 +75,7 @@ fn it_should_handle_user_requests_after_initialization() {
 #[test]
 fn it_should_only_initialize_once() {
     let service = OakFunctionsService::new(Arc::new(PlaceholderAmdAttestationGenerator));
-    let mut client = schema::OakFunctionsClient::new(OakFunctions::serve(service));
+    let mut client = schema::OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
     let wasm_bytes = std::fs::read(wasm_path).unwrap();
@@ -99,7 +99,7 @@ fn it_should_only_initialize_once() {
 #[tokio::test]
 async fn it_should_support_lookup_data() {
     let service = OakFunctionsService::new(Arc::new(PlaceholderAmdAttestationGenerator));
-    let mut client = schema::OakFunctionsClient::new(OakFunctions::serve(service));
+    let mut client = schema::OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
     let wasm_bytes = std::fs::read(wasm_path).unwrap();

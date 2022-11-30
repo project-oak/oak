@@ -38,7 +38,7 @@ fn main(channel: Box<dyn Channel>) -> ! {
     let service = oak_functions_freestanding::OakFunctionsService::new(Arc::new(
         PlaceholderAmdAttestationGenerator,
     ));
-    let server = oak_functions_freestanding::schema::OakFunctions::serve(service);
+    let server = oak_functions_freestanding::schema::OakFunctionsServer::new(service);
     oak_channel::server::start_blocking_server(channel, server)
         .expect("server encountered an unrecoverable error");
 }
