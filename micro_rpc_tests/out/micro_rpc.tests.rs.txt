@@ -32,6 +32,9 @@ impl<S: TestService> ::micro_rpc::Transport for TestServiceServer<S> {
     }
 }
 impl<S: TestService> TestServiceServer<S> {
+    pub fn new(service: S) -> Self {
+        Self { service }
+    }
     fn invoke_inner(
         &mut self,
         request_bytes: &[u8],
@@ -84,9 +87,6 @@ pub trait TestService: Sized {
         request: &LookupDataRequest,
     ) -> Result<LookupDataResponse, ::micro_rpc::Status>;
     fn log(&mut self, request: &LogRequest) -> Result<LogResponse, ::micro_rpc::Status>;
-    fn serve(self) -> TestServiceServer<Self> {
-        TestServiceServer { service: self }
-    }
 }
 pub struct TestServiceClient<T: ::micro_rpc::Transport> {
     transport: T,

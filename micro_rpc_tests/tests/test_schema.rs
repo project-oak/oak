@@ -78,8 +78,7 @@ fn test_failing_transport() {
 #[test]
 fn test_lookup_data() {
     let service = TestServiceImpl;
-    use test_schema::TestService;
-    let transport = service.serve();
+    let transport = test_schema::TestServiceServer::new(service);
     let mut client = test_schema::TestServiceClient::new(transport);
     {
         let request = test_schema::LookupDataRequest { key: vec![14, 12] };
@@ -122,8 +121,7 @@ impl<S: test_schema::TestService + std::marker::Send + std::marker::Sync> micro_
 #[tokio::test]
 async fn test_async_lookup_data() {
     let service = TestServiceImpl;
-    use test_schema::TestService;
-    let service_impl = service.serve();
+    let service_impl = test_schema::TestServiceServer::new(service);
     let async_transport = AsyncTestServiceServer {
         inner: service_impl,
     };

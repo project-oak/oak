@@ -21,7 +21,7 @@
 extern crate alloc;
 
 use oak_echo_service::{
-    proto::{Echo, EchoClient, EchoRequest},
+    proto::{EchoClient, EchoRequest, EchoServer},
     EchoService,
 };
 
@@ -30,7 +30,7 @@ const TEST_DATA: &[u8] = b"test_data";
 #[test]
 fn it_should_handle_echo_requests() {
     let service = EchoService::default();
-    let mut client = EchoClient::new(service.serve());
+    let mut client = EchoClient::new(EchoServer::new(service));
 
     let request = EchoRequest {
         body: TEST_DATA.to_vec(),

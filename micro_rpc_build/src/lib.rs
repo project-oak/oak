@@ -93,6 +93,9 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!("}}"),
         format!(""),
         format!("impl <S: {service_name}> {server_name}<S> {{"),
+        format!("    pub fn new(service: S) -> Self {{"),
+        format!("        Self {{ service }}"),
+        format!("    }}"),
         // invoke_inner returns either a successful response body, or an error represented as Status.
         format!("    fn invoke_inner(&mut self, request_bytes: &[u8]) -> Result<::prost::alloc::vec::Vec<u8>, ::micro_rpc::Status> {{"),
         format!("        let request = ::micro_rpc::Request::decode(request_bytes).map_err(|err| {{"),
@@ -124,13 +127,7 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!("pub trait {service_name}: Sized {{"),
     ]);
     lines.extend(service.methods.iter().flat_map(generate_service_method));
-    lines.extend(vec![
-        format!("    fn serve(self) -> {server_name}<Self> {{"),
-        format!("        {server_name} {{ service : self }}"),
-        format!("    }}"),
-        format!("}}"),
-        format!(""),
-    ]);
+    lines.extend(vec![format!("}}"), format!("")]);
     Ok(lines.into_iter().intersperse("\n".to_string()).collect())
 }
 
