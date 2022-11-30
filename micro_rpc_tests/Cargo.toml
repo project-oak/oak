@@ -11,6 +11,7 @@ async-trait = "*"
 maplit = "*"
 micro_rpc = { path = "../micro_rpc" }
 prost = "*"
+prost-types = "*"
 tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]

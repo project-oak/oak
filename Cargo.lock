@@ -2254,6 +2254,7 @@ dependencies = [
  "micro_rpc",
  "micro_rpc_build",
  "prost 0.11.2",
+ "prost-types 0.11.2",
  "tokio",
 ]
 
