@@ -25,7 +25,7 @@ frames which are then sent over the transport channel.
 
 Methods define the functionality exposed by the service. Each method defines
 input parameters and return types. Protocol buffers (protobuf) is used to define
-which methods are available, the method ids, input parameters and return types.
+which methods are available, the method IDs, input parameters and return types.
 The client and service convert the requests and responses into bytes using
 standard protobuf encoding.
 
@@ -63,8 +63,9 @@ messages follows an identical format.
 
 #### Message
 
-The invocation ID and message length is already encoded into the frame, so a
-byte encoded message MUST only consist of the encoded bytes:
+The invocation ID and message length is already encoded into the frame header,
+so an encoded message does not have a header of its own and MUST only consist of
+a body containing the encoded bytes of the request or response:
 
 ```text
  0                   1                   2                   3
@@ -79,10 +80,6 @@ byte encoded message MUST only consist of the encoded bytes:
 <!-- Diagram generated with https://www.luismg.com/protocol/, using the spec
 "body bytes...:64"  -->
 
-- `body`, variable length byte array
-
-  Encoded byte content of the message.
-
 ### Frame Layer
 
 Messages are sent and received as frames with a maximum total length of 4,096
@@ -90,36 +87,19 @@ bytes per frame. Each message is fragmented into a set of one or more frames.
 
 #### Frame
 
-A byte encoded frame MUST consist of the following fields:
+MUST consist of a header and a body. The encoded header is 16 bytes long and
+MUST consist of the following fields:
 
-```text
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                          body_length                          |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                         message_length                        |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                          frame_number                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                         invocation_id                         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-+                         body bytes...                         +
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
-```
+- `protocol_version`, unsigned 16-bit little-endian integer
 
-<!-- Diagram generated with https://www.luismg.com/protocol/, using the spec
-"invocation_id:32,message_length:32,frame_number:32,body_length:32,body bytes...:64" -->
+  The version of the communication protocol in use. This value MUST be 1 for
+  this version of the specification.
 
-- `invocation_id`, u32, little endian
+- `body_length`, unsigned 16-bit little-endian integer
 
-  The unique ID of the invocation that the frame's forms a part of. All the
-  frames that make up a message MUST have the same invocation ID. The invocation
-  ID of a response message MUST match the value of its related request message.
-  The invocation ID MUST be incremented for each method invocation, naturally
-  wrapping when the maximum value for the data type is reached.
+  The length of the body contents of the frame. This value must not exceed
+  4,080. The sum of the body lengths of all the frames in a message must equal
+  the message length.
 
 - `message_length`, unsigned 32-bit little-endian integer
 
@@ -136,16 +116,39 @@ A byte encoded frame MUST consist of the following fields:
   frame. Frames for a single message MUST be sent in ascending order of the
   frame number.
 
-- `body_length`, unsigned 32-bit little-endian integer
+- `invocation_id`, u32, little endian
 
-  The length of the body byte array of the frame. This value must not exceed
-  4,080. The sum of the body lengths of all the frames in a message must equal
-  the message length.
+  The unique ID of the invocation that the frame is part of. All the frames that
+  make up a message MUST have the same invocation ID. The invocation ID of a
+  response message MUST match the invocation ID of its related request message.
+  The invocation ID MUST be incremented for each method invocation, naturally
+  wrapping when the maximum value for the data type is reached.
 
-- `body`, variable length byte array
+The body contains the fragment of the encoded message corresponding to the frame
+number. The size of the body MUST NOT exceed 4,080 bytes.
 
-  Byte fragment of an encoded message. This size of the byte array MUST NOT
-  exceed 4,080 bytes.
+Representation of the encoded frame:
+
+```text
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|        protocol_version       |          body_length          |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         message_length                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                          frame_number                         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         invocation_id                         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                                               |
++                         body bytes...                         +
+|                                                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ...
+```
+
+<!-- Diagram generated with https://www.luismg.com/protocol/, using the spec
+"protocol_version:16,body_length:16,message_length:32,frame_number:32,invocation_id:32,body bytes...:64" -->
 
 The maximum total length of a single frame is 4,096 bytes.
 
@@ -167,9 +170,29 @@ number.
 
 To receive a message the recipent incrementally reads frames from the
 communication channel. The recipient parses a message from frames by appending
-the frame bodies in the order they are received. The recipient MUST validate the
-sequence of frame numbers to ensure that all frames are received in the right
-order.
+the frame bodies in the order they are received.
+
+The recipient MUST perform the following validation on a received message:
+
+- The protocol version for all frames MUST be 1
+- All frames MUST have the same message length specified
+- All frames MUST have the same invocation ID specified
+- The body length of each frame MUST NOT exceed 4,080
+- If the frame is not the last frame of the message, the body length MUST be
+  exactly 4,080
+- the frame number of the first frame of a message MUST be 0
+- the frame number of any subsequent frames for the same message MUST be 1
+  higher than the number of the previous frame
+- the sum of the body lengths of the frames in the message MUST equal the
+  message length
+
+If any of these validations fail the recipient MUST treat the message as
+invalid:
+
+- If the recipient is the service it MUST send a corresponding response for the
+  invocation indicating an error
+- If the recipient is the client it MUST discard the message and treat it as a
+  failed invocation
 
 The recipent MAY start parsing a message before fully receiving all of its
 frames.
