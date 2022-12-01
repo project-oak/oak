@@ -265,7 +265,7 @@
             })<span class="question-mark">?</span>;
         <span class="kw">match </span>request.method_id {
             <span class="number">0 </span>=&gt; {
-                <span class="kw">let </span>request = InitializeRequest::decode(request.body.as_ref())
+                <span class="kw">let </span>request = &lt;InitializeRequest&gt;::decode(request.body.as_ref())
                     .map_err(|err| {
                         ::micro_rpc::Status::new_with_message(
                             ::micro_rpc::StatusCode::Internal,
@@ -279,7 +279,7 @@
                 <span class="prelude-val">Ok</span>(response_body)
             }
             <span class="number">1 </span>=&gt; {
-                <span class="kw">let </span>request = InvokeRequest::decode(request.body.as_ref())
+                <span class="kw">let </span>request = &lt;InvokeRequest&gt;::decode(request.body.as_ref())
                     .map_err(|err| {
                         ::micro_rpc::Status::new_with_message(
                             ::micro_rpc::StatusCode::Internal,
@@ -293,7 +293,7 @@
                 <span class="prelude-val">Ok</span>(response_body)
             }
             <span class="number">2 </span>=&gt; {
-                <span class="kw">let </span>request = LookupData::decode(request.body.as_ref())
+                <span class="kw">let </span>request = &lt;LookupData&gt;::decode(request.body.as_ref())
                     .map_err(|err| {
                         ::micro_rpc::Status::new_with_message(
                             ::micro_rpc::StatusCode::Internal,

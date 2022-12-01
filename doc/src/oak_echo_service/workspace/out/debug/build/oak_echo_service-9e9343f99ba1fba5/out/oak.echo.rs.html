@@ -139,7 +139,7 @@
             })<span class="question-mark">?</span>;
         <span class="kw">match </span>request.method_id {
             <span class="number">1988 </span>=&gt; {
-                <span class="kw">let </span>request = EchoRequest::decode(request.body.as_ref())
+                <span class="kw">let </span>request = &lt;EchoRequest&gt;::decode(request.body.as_ref())
                     .map_err(|err| {
                         ::micro_rpc::Status::new_with_message(
                             ::micro_rpc::StatusCode::Internal,

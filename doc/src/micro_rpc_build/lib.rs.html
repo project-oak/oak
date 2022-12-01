@@ -271,6 +271,8 @@
 <span id="271">271</span>
 <span id="272">272</span>
 <span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -467,7 +469,9 @@
     <span class="kw">let </span>method_name = method_name(method);
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">&quot;            {method_id} =&gt; {{&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                let request = {request_type}::decode(request.body.as_ref()).map_err(|err| {{&quot;</span>),
+        <span class="comment">// We need the angle brackets around the type in order to make sure it works with Rust well 
+        // known types, e.g. when `google.protobuf.Empty` is replaced by `()`.
+        </span><span class="macro">format!</span>(<span class="string">&quot;                let request = &lt;{request_type}&gt;::decode(request.body.as_ref()).map_err(|err| {{&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                    ::micro_rpc::Status::new_with_message(&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                        ::micro_rpc::StatusCode::Internal,&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                        ::micro_rpc::format!(\&quot;Service failed to deserialize the request: {{:?}}\&quot;, err)&quot;</span>),
