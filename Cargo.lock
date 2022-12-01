@@ -170,13 +170,15 @@ checksum = "ec8ad6edb4840b78c5c3d88de606b22252d552b55f3a4699fbb10fc070ec3049"
 
 [[package]]
 name = "aml"
-version = "0.15.0"
+version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c264f2e933012ef2dd324cdac38f4c6c142473c1d1a1357ba16321e7d892975f"
+checksum = "e7450aaee7581251d456c0f283f4c3db13b09a95054572ae77b6d22f77216caf"
 dependencies = [
  "bit_field",
+ "bitvec",
  "byteorder",
  "log",
+ "spinning_top",
 ]
 
 [[package]]
