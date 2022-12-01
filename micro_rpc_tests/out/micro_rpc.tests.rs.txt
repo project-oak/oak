@@ -50,7 +50,7 @@ impl<S: TestService> TestServiceServer<S> {
             })?;
         match request.method_id {
             15 => {
-                let request = LookupDataRequest::decode(request.body.as_ref())
+                let request = <LookupDataRequest>::decode(request.body.as_ref())
                     .map_err(|err| {
                         ::micro_rpc::Status::new_with_message(
                             ::micro_rpc::StatusCode::Internal,
@@ -64,7 +64,7 @@ impl<S: TestService> TestServiceServer<S> {
                 Ok(response_body)
             }
             16 => {
-                let request = LogRequest::decode(request.body.as_ref())
+                let request = <LogRequest>::decode(request.body.as_ref())
                     .map_err(|err| {
                         ::micro_rpc::Status::new_with_message(
                             ::micro_rpc::StatusCode::Internal,
@@ -74,6 +74,62 @@ impl<S: TestService> TestServiceServer<S> {
                         )
                     })?;
                 let response = self.service.log(&request)?;
+                let response_body = response.encode_to_vec();
+                Ok(response_body)
+            }
+            17 => {
+                let request = <()>::decode(request.body.as_ref())
+                    .map_err(|err| {
+                        ::micro_rpc::Status::new_with_message(
+                            ::micro_rpc::StatusCode::Internal,
+                            ::micro_rpc::format!(
+                                "Service failed to deserialize the request: {:?}", err
+                            ),
+                        )
+                    })?;
+                let response = self.service.empty(&request)?;
+                let response_body = response.encode_to_vec();
+                Ok(response_body)
+            }
+            18 => {
+                let request = <::prost_types::Duration>::decode(request.body.as_ref())
+                    .map_err(|err| {
+                        ::micro_rpc::Status::new_with_message(
+                            ::micro_rpc::StatusCode::Internal,
+                            ::micro_rpc::format!(
+                                "Service failed to deserialize the request: {:?}", err
+                            ),
+                        )
+                    })?;
+                let response = self.service.duration(&request)?;
+                let response_body = response.encode_to_vec();
+                Ok(response_body)
+            }
+            19 => {
+                let request = <::prost_types::Timestamp>::decode(request.body.as_ref())
+                    .map_err(|err| {
+                        ::micro_rpc::Status::new_with_message(
+                            ::micro_rpc::StatusCode::Internal,
+                            ::micro_rpc::format!(
+                                "Service failed to deserialize the request: {:?}", err
+                            ),
+                        )
+                    })?;
+                let response = self.service.timestamp(&request)?;
+                let response_body = response.encode_to_vec();
+                Ok(response_body)
+            }
+            20 => {
+                let request = <::prost_types::Any>::decode(request.body.as_ref())
+                    .map_err(|err| {
+                        ::micro_rpc::Status::new_with_message(
+                            ::micro_rpc::StatusCode::Internal,
+                            ::micro_rpc::format!(
+                                "Service failed to deserialize the request: {:?}", err
+                            ),
+                        )
+                    })?;
+                let response = self.service.any(&request)?;
                 let response_body = response.encode_to_vec();
                 Ok(response_body)
             }
@@ -87,6 +143,19 @@ pub trait TestService: Sized {
         request: &LookupDataRequest,
     ) -> Result<LookupDataResponse, ::micro_rpc::Status>;
     fn log(&mut self, request: &LogRequest) -> Result<LogResponse, ::micro_rpc::Status>;
+    fn empty(&mut self, request: &()) -> Result<(), ::micro_rpc::Status>;
+    fn duration(
+        &mut self,
+        request: &::prost_types::Duration,
+    ) -> Result<::prost_types::Duration, ::micro_rpc::Status>;
+    fn timestamp(
+        &mut self,
+        request: &::prost_types::Timestamp,
+    ) -> Result<::prost_types::Timestamp, ::micro_rpc::Status>;
+    fn any(
+        &mut self,
+        request: &::prost_types::Any,
+    ) -> Result<::prost_types::Any, ::micro_rpc::Status>;
 }
 pub struct TestServiceClient<T: ::micro_rpc::Transport> {
     transport: T,
@@ -107,6 +176,30 @@ impl<T: ::micro_rpc::Transport> TestServiceClient<T> {
     ) -> Result<Result<LogResponse, ::micro_rpc::Status>, T::Error> {
         ::micro_rpc::client_invoke(&mut self.transport, 16, request)
     }
+    pub fn empty(
+        &mut self,
+        request: &(),
+    ) -> Result<Result<(), ::micro_rpc::Status>, T::Error> {
+        ::micro_rpc::client_invoke(&mut self.transport, 17, request)
+    }
+    pub fn duration(
+        &mut self,
+        request: &::prost_types::Duration,
+    ) -> Result<Result<::prost_types::Duration, ::micro_rpc::Status>, T::Error> {
+        ::micro_rpc::client_invoke(&mut self.transport, 18, request)
+    }
+    pub fn timestamp(
+        &mut self,
+        request: &::prost_types::Timestamp,
+    ) -> Result<Result<::prost_types::Timestamp, ::micro_rpc::Status>, T::Error> {
+        ::micro_rpc::client_invoke(&mut self.transport, 19, request)
+    }
+    pub fn any(
+        &mut self,
+        request: &::prost_types::Any,
+    ) -> Result<Result<::prost_types::Any, ::micro_rpc::Status>, T::Error> {
+        ::micro_rpc::client_invoke(&mut self.transport, 20, request)
+    }
 }
 pub struct TestServiceAsyncClient<T: ::micro_rpc::AsyncTransport> {
     transport: T,
@@ -126,5 +219,29 @@ impl<T: ::micro_rpc::AsyncTransport> TestServiceAsyncClient<T> {
         request: &LogRequest,
     ) -> Result<Result<LogResponse, ::micro_rpc::Status>, T::Error> {
         ::micro_rpc::async_client_invoke(&mut self.transport, 16, request).await
+    }
+    pub async fn empty(
+        &mut self,
+        request: &(),
+    ) -> Result<Result<(), ::micro_rpc::Status>, T::Error> {
+        ::micro_rpc::async_client_invoke(&mut self.transport, 17, request).await
+    }
+    pub async fn duration(
+        &mut self,
+        request: &::prost_types::Duration,
+    ) -> Result<Result<::prost_types::Duration, ::micro_rpc::Status>, T::Error> {
+        ::micro_rpc::async_client_invoke(&mut self.transport, 18, request).await
+    }
+    pub async fn timestamp(
+        &mut self,
+        request: &::prost_types::Timestamp,
+    ) -> Result<Result<::prost_types::Timestamp, ::micro_rpc::Status>, T::Error> {
+        ::micro_rpc::async_client_invoke(&mut self.transport, 19, request).await
+    }
+    pub async fn any(
+        &mut self,
+        request: &::prost_types::Any,
+    ) -> Result<Result<::prost_types::Any, ::micro_rpc::Status>, T::Error> {
+        ::micro_rpc::async_client_invoke(&mut self.transport, 20, request).await
     }
 }

@@ -24,7 +24,7 @@ extern crate alloc;
 use micro_rpc::Transport;
 
 mod test_schema {
-    #![allow(dead_code)]
+    #![allow(dead_code, clippy::let_unit_value)]
     use prost::Message;
     include!(concat!(env!("OUT_DIR"), "/micro_rpc.tests.rs"));
 }
@@ -64,6 +64,28 @@ impl test_schema::TestService for TestServiceImpl {
     ) -> Result<test_schema::LogResponse, micro_rpc::Status> {
         eprintln!("log: {}", request.entry);
         Ok(test_schema::LogResponse {})
+    }
+
+    fn empty(&mut self, _request: &()) -> Result<(), ::micro_rpc::Status> {
+        Ok(())
+    }
+    fn duration(
+        &mut self,
+        _request: &::prost_types::Duration,
+    ) -> Result<::prost_types::Duration, ::micro_rpc::Status> {
+        Ok(std::time::Duration::from_millis(123).try_into().unwrap())
+    }
+    fn timestamp(
+        &mut self,
+        _request: &::prost_types::Timestamp,
+    ) -> Result<::prost_types::Timestamp, ::micro_rpc::Status> {
+        Ok(std::time::SystemTime::UNIX_EPOCH.try_into().unwrap())
+    }
+    fn any(
+        &mut self,
+        _request: &::prost_types::Any,
+    ) -> Result<::prost_types::Any, ::micro_rpc::Status> {
+        Ok(prost_types::Any::default())
     }
 }
 
