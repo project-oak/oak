@@ -41,6 +41,8 @@ struct Cli {
     stage0_rom: Option<PathBuf>,
     #[arg(long, help = "The location of the enclave binary")]
     enclave_binary: Option<PathBuf>,
+    #[arg(long, help = "Whether the firwmare is shadowed to support legacy boot")]
+    legacy_boot: bool,
 }
 
 impl Cli {
@@ -66,8 +68,10 @@ fn main() -> anyhow::Result<()> {
     let mut page_info = PageInfo::new();
     // Add the Stage 0 firmware ROM image.
     page_info.update_from_data(stage0.rom_bytes(), stage0.start_address);
-    // Add the legacy boot shadow of the Stage 0 firmware ROM image.
-    page_info.update_from_data(stage0.legacy_shadow_bytes(), stage0.legacy_start_address);
+    if cli.legacy_boot {
+        // Add the legacy boot shadow of the Stage 0 firmware ROM image.
+        page_info.update_from_data(stage0.legacy_shadow_bytes(), stage0.legacy_start_address);
+    }
 
     // Add all non-zero loadable segments from the enclave binary.
     for memory_segment in load_elf_segments(cli.enclave_binary_path())? {
