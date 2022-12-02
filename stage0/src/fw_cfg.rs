@@ -28,6 +28,7 @@ const SIGNATURE: &[u8] = b"QEMU";
 enum FwCfgItems {
     Signature = 0x0000,
     FileDir = 0x0019,
+    E820ReservationTable = 0x8003,
 }
 
 /// an individual file entry, 64 bytes total
@@ -174,6 +175,16 @@ impl FwCfg {
         } else {
             Err("couldn't find requested file")
         }
+    }
+
+    /// Reads the size of the E820 reservation table.
+    ///
+    /// This table predates the file interface and thus has its own selector.
+    pub fn read_e820_reservation_table_size(&mut self) -> Result<u32, &'static str> {
+        let mut reservation_count: u32 = 0;
+        self.write_selector(FwCfgItems::E820ReservationTable as u16)?;
+        self.read(&mut reservation_count)?;
+        Ok(reservation_count)
     }
 
     /// Reads contents of a file; returns the number of bytes actrually read.

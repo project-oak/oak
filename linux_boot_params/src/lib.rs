@@ -469,6 +469,13 @@ pub struct BootE820Entry {
 }
 
 impl BootE820Entry {
+    pub fn new(addr: usize, size: usize, type_: E820EntryType) -> Self {
+        Self {
+            addr,
+            size,
+            type_: type_ as u32,
+        }
+    }
     pub fn entry_type(&self) -> Option<E820EntryType> {
         E820EntryType::from_repr(self.type_)
     }
