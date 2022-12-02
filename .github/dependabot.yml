@@ -1,23 +1,28 @@
 # Please see the documentation for all configuration options:
-# https://help.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+# We add the 'kokoro:run' label in order to explicitly trigger kokoro checks.
+# They do not automatically run for external users.
 
 version: 2
 updates:
   - package-ecosystem: 'cargo'
     directory: '/'
+    open-pull-requests-limit: 2
     schedule:
       interval: 'daily'
-    # We do not set an explicit reviewer, as that is already automatically assigned via CODEOWNERS.
-    # reviewers
-
-    # Explicitly trigger kokoro checks. They do not automatically run for
-    # external users.
     labels:
       - 'kokoro:run'
-  # Keep the following two in sync with the main one, above, as the freestanding targets have their own `Cargo.lock` files.
+    assignees:
+      - 'project-oak/core'
+
+  # Keep the following in sync with the main one, above, as the freestanding targets have their own `Cargo.lock` files.
   - package-ecosystem: 'cargo'
     directory: '/oak_functions_freestanding_bin'
+    open-pull-requests-limit: 2
     schedule:
       interval: 'daily'
     labels:
       - 'kokoro:run'
+    assignees:
+      - 'project-oak/core'
