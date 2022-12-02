@@ -311,7 +311,7 @@ SECTIONS {
      * Unfortunately it doesn't look like `SIZEOF()` works here, so we have to keep track of the data
      * structure size by hand to ensure that it ends at the correct location in memory.
      */
-    .guid_tables TOP - 0x20 - (16 + 3*12 + 2*22 + 18) : {
+    .guid_tables TOP - 0x20 - (16 + 4*12 + 2*22 + 18) : {
         /* SEV metadata. This data structure is not part of the GUIDed tables, but it makes sense to have
          * them together at the end of the file, thus we put them in the .guid_tables section along with
          * the GUIDed tables themselves. The data structure is defined in the EDK2 source:
@@ -333,6 +333,10 @@ SECTIONS {
         /* Unmeasured page location */
         LONG(ADDR(.boot.ghcb))
         LONG(SIZEOF(.boot.ghcb))
+        LONG(SEV_SECTION_UNMEASURED)
+        /* Zero page location */
+        LONG(ADDR(.boot.zero_page))
+        LONG(SIZEOF(.boot.zero_page))
         LONG(SEV_SECTION_UNMEASURED)
         /* Secrets page location */
         LONG(ADDR(.boot.secrets))
