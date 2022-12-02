@@ -660,6 +660,13 @@
 <span id="660">660</span>
 <span id="661">661</span>
 <span id="662">662</span>
+<span id="663">663</span>
+<span id="664">664</span>
+<span id="665">665</span>
+<span id="666">666</span>
+<span id="667">667</span>
+<span id="668">668</span>
+<span id="669">669</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -1131,6 +1138,13 @@
 }
 
 <span class="kw">impl </span>BootE820Entry {
+    <span class="kw">pub fn </span>new(addr: usize, size: usize, type_: E820EntryType) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            addr,
+            size,
+            type_: type_ <span class="kw">as </span>u32,
+        }
+    }
     <span class="kw">pub fn </span>entry_type(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;E820EntryType&gt; {
         E820EntryType::from_repr(<span class="self">self</span>.type_)
     }
