@@ -92,6 +92,10 @@
 <span id="92">92</span>
 <span id="93">93</span>
 <span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -135,6 +139,8 @@
     </span>stage0_rom: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
     <span class="attribute">#[arg(long, help = <span class="string">&quot;The location of the enclave binary&quot;</span>)]
     </span>enclave_binary: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
+    <span class="attribute">#[arg(long, help = <span class="string">&quot;Whether the firwmare is shadowed to support legacy boot&quot;</span>)]
+    </span>legacy_boot: bool,
 }
 
 <span class="kw">impl </span>Cli {
@@ -160,8 +166,10 @@
     <span class="kw">let </span><span class="kw-2">mut </span>page_info = PageInfo::new();
     <span class="comment">// Add the Stage 0 firmware ROM image.
     </span>page_info.update_from_data(stage0.rom_bytes(), stage0.start_address);
-    <span class="comment">// Add the legacy boot shadow of the Stage 0 firmware ROM image.
-    </span>page_info.update_from_data(stage0.legacy_shadow_bytes(), stage0.legacy_start_address);
+    <span class="kw">if </span>cli.legacy_boot {
+        <span class="comment">// Add the legacy boot shadow of the Stage 0 firmware ROM image.
+        </span>page_info.update_from_data(stage0.legacy_shadow_bytes(), stage0.legacy_start_address);
+    }
 
     <span class="comment">// Add all non-zero loadable segments from the enclave binary.
     </span><span class="kw">for </span>memory_segment <span class="kw">in </span>load_elf_segments(cli.enclave_binary_path())<span class="question-mark">? </span>{
