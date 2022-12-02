@@ -95,26 +95,25 @@ MUST consist of the following fields:
   The version of the communication protocol in use. This value MUST be 1 for
   this version of the specification.
 
-- `body_length`, unsigned 16-bit little-endian integer
+- `frame_length`, unsigned 16-bit little-endian integer
 
-  The length of the body contents of the frame. This value must not exceed
-  4,080. The sum of the body lengths of all the frames in a message must equal
-  the message length.
+  The total length of the frame including the header and body. This value MUST
+  be larger than 16 (the header length) nad MUST not exceed 4,096. The sum of
+  the frames lengths minus the sum of the header lengths of all the frames in a
+  message must equal the message length.
 
 - `message_length`, unsigned 32-bit little-endian integer
 
-  The length of the overall message. This value MUST be larger or equal to
-  `body_length`. The message length for all frames that make up the message MUST
-  be the same.
+  The length of the overall message. This value MUST be larger or equal to the
+  frame length minus the header length. The value of this field MUST be the same
+  for all frames that make up the message.
 
-  The size of a single message MUST NOT exceed 2GiB.
-
-- `frame_number`, unsigned 32-bit little-endian integer
+- `frame_number`, unsigned 16-bit little-endian integer
 
   The position of this frame within the overall message. The first frame MUST
   start at number 0. Each frame's number MUST be 1 higher than the previous
   frame. Frames for a single message MUST be sent in ascending order of the
-  frame number.
+  frame number. The frame number MUST be less than the frame count.
 
 - `invocation_id`, u32, little endian
 
@@ -133,11 +132,11 @@ Representation of the encoded frame:
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|        protocol_version       |          body_length          |
+|        protocol_version       |          frame_length         |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                         message_length                        |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                          frame_number                         |
+|          frame_count          |          frame_number         |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                         invocation_id                         |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -148,7 +147,7 @@ Representation of the encoded frame:
 ```
 
 <!-- Diagram generated with https://www.luismg.com/protocol/, using the spec
-"protocol_version:16,body_length:16,message_length:32,frame_number:32,invocation_id:32,body bytes...:64" -->
+"protocol_version:16,frame_length:16,message_length:32,frame_count:16,frame_number:16,invocation_id:32,body bytes...:64" -->
 
 The maximum total length of a single frame is 4,096 bytes.
 
