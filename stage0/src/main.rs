@@ -45,6 +45,7 @@ use x86_64::{
 
 mod acpi;
 mod asm;
+mod cmos;
 mod fw_cfg;
 mod logging;
 mod sev;
@@ -183,7 +184,13 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     // Safety: If we don't have a fw_cfg device available, we assume the VMM has filled in the zero
     // page for us. If the device is available, we zero out the page and fill it in ourselves.
     let zero_page = if let Ok(ref mut fwcfg) = fwcfg {
-        zero_page::init_zero_page(fwcfg)
+        zero_page::init_zero_page(
+            fwcfg,
+            match ghcb_protocol {
+                Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
+                None => PortFactoryWrapper::new_raw(),
+            },
+        )
     } else {
         unsafe { zero_page::get_zero_page() }
     };
