@@ -41,9 +41,8 @@ static mut EBDA: MaybeUninit<[u8; EBDA_SIZE]> = MaybeUninit::uninit();
 // Safety: we include a nul byte at the end of the string, and that is the only nul byte.
 const TABLE_LOADER_FILE_NAME: &CStr =
     unsafe { CStr::from_bytes_with_nul_unchecked(b"etc/table-loader\0") };
-const RSDP_FILE_NAME: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"etc/acpi/rsdp\0") };
-const ACPI_TABLES_FILE_NAME: &CStr =
-    unsafe { CStr::from_bytes_with_nul_unchecked(b"etc/acpi/tables\0") };
+const RSDP_FILE_NAME_SUFFIX: &str = "acpi/rsdp";
+const ACPI_TABLES_FILE_NAME_SUFFIX: &str = "acpi/tables";
 
 const ROMFILE_LOADER_FILESZ: usize = 56;
 
@@ -52,9 +51,10 @@ type RomfileName = [u8; ROMFILE_LOADER_FILESZ];
 fn get_file(name: &CStr) -> Result<&'static mut [u8], &'static str> {
     // Safety: we do not have concurrent threads so accessing the static is safe, and even if
     // Allocate has not been called yet, all values are valid for an [u8].
-    if name == RSDP_FILE_NAME {
+    let name = name.to_str().map_err(|_| "invalid file name")?;
+    if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
         Ok(unsafe { RSDP.assume_init_mut() })
-    } else if name == ACPI_TABLES_FILE_NAME {
+    } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
         Ok(unsafe { EBDA.assume_init_mut() })
     } else {
         Err("Unsupported file in table-loader")
@@ -102,8 +102,9 @@ impl Allocate {
 
     fn invoke(&self, fwcfg: &mut FwCfg) -> Result<(), &'static str> {
         let file = fwcfg.find(self.file()).unwrap();
+        let name = self.file().to_str().map_err(|_| "invalid file name")?;
 
-        if self.file() == RSDP_FILE_NAME {
+        if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
             if file.size() != RSDP_SIZE {
                 return Err("RSDP doesn't match expected size");
             }
@@ -123,7 +124,7 @@ impl Allocate {
             }
 
             fwcfg.read_file(&file, buf).map(|_| ())
-        } else if self.file() == ACPI_TABLES_FILE_NAME {
+        } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
             // Safety: we do not have concurrent threads so accessing the static is safe.
             let buf = unsafe { EBDA.write(zeroed()) };
 
@@ -372,6 +373,13 @@ impl RomfileCommand {
     }
 
     fn invoke(&self, fwcfg: &mut FwCfg) -> Result<(), &'static str> {
+        if self.tag > 0x80000000 {
+            log::warn!(
+                "ignoring proprietary ACPI linker command with tag {:#x}",
+                self.tag
+            );
+            return Ok(());
+        }
         self.extract()?.invoke(fwcfg)
     }
 }
