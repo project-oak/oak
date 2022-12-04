@@ -113,8 +113,9 @@ impl aml::Handler for Handler {
         unimplemented!()
     }
 
-    fn read_io_u8(&self, _port: u16) -> u8 {
-        unimplemented!()
+    fn read_io_u8(&self, port: u16) -> u8 {
+        log::error!("unexpected call to `read_io_u8`: port {:#x}", port);
+        0
     }
 
     fn read_io_u16(&self, _port: u16) -> u16 {
@@ -137,8 +138,9 @@ impl aml::Handler for Handler {
         unimplemented!()
     }
 
-    fn read_pci_u8(&self, _segment: u16, _bus: u8, _device: u8, _function: u8, _offset: u16) -> u8 {
-        unimplemented!()
+    fn read_pci_u8(&self, segment: u16, bus: u8, device: u8, function: u8, offset: u16) -> u8 {
+        log::error!("unexpected call to `read_pci_u8`: segment {}, bus {}, device {}, function {}, offset {}", segment, bus, device, function, offset);
+        0
     }
 
     fn read_pci_u16(
