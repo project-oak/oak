@@ -422,6 +422,8 @@
 <span id="422">422</span>
 <span id="423">423</span>
 <span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -537,9 +539,10 @@
         <span class="macro">unimplemented!</span>()
     }
 
-    <span class="kw">fn </span>read_io_u8(<span class="kw-2">&amp;</span><span class="self">self</span>, _port: u16) -&gt; u8 {
-        <span class="macro">unimplemented!</span>()
-    }
+    <span class="kw">fn </span>read_io_u8(<span class="kw-2">&amp;</span><span class="self">self</span>, port: u16) -&gt; u8 {
+        <span class="macro">log::error!</span>(<span class="string">&quot;unexpected call to `read_io_u8`: port {:#x}&quot;</span>, port);
+        <span class="number">0
+    </span>}
 
     <span class="kw">fn </span>read_io_u16(<span class="kw-2">&amp;</span><span class="self">self</span>, _port: u16) -&gt; u16 {
         <span class="macro">unimplemented!</span>()
@@ -561,9 +564,10 @@
         <span class="macro">unimplemented!</span>()
     }
 
-    <span class="kw">fn </span>read_pci_u8(<span class="kw-2">&amp;</span><span class="self">self</span>, _segment: u16, _bus: u8, _device: u8, _function: u8, _offset: u16) -&gt; u8 {
-        <span class="macro">unimplemented!</span>()
-    }
+    <span class="kw">fn </span>read_pci_u8(<span class="kw-2">&amp;</span><span class="self">self</span>, segment: u16, bus: u8, device: u8, function: u8, offset: u16) -&gt; u8 {
+        <span class="macro">log::error!</span>(<span class="string">&quot;unexpected call to `read_pci_u8`: segment {}, bus {}, device {}, function {}, offset {}&quot;</span>, segment, bus, device, function, offset);
+        <span class="number">0
+    </span>}
 
     <span class="kw">fn </span>read_pci_u16(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
