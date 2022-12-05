@@ -179,21 +179,16 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
             Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
             None => PortFactoryWrapper::new_raw(),
         })
-    };
+    }
+    .expect("fw_cfg device not found!");
 
-    // Safety: If we don't have a fw_cfg device available, we assume the VMM has filled in the zero
-    // page for us. If the device is available, we zero out the page and fill it in ourselves.
-    let zero_page = if let Ok(ref mut fwcfg) = fwcfg {
-        zero_page::init_zero_page(
-            fwcfg,
-            match ghcb_protocol {
-                Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
-                None => PortFactoryWrapper::new_raw(),
-            },
-        )
-    } else {
-        unsafe { zero_page::get_zero_page() }
-    };
+    let zero_page = zero_page::init_zero_page(
+        &mut fwcfg,
+        match ghcb_protocol {
+            Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
+            None => PortFactoryWrapper::new_raw(),
+        },
+    );
 
     if snp {
         sev::validate_memory(zero_page, encrypted);
@@ -292,9 +287,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         entry = VirtAddr::new(header.e_entry);
     }
 
-    if let Ok(ref mut fwcfg) = fwcfg {
-        acpi::build_acpi_tables(fwcfg).unwrap();
-    }
+    acpi::build_acpi_tables(&mut fwcfg).unwrap();
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 
