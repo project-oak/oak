@@ -119,13 +119,3 @@ fn build_e820_from_nvram(
 
     Ok(())
 }
-
-/// Returns a mutable reference to the zero page, which we assume is initialized.
-///
-/// # Safety
-///
-/// This assumes the VMM has set up the zero page for us. Calling this function without the memory
-/// set up correctly is undefined behaviour.
-pub unsafe fn get_zero_page() -> &'static mut BootParams {
-    BOOT_ZERO_PAGE.assume_init_mut()
-}
