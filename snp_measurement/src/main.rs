@@ -25,6 +25,7 @@ use crate::{
     vmsa::{get_boot_vmsa, VMSA_ADDRESS},
 };
 use clap::Parser;
+use log::trace;
 use page::PageInfo;
 use std::path::PathBuf;
 
@@ -66,16 +67,16 @@ fn main() -> anyhow::Result<()> {
     let stage0 = load_stage0(cli.stage0_path())?;
 
     let mut page_info = PageInfo::new();
+    // Add all non-zero loadable segments from the enclave binary.
+    for memory_segment in load_elf_segments(cli.enclave_binary_path())? {
+        page_info.update_from_data(&memory_segment.data, memory_segment.start_address);
+    }
+
     // Add the Stage 0 firmware ROM image.
     page_info.update_from_data(stage0.rom_bytes(), stage0.start_address);
     if cli.legacy_boot {
         // Add the legacy boot shadow of the Stage 0 firmware ROM image.
         page_info.update_from_data(stage0.legacy_shadow_bytes(), stage0.legacy_start_address);
-    }
-
-    // Add all non-zero loadable segments from the enclave binary.
-    for memory_segment in load_elf_segments(cli.enclave_binary_path())? {
-        page_info.update_from_data(&memory_segment.data, memory_segment.start_address);
     }
 
     for snp_page in stage0.get_snp_pages() {
@@ -89,6 +90,8 @@ fn main() -> anyhow::Result<()> {
 
     // For now we assume there will only be one vCPU in the VM.
     page_info.update_from_vmsa(&get_boot_vmsa(), VMSA_ADDRESS);
+
+    trace!("raw measurement: {:?}", page_info.digest_cur);
 
     println!(
         "Attestation Measurement: {}",
