@@ -17,7 +17,10 @@
 #![no_std]
 
 use bitflags::bitflags;
-use core::ffi::{c_char, CStr};
+use core::{
+    ffi::{c_char, CStr},
+    mem::size_of,
+};
 use strum::{Display, FromRepr};
 use zerocopy::{AsBytes, FromBytes};
 
@@ -97,6 +100,7 @@ pub enum SetupDataType {
 }
 
 #[repr(C, packed)]
+#[derive(Clone, Copy, Debug)]
 pub struct SetupData {
     pub next: *const SetupData,
     pub type_: SetupDataType,
@@ -105,9 +109,23 @@ pub struct SetupData {
 }
 
 #[repr(C, packed)]
+#[derive(Clone, Copy, Debug)]
 pub struct CCSetupData {
     pub header: SetupData,
     pub cc_blob_address: u32,
+}
+
+impl CCSetupData {
+    pub fn new(cc_blob: *const CCBlobSevInfo) -> Self {
+        Self {
+            header: SetupData {
+                next: core::ptr::null(),
+                type_: SetupDataType::CCBlob,
+                len: (size_of::<CCSetupData>() - size_of::<SetupData>()) as u32,
+            },
+            cc_blob_address: (cc_blob as usize).try_into().unwrap(),
+        }
+    }
 }
 
 /// Real-mode Kernel Header.
@@ -655,7 +673,7 @@ impl BootParams {
 pub const CC_BLOB_SEV_INFO_MAGIC: u32 = 0x45444d41; // 'AMDE'
 
 #[repr(C, packed)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct CCBlobSevInfo {
     pub magic: u32,
     pub version: u16,
@@ -666,4 +684,20 @@ pub struct CCBlobSevInfo {
     pub cpuid_phys: usize,
     pub cpuid_len: u32,
     pub _rsvd2: u32,
+}
+
+impl CCBlobSevInfo {
+    pub fn new<S, C>(secrets: *const S, cpuid: *const C) -> Self {
+        Self {
+            magic: CC_BLOB_SEV_INFO_MAGIC,
+            version: 1,
+            _reserved: 0,
+            secrets_phys: secrets as usize,
+            secrets_len: size_of::<S>().try_into().unwrap(),
+            _rsvd1: 0,
+            cpuid_phys: cpuid as usize,
+            cpuid_len: size_of::<C>().try_into().unwrap(),
+            _rsvd2: 0,
+        }
+    }
 }

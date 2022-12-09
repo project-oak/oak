@@ -65,18 +65,6 @@ SECTIONS {
      * 
      * These sections have to be marked NOLOAD, otherwise you risk ending up with a 4GB BIOS image.
      */
-    .boot.gdt 0x1500 (NOLOAD) : {
-        *(.boot.gdt)
-    } > ram_low
-
-    /* The GDT provided by crosvm has 4 entries, which means that the (empty) IDT can go
-     * immediately after that to address 0x1520. The Rust x86_64::GlobalDescriptorTable has 8
-     * entries instead of 4, and the x86_64::InterruptDescriptorTable takes a full 4K of memory, so
-     * let's move it to the next page.
-     */
-    .boot.idt 0x2000 (NOLOAD) : {
-        *(.boot.idt)
-    } > ram_low
     
     .boot.zero_page 0x7000 (NOLOAD) : {
         *(.boot.zero_page)
@@ -84,18 +72,6 @@ SECTIONS {
     ASSERT(SIZEOF(.boot.zero_page) == 4K, "Zero page has to be exactly one page in size")
 
     boot_stack_pointer = 0x8000;
-
-    .boot.pml4 0x9000 (NOLOAD) : {
-        *(.boot.pml4)
-    } > ram_low
-
-    .boot.pdpt 0xA000 (NOLOAD) : {
-        *(.boot.pdpt)
-    } > ram_low
-
-    .boot.pd 0xB000 (NOLOAD) : {
-        *(.boot.pd)
-    } > ram_low
 
     .boot.secrets 0xD000 (NOLOAD) : {
         KEEP(*(.boot.secrets))
