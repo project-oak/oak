@@ -1,4 +1,4 @@
-# Oak Restricted Kernel Communication Protocol Specification
+# Oak Restricted Kernel Communication Protocol Specification version 1
 
 This document serves as a specification of the protocol used for communication
 between the Untrusted Launcher (running on the host) and Enclave Binary built
