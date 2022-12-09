@@ -14,20 +14,19 @@ interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119).
 ## Layer Defintions
 
 Conceptually, the Oak Restricted Kernel Communication Protocol is made up of
-three layers. The [Invocation Layer](#invocation-layer) uses protocol buffers
-(protobuf) to define the methods exposed by the service. It is responsible for
-encoding requests and responses that wrap input parameters and return values.
-The [Message Layer](#message-layer) provides a logical wrapper for the encoded
+three layers. The [Invocation Layer](#invocation-layer) uses microRPC to define
+the methods exposed by the service. It is responsible for encoding requests and
+responses that wrap input parameters and return values. The
+[Message Layer](#message-layer) provides a logical wrapper for the encoded
 requests and responses. The [Frame Layer](#frame-layer) converts messages into
 frames which are then sent over the transport channel.
 
 ### Invocation Layer
 
 Methods define the functionality exposed by the service. Each method defines
-input parameters and return types. Protocol buffers (protobuf) is used to define
-which methods are available, the method IDs, input parameters and return types.
-The client and service convert the requests and responses into bytes using
-standard protobuf encoding.
+input parameters and return types. microRPC is used to define which methods are
+available, the method IDs, input parameters and return types. microRPC is also
+responsible for encoding method parameters and return values to bytes.
 
 #### Invocation
 
