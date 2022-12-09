@@ -164,11 +164,11 @@ The maximum total length of a single frame is 4,096 bytes.
 
 To send a message, the sender MUST first encode the message into frames:
 
-The sender MUST chunk byte representation of the message into a set of frame
-bodies and prepend an appropriate frame header to it. The sender MUST send the
-resulting frame set in sequential order. Frames from different messages MAY be
-interleaved. The recipient can detect which frames are part of the same message
-by using the invocation ID.
+The sender MUST chunk the byte representation of the message into a set of frame
+bodies and prepend an appropriate frame header to each frame body. The sender
+MUST send the resulting frame set in sequential order. Frames from different
+messages MAY be interleaved on the same channel. The recipient can detect which
+frames are part of a specific message by using the invocation ID.
 
 ### Receiving Messages
 
