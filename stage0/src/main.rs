@@ -18,14 +18,10 @@
 #![no_main]
 #![feature(cstr_from_bytes_until_nul)]
 
-use core::{
-    arch::asm,
-    ffi::c_void,
-    mem::{size_of, zeroed, MaybeUninit},
-    panic::PanicInfo,
-};
+use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use goblin::elf::header;
 use oak_sev_guest::io::PortFactoryWrapper;
+use static_alloc::bump::Bump;
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment, tlb},
     registers::{
@@ -51,26 +47,13 @@ mod logging;
 mod sev;
 mod zero_page;
 
-#[link_section = ".boot.gdt"]
-static mut BOOT_GDT: MaybeUninit<GlobalDescriptorTable> = MaybeUninit::uninit();
-#[link_section = ".boot.idt"]
-static mut BOOT_IDT: MaybeUninit<InterruptDescriptorTable> = MaybeUninit::uninit();
-#[link_section = ".boot.pml4"]
-static mut BOOT_PML4: MaybeUninit<PageTable> = MaybeUninit::uninit();
-#[link_section = ".boot.pdpt"]
-static mut BOOT_PDPT: MaybeUninit<PageTable> = MaybeUninit::uninit();
-#[link_section = ".boot.pd"]
-static mut BOOT_PD: MaybeUninit<PageTable> = MaybeUninit::uninit();
-#[link_section = ".boot.secrets"]
-static mut SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
-#[link_section = ".boot.cpuid"]
-static mut SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
+#[link_section = ".boot"]
+static mut BOOT_ALLOC: MaybeUninit<Bump<[u8; 128 * 1024]>> = MaybeUninit::uninit();
 
-#[link_section = ".boot"]
-static mut CC_BLOB_SEV_INFO: MaybeUninit<oak_linux_boot_params::CCBlobSevInfo> =
-    MaybeUninit::uninit();
-#[link_section = ".boot"]
-static mut CC_SETUP_DATA: MaybeUninit<oak_linux_boot_params::CCSetupData> = MaybeUninit::uninit();
+#[link_section = ".boot.secrets"]
+static SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
+#[link_section = ".boot.cpuid"]
+static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
 
 extern "C" {
     #[link_name = "pd_addr"]
@@ -194,11 +177,18 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         sev::validate_memory(zero_page, encrypted);
     }
 
+    // Initialize the bump allocator.
+    // Safety: we're the only thread, and we need to explicitly zero out the internal state if we're
+    // running under memory encryption.
+    let alloc = unsafe { BOOT_ALLOC.write(Bump::uninit()) };
+
     /* Set up the machine according to the 64-bit Linux boot protocol.
      * See https://www.kernel.org/doc/html/latest/x86/boot.html#id1 for the particular requirements.
      */
 
-    let gdt = unsafe { BOOT_GDT.write(GlobalDescriptorTable::new()) };
+    let gdt = alloc
+        .leak(GlobalDescriptorTable::new())
+        .expect("Failed to allocate memory for GDT");
 
     let (cs, ds) = create_gdt(gdt);
     gdt.load();
@@ -212,14 +202,22 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         SS::set_reg(ds);
     }
 
-    let idt = unsafe { BOOT_IDT.write(InterruptDescriptorTable::new()) };
+    let idt = alloc
+        .leak(InterruptDescriptorTable::new())
+        .expect("Failed to allocate memory for IDT");
 
     create_idt(idt);
     idt.load();
 
-    let pml4 = unsafe { BOOT_PML4.write(PageTable::new()) };
-    let pdpt = unsafe { BOOT_PDPT.write(PageTable::new()) };
-    let pd = unsafe { BOOT_PD.write(PageTable::new()) };
+    let pml4 = alloc
+        .leak(PageTable::new())
+        .expect("Failed to allocate memory for PML4");
+    let pdpt = alloc
+        .leak(PageTable::new())
+        .expect("Failed to allocate memory for PDPT");
+    let pd = alloc
+        .leak(PageTable::new())
+        .expect("Failed to allocate memory for PD");
     create_page_tables(pml4, pdpt, pd, encrypted);
     /* We need to do some trickery here. All of the stage0 code is somewhere within [4G-2M; 4G).
      * Thus, let's keep our own last PD, so that we can continue executing after reloading the
@@ -240,26 +238,21 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     // own code.
     unsafe {
         Cr3::write(
-            PhysFrame::from_start_address(PhysAddr::new(BOOT_PML4.as_ptr() as u64)).unwrap(),
+            PhysFrame::from_start_address(PhysAddr::new(pml4 as *const _ as u64)).unwrap(),
             Cr3Flags::empty(),
         );
     }
 
     if snp {
-        let setup_data = unsafe { CC_SETUP_DATA.write(zeroed()) };
-        let cc_blob = unsafe { CC_BLOB_SEV_INFO.write(zeroed()) };
-
-        setup_data.header.type_ = oak_linux_boot_params::SetupDataType::CCBlob;
-        setup_data.header.len = (size_of::<oak_linux_boot_params::CCSetupData>()
-            - size_of::<oak_linux_boot_params::SetupData>()) as u32;
-        setup_data.cc_blob_address = cc_blob as *const _ as u32;
-
-        cc_blob.magic = oak_linux_boot_params::CC_BLOB_SEV_INFO_MAGIC;
-        cc_blob.version = 1;
-        cc_blob.secrets_phys = unsafe { SEV_SECRETS.as_ptr() } as usize;
-        cc_blob.secrets_len = size_of::<oak_sev_guest::secrets::SecretsPage>() as u32;
-        cc_blob.cpuid_phys = unsafe { SEV_CPUID.as_ptr() } as usize;
-        cc_blob.cpuid_len = size_of::<oak_sev_guest::cpuid::CpuidPage>() as u32;
+        let cc_blob = alloc
+            .leak(oak_linux_boot_params::CCBlobSevInfo::new(
+                SEV_SECRETS.as_ptr(),
+                SEV_CPUID.as_ptr(),
+            ))
+            .expect("Failed to allocate memory for CCBlobSevInfo");
+        let setup_data = alloc
+            .leak(oak_linux_boot_params::CCSetupData::new(cc_blob))
+            .expect("Failed to allocate memory for CCSetupData");
 
         // Put our header as the first element in the linked list.
         setup_data.header.next = zero_page.hdr.setup_data;
