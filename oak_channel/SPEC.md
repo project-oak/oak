@@ -46,14 +46,14 @@ The service MUST respond to each request message with exactly one response
 message. The service MAY send a response message before the request message has
 been received in its entirety, but MUST NOT start sending a response before any
 part of the request message has been received. Sending a response message
-concludes the invocation.
+concludes the invocation from the perspective of the service.
 
 The client MUST NOT send response messages.
 
 ### Message Layer
 
 Messages are logical units used to transport requests and responses. Each
-message consists of an invocation ID, a length and the encoded content of the
+message consists of an invocation ID, a length, and the encoded content of the
 request or response it represents.
 
 There are exactly two message types: request messages and response messages.
@@ -98,7 +98,7 @@ MUST consist of the following fields:
 - `frame_length`, unsigned 16-bit little-endian integer
 
   The total length of the frame including the header and body. This value MUST
-  be larger than 16 (the header length) nad MUST not exceed 4,096. The sum of
+  be larger than 16 (the header length) and MUST not exceed 4,096. The sum of
   the frames lengths minus the sum of the header lengths of all the frames in a
   message must equal the message length.
 
@@ -108,20 +108,27 @@ MUST consist of the following fields:
   frame length minus the header length. The value of this field MUST be the same
   for all frames that make up the message.
 
-- `frame_number`, unsigned 16-bit little-endian integer
-
-  The position of this frame within the overall message. The first frame MUST
-  start at number 0. Each frame's number MUST be 1 higher than the previous
-  frame. Frames for a single message MUST be sent in ascending order of the
-  frame number. The frame number MUST be less than the frame count.
-
-- `invocation_id`, u32, little endian
+- `invocation_id`, unsigned 32-bit little-endian integer
 
   The unique ID of the invocation that the frame is part of. All the frames that
   make up a message MUST have the same invocation ID. The invocation ID of a
   response message MUST match the invocation ID of its related request message.
   The invocation ID MUST be incremented for each method invocation, naturally
   wrapping when the maximum value for the data type is reached.
+
+- `checksum`, 4 bytes
+
+  The header checksum to detect frame misalignement or other possible header
+  corruptions. The checksum MUST be calculated as the truncated SHA-256 hash of
+  the first 12 bytes of the header.
+
+  For clarity: the checksum is calculated by appending 20 0 bytes to the end of
+  the first 12 bytes of the header, computing the SHA-256 hash of that value and
+  taking the first 4 bytes of the result as the checksum.
+
+  The checksum does not cover the body bytes, and it is assumed that the
+  application layer is responsible for ensuring the integrity of the content of
+  the messages, e.g. through authenticated encryption.
 
 The body contains the fragment of the encoded message corresponding to the frame
 number. The size of the body MUST NOT exceed 4,080 bytes.
@@ -136,9 +143,9 @@ Representation of the encoded frame:
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                         message_length                        |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|          frame_count          |          frame_number         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                         invocation_id                         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                           checksum                            |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                                                               |
 +                         body bytes...                         +
@@ -147,7 +154,7 @@ Representation of the encoded frame:
 ```
 
 <!-- Diagram generated with https://www.luismg.com/protocol/, using the spec
-"protocol_version:16,frame_length:16,message_length:32,frame_count:16,frame_number:16,invocation_id:32,body bytes...:64" -->
+"protocol_version:16,frame_length:16,message_length:32,invocation_id:32,checksum:32,body bytes...:64" -->
 
 The maximum total length of a single frame is 4,096 bytes.
 
@@ -158,40 +165,28 @@ The maximum total length of a single frame is 4,096 bytes.
 To send a message, the sender MUST first encode the message into frames:
 
 The sender MUST chunk byte representation of the message into a set of frame
-bodies. The last frame body of the resulting set MAY be shorter than 4,080 bytes
-(the maximum length of a frame body). Any preceding frame bodies MUST be exactly
-4,080 bytes in length. The sender MUST then create a frame from each frame body.
-
-The sender MUST send the resulting frame set in sequential order of the frame
-number.
+bodies and prepend an appropriate frame header to it. The sender MUST send the
+resulting frame set in sequential order. Frames from different messages MAY be
+interleaved. The recipient can detect which frames are part of the same message
+by using the invocation ID.
 
 ### Receiving Messages
 
 To receive a message the recipent incrementally reads frames from the
-communication channel. The recipient parses a message from frames by appending
-the frame bodies in the order they are received.
+communication channel. The recipient parses a message from its constituent
+frames by appending the frame bodies in the order they are received until the
+length of the message matches the message length specified in the header.
 
-The recipient MUST perform the following validation on a received message:
+The recipient MUST perform the following validation on the frames that make up a
+received message:
 
 - the protocol version for all frames MUST be 1
+- the header checksum for each frame must be valid
 - all frames MUST have the same message length specified
 - all frames MUST have the same invocation ID specified
-- the body length of each frame MUST NOT exceed 4,080
-- if the frame is not the last frame of the message, the body length MUST be
-  exactly 4,080
-- the frame number of the first frame of a message MUST be 0
-- the frame number of any subsequent frames for the same message MUST be 1
-  higher than the number of the previous frame
-- the sum of the body lengths of the frames in the message MUST equal the
-  message length
+- the frame length of each frame MUST exceed 16 and MUST NOT exceed 4,096
+- the sum of the body lengths of all the frames in the message MUST equal the
+  message length specified in the header
 
-If any of these validations fail the recipient MUST treat the message as
-invalid:
-
-- if the recipient is the service it MUST send a corresponding response for the
-  invocation indicating an error
-- if the recipient is the client it MUST discard the message and treat it as a
-  failed invocation
-
-The recipent MAY start parsing a message before fully receiving all of its
-frames.
+If any of these validations fail the recipient MUST treat it as a channel
+corruption and stop using the channel for any future communications.
