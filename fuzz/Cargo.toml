@@ -11,12 +11,8 @@ cargo-fuzz = true
 [dependencies]
 anyhow = "*"
 arbitrary = { version = "1", features = ["derive"] }
-# TODO(#3503): Required for the failing target. Remove.
-hex = "*"
 libfuzzer-sys = "*"
 oak_functions_abi = { path = "../oak_functions_abi" }
-# TODO(#3503): Required for the failing target. Remove.
-sha2 = "*"
 
 [build-dependencies]
 prost-build = "*"
@@ -29,12 +25,5 @@ members = ["."]
 [[bin]]
 name = "apply_policy"
 path = "fuzz_targets/apply_policy.rs"
-test = false
-doc = false
-
-# TODO(#3503): Remove.
-[[bin]]
-name = "failing"
-path = "fuzz_targets/failing.rs"
 test = false
 doc = false
