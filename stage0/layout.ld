@@ -56,8 +56,6 @@ HIDDEN(SEV_SECTION_CPUID = 0x3);
 SECTIONS {
     /* Lowest 1MB of memory (the real mode address space) where we place a lot of our data structures, as
      * that region is usually avoided by OS kernels.
-     * The exact addresses for the various data structures are arbitrary, but wherever possible, we've
-     * chosen to follow the examples of either crosvm and/or EDK2.
      * For more background, see:
      * https://wiki.osdev.org/Memory_Map_(x86)
      * https://google.github.io/crosvm/appendix/memory_layout.html
@@ -72,16 +70,6 @@ SECTIONS {
     ASSERT(SIZEOF(.boot.zero_page) == 4K, "Zero page has to be exactly one page in size")
 
     boot_stack_pointer = 0x8000;
-
-    .boot.secrets 0xD000 (NOLOAD) : {
-        KEEP(*(.boot.secrets))
-    } > ram_low
-    ASSERT(SIZEOF(.boot.secrets) == 4K, "Secrets section has to be exactly one page in size")
-
-    .boot.cpuid 0xE000 (NOLOAD) : {
-        KEEP(*(.boot.cpuid))
-    } > ram_low
-    ASSERT(SIZEOF(.boot.cpuid) == 4K, "CPUID section has to be exactly one page in size")
 
     .boot.ghcb ALIGN(4K) (NOLOAD) : {
         KEEP(*(.boot.ghcb))
@@ -315,12 +303,12 @@ SECTIONS {
         LONG(SIZEOF(.boot.zero_page))
         LONG(SEV_SECTION_UNMEASURED)
         /* Secrets page location */
-        LONG(ADDR(.boot.secrets))
-        LONG(SIZEOF(.boot.secrets))
+        LONG(SEV_SECRETS)
+        LONG(0x1000)
         LONG(SEV_SECTION_SECRET)
         /* CPUID page location */
-        LONG(ADDR(.boot.cpuid))
-        LONG(SIZEOF(.boot.cpuid))
+        LONG(SEV_CPUID)
+        LONG(0x1000)
         LONG(SEV_SECTION_CPUID)
         HIDDEN(sev_guided_structure_end = .);
 

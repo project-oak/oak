@@ -49,10 +49,11 @@ mod zero_page;
 
 #[link_section = ".boot"]
 static mut BOOT_ALLOC: MaybeUninit<Bump<[u8; 128 * 1024]>> = MaybeUninit::uninit();
-
-#[link_section = ".boot.secrets"]
+#[link_section = ".boot"]
+#[no_mangle]
 static SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
-#[link_section = ".boot.cpuid"]
+#[link_section = ".boot"]
+#[no_mangle]
 static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
 
 extern "C" {
