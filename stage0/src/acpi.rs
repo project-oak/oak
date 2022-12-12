@@ -384,7 +384,10 @@ impl RomfileCommand {
     }
 }
 
-pub fn build_acpi_tables(fwcfg: &mut FwCfg) -> Result<(), &'static str> {
+/// Populates the ACPI tables per linking instructions in `etc/table-loader`.
+///
+/// Returns the address of the RSDP table.
+pub fn build_acpi_tables(fwcfg: &mut FwCfg) -> Result<u64, &'static str> {
     let mut commands: [RomfileCommand; 32] = Default::default();
 
     let file = fwcfg
@@ -415,5 +418,5 @@ pub fn build_acpi_tables(fwcfg: &mut FwCfg) -> Result<(), &'static str> {
         command.invoke(fwcfg)?;
     }
 
-    Ok(())
+    Ok(unsafe { RSDP.as_ptr() } as u64)
 }

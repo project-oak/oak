@@ -24,9 +24,23 @@ const FWCFG_PORT_DATA: u16 = 0x511;
 
 const SIGNATURE: &[u8] = b"QEMU";
 
+/// Selector keys for "well-known" fw_cfg entries.
+///
+/// See QEMU include/standard-headers/linux/qemu_fw_cfg.h for the authoritative list.
+#[allow(dead_code)]
 #[repr(u16)]
 enum FwCfgItems {
     Signature = 0x0000,
+    KernelAddr = 0x0007,
+    KernelSize = 0x0008,
+    InitrdAddr = 0x000a,
+    InitrdSize = 0x000b,
+    KernelEntry = 0x0010,
+    KernelData = 0x0011,
+    InitrdData = 0x0012,
+    CmdlineAddr = 0x0013,
+    CmdlineSize = 0x0014,
+    CmdlineData = 0x0015,
     FileDir = 0x0019,
     E820ReservationTable = 0x8003,
 }
@@ -175,6 +189,20 @@ impl FwCfg {
         } else {
             Err("couldn't find requested file")
         }
+    }
+
+    pub fn read_cmdline_size(&mut self) -> Result<u32, &'static str> {
+        let mut cmdline_size: u32 = 0;
+        self.write_selector(FwCfgItems::CmdlineSize as u16)?;
+        self.read(&mut cmdline_size)?;
+        Ok(cmdline_size)
+    }
+
+    pub fn read_cmdline(&mut self, buf: &mut [u8]) -> Result<usize, &'static str> {
+        let len = min(buf.len(), self.read_cmdline_size()? as usize);
+        self.write_selector(FwCfgItems::CmdlineData as u16)?;
+        self.read_buf(&mut buf[..len])?;
+        Ok(len)
     }
 
     /// Reads the size of the E820 reservation table.
