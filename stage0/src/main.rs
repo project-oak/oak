@@ -18,7 +18,7 @@
 #![no_main]
 #![feature(cstr_from_bytes_until_nul)]
 
-use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
+use core::{alloc::Layout, arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use goblin::elf::header;
 use oak_sev_guest::io::PortFactoryWrapper;
 use static_alloc::bump::Bump;
@@ -259,6 +259,26 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         zero_page.hdr.setup_data = &setup_data.header as *const oak_linux_boot_params::SetupData;
     }
 
+    if let Ok(cmdline_size) = fwcfg.read_cmdline_size() {
+        if cmdline_size > 0 {
+            let mut buf = alloc
+                .alloc(
+                    Layout::from_size_align(cmdline_size as usize, 1)
+                        .expect("failed to create layout for kernel command line"),
+                )
+                .expect("failed to allocate memory for kernel command line");
+            // Safety: we've now allocated (at least) `cmdline_size` worth of bytes, so turning the
+            // memory into a slice is safe.
+            let buf =
+                unsafe { core::slice::from_raw_parts_mut(buf.as_mut(), cmdline_size as usize) };
+            fwcfg
+                .read_cmdline(buf)
+                .expect("failed to read kernel command line from fw_cfg");
+            zero_page.hdr.cmdline_size = cmdline_size;
+            zero_page.hdr.cmd_line_ptr = buf.as_ptr() as u32;
+        }
+    }
+
     // Attempt to parse 64 bytes at 0x200000 (2MiB) as an ELF header. If it works, extract the entry
     // point address from there; if there is no valid ELF header at that address, assume it's code,
     // and jump there directly.
@@ -280,7 +300,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         entry = VirtAddr::new(header.e_entry);
     }
 
-    acpi::build_acpi_tables(&mut fwcfg).unwrap();
+    zero_page.acpi_rsdp_addr = acpi::build_acpi_tables(&mut fwcfg).unwrap();
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 
