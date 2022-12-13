@@ -24,6 +24,7 @@ use core::{
     mem::{zeroed, MaybeUninit},
 };
 use strum::FromRepr;
+use x86_64::PhysAddr;
 use zerocopy::AsBytes;
 
 // RSDP has to be within the first 1 KiB of EBDA, so we treat it separately.
@@ -387,7 +388,7 @@ impl RomfileCommand {
 /// Populates the ACPI tables per linking instructions in `etc/table-loader`.
 ///
 /// Returns the address of the RSDP table.
-pub fn build_acpi_tables(fwcfg: &mut FwCfg) -> Result<u64, &'static str> {
+pub fn build_acpi_tables(fwcfg: &mut FwCfg) -> Result<PhysAddr, &'static str> {
     let mut commands: [RomfileCommand; 32] = Default::default();
 
     let file = fwcfg
@@ -418,5 +419,6 @@ pub fn build_acpi_tables(fwcfg: &mut FwCfg) -> Result<u64, &'static str> {
         command.invoke(fwcfg)?;
     }
 
-    Ok(unsafe { RSDP.as_ptr() } as u64)
+    // stage0 runs under identity mapping so virtual == physical
+    Ok(PhysAddr::new(unsafe { RSDP.as_ptr() } as u64))
 }

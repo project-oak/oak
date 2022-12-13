@@ -18,7 +18,13 @@
 #![no_main]
 #![feature(cstr_from_bytes_until_nul)]
 
-use core::{alloc::Layout, arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
+use core::{
+    alloc::Layout,
+    arch::asm,
+    ffi::{c_void, CStr},
+    mem::MaybeUninit,
+    panic::PanicInfo,
+};
 use goblin::elf::header;
 use oak_sev_guest::io::PortFactoryWrapper;
 use static_alloc::bump::Bump;
@@ -166,7 +172,16 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     }
     .expect("fw_cfg device not found!");
 
-    let zero_page = zero_page::init_zero_page(
+    // Initialize the bump allocator.
+    // Safety: we're the only thread, and we need to explicitly zero out the internal state if we're
+    // running under memory encryption.
+    let alloc = unsafe { BOOT_ALLOC.write(Bump::uninit()) };
+
+    let zero_page = alloc
+        .leak(zero_page::ZeroPage::new())
+        .expect("failed to allocate memory for zero page");
+
+    zero_page.fill_e820_table(
         &mut fwcfg,
         match ghcb_protocol {
             Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
@@ -175,13 +190,8 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     );
 
     if snp {
-        sev::validate_memory(zero_page, encrypted);
+        sev::validate_memory(zero_page.e820_table(), encrypted);
     }
-
-    // Initialize the bump allocator.
-    // Safety: we're the only thread, and we need to explicitly zero out the internal state if we're
-    // running under memory encryption.
-    let alloc = unsafe { BOOT_ALLOC.write(Bump::uninit()) };
 
     /* Set up the machine according to the 64-bit Linux boot protocol.
      * See https://www.kernel.org/doc/html/latest/x86/boot.html#id1 for the particular requirements.
@@ -255,9 +265,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
             .leak(oak_linux_boot_params::CCSetupData::new(cc_blob))
             .expect("Failed to allocate memory for CCSetupData");
 
-        // Put our header as the first element in the linked list.
-        setup_data.header.next = zero_page.hdr.setup_data;
-        zero_page.hdr.setup_data = &setup_data.header as *const oak_linux_boot_params::SetupData;
+        zero_page.add_setup_data(setup_data);
     }
 
     if let Ok(cmdline_size) = fwcfg.read_cmdline_size() {
@@ -275,8 +283,8 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
             fwcfg
                 .read_cmdline(buf)
                 .expect("failed to read kernel command line from fw_cfg");
-            zero_page.hdr.cmdline_size = cmdline_size;
-            zero_page.hdr.cmd_line_ptr = buf.as_ptr() as u32;
+            zero_page
+                .set_cmdline(CStr::from_bytes_with_nul(buf).expect("invalid kernel command line"));
         }
     }
 
@@ -301,7 +309,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         entry = VirtAddr::new(header.e_entry);
     }
 
-    zero_page.acpi_rsdp_addr = acpi::build_acpi_tables(&mut fwcfg).unwrap();
+    zero_page.set_acpi_rsdp_addr(acpi::build_acpi_tables(&mut fwcfg).unwrap());
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 

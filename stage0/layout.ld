@@ -64,20 +64,15 @@ SECTIONS {
      * These sections have to be marked NOLOAD, otherwise you risk ending up with a 4GB BIOS image.
      */
     
-    .boot.zero_page 0x7000 (NOLOAD) : {
-        *(.boot.zero_page)
+    .boot 0x1000 (NOLOAD) : {
+        KEEP(*(.boot))
+        . = ALIGN(4K);
     } > ram_low
-    ASSERT(SIZEOF(.boot.zero_page) == 4K, "Zero page has to be exactly one page in size")
 
     .boot.ghcb ALIGN(4K) (NOLOAD) : {
         KEEP(*(.boot.ghcb))
     } > ram_low
     ASSERT(SIZEOF(.boot.ghcb) == 4K, "GHCB has to be exactly one page in size")
-
-    .boot ALIGN(4K) (NOLOAD) : {
-        KEEP(*(.boot))
-        . = ALIGN(4K);
-    } > ram_low
 
     /* Put the stack just below the EBDA, at the end of 512K. */
     .stack (0x80000 - 32K) (NOLOAD) : {
@@ -274,7 +269,7 @@ SECTIONS {
      * Unfortunately it doesn't look like `SIZEOF()` works here, so we have to keep track of the data
      * structure size by hand to ensure that it ends at the correct location in memory.
      */
-    .guid_tables TOP - 0x20 - (16 + 4*12 + 2*22 + 18) : {
+    .guid_tables TOP - 0x20 - (16 + 3*12 + 2*22 + 18) : {
         /* SEV metadata. This data structure is not part of the GUIDed tables, but it makes sense to have
          * them together at the end of the file, thus we put them in the .guid_tables section along with
          * the GUIDed tables themselves. The data structure is defined in the EDK2 source:
@@ -299,10 +294,6 @@ SECTIONS {
          */
         LONG(ADDR(.stack))
         LONG(SIZEOF(.stack))
-        LONG(SEV_SECTION_UNMEASURED)
-        /* Zero page location */
-        LONG(ADDR(.boot.zero_page))
-        LONG(SIZEOF(.boot.zero_page))
         LONG(SEV_SECTION_UNMEASURED)
         /* Secrets page location */
         LONG(SEV_SECRETS)

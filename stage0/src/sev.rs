@@ -16,7 +16,7 @@
 
 use core::mem::MaybeUninit;
 use oak_core::sync::OnceCell;
-use oak_linux_boot_params::{BootParams, E820EntryType};
+use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
     instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
@@ -106,7 +106,7 @@ pub fn deinit_ghcb(snp: bool, encrypted: u64) {
 }
 
 /// Calls `PVALIDATE` on all memory ranges specified in the E820 table with type `RAM`.
-pub fn validate_memory(zero_page: &BootParams, encrypted: u64) {
+pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
     let mut page_table = PageTable::new();
 
     // Find a location for our (temporary) page table. The initial page tables map [0..2MiB), so it
@@ -120,7 +120,7 @@ pub fn validate_memory(zero_page: &BootParams, encrypted: u64) {
         PageTableFlags::PRESENT,
     );
 
-    for entry in zero_page.e820_table() {
+    for entry in e820_table {
         if entry.entry_type() != Some(E820EntryType::RAM) {
             continue;
         }

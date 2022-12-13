@@ -65,11 +65,27 @@ _protected_mode_start:
     mov $0xc0010131, %ecx     # SEV_STATUS MSR. See Section 15.34.10 in AMD64 Architecture Programmer's
                               # Manual, Volume 2 for more details.
     rdmsr                     # EDX:EAX <- MSR[ECX]
-    and $3, %eax              # eax &= 0b11;
+    and $0b111, %eax          # eax &= 0b111;
                               # Bit 0 - SEV enabled
                               # Bit 1 - SEV-ES enabled
+                              # Bit 2 - SEV-SNP active
     test %eax, %eax           # is it zero?
     je no_encryption          # if yes, jump to no_encryption
+    # See if we're under SEV-SNP, and if yes, pre-emptively PVALIDATE the first megabyte of memory, as that's
+    # where we'll be storing many data structures.
+    and $0b100, %eax          # eax &= 0b100; -- SEV-SNP active
+    test %eax, %eax           # is eax zero?
+    je 2f                     # if yes, no SNP, skip validation and jump ahead
+    xor %ebx, %ebx            # ebx = 0 -- start address
+    xor %ecx, %ecx            # ecx = 0 -- we're using 4K pages
+    mov $0b1, %edx            # edx = 1 -- set RMP VALIDATED bit
+    1:
+    mov %ebx, %eax            # eax = ebx (PVALIDATE will clobber EAX)
+    pvalidate                 # set validated bit in RMP, but ignore results for now
+    add $0x1000, %ebx         # ebx += 0x1000
+    cmp $0x100000, %ebx       # have we covered the full megabyte?
+    jl 1b                     # if no, go back
+    2:
 
     # Memory encryption enabled: set encrypted bits in the page tables.
     # We assume the encrypted bit is bit 51, for now.

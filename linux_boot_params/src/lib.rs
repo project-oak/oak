@@ -606,8 +606,8 @@ pub struct EDIDInfo {
     pub dummy: [u8; 128usize],
 }
 
-#[repr(C, packed)]
-#[derive(Copy, Clone)]
+#[repr(C, align(4096))]
+#[derive(Copy, Clone, Debug)]
 pub struct BootParams {
     pub screen_info: ScreenInfo,
     pub apm_bios_info: APMBiosInfo,
@@ -651,6 +651,11 @@ pub struct BootParams {
 static_assertions::assert_eq_size!(BootParams, [u8; 4096usize]);
 
 impl BootParams {
+    pub fn zeroed() -> Self {
+        // Safety: an all-zeroes BootParams struct is valid.
+        unsafe { core::mem::zeroed() }
+    }
+
     pub fn protocol(&self) -> &'static str {
         "Linux Boot Protocol"
     }
