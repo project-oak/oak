@@ -63,7 +63,7 @@ extern "C" {
     #[link_name = "pt_addr"]
     static BIOS_PT: c_void;
 
-    #[link_name = "boot_stack_pointer"]
+    #[link_name = "stack_start"]
     static BOOT_STACK_POINTER: c_void;
 }
 

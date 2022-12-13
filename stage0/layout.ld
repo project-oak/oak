@@ -69,8 +69,6 @@ SECTIONS {
     } > ram_low
     ASSERT(SIZEOF(.boot.zero_page) == 4K, "Zero page has to be exactly one page in size")
 
-    boot_stack_pointer = 0x8000;
-
     .boot.ghcb ALIGN(4K) (NOLOAD) : {
         KEEP(*(.boot.ghcb))
     } > ram_low
@@ -79,6 +77,12 @@ SECTIONS {
     .boot ALIGN(4K) (NOLOAD) : {
         KEEP(*(.boot))
         . = ALIGN(4K);
+    } > ram_low
+
+    /* Put the stack just below the EBDA, at the end of 512K. */
+    .stack (0x80000 - 32K) (NOLOAD) : {
+        . += 32K;
+        stack_start = .;
     } > ram_low
 
     /* EBDA - Extended BIOS Data Area; 128K of memory between [512K, 640K). The RSDP must be within
@@ -145,11 +149,6 @@ SECTIONS {
         bss_start = .;
         *(.bss .bss.*)
         bss_size = . - bss_start;
-    } > bios
-
-    .stack ALIGN(4K) (NOLOAD) : {
-        . += 32K;
-        stack_start = .;
     } > bios
 
     /* Everything below this line interacts with 16-bit code, so should be kept as close to the end of the file as
@@ -295,8 +294,11 @@ SECTIONS {
          * Thankfully none of these clashed with existing data structures that we're setting up.
          */
         /* Unmeasured page location */
-        LONG(ADDR(.boot.ghcb))
-        LONG(SIZEOF(.boot.ghcb))
+        /* We mark the stack as unmeasured, as we need to support interrupts before we even know whether
+         * we're running under some form of SEV, and interrupts require a functioning stack.
+         */
+        LONG(ADDR(.stack))
+        LONG(SIZEOF(.stack))
         LONG(SEV_SECTION_UNMEASURED)
         /* Zero page location */
         LONG(ADDR(.boot.zero_page))
