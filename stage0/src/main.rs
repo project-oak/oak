@@ -150,9 +150,21 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     // We assume 0-th bit is never the encrypted bit.
     let encrypted = if encrypted > 0 { 1 << encrypted } else { 0 };
 
+    // Initialize the bump allocator.
+    // Safety: we're the only thread, and we need to explicitly zero out the internal state if we're
+    // running under memory encryption.
+    let alloc = unsafe { BOOT_ALLOC.write(Bump::uninit()) };
+
     // If we're under SEV-ES or SNP, we need a GHCB block for communication.
     let ghcb_protocol = if es {
-        Some(sev::init_ghcb(snp, encrypted))
+        // No point in calling expect() here, the logging isn't set up yet.
+        // In any case, this allocation should not fail. This is the first thing we allocate, the
+        // GHCB is 4K in size, and the allocator should be far bigger than that (as we have more
+        // data structures we need to allocate in there).
+        // If the allocation does fail, something is horribly broken and we have no hope of
+        // continuing.
+        let ghcb = alloc.leak(sev::Ghcb::new()).unwrap();
+        Some(sev::init_ghcb(ghcb, snp, encrypted))
     } else {
         None
     };
@@ -171,11 +183,6 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         })
     }
     .expect("fw_cfg device not found!");
-
-    // Initialize the bump allocator.
-    // Safety: we're the only thread, and we need to explicitly zero out the internal state if we're
-    // running under memory encryption.
-    let alloc = unsafe { BOOT_ALLOC.write(Bump::uninit()) };
 
     let zero_page = alloc
         .leak(zero_page::ZeroPage::new())

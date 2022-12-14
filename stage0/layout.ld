@@ -69,11 +69,6 @@ SECTIONS {
         . = ALIGN(4K);
     } > ram_low
 
-    .boot.ghcb ALIGN(4K) (NOLOAD) : {
-        KEEP(*(.boot.ghcb))
-    } > ram_low
-    ASSERT(SIZEOF(.boot.ghcb) == 4K, "GHCB has to be exactly one page in size")
-
     /* Put the stack just below the EBDA, at the end of 512K. */
     .stack (0x80000 - 32K) (NOLOAD) : {
         . += 32K;

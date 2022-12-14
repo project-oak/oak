@@ -14,11 +14,11 @@
 // limitations under the License.
 //
 
-use core::mem::MaybeUninit;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
+pub use oak_sev_guest::ghcb::Ghcb;
 use oak_sev_guest::{
-    ghcb::{Ghcb, GhcbProtocol},
+    ghcb::GhcbProtocol,
     instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
     msr::{
         change_snp_page_state, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
@@ -34,9 +34,6 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
-#[link_section = ".boot.ghcb"]
-static mut GHCB: MaybeUninit<Ghcb> = MaybeUninit::uninit();
-
 static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
 fn get_pd(encrypted: u64) -> &'static mut PageTable {
@@ -47,8 +44,12 @@ fn get_pd(encrypted: u64) -> &'static mut PageTable {
     unsafe { &mut *((pdpt[0].addr().as_u64() & !encrypted) as *mut PageTable) }
 }
 
-pub fn init_ghcb(snp: bool, encrypted: u64) -> &'static Spinlock<GhcbProtocol<'static, Ghcb>> {
-    let ghcb_addr = unsafe { GHCB.as_ptr() } as u64;
+pub fn init_ghcb(
+    ghcb: &'static mut Ghcb,
+    snp: bool,
+    encrypted: u64,
+) -> &'static Spinlock<GhcbProtocol<'static, Ghcb>> {
+    let ghcb_addr = ghcb as *const _ as u64;
 
     // Remove the ENCRYPTED bit from the entry that maps the GHCB.
     let pd = get_pd(encrypted);
@@ -72,8 +73,6 @@ pub fn init_ghcb(snp: bool, encrypted: u64) -> &'static Spinlock<GhcbProtocol<'s
             .expect("couldn't register the GHCB address with the hypervisor");
     }
 
-    let ghcb = unsafe { GHCB.write(Ghcb::new()) };
-
     // We can't use `.expect()` here as Spinlock doesn't implement `fmt::Debug`.
     if GHCB_WRAPPER
         .set(Spinlock::new(GhcbProtocol::new(ghcb, |vaddr: VirtAddr| {
@@ -87,7 +86,7 @@ pub fn init_ghcb(snp: bool, encrypted: u64) -> &'static Spinlock<GhcbProtocol<'s
 }
 
 pub fn deinit_ghcb(snp: bool, encrypted: u64) {
-    let ghcb_addr = unsafe { GHCB.as_ptr() } as u64;
+    let ghcb_addr = GHCB_WRAPPER.get().unwrap().lock().get_gpa().as_u64();
 
     if snp {
         let request = SnpPageStateChangeRequest::new(ghcb_addr as usize, PageAssignment::Private)
