@@ -701,6 +701,11 @@
 <span id="701">701</span>
 <span id="702">702</span>
 <span id="703">703</span>
+<span id="704">704</span>
+<span id="705">705</span>
+<span id="706">706</span>
+<span id="707">707</span>
+<span id="708">708</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -1309,8 +1314,8 @@
     <span class="kw">pub </span>dummy: [u8; <span class="number">128usize</span>],
 }
 
-<span class="attribute">#[repr(C, packed)]
-#[derive(Copy, Clone)]
+<span class="attribute">#[repr(C, align(<span class="number">4096</span>))]
+#[derive(Copy, Clone, Debug)]
 </span><span class="kw">pub struct </span>BootParams {
     <span class="kw">pub </span>screen_info: ScreenInfo,
     <span class="kw">pub </span>apm_bios_info: APMBiosInfo,
@@ -1354,6 +1359,11 @@
 <span class="macro">static_assertions::assert_eq_size!</span>(BootParams, [u8; <span class="number">4096usize</span>]);
 
 <span class="kw">impl </span>BootParams {
+    <span class="kw">pub fn </span>zeroed() -&gt; <span class="self">Self </span>{
+        <span class="comment">// Safety: an all-zeroes BootParams struct is valid.
+        </span><span class="kw">unsafe </span>{ core::mem::zeroed() }
+    }
+
     <span class="kw">pub fn </span>protocol(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
         <span class="string">&quot;Linux Boot Protocol&quot;
     </span>}
