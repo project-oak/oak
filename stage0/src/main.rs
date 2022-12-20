@@ -53,8 +53,8 @@ mod logging;
 mod sev;
 mod zero_page;
 
-#[link_section = ".boot"]
-static mut BOOT_ALLOC: MaybeUninit<Bump<[u8; 128 * 1024]>> = MaybeUninit::uninit();
+static BOOT_ALLOC: Bump<[u8; 128 * 1024]> = Bump::uninit();
+
 #[link_section = ".boot"]
 #[no_mangle]
 static SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
@@ -150,11 +150,6 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     // We assume 0-th bit is never the encrypted bit.
     let encrypted = if encrypted > 0 { 1 << encrypted } else { 0 };
 
-    // Initialize the bump allocator.
-    // Safety: we're the only thread, and we need to explicitly zero out the internal state if we're
-    // running under memory encryption.
-    let alloc = unsafe { BOOT_ALLOC.write(Bump::uninit()) };
-
     // If we're under SEV-ES or SNP, we need a GHCB block for communication.
     let ghcb_protocol = if es {
         // No point in calling expect() here, the logging isn't set up yet.
@@ -163,7 +158,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         // data structures we need to allocate in there).
         // If the allocation does fail, something is horribly broken and we have no hope of
         // continuing.
-        let ghcb = alloc.leak(sev::Ghcb::new()).unwrap();
+        let ghcb = BOOT_ALLOC.leak(sev::Ghcb::new()).unwrap();
         Some(sev::init_ghcb(ghcb, snp, encrypted))
     } else {
         None
@@ -184,7 +179,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     }
     .expect("fw_cfg device not found!");
 
-    let zero_page = alloc
+    let zero_page = BOOT_ALLOC
         .leak(zero_page::ZeroPage::new())
         .expect("failed to allocate memory for zero page");
 
@@ -204,7 +199,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
      * See https://www.kernel.org/doc/html/latest/x86/boot.html#id1 for the particular requirements.
      */
 
-    let gdt = alloc
+    let gdt = BOOT_ALLOC
         .leak(GlobalDescriptorTable::new())
         .expect("Failed to allocate memory for GDT");
 
@@ -220,20 +215,20 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         SS::set_reg(ds);
     }
 
-    let idt = alloc
+    let idt = BOOT_ALLOC
         .leak(InterruptDescriptorTable::new())
         .expect("Failed to allocate memory for IDT");
 
     create_idt(idt);
     idt.load();
 
-    let pml4 = alloc
+    let pml4 = BOOT_ALLOC
         .leak(PageTable::new())
         .expect("Failed to allocate memory for PML4");
-    let pdpt = alloc
+    let pdpt = BOOT_ALLOC
         .leak(PageTable::new())
         .expect("Failed to allocate memory for PDPT");
-    let pd = alloc
+    let pd = BOOT_ALLOC
         .leak(PageTable::new())
         .expect("Failed to allocate memory for PD");
     create_page_tables(pml4, pdpt, pd, encrypted);
@@ -262,13 +257,13 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     }
 
     if snp {
-        let cc_blob = alloc
+        let cc_blob = BOOT_ALLOC
             .leak(oak_linux_boot_params::CCBlobSevInfo::new(
                 SEV_SECRETS.as_ptr(),
                 SEV_CPUID.as_ptr(),
             ))
             .expect("Failed to allocate memory for CCBlobSevInfo");
-        let setup_data = alloc
+        let setup_data = BOOT_ALLOC
             .leak(oak_linux_boot_params::CCSetupData::new(cc_blob))
             .expect("Failed to allocate memory for CCSetupData");
 
@@ -277,7 +272,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
 
     if let Ok(cmdline_size) = fwcfg.read_cmdline_size() {
         if cmdline_size > 0 {
-            let mut buf = alloc
+            let mut buf = BOOT_ALLOC
                 .alloc(
                     Layout::from_size_align(cmdline_size as usize, 1)
                         .expect("failed to create layout for kernel command line"),
