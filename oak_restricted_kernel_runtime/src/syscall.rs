@@ -31,6 +31,8 @@ pub enum Errno {
     EFAULT = -14,
     /// Invalid argument
     EINVAL = -22,
+    /// Function not implemented
+    ENOSYS = -38,
 }
 
 #[no_mangle]
@@ -94,16 +96,10 @@ mod tests {
         let (reader, writer) = os_pipe::pipe().unwrap();
 
         let tx = b"test";
-        assert_eq!(
-            Ok(4),
-            write(writer.as_raw_fd() as i32, tx.as_ptr(), tx.len())
-        );
+        assert_eq!(Ok(4), write(writer.as_raw_fd(), tx.as_ptr(), tx.len()));
 
         let mut rx = [0u8; 4];
-        assert_eq!(
-            Ok(4),
-            read(reader.as_raw_fd() as i32, rx.as_mut_ptr(), rx.len())
-        );
+        assert_eq!(Ok(4), read(reader.as_raw_fd(), rx.as_mut_ptr(), rx.len()));
 
         assert_eq!(tx, &rx);
     }
@@ -112,27 +108,30 @@ mod tests {
     fn test_erroneus_read() {
         let fd = {
             let (reader, _) = os_pipe::pipe().unwrap();
-            reader.as_raw_fd() as i32
+            reader.as_raw_fd()
         };
 
         let mut rx = [0u8; 4];
-        assert_eq!(Err(Errno::EIO), write(fd, rx.as_mut_ptr(), rx.len()));
+        assert!(write(fd, rx.as_mut_ptr(), rx.len()).is_err());
     }
 
     #[test]
     fn test_erroneus_write() {
         let fd = {
             let (_, writer) = os_pipe::pipe().unwrap();
-            writer.as_raw_fd() as i32
+            writer.as_raw_fd()
         };
 
         let tx = b"test";
-        assert_eq!(Err(Errno::EIO), write(fd, tx.as_ptr(), tx.len()));
+        assert!(write(fd, tx.as_ptr(), tx.len()).is_err());
     }
 
     #[test]
-    fn test_sync() {
-        // Not that we can tell if anything goes wrong...
-        sync();
+    fn test_fsync() {
+        let fd = {
+            let (_, writer) = os_pipe::pipe().unwrap();
+            writer.as_raw_fd()
+        };
+        assert!(fsync(fd).is_err());
     }
 }

@@ -451,6 +451,7 @@ dependencies = [
  "oak_channel",
  "oak_core",
  "oak_linux_boot_params",
+ "oak_restricted_kernel_runtime",
  "oak_sev_guest",
  "oak_simple_io",
  "oak_virtio",
@@ -461,6 +462,15 @@ dependencies = [
  "strum",
  "x86_64",
  "zerocopy",
+]
+
+[[package]]
+name = "oak_restricted_kernel_runtime"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_channel",
+ "strum",
 ]
 
 [[package]]

@@ -50,8 +50,8 @@ pub fn init_gdt() {
     };
     descriptors.kernel_cs_selector = descriptors.gdt.add_entry(Descriptor::kernel_code_segment());
     descriptors.kernel_ds_selector = descriptors.gdt.add_entry(Descriptor::kernel_data_segment());
-    descriptors.user_cs_selector = descriptors.gdt.add_entry(Descriptor::user_code_segment());
     descriptors.user_ds_selector = descriptors.gdt.add_entry(Descriptor::user_data_segment());
+    descriptors.user_cs_selector = descriptors.gdt.add_entry(Descriptor::user_code_segment());
     descriptors.tss_selector = descriptors.gdt.add_entry(Descriptor::tss_segment(&TSS));
 
     // Make sure the GDT was not previously initialized.

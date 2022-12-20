@@ -24,3 +24,4 @@ mod raw_syscall;
 pub mod syscall;
 
 pub use channel::SyscallChannel;
+pub use raw_syscall::Syscall;

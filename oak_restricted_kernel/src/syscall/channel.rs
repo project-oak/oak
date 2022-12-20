@@ -14,11 +14,9 @@
 // limitations under the License.
 //
 
-use alloc::{boxed::Box, collections::BTreeMap, rc::Rc, slice, sync::Arc};
-use core::{
-    any::Any,
-    ffi::{c_size_t, c_ssize_t, c_void},
-};
+use core::ffi::{c_int, c_size_t, c_ssize_t, c_void};
+
+use alloc::{boxed::Box, slice};
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_restricted_kernel_runtime::syscall::Errno;
@@ -30,26 +28,15 @@ trait FileDescriptor {
     fn sync(&mut self) -> Result<(), Errno>;
 }
 
-struct Stderr {}
-impl FileDescriptor for Stderr {
-    fn read(&mut self, buf: &mut [u8]) -> Result<isize, Errno> {
-        Err(Errno::EBADF)
-    }
-
-    fn write(&mut self, buf: &[u8]) -> Result<isize, Errno> {
-        let size: isize = buf.len().try_into().map_err(|_| Errno::EINVAL)?;
-        log::info!("{:?}", buf);
-        Ok(size)
-    }
-
-    fn sync(&mut self) -> Result<(), Errno> {
-        Ok(())
-    }
-}
-
 #[repr(transparent)]
 struct ChannelDescriptor {
     channel: Box<dyn Channel>,
+}
+
+impl ChannelDescriptor {
+    pub fn new(channel: Box<dyn Channel>) -> Self {
+        Self { channel }
+    }
 }
 
 impl FileDescriptor for ChannelDescriptor {
@@ -71,42 +58,48 @@ impl FileDescriptor for ChannelDescriptor {
     }
 }
 
-struct DescriptorMap {
-    descriptors: BTreeMap<isize, Arc<dyn FileDescriptor>>,
-}
+static CHANNEL_DESCRIPTOR: OnceCell<Spinlock<ChannelDescriptor>> = OnceCell::new();
 
-impl DescriptorMap {
-    pub fn add(&mut self, fd: isize, descriptor: Box<dyn FileDescriptor>) {}
-}
-
-/*
-static DESCRIPTORS: OnceCell<BTreeMap<isize, Arc<Spinlock<dyn FileDescriptor>>>> = OnceCell::new();
-*/
 pub fn init(channel: Box<dyn Channel>) {
-    /*
-    let mut map: BTreeMap<isize, Box<dyn FileDescriptor + Send + Sync>> = BTreeMap::new();
-    map.insert(10, Box::new(ChannelDescriptor { channel }));
-    map.insert(3, Box::new(Stderr {}));
-    DESCRIPTORS.set(map);
-    */
-    /*
-    CHANNEL
-        .set(channel)
+    CHANNEL_DESCRIPTOR
+        .set(Spinlock::new(ChannelDescriptor::new(channel)))
         .map_err(|_| ())
         .expect("communication channel was already initialised");
-    */
 }
 
-/*
-pub fn syscall_read(buf: *mut c_void, count: c_size_t) -> c_ssize_t {
+pub fn syscall_read(_fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
+    // We should validate that the pointer and count are valid, as these come from userspace and
+    // therefore are not to be trusted, but right now everything is in kernel space so there is
+    // nothing to check.
     let data = unsafe { slice::from_raw_parts_mut(buf as *mut u8, count) };
-    let result = CHANNEL
+
+    let mut channel = CHANNEL_DESCRIPTOR
         .get()
         .expect("syscall interface not ready yet")
-        .read(data);
-
-    count.try_into().unwrap()
+        .lock();
+    channel.read(data).unwrap_or_else(|err| err as isize)
 }
-pub fn syscall_write() {}
-pub fn syscall_sync() {}
-*/
+
+pub fn syscall_write(_fd: c_int, buf: *const c_void, count: c_size_t) -> c_ssize_t {
+    // We should validate that the pointer and count are valid, as these come from userspace and
+    // therefore are not to be trusted, but right now everything is in kernel space so there is
+    // nothing to check.
+    let data = unsafe { slice::from_raw_parts(buf as *mut u8, count) };
+
+    let mut channel = CHANNEL_DESCRIPTOR
+        .get()
+        .expect("syscall interface not ready yet")
+        .lock();
+    channel.write(data).unwrap_or_else(|err| err as isize)
+}
+
+pub fn syscall_fsync(_fd: c_int) -> c_ssize_t {
+    let mut channel = CHANNEL_DESCRIPTOR
+        .get()
+        .expect("syscall interface not ready yet")
+        .lock();
+    channel
+        .sync()
+        .map(|()| 0)
+        .unwrap_or_else(|err| err as isize)
+}

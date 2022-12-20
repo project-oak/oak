@@ -17,6 +17,8 @@
 use anyhow::anyhow;
 use oak_channel::{Read, Write};
 
+pub const OAK_CHANNEL_FD: i32 = 10;
+
 pub struct SyscallChannel {
     fd: i32,
 }
@@ -24,6 +26,12 @@ pub struct SyscallChannel {
 impl SyscallChannel {
     pub fn new(fd: i32) -> Self {
         Self { fd }
+    }
+}
+
+impl Default for SyscallChannel {
+    fn default() -> Self {
+        Self::new(OAK_CHANNEL_FD)
     }
 }
 

@@ -15,8 +15,10 @@
 //
 
 use core::arch::asm;
+use strum::FromRepr;
 
-#[repr(u64)]
+#[repr(usize)]
+#[derive(FromRepr)]
 pub enum Syscall {
     Read = 0,
     Write = 1,
@@ -31,7 +33,7 @@ macro_rules! syscall {
     ($syscall:expr, $arg1:expr) => {
         $crate::raw_syscall::syscall1($syscall, $arg1 as usize)
     };
-    ($syscall:expr, $arg1:expr) => {
+    ($syscall:expr, $arg1:expr, $arg2:expr) => {
         $crate::raw_syscall::syscall2($syscall, $arg1 as usize, $arg2 as usize)
     };
     ($syscall:expr, $arg1:expr, $arg2:expr, $arg3:expr) => {
@@ -40,6 +42,7 @@ macro_rules! syscall {
 }
 
 #[inline]
+#[allow(dead_code)]
 pub unsafe fn syscall0(syscall: Syscall) -> isize {
     let mut ret: isize;
     asm!("syscall",
@@ -61,6 +64,7 @@ pub unsafe fn syscall1(syscall: Syscall, arg1: usize) -> isize {
 }
 
 #[inline]
+#[allow(dead_code)]
 pub unsafe fn syscall2(syscall: Syscall, arg1: usize, arg2: usize) -> isize {
     let mut ret: isize;
     asm!("syscall",
