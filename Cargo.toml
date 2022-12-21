@@ -42,6 +42,7 @@ members = [
   "oak_remote_attestation_sessions",
   "oak_remote_attestation_sessions_client",
   "oak_restricted_kernel",
+  "oak_restricted_kernel_runtime",
   "oak_sev_guest",
   "oak_simple_io",
   "oak_tensorflow_service",

@@ -2882,6 +2882,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_restricted_kernel_runtime"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_channel",
+ "os_pipe",
+ "strum",
+]
+
+[[package]]
 name = "oak_sev_guest"
 version = "0.1.0"
 dependencies = [
