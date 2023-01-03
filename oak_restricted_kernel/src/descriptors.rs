@@ -17,7 +17,7 @@
 use oak_core::sync::OnceCell;
 use x86_64::{
     instructions::tables::load_tss,
-    registers::segmentation::*,
+    registers::{model_specific::Star, segmentation::*},
     structures::{
         gdt::{Descriptor, GlobalDescriptorTable},
         tss::TaskStateSegment,
@@ -72,4 +72,13 @@ pub fn init_gdt() {
         SS::set_reg(descriptors.kernel_ds_selector);
         load_tss(descriptors.tss_selector);
     }
+
+    // Set IA32_STAR MSR for syscalls.
+    Star::write(
+        descriptors.user_cs_selector,   // Code segment for SYSRET
+        descriptors.user_ds_selector,   // Stack segment for SYSRET
+        descriptors.kernel_cs_selector, // Code segment for SYSCALL
+        descriptors.kernel_ds_selector, // Stack segment for SYSCALL
+    )
+    .expect("failed to set IA32_STAR MSR");
 }

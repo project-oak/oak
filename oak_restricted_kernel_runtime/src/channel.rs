@@ -57,7 +57,6 @@ impl Write for SyscallChannel {
     }
 
     fn flush(&mut self) -> anyhow::Result<()> {
-        crate::syscall::sync();
-        Ok(())
+        crate::syscall::fsync(self.fd).map_err(|err| anyhow!("sync failure: {}", err))
     }
 }

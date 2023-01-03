@@ -23,8 +23,14 @@ use strum::{Display, FromRepr};
 #[repr(isize)]
 #[non_exhaustive]
 pub enum Errno {
-    EIO = -9,     // Input/output error
-    EFAULT = -14, // Bad address
+    /// Input/output error
+    EIO = -5,
+    /// Bad file descriptor
+    EBADF = -9,
+    /// Bad address
+    EFAULT = -14,
+    /// Invalid argument
+    EINVAL = -22,
 }
 
 #[no_mangle]
@@ -37,7 +43,7 @@ pub fn read(fd: i32, buf: *mut u8, len: usize) -> Result<usize, Errno> {
 
     if ret < 0 {
         Err(Errno::from_repr(ret)
-            .unwrap_or_else(|| panic!("unexpected error from READ syscall: {}", ret)))
+            .unwrap_or_else(|| panic!("unexpected error from read syscall: {}", ret)))
     } else {
         Ok(ret as usize)
     }
@@ -53,20 +59,27 @@ pub fn write(fd: i32, buf: *const u8, len: usize) -> Result<usize, Errno> {
 
     if ret < 0 {
         Err(Errno::from_repr(ret)
-            .unwrap_or_else(|| panic!("unexpected error from WRITE syscall: {}", ret)))
+            .unwrap_or_else(|| panic!("unexpected error from write syscall: {}", ret)))
     } else {
         Ok(ret as usize)
     }
 }
 
 #[no_mangle]
-pub extern "C" fn sys_sync() {
-    unsafe { syscall!(Syscall::Sync) };
+pub extern "C" fn sys_fsync(fd: c_int) -> c_ssize_t {
+    unsafe { syscall!(Syscall::Fsync, fd) }
 }
 
 #[inline]
-pub fn sync() {
-    sys_sync()
+pub fn fsync(fd: i32) -> Result<(), Errno> {
+    let ret = sys_fsync(fd);
+
+    if ret < 0 {
+        Err(Errno::from_repr(ret)
+            .unwrap_or_else(|| panic!("unexpected error from fsync syscall: {}", ret)))
+    } else {
+        Ok(())
+    }
 }
 
 #[cfg(test)]
