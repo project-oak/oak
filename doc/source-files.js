@@ -13,7 +13,6 @@ var sourcesIndex = JSON.parse('{\
 "oak_functions_abi":["",[],["lib.rs"]],\
 "oak_functions_client":["",[],["lib.rs","rekor.rs"]],\
 "oak_functions_extension":["",[],["lib.rs"]],\
-"oak_functions_freestanding":["",[["wasm",[],["mod.rs"]]],["lib.rs","logger.rs","remote_attestation.rs"]],\
 "oak_functions_launcher":["",[["instance",[],["mod.rs","native.rs","virtualized.rs"]]],["channel.rs","lookup.rs","main.rs","server.rs"]],\
 "oak_functions_linux_fd_bin":["",[],["main.rs"]],\
 "oak_functions_linux_vsock_bin":["",[],["channel.rs","main.rs"]],\
@@ -22,6 +21,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_functions_sdk":["",[],["lib.rs"]],\
 "oak_functions_sdk_abi_test_get_storage_item":["",[],["lib.rs"]],\
 "oak_functions_sdk_abi_test_invoke_testing":["",[],["lib.rs"]],\
+"oak_functions_service":["",[["wasm",[],["mod.rs"]]],["lib.rs","logger.rs","remote_attestation.rs"]],\
 "oak_functions_test_utils":["",[],["lib.rs"]],\
 "oak_functions_testing_extension":["",[],["lib.rs"]],\
 "oak_functions_wasm":["",[],["lib.rs"]],\

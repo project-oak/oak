@@ -224,7 +224,7 @@
     <span class="doccomment">/// Get the crate name of respective enclave binary variant
     </span><span class="kw">pub fn </span>enclave_crate_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
-            LauncherMode::Virtual =&gt; <span class="string">&quot;oak_functions_freestanding_bin&quot;</span>,
+            LauncherMode::Virtual =&gt; <span class="string">&quot;oak_functions_enclave&quot;</span>,
             LauncherMode::Native =&gt; <span class="string">&quot;oak_functions_linux_fd_bin&quot;</span>,
         }
     }
