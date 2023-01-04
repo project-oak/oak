@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":[["OAK_CHANNEL_FD","Predefined file descriptor for the Oak communication channel."]],"mod":[["errno",""],["syscalls",""]]};

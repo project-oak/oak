@@ -288,6 +288,13 @@
 <span id="288">288</span>
 <span id="289">289</span>
 <span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -324,6 +331,7 @@
 #![feature(asm_sym)]
 #![feature(naked_functions)]
 #![feature(once_cell)]
+#![feature(c_size_t)]
 
 </span><span class="kw">mod </span>acpi;
 <span class="kw">mod </span>args;
@@ -346,6 +354,7 @@
 <span class="attribute">#[cfg(feature = <span class="string">&quot;simple_io_channel&quot;</span>)]
 </span><span class="kw">mod </span>simpleio;
 <span class="kw">mod </span>snp;
+<span class="kw">mod </span>syscall;
 <span class="attribute">#[cfg(feature = <span class="string">&quot;vsock_channel&quot;</span>)]
 </span><span class="kw">mod </span>virtio;
 <span class="attribute">#[cfg(feature = <span class="string">&quot;virtio_console_channel&quot;</span>)]
@@ -366,6 +375,7 @@
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_linux_boot_params::BootParams;
+<span class="kw">use </span>oak_restricted_kernel_api::FileDescriptorChannel;
 <span class="kw">use </span>oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 <span class="kw">use </span>strum::{EnumIter, EnumString, IntoEnumIterator};
 <span class="kw">use </span>x86_64::{
@@ -517,13 +527,17 @@
         report.validate().expect(<span class="string">&quot;attestation report is invalid&quot;</span>);
     }
 
-    get_channel(
+    <span class="kw">let </span>channel = get_channel(
         <span class="kw-2">&amp;</span>kernel_args,
         mapper,
         GUEST_HOST_HEAP.get().unwrap(),
         acpi.as_mut(),
         sev_status,
-    )
+    );
+
+    syscall::enable_syscalls(channel);
+
+    Box::&lt;FileDescriptorChannel&gt;::default()
 }
 
 <span class="attribute">#[derive(EnumIter, EnumString)]

@@ -73,6 +73,15 @@
 <span id="73">73</span>
 <span id="74">74</span>
 <span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -92,7 +101,7 @@
 </span><span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>x86_64::{
     instructions::tables::load_tss,
-    registers::segmentation::<span class="kw-2">*</span>,
+    registers::{model_specific::Star, segmentation::<span class="kw-2">*</span>},
     structures::{
         gdt::{Descriptor, GlobalDescriptorTable},
         tss::TaskStateSegment,
@@ -125,8 +134,8 @@
     };
     descriptors.kernel_cs_selector = descriptors.gdt.add_entry(Descriptor::kernel_code_segment());
     descriptors.kernel_ds_selector = descriptors.gdt.add_entry(Descriptor::kernel_data_segment());
-    descriptors.user_cs_selector = descriptors.gdt.add_entry(Descriptor::user_code_segment());
     descriptors.user_ds_selector = descriptors.gdt.add_entry(Descriptor::user_data_segment());
+    descriptors.user_cs_selector = descriptors.gdt.add_entry(Descriptor::user_code_segment());
     descriptors.tss_selector = descriptors.gdt.add_entry(Descriptor::tss_segment(<span class="kw-2">&amp;</span>TSS));
 
     <span class="comment">// Make sure the GDT was not previously initialized.
@@ -147,6 +156,15 @@
         SS::set_reg(descriptors.kernel_ds_selector);
         load_tss(descriptors.tss_selector);
     }
+
+    <span class="comment">// Set IA32_STAR MSR for syscalls.
+    </span>Star::write(
+        descriptors.user_cs_selector,   <span class="comment">// Code segment for SYSRET
+        </span>descriptors.user_ds_selector,   <span class="comment">// Stack segment for SYSRET
+        </span>descriptors.kernel_cs_selector, <span class="comment">// Code segment for SYSCALL
+        </span>descriptors.kernel_ds_selector, <span class="comment">// Stack segment for SYSCALL
+    </span>)
+    .expect(<span class="string">&quot;failed to set IA32_STAR MSR&quot;</span>);
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_restricted_kernel" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>
