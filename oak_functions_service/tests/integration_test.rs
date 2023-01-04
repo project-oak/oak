@@ -20,7 +20,7 @@
 extern crate alloc;
 
 use core::assert_matches::assert_matches;
-use oak_functions_freestanding::{
+use oak_functions_service::{
     schema::{self, OakFunctionsServer},
     OakFunctionsService,
 };

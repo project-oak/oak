@@ -2533,28 +2533,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_freestanding"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "hashbrown 0.13.1",
- "log",
- "micro_rpc",
- "micro_rpc_build",
- "oak_functions_abi",
- "oak_functions_lookup",
- "oak_functions_test_utils",
- "oak_functions_wasm",
- "oak_functions_workload_logging",
- "oak_logger",
- "oak_remote_attestation",
- "oak_remote_attestation_amd",
- "prost 0.11.2",
- "tokio",
-]
-
-[[package]]
 name = "oak_functions_launcher"
 version = "0.1.0"
 dependencies = [
@@ -2587,7 +2565,7 @@ dependencies = [
  "clap",
  "log",
  "oak_channel",
- "oak_functions_freestanding",
+ "oak_functions_service",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
 ]
@@ -2601,7 +2579,7 @@ dependencies = [
  "clap",
  "libc",
  "oak_channel",
- "oak_functions_freestanding",
+ "oak_functions_service",
  "oak_remote_attestation",
  "prost 0.11.2",
  "prost-build 0.11.2",
@@ -2641,8 +2619,8 @@ dependencies = [
  "hashbrown 0.13.1",
  "lazy_static",
  "oak_functions_abi",
- "oak_functions_freestanding",
  "oak_functions_lookup",
+ "oak_functions_service",
  "oak_functions_test_utils",
  "oak_functions_testing_extension",
  "oak_functions_wasm",
@@ -2672,6 +2650,28 @@ dependencies = [
  "oak_functions_sdk",
  "serde",
  "serde_derive",
+]
+
+[[package]]
+name = "oak_functions_service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "hashbrown 0.12.3",
+ "log",
+ "micro_rpc",
+ "micro_rpc_build",
+ "oak_functions_abi",
+ "oak_functions_lookup",
+ "oak_functions_test_utils",
+ "oak_functions_wasm",
+ "oak_functions_workload_logging",
+ "oak_logger",
+ "oak_remote_attestation",
+ "oak_remote_attestation_amd",
+ "prost 0.11.2",
+ "tokio",
 ]
 
 [[package]]

@@ -17,11 +17,11 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     micro_rpc_build::compile(
         &[format!(
-            "{}oak_functions_freestanding/proto/oak_functions.proto",
+            "{}oak_functions_service/proto/oak_functions.proto",
             env!("WORKSPACE_ROOT")
         )],
         &[format!(
-            "{}oak_functions_freestanding/proto",
+            "{}oak_functions_service/proto",
             env!("WORKSPACE_ROOT")
         )],
     );

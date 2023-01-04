@@ -4,4 +4,4 @@
 enclave binary.
 
 The interface of the service is defined via microRPC in
-[`oak_functions.proto`](/oak_functions_freestanding/proto/oak_functions.proto).
+[`oak_functions.proto`](/oak_functions_service/proto/oak_functions.proto).

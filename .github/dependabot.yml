@@ -16,9 +16,9 @@ updates:
     assignees:
       - 'project-oak/core'
 
-  # Keep the following in sync with the main one, above, as the freestanding targets have their own `Cargo.lock` files.
+  # Keep the following in sync with the main one, above, as the enclave targets have their own `Cargo.lock` files.
   - package-ecosystem: 'cargo'
-    directory: '/oak_functions_freestanding_bin'
+    directory: '/oak_functions_enclave'
     open-pull-requests-limit: 2
     schedule:
       interval: 'daily'

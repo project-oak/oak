@@ -1,15 +1,15 @@
 # This is the static build configuration that we use with the transparent
-# release tool for building the `oak_functions_freestanding_bin` binary. To use
+# release tool for building the `oak_functions_enclave` binary. To use
 # it with the build tool from Transparent Release, additional information must
 # be added to the config. See `./scripts/build_binary` for more information.
 repo = "https://github.com/project-oak/oak"
 command = [
   "env",
-  "--chdir=oak_functions_freestanding_bin",
+  "--chdir=oak_functions_enclave",
   "cargo",
   "build",
   "--no-default-features",
   "--features=simple_io_channel",
   "--release"
 ]
-output_path = "./oak_functions_freestanding_bin/target/x86_64-unknown-none/release/oak_functions_freestanding_bin"
+output_path = "./oak_functions_enclave/target/x86_64-unknown-none/release/oak_functions_enclave"
