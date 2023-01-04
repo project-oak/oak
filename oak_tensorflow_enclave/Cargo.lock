@@ -400,30 +400,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_echo_bin"
-version = "0.1.0"
-dependencies = [
- "log",
- "micro_rpc",
- "oak_channel",
- "oak_echo_service",
- "oak_linux_boot_params",
- "oak_restricted_kernel",
- "static_assertions",
-]
-
-[[package]]
-name = "oak_echo_service"
-version = "0.1.0"
-dependencies = [
- "hashbrown",
- "log",
- "micro_rpc",
- "micro_rpc_build",
- "prost",
-]
-
-[[package]]
 name = "oak_linux_boot_params"
 version = "0.1.0"
 dependencies = [
@@ -485,6 +461,31 @@ dependencies = [
  "bitflags",
  "oak_sev_guest",
  "x86_64",
+]
+
+[[package]]
+name = "oak_tensorflow_enclave"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "micro_rpc",
+ "oak_channel",
+ "oak_linux_boot_params",
+ "oak_restricted_kernel",
+ "oak_tensorflow_service",
+ "static_assertions",
+]
+
+[[package]]
+name = "oak_tensorflow_service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "hashbrown",
+ "log",
+ "micro_rpc",
+ "micro_rpc_build",
+ "prost",
 ]
 
 [[package]]
