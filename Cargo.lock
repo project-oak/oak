@@ -2670,7 +2670,7 @@ dependencies = [
  "oak_logger",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
- "prost 0.9.0",
+ "prost 0.11.2",
  "tokio",
 ]
 
