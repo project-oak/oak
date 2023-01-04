@@ -35,7 +35,7 @@ impl LauncherMode {
     /// Get the crate name of respective enclave binary variant
     pub fn enclave_crate_name(&self) -> &'static str {
         match self {
-            LauncherMode::Virtual => "oak_functions_freestanding_bin",
+            LauncherMode::Virtual => "oak_functions_enclave",
             LauncherMode::Native => "oak_functions_linux_fd_bin",
         }
     }
