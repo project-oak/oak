@@ -115,7 +115,7 @@ Similarly, you can use the SHA256 digest of the provenance to download the
 provenance from `ent`:
 
 ```bash
-$ curl --output oak_functions_freestanding_provenance.jsonl  https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:729291baba0ec2bb6eff7528e8aa0d0dd1fbfaccd3c59219174b182fe1f8e5ff
+$ curl --output oak_functions_service_provenance.jsonl  https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:729291baba0ec2bb6eff7528e8aa0d0dd1fbfaccd3c59219174b182fe1f8e5ff
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
 100 14548    0 14548    0     0  33443      0 --:--:-- --:--:-- --:--:-- 33443

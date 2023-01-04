@@ -638,7 +638,7 @@ dependencies = [
  "log",
  "micro_rpc",
  "oak_channel",
- "oak_functions_freestanding",
+ "oak_functions_service",
  "oak_linux_boot_params",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
@@ -656,7 +656,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_freestanding"
+name = "oak_functions_lookup"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "hashbrown",
+ "log",
+ "oak_functions_abi",
+ "oak_functions_extension",
+ "oak_logger",
+ "spinning_top",
+]
+
+[[package]]
+name = "oak_functions_service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -671,19 +684,6 @@ dependencies = [
  "oak_logger",
  "oak_remote_attestation",
  "prost",
-]
-
-[[package]]
-name = "oak_functions_lookup"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "hashbrown",
- "log",
- "oak_functions_abi",
- "oak_functions_extension",
- "oak_logger",
- "spinning_top",
 ]
 
 [[package]]

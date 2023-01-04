@@ -47,7 +47,7 @@ lazy_static! {
 
 #[tokio::test]
 async fn test_read_write() {
-    let logger = oak_functions_freestanding::StandaloneLogger {};
+    let logger = oak_functions_service::StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("couldn't create LookupFactory");
@@ -64,7 +64,7 @@ async fn test_read_write() {
 
 #[tokio::test]
 async fn test_double_read() {
-    let logger = oak_functions_freestanding::StandaloneLogger {};
+    let logger = oak_functions_service::StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("couldn't create LookupFactory");
@@ -81,7 +81,7 @@ async fn test_double_read() {
 
 #[tokio::test]
 async fn test_double_write() {
-    let logger = oak_functions_freestanding::StandaloneLogger {};
+    let logger = oak_functions_service::StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("couldn't create LookupFactory");
@@ -98,7 +98,7 @@ async fn test_double_write() {
 
 #[tokio::test]
 async fn test_write_log() {
-    let logger = oak_functions_freestanding::StandaloneLogger {};
+    let logger = oak_functions_service::StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("couldn't create LookupFactory");
@@ -125,7 +125,7 @@ async fn test_storage_get_item() {
     let entries =
         HashMap::from_iter([(b"StorageGet".to_vec(), b"StorageGetResponse".to_vec())].into_iter());
 
-    let logger = oak_functions_freestanding::StandaloneLogger {};
+    let logger = oak_functions_service::StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("couldn't create LookupFactory");
@@ -145,7 +145,7 @@ async fn test_storage_get_item_not_found() {
     // empty lookup data, no key will be found
     let entries = HashMap::new();
 
-    let logger = oak_functions_freestanding::StandaloneLogger {};
+    let logger = oak_functions_service::StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
     let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
         .expect("couldn't create LookupFactory");
@@ -162,7 +162,7 @@ async fn test_storage_get_item_not_found() {
 
 #[tokio::test]
 async fn test_echo() {
-    let logger = oak_functions_freestanding::StandaloneLogger {};
+    let logger = oak_functions_service::StandaloneLogger {};
     let message_to_echo = "ECHO";
 
     let testing_factory =
@@ -188,7 +188,7 @@ async fn test_blackhole() {
     // Keep in sync with
     // `workspace/oak_functions/sdk/oak_functions/tests/testing_module/src/lib.rs`.
 
-    let logger = oak_functions_freestanding::StandaloneLogger {};
+    let logger = oak_functions_service::StandaloneLogger {};
     let message_to_blackhole = "BLACKHOLE";
 
     let testing_factory =
