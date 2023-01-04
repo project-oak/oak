@@ -34,6 +34,7 @@
 #![feature(asm_sym)]
 #![feature(naked_functions)]
 #![feature(once_cell)]
+#![feature(c_size_t)]
 
 mod acpi;
 mod args;
@@ -56,6 +57,7 @@ pub mod shutdown;
 #[cfg(feature = "simple_io_channel")]
 mod simpleio;
 mod snp;
+mod syscall;
 #[cfg(feature = "vsock_channel")]
 mod virtio;
 #[cfg(feature = "virtio_console_channel")]
@@ -76,6 +78,7 @@ use mm::encrypted_mapper::{EncryptedPageTable, PhysOffset};
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::BootParams;
+use oak_restricted_kernel_api::FileDescriptorChannel;
 use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
@@ -227,13 +230,17 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
         report.validate().expect("attestation report is invalid");
     }
 
-    get_channel(
+    let channel = get_channel(
         &kernel_args,
         mapper,
         GUEST_HOST_HEAP.get().unwrap(),
         acpi.as_mut(),
         sev_status,
-    )
+    );
+
+    syscall::enable_syscalls(channel);
+
+    Box::<FileDescriptorChannel>::default()
 }
 
 #[derive(EnumIter, EnumString)]

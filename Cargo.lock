@@ -2867,6 +2867,8 @@ dependencies = [
  "oak_channel",
  "oak_core",
  "oak_linux_boot_params",
+ "oak_restricted_kernel_api",
+ "oak_restricted_kernel_interface",
  "oak_sev_guest",
  "oak_simple_io",
  "oak_virtio",
@@ -2879,6 +2881,24 @@ dependencies = [
  "virtio-drivers",
  "x86_64",
  "zerocopy",
+]
+
+[[package]]
+name = "oak_restricted_kernel_api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_channel",
+ "oak_restricted_kernel_interface",
+ "os_pipe",
+ "strum",
+]
+
+[[package]]
+name = "oak_restricted_kernel_interface"
+version = "0.1.0"
+dependencies = [
+ "strum",
 ]
 
 [[package]]
