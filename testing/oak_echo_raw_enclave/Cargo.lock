@@ -375,7 +375,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_echo_raw_bin"
+name = "oak_echo_raw_enclave"
 version = "0.1.0"
 dependencies = [
  "log",

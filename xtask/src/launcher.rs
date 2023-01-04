@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Functionality for testing variants of the freestanding enclave binary exposed by the launcher.
+//! Functionality for testing variants of the enclave binary exposed by the launcher.
 
 const CLIENT_PATH: &str = "./target/debug/oak_functions_client";
 const WASM_PATH: &str = "./oak_functions_launcher/key_value_lookup.wasm";
