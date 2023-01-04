@@ -15,16 +15,13 @@
 //
 
 use core::arch::asm;
-use strum::FromRepr;
+use oak_restricted_kernel_interface::Syscall;
 
-#[repr(usize)]
-#[derive(FromRepr)]
-pub enum Syscall {
-    Read = 0,
-    Write = 1,
-    Fsync = 74,
-}
-
+/// Invoke system calls based on the Linux calling convention using `SYSCALL`.
+///
+/// See <https://github.com/torvalds/linux/blob/master/arch/x86/entry/calling.h> for the definition
+/// of the calling convention, and the AMD64 Architecture Programmer's Manual, Volume 3 for the
+/// semantics of `SYSCALL`/`SYSRET`.
 #[macro_export]
 macro_rules! syscall {
     ($syscall:expr) => {

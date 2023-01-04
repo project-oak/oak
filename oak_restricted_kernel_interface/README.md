@@ -7,9 +7,4 @@
 # Oak Restricted Kernel Runtime
 
 This crate contains what could be called "kernel headers" (syscall identifiers
-and other structs needed to communicate with Oak Restricted Kernel), plus a
-basic runtime library implementation for users of Restricted Kernel.
-
-Users of Oak Restricted Kernel should only depend on this crate, and not the
-kernel itself. (Note that unfortunately we're not quite there yet with the
-isolation, but that's the future goal.)
+and other structs needed to communicate with Oak Restricted Kernel).

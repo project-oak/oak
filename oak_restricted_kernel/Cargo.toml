@@ -35,7 +35,8 @@ oak_channel = { path = "../oak_channel" }
 oak_core = { path = "../oak_core" }
 oak_simple_io = { path = "../oak_simple_io", optional = true }
 oak_linux_boot_params = { path = "../linux_boot_params" }
-oak_restricted_kernel_runtime = { path = "../oak_restricted_kernel_runtime" }
+oak_restricted_kernel_api = { path = "../oak_restricted_kernel_api" }
+oak_restricted_kernel_interface = { path = "../oak_restricted_kernel_interface" }
 rust-hypervisor-firmware-virtio = { path = "../third_party/rust-hypervisor-firmware-virtio" }
 oak_sev_guest = { path = "../oak_sev_guest" }
 sev_serial = { path = "../sev_serial" }

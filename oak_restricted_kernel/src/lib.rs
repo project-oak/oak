@@ -78,7 +78,7 @@ use mm::encrypted_mapper::{EncryptedPageTable, PhysOffset};
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::BootParams;
-use oak_restricted_kernel_runtime::SyscallChannel;
+use oak_restricted_kernel_api::FileDescriptorChannel;
 use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
@@ -240,7 +240,7 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
 
     syscall::enable_syscalls(channel);
 
-    Box::<SyscallChannel>::default()
+    Box::<FileDescriptorChannel>::default()
 }
 
 #[derive(EnumIter, EnumString)]

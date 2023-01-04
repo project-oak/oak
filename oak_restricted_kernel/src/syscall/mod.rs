@@ -19,7 +19,7 @@ mod channel;
 use alloc::boxed::Box;
 use core::{arch::asm, ffi::c_void};
 use oak_channel::Channel;
-use oak_restricted_kernel_runtime::{syscall::Errno, Syscall};
+use oak_restricted_kernel_interface::{Errno, Syscall};
 use x86_64::{
     registers::{
         control::Efer,
@@ -39,8 +39,11 @@ pub fn enable_syscalls(channel: Box<dyn Channel>) {
     }
 }
 
-// SysV ABI: arguments are in RDI, RSI, RDX, RCX; return value in RAX (which matches SYSRET!)
+/// Rust wrapper for system calls.
+///
+/// This function assumes the 64-bit SysV ABI, not the syscall ABI!
 extern "sysv64" fn syscall_handler(syscall: usize, arg1: usize, arg2: usize, arg3: usize) -> isize {
+    // SysV ABI: arguments are in RDI, RSI, RDX, RCX; return value in RAX (which matches SYSRET!)
     match Syscall::from_repr(syscall) {
         Some(Syscall::Read) => syscall_read(arg1 as i32, arg2 as *mut c_void, arg3),
         Some(Syscall::Write) => syscall_write(arg1 as i32, arg2 as *const c_void, arg3),
@@ -49,25 +52,39 @@ extern "sysv64" fn syscall_handler(syscall: usize, arg1: usize, arg2: usize, arg
     }
 }
 
-// When user code uses `SYSCALL`, the following happens (abridged):
-//  - RIP of the instruction following the SYSCALL will be in RCX
-//  - RFLAGS will be saved in R11
-//  - new RIP will be loaded from LSTAR (see `enable_syscalls()`)
-//  - CS and SS selectors will be loaded from STAR (see `init_gdt()` in `descriptors.rs`)
-//  - CPL will be forced to zero.
-//
-// For `SYSRET`, the fast system return:
-//  - lower 32 bits of RFLAGS will be loaded from R11, upper 32 are cleared
-//  - RIP will be loaded from RCX
-//  - CS and SS selectors will be loaded from STAR (see `init_gdt()` in `descriptors.rs`)
-//  - CPL will be forced to 3
-//
-// Note that (a) this does not preserve RCX and R11, which the user code will take into account, and
-// (b) SYSRET will always go back to ring 3.
-//
-// See SYSCALL and SYSRET in AMD64 Architecture Programmer's Manual, Volume 3 for more details.
+/// Main entry point for system calls in the Oak Restricted Kernel.
+///
+/// As we only support x86-64, we rely on the `SYSCALL`/`SYSRET` mechanism to invoke system calls.
+///
+/// The system calls follow the Linux calling convention:
+/// <https://github.com/torvalds/linux/blob/master/arch/x86/entry/calling.h>
+///
+/// In short:
+///   - system call number is in `RAX`
+///   - arguments go in `RDI`, `RSI`, `RDX`, `RCX`, `R8`, `R9`
+///   - return value is in `RAX`
+///
+/// For the list of system calls that are supported, see the `oak_restricted_kernel_interface`
+/// crate.
 #[naked]
 extern "C" fn syscall_entrypoint() {
+    // When user code uses `SYSCALL`, the following happens (abridged):
+    //  - RIP of the instruction following the SYSCALL will be in RCX
+    //  - RFLAGS will be saved in R11
+    //  - new RIP will be loaded from LSTAR (see `enable_syscalls()`)
+    //  - CS and SS selectors will be loaded from STAR (see `init_gdt()` in `descriptors.rs`)
+    //  - CPL will be forced to zero.
+    //
+    // For `SYSRET`, the fast system return:
+    //  - lower 32 bits of RFLAGS will be loaded from R11, upper 32 are cleared
+    //  - RIP will be loaded from RCX
+    //  - CS and SS selectors will be loaded from STAR (see `init_gdt()` in `descriptors.rs`)
+    //  - CPL will be forced to 3
+    //
+    // Note that (a) this does not preserve RCX and R11, which the user code will take into account,
+    // and (b) SYSRET will always go back to ring 3.
+    //
+    // See SYSCALL and SYSRET in AMD64 Architecture Programmer's Manual, Volume 3 for more details.
     unsafe {
         asm! {
             // Save mutable registers other than RAX.
@@ -104,7 +121,8 @@ extern "C" fn syscall_entrypoint() {
             "vmovups [rsp + 14*32], YMM14",
             "vmovups [rsp + 15*32], YMM15",
 
-            // Shuffle around register values to match sysv calling convention.
+            // Shuffle around register values to match sysv calling convention, and escape into
+            // proper Rust code from the assembly.
             "mov rcx, rdx",
             "mov rdx, rsi",
             "mov rsi, rdi",

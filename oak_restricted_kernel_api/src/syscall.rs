@@ -14,34 +14,17 @@
 // limitations under the License.
 //
 
-use crate::{raw_syscall::Syscall, syscall};
+use crate::syscall;
 use core::ffi::{c_int, c_size_t, c_ssize_t, c_void};
-use strum::{Display, FromRepr};
-
-#[allow(clippy::upper_case_acronyms)]
-#[derive(Debug, Display, Eq, FromRepr, PartialEq)]
-#[repr(isize)]
-#[non_exhaustive]
-pub enum Errno {
-    /// Input/output error
-    EIO = -5,
-    /// Bad file descriptor
-    EBADF = -9,
-    /// Bad address
-    EFAULT = -14,
-    /// Invalid argument
-    EINVAL = -22,
-    /// Function not implemented
-    ENOSYS = -38,
-}
+use oak_restricted_kernel_interface::{Errno, Syscall};
 
 #[no_mangle]
 pub extern "C" fn sys_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
     unsafe { syscall!(Syscall::Read, fd, buf, count) }
 }
 
-pub fn read(fd: i32, buf: *mut u8, len: usize) -> Result<usize, Errno> {
-    let ret = sys_read(fd, buf as *mut c_void, len);
+pub fn read(fd: i32, buf: &mut [u8]) -> Result<usize, Errno> {
+    let ret = sys_read(fd, buf.as_mut_ptr() as *mut c_void, buf.len());
 
     if ret < 0 {
         Err(Errno::from_repr(ret)
@@ -56,8 +39,8 @@ pub extern "C" fn sys_write(fd: c_int, buf: *const c_void, count: c_size_t) -> c
     unsafe { syscall!(Syscall::Write, fd, buf, count) }
 }
 
-pub fn write(fd: i32, buf: *const u8, len: usize) -> Result<usize, Errno> {
-    let ret = sys_write(fd, buf as *const c_void, len);
+pub fn write(fd: i32, buf: &[u8]) -> Result<usize, Errno> {
+    let ret = sys_write(fd, buf.as_ptr() as *const c_void, buf.len());
 
     if ret < 0 {
         Err(Errno::from_repr(ret)
@@ -96,10 +79,10 @@ mod tests {
         let (reader, writer) = os_pipe::pipe().unwrap();
 
         let tx = b"test";
-        assert_eq!(Ok(4), write(writer.as_raw_fd(), tx.as_ptr(), tx.len()));
+        assert_eq!(Ok(4), write(writer.as_raw_fd(), tx));
 
         let mut rx = [0u8; 4];
-        assert_eq!(Ok(4), read(reader.as_raw_fd(), rx.as_mut_ptr(), rx.len()));
+        assert_eq!(Ok(4), read(reader.as_raw_fd(), &mut rx));
 
         assert_eq!(tx, &rx);
     }
@@ -112,7 +95,7 @@ mod tests {
         };
 
         let mut rx = [0u8; 4];
-        assert!(write(fd, rx.as_mut_ptr(), rx.len()).is_err());
+        assert!(read(fd, &mut rx).is_err());
     }
 
     #[test]
@@ -123,7 +106,7 @@ mod tests {
         };
 
         let tx = b"test";
-        assert!(write(fd, tx.as_ptr(), tx.len()).is_err());
+        assert!(write(fd, tx).is_err());
     }
 
     #[test]

@@ -16,33 +16,34 @@
 
 use anyhow::anyhow;
 use oak_channel::{Read, Write};
+use oak_restricted_kernel_interface::OAK_CHANNEL_FD;
 
-pub const OAK_CHANNEL_FD: i32 = 10;
-
-pub struct SyscallChannel {
+/// Channel that communicates over a file descriptor.
+pub struct FileDescriptorChannel {
     fd: i32,
 }
 
-impl SyscallChannel {
+impl FileDescriptorChannel {
     pub fn new(fd: i32) -> Self {
         Self { fd }
     }
 }
 
-impl Default for SyscallChannel {
+impl Default for FileDescriptorChannel {
+    /// Constructs a new FileDescriptorChannel that assumes we'll use the well-known Oak file
+    /// descriptor number.
     fn default() -> Self {
         Self::new(OAK_CHANNEL_FD)
     }
 }
 
-impl Read for SyscallChannel {
+impl Read for FileDescriptorChannel {
     fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let len = data.len();
         let mut remaining = data.len();
 
         while remaining > 0 {
-            let ptr = data[len - remaining..].as_mut_ptr();
-            remaining -= crate::syscall::read(self.fd, ptr, remaining)
+            remaining -= crate::syscall::read(self.fd, &mut data[len - remaining..])
                 .map_err(|err| anyhow!("read failure: {}", err))?;
         }
 
@@ -50,14 +51,13 @@ impl Read for SyscallChannel {
     }
 }
 
-impl Write for SyscallChannel {
+impl Write for FileDescriptorChannel {
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let len = data.len();
         let mut remaining = data.len();
 
         while remaining > 0 {
-            let ptr = data[len - remaining..].as_ptr();
-            remaining -= crate::syscall::write(self.fd, ptr, remaining)
+            remaining -= crate::syscall::write(self.fd, &data[len - remaining..])
                 .map_err(|err| anyhow!("write failure: {}", err))?;
         }
 
