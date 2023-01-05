@@ -23,20 +23,20 @@ extern crate alloc;
 use alloc::boxed::Box;
 use core::panic::PanicInfo;
 use log::info;
-use oak_channel::Channel;
 use oak_linux_boot_params::BootParams;
+use oak_restricted_kernel_api::FileDescriptorChannel;
 
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
-    let channel = oak_restricted_kernel::start_kernel(rsi);
+    oak_restricted_kernel::start_kernel(rsi);
     info!("In main!");
-    start_server(channel)
+    start_server()
 }
 
-fn start_server(channel: Box<dyn Channel>) -> ! {
+fn start_server() -> ! {
     let service = oak_tensorflow_service::TensorflowService::new();
     let server = oak_tensorflow_service::schema::TensorflowServer::new(service);
-    oak_channel::server::start_blocking_server(channel, server)
+    oak_channel::server::start_blocking_server(Box::<FileDescriptorChannel>::default(), server)
         .expect("server encountered an unrecoverable error")
 }
 
