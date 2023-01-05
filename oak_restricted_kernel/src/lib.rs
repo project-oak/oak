@@ -71,19 +71,27 @@ use crate::{
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 use alloc::{alloc::Allocator, boxed::Box};
-use core::{marker::Sync, panic::PanicInfo, str::FromStr};
+use core::{marker::Sync, ops::DerefMut, panic::PanicInfo, str::FromStr};
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
-use mm::encrypted_mapper::{EncryptedPageTable, PhysOffset};
+use mm::{
+    encrypted_mapper::{EncryptedPageTable, PhysOffset},
+    frame_allocator::PhysicalMemoryAllocator,
+};
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::BootParams;
 use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
+use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
     structures::paging::{MappedPageTable, Page, Size2MiB},
     PhysAddr, VirtAddr,
 };
+
+/// Allocator for physical memory frames in the system.
+/// We reserve enough room to handle up to 128 GiB of memory, for now.
+pub static FRAME_ALLOCATOR: OnceCell<Spinlock<PhysicalMemoryAllocator<1024>>> = OnceCell::new();
 
 /// The allocator for allocating space in the memory area that is shared with the hypervisor.
 pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
@@ -127,11 +135,17 @@ pub fn start_kernel(info: &BootParams) {
     // Safety: in the linker script we specify that the ELF header should be placed at 0x200000.
     let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
 
-    // Physical frame allocator: support up to 128 GiB of memory, for now.
-    let mut frame_allocator = mm::init::<1024>(info.e820_table(), program_headers);
+    // Physical frame allocator
+    FRAME_ALLOCATOR
+        .set(Spinlock::new(mm::init(info.e820_table(), program_headers)))
+        .map_err(|_| ())
+        .expect("did not expect frame allocator to be already set!");
 
     // Note: `info` will not be valid after calling this!
-    let mut mapper = mm::init_paging(&mut frame_allocator, program_headers).unwrap();
+    let mut mapper = {
+        let mut frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
+        mm::init_paging(frame_allocator.deref_mut(), program_headers).unwrap()
+    };
 
     // Re-map boot params to the new virtual address.
     // Safety: we know we're addressing valid memory that contains the correct data structure, as
@@ -161,7 +175,10 @@ pub fn start_kernel(info: &BootParams) {
 
     // Allocate a section for guest-host communication (without the `ENCRYPTED` bit set)
     // We'll allocate 2*2MiB, as virtio needs more than 2 MiB for its data structures.
-    let guest_host_frames = frame_allocator.allocate_contiguous(2).unwrap();
+    let guest_host_frames = {
+        let mut frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
+        frame_allocator.allocate_contiguous(2).unwrap()
+    };
     let guest_host_pages = Page::range(
         mapper
             .translate_physical_frame(guest_host_frames.start)
@@ -197,7 +214,10 @@ pub fn start_kernel(info: &BootParams) {
     let mapper = ADDRESS_TRANSLATOR.get().unwrap();
 
     // If we don't find memory for heap, it's ok to panic.
-    let heap_phys_frames = frame_allocator.largest_available().unwrap();
+    let heap_phys_frames = {
+        let mut frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
+        frame_allocator.largest_available().unwrap()
+    };
     memory::init_kernel_heap::<Size2MiB>(Page::range(
         mapper
             .translate_physical_frame(heap_phys_frames.start)
