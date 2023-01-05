@@ -292,9 +292,6 @@
 <span id="292">292</span>
 <span id="293">293</span>
 <span id="294">294</span>
-<span id="295">295</span>
-<span id="296">296</span>
-<span id="297">297</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -375,7 +372,6 @@
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_linux_boot_params::BootParams;
-<span class="kw">use </span>oak_restricted_kernel_api::FileDescriptorChannel;
 <span class="kw">use </span>oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 <span class="kw">use </span>strum::{EnumIter, EnumString, IntoEnumIterator};
 <span class="kw">use </span>x86_64::{
@@ -391,7 +387,7 @@
     OnceCell::new();
 
 <span class="doccomment">/// Main entry point for the kernel, to be called from bootloader.
-</span><span class="kw">pub fn </span>start_kernel(info: <span class="kw-2">&amp;</span>BootParams) -&gt; Box&lt;<span class="kw">dyn </span>Channel&gt; {
+</span><span class="kw">pub fn </span>start_kernel(info: <span class="kw-2">&amp;</span>BootParams) {
     avx::enable_avx();
     descriptors::init_gdt();
     interrupts::init_idt();
@@ -536,8 +532,6 @@
     );
 
     syscall::enable_syscalls(channel);
-
-    Box::&lt;FileDescriptorChannel&gt;::default()
 }
 
 <span class="attribute">#[derive(EnumIter, EnumString)]
