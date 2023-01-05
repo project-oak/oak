@@ -78,7 +78,6 @@ use mm::encrypted_mapper::{EncryptedPageTable, PhysOffset};
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::BootParams;
-use oak_restricted_kernel_api::FileDescriptorChannel;
 use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
@@ -94,7 +93,7 @@ pub static ADDRESS_TRANSLATOR: OnceCell<EncryptedPageTable<MappedPageTable<'stat
     OnceCell::new();
 
 /// Main entry point for the kernel, to be called from bootloader.
-pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
+pub fn start_kernel(info: &BootParams) {
     avx::enable_avx();
     descriptors::init_gdt();
     interrupts::init_idt();
@@ -239,8 +238,6 @@ pub fn start_kernel(info: &BootParams) -> Box<dyn Channel> {
     );
 
     syscall::enable_syscalls(channel);
-
-    Box::<FileDescriptorChannel>::default()
 }
 
 #[derive(EnumIter, EnumString)]

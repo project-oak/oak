@@ -643,6 +643,7 @@ dependencies = [
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
  "oak_restricted_kernel",
+ "oak_restricted_kernel_api",
  "static_assertions",
 ]
 
@@ -772,7 +773,6 @@ dependencies = [
  "oak_channel",
  "oak_core",
  "oak_linux_boot_params",
- "oak_restricted_kernel_api",
  "oak_restricted_kernel_interface",
  "oak_sev_guest",
  "oak_simple_io",

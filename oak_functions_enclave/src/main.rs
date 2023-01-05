@@ -23,23 +23,23 @@ extern crate alloc;
 use alloc::{boxed::Box, sync::Arc};
 use core::panic::PanicInfo;
 use log::info;
-use oak_channel::Channel;
 use oak_linux_boot_params::BootParams;
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
+use oak_restricted_kernel_api::FileDescriptorChannel;
 
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
-    let channel = oak_restricted_kernel::start_kernel(rsi);
-    main(channel)
+    oak_restricted_kernel::start_kernel(rsi);
+    main()
 }
 
-fn main(channel: Box<dyn Channel>) -> ! {
+fn main() -> ! {
     info!("In main!");
     let service = oak_functions_service::OakFunctionsService::new(Arc::new(
         PlaceholderAmdAttestationGenerator,
     ));
     let server = oak_functions_service::schema::OakFunctionsServer::new(service);
-    oak_channel::server::start_blocking_server(channel, server)
+    oak_channel::server::start_blocking_server(Box::<FileDescriptorChannel>::default(), server)
         .expect("server encountered an unrecoverable error");
 }
 

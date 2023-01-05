@@ -20,24 +20,26 @@
 
 extern crate alloc;
 
-use alloc::{boxed::Box, vec, vec::Vec};
+use alloc::{vec, vec::Vec};
 use core::panic::PanicInfo;
 use log::info;
-use oak_channel::Channel;
+use oak_channel::{Read, Write};
 use oak_linux_boot_params::BootParams;
+use oak_restricted_kernel_api::FileDescriptorChannel;
 
 const MESSAGE_SIZE: usize = 1;
 
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
-    let channel = oak_restricted_kernel::start_kernel(rsi);
+    oak_restricted_kernel::start_kernel(rsi);
     info!("In main!");
-    start_echo_server(channel)
+    start_echo_server()
 }
 
 // Starts an echo server that reads single bytes from the channel and writes
 // them back.
-fn start_echo_server(mut channel: Box<dyn Channel>) -> ! {
+fn start_echo_server() -> ! {
+    let mut channel = FileDescriptorChannel::default();
     loop {
         let bytes = {
             let mut bytes: Vec<u8> = vec![0; MESSAGE_SIZE];
