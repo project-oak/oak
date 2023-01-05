@@ -15,7 +15,10 @@
 //
 
 mod channel;
+mod fd;
+mod stdio;
 
+use self::fd::{syscall_fsync, syscall_read, syscall_write};
 use alloc::boxed::Box;
 use core::{arch::asm, ffi::c_void};
 use oak_channel::Channel;
@@ -28,10 +31,9 @@ use x86_64::{
     VirtAddr,
 };
 
-use self::channel::{syscall_fsync, syscall_read, syscall_write};
-
 pub fn enable_syscalls(channel: Box<dyn Channel>) {
-    channel::init(channel);
+    channel::register(channel);
+    stdio::register();
 
     LStar::write(VirtAddr::new(syscall_entrypoint as *const fn() as u64));
     unsafe {

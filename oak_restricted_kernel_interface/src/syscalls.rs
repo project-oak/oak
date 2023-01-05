@@ -29,8 +29,7 @@ pub enum Syscall {
     /// Read from a file descriptor.
     ///
     /// Arguments:
-    ///   - arg0 (c_ssize_t): file descriptor number. Ignored by the kernel as we don't support
-    ///     multiple file descriptors.
+    ///   - arg0 (c_ssize_t): file descriptor number
     ///   - arg1 (*mut c_void): pointer to the buffer to be filled
     ///   - arg2 (c_size_t): size of the buffer
     /// Returns:
@@ -40,8 +39,7 @@ pub enum Syscall {
     /// Write to a file descriptor.
     ///
     /// Arguments:
-    ///   - arg0 (c_ssize_t): file descriptor number. Ignored by the kernel as we don't support
-    ///     multiple file descriptors.
+    ///   - arg0 (c_ssize_t): file descriptor number
     ///   - arg1 (*const c_void): pointer to the buffer containing data to be written
     ///   - arg2 (c_size_t): size of the buffer
     /// Returns:
