@@ -72,10 +72,10 @@ fn main() -> ! {
 
     let channel = Box::new(Channel::new(stream));
     let service =
-        oak_functions_freestanding::OakFunctionsService::new(Arc::new(EmptyAttestationGenerator));
+        oak_functions_service::OakFunctionsService::new(Arc::new(EmptyAttestationGenerator));
     oak_channel::server::start_blocking_server(
         channel,
-        oak_functions_freestanding::schema::OakFunctionsServer::new(service),
+        oak_functions_service::schema::OakFunctionsServer::new(service),
     )
     .expect("server encountered an unrecoverable error");
 }

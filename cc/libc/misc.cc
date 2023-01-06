@@ -46,8 +46,8 @@ void abort() {
     ;
 }
 
-// *NOT* used when linking to Oak Kernel/Runtime since
-// this function is simply used to build a freestanding
-// program binary runnable and debuggable locally.
+// *NOT* used when linking to Oak TensorFlow Enclave since this function is
+// simply used to build a freestanding program binary runnable and debuggable
+// locally.
 int atexit(void (*)()) { return 0; }
 }

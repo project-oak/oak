@@ -1,0 +1,29 @@
+[package]
+name = "oak_echo_raw_enclave"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[workspace]
+resolver = "2"
+members = ["."]
+
+[features]
+default = ["vsock_channel"]
+vsock_channel = ["oak_restricted_kernel/vsock_channel"]
+simple_io_channel = ["oak_restricted_kernel/simple_io_channel"]
+
+[dependencies]
+log = "*"
+oak_channel = { path = "../../oak_channel" }
+oak_restricted_kernel = { path = "../../oak_restricted_kernel", default-features = false }
+oak_restricted_kernel_api = { path = "../../oak_restricted_kernel_api" }
+micro_rpc = { path = "../../micro_rpc" }
+oak_linux_boot_params = { path = "../../linux_boot_params" }
+static_assertions = "*"
+
+[[bin]]
+name = "oak_echo_raw_enclave"
+test = false
+bench = false

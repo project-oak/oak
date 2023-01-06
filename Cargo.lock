@@ -192,9 +192,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.66"
+version = "1.0.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "216261ddc8289130e551ddcd5ce8a064710c0d064a4d2895c67151c92b5443f6"
+checksum = "2cb2f989d18dd141ab8ae82f64d1a8cdd37e0840f73a406896cf5e99502fab61"
 
 [[package]]
 name = "approx"
@@ -268,9 +268,9 @@ dependencies = [
 
 [[package]]
 name = "atomic_refcell"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73b5e5f48b927f04e952dedc932f31995a65a0bf65ec971c74436e51bf6e970d"
+checksum = "857253367827bd9d0fd973f0ef15506a96e79e41b0ad7aa691203a4e3214f6c8"
 
 [[package]]
 name = "atty"
@@ -686,9 +686,9 @@ dependencies = [
 
 [[package]]
 name = "clap_complete"
-version = "4.0.6"
+version = "4.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7b3c9eae0de7bf8e3f904a5e40612b21fb2e2e566456d177809a48b892d24da"
+checksum = "10861370d2ba66b0f5989f83ebf35db6421713fd92351790e7fdd6c36774c56b"
 dependencies = [
  "clap",
 ]
@@ -2533,28 +2533,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_freestanding"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "hashbrown 0.13.1",
- "log",
- "micro_rpc",
- "micro_rpc_build",
- "oak_functions_abi",
- "oak_functions_lookup",
- "oak_functions_test_utils",
- "oak_functions_wasm",
- "oak_functions_workload_logging",
- "oak_logger",
- "oak_remote_attestation",
- "oak_remote_attestation_amd",
- "prost 0.11.2",
- "tokio",
-]
-
-[[package]]
 name = "oak_functions_launcher"
 version = "0.1.0"
 dependencies = [
@@ -2587,7 +2565,7 @@ dependencies = [
  "clap",
  "log",
  "oak_channel",
- "oak_functions_freestanding",
+ "oak_functions_service",
  "oak_remote_attestation",
  "oak_remote_attestation_amd",
 ]
@@ -2601,7 +2579,7 @@ dependencies = [
  "clap",
  "libc",
  "oak_channel",
- "oak_functions_freestanding",
+ "oak_functions_service",
  "oak_remote_attestation",
  "prost 0.11.2",
  "prost-build 0.11.2",
@@ -2641,8 +2619,8 @@ dependencies = [
  "hashbrown 0.13.1",
  "lazy_static",
  "oak_functions_abi",
- "oak_functions_freestanding",
  "oak_functions_lookup",
+ "oak_functions_service",
  "oak_functions_test_utils",
  "oak_functions_testing_extension",
  "oak_functions_wasm",
@@ -2672,6 +2650,28 @@ dependencies = [
  "oak_functions_sdk",
  "serde",
  "serde_derive",
+]
+
+[[package]]
+name = "oak_functions_service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "hashbrown 0.13.1",
+ "log",
+ "micro_rpc",
+ "micro_rpc_build",
+ "oak_functions_abi",
+ "oak_functions_lookup",
+ "oak_functions_test_utils",
+ "oak_functions_wasm",
+ "oak_functions_workload_logging",
+ "oak_logger",
+ "oak_remote_attestation",
+ "oak_remote_attestation_amd",
+ "prost 0.11.2",
+ "tokio",
 ]
 
 [[package]]
@@ -2867,6 +2867,7 @@ dependencies = [
  "oak_channel",
  "oak_core",
  "oak_linux_boot_params",
+ "oak_restricted_kernel_interface",
  "oak_sev_guest",
  "oak_simple_io",
  "oak_virtio",
@@ -2879,6 +2880,24 @@ dependencies = [
  "virtio-drivers",
  "x86_64",
  "zerocopy",
+]
+
+[[package]]
+name = "oak_restricted_kernel_api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_channel",
+ "oak_restricted_kernel_interface",
+ "os_pipe",
+ "strum",
+]
+
+[[package]]
+name = "oak_restricted_kernel_interface"
+version = "0.1.0"
+dependencies = [
+ "strum",
 ]
 
 [[package]]
@@ -4039,18 +4058,18 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.150"
+version = "1.0.151"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e326c9ec8042f1b5da33252c8a37e9ffbd2c9bef0155215b6e6c80c790e05f91"
+checksum = "97fed41fc1a24994d044e6db6935e69511a1153b52c15eb42493b26fa87feba0"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.150"
+version = "1.0.151"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42a3df25b0713732468deadad63ab9da1f1fd75a48a15024b50363f128db627e"
+checksum = "255abe9a125a985c05190d687b320c12f9b1f0b99445e608c21ba0782c719ad8"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4226,9 +4245,9 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 
 [[package]]
 name = "snafu"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a152ba99b054b22972ee794cf04e5ef572da1229e33b65f3c57abbff0525a454"
+checksum = "cb0656e7e3ffb70f6c39b3c2a86332bb74aa3c679da781642590f3c1118c5045"
 dependencies = [
  "doc-comment",
  "snafu-derive",
@@ -4236,9 +4255,9 @@ dependencies = [
 
 [[package]]
 name = "snafu-derive"
-version = "0.7.3"
+version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5e79cdebbabaebb06a9bdbaedc7f159b410461f63611d4d0e3fb0fab8fed850"
+checksum = "475b3bbe5245c26f2d8a6f62d67c1f30eb9fffeccee721c45d162c3ebbdf81b2"
 dependencies = [
  "heck 0.4.0",
  "proc-macro2",
@@ -5367,9 +5386,9 @@ dependencies = [
 
 [[package]]
 name = "wasm_mutex"
-version = "0.1.4"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efbdddc3b163fc2d639800b3411a5428d1e151ba2a400a560b1545e39f1e68cd"
+checksum = "cd58278a2d9b33ae3e134252dc229751f2bdf9e5792f2288af3873b699240a1b"
 dependencies = [
  "serde",
 ]

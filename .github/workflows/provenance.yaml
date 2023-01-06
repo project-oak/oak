@@ -18,10 +18,10 @@ jobs:
       fail-fast: false
       matrix:
         buildconfig:
-          - buildconfigs/oak_echo_bin.toml
-          - buildconfigs/oak_echo_raw_bin.toml
-          - buildconfigs/oak_functions_freestanding_bin.toml
-          - buildconfigs/oak_tensorflow_freestanding_bin.toml
+          - buildconfigs/oak_echo_enclave.toml
+          - buildconfigs/oak_echo_raw_enclave.toml
+          - buildconfigs/oak_functions_enclave.toml
+          - buildconfigs/oak_tensorflow_enclave.toml
 
     permissions:
       actions: read

@@ -29,7 +29,7 @@ A buildconfig is a `.toml` file containing three fields:
 
 The `output_path` must be the last line of the `.toml` file, so that the
 provenance generation workflow can retrieve the path. For an example see
-`./buildconfigs/oak_functions_freestanding_bin.toml`.
+`./buildconfigs/oak_functions_enclave.toml`.
 
 You need to add the config file to the `./buildconfigs` folder.
 
@@ -48,7 +48,7 @@ jobs:
       fail-fast: false
       matrix:
         buildconfig:
-          - buildconfigs/oak_functions_freestanding_bin.toml
+          - buildconfigs/oak_functions_enclave.toml
           - buildconfigs/<name_of_the_new_buildconfig_file>
 ```
 
@@ -76,15 +76,14 @@ posted on [PR #3473](https://github.com/project-oak/oak/pull/3473).
 
 Artifact digest and name:
 
-ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a  oak_functions_freestanding_bin
+ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a  oak_functions_enclave
 
 Provenance digest:
 
 sha256:729291baba0ec2bb6eff7528e8aa0d0dd1fbfaccd3c59219174b182fe1f8e5ff ↑ [ent-store]
 ```
 
-The comment contains the SHA256 digest of the binary
-(`oak_functions_freestanding_bin`):
+The comment contains the SHA256 digest of the binary (`oak_functions_enclave`):
 
 ```text
 ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a
@@ -104,7 +103,7 @@ download the binary from `ent`, with the following command using the
 [ent HTTP API](https://github.com/google/ent#raw-http-api):
 
 ```bash
-$ curl --output oak_functions_freestanding_bin_from_ent  https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a
+$ curl --output oak_functions_enclave_from_ent  https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
 100 2298k    0 2298k    0     0  3541k      0 --:--:-- --:--:-- --:--:-- 3541k
@@ -116,7 +115,7 @@ Similarly, you can use the SHA256 digest of the provenance to download the
 provenance from `ent`:
 
 ```bash
-$ curl --output oak_functions_freestanding_provenance.jsonl  https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:729291baba0ec2bb6eff7528e8aa0d0dd1fbfaccd3c59219174b182fe1f8e5ff
+$ curl --output oak_functions_service_provenance.jsonl  https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:729291baba0ec2bb6eff7528e8aa0d0dd1fbfaccd3c59219174b182fe1f8e5ff
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
 100 14548    0 14548    0     0  33443      0 --:--:-- --:--:-- --:--:-- 33443
@@ -206,7 +205,7 @@ LogEntry using the following command:
 
 ```bash
 $ jq .[].attestation.data signed-provenance-entry | tr --delete '"' | base64 --decode
-{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"https://slsa.dev/provenance/v0.2","subject":[{"name":"oak_functions_freestanding_bin","digest":{"sha256":"ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a"}}],"predicate":{"builder":{"id":"https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v1.2.1"},"buildType":"https://github.com/slsa-framework/slsa-github-generator/generic@v1","invocation":{"configSource":{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"3981047db8f9f61355ab93054fa039c907094cc5"},"entryPoint":".github/workflows/provenance.yaml"},"parameters":{},"environment":{"/* GitHub context */"}},"metadata":{"buildInvocationID":"3498762287-1","completeness":{"parameters":true,"environment":false,"materials":false},"reproducible":false},"materials":[{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"3981047db8f9f61355ab93054fa039c907094cc5"}}]}}
+{"_type":"https://in-toto.io/Statement/v0.1","predicateType":"https://slsa.dev/provenance/v0.2","subject":[{"name":"oak_functions_enclave","digest":{"sha256":"ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a"}}],"predicate":{"builder":{"id":"https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v1.2.1"},"buildType":"https://github.com/slsa-framework/slsa-github-generator/generic@v1","invocation":{"configSource":{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"3981047db8f9f61355ab93054fa039c907094cc5"},"entryPoint":".github/workflows/provenance.yaml"},"parameters":{},"environment":{"/* GitHub context */"}},"metadata":{"buildInvocationID":"3498762287-1","completeness":{"parameters":true,"environment":false,"materials":false},"reproducible":false},"materials":[{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"3981047db8f9f61355ab93054fa039c907094cc5"}}]}}
 ```
 
 Optional: Verify that this is the same as the provenance (i.e., payload) in the
@@ -224,7 +223,7 @@ of the LogEntry:
 ```bash
 $ $ rekor-cli get --uuid 24296fb24b8ad77a80749c88e748a38199301c06daba6eeb4e242dcc5839fc45c7b52de6f40d1cb4
 LogID: c0d23d6ad406973f9559f3ba2d1ca01f84147d8ffc5b8445c224f98b9591801d
-Attestation: {"_type":"https://in-toto.io/Statement/v0.1","predicateType":"https://slsa.dev/provenance/v0.2","subject":[{"name":"oak_functions_freestanding_bin","digest":{"sha256":"ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a"}}],"predicate":{"builder":{"id":"https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v1.2.1"},"buildType":"https://github.com/slsa-framework/slsa-github-generator/generic@v1","invocation":{"configSource":{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"3981047db8f9f61355ab93054fa039c907094cc5"},"entryPoint":".github/workflows/provenance.yaml"},"parameters":{},"environment":{"/* GitHub context */"}},"metadata":{"buildInvocationID":"3498762287-1","completeness":{"parameters":true,"environment":false,"materials":false},"reproducible":false},"materials":[{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"3981047db8f9f61355ab93054fa039c907094cc5"}}]}}
+Attestation: {"_type":"https://in-toto.io/Statement/v0.1","predicateType":"https://slsa.dev/provenance/v0.2","subject":[{"name":"oak_functions_enclave","digest":{"sha256":"ccf7bc7d07dc7f74dffa5485dc795e90bb1deec27286c65debca878226eeb16a"}}],"predicate":{"builder":{"id":"https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v1.2.1"},"buildType":"https://github.com/slsa-framework/slsa-github-generator/generic@v1","invocation":{"configSource":{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"3981047db8f9f61355ab93054fa039c907094cc5"},"entryPoint":".github/workflows/provenance.yaml"},"parameters":{},"environment":{"/* GitHub context */"}},"metadata":{"buildInvocationID":"3498762287-1","completeness":{"parameters":true,"environment":false,"materials":false},"reproducible":false},"materials":[{"uri":"git+https://github.com/project-oak/oak@refs/heads/main","digest":{"sha1":"3981047db8f9f61355ab93054fa039c907094cc5"}}]}}
 Index: 7359481
 IntegratedTime: 2022-11-18T17:16:22Z
 UUID: 24296fb24b8ad77a80749c88e748a38199301c06daba6eeb4e242dcc5839fc45c7b52de6f40d1cb4
