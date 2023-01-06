@@ -171,6 +171,8 @@
 <span id="171">171</span>
 <span id="172">172</span>
 <span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -188,7 +190,10 @@
 //
 
 </span><span class="kw">mod </span>channel;
+<span class="kw">mod </span>fd;
+<span class="kw">mod </span>stdio;
 
+<span class="kw">use </span><span class="self">self</span>::fd::{syscall_fsync, syscall_read, syscall_write};
 <span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>core::{arch::asm, ffi::c_void};
 <span class="kw">use </span>oak_channel::Channel;
@@ -201,10 +206,9 @@
     VirtAddr,
 };
 
-<span class="kw">use </span><span class="self">self</span>::channel::{syscall_fsync, syscall_read, syscall_write};
-
 <span class="kw">pub fn </span>enable_syscalls(channel: Box&lt;<span class="kw">dyn </span>Channel&gt;) {
-    channel::init(channel);
+    channel::register(channel);
+    stdio::register();
 
     LStar::write(VirtAddr::new(syscall_entrypoint <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">fn</span>() <span class="kw">as </span>u64));
     <span class="kw">unsafe </span>{

@@ -54,8 +54,6 @@
 <span id="54">54</span>
 <span id="55">55</span>
 <span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -87,8 +85,7 @@
     <span class="doccomment">/// Read from a file descriptor.
     ///
     /// Arguments:
-    ///   - arg0 (c_ssize_t): file descriptor number. Ignored by the kernel as we don&#39;t support
-    ///     multiple file descriptors.
+    ///   - arg0 (c_ssize_t): file descriptor number
     ///   - arg1 (*mut c_void): pointer to the buffer to be filled
     ///   - arg2 (c_size_t): size of the buffer
     /// Returns:
@@ -98,8 +95,7 @@
     <span class="doccomment">/// Write to a file descriptor.
     ///
     /// Arguments:
-    ///   - arg0 (c_ssize_t): file descriptor number. Ignored by the kernel as we don&#39;t support
-    ///     multiple file descriptors.
+    ///   - arg0 (c_ssize_t): file descriptor number
     ///   - arg1 (*const c_void): pointer to the buffer containing data to be written
     ///   - arg2 (c_size_t): size of the buffer
     /// Returns:

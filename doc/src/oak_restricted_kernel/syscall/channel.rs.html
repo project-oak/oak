@@ -55,54 +55,6 @@
 <span id="55">55</span>
 <span id="56">56</span>
 <span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
-<span id="83">83</span>
-<span id="84">84</span>
-<span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
-<span id="88">88</span>
-<span id="89">89</span>
-<span id="90">90</span>
-<span id="91">91</span>
-<span id="92">92</span>
-<span id="93">93</span>
-<span id="94">94</span>
-<span id="95">95</span>
-<span id="96">96</span>
-<span id="97">97</span>
-<span id="98">98</span>
-<span id="99">99</span>
-<span id="100">100</span>
-<span id="101">101</span>
-<span id="102">102</span>
-<span id="103">103</span>
-<span id="104">104</span>
-<span id="105">105</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -119,22 +71,13 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>core::ffi::{c_int, c_size_t, c_ssize_t, c_void};
-
-<span class="kw">use </span>alloc::{boxed::Box, slice};
+</span><span class="kw">use </span><span class="kw">super</span>::fd::FileDescriptor;
+<span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>oak_channel::Channel;
-<span class="kw">use </span>oak_core::sync::OnceCell;
-<span class="kw">use </span>oak_restricted_kernel_interface::Errno;
-<span class="kw">use </span>spinning_top::Spinlock;
-
-<span class="kw">trait </span>FileDescriptor {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;isize, Errno&gt;;
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;isize, Errno&gt;;
-    <span class="kw">fn </span>sync(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), Errno&gt;;
-}
+<span class="kw">use </span>oak_restricted_kernel_interface::{Errno, OAK_CHANNEL_FD};
 
 <span class="attribute">#[repr(transparent)]
-</span><span class="kw">struct </span>ChannelDescriptor {
+</span><span class="kw">pub struct </span>ChannelDescriptor {
     channel: Box&lt;<span class="kw">dyn </span>Channel&gt;,
 }
 
@@ -163,50 +106,11 @@
     }
 }
 
-<span class="kw">static </span>CHANNEL_DESCRIPTOR: OnceCell&lt;Spinlock&lt;ChannelDescriptor&gt;&gt; = OnceCell::new();
-
-<span class="kw">pub fn </span>init(channel: Box&lt;<span class="kw">dyn </span>Channel&gt;) {
-    CHANNEL_DESCRIPTOR
-        .set(Spinlock::new(ChannelDescriptor::new(channel)))
-        .map_err(|<span class="kw">_</span>| ())
-        .expect(<span class="string">&quot;communication channel was already initialised&quot;</span>);
-}
-
-<span class="kw">pub fn </span>syscall_read(_fd: c_int, buf: <span class="kw-2">*mut </span>c_void, count: c_size_t) -&gt; c_ssize_t {
-    <span class="comment">// We should validate that the pointer and count are valid, as these come from userspace and
-    // therefore are not to be trusted, but right now everything is in kernel space so there is
-    // nothing to check.
-    </span><span class="kw">let </span>data = <span class="kw">unsafe </span>{ slice::from_raw_parts_mut(buf <span class="kw">as </span><span class="kw-2">*mut </span>u8, count) };
-
-    <span class="kw">let </span><span class="kw-2">mut </span>channel = CHANNEL_DESCRIPTOR
-        .get()
-        .expect(<span class="string">&quot;syscall interface not ready yet&quot;</span>)
-        .lock();
-    channel.read(data).unwrap_or_else(|err| err <span class="kw">as </span>isize)
-}
-
-<span class="kw">pub fn </span>syscall_write(_fd: c_int, buf: <span class="kw-2">*const </span>c_void, count: c_size_t) -&gt; c_ssize_t {
-    <span class="comment">// We should validate that the pointer and count are valid, as these come from userspace and
-    // therefore are not to be trusted, but right now everything is in kernel space so there is
-    // nothing to check.
-    </span><span class="kw">let </span>data = <span class="kw">unsafe </span>{ slice::from_raw_parts(buf <span class="kw">as </span><span class="kw-2">*mut </span>u8, count) };
-
-    <span class="kw">let </span><span class="kw-2">mut </span>channel = CHANNEL_DESCRIPTOR
-        .get()
-        .expect(<span class="string">&quot;syscall interface not ready yet&quot;</span>)
-        .lock();
-    channel.write(data).unwrap_or_else(|err| err <span class="kw">as </span>isize)
-}
-
-<span class="kw">pub fn </span>syscall_fsync(_fd: c_int) -&gt; c_ssize_t {
-    <span class="kw">let </span><span class="kw-2">mut </span>channel = CHANNEL_DESCRIPTOR
-        .get()
-        .expect(<span class="string">&quot;syscall interface not ready yet&quot;</span>)
-        .lock();
-    channel
-        .sync()
-        .map(|()| <span class="number">0</span>)
-        .unwrap_or_else(|err| err <span class="kw">as </span>isize)
+<span class="doccomment">/// Registers a handler for the Oak communication channel file descriptor (`OAK_CHANNEL_FD`)
+</span><span class="kw">pub fn </span>register(channel: Box&lt;<span class="kw">dyn </span>Channel&gt;) {
+    <span class="kw">super</span>::fd::register(OAK_CHANNEL_FD, Box::new(ChannelDescriptor::new(channel)))
+        .map_err(|<span class="kw">_</span>| ()) <span class="comment">// throw away the box we get back
+        </span>.expect(<span class="string">&quot;communication channel was already registered&quot;</span>);
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="oak_restricted_kernel" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>
