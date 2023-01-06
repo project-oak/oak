@@ -51,13 +51,14 @@ where
 }
 
 #[cfg(feature = "vsock_channel")]
-pub fn get_vsock_channel<'a, X: Translator, A: Allocator>(
-    translator: &X,
-    alloc: &'a A,
-) -> Channel<oak_virtio::vsock::socket::Socket<'a, VirtioPciTransport, A>> {
+pub fn get_vsock_channel<A: Allocator>(
+    alloc: &A,
+) -> Channel<oak_virtio::vsock::socket::Socket<'_, VirtioPciTransport, A>> {
+    use crate::PAGE_TABLES;
+
     let vsock = oak_virtio::vsock::VSock::find_and_configure_device(
-        |vaddr: VirtAddr| translator.translate_virtual(vaddr),
-        |paddr: PhysAddr| translator.translate_physical(paddr),
+        |vaddr: VirtAddr| PAGE_TABLES.get().unwrap().lock().translate_virtual(vaddr),
+        |paddr: PhysAddr| PAGE_TABLES.get().unwrap().lock().translate_physical(paddr),
         alloc,
     )
     .expect("couldn't configure PCI virtio vsock device");
