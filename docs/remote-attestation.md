@@ -104,11 +104,15 @@ The client also generates an encryption key pair ahead of time (it may be reused
 across invocations, or it may be generated for each invocation).
 
 For each invocation (consisting of a request followed by a response) the client
-generates a fresh symmetric key for the response, then it concatenates this key
-with the request body, and encrypts the resulting blob with the enclave public
-key using [Hybrid Encryption](https://developers.google.com/tink/hybrid). The
-client may also authenticate additional data, which is not encrypted, but is
-bound to the ciphertext via
+generates a fresh symmetric response key.
+
+Then it uses the enclave public key to encrypt the response key, and also uses
+the response key to encrypt the request body. These two cyphertexts are then
+concatenated, resulting in an "encrypted message" that will be sent to the
+server. This scheme is called
+[Hybrid Encryption](https://developers.google.com/tink/hybrid). The client may
+also authenticate additional data, which is not encrypted, but is bound to the
+ciphertext via
 [context info](https://developers.google.com/tink/hybrid#context_info_parameter).
 
 It then sends the encrypted message to the server, which forwards it to the
@@ -118,7 +122,7 @@ request and verify the integrity of the additional data, if present.
 
 The trusted enclave then processes the client request according to the
 application-specific logic, and once that is done, it encrypts the response with
-the client response key via using symmetric encryption.
+the client response key using symmetric encryption.
 
 The client receives the encrypted response, and decrypts it with the response
 key. The response key is then discarded and **not** reused for subsequent
