@@ -18,8 +18,8 @@ use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
-        "./proto",
-        &["oak_session_noninteractive_v1.proto"],
+        "./proto/v1",
+        &["service_streaming.proto"],
         CodegenOptions {
             build_server: true,
             build_client: true,
