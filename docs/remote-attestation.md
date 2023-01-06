@@ -54,12 +54,12 @@ Note over C,P: Exchange Encrypted Data
 
 loop for each invocation
    C-->>C: Generate symmetric Response Key<br>RK
-   C-->>C: Encrypt Response Key and request body with Enclave Public Key<br>Authenticate additional data (plaintext)
+   C-->>C: Encrypt Response Key with Enclave Public Key<br>Encrypt request body with Response Key<br>Authenticate additional data (plaintext)
    C->>U: InvokeRequest
    activate U
    U->>T: InvokeRequest
    activate T
-   T-->>T: Decrypt Response Key and request body with Enclave Secret Key
+   T-->>T: Decrypt Response Key with Enclave Secret Key<br>Decrypt request body with Response Key
    T-->>T: Process request
    T-->>T: Encrypt response with Response Key
    T->>U: InvokeResponse
