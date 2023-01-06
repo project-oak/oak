@@ -42,7 +42,7 @@ java_grpc_library(
 
 proto_library(
     name = "messages_proto",
-    srcs = ["messges.proto"],
+    srcs = ["messages.proto"],
 )
 
 java_proto_library(
