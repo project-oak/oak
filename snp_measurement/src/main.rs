@@ -33,7 +33,8 @@ use std::path::PathBuf;
 const DEFAULT_STAGE0_ROM: &str = "stage0/target/x86_64-unknown-none/release/stage0.bin";
 
 /// The default workspace-relative path to the release Oak Functions enclave binary.
-const DEFAULT_ENCLAVE_BINARY: &str = "oak_functions_freestanding_bin/target/x86_64-unknown-none/release/oak_functions_freestanding_bin";
+const DEFAULT_ENCLAVE_BINARY: &str =
+    "oak_functions_enclave/target/x86_64-unknown-none/release/oak_functions_enclave";
 
 #[derive(Parser, Clone)]
 #[command(about = "Oak SEV-SNP Measurement Calculator")]

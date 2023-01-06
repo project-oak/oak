@@ -13,7 +13,7 @@ oak_remote_attestation = { path = "../oak_remote_attestation", default-features 
   "rust-crypto"
 ] }
 oak_channel = { path = "../oak_channel", features = ["std"] }
-oak_functions_freestanding = { path = "../oak_functions_freestanding", default-features = false }
+oak_functions_service = { path = "../oak_functions_service", default-features = false }
 oak_remote_attestation_amd = { path = "../oak_remote_attestation_amd", default-features = false, features = [
   "rust-crypto"
 ] }

@@ -118,7 +118,7 @@ example:
 
 1. Binaries that runs on Oak server
    ```bash
-   cd oak_tensorflow_freestanding_bin
+   cd oak_tensorflow_enclave
    cargo build
    ```
    The binary is built with Oak Restricted Kernel and Oak TensorFlow Service,

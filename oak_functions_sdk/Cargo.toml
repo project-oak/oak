@@ -14,7 +14,7 @@ serde_derive = "*"
 [dev-dependencies]
 hashbrown = "*"
 lazy_static = "*"
-oak_functions_freestanding = { path = "../oak_functions_freestanding" }
+oak_functions_service = { path = "../oak_functions_service" }
 oak_functions_wasm = { path = "../oak_functions/wasm" }
 oak_functions_lookup = { path = "../oak_functions/lookup" }
 oak_functions_testing_extension = { path = "../oak_functions/testing" }

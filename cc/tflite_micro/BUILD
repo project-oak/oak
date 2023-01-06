@@ -54,7 +54,7 @@ cc_library(
 )
 
 # Shared target used by both Linux freestanding binary
-# and Oak TensorFlow runtime to run generic tflite models.
+# and Oak TensorFlow enclave to run generic tflite models.
 cc_library(
     name = "tflite_micro_generic",
     srcs = ["tflite_micro.cc"],

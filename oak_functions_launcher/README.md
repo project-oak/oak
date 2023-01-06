@@ -9,7 +9,7 @@ Communicates with the binary via the `oak_channel`.
 The Oak Functions binary may be loaded in crosvm via
 
 ```shell
-(cd oak_functions_freestanding_bin && cargo build) \
+(cd oak_functions_enclave && cargo build) \
     && RUST_LOG=debug cargo run \
     --package=oak_functions_launcher \
     -- \
@@ -17,7 +17,7 @@ The Oak Functions binary may be loaded in crosvm via
     --lookup-data=oak_functions_launcher/mock_lookup_data \
     crosvm \
     --vmm-binary=/usr/local/cargo/bin/crosvm \
-    --enclave-binary=oak_functions_freestanding_bin/target/x86_64-unknown-none/debug/oak_functions_freestanding_bin
+    --enclave-binary=oak_functions_enclave/target/x86_64-unknown-none/debug/oak_functions_enclave
 ```
 
 See also the See the task integration at `xtask/src/vm.rs`. Additional
