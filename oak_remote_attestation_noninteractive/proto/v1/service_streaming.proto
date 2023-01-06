@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak.session.noninteractive.v1;
 
-import "proto/v1/messages.proto";
+import "messages.proto";
 
 option java_multiple_files = true;
 option java_package = "oak.session.noninteractive.v1";
