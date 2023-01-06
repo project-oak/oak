@@ -292,6 +292,26 @@
 <span id="292">292</span>
 <span id="293">293</span>
 <span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -365,19 +385,27 @@
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 <span class="kw">use </span>alloc::{alloc::Allocator, boxed::Box};
-<span class="kw">use </span>core::{marker::Sync, panic::PanicInfo, str::FromStr};
+<span class="kw">use </span>core::{marker::Sync, ops::DerefMut, panic::PanicInfo, str::FromStr};
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>log::{error, info};
-<span class="kw">use </span>mm::encrypted_mapper::{EncryptedPageTable, PhysOffset};
+<span class="kw">use </span>mm::{
+    encrypted_mapper::{EncryptedPageTable, PhysOffset},
+    frame_allocator::PhysicalMemoryAllocator,
+};
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_linux_boot_params::BootParams;
 <span class="kw">use </span>oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
+<span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>strum::{EnumIter, EnumString, IntoEnumIterator};
 <span class="kw">use </span>x86_64::{
     structures::paging::{MappedPageTable, Page, Size2MiB},
     PhysAddr, VirtAddr,
 };
+
+<span class="doccomment">/// Allocator for physical memory frames in the system.
+/// We reserve enough room to handle up to 128 GiB of memory, for now.
+</span><span class="kw">pub static </span>FRAME_ALLOCATOR: OnceCell&lt;Spinlock&lt;PhysicalMemoryAllocator&lt;<span class="number">1024</span>&gt;&gt;&gt; = OnceCell::new();
 
 <span class="doccomment">/// The allocator for allocating space in the memory area that is shared with the hypervisor.
 </span><span class="kw">pub static </span>GUEST_HOST_HEAP: OnceCell&lt;LockedHeap&gt; = OnceCell::new();
@@ -421,11 +449,17 @@
     <span class="comment">// Safety: in the linker script we specify that the ELF header should be placed at 0x200000.
     </span><span class="kw">let </span>program_headers = <span class="kw">unsafe </span>{ elf::get_phdrs(VirtAddr::new(<span class="number">0x20_0000</span>)) };
 
-    <span class="comment">// Physical frame allocator: support up to 128 GiB of memory, for now.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>frame_allocator = mm::init::&lt;<span class="number">1024</span>&gt;(info.e820_table(), program_headers);
+    <span class="comment">// Physical frame allocator
+    </span>FRAME_ALLOCATOR
+        .set(Spinlock::new(mm::init(info.e820_table(), program_headers)))
+        .map_err(|<span class="kw">_</span>| ())
+        .expect(<span class="string">&quot;did not expect frame allocator to be already set!&quot;</span>);
 
     <span class="comment">// Note: `info` will not be valid after calling this!
-    </span><span class="kw">let </span><span class="kw-2">mut </span>mapper = mm::init_paging(<span class="kw-2">&amp;mut </span>frame_allocator, program_headers).unwrap();
+    </span><span class="kw">let </span><span class="kw-2">mut </span>mapper = {
+        <span class="kw">let </span><span class="kw-2">mut </span>frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
+        mm::init_paging(frame_allocator.deref_mut(), program_headers).unwrap()
+    };
 
     <span class="comment">// Re-map boot params to the new virtual address.
     // Safety: we know we&#39;re addressing valid memory that contains the correct data structure, as
@@ -455,7 +489,10 @@
 
     <span class="comment">// Allocate a section for guest-host communication (without the `ENCRYPTED` bit set)
     // We&#39;ll allocate 2*2MiB, as virtio needs more than 2 MiB for its data structures.
-    </span><span class="kw">let </span>guest_host_frames = frame_allocator.allocate_contiguous(<span class="number">2</span>).unwrap();
+    </span><span class="kw">let </span>guest_host_frames = {
+        <span class="kw">let </span><span class="kw-2">mut </span>frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
+        frame_allocator.allocate_contiguous(<span class="number">2</span>).unwrap()
+    };
     <span class="kw">let </span>guest_host_pages = Page::range(
         mapper
             .translate_physical_frame(guest_host_frames.start)
@@ -491,7 +528,10 @@
     <span class="kw">let </span>mapper = ADDRESS_TRANSLATOR.get().unwrap();
 
     <span class="comment">// If we don&#39;t find memory for heap, it&#39;s ok to panic.
-    </span><span class="kw">let </span>heap_phys_frames = frame_allocator.largest_available().unwrap();
+    </span><span class="kw">let </span>heap_phys_frames = {
+        <span class="kw">let </span><span class="kw-2">mut </span>frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
+        frame_allocator.largest_available().unwrap()
+    };
     memory::init_kernel_heap::&lt;Size2MiB&gt;(Page::range(
         mapper
             .translate_physical_frame(heap_phys_frames.start)
