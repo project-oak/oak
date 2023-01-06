@@ -15,8 +15,7 @@
 //
 
 use crate::{
-    ghcb::GHCB_PROTOCOL, mm::Translator, snp::GUEST_MESSAGE_ENCRYPTOR, ADDRESS_TRANSLATOR,
-    GUEST_HOST_HEAP,
+    ghcb::GHCB_PROTOCOL, mm::Translator, snp::GUEST_MESSAGE_ENCRYPTOR, GUEST_HOST_HEAP, PAGE_TABLES,
 };
 use alloc::boxed::Box;
 pub use oak_sev_guest::guest::{
@@ -53,9 +52,10 @@ pub fn get_attestation(report_data: [u8; REPORT_DATA_SIZE]) -> anyhow::Result<At
         .map_err(anyhow::Error::msg)?;
     let response_message = Box::new_in(GuestMessage::new(), alloc);
 
-    let translator = ADDRESS_TRANSLATOR
+    let translator = PAGE_TABLES
         .get()
-        .ok_or_else(|| anyhow::anyhow!("address translator is not initialized"))?;
+        .ok_or_else(|| anyhow::anyhow!("address translator is not initialized"))?
+        .lock();
     let request_address = translator
         .translate_virtual(VirtAddr::from_ptr(
             request_message.as_ref() as *const GuestMessage
