@@ -31,10 +31,7 @@ proto_library(
 
 java_proto_library(
     name = "service_streaming_java_proto",
-    deps = [
-        ":messages_proto",
-        ":service_streaming_proto",
-    ]
+    deps = [":service_streaming_proto"]
 )
 
 java_grpc_library(
