@@ -24,8 +24,18 @@ package(
 )
 
 proto_library(
+    name = "messages_proto",
+    srcs = ["messages.proto"],
+)
+
+proto_library(
     name = "service_streaming_proto",
     srcs = ["service_streaming.proto"],
+    deps = [":messages_proto"],
+)
+
+java_proto_library(
+    name = "messages_java_proto",
     deps = [":messages_proto"],
 )
 
@@ -38,14 +48,4 @@ java_grpc_library(
     name = "service_streaming_java_grpc",
     srcs = [":service_streaming_proto"],
     deps = [":service_streaming_java_proto"],
-)
-
-proto_library(
-    name = "messages_proto",
-    srcs = ["messages.proto"],
-)
-
-java_proto_library(
-    name = "messages_java_proto",
-    deps = [":messages_proto"],
 )
