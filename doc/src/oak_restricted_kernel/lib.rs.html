@@ -312,6 +312,13 @@
 <span id="312">312</span>
 <span id="313">313</span>
 <span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -385,7 +392,12 @@
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 <span class="kw">use </span>alloc::{alloc::Allocator, boxed::Box};
-<span class="kw">use </span>core::{marker::Sync, ops::DerefMut, panic::PanicInfo, str::FromStr};
+<span class="kw">use </span>core::{
+    marker::Sync,
+    ops::{Deref, DerefMut},
+    panic::PanicInfo,
+    str::FromStr,
+};
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>log::{error, info};
 <span class="kw">use </span>mm::{
@@ -399,7 +411,7 @@
 <span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>strum::{EnumIter, EnumString, IntoEnumIterator};
 <span class="kw">use </span>x86_64::{
-    structures::paging::{MappedPageTable, Page, Size2MiB},
+    structures::paging::{MappedPageTable, Page},
     PhysAddr, VirtAddr,
 };
 
@@ -410,9 +422,10 @@
 <span class="doccomment">/// The allocator for allocating space in the memory area that is shared with the hypervisor.
 </span><span class="kw">pub static </span>GUEST_HOST_HEAP: OnceCell&lt;LockedHeap&gt; = OnceCell::new();
 
-<span class="doccomment">/// Translator that can convert between physical and virtual addresses.
-</span><span class="kw">pub static </span>ADDRESS_TRANSLATOR: OnceCell&lt;EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;static</span>, PhysOffset&gt;&gt;&gt; =
-    OnceCell::new();
+<span class="doccomment">/// Active page tables.
+</span><span class="kw">pub static </span>PAGE_TABLES: OnceCell&lt;
+    Spinlock&lt;EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;static</span>, PhysOffset&gt;&gt;&gt;,
+&gt; = OnceCell::new();
 
 <span class="doccomment">/// Main entry point for the kernel, to be called from bootloader.
 </span><span class="kw">pub fn </span>start_kernel(info: <span class="kw-2">&amp;</span>BootParams) {
@@ -456,32 +469,43 @@
         .expect(<span class="string">&quot;did not expect frame allocator to be already set!&quot;</span>);
 
     <span class="comment">// Note: `info` will not be valid after calling this!
-    </span><span class="kw">let </span><span class="kw-2">mut </span>mapper = {
-        <span class="kw">let </span><span class="kw-2">mut </span>frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
-        mm::init_paging(frame_allocator.deref_mut(), program_headers).unwrap()
+    </span><span class="kw">if </span>PAGE_TABLES
+        .set(Spinlock::new({
+            <span class="kw">let </span><span class="kw-2">mut </span>frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
+            mm::init_paging(frame_allocator.deref_mut(), program_headers).unwrap()
+        }))
+        .is_err()
+    {
+        <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t initialize page tables&quot;</span>);
     };
 
     <span class="comment">// Re-map boot params to the new virtual address.
     // Safety: we know we&#39;re addressing valid memory that contains the correct data structure, as
     // we&#39;re just translating addresses differently due to the new page tables.
     </span><span class="kw">let </span>info = <span class="kw">unsafe </span>{
-        <span class="kw-2">&amp;*</span>mapper
+        (PAGE_TABLES
+            .get()
+            .unwrap()
+            .lock()
             .translate_physical(PhysAddr::new(info <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64))
             .unwrap()
-            .as_ptr()
+            .as_ptr() <span class="kw">as </span><span class="kw-2">*const </span>BootParams)
+            .as_ref()
+            .unwrap()
     };
 
     <span class="kw">if </span>sev_es_enabled {
+        <span class="kw">let </span><span class="kw-2">mut </span>mapper = PAGE_TABLES.get().unwrap().lock();
         <span class="comment">// Now that the page tables have been updated, we have to re-share the GHCB with the
         // hypervisor.
-        </span>ghcb::reshare_ghcb(<span class="kw-2">&amp;mut </span>mapper);
+        </span>ghcb::reshare_ghcb(mapper.deref_mut());
         <span class="kw">if </span>sev_snp_enabled {
             <span class="comment">// We must also initialise the CPUID and secrets pages and the guest message encryptor
             // when SEV-SNP is active. Panicking is OK at this point, because these pages are
             // required to support the full features and we don&#39;t want to run without them.
             </span>init_snp_pages(
                 snp_pages.expect(<span class="string">&quot;missing SNP CPUID and secrets pages&quot;</span>),
-                <span class="kw-2">&amp;</span>mapper,
+                mapper.deref(),
             );
             snp::init_guest_message_encryptor();
         }
@@ -493,14 +517,15 @@
         <span class="kw">let </span><span class="kw-2">mut </span>frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
         frame_allocator.allocate_contiguous(<span class="number">2</span>).unwrap()
     };
-    <span class="kw">let </span>guest_host_pages = Page::range(
-        mapper
-            .translate_physical_frame(guest_host_frames.start)
-            .unwrap(),
-        mapper
-            .translate_physical_frame(guest_host_frames.end)
-            .unwrap(),
-    );
+
+    <span class="kw">let </span>guest_host_pages = {
+        <span class="kw">let </span>pt = PAGE_TABLES.get().unwrap().lock();
+        Page::range(
+            pt.translate_physical_frame(guest_host_frames.start)
+                .unwrap(),
+            pt.translate_physical_frame(guest_host_frames.end).unwrap(),
+        )
+    };
 
     <span class="comment">// If we are running on SNP we have to mark the guest-host frames as shared in the RMP. It is OK
     // to crash if we cannot mark the pages as shared in the RMP.
@@ -516,30 +541,24 @@
     // overwriting any other memory; writing to the static mut is safe as we&#39;re in the
     // initialization code and thus there can be no concurrent access.
     </span><span class="kw">if </span>GUEST_HOST_HEAP
-        .set(<span class="kw">unsafe </span>{ memory::init_guest_host_heap(guest_host_pages, <span class="kw-2">&amp;mut </span>mapper) }.unwrap())
+        .set(
+            <span class="kw">unsafe </span>{
+                memory::init_guest_host_heap(
+                    guest_host_pages,
+                    PAGE_TABLES.get().unwrap().lock().deref_mut(),
+                )
+            }
+            .unwrap(),
+        )
         .is_err()
     {
         <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t initialize the guest-host heap&quot;</span>);
     }
 
-    <span class="kw">if </span>ADDRESS_TRANSLATOR.set(mapper).is_err() {
-        <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t initialize the address translator&quot;</span>);
-    }
-    <span class="kw">let </span>mapper = ADDRESS_TRANSLATOR.get().unwrap();
-
     <span class="comment">// If we don&#39;t find memory for heap, it&#39;s ok to panic.
-    </span><span class="kw">let </span>heap_phys_frames = {
-        <span class="kw">let </span><span class="kw-2">mut </span>frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
-        frame_allocator.largest_available().unwrap()
-    };
-    memory::init_kernel_heap::&lt;Size2MiB&gt;(Page::range(
-        mapper
-            .translate_physical_frame(heap_phys_frames.start)
-            .unwrap(),
-        mapper
-            .translate_physical_frame(heap_phys_frames.end + <span class="number">1</span>)
-            .unwrap(),
-    ))
+    </span>memory::init_kernel_heap(
+        Page::from_start_address(VirtAddr::new(<span class="number">0xFFFF_C900_0000_0000</span>)).unwrap(),
+    )
     .unwrap();
 
     <span class="comment">// Init ACPI, if available.
@@ -565,7 +584,6 @@
 
     <span class="kw">let </span>channel = get_channel(
         <span class="kw-2">&amp;</span>kernel_args,
-        mapper,
         GUEST_HOST_HEAP.get().unwrap(),
         acpi.as_mut(),
         sev_status,
@@ -588,9 +606,8 @@
 }
 
 <span class="doccomment">/// Create a channel for communicating with the Untrusted Launcher.
-</span><span class="kw">fn </span>get_channel&lt;<span class="lifetime">&#39;a</span>, X: Translator, A: Allocator + Sync&gt;(
+</span><span class="kw">fn </span>get_channel&lt;<span class="lifetime">&#39;a</span>, A: Allocator + Sync&gt;(
     kernel_args: <span class="kw-2">&amp;</span>args::Args,
-    mapper: <span class="kw-2">&amp;</span>X,
     alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A,
     acpi: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Acpi&gt;,
     sev_status: SevStatus,
@@ -606,17 +623,14 @@
     <span class="kw">match </span>chan_type {
         <span class="attribute">#[cfg(feature = <span class="string">&quot;virtio_console_channel&quot;</span>)]
         </span>ChannelType::VirtioConsole =&gt; Box::new(virtio_console::get_console_channel(
-            mapper,
             acpi.expect(<span class="string">&quot;ACPI not available; unable to use virtio console&quot;</span>),
         )),
         <span class="attribute">#[cfg(feature = <span class="string">&quot;vsock_channel&quot;</span>)]
-        </span>ChannelType::VirtioVsock =&gt; Box::new(virtio::get_vsock_channel(mapper, alloc)),
+        </span>ChannelType::VirtioVsock =&gt; Box::new(virtio::get_vsock_channel(alloc)),
         <span class="attribute">#[cfg(feature = <span class="string">&quot;serial_channel&quot;</span>)]
         </span>ChannelType::Serial =&gt; Box::new(serial::Serial::new()),
         <span class="attribute">#[cfg(feature = <span class="string">&quot;simple_io_channel&quot;</span>)]
-        </span>ChannelType::SimpleIo =&gt; {
-            Box::new(simpleio::SimpleIoChannel::new(mapper, alloc, sev_status))
-        }
+        </span>ChannelType::SimpleIo =&gt; Box::new(simpleio::SimpleIoChannel::new(alloc, sev_status)),
     }
 }
 

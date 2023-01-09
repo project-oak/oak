@@ -424,6 +424,8 @@
 <span id="424">424</span>
 <span id="425">425</span>
 <span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -452,7 +454,7 @@
 <span class="kw">use </span>oak_linux_boot_params::BootParams;
 <span class="kw">use </span>x86_64::PhysAddr;
 
-<span class="kw">use crate</span>::{mm::Translator, ADDRESS_TRANSLATOR};
+<span class="kw">use crate</span>::{mm::Translator, PAGE_TABLES};
 
 <span class="doccomment">/// Table of well-known ACPI devices (or, rather, well-known to us)
 </span><span class="kw">const </span>ACPI_GED: <span class="kw-2">&amp;</span>str = <span class="string">&quot;ACPI0013&quot;</span>;
@@ -487,9 +489,10 @@
         PhysicalMapping::new(
             physical_address,
             NonNull::new(
-                ADDRESS_TRANSLATOR
+                PAGE_TABLES
                     .get()
                     .unwrap()
+                    .lock()
                     .translate_physical(PhysAddr::new(physical_address <span class="kw">as </span>u64))
                     .unwrap()
                     .as_mut_ptr(),
@@ -633,9 +636,10 @@
 }
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; TableContents&lt;<span class="lifetime">&#39;a</span>&gt; <span class="kw">for </span>AmlTable {
     <span class="kw">fn </span>contents(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8] {
-        <span class="kw">let </span>virt_addr = ADDRESS_TRANSLATOR
+        <span class="kw">let </span>virt_addr = PAGE_TABLES
             .get()
             .unwrap()
+            .lock()
             .translate_physical(PhysAddr::new(<span class="self">self</span>.address <span class="kw">as </span>u64))
             .unwrap();
         <span class="comment">// Safety: this address was specified in the ACPI tables by the firmware, so if the tables

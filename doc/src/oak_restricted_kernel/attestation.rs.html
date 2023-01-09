@@ -103,8 +103,7 @@
 //
 
 </span><span class="kw">use crate</span>::{
-    ghcb::GHCB_PROTOCOL, mm::Translator, snp::GUEST_MESSAGE_ENCRYPTOR, ADDRESS_TRANSLATOR,
-    GUEST_HOST_HEAP,
+    ghcb::GHCB_PROTOCOL, mm::Translator, snp::GUEST_MESSAGE_ENCRYPTOR, GUEST_HOST_HEAP, PAGE_TABLES,
 };
 <span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">pub use </span>oak_sev_guest::guest::{
@@ -141,9 +140,10 @@
         .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
     <span class="kw">let </span>response_message = Box::new_in(GuestMessage::new(), alloc);
 
-    <span class="kw">let </span>translator = ADDRESS_TRANSLATOR
+    <span class="kw">let </span>translator = PAGE_TABLES
         .get()
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;address translator is not initialized&quot;</span>))<span class="question-mark">?</span>;
+        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;address translator is not initialized&quot;</span>))<span class="question-mark">?
+        </span>.lock();
     <span class="kw">let </span>request_address = translator
         .translate_virtual(VirtAddr::from_ptr(
             request_message.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>GuestMessage

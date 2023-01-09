@@ -67,6 +67,7 @@
 <span id="67">67</span>
 <span id="68">68</span>
 <span id="69">69</span>
+<span id="70">70</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -120,13 +121,14 @@
 }
 
 <span class="attribute">#[cfg(feature = <span class="string">&quot;vsock_channel&quot;</span>)]
-</span><span class="kw">pub fn </span>get_vsock_channel&lt;<span class="lifetime">&#39;a</span>, X: Translator, A: Allocator&gt;(
-    translator: <span class="kw-2">&amp;</span>X,
-    alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>A,
-) -&gt; Channel&lt;oak_virtio::vsock::socket::Socket&lt;<span class="lifetime">&#39;a</span>, VirtioPciTransport, A&gt;&gt; {
+</span><span class="kw">pub fn </span>get_vsock_channel&lt;A: Allocator&gt;(
+    alloc: <span class="kw-2">&amp;</span>A,
+) -&gt; Channel&lt;oak_virtio::vsock::socket::Socket&lt;<span class="lifetime">&#39;_</span>, VirtioPciTransport, A&gt;&gt; {
+    <span class="kw">use </span><span class="kw">crate</span>::PAGE_TABLES;
+
     <span class="kw">let </span>vsock = oak_virtio::vsock::VSock::find_and_configure_device(
-        |vaddr: VirtAddr| translator.translate_virtual(vaddr),
-        |paddr: PhysAddr| translator.translate_physical(paddr),
+        |vaddr: VirtAddr| PAGE_TABLES.get().unwrap().lock().translate_virtual(vaddr),
+        |paddr: PhysAddr| PAGE_TABLES.get().unwrap().lock().translate_physical(paddr),
         alloc,
     )
     .expect(<span class="string">&quot;couldn&#39;t configure PCI virtio vsock device&quot;</span>);
