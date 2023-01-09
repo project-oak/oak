@@ -30,6 +30,8 @@ pub enum Errno {
     EIO = -5,
     /// Bad file descriptor
     EBADF = -9,
+    /// Cannot allocate memory
+    ENOMEM = -12,
     /// Bad address
     EFAULT = -14,
     /// Invalid argument

@@ -15,8 +15,14 @@
 //
 
 use crate::syscall;
-use core::ffi::{c_int, c_size_t, c_ssize_t, c_void};
-use oak_restricted_kernel_interface::{Errno, Syscall};
+use core::{
+    ffi::{c_int, c_size_t, c_ssize_t, c_void},
+    ptr::NonNull,
+};
+use oak_restricted_kernel_interface::{
+    syscalls::{MmapFlags, MmapProtection},
+    Errno, Syscall,
+};
 
 #[no_mangle]
 pub extern "C" fn sys_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
@@ -67,6 +73,45 @@ pub fn fsync(fd: i32) -> Result<(), Errno> {
     }
 }
 
+#[no_mangle]
+pub extern "C" fn sys_mmap(
+    addr: *const c_void,
+    size: c_size_t,
+    prot: c_int,
+    flags: c_int,
+    fd: c_int,
+    offset: c_int,
+) -> isize {
+    unsafe { syscall!(Syscall::Mmap, addr, size, prot, flags, fd, offset) }
+}
+
+pub fn mmap(
+    addr: *const c_void,
+    size: isize,
+    prot: MmapProtection,
+    flags: MmapFlags,
+    fd: i32,
+    offset: c_int,
+) -> Result<NonNull<c_void>, Errno> {
+    let ret = sys_mmap(
+        addr,
+        size.try_into().map_err(|_| Errno::EINVAL)?,
+        prot.bits(),
+        flags.bits(),
+        fd,
+        offset,
+    );
+
+    if ret < 0 {
+        Err(Errno::from_repr(ret)
+            .unwrap_or_else(|| panic!("unexpected error from mmap syscall: {}", ret)))
+    } else {
+        Ok(NonNull::new(ret as *mut c_void).expect("mmap syscall returned nullptr!"))
+    }
+}
+
+// Note that these tests are not being executed against Restricted Kernel, but rather the Linux
+// kernel of the machine cargo is running on!
 #[cfg(test)]
 mod tests {
     extern crate std;
@@ -116,5 +161,31 @@ mod tests {
             writer.as_raw_fd()
         };
         assert!(fsync(fd).is_err());
+    }
+
+    #[test]
+    fn test_mmap() {
+        let mem = mmap(
+            std::ptr::null(),
+            1024,
+            MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
+            MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
+            -1,
+            0,
+        );
+        assert!(mem.is_ok());
+    }
+
+    #[test]
+    fn test_mmap_error() {
+        let mem = mmap(
+            std::ptr::null(),
+            0,
+            MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
+            MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
+            -1,
+            0,
+        );
+        assert!(mem.is_err());
     }
 }
