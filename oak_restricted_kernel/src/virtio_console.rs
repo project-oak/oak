@@ -17,7 +17,7 @@
 use crate::{
     acpi::{Acpi, AcpiDevice, VIRTIO_MMIO},
     mm::Translator,
-    ADDRESS_TRANSLATOR, GUEST_HOST_HEAP,
+    GUEST_HOST_HEAP, PAGE_TABLES,
 };
 use alloc::{string::String, vec::Vec};
 use aml::{
@@ -50,18 +50,20 @@ impl Hal for OakHal {
                 .cast::<u8>()
                 .as_ptr(),
         );
-        ADDRESS_TRANSLATOR
+        PAGE_TABLES
             .get()
             .unwrap()
+            .lock()
             .translate_virtual(vaddr)
             .unwrap()
             .as_u64() as usize
     }
 
     fn dma_dealloc(paddr: virtio_drivers::PhysAddr, pages: usize) -> i32 {
-        let vaddr = ADDRESS_TRANSLATOR
+        let vaddr = PAGE_TABLES
             .get()
             .unwrap()
+            .lock()
             .translate_physical(PhysAddr::new(paddr as u64))
             .unwrap();
         unsafe {
@@ -75,18 +77,20 @@ impl Hal for OakHal {
     }
 
     fn phys_to_virt(paddr: virtio_drivers::PhysAddr) -> virtio_drivers::VirtAddr {
-        ADDRESS_TRANSLATOR
+        PAGE_TABLES
             .get()
             .unwrap()
+            .lock()
             .translate_physical(PhysAddr::new(paddr as u64))
             .unwrap()
             .as_u64() as usize
     }
 
     fn virt_to_phys(vaddr: virtio_drivers::VirtAddr) -> virtio_drivers::PhysAddr {
-        ADDRESS_TRANSLATOR
+        PAGE_TABLES
             .get()
             .unwrap()
+            .lock()
             .translate_virtual(VirtAddr::new(vaddr as u64))
             .unwrap()
             .as_u64() as usize
@@ -164,10 +168,7 @@ fn find_memory_range(device: &AcpiDevice, ctx: &mut AmlContext) -> Option<(PhysA
     None
 }
 
-pub fn get_console_channel<'a>(
-    translator: &impl Translator,
-    acpi: &mut Acpi,
-) -> MmioConsoleChannel<'a> {
+pub fn get_console_channel<'a>(acpi: &mut Acpi) -> MmioConsoleChannel<'a> {
     let devices = acpi.devices().unwrap();
 
     let virtio_devices: Vec<&AcpiDevice> = devices
@@ -178,7 +179,10 @@ pub fn get_console_channel<'a>(
         .collect();
 
     for device in virtio_devices {
-        let header = translator
+        let header = PAGE_TABLES
+            .get()
+            .unwrap()
+            .lock()
             .translate_physical(
                 find_memory_range(device, &mut acpi.aml)
                     .expect("unable to determine physical memory range for virtio MMIO device")

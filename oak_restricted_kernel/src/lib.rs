@@ -71,7 +71,12 @@ use crate::{
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 use alloc::{alloc::Allocator, boxed::Box};
-use core::{marker::Sync, ops::DerefMut, panic::PanicInfo, str::FromStr};
+use core::{
+    marker::Sync,
+    ops::{Deref, DerefMut},
+    panic::PanicInfo,
+    str::FromStr,
+};
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
@@ -85,7 +90,7 @@ use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignm
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
-    structures::paging::{MappedPageTable, Page, Size2MiB},
+    structures::paging::{MappedPageTable, Page},
     PhysAddr, VirtAddr,
 };
 
@@ -96,9 +101,10 @@ pub static FRAME_ALLOCATOR: OnceCell<Spinlock<PhysicalMemoryAllocator<1024>>> = 
 /// The allocator for allocating space in the memory area that is shared with the hypervisor.
 pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
 
-/// Translator that can convert between physical and virtual addresses.
-pub static ADDRESS_TRANSLATOR: OnceCell<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>> =
-    OnceCell::new();
+/// Active page tables.
+pub static PAGE_TABLES: OnceCell<
+    Spinlock<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>>,
+> = OnceCell::new();
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel(info: &BootParams) {
@@ -142,32 +148,43 @@ pub fn start_kernel(info: &BootParams) {
         .expect("did not expect frame allocator to be already set!");
 
     // Note: `info` will not be valid after calling this!
-    let mut mapper = {
-        let mut frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
-        mm::init_paging(frame_allocator.deref_mut(), program_headers).unwrap()
+    if PAGE_TABLES
+        .set(Spinlock::new({
+            let mut frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
+            mm::init_paging(frame_allocator.deref_mut(), program_headers).unwrap()
+        }))
+        .is_err()
+    {
+        panic!("couldn't initialize page tables");
     };
 
     // Re-map boot params to the new virtual address.
     // Safety: we know we're addressing valid memory that contains the correct data structure, as
     // we're just translating addresses differently due to the new page tables.
     let info = unsafe {
-        &*mapper
+        (PAGE_TABLES
+            .get()
+            .unwrap()
+            .lock()
             .translate_physical(PhysAddr::new(info as *const _ as u64))
             .unwrap()
-            .as_ptr()
+            .as_ptr() as *const BootParams)
+            .as_ref()
+            .unwrap()
     };
 
     if sev_es_enabled {
+        let mut mapper = PAGE_TABLES.get().unwrap().lock();
         // Now that the page tables have been updated, we have to re-share the GHCB with the
         // hypervisor.
-        ghcb::reshare_ghcb(&mut mapper);
+        ghcb::reshare_ghcb(mapper.deref_mut());
         if sev_snp_enabled {
             // We must also initialise the CPUID and secrets pages and the guest message encryptor
             // when SEV-SNP is active. Panicking is OK at this point, because these pages are
             // required to support the full features and we don't want to run without them.
             init_snp_pages(
                 snp_pages.expect("missing SNP CPUID and secrets pages"),
-                &mapper,
+                mapper.deref(),
             );
             snp::init_guest_message_encryptor();
         }
@@ -179,14 +196,15 @@ pub fn start_kernel(info: &BootParams) {
         let mut frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
         frame_allocator.allocate_contiguous(2).unwrap()
     };
-    let guest_host_pages = Page::range(
-        mapper
-            .translate_physical_frame(guest_host_frames.start)
-            .unwrap(),
-        mapper
-            .translate_physical_frame(guest_host_frames.end)
-            .unwrap(),
-    );
+
+    let guest_host_pages = {
+        let pt = PAGE_TABLES.get().unwrap().lock();
+        Page::range(
+            pt.translate_physical_frame(guest_host_frames.start)
+                .unwrap(),
+            pt.translate_physical_frame(guest_host_frames.end).unwrap(),
+        )
+    };
 
     // If we are running on SNP we have to mark the guest-host frames as shared in the RMP. It is OK
     // to crash if we cannot mark the pages as shared in the RMP.
@@ -202,30 +220,24 @@ pub fn start_kernel(info: &BootParams) {
     // overwriting any other memory; writing to the static mut is safe as we're in the
     // initialization code and thus there can be no concurrent access.
     if GUEST_HOST_HEAP
-        .set(unsafe { memory::init_guest_host_heap(guest_host_pages, &mut mapper) }.unwrap())
+        .set(
+            unsafe {
+                memory::init_guest_host_heap(
+                    guest_host_pages,
+                    PAGE_TABLES.get().unwrap().lock().deref_mut(),
+                )
+            }
+            .unwrap(),
+        )
         .is_err()
     {
         panic!("couldn't initialize the guest-host heap");
     }
 
-    if ADDRESS_TRANSLATOR.set(mapper).is_err() {
-        panic!("couldn't initialize the address translator");
-    }
-    let mapper = ADDRESS_TRANSLATOR.get().unwrap();
-
     // If we don't find memory for heap, it's ok to panic.
-    let heap_phys_frames = {
-        let mut frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
-        frame_allocator.largest_available().unwrap()
-    };
-    memory::init_kernel_heap::<Size2MiB>(Page::range(
-        mapper
-            .translate_physical_frame(heap_phys_frames.start)
-            .unwrap(),
-        mapper
-            .translate_physical_frame(heap_phys_frames.end + 1)
-            .unwrap(),
-    ))
+    memory::init_kernel_heap(
+        Page::from_start_address(VirtAddr::new(0xFFFF_C900_0000_0000)).unwrap(),
+    )
     .unwrap();
 
     // Init ACPI, if available.
@@ -251,7 +263,6 @@ pub fn start_kernel(info: &BootParams) {
 
     let channel = get_channel(
         &kernel_args,
-        mapper,
         GUEST_HOST_HEAP.get().unwrap(),
         acpi.as_mut(),
         sev_status,
@@ -274,9 +285,8 @@ enum ChannelType {
 }
 
 /// Create a channel for communicating with the Untrusted Launcher.
-fn get_channel<'a, X: Translator, A: Allocator + Sync>(
+fn get_channel<'a, A: Allocator + Sync>(
     kernel_args: &args::Args,
-    mapper: &X,
     alloc: &'a A,
     acpi: Option<&mut Acpi>,
     sev_status: SevStatus,
@@ -292,17 +302,14 @@ fn get_channel<'a, X: Translator, A: Allocator + Sync>(
     match chan_type {
         #[cfg(feature = "virtio_console_channel")]
         ChannelType::VirtioConsole => Box::new(virtio_console::get_console_channel(
-            mapper,
             acpi.expect("ACPI not available; unable to use virtio console"),
         )),
         #[cfg(feature = "vsock_channel")]
-        ChannelType::VirtioVsock => Box::new(virtio::get_vsock_channel(mapper, alloc)),
+        ChannelType::VirtioVsock => Box::new(virtio::get_vsock_channel(alloc)),
         #[cfg(feature = "serial_channel")]
         ChannelType::Serial => Box::new(serial::Serial::new()),
         #[cfg(feature = "simple_io_channel")]
-        ChannelType::SimpleIo => {
-            Box::new(simpleio::SimpleIoChannel::new(mapper, alloc, sev_status))
-        }
+        ChannelType::SimpleIo => Box::new(simpleio::SimpleIoChannel::new(alloc, sev_status)),
     }
 }
 

@@ -26,7 +26,7 @@ use core::ptr::NonNull;
 use oak_linux_boot_params::BootParams;
 use x86_64::PhysAddr;
 
-use crate::{mm::Translator, ADDRESS_TRANSLATOR};
+use crate::{mm::Translator, PAGE_TABLES};
 
 /// Table of well-known ACPI devices (or, rather, well-known to us)
 const ACPI_GED: &str = "ACPI0013";
@@ -61,9 +61,10 @@ impl AcpiHandler for Handler {
         PhysicalMapping::new(
             physical_address,
             NonNull::new(
-                ADDRESS_TRANSLATOR
+                PAGE_TABLES
                     .get()
                     .unwrap()
+                    .lock()
                     .translate_physical(PhysAddr::new(physical_address as u64))
                     .unwrap()
                     .as_mut_ptr(),
@@ -207,9 +208,10 @@ trait TableContents<'a> {
 }
 impl<'a> TableContents<'a> for AmlTable {
     fn contents(&self) -> &'a [u8] {
-        let virt_addr = ADDRESS_TRANSLATOR
+        let virt_addr = PAGE_TABLES
             .get()
             .unwrap()
+            .lock()
             .translate_physical(PhysAddr::new(self.address as u64))
             .unwrap();
         // Safety: this address was specified in the ACPI tables by the firmware, so if the tables

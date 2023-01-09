@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::mm::Translator;
+use crate::{mm::Translator, PAGE_TABLES};
 use alloc::collections::VecDeque;
 use core::alloc::Allocator;
 use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
@@ -32,7 +32,7 @@ pub struct SimpleIoChannel<'a, A: Allocator> {
 }
 
 impl<'a, A: Allocator> SimpleIoChannel<'a, A> {
-    pub fn new<X: Translator>(translator: &X, alloc: &'a A, sev_status: SevStatus) -> Self {
+    pub fn new(alloc: &'a A, sev_status: SevStatus) -> Self {
         let io_port_factory = if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
             crate::ghcb::get_ghcb_port_factory()
         } else {
@@ -40,7 +40,7 @@ impl<'a, A: Allocator> SimpleIoChannel<'a, A> {
         };
         let device = SimpleIo::new_with_defaults(
             io_port_factory,
-            |vaddr: VirtAddr| translator.translate_virtual(vaddr),
+            |vaddr: VirtAddr| PAGE_TABLES.get().unwrap().lock().translate_virtual(vaddr),
             alloc,
         )
         .expect("couldn't create IO device");
