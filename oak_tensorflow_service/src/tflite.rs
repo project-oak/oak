@@ -14,9 +14,13 @@
 // limitations under the License.
 //
 
+use core::ptr::NonNull;
+
 use alloc::{vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use log::{log, Level};
+use oak_restricted_kernel_api::syscall::mmap;
+use oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 
 // TODO(#3297): Don't use null terminated and use `string_view` instead.
 /// Prints `message` to the debug Restricted Kernel logs.
@@ -68,11 +72,10 @@ extern "C" {
 }
 
 // TODO(#3297): Use 8GiB or 10GiB arena sizes.
-const TENSOR_ARENA_SIZE: usize = 1024 * 1024 * 1024;
+const TENSOR_ARENA_SIZE: isize = 1024 * 1024 * 1024;
 
-#[derive(Default)]
 pub struct TfliteModel {
-    tensor_arena: Vec<u8>,
+    tensor_arena: NonNull<u8>,
     /// TFLite model binary representation.
     /// Rust needs to keep ownership of the model, because the C++ code just uses it as a
     /// reference.
@@ -84,10 +87,28 @@ pub struct TfliteModel {
     output_buffer_len: Option<usize>,
 }
 
+impl Default for TfliteModel {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TfliteModel {
     pub fn new() -> Self {
+        // Allocate memory. Both Oak Restricted Kernel and Linux have similar enough `mmap()`
+        // semantics for this to work.
+        let mem = mmap(
+            core::ptr::null(), // we don't care where the allocation lands
+            TENSOR_ARENA_SIZE,
+            MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
+            MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
+            -1,
+            0,
+        )
+        .expect("failed to allocate memory for tensor arena");
+
         Self {
-            tensor_arena: vec![0; TENSOR_ARENA_SIZE],
+            tensor_arena: mem.cast(),
             model_bytes: vec![],
             output_buffer_len: None,
         }
@@ -107,8 +128,8 @@ impl TfliteModel {
             tflite_init(
                 self.model_bytes.as_ptr(),
                 self.model_bytes.len(),
-                self.tensor_arena.as_mut_ptr(),
-                self.tensor_arena.len(),
+                self.tensor_arena.as_ptr(),
+                TENSOR_ARENA_SIZE as usize,
                 &mut output_buffer_len,
             )
         };

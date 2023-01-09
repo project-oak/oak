@@ -92,7 +92,6 @@ impl GrowableHeap {
                         | PageTableFlags::HUGE_PAGE
                         | PageTableFlags::ENCRYPTED,
                     PageTableFlags::PRESENT
-                        | PageTableFlags::GLOBAL
                         | PageTableFlags::WRITABLE
                         | PageTableFlags::NO_EXECUTE
                         | PageTableFlags::ENCRYPTED,

@@ -22,6 +22,7 @@ use x86_64::{
             FlagUpdateError, MapToError, MapperAllSizes, MapperFlush, PageTableFrameMapping,
             UnmapError,
         },
+        page::PageRange,
         FrameAllocator, MappedPageTable, Mapper as BaseMapper, Page, PageSize, PageTable,
         PhysFrame, Size4KiB, Translate as BaseTranslate,
     },
@@ -130,6 +131,52 @@ impl<'a> EncryptedPageTable<MappedPageTable<'a, PhysOffset>> {
             offset,
             inner: unsafe { MappedPageTable::new(pml4, PhysOffset { offset, encryption }) },
         }
+    }
+
+    /// Finds a range of unallocated pages of the requested size.
+    ///
+    /// Args:
+    ///   - start: the pages must start at, or after, `start`
+    ///   - count: number of pages to allocate
+    ///
+    /// Returns:
+    /// The range of unallocated pages, if there was a big enough unallocated gap in the virtual
+    /// address space. The range may start at exactly `start`.
+    pub fn find_unallocated_pages<S: PageSize>(
+        &self,
+        mut start: Page<S>,
+        count: usize,
+    ) -> Option<PageRange<S>> {
+        // This is highly inefficient, but it should be called rarely enough that it doesn't matter
+        // (famous last words...)
+        // We assume virtual addresses are 48 bits, with the gap in the middle.
+        let limit = Page::containing_address(if start.start_address().as_u64() < u64::pow(2, 47) {
+            VirtAddr::new(u64::pow(2, 47) - 1)
+        } else {
+            VirtAddr::new(0xFFFF_FFFF_FFFF_FFFF - 1)
+        });
+        while start < limit {
+            let range = Page::range(start, start + count as u64);
+
+            // We need to make sure all 4K pages inside that range are unmapped, as we _may_ have
+            // some 4K mappings.
+            if let Some(item) = Page::<Size4KiB>::range(
+                Page::containing_address(range.start.start_address()),
+                Page::containing_address(range.end.start_address()),
+            )
+            .find(|page| self.translate_virtual(page.start_address()).is_some())
+            {
+                // We found a page that had a valid mapping in that range. Let's move our search
+                // window to the page just past the page that had a valid address.
+                start = Page::<S>::containing_address(item.start_address()) + 1;
+            } else {
+                // No valid mappings found, the whole range is unmapped!
+                return Some(range);
+            }
+        }
+
+        // given the size of the 64-bit address space, this should never happen
+        None
     }
 }
 

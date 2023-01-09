@@ -16,9 +16,13 @@
 
 mod channel;
 mod fd;
+mod mmap;
 mod stdio;
 
-use self::fd::{syscall_fsync, syscall_read, syscall_write};
+use self::{
+    fd::{syscall_fsync, syscall_read, syscall_write},
+    mmap::syscall_mmap,
+};
 use alloc::boxed::Box;
 use core::{arch::asm, ffi::c_void};
 use oak_channel::Channel;
@@ -44,11 +48,23 @@ pub fn enable_syscalls(channel: Box<dyn Channel>) {
 /// Rust wrapper for system calls.
 ///
 /// This function assumes the 64-bit SysV ABI, not the syscall ABI!
-extern "sysv64" fn syscall_handler(syscall: usize, arg1: usize, arg2: usize, arg3: usize) -> isize {
-    // SysV ABI: arguments are in RDI, RSI, RDX, RCX; return value in RAX (which matches SYSRET!)
+extern "sysv64" fn syscall_handler(
+    syscall: usize,
+    arg1: usize,
+    arg2: usize,
+    arg3: usize,
+    arg4: usize,
+    arg5: usize,
+    arg6: usize,
+) -> isize {
+    // SysV ABI: arguments are in RDI, RSI, RDX, RCX, R8, R9, top of stack; return value in RAX
+    // (which matches SYSRET!)
     match Syscall::from_repr(syscall) {
         Some(Syscall::Read) => syscall_read(arg1 as i32, arg2 as *mut c_void, arg3),
         Some(Syscall::Write) => syscall_write(arg1 as i32, arg2 as *const c_void, arg3),
+        Some(Syscall::Mmap) => {
+            syscall_mmap(arg1 as *const c_void, arg2, arg3, arg4, arg5 as i32, arg6)
+        }
         Some(Syscall::Fsync) => syscall_fsync(arg1 as i32),
         None => Errno::ENOSYS as isize,
     }
@@ -125,11 +141,17 @@ extern "C" fn syscall_entrypoint() {
 
             // Shuffle around register values to match sysv calling convention, and escape into
             // proper Rust code from the assembly.
+            "sub rsp, 8",
+            "push r9",
+            "mov r9, r8",
+            "mov r8, r10",
             "mov rcx, rdx",
             "mov rdx, rsi",
             "mov rsi, rdi",
             "mov rdi, rax",
             "call {HANDLER}",
+            "pop r9",
+            "add rsp, 8",
 
             // Restore AVX registers.
             "vmovups YMM0, [rsp + 0*32]",

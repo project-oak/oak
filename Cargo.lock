@@ -2897,6 +2897,7 @@ dependencies = [
 name = "oak_restricted_kernel_interface"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "strum",
 ]
 
@@ -2934,6 +2935,8 @@ dependencies = [
  "log",
  "micro_rpc",
  "micro_rpc_build",
+ "oak_restricted_kernel_api",
+ "oak_restricted_kernel_interface",
  "prost 0.11.2",
 ]
 

@@ -36,6 +36,17 @@ macro_rules! syscall {
     ($syscall:expr, $arg1:expr, $arg2:expr, $arg3:expr) => {
         $crate::raw_syscall::syscall3($syscall, $arg1 as usize, $arg2 as usize, $arg3 as usize)
     };
+    ($syscall:expr, $arg1:expr, $arg2:expr, $arg3:expr, $arg4:expr, $arg5:expr, $arg6:expr) => {
+        $crate::raw_syscall::syscall6(
+            $syscall,
+            $arg1 as usize,
+            $arg2 as usize,
+            $arg3 as usize,
+            $arg4 as usize,
+            $arg5 as usize,
+            $arg6 as usize,
+        )
+    };
 }
 
 #[inline]
@@ -80,6 +91,30 @@ pub unsafe fn syscall3(syscall: Syscall, arg1: usize, arg2: usize, arg3: usize) 
          in("rdi") arg1,
          in("rsi") arg2,
          in("rdx") arg3,
+         out("rcx") _,
+         out("r11") _,
+         inout("rax") syscall as u64 => ret);
+    ret
+}
+
+#[inline]
+pub unsafe fn syscall6(
+    syscall: Syscall,
+    arg1: usize,
+    arg2: usize,
+    arg3: usize,
+    arg4: usize,
+    arg5: usize,
+    arg6: usize,
+) -> isize {
+    let mut ret: isize;
+    asm!("syscall",
+         in("rdi") arg1,
+         in("rsi") arg2,
+         in("rdx") arg3,
+         in("r10") arg4,
+         in("r8") arg5,
+         in("r9") arg6,
          out("rcx") _,
          out("r11") _,
          inout("rax") syscall as u64 => ret);
