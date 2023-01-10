@@ -66,6 +66,14 @@ pub enum Syscall {
     ///   - We do not support PROT_NONE; PROT_READ is always implied.
     Mmap = 9,
 
+    /// Terminates he calling process.
+    /// Arguments:
+    ///   - arg0 (c_int): error code
+    /// Oak Restricted Kernel considerations:
+    ///   We don't expect the user process to terminate, so this triggers a kernel panic, no matter
+    ///   the error code.
+    Exit = 60,
+
     /// Flush a file descriptor.
     /// Arguments:
     ///   - arg0 (c_ssize_t): file descriptor number. Ignored by the kernel as we don't support

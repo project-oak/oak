@@ -110,6 +110,16 @@ pub fn mmap(
     }
 }
 
+#[no_mangle]
+pub extern "C" fn sys_exit(status: c_int) {
+    unsafe { syscall!(Syscall::Exit, status) };
+}
+
+pub fn exit(status: i32) -> ! {
+    sys_exit(status);
+    unreachable!();
+}
+
 // Note that these tests are not being executed against Restricted Kernel, but rather the Linux
 // kernel of the machine cargo is running on!
 #[cfg(test)]

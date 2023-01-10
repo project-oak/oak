@@ -17,11 +17,13 @@
 mod channel;
 mod fd;
 mod mmap;
+mod process;
 mod stdio;
 
 use self::{
     fd::{syscall_fsync, syscall_read, syscall_write},
     mmap::syscall_mmap,
+    process::syscall_exit,
 };
 use alloc::boxed::Box;
 use core::{arch::asm, ffi::c_void};
@@ -62,6 +64,7 @@ extern "sysv64" fn syscall_handler(
     match Syscall::from_repr(syscall) {
         Some(Syscall::Read) => syscall_read(arg1 as i32, arg2 as *mut c_void, arg3),
         Some(Syscall::Write) => syscall_write(arg1 as i32, arg2 as *const c_void, arg3),
+        Some(Syscall::Exit) => syscall_exit(arg1 as i32),
         Some(Syscall::Mmap) => {
             syscall_mmap(arg1 as *const c_void, arg2, arg3, arg4, arg5 as i32, arg6)
         }
