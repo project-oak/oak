@@ -173,6 +173,28 @@
 <span id="173">173</span>
 <span id="174">174</span>
 <span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -191,9 +213,13 @@
 
 </span><span class="kw">mod </span>channel;
 <span class="kw">mod </span>fd;
+<span class="kw">mod </span>mmap;
 <span class="kw">mod </span>stdio;
 
-<span class="kw">use </span><span class="self">self</span>::fd::{syscall_fsync, syscall_read, syscall_write};
+<span class="kw">use </span><span class="self">self</span>::{
+    fd::{syscall_fsync, syscall_read, syscall_write},
+    mmap::syscall_mmap,
+};
 <span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>core::{arch::asm, ffi::c_void};
 <span class="kw">use </span>oak_channel::Channel;
@@ -219,11 +245,23 @@
 <span class="doccomment">/// Rust wrapper for system calls.
 ///
 /// This function assumes the 64-bit SysV ABI, not the syscall ABI!
-</span><span class="kw">extern </span><span class="string">&quot;sysv64&quot; </span><span class="kw">fn </span>syscall_handler(syscall: usize, arg1: usize, arg2: usize, arg3: usize) -&gt; isize {
-    <span class="comment">// SysV ABI: arguments are in RDI, RSI, RDX, RCX; return value in RAX (which matches SYSRET!)
+</span><span class="kw">extern </span><span class="string">&quot;sysv64&quot; </span><span class="kw">fn </span>syscall_handler(
+    syscall: usize,
+    arg1: usize,
+    arg2: usize,
+    arg3: usize,
+    arg4: usize,
+    arg5: usize,
+    arg6: usize,
+) -&gt; isize {
+    <span class="comment">// SysV ABI: arguments are in RDI, RSI, RDX, RCX, R8, R9, top of stack; return value in RAX
+    // (which matches SYSRET!)
     </span><span class="kw">match </span>Syscall::from_repr(syscall) {
         <span class="prelude-val">Some</span>(Syscall::Read) =&gt; syscall_read(arg1 <span class="kw">as </span>i32, arg2 <span class="kw">as </span><span class="kw-2">*mut </span>c_void, arg3),
         <span class="prelude-val">Some</span>(Syscall::Write) =&gt; syscall_write(arg1 <span class="kw">as </span>i32, arg2 <span class="kw">as </span><span class="kw-2">*const </span>c_void, arg3),
+        <span class="prelude-val">Some</span>(Syscall::Mmap) =&gt; {
+            syscall_mmap(arg1 <span class="kw">as </span><span class="kw-2">*const </span>c_void, arg2, arg3, arg4, arg5 <span class="kw">as </span>i32, arg6)
+        }
         <span class="prelude-val">Some</span>(Syscall::Fsync) =&gt; syscall_fsync(arg1 <span class="kw">as </span>i32),
         <span class="prelude-val">None </span>=&gt; Errno::ENOSYS <span class="kw">as </span>isize,
     }
@@ -300,11 +338,17 @@
 
             <span class="comment">// Shuffle around register values to match sysv calling convention, and escape into
             // proper Rust code from the assembly.
-            </span><span class="string">&quot;mov rcx, rdx&quot;</span>,
+            </span><span class="string">&quot;sub rsp, 8&quot;</span>,
+            <span class="string">&quot;push r9&quot;</span>,
+            <span class="string">&quot;mov r9, r8&quot;</span>,
+            <span class="string">&quot;mov r8, r10&quot;</span>,
+            <span class="string">&quot;mov rcx, rdx&quot;</span>,
             <span class="string">&quot;mov rdx, rsi&quot;</span>,
             <span class="string">&quot;mov rsi, rdi&quot;</span>,
             <span class="string">&quot;mov rdi, rax&quot;</span>,
             <span class="string">&quot;call {HANDLER}&quot;</span>,
+            <span class="string">&quot;pop r9&quot;</span>,
+            <span class="string">&quot;add rsp, 8&quot;</span>,
 
             <span class="comment">// Restore AVX registers.
             </span><span class="string">&quot;vmovups YMM0, [rsp + 0*32]&quot;</span>,

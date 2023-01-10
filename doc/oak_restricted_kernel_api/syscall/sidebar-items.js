@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["fsync",""],["read",""],["sys_fsync",""],["sys_read",""],["sys_write",""],["write",""]]};
+window.SIDEBAR_ITEMS = {"fn":[["fsync",""],["mmap",""],["read",""],["sys_fsync",""],["sys_mmap",""],["sys_read",""],["sys_write",""],["write",""]]};

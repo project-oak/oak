@@ -35,7 +35,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_remote_attestation_noninteractive":["",[],["client.rs","lib.rs"]],\
 "oak_remote_attestation_sessions":["",[],["lib.rs"]],\
 "oak_remote_attestation_sessions_client":["",[],["lib.rs"]],\
-"oak_restricted_kernel":["",[["boot",[],["mod.rs"]],["mm",[],["bitmap_frame_allocator.rs","encrypted_mapper.rs","frame_allocator.rs","mod.rs","page_tables.rs"]],["syscall",[],["channel.rs","fd.rs","mod.rs","stdio.rs"]]],["acpi.rs","args.rs","attestation.rs","avx.rs","descriptors.rs","elf.rs","ghcb.rs","interrupts.rs","lib.rs","libm.rs","logging.rs","memory.rs","shutdown.rs","snp.rs","virtio.rs"]],\
+"oak_restricted_kernel":["",[["boot",[],["mod.rs"]],["mm",[],["bitmap_frame_allocator.rs","encrypted_mapper.rs","frame_allocator.rs","mod.rs","page_tables.rs"]],["syscall",[],["channel.rs","fd.rs","mmap.rs","mod.rs","stdio.rs"]]],["acpi.rs","args.rs","attestation.rs","avx.rs","descriptors.rs","elf.rs","ghcb.rs","interrupts.rs","lib.rs","libm.rs","logging.rs","memory.rs","shutdown.rs","snp.rs","virtio.rs"]],\
 "oak_restricted_kernel_api":["",[],["channel.rs","lib.rs","raw_syscall.rs","syscall.rs"]],\
 "oak_restricted_kernel_interface":["",[],["errno.rs","lib.rs","syscalls.rs"]],\
 "oak_sev_guest":["",[],["cpuid.rs","crypto.rs","ghcb.rs","guest.rs","instructions.rs","interrupts.rs","io.rs","lib.rs","msr.rs","secrets.rs","vmsa.rs"]],\
