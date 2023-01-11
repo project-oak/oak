@@ -195,6 +195,9 @@
 <span id="195">195</span>
 <span id="196">196</span>
 <span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -214,11 +217,13 @@
 </span><span class="kw">mod </span>channel;
 <span class="kw">mod </span>fd;
 <span class="kw">mod </span>mmap;
+<span class="kw">mod </span>process;
 <span class="kw">mod </span>stdio;
 
 <span class="kw">use </span><span class="self">self</span>::{
     fd::{syscall_fsync, syscall_read, syscall_write},
     mmap::syscall_mmap,
+    process::syscall_exit,
 };
 <span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>core::{arch::asm, ffi::c_void};
@@ -259,6 +264,7 @@
     </span><span class="kw">match </span>Syscall::from_repr(syscall) {
         <span class="prelude-val">Some</span>(Syscall::Read) =&gt; syscall_read(arg1 <span class="kw">as </span>i32, arg2 <span class="kw">as </span><span class="kw-2">*mut </span>c_void, arg3),
         <span class="prelude-val">Some</span>(Syscall::Write) =&gt; syscall_write(arg1 <span class="kw">as </span>i32, arg2 <span class="kw">as </span><span class="kw-2">*const </span>c_void, arg3),
+        <span class="prelude-val">Some</span>(Syscall::Exit) =&gt; syscall_exit(arg1 <span class="kw">as </span>i32),
         <span class="prelude-val">Some</span>(Syscall::Mmap) =&gt; {
             syscall_mmap(arg1 <span class="kw">as </span><span class="kw-2">*const </span>c_void, arg2, arg3, arg4, arg5 <span class="kw">as </span>i32, arg6)
         }
