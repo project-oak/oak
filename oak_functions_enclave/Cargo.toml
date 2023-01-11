@@ -9,26 +9,20 @@ license = "Apache-2.0"
 resolver = "2"
 members = ["."]
 
-[features]
-default = ["virtio_console_channel"]
-virtio_console_channel = ["oak_restricted_kernel/virtio_console_channel"]
-vsock_channel = ["oak_restricted_kernel/vsock_channel"]
-simple_io_channel = ["oak_restricted_kernel/simple_io_channel"]
-serial_channel = ["oak_restricted_kernel/serial_channel"]
-
 [dependencies]
 log = "*"
 oak_channel = { path = "../oak_channel" }
-oak_restricted_kernel = { path = "../oak_restricted_kernel", default-features = false }
 oak_restricted_kernel_api = { path = "../oak_restricted_kernel_api" }
+oak_restricted_kernel_interface = { path = "../oak_restricted_kernel_interface" }
 oak_functions_service = { path = "../oak_functions_service", default-features = false }
-oak_linux_boot_params = { path = "../linux_boot_params" }
 oak_remote_attestation = { path = "../oak_remote_attestation", default-features = false, features = [
   "rust-crypto"
 ] }
 oak_remote_attestation_amd = { path = "../oak_remote_attestation_amd", default-features = false, features = [
   "rust-crypto"
 ] }
+libm = "*"
+linked_list_allocator = { version = "*", features = ["alloc_ref"] }
 micro_rpc = { path = "../micro_rpc" }
 static_assertions = "*"
 
