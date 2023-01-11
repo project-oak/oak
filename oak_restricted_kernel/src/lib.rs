@@ -319,3 +319,14 @@ pub fn panic(info: &PanicInfo) -> ! {
     error!("PANIC: {}", info);
     shutdown::shutdown();
 }
+
+/// Parses a pre-loaded ELF file and passes control to it.
+///
+/// # Safety
+///
+/// We expect there to be an ELF file loaded in the memory pointed to by `payload`. If the pointer
+/// does not point to a valid ELF file, the behaviour is undefined.
+pub unsafe fn run_payload(payload: *const u8) -> ! {
+    let program_headers = unsafe { elf::get_phdrs(VirtAddr::from_ptr(payload)) };
+    loop {}
+}
