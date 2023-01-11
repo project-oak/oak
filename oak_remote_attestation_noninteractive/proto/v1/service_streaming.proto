@@ -18,38 +18,10 @@ syntax = "proto3";
 
 package oak.session.noninteractive.v1;
 
+import "oak_remote_attestation_noninteractive/proto/v1/messages.proto";
+
 option java_multiple_files = true;
 option java_package = "oak.session.noninteractive.v1";
-
-message PublicKeyInfo {
-  // The serialized enclave public key.
-  // TODO(#3442): Specify key format.
-  bytes public_key = 1;
-  // The serialized attestation report binding the public key.
-  bytes attestation = 2;
-  // TODO(#3442): Add evidence (endorsements and inclusion proofs) for the attested binary.
-}
-
-message GetPublicKeyRequest {}
-
-message GetPublicKeyResponse {
-  // The enclave public key.
-  PublicKeyInfo public_key_info = 1;
-}
-
-message InvokeRequest {
-  // Body of the request, encrypted with the enclave public key.
-  // TODO(#3442): Specify encryption format.
-  // TODO(#3442): Also pass client public or symmetric key to use for response encryption. Note that
-  // needs to be at least authenticated by the client, if not encrypted within this field.
-  bytes encrypted_body = 1;
-}
-
-message InvokeResponse {
-  // Body of the request, encrypted with the client public or symmetric key.
-  // TODO(#3442): Specify encryption format.
-  bytes encrypted_body = 1;
-}
 
 message RequestWrapper {
   oneof request {

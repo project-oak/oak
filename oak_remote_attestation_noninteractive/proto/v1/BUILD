@@ -24,18 +24,28 @@ package(
 )
 
 proto_library(
-    name = "oak_session_noninteractive_v1_proto",
-    srcs = ["oak_session_noninteractive_v1.proto"],
-    deps = [],
+    name = "messages_proto",
+    srcs = ["messages.proto"],
+)
+
+proto_library(
+    name = "service_streaming_proto",
+    srcs = ["service_streaming.proto"],
+    deps = [":messages_proto"],
 )
 
 java_proto_library(
-    name = "oak_session_noninteractive_v1_java_proto",
-    deps = [":oak_session_noninteractive_v1_proto"],
+    name = "messages_java_proto",
+    deps = [":messages_proto"],
+)
+
+java_proto_library(
+    name = "service_streaming_java_proto",
+    deps = [":service_streaming_proto"],
 )
 
 java_grpc_library(
-    name = "oak_session_noninteractive_v1_java_grpc",
-    srcs = [":oak_session_noninteractive_v1_proto"],
-    deps = [":oak_session_noninteractive_v1_java_proto"],
+    name = "service_streaming_java_grpc",
+    srcs = [":service_streaming_proto"],
+    deps = [":service_streaming_java_proto"],
 )
