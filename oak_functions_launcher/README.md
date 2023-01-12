@@ -1,28 +1,19 @@
 # Oak Functions Launcher
 
-Untrusted companion app that loads the Oak Functions binary in either QEMU or
-crosvm, and exposes a gRPC server for communicating with the binary.
-Communicates with the binary via the `oak_channel`.
+The Oak Functions Launcher loads the Oak Functions binary in either QEMU or
+crosvm, and exposes a gRPC server for communicating with the binary via the
+[Oak Channel](../oak_channel).
 
-## Starting the binary
-
-The Oak Functions binary may be loaded in crosvm via
+## Launching the Oak Functions enclave binary
 
 ```shell
-(cd oak_functions_enclave && cargo build) \
-    && RUST_LOG=debug cargo run \
-    --package=oak_functions_launcher \
-    -- \
-    --wasm=oak_functions_launcher/key_value_lookup.wasm \
-    --lookup-data=oak_functions_launcher/mock_lookup_data \
-    crosvm \
-    --vmm-binary=/usr/local/cargo/bin/crosvm \
-    --enclave-binary=oak_functions_enclave/target/x86_64-unknown-none/debug/oak_functions_enclave
+xtask run-launcher-test
 ```
 
-See also the See the task integration at `xtask/src/vm.rs`. Additional
-documentation is available via
+Additional documentation is available via
 `cargo run --package=oak_functions_launcher -- --help`.
+
+To launch the Oak Functions enclave binary directly as a child process:
 
 ```shell
 cargo build --package=oak_functions_linux_fd_bin \
@@ -32,4 +23,11 @@ cargo build --package=oak_functions_linux_fd_bin \
     --lookup-data=oak_functions_launcher/mock_lookup_data \
     native \
     --enclave-binary=target/debug/oak_functions_linux_fd_bin
+```
+
+Output:
+
+```
+[2023-01-12T16:38:04Z INFO  oak_functions_launcher] read Wasm file from disk oak_functions_launcher/key_value_lookup.wasm (1728193 bytes)
+INFO: Connecting to the launcher via the file descriptor: 11
 ```

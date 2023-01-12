@@ -42,7 +42,7 @@ mod server;
 
 #[derive(clap::Subcommand, Clone, Debug, PartialEq)]
 enum Mode {
-    /// Launch enclave in crosvm
+    /// Launch a virtual enclave binary
     Virtual(virtualized::Params),
     /// Launch an enclave binary directly as a child process
     Native(native::Params),

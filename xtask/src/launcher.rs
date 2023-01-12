@@ -77,9 +77,9 @@ impl LauncherMode {
     }
 }
 
-pub fn build_baremetal_variants(opt: &BuildBaremetalVariantsOpt) -> Step {
+pub fn build_enclave_binary_variants(opt: &BuildEnclaveBinaryVariantsOpt) -> Step {
     Step::Multiple {
-        name: "Build baremetal variants".to_string(),
+        name: "Build enclave binary variants".to_string(),
         steps: LauncherMode::iter()
             .filter(|v| option_covers_variant(opt, v))
             .map(|v| build_released_binary(&v.to_string(), &v.enclave_crate_path()))
@@ -87,7 +87,7 @@ pub fn build_baremetal_variants(opt: &BuildBaremetalVariantsOpt) -> Step {
     }
 }
 
-fn option_covers_variant(opt: &BuildBaremetalVariantsOpt, variant: &LauncherMode) -> bool {
+fn option_covers_variant(opt: &BuildEnclaveBinaryVariantsOpt, variant: &LauncherMode) -> bool {
     match &opt.variant {
         None => true,
         Some(var) => match *variant {
