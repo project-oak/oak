@@ -51,13 +51,22 @@ fn mmap(
         return Err(Errno::EINVAL);
     }
 
-    // Don't touch anything below 2 MiB boundary (we don't want to make 0x0 a valid address); also,
-    // make sure that the address is aligned to 2 MiB boundary.
-    let addr = max(
-        addr.unwrap_or(VirtAddr::zero()),
-        VirtAddr::new(Size2MiB::SIZE),
-    )
-    .align_up(Size2MiB::SIZE);
+    // Don't touch anything below 2 MiB boundary (we don't want to make 0x0 a valid address).
+    // We also need to ensure the address is aligned to a 2 MiB boundary; adjust the address, if
+    // we're allowed to do so.
+    let addr = if flags.contains(MmapFlags::MAP_FIXED) {
+        let addr = addr.ok_or(Errno::EINVAL)?;
+        if !addr.is_aligned(Size2MiB::SIZE) || addr.as_u64() < Size2MiB::SIZE {
+            return Err(Errno::EINVAL);
+        }
+        addr
+    } else {
+        max(
+            addr.unwrap_or(VirtAddr::zero()),
+            VirtAddr::new(Size2MiB::SIZE),
+        )
+        .align_up(Size2MiB::SIZE)
+    };
 
     // We only deal with 2 MiB pages, so round `size` up to the closest 2 MiB boundary as well.
     let size = align_up(size as u64, Size2MiB::SIZE) as usize;
@@ -67,7 +76,7 @@ fn mmap(
     // Iterator that keeps allocating physical frames.
     let frames = repeat_with(|| FRAME_ALLOCATOR.get().unwrap().lock().allocate_frame());
 
-    let flags = PageTableFlags::PRESENT
+    let pt_flags = PageTableFlags::PRESENT
         | PageTableFlags::USER_ACCESSIBLE
         | PageTableFlags::ENCRYPTED
         | if prot.contains(MmapProtection::PROT_EXEC) {
@@ -89,9 +98,14 @@ fn mmap(
         //  - in the lower half of virtual memory (user space)
         //  - greater or equal to `addr`
         //  - of at least size `size` (with size rounded up to the next 2 MiB boundary)
-        let pages = pt
-            .find_unallocated_pages(Page::<Size2MiB>::containing_address(addr), count)
-            .ok_or(Errno::ENOMEM)?;
+        let pages = if flags.contains(MmapFlags::MAP_FIXED) {
+            let start = Page::containing_address(addr);
+            let pages = Page::<Size2MiB>::range(start, start + count as u64);
+            pt.is_unallocated(pages).map(|()| pages).ok()
+        } else {
+            pt.find_unallocated_pages(Page::<Size2MiB>::containing_address(addr), count)
+        }
+        .ok_or(Errno::ENOMEM)?;
 
         // For each page we also need a physical frame to back it to create a mapping.
         for (page, frame) in pages.zip(frames) {
@@ -102,7 +116,7 @@ fn mmap(
                 pt.map_to_with_table_flags(
                     page,
                     frame.ok_or(Errno::ENOMEM)?,
-                    flags,
+                    pt_flags,
                     PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::ENCRYPTED,
                     FRAME_ALLOCATOR.get().unwrap().lock().deref_mut(),
                 )

@@ -52,7 +52,8 @@ pub enum Syscall {
     ///   - arg0 (*const c_void): hint for start address for the new mapping, may be nullptr
     ///   - arg1 (c_size_t): size of the new mapping
     ///   - arg2 (c_int): protection on mapping (PROT_EXEC, PROT_READ, PROT_WRITE, PROT_NONE)
-    ///   - arg3 (c_int): flags. The only combination we support is MAP_PRIVATE | MAP_ANONYMOUS.
+    ///   - arg3 (c_int): flags. We require MAP_PRIVATE and MAP_ANONYMOUS to be set, and
+    ///     additionally support MAP_FIXED.
     ///   - arg4 (c_int): file descriptor. Ignored, as we only support anonymous mappings. Should
     ///     be set to -1 by caller.
     ///   - arg5 (c_int): offset. Ignored, as we only support anonymous mappings. Should be set to
@@ -62,7 +63,8 @@ pub enum Syscall {
     ///     chunk of memory. Thus, size should be kept as a multiple of 2 MiB.
     ///   - related to previous, the allocation address will always be 2 MiB-aligned (rounded
     ///     upward from hint).
-    ///   - We do not support MAP_FIXED.
+    ///   - MAP_FIXED requires address to be 2 MiB-aligned, and will return an error if it'd touch
+    ///     any existing mappings.
     ///   - We do not support PROT_NONE; PROT_READ is always implied.
     Mmap = 9,
 
@@ -102,6 +104,9 @@ bitflags! {
     pub struct MmapFlags: i32 {
         /// Private copy-on-write mapping.
         const MAP_PRIVATE = 0x02;
+
+        /// Don't interpret addr as a hint, but require mapping at given address.
+        const MAP_FIXED = 0x10;
 
         /// The mapping is not backed by any file; contents are initialized to zero.
         const MAP_ANONYMOUS = 0x20;
