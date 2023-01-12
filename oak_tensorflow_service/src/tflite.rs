@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-use core::ptr::NonNull;
-
 use alloc::{vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use log::{log, Level};
@@ -75,7 +73,7 @@ extern "C" {
 const TENSOR_ARENA_SIZE: isize = 1024 * 1024 * 1024;
 
 pub struct TfliteModel {
-    tensor_arena: NonNull<u8>,
+    tensor_arena: &'static mut [u8],
     /// TFLite model binary representation.
     /// Rust needs to keep ownership of the model, because the C++ code just uses it as a
     /// reference.
@@ -98,7 +96,7 @@ impl TfliteModel {
         // Allocate memory. Both Oak Restricted Kernel and Linux have similar enough `mmap()`
         // semantics for this to work.
         let mem = mmap(
-            core::ptr::null(), // we don't care where the allocation lands
+            None, // we don't care where the allocation lands
             TENSOR_ARENA_SIZE,
             MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
@@ -108,7 +106,7 @@ impl TfliteModel {
         .expect("failed to allocate memory for tensor arena");
 
         Self {
-            tensor_arena: mem.cast(),
+            tensor_arena: mem,
             model_bytes: vec![],
             output_buffer_len: None,
         }
@@ -128,7 +126,7 @@ impl TfliteModel {
             tflite_init(
                 self.model_bytes.as_ptr(),
                 self.model_bytes.len(),
-                self.tensor_arena.as_ptr(),
+                self.tensor_arena.as_mut_ptr(),
                 TENSOR_ARENA_SIZE as usize,
                 &mut output_buffer_len,
             )

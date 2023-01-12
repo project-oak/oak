@@ -23,7 +23,7 @@ use core::{
     ffi::{c_int, c_size_t, c_void},
     iter::repeat_with,
     ops::DerefMut,
-    ptr::NonNull,
+    slice,
 };
 use oak_restricted_kernel_interface::{
     syscalls::{MmapFlags, MmapProtection},
@@ -36,11 +36,11 @@ use x86_64::{
 };
 
 fn mmap(
-    addr: *const c_void,
+    addr: Option<VirtAddr>,
     size: usize,
     prot: MmapProtection,
     flags: MmapFlags,
-) -> Result<NonNull<c_void>, Errno> {
+) -> Result<&'static mut [u8], Errno> {
     if size == 0 {
         log::warn!("invalid size passed to mmap: {}", size);
         return Err(Errno::EINVAL);
@@ -53,7 +53,11 @@ fn mmap(
 
     // Don't touch anything below 2 MiB boundary (we don't want to make 0x0 a valid address); also,
     // make sure that the address is aligned to 2 MiB boundary.
-    let addr = VirtAddr::new(max(addr as u64, Size2MiB::SIZE)).align_up(Size2MiB::SIZE);
+    let addr = max(
+        addr.unwrap_or(VirtAddr::zero()),
+        VirtAddr::new(Size2MiB::SIZE),
+    )
+    .align_up(Size2MiB::SIZE);
 
     // We only deal with 2 MiB pages, so round `size` up to the closest 2 MiB boundary as well.
     let size = align_up(size as u64, Size2MiB::SIZE) as usize;
@@ -117,17 +121,13 @@ fn mmap(
         pages
     };
 
-    // Zero out the memory, as required by mmap() semantics.
     // Safety: we've just allocated and mapped that chunk of memory, so (a) we know it's valid and
     // (b) nobody else can have a reference to it yet.
-    unsafe {
-        core::ptr::write_bytes::<u8>(pages.start.start_address().as_mut_ptr(), 0u8, size);
-    }
+    let buf = unsafe { slice::from_raw_parts_mut(pages.start.start_address().as_mut_ptr(), size) };
+    // Zero out the memory, as required by mmap() semantics.
+    buf.fill(0u8);
 
-    // Given that we've just successfully altered the page table the start address can't reasonably
-    // be null.
-    Ok(NonNull::new(pages.start.start_address().as_mut_ptr())
-        .expect("page range start address is null!"))
+    Ok(buf)
 }
 
 pub fn syscall_mmap(
@@ -159,5 +159,6 @@ pub fn syscall_mmap(
         return Errno::EINVAL as isize;
     };
 
-    mmap(addr, size, prot, flags).map_or_else(|err| err as isize, |ptr| ptr.as_ptr() as isize)
+    mmap(Some(VirtAddr::from_ptr(addr)), size, prot, flags)
+        .map_or_else(|err| err as isize, |ptr| ptr.as_ptr() as isize)
 }
