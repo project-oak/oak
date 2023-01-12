@@ -15,10 +15,7 @@
 //
 
 use crate::syscall;
-use core::{
-    ffi::{c_int, c_size_t, c_ssize_t, c_void},
-    ptr::NonNull,
-};
+use core::ffi::{c_int, c_size_t, c_ssize_t, c_void};
 use oak_restricted_kernel_interface::{
     syscalls::{MmapFlags, MmapProtection},
     Errno, Syscall,
@@ -86,15 +83,15 @@ pub extern "C" fn sys_mmap(
 }
 
 pub fn mmap(
-    addr: *const c_void,
+    addr: Option<*const c_void>,
     size: isize,
     prot: MmapProtection,
     flags: MmapFlags,
     fd: i32,
     offset: c_int,
-) -> Result<NonNull<c_void>, Errno> {
+) -> Result<&'static mut [u8], Errno> {
     let ret = sys_mmap(
-        addr,
+        addr.unwrap_or(core::ptr::null()),
         size.try_into().map_err(|_| Errno::EINVAL)?,
         prot.bits(),
         flags.bits(),
@@ -102,11 +99,13 @@ pub fn mmap(
         offset,
     );
 
-    if ret < 0 {
+    if ret <= 0 {
         Err(Errno::from_repr(ret)
             .unwrap_or_else(|| panic!("unexpected error from mmap syscall: {}", ret)))
     } else {
-        Ok(NonNull::new(ret as *mut c_void).expect("mmap syscall returned nullptr!"))
+        // Safety: if the syscall didn't return an error, then the kernel guarantees that the
+        // address is valid and there is enough memory allocated.
+        Ok(unsafe { core::slice::from_raw_parts_mut(ret as *mut u8, size as usize) })
     }
 }
 
@@ -176,7 +175,7 @@ mod tests {
     #[test]
     fn test_mmap() {
         let mem = mmap(
-            std::ptr::null(),
+            None,
             1024,
             MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
@@ -189,7 +188,7 @@ mod tests {
     #[test]
     fn test_mmap_error() {
         let mem = mmap(
-            std::ptr::null(),
+            None,
             0,
             MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
