@@ -17,7 +17,7 @@
 use crate::syscall;
 use core::{
     ffi::{c_int, c_size_t, c_ssize_t, c_void},
-    ptr::NonNull,
+    slice,
 };
 use oak_restricted_kernel_interface::{
     syscalls::{MmapFlags, MmapProtection},
@@ -85,14 +85,14 @@ pub extern "C" fn sys_mmap(
     unsafe { syscall!(Syscall::Mmap, addr, size, prot, flags, fd, offset) }
 }
 
-pub fn mmap(
+pub fn mmap<'a>(
     addr: *const c_void,
     size: isize,
     prot: MmapProtection,
     flags: MmapFlags,
     fd: i32,
     offset: c_int,
-) -> Result<NonNull<c_void>, Errno> {
+) -> Result<&'a mut [u8], Errno> {
     let ret = sys_mmap(
         addr,
         size.try_into().map_err(|_| Errno::EINVAL)?,
@@ -106,7 +106,7 @@ pub fn mmap(
         Err(Errno::from_repr(ret)
             .unwrap_or_else(|| panic!("unexpected error from mmap syscall: {}", ret)))
     } else {
-        Ok(NonNull::new(ret as *mut c_void).expect("mmap syscall returned nullptr!"))
+        Ok(unsafe { slice::from_raw_parts_mut(ret as *mut u8, size as usize) })
     }
 }
 
