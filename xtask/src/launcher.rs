@@ -25,7 +25,7 @@ use std::path::Path;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter};
 
-#[derive(Debug, Display, Clone, PartialEq, EnumIter)]
+#[derive(Debug, Display, Copy, Clone, PartialEq, EnumIter)]
 pub enum LauncherMode {
     Virtual,
     Native,
@@ -62,7 +62,7 @@ impl LauncherMode {
         match self {
             LauncherMode::Virtual => vec![
                 "virtual".to_string(),
-                format!("--enclave-binary={}", &self.enclave_binary_path()),
+                format!("--enclave-binary={}", "./target/enclave_bin"),
                 format!("--vmm-binary={}", "/usr/bin/qemu-system-x86_64"),
                 format!(
                     "--bios-binary={}",
@@ -105,28 +105,47 @@ fn build_released_binary(name: &str, directory: &str) -> Step {
 }
 
 pub fn run_launcher_test() -> Step {
+    let mut steps = vec![build_binary(
+        "build Oak Functions loader",
+        "./oak_functions_launcher",
+    )];
+    steps.extend(LauncherMode::iter().map(run_variant));
+
     Step::Multiple {
         name: "End-to-end tests for the launcher and enclave binary".to_string(),
-        steps: LauncherMode::iter().map(run_variant).collect(),
+        steps: steps,
     }
 }
 
 fn run_variant(variant: LauncherMode) -> Step {
-    Step::Multiple {
-        name: format!("run {} variant", variant),
-        steps: vec![
+    let mut steps = vec![build_binary(
+        "build Oak Functions enclave binary",
+        &variant.enclave_crate_path(),
+    )];
+    steps.extend(match variant {
+        LauncherMode::Virtual => vec![
             build_stage0(),
-            build_binary("build Oak Functions loader", "./oak_functions_launcher"),
-            build_binary(
-                "build Oak Functions enclave binary",
-                &variant.enclave_crate_path(),
-            ),
-            Step::WithBackground {
-                name: "background loader".to_string(),
-                background: run_launcher(variant),
-                foreground: Box::new(run_client("test_key", "^test_value$", 300)),
+            build_binary("shim", "oak_enclave_shim"),
+            Step::Single {
+                name: "merge shim and enclave binary".to_string(),
+                command: Cmd::new("objcopy", vec![
+                    "--update-section",
+                    ".payload=oak_functions_enclave/target/x86_64-unknown-none/debug/oak_functions_enclave",
+                    "oak_enclave_shim/target/x86_64-unknown-none/debug/oak_enclave_shim",
+                    "target/enclave_bin",
+                ]),
             },
         ],
+        LauncherMode::Native => vec![],
+    });
+    steps.extend(vec![Step::WithBackground {
+        name: "background loader".to_string(),
+        background: run_launcher(variant),
+        foreground: Box::new(run_client("test_key", "^test_value$", 300)),
+    }]);
+    Step::Multiple {
+        name: format!("run {} variant", variant),
+        steps: steps,
     }
 }
 

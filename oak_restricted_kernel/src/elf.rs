@@ -14,20 +14,24 @@
 // limitations under the License.
 //
 
-use goblin::elf64::program_header::ProgramHeader;
+use goblin::{elf::Header, elf64::program_header::ProgramHeader};
 use x86_64::VirtAddr;
 
 /// Interpret raw memory at the given address as an ELF header and return the program headers.
 ///
 /// Safety: this virtual address must be valid and contain ELF headers and program headers.
 pub unsafe fn get_phdrs(addr: VirtAddr) -> &'static [ProgramHeader] {
-    let raw_header = core::slice::from_raw_parts(
-        addr.as_u64() as *const u8,
-        goblin::elf::header::header64::SIZEOF_EHDR,
-    );
-    let header = goblin::elf::Elf::parse_header(raw_header).unwrap();
+    let header = get_header(addr);
     ProgramHeader::from_raw_parts(
         (addr.as_u64() + header.e_phoff) as *const ProgramHeader,
         header.e_phnum as usize,
     )
+}
+
+pub unsafe fn get_header(addr: VirtAddr) -> Header {
+    let raw_header = core::slice::from_raw_parts(
+        addr.as_u64() as *const u8,
+        goblin::elf::header::header64::SIZEOF_EHDR,
+    );
+    goblin::elf::Elf::parse_header(raw_header).unwrap()
 }

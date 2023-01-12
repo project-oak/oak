@@ -94,6 +94,8 @@ SECTIONS {
      */
     .payload : ALIGN(2M) {
         payload_start = .;
+        /* Random byte to ensure that the section will end up in a loadable segment; this will be overwritten. */
+        BYTE(0xFF)
     } : payload
 
     /DISCARD/ : {

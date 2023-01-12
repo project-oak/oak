@@ -158,25 +158,38 @@ impl<'a> EncryptedPageTable<MappedPageTable<'a, PhysOffset>> {
         while start < limit {
             let range = Page::range(start, start + count as u64);
 
-            // We need to make sure all 4K pages inside that range are unmapped, as we _may_ have
-            // some 4K mappings.
-            if let Some(item) = Page::<Size4KiB>::range(
-                Page::containing_address(range.start.start_address()),
-                Page::containing_address(range.end.start_address()),
-            )
-            .find(|page| self.translate_virtual(page.start_address()).is_some())
-            {
-                // We found a page that had a valid mapping in that range. Let's move our search
-                // window to the page just past the page that had a valid address.
-                start = Page::<S>::containing_address(item.start_address()) + 1;
-            } else {
-                // No valid mappings found, the whole range is unmapped!
-                return Some(range);
+            match self.is_unallocated(range) {
+                Ok(()) => return Some(range),
+                Err(page) => {
+                    start = page + 1;
+                }
             }
         }
 
         // given the size of the 64-bit address space, this should never happen
         None
+    }
+
+    /// Checks wheter all the pages in the range are unallocated.
+    ///
+    /// Even though the pages may be of arbitrary size, we check all 4KiB-aligned addresses in the
+    /// range, as the mappings may be done with a smaller page size.
+    ///
+    /// If we find an address with a valid mapping, we return the page which contains a valid
+    /// mapping.
+    pub fn is_unallocated<S: PageSize>(&self, range: PageRange<S>) -> Result<(), Page<S>> {
+        if let Some(item) = Page::<Size4KiB>::range(
+            Page::containing_address(range.start.start_address()),
+            Page::containing_address(range.end.start_address()),
+        )
+        .find(|page| self.translate_virtual(page.start_address()).is_some())
+        {
+            // We found a page that had a valid mapping in that range, bail out.
+            Err(Page::<S>::containing_address(item.start_address()))
+        } else {
+            // No valid mappings found, the whole range is unmapped!
+            Ok(())
+        }
     }
 }
 

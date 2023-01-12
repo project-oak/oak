@@ -77,6 +77,7 @@ use core::{
     panic::PanicInfo,
     str::FromStr,
 };
+use goblin::elf64::program_header::PT_LOAD;
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
@@ -86,11 +87,13 @@ use mm::{
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::BootParams;
+use oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
-    structures::paging::{MappedPageTable, Page},
+    align_down, align_up,
+    structures::paging::{MappedPageTable, Page, PageSize, Size2MiB, Size4KiB},
     PhysAddr, VirtAddr,
 };
 
@@ -328,5 +331,48 @@ pub fn panic(info: &PanicInfo) -> ! {
 /// does not point to a valid ELF file, the behaviour is undefined.
 pub unsafe fn run_payload(payload: *const u8) -> ! {
     let program_headers = unsafe { elf::get_phdrs(VirtAddr::from_ptr(payload)) };
-    loop {}
+    for phdr in program_headers {
+        if phdr.p_type != PT_LOAD {
+            continue;
+        }
+        log::info!(
+            "VirtAddr: {}, file size: {}, mem size: {}, offset: {}",
+            phdr.p_vaddr,
+            phdr.p_filesz,
+            phdr.p_memsz,
+            phdr.p_offset
+        );
+        let lower = align_down(phdr.p_vaddr, Size2MiB::SIZE);
+        let upper = align_up(phdr.p_vaddr + phdr.p_memsz, Size2MiB::SIZE);
+        log::info!(" - pages: [{:#018x}..{:#018x})", lower, upper);
+        log::info!(
+            " - memory: [{:#018x}..{:#018x})",
+            phdr.p_vaddr,
+            phdr.p_vaddr + phdr.p_memsz
+        );
+
+        log::info!(" - perms: {}", phdr.p_flags);
+
+        let ret = syscall::mmap::mmap(
+            VirtAddr::new(lower),
+            phdr.p_memsz as usize,
+            MmapProtection::PROT_EXEC | MmapProtection::PROT_WRITE,
+            MmapFlags::MAP_FIXED | MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
+        );
+        //log::info!(" - ret: {:?}", ret);
+
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                (payload as u64 + phdr.p_offset) as *const u8,
+                phdr.p_vaddr as *mut u8,
+                phdr.p_filesz as usize,
+            );
+        }
+    }
+
+    core::arch::asm! {
+        "call *{0}",
+        in(reg) elf::get_header(VirtAddr::from_ptr(payload)).e_entry,
+        options(noreturn, att_syntax)
+    }
 }

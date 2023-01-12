@@ -103,6 +103,9 @@ bitflags! {
         /// Private copy-on-write mapping.
         const MAP_PRIVATE = 0x02;
 
+        /// Don't interpret addr as a hint, but require mapping at given address.
+        const MAP_FIXED = 0x10;
+
         /// The mapping is not backed by any file; contents are initialized to zero.
         const MAP_ANONYMOUS = 0x20;
     }
