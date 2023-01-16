@@ -16,7 +16,7 @@
 
 mod channel;
 mod fd;
-mod mmap;
+pub mod mmap;
 mod process;
 mod stdio;
 

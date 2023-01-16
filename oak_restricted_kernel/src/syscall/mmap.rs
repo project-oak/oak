@@ -35,7 +35,7 @@ use x86_64::{
     VirtAddr,
 };
 
-fn mmap(
+pub fn mmap(
     addr: Option<VirtAddr>,
     size: usize,
     prot: MmapProtection,
