@@ -44,8 +44,6 @@ mod boot;
 mod descriptors;
 mod elf;
 mod ghcb;
-#[cfg(feature = "c_interface")]
-mod interface;
 mod interrupts;
 mod libm;
 mod logging;

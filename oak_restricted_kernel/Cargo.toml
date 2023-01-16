@@ -6,7 +6,6 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
-c_interface = ["hashbrown", "libc"]
 default = ["vsock_channel"]
 virtio_console_channel = ["virtio-drivers"]
 vsock_channel = ["oak_virtio"]
@@ -26,10 +25,8 @@ goblin = { version = "*", default-features = false, features = [
   "elf64",
   "endian_fd"
 ] }
-hashbrown = { version = "*", optional = true }
 linked_list_allocator = { version = "*", features = ["alloc_ref"] }
 log = "*"
-libc = { version = "*", optional = true }
 libm = "*"
 oak_channel = { path = "../oak_channel" }
 oak_core = { path = "../oak_core" }
