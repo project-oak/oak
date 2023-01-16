@@ -13,12 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod rekor;
-
 use anyhow::Context;
-
-#[cfg(test)]
-mod tests;
 
 pub struct Client {
     inner: oak_remote_attestation_noninteractive::client::OakClient,

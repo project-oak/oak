@@ -1,0 +1,35 @@
+[package]
+name = "oak_client"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+async-stream = "*"
+base64 = "*"
+clap = { version = "*", features = ["derive"] }
+ecdsa = { version = "*", features = ["verify", "pkcs8", "pem"] }
+env_logger = "*"
+hex = "*"
+http = "*"
+log = "*"
+oak_functions_abi = { path = "../oak_functions_abi" }
+oak_remote_attestation_noninteractive = { path = "../oak_remote_attestation_noninteractive" }
+p256 = { version = "*", features = ["ecdsa-core", "ecdsa", "pem"] }
+prost = "*"
+regex = "*"
+serde = "*"
+serde_jcs = "*"
+serde_json = "*"
+sha2 = { version = "*", default-features = false }
+signature = "*"
+tokio = { version = "*", features = [
+  "fs",
+  "macros",
+  "sync",
+  "rt-multi-thread"
+] }
+tonic = { version = "*", features = ["tls", "tls-roots"] }
+async-trait = "*"
