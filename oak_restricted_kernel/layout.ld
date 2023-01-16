@@ -29,6 +29,7 @@ PHDRS
     text    PT_LOAD FLAGS(4 + 1); /* PF_R + PF_X */
     /* Read-only data. */
     rodata  PT_LOAD FLAGS(4); /* PF_R */
+    payload PT_LOAD FLAGS(4); /* PF_R */
     /* Initialized read-write data. */
     data    PT_LOAD FLAGS(4 + 2); /* PF_R + PF_W */
     /* Uninitialized read-write data. */
@@ -86,6 +87,14 @@ SECTIONS {
         . += 512K;
     } : bss
     stack_start = .;
+
+    /* This section is empty when we link the binary together, but later we'll embed the user-space
+     * binary here. This needs to be the last item, as we don't know the size of it when we're linking
+     * the program.
+     */
+    .payload : ALIGN(2M) {
+        *(.payload .payload.*)
+    } : payload
 
     /DISCARD/ : {
         *(.eh_frame*)

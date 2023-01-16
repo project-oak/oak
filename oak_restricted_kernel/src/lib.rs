@@ -51,6 +51,7 @@ mod libm;
 mod logging;
 mod memory;
 mod mm;
+mod payload;
 #[cfg(feature = "serial_channel")]
 mod serial;
 pub mod shutdown;
@@ -93,6 +94,8 @@ use x86_64::{
     structures::paging::{MappedPageTable, Page},
     PhysAddr, VirtAddr,
 };
+
+pub use payload::run_payload;
 
 /// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 128 GiB of memory, for now.

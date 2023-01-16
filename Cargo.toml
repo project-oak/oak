@@ -60,6 +60,7 @@ members = [
 ]
 exclude = [
   "fuzz",
+  "oak_enclave_shim",
   "oak_functions/loader/fuzz",
   "oak_functions_enclave",
   "oak_tensorflow_enclave",
