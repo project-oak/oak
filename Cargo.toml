@@ -36,7 +36,7 @@ members = [
   "oak_functions_service",
   "oak_functions_test_utils",
   "oak_core",
-  "oak_remote_attestation",
+  "oak_remote_attestation_interactive",
   "oak_remote_attestation_amd",
   "oak_remote_attestation_noninteractive",
   "oak_remote_attestation_sessions",

@@ -22,7 +22,7 @@ use crate::proto::{UnaryRequest, UnaryResponse};
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_functions_abi::Response;
-use oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationGenerator};
+use oak_remote_attestation_interactive::handshaker::{AttestationBehavior, EmptyAttestationGenerator};
 use oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
 use oak_remote_attestation_sessions::SessionId;
 use oak_remote_attestation_sessions_client::{AttestationTransport, GenericAttestationClient};
