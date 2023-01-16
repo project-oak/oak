@@ -198,7 +198,6 @@
 <span id="198">198</span>
 <span id="199">199</span>
 <span id="200">200</span>
-<span id="201">201</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -216,10 +215,7 @@
 //
 
 </span><span class="kw">use </span><span class="kw">crate</span>::syscall;
-<span class="kw">use </span>core::{
-    ffi::{c_int, c_size_t, c_ssize_t, c_void},
-    ptr::NonNull,
-};
+<span class="kw">use </span>core::ffi::{c_int, c_size_t, c_ssize_t, c_void};
 <span class="kw">use </span>oak_restricted_kernel_interface::{
     syscalls::{MmapFlags, MmapProtection},
     Errno, Syscall,
@@ -287,15 +283,15 @@
 }
 
 <span class="kw">pub fn </span>mmap(
-    addr: <span class="kw-2">*const </span>c_void,
+    addr: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">*const </span>c_void&gt;,
     size: isize,
     prot: MmapProtection,
     flags: MmapFlags,
     fd: i32,
     offset: c_int,
-) -&gt; <span class="prelude-ty">Result</span>&lt;NonNull&lt;c_void&gt;, Errno&gt; {
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>[u8], Errno&gt; {
     <span class="kw">let </span>ret = sys_mmap(
-        addr,
+        addr.unwrap_or(core::ptr::null()),
         size.try_into().map_err(|<span class="kw">_</span>| Errno::EINVAL)<span class="question-mark">?</span>,
         prot.bits(),
         flags.bits(),
@@ -303,11 +299,13 @@
         offset,
     );
 
-    <span class="kw">if </span>ret &lt; <span class="number">0 </span>{
+    <span class="kw">if </span>ret &lt;= <span class="number">0 </span>{
         <span class="prelude-val">Err</span>(Errno::from_repr(ret)
             .unwrap_or_else(|| <span class="macro">panic!</span>(<span class="string">&quot;unexpected error from mmap syscall: {}&quot;</span>, ret)))
     } <span class="kw">else </span>{
-        <span class="prelude-val">Ok</span>(NonNull::new(ret <span class="kw">as </span><span class="kw-2">*mut </span>c_void).expect(<span class="string">&quot;mmap syscall returned nullptr!&quot;</span>))
+        <span class="comment">// Safety: if the syscall didn&#39;t return an error, then the kernel guarantees that the
+        // address is valid and there is enough memory allocated.
+        </span><span class="prelude-val">Ok</span>(<span class="kw">unsafe </span>{ core::slice::from_raw_parts_mut(ret <span class="kw">as </span><span class="kw-2">*mut </span>u8, size <span class="kw">as </span>usize) })
     }
 }
 
@@ -377,7 +375,7 @@
     <span class="attribute">#[test]
     </span><span class="kw">fn </span>test_mmap() {
         <span class="kw">let </span>mem = mmap(
-            std::ptr::null(),
+            <span class="prelude-val">None</span>,
             <span class="number">1024</span>,
             MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
@@ -390,7 +388,7 @@
     <span class="attribute">#[test]
     </span><span class="kw">fn </span>test_mmap_error() {
         <span class="kw">let </span>mem = mmap(
-            std::ptr::null(),
+            <span class="prelude-val">None</span>,
             <span class="number">0</span>,
             MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
