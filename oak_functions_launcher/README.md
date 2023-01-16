@@ -1,10 +1,19 @@
 # Oak Functions Launcher
 
-The Oak Functions Launcher loads the Oak Functions binary in either QEMU or
-crosvm, and exposes a gRPC server for communicating with the binary via the
+The Oak Functions Launcher loads the Oak Functions enclave binary and exposes a
+gRPC server for communicating with the binary via the
 [Oak Channel](../oak_channel).
 
 ## Launching the Oak Functions enclave binary
+
+First, set the permission to access the KVM kernel module by either (i)
+`sudo setfacl -m u:${USER}:rw /dev/kvm` on the host, or by (ii) adding the user
+to the KVM group.
+
+Then, run the following from within the
+[Oak Developer Docker Container](../docs/development.md#docker-helper-scripts):
+
+To launch the Oak Functions enclave binary with `xtask`:
 
 ```shell
 xtask run-launcher-test
@@ -27,7 +36,7 @@ cargo build --package=oak_functions_linux_fd_bin \
 
 Output:
 
-```
+```shell
 [2023-01-12T16:38:04Z INFO  oak_functions_launcher] read Wasm file from disk oak_functions_launcher/key_value_lookup.wasm (1728193 bytes)
 INFO: Connecting to the launcher via the file descriptor: 11
 ```
