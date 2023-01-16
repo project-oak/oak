@@ -751,6 +751,19 @@
 <span id="751">751</span>
 <span id="752">752</span>
 <span id="753">753</span>
+<span id="754">754</span>
+<span id="755">755</span>
+<span id="756">756</span>
+<span id="757">757</span>
+<span id="758">758</span>
+<span id="759">759</span>
+<span id="760">760</span>
+<span id="761">761</span>
+<span id="762">762</span>
+<span id="763">763</span>
+<span id="764">764</span>
+<span id="765">765</span>
+<span id="766">766</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -886,6 +899,28 @@
         }
     }
 
+    <span class="doccomment">/// Checks wheter all the pages in the range are unallocated.
+    ///
+    /// Even though the pages may be of arbitrary size, we check all 4KiB-aligned addresses in the
+    /// range, as the mappings may be done with a smaller page size.
+    ///
+    /// If we find an address with a valid mapping, we return the page which contains a valid
+    /// mapping.
+    </span><span class="kw">pub fn </span>is_unallocated&lt;S: PageSize&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, range: PageRange&lt;S&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Page&lt;S&gt;&gt; {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(item) = Page::&lt;Size4KiB&gt;::range(
+            Page::containing_address(range.start.start_address()),
+            Page::containing_address(range.end.start_address()),
+        )
+        .find(|page| <span class="self">self</span>.translate_virtual(page.start_address()).is_some())
+        {
+            <span class="comment">// We found a page that had a valid mapping in that range, bail out.
+            </span><span class="prelude-val">Err</span>(Page::&lt;S&gt;::containing_address(item.start_address()))
+        } <span class="kw">else </span>{
+            <span class="comment">// No valid mappings found, the whole range is unmapped!
+            </span><span class="prelude-val">Ok</span>(())
+        }
+    }
+
     <span class="doccomment">/// Finds a range of unallocated pages of the requested size.
     ///
     /// Args:
@@ -911,20 +946,11 @@
         <span class="kw">while </span>start &lt; limit {
             <span class="kw">let </span>range = Page::range(start, start + count <span class="kw">as </span>u64);
 
-            <span class="comment">// We need to make sure all 4K pages inside that range are unmapped, as we _may_ have
-            // some 4K mappings.
-            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(item) = Page::&lt;Size4KiB&gt;::range(
-                Page::containing_address(range.start.start_address()),
-                Page::containing_address(range.end.start_address()),
-            )
-            .find(|page| <span class="self">self</span>.translate_virtual(page.start_address()).is_some())
-            {
-                <span class="comment">// We found a page that had a valid mapping in that range. Let&#39;s move our search
-                // window to the page just past the page that had a valid address.
-                </span>start = Page::&lt;S&gt;::containing_address(item.start_address()) + <span class="number">1</span>;
-            } <span class="kw">else </span>{
-                <span class="comment">// No valid mappings found, the whole range is unmapped!
-                </span><span class="kw">return </span><span class="prelude-val">Some</span>(range);
+            <span class="comment">// If it turns out something in that range was allocated, we move forward to the page
+            // after that and try again.
+            </span><span class="kw">match </span><span class="self">self</span>.is_unallocated(range) {
+                <span class="prelude-val">Ok</span>(()) =&gt; <span class="kw">return </span><span class="prelude-val">Some</span>(range),
+                <span class="prelude-val">Err</span>(page) =&gt; start = page + <span class="number">1</span>,
             }
         }
 

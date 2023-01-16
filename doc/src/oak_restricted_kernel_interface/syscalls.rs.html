@@ -107,6 +107,11 @@
 <span id="107">107</span>
 <span id="108">108</span>
 <span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -161,7 +166,8 @@
     ///   - arg0 (*const c_void): hint for start address for the new mapping, may be nullptr
     ///   - arg1 (c_size_t): size of the new mapping
     ///   - arg2 (c_int): protection on mapping (PROT_EXEC, PROT_READ, PROT_WRITE, PROT_NONE)
-    ///   - arg3 (c_int): flags. The only combination we support is MAP_PRIVATE | MAP_ANONYMOUS.
+    ///   - arg3 (c_int): flags. We require MAP_PRIVATE and MAP_ANONYMOUS to be set, and
+    ///     additionally support MAP_FIXED.
     ///   - arg4 (c_int): file descriptor. Ignored, as we only support anonymous mappings. Should
     ///     be set to -1 by caller.
     ///   - arg5 (c_int): offset. Ignored, as we only support anonymous mappings. Should be set to
@@ -171,7 +177,8 @@
     ///     chunk of memory. Thus, size should be kept as a multiple of 2 MiB.
     ///   - related to previous, the allocation address will always be 2 MiB-aligned (rounded
     ///     upward from hint).
-    ///   - We do not support MAP_FIXED.
+    ///   - MAP_FIXED requires address to be 2 MiB-aligned, and will return an error if it&#39;d touch
+    ///     any existing mappings.
     ///   - We do not support PROT_NONE; PROT_READ is always implied.
     </span>Mmap = <span class="number">9</span>,
 
@@ -211,6 +218,9 @@
     </span><span class="kw">pub struct </span>MmapFlags: i32 {
         <span class="doccomment">/// Private copy-on-write mapping.
         </span><span class="kw">const </span>MAP_PRIVATE = <span class="number">0x02</span>;
+
+        <span class="doccomment">/// Don&#39;t interpret addr as a hint, but require mapping at given address.
+        </span><span class="kw">const </span>MAP_FIXED = <span class="number">0x10</span>;
 
         <span class="doccomment">/// The mapping is not backed by any file; contents are initialized to zero.
         </span><span class="kw">const </span>MAP_ANONYMOUS = <span class="number">0x20</span>;

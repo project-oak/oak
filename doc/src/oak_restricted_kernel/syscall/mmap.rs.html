@@ -162,6 +162,20 @@
 <span id="162">162</span>
 <span id="163">163</span>
 <span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -215,13 +229,22 @@
         <span class="kw">return </span><span class="prelude-val">Err</span>(Errno::EINVAL);
     }
 
-    <span class="comment">// Don&#39;t touch anything below 2 MiB boundary (we don&#39;t want to make 0x0 a valid address); also,
-    // make sure that the address is aligned to 2 MiB boundary.
-    </span><span class="kw">let </span>addr = max(
-        addr.unwrap_or(VirtAddr::zero()),
-        VirtAddr::new(Size2MiB::SIZE),
-    )
-    .align_up(Size2MiB::SIZE);
+    <span class="comment">// Don&#39;t touch anything below 2 MiB boundary (we don&#39;t want to make 0x0 a valid address).
+    // We also need to ensure the address is aligned to a 2 MiB boundary; adjust the address, if
+    // we&#39;re allowed to do so.
+    </span><span class="kw">let </span>addr = <span class="kw">if </span>flags.contains(MmapFlags::MAP_FIXED) {
+        <span class="kw">let </span>addr = addr.ok_or(Errno::EINVAL)<span class="question-mark">?</span>;
+        <span class="kw">if </span>!addr.is_aligned(Size2MiB::SIZE) || addr.as_u64() &lt; Size2MiB::SIZE {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Errno::EINVAL);
+        }
+        addr
+    } <span class="kw">else </span>{
+        max(
+            addr.unwrap_or(VirtAddr::zero()),
+            VirtAddr::new(Size2MiB::SIZE),
+        )
+        .align_up(Size2MiB::SIZE)
+    };
 
     <span class="comment">// We only deal with 2 MiB pages, so round `size` up to the closest 2 MiB boundary as well.
     </span><span class="kw">let </span>size = align_up(size <span class="kw">as </span>u64, Size2MiB::SIZE) <span class="kw">as </span>usize;
@@ -231,7 +254,7 @@
     // Iterator that keeps allocating physical frames.
     </span><span class="kw">let </span>frames = repeat_with(|| FRAME_ALLOCATOR.get().unwrap().lock().allocate_frame());
 
-    <span class="kw">let </span>flags = PageTableFlags::PRESENT
+    <span class="kw">let </span>pt_flags = PageTableFlags::PRESENT
         | PageTableFlags::USER_ACCESSIBLE
         | PageTableFlags::ENCRYPTED
         | <span class="kw">if </span>prot.contains(MmapProtection::PROT_EXEC) {
@@ -253,9 +276,14 @@
         //  - in the lower half of virtual memory (user space)
         //  - greater or equal to `addr`
         //  - of at least size `size` (with size rounded up to the next 2 MiB boundary)
-        </span><span class="kw">let </span>pages = pt
-            .find_unallocated_pages(Page::&lt;Size2MiB&gt;::containing_address(addr), count)
-            .ok_or(Errno::ENOMEM)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>pages = <span class="kw">if </span>flags.contains(MmapFlags::MAP_FIXED) {
+            <span class="kw">let </span>start = Page::containing_address(addr);
+            <span class="kw">let </span>pages = Page::&lt;Size2MiB&gt;::range(start, start + count <span class="kw">as </span>u64);
+            pt.is_unallocated(pages).map(|()| pages).ok()
+        } <span class="kw">else </span>{
+            pt.find_unallocated_pages(Page::&lt;Size2MiB&gt;::containing_address(addr), count)
+        }
+        .ok_or(Errno::ENOMEM)<span class="question-mark">?</span>;
 
         <span class="comment">// For each page we also need a physical frame to back it to create a mapping.
         </span><span class="kw">for </span>(page, frame) <span class="kw">in </span>pages.zip(frames) {
@@ -266,7 +294,7 @@
                 pt.map_to_with_table_flags(
                     page,
                     frame.ok_or(Errno::ENOMEM)<span class="question-mark">?</span>,
-                    flags,
+                    pt_flags,
                     PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::ENCRYPTED,
                     FRAME_ALLOCATOR.get().unwrap().lock().deref_mut(),
                 )
