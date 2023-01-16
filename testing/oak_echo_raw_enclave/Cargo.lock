@@ -433,6 +433,7 @@ name = "oak_restricted_kernel_api"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "log",
  "oak_channel",
  "oak_restricted_kernel_interface",
  "strum",

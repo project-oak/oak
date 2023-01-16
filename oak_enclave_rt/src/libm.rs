@@ -14,6 +14,12 @@
 // limitations under the License.
 //
 
-fn main() {
-    println!("cargo:rustc-link-arg=-zmax-page-size=0x200000");
+#[no_mangle]
+pub extern "C" fn fmodf(a: f32, b: f32) -> f32 {
+    libm::fmodf(a, b)
+}
+
+#[no_mangle]
+pub extern "C" fn fmod(a: f64, b: f64) -> f64 {
+    libm::fmod(a, b)
 }
