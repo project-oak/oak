@@ -65,14 +65,6 @@ enum Application {
 #[serde(deny_unknown_fields)]
 struct OakFunctionsApplication {
     target: Target,
-    wizer: Option<WizerOpt>,
-}
-
-#[derive(serde::Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-struct WizerOpt {
-    input: String,
-    output: String,
 }
 
 #[derive(serde::Deserialize, Debug, Default)]
@@ -118,12 +110,7 @@ struct Executable {
 
 impl OakFunctionsApplication {
     fn construct_application_build_steps(&self, example_name: &str) -> Vec<Step> {
-        let mut result = vec![build_wasm_module(example_name, &self.target, example_name)];
-        // If Wizer configuration is specified, run Wizer after the build.
-        if let Some(wizer) = &self.wizer {
-            result.push(run_wizer(&wizer.input, &wizer.output));
-        }
-        result
+        vec![build_wasm_module(example_name, &self.target, example_name)]
     }
 
     fn construct_server_run_step(&self, example: &OakFunctionsExample, run_clients: Step) -> Step {
@@ -445,17 +432,6 @@ pub fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Ste
         },
         Target::Npm { .. } => todo!(),
         Target::Shell { .. } => todo!(),
-    }
-}
-
-fn run_wizer(input: &str, output: &str) -> Step {
-    Step::Single {
-        name: format!("wizer:{}:{}", input, output),
-        command: Cmd::new(
-            "wizer",
-            // See https://github.com/bytecodealliance/wizer#example-usage.
-            spread![format!("{}", input), format!("-o={}", output),],
-        ),
     }
 }
 

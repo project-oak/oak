@@ -5,10 +5,9 @@ name = "weather_lookup"
 [applications.rust]
 type = "OakFunctions"
 target = { Cargo = { cargo_manifest = "oak_functions/examples/weather_lookup/module/Cargo.toml" } }
-wizer = { input = "bin/weather_lookup.wasm", output = "bin/weather_lookup_init.wasm" }
 
 [server]
-wasm_path = "bin/weather_lookup_init.wasm"
+wasm_path = "bin/weather_lookup.wasm"
 constant_response_size_bytes = 900
 lookup_data = "oak_functions/examples/weather_lookup/testdata/lookup_data_weather_sparse_s2"
 
