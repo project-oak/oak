@@ -106,7 +106,7 @@ fn build_released_binary(name: &str, directory: &str) -> Step {
 
 pub fn run_launcher_test() -> Step {
     let mut steps = vec![build_binary(
-        "build Oak Functions loader",
+        "build Oak Functions launcher",
         "./oak_functions_launcher",
     )];
     steps.extend(LauncherMode::iter().map(run_variant));
@@ -122,6 +122,12 @@ fn run_variant(variant: LauncherMode) -> Step {
         "build Oak Functions enclave binary",
         &variant.enclave_crate_path(),
     )];
+    // If we want to run in an VMM, we need to do some extra steps:
+    // 1. build the stage0 BIOS image
+    // 2. build the enclave shim that wraps the kernel
+    // 3. embed the built oak_functions binary in the .payload section of the shim
+    // and then we can start QEMU with stage0 as the firmware and the merged enclave_bin as the ELF
+    // binary to load.
     steps.extend(match variant {
         LauncherMode::Virtual => vec![
             build_stage0(),
@@ -139,7 +145,7 @@ fn run_variant(variant: LauncherMode) -> Step {
         LauncherMode::Native => vec![],
     });
     steps.extend(vec![Step::WithBackground {
-        name: "background loader".to_string(),
+        name: "background launcher".to_string(),
         background: run_launcher(variant),
         foreground: Box::new(run_client("test_key", "^test_value$", 300)),
     }]);

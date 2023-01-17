@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+// These C ABI functions are required by the Rust core library.
+
 #[no_mangle]
 pub extern "C" fn fmodf(a: f32, b: f32) -> f32 {
     libm::fmodf(a, b)
