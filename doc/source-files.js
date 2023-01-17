@@ -30,8 +30,8 @@ var sourcesIndex = JSON.parse('{\
 "oak_grpc_utils":["",[],["lib.rs"]],\
 "oak_linux_boot_params":["",[],["lib.rs"]],\
 "oak_logger":["",[],["lib.rs"]],\
-"oak_remote_attestation":["",[["crypto",[],["mod.rs","ring_crypto.rs"]]],["handshaker.rs","lib.rs","message.rs"]],\
 "oak_remote_attestation_amd":["",[],["lib.rs"]],\
+"oak_remote_attestation_interactive":["",[["crypto",[],["mod.rs","ring_crypto.rs"]]],["handshaker.rs","lib.rs","message.rs"]],\
 "oak_remote_attestation_noninteractive":["",[],["client.rs","lib.rs"]],\
 "oak_remote_attestation_sessions":["",[],["lib.rs"]],\
 "oak_remote_attestation_sessions_client":["",[],["lib.rs"]],\

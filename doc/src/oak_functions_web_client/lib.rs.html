@@ -158,6 +158,8 @@
 <span id="158">158</span>
 <span id="159">159</span>
 <span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -182,8 +184,10 @@
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>oak_functions_abi::Response;
-<span class="kw">use </span>oak_remote_attestation::handshaker::{AttestationBehavior, EmptyAttestationGenerator};
 <span class="kw">use </span>oak_remote_attestation_amd::PlaceholderAmdAttestationVerifier;
+<span class="kw">use </span>oak_remote_attestation_interactive::handshaker::{
+    AttestationBehavior, EmptyAttestationGenerator,
+};
 <span class="kw">use </span>oak_remote_attestation_sessions::SessionId;
 <span class="kw">use </span>oak_remote_attestation_sessions_client::{AttestationTransport, GenericAttestationClient};
 <span class="kw">use </span>std::rc::Rc;
