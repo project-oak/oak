@@ -112,12 +112,8 @@ async fn test_server() {
     oak_functions_test_utils::kill_process(server_background);
 }
 
-#[bench]
-fn bench_wasm_handler_no_warmup(bencher: &mut Bencher) {
-    bench_wasm_handler(bencher);
-}
-
 /// Run a benchmark of the wasm module.
+#[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
     let entry_count = 200_000;
     let elapsed_limit_millis = 20;
