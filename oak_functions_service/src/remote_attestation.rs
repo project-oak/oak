@@ -24,7 +24,7 @@
 extern crate alloc;
 
 use alloc::{sync::Arc, vec::Vec};
-use oak_remote_attestation::handshaker::AttestationGenerator;
+use oak_remote_attestation_interactive::handshaker::AttestationGenerator;
 
 /// Information about a public key.
 #[derive(Debug, Clone)]

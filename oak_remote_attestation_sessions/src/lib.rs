@@ -23,7 +23,7 @@ extern crate alloc;
 use alloc::{boxed::Box, sync::Arc};
 use core::num::NonZeroUsize;
 use lru::LruCache;
-use oak_remote_attestation::{
+use oak_remote_attestation_interactive::{
     crypto::Signer,
     handshaker::{
         AttestationBehavior, AttestationGenerator, AttestationVerifier, Encryptor, ServerHandshaker,
