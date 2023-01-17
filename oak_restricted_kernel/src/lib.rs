@@ -83,6 +83,7 @@ use log::{error, info};
 use mm::{
     encrypted_mapper::{EncryptedPageTable, PhysOffset},
     frame_allocator::PhysicalMemoryAllocator,
+    virtual_address_allocator::VirtualAddressAllocator,
 };
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
@@ -91,7 +92,7 @@ use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignm
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
-    structures::paging::{MappedPageTable, Page},
+    structures::paging::{MappedPageTable, Page, Size2MiB},
     PhysAddr, VirtAddr,
 };
 
@@ -108,6 +109,19 @@ pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
 pub static PAGE_TABLES: OnceCell<
     Spinlock<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>>,
 > = OnceCell::new();
+
+/// Allocator for long-lived pages in the kernel.
+pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
+    Spinlock::new(VirtualAddressAllocator::new(Page::range(
+        // Assign 32 TB of virtual memory for this allocator.
+        // Safety: these addresses are constants and thus we know they're page-aligned.
+        unsafe {
+            Page::from_start_address_unchecked(VirtAddr::new_truncate(0xFFFF_C900_0000_0000))
+        },
+        unsafe {
+            Page::from_start_address_unchecked(VirtAddr::new_truncate(0xFFFF_E900_0000_0000))
+        },
+    )));
 
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel(info: &BootParams) {
@@ -238,10 +252,9 @@ pub fn start_kernel(info: &BootParams) {
     }
 
     // If we don't find memory for heap, it's ok to panic.
-    memory::init_kernel_heap(
-        Page::from_start_address(VirtAddr::new(0xFFFF_C900_0000_0000)).unwrap(),
-    )
-    .unwrap();
+    // We'll let the heap to grow to 1 TB (1 << 19 * 2 MiB pages), max.
+    let heap_page_range = VMA_ALLOCATOR.lock().allocate(1 << 19).unwrap();
+    memory::init_kernel_heap(heap_page_range).unwrap();
 
     // Init ACPI, if available.
     let mut acpi = match acpi::Acpi::new(info) {

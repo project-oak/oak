@@ -47,22 +47,23 @@ struct GrowableHeap {
     /// Underlying heap allocator implementation.
     heap: Heap,
 
-    /// Base virtual address for the heap.
+    /// Virtual address range available for the heap.
     base: Page<Size2MiB>,
 
-    /// Non-nclusive limit of the heap: the last page of the heap.
+    /// Non-inclusive limit of the heap: the last page of the heap.
     ///
     /// The heap will use [base, cursor) addresses in the virtual memory.
-    cursor: Page<Size2MiB>,
+    available: PageRange<Size2MiB>,
 }
 
 impl GrowableHeap {
     pub const fn empty() -> Self {
         // Safety: zero is definitely aligned with a 2 MiB boundary.
+        let zero_page = unsafe { Page::from_start_address_unchecked(VirtAddr::zero()) };
         Self {
             heap: Heap::empty(),
-            base: unsafe { Page::from_start_address_unchecked(VirtAddr::zero()) },
-            cursor: unsafe { Page::from_start_address_unchecked(VirtAddr::zero()) },
+            base: zero_page,
+            available: Page::range(zero_page, zero_page),
         }
     }
 
@@ -83,7 +84,7 @@ impl GrowableHeap {
         unsafe {
             mapper
                 .map_to_with_table_flags(
-                    self.cursor,
+                    self.available.next().ok_or("kernel heap exhausted")?,
                     frame,
                     PageTableFlags::PRESENT
                         | PageTableFlags::WRITABLE
@@ -100,25 +101,26 @@ impl GrowableHeap {
                 .map_err(|_| "unable to create page mapping for kernel heap")?
                 .flush();
         }
-        self.cursor += 1;
 
         log::debug!(
             "Extending kernel heap to [{:#018x}..{:#018x}).",
             self.base.start_address().as_u64(),
-            self.cursor.start_address().as_u64()
+            self.available.start.start_address().as_u64(),
         );
         Ok(())
     }
 
-    pub unsafe fn init(&mut self, base: Page<Size2MiB>) {
-        self.base = base;
-        self.cursor = base;
+    pub unsafe fn init(&mut self, range: PageRange<Size2MiB>) {
+        self.base = range.start;
+        self.available = range;
 
         // Get the first 2 MiB of memory for the heap.
         self.extend().unwrap();
 
-        self.heap
-            .init(base.start_address().as_mut_ptr(), Size2MiB::SIZE as usize);
+        self.heap.init(
+            self.base.start_address().as_mut_ptr(),
+            Size2MiB::SIZE as usize,
+        );
     }
 
     pub fn allocate_first_fit(&mut self, layout: Layout) -> Result<NonNull<u8>, ()> {
@@ -178,10 +180,10 @@ unsafe impl GlobalAlloc for LockedGrowableHeap {
 /// Pointers to addresses in the memory area (or references to data contained within the slice) must
 /// be considered invalid after calling this function, as the allocator may overwrite the data at
 /// any point.
-pub fn init_kernel_heap(base: Page<Size2MiB>) -> Result<(), &'static str> {
+pub fn init_kernel_heap(range: PageRange<Size2MiB>) -> Result<(), &'static str> {
     // This is safe as we know the memory is available based on the e820 map.
     unsafe {
-        ALLOCATOR.lock().init(base);
+        ALLOCATOR.lock().init(range);
     }
     Ok(())
 }

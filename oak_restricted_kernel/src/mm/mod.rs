@@ -37,6 +37,7 @@ mod bitmap_frame_allocator;
 pub mod encrypted_mapper;
 pub mod frame_allocator;
 pub mod page_tables;
+pub mod virtual_address_allocator;
 
 /// The start of kernel memory.
 pub const KERNEL_OFFSET: u64 = 0xFFFF_FFFF_8000_0000;
