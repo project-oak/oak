@@ -64,11 +64,22 @@ impl OakClientBuilder {
 
 pub struct OakClient {
     transport: Box<dyn Transport>, // RpcClient
+    encryptor: ClientEncryptor,
 }
 
 impl OakClient {
-    pub fn invoke(&self, request: &[u8]) -> anyhow::Result<Vec<u8>> {
-        self.transport.send(request)
+    pub fn invoke(&self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
+        let (encrypted_request, decryptor) = encryptor
+            .encrypt(request_body)
+            .context("couldn't encrypt request")?;
+        let encrypted_response = self
+            .transport
+            .invoke(encrypted_request)
+            .context("couldn't send request")?;
+        let decrypted_response = decryptor
+            .decrypt(encrypted_response)
+            .context("couldn't decrypt response")?;
+        Ok(decrypted_response)
     }
 }
 

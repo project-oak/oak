@@ -15,12 +15,48 @@
 //
 
 use anyhow::Context;
+use tink_core::keyset::Handle;
+use tink_hybrid::init;
 
 pub trait CryptoEngine {
     fn encrypt(&self, plaintext_message: &[u8]) -> anyhow::Result<Vec<u8>>;
     fn decrypt(&self, encrypted_message: &[u8]) -> anyhow::Result<Vec<u8>>;
 }
 
-pub struct HybridCryptoEngine {
-    
+/// Context info value for encryption and decryption.
+/// 
+/// The value should be the same for both encryption and decryption to ensure
+/// the correct decryption of a ciphertext:
+/// https://docs.rs/tink-core/0.2.4/tink_core/trait.HybridDecrypt.html#security-guarantees
+pub const HYBRID_ENCRYPTION_CONTEXT_INFO: &[u8] = b"Oak Non-Interactive Attestation v0.1";
+
+pub struct ClientEncryptor {
+    enclave_public_key: &Handle,
+}
+
+impl ClientEncryptor {
+    pub fn new(enclave_public_key: &[u8]) -> Self {
+        Self {}
+    }
+
+    pub fn encrypt(&self, plaintext_message: &[u8]) -> anyhow::Result<(Vec<u8>, ClientDecryptor)> {
+        let encryptor = tink_hybrid::new_encrypt(self.enclave_public_key)
+            .map_err(|error| anyhow!("couldn't create hybrid encryptor: {}", error))?;
+        let encrypted_message = encryptor
+            .encrypt(plaintext_message, HYBRID_ENCRYPTION_CONTEXT_INFO)
+            .map_err(|error| anyhow!("couldn't encrypt data: {}", error))?;
+    }
+}
+
+pub struct ClientDecryptor {
+    fn decrypt(&self, encrypted_message: &[u8]) -> anyhow::Result<Vec<u8>>;
+}
+
+pub struct ServerHybridCryptoEngineBuilder {
+
+}
+
+fn main() {
+    let client_encryptor = ClientEncryptor::new(enclave_public_key);
+    let encrypted_message = 
 }
