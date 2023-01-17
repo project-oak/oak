@@ -14,9 +14,14 @@
 // limitations under the License.
 //
 
-pub trait Transport {
-    fn send(body: &[u8]) -> anyhow::Result<Vec<u8>>;
-}
+use micro_rpc::Transport;
+
+// pub trait Transport { 
+//     /// Type representing any transport-specific errors. By default, the transport is assumed to be 
+//     /// infallible. 
+//     type Error = !; 
+//     fn invoke(&mut self, request_bytes: &[u8]) -> Result<Vec<u8>, Self::Error>; 
+// } 
 
 pub struct GrpcTransport {
     rpc_client: StreamingSessionClient<Channel>,
@@ -29,7 +34,9 @@ impl GrpcTransport {
 }
 
 impl Transport for GrpcTransport {
-    fn send(&mut self, body: &[u8]) -> anyhow::Result<Vec<u8>> {
+    type Error = u32;
+
+    fn invoke(&mut self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
         let invoke_request = InvokeRequest {
             encrypted_body: body.to_vec(),
         };
