@@ -55,7 +55,7 @@ pub struct Opt {
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
     RunLauncherTest,
-    BuildBaremetalVariants(BuildBaremetalVariantsOpt),
+    BuildEnclaveBinaryVariants(BuildEnclaveBinaryVariantsOpt),
     RunOakFunctionsExamples(RunOakExamplesOpt),
     BuildOakFunctionsExample(RunOakExamplesOpt),
     BuildOakFunctionsServerVariants(BuildServerOpt),
@@ -254,10 +254,10 @@ pub struct RunCargoFuzz {
 }
 
 #[derive(Parser, Clone, Debug)]
-pub struct BuildBaremetalVariantsOpt {
+pub struct BuildEnclaveBinaryVariantsOpt {
     #[arg(
         long,
-        help = "name of a specific baremetal variant (qemu, or crosvm). If not specified, builds all variants."
+        help = "name of a specific enclave binary variant. If not specified, builds all variants."
     )]
     pub variant: Option<String>,
 }

@@ -24,7 +24,7 @@
     "source=/dev/log,target=/dev/log,type=bind"
   ],
   "runArgs": [
-    // Required by crosvm.
+    // Required by the VMM.
     "--device=/dev/kvm",
     // In order to access /dev/kvm, our user inside the container needs to be a
     // member of the group that owns /dev/kvm; the device itself is exposed
