@@ -145,15 +145,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "block-buffer"
-version = "0.10.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69cce20737498f97b993470a6e536b8523f0af7892a4f928cceb1ac5e52ebe7e"
-dependencies = [
- "generic-array",
-]
-
-[[package]]
 name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -243,7 +234,7 @@ name = "curve25519-dalek"
 version = "3.2.1"
 dependencies = [
  "byteorder",
- "digest 0.9.0",
+ "digest",
  "rand_core",
  "subtle",
  "zeroize",
@@ -265,17 +256,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3dd60d1080a57a05ab032377049e0591415d2b31afd7028356dbf3cc6dcb066"
 dependencies = [
  "generic-array",
-]
-
-[[package]]
-name = "digest"
-version = "0.10.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adfbc57365a37acbd2ebf2b64d7e69bb766e2fea813521ed536f5d0520dcf86c"
-dependencies = [
- "block-buffer 0.10.3",
- "crypto-common",
- "subtle",
 ]
 
 [[package]]
@@ -427,11 +407,12 @@ checksum = "2540771e65fc8cb83cd6e8a237f70c319bd5c29f78ed1084ba5d50eeac86f7f9"
 
 [[package]]
 name = "hkdf"
-version = "0.12.3"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "791a029f6b9fc27657f6f188ec6e5e43f6911f6f878e0dc5501396e09809d437"
+checksum = "01706d578d5c281058480e673ae4086a9f4710d8df1ad80a5b03e39ece5f886b"
 dependencies = [
- "hmac 0.12.1",
+ "digest",
+ "hmac",
 ]
 
 [[package]]
@@ -441,16 +422,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a2a2320eb7ec0ebe8da8f744d7812d9fc4cb4d09344ac01898dbcb6a20ae69b"
 dependencies = [
  "crypto-mac",
- "digest 0.9.0",
-]
-
-[[package]]
-name = "hmac"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
-dependencies = [
- "digest 0.10.5",
+ "digest",
 ]
 
 [[package]]
@@ -640,8 +612,8 @@ dependencies = [
  "oak_channel",
  "oak_functions_service",
  "oak_linux_boot_params",
- "oak_remote_attestation",
  "oak_remote_attestation_amd",
+ "oak_remote_attestation_interactive",
  "oak_restricted_kernel",
  "oak_restricted_kernel_api",
  "static_assertions",
@@ -683,7 +655,7 @@ dependencies = [
  "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_logger",
- "oak_remote_attestation",
+ "oak_remote_attestation_interactive",
  "prost",
 ]
 
@@ -730,7 +702,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_remote_attestation"
+name = "oak_remote_attestation_amd"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_remote_attestation_interactive",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "oak_remote_attestation_interactive"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
@@ -740,19 +722,9 @@ dependencies = [
  "hkdf",
  "p256",
  "rand_core",
- "sha2 0.10.6",
+ "sha2",
  "signature",
  "x25519-dalek",
-]
-
-[[package]]
-name = "oak_remote_attestation_amd"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "oak_remote_attestation",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -863,7 +835,7 @@ dependencies = [
  "ecdsa",
  "elliptic-curve",
  "sec1",
- "sha2 0.9.9",
+ "sha2",
 ]
 
 [[package]]
@@ -1026,7 +998,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96ef608575f6392792f9ecf7890c00086591d29a83910939d430753f7c050525"
 dependencies = [
  "crypto-bigint",
- "hmac 0.11.0",
+ "hmac",
  "zeroize",
 ]
 
@@ -1144,22 +1116,11 @@ version = "0.9.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4d58a1e1bf39749807d89cf2d98ac2dfa0ff1cb3faa38fbb64dd88ac8013d800"
 dependencies = [
- "block-buffer 0.9.0",
+ "block-buffer",
  "cfg-if",
  "cpufeatures",
- "digest 0.9.0",
+ "digest",
  "opaque-debug",
-]
-
-[[package]]
-name = "sha2"
-version = "0.10.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82e6b795fe2e3b1e845bafcb27aa35405c4d47cdfc92af5fc8d3002f76cebdc0"
-dependencies = [
- "cfg-if",
- "cpufeatures",
- "digest 0.10.5",
 ]
 
 [[package]]
@@ -1168,7 +1129,7 @@ version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02658e48d89f2bec991f9a78e69cfa4c316f8d6a6c4ec12fae1aeb263d486788"
 dependencies = [
- "digest 0.9.0",
+ "digest",
  "rand_core",
 ]
 

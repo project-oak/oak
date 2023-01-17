@@ -33,7 +33,7 @@ mod tests;
 use crate::channel::Channel;
 use anyhow::anyhow;
 use clap::Parser;
-use oak_remote_attestation::handshaker::EmptyAttestationGenerator;
+use oak_remote_attestation_interactive::handshaker::EmptyAttestationGenerator;
 use std::{
     os::unix::{io::FromRawFd, prelude::RawFd},
     sync::Arc,

@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-//! This crate implements remote attestation primitives from `oak_remote_attestation` based on
-//! AMD-SEV-SNP.
+//! This crate implements remote attestation primitives from `oak_remote_attestation_interactive`
+//! based on AMD-SEV-SNP.
 //!
 //! Currently only contains some placeholder structs, which will be replaced with actual
 //! functionality as part of #2842.
@@ -28,7 +28,7 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use oak_remote_attestation::handshaker::{AttestationGenerator, AttestationVerifier};
+use oak_remote_attestation_interactive::handshaker::{AttestationGenerator, AttestationVerifier};
 use serde::{Deserialize, Serialize};
 
 // TODO(#2842): Add remote attestation support.

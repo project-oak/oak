@@ -1,5 +1,5 @@
 [package]
-name = "oak_remote_attestation"
+name = "oak_remote_attestation_interactive"
 version = "0.1.0"
 authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2021"

@@ -33,7 +33,7 @@ use alloc::{boxed::Box, format, sync::Arc};
 use oak_functions_abi::Request;
 use oak_functions_lookup::LookupDataManager;
 use oak_functions_wasm::WasmHandler;
-use oak_remote_attestation::handshaker::AttestationGenerator;
+use oak_remote_attestation_interactive::handshaker::AttestationGenerator;
 use remote_attestation::Handler;
 
 pub use crate::logger::StandaloneLogger;
