@@ -752,6 +752,8 @@
 <span id="752">752</span>
 <span id="753">753</span>
 <span id="754">754</span>
+<span id="755">755</span>
+<span id="756">756</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -869,7 +871,9 @@
 <span class="kw">fn </span>match_cmd(opt: <span class="kw-2">&amp;</span>Opt) -&gt; Step {
     <span class="kw">match </span>opt.cmd {
         Command::RunLauncherTest =&gt; launcher::run_launcher_test(),
-        Command::BuildBaremetalVariants(<span class="kw-2">ref </span>opts) =&gt; launcher::build_baremetal_variants(opts),
+        Command::BuildEnclaveBinaryVariants(<span class="kw-2">ref </span>opts) =&gt; {
+            launcher::build_enclave_binary_variants(opts)
+        }
         Command::RunOakFunctionsExamples(<span class="kw-2">ref </span>run_opt) =&gt; {
             run_oak_functions_examples(run_opt, <span class="kw-2">&amp;</span>opt.scope)
         }

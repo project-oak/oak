@@ -1069,7 +1069,7 @@
 <span class="attribute">#[derive(Subcommand, Clone, Debug)]
 </span><span class="kw">pub enum </span>Command {
     RunLauncherTest,
-    BuildBaremetalVariants(BuildBaremetalVariantsOpt),
+    BuildEnclaveBinaryVariants(BuildEnclaveBinaryVariantsOpt),
     RunOakFunctionsExamples(RunOakExamplesOpt),
     BuildOakFunctionsExample(RunOakExamplesOpt),
     BuildOakFunctionsServerVariants(BuildServerOpt),
@@ -1268,10 +1268,10 @@
 }
 
 <span class="attribute">#[derive(Parser, Clone, Debug)]
-</span><span class="kw">pub struct </span>BuildBaremetalVariantsOpt {
+</span><span class="kw">pub struct </span>BuildEnclaveBinaryVariantsOpt {
     <span class="attribute">#[arg(
         long,
-        help = <span class="string">&quot;name of a specific baremetal variant (qemu, or crosvm). If not specified, builds all variants.&quot;
+        help = <span class="string">&quot;name of a specific enclave binary variant. If not specified, builds all variants.&quot;
     </span>)]
     </span><span class="kw">pub </span>variant: <span class="prelude-ty">Option</span>&lt;String&gt;,
 }

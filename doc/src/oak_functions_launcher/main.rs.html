@@ -232,7 +232,7 @@
 
 <span class="attribute">#[derive(clap::Subcommand, Clone, Debug, PartialEq)]
 </span><span class="kw">enum </span>Mode {
-    <span class="doccomment">/// Launch enclave in crosvm
+    <span class="doccomment">/// Launch a virtual enclave binary
     </span>Virtual(virtualized::Params),
     <span class="doccomment">/// Launch an enclave binary directly as a child process
     </span>Native(native::Params),

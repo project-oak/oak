@@ -266,9 +266,9 @@
     }
 }
 
-<span class="kw">pub fn </span>build_baremetal_variants(opt: <span class="kw-2">&amp;</span>BuildBaremetalVariantsOpt) -&gt; Step {
+<span class="kw">pub fn </span>build_enclave_binary_variants(opt: <span class="kw-2">&amp;</span>BuildEnclaveBinaryVariantsOpt) -&gt; Step {
     Step::Multiple {
-        name: <span class="string">&quot;Build baremetal variants&quot;</span>.to_string(),
+        name: <span class="string">&quot;Build enclave binary variants&quot;</span>.to_string(),
         steps: LauncherMode::iter()
             .filter(|v| option_covers_variant(opt, v))
             .map(|v| build_released_binary(<span class="kw-2">&amp;</span>v.to_string(), <span class="kw-2">&amp;</span>v.enclave_crate_path()))
@@ -276,7 +276,7 @@
     }
 }
 
-<span class="kw">fn </span>option_covers_variant(opt: <span class="kw-2">&amp;</span>BuildBaremetalVariantsOpt, variant: <span class="kw-2">&amp;</span>LauncherMode) -&gt; bool {
+<span class="kw">fn </span>option_covers_variant(opt: <span class="kw-2">&amp;</span>BuildEnclaveBinaryVariantsOpt, variant: <span class="kw-2">&amp;</span>LauncherMode) -&gt; bool {
     <span class="kw">match </span><span class="kw-2">&amp;</span>opt.variant {
         <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
         <span class="prelude-val">Some</span>(var) =&gt; <span class="kw">match </span><span class="kw-2">*</span>variant {
