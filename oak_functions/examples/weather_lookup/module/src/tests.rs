@@ -114,28 +114,16 @@ async fn test_server() {
 
 #[bench]
 fn bench_wasm_handler_no_warmup(bencher: &mut Bencher) {
-    bench_wasm_handler(bencher, false);
+    bench_wasm_handler(bencher);
 }
 
-#[bench]
-fn bench_wasm_handler_with_warmup(bencher: &mut Bencher) {
-    bench_wasm_handler(bencher, true);
-}
-
-/// Run a benchmark of the wasm module, optionally performing a warup-initialisation using Wizer.
-fn bench_wasm_handler(bencher: &mut Bencher, warmup: bool) {
+/// Run a benchmark of the wasm module.
+fn bench_wasm_handler(bencher: &mut Bencher) {
     let entry_count = 200_000;
     let elapsed_limit_millis = 20;
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("weather_lookup").unwrap();
     let wasm_module_bytes = std::fs::read(&wasm_path).expect("couldn't read Wasm file");
-    let wasm_module_bytes = if warmup {
-        wizer::Wizer::new()
-            .run(&wasm_module_bytes)
-            .expect("couldn't initialise Wasm module via Wizer")
-    } else {
-        wasm_module_bytes
-    };
     let wasm_path_after_optimization =
         oak_functions_test_utils::write_to_temp_file(&wasm_module_bytes);
 

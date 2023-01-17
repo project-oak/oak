@@ -14,8 +14,6 @@ ignore = [
   "RUSTSEC-2021-0146",
   # TODO(#3377): Remove when updated.
   "RUSTSEC-2022-0061",
-  "RUSTSEC-2022-0075",
-  "RUSTSEC-2022-0076",
 ]
 
 [bans]
