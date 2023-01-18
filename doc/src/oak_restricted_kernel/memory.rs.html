@@ -219,6 +219,8 @@
 <span id="219">219</span>
 <span id="220">220</span>
 <span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -268,22 +270,23 @@
     <span class="doccomment">/// Underlying heap allocator implementation.
     </span>heap: Heap,
 
-    <span class="doccomment">/// Base virtual address for the heap.
+    <span class="doccomment">/// Virtual address range available for the heap.
     </span>base: Page&lt;Size2MiB&gt;,
 
-    <span class="doccomment">/// Non-nclusive limit of the heap: the last page of the heap.
+    <span class="doccomment">/// Non-inclusive limit of the heap: the last page of the heap.
     ///
     /// The heap will use [base, cursor) addresses in the virtual memory.
-    </span>cursor: Page&lt;Size2MiB&gt;,
+    </span>available: PageRange&lt;Size2MiB&gt;,
 }
 
 <span class="kw">impl </span>GrowableHeap {
     <span class="kw">pub const fn </span>empty() -&gt; <span class="self">Self </span>{
         <span class="comment">// Safety: zero is definitely aligned with a 2 MiB boundary.
-        </span><span class="self">Self </span>{
+        </span><span class="kw">let </span>zero_page = <span class="kw">unsafe </span>{ Page::from_start_address_unchecked(VirtAddr::zero()) };
+        <span class="self">Self </span>{
             heap: Heap::empty(),
-            base: <span class="kw">unsafe </span>{ Page::from_start_address_unchecked(VirtAddr::zero()) },
-            cursor: <span class="kw">unsafe </span>{ Page::from_start_address_unchecked(VirtAddr::zero()) },
+            base: zero_page,
+            available: Page::range(zero_page, zero_page),
         }
     }
 
@@ -304,7 +307,7 @@
         </span><span class="kw">unsafe </span>{
             mapper
                 .map_to_with_table_flags(
-                    <span class="self">self</span>.cursor,
+                    <span class="self">self</span>.available.next().ok_or(<span class="string">&quot;kernel heap exhausted&quot;</span>)<span class="question-mark">?</span>,
                     frame,
                     PageTableFlags::PRESENT
                         | PageTableFlags::WRITABLE
@@ -321,25 +324,26 @@
                 .map_err(|<span class="kw">_</span>| <span class="string">&quot;unable to create page mapping for kernel heap&quot;</span>)<span class="question-mark">?
                 </span>.flush();
         }
-        <span class="self">self</span>.cursor += <span class="number">1</span>;
 
         <span class="macro">log::debug!</span>(
             <span class="string">&quot;Extending kernel heap to [{:#018x}..{:#018x}).&quot;</span>,
             <span class="self">self</span>.base.start_address().as_u64(),
-            <span class="self">self</span>.cursor.start_address().as_u64()
+            <span class="self">self</span>.available.start.start_address().as_u64(),
         );
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub unsafe fn </span>init(<span class="kw-2">&amp;mut </span><span class="self">self</span>, base: Page&lt;Size2MiB&gt;) {
-        <span class="self">self</span>.base = base;
-        <span class="self">self</span>.cursor = base;
+    <span class="kw">pub unsafe fn </span>init(<span class="kw-2">&amp;mut </span><span class="self">self</span>, range: PageRange&lt;Size2MiB&gt;) {
+        <span class="self">self</span>.base = range.start;
+        <span class="self">self</span>.available = range;
 
         <span class="comment">// Get the first 2 MiB of memory for the heap.
         </span><span class="self">self</span>.extend().unwrap();
 
-        <span class="self">self</span>.heap
-            .init(base.start_address().as_mut_ptr(), Size2MiB::SIZE <span class="kw">as </span>usize);
+        <span class="self">self</span>.heap.init(
+            <span class="self">self</span>.base.start_address().as_mut_ptr(),
+            Size2MiB::SIZE <span class="kw">as </span>usize,
+        );
     }
 
     <span class="kw">pub fn </span>allocate_first_fit(<span class="kw-2">&amp;mut </span><span class="self">self</span>, layout: Layout) -&gt; <span class="prelude-ty">Result</span>&lt;NonNull&lt;u8&gt;, ()&gt; {
@@ -399,10 +403,10 @@
 /// Pointers to addresses in the memory area (or references to data contained within the slice) must
 /// be considered invalid after calling this function, as the allocator may overwrite the data at
 /// any point.
-</span><span class="kw">pub fn </span>init_kernel_heap(base: Page&lt;Size2MiB&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>init_kernel_heap(range: PageRange&lt;Size2MiB&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// This is safe as we know the memory is available based on the e820 map.
     </span><span class="kw">unsafe </span>{
-        ALLOCATOR.lock().init(base);
+        ALLOCATOR.lock().init(range);
     }
     <span class="prelude-val">Ok</span>(())
 }
