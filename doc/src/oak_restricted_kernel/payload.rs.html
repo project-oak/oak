@@ -72,6 +72,14 @@
 <span id="72">72</span>
 <span id="73">73</span>
 <span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -90,7 +98,7 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::syscall::mmap::mmap;
 <span class="kw">use </span>core::arch::asm;
-<span class="kw">use </span>goblin::elf64::program_header::ProgramHeader;
+<span class="kw">use </span>goblin::elf64::program_header::{ProgramHeader, PF_W, PF_X, PT_LOAD};
 <span class="kw">use </span>oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 <span class="kw">use </span>x86_64::{
     structures::paging::{PageSize, Size2MiB},
@@ -116,17 +124,25 @@
         header.e_phnum <span class="kw">as </span>usize,
     );
 
-    <span class="kw">for </span>phdr <span class="kw">in </span>phdrs {
+    <span class="kw">for </span>phdr <span class="kw">in </span>phdrs.iter().filter(|<span class="kw-2">&amp;</span>phdr| phdr.p_type == PT_LOAD) {
         <span class="kw">let </span>vaddr = VirtAddr::new(phdr.p_vaddr).align_down(Size2MiB::SIZE);
+
+        <span class="kw">let </span><span class="kw-2">mut </span>prot = MmapProtection::PROT_READ;
+        <span class="kw">if </span>phdr.p_flags &amp; PF_W &gt; <span class="number">0 </span>{
+            prot |= MmapProtection::PROT_WRITE;
+        }
+        <span class="kw">if </span>phdr.p_flags &amp; PF_X &gt; <span class="number">0 </span>{
+            prot |= MmapProtection::PROT_EXEC;
+        }
 
         <span class="comment">// As we need memory in the user space anyway, use the `mmap()` syscall that will allocate
         // physical frames and sets up user-accessible page tables for us.
-        // For now we also mark all memory as executable + writable (which we really shouldn&#39;t) as
-        // there is no guarantee that the memory areas in the ELF header won&#39;t overlap.
+        // Note that the expectation here is that all the sections are nicely 2 MiB-aligned,
+        // otherwise the mmap() will fail.
         </span>mmap(
             <span class="prelude-val">Some</span>(vaddr),
             phdr.p_memsz <span class="kw">as </span>usize,
-            MmapProtection::PROT_EXEC | MmapProtection::PROT_WRITE,
+            prot,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
         )
         .expect(<span class="string">&quot;failed to allocate user memory&quot;</span>);

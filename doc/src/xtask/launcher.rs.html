@@ -187,6 +187,31 @@
 <span id="187">187</span>
 <span id="188">188</span>
 <span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -214,7 +239,7 @@
 <span class="kw">use </span>strum::IntoEnumIterator;
 <span class="kw">use </span>strum_macros::{Display, EnumIter};
 
-<span class="attribute">#[derive(Debug, Display, Clone, PartialEq, EnumIter)]
+<span class="attribute">#[derive(Debug, Display, Copy, Clone, PartialEq, EnumIter)]
 </span><span class="kw">pub enum </span>LauncherMode {
     Virtual,
     Native,
@@ -251,7 +276,7 @@
         <span class="kw">match </span><span class="self">self </span>{
             LauncherMode::Virtual =&gt; <span class="macro">vec!</span>[
                 <span class="string">&quot;virtual&quot;</span>.to_string(),
-                <span class="macro">format!</span>(<span class="string">&quot;--enclave-binary={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_binary_path()),
+                <span class="macro">format!</span>(<span class="string">&quot;--enclave-binary={}&quot;</span>, <span class="string">&quot;./target/enclave_bin&quot;</span>),
                 <span class="macro">format!</span>(<span class="string">&quot;--vmm-binary={}&quot;</span>, <span class="string">&quot;/usr/bin/qemu-system-x86_64&quot;</span>),
                 <span class="macro">format!</span>(
                     <span class="string">&quot;--bios-binary={}&quot;</span>,
@@ -294,28 +319,53 @@
 }
 
 <span class="kw">pub fn </span>run_launcher_test() -&gt; Step {
+    <span class="kw">let </span><span class="kw-2">mut </span>steps = <span class="macro">vec!</span>[build_binary(
+        <span class="string">&quot;build Oak Functions launcher&quot;</span>,
+        <span class="string">&quot;./oak_functions_launcher&quot;</span>,
+    )];
+    steps.extend(LauncherMode::iter().map(run_variant));
+
     Step::Multiple {
         name: <span class="string">&quot;End-to-end tests for the launcher and enclave binary&quot;</span>.to_string(),
-        steps: LauncherMode::iter().map(run_variant).collect(),
+        steps,
     }
 }
 
 <span class="kw">fn </span>run_variant(variant: LauncherMode) -&gt; Step {
-    Step::Multiple {
-        name: <span class="macro">format!</span>(<span class="string">&quot;run {} variant&quot;</span>, variant),
-        steps: <span class="macro">vec!</span>[
+    <span class="kw">let </span><span class="kw-2">mut </span>steps = <span class="macro">vec!</span>[build_binary(
+        <span class="string">&quot;build Oak Functions enclave binary&quot;</span>,
+        <span class="kw-2">&amp;</span>variant.enclave_crate_path(),
+    )];
+    <span class="comment">// If we want to run in an VMM, we need to do some extra steps:
+    // 1. build the stage0 BIOS image
+    // 2. build the enclave shim that wraps the kernel
+    // 3. embed the built oak_functions binary in the .payload section of the shim
+    // and then we can start QEMU with stage0 as the firmware and the merged enclave_bin as the ELF
+    // binary to load.
+    </span>steps.extend(<span class="kw">match </span>variant {
+        LauncherMode::Virtual =&gt; <span class="macro">vec!</span>[
             build_stage0(),
-            build_binary(<span class="string">&quot;build Oak Functions loader&quot;</span>, <span class="string">&quot;./oak_functions_launcher&quot;</span>),
-            build_binary(
-                <span class="string">&quot;build Oak Functions enclave binary&quot;</span>,
-                <span class="kw-2">&amp;</span>variant.enclave_crate_path(),
-            ),
-            Step::WithBackground {
-                name: <span class="string">&quot;background loader&quot;</span>.to_string(),
-                background: run_launcher(variant),
-                foreground: Box::new(run_client(<span class="string">&quot;test_key&quot;</span>, <span class="string">&quot;^test_value$&quot;</span>, <span class="number">300</span>)),
+            build_binary(<span class="string">&quot;shim&quot;</span>, <span class="string">&quot;oak_enclave_shim&quot;</span>),
+            Step::Single {
+                name: <span class="string">&quot;merge shim and enclave binary&quot;</span>.to_string(),
+                command: Cmd::new(<span class="string">&quot;objcopy&quot;</span>, <span class="macro">vec!</span>[
+                    <span class="string">&quot;--update-section&quot;</span>,
+                    <span class="string">&quot;.payload=oak_functions_enclave/target/x86_64-unknown-none/debug/oak_functions_enclave&quot;</span>,
+                    <span class="string">&quot;oak_enclave_shim/target/x86_64-unknown-none/debug/oak_enclave_shim&quot;</span>,
+                    <span class="string">&quot;target/enclave_bin&quot;</span>,
+                ]),
             },
         ],
+        LauncherMode::Native =&gt; <span class="macro">vec!</span>[],
+    });
+    steps.extend(<span class="macro">vec!</span>[Step::WithBackground {
+        name: <span class="string">&quot;background launcher&quot;</span>.to_string(),
+        background: run_launcher(variant),
+        foreground: Box::new(run_client(<span class="string">&quot;test_key&quot;</span>, <span class="string">&quot;^test_value$&quot;</span>, <span class="number">300</span>)),
+    }]);
+    Step::Multiple {
+        name: <span class="macro">format!</span>(<span class="string">&quot;run {} variant&quot;</span>, variant),
+        steps,
     }
 }
 

@@ -24,6 +24,8 @@
 <span id="24">24</span>
 <span id="25">25</span>
 <span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -46,9 +48,11 @@
 </span><span class="kw">extern crate </span>alloc;
 
 <span class="kw">mod </span>channel;
+<span class="kw">mod </span>logging;
 <span class="kw">mod </span>raw_syscall;
 <span class="kw">pub mod </span>syscall;
 
 <span class="kw">pub use </span>channel::FileDescriptorChannel;
+<span class="kw">pub use </span>logging::StderrLogger;
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_restricted_kernel_api" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>
