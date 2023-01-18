@@ -51,6 +51,7 @@ members = [
   "oak_virtio",
   "sev_serial",
   "snp_measurement",
+  "testing/hello_world_linux_init",
   "testing/oak_echo_service",
   "trusted_shuffler/backend",
   "trusted_shuffler/client",

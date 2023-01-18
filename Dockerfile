@@ -46,6 +46,8 @@ RUN apt-get --yes update \
   clang-tidy \
   # `cmake` is needed for flatbuffer.
   cmake \
+  # `cpio` is needed for creating initial RAM disks.
+  cpio \
   curl \
   docker-ce-cli \
   git \
