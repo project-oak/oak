@@ -25,6 +25,7 @@ use self::{
     mmap::syscall_mmap,
     process::syscall_exit,
 };
+use crate::mm;
 use alloc::boxed::Box;
 use core::{arch::asm, ffi::c_void};
 use oak_channel::Channel;
@@ -32,16 +33,50 @@ use oak_restricted_kernel_interface::{Errno, Syscall};
 use x86_64::{
     registers::{
         control::Efer,
-        model_specific::{EferFlags, LStar},
+        model_specific::{EferFlags, GsBase, KernelGsBase, LStar},
     },
     VirtAddr,
 };
+
+/// State we need to track for system calls.
+///
+/// Do not change the order of the fields here, as this is accessed from assembly!
+#[repr(C)]
+struct GsData {
+    /// Kernel stack pointer (what to set in RSP after saving user RSP).
+    kernel_sp: VirtAddr,
+
+    /// User stack pointer. Saved from RSP after SYSCALL.
+    user_sp: VirtAddr,
+
+    /// User instruction pointer (where to return after SYSCALL). Saved from RCX.
+    user_ip: VirtAddr,
+
+    /// User flags. Saved from R11.
+    user_flags: usize,
+}
 
 pub fn enable_syscalls(channel: Box<dyn Channel>) {
     channel::register(channel);
     stdio::register();
 
-    LStar::write(VirtAddr::new(syscall_entrypoint as *const fn() as u64));
+    // Allocate a stack for the system call handler.
+    let kernel_sp = mm::allocate_stack();
+
+    // Store the gsdata structure in the kernel heap.
+    // We need the GsData to stick around statically, so we'll leak it here.
+    let gsdata = Box::leak(Box::new(GsData {
+        // Stack grows down, so SP points to the end of the page
+        kernel_sp,
+        user_sp: VirtAddr::zero(),
+        user_ip: VirtAddr::zero(),
+        user_flags: 0,
+    }));
+
+    KernelGsBase::write(VirtAddr::from_ptr(gsdata));
+    GsBase::write(VirtAddr::from_ptr(gsdata));
+
+    LStar::write(VirtAddr::new(syscall_entrypoint as usize as u64));
     unsafe {
         Efer::update(|flags| flags.set(EferFlags::SYSTEM_CALL_EXTENSIONS, true));
     }
@@ -108,16 +143,22 @@ extern "C" fn syscall_entrypoint() {
     // See SYSCALL and SYSRET in AMD64 Architecture Programmer's Manual, Volume 3 for more details.
     unsafe {
         asm! {
-            // Save mutable registers other than RAX.
+            // Switch to the syscall stack
+            "swapgs", // switch to kernel GS
+            "mov gs:[0x8], rsp", // save user RSP
+            "mov gs:[0x10], rcx", // save user RIP
+            "mov gs:[0x18], r11", // save user RFLAGS
+            "mov rsp, gs:[0x0]", // switch to kernel stack
+
+            // Save mutable registers other than RAX, RCX and R11 (the first is trashed for the return value;
+            // the latter two are are stored in gsdata).
             "push rsi",
             "push rdi",
             "push rdx",
-            "push rcx",
             "push rbx",
             "push r8",
             "push r9",
             "push r10",
-            "push r11",
 
             // Make sure the stack is 16-byte aligned.
             "sub rsp, 8",
@@ -178,15 +219,21 @@ extern "C" fn syscall_entrypoint() {
             // Undo stack alignment.
             "add rsp, 8",
             // Restore scratch registers.
-            "pop r11",
             "pop r10",
             "pop r9",
             "pop r8",
             "pop rbx",
-            "pop rcx",
             "pop rdx",
             "pop rdi",
             "pop rsi",
+
+            // Restore user values in preparation for SYSRET.
+            // We don't save the kernel stack value; we'll just overwrite what's there next time
+            // a syscall is invoked.
+            "mov rsp, gs:[0x8]", // restore user RSP
+            "mov rcx, gs:[0x10]", // restore user RIP
+            "mov r11, gs:[0x18]", // restore user RFLAGS
+            "swapgs", // restore user GS
 
             // We can't use SYSRET as that'll force us to Ring 3!
             // However, we've restored all the registers, and the return value is in RAX, and we

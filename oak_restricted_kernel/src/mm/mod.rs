@@ -15,6 +15,8 @@
 //
 
 use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset};
+use crate::{FRAME_ALLOCATOR, PAGE_TABLES, VMA_ALLOCATOR};
+use core::ops::DerefMut;
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
@@ -335,4 +337,49 @@ pub fn init_paging<A: FrameAllocator<Size4KiB>>(
         DIRECT_MAPPING_OFFSET,
         encrypted,
     ))
+}
+
+/// Allocates memory usable as a stack.
+///
+/// The stack will be one page (2 MiB) in size, will be allocated in the VMA_ALLOCATOR area, and
+/// will consume two pages: one as a unmapped stack guard (so that we'd get a page fault if we blow
+/// the stack), and one backed by a physical frame as the actual stack.
+///
+/// The return address is usable as the stack pointer; that is, it points to the end of the
+/// allocated stack page.
+pub fn allocate_stack() -> VirtAddr {
+    // Of the two pages we allocate, the first will be the stack guard page, and the second will be
+    // the actual stack.
+    let pages = VMA_ALLOCATOR
+        .lock()
+        .allocate(2)
+        .expect("unable to allocate virtual memory for syscall stack");
+    let frame = FRAME_ALLOCATOR
+        .get()
+        .unwrap()
+        .lock()
+        .allocate_frame()
+        .expect("unable to allocate physical memory for syscall stack");
+    let stack_page = pages.start + 1;
+    unsafe {
+        PAGE_TABLES
+            .get()
+            .unwrap()
+            .lock()
+            .map_to_with_table_flags(
+                stack_page,
+                frame,
+                PageTableFlags::GLOBAL
+                    | PageTableFlags::PRESENT
+                    | PageTableFlags::ENCRYPTED
+                    | PageTableFlags::NO_EXECUTE
+                    | PageTableFlags::WRITABLE,
+                PageTableFlags::ENCRYPTED | PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                FRAME_ALLOCATOR.get().unwrap().lock().deref_mut(),
+            )
+            .expect("failed to update page tables for syscall stack")
+            .flush();
+    };
+
+    (stack_page + 1).start_address()
 }
