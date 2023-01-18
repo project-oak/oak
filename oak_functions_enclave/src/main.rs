@@ -32,7 +32,7 @@ static LOGGER: StderrLogger = StderrLogger {};
 fn _start() -> ! {
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(log::LevelFilter::Debug);
-    oak_enclave_rt::init();
+    oak_enclave_runtime_support::init();
     main();
 }
 

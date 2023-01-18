@@ -21,11 +21,7 @@ use heap::LockedGrowableHeap;
 mod heap;
 mod libm;
 
-#[cfg(not(test))]
-#[global_allocator]
-static ALLOCATOR: LockedGrowableHeap = LockedGrowableHeap::empty();
-
-#[cfg(test)]
+#[cfg_attr(not(test), global_allocator)]
 static ALLOCATOR: LockedGrowableHeap = LockedGrowableHeap::empty();
 
 pub fn init() {

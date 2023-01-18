@@ -2043,7 +2043,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_enclave_rt"
+name = "oak_enclave_runtime_support"
 version = "0.1.0"
 dependencies = [
  "libm 0.1.4",

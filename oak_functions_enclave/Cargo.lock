@@ -509,7 +509,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_enclave_rt"
+name = "oak_enclave_runtime_support"
 version = "0.1.0"
 dependencies = [
  "libm",
@@ -539,7 +539,7 @@ dependencies = [
  "log",
  "micro_rpc",
  "oak_channel",
- "oak_enclave_rt",
+ "oak_enclave_runtime_support",
  "oak_functions_service",
  "oak_remote_attestation_amd",
  "oak_remote_attestation_interactive",
