@@ -71,12 +71,25 @@ pub unsafe fn run_payload(payload: *const u8) -> ! {
             phdr.p_filesz as usize,
         );
     }
+    // Set up the userspace stack at the end of the lower half of the virtual address space.
+    // Well... almost. It's one page lower than the very end, as otherwise the initial stack pointer
+    // would need to be a noncanonical address, so let's avoid that whole mess by moving down a bit.
+    let rsp = VirtAddr::new(0x8000_0000_0000 - Size2MiB::SIZE);
+    mmap(
+        Some(rsp - Size2MiB::SIZE),
+        Size2MiB::SIZE as usize,
+        MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
+        MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
+    )
+    .expect("failed to allocate memory for user stack");
 
     // Jump to user code; instead of raw jump (or call, as the case is here) in the future we'll
     // need to enter Ring 3 properly.
     asm! {
+        "mov {1}, %rsp",
         "call *{0}",
         in(reg) header.e_entry,
+        in(reg) rsp.as_u64(),
         options(noreturn, att_syntax)
     }
 }
