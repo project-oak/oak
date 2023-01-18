@@ -14,6 +14,18 @@
 // limitations under the License.
 //
 
-fn main() {
-    println!("cargo:rustc-link-arg=-zmax-page-size=0x200000");
+#![no_std]
+
+use heap::LockedGrowableHeap;
+
+mod heap;
+mod libm;
+
+#[cfg_attr(not(test), global_allocator)]
+static ALLOCATOR: LockedGrowableHeap = LockedGrowableHeap::empty();
+
+pub fn init() {
+    unsafe {
+        ALLOCATOR.lock().init();
+    }
 }

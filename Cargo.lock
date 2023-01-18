@@ -2043,6 +2043,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_enclave_runtime_support"
+version = "0.1.0"
+dependencies = [
+ "libm 0.1.4",
+ "linked_list_allocator",
+ "log",
+ "oak_restricted_kernel_api",
+ "oak_restricted_kernel_interface",
+ "spinning_top",
+]
+
+[[package]]
 name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
@@ -2444,6 +2456,7 @@ name = "oak_restricted_kernel_api"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "log",
  "oak_channel",
  "oak_restricted_kernel_interface",
  "os_pipe",

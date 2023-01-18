@@ -20,7 +20,9 @@
 extern crate alloc;
 
 mod channel;
+mod logging;
 mod raw_syscall;
 pub mod syscall;
 
 pub use channel::FileDescriptorChannel;
+pub use logging::StderrLogger;

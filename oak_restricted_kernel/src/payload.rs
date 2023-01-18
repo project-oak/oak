@@ -16,7 +16,7 @@
 
 use crate::syscall::mmap::mmap;
 use core::arch::asm;
-use goblin::elf64::program_header::ProgramHeader;
+use goblin::elf64::program_header::{ProgramHeader, PF_W, PF_X, PT_LOAD};
 use oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 use x86_64::{
     structures::paging::{PageSize, Size2MiB},
@@ -42,17 +42,25 @@ pub unsafe fn run_payload(payload: *const u8) -> ! {
         header.e_phnum as usize,
     );
 
-    for phdr in phdrs {
+    for phdr in phdrs.iter().filter(|&phdr| phdr.p_type == PT_LOAD) {
         let vaddr = VirtAddr::new(phdr.p_vaddr).align_down(Size2MiB::SIZE);
+
+        let mut prot = MmapProtection::PROT_READ;
+        if phdr.p_flags & PF_W > 0 {
+            prot |= MmapProtection::PROT_WRITE;
+        }
+        if phdr.p_flags & PF_X > 0 {
+            prot |= MmapProtection::PROT_EXEC;
+        }
 
         // As we need memory in the user space anyway, use the `mmap()` syscall that will allocate
         // physical frames and sets up user-accessible page tables for us.
-        // For now we also mark all memory as executable + writable (which we really shouldn't) as
-        // there is no guarantee that the memory areas in the ELF header won't overlap.
+        // Note that the expectation here is that all the sections are nicely 2 MiB-aligned,
+        // otherwise the mmap() will fail.
         mmap(
             Some(vaddr),
             phdr.p_memsz as usize,
-            MmapProtection::PROT_EXEC | MmapProtection::PROT_WRITE,
+            prot,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
         )
         .expect("failed to allocate user memory");
