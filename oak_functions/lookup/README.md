@@ -1,9 +1,14 @@
-# Lookup
+# Lookup Extension
 
-We want to maintain the following invariants on the key/value lookups in the
-lookup data loaded into Oak Functions.
+With the lookup extension, a request can do private key/value lookups in
+`Oak Functions`.
 
-## Invariant: Consistent view on lookup data.
+The key idea is that `Oak Functions` initially loads the entire lookup data into
+the TEE and requests can then do a key/value lookup on this lookup data.
+
+We want to maintain the following invariants on the key/value lookups.
+
+## Invariant: Consistent view on lookup data
 
 When the lookup data is updated in the background, key/value lookups of requests
 which arrived after the update will return values from the new lookup data, but
@@ -18,23 +23,25 @@ of a request. In the worst case, this can lead to _n_ copies of lookup data for
 _n_ requests running in parallel, but we expect short-lived requests and
 low-frequency updates of lookup data.
 
-## Invariant: Fully loaded lookup data.
+## Invariant: Fully loaded lookup data
 
-No key/value lookups of requests are served until the lookup data is completely
-loaded in Oak Functions.
+No requests are served until the initial lookup data is completely loaded in Oak
+Functions.
 
 _Reasoning_: If Oak Functions serves requests before it has loaded the complete
 lookup data and the key/value pair is not yet loaded, the lookup may falsely
 return that no value is found. This is especially problematic, if the lookup
 data serves as a block list and no value indicates that the key is not blocked.
+Oak Functions also does not want to leak whether a request actually does a
+key/value lookup, so it cannot serve any request.
 
-## Invariant: At most one value.
+## Invariant: At most one value
 
 Every key has at most one value.
 
 _Reasoning_: This is due to our underlying data structure.
 
-## Invariant: Shared Lookup Data.
+## Invariant: Shared Lookup Data
 
 Lookup Data can be shared between requests.
 
