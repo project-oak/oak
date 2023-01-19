@@ -4,8 +4,6 @@ command = [
   "--chdir=testing/oak_echo_raw_enclave",
   "cargo",
   "build",
-  "--no-default-features",
-  "--features=simple_io_channel",
   "--release"
 ]
 output_path = "./testing/oak_echo_raw_enclave/target/x86_64-unknown-none/release/oak_echo_raw_enclave"

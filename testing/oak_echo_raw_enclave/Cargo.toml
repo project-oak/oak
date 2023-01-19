@@ -9,18 +9,12 @@ license = "Apache-2.0"
 resolver = "2"
 members = ["."]
 
-[features]
-default = ["vsock_channel"]
-vsock_channel = ["oak_restricted_kernel/vsock_channel"]
-simple_io_channel = ["oak_restricted_kernel/simple_io_channel"]
-
 [dependencies]
 log = "*"
 oak_channel = { path = "../../oak_channel" }
-oak_restricted_kernel = { path = "../../oak_restricted_kernel", default-features = false }
+oak_enclave_runtime_support = { path = "../../oak_enclave_runtime_support" }
 oak_restricted_kernel_api = { path = "../../oak_restricted_kernel_api" }
 micro_rpc = { path = "../../micro_rpc" }
-oak_linux_boot_params = { path = "../../linux_boot_params" }
 static_assertions = "*"
 
 [[bin]]
