@@ -23,12 +23,19 @@ extern crate alloc;
 use alloc::boxed::Box;
 use core::panic::PanicInfo;
 use log::info;
-use oak_linux_boot_params::BootParams;
-use oak_restricted_kernel_api::FileDescriptorChannel;
+use oak_restricted_kernel_api::{FileDescriptorChannel, StderrLogger};
+
+static LOGGER: StderrLogger = StderrLogger {};
 
 #[no_mangle]
-pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
-    oak_restricted_kernel::start_kernel(rsi);
+fn _start() -> ! {
+    log::set_logger(&LOGGER).unwrap();
+    log::set_max_level(log::LevelFilter::Debug);
+    oak_enclave_runtime_support::init();
+    main();
+}
+
+fn main() -> ! {
     info!("In main!");
     start_server()
 }
@@ -47,5 +54,6 @@ fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    oak_restricted_kernel::panic(info);
+    log::error!("PANIC: {}", info);
+    oak_restricted_kernel_api::syscall::exit(-1);
 }
