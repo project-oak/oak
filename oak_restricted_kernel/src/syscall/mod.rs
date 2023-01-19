@@ -42,6 +42,7 @@ use x86_64::{
 ///
 /// Do not change the order of the fields here, as this is accessed from assembly!
 #[repr(C)]
+#[derive(Debug)]
 struct GsData {
     /// Kernel stack pointer (what to set in RSP after saving user RSP).
     kernel_sp: VirtAddr,
@@ -235,11 +236,8 @@ extern "C" fn syscall_entrypoint() {
             "mov r11, gs:[0x18]", // restore user RFLAGS
             "swapgs", // restore user GS
 
-            // We can't use SYSRET as that'll force us to Ring 3!
-            // However, we've restored all the registers, and the return value is in RAX, and we
-            // are allowed to trash RCX. Thus... let's just jump back.
-            // Note that this does *not* restore flags properly.
-            "jmp rcx",
+            // Back to user code in Ring 3.
+            "sysretq",
             HANDLER = sym syscall_handler,
             options(noreturn)
         }

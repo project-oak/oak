@@ -117,7 +117,10 @@ pub fn mmap(
                     page,
                     frame.ok_or(Errno::ENOMEM)?,
                     pt_flags,
-                    PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::ENCRYPTED,
+                    PageTableFlags::PRESENT
+                        | PageTableFlags::WRITABLE
+                        | PageTableFlags::ENCRYPTED
+                        | PageTableFlags::USER_ACCESSIBLE,
                     FRAME_ALLOCATOR.get().unwrap().lock().deref_mut(),
                 )
                 .map_err(|err| {
