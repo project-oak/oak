@@ -47,3 +47,11 @@ _Reasoning_: This is due to our underlying data structure.
 
 _Reasoning_: As we expect large lookup data and short-lived requests, we cannot
 afford the space/time to copy lookup data for every request.
+
+## Invariant: Request cannot trigger update
+
+> A request can never trigger the update of lookup data.
+
+_Reasoning_: Updating the lookup data is externally observable by the Untrusted
+Launcher. If the logic in the request could trigger the update of lookup data,
+it could do so conditional on some secret.
