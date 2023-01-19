@@ -336,6 +336,53 @@
 <span id="336">336</span>
 <span id="337">337</span>
 <span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -353,6 +400,8 @@
 //
 
 </span><span class="kw">use </span><span class="self">self</span>::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset};
+<span class="kw">use crate</span>::{FRAME_ALLOCATOR, PAGE_TABLES, VMA_ALLOCATOR};
+<span class="kw">use </span>core::ops::DerefMut;
 <span class="kw">use </span>goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 <span class="kw">use </span>log::info;
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
@@ -673,6 +722,51 @@
         DIRECT_MAPPING_OFFSET,
         encrypted,
     ))
+}
+
+<span class="doccomment">/// Allocates memory usable as a stack.
+///
+/// The stack will be one page (2 MiB) in size, will be allocated in the VMA_ALLOCATOR area, and
+/// will consume two pages: one as a unmapped stack guard (so that we&#39;d get a page fault if we blow
+/// the stack), and one backed by a physical frame as the actual stack.
+///
+/// The return address is usable as the stack pointer; that is, it points to the end of the
+/// allocated stack page.
+</span><span class="kw">pub fn </span>allocate_stack() -&gt; VirtAddr {
+    <span class="comment">// Of the two pages we allocate, the first will be the stack guard page, and the second will be
+    // the actual stack.
+    </span><span class="kw">let </span>pages = VMA_ALLOCATOR
+        .lock()
+        .allocate(<span class="number">2</span>)
+        .expect(<span class="string">&quot;unable to allocate virtual memory for syscall stack&quot;</span>);
+    <span class="kw">let </span>frame = FRAME_ALLOCATOR
+        .get()
+        .unwrap()
+        .lock()
+        .allocate_frame()
+        .expect(<span class="string">&quot;unable to allocate physical memory for syscall stack&quot;</span>);
+    <span class="kw">let </span>stack_page = pages.start + <span class="number">1</span>;
+    <span class="kw">unsafe </span>{
+        PAGE_TABLES
+            .get()
+            .unwrap()
+            .lock()
+            .map_to_with_table_flags(
+                stack_page,
+                frame,
+                PageTableFlags::GLOBAL
+                    | PageTableFlags::PRESENT
+                    | PageTableFlags::ENCRYPTED
+                    | PageTableFlags::NO_EXECUTE
+                    | PageTableFlags::WRITABLE,
+                PageTableFlags::ENCRYPTED | PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+                FRAME_ALLOCATOR.get().unwrap().lock().deref_mut(),
+            )
+            .expect(<span class="string">&quot;failed to update page tables for syscall stack&quot;</span>)
+            .flush();
+    };
+
+    (stack_page + <span class="number">1</span>).start_address()
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="oak_restricted_kernel" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

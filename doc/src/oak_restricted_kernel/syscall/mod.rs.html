@@ -198,6 +198,53 @@
 <span id="198">198</span>
 <span id="199">199</span>
 <span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -225,6 +272,7 @@
     mmap::syscall_mmap,
     process::syscall_exit,
 };
+<span class="kw">use </span><span class="kw">crate</span>::mm;
 <span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>core::{arch::asm, ffi::c_void};
 <span class="kw">use </span>oak_channel::Channel;
@@ -232,16 +280,50 @@
 <span class="kw">use </span>x86_64::{
     registers::{
         control::Efer,
-        model_specific::{EferFlags, LStar},
+        model_specific::{EferFlags, GsBase, KernelGsBase, LStar},
     },
     VirtAddr,
 };
+
+<span class="doccomment">/// State we need to track for system calls.
+///
+/// Do not change the order of the fields here, as this is accessed from assembly!
+</span><span class="attribute">#[repr(C)]
+</span><span class="kw">struct </span>GsData {
+    <span class="doccomment">/// Kernel stack pointer (what to set in RSP after saving user RSP).
+    </span>kernel_sp: VirtAddr,
+
+    <span class="doccomment">/// User stack pointer. Saved from RSP after SYSCALL.
+    </span>user_sp: VirtAddr,
+
+    <span class="doccomment">/// User instruction pointer (where to return after SYSCALL). Saved from RCX.
+    </span>user_ip: VirtAddr,
+
+    <span class="doccomment">/// User flags. Saved from R11.
+    </span>user_flags: usize,
+}
 
 <span class="kw">pub fn </span>enable_syscalls(channel: Box&lt;<span class="kw">dyn </span>Channel&gt;) {
     channel::register(channel);
     stdio::register();
 
-    LStar::write(VirtAddr::new(syscall_entrypoint <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">fn</span>() <span class="kw">as </span>u64));
+    <span class="comment">// Allocate a stack for the system call handler.
+    </span><span class="kw">let </span>kernel_sp = mm::allocate_stack();
+
+    <span class="comment">// Store the gsdata structure in the kernel heap.
+    // We need the GsData to stick around statically, so we&#39;ll leak it here.
+    </span><span class="kw">let </span>gsdata = Box::leak(Box::new(GsData {
+        <span class="comment">// Stack grows down, so SP points to the end of the page
+        </span>kernel_sp,
+        user_sp: VirtAddr::zero(),
+        user_ip: VirtAddr::zero(),
+        user_flags: <span class="number">0</span>,
+    }));
+
+    KernelGsBase::write(VirtAddr::from_ptr(gsdata));
+    GsBase::write(VirtAddr::from_ptr(gsdata));
+
+    LStar::write(VirtAddr::new(syscall_entrypoint <span class="kw">as </span>usize <span class="kw">as </span>u64));
     <span class="kw">unsafe </span>{
         Efer::update(|flags| flags.set(EferFlags::SYSTEM_CALL_EXTENSIONS, <span class="bool-val">true</span>));
     }
@@ -308,16 +390,22 @@
     // See SYSCALL and SYSRET in AMD64 Architecture Programmer&#39;s Manual, Volume 3 for more details.
     </span><span class="kw">unsafe </span>{
         <span class="macro">asm! </span>{
-            <span class="comment">// Save mutable registers other than RAX.
+            <span class="comment">// Switch to the syscall stack
+            </span><span class="string">&quot;swapgs&quot;</span>, <span class="comment">// switch to kernel GS
+            </span><span class="string">&quot;mov gs:[0x8], rsp&quot;</span>, <span class="comment">// save user RSP
+            </span><span class="string">&quot;mov gs:[0x10], rcx&quot;</span>, <span class="comment">// save user RIP
+            </span><span class="string">&quot;mov gs:[0x18], r11&quot;</span>, <span class="comment">// save user RFLAGS
+            </span><span class="string">&quot;mov rsp, gs:[0x0]&quot;</span>, <span class="comment">// switch to kernel stack
+
+            // Save mutable registers other than RAX, RCX and R11 (the first is trashed for the return value;
+            // the latter two are are stored in gsdata).
             </span><span class="string">&quot;push rsi&quot;</span>,
             <span class="string">&quot;push rdi&quot;</span>,
             <span class="string">&quot;push rdx&quot;</span>,
-            <span class="string">&quot;push rcx&quot;</span>,
             <span class="string">&quot;push rbx&quot;</span>,
             <span class="string">&quot;push r8&quot;</span>,
             <span class="string">&quot;push r9&quot;</span>,
             <span class="string">&quot;push r10&quot;</span>,
-            <span class="string">&quot;push r11&quot;</span>,
 
             <span class="comment">// Make sure the stack is 16-byte aligned.
             </span><span class="string">&quot;sub rsp, 8&quot;</span>,
@@ -378,17 +466,23 @@
             <span class="comment">// Undo stack alignment.
             </span><span class="string">&quot;add rsp, 8&quot;</span>,
             <span class="comment">// Restore scratch registers.
-            </span><span class="string">&quot;pop r11&quot;</span>,
-            <span class="string">&quot;pop r10&quot;</span>,
+            </span><span class="string">&quot;pop r10&quot;</span>,
             <span class="string">&quot;pop r9&quot;</span>,
             <span class="string">&quot;pop r8&quot;</span>,
             <span class="string">&quot;pop rbx&quot;</span>,
-            <span class="string">&quot;pop rcx&quot;</span>,
             <span class="string">&quot;pop rdx&quot;</span>,
             <span class="string">&quot;pop rdi&quot;</span>,
             <span class="string">&quot;pop rsi&quot;</span>,
 
-            <span class="comment">// We can&#39;t use SYSRET as that&#39;ll force us to Ring 3!
+            <span class="comment">// Restore user values in preparation for SYSRET.
+            // We don&#39;t save the kernel stack value; we&#39;ll just overwrite what&#39;s there next time
+            // a syscall is invoked.
+            </span><span class="string">&quot;mov rsp, gs:[0x8]&quot;</span>, <span class="comment">// restore user RSP
+            </span><span class="string">&quot;mov rcx, gs:[0x10]&quot;</span>, <span class="comment">// restore user RIP
+            </span><span class="string">&quot;mov r11, gs:[0x18]&quot;</span>, <span class="comment">// restore user RFLAGS
+            </span><span class="string">&quot;swapgs&quot;</span>, <span class="comment">// restore user GS
+
+            // We can&#39;t use SYSRET as that&#39;ll force us to Ring 3!
             // However, we&#39;ve restored all the registers, and the return value is in RAX, and we
             // are allowed to trash RCX. Thus... let&#39;s just jump back.
             // Note that this does *not* restore flags properly.
