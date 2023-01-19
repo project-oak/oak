@@ -30,7 +30,7 @@ enum ExtensionHandle {
   TESTING_HANDLE = 1;
   LOOKUP_HANDLE = 2;
   LOGGING_HANDLE = 3;
-  // We must not add a handle for updating lookup data to maintain invariant [that there is no such method](https://github.com/project-oak/oak/tree/main/oak_functions/lookupREADME.md#invariant-request-cannot-trigger-update)
+  // We must not add a handle for updating lookup data to maintain invariant [that there is no such method](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-request-cannot-trigger-update)
 }
 
 // Status values exchanged as i32 values across the Node Wasm interface.
