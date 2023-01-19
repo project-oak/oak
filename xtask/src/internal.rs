@@ -72,10 +72,6 @@ pub enum Command {
     RunCargoClean,
     #[command(about = "generate bash completion script to stdout")]
     Completion(Completion),
-    #[command(about = "example running Trusted Shuffler forward a HTTP request")]
-    RunTrustedShuffler,
-    #[command(about = "example running Trusted Shuffler forward a gRPC request")]
-    RunTrustedShufflerGrpc,
 }
 
 #[derive(Parser, Clone, Debug)]
