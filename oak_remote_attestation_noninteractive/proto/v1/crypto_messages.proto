@@ -14,10 +14,22 @@
 // limitations under the License.
 //
 
-pub mod proto {
-    #![allow(clippy::return_self_not_must_use)]
-    tonic::include_proto!("oak.session.noninteractive.v1");
+syntax = "proto3";
+
+package oak.session.noninteractive.v1;
+
+option java_multiple_files = true;
+option java_package = "oak.session.noninteractive.v1";
+
+message CryptoRequest {
+  // Request message body.
+  bytes body = 1;
+
+  // Symmetric key that should be used for encrypting the response.
+  bytes response_key = 2;
 }
 
-pub mod client;
-pub mod crypto;
+message CryptoResponse {
+  // Response message body.
+  bytes body = 1;
+}

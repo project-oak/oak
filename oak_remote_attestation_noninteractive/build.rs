@@ -20,6 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
         "../",
         &[
+            "oak_remote_attestation_noninteractive/proto/v1/crypto_messages.proto",
             "oak_remote_attestation_noninteractive/proto/v1/messages.proto",
             "oak_remote_attestation_noninteractive/proto/v1/service_streaming.proto",
         ],

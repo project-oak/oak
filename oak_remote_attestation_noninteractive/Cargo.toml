@@ -8,6 +8,10 @@ license = "Apache-2.0"
 anyhow = "*"
 futures-util = "*"
 prost = "*"
+tink-aead = "*"
+tink-core = "*"
+tink-hybrid = "*"
+tink-proto = "*"
 tonic = "*"
 
 [build-dependencies]
