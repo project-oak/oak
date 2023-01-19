@@ -83,13 +83,13 @@ pub unsafe fn run_payload(payload: *const u8) -> ! {
     )
     .expect("failed to allocate memory for user stack");
 
-    // Jump to user code; instead of raw jump (or call, as the case is here) in the future we'll
-    // need to enter Ring 3 properly.
+    // Enter Ring 3 and jump to user code.
     asm! {
-        "mov {1}, %rsp",
-        "call *{0}",
-        in(reg) header.e_entry,
-        in(reg) rsp.as_u64(),
-        options(noreturn, att_syntax)
+        "mov rsp, {}", // user stack
+        "sysretq",
+        in(reg) rsp.as_u64() - 8, // maintain stack alignment
+        in("rcx") header.e_entry, // initial RIP
+        in("r11") 0x202, // initial RFLAGS
+        options(noreturn)
     }
 }
