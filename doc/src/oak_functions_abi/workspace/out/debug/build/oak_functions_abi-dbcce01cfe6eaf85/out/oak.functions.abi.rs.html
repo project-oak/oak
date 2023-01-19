@@ -92,6 +92,8 @@
 <span id="92">92</span>
 <span id="93">93</span>
 <span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
 </pre><pre class="rust"><code><span class="doccomment">/// The client can check the configuration report for the configuration of the Oak Functions runtime.
 </span><span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ConfigurationReport {
@@ -138,7 +140,9 @@
     <span class="doccomment">/// Handle for an extension used for testing Wasm modules.
     </span>TestingHandle = <span class="number">1</span>,
     LookupHandle = <span class="number">2</span>,
-    LoggingHandle = <span class="number">3</span>,
+    <span class="doccomment">/// We must not add a handle for updating lookup data to maintain invariant [that there is no such
+    /// method](&lt;https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-request-cannot-trigger-update&gt;)
+    </span>LoggingHandle = <span class="number">3</span>,
 }
 <span class="kw">impl </span>ExtensionHandle {
     <span class="doccomment">/// String value of the enum field names used in the ProtoBuf definition.
