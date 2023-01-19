@@ -124,8 +124,8 @@ pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
 /// Main entry point for the kernel, to be called from bootloader.
 pub fn start_kernel(info: &BootParams) {
     avx::enable_avx();
-    descriptors::init_gdt();
-    interrupts::init_idt();
+    descriptors::init_gdt_early();
+    interrupts::init_idt_early();
     let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
     let sev_es_enabled = sev_status.contains(SevStatus::SEV_ES_ENABLED);
     let sev_snp_enabled = sev_status.contains(SevStatus::SNP_ACTIVE);
@@ -253,6 +253,17 @@ pub fn start_kernel(info: &BootParams) {
     // We'll let the heap to grow to 1 TB (1 << 19 * 2 MiB pages), max.
     let heap_page_range = VMA_ALLOCATOR.lock().allocate(1 << 19).unwrap();
     memory::init_kernel_heap(heap_page_range).unwrap();
+
+    // Okay. We've got page tables and a heap. Set up the "late" IDT, this time with descriptors for
+    // user mode.
+    let double_fault_stack = mm::allocate_stack();
+    let privileged_interrupt_stack = mm::allocate_stack();
+    let double_fault_stack_index =
+        descriptors::init_gdt(double_fault_stack, privileged_interrupt_stack);
+    // Safety: we've just loaded a new GDT with a valid IST entry for the double fault.
+    unsafe {
+        interrupts::init_idt(double_fault_stack_index);
+    }
 
     // Init ACPI, if available.
     let mut acpi = match acpi::Acpi::new(info) {
