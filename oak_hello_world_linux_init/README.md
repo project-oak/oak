@@ -31,26 +31,22 @@ root.
 Build the application as a statically linked binary:
 
 ```bash
-
 cargo build --release --target=x86_64-unknown-linux-musl \
-    --package=hello_world_linux_init
-
+    --package=oak_hello_world_linux_init
 ```
 
 Create the initial RAM disk:
 
 ```bash
-
 # Create a temporary directory containing the initial workload.
 export RAMDIR=$(mktemp -d)
-cp --archive target/x86_64-unknown-linux-musl/release/hello_world_linux_init \
+cp --archive target/x86_64-unknown-linux-musl/release/oak_hello_world_linux_init \
     ${RAMDIR}/init
 # Create a compressed CPIO archive.
 ( cd ${RAMDIR}; find . -print0 \
     | cpio --null --create --format=newc ) \
     | gzip \
     > bin/initramfs
-
 ```
 
 Execute the initial RAM disk with QEMU:
@@ -59,10 +55,8 @@ Note: this assumes an appropiate compressed Linux kernel image has been copied
 to `bin/bzImage`.
 
 ```bash
-
 qemu-system-x86_64 -kernel bin/bzImage -initrd bin/initramfs \
     -append "console=ttyS0" -nographic
-
 ```
 
 To exit QEMU, type `Ctrl+A` followed by `X`.

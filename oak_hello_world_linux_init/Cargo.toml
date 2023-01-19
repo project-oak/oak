@@ -1,5 +1,5 @@
 [package]
-name = "hello_world_linux_init"
+name = "oak_hello_world_linux_init"
 version = "0.1.0"
 authors = ["Conrad Grobler <grobler@google.com>"]
 edition = "2021"

@@ -1373,16 +1373,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2540771e65fc8cb83cd6e8a237f70c319bd5c29f78ed1084ba5d50eeac86f7f9"
 
 [[package]]
-name = "hello_world_linux_init"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "log",
- "nix 0.26.1",
- "simple_logger",
-]
-
-[[package]]
 name = "hermit-abi"
 version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2356,6 +2346,16 @@ dependencies = [
  "prost-build 0.11.2",
  "tempfile",
  "tonic-build 0.8.2",
+]
+
+[[package]]
+name = "oak_hello_world_linux_init"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "nix 0.22.3",
+ "simple_logger",
 ]
 
 [[package]]
