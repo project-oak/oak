@@ -17,18 +17,18 @@
 use crate::{shutdown, snp::CPUID_PAGE};
 use core::{arch::asm, ops::Deref};
 use log::error;
-use oak_core::sync::OnceCell;
 use oak_sev_guest::{
     interrupts::{mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame},
     msr::get_cpuid_for_vc_exception,
 };
+use spinning_top::Spinlock;
 use x86_64::{
     registers::control::Cr2,
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
     VirtAddr,
 };
 
-static IDT: OnceCell<InterruptDescriptorTable> = OnceCell::new();
+static IDT: Spinlock<InterruptDescriptorTable> = Spinlock::new(InterruptDescriptorTable::new());
 
 #[naked]
 extern "x86-interrupt" fn general_protection_fault_handler(_: InterruptStackFrame, _: u64) {
@@ -294,11 +294,11 @@ extern "x86-interrupt" fn simd_fp_handler(stack_frame: InterruptStackFrame) {
     shutdown::shutdown();
 }
 
-pub fn init_idt() {
+pub fn init_idt_early() {
     // The full list if interrupts is processor-specific.
     // For AMD, see Section 8.2 of the AMD64 Architecture Programmer's Manual, Volume 2 for more
     // details.
-    let mut idt = InterruptDescriptorTable::new();
+    let mut idt = IDT.lock();
     idt.divide_error.set_handler_fn(divide_error_handler); // vector 0
                                                            // skipping vector 1 (debug)
     idt.non_maskable_interrupt.set_handler_fn(nmi_handler); // vector 2
@@ -333,9 +333,20 @@ pub fn init_idt() {
             .set_handler_addr(vc_handler_address); // vector 29
     }
 
-    // Make sure the IDT was not previously initialized.
-    if IDT.set(idt).is_err() {
-        panic!("idt is already initialized");
-    }
-    IDT.get().unwrap().load();
+    // Safety: unfortunately we have to escape from the borrow checker here, as we know the IDT is
+    // 'static but the `idt` variable (the mutex lock) is not 'static, so calling `idt.load()` will
+    // not work.
+    unsafe { idt.load_unsafe() };
+}
+
+/// Updates the IDT to point the double fault handler to a separate stack.
+///
+/// # Safety
+///
+/// The caller needs to guarantee that the stack index is valid.
+pub unsafe fn init_idt(double_fault_stack_index: u16) {
+    let mut idt = IDT.lock();
+    let opts = idt.double_fault.set_handler_fn(double_fault_handler);
+    opts.set_stack_index(double_fault_stack_index);
+    idt.load_unsafe();
 }
