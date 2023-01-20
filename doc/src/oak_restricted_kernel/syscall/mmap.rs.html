@@ -176,6 +176,9 @@
 <span id="176">176</span>
 <span id="177">177</span>
 <span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -295,7 +298,10 @@
                     page,
                     frame.ok_or(Errno::ENOMEM)<span class="question-mark">?</span>,
                     pt_flags,
-                    PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::ENCRYPTED,
+                    PageTableFlags::PRESENT
+                        | PageTableFlags::WRITABLE
+                        | PageTableFlags::ENCRYPTED
+                        | PageTableFlags::USER_ACCESSIBLE,
                     FRAME_ALLOCATOR.get().unwrap().lock().deref_mut(),
                 )
                 .map_err(|err| {

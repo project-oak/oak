@@ -243,8 +243,6 @@
 <span id="243">243</span>
 <span id="244">244</span>
 <span id="245">245</span>
-<span id="246">246</span>
-<span id="247">247</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -289,6 +287,7 @@
 ///
 /// Do not change the order of the fields here, as this is accessed from assembly!
 </span><span class="attribute">#[repr(C)]
+#[derive(Debug)]
 </span><span class="kw">struct </span>GsData {
     <span class="doccomment">/// Kernel stack pointer (what to set in RSP after saving user RSP).
     </span>kernel_sp: VirtAddr,
@@ -482,11 +481,8 @@
             </span><span class="string">&quot;mov r11, gs:[0x18]&quot;</span>, <span class="comment">// restore user RFLAGS
             </span><span class="string">&quot;swapgs&quot;</span>, <span class="comment">// restore user GS
 
-            // We can&#39;t use SYSRET as that&#39;ll force us to Ring 3!
-            // However, we&#39;ve restored all the registers, and the return value is in RAX, and we
-            // are allowed to trash RCX. Thus... let&#39;s just jump back.
-            // Note that this does *not* restore flags properly.
-            </span><span class="string">&quot;jmp rcx&quot;</span>,
+            // Back to user code in Ring 3.
+            </span><span class="string">&quot;sysretq&quot;</span>,
             HANDLER = sym syscall_handler,
             options(noreturn)
         }
