@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::proto::{CryptoRequest, CryptoResponse, InvokeRequest};
+use crate::proto::{CryptoRequest, CryptoResponse};
 use anyhow::{anyhow, Context};
 use prost::Message;
 use tink_core::keyset::Handle;
@@ -53,10 +53,10 @@ pub struct ClientEncryptor<'a> {
 }
 
 impl<'a> ClientEncryptor<'a> {
-    pub fn create(enclave_public_key: &Handle) -> anyhow::Result<Self> {
+    pub fn create(enclave_public_key: &'a Handle) -> anyhow::Result<Self> {
         let response_key = tink_core::keyset::Handle::new(
             &tink_aead::aes128_gcm_key_template()
-        ).map_err(|error| anyhow!("couldn't create response encryption key: {}", error))?;
+        ).map_err(|error| anyhow!("couldn't create response key: {}", error))?;
         Ok(Self { enclave_public_key, response_key })
     }
 
@@ -65,12 +65,11 @@ impl<'a> ClientEncryptor<'a> {
             .map_err(|error| anyhow!("couldn't create hybrid encryptor: {}", error))?;
 
         let serialized_response_key = serialize_public_key(&self.response_key)
-            .map_err(|error| anyhow!("couldn't create response encryption key: {}", error))?;
+            .map_err(|error| anyhow!("couldn't serialize response key: {}", error))?;
         let request = CryptoRequest {
             body: message.to_vec(),
             response_key: serialized_response_key,
         };
-
         let mut serialized_request = vec![];
         request
             .encode(&mut serialized_request)
@@ -142,31 +141,56 @@ pub struct EnclaveDecryptor<'a> {
 }
 
 impl<'a> EnclaveDecryptor<'a> {
-    pub fn new(private_key: &Handle) -> Self {
+    pub fn new(private_key: &'a Handle) -> Self {
         Self { private_key }
     }
 
-    pub fn decrypt(self) -> anyhow::Result<Vec<u8>> {
+    pub fn decrypt(self, encrypted_message: &[u8]) -> anyhow::Result<(Vec<u8>, EnclaveEncryptor)> {
         let decryptor = tink_hybrid::new_decrypt(&self.private_key)
             .map_err(|error| anyhow!("couldn't create hybrid decryptor: {}", error))?;
+
+        let serialized_request = decryptor
+            .decrypt(&encrypted_message, HYBRID_ENCRYPTION_CONTEXT_INFO)
+            .map_err(|error| anyhow!("couldn't decrypt request: {}", error))?;
+
+        let request = CryptoRequest::decode(serialized_request.as_ref())
+            .context("couldn't deserialize request")?;
+        let response_key = deserialize_public_key(&request.response_key)
+            .map_err(|error| anyhow!("couldn't deserialize response key: {}", error))?;
+        let encryptor = EnclaveEncryptor::new(response_key);
+        
+        Ok((request.body, encryptor))
     }
 }
 
 pub struct EnclaveEncryptor {
-
+    response_key: Handle,
 }
 
 impl EnclaveEncryptor {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(response_key: Handle) -> Self {
+        Self { response_key }
     }
 
-    pub fn encrypt(self) -> anyhow::Result<Vec<u8>> {
+    pub fn encrypt(self, message: &[u8]) -> anyhow::Result<Vec<u8>> {
         let encryptor = tink_aead::new(&self.response_key)
             .map_err(|error| anyhow!("couldn't create AEAD encryptor: {}", error))?;
 
+        let response = CryptoResponse {
+            body: message.to_vec(),
+        };
+        let mut serialized_response = vec![];
+        response
+            .encode(&mut serialized_response)
+            .map_err(|error| anyhow!("couldn't serialize response: {}", error))?;
+
         // We don't specify any additional authenticated data.
         let additional_data = vec![];
+        let encrypted_response = encryptor
+            .encrypt(&serialized_response, &additional_data)
+            .map_err(|error| anyhow!("couldn't encrypt response: {}", error))?;
+    
+        Ok(encrypted_response)
     }
 }
 
