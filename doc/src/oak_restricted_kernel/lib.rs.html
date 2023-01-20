@@ -333,6 +333,17 @@
 <span id="333">333</span>
 <span id="334">334</span>
 <span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -459,8 +470,8 @@
 <span class="doccomment">/// Main entry point for the kernel, to be called from bootloader.
 </span><span class="kw">pub fn </span>start_kernel(info: <span class="kw-2">&amp;</span>BootParams) {
     avx::enable_avx();
-    descriptors::init_gdt();
-    interrupts::init_idt();
+    descriptors::init_gdt_early();
+    interrupts::init_idt_early();
     <span class="kw">let </span>sev_status = get_sev_status().unwrap_or(SevStatus::empty());
     <span class="kw">let </span>sev_es_enabled = sev_status.contains(SevStatus::SEV_ES_ENABLED);
     <span class="kw">let </span>sev_snp_enabled = sev_status.contains(SevStatus::SNP_ACTIVE);
@@ -588,6 +599,17 @@
     // We&#39;ll let the heap to grow to 1 TB (1 &lt;&lt; 19 * 2 MiB pages), max.
     </span><span class="kw">let </span>heap_page_range = VMA_ALLOCATOR.lock().allocate(<span class="number">1 </span>&lt;&lt; <span class="number">19</span>).unwrap();
     memory::init_kernel_heap(heap_page_range).unwrap();
+
+    <span class="comment">// Okay. We&#39;ve got page tables and a heap. Set up the &quot;late&quot; IDT, this time with descriptors for
+    // user mode.
+    </span><span class="kw">let </span>double_fault_stack = mm::allocate_stack();
+    <span class="kw">let </span>privileged_interrupt_stack = mm::allocate_stack();
+    <span class="kw">let </span>double_fault_stack_index =
+        descriptors::init_gdt(double_fault_stack, privileged_interrupt_stack);
+    <span class="comment">// Safety: we&#39;ve just loaded a new GDT with a valid IST entry for the double fault.
+    </span><span class="kw">unsafe </span>{
+        interrupts::init_idt(double_fault_stack_index);
+    }
 
     <span class="comment">// Init ACPI, if available.
     </span><span class="kw">let </span><span class="kw-2">mut </span>acpi = <span class="kw">match </span>acpi::Acpi::new(info) {

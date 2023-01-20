@@ -339,6 +339,17 @@
 <span id="339">339</span>
 <span id="340">340</span>
 <span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -358,18 +369,18 @@
 </span><span class="kw">use crate</span>::{shutdown, snp::CPUID_PAGE};
 <span class="kw">use </span>core::{arch::asm, ops::Deref};
 <span class="kw">use </span>log::error;
-<span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_sev_guest::{
     interrupts::{mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame},
     msr::get_cpuid_for_vc_exception,
 };
+<span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>x86_64::{
     registers::control::Cr2,
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
     VirtAddr,
 };
 
-<span class="kw">static </span>IDT: OnceCell&lt;InterruptDescriptorTable&gt; = OnceCell::new();
+<span class="kw">static </span>IDT: Spinlock&lt;InterruptDescriptorTable&gt; = Spinlock::new(InterruptDescriptorTable::new());
 
 <span class="attribute">#[naked]
 </span><span class="kw">extern </span><span class="string">&quot;x86-interrupt&quot; </span><span class="kw">fn </span>general_protection_fault_handler(<span class="kw">_</span>: InterruptStackFrame, <span class="kw">_</span>: u64) {
@@ -635,11 +646,11 @@
     shutdown::shutdown();
 }
 
-<span class="kw">pub fn </span>init_idt() {
+<span class="kw">pub fn </span>init_idt_early() {
     <span class="comment">// The full list if interrupts is processor-specific.
     // For AMD, see Section 8.2 of the AMD64 Architecture Programmer&#39;s Manual, Volume 2 for more
     // details.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>idt = InterruptDescriptorTable::new();
+    </span><span class="kw">let </span><span class="kw-2">mut </span>idt = IDT.lock();
     idt.divide_error.set_handler_fn(divide_error_handler); <span class="comment">// vector 0
                                                            // skipping vector 1 (debug)
     </span>idt.non_maskable_interrupt.set_handler_fn(nmi_handler); <span class="comment">// vector 2
@@ -674,11 +685,22 @@
             .set_handler_addr(vc_handler_address); <span class="comment">// vector 29
     </span>}
 
-    <span class="comment">// Make sure the IDT was not previously initialized.
-    </span><span class="kw">if </span>IDT.set(idt).is_err() {
-        <span class="macro">panic!</span>(<span class="string">&quot;idt is already initialized&quot;</span>);
-    }
-    IDT.get().unwrap().load();
+    <span class="comment">// Safety: unfortunately we have to escape from the borrow checker here, as we know the IDT is
+    // &#39;static but the `idt` variable (the mutex lock) is not &#39;static, so calling `idt.load()` will
+    // not work.
+    </span><span class="kw">unsafe </span>{ idt.load_unsafe() };
+}
+
+<span class="doccomment">/// Updates the IDT to point the double fault handler to a separate stack.
+///
+/// # Safety
+///
+/// The caller needs to guarantee that the stack index is valid.
+</span><span class="kw">pub unsafe fn </span>init_idt(double_fault_stack_index: u16) {
+    <span class="kw">let </span><span class="kw-2">mut </span>idt = IDT.lock();
+    <span class="kw">let </span>opts = idt.double_fault.set_handler_fn(double_fault_handler);
+    opts.set_stack_index(double_fault_stack_index);
+    idt.load_unsafe();
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_restricted_kernel" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>
