@@ -752,8 +752,6 @@
 <span id="752">752</span>
 <span id="753">753</span>
 <span id="754">754</span>
-<span id="755">755</span>
-<span id="756">756</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -895,8 +893,6 @@
         Command::RunCargoDeny =&gt; run_cargo_deny(),
         Command::RunCargoUdeps =&gt; run_cargo_udeps(<span class="kw-2">&amp;</span>opt.scope),
         Command::RunCargoClean =&gt; run_cargo_clean(),
-        Command::RunTrustedShuffler =&gt; run_trusted_shuffler(<span class="macro">vec!</span>[]),
-        Command::RunTrustedShufflerGrpc =&gt; run_trusted_shuffler(<span class="macro">vec!</span>[<span class="string">&quot;--use-grpc&quot;</span>]),
     }
 }
 

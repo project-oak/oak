@@ -1008,10 +1008,6 @@
 <span id="1008">1008</span>
 <span id="1009">1009</span>
 <span id="1010">1010</span>
-<span id="1011">1011</span>
-<span id="1012">1012</span>
-<span id="1013">1013</span>
-<span id="1014">1014</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -1086,10 +1082,6 @@
     RunCargoClean,
     <span class="attribute">#[command(about = <span class="string">&quot;generate bash completion script to stdout&quot;</span>)]
     </span>Completion(Completion),
-    <span class="attribute">#[command(about = <span class="string">&quot;example running Trusted Shuffler forward a HTTP request&quot;</span>)]
-    </span>RunTrustedShuffler,
-    <span class="attribute">#[command(about = <span class="string">&quot;example running Trusted Shuffler forward a gRPC request&quot;</span>)]
-    </span>RunTrustedShufflerGrpc,
 }
 
 <span class="attribute">#[derive(Parser, Clone, Debug)]

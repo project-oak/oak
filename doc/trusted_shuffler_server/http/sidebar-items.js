@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":[["copy_selected_keys",""]],"struct":[["HttpRequestHandler",""],["HyperRequestWrapper",""],["HyperResponseWrapper",""],["Service",""],["ServiceBuilder",""]]};

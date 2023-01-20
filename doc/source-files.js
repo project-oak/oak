@@ -49,11 +49,6 @@ var sourcesIndex = JSON.parse('{\
 "offline_attestation_shared":["",[],["lib.rs"]],\
 "sev_serial":["",[],["lib.rs"]],\
 "snp_measurement":["",[],["elf.rs","main.rs","page.rs","stage0.rs","vmsa.rs"]],\
-"trusted_shuffler":["",[],["lib.rs"]],\
-"trusted_shuffler_backend":["",[],["main.rs"]],\
-"trusted_shuffler_client":["",[],["main.rs"]],\
-"trusted_shuffler_common":["",[],["lib.rs"]],\
-"trusted_shuffler_server":["",[],["http.rs","main.rs"]],\
 "vsock_echo":["",[],["main.rs"]],\
 "weather_lookup":["",[],["lib.rs"]],\
 "xtask":["",[],["check_build_licenses.rs","check_license.rs","check_todo.rs","diffs.rs","examples.rs","files.rs","internal.rs","launcher.rs","main.rs"]]\

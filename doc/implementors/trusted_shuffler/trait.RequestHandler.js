@@ -1,3 +1,0 @@
-(function() {var implementors = {
-"trusted_shuffler_server":[["impl RequestHandler for <a class=\"struct\" href=\"trusted_shuffler_server/http/struct.HttpRequestHandler.html\" title=\"struct trusted_shuffler_server::http::HttpRequestHandler\">HttpRequestHandler</a>"]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

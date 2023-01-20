@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":[["EncryptedRequest",""],["EncryptedResponse",""],["PlaintextRequest",""],["PlaintextResponse",""],["TrustedShuffler",""]],"trait":[["RequestHandler",""]]};
