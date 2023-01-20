@@ -29,6 +29,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_functions_web_client":["",[],["grpc_web.rs","lib.rs"]],\
 "oak_functions_workload_logging":["",[],["lib.rs"]],\
 "oak_grpc_utils":["",[],["lib.rs"]],\
+"oak_hello_world_linux_init":["",[],["init.rs","main.rs"]],\
 "oak_linux_boot_params":["",[],["lib.rs"]],\
 "oak_logger":["",[],["lib.rs"]],\
 "oak_remote_attestation_amd":["",[],["lib.rs"]],\
