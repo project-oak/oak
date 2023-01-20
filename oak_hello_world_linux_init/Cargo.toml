@@ -1,0 +1,12 @@
+[package]
+name = "oak_hello_world_linux_init"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+simple_logger = "*"
+log = "*"
+nix = "*"
