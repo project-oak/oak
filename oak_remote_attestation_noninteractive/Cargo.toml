@@ -16,3 +16,6 @@ tonic = "*"
 
 [build-dependencies]
 oak_grpc_utils = { path = "../oak_grpc_utils" }
+
+[dev-dependencies]
+assert_matches = "*"

@@ -20,28 +20,30 @@ use prost::Message;
 use tink_core::keyset::Handle;
 use tink_hybrid::init;
 
-static ENCLAVE_ASYMMETRIC_ENCRYPTION_SCHEME: fn() -> tink_proto::KeyTemplate =
+pub(crate) static HYBRID_ENCRYPTION_SCHEME: fn() -> tink_proto::KeyTemplate =
     tink_hybrid::ecies_hkdf_aes128_gcm_key_template;
+pub(crate) static SYMMETRIC_ENCRYPTION_SCHEME: fn() -> tink_proto::KeyTemplate =
+    tink_aead::aes128_gcm_key_template;
 
 /// Context info value for encryption and decryption.
 /// 
 /// The value should be the same for both encryption and decryption to ensure
 /// the correct decryption of a ciphertext:
 /// https://docs.rs/tink-core/0.2.4/tink_core/trait.HybridDecrypt.html#security-guarantees
-pub const HYBRID_ENCRYPTION_CONTEXT_INFO: &[u8] = b"Oak Non-Interactive Attestation v0.1";
+pub(crate) const HYBRID_ENCRYPTION_CONTEXT_INFO: &[u8] = b"Oak Non-Interactive Attestation v0.1";
 
 pub struct ClientCryptoProvider {
     enclave_public_key: Handle,
 }
 
 impl ClientCryptoProvider {
-    fn create(serialized_enclave_public_key: &[u8]) -> anyhow::Result<Self> {
+    pub fn create(serialized_enclave_public_key: &[u8]) -> anyhow::Result<Self> {
         let enclave_public_key = deserialize_public_key(serialized_enclave_public_key)
             .map_err(|error| anyhow!("couldn't deserialize enclave public key: {}", error))?;
         Ok(Self { enclave_public_key })
     }
 
-    fn get_encryptor(&self) -> anyhow::Result<ClientEncryptor> {
+    pub fn get_encryptor(&self) -> anyhow::Result<ClientEncryptor> {
         ClientEncryptor::create(&self.enclave_public_key)
             .map_err(|error| anyhow!("couldn't create client encryptor: {}", error))
     }
@@ -55,7 +57,7 @@ pub struct ClientEncryptor<'a> {
 impl<'a> ClientEncryptor<'a> {
     pub fn create(enclave_public_key: &'a Handle) -> anyhow::Result<Self> {
         let response_key = tink_core::keyset::Handle::new(
-            &tink_aead::aes128_gcm_key_template()
+            &SYMMETRIC_ENCRYPTION_SCHEME()
         ).map_err(|error| anyhow!("couldn't create response key: {}", error))?;
         Ok(Self { enclave_public_key, response_key })
     }
@@ -118,7 +120,7 @@ pub struct EnclaveCryptoProvider {
 impl EnclaveCryptoProvider {
     pub fn create() -> anyhow::Result<Self> {
         let private_key = tink_core::keyset::Handle::new(
-            &tink_hybrid::ecies_hkdf_aes128_gcm_key_template()
+            &HYBRID_ENCRYPTION_SCHEME()
         ).map_err(|error| anyhow!("couldn't create enclave private key: {}", error))?;
         Ok(Self { private_key })
     }
@@ -197,7 +199,7 @@ impl EnclaveEncryptor {
 /// Serialises the handle's underlying keyset containing the public key to a binary representation.
 ///
 /// Serialisation will fail if the handle's keyset contains any secret data.
-fn serialize_public_key(public_key_handle: &Handle) -> anyhow::Result<Vec<u8>> {
+pub(crate) fn serialize_public_key(public_key_handle: &Handle) -> anyhow::Result<Vec<u8>> {
     let mut result = Vec::new();
     let mut writer = tink_core::keyset::BinaryWriter::new(&mut result);
     public_key_handle
@@ -208,24 +210,8 @@ fn serialize_public_key(public_key_handle: &Handle) -> anyhow::Result<Vec<u8>> {
 
 /// Deserialises the binary data into a keyset containing the public key and returns the associated
 /// handle.
-fn deserialize_public_key(serialized_public_key: &[u8]) -> anyhow::Result<Handle> {
+pub(crate) fn deserialize_public_key(serialized_public_key: &[u8]) -> anyhow::Result<Handle> {
     let mut reader = tink_core::keyset::BinaryReader::new(serialized_public_key);
     Handle::read_with_no_secrets(&mut reader)
         .map_err(|error| anyhow!("couldn't deserialise public key: {}", error))
 }
-
-// fn main() {
-//     let client_encryptor = ClientEncryptor::new(enclave_public_key);
-
-//     let (encrypted_request, decryptor) = encryptor
-//         .encrypt(request_body)
-//         .context("couldn't encrypt request")?;
-//     let encrypted_response = self
-//         .transport
-//         .invoke(encrypted_request)
-//         .context("couldn't send request")?;
-//     let response = decryptor
-//         .decrypt(encrypted_response)
-//         .context("couldn't decrypt response")?;
-//     Ok(response)
-// }

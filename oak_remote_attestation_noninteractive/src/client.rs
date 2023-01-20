@@ -19,6 +19,7 @@ use crate::proto::{
     InvokeRequest, RequestWrapper,
 };
 use anyhow::Context;
+use tink_hybrid::init;
 use tonic::transport::Channel;
 
 /// A client that allows interacting with an Oak server instance over gRPC, using the noninteractive

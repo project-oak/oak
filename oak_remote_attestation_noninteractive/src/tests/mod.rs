@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,12 +14,4 @@
 // limitations under the License.
 //
 
-pub mod proto {
-    #![allow(clippy::return_self_not_must_use)]
-    tonic::include_proto!("oak.session.noninteractive.v1");
-}
-
-pub mod client;
-pub mod crypto;
-#[cfg(test)]
-mod tests;
+mod crypto;
