@@ -53,11 +53,6 @@ members = [
   "sev_serial",
   "snp_measurement",
   "testing/oak_echo_service",
-  "trusted_shuffler/backend",
-  "trusted_shuffler/client",
-  "trusted_shuffler/common",
-  "trusted_shuffler/server",
-  "trusted_shuffler/trusted_shuffler",
   "xtask",
 ]
 exclude = [

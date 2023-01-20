@@ -453,64 +453,6 @@ fn run_oak_functions_server(server: &Server) -> Box<dyn Runnable> {
     )
 }
 
-pub fn run_trusted_shuffler(flags: Vec<&str>) -> Step {
-    // Build and run the echo backend.
-    let backend_cmd = Cmd::new(
-        "cargo",
-        spread![
-            "run",
-            "--manifest-path=trusted_shuffler/backend/Cargo.toml",
-            "--",
-            "--listen-address=[::]:8888",
-            ...flags
-        ],
-    );
-
-    // Build and run the Trusted Shuffler.
-    let trusted_shuffler_cmd = Cmd::new(
-        "cargo",
-        spread![
-            "run",
-            "--manifest-path=trusted_shuffler/server/Cargo.toml",
-            "--",
-            "--batch-size=1",
-            "--listen-address=[::]:8080",
-            "--backend-url=http://localhost:8888",
-        ],
-    );
-
-    // Build and run the echo gRPC client.
-    let client_cmd = Cmd::new(
-        "cargo",
-        spread![
-            "run",
-            "--manifest-path=trusted_shuffler/client/Cargo.toml",
-            "--",
-            "--server-url=http://localhost:8080",
-            "--qps=1",
-            "--seconds=1",
-            ...flags
-        ],
-    );
-
-    let client_step = Step::Single {
-        name: "Client".to_string(),
-        command: client_cmd,
-    };
-
-    let trusted_shuffler_step = Step::WithBackground {
-        name: "Trusted Shuffler and Backend".to_string(),
-        foreground: Box::new(client_step),
-        background: trusted_shuffler_cmd,
-    };
-
-    Step::WithBackground {
-        name: "Run echo Trusted Shuffler with k=1".to_string(),
-        foreground: Box::new(trusted_shuffler_step),
-        background: backend_cmd,
-    }
-}
-
 fn run_clients(
     example: &OakExample,
     build_client: &BuildClient,

@@ -66,12 +66,6 @@ _xtask() {
             xtask,run-tests)
                 cmd="xtask__run__tests"
                 ;;
-            xtask,run-trusted-shuffler)
-                cmd="xtask__run__trusted__shuffler"
-                ;;
-            xtask,run-trusted-shuffler-grpc)
-                cmd="xtask__run__trusted__shuffler__grpc"
-                ;;
             xtask__help,build-enclave-binary-variants)
                 cmd="xtask__help__build__enclave__binary__variants"
                 ;;
@@ -126,12 +120,6 @@ _xtask() {
             xtask__help,run-tests)
                 cmd="xtask__help__run__tests"
                 ;;
-            xtask__help,run-trusted-shuffler)
-                cmd="xtask__help__run__trusted__shuffler"
-                ;;
-            xtask__help,run-trusted-shuffler-grpc)
-                cmd="xtask__help__run__trusted__shuffler__grpc"
-                ;;
             *)
                 ;;
         esac
@@ -139,7 +127,7 @@ _xtask() {
 
     case "${cmd}" in
         xtask)
-            opts="-h --dry-run --logs --keep-going --scope --help run-launcher-test build-enclave-binary-variants run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion run-trusted-shuffler run-trusted-shuffler-grpc help"
+            opts="-h --dry-run --logs --keep-going --scope --help run-launcher-test build-enclave-binary-variants run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -305,7 +293,7 @@ _xtask() {
             return 0
             ;;
         xtask__help)
-            opts="run-launcher-test build-enclave-binary-variants run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion run-trusted-shuffler run-trusted-shuffler-grpc help"
+            opts="run-launcher-test build-enclave-binary-variants run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -570,34 +558,6 @@ _xtask() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
-        xtask__help__run__trusted__shuffler)
-            opts=""
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__help__run__trusted__shuffler__grpc)
-            opts=""
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
         xtask__run__bazel__tests)
             opts="-h --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
@@ -787,34 +747,6 @@ _xtask() {
             return 0
             ;;
         xtask__run__tests)
-            opts="-h --help"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__run__trusted__shuffler)
-            opts="-h --help"
-            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
-                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-                return 0
-            fi
-            case "${prev}" in
-                *)
-                    COMPREPLY=()
-                    ;;
-            esac
-            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
-            return 0
-            ;;
-        xtask__run__trusted__shuffler__grpc)
             opts="-h --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )

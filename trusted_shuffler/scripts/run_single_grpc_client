@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-
-RUST_LOG=info cargo run --manifest-path=trusted_shuffler/client/Cargo.toml -- \
---server-url="http://localhost:8080" --qps=1 --seconds=1 --use-grpc
