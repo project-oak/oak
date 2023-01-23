@@ -121,7 +121,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let mut client = schema::OakFunctionsAsyncClient::new(connector_handle.clone());
 
-        // Block until lookup data is fully loaded.
+        // Block for [invariant that lookup data is fully loaded](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-fully-loaded-lookup-data)
         let lookup_data =
             lookup::load_lookup_data(&cli.lookup_data).expect("couldn't load lookup data");
         let encoded_lookup_data =
