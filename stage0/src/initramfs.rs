@@ -16,18 +16,12 @@
 
 use crate::fw_cfg::FwCfg;
 use core::slice;
-use x86_64::VirtAddr;
-
-pub struct RamDiskInfo {
-    pub address: VirtAddr,
-    pub size: u32,
-}
 
 /// Tries to load an initial RAM disk from the QEMU FW_CFG device.
 ///
 /// If it finds a RAM disk it returns the address where it is loaded and the size. If not it
 /// returns `None`.
-pub fn try_load_initial_ram_disk(fw_cfg: &mut FwCfg) -> Option<RamDiskInfo> {
+pub fn try_load_initial_ram_disk(fw_cfg: &mut FwCfg) -> Option<&[u8]> {
     let size = fw_cfg
         .read_initrd_size()
         .expect("couldn't read initial RAM disk size");
@@ -51,5 +45,5 @@ pub fn try_load_initial_ram_disk(fw_cfg: &mut FwCfg) -> Option<RamDiskInfo> {
     fw_cfg
         .read_initrd_data(buf)
         .expect("couldn't read initial RAM disk content");
-    Some(RamDiskInfo { size, address })
+    Some(buf)
 }
