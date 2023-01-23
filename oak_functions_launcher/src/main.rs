@@ -118,13 +118,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let comms = launched_instance.create_comms_channel().await?;
     let connector_handle = channel::Connector::spawn(comms);
 
-    // Spawn task to load & periodically refresh lookup data.
     {
         let mut client = schema::OakFunctionsAsyncClient::new(connector_handle.clone());
+
+        // Block until lookup data is fully loaded.
+        let lookup_data =
+            lookup::load_lookup_data(&cli.lookup_data).expect("couldn't load lookup data");
+        let encoded_lookup_data =
+            lookup::encode_lookup_data(lookup_data).expect("couldn't encode lookup data");
+
+        if let Err(err) = client.update_lookup_data(&encoded_lookup_data).await {
+            panic!("couldn't send lookup data: {:?}", err)
+        }
+
+        // Spawn task to periodically refresh lookup data.
         tokio::spawn(async move {
             let mut interval =
                 tokio::time::interval(std::time::Duration::from_millis(1000 * 60 * 10));
             loop {
+                // Wait before updating because we just loaded the lookup data.
+                interval.tick().await;
+
                 let lookup_data =
                     lookup::load_lookup_data(&cli.lookup_data).expect("couldn't load lookup data");
                 let encoded_lookup_data =
@@ -133,8 +147,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Err(err) = client.update_lookup_data(&encoded_lookup_data).await {
                     panic!("couldn't send lookup data: {:?}", err)
                 }
-
-                interval.tick().await;
             }
         });
     }
