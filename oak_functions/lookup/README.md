@@ -25,8 +25,6 @@ low-frequency updates of lookup data.
 
 ## Invariant: Fully loaded lookup data
 
-// TODO(#3615): Check how this invariant is maintained in the code.
-
 > No requests are served until the initial lookup data is completely loaded in
 > Oak Functions.
 
