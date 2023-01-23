@@ -49,6 +49,7 @@ mod acpi;
 mod asm;
 mod cmos;
 mod fw_cfg;
+mod initramfs;
 mod logging;
 mod sev;
 mod zero_page;
@@ -312,6 +313,10 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     }
 
     zero_page.set_acpi_rsdp_addr(acpi::build_acpi_tables(&mut fwcfg).unwrap());
+
+    if let Some(ram_disk) = initramfs::try_load_initial_ram_disk(&mut fwcfg) {
+        zero_page.set_initial_ram_disk(ram_disk);
+    }
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 

@@ -116,6 +116,17 @@ impl ZeroPage {
         setup_data.header.next = self.inner.hdr.setup_data;
         self.inner.hdr.setup_data = &setup_data.header as *const oak_linux_boot_params::SetupData;
     }
+
+    /// Sets the address and size of the initial RAM disk.
+    pub fn set_initial_ram_disk(&mut self, ram_disk: &[u8]) {
+        // The address of the RAM disk will always be in the lower 32-bit range of virtual memory
+        // since we only identity-map the first 1GiB of RAM and QEMU only provides 32-bit addresses
+        // via the fw_cfg device.
+        self.inner.hdr.ramdisk_image = ram_disk.as_ptr() as u64 as u32;
+        // The size of the RAM disk will always fit into 32 bits since we only map a maximum of 1GiB
+        // of RAM.
+        self.inner.hdr.ramdisk_size = ram_disk.len() as u32;
+    }
 }
 
 /// Builds an E820 table by reading the low and high memory amount from CMOS.
