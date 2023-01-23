@@ -188,6 +188,18 @@
 <span id="188">188</span>
 <span id="189">189</span>
 <span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -308,13 +320,27 @@
     <span class="kw">let </span>comms = launched_instance.create_comms_channel().<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>connector_handle = channel::Connector::spawn(comms);
 
-    <span class="comment">// Spawn task to load &amp; periodically refresh lookup data.
-    </span>{
+    {
         <span class="kw">let </span><span class="kw-2">mut </span>client = schema::OakFunctionsAsyncClient::new(connector_handle.clone());
-        tokio::spawn(<span class="kw">async move </span>{
+
+        <span class="comment">// Block until lookup data is fully loaded.
+        </span><span class="kw">let </span>lookup_data =
+            lookup::load_lookup_data(<span class="kw-2">&amp;</span>cli.lookup_data).expect(<span class="string">&quot;couldn&#39;t load lookup data&quot;</span>);
+        <span class="kw">let </span>encoded_lookup_data =
+            lookup::encode_lookup_data(lookup_data).expect(<span class="string">&quot;couldn&#39;t encode lookup data&quot;</span>);
+
+        <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = client.update_lookup_data(<span class="kw-2">&amp;</span>encoded_lookup_data).<span class="kw">await </span>{
+            <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t send lookup data: {:?}&quot;</span>, err)
+        }
+
+        <span class="comment">// Spawn task to periodically refresh lookup data.
+        </span>tokio::spawn(<span class="kw">async move </span>{
             <span class="kw">let </span><span class="kw-2">mut </span>interval =
                 tokio::time::interval(std::time::Duration::from_millis(<span class="number">1000 </span>* <span class="number">60 </span>* <span class="number">10</span>));
             <span class="kw">loop </span>{
+                <span class="comment">// Wait before updating because we just loaded the lookup data.
+                </span>interval.tick().<span class="kw">await</span>;
+
                 <span class="kw">let </span>lookup_data =
                     lookup::load_lookup_data(<span class="kw-2">&amp;</span>cli.lookup_data).expect(<span class="string">&quot;couldn&#39;t load lookup data&quot;</span>);
                 <span class="kw">let </span>encoded_lookup_data =
@@ -323,8 +349,6 @@
                 <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = client.update_lookup_data(<span class="kw-2">&amp;</span>encoded_lookup_data).<span class="kw">await </span>{
                     <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t send lookup data: {:?}&quot;</span>, err)
                 }
-
-                interval.tick().<span class="kw">await</span>;
             }
         });
     }
