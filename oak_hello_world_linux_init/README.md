@@ -49,14 +49,22 @@ cp --archive target/x86_64-unknown-linux-musl/release/oak_hello_world_linux_init
     > bin/initramfs
 ```
 
-Execute the initial RAM disk with QEMU:
-
-Note: this assumes an appropiate compressed Linux kernel image has been copied
-to `bin/bzImage`.
+Build the Stage 0 Firmware image:
 
 ```bash
-qemu-system-x86_64 -kernel bin/bzImage -initrd bin/initramfs \
-    -append "console=ttyS0" -nographic
+( cd stage0; cargo build --release; )
+objcopy --output-format binary stage0/target/x86_64-unknown-none/release/oak_stage0 \
+    bin/stage0.bin
 ```
 
-To exit QEMU, type `Ctrl+A` followed by `X`.
+Execute the initial RAM disk with QEMU:
+
+Note: this assumes an appropiate uncompressed Linux kernel ELF binary has been
+copied to `bin/vmlinux`.
+
+```bash
+qemu-system-x86_64 -cpu host -enable-kvm -nographic -nodefaults -no-reboot -machine "microvm,acpi=on" \
+    -bios "bin/stage0.bin" -kernel "bin/vmlinux" -initrd "bin/initramfs" \
+    -serial stdio -m 1G -device "loader,file=bin/vmlinux" -append "console=ttyS0" \
+    -nographic -no-reboot -machine "microvm,acpi=on"
+```

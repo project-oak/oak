@@ -16,6 +16,7 @@
 
 use core::{cmp::min, ffi::CStr};
 use oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
+use x86_64::VirtAddr;
 use zerocopy::{AsBytes, FromBytes};
 
 // See https://www.qemu.org/docs/master/specs/fw_cfg.html for documentation about the various data structures and constants.
@@ -215,7 +216,39 @@ impl FwCfg {
         Ok(reservation_count)
     }
 
-    /// Reads contents of a file; returns the number of bytes actrually read.
+    /// Reads the size of the initial RAM disk.
+    pub fn read_initrd_size(&mut self) -> Result<u32, &'static str> {
+        let mut initrd_size: u32 = 0;
+        self.write_selector(FwCfgItems::InitrdSize as u16)?;
+        self.read(&mut initrd_size)?;
+        Ok(initrd_size)
+    }
+
+    /// Reads the address for the intended location or the initial RAM disk.
+    pub fn read_initrd_address(&mut self) -> Result<VirtAddr, &'static str> {
+        let mut initrd_addr: u32 = 0;
+        self.write_selector(FwCfgItems::InitrdAddr as u16)?;
+        self.read(&mut initrd_addr)?;
+        // Since we use an identity mapping in the Stage0 firmware, we can interpret the physical
+        // address directly as a virtual address.
+        Ok(VirtAddr::new(initrd_addr as u64))
+    }
+
+    /// Reads the contents of the initial RAM disk into the supplied buffer.
+    ///
+    /// The initial RAM disk is not available via the file interface but has its own selector.
+    ///
+    /// Important note: we cannot read the size of the initial RAM disk again, as it returns 0 on
+    /// the second read, so it is the responsibility of the caller to ensure that the size of the
+    /// buffer matches the size of the RAM disk exactly.
+    pub fn read_initrd_data(&mut self, buf: &mut [u8]) -> Result<usize, &'static str> {
+        self.write_selector(FwCfgItems::InitrdData as u16)?;
+        // TODO(#3631): Read the initial RAM disk via DMA.
+        self.read_buf(buf)?;
+        Ok(buf.len())
+    }
+
+    /// Reads contents of a file; returns the number of bytes actually read.
     ///
     /// The buffer `buf` will be filled to capacity if the file is larger;
     /// if it is shorter, the trailing bytes will not be touched.

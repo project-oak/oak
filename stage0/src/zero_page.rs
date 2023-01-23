@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{cmos::Cmos, fw_cfg::FwCfg};
+use crate::{cmos::Cmos, fw_cfg::FwCfg, initramfs::RamDiskInfo};
 use core::{ffi::CStr, mem::size_of};
 use oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
 use oak_sev_guest::io::PortFactoryWrapper;
@@ -115,6 +115,12 @@ impl ZeroPage {
         // Put our header as the first element in the linked list.
         setup_data.header.next = self.inner.hdr.setup_data;
         self.inner.hdr.setup_data = &setup_data.header as *const oak_linux_boot_params::SetupData;
+    }
+
+    /// Sets the address and size of the initial RAM disk.
+    pub fn set_initial_ram_disk(&mut self, ram_disk: &RamDiskInfo) {
+        self.inner.hdr.ramdisk_image = ram_disk.address.as_u64() as u32;
+        self.inner.hdr.ramdisk_size = ram_disk.size;
     }
 }
 
