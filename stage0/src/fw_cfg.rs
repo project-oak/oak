@@ -237,8 +237,6 @@ impl FwCfg {
         let mut initrd_addr: u32 = 0;
         self.write_selector(FwCfgItems::InitrdAddr as u16)?;
         self.read(&mut initrd_addr)?;
-        // Since we use an identity mapping in the Stage0 firmware, we can interpret the physical
-        // address directly as a virtual address.
         Ok(PhysAddr::new(initrd_addr as u64))
     }
 
