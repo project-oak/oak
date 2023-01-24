@@ -16,6 +16,7 @@
 
 use crate::fw_cfg::FwCfg;
 use core::slice;
+use x86_64::VirtAddr;
 
 /// Tries to load an initial RAM disk from the QEMU FW_CFG device.
 ///
@@ -33,6 +34,9 @@ pub fn try_load_initial_ram_disk(fw_cfg: &mut FwCfg) -> Option<&[u8]> {
     let address = fw_cfg
         .read_initrd_address()
         .expect("couldn't read initial RAM disk address");
+
+    // We use an identity mapping for memory.
+    let address = VirtAddr::new(address.as_u64());
 
     log::debug!("Initial RAM disk size {}", size);
     log::debug!("Initial RAM disk address {:#018x}", address.as_u64());

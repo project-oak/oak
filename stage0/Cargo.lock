@@ -114,6 +114,7 @@ dependencies = [
 name = "oak_stage0"
 version = "0.1.0"
 dependencies = [
+ "bitflags",
  "goblin",
  "log",
  "oak_core",
