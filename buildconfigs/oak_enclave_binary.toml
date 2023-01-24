@@ -1,0 +1,3 @@
+repo = "https://github.com/project-oak/oak"
+command = ["env", "--chdir=oak_enclave_binary", "cargo", "build", "--release"]
+output_path = "./oak_enclave_binary/target/x86_64-unknown-none/release/oak_enclave_binary"

@@ -35,7 +35,7 @@ impl LauncherMode {
     /// Get the crate name of respective enclave binary variant
     pub fn enclave_crate_name(&self) -> &'static str {
         match self {
-            LauncherMode::Virtual => "oak_functions_enclave",
+            LauncherMode::Virtual => "oak_functions_app",
             LauncherMode::Native => "oak_functions_linux_fd_bin",
         }
     }
@@ -128,12 +128,18 @@ fn run_variant(variant: LauncherMode) -> Step {
     )];
     // If we want to run in an VMM, we need three binaries:
     // 1. the stage0 BIOS image,
-    // 2. the enclave shim that wraps the kernel,
-    // 3. the actual Oak Functions application binary.
+    // 2. the kernel binary,
+    // 3. the actual Oak Functions enclave application.
     // (1) and (2) are needed to start the VMM, and the kernel expects to read (3) as the very first
     // thing over the communication channel.
     steps.extend(match variant {
-        LauncherMode::Virtual => vec![build_stage0(), build_binary("shim", "oak_enclave_shim")],
+        LauncherMode::Virtual => vec![
+            build_stage0(),
+            build_binary(
+                "build Restricted Kernel binary",
+                "oak_restricted_kernel_bin",
+            ),
+        ],
         LauncherMode::Native => vec![],
     });
     steps.extend(vec![Step::WithBackground {

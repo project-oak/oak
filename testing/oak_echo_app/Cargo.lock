@@ -209,7 +209,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_echo_enclave"
+name = "oak_echo_app"
 version = "0.1.0"
 dependencies = [
  "log",

@@ -1,0 +1,3 @@
+repo = "https://github.com/project-oak/oak"
+command = ["env", "--chdir=testing/oak_echo_app", "cargo", "build", "--release"]
+output_path = "./testing/oak_echo_app/target/x86_64-unknown-none/release/oak_echo_app"

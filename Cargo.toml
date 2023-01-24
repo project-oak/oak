@@ -57,13 +57,13 @@ members = [
 ]
 exclude = [
   "fuzz",
-  "oak_enclave_shim",
+  "oak_enclave_binary",
   "oak_functions/loader/fuzz",
-  "oak_functions_enclave",
-  "oak_tensorflow_enclave",
+  "oak_functions_app",
+  "oak_tensorflow_app",
   "stage0",
-  "testing/oak_echo_enclave",
-  "testing/oak_echo_raw_enclave",
+  "testing/oak_echo_app",
+  "testing/oak_echo_raw_app",
   "testing/sev_snp_hello_world_kernel",
   "third_party/curve25519-dalek",
   "third_party/rust-hypervisor-firmware-virtio",
