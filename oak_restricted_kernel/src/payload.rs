@@ -22,13 +22,13 @@ use goblin::elf64::program_header::{PF_W, PF_X, PT_LOAD};
 use oak_channel::Channel;
 use oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 use x86_64::{
-    structures::paging::{PageSize, Size2MiB},
+    structures::paging::{PageSize, Size2MiB, Size4KiB},
     VirtAddr,
 };
 
 /// Reads a chunk of data and acknowledges the transmission by writing back the number of bytes
 /// read.
-fn read_chunk(channel: &mut dyn Channel, chunk: &mut [u8]) -> Result<()> {
+fn read_chunk<C: Channel + ?Sized>(channel: &mut C, chunk: &mut [u8]) -> Result<()> {
     let len: u32 = chunk
         .len()
         .try_into()
@@ -37,15 +37,15 @@ fn read_chunk(channel: &mut dyn Channel, chunk: &mut [u8]) -> Result<()> {
     channel.write(&len.to_be_bytes())
 }
 
-/// Reads a payload blob from the given channel.
-pub fn read_payload(channel: &mut dyn Channel) -> Result<Vec<u8>> {
+/// Reads a payload blob, one page at a time, from the given channel.
+pub fn read_payload<C: Channel + ?Sized>(channel: &mut C) -> Result<Vec<u8>> {
     let payload_len = {
         let mut buf: [u8; 4] = Default::default();
         channel.read(&mut buf)?;
         u32::from_be_bytes(buf)
     };
     let mut payload = vec![0; payload_len as usize];
-    let mut chunks_mut = payload.array_chunks_mut::<4096>();
+    let mut chunks_mut = payload.array_chunks_mut::<{ Size4KiB::SIZE as usize }>();
 
     for chunk in chunks_mut.by_ref() {
         read_chunk(channel, chunk)?;

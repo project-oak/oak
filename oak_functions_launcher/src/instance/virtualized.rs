@@ -29,6 +29,8 @@ use std::{
     process::Stdio,
 };
 
+const PAGE_SIZE: usize = 4096;
+
 /// Parameters used for launching VM instances
 #[derive(Parser, Clone, Debug, PartialEq)]
 pub struct Params {
@@ -59,7 +61,7 @@ fn write_chunk(channel: &mut dyn Channel, chunk: &[u8]) -> Result<()> {
     let mut ack: [u8; 4] = Default::default();
     channel.read(&mut ack)?;
     if u32::from_be_bytes(ack) as usize != chunk.len() {
-        anyhow::bail!("ack wasnt of correct length");
+        anyhow::bail!("ack wasn't of correct length");
     }
     Ok(())
 }
@@ -151,7 +153,8 @@ impl Instance {
             .write(&(app_bytes.len() as u32).to_be_bytes())
             .expect("failed to send application binary length to enclave");
 
-        let mut chunks = app_bytes.array_chunks::<4096>();
+        // The kernel expects data to be transmitted in chunks of one page.
+        let mut chunks = app_bytes.array_chunks::<PAGE_SIZE>();
         for chunk in chunks.by_ref() {
             write_chunk(&mut comms_host, chunk)?;
         }
