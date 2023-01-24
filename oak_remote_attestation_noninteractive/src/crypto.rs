@@ -215,3 +215,18 @@ pub(crate) fn deserialize_public_key(serialized_public_key: &[u8]) -> anyhow::Re
     Handle::read_with_no_secrets(&mut reader)
         .map_err(|error| anyhow!("couldn't deserialise public key: {}", error))
 }
+
+// pub(crate) fn serialize_symmetric_key(symmetric_key_handle: &Handle) -> anyhow::Result<Vec<u8>> {
+//     let mut result = Vec::new();
+//     let mut writer = tink_core::keyset::BinaryWriter::new(&mut result);
+//     symmetric_key_handle
+//         .write(&mut writer)
+//         .map_err(|error| anyhow!("couldn't deserialise symmetric key: {}", error))?;
+//     Ok(result)
+// }
+
+// pub(crate) fn deserialize_symmetric_key(serialized_symmetric_key: &[u8]) -> anyhow::Result<Handle> {
+//     let mut reader = tink_core::keyset::BinaryReader::new(serialized_symmetric_key);
+//     Handle::read(&mut reader)
+//         .map_err(|error| anyhow!("couldn't deserialise symmetric key: {}", error))
+// }

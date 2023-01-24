@@ -20,7 +20,39 @@ use crate::crypto::{
 };
 use assert_matches::assert_matches;
 
-const TEST_MESSAGE: [u8; 10] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+const TEST_REQUEST: [u8; 5] = [0, 1, 2, 3, 4];
+const TEST_RESPONSE: [u8; 5] = [5, 6, 7, 8, 9];
+
+#[test]
+fn test_serialize_deserialize_public_key() {
+    tink_hybrid::init();
+    let private_key = tink_core::keyset::Handle::new(
+        &HYBRID_ENCRYPTION_SCHEME()
+    ).expect("couldn't create private key");
+    let public_key = private_key.public().expect("couldn't get public key");
+
+    let result = serialize_public_key(&public_key);
+    assert_matches!(result, Ok(_));
+    let serialized_public_key = result.unwrap();
+
+    let result = deserialize_public_key(&serialized_public_key);
+    assert_matches!(result, Ok(_));
+}
+
+#[test]
+fn test_serialize_deserialize_symmetric_key() {
+    tink_hybrid::init();
+    let symmetric_key = tink_core::keyset::Handle::new(
+        &SYMMETRIC_ENCRYPTION_SCHEME()
+    ).expect("couldn't create symmetric key");
+
+    let result = serialize_public_key(&symmetric_key);
+    assert_matches!(result, Ok(_));
+    let serialized_symmetric_key = result.unwrap();
+
+    let result = deserialize_public_key(&serialized_symmetric_key);
+    assert_matches!(result, Ok(_));
+}
 
 #[test]
 fn test_create_client_crypto_provider() {
@@ -37,33 +69,16 @@ fn test_create_client_crypto_provider() {
     assert!(result.is_ok());
 }
 
-#[test]
-fn test_serialize_deserialize_public_key() {
-    let private_key = tink_core::keyset::Handle::new(
-        &HYBRID_ENCRYPTION_SCHEME()
-    ).expect("couldn't create private key");
-    let public_key = private_key.public().expect("couldn't get public key");
-
-    let result = serialize_public_key(&public_key);
-    assert_matches!(result, Ok(_));
-    let serialized_public_key = result.unwrap();
-
-    let result = deserialize_public_key(&serialized_public_key);
-    assert_matches!(result, Ok(_));
-}
 
 #[test]
-fn test_serialize_deserialize_symmetric_key() {
-    let symmetric_key = tink_core::keyset::Handle::new(
-        &SYMMETRIC_ENCRYPTION_SCHEME()
-    ).expect("couldn't create symmetric key");
+fn test_hybrid_encryption() {
+    tink_hybrid::init();
+    let enclave_crypto_provider = EnclaveCryptoProvider::create().unwrap();
+    let public_key = enclave_crypto_provider.get_public_key().unwrap();
+    let client_crypto_provider = ClientCryptoProvider::create(&public_key).unwrap();
 
-    let result = serialize_public_key(&symmetric_key);
-    assert_matches!(result, Ok(_));
-    let serialized_symmetric_key = result.unwrap();
-
-    let result = deserialize_public_key(&serialized_symmetric_key);
-    assert_matches!(result, Ok(_));
+    let client_encryptor = client_crypto_provider.get_encryptor();
+    let encrypted_request = client_encryptor
 }
 
 // fn main() {
