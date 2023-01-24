@@ -10,6 +10,7 @@ resolver = "2"
 members = ["."]
 
 [dependencies]
+bitflags = "*"
 goblin = { version = "*", default-features = false, features = ["elf64"] }
 log = "*"
 oak_core = { path = "../oak_core", default-features = false }
