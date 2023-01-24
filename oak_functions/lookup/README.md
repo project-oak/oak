@@ -14,9 +14,13 @@ We want to maintain the following invariants on the key/value lookups.
 > requests which arrived after the update will return values from the new lookup
 > data, but key/value lookups of requests which arrived before the update will
 > return values from the old lookup data.
->
-> In particular, within a request for two key/value lookups of the same key Oak
-> Functions will return the same value.
+
+This means that within a request
+
+- for two key/value lookups of the same key Oak Functions will return the same
+  value, and
+- the lookup of a key depending on the value of another key share the same view
+  of the lookup data.
 
 _Reasoning_: We want a consistent view of the lookup data within the life time
 of a request. In the worst case, this can lead to _n_ copies of lookup data for
@@ -24,8 +28,6 @@ _n_ requests running in parallel, but we expect short-lived requests and
 low-frequency updates of lookup data.
 
 ## Invariant: Fully loaded lookup data
-
-// TODO(#3615): Check how this invariant is maintained in the code.
 
 > No requests are served until the initial lookup data is completely loaded in
 > Oak Functions.
