@@ -15,34 +15,55 @@
 //
 
 use crate::syscall::mmap::mmap;
+use alloc::{vec, vec::Vec};
+use anyhow::Result;
 use core::arch::asm;
-use goblin::elf64::program_header::{ProgramHeader, PF_W, PF_X, PT_LOAD};
+use goblin::elf64::program_header::{PF_W, PF_X, PT_LOAD};
+use oak_channel::Channel;
 use oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 use x86_64::{
     structures::paging::{PageSize, Size2MiB},
     VirtAddr,
 };
 
-/// Parses a pre-loaded ELF file, lays it out in memory, and passes control to it.
-///
-/// # Safety
-///
-/// We expect there to be an ELF file loaded in the memory pointed to by `payload`. If the pointer
-/// does not point to a valid ELF file, the behaviour is undefined.
-pub unsafe fn run_payload(payload: *const u8) -> ! {
-    // Unfortunately we can't parse the whole file as an &[u8], as we don't know the size of the
-    // embeded file. We only know where it starts. However, we know the ELF header is 64 bytes,
-    // so assuming we have a valid file in there, we shouldn't cause UB here by accessing memory
-    // outside our boundaries.
-    let raw_header =
-        core::slice::from_raw_parts(payload, goblin::elf::header::header64::SIZEOF_EHDR);
-    let header = goblin::elf::Elf::parse_header(raw_header).unwrap();
-    let phdrs = ProgramHeader::from_raw_parts(
-        (payload as u64 + header.e_phoff) as *const ProgramHeader,
-        header.e_phnum as usize,
-    );
+/// Reads a chunk of data and acknowledges the transmission by writing back the number of bytes
+/// read.
+fn read_chunk(channel: &mut dyn Channel, chunk: &mut [u8]) -> Result<()> {
+    let len: u32 = chunk
+        .len()
+        .try_into()
+        .map_err(|_| anyhow::anyhow!("chunk too big"))?;
+    channel.read(chunk)?;
+    channel.write(&len.to_be_bytes())
+}
 
-    for phdr in phdrs.iter().filter(|&phdr| phdr.p_type == PT_LOAD) {
+/// Reads a payload blob from the given channel.
+pub fn read_payload(channel: &mut dyn Channel) -> Result<Vec<u8>> {
+    let payload_len = {
+        let mut buf: [u8; 4] = Default::default();
+        channel.read(&mut buf)?;
+        u32::from_be_bytes(buf)
+    };
+    let mut payload = vec![0; payload_len as usize];
+    let mut chunks_mut = payload.array_chunks_mut::<4096>();
+
+    for chunk in chunks_mut.by_ref() {
+        read_chunk(channel, chunk)?;
+    }
+    read_chunk(channel, chunks_mut.into_remainder())?;
+
+    Ok(payload)
+}
+
+/// Parses a pre-loaded ELF file, lays it out in memory, and passes control to it.
+pub fn run_payload(payload: &[u8]) -> ! {
+    let elf = goblin::elf::Elf::parse(payload).expect("failed to parse application binary");
+
+    for phdr in elf
+        .program_headers
+        .iter()
+        .filter(|&phdr| phdr.p_type == PT_LOAD)
+    {
         let vaddr = VirtAddr::new(phdr.p_vaddr).align_down(Size2MiB::SIZE);
 
         let mut prot = MmapProtection::PROT_READ;
@@ -65,11 +86,14 @@ pub unsafe fn run_payload(payload: *const u8) -> ! {
         )
         .expect("failed to allocate user memory");
 
-        core::ptr::copy_nonoverlapping(
-            (payload as u64 + phdr.p_offset) as *const u8,
-            phdr.p_vaddr as *mut u8,
-            phdr.p_filesz as usize,
-        );
+        // Safety: we know the target memory is valid as we've just allocated it with mmap().
+        unsafe {
+            core::ptr::copy_nonoverlapping(
+                (payload.as_ptr() as u64 + phdr.p_offset) as *const u8,
+                phdr.p_vaddr as *mut u8,
+                phdr.p_filesz as usize,
+            );
+        }
     }
     // Set up the userspace stack at the end of the lower half of the virtual address space.
     // Well... almost. It's one page lower than the very end, as otherwise the initial stack pointer
@@ -84,12 +108,16 @@ pub unsafe fn run_payload(payload: *const u8) -> ! {
     .expect("failed to allocate memory for user stack");
 
     // Enter Ring 3 and jump to user code.
-    asm! {
-        "mov rsp, {}", // user stack
-        "sysretq",
-        in(reg) rsp.as_u64() - 8, // maintain stack alignment
-        in("rcx") header.e_entry, // initial RIP
-        in("r11") 0x202, // initial RFLAGS
-        options(noreturn)
+    // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the user to
+    // guarantee that the file made sense.
+    unsafe {
+        asm! {
+            "mov rsp, {}", // user stack
+            "sysretq",
+            in(reg) rsp.as_u64() - 8, // maintain stack alignment
+            in("rcx") elf.entry, // initial RIP
+            in("r11") 0x202, // initial RFLAGS
+            options(noreturn)
+        }
     }
 }

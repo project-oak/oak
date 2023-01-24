@@ -19,38 +19,12 @@
 #![feature(alloc_error_handler)]
 #![feature(naked_functions)]
 
-use core::{arch::asm, ffi::c_void, panic::PanicInfo};
+use core::panic::PanicInfo;
 use oak_linux_boot_params::BootParams;
 
-// Placeholder payload that triggers an undefined instruction fault.
-// We do this here for three reasons:
-// a) It provides a convenient way to figure out the address of the payload.
-// b) It stops the compiler and linker from optimizing away the whole section.
-// c) It's invalid as both code and as an ELF file, so should trigger an error no matter whether we
-//    try to execute it ourselves or try to parse it as an ELF file.
-// (A more clever thing would be to embed an ELF file here that causes an ud2...)
-#[naked]
-#[no_mangle]
-#[link_section = ".payload"]
-extern "C" fn payload() -> ! {
-    unsafe {
-        asm!("ud2", options(noreturn));
-    }
-}
-
-extern "C" {
-    #[link_name = "payload_start"]
-    static PAYLOAD_START: c_void;
-}
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, rsi: &BootParams) -> ! {
     oak_restricted_kernel::start_kernel(rsi);
-    // Safety: the linker script guarantees that even if we didn't place a valid ELF file in the
-    // payload section, there's at least a header's worth of invalid data in there so we won't be
-    // reading uninitialized memory.
-    unsafe {
-        oak_restricted_kernel::run_payload(&PAYLOAD_START as *const _ as *const u8);
-    }
 }
 
 #[alloc_error_handler]

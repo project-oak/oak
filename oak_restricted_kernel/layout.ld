@@ -88,21 +88,6 @@ SECTIONS {
     } : bss
     stack_start = .;
 
-    /* This section is empty when we link the binary together, but later we'll embed the user-space
-     * binary here. This needs to be the last item, as we don't know the size of it when we're linking
-     * the program.
-     */
-    .payload : ALIGN(2M) {
-        payload_start = .;
-        /* The ELF64 header is 64 bytes long, so let's ensure that even if we forget to include the payload
-         * binary there's at least a header's worth of data to load in here.
-         * As the four-byte magic would need to be 0x7F 'E' 'L' 'F', filling this section with 64*0xFF means
-         * we'll get an runtime error when attempting to parse this section.
-         */
-        FILL(0xFF)
-        . += 64;
-    } : payload
-
     /DISCARD/ : {
         *(.eh_frame*)
     }

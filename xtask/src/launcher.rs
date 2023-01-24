@@ -62,8 +62,12 @@ impl LauncherMode {
         match self {
             LauncherMode::Virtual => vec![
                 "virtual".to_string(),
-                format!("--enclave-binary={}", "./target/enclave_bin"),
+                format!(
+                    "--enclave-binary={}",
+                    "./oak_enclave_shim/target/x86_64-unknown-none/debug/oak_enclave_shim"
+                ),
                 format!("--vmm-binary={}", "/usr/bin/qemu-system-x86_64"),
+                format!("--app-binary={}", &self.enclave_binary_path()),
                 format!(
                     "--bios-binary={}",
                     "./stage0/target/x86_64-unknown-none/release/oak_stage0.bin"
@@ -122,26 +126,14 @@ fn run_variant(variant: LauncherMode) -> Step {
         "build Oak Functions enclave binary",
         &variant.enclave_crate_path(),
     )];
-    // If we want to run in an VMM, we need to do some extra steps:
-    // 1. build the stage0 BIOS image
-    // 2. build the enclave shim that wraps the kernel
-    // 3. embed the built oak_functions binary in the .payload section of the shim
-    // and then we can start QEMU with stage0 as the firmware and the merged enclave_bin as the ELF
-    // binary to load.
+    // If we want to run in an VMM, we need three binaries:
+    // 1. the stage0 BIOS image,
+    // 2. the enclave shim that wraps the kernel,
+    // 3. the actual Oak Functions application binary.
+    // (1) and (2) are needed to start the VMM, and the kernel expects to read (3) as the very first
+    // thing over the communication channel.
     steps.extend(match variant {
-        LauncherMode::Virtual => vec![
-            build_stage0(),
-            build_binary("shim", "oak_enclave_shim"),
-            Step::Single {
-                name: "merge shim and enclave binary".to_string(),
-                command: Cmd::new("objcopy", vec![
-                    "--update-section",
-                    ".payload=oak_functions_enclave/target/x86_64-unknown-none/debug/oak_functions_enclave",
-                    "oak_enclave_shim/target/x86_64-unknown-none/debug/oak_enclave_shim",
-                    "target/enclave_bin",
-                ]),
-            },
-        ],
+        LauncherMode::Virtual => vec![build_stage0(), build_binary("shim", "oak_enclave_shim")],
         LauncherMode::Native => vec![],
     });
     steps.extend(vec![Step::WithBackground {
