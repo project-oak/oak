@@ -34,7 +34,7 @@ fn read_chunk<C: Channel + ?Sized>(channel: &mut C, chunk: &mut [u8]) -> Result<
         .try_into()
         .map_err(|_| anyhow::anyhow!("chunk too big"))?;
     channel.read(chunk)?;
-    channel.write(&len.to_be_bytes())
+    channel.write(&len.to_le_bytes())
 }
 
 /// Reads a payload blob, one page at a time, from the given channel.
@@ -42,7 +42,7 @@ pub fn read_payload<C: Channel + ?Sized>(channel: &mut C) -> Result<Vec<u8>> {
     let payload_len = {
         let mut buf: [u8; 4] = Default::default();
         channel.read(&mut buf)?;
-        u32::from_be_bytes(buf)
+        u32::from_le_bytes(buf)
     };
     let mut payload = vec![0; payload_len as usize];
     let mut chunks_mut = payload.array_chunks_mut::<{ Size4KiB::SIZE as usize }>();
