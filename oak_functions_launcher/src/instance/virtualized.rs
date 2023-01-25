@@ -15,17 +15,21 @@
 //
 
 use crate::{instance::LaunchedInstance, path_exists};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use clap::Parser;
 use command_fds::tokio::CommandFdAsyncExt;
 use log::info;
+use oak_channel::{Channel, Write};
 use std::{
+    fs,
     net::Shutdown,
     os::unix::{io::AsRawFd, net::UnixStream},
     path::PathBuf,
     process::Stdio,
 };
+
+const PAGE_SIZE: usize = 4096;
 
 /// Parameters used for launching VM instances
 #[derive(Parser, Clone, Debug, PartialEq)]
@@ -38,6 +42,10 @@ pub struct Params {
     #[arg(long, value_parser = path_exists)]
     pub enclave_binary: PathBuf,
 
+    /// Path to the Oak Functions application binary to be loaded into the enclave.
+    #[arg(long, value_parser = path_exists)]
+    pub app_binary: PathBuf,
+
     /// Path to the BIOS image to use.
     #[arg(long, value_parser = path_exists)]
     pub bios_binary: PathBuf,
@@ -45,6 +53,17 @@ pub struct Params {
     /// Port to use for debugging with gdb
     #[arg(long = "gdb")]
     pub gdb: Option<u16>,
+}
+
+/// Writes a chunk to a channel, and expects an acknowledgement containing the length of the chunk.
+fn write_chunk(channel: &mut dyn Channel, chunk: &[u8]) -> Result<()> {
+    channel.write(chunk)?;
+    let mut ack: [u8; 4] = Default::default();
+    channel.read(&mut ack)?;
+    if u32::from_be_bytes(ack) as usize != chunk.len() {
+        anyhow::bail!("ack wasn't of correct length");
+    }
+    Ok(())
 }
 
 pub struct Instance {
@@ -55,8 +74,20 @@ pub struct Instance {
 
 impl Instance {
     pub fn start(params: Params, console: UnixStream) -> Result<Self> {
+        let app_bytes = fs::read(&params.app_binary).with_context(|| {
+            format!(
+                "couldn't read application binary {}",
+                &params.app_binary.display()
+            )
+        })?;
+        log::info!(
+            "read application binary from disk {} ({} bytes)",
+            &params.app_binary.display(),
+            app_bytes.len()
+        );
+
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
-        let (comms_guest, comms_host) = UnixStream::pair()?;
+        let (comms_guest, mut comms_host) = UnixStream::pair()?;
 
         cmd.stderr(Stdio::inherit());
         cmd.stdin(Stdio::null());
@@ -114,8 +145,23 @@ impl Instance {
 
         info!("Executing: {:?}", cmd);
 
+        let instance = cmd.spawn()?;
+
+        // Loading the application binary needs to happen before we start using microrpc over the
+        // channel.
+        comms_host
+            .write(&(app_bytes.len() as u32).to_be_bytes())
+            .expect("failed to send application binary length to enclave");
+
+        // The kernel expects data to be transmitted in chunks of one page.
+        let mut chunks = app_bytes.array_chunks::<PAGE_SIZE>();
+        for chunk in chunks.by_ref() {
+            write_chunk(&mut comms_host, chunk)?;
+        }
+        write_chunk(&mut comms_host, chunks.remainder())?;
+
         Ok(Self {
-            instance: cmd.spawn()?,
+            instance,
             console,
             comms: comms_host,
         })

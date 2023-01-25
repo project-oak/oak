@@ -16,6 +16,7 @@
 
 #![feature(never_type)]
 #![feature(result_flattening)]
+#![feature(array_chunks)]
 
 use anyhow::Context;
 use clap::Parser;

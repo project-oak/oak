@@ -31,6 +31,7 @@
 #![cfg_attr(not(test), no_std)]
 #![feature(abi_x86_interrupt)]
 #![feature(allocator_api)]
+#![feature(array_chunks)]
 #![feature(asm_sym)]
 #![feature(naked_functions)]
 #![feature(once_cell)]
@@ -122,7 +123,7 @@ pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
     )));
 
 /// Main entry point for the kernel, to be called from bootloader.
-pub fn start_kernel(info: &BootParams) {
+pub fn start_kernel(info: &BootParams) -> ! {
     avx::enable_avx();
     descriptors::init_gdt_early();
     interrupts::init_idt_early();
@@ -286,14 +287,23 @@ pub fn start_kernel(info: &BootParams) {
         report.validate().expect("attestation report is invalid");
     }
 
-    let channel = get_channel(
+    let mut channel = get_channel(
         &kernel_args,
         GUEST_HOST_HEAP.get().unwrap(),
         acpi.as_mut(),
         sev_status,
     );
 
+    // We need to load the application binary before we hand the channel over to the syscalls, which
+    // expose it to the user space.
+    info!("Loading application binary...");
+    let payload = payload::read_payload(&mut *channel)
+        .expect("failed to load application binary from channel");
+    info!("Binary loaded, size: {}", payload.len());
+
     syscall::enable_syscalls(channel);
+
+    payload::run_payload(&payload);
 }
 
 #[derive(EnumIter, EnumString)]
