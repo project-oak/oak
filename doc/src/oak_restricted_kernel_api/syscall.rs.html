@@ -187,17 +187,6 @@
 <span id="187">187</span>
 <span id="188">188</span>
 <span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
-<span id="199">199</span>
-<span id="200">200</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -339,17 +328,6 @@
         <span class="macro">assert_eq!</span>(<span class="prelude-val">Ok</span>(<span class="number">4</span>), read(reader.as_raw_fd(), <span class="kw-2">&amp;mut </span>rx));
 
         <span class="macro">assert_eq!</span>(tx, <span class="kw-2">&amp;</span>rx);
-    }
-
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>test_erroneus_read() {
-        <span class="kw">let </span>fd = {
-            <span class="kw">let </span>(reader, <span class="kw">_</span>) = os_pipe::pipe().unwrap();
-            reader.as_raw_fd()
-        };
-
-        <span class="kw">let </span><span class="kw-2">mut </span>rx = [<span class="number">0u8</span>; <span class="number">4</span>];
-        <span class="macro">assert!</span>(read(fd, <span class="kw-2">&amp;mut </span>rx).is_err());
     }
 
     <span class="attribute">#[test]
