@@ -17,6 +17,7 @@
 #![no_std]
 #![no_main]
 #![feature(cstr_from_bytes_until_nul)]
+#![feature(int_roundings)]
 
 use core::{
     alloc::Layout,
@@ -39,7 +40,7 @@ use x86_64::{
         idt::InterruptDescriptorTable,
         paging::{
             page_table::{PageTable, PageTableFlags},
-            PageSize, PhysFrame, Size2MiB,
+            PageSize, PhysFrame, Size1GiB, Size2MiB,
         },
     },
     PhysAddr, VirtAddr,
@@ -62,6 +63,12 @@ static SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUnin
 #[link_section = ".boot"]
 #[no_mangle]
 static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
+
+/// The default entry point for the kernel if one wasn't supplied via the QEMU fw_cfg device.
+const DEFAULT_KERNEL_ENTRY: u64 = 0x200000;
+
+/// We create an identity map for the first 1GiB of memory.
+const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
 
 extern "C" {
     #[link_name = "pd_addr"]
@@ -291,11 +298,23 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         }
     }
 
-    // Attempt to parse 64 bytes at 0x200000 (2MiB) as an ELF header. If it works, extract the entry
-    // point address from there; if there is no valid ELF header at that address, assume it's code,
-    // and jump there directly.
+    // For the Linux boot protocol we use the start address as the entry point. The kernel entry
+    // point provided by the fw_cfg device actually points to the entry point for the PVH boot
+    // protocol. We use an identity mapping.
+    let mut entry = VirtAddr::new(
+        fwcfg
+            .read_kernel_address()
+            .expect("failed to read kernel start addres from fw_cfg")
+            .as_u64(),
+    );
+    if entry.is_null() {
+        entry = VirtAddr::new(DEFAULT_KERNEL_ENTRY);
+    }
+
+    // Attempt to parse 64 bytes at the suggested entry point as an ELF header. If it works, extract
+    // the entry point address from there; if there is no valid ELF header at that address, assume
+    // it's code, and jump there directly.
     // Safety: this assumes the kernel is loaded at the given address.
-    let mut entry = VirtAddr::new(0x200000);
     let header = header::header64::Header::from_bytes(unsafe {
         &*(entry.as_u64() as *const [u8; header::header64::SIZEOF_EHDR])
     });
@@ -314,7 +333,8 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
 
     zero_page.set_acpi_rsdp_addr(acpi::build_acpi_tables(&mut fwcfg).unwrap());
 
-    if let Some(ram_disk) = initramfs::try_load_initial_ram_disk(&mut fwcfg) {
+    if let Some(ram_disk) = initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table())
+    {
         zero_page.set_initial_ram_disk(ram_disk);
     }
 

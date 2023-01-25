@@ -253,6 +253,22 @@ impl FwCfg {
         Ok(buf.len())
     }
 
+    /// Reads the size of the kernel.
+    pub fn read_kernel_size(&mut self) -> Result<u32, &'static str> {
+        let mut kernel_size: u32 = 0;
+        self.write_selector(FwCfgItems::KernelSize as u16)?;
+        self.read(&mut kernel_size)?;
+        Ok(kernel_size)
+    }
+
+    /// Reads the address for the intended start of the kernel.
+    pub fn read_kernel_address(&mut self) -> Result<PhysAddr, &'static str> {
+        let mut kernel_addr: u32 = 0;
+        self.write_selector(FwCfgItems::KernelAddr as u16)?;
+        self.read(&mut kernel_addr)?;
+        Ok(PhysAddr::new(kernel_addr as u64))
+    }
+
     /// Reads contents of a file; returns the number of bytes actually read.
     ///
     /// The buffer `buf` will be filled to capacity if the file is larger;
