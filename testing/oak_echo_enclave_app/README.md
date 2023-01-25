@@ -1,7 +1,6 @@
 # Oak Echo
 
-Echo freestanding binary that can be run under
-[crosvm](https://chromium.googlesource.com/chromiumos/platform/crosvm/).
+Echo enclave application that can be run under Restricted Kernel.
 
 Echo binary receives a microRPC request containing bytes, and sends back a
 microRPC response with the same bytes, without interpreting them.

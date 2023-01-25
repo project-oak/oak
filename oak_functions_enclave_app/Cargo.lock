@@ -533,7 +533,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_enclave"
+name = "oak_functions_enclave_app"
 version = "0.1.0"
 dependencies = [
  "log",
