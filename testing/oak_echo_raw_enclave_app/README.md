@@ -1,6 +1,6 @@
 # Oak Echo Raw
 
-Echo restricted binary that can be run under Restricted Kernel.
+Echo enclave application that can be run under Restricted Kernel.
 
 Echo binary receives a message as bytes, and sends back the same bytes, without
 interpreting them.

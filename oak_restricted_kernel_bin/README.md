@@ -6,3 +6,13 @@
 
 This is the binary that needs to be loaded into an enclave to start Restricted
 Kernel and run applications targeting Restricted Kernel.
+
+The exact loading mechanism depends on the VMM, but with QEMU (and our stage0
+binary), it will be something similar to this:
+
+```bash
+$ qemu-system-x86_64
+    -machine microvm
+    -bios path/to/stage0.bin
+    -device loader,file=path/to/oak_restricted_kernel_bin
+```

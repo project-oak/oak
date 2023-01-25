@@ -1,5 +1,5 @@
 [package]
-name = "oak_echo_raw_app"
+name = "oak_echo_raw_enclave_app"
 version = "0.1.0"
 authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2021"
@@ -18,6 +18,6 @@ micro_rpc = { path = "../../micro_rpc" }
 static_assertions = "*"
 
 [[bin]]
-name = "oak_echo_raw_app"
+name = "oak_echo_raw_enclave_app"
 test = false
 bench = false

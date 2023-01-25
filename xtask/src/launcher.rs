@@ -35,7 +35,7 @@ impl LauncherMode {
     /// Get the crate name of respective enclave binary variant
     pub fn enclave_crate_name(&self) -> &'static str {
         match self {
-            LauncherMode::Virtual => "oak_functions_app",
+            LauncherMode::Virtual => "oak_functions_enclave_app",
             LauncherMode::Native => "oak_functions_linux_fd_bin",
         }
     }
@@ -64,7 +64,7 @@ impl LauncherMode {
                 "virtual".to_string(),
                 format!(
                     "--enclave-binary={}",
-                    "./oak_enclave_shim/target/x86_64-unknown-none/debug/oak_enclave_shim"
+                    "./oak_restricted_kernel_bin/target/x86_64-unknown-none/debug/oak_restricted_kernel_bin"
                 ),
                 format!("--vmm-binary={}", "/usr/bin/qemu-system-x86_64"),
                 format!("--app-binary={}", &self.enclave_binary_path()),

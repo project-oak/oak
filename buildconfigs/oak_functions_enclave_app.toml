@@ -1,0 +1,13 @@
+# This is the static build configuration that we use with the transparent
+# release tool for building the `oak_functions_enclave_app` binary. To use
+# it with the build tool from Transparent Release, additional information must
+# be added to the config. See `./scripts/build_binary` for more information.
+repo = "https://github.com/project-oak/oak"
+command = [
+  "env",
+  "--chdir=oak_functions_enclave_app",
+  "cargo",
+  "build",
+  "--release"
+]
+output_path = "./oak_functions_enclave_app/target/x86_64-unknown-none/release/oak_functions_enclave_app"
