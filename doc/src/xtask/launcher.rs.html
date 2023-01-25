@@ -204,6 +204,12 @@
 <span id="204">204</span>
 <span id="205">205</span>
 <span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -241,7 +247,7 @@
     <span class="doccomment">/// Get the crate name of respective enclave binary variant
     </span><span class="kw">pub fn </span>enclave_crate_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
-            LauncherMode::Virtual =&gt; <span class="string">&quot;oak_functions_enclave&quot;</span>,
+            LauncherMode::Virtual =&gt; <span class="string">&quot;oak_functions_enclave_app&quot;</span>,
             LauncherMode::Native =&gt; <span class="string">&quot;oak_functions_linux_fd_bin&quot;</span>,
         }
     }
@@ -270,7 +276,7 @@
                 <span class="string">&quot;virtual&quot;</span>.to_string(),
                 <span class="macro">format!</span>(
                     <span class="string">&quot;--enclave-binary={}&quot;</span>,
-                    <span class="string">&quot;./oak_enclave_shim/target/x86_64-unknown-none/debug/oak_enclave_shim&quot;
+                    <span class="string">&quot;./oak_restricted_kernel_bin/target/x86_64-unknown-none/debug/oak_restricted_kernel_bin&quot;
                 </span>),
                 <span class="macro">format!</span>(<span class="string">&quot;--vmm-binary={}&quot;</span>, <span class="string">&quot;/usr/bin/qemu-system-x86_64&quot;</span>),
                 <span class="macro">format!</span>(<span class="string">&quot;--app-binary={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_binary_path()),
@@ -334,12 +340,18 @@
     )];
     <span class="comment">// If we want to run in an VMM, we need three binaries:
     // 1. the stage0 BIOS image,
-    // 2. the enclave shim that wraps the kernel,
-    // 3. the actual Oak Functions application binary.
+    // 2. the kernel binary,
+    // 3. the actual Oak Functions enclave application.
     // (1) and (2) are needed to start the VMM, and the kernel expects to read (3) as the very first
     // thing over the communication channel.
     </span>steps.extend(<span class="kw">match </span>variant {
-        LauncherMode::Virtual =&gt; <span class="macro">vec!</span>[build_stage0(), build_binary(<span class="string">&quot;shim&quot;</span>, <span class="string">&quot;oak_enclave_shim&quot;</span>)],
+        LauncherMode::Virtual =&gt; <span class="macro">vec!</span>[
+            build_stage0(),
+            build_binary(
+                <span class="string">&quot;build Restricted Kernel binary&quot;</span>,
+                <span class="string">&quot;oak_restricted_kernel_bin&quot;</span>,
+            ),
+        ],
         LauncherMode::Native =&gt; <span class="macro">vec!</span>[],
     });
     steps.extend(<span class="macro">vec!</span>[Step::WithBackground {
