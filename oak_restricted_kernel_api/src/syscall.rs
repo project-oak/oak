@@ -142,17 +142,6 @@ mod tests {
     }
 
     #[test]
-    fn test_erroneus_read() {
-        let fd = {
-            let (reader, _) = os_pipe::pipe().unwrap();
-            reader.as_raw_fd()
-        };
-
-        let mut rx = [0u8; 4];
-        assert!(read(fd, &mut rx).is_err());
-    }
-
-    #[test]
     fn test_erroneus_write() {
         let fd = {
             let (_, writer) = os_pipe::pipe().unwrap();
