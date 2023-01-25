@@ -139,6 +139,52 @@
 <span id="139">139</span>
 <span id="140">140</span>
 <span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
+<span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
+<span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
+<span id="187">187</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -156,17 +202,21 @@
 //
 
 </span><span class="kw">use crate</span>::{instance::LaunchedInstance, path_exists};
-<span class="kw">use </span>anyhow::Result;
+<span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>command_fds::tokio::CommandFdAsyncExt;
 <span class="kw">use </span>log::info;
+<span class="kw">use </span>oak_channel::{Channel, Write};
 <span class="kw">use </span>std::{
+    fs,
     net::Shutdown,
     os::unix::{io::AsRawFd, net::UnixStream},
     path::PathBuf,
     process::Stdio,
 };
+
+<span class="kw">const </span>PAGE_SIZE: usize = <span class="number">4096</span>;
 
 <span class="doccomment">/// Parameters used for launching VM instances
 </span><span class="attribute">#[derive(Parser, Clone, Debug, PartialEq)]
@@ -179,6 +229,10 @@
     </span><span class="attribute">#[arg(long, value_parser = path_exists)]
     </span><span class="kw">pub </span>enclave_binary: PathBuf,
 
+    <span class="doccomment">/// Path to the Oak Functions application binary to be loaded into the enclave.
+    </span><span class="attribute">#[arg(long, value_parser = path_exists)]
+    </span><span class="kw">pub </span>app_binary: PathBuf,
+
     <span class="doccomment">/// Path to the BIOS image to use.
     </span><span class="attribute">#[arg(long, value_parser = path_exists)]
     </span><span class="kw">pub </span>bios_binary: PathBuf,
@@ -186,6 +240,17 @@
     <span class="doccomment">/// Port to use for debugging with gdb
     </span><span class="attribute">#[arg(long = <span class="string">&quot;gdb&quot;</span>)]
     </span><span class="kw">pub </span>gdb: <span class="prelude-ty">Option</span>&lt;u16&gt;,
+}
+
+<span class="doccomment">/// Writes a chunk to a channel, and expects an acknowledgement containing the length of the chunk.
+</span><span class="kw">fn </span>write_chunk(channel: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Channel, chunk: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+    channel.write(chunk)<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>ack: [u8; <span class="number">4</span>] = Default::default();
+    channel.read(<span class="kw-2">&amp;mut </span>ack)<span class="question-mark">?</span>;
+    <span class="kw">if </span>u32::from_be_bytes(ack) <span class="kw">as </span>usize != chunk.len() {
+        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;ack wasn&#39;t of correct length&quot;</span>);
+    }
+    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="kw">pub struct </span>Instance {
@@ -196,8 +261,20 @@
 
 <span class="kw">impl </span>Instance {
     <span class="kw">pub fn </span>start(params: Params, console: UnixStream) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>app_bytes = fs::read(<span class="kw-2">&amp;</span>params.app_binary).with_context(|| {
+            <span class="macro">format!</span>(
+                <span class="string">&quot;couldn&#39;t read application binary {}&quot;</span>,
+                <span class="kw-2">&amp;</span>params.app_binary.display()
+            )
+        })<span class="question-mark">?</span>;
+        <span class="macro">log::info!</span>(
+            <span class="string">&quot;read application binary from disk {} ({} bytes)&quot;</span>,
+            <span class="kw-2">&amp;</span>params.app_binary.display(),
+            app_bytes.len()
+        );
+
         <span class="kw">let </span><span class="kw-2">mut </span>cmd = tokio::process::Command::new(params.vmm_binary);
-        <span class="kw">let </span>(comms_guest, comms_host) = UnixStream::pair()<span class="question-mark">?</span>;
+        <span class="kw">let </span>(comms_guest, <span class="kw-2">mut </span>comms_host) = UnixStream::pair()<span class="question-mark">?</span>;
 
         cmd.stderr(Stdio::inherit());
         cmd.stdin(Stdio::null());
@@ -255,8 +332,23 @@
 
         <span class="macro">info!</span>(<span class="string">&quot;Executing: {:?}&quot;</span>, cmd);
 
+        <span class="kw">let </span>instance = cmd.spawn()<span class="question-mark">?</span>;
+
+        <span class="comment">// Loading the application binary needs to happen before we start using microrpc over the
+        // channel.
+        </span>comms_host
+            .write(<span class="kw-2">&amp;</span>(app_bytes.len() <span class="kw">as </span>u32).to_be_bytes())
+            .expect(<span class="string">&quot;failed to send application binary length to enclave&quot;</span>);
+
+        <span class="comment">// The kernel expects data to be transmitted in chunks of one page.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>chunks = app_bytes.array_chunks::&lt;PAGE_SIZE&gt;();
+        <span class="kw">for </span>chunk <span class="kw">in </span>chunks.by_ref() {
+            write_chunk(<span class="kw-2">&amp;mut </span>comms_host, chunk)<span class="question-mark">?</span>;
+        }
+        write_chunk(<span class="kw-2">&amp;mut </span>comms_host, chunks.remainder())<span class="question-mark">?</span>;
+
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            instance: cmd.spawn()<span class="question-mark">?</span>,
+            instance,
             console,
             comms: comms_host,
         })

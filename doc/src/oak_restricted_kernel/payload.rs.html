@@ -93,6 +93,34 @@
 <span id="93">93</span>
 <span id="94">94</span>
 <span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -110,34 +138,55 @@
 //
 
 </span><span class="kw">use </span><span class="kw">crate</span>::syscall::mmap::mmap;
+<span class="kw">use </span>alloc::{vec, vec::Vec};
+<span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>core::arch::asm;
-<span class="kw">use </span>goblin::elf64::program_header::{ProgramHeader, PF_W, PF_X, PT_LOAD};
+<span class="kw">use </span>goblin::elf64::program_header::{PF_W, PF_X, PT_LOAD};
+<span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 <span class="kw">use </span>x86_64::{
-    structures::paging::{PageSize, Size2MiB},
+    structures::paging::{PageSize, Size2MiB, Size4KiB},
     VirtAddr,
 };
 
-<span class="doccomment">/// Parses a pre-loaded ELF file, lays it out in memory, and passes control to it.
-///
-/// # Safety
-///
-/// We expect there to be an ELF file loaded in the memory pointed to by `payload`. If the pointer
-/// does not point to a valid ELF file, the behaviour is undefined.
-</span><span class="kw">pub unsafe fn </span>run_payload(payload: <span class="kw-2">*const </span>u8) -&gt; ! {
-    <span class="comment">// Unfortunately we can&#39;t parse the whole file as an &amp;[u8], as we don&#39;t know the size of the
-    // embeded file. We only know where it starts. However, we know the ELF header is 64 bytes,
-    // so assuming we have a valid file in there, we shouldn&#39;t cause UB here by accessing memory
-    // outside our boundaries.
-    </span><span class="kw">let </span>raw_header =
-        core::slice::from_raw_parts(payload, goblin::elf::header::header64::SIZEOF_EHDR);
-    <span class="kw">let </span>header = goblin::elf::Elf::parse_header(raw_header).unwrap();
-    <span class="kw">let </span>phdrs = ProgramHeader::from_raw_parts(
-        (payload <span class="kw">as </span>u64 + header.e_phoff) <span class="kw">as </span><span class="kw-2">*const </span>ProgramHeader,
-        header.e_phnum <span class="kw">as </span>usize,
-    );
+<span class="doccomment">/// Reads a chunk of data and acknowledges the transmission by writing back the number of bytes
+/// read.
+</span><span class="kw">fn </span>read_chunk&lt;C: Channel + <span class="question-mark">?</span>Sized&gt;(channel: <span class="kw-2">&amp;mut </span>C, chunk: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+    <span class="kw">let </span>len: u32 = chunk
+        .len()
+        .try_into()
+        .map_err(|<span class="kw">_</span>| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;chunk too big&quot;</span>))<span class="question-mark">?</span>;
+    channel.read(chunk)<span class="question-mark">?</span>;
+    channel.write(<span class="kw-2">&amp;</span>len.to_be_bytes())
+}
 
-    <span class="kw">for </span>phdr <span class="kw">in </span>phdrs.iter().filter(|<span class="kw-2">&amp;</span>phdr| phdr.p_type == PT_LOAD) {
+<span class="doccomment">/// Reads a payload blob, one page at a time, from the given channel.
+</span><span class="kw">pub fn </span>read_payload&lt;C: Channel + <span class="question-mark">?</span>Sized&gt;(channel: <span class="kw-2">&amp;mut </span>C) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;&gt; {
+    <span class="kw">let </span>payload_len = {
+        <span class="kw">let </span><span class="kw-2">mut </span>buf: [u8; <span class="number">4</span>] = Default::default();
+        channel.read(<span class="kw-2">&amp;mut </span>buf)<span class="question-mark">?</span>;
+        u32::from_be_bytes(buf)
+    };
+    <span class="kw">let </span><span class="kw-2">mut </span>payload = <span class="macro">vec!</span>[<span class="number">0</span>; payload_len <span class="kw">as </span>usize];
+    <span class="kw">let </span><span class="kw-2">mut </span>chunks_mut = payload.array_chunks_mut::&lt;{ Size4KiB::SIZE <span class="kw">as </span>usize }&gt;();
+
+    <span class="kw">for </span>chunk <span class="kw">in </span>chunks_mut.by_ref() {
+        read_chunk(channel, chunk)<span class="question-mark">?</span>;
+    }
+    read_chunk(channel, chunks_mut.into_remainder())<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(payload)
+}
+
+<span class="doccomment">/// Parses a pre-loaded ELF file, lays it out in memory, and passes control to it.
+</span><span class="kw">pub fn </span>run_payload(payload: <span class="kw-2">&amp;</span>[u8]) -&gt; ! {
+    <span class="kw">let </span>elf = goblin::elf::Elf::parse(payload).expect(<span class="string">&quot;failed to parse application binary&quot;</span>);
+
+    <span class="kw">for </span>phdr <span class="kw">in </span>elf
+        .program_headers
+        .iter()
+        .filter(|<span class="kw-2">&amp;</span>phdr| phdr.p_type == PT_LOAD)
+    {
         <span class="kw">let </span>vaddr = VirtAddr::new(phdr.p_vaddr).align_down(Size2MiB::SIZE);
 
         <span class="kw">let </span><span class="kw-2">mut </span>prot = MmapProtection::PROT_READ;
@@ -160,11 +209,14 @@
         )
         .expect(<span class="string">&quot;failed to allocate user memory&quot;</span>);
 
-        core::ptr::copy_nonoverlapping(
-            (payload <span class="kw">as </span>u64 + phdr.p_offset) <span class="kw">as </span><span class="kw-2">*const </span>u8,
-            phdr.p_vaddr <span class="kw">as </span><span class="kw-2">*mut </span>u8,
-            phdr.p_filesz <span class="kw">as </span>usize,
-        );
+        <span class="comment">// Safety: we know the target memory is valid as we&#39;ve just allocated it with mmap().
+        </span><span class="kw">unsafe </span>{
+            core::ptr::copy_nonoverlapping(
+                (payload.as_ptr() <span class="kw">as </span>u64 + phdr.p_offset) <span class="kw">as </span><span class="kw-2">*const </span>u8,
+                phdr.p_vaddr <span class="kw">as </span><span class="kw-2">*mut </span>u8,
+                phdr.p_filesz <span class="kw">as </span>usize,
+            );
+        }
     }
     <span class="comment">// Set up the userspace stack at the end of the lower half of the virtual address space.
     // Well... almost. It&#39;s one page lower than the very end, as otherwise the initial stack pointer
@@ -179,13 +231,17 @@
     .expect(<span class="string">&quot;failed to allocate memory for user stack&quot;</span>);
 
     <span class="comment">// Enter Ring 3 and jump to user code.
-    </span><span class="macro">asm! </span>{
-        <span class="string">&quot;mov rsp, {}&quot;</span>, <span class="comment">// user stack
-        </span><span class="string">&quot;sysretq&quot;</span>,
-        <span class="kw">in</span>(reg) rsp.as_u64() - <span class="number">8</span>, <span class="comment">// maintain stack alignment
-        </span><span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) header.e_entry, <span class="comment">// initial RIP
-        </span><span class="kw">in</span>(<span class="string">&quot;r11&quot;</span>) <span class="number">0x202</span>, <span class="comment">// initial RFLAGS
-        </span>options(noreturn)
+    // Safety: by now, if we&#39;re here, we&#39;ve loaded a valid ELF file. It&#39;s up to the user to
+    // guarantee that the file made sense.
+    </span><span class="kw">unsafe </span>{
+        <span class="macro">asm! </span>{
+            <span class="string">&quot;mov rsp, {}&quot;</span>, <span class="comment">// user stack
+            </span><span class="string">&quot;sysretq&quot;</span>,
+            <span class="kw">in</span>(reg) rsp.as_u64() - <span class="number">8</span>, <span class="comment">// maintain stack alignment
+            </span><span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) elf.entry, <span class="comment">// initial RIP
+            </span><span class="kw">in</span>(<span class="string">&quot;r11&quot;</span>) <span class="number">0x202</span>, <span class="comment">// initial RFLAGS
+            </span>options(noreturn)
+        }
     }
 }
 </code></pre></div>

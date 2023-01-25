@@ -344,6 +344,16 @@
 <span id="344">344</span>
 <span id="345">345</span>
 <span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -377,6 +387,7 @@
 </span><span class="attribute">#![cfg_attr(not(test), no_std)]
 #![feature(abi_x86_interrupt)]
 #![feature(allocator_api)]
+#![feature(array_chunks)]
 #![feature(asm_sym)]
 #![feature(naked_functions)]
 #![feature(once_cell)]
@@ -468,7 +479,7 @@
     )));
 
 <span class="doccomment">/// Main entry point for the kernel, to be called from bootloader.
-</span><span class="kw">pub fn </span>start_kernel(info: <span class="kw-2">&amp;</span>BootParams) {
+</span><span class="kw">pub fn </span>start_kernel(info: <span class="kw-2">&amp;</span>BootParams) -&gt; ! {
     avx::enable_avx();
     descriptors::init_gdt_early();
     interrupts::init_idt_early();
@@ -632,14 +643,23 @@
         report.validate().expect(<span class="string">&quot;attestation report is invalid&quot;</span>);
     }
 
-    <span class="kw">let </span>channel = get_channel(
+    <span class="kw">let </span><span class="kw-2">mut </span>channel = get_channel(
         <span class="kw-2">&amp;</span>kernel_args,
         GUEST_HOST_HEAP.get().unwrap(),
         acpi.as_mut(),
         sev_status,
     );
 
+    <span class="comment">// We need to load the application binary before we hand the channel over to the syscalls, which
+    // expose it to the user space.
+    </span><span class="macro">info!</span>(<span class="string">&quot;Loading application binary...&quot;</span>);
+    <span class="kw">let </span>payload = payload::read_payload(<span class="kw-2">&amp;mut *</span>channel)
+        .expect(<span class="string">&quot;failed to load application binary from channel&quot;</span>);
+    <span class="macro">info!</span>(<span class="string">&quot;Binary loaded, size: {}&quot;</span>, payload.len());
+
     syscall::enable_syscalls(channel);
+
+    payload::run_payload(<span class="kw-2">&amp;</span>payload);
 }
 
 <span class="attribute">#[derive(EnumIter, EnumString)]
