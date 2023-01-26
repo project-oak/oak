@@ -17,7 +17,10 @@
 use bitflags::bitflags;
 use core::{cmp::min, ffi::CStr};
 use oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
-use x86_64::PhysAddr;
+use x86_64::{
+    structures::paging::{PageSize, Size4KiB},
+    PhysAddr,
+};
 use zerocopy::{AsBytes, FromBytes};
 
 // See https://www.qemu.org/docs/master/specs/fw_cfg.html for documentation about the various data structures and constants.
@@ -26,6 +29,23 @@ const FWCFG_PORT_DATA: u16 = 0x511;
 const FWCFG_PORT_DMA: u16 = 0x514;
 
 const SIGNATURE: &[u8] = b"QEMU";
+
+/// A single 4KiB buffer that is 4KiB page-aligned.
+#[repr(C, align(4096))]
+#[derive(Debug)]
+pub struct DmaBuffer {
+    data: [u8; Size4KiB::SIZE as usize],
+}
+
+static_assertions::assert_eq_size!(DmaBuffer, [u8; Size4KiB::SIZE as usize]);
+
+impl DmaBuffer {
+    pub const fn new() -> Self {
+        DmaBuffer {
+            data: [0u8; Size4KiB::SIZE as usize],
+        }
+    }
+}
 
 /// Selector keys for "well-known" fw_cfg entries.
 ///
@@ -105,6 +125,7 @@ pub struct FwCfg {
     data: PortWrapper<u8>,
     dma_high: PortWrapper<u32>,
     dma_low: PortWrapper<u32>,
+    dma_buf: &'static mut DmaBuffer,
 }
 
 impl FwCfg {
@@ -116,7 +137,10 @@ impl FwCfg {
     ///
     /// The caller has to guarantee that at least doing the probe will not cause any adverse
     /// effects.
-    pub unsafe fn new(port_factory: PortFactoryWrapper) -> Result<Self, &'static str> {
+    pub unsafe fn new(
+        port_factory: PortFactoryWrapper,
+        dma_buf: &'static mut DmaBuffer,
+    ) -> Result<Self, &'static str> {
         let mut fwcfg = Self {
             selector: port_factory.new_writer(FWCFG_PORT_SELECTOR),
             data: port_factory.new_reader(FWCFG_PORT_DATA),
@@ -124,6 +148,7 @@ impl FwCfg {
             // The DMA address must be big-endian encoded, so the low address is 4 bytes further
             // than the high address.
             dma_low: port_factory.new_writer(FWCFG_PORT_DMA + 4),
+            dma_buf,
         };
 
         // Make sure the fw_cfg device is available. If the device is not available, writing and
@@ -299,11 +324,26 @@ impl FwCfg {
     }
 
     fn read_buf_dma(&mut self, buf: &mut [u8]) -> Result<(), &'static str> {
-        // We always use an identity mapping.
-        let address = PhysAddr::new(buf.as_ptr() as usize as u64);
+        let mut chunks_mut = buf.chunks_mut(Size4KiB::SIZE as usize);
+
+        for chunk in chunks_mut.by_ref() {
+            self.read_chunk_dma(chunk)?;
+        }
+
+        Ok(())
+    }
+
+    fn read_chunk_dma(&mut self, chunk: &mut [u8]) -> Result<(), &'static str> {
+        if chunk.len() > self.dma_buf.data[..].len() {
+            return Err("chunk is larger than the DMA buffer");
+        }
+
+        // We always use an identity mapping. We use the shared DMA buffer as a bounce-buffer to
+        // account for potential memory encryption.
+        let address = PhysAddr::new(self.dma_buf.data.as_ptr() as usize as u64);
         // The length of the buffer will always fit in 32 bits, since we only map the first 1GiB of
         // physical memory to virtual memory.
-        let length = buf.len() as u32;
+        let length = chunk.len() as u32;
         let dma_access = FwCfgDmaAccess::new(ControlFlags::READ, length, address);
         let dma_access_address = &dma_access as *const _ as usize as u64;
         let dma_low = (dma_access_address & 0xFFFFFFFF) as u32;
@@ -326,6 +366,7 @@ impl FwCfg {
         if dma_access.control != 0 {
             Err("fw_cfg DMA failed")
         } else {
+            chunk.copy_from_slice(&self.dma_buf.data[..chunk.len()]);
             Ok(())
         }
     }

@@ -178,12 +178,21 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     });
     log::info!("starting...");
 
+    let dma_buf = BOOT_ALLOC.leak(fw_cfg::DmaBuffer::new()).unwrap();
+    let dma_buf_address = PhysAddr::new(dma_buf as *const _ as u64);
+    if encrypted > 0 {
+        sev::share_page(dma_buf_address, snp, encrypted);
+    }
+
     // Safety: we assume there won't be any other hardware devices using the fw_cfg IO ports.
     let mut fwcfg = unsafe {
-        fw_cfg::FwCfg::new(match ghcb_protocol {
-            Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
-            None => PortFactoryWrapper::new_raw(),
-        })
+        fw_cfg::FwCfg::new(
+            match ghcb_protocol {
+                Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
+                None => PortFactoryWrapper::new_raw(),
+            },
+            dma_buf,
+        )
     }
     .expect("fw_cfg device not found!");
 
@@ -344,6 +353,9 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     // used and switch back to a hugepage for the first 2M of memory.
     if ghcb_protocol.is_some() {
         sev::deinit_ghcb(snp, encrypted);
+    }
+    if encrypted > 0 {
+        sev::unshare_page(dma_buf_address, snp, encrypted);
     }
 
     // Allow identity-op to keep the fact that the address we're talking about here is 0x00.

@@ -60,22 +60,10 @@ pub fn init_ghcb(
 ) -> &'static Spinlock<GhcbProtocol<'static, Ghcb>> {
     let ghcb_addr = ghcb as *const _ as u64;
 
-    // Remove the ENCRYPTED bit from the entry that maps the GHCB.
-    let PageTables { pdpt: _, pd } = get_page_tables(encrypted);
-    let pt = unsafe { &mut *((pd[0].addr().as_u64() & !encrypted) as *mut PageTable) };
-    let idx = (ghcb_addr / Size4KiB::SIZE) as usize;
-    pt[idx].set_addr(
-        PhysAddr::new(ghcb_addr),
-        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-    );
-    tlb::flush_all();
+    share_page(PhysAddr::new(ghcb_addr), snp, encrypted);
 
-    // SNP requires extra handling beyond just removing the encrypted bit.
+    // SNP requires that the GHCB is registered with the hypervisor.
     if snp {
-        let request = SnpPageStateChangeRequest::new(ghcb_addr as usize, PageAssignment::Shared)
-            .expect("invalid address for GHCB location");
-        change_snp_page_state(request).expect("couldn't change SNP state for GHCB");
-
         let ghcb_location_request = RegisterGhcbGpaRequest::new(ghcb_addr as usize)
             .expect("invalid address for GHCB location");
         register_ghcb_location(ghcb_location_request)
@@ -96,18 +84,44 @@ pub fn init_ghcb(
 
 pub fn deinit_ghcb(snp: bool, encrypted: u64) {
     let ghcb_addr = GHCB_WRAPPER.get().unwrap().lock().get_gpa().as_u64();
+    unshare_page(PhysAddr::new(ghcb_addr), snp, encrypted);
+}
 
+/// Shares a single 4KiB page containing the address with the hypervisor.
+pub fn share_page(address: PhysAddr, snp: bool, encrypted: u64) {
+    let page_start = address.align_down(Size4KiB::SIZE).as_u64();
+    // Remove the ENCRYPTED bit from the entry that maps the page.
+    let PageTables { pdpt: _, pd } = get_page_tables(encrypted);
+    let pt = unsafe { &mut *((pd[0].addr().as_u64() & !encrypted) as *mut PageTable) };
+    let idx = (page_start / Size4KiB::SIZE) as usize;
+    pt[idx].set_addr(
+        PhysAddr::new(page_start),
+        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+    );
+    tlb::flush_all();
+
+    // SNP requires extra handling beyond just removing the encrypted bit.
     if snp {
-        let request = SnpPageStateChangeRequest::new(ghcb_addr as usize, PageAssignment::Private)
-            .expect("invalid address for GHCB location");
-        change_snp_page_state(request).expect("couldn't change SNP state for GHCB");
+        let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Shared)
+            .expect("invalid address for page location");
+        change_snp_page_state(request).expect("couldn't change SNP state for page");
+    }
+}
+
+/// Stops sharing a single 4KiB page containing the address with the hypervisor.
+pub fn unshare_page(address: PhysAddr, snp: bool, encrypted: u64) {
+    let page_start = address.align_down(Size4KiB::SIZE).as_u64();
+    if snp {
+        let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Private)
+            .expect("invalid address for page location");
+        change_snp_page_state(request).expect("couldn't change SNP state for page");
     }
 
     let PageTables { pdpt: _, pd } = get_page_tables(encrypted);
     let pt = unsafe { &mut *((pd[0].addr().as_u64() & !encrypted) as *mut PageTable) };
-    let idx = (ghcb_addr / Size4KiB::SIZE) as usize;
+    let idx = (page_start / Size4KiB::SIZE) as usize;
     pt[idx].set_addr(
-        PhysAddr::new(ghcb_addr | encrypted),
+        PhysAddr::new(page_start | encrypted),
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
     );
     tlb::flush_all();
