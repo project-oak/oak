@@ -58,13 +58,13 @@ pub fn init_ghcb(
     snp: bool,
     encrypted: u64,
 ) -> &'static Spinlock<GhcbProtocol<'static, Ghcb>> {
-    let ghcb_addr = ghcb as *const _ as u64;
+    let ghcb_addr = VirtAddr::from_ptr(ghcb as *const _);
 
-    share_page(PhysAddr::new(ghcb_addr), snp, encrypted);
+    share_page(Page::containing_address(ghcb_addr), snp, encrypted);
 
     // SNP requires that the GHCB is registered with the hypervisor.
     if snp {
-        let ghcb_location_request = RegisterGhcbGpaRequest::new(ghcb_addr as usize)
+        let ghcb_location_request = RegisterGhcbGpaRequest::new(ghcb_addr.as_u64() as usize)
             .expect("invalid address for GHCB location");
         register_ghcb_location(ghcb_location_request)
             .expect("couldn't register the GHCB address with the hypervisor");
@@ -83,13 +83,13 @@ pub fn init_ghcb(
 }
 
 pub fn deinit_ghcb(snp: bool, encrypted: u64) {
-    let ghcb_addr = GHCB_WRAPPER.get().unwrap().lock().get_gpa().as_u64();
-    unshare_page(PhysAddr::new(ghcb_addr), snp, encrypted);
+    let ghcb_addr = VirtAddr::new(GHCB_WRAPPER.get().unwrap().lock().get_gpa().as_u64());
+    unshare_page(Page::containing_address(ghcb_addr), snp, encrypted);
 }
 
-/// Shares a single 4KiB page containing the address with the hypervisor.
-pub fn share_page(address: PhysAddr, snp: bool, encrypted: u64) {
-    let page_start = address.align_down(Size4KiB::SIZE).as_u64();
+/// Shares a single 4KiB page with the hypervisor.
+pub fn share_page(page: Page<Size4KiB>, snp: bool, encrypted: u64) {
+    let page_start = page.start_address().as_u64();
     // Remove the ENCRYPTED bit from the entry that maps the page.
     let PageTables { pdpt: _, pd } = get_page_tables(encrypted);
     let pt = unsafe { &mut *((pd[0].addr().as_u64() & !encrypted) as *mut PageTable) };
@@ -108,9 +108,9 @@ pub fn share_page(address: PhysAddr, snp: bool, encrypted: u64) {
     }
 }
 
-/// Stops sharing a single 4KiB page containing the address with the hypervisor.
-pub fn unshare_page(address: PhysAddr, snp: bool, encrypted: u64) {
-    let page_start = address.align_down(Size4KiB::SIZE).as_u64();
+/// Stops sharing a single 4KiB page with the hypervisor.
+pub fn unshare_page(page: Page<Size4KiB>, snp: bool, encrypted: u64) {
+    let page_start = page.start_address().as_u64();
     if snp {
         let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Private)
             .expect("invalid address for page location");

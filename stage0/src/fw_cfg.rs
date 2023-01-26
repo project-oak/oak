@@ -39,8 +39,8 @@ pub struct DmaBuffer {
 
 static_assertions::assert_eq_size!(DmaBuffer, [u8; Size4KiB::SIZE as usize]);
 
-impl DmaBuffer {
-    pub const fn new() -> Self {
+impl Default for DmaBuffer {
+    fn default() -> Self {
         DmaBuffer {
             data: [0u8; Size4KiB::SIZE as usize],
         }
