@@ -77,6 +77,11 @@ impl GrowableHeap {
                 .cursor
                 .map_or_else(MmapFlags::empty, |_| MmapFlags::MAP_FIXED);
 
+        log::debug!(
+            "Asking kernel for heap memory at {:?}, size: {}",
+            self.cursor,
+            pages * Self::PAGE_SIZE
+        );
         let mem = oak_restricted_kernel_api::syscall::mmap(
             self.cursor.map(|x| x as *const c_void),
             (pages * Self::PAGE_SIZE) as isize,
@@ -88,7 +93,7 @@ impl GrowableHeap {
         .map_err(|_| "failed to acquire memory")?;
 
         // Move the cursor to the next unallocated page.
-        self.cursor = Some(mem.as_ptr() as usize + Self::PAGE_SIZE);
+        self.cursor = Some(mem.as_ptr() as usize + (pages * Self::PAGE_SIZE));
         self.base.get_or_insert(mem.as_ptr() as usize);
 
         Ok(())

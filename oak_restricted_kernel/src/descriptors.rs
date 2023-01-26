@@ -62,10 +62,10 @@ pub fn init_gdt_early() {
     // Safety: it's safe to load these segments as we've initialized the GDT just above.
     unsafe {
         CS::set_reg(descriptors.kernel_cs_selector);
-        DS::set_reg(descriptors.kernel_ds_selector);
-        ES::set_reg(descriptors.kernel_ds_selector);
-        FS::set_reg(descriptors.kernel_ds_selector);
-        GS::set_reg(descriptors.kernel_ds_selector);
+        DS::set_reg(SegmentSelector::NULL);
+        ES::set_reg(SegmentSelector::NULL);
+        FS::set_reg(SegmentSelector::NULL);
+        GS::set_reg(SegmentSelector::NULL);
         SS::set_reg(descriptors.kernel_ds_selector);
     }
 }
@@ -102,6 +102,9 @@ pub fn init_gdt(double_fault_stack: VirtAddr, privileged_interrupt_stack: VirtAd
         descriptors.kernel_ds_selector, // Stack segment for SYSCALL
     )
     .expect("failed to set IA32_STAR MSR");
+
+    log::info!("CS: {:?}", CS::get_reg());
+    log::info!("SS: {:?}", SS::get_reg());
 
     DOUBLE_FAULT_STACK_INDEX
 }

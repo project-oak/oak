@@ -65,6 +65,7 @@ pub fn run_payload(payload: &[u8]) -> ! {
         .filter(|&phdr| phdr.p_type == PT_LOAD)
     {
         let vaddr = VirtAddr::new(phdr.p_vaddr).align_down(Size2MiB::SIZE);
+        let padding = phdr.p_vaddr - vaddr.as_u64();
 
         let mut prot = MmapProtection::PROT_READ;
         if phdr.p_flags & PF_W > 0 {
@@ -78,9 +79,15 @@ pub fn run_payload(payload: &[u8]) -> ! {
         // physical frames and sets up user-accessible page tables for us.
         // Note that the expectation here is that all the sections are nicely 2 MiB-aligned,
         // otherwise the mmap() will fail.
+        log::info!(
+            "allocating memory for section: addr = {:#018x}, size = {:x} + {:x}",
+            vaddr.as_u64(),
+            padding,
+            phdr.p_memsz
+        );
         mmap(
             Some(vaddr),
-            phdr.p_memsz as usize,
+            (padding + phdr.p_memsz) as usize,
             prot,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
         )
@@ -116,7 +123,7 @@ pub fn run_payload(payload: &[u8]) -> ! {
             "sysretq",
             in(reg) rsp.as_u64() - 8, // maintain stack alignment
             in("rcx") elf.entry, // initial RIP
-            in("r11") 0x202, // initial RFLAGS
+            in("r11") 0x002, // initial RFLAGS (leave interrupts disabled)
             options(noreturn)
         }
     }

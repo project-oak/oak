@@ -24,7 +24,12 @@ use oak_sev_guest::{
 use spinning_top::Spinlock;
 use x86_64::{
     registers::control::Cr2,
-    structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
+    structures::{
+        gdt::SegmentSelector,
+        idt::{
+            InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode, SelectorErrorCode,
+        },
+    },
     VirtAddr,
 };
 
@@ -237,7 +242,7 @@ extern "x86-interrupt" fn segment_not_present_handler(
         "Instruction pointer: {:#016x}",
         stack_frame.deref().instruction_pointer.as_u64()
     );
-    error!("Error code: {:?}", error_code);
+    error!("Error code: {:?}", SelectorErrorCode::new(error_code));
     shutdown::shutdown();
 }
 

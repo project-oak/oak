@@ -101,7 +101,18 @@ pub fn mmap(
         let pages = if flags.contains(MmapFlags::MAP_FIXED) {
             let start = Page::containing_address(addr);
             let pages = Page::<Size2MiB>::range(start, start + count as u64);
-            pt.is_unallocated(pages).map(|()| pages).ok()
+            pt.is_unallocated(pages).map(|()| pages).map_or_else(
+                |err| {
+                    log::warn!(
+                        "Fixed page range {:?} not avaliable, first mapped page in range: {:?}",
+                        pages,
+                        err
+                    );
+
+                    None
+                },
+                Some,
+            )
         } else {
             pt.find_unallocated_pages(Page::<Size2MiB>::containing_address(addr), count)
         }
@@ -134,6 +145,8 @@ pub fn mmap(
                 .flush();
             }
         }
+
+        log::info!("allocated pages: {:?}", pages);
 
         pages
     };
