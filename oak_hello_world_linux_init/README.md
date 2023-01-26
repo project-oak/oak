@@ -63,8 +63,7 @@ Note: this assumes an appropiate uncompressed Linux kernel ELF binary has been
 copied to `bin/vmlinux`.
 
 ```bash
-qemu-system-x86_64 -cpu host -enable-kvm -nographic -nodefaults -no-reboot -machine "microvm,acpi=on" \
-    -bios "bin/stage0.bin" -kernel "bin/vmlinux" -initrd "bin/initramfs" \
-    -serial stdio -m 1G -device "loader,file=bin/vmlinux" -append "console=ttyS0" \
-    -nographic -no-reboot -machine "microvm,acpi=on"
+qemu-system-x86_64 -cpu host -enable-kvm -machine "microvm,acpi=on" -m 1G \
+    -nographic -nodefaults -no-reboot -serial stdio -append "console=ttyS0 quiet" \
+    -bios "bin/stage0.bin" -kernel "bin/vmlinux" -initrd "bin/initramfs"
 ```
