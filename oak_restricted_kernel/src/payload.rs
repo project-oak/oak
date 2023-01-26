@@ -65,6 +65,8 @@ pub fn run_payload(payload: &[u8]) -> ! {
         .filter(|&phdr| phdr.p_type == PT_LOAD)
     {
         let vaddr = VirtAddr::new(phdr.p_vaddr).align_down(Size2MiB::SIZE);
+        // As we've aligned the address down, we may need extra memory to account for the padding.
+        let size = ((phdr.p_vaddr - vaddr.as_u64()) + phdr.p_memsz) as usize;
 
         let mut prot = MmapProtection::PROT_READ;
         if phdr.p_flags & PF_W > 0 {
@@ -80,7 +82,7 @@ pub fn run_payload(payload: &[u8]) -> ! {
         // otherwise the mmap() will fail.
         mmap(
             Some(vaddr),
-            phdr.p_memsz as usize,
+            size,
             prot,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
         )
@@ -116,7 +118,7 @@ pub fn run_payload(payload: &[u8]) -> ! {
             "sysretq",
             in(reg) rsp.as_u64() - 8, // maintain stack alignment
             in("rcx") elf.entry, // initial RIP
-            in("r11") 0x202, // initial RFLAGS
+            in("r11") 0x2, // initial RFLAGS (interrupts disabled)
             options(noreturn)
         }
     }

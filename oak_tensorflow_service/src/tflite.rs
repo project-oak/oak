@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use core::ffi::c_void;
+
 use alloc::{vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use log::{log, Level};
@@ -96,7 +98,9 @@ impl TfliteModel {
         // Allocate memory. Both Oak Restricted Kernel and Linux have similar enough `mmap()`
         // semantics for this to work.
         let mem = mmap(
-            None, // we don't care where the allocation lands
+            // We don't particularly care where the allocation lands, but let's place it at the 64
+            // GiB mark to ensure we won't reasonably have the heap running into it.
+            Some(0x10_0000_0000 as *const c_void),
             TENSOR_ARENA_SIZE,
             MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
