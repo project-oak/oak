@@ -121,6 +121,8 @@
 <span id="121">121</span>
 <span id="122">122</span>
 <span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -188,6 +190,8 @@
         .filter(|<span class="kw-2">&amp;</span>phdr| phdr.p_type == PT_LOAD)
     {
         <span class="kw">let </span>vaddr = VirtAddr::new(phdr.p_vaddr).align_down(Size2MiB::SIZE);
+        <span class="comment">// As we&#39;ve aligned the address down, we may need extra memory to account for the padding.
+        </span><span class="kw">let </span>size = ((phdr.p_vaddr - vaddr.as_u64()) + phdr.p_memsz) <span class="kw">as </span>usize;
 
         <span class="kw">let </span><span class="kw-2">mut </span>prot = MmapProtection::PROT_READ;
         <span class="kw">if </span>phdr.p_flags &amp; PF_W &gt; <span class="number">0 </span>{
@@ -203,7 +207,7 @@
         // otherwise the mmap() will fail.
         </span>mmap(
             <span class="prelude-val">Some</span>(vaddr),
-            phdr.p_memsz <span class="kw">as </span>usize,
+            size,
             prot,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
         )
@@ -239,7 +243,7 @@
             </span><span class="string">&quot;sysretq&quot;</span>,
             <span class="kw">in</span>(reg) rsp.as_u64() - <span class="number">8</span>, <span class="comment">// maintain stack alignment
             </span><span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) elf.entry, <span class="comment">// initial RIP
-            </span><span class="kw">in</span>(<span class="string">&quot;r11&quot;</span>) <span class="number">0x202</span>, <span class="comment">// initial RFLAGS
+            </span><span class="kw">in</span>(<span class="string">&quot;r11&quot;</span>) <span class="number">0x2</span>, <span class="comment">// initial RFLAGS (interrupts disabled)
             </span>options(noreturn)
         }
     }

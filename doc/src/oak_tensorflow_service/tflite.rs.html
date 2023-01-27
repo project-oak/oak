@@ -180,6 +180,10 @@
 <span id="180">180</span>
 <span id="181">181</span>
 <span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -196,7 +200,9 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>alloc::{vec, vec::Vec};
+</span><span class="kw">use </span>core::ffi::c_void;
+
+<span class="kw">use </span>alloc::{vec, vec::Vec};
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>log::{log, Level};
 <span class="kw">use </span>oak_restricted_kernel_api::syscall::mmap;
@@ -278,8 +284,10 @@
         <span class="comment">// Allocate memory. Both Oak Restricted Kernel and Linux have similar enough `mmap()`
         // semantics for this to work.
         </span><span class="kw">let </span>mem = mmap(
-            <span class="prelude-val">None</span>, <span class="comment">// we don&#39;t care where the allocation lands
-            </span>TENSOR_ARENA_SIZE,
+            <span class="comment">// We don&#39;t particularly care where the allocation lands, but let&#39;s place it at the 64
+            // GiB mark to ensure we won&#39;t reasonably have the heap running into it.
+            </span><span class="prelude-val">Some</span>(<span class="number">0x10_0000_0000 </span><span class="kw">as </span><span class="kw-2">*const </span>c_void),
+            TENSOR_ARENA_SIZE,
             MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
             -<span class="number">1</span>,

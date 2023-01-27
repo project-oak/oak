@@ -241,7 +241,7 @@
         .map_err(|<span class="kw">_</span>| <span class="string">&quot;failed to acquire memory&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Move the cursor to the next unallocated page.
-        </span><span class="self">self</span>.cursor = <span class="prelude-val">Some</span>(mem.as_ptr() <span class="kw">as </span>usize + <span class="self">Self</span>::PAGE_SIZE);
+        </span><span class="self">self</span>.cursor = <span class="prelude-val">Some</span>(mem.as_ptr() <span class="kw">as </span>usize + (pages * <span class="self">Self</span>::PAGE_SIZE));
         <span class="self">self</span>.base.get_or_insert(mem.as_ptr() <span class="kw">as </span>usize);
 
         <span class="prelude-val">Ok</span>(())
