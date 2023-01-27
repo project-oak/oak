@@ -115,6 +115,12 @@ pub fn unshare_page(page: Page<Size4KiB>, snp: bool, encrypted: u64) {
         let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Private)
             .expect("invalid address for page location");
         change_snp_page_state(request).expect("couldn't change SNP state for page");
+        pvalidate(
+            page_start as usize,
+            SevPageSize::Page4KiB,
+            Validation::Validated,
+        )
+        .unwrap();
     }
 
     let PageTables { pdpt: _, pd } = get_page_tables(encrypted);
