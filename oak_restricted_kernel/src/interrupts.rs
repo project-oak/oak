@@ -19,7 +19,8 @@ use core::{arch::asm, ops::Deref};
 use log::error;
 use oak_sev_guest::{
     interrupts::{mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame},
-    msr::get_cpuid_for_vc_exception,
+    io::{IoPortFactory, PortFactoryWrapper, PortWrapper, PortWriter},
+    msr::{get_cpuid_for_vc_exception, SevStatus},
 };
 use spinning_top::Spinlock;
 use x86_64::{
@@ -349,4 +350,66 @@ pub unsafe fn init_idt(double_fault_stack_index: u16) {
     let opts = idt.double_fault.set_handler_fn(double_fault_handler);
     opts.set_stack_index(double_fault_stack_index);
     idt.load_unsafe();
+}
+
+struct Pic {
+    command: PortWrapper<u8>,
+    data: PortWrapper<u8>,
+}
+
+impl Pic {
+    pub fn new(factory: &PortFactoryWrapper, base: u16) -> Self {
+        Self {
+            command: factory.new_writer(base),
+            data: factory.new_writer(base + 1),
+        }
+    }
+
+    pub unsafe fn write_command(&mut self, command: u8) -> Result<(), &'static str> {
+        self.command.try_write(command)
+    }
+
+    pub unsafe fn write_data(&mut self, data: u8) -> Result<(), &'static str> {
+        self.data.try_write(data)
+    }
+}
+
+/// Initializes the 8259 PIC and then immediately disables all exceptions.
+///
+/// # Safety
+///
+/// This uses raw I/O port access to talk to the PIC; the caller has to guarantee there will not be
+/// any adverse effect if there's no PIC at those ports.
+pub unsafe fn init_pic8259(sev_status: SevStatus) -> Result<(), &'static str> {
+    let io_port_factory = if sev_status.contains(SevStatus::SEV_ES_ENABLED) {
+        crate::ghcb::get_ghcb_port_factory()
+    } else {
+        PortFactoryWrapper::new_raw()
+    };
+
+    let mut pic0 = Pic::new(&io_port_factory, 0x20);
+    let mut pic1 = Pic::new(&io_port_factory, 0xA0);
+
+    // The initialization process is documented in https://wiki.osdev.org/8259_PIC
+    // Tell the PICs we're going to start intializing them.
+    pic0.write_command(0x11)?; // ICW1_INIT | ICW1_ICW4
+    pic1.write_command(0x11)?;
+
+    // Byte 1: the interrupt offsets.
+    pic0.write_data(0x20)?; // PIC0 interrupts start at vector 32
+    pic1.write_data(0x28)?; // PIC1 interrupts start at vector 40
+
+    // Byte 2: chanining between PICs.
+    pic0.write_data(4)?; // PIC0: there's PIC1 at your IRQ 2
+    pic1.write_data(2)?; // PIC1: your cascade identity
+
+    // Byte 3: operation mode.
+    pic0.write_data(0x01)?; // ICW4_8086
+    pic1.write_data(0x01)?;
+
+    // Finally, mask all interrupts as we're not going to use the PICs.
+    pic0.write_data(0xFF)?;
+    pic1.write_data(0xFF)?;
+
+    Ok(())
 }
