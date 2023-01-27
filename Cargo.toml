@@ -8,6 +8,7 @@ members = [
   "oak_channel",
   "oak_client",
   "oak_core",
+  "oak_crypto",
   "oak_echo_linux_init",
   "oak_enclave_runtime_support",
   "oak_functions/examples/benchmark/module",
