@@ -354,6 +354,12 @@
 <span id="354">354</span>
 <span id="355">355</span>
 <span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -490,6 +496,12 @@
         ghcb::init(sev_snp_enabled);
     }
     logging::init_logging(sev_es_enabled);
+
+    <span class="comment">// Safety: we shouldn&#39;t have anything else but the PICs on the I/O ports.
+    // If we get an error, we will still try to continue.
+    </span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = <span class="kw">unsafe </span>{ interrupts::init_pic8259(sev_status) } {
+        <span class="macro">log::warn!</span>(<span class="string">&quot;error disabling 8259 PIC: {}&quot;</span>, err);
+    }
 
     <span class="comment">// We need to be done with the boot info struct before intializing memory. For example, the
     // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it&#39;s
