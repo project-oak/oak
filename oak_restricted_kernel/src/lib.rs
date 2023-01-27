@@ -135,6 +135,12 @@ pub fn start_kernel(info: &BootParams) -> ! {
     }
     logging::init_logging(sev_es_enabled);
 
+    // Safety: we shouldn't have anything else but the PICs on the I/O ports.
+    // If we get an error, we will still try to continue.
+    if let Err(err) = unsafe { interrupts::init_pic8259(sev_status) } {
+        log::warn!("error disabling 8259 PIC: {}", err);
+    }
+
     // We need to be done with the boot info struct before intializing memory. For example, the
     // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it's
     // highly likely we will overwrite some data after we initialize the heap. args::init_args()

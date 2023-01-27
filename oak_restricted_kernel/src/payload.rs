@@ -118,7 +118,7 @@ pub fn run_payload(payload: &[u8]) -> ! {
             "sysretq",
             in(reg) rsp.as_u64() - 8, // maintain stack alignment
             in("rcx") elf.entry, // initial RIP
-            in("r11") 0x2, // initial RFLAGS (interrupts disabled)
+            in("r11") 0x202, // initial RFLAGS (interrupts enabled)
             options(noreturn)
         }
     }
