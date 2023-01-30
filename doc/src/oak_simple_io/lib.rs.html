@@ -186,6 +186,15 @@
 <span id="186">186</span>
 <span id="187">187</span>
 <span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
+<span id="197">197</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -335,9 +344,9 @@
     <span class="doccomment">/// Writes the data to the output buffer and notifies the host.
     ///
     /// Returns the number of bytes written, if any.
-    </span><span class="kw">pub fn </span>write_bytes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+    </span><span class="kw">pub fn </span>write_bytes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">if </span>data.is_empty() {
-            <span class="kw">return </span><span class="prelude-val">None</span>;
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="number">0</span>);
         }
 
         <span class="kw">let </span>length = core::cmp::min(OUTPUT_BUFFER_LENGTH, data.len());
@@ -349,10 +358,19 @@
 
         <span class="comment">// Safety: this usage is safe, as we as only write an uninterpreted u32 value to the port.
         </span><span class="kw">unsafe </span>{
-            <span class="self">self</span>.output_length_port.try_write(length <span class="kw">as </span>u32).ok()<span class="question-mark">?</span>;
-        }
+            <span class="self">self</span>.output_length_port.try_write(length <span class="kw">as </span>u32)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Some</span>(length)
+            <span class="comment">// Read back how much the host was able to consume from the buffer. If the count is less
+            // than 0, there was an error.
+            </span><span class="self">self</span>.output_length_port.try_read()
+        }
+        .and_then(|ret| {
+            <span class="kw">if </span>(ret <span class="kw">as </span>isize) &lt; <span class="number">0 </span>{
+                <span class="prelude-val">Err</span>(<span class="string">&quot;simple IO device returned an error&quot;</span>)
+            } <span class="kw">else </span>{
+                <span class="prelude-val">Ok</span>(ret <span class="kw">as </span>usize)
+            }
+        })
     }
 }
 
