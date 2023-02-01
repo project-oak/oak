@@ -161,6 +161,28 @@ async fn test_storage_get_item_not_found() {
 }
 
 #[tokio::test]
+#[ignore]
+async fn test_storage_get_item_huge_key() {
+    let bytes: Vec<u8> = (0..(i32::pow(2, 20))).map(|_| 42u8).collect();
+    let entries = HashMap::from_iter([(bytes.clone(), bytes.clone())].into_iter());
+
+    let logger = oak_functions_service::StandaloneLogger {};
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
+    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
+        .expect("couldn't create LookupFactory");
+
+    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
+        .expect("couldn't instantiate WasmHandler");
+
+    let request = Request {
+        body: b"LargeKey".to_vec(),
+    };
+
+    let response: Response = wasm_handler.handle_invoke(request).unwrap();
+    assert_eq!(response.body.len(), bytes.len())
+}
+
+#[tokio::test]
 async fn test_echo() {
     let logger = oak_functions_service::StandaloneLogger {};
     let message_to_echo = "ECHO";
@@ -207,4 +229,30 @@ async fn test_blackhole() {
 
     let response: Response = wasm_handler.handle_invoke(request).unwrap();
     oak_functions_test_utils::assert_response_body(response, "Blackholed");
+}
+
+#[tokio::test]
+#[ignore]
+async fn test_huge_response() {
+    // Keep in sync with
+    // `workspace/oak_functions/sdk/oak_functions/tests/testing_module/src/lib.rs`.
+
+    let logger = oak_functions_service::StandaloneLogger {};
+
+    let testing_factory =
+        oak_functions_testing_extension::TestingFactory::new_boxed_extension_factory(
+            logger.clone(),
+        )
+        .expect("couldn't create testing extension factory");
+
+    let wasm_handler =
+        WasmHandler::create(&TESTING_WASM_MODULE_BYTES, vec![testing_factory], logger)
+            .expect("couldn't instantiate WasmHandler");
+
+    let request = Request {
+        body: "HUGE_RESPONSE".as_bytes().to_vec(),
+    };
+
+    let response: Response = wasm_handler.handle_invoke(request).unwrap();
+    assert_eq!(response.body.len(), i32::pow(2, 20) as usize)
 }
