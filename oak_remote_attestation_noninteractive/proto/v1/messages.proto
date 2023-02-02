@@ -24,10 +24,23 @@ option java_package = "oak.session.noninteractive.v1";
 message PublicKeyInfo {
   // The serialized enclave public key.
   // TODO(#3442): Specify key format.
-  bytes public_key = 1;
+  bytes enclave_public_key = 1;
   // The serialized attestation report binding the public key.
   bytes attestation = 2;
-  // TODO(#3442): Add evidence (endorsements and inclusion proofs) for the attested binary.
+  // The serialized AMD-SEV-SNP certificate.
+  bytes tee_certificate = 3;
+  // The serialized binary attestation evidence.
+  bytes binary_attestation = 4;
+  // The serialized server configuration. The details of the configuration is application-specific.
+  // This field is optional and can be left empty.
+  bytes server_config = 5;
+}
+
+message BinaryAttestation {
+  // The serialized binary endorsement statement from the transparent release process.
+  bytes endorsement_statement = 1;
+  // The serialized Rekor LogEntry as proof of the inclusion of the endorsement statement in Rekor.
+  bytes rekor_log_entry = 2;
 }
 
 message GetPublicKeyRequest {}
