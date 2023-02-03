@@ -19,6 +19,7 @@
 #![feature(array_chunks)]
 
 use anyhow::Context;
+use channel::ConnectorHandle;
 use clap::Parser;
 use instance::{native, virtualized, LaunchedInstance};
 use std::{
@@ -29,6 +30,8 @@ use std::{
     path::PathBuf,
 };
 use tokio::signal;
+
+use crate::schema::InitializeResponse;
 
 pub mod schema {
     #![allow(dead_code)]
@@ -42,7 +45,7 @@ mod lookup;
 mod server;
 
 #[derive(clap::Subcommand, Clone, Debug, PartialEq)]
-enum Mode {
+pub enum Mode {
     /// Launch a virtual enclave binary
     Virtual(virtualized::Params),
     /// Launch an enclave binary directly as a child process
@@ -91,6 +94,65 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
     env_logger::init();
 
+    let (mut launched_instance, connector_handle, result) = create(
+        cli.mode,
+        cli.lookup_data,
+        cli.wasm,
+        cli.constant_response_size,
+    )
+    .await?;
+
+    let public_key_info = result.public_key_info.expect("no public key info returned");
+    log::info!(
+        "obtained public key ({} bytes)",
+        public_key_info.public_key.len()
+    );
+
+    let server_future = server::server(
+        SocketAddr::from((Ipv6Addr::UNSPECIFIED, cli.port)),
+        connector_handle.clone(),
+        public_key_info.public_key,
+        public_key_info.attestation,
+    );
+
+    // Wait until something dies or we get a signal to terminate.
+    tokio::select! {
+        _ = signal::ctrl_c() => {
+            launched_instance.kill().await?;
+        },
+        _ = server_future => {
+            launched_instance.kill().await?;
+        },
+        val = launched_instance.wait() => {
+            log::error!("Unexpected VMM exit, status: {:?}", val);
+        },
+    }
+
+    Ok(())
+}
+
+pub async fn create(
+    mode: Mode,
+    lookup_data_path: PathBuf,
+    wasm_path: PathBuf,
+    constant_response_size: u32,
+) -> Result<
+    (
+        Box<dyn LaunchedInstance>,
+        ConnectorHandle,
+        InitializeResponse,
+    ),
+    Box<dyn std::error::Error>,
+> {
+    let (launched_instance, connector_handle) = launch_instance(mode).await?;
+    setup_lookup_data(connector_handle.clone(), lookup_data_path).await;
+    let result = setup_wasm(connector_handle.clone(), &wasm_path, constant_response_size).await?;
+    Ok((launched_instance, connector_handle, result))
+}
+
+async fn launch_instance(
+    mode: Mode,
+) -> Result<(Box<dyn LaunchedInstance>, ConnectorHandle), Box<dyn std::error::Error>> {
     // Provide a way for the launched instance to send logs
     let logs_console: UnixStream = {
         // Create two linked consoles. Technically both can read/write, but we'll
@@ -111,93 +173,75 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         console_writer
     };
 
-    let mut launched_instance: Box<dyn LaunchedInstance> = match cli.mode {
+    let launched_instance: Box<dyn LaunchedInstance> = match mode {
         Mode::Virtual(params) => Box::new(virtualized::Instance::start(params, logs_console)?),
         Mode::Native(params) => Box::new(native::Instance::start(params)?),
     };
-
     let comms = launched_instance.create_comms_channel().await?;
     let connector_handle = channel::Connector::spawn(comms);
 
-    {
-        let mut client = schema::OakFunctionsAsyncClient::new(connector_handle.clone());
+    Ok((launched_instance, connector_handle))
+}
 
-        // Block for [invariant that lookup data is fully loaded](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-fully-loaded-lookup-data)
-        let lookup_data =
-            lookup::load_lookup_data(&cli.lookup_data).expect("couldn't load lookup data");
-        let encoded_lookup_data =
-            lookup::encode_lookup_data(lookup_data).expect("couldn't encode lookup data");
+// Initially loads lookup data and spawns task to periodically refresh lookup data.
+async fn setup_lookup_data(connector_handle: ConnectorHandle, lookup_data_path: PathBuf) {
+    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
 
-        if let Err(err) = client.update_lookup_data(&encoded_lookup_data).await {
-            panic!("couldn't send lookup data: {:?}", err)
-        }
+    // Block for [invariant that lookup data is fully loaded](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-fully-loaded-lookup-data)
+    let lookup_data =
+        lookup::load_lookup_data(&lookup_data_path).expect("couldn't load lookup data");
+    let encoded_lookup_data =
+        lookup::encode_lookup_data(lookup_data).expect("couldn't encode lookup data");
 
-        // Spawn task to periodically refresh lookup data.
-        tokio::spawn(async move {
-            let mut interval =
-                tokio::time::interval(std::time::Duration::from_millis(1000 * 60 * 10));
-            loop {
-                // Wait before updating because we just loaded the lookup data.
-                interval.tick().await;
-
-                let lookup_data =
-                    lookup::load_lookup_data(&cli.lookup_data).expect("couldn't load lookup data");
-                let encoded_lookup_data =
-                    lookup::encode_lookup_data(lookup_data).expect("couldn't encode lookup data");
-
-                if let Err(err) = client.update_lookup_data(&encoded_lookup_data).await {
-                    panic!("couldn't send lookup data: {:?}", err)
-                }
-            }
-        });
+    if let Err(err) = client.update_lookup_data(&encoded_lookup_data).await {
+        panic!("couldn't send lookup data: {:?}", err)
     }
 
-    let wasm_bytes = fs::read(&cli.wasm)
-        .with_context(|| format!("couldn't read Wasm file {}", &cli.wasm.display()))
+    // Spawn task to periodically refresh lookup data.
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_millis(1000 * 60 * 10));
+        loop {
+            // Wait before updating because we just loaded the lookup data.
+            interval.tick().await;
+
+            let lookup_data =
+                lookup::load_lookup_data(&lookup_data_path).expect("couldn't load lookup data");
+            let encoded_lookup_data =
+                lookup::encode_lookup_data(lookup_data).expect("couldn't encode lookup data");
+
+            if let Err(err) = client.update_lookup_data(&encoded_lookup_data).await {
+                panic!("couldn't send lookup data: {:?}", err)
+            }
+        }
+    });
+}
+
+// Loads wasm bytes.
+async fn setup_wasm(
+    connector_handle: ConnectorHandle,
+    wasm: &PathBuf,
+    constant_response_size: u32,
+) -> Result<InitializeResponse, Box<dyn std::error::Error>> {
+    let wasm_bytes = fs::read(&wasm)
+        .with_context(|| format!("couldn't read Wasm file {}", wasm.display()))
         .unwrap();
     log::info!(
         "read Wasm file from disk {} ({} bytes)",
-        &cli.wasm.display(),
+        &wasm.display(),
         wasm_bytes.len()
     );
 
     let request = schema::InitializeRequest {
         wasm_module: wasm_bytes,
-        constant_response_size: cli.constant_response_size,
+        constant_response_size: constant_response_size,
     };
 
-    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle.clone());
+    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
     let result = client
         .initialize(&request)
         .await
         .flatten()
         .expect("couldn't initialize the service");
 
-    let public_key_info = result.public_key_info.expect("no public key info returned");
-    log::info!(
-        "obtained public key ({} bytes)",
-        public_key_info.public_key.len()
-    );
-
-    let server_future = server::server(
-        SocketAddr::from((Ipv6Addr::UNSPECIFIED, cli.port)),
-        connector_handle,
-        public_key_info.public_key,
-        public_key_info.attestation,
-    );
-
-    // Wait until something dies or we get a signal to terminate.
-    tokio::select! {
-        _ = signal::ctrl_c() => {
-            launched_instance.kill().await?;
-        },
-        _ = server_future => {
-            launched_instance.kill().await?;
-        },
-        val = launched_instance.wait() => {
-            log::error!("Unexpected VMM exit, status: {:?}", val);
-        },
-    }
-
-    Ok(())
+    return Ok(result);
 }
