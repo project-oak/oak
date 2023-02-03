@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{instance::LaunchedInstance, path_exists};
+use crate::instance::LaunchedInstance;
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use clap::Parser;
@@ -28,6 +28,16 @@ use std::{
     path::PathBuf,
     process::Stdio,
 };
+
+// TODO(mschett): Remove this duplicated path_exists.
+fn path_exists(s: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(s);
+    if !fs::metadata(s).map_err(|err| err.to_string())?.is_file() {
+        Err(String::from("path does not represent a file"))
+    } else {
+        Ok(path)
+    }
+}
 
 const PAGE_SIZE: usize = 4096;
 
