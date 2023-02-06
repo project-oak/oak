@@ -34,6 +34,12 @@ proto_library(
     deps = [":messages_proto"],
 )
 
+proto_library(
+    name = "service_unary_proto",
+    srcs = ["service_unary.proto"],
+    deps = ["messages_proto"],
+)
+
 java_proto_library(
     name = "messages_java_proto",
     deps = [":messages_proto"],
