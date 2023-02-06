@@ -40,3 +40,4 @@ micro_rpc_build = { path = "../micro_rpc_build" }
 
 [dev-dependencies]
 lazy_static = "*"
+oak_functions_test_utils = { path = "../oak_functions_test_utils" }

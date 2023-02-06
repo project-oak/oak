@@ -2106,6 +2106,7 @@ dependencies = [
  "micro_rpc_build",
  "oak_channel",
  "oak_functions_abi",
+ "oak_functions_test_utils",
  "oak_remote_attestation_noninteractive",
  "prost 0.11.2",
  "serde",

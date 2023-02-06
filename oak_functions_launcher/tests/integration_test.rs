@@ -20,6 +20,7 @@ use std::path::PathBuf;
 use lazy_static::lazy_static;
 use micro_rpc::AsyncTransport;
 use oak_functions_launcher::Mode;
+use oak_functions_test_utils;
 
 lazy_static! {
     static ref WASM_PATH: PathBuf = {
@@ -32,16 +33,16 @@ lazy_static! {
          [env!("WORKSPACE_ROOT"),"oak_functions_launcher", "mock_lookup_data"].iter().collect()
     };
 
-    // TODO(mschett): make sure the binary is there, probably by building it.
-    static ref ENCLAVE_BINARY_PATH : PathBuf = {
-        [env!("WORKSPACE_ROOT"), "target",  "debug", "oak_functions_linux_fd_bin"].iter().collect()
-    };
 }
 
 #[tokio::test]
 async fn test_launcher_looks_up_key() {
+    let oak_functions_linux_fd_bin_path =
+        oak_functions_test_utils::build_rust_crate_linux("oak_functions_linux_fd_bin")
+            .expect("Failed to build oak_functions_linux_fd_bin.");
+
     let params = oak_functions_launcher::instance::native::Params {
-        enclave_binary: ENCLAVE_BINARY_PATH.to_path_buf(),
+        enclave_binary: PathBuf::from(oak_functions_linux_fd_bin_path),
     };
 
     let (launched_instance, mut connector_handle, _) = oak_functions_launcher::create(
