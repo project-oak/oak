@@ -37,7 +37,7 @@ pub mod schema {
 }
 
 mod channel;
-mod instance;
+pub mod instance;
 mod lookup;
 pub mod server;
 

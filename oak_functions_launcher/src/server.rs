@@ -76,7 +76,7 @@ impl oak_remote_attestation_noninteractive::proto::streaming_session_server::Str
     }
 }
 
-pub fn server(
+pub fn new(
     addr: SocketAddr,
     connector_handle: ConnectorHandle,
     signing_public_key: Vec<u8>,

@@ -88,9 +88,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         public_key_info.public_key.len()
     );
 
-    let server_future = oak_functions_launcher::server::server(
+    let server_future = oak_functions_launcher::server::new(
         SocketAddr::from((Ipv6Addr::UNSPECIFIED, cli.port)),
-        connector_handle.clone(),
+        connector_handle,
         public_key_info.public_key,
         public_key_info.attestation,
     );

@@ -28,7 +28,6 @@ use std::{
 
 use std::fs;
 
-// TODO(mschett): Remove this duplicated path_exists.
 fn path_exists(s: &str) -> Result<PathBuf, String> {
     let path = PathBuf::from(s);
     if !fs::metadata(s).map_err(|err| err.to_string())?.is_file() {
