@@ -2100,6 +2100,7 @@ dependencies = [
  "env_logger 0.10.0",
  "futures",
  "hashbrown 0.13.1",
+ "lazy_static",
  "log",
  "micro_rpc",
  "micro_rpc_build",

@@ -37,3 +37,6 @@ hashbrown = "*"
 
 [build-dependencies]
 micro_rpc_build = { path = "../micro_rpc_build" }
+
+[dev-dependencies]
+lazy_static = "*"
