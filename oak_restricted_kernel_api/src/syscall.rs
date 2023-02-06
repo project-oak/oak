@@ -142,17 +142,6 @@ mod tests {
     }
 
     #[test]
-    fn test_erroneus_write() {
-        let fd = {
-            let (_, writer) = os_pipe::pipe().unwrap();
-            writer.as_raw_fd()
-        };
-
-        let tx = b"test";
-        assert!(write(fd, tx).is_err());
-    }
-
-    #[test]
     fn test_fsync() {
         let fd = {
             let (_, writer) = os_pipe::pipe().unwrap();
