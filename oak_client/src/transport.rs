@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,13 +15,14 @@
 //
 
 use micro_rpc::Transport;
+use tonic::transport::Channel;
 
-// pub trait Transport { 
-//     /// Type representing any transport-specific errors. By default, the transport is assumed to be 
-//     /// infallible. 
-//     type Error = !; 
-//     fn invoke(&mut self, request_bytes: &[u8]) -> Result<Vec<u8>, Self::Error>; 
-// } 
+// pub trait Transport {
+//     /// Type representing any transport-specific errors. By default, the transport is assumed to be
+//     /// infallible.
+//     type Error = !;
+//     fn invoke(&mut self, request_bytes: &[u8]) -> Result<Vec<u8>, Self::Error>;
+// }
 
 pub struct GrpcTransport {
     rpc_client: StreamingSessionClient<Channel>,

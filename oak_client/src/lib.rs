@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,61 +15,68 @@
 //
 
 pub mod transport;
-pub mod rekor;
-
-use crate::transport::Transport;
-use anyhow::Context;
-use tonic::transport::Channel;
+// pub mod rekor;
+pub mod verifier;
 
 #[cfg(test)]
 mod tests;
 
-pub struct ReferenceValue {
-    binary_hash: String;
-}
+use crate::{
+    transport::Transport,
+    verifier::{EvidenceProvider, ReferenceValue, Verifier},
+};
+use alloc::{vec, vec::Vec};
+use anyhow::Context;
 
 pub struct OakClientBuilder {
     transport: Box<dyn Transport>,
     evidence_provider: Box<dyn EvidenceProvider>,
     reference_value: ReferenceValue,
+    verifier: Box<dyn Verifier>,
+    crypto_provider: CryptoProvider,
 }
 
-/// ... RATS architecture:
-/// https://datatracker.ietf.org/doc/html/draft-ietf-rats-architecture
 impl OakClientBuilder {
     pub fn new(transport: Box<dyn Transport>,
                evidence_provider: Box<dyn EvidenceProvider>,
                reference_value: ReferenceValue,
-               encryptor_provider: EncryptorProvider) -> Self {
-        Self { transport, evidence_provider, reference_value }
+               verifier: Box<dyn Verifier>,
+               crypto_provider: CryptoProvider) -> Self {
+        Self { transport, evidence_provider, reference_value, verifier, crypto_provider }
     }
 
     pub fn build(self) -> anyhow::Result<OakClient> {
-        let evidence = self.evidence_provider.get_evidence(self.transport)?;
+        let evidence = self
+            .evidence_provider
+            .get_evidence()
+            .context("couldn't get evidence")?;
 
         let attestation_result = self.verifier.verify(
-            evidence, self.reference_value);
+            evidence, self.reference_value,
+        ).context("couldn't verify evidence")?;
 
-        if attestation_result.is_ok() {
-            OakClient {
-                transport: self.transport,
-            }
-        } else {
-            Err(anyhow!(
-                "Attestation verification failed: {:?}", attestation_result)
-            )
+        let encryptor = self
+            .crypto_provider
+            .get_encryptor(evidence.enclave_public_key)
+            .context("couldn't create encryptor")?;
+
+        OakClient {
+            transport: self.transport,
         }
     }
 }
 
+/// Client for connecting to Oak.
+/// Represents a Relying Party from the RATS Architecture:
+/// <https://www.rfc-editor.org/rfc/rfc9334.html#name-relying-party>
 pub struct OakClient {
     transport: Box<dyn Transport>, // RpcClient
     encryptor: ClientEncryptor,
 }
 
 impl OakClient {
-    pub fn invoke(&self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let (encrypted_request, decryptor) = encryptor
+    pub fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
+        let (encrypted_request, decryptor) = self.encryptor
             .encrypt(request_body)
             .context("couldn't encrypt request")?;
         let encrypted_response = self
@@ -83,41 +90,27 @@ impl OakClient {
     }
 }
 
-pub trait EvidenceProvider {
-    fn get_evidence(transport: &dyn Transport) -> anyhow::Result<Evidence>;
-}
+// TODO(#3654): Implement client crypto provider.
+pub struct CryptoProvider {}
 
-pub struct NonInteractiveEvidenceProvider {
-    fn new(transport: &dyn Transport) {
-
-    }
-
-    fn get_evidence() -> anyhow::Result<Evidence> {
-
+impl CryptoProvider {
+    fn get_encryptor(enclave_public_key: &[u8]) -> anyhow::Result<Encryptor> {
+        Ok(Encryptor{})
     }
 }
 
-pub trait AttestationVerifier {
-    fn verify(evidence: Evidence, reference_value: ReferenceValue) -> anyhow::Result<()>;
-}
+struct Encryptor {}
 
-pub struct NonInteractiveAttestationManager {}
-
-impl EvidenceProvider for NonInteractiveAttestationManager {
-    fn get_evidence(transport: &dyn Transport) -> anyhow::Result<Evidence> {
-
+impl Encryptor {
+    fn encrypt(&mut self, message: &[u8]) -> anyhow::Result<Vec<u8>>{
+        Ok(vec![])
     }
 }
 
-fn main() {
-    let channel = Channel::from_shared(uri.to_string())
-        .context("couldn't create gRPC channel")?
-        .connect()
-        .await?;
-    let transport = StreamingSessionClient::new(channel);
+struct Decryptor {}
 
-    let oak_client = OakClient::builder()
-        .transport(transport)
-        .verifier()
-        .build();
+impl Decryptor {
+    fn decrypt(&self, encrypted_message: &[u8]) -> anyhow::Result<Vec<u8>>{
+        Ok(vec![])
+    }
 }

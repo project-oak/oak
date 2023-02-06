@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ pub trait CryptoEngine {
 }
 
 /// Context info value for encryption and decryption.
-/// 
+///
 /// The value should be the same for both encryption and decryption to ensure
 /// the correct decryption of a ciphertext:
 /// https://docs.rs/tink-core/0.2.4/tink_core/trait.HybridDecrypt.html#security-guarantees
@@ -58,5 +58,5 @@ pub struct ServerHybridCryptoEngineBuilder {
 
 fn main() {
     let client_encryptor = ClientEncryptor::new(enclave_public_key);
-    let encrypted_message = 
+    let encrypted_message =
 }
