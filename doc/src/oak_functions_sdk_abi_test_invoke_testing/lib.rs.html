@@ -61,6 +61,11 @@
 <span id="61">61</span>
 <span id="62">62</span>
 <span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -120,6 +125,11 @@
             // empty response would be sent.
             </span>oak_functions_sdk::write_response(<span class="string">&quot;Blackholed&quot;</span>.as_bytes())
                 .expect(<span class="string">&quot;couldn&#39;t write response body&quot;</span>);
+        }
+        <span class="string">&quot;HUGE_RESPONSE&quot; </span>=&gt; {
+            <span class="comment">// Ignore request just send a huge response.
+            </span><span class="kw">let </span>bytes: Vec&lt;u8&gt; = (<span class="number">0</span>..i32::pow(<span class="number">2</span>, <span class="number">20</span>)).map(|<span class="kw">_</span>| <span class="number">42u8</span>).collect();
+            oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>bytes).expect(<span class="string">&quot;couldn&#39;t write response body&quot;</span>);
         }
         <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;request not recognized&quot;</span>),
     }
