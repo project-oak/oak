@@ -39,7 +39,7 @@ lazy_static! {
 async fn test_launcher_looks_up_key() {
     let oak_functions_linux_fd_bin_path =
         oak_functions_test_utils::build_rust_crate_linux("oak_functions_linux_fd_bin")
-            .expect("Failed to build oak_functions_linux_fd_bin.");
+            .expect("Failed to build oak_functions_linux_fd_bin");
 
     let params = oak_functions_launcher::instance::native::Params {
         enclave_binary: PathBuf::from(oak_functions_linux_fd_bin_path),
@@ -49,17 +49,22 @@ async fn test_launcher_looks_up_key() {
         Mode::Native(params),
         LOOKUP_DATA_PATH.to_path_buf(),
         WASM_PATH.to_path_buf(),
-        // TODO(mschett): make sure the response fits in the constant response size.
         1024,
     )
     .await
     .expect("Fail to create launcher");
 
-    // TODO(mschett): Find easiest way to send "test_key".
-    // Send lookup request.
-    let _ = connector_handle.invoke(&[42u8]).await;
+    // TODO(mschett): Find easiest way to send "test_key" as invocation of lookup data and unwrap
+    // "test_value".
+    let response = connector_handle
+        .invoke(&[42u8])
+        .await
+        .expect("Failed to receive response.");
 
-    // TODO(mschett): Check lookup response "test_value".
+    assert_eq!(b"test_value".to_vec(), response);
 
-    let _ = launched_instance.kill().await;
+    launched_instance
+        .kill()
+        .await
+        .expect("Failed to stop launcher");
 }
