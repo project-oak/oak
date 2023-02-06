@@ -91,6 +91,8 @@ impl<L: OakLogger> OakApiNativeExtension for LookupData<L> {
     }
 }
 
+// Data maintains the invariant on lookup data to have [at most one
+// value](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-at-most-one-value)
 pub type Data = HashMap<Vec<u8>, Vec<u8>>;
 
 /// Utility for managing lookup data.
@@ -98,6 +100,10 @@ pub type Data = HashMap<Vec<u8>, Vec<u8>>;
 /// `LookupDataManager` can be used to create `LookupData` instances that share the underlying data.
 /// It can also update the underlying data. After updating the data, new `LookupData` instances will
 /// use the new data, but earlier instances will still used the earlier data.
+///
+/// LookupDataManager maintains the invariants [consistent view on lookup
+/// data](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-consistent-view-on-lookup-data) , and [shared
+/// lookup data](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-shared-lookup-data)
 ///
 /// Note that the data is never mutated in-place, but only ever replaced. So instead of the Rust
 /// idiom `Arc<Spinlock<T>>` we have `Spinlock<Arc<T>>`.

@@ -31,6 +31,7 @@
 #![cfg_attr(not(test), no_std)]
 #![feature(abi_x86_interrupt)]
 #![feature(allocator_api)]
+#![feature(array_chunks)]
 #![feature(asm_sym)]
 #![feature(naked_functions)]
 #![feature(once_cell)]
@@ -44,13 +45,12 @@ mod boot;
 mod descriptors;
 mod elf;
 mod ghcb;
-#[cfg(feature = "c_interface")]
-mod interface;
 mod interrupts;
 mod libm;
 mod logging;
 mod memory;
 mod mm;
+mod payload;
 #[cfg(feature = "serial_channel")]
 mod serial;
 pub mod shutdown;
@@ -82,6 +82,7 @@ use log::{error, info};
 use mm::{
     encrypted_mapper::{EncryptedPageTable, PhysOffset},
     frame_allocator::PhysicalMemoryAllocator,
+    virtual_address_allocator::VirtualAddressAllocator,
 };
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
@@ -90,9 +91,11 @@ use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignm
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
-    structures::paging::{MappedPageTable, Page},
+    structures::paging::{MappedPageTable, Page, Size2MiB},
     PhysAddr, VirtAddr,
 };
+
+pub use payload::run_payload;
 
 /// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 128 GiB of memory, for now.
@@ -106,11 +109,24 @@ pub static PAGE_TABLES: OnceCell<
     Spinlock<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>>,
 > = OnceCell::new();
 
+/// Allocator for long-lived pages in the kernel.
+pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
+    Spinlock::new(VirtualAddressAllocator::new(Page::range(
+        // Assign 32 TB of virtual memory for this allocator.
+        // Safety: these addresses are constants and thus we know they're page-aligned.
+        unsafe {
+            Page::from_start_address_unchecked(VirtAddr::new_truncate(0xFFFF_C900_0000_0000))
+        },
+        unsafe {
+            Page::from_start_address_unchecked(VirtAddr::new_truncate(0xFFFF_E900_0000_0000))
+        },
+    )));
+
 /// Main entry point for the kernel, to be called from bootloader.
-pub fn start_kernel(info: &BootParams) {
+pub fn start_kernel(info: &BootParams) -> ! {
     avx::enable_avx();
-    descriptors::init_gdt();
-    interrupts::init_idt();
+    descriptors::init_gdt_early();
+    interrupts::init_idt_early();
     let sev_status = get_sev_status().unwrap_or(SevStatus::empty());
     let sev_es_enabled = sev_status.contains(SevStatus::SEV_ES_ENABLED);
     let sev_snp_enabled = sev_status.contains(SevStatus::SNP_ACTIVE);
@@ -118,6 +134,12 @@ pub fn start_kernel(info: &BootParams) {
         ghcb::init(sev_snp_enabled);
     }
     logging::init_logging(sev_es_enabled);
+
+    // Safety: we shouldn't have anything else but the PICs on the I/O ports.
+    // If we get an error, we will still try to continue.
+    if let Err(err) = unsafe { interrupts::init_pic8259(sev_status) } {
+        log::warn!("error disabling 8259 PIC: {}", err);
+    }
 
     // We need to be done with the boot info struct before intializing memory. For example, the
     // multiboot protocol explicitly states data can be placed anywhere in memory; therefore, it's
@@ -235,10 +257,20 @@ pub fn start_kernel(info: &BootParams) {
     }
 
     // If we don't find memory for heap, it's ok to panic.
-    memory::init_kernel_heap(
-        Page::from_start_address(VirtAddr::new(0xFFFF_C900_0000_0000)).unwrap(),
-    )
-    .unwrap();
+    // We'll let the heap to grow to 1 TB (1 << 19 * 2 MiB pages), max.
+    let heap_page_range = VMA_ALLOCATOR.lock().allocate(1 << 19).unwrap();
+    memory::init_kernel_heap(heap_page_range).unwrap();
+
+    // Okay. We've got page tables and a heap. Set up the "late" IDT, this time with descriptors for
+    // user mode.
+    let double_fault_stack = mm::allocate_stack();
+    let privileged_interrupt_stack = mm::allocate_stack();
+    let double_fault_stack_index =
+        descriptors::init_gdt(double_fault_stack, privileged_interrupt_stack);
+    // Safety: we've just loaded a new GDT with a valid IST entry for the double fault.
+    unsafe {
+        interrupts::init_idt(double_fault_stack_index);
+    }
 
     // Init ACPI, if available.
     let mut acpi = match acpi::Acpi::new(info) {
@@ -261,14 +293,23 @@ pub fn start_kernel(info: &BootParams) {
         report.validate().expect("attestation report is invalid");
     }
 
-    let channel = get_channel(
+    let mut channel = get_channel(
         &kernel_args,
         GUEST_HOST_HEAP.get().unwrap(),
         acpi.as_mut(),
         sev_status,
     );
 
+    // We need to load the application binary before we hand the channel over to the syscalls, which
+    // expose it to the user space.
+    info!("Loading application binary...");
+    let payload = payload::read_payload(&mut *channel)
+        .expect("failed to load application binary from channel");
+    info!("Binary loaded, size: {}", payload.len());
+
     syscall::enable_syscalls(channel);
+
+    payload::run_payload(&payload);
 }
 
 #[derive(EnumIter, EnumString)]

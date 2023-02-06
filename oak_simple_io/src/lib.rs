@@ -147,9 +147,9 @@ impl<'a, A: Allocator> SimpleIo<'a, A> {
     /// Writes the data to the output buffer and notifies the host.
     ///
     /// Returns the number of bytes written, if any.
-    pub fn write_bytes(&mut self, data: &[u8]) -> Option<usize> {
+    pub fn write_bytes(&mut self, data: &[u8]) -> Result<usize, &'static str> {
         if data.is_empty() {
-            return None;
+            return Ok(0);
         }
 
         let length = core::cmp::min(OUTPUT_BUFFER_LENGTH, data.len());
@@ -161,10 +161,19 @@ impl<'a, A: Allocator> SimpleIo<'a, A> {
 
         // Safety: this usage is safe, as we as only write an uninterpreted u32 value to the port.
         unsafe {
-            self.output_length_port.try_write(length as u32).ok()?;
-        }
+            self.output_length_port.try_write(length as u32)?;
 
-        Some(length)
+            // Read back how much the host was able to consume from the buffer. If the count is less
+            // than 0, there was an error.
+            self.output_length_port.try_read()
+        }
+        .and_then(|ret| {
+            if (ret as isize) < 0 {
+                Err("simple IO device returned an error")
+            } else {
+                Ok(ret as usize)
+            }
+        })
     }
 }
 

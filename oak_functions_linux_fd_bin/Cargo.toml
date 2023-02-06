@@ -9,7 +9,7 @@ license = "Apache-2.0"
 log = "*"
 anyhow = { version = "*", default-features = false }
 clap = { version = "*", features = ["derive"] }
-oak_remote_attestation = { path = "../oak_remote_attestation", default-features = false, features = [
+oak_remote_attestation_interactive = { path = "../oak_remote_attestation_interactive", default-features = false, features = [
   "rust-crypto"
 ] }
 oak_channel = { path = "../oak_channel", features = ["std"] }

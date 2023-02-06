@@ -262,15 +262,12 @@ WebAssembly, as [described above](#build-application).
 xtask --scope=all --logs run-oak-functions-examples --example-name=weather_lookup --client-variant=none
 ```
 
-In the end, you should end up with an Oak server running, end with log output
+In the end, you should end up with an Oak server running, and with log output
 something like:
 
 ```log
-2022-02-23T21:14:39Z INFO - refreshing lookup data from HTTP: https://storage.googleapis.com/oak_lookup_data/lookup_data_weather_sparse_s2 with auth None
-2022-02-23T21:14:39Z INFO - fetched 8507683 bytes of lookup data in 626ms
-2022-02-23T21:14:40Z INFO - parsed 143548 entries of lookup data in 102ms
-2022-02-23T21:14:40Z DEBUG - lookup data write lock acquisition time: 709ns
-2022-02-23T21:14:40Z INFO - ThreadId(3): Starting gRPC server on [::]:8080
+[2023-01-17T07:52:51Z INFO  oak_functions_launcher] read Wasm file from disk bin/weather_lookup.wasm (2045311 bytes)
+[2023-01-17T07:52:51Z INFO  oak_functions_launcher] obtained public key (0 bytes)
 ```
 
 ### Run Example Client
@@ -286,35 +283,36 @@ xtask --scope=all --logs run-oak-functions-examples --example-name=weather_looku
 The client should run to completion and give output something like:
 
 ```log
-[19:27:50 ✓:0,✗:0,⠇:1] ┌[oak-functions examples]
-[19:27:50 ✓:0,✗:0,⠇:1] │┌[weather_lookup]
-[19:27:50 ✓:0,✗:0,⠇:1] ││┌[wasm:weather_lookup:oak_functions/examples/weather_lookup/module/Cargo.toml]
-[19:27:50 ✓:0,✗:0,⠇:1] │││ cargo -Zunstable-options build --target=wasm32-unknown-unknown --target-dir=/workspace/target/wasm --manifest-path=oak_functions/examples/weather_lookup/module/Cargo.toml --out-dir=/workspace/bin --release
-    Finished release [optimized] target(s) in 0.44s
-[19:27:50 ✓:0,✗:0,⠇:1] ││└─▶OK 616ms
-[19:27:50 ✓:0,✗:0,⠇:1] ││┌[wizer:bin/weather_lookup.wasm:bin/weather_lookup_init.wasm]
-[19:27:50 ✓:0,✗:0,⠇:1] │││ wizer bin/weather_lookup.wasm -o=bin/weather_lookup_init.wasm
-[19:27:50 ✓:0,✗:0,⠇:1] ││└─▶OK 71ms
-[19:27:50 ✓:0,✗:0,⠇:1] ││┌[run]
-[19:27:50 ✓:0,✗:0,⠇:1] │││┌[run clients]
-[19:27:50 ✓:0,✗:0,⠇:1] ││││┌[rust]
-[19:27:50 ✓:0,✗:0,⠇:1] │││││┌[build]
-[19:27:50 ✓:0,✗:0,⠇:1] ││││││ cargo build --release --target=x86_64-unknown-linux-gnu --manifest-path=oak_functions/client/rust/Cargo.toml
-    Finished release [optimized] target(s) in 0.49s
-[19:27:51 ✓:0,✗:0,⠇:1] │││││└─▶OK 665ms
-[19:27:51 ✓:0,✗:0,⠇:1] │││││┌[run]
-[19:27:51 ✓:0,✗:0,⠇:1] ││││││ cargo run --release --target=x86_64-unknown-linux-gnu --manifest-path=oak_functions/client/rust/Cargo.toml -- --uri=http://localhost:8080 --request={"lat":0,"lng":0} --expected-response-pattern=\{"temperature_degrees_celsius":.*\}
-    Finished release [optimized] target(s) in 0.51s
+[07:55:54 ✓:0,✗:0,⠇:1] ┌[oak-functions examples]
+[07:55:54 ✓:0,✗:0,⠇:1] │┌[weather_lookup]
+[07:55:54 ✓:0,✗:0,⠇:1] ││┌[wasm:weather_lookup:oak_functions/examples/weather_lookup/module/Cargo.toml]
+[07:55:54 ✓:0,✗:0,⠇:1] │││ cargo -Zunstable-options build --target=wasm32-unknown-unknown --target-dir=/workspace/target/wasm --manifest-path=oak_functions/examples/weather_lookup/module/Cargo.toml --out-dir=/workspace/bin --release
+    Finished release [optimized] target(s) in 0.20s
+[07:55:54 ✓:0,✗:0,⠇:1] ││└─▶OK 263ms
+[07:55:54 ✓:0,✗:0,⠇:1] ││┌[run]
+[07:55:54 ✓:0,✗:0,⠇:1] │││┌[run clients]
+[07:55:54 ✓:0,✗:0,⠇:1] ││││┌[rust]
+[07:55:54 ✓:0,✗:0,⠇:1] │││││┌[build]
+[07:55:54 ✓:0,✗:0,⠇:1] ││││││ cargo build --release --target=x86_64-unknown-linux-gnu --manifest-path=oak_functions_client/Cargo.toml
+   Compiling oak_remote_attestation_noninteractive v0.1.0 (/workspace/oak_remote_attestation_noninteractive)
+   Compiling oak_functions_client v0.1.0 (/workspace/oak_functions_client)
+    Finished release [optimized] target(s) in 8.01s
+[07:56:02 ✓:0,✗:0,⠇:1] │││││└─▶OK 8s
+[07:56:02 ✓:0,✗:0,⠇:1] │││││┌[run]
+[07:56:02 ✓:0,✗:0,⠇:1] ││││││ cargo run --release --target=x86_64-unknown-linux-gnu --manifest-path=oak_functions_client/Cargo.toml -- --uri=http://localhost:8080 --request={"lat":0,"lng":0} --expected-response-pattern=\{"temperature_degrees_celsius":.*\}
+   Compiling oak_remote_attestation_noninteractive v0.1.0 (/workspace/oak_remote_attestation_noninteractive)
+   Compiling oak_functions_client v0.1.0 (/workspace/oak_functions_client)
+    Finished release [optimized] target(s) in 8.08s
      Running `target/x86_64-unknown-linux-gnu/release/oak_functions_client '--uri=http://localhost:8080' '--request={"lat":0,"lng":0}' '--expected-response-pattern=\{"temperature_degrees_celsius":.*\}'`
 req: Request { body: [123, 34, 108, 97, 116, 34, 58, 48, 44, 34, 108, 110, 103, 34, 58, 48, 125] }
-Response: Response { status: Success, body: [...], length: 34 }
+Response: [123, 34, 116, 101, 109, 112, 101, 114, 97, 116, 117, 114, 101, 95, 100, 101, 103, 114, 101, 101, 115, 95, 99, 101, 108, 115, 105, 117, 115, 34, 58, 50, 57, 125]
 Response: "{\"temperature_degrees_celsius\":29}"
-[19:27:53 ✓:0,✗:0,⠇:1] │││││└─▶OK 2s
-[19:27:53 ✓:0,✗:0,⠇:1] ││││└[rust]─▶[OK] 2s
-[19:27:53 ✓:0,✗:0,⠇:1] │││└[run clients]─▶[OK] 2s
-[19:27:53 ✓:0,✗:0,⠇:1] ││└[run]─▶[OK] 2s
-[19:27:53 ✓:0,✗:0,⠇:1] │└[weather_lookup]─▶[OK] 3s
-[19:27:53 ✓:1,✗:0,⠇:0] └[oak-functions examples]─▶[OK] 3s
+[07:56:11 ✓:0,✗:0,⠇:1] │││││└─▶OK 8s
+[07:56:11 ✓:0,✗:0,⠇:1] ││││└[rust]─▶[OK] 16s
+[07:56:11 ✓:0,✗:0,⠇:1] │││└[run clients]─▶[OK] 16s
+[07:56:11 ✓:0,✗:0,⠇:1] ││└[run]─▶[OK] 16s
+[07:56:11 ✓:0,✗:0,⠇:1] │└[weather_lookup]─▶[OK] 17s
+[07:56:11 ✓:1,✗:0,⠇:0] └[oak-functions examples]─▶[OK] 17s
 ```
 
 ## Fuzz testing

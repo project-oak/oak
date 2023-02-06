@@ -58,6 +58,11 @@ pub extern "C" fn main() {
             oak_functions_sdk::write_response("Blackholed".as_bytes())
                 .expect("couldn't write response body");
         }
+        "HUGE_RESPONSE" => {
+            // Ignore request just send a huge response.
+            let bytes: Vec<u8> = (0..i32::pow(2, 20)).map(|_| 42u8).collect();
+            oak_functions_sdk::write_response(&bytes).expect("couldn't write response body");
+        }
         _ => panic!("request not recognized"),
     }
 }

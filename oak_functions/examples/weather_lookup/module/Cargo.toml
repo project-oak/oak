@@ -27,9 +27,3 @@ tokio = { version = "*", features = [
   "rt-multi-thread"
 ] }
 tonic = "*"
-# Provide cargo with the dev version that is compatible with recent nightly Rust.
-# Once a new version is released, we should revert to loading this crate via crates.io.
-wizer = "*"
-
-[package.metadata.cargo-udeps.ignore]
-development = ["wizer"]

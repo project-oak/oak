@@ -1,0 +1,24 @@
+[package]
+name = "oak_echo_enclave_app"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[workspace]
+resolver = "2"
+members = ["."]
+
+[dependencies]
+oak_echo_service = { path = "../oak_echo_service" }
+oak_enclave_runtime_support = { path = "../../oak_enclave_runtime_support" }
+log = "*"
+oak_channel = { path = "../../oak_channel" }
+oak_restricted_kernel_api = { path = "../../oak_restricted_kernel_api" }
+micro_rpc = { path = "../../micro_rpc" }
+static_assertions = "*"
+
+[[bin]]
+name = "oak_echo_enclave_app"
+test = false
+bench = false

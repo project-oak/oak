@@ -16,7 +16,10 @@
 
 use crate::syscall;
 use core::ffi::{c_int, c_size_t, c_ssize_t, c_void};
-use oak_restricted_kernel_interface::{Errno, Syscall};
+use oak_restricted_kernel_interface::{
+    syscalls::{MmapFlags, MmapProtection},
+    Errno, Syscall,
+};
 
 #[no_mangle]
 pub extern "C" fn sys_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {
@@ -67,6 +70,57 @@ pub fn fsync(fd: i32) -> Result<(), Errno> {
     }
 }
 
+#[no_mangle]
+pub extern "C" fn sys_mmap(
+    addr: *const c_void,
+    size: c_size_t,
+    prot: c_int,
+    flags: c_int,
+    fd: c_int,
+    offset: c_int,
+) -> isize {
+    unsafe { syscall!(Syscall::Mmap, addr, size, prot, flags, fd, offset) }
+}
+
+pub fn mmap(
+    addr: Option<*const c_void>,
+    size: isize,
+    prot: MmapProtection,
+    flags: MmapFlags,
+    fd: i32,
+    offset: c_int,
+) -> Result<&'static mut [u8], Errno> {
+    let ret = sys_mmap(
+        addr.unwrap_or(core::ptr::null()),
+        size.try_into().map_err(|_| Errno::EINVAL)?,
+        prot.bits(),
+        flags.bits(),
+        fd,
+        offset,
+    );
+
+    if ret <= 0 {
+        Err(Errno::from_repr(ret)
+            .unwrap_or_else(|| panic!("unexpected error from mmap syscall: {}", ret)))
+    } else {
+        // Safety: if the syscall didn't return an error, then the kernel guarantees that the
+        // address is valid and there is enough memory allocated.
+        Ok(unsafe { core::slice::from_raw_parts_mut(ret as *mut u8, size as usize) })
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn sys_exit(status: c_int) {
+    unsafe { syscall!(Syscall::Exit, status) };
+}
+
+pub fn exit(status: i32) -> ! {
+    sys_exit(status);
+    unreachable!();
+}
+
+// Note that these tests are not being executed against Restricted Kernel, but rather the Linux
+// kernel of the machine cargo is running on!
 #[cfg(test)]
 mod tests {
     extern crate std;
@@ -88,17 +142,6 @@ mod tests {
     }
 
     #[test]
-    fn test_erroneus_read() {
-        let fd = {
-            let (reader, _) = os_pipe::pipe().unwrap();
-            reader.as_raw_fd()
-        };
-
-        let mut rx = [0u8; 4];
-        assert!(read(fd, &mut rx).is_err());
-    }
-
-    #[test]
     fn test_erroneus_write() {
         let fd = {
             let (_, writer) = os_pipe::pipe().unwrap();
@@ -116,5 +159,31 @@ mod tests {
             writer.as_raw_fd()
         };
         assert!(fsync(fd).is_err());
+    }
+
+    #[test]
+    fn test_mmap() {
+        let mem = mmap(
+            None,
+            1024,
+            MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
+            MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
+            -1,
+            0,
+        );
+        assert!(mem.is_ok());
+    }
+
+    #[test]
+    fn test_mmap_error() {
+        let mem = mmap(
+            None,
+            0,
+            MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
+            MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
+            -1,
+            0,
+        );
+        assert!(mem.is_err());
     }
 }

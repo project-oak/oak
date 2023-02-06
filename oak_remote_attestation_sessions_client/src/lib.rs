@@ -16,7 +16,7 @@
 
 use anyhow::Context;
 use async_trait::async_trait;
-use oak_remote_attestation::handshaker::{
+use oak_remote_attestation_interactive::handshaker::{
     AttestationBehavior, AttestationGenerator, AttestationVerifier, ClientHandshaker, Encryptor,
 };
 use oak_remote_attestation_sessions::SessionId;

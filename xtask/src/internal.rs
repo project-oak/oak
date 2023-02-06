@@ -55,7 +55,7 @@ pub struct Opt {
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
     RunLauncherTest,
-    BuildBaremetalVariants(BuildBaremetalVariantsOpt),
+    BuildEnclaveBinaryVariants(BuildEnclaveBinaryVariantsOpt),
     RunOakFunctionsExamples(RunOakExamplesOpt),
     BuildOakFunctionsExample(RunOakExamplesOpt),
     BuildOakFunctionsServerVariants(BuildServerOpt),
@@ -72,10 +72,6 @@ pub enum Command {
     RunCargoClean,
     #[command(about = "generate bash completion script to stdout")]
     Completion(Completion),
-    #[command(about = "example running Trusted Shuffler forward a HTTP request")]
-    RunTrustedShuffler,
-    #[command(about = "example running Trusted Shuffler forward a gRPC request")]
-    RunTrustedShufflerGrpc,
 }
 
 #[derive(Parser, Clone, Debug)]
@@ -254,10 +250,10 @@ pub struct RunCargoFuzz {
 }
 
 #[derive(Parser, Clone, Debug)]
-pub struct BuildBaremetalVariantsOpt {
+pub struct BuildEnclaveBinaryVariantsOpt {
     #[arg(
         long,
-        help = "name of a specific baremetal variant (qemu, or crosvm). If not specified, builds all variants."
+        help = "name of a specific enclave binary variant. If not specified, builds all variants."
     )]
     pub variant: Option<String>,
 }

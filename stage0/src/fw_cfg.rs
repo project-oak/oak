@@ -14,15 +14,38 @@
 // limitations under the License.
 //
 
+use bitflags::bitflags;
 use core::{cmp::min, ffi::CStr};
 use oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
+use x86_64::{
+    structures::paging::{PageSize, Size4KiB},
+    PhysAddr,
+};
 use zerocopy::{AsBytes, FromBytes};
 
 // See https://www.qemu.org/docs/master/specs/fw_cfg.html for documentation about the various data structures and constants.
 const FWCFG_PORT_SELECTOR: u16 = 0x510;
 const FWCFG_PORT_DATA: u16 = 0x511;
+const FWCFG_PORT_DMA: u16 = 0x514;
 
 const SIGNATURE: &[u8] = b"QEMU";
+
+/// A single 4KiB buffer that is 4KiB page-aligned.
+#[repr(C, align(4096))]
+#[derive(Debug)]
+pub struct DmaBuffer {
+    data: [u8; Size4KiB::SIZE as usize],
+}
+
+static_assertions::assert_eq_size!(DmaBuffer, [u8; Size4KiB::SIZE as usize]);
+
+impl Default for DmaBuffer {
+    fn default() -> Self {
+        DmaBuffer {
+            data: [0u8; Size4KiB::SIZE as usize],
+        }
+    }
+}
 
 /// Selector keys for "well-known" fw_cfg entries.
 ///
@@ -100,6 +123,9 @@ impl core::fmt::Debug for DirEntry {
 pub struct FwCfg {
     selector: PortWrapper<u16>,
     data: PortWrapper<u8>,
+    dma_high: PortWrapper<u32>,
+    dma_low: PortWrapper<u32>,
+    dma_buf: &'static mut DmaBuffer,
 }
 
 impl FwCfg {
@@ -111,10 +137,18 @@ impl FwCfg {
     ///
     /// The caller has to guarantee that at least doing the probe will not cause any adverse
     /// effects.
-    pub unsafe fn new(port_factory: PortFactoryWrapper) -> Result<Self, &'static str> {
+    pub unsafe fn new(
+        port_factory: PortFactoryWrapper,
+        dma_buf: &'static mut DmaBuffer,
+    ) -> Result<Self, &'static str> {
         let mut fwcfg = Self {
             selector: port_factory.new_writer(FWCFG_PORT_SELECTOR),
             data: port_factory.new_reader(FWCFG_PORT_DATA),
+            dma_high: port_factory.new_writer(FWCFG_PORT_DMA),
+            // The DMA address must be big-endian encoded, so the low address is 4 bytes further
+            // than the high address.
+            dma_low: port_factory.new_writer(FWCFG_PORT_DMA + 4),
+            dma_buf,
         };
 
         // Make sure the fw_cfg device is available. If the device is not available, writing and
@@ -215,7 +249,52 @@ impl FwCfg {
         Ok(reservation_count)
     }
 
-    /// Reads contents of a file; returns the number of bytes actrually read.
+    /// Reads the size of the initial RAM disk.
+    pub fn read_initrd_size(&mut self) -> Result<u32, &'static str> {
+        let mut initrd_size: u32 = 0;
+        self.write_selector(FwCfgItems::InitrdSize as u16)?;
+        self.read(&mut initrd_size)?;
+        Ok(initrd_size)
+    }
+
+    /// Reads the address for the intended location or the initial RAM disk.
+    pub fn read_initrd_address(&mut self) -> Result<PhysAddr, &'static str> {
+        let mut initrd_addr: u32 = 0;
+        self.write_selector(FwCfgItems::InitrdAddr as u16)?;
+        self.read(&mut initrd_addr)?;
+        Ok(PhysAddr::new(initrd_addr as u64))
+    }
+
+    /// Reads the contents of the initial RAM disk into the supplied buffer.
+    ///
+    /// The initial RAM disk is not available via the file interface but has its own selector.
+    pub fn read_initrd_data(&mut self, buf: &mut [u8]) -> Result<usize, &'static str> {
+        if buf.len() != self.read_initrd_size()? as usize {
+            return Err("invalid buffer length");
+        }
+
+        self.write_selector(FwCfgItems::InitrdData as u16)?;
+        self.read_buf_dma(buf)?;
+        Ok(buf.len())
+    }
+
+    /// Reads the size of the kernel.
+    pub fn read_kernel_size(&mut self) -> Result<u32, &'static str> {
+        let mut kernel_size: u32 = 0;
+        self.write_selector(FwCfgItems::KernelSize as u16)?;
+        self.read(&mut kernel_size)?;
+        Ok(kernel_size)
+    }
+
+    /// Reads the address for the intended start of the kernel.
+    pub fn read_kernel_address(&mut self) -> Result<PhysAddr, &'static str> {
+        let mut kernel_addr: u32 = 0;
+        self.write_selector(FwCfgItems::KernelAddr as u16)?;
+        self.read(&mut kernel_addr)?;
+        Ok(PhysAddr::new(kernel_addr as u64))
+    }
+
+    /// Reads contents of a file; returns the number of bytes actually read.
     ///
     /// The buffer `buf` will be filled to capacity if the file is larger;
     /// if it is shorter, the trailing bytes will not be touched.
@@ -242,5 +321,82 @@ impl FwCfg {
             *i = unsafe { self.data.try_read() }?;
         }
         Ok(())
+    }
+
+    fn read_buf_dma(&mut self, buf: &mut [u8]) -> Result<(), &'static str> {
+        let mut chunks_mut = buf.chunks_mut(Size4KiB::SIZE as usize);
+
+        for chunk in chunks_mut.by_ref() {
+            self.read_chunk_dma(chunk)?;
+        }
+
+        Ok(())
+    }
+
+    fn read_chunk_dma(&mut self, chunk: &mut [u8]) -> Result<(), &'static str> {
+        if chunk.len() > self.dma_buf.data[..].len() {
+            return Err("chunk is larger than the DMA buffer");
+        }
+
+        // We always use an identity mapping. We use the shared DMA buffer as a bounce-buffer to
+        // account for potential memory encryption.
+        let address = PhysAddr::new(self.dma_buf.data.as_ptr() as usize as u64);
+        // The length of the buffer will always fit in 32 bits, since we only map the first 1GiB of
+        // physical memory to virtual memory.
+        let length = chunk.len() as u32;
+        let dma_access = FwCfgDmaAccess::new(ControlFlags::READ, length, address);
+        let dma_access_address = &dma_access as *const _ as usize as u64;
+        let dma_low = (dma_access_address & 0xFFFFFFFF) as u32;
+        let dma_high = (dma_access_address >> 32) as u32;
+        // The DMA address halves must be written in big endian format, and the high half must be
+        // written before the low half.
+        // Safety: We make sure that the device is available in `new()`, so writing to the ports is
+        // safe.
+        unsafe {
+            self.dma_high.try_write(dma_high.to_be())?;
+            // Memory fence to make sure the high half is written before the low half.
+            core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
+            self.dma_low.try_write(dma_low.to_be())?;
+        }
+
+        // Memory fence to make sure that the DMA operation is complete before we read the result.
+        core::sync::atomic::fence(core::sync::atomic::Ordering::Release);
+
+        // The control field will be cleared if the DMA operation is complete and successful.
+        if dma_access.control != 0 {
+            Err("fw_cfg DMA failed")
+        } else {
+            chunk.copy_from_slice(&self.dma_buf.data[..chunk.len()]);
+            Ok(())
+        }
+    }
+}
+
+bitflags! {
+    /// Control flags for DMA access.
+    struct ControlFlags: u32 {
+        /// Indicates that an error occurred during the DMA operation.
+        const ERROR = 1 << 0;
+        /// A DMA guest read operation is requested.
+        const READ = 1 << 1;
+    }
+}
+
+/// Definition for a DMA access request.
+#[repr(C)]
+struct FwCfgDmaAccess {
+    control: u32,
+    length: u32,
+    address: u64,
+}
+
+impl FwCfgDmaAccess {
+    const fn new(flags: ControlFlags, length: u32, address: PhysAddr) -> Self {
+        // All the values in this structure is expected to be big endian encoded.
+        FwCfgDmaAccess {
+            control: flags.bits().to_be(),
+            length: length.to_be(),
+            address: address.as_u64().to_be(),
+        }
     }
 }

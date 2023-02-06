@@ -46,6 +46,8 @@ RUN apt-get --yes update \
   clang-tidy \
   # `cmake` is needed for flatbuffer.
   cmake \
+  # `cpio` is needed for creating initial RAM disks.
+  cpio \
   curl \
   docker-ce-cli \
   git \
@@ -231,12 +233,6 @@ RUN cargo install --git https://github.com/rust-fuzz/cargo-fuzz/ --rev 8c964bf18
 # Install cargo-binutils.
 ARG binutils_version=0.3.6
 RUN cargo install --version=${binutils_version} cargo-binutils
-
-# Install Wizer.
-# To allow running warmup initialisation on example Wasm modules.
-# https://github.com/bytecodealliance/wizer
-ARG wizer_version=1.4.0
-RUN cargo install --version=${wizer_version} wizer --all-features
 
 # Where to install rust tooling
 ARG install_dir=${rustup_dir}/bin

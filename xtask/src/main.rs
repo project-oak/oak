@@ -115,7 +115,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
         Command::RunLauncherTest => launcher::run_launcher_test(),
-        Command::BuildBaremetalVariants(ref opts) => launcher::build_baremetal_variants(opts),
+        Command::BuildEnclaveBinaryVariants(ref opts) => {
+            launcher::build_enclave_binary_variants(opts)
+        }
         Command::RunOakFunctionsExamples(ref run_opt) => {
             run_oak_functions_examples(run_opt, &opt.scope)
         }
@@ -137,8 +139,6 @@ fn match_cmd(opt: &Opt) -> Step {
         Command::RunCargoDeny => run_cargo_deny(),
         Command::RunCargoUdeps => run_cargo_udeps(&opt.scope),
         Command::RunCargoClean => run_cargo_clean(),
-        Command::RunTrustedShuffler => run_trusted_shuffler(vec![]),
-        Command::RunTrustedShufflerGrpc => run_trusted_shuffler(vec!["--use-grpc"]),
     }
 }
 

@@ -25,7 +25,7 @@ use std::path::Path;
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter};
 
-#[derive(Debug, Display, Clone, PartialEq, EnumIter)]
+#[derive(Debug, Display, Copy, Clone, PartialEq, EnumIter)]
 pub enum LauncherMode {
     Virtual,
     Native,
@@ -35,7 +35,7 @@ impl LauncherMode {
     /// Get the crate name of respective enclave binary variant
     pub fn enclave_crate_name(&self) -> &'static str {
         match self {
-            LauncherMode::Virtual => "oak_functions_enclave",
+            LauncherMode::Virtual => "oak_functions_enclave_app",
             LauncherMode::Native => "oak_functions_linux_fd_bin",
         }
     }
@@ -62,8 +62,12 @@ impl LauncherMode {
         match self {
             LauncherMode::Virtual => vec![
                 "virtual".to_string(),
-                format!("--enclave-binary={}", &self.enclave_binary_path()),
+                format!(
+                    "--enclave-binary={}",
+                    "./oak_restricted_kernel_bin/target/x86_64-unknown-none/debug/oak_restricted_kernel_bin"
+                ),
                 format!("--vmm-binary={}", "/usr/bin/qemu-system-x86_64"),
+                format!("--app-binary={}", &self.enclave_binary_path()),
                 format!(
                     "--bios-binary={}",
                     "./stage0/target/x86_64-unknown-none/release/oak_stage0.bin"
@@ -77,9 +81,9 @@ impl LauncherMode {
     }
 }
 
-pub fn build_baremetal_variants(opt: &BuildBaremetalVariantsOpt) -> Step {
+pub fn build_enclave_binary_variants(opt: &BuildEnclaveBinaryVariantsOpt) -> Step {
     Step::Multiple {
-        name: "Build baremetal variants".to_string(),
+        name: "Build enclave binary variants".to_string(),
         steps: LauncherMode::iter()
             .filter(|v| option_covers_variant(opt, v))
             .map(|v| build_released_binary(&v.to_string(), &v.enclave_crate_path()))
@@ -87,7 +91,7 @@ pub fn build_baremetal_variants(opt: &BuildBaremetalVariantsOpt) -> Step {
     }
 }
 
-fn option_covers_variant(opt: &BuildBaremetalVariantsOpt, variant: &LauncherMode) -> bool {
+fn option_covers_variant(opt: &BuildEnclaveBinaryVariantsOpt, variant: &LauncherMode) -> bool {
     match &opt.variant {
         None => true,
         Some(var) => match *variant {
@@ -105,28 +109,47 @@ fn build_released_binary(name: &str, directory: &str) -> Step {
 }
 
 pub fn run_launcher_test() -> Step {
+    let mut steps = vec![build_binary(
+        "build Oak Functions launcher",
+        "./oak_functions_launcher",
+    )];
+    steps.extend(LauncherMode::iter().map(run_variant));
+
     Step::Multiple {
         name: "End-to-end tests for the launcher and enclave binary".to_string(),
-        steps: LauncherMode::iter().map(run_variant).collect(),
+        steps,
     }
 }
 
 fn run_variant(variant: LauncherMode) -> Step {
+    let mut steps = vec![build_binary(
+        "build Oak Functions enclave binary",
+        &variant.enclave_crate_path(),
+    )];
+    // If we want to run in an VMM, we need three binaries:
+    // 1. the stage0 BIOS image,
+    // 2. the kernel binary,
+    // 3. the actual Oak Functions enclave application.
+    // (1) and (2) are needed to start the VMM, and the kernel expects to read (3) as the very first
+    // thing over the communication channel.
+    steps.extend(match variant {
+        LauncherMode::Virtual => vec![
+            build_stage0(),
+            build_binary(
+                "build Restricted Kernel binary",
+                "oak_restricted_kernel_bin",
+            ),
+        ],
+        LauncherMode::Native => vec![],
+    });
+    steps.extend(vec![Step::WithBackground {
+        name: "background launcher".to_string(),
+        background: run_launcher(variant),
+        foreground: Box::new(run_client("test_key", "^test_value$", 300)),
+    }]);
     Step::Multiple {
         name: format!("run {} variant", variant),
-        steps: vec![
-            build_stage0(),
-            build_binary("build Oak Functions loader", "./oak_functions_launcher"),
-            build_binary(
-                "build Oak Functions enclave binary",
-                &variant.enclave_crate_path(),
-            ),
-            Step::WithBackground {
-                name: "background loader".to_string(),
-                background: run_launcher(variant),
-                foreground: Box::new(run_client("test_key", "^test_value$", 300)),
-            },
-        ],
+        steps,
     }
 }
 

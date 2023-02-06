@@ -29,6 +29,7 @@ PHDRS
     text    PT_LOAD FLAGS(4 + 1); /* PF_R + PF_X */
     /* Read-only data. */
     rodata  PT_LOAD FLAGS(4); /* PF_R */
+    payload PT_LOAD FLAGS(4); /* PF_R */
     /* Initialized read-write data. */
     data    PT_LOAD FLAGS(4 + 2); /* PF_R + PF_W */
     /* Uninitialized read-write data. */
@@ -53,7 +54,6 @@ SECTIONS {
      * code is to set up proper page tables before jumping to the kernel proper.
      */
     .boot : ALIGN(4K) {
-        ram_min = .;
         *(.boot)
     } : boot
 
@@ -64,14 +64,9 @@ SECTIONS {
      */
     . += KERNEL_MEM_START;
 
-    data_start = .;
-    text_start = .;
-
     .text ALIGN(2M) : AT(ADDR(.text) - KERNEL_MEM_START) {
         *(.text .text.*)
     } : text
-
-    text_end = .;
 
     .rodata ALIGN(2M) : {
         *(.rodata .rodata.*)
@@ -80,8 +75,6 @@ SECTIONS {
     .data ALIGN(2M) : {
         *(.data .data.*)
     } : data
-
-    data_end = .;
 
     .bss : ALIGN(2M) {
         bss_start = .;

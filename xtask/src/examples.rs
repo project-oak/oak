@@ -65,14 +65,6 @@ enum Application {
 #[serde(deny_unknown_fields)]
 struct OakFunctionsApplication {
     target: Target,
-    wizer: Option<WizerOpt>,
-}
-
-#[derive(serde::Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-struct WizerOpt {
-    input: String,
-    output: String,
 }
 
 #[derive(serde::Deserialize, Debug, Default)]
@@ -118,12 +110,7 @@ struct Executable {
 
 impl OakFunctionsApplication {
     fn construct_application_build_steps(&self, example_name: &str) -> Vec<Step> {
-        let mut result = vec![build_wasm_module(example_name, &self.target, example_name)];
-        // If Wizer configuration is specified, run Wizer after the build.
-        if let Some(wizer) = &self.wizer {
-            result.push(run_wizer(&wizer.input, &wizer.output));
-        }
-        result
+        vec![build_wasm_module(example_name, &self.target, example_name)]
     }
 
     fn construct_server_run_step(&self, example: &OakFunctionsExample, run_clients: Step) -> Step {
@@ -448,17 +435,6 @@ pub fn build_wasm_module(name: &str, target: &Target, example_name: &str) -> Ste
     }
 }
 
-fn run_wizer(input: &str, output: &str) -> Step {
-    Step::Single {
-        name: format!("wizer:{}:{}", input, output),
-        command: Cmd::new(
-            "wizer",
-            // See https://github.com/bytecodealliance/wizer#example-usage.
-            spread![format!("{}", input), format!("-o={}", output),],
-        ),
-    }
-}
-
 fn run_oak_functions_server(server: &Server) -> Box<dyn Runnable> {
     Cmd::new(
         server.server_variant.path_to_executable(),
@@ -475,64 +451,6 @@ fn run_oak_functions_server(server: &Server) -> Box<dyn Runnable> {
                 .to_string(),
         ],
     )
-}
-
-pub fn run_trusted_shuffler(flags: Vec<&str>) -> Step {
-    // Build and run the echo backend.
-    let backend_cmd = Cmd::new(
-        "cargo",
-        spread![
-            "run",
-            "--manifest-path=trusted_shuffler/backend/Cargo.toml",
-            "--",
-            "--listen-address=[::]:8888",
-            ...flags
-        ],
-    );
-
-    // Build and run the Trusted Shuffler.
-    let trusted_shuffler_cmd = Cmd::new(
-        "cargo",
-        spread![
-            "run",
-            "--manifest-path=trusted_shuffler/server/Cargo.toml",
-            "--",
-            "--batch-size=1",
-            "--listen-address=[::]:8080",
-            "--backend-url=http://localhost:8888",
-        ],
-    );
-
-    // Build and run the echo gRPC client.
-    let client_cmd = Cmd::new(
-        "cargo",
-        spread![
-            "run",
-            "--manifest-path=trusted_shuffler/client/Cargo.toml",
-            "--",
-            "--server-url=http://localhost:8080",
-            "--qps=1",
-            "--seconds=1",
-            ...flags
-        ],
-    );
-
-    let client_step = Step::Single {
-        name: "Client".to_string(),
-        command: client_cmd,
-    };
-
-    let trusted_shuffler_step = Step::WithBackground {
-        name: "Trusted Shuffler and Backend".to_string(),
-        foreground: Box::new(client_step),
-        background: trusted_shuffler_cmd,
-    };
-
-    Step::WithBackground {
-        name: "Run echo Trusted Shuffler with k=1".to_string(),
-        foreground: Box::new(trusted_shuffler_step),
-        background: backend_cmd,
-    }
 }
 
 fn run_clients(

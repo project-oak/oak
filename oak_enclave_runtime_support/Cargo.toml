@@ -1,0 +1,15 @@
+[package]
+name = "oak_enclave_runtime_support"
+version = "0.1.0"
+authors = ["Andri Saar <andrisaar@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+libm = "*"
+linked_list_allocator = { version = "*", features = ["alloc_ref"] }
+log = "*"
+oak_restricted_kernel_api = { path = "../oak_restricted_kernel_api" }
+oak_restricted_kernel_interface = { path = "../oak_restricted_kernel_interface" }
+spinning_top = { version = "*" }

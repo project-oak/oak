@@ -102,7 +102,6 @@ pub extern "C" fn main() {
     oak_functions_sdk::write_response(&response).expect("couldn't write the response body");
 }
 
-#[export_name = "wizer.initialize"]
 pub extern "C" fn init() {
     // We perform a single S2 cell lookup to ensure that the lookup tables are initialised, as this
     // initisalisation is quite expensive and we don't want to redo it for every request.

@@ -1,0 +1,30 @@
+[package]
+name = "oak_functions_enclave_app"
+version = "0.1.0"
+authors = ["Andri Saar <andrisaar@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[workspace]
+resolver = "2"
+members = ["."]
+
+[dependencies]
+log = "*"
+oak_channel = { path = "../oak_channel" }
+oak_enclave_runtime_support = { path = "../oak_enclave_runtime_support" }
+oak_functions_service = { path = "../oak_functions_service", default-features = false }
+oak_remote_attestation_interactive = { path = "../oak_remote_attestation_interactive", default-features = false, features = [
+  "rust-crypto"
+] }
+oak_remote_attestation_amd = { path = "../oak_remote_attestation_amd", default-features = false, features = [
+  "rust-crypto"
+] }
+oak_restricted_kernel_api = { path = "../oak_restricted_kernel_api" }
+micro_rpc = { path = "../micro_rpc" }
+static_assertions = "*"
+
+[[bin]]
+name = "oak_functions_enclave_app"
+test = false
+bench = false
