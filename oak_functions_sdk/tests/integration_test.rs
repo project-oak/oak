@@ -163,7 +163,7 @@ async fn test_storage_get_item_not_found() {
 #[tokio::test]
 #[ignore]
 async fn test_storage_get_item_huge_key() {
-    let bytes: Vec<u8> = (0..(i32::pow(2, 20))).map(|_| 42u8).collect();
+    let bytes: Vec<u8> = vec![42u8; 1 << 20];
     let entries = HashMap::from_iter([(bytes.clone(), bytes.clone())].into_iter());
 
     let logger = oak_functions_service::StandaloneLogger {};
@@ -179,7 +179,7 @@ async fn test_storage_get_item_huge_key() {
     };
 
     let response: Response = wasm_handler.handle_invoke(request).unwrap();
-    assert_eq!(response.body.len(), bytes.len())
+    assert_eq!(response.body, bytes)
 }
 
 #[tokio::test]
@@ -254,5 +254,5 @@ async fn test_huge_response() {
     };
 
     let response: Response = wasm_handler.handle_invoke(request).unwrap();
-    assert_eq!(response.body.len(), i32::pow(2, 20) as usize)
+    assert_eq!(response.body, vec![42u8; 1 << 20])
 }

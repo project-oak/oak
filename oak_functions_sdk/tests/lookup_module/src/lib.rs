@@ -119,13 +119,12 @@ impl TestManager<'static> {
     /// the integration test.
     fn test_storage_get_item_huge_key(_key: &str) {
         // Easier to ignore key from request, just create the same as in the integration test.
-        let key: Vec<u8> = (0..(i32::pow(2, 20))).map(|_| 42u8).collect();
-        let value = oak_functions_sdk::storage_get_item(&key);
-        assert_matches!(value, Ok(_));
-        let value = value.unwrap();
-        assert_matches!(value, Some(_));
+        let key: Vec<u8> = vec![42u8; 1 << 20];
+        let value = oak_functions_sdk::storage_get_item(&key)
+            .expect("couldn't receive response")
+            .expect("no value found");
 
-        oak_functions_sdk::write_response(&value.unwrap()).expect("couldn't write response");
+        oak_functions_sdk::write_response(&value).expect("couldn't write response");
     }
 }
 
