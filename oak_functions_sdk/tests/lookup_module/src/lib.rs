@@ -37,6 +37,7 @@ impl TestManager<'static> {
                 "WriteLog" => Self::test_write_log as TestFn,
                 "StorageGet" => Self::test_storage_get as TestFn,
                 "StorageGetItemNotFound" => Self::test_storage_get_item_not_found as TestFn,
+                "LargeKey" => Self::test_storage_get_item_huge_key as TestFn,
             ],
         }
     }
@@ -112,6 +113,18 @@ impl TestManager<'static> {
             Err(_) => b"Unexpected error".to_vec(),
         };
         oak_functions_sdk::write_response(&response_msg).expect("couldn't write response")
+    }
+
+    /// Tests `storage_get_item` when the key is large. The lookup data is set in
+    /// the integration test.
+    fn test_storage_get_item_huge_key(_key: &str) {
+        // Easier to ignore key from request, just create the same as in the integration test.
+        let key: Vec<u8> = vec![42u8; 1 << 20];
+        let value = oak_functions_sdk::storage_get_item(&key)
+            .expect("couldn't receive response")
+            .expect("no value found");
+
+        oak_functions_sdk::write_response(&value).expect("couldn't write response");
     }
 }
 
