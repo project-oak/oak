@@ -176,17 +176,6 @@
 <span id="176">176</span>
 <span id="177">177</span>
 <span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
-<span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
-<span id="189">189</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -328,17 +317,6 @@
         <span class="macro">assert_eq!</span>(<span class="prelude-val">Ok</span>(<span class="number">4</span>), read(reader.as_raw_fd(), <span class="kw-2">&amp;mut </span>rx));
 
         <span class="macro">assert_eq!</span>(tx, <span class="kw-2">&amp;</span>rx);
-    }
-
-    <span class="attribute">#[test]
-    </span><span class="kw">fn </span>test_erroneus_write() {
-        <span class="kw">let </span>fd = {
-            <span class="kw">let </span>(<span class="kw">_</span>, writer) = os_pipe::pipe().unwrap();
-            writer.as_raw_fd()
-        };
-
-        <span class="kw">let </span>tx = <span class="string">b&quot;test&quot;</span>;
-        <span class="macro">assert!</span>(write(fd, tx).is_err());
     }
 
     <span class="attribute">#[test]
