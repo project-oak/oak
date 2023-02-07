@@ -23,7 +23,7 @@ option java_package = "oak.session.noninteractive.v1";
 
 // AttestationEvidence contains the information that the untrusted launcher provides to the client
 // in response to its request for the enclave's public key(s). The name is chosen to match the RATS
-// terminology (see https://datatracker.ietf.org/wg/rats/about/).
+// terminology (see https://datatracker.ietf.org/doc/draft-ietf-rats-eat/).
 message AttestationEvidence {
   // The serialized public key part of the enclave encryption key.
   // TODO(#3442): Specify key format.
@@ -74,8 +74,8 @@ message ApplicationData {
 message GetPublicKeyRequest {}
 
 message GetPublicKeyResponse {
-  // The AttestationEvidence containing the enclave's signing and encryption public keys.
-  AttestationEvidence public_key_info = 1;
+  // The enclave's signing and encryption public keys and attestation evidence about them.
+  AttestationEvidence attestation_evidence = 1;
 }
 
 message InvokeRequest {
