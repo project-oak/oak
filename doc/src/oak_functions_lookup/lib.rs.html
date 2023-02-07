@@ -243,6 +243,10 @@
 <span id="243">243</span>
 <span id="244">244</span>
 <span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -306,7 +310,11 @@
     <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, OakStatus&gt; {
         <span class="comment">// The request is the key to lookup.
         </span><span class="kw">let </span>key = request;
-        <span class="self">self</span>.log_debug(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;storage_get_item(): key: {}&quot;</span>, format_bytes(<span class="kw-2">&amp;</span>key)));
+        <span class="kw">let </span>key_to_log = key.clone().into_iter().take(<span class="number">512</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+        <span class="self">self</span>.log_debug(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+            <span class="string">&quot;storage_get_item(): key: {}&quot;</span>,
+            format_bytes(<span class="kw-2">&amp;</span>key_to_log)
+        ));
         <span class="kw">let </span>value = <span class="self">self</span>.get(<span class="kw-2">&amp;</span>key);
 
         <span class="comment">// Log found value.
