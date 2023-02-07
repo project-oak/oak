@@ -61,7 +61,11 @@ impl<L: OakLogger> OakApiNativeExtension for LookupData<L> {
     fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
         // The request is the key to lookup.
         let key = request;
-        self.log_debug(&format!("storage_get_item(): key: {}", format_bytes(&key)));
+        let key_to_log = key.clone().into_iter().take(512).collect::<Vec<_>>();
+        self.log_debug(&format!(
+            "storage_get_item(): key: {}",
+            format_bytes(&key_to_log)
+        ));
         let value = self.get(&key);
 
         // Log found value.
