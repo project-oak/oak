@@ -1,0 +1,5 @@
+Libgloss is a library for all the details that usually get glossed over.
+This library refers to things like startup code, and usually I/O support
+for GCC and the C library.
+
+For more details, see the manual under doc/.

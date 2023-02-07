@@ -1,0 +1,44 @@
+Bug Fixes
+---------
+
+- Fix an issue that command "cmd /c script -c cmd" crashes if it
+  is issued in console of Windows 7.
+
+- Fix killpg failing because the exec'ing as well as the exec'ed
+  process are not in the pidlist for a brief moment.
+  Addresses: https://cygwin.com/pipermail/cygwin/2022-May/251479.html
+
+- Fix mknod (64-bit only), whose definition didn't match its prototype.
+  Addresses: https://cygwin.com/pipermail/cygwin-developers/2022-May/012589.html
+
+- Fix a regression that prevented Cygwin from starting if cygwin1.dll
+  is in the root directory.
+  Addresses: https://cygwin.com/pipermail/cygwin/2022-May/251548.html
+
+- Handle setting very long window title correctly in console.
+  Addresses: https://cygwin.com/pipermail/cygwin/2022-June/251662.html
+
+- Fix a bug of poll() that it returns event which is not inquired
+  if events are inquired in multiple pollfd entries on the same fd
+  at the same time.
+  Addresses: https://cygwin.com/pipermail/cygwin/2022-June/251732.html
+
+- Fix a console problem that the text longer than 1024 bytes cannot
+  be pasted correctly.
+  Addresses: https://cygwin.com/pipermail/cygwin/2022-June/251764.html
+
+- Fix a pty problem that pty failed to switch I/O pipe to that for
+  native apps if *.bat or *.cmd is executed directly from cygwin
+  shell.
+  Addresses: https://cygwin.com/pipermail/cygwin/2022-July/251993.html
+
+- Fix a problem that prevented some symbolic links to /cygdrive/C,
+  /cygdrive/./c, /cygdrive//c, etc. from working.
+  Addresses: https://cygwin.com/pipermail/cygwin/2022-July/251994.html
+
+- Fix a path handling bug that could cause a non-existing file to be
+  treated as the current directory.
+  Addresses: https://cygwin.com/pipermail/cygwin/2022-August/252030.html
+
+- Fix a crash in newlocale.
+  Addresses: https://cygwin.com/pipermail/cygwin/2022-August/252043.html

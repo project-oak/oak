@@ -1,0 +1,24 @@
+Bug Fixes
+---------
+
+- Fix an uninitialized variable having weird side-effects in path handling.
+  Addresses: https://cygwin.com/pipermail/cygwin/2022-December/252734.html
+
+- Fix hang-up of less on quit which occurs when it is started from non-cygwin
+  shell and window is resized.
+  Addresses: https://cygwin.com/pipermail/cygwin/2022-December/252737.html
+
+- Reinstantiate exporting _alloca.
+  Addresses: https://cygwin.com/pipermail/cygwin/2023-January/252797.html
+
+- Avoid hangs when reading /proc/<PID>/status.
+  Addresses: https://cygwin.com/pipermail/cygwin/2022-December/252756.html
+
+- Fix vmstat(1) printing an error message on single core CPUs.
+  Addresses: https://cygwin.com/pipermail/cygwin/2023-January/252857.html
+
+- Fix potential process termination during process initialization.
+  Most easily reproducible is the case of non-Cygwin processes running
+  with high-entropy VA enabled and loading the Cygwin DLL dynamically.
+  Addresses: https://cygwin.com/pipermail/cygwin/2023-January/252765.html
+	     https://cygwin.com/pipermail/cygwin/2023-January/252865.html

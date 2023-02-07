@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+#set -x
+input_file=$1
+output_file=$2
+tmp_file=/tmp/${output_file}.$$
+
+trap "rm -f ${tmp_file}" 0 1 2 15
+
+# Preprocess cygtls.h and filter out only the member lines from
+# class _cygtls to generate an input file for the cross compiler
+# to generate the member offsets for tlsoffsets-$(target_cpu).h.
+${CXXCOMPILE} -E -P "${input_file}" 2> /dev/null | \
+gawk '
+  BEGIN {
+    # marker is used to split out the member lines from class _cygtls
+    marker=0;
+    # Prepare the input file for the subsequent compiler run.
+    # Prepend value of __CYGTLS_PADSIZE__ so we can compute the offsets
+    # up and down at the same time
+    print "#include \"winsup.h\"";
+    print "#include \"cygtls.h\"";
+    print "extern \"C\" const uint32_t __CYGTLS__start_offset = __CYGTLS_PADSIZE__;";
+  }
+  /^class _cygtls$/ {
+    # Ok, bump marker, next we are expecting a "public:" line
+    marker=1;
+  }
+  /^public:/ {
+    # We are only interested in the lines between the first (marker == 2)
+    # and the second (marker == 3) "public:" line in class _cygtls.  These
+    # are where the members are defined.
+    if (marker > 0) ++marker;
+    if (marker > 2) exit;
+  }
+  {
+    if (marker == 2 && $1 != "public:") {
+      # Filter out function names
+      $0 = gensub (/\(\*(\w+)\)\s*\([^\)]*\)/, "\\1", "g");
+      # Filter out leading asterisk
+      $NF = gensub (/^\**(\w+)/, "\\1", "g", $NF);
+      # Filter out trailing array expression
+      $NF = gensub (/(\w+)\s*\[[^\]]*\]/, "\\1", "g", $NF);
+      $NF = gensub (/(\w+);/, "\\1", "g", $NF);
+      print "extern \"C\" const uint32_t __CYGTLS__" $NF " = offsetof (class _cygtls, " $NF ");";
+    }
+  }
+' | \
+# Now run the compiler to generate an assembler file.
+${CXXCOMPILE} -x c++ -g0 -S - -o ${tmp_file} && \
+# The assembler file consists of lines like these:
+#
+#   __CYGTLS__foo
+#       .long 42
+#       .globl __CYGTLS__foo
+#       .align 4
+#
+# From this info, generate the tlsoffsets file.
+start_offset=$(gawk '\
+  BEGIN {
+    varname=""
+  }
+  /^__CYGTLS__/ {
+    varname = gensub (/__CYGTLS__(\w+):/, "\\1", "g");
+  }
+  /\s*\.long\s+/ {
+    if (length (varname) > 0) {
+      if (varname == "start_offset") {
+	print $2;
+      }
+      varname = "";
+    }
+  }
+' ${tmp_file}) && \
+gawk -v start_offset="$start_offset" '\
+  BEGIN {
+    varname=""
+  }
+  /^__CYGTLS__/ {
+    varname = gensub (/__CYGTLS__(\w+):/, "\\1", "g");
+  }
+  /\s*\.space\s*4/ {
+    if (length (varname) > 0) {
+      printf (".equ _cygtls.%s, %d\n", varname, -start_offset);
+      printf (".equ _cygtls.%s_p, 0\n", varname);
+      varname = "";
+    }
+  }
+  /\s*\.long\s+/ {
+    if (length (varname) > 0) {
+      if (varname == "start_offset") {
+	printf (".equ _cygtls.%s, -%u\n", varname, start_offset);
+      } else {
+      	value = $2;
+	printf (".equ _cygtls.%s, %d\n", varname, value - start_offset);
+	printf (".equ _cygtls.%s_p, %d\n", varname, value);
+      }
+      varname = "";
+    }
+  }
+' ${tmp_file} > "${output_file}"
+# Check if the `context' member is 16 bytes aligned.  Delete output_file
+# and bail out with error if not.
+MOD=$(awk '/_cygtls.context_p/{ print $3 % 16; }' "${output_file}")
+if [ $MOD -ne 0 ]
+then
+  echo "Error: _cygtls.context member is not 16 bytes aligned!"
+  rm "${output_file}"
+  exit 1
+fi

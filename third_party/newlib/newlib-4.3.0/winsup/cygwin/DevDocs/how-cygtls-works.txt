@@ -1,0 +1,62 @@
+Contributed by Max Kaehn
+
+All cygwin threads have separate context in an object of class _cygtls.  The
+storage for this object is kept on the stack in the bottom __CYGTLS_PADSIZE__
+bytes.  Each thread references the storage via the Thread Environment Block
+(aka Thread Information Block), which Windows maintains for each user thread
+in the system, with the address in a segment register (FS on x86, GS on x86_64).
+The memory is laid out as in the NT_TIB structure from <w32api/winnt.h>:
+
+typedef struct _NT_TIB {
+	struct _EXCEPTION_REGISTRATION_RECORD *ExceptionList;
+	PVOID StackBase;
+	PVOID StackLimit;
+	PVOID SubSystemTib;
+	_ANONYMOUS_UNION union {
+		PVOID FiberData;
+		DWORD Version;
+	} DUMMYUNIONNAME;
+	PVOID ArbitraryUserPointer;
+	struct _NT_TIB *Self;
+} NT_TIB,*PNT_TIB;
+
+Cygwin accesses cygtls like this (see cygtls.h):
+
+#define _my_tls (*((_cygtls *) ((PBYTE) NtCurrentTeb()->Tib.StackBase \
+		                - __CYGTLS_PADSIZE__)))
+
+Initialization always goes through _cygtls::init_thread().  It works
+in the following ways:
+
+* In the main thread, _dll_crt0() provides __CYGTLS_PADSIZE__ bytes on the stack
+  and passes them to initialize_main_tls(), which calls _cygtls::init_thread().
+  It then calls dll_crt0_1(), which terminates with cygwin_exit() rather than
+  by returning, so the storage never goes out of scope.
+
+  If you load cygwin1.dll dynamically from a non-cygwin application, it is
+  vital that the bottom __CYGTLS_PADSIZE__ bytes of the stack are not in use
+  before you call cygwin_dll_init().  See winsup/testsuite/cygload for
+  more information.
+
+* Threads other than the main thread receive DLL_THREAD_ATTACH messages
+  to dll_entry() (in init.cc).
+  - dll_entry() calls munge_threadfunc(), which grabs the function pointer
+    for the thread from the stack frame and substitutes threadfunc_fe(),
+  - which then passes the original function pointer to _cygtls::call(),
+  - which then allocates __CYGTLS_PADSIZE__ bytes on the stack and hands them
+    to call2(),
+  - which allocates an exception_list object on the stack and hands it to
+    init_exceptions() (in exceptions.cc), which attaches it to the end of
+    the list of exception handlers, changing _except_list (aka
+    tib->ExceptionList), then passes the cygtls storage to init_thread().
+    call2() calls ExitThread() instead of returning, so the storage never
+    goes out of scope.
+
+Note that the padding isn't necessarily going to be just where the _cygtls
+structure lives; it just makes sure there's enough room on the stack when the
+__CYGTLS_PADSIZE__ bytes down from there are overwritten.
+
+
+Debugging
+
+You can examine the TIB in gdb via "info w32 tib"
