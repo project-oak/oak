@@ -15,12 +15,14 @@
 
 //! Integration tests for the Oak Functions Launcher.
 
-use std::path::PathBuf;
-
 use lazy_static::lazy_static;
-use micro_rpc::AsyncTransport;
-use oak_functions_launcher::Mode;
+
+use oak_functions_launcher::{
+    schema::{self, InvokeRequest},
+    Mode,
+};
 use oak_functions_test_utils;
+use std::path::PathBuf;
 
 lazy_static! {
     static ref WASM_PATH: PathBuf = {
@@ -45,7 +47,7 @@ async fn test_launcher_looks_up_key() {
         enclave_binary: PathBuf::from(oak_functions_linux_fd_bin_path),
     };
 
-    let (launched_instance, mut connector_handle, _) = oak_functions_launcher::create(
+    let (launched_instance, connector_handle, _) = oak_functions_launcher::create(
         Mode::Native(params),
         LOOKUP_DATA_PATH.to_path_buf(),
         WASM_PATH.to_path_buf(),
@@ -54,14 +56,18 @@ async fn test_launcher_looks_up_key() {
     .await
     .expect("Fail to create launcher");
 
-    // TODO(mschett): Find easiest way to send "test_key" as invocation of lookup data and unwrap
-    // "test_value".
-    let response = connector_handle
-        .invoke(&[42u8])
+    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
+    let body = b"test_key".to_vec();
+    let invoke_request = InvokeRequest { body: body };
+
+
+    let response = client
+        .invoke(&invoke_request)
         .await
         .expect("Failed to receive response.");
 
-    assert_eq!(b"test_value".to_vec(), response);
+    assert!(response.is_ok());
+    assert_eq!(b"test_value".to_vec(), response.unwrap().body);
 
     launched_instance
         .kill()
