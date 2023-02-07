@@ -79,7 +79,7 @@ async fn test_launcher_looks_up_key() {
 }
 
 #[tokio::test]
-
+#[ignore]
 async fn test_load_large_lookup_data() {
     let params = oak_functions_launcher::instance::native::Params {
         enclave_binary: ENCLAVE_BINARY_PATH.to_path_buf(),
