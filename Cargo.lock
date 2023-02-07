@@ -2109,6 +2109,7 @@ dependencies = [
  "oak_functions_test_utils",
  "oak_remote_attestation_noninteractive",
  "prost 0.11.2",
+ "rand 0.4.6",
  "serde",
  "tokio",
  "tonic",

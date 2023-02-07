@@ -22,6 +22,7 @@ use oak_functions_launcher::{
     Mode,
 };
 use oak_functions_test_utils;
+use rand::Rng;
 use std::path::PathBuf;
 
 lazy_static! {
@@ -75,4 +76,43 @@ async fn test_launcher_looks_up_key() {
         .kill()
         .await
         .expect("Failed to stop launcher");
+}
+
+#[tokio::test]
+
+async fn test_load_large_lookup_data() {
+    let params = oak_functions_launcher::instance::native::Params {
+        enclave_binary: ENCLAVE_BINARY_PATH.to_path_buf(),
+    };
+
+    let mut rng = rand::thread_rng();
+    // Initialize > 2 GiB of lookup data to hit the proto limits.
+    let lookup_data_size = 2 * (2 << 30);
+    let entry_size = 2 << 10;
+    // The key in the lookup data maps to itself, so an entry has double key size.
+    let mut entries = std::collections::HashMap::new(); // Vec::with_capacity(lookup_data_size / entry_size / 2);
+
+    let mut key_prefix = vec![0u8; (entry_size / 2) - 4];
+    rng.fill_bytes(key_prefix.as_mut_slice());
+
+    for i in 0..(lookup_data_size / entry_size / 2) {
+        let mut n = key_prefix.clone();
+        n.append(&mut format!("{}", i).into_bytes());
+        entries.insert(n.clone(), n);
+    }
+
+    let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
+        &oak_functions_test_utils::serialize_entries(entries),
+    );
+
+    let status = oak_functions_launcher::create(
+        Mode::Native(params),
+        lookup_data_file.path().to_path_buf(),
+        WASM_PATH.to_path_buf(),
+        (entry_size as u32 / 2) + 1024, // Add some margin be on the safe side.
+    )
+    .await;
+
+    // TODO(#3668): Load 2 GiB of lookup data.
+    assert!(status.is_err())
 }
