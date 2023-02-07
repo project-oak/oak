@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding='UTF-8'?>
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook V4.5//EN"
+		"http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
+
+<qandadiv id="faq.api">
+<title>Cygwin API Questions</title>
+
+<!-- faq-api.xml --> 
+<qandaentry id="faq.api.everything">
+<question><para>How does everything work?</para></question>
+<answer>
+
+<para>There's a C library which provides a POSIX-style API.  The
+applications are linked with it and voila - they run on Windows.
+</para>
+<para>The aim is to add all the goop necessary to make your apps run on
+Windows into the C library.  Then your apps should (ideally) run on POSIX
+systems (Unix/Linux) and Windows with no changes at the source level.
+</para>
+<para>The C library is in a DLL, which makes basic applications quite small.
+And it allows relatively easy upgrades to the Windows/POSIX translation
+layer, providing that DLL changes stay backward-compatible.
+</para>
+<para>For a good overview of Cygwin, you may want to read the Cygwin
+User's Guide.
+</para>
+</answer></qandaentry>
+
+<qandaentry id="faq.api.snapshots">
+<question><para>Are development snapshots for the Cygwin library available?</para></question>
+<answer>
+
+<para>Starting December 2022, the old developer snapshots have been
+deprecated by regular, automated test releases.  See the next FAQ entry
+<xref linkend="faq.api.testrels"></xref>
+</para>
+</answer></qandaentry>
+
+<qandaentry id="faq.api.testrels" xreflabel="Test Releases">
+<question><para>Are test releases for the Cygwin library available?</para></question>
+<answer>
+
+<para>Yes.  Starting December 2022, regular, automated test releases
+are created whenever a considerable patch is pushed to the Cygwin git
+repo at <ulink url="https://cygwin.com/git/newlib-cygwin.git"/>.
+You can download the cygwin package test releases just like any other
+test release for any Cgywin package using the Cygwin Setup program.
+For more info, see
+<xref linkend="faq.setup.testrels"></xref>.
+</para>
+</answer></qandaentry>
+
+<qandaentry id="faq.api.cr-lf">
+<question><para>How is the DOS/Unix CR/LF thing handled?</para></question>
+<answer>
+
+<para>Let's start with some background.
+</para>
+<para>On POSIX systems, a file is a file and what the file contains is
+whatever the program/programmer/user told it to put into it.  In Windows,
+a file is also a file and what the file contains depends not only on the
+program/programmer/user but also the file processing mode.
+</para>
+<para>When processing in text mode, certain values of data are treated
+specially.  A \n (new line, NL) written to the file will prepend a \r
+(carriage return, CR) so that if you `printf("Hello\n") you in fact get
+"Hello\r\n".  Upon reading this combination, the \r is removed and the
+number of bytes returned by the read is 1 less than was actually read.
+This tends to confuse programs dependent on ftell() and fseek().  A
+Ctrl-Z encountered while reading a file sets the End Of File flags even
+though it truly isn't the end of file.
+</para>
+<para>One of Cygwin's goals is to make it possible to mix Cygwin-ported
+POSIX programs with generic Windows programs.  As a result, Cygwin allows
+to open files in text mode.  In the accompanying tools, tools that deal
+with binaries (e.g. objdump) operate in POSIX binary mode and many (but
+not all) tools that deal with text files (e.g. bash) operate in text mode.
+There are also some text tools which operate in a mixed mode.  They read
+files always in text mode, but write files in binary mode, or they write
+in the mode (text or binary) which is specified by the underlying mount
+point.  For a description of mount points, see the Cygwin User's Guide.
+</para>
+<para>Actually there's no really good reason to do text mode processing
+since it only slows down reading and writing files.  Additionally many
+Windows applications can deal with POSIX \n line endings just fine
+(unfortunate exception: Notepad).  So we suggest to use binary mode
+as much as possible and only convert files from or to DOS text mode
+using tools specifically created to do that job, for instance, dos2unix and
+unix2dos from the dos2unix package.
+</para>
+<para>It is rather easy for the porter of a Unix package to fix the source
+code by supplying the appropriate file processing mode switches to the
+open/fopen functions.  Treat all text files as text and treat all binary
+files as binary.  To be specific, you can select binary mode by adding
+<literal>O_BINARY</literal> to the second argument of an
+<literal>open</literal> call, or <literal>"b"</literal> to second argument
+of an <literal>fopen</literal> call.  You can also call
+<literal>setmode (fd, O_BINARY)</literal>.  To select text mode add
+<literal>O_TEXT</literal> to the second argument of an <literal>open</literal>
+call, or <literal>"t"</literal> to second argument of an
+<literal>fopen</literal> call, or just call
+<literal>setmode (fd, O_TEXT)</literal>.
+</para>
+<para>You can also avoid to change the source code at all by linking
+an additional object file to your executable.  Cygwin provides various
+object files in the <filename>/usr/lib</filename> directory which,
+when linked to an executable, changes the default open modes of any
+file opened within the executed process itself.  The files are
+<screen>
+  binmode.o      - Open all files in binary mode.
+  textmode.o     - Open all files in text mode.
+  textreadmode.o - Open all files opened for reading in text mode.
+  automode.o     - Open all files opened for reading in text mode,
+                   all files opened for writing in binary mode.
+</screen>
+</para>
+<para>
+<note>
+  Linking against these object files does <emphasis>not</emphasis> change
+  the open mode of files propagated to a process by its parent process,
+  for instance, if the process is part of a shell pipe expression.
+</note>
+</para>
+<para>Note that of the above flags only the "b" fopen flags are defined by
+ANSI.  They exist under most flavors of Unix.  However, using O_BINARY,
+O_TEXT, or the "t" flag is non-portable.
+</para>
+</answer></qandaentry>
+
+<qandaentry id="faq.api.threads">
+<question><para>Is the Cygwin library multi-thread-safe?</para></question>
+<answer>
+
+<para>Yes.
+</para>
+<para>There is also extensive support for 'POSIX threads', see the file
+<literal>cygwin.din</literal> for the list of POSIX thread functions provided.
+</para>
+</answer></qandaentry>
+
+<qandaentry id="faq.api.fork">
+<question><para>How is fork() implemented?</para></question>
+<answer>
+
+<para>Cygwin fork() essentially works like a non-copy on write version
+of fork() (like old Unix versions used to do).  Because of this it
+can be a little slow.  In most cases, you are better off using the
+spawn family of calls if possible.
+</para>
+<para>Here's how it works:
+</para>
+<para>Parent initializes a space in the Cygwin process table for child.
+Parent creates child suspended using Windows CreateProcess call, giving
+the same path it was invoked with itself.  Parent calls setjmp to save
+its own context and then sets a pointer to this in the Cygwin shared
+memory area (shared among all Cygwin tasks).  Parent fills in the child's
+.data and .bss subsections by copying from its own address space into
+the suspended child's address space.  Parent then starts the child.
+Parent waits on mutex for child to get to safe point.  Child starts and
+discovers if has been forked and then longjumps using the saved jump
+buffer.  Child sets mutex parent is waiting on and then blocks on
+another mutex waiting for parent to fill in its stack and heap.  Parent
+notices child is in safe area, copies stack and heap from itself into
+child, releases the mutex the child is waiting on and returns from the
+fork call.  Child wakes from blocking on mutex, recreates any mmapped
+areas passed to it via shared area and then returns from fork itself.
+</para>
+<para>When the executable or any dll in use by the parent was renamed or
+moved into the hidden recycle bin, fork retries with creating hardlinks
+for the old executable and any dll into per-user subdirectories in the
+/var/run/cygfork/ directory, when that one exists and resides on NTFS.
+</para>
+</answer></qandaentry>
+
+<qandaentry id="faq.api.globbing">
+<question><para>How does wildcarding (globbing) work?</para></question>
+<answer>
+
+<para>If the DLL thinks it was invoked from a DOS style prompt, it runs a
+`globber' over the arguments provided on the command line.  This means
+that if you type <literal>LS *.EXE</literal> from DOS, it will do what you might
+expect.
+</para>
+<para>Beware: globbing uses <literal>malloc</literal>.  If your application defines
+<literal>malloc</literal>, that will get used.  This may do horrible things to you.
+</para>
+</answer></qandaentry>
+
+<qandaentry id="faq.api.symlinks">
+<question><para>How do symbolic links work?</para></question>
+<answer>
+
+<para>Cygwin knows of five ways to create symlinks.  This is really
+complicated stuff since we started out way back when Windows didn't
+know symlinks at all.  The rest is history...
+</para>
+
+<itemizedlist spacing="compact">
+
+<listitem><para>
+Starting with Cygwin 3.1.5 in 2020, symlinks are created by default as a
+special reparse point type known as "WSL symlinks".  These have been
+introduced on Windows 10 with the advent of WSL, "Windows Subsystem for
+Linux".  WSL symlinks created by Cygwin are understood by WSL and vice
+versa.  They contain a normal POSIX path as used in the Cygwin and WSL
+environments.  Windows itself recognizes them as arbitrary reparse
+points (CMD's "dir" command shows them as "[JUNCTION]") but it doesn't
+know how to follow them to the target.  Older Windows versions handle
+these symlinks exactly the same way, so there's no point using different
+symlink types on older Windows.  These symlinks only work on filesystems
+supporting reparse points, but fortunately there's another symlink type
+Cygwin creates, right the next bullet point...
+</para></listitem>
+
+<listitem><para>
+The original default method creating symlinks in Cygwin since pre-2000
+generates symlinks as simple files with a magic header and the DOS
+SYSTEM attribute set.  When you open a file or directory through such a
+symlink, Cygwin opens the file, checks the magic header, and if it's
+correct, reads the target of the symlink from the remainder of the file.
+Because we don't want having to open every referenced file to check
+symlink status, Cygwin only opens files with DOS SYSTEM attribute set to
+inspect them for being a Cygwin symlink.  These symlinks also work
+on filesystems not supporting reparse points, i. e., FAT/FAT32/ExFAT.
+</para></listitem>
+
+<listitem><para>
+A very special case are NFS filesystems, supported by Cygwin since 2008
+via the Microsoft NFS driver, unfortunately only available in Enterprise
+versions of Windows.  Filesystems shared via NFS usually support symlinks
+all by themselves, and the Microsoft driver has special functionality to
+support them.  Cygwin utilizes this interface to create "real" symlinks
+on filesystems mounted via NFS.
+</para></listitem>
+
+<listitem><para>
+Starting 2013, Cygwin also supports NTFS symlinks, introduced with
+Windows Vista.  These symlinks are reparse points containing a Windows
+path.  Creating them is enabled by setting 'winsymlinks:native' or
+'winsymlinks:nativestrict' in the environment variable CYGWIN.  The
+upside of this symlink type is that the path is stored as Windows path
+so they are understood by non-Cygwin Windows tools as well.  The downsides
+are:
+<itemizedlist spacing="compact">
+<listitem><para>
+The path is stored as Windows path, so the path has perhaps to be rearranged
+to result in a valid path.  This may result in a divergence from the original
+POSIX path the user intended.
+</para></listitem>
+<listitem><para>
+Creating NTFS symlinks require administrative privileges by default.  You
+have to make certain settings in the OS (depending on the Windows version)
+to allow creating them as a non-privileged user.
+</para></listitem>
+<listitem><para>
+NTFS symlinks have a type.  They are either a "file" or a "directory",
+depending on the target file type.  This information is utilized especially
+by Windows Explorer to show the correct file or directory icon in file
+listings without having to check on the target file and to know what
+actions are provided by clicking on the symlink.  However, if a NTFS
+symlink points to a file "foo", and "foo" is deleted and replaced by
+a directory "foo", the symlink type of an NTFS symlink pointing to "foo"
+is unchanged and subsequently Windows Explorer will misbehave.
+Consequentially, creating dangling NTFS symlinks is a nuisance, since
+the library does not know what type the still-to-be-created symlink
+target will be.  Cygwin will not create dangling NTFS symlinks, but
+fallback to creating the default symlink type (winsymlinks:native) or
+just fail (winsymlinks:nativestrict).
+</para></listitem>
+</itemizedlist>
+</para></listitem>
+
+<listitem><para>
+Another method, available since 2001, is enabled if `winsymlinks'  or
+'winsymlinks:lnk' is set in the environment variable CYGWIN.  Using this
+method, Cygwin generates symlinks by creating Windows shortcuts .
+Cygwin created shortcuts have a special header (which is never created
+by Explorer that way) and the DOS READONLY attribute set.  A Windows
+path is stored in the shortcut as usual and the POSIX path is stored in
+the remainder of the file.  While the POSIX path is stored as is, the
+Windows path has perhaps to be rearranged to result in a valid path.
+This may result in a divergence between the Windows and the POSIX path
+when symlinks are moved crossing mount points.  When a user changes the
+shortcut, this will be detected by Cygwin and it will only use the
+Windows path then.  While Cygwin shortcuts are shown without the ".lnk"
+suffix in `ls' output, non-Cygwin shortcuts are shown with the suffix.
+</para>
+
+<para>For enabling this or the preceeding symlink type, see
+<ulink url="https://cygwin.com/cygwin-ug-net/using-cygwinenv.html"/>
+</para></listitem>
+
+</itemizedlist>
+
+</answer></qandaentry>
+
+<qandaentry id="faq.api.executables">
+<question><para>Why do some files, which are not executables have the 'x' type.</para></question>
+<answer>
+
+<para>When working out the POSIX-style attribute bits on a file stored on
+certain filesystems (FAT, FAT32), the library has to fill out some information
+not provided by these filesystems.
+</para>
+<para>It guesses that files ending in .exe and .bat are executable, as are
+ones which have a "#!" as their first characters.  This guessing doesn't
+take place on filesystems providing real permission information (NTFS, NFS),
+unless you switch the permission handling off using the mount flag "noacl"
+on these filesystems.
+</para>
+</answer></qandaentry>
+
+<qandaentry id="faq.api.secure">
+<question><para>How secure is Cygwin in a multi-user environment?</para></question>
+<answer>
+
+<para>As of version 1.5.13, the Cygwin developers are not aware of any feature
+in the cygwin dll that would allow users to gain privileges or to access
+objects to which they have no rights under Windows. However there is no
+guarantee that Cygwin is as secure as the Windows it runs on.  Cygwin
+processes share some variables and are thus easier targets of denial of
+service type of attacks.
+</para>
+</answer></qandaentry>
+
+<qandaentry id="faq.api.net-functions">
+<question><para>How do the net-related functions work?</para></question>
+<answer>
+
+<para>The network support in Cygwin is supposed to provide the POSIX API, not
+the Winsock API.
+</para>
+<para>There are differences between the semantics of functions with the same
+name under the API.
+</para>
+<para>E.g., the POSIX select system call can wait on a standard file handles
+and handles to sockets.  The select call in Winsock can only wait on
+sockets.  Because of this, the Cygwin dll does a lot of nasty stuff behind
+the scenes, trying to persuade various Winsock/Windows functions to do what
+a Unix select would do.
+</para>
+<para>If you are porting an application which already uses Winsock, then
+porting the application to Cygwin means to port the application to using
+the POSIX net functions.  You should never mix Cygwin net functions with
+direct calls to Winsock functions.  If you use Cygwin, use the POSIX API.
+</para>
+</answer></qandaentry>
+
+<qandaentry id="faq.api.winsock">
+<question><para>I don't want Unix sockets, how do I use normal Windows winsock?</para></question>
+<answer>
+
+<para>You don't.  Look for the Mingw-w64 project to port applications using
+native Windows API/Winsock functions.  Cross compilers packages to build Mingw-w64
+targets are available in the Cygwin distro.
+</para>
+</answer></qandaentry>
+
+<qandaentry id="faq.api.versions">
+<question><para>What version numbers are associated with Cygwin?</para></question>
+<answer>
+
+<para>Cygwin versioning is relatively complicated because of its status as a
+shared library.  First of all, since October 1998 every Cygwin DLL has
+been named <literal>cygwin1.dll</literal> and has a 1 in the release name.
+Additionally, there are DLL major and minor numbers that correspond to
+the name of the release, and a release number. In other words,
+cygwin-2.4.1-1 is <literal>cygwin1.dll</literal>, major version 2, minor
+version 4, release 1.  -1 is a subrelease number required by the distro
+versioning scheme.  It's not actually part of the Cygwin DLL version number.
+</para>
+<para>The <literal>cygwin1.dll</literal> major version number gets incremented
+only when a change is made that makes existing software incompatible. For
+example, the first major version 5 release, cygwin-1.5.0-1, added 64-bit
+file I/O operations, which required many libraries to be recompiled and
+relinked.  The minor version changes every time we make a new backward
+compatible Cygwin release available.  There is also a
+<literal>cygwin1.dll</literal> release version number.  The release number
+is only incremented if we update an existing release in a way that does not
+effect the DLL (like a missing header file).
+</para>
+<para>There are also Cygwin API major and minor numbers.  The major number
+tracks important non-backward-compatible interface changes to the API.
+An executable linked with an earlier major number will not be compatible
+with the latest DLL.  The minor number tracks significant API additions
+or changes that will not break older executables but may be required by
+newly compiled ones.
+</para>
+<para>Then there is a shared memory region compatibility version number.  It is
+incremented when incompatible changes are made to the shared memory
+region or to any named shared mutexes, semaphores, etc.  For more exciting
+Cygwin version number details, check out the
+<literal>/usr/include/cygwin/version.h</literal> file.
+</para>
+</answer></qandaentry>
+
+<qandaentry id="faq.api.timezone">
+<question><para>Why isn't my time (or zone) set correctly?</para></question>
+<answer>
+
+<para>Daylight saving (Summer time) and other time zone changes are
+decided on by politicians, and announced by government officials,
+sometimes with short or no notice, so time zone updates are released at
+least a few, and sometimes several, times a year.
+Details of changes are not known until they are announced publicly by
+officials, often in foreign languages.
+Those details then have to be noticed, possibly translated, passed to,
+picked up, and applied by the official <filename>tzdata</filename>
+source package maintainers.
+That information has to be compiled, checked, and released publicly in
+an update to the official <filename>tzdata</filename> source package.
+Then those changes have to be picked up and applied to the Cygwin
+<filename>tzdata</filename> package, which has to be updated, built,
+tested, and released publicly.
+</para>
+<para>Time zone settings are updates to the daylight saving (Summer
+time) rules for dates of changes, hour offsets from UTC of time zones,
+and the geographic regions to which those rules and offsets apply,
+provided in the <filename>tzdata</filename> package included in all
+Cygwin installations.
+Have you run the Cygwin Setup program recently to update at least
+the <filename>tzdata</filename> package?
+</para>
+<para>Are you developing applications using times which may be affected
+by time zones?
+Since the <literal>ctime()</literal>, <literal>localtime()</literal>,
+<literal>mktime()</literal>, and <literal>strftime()</literal> functions
+are required to set time zone information as if by calling
+<literal>tzset()</literal>, there is no need for an explicit
+<literal>tzset()</literal> call before using these functions.
+However, if none of the above functions are called first, applications
+should ensure <literal>tzset()</literal> is called explicitly before
+using any other time functions, or checking or using time zone
+information.
+</para>
+</answer></qandaentry>
+
+<qandaentry id="faq.api.mouse">
+<question><para>Is there a mouse interface?</para></question>
+<answer>
+
+<para>If you're using X then use the X API to handle mouse events.
+In a Windows console window you can enable and capture mouse events
+using the xterm escape sequences for mouse events.
+</para>
+</answer></qandaentry>
+</qandadiv>

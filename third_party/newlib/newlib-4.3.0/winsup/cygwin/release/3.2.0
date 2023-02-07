@@ -1,0 +1,103 @@
+What's new:
+-----------
+
+- Revamped pseudo console support.  Conditionally activating it only when
+  a non-cygwin application is run.
+
+- New C11 threads API: call_once, cnd_broadcast, cnd_destroy, cnd_init,
+  cnd_signal, cnd_timedwait, cnd_wait, mtx_destroy, mtx_init, mtx_lock,
+  mtx_timedlock, mtx_trylock, mtx_unlock, thrd_create, thrd_current,
+  thrd_detach, thrd_equal, thrd_exit, thrd_join, thrd_sleep, thrd_yield,
+  tss_create, tss_delete, tss_get, tss_set.
+
+- In cygwin console, new thread which handles special keys/signals such
+  as Ctrl-Z (VSUSP), Ctrl-\ (VQUIT), Ctrl-S (VSTOP), Ctrl-Q (VSTART) and
+  SIGWINCH has been introduced. There have been a long standing issue
+  that these keys/signals are handled only when app calls read() or
+  select(). Now, these work even if app does not call read() or select().
+
+- fchmodat(2) now has limited support for the AT_SYMLINK_NOFOLLOW flag.
+
+- Cygwin now recognizes native Windows AF_UNIX sockets (as regular
+  files, not as socket files).  This allows tools like 'ls' and 'rm'
+  to work.
+
+What changed:
+-------------
+
+- Allow ~5000 child processes per process on 64 bit, ~1200 child processes
+  per process on 32 bit.  So far, only 256 child processes per process were
+  supported.
+
+- A few FAQ updates.
+
+- Have tmpfile(3) make use of Win32 FILE_ATTRIBUTE_TEMPORARY via open(2)
+  flag O_TMPFILE.
+  Addresses: https://cygwin.com/pipermail/cygwin/2021-January/247304.html
+
+- Utilize Windows 10 1809 FILE_DISPOSITION_IGNORE_READONLY_ATTRIBUTE
+  flag to allow simpler unlink of files with DOS readonly flags set.
+
+- getdtablesize(3), sysconf(_SC_OPEN_MAX), and
+  getrlimit(RLIMIT_NOFILE) now return the true limit on the number of
+  open descriptors, 3200.  Previously they returned the current size
+  of Cygwin's internal file descriptor table, which can grow
+  dynamically.
+
+- facl(2) now fails with EBADF on a file opened with O_PATH.
+
+- Allow to start Windows Store executables via their "app execution
+  aliases".  Handle these aliases (which are special reparse points)
+  as symlinks to the actual executables.
+
+
+Bug Fixes
+---------
+
+- Iterate at least 4 times over pthread_key_t destructors per POSIX.
+
+- The pthread_yield declaration in pthread is now visible by default
+  or when defining _BSD_SOURCE, too.
+
+- Fix SEGV in modfl call.
+  Addresses: https://cygwin.com/pipermail/cygwin/2020-August/246056.html
+
+- Fix a collision of offical and internally used file flags.
+  Addresses: https://cygwin.com/pipermail/cygwin/2020-September/246174.html
+
+- Fix assertion failure on an invalid path under /proc/<pid>/fd/.
+  Addresses: https://cygwin.com/pipermail/cygwin/2020-September/246160.html
+
+- Fix crash on stat(2)'ing /dev/ptmx on 32 bit.
+  Addresses: https://cygwin.com/pipermail/cygwin/2020-September/246218.html
+
+- Fix return value of sqrtl on negative infinity.
+  Addresses: https://cygwin.com/pipermail/cygwin/2020-October/246606.html
+
+- Fix a path handling problem if there is a WSL symlink in PATH.
+  Addresses: https://cygwin.com/pipermail/cygwin/2020-December/246938.html
+
+- Fix a bug in fstatat(2) on 32 bit that could cause it to return garbage.
+  Addresses: https://cygwin.com/pipermail/cygwin/2021-January/247399.html
+
+- Fix the errno when a path contains .. and the prefix exists but is
+  not a directory.
+  Addresses: https://lists.gnu.org/archive/html/bug-gnulib/2021-01/msg00214.html
+
+- Fix the return value when ptsname_r(3) is called with a bad file descriptor
+  Addresses: https://lists.gnu.org/archive/html/bug-gnulib/2021-01/msg00245.html
+
+- Fix path handling in case the Cygwin installation dir is accessed via
+  a Windows junction point.
+  Addresses: https://cygwin.com/pipermail/cygwin-developers/2021-February/012054.html
+
+- Fix potential handle leaks when dup'ing descriptors
+  Addresses: https://cygwin.com/pipermail/cygwin-developers/2021-February/012041.html
+
+- Fix a bug that could cause fstat(2) to return incorrect results on a FIFO.
+
+- Fix some system calls on AF_LOCAL sockets that are not socket files.
+  Addresses: https://cygwin.com/pipermail/cygwin-developers/2021-February/012066.html
+
+- Fix access to block devices under /proc/sys.
+  Addresses: https://sourceware.org/pipermail/cygwin-patches/2020q4/010843.html

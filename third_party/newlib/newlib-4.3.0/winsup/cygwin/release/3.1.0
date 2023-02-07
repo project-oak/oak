@@ -1,0 +1,116 @@
+What's new:
+-----------
+
+- Add 24 bit color support using xterm compatibility mode in Windows 10
+  1703 or later.  Add fake 24 bit color support for legacy console,
+  which uses the nearest color from 16 system colors.
+
+- Support pseudo console in PTY. Pseudo console is a new feature
+  in Windows 10 1809, which provides console APIs on virtual
+  terminal. With this patch, native console applications can work
+  in PTYs such as mintty, ssh, gnu screen or tmux.
+
+- New APIs: sched_getaffinity, sched_setaffinity, pthread_getaffinity_np,
+  pthread_setaffinity_np, plus CPU_SET macros.
+
+- New APIs: dbm_clearerr, dbm_close, dbm_delete, dbm_dirfno, dbm_error,
+  dbm_fetch, dbm_firstkey, dbm_nextkey, dbm_open, dbm_store.
+
+
+What changed:
+-------------
+
+- FIFOs can now be opened multiple times for writing.
+  Addresses: https://cygwin.com/ml/cygwin/2015-03/msg00047.html
+             https://cygwin.com/ml/cygwin/2015-12/msg00311.html
+
+- If a SA_SIGINFO signal handler changes the ucontext_t pointed to by
+  the third parameter, follow it after returning from the handler.
+
+- Eliminate a header file name collision with <X11/XLocale.h> on case
+  insensitive filesystems by reverting <xlocale.h> back to <sys/_locale.h>.
+
+- Allow times(2) to have a NULL argument, as on Linux.
+  Addresses: https://cygwin.com/ml/cygwin/2019-09/msg00141.html
+
+- Improve /proc/cpuinfo output and align more closely with Linux.
+
+- Raise stackdump frame limit from 16 to 32.
+  Addresses: https://cygwin.com/ml/cygwin/2019-11/msg00038.html
+
+
+Bug Fixes
+---------
+
+- Fix select() on console in canonical mode.  Return after one line is
+  completed, instead of when only one key is typed.
+
+- Make console I/O functions thread-safe.
+
+- Define missing MSG_EOR.  It's unsupported by the underlying Winsock
+  layer so using it in send(2), sendto(2), or sendmsg(2) will return -1
+  with errno set to EOPNOTSUPP and recvmsg(2) will never return it.
+
+- Fix a timerfd deadlock.
+  Addresses: https://cygwin.com/ml/cygwin/2019-06/msg00096.html
+
+- Fix sigpending() incorrectly returning signals for unrelated threads.
+  Addresses: https://cygwin.com/ml/cygwin/2019-07/msg00051.html
+
+- Fix a hang when opening a FIFO with O_PATH.
+  Addresses: https://cygwin.com/ml/cygwin-developers/2019-06/msg00001.html
+
+- Don't append ".lnk" when renaming a socket file.
+  Addresses: https://cygwin.com/ml/cygwin/2019-07/msg00139.html
+
+- Make tcsetpgrp() return -1 if its argument is negative.
+  Addresses: https://cygwin.com/ml/cygwin/2019-07/msg00166.html
+
+- Avoid mistakenly moving a process under debugger control into the
+  process group of the debugger.
+  Addresses a problem visible in GDB 8.1.1, related to
+  https://cygwin.com/ml/cygwin/2019-07/msg00166.html
+
+- Return ENOEXEC from execve for arbitrary files only if the files are
+  executable.
+  Addresses: https://cygwin.com/ml/cygwin/2019-08/msg00054.html
+
+- Fix off-by-one in environment evaluation leading to an abort.
+  Addresses: https://cygwin.com/ml/cygwin-patches/2019-q3/msg00069.html
+
+- Make output of /proc/[PID]/stat consistent with getpriority().
+  Addresses: https://cygwin.com/ml/cygwin/2019-08/msg00082.html
+
+- 64 bit only: Avoid collisions between memory maps created with shmat
+  and Windows datastructures during fork.
+  Addresses: https://cygwin.com/ml/cygwin/2019-08/msg00107.html
+
+- Make rmdir fail if its argument is a symlink.
+  Addresses: https://cygwin.com/ml/cygwin/2019-09/msg00221.html
+
+- Fix an assertion failure on an invalid path.
+  Addresses: https://cygwin.com/ml/cygwin/2019-09/msg00228.html
+
+- If the argument to mkdir(2) or rmdir(2) is 'x:\', don't strip the
+  trailing backslash.
+  Addresses: https://cygwin.com/ml/cygwin/2019-08/msg00334.html
+
+- Make spawnvp, spawnvpe fail if the executable is not in $PATH.
+  Addresses: https://cygwin.com/ml/cygwin/2019-10/msg00032.html
+
+- Fix parent/child relationship after parent dies.
+  Addresses: https://cygwin.com/ml/cygwin/2019-09/msg00263.html
+
+- Fix a security problem if Cygwin is installed into a path
+  with spaces in it.
+  Addresses: https://cygwin.com/ml/cygwin/2019-11/msg00018.html
+
+- Fix an assertion failure when /cygdrive contains an offline network
+  drive.
+  Addresses: https://cygwin.com/ml/cygwin/2019-12/msg00016.html
+
+- Fix return value of ilogbl for 0 input.
+  Addresses: https://cygwin.com/ml/cygwin/2019-12/msg00074.html
+
+- Let strtold set errno to ERANGE on underflow per POSIX.
+  Addresses: https://cygwin.com/ml/cygwin/2019-12/msg00072.html
