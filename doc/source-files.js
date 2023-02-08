@@ -47,6 +47,7 @@ var sourcesIndex = JSON.parse('{\
 "offline_attestation_client":["",[],["main.rs"]],\
 "offline_attestation_server":["",[],["main.rs"]],\
 "offline_attestation_shared":["",[],["lib.rs"]],\
+"quirk_echo_service":["",[],["lib.rs"]],\
 "sev_serial":["",[],["lib.rs"]],\
 "snp_measurement":["",[],["elf.rs","main.rs","page.rs","stage0.rs","vmsa.rs"]],\
 "vsock_echo":["",[],["main.rs"]],\
