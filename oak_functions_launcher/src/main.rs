@@ -74,15 +74,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
     env_logger::init();
 
-    let (mut launched_instance, connector_handle, result) = oak_functions_launcher::create(
-        cli.mode,
-        cli.lookup_data,
-        cli.wasm,
-        cli.constant_response_size,
-    )
-    .await?;
+    let (mut launched_instance, connector_handle, initialize_response) =
+        oak_functions_launcher::create(
+            cli.mode,
+            cli.lookup_data,
+            cli.wasm,
+            cli.constant_response_size,
+        )
+        .await?;
 
-    let public_key_info = result.public_key_info.expect("no public key info returned");
+    let public_key_info = initialize_response
+        .public_key_info
+        .expect("no public key info returned");
     log::info!(
         "obtained public key ({} bytes)",
         public_key_info.public_key.len()

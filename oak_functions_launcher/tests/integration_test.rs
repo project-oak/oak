@@ -51,14 +51,17 @@ async fn test_launcher_looks_up_key() {
         enclave_binary: ENCLAVE_BINARY_PATH.to_path_buf(),
     };
 
+    // Make sure the response fits in the response size.
+    let constant_response_size: u32 = 1024;
+
     let (launched_instance, connector_handle, _) = oak_functions_launcher::create(
         Mode::Native(params),
         LOOKUP_DATA_PATH.to_path_buf(),
         WASM_PATH.to_path_buf(),
-        1024,
+        constant_response_size,
     )
     .await
-    .expect("Fail to create launcher");
+    .expect("Failed to create launcher");
 
     let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
     let body = b"test_key".to_vec();
@@ -91,11 +94,12 @@ async fn test_load_large_lookup_data() {
     let entry_size = 2 << 10;
     // The key in the lookup data maps to itself, so an entry has double key size.
     let mut entries = std::collections::HashMap::new(); // Vec::with_capacity(lookup_data_size / entry_size / 2);
+    let entries_count = lookup_data_size / entry_size;
 
     let mut key_prefix = vec![0u8; (entry_size / 2) - 4];
     rng.fill_bytes(key_prefix.as_mut_slice());
 
-    for i in 0..(lookup_data_size / entry_size / 2) {
+    for i in 0..entries_count {
         let mut n = key_prefix.clone();
         n.append(&mut format!("{}", i).into_bytes());
         entries.insert(n.clone(), n);
@@ -105,14 +109,55 @@ async fn test_load_large_lookup_data() {
         &oak_functions_test_utils::serialize_entries(entries),
     );
 
+    let constant_response_size = (entry_size as u32 / 2) + 1024; // Add some margin be on the safe side.
+
     let status = oak_functions_launcher::create(
         Mode::Native(params),
         lookup_data_file.path().to_path_buf(),
         WASM_PATH.to_path_buf(),
-        (entry_size as u32 / 2) + 1024, // Add some margin be on the safe side.
+        constant_response_size,
     )
     .await;
 
-    // TODO(#3668): Load 2 GiB of lookup data.
-    assert!(status.is_err())
+    // TODO(#3668): status is currently not ok and the test is expected to fail until we can load 2
+    // GiB of lookup data.
+    assert!(status.is_ok());
+
+    let (launched_instance, connector_handle, _) = status.unwrap();
+
+    let mut first_key = key_prefix.clone();
+    first_key.append(&mut format!("{}", 1).into_bytes());
+
+    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
+    let invoke_request = InvokeRequest {
+        body: first_key.clone(),
+    };
+
+    let response = client
+        .invoke(&invoke_request)
+        .await
+        .expect("Failed to receive response.");
+
+    assert!(response.is_ok());
+    assert_eq!(first_key, response.unwrap().body);
+
+    let mut last_key = key_prefix.clone();
+    last_key.append(&mut format!("{}", entries_count - 1).into_bytes());
+
+    let invoke_request = InvokeRequest {
+        body: last_key.clone(),
+    };
+
+    let response = client
+        .invoke(&invoke_request)
+        .await
+        .expect("Failed to receive response.");
+
+    assert!(response.is_ok());
+    assert_eq!(last_key, response.unwrap().body);
+
+    launched_instance
+        .kill()
+        .await
+        .expect("Failed to stop launcher");
 }

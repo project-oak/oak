@@ -64,8 +64,9 @@ pub async fn create(
 > {
     let (launched_instance, connector_handle) = launch_instance(mode).await?;
     setup_lookup_data(connector_handle.clone(), lookup_data_path).await;
-    let result = setup_wasm(connector_handle.clone(), &wasm_path, constant_response_size).await?;
-    Ok((launched_instance, connector_handle, result))
+    let intialization_response =
+        setup_wasm(connector_handle.clone(), &wasm_path, constant_response_size).await?;
+    Ok((launched_instance, connector_handle, intialization_response))
 }
 
 async fn launch_instance(
@@ -155,11 +156,11 @@ async fn setup_wasm(
     };
 
     let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
-    let result = client
+    let initialize_response = client
         .initialize(&request)
         .await
         .flatten()
         .expect("couldn't initialize the service");
 
-    return Ok(result);
+    return Ok(initialize_response);
 }
