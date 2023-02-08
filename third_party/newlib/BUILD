@@ -24,6 +24,7 @@ configure_make(
     out_static_libs = [
         "libm.a",
         "libc.a",
+        "liboak.a",
     ],
     visibility = ["//visibility:public"],
 )

@@ -630,6 +630,8 @@ CPPFLAGS
 LDFLAGS
 CFLAGS
 CC
+CONFIG_OAK_FALSE
+CONFIG_OAK_TRUE
 CONFIG_WINCE_FALSE
 CONFIG_WINCE_TRUE
 CONFIG_RISCV_FALSE
@@ -2980,6 +2982,10 @@ case "${target}" in
   nios2-*-*)
 	config_nios2=true
 	;;
+  x86_64-unknown-oak)
+	config_libnosys=false
+	config_oak=true
+	;;
 esac
 
 
@@ -3077,6 +3083,14 @@ fi
 else
   CONFIG_WINCE_TRUE='#'
   CONFIG_WINCE_FALSE=
+fi
+
+   if test x$config_oak = xtrue; then
+  CONFIG_OAK_TRUE=
+  CONFIG_OAK_FALSE='#'
+else
+  CONFIG_OAK_TRUE='#'
+  CONFIG_OAK_FALSE=
 fi
 
 
@@ -5345,6 +5359,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${CONFIG_WINCE_TRUE}" && test -z "${CONFIG_WINCE_FALSE}"; then
   as_fn_error $? "conditional \"CONFIG_WINCE\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${CONFIG_OAK_TRUE}" && test -z "${CONFIG_OAK_FALSE}"; then
+  as_fn_error $? "conditional \"CONFIG_OAK\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${AMDEP_TRUE}" && test -z "${AMDEP_FALSE}"; then
