@@ -185,6 +185,15 @@
 <span id="185">185</span>
 <span id="186">186</span>
 <span id="187">187</span>
+<span id="188">188</span>
+<span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
+<span id="193">193</span>
+<span id="194">194</span>
+<span id="195">195</span>
+<span id="196">196</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -201,7 +210,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{instance::LaunchedInstance, path_exists};
+</span><span class="kw">use </span><span class="kw">crate</span>::instance::LaunchedInstance;
 <span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>clap::Parser;
@@ -215,6 +224,15 @@
     path::PathBuf,
     process::Stdio,
 };
+
+<span class="kw">fn </span>path_exists(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;PathBuf, String&gt; {
+    <span class="kw">let </span>path = PathBuf::from(s);
+    <span class="kw">if </span>!fs::metadata(s).map_err(|err| err.to_string())<span class="question-mark">?</span>.is_file() {
+        <span class="prelude-val">Err</span>(String::from(<span class="string">&quot;path does not represent a file&quot;</span>))
+    } <span class="kw">else </span>{
+        <span class="prelude-val">Ok</span>(path)
+    }
+}
 
 <span class="kw">const </span>PAGE_SIZE: usize = <span class="number">4096</span>;
 

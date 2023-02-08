@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["PAGE_SIZE",""]],"fn":[["write_chunk","Writes a chunk to a channel, and expects an acknowledgement containing the length of the chunk."]],"struct":[["Instance",""],["Params","Parameters used for launching VM instances"]]};
+window.SIDEBAR_ITEMS = {"struct":[["Instance",""],["Params","Parameters used for launching VM instances"]]};
