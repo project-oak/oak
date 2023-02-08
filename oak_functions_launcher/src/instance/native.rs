@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{instance::LaunchedInstance, path_exists};
+use crate::instance::LaunchedInstance;
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
@@ -25,6 +25,17 @@ use std::{
     os::unix::{io::AsRawFd, net::UnixStream},
     path::PathBuf,
 };
+
+use std::fs;
+
+fn path_exists(s: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(s);
+    if !fs::metadata(s).map_err(|err| err.to_string())?.is_file() {
+        Err(String::from("path does not represent a file"))
+    } else {
+        Ok(path)
+    }
+}
 
 /// Parameters used for launching the enclave as a native binary
 #[derive(Parser, Clone, Debug, PartialEq)]

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Test utilities to help with unit testing of Oak-Functions SDK code.
+//! Test utilities to help with unit testing of Oak Functions code.
 
 use anyhow::Context;
 use log::info;
@@ -138,7 +138,7 @@ where
 /// Builds the crate identified by the given package name (as per the `name` attribute in a
 /// Cargo.toml file included in the root cargo workspace) as a Linux binary, and returns the path of
 /// the resulting binary.
-fn build_rust_crate_linux(crate_name: &str) -> anyhow::Result<String> {
+pub fn build_rust_crate_linux(crate_name: &str) -> anyhow::Result<String> {
     duct::cmd!(
         "cargo",
         "build",

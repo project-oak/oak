@@ -18,14 +18,10 @@
 #![feature(result_flattening)]
 #![feature(array_chunks)]
 
-use anyhow::Context;
 use clap::Parser;
-use instance::{native, virtualized, LaunchedInstance};
 use std::{
     fs,
-    io::{BufRead, BufReader},
     net::{Ipv6Addr, SocketAddr},
-    os::unix::net::UnixStream,
     path::PathBuf,
 };
 use tokio::signal;
@@ -36,24 +32,11 @@ pub mod schema {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
 }
 
-mod channel;
-mod instance;
-mod lookup;
-mod server;
-
-#[derive(clap::Subcommand, Clone, Debug, PartialEq)]
-enum Mode {
-    /// Launch a virtual enclave binary
-    Virtual(virtualized::Params),
-    /// Launch an enclave binary directly as a child process
-    Native(native::Params),
-}
-
 #[derive(Parser, Debug)]
 struct Args {
     /// Execution mode.
     #[command(subcommand)]
-    mode: Mode,
+    mode: oak_functions_launcher::Mode,
 
     /// Consistent response size that the enclave should apply
     #[arg(long, default_value = "1024")]
@@ -91,95 +74,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
     env_logger::init();
 
-    // Provide a way for the launched instance to send logs
-    let logs_console: UnixStream = {
-        // Create two linked consoles. Technically both can read/write, but we'll
-        // use them as a one way channel.
-        let (console_writer, console_receiver) = UnixStream::pair()?;
+    let (mut launched_instance, connector_handle, initialize_response) =
+        oak_functions_launcher::create(
+            cli.mode,
+            cli.lookup_data,
+            cli.wasm,
+            cli.constant_response_size,
+        )
+        .await?;
 
-        // Log everything sent by the writer.
-        tokio::spawn(async {
-            let mut reader = BufReader::new(console_receiver);
-
-            let mut line = String::new();
-            while reader.read_line(&mut line).expect("couldn't read line") > 0 {
-                log::info!("console: {:?}", line);
-                line.clear();
-            }
-        });
-
-        console_writer
-    };
-
-    let mut launched_instance: Box<dyn LaunchedInstance> = match cli.mode {
-        Mode::Virtual(params) => Box::new(virtualized::Instance::start(params, logs_console)?),
-        Mode::Native(params) => Box::new(native::Instance::start(params)?),
-    };
-
-    let comms = launched_instance.create_comms_channel().await?;
-    let connector_handle = channel::Connector::spawn(comms);
-
-    {
-        let mut client = schema::OakFunctionsAsyncClient::new(connector_handle.clone());
-
-        // Block for [invariant that lookup data is fully loaded](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-fully-loaded-lookup-data)
-        let lookup_data =
-            lookup::load_lookup_data(&cli.lookup_data).expect("couldn't load lookup data");
-        let encoded_lookup_data =
-            lookup::encode_lookup_data(lookup_data).expect("couldn't encode lookup data");
-
-        if let Err(err) = client.update_lookup_data(&encoded_lookup_data).await {
-            panic!("couldn't send lookup data: {:?}", err)
-        }
-
-        // Spawn task to periodically refresh lookup data.
-        tokio::spawn(async move {
-            let mut interval =
-                tokio::time::interval(std::time::Duration::from_millis(1000 * 60 * 10));
-            loop {
-                // Wait before updating because we just loaded the lookup data.
-                interval.tick().await;
-
-                let lookup_data =
-                    lookup::load_lookup_data(&cli.lookup_data).expect("couldn't load lookup data");
-                let encoded_lookup_data =
-                    lookup::encode_lookup_data(lookup_data).expect("couldn't encode lookup data");
-
-                if let Err(err) = client.update_lookup_data(&encoded_lookup_data).await {
-                    panic!("couldn't send lookup data: {:?}", err)
-                }
-            }
-        });
-    }
-
-    let wasm_bytes = fs::read(&cli.wasm)
-        .with_context(|| format!("couldn't read Wasm file {}", &cli.wasm.display()))
-        .unwrap();
-    log::info!(
-        "read Wasm file from disk {} ({} bytes)",
-        &cli.wasm.display(),
-        wasm_bytes.len()
-    );
-
-    let request = schema::InitializeRequest {
-        wasm_module: wasm_bytes,
-        constant_response_size: cli.constant_response_size,
-    };
-
-    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle.clone());
-    let result = client
-        .initialize(&request)
-        .await
-        .flatten()
-        .expect("couldn't initialize the service");
-
-    let public_key_info = result.public_key_info.expect("no public key info returned");
+    let public_key_info = initialize_response
+        .public_key_info
+        .expect("no public key info returned");
     log::info!(
         "obtained public key ({} bytes)",
         public_key_info.public_key.len()
     );
 
-    let server_future = server::server(
+    let server_future = oak_functions_launcher::server::new(
         SocketAddr::from((Ipv6Addr::UNSPECIFIED, cli.port)),
         connector_handle,
         public_key_info.public_key,
