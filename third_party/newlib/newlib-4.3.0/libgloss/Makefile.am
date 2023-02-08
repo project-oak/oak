@@ -99,3 +99,6 @@ endif
 if CONFIG_WINCE
 include wince/Makefile.inc
 endif
+if CONFIG_OAK
+include oak/Makefile.inc
+endif

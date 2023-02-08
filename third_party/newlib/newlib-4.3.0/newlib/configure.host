@@ -590,6 +590,10 @@ case "${host}" in
 	newlib_cflags="${newlib_cflags} -DHAVE_OPENDIR -DHAVE_RENAME -DGETREENT_PROVIDED -DSIGNAL_PROVIDED -DHAVE_BLKSIZE -DHAVE_FCNTL -DMALLOC_PROVIDED"
 	syscall_dir=syscalls
 	;;
+  *-*-oak*)
+	newlib_cflags="${newlib_cflags} -DREENTRANT_SYSCALLS_PROVIDED"
+	syscall_dir=syscalls
+	;;
 # RTEMS supplies its own versions of some routines:
 #       malloc()            (reentrant version)
 #       exit()              RTEMS has a "global" reent to flush

@@ -190,6 +190,7 @@ check_PROGRAMS = $(am__EXEEXT_2) $(am__EXEEXT_3)
 @CONFIG_RISCV_TRUE@	riscv/libsemihost.a
 @CONFIG_WINCE_TRUE@am__append_36 = $(gdbdir)
 @CONFIG_WINCE_TRUE@am__append_37 = wince/stub.exe
+@CONFIG_OAK_TRUE@am__append_38 = oak/liboak.a
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/../config/depstand.m4 \
@@ -450,6 +451,11 @@ nios2_libnios2_a_LIBADD =
 @CONFIG_NIOS2_TRUE@	nios2/nios2_libnios2_a-kill.$(OBJEXT) \
 @CONFIG_NIOS2_TRUE@	nios2/nios2_libnios2_a-sbrk.$(OBJEXT)
 nios2_libnios2_a_OBJECTS = $(am_nios2_libnios2_a_OBJECTS)
+oak_liboak_a_AR = $(AR) $(ARFLAGS)
+oak_liboak_a_LIBADD =
+@CONFIG_OAK_TRUE@am_oak_liboak_a_OBJECTS = oak/syscalls.$(OBJEXT) \
+@CONFIG_OAK_TRUE@	oak/crt0.$(OBJEXT)
+oak_liboak_a_OBJECTS = $(am_oak_liboak_a_OBJECTS)
 riscv_libgloss_a_AR = $(AR) $(ARFLAGS)
 riscv_libgloss_a_LIBADD =
 @CONFIG_RISCV_TRUE@am_riscv_libgloss_a_OBJECTS = riscv/riscv_libgloss_a-sys_access.$(OBJEXT) \
@@ -573,9 +579,9 @@ SOURCES = $(aarch64_librdimon_a_SOURCES) $(arc_libnsim_a_SOURCES) \
 	$(csky_libsemi_a_SOURCES) $(d30v_libsim_a_SOURCES) \
 	$(iq2000_libeval_a_SOURCES) $(libnosys_libnosys_a_SOURCES) \
 	$(libobjs_a_SOURCES) $(lm32_libgloss_a_SOURCES) \
-	$(nios2_libnios2_a_SOURCES) $(riscv_libgloss_a_SOURCES) \
-	$(riscv_libsemihost_a_SOURCES) bfin/sim-test.c iq2000/test.c \
-	$(wince_stub_exe_SOURCES)
+	$(nios2_libnios2_a_SOURCES) $(oak_liboak_a_SOURCES) \
+	$(riscv_libgloss_a_SOURCES) $(riscv_libsemihost_a_SOURCES) \
+	bfin/sim-test.c iq2000/test.c $(wince_stub_exe_SOURCES)
 AM_V_DVIPS = $(am__v_DVIPS_@AM_V@)
 am__v_DVIPS_ = $(am__v_DVIPS_@AM_DEFAULT_V@)
 am__v_DVIPS_0 = @echo "  DVIPS   " $@;
@@ -802,7 +808,8 @@ multilibtool_DATA = $(am__append_3) $(am__append_6) $(am__append_7) \
 multilibtool_LIBRARIES = $(am__append_2) $(am__append_5) \
 	$(am__append_9) $(am__append_11) $(am__append_20) \
 	$(am__append_21) $(am__append_24) $(am__append_28) \
-	$(am__append_30) $(am__append_33) $(am__append_35)
+	$(am__append_30) $(am__append_33) $(am__append_35) \
+	$(am__append_38)
 includetooldir = $(tooldir)/include
 includetool_DATA = $(am__append_16)
 includesystooldir = $(tooldir)/include/sys
@@ -1092,6 +1099,10 @@ TEXINFO_TEX = ../texinfo/texinfo.tex
 @CONFIG_WINCE_TRUE@wince_stub_exe_SOURCES = wince-stub.c
 @CONFIG_WINCE_TRUE@wince_stub_exe_CPPFLAGS = $(AM_CPPFLAGS) -I$(gdbdir)
 @CONFIG_WINCE_TRUE@wince_stub_exe_LDADD = -lwinsock $(WINCE_STUB_LIBS)
+@CONFIG_OAK_TRUE@oak_liboak_a_SOURCES = \
+@CONFIG_OAK_TRUE@    oak/syscalls.c \
+@CONFIG_OAK_TRUE@    oak/crt0.S
+
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -1099,7 +1110,7 @@ all: config.h
 .SUFFIXES: .S .c .dvi .o .obj .ps
 am--refresh: Makefile
 	@:
-$(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am $(top_srcdir)/../multilib.am $(srcdir)/doc/Makefile.inc $(srcdir)/aarch64/Makefile.inc $(srcdir)/aarch64/cpu-init/Makefile.inc $(srcdir)/arc/Makefile.inc $(srcdir)/arm/Makefile.inc $(srcdir)/arm/cpu-init/Makefile.inc $(srcdir)/bfin/Makefile.inc $(srcdir)/csky/Makefile.inc $(srcdir)/d30v/Makefile.inc $(srcdir)/iq2000/Makefile.inc $(srcdir)/libnosys/Makefile.inc $(srcdir)/lm32/Makefile.inc $(srcdir)/nios2/Makefile.inc $(srcdir)/riscv/Makefile.inc $(srcdir)/wince/Makefile.inc $(am__configure_deps)
+$(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am $(top_srcdir)/../multilib.am $(srcdir)/doc/Makefile.inc $(srcdir)/aarch64/Makefile.inc $(srcdir)/aarch64/cpu-init/Makefile.inc $(srcdir)/arc/Makefile.inc $(srcdir)/arm/Makefile.inc $(srcdir)/arm/cpu-init/Makefile.inc $(srcdir)/bfin/Makefile.inc $(srcdir)/csky/Makefile.inc $(srcdir)/d30v/Makefile.inc $(srcdir)/iq2000/Makefile.inc $(srcdir)/libnosys/Makefile.inc $(srcdir)/lm32/Makefile.inc $(srcdir)/nios2/Makefile.inc $(srcdir)/riscv/Makefile.inc $(srcdir)/wince/Makefile.inc $(srcdir)/oak/Makefile.inc $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
 	    *$$dep*) \
@@ -1121,7 +1132,7 @@ Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	    echo ' cd $(top_builddir) && $(SHELL) ./config.status $@ $(am__depfiles_maybe)'; \
 	    cd $(top_builddir) && $(SHELL) ./config.status $@ $(am__depfiles_maybe);; \
 	esac;
-$(top_srcdir)/../multilib.am $(srcdir)/doc/Makefile.inc $(srcdir)/aarch64/Makefile.inc $(srcdir)/aarch64/cpu-init/Makefile.inc $(srcdir)/arc/Makefile.inc $(srcdir)/arm/Makefile.inc $(srcdir)/arm/cpu-init/Makefile.inc $(srcdir)/bfin/Makefile.inc $(srcdir)/csky/Makefile.inc $(srcdir)/d30v/Makefile.inc $(srcdir)/iq2000/Makefile.inc $(srcdir)/libnosys/Makefile.inc $(srcdir)/lm32/Makefile.inc $(srcdir)/nios2/Makefile.inc $(srcdir)/riscv/Makefile.inc $(srcdir)/wince/Makefile.inc $(am__empty):
+$(top_srcdir)/../multilib.am $(srcdir)/doc/Makefile.inc $(srcdir)/aarch64/Makefile.inc $(srcdir)/aarch64/cpu-init/Makefile.inc $(srcdir)/arc/Makefile.inc $(srcdir)/arm/Makefile.inc $(srcdir)/arm/cpu-init/Makefile.inc $(srcdir)/bfin/Makefile.inc $(srcdir)/csky/Makefile.inc $(srcdir)/d30v/Makefile.inc $(srcdir)/iq2000/Makefile.inc $(srcdir)/libnosys/Makefile.inc $(srcdir)/lm32/Makefile.inc $(srcdir)/nios2/Makefile.inc $(srcdir)/riscv/Makefile.inc $(srcdir)/wince/Makefile.inc $(srcdir)/oak/Makefile.inc $(am__empty):
 
 $(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
 	$(SHELL) ./config.status --recheck
@@ -1645,6 +1656,20 @@ nios2/libnios2.a: $(nios2_libnios2_a_OBJECTS) $(nios2_libnios2_a_DEPENDENCIES) $
 	$(AM_V_at)-rm -f nios2/libnios2.a
 	$(AM_V_AR)$(nios2_libnios2_a_AR) nios2/libnios2.a $(nios2_libnios2_a_OBJECTS) $(nios2_libnios2_a_LIBADD)
 	$(AM_V_at)$(RANLIB) nios2/libnios2.a
+oak/$(am__dirstamp):
+	@$(MKDIR_P) oak
+	@: > oak/$(am__dirstamp)
+oak/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) oak/$(DEPDIR)
+	@: > oak/$(DEPDIR)/$(am__dirstamp)
+oak/syscalls.$(OBJEXT): oak/$(am__dirstamp) \
+	oak/$(DEPDIR)/$(am__dirstamp)
+oak/crt0.$(OBJEXT): oak/$(am__dirstamp) oak/$(DEPDIR)/$(am__dirstamp)
+
+oak/liboak.a: $(oak_liboak_a_OBJECTS) $(oak_liboak_a_DEPENDENCIES) $(EXTRA_oak_liboak_a_DEPENDENCIES) oak/$(am__dirstamp)
+	$(AM_V_at)-rm -f oak/liboak.a
+	$(AM_V_AR)$(oak_liboak_a_AR) oak/liboak.a $(oak_liboak_a_OBJECTS) $(oak_liboak_a_LIBADD)
+	$(AM_V_at)$(RANLIB) oak/liboak.a
 riscv/$(am__dirstamp):
 	@$(MKDIR_P) riscv
 	@: > riscv/$(am__dirstamp)
@@ -1854,6 +1879,7 @@ mostlyclean-compile:
 	-rm -f libnosys/*.$(OBJEXT)
 	-rm -f lm32/*.$(OBJEXT)
 	-rm -f nios2/*.$(OBJEXT)
+	-rm -f oak/*.$(OBJEXT)
 	-rm -f riscv/*.$(OBJEXT)
 
 distclean-compile:
@@ -1996,6 +2022,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@nios2/$(DEPDIR)/nios2_libnios2_a-io-write.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@nios2/$(DEPDIR)/nios2_libnios2_a-kill.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@nios2/$(DEPDIR)/nios2_libnios2_a-sbrk.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@oak/$(DEPDIR)/crt0.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@oak/$(DEPDIR)/syscalls.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@riscv/$(DEPDIR)/riscv_libgloss_a-sys_access.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@riscv/$(DEPDIR)/riscv_libgloss_a-sys_chdir.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@riscv/$(DEPDIR)/riscv_libgloss_a-sys_chmod.Po@am__quote@
@@ -4224,6 +4252,8 @@ distclean-generic:
 	-rm -f lm32/$(am__dirstamp)
 	-rm -f nios2/$(DEPDIR)/$(am__dirstamp)
 	-rm -f nios2/$(am__dirstamp)
+	-rm -f oak/$(DEPDIR)/$(am__dirstamp)
+	-rm -f oak/$(am__dirstamp)
 	-rm -f riscv/$(DEPDIR)/$(am__dirstamp)
 	-rm -f riscv/$(am__dirstamp)
 	-rm -f wince/$(am__dirstamp)
@@ -4239,7 +4269,7 @@ clean-am: clean-aminfo clean-binPROGRAMS clean-checkPROGRAMS \
 
 distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf ./$(DEPDIR) aarch64/$(DEPDIR) arc/$(DEPDIR) arm/$(DEPDIR) bfin/$(DEPDIR) csky/$(DEPDIR) d30v/$(DEPDIR) iq2000/$(DEPDIR) libnosys/$(DEPDIR) lm32/$(DEPDIR) nios2/$(DEPDIR) riscv/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) aarch64/$(DEPDIR) arc/$(DEPDIR) arm/$(DEPDIR) bfin/$(DEPDIR) csky/$(DEPDIR) d30v/$(DEPDIR) iq2000/$(DEPDIR) libnosys/$(DEPDIR) lm32/$(DEPDIR) nios2/$(DEPDIR) oak/$(DEPDIR) riscv/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-hdr distclean-local distclean-tags
@@ -4382,7 +4412,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf ./$(DEPDIR) aarch64/$(DEPDIR) arc/$(DEPDIR) arm/$(DEPDIR) bfin/$(DEPDIR) csky/$(DEPDIR) d30v/$(DEPDIR) iq2000/$(DEPDIR) libnosys/$(DEPDIR) lm32/$(DEPDIR) nios2/$(DEPDIR) riscv/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) aarch64/$(DEPDIR) arc/$(DEPDIR) arm/$(DEPDIR) bfin/$(DEPDIR) csky/$(DEPDIR) d30v/$(DEPDIR) iq2000/$(DEPDIR) libnosys/$(DEPDIR) lm32/$(DEPDIR) nios2/$(DEPDIR) oak/$(DEPDIR) riscv/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-aminfo \
 	maintainer-clean-generic maintainer-clean-local
