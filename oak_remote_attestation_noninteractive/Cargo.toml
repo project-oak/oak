@@ -13,15 +13,8 @@ tonic = "*"
 [dev-dependencies]
 async-trait = "*"
 futures = "*"
+tokio = { version = "*", features = ["rt-multi-thread", "net"] }
 tonic = "*"
-tokio = { version = "*", features = [
-  "rt-multi-thread",
-  "macros",
-  "net",
-  "process",
- # "signal",
- # "sync",
-] }
 
 [build-dependencies]
 oak_grpc_utils = { path = "../oak_grpc_utils" }
