@@ -21,7 +21,6 @@ use oak_functions_launcher::{
     schema::{self, InvokeRequest},
     Mode,
 };
-use oak_functions_test_utils;
 use rand::Rng;
 use std::path::PathBuf;
 
@@ -65,7 +64,7 @@ async fn test_launcher_looks_up_key() {
 
     let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
     let body = b"test_key".to_vec();
-    let invoke_request = InvokeRequest { body: body };
+    let invoke_request = InvokeRequest { body };
 
     let response = client
         .invoke(&invoke_request)

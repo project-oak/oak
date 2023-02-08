@@ -141,7 +141,7 @@ async fn setup_wasm(
     wasm: &PathBuf,
     constant_response_size: u32,
 ) -> Result<InitializeResponse, Box<dyn std::error::Error>> {
-    let wasm_bytes = fs::read(&wasm)
+    let wasm_bytes = fs::read(wasm)
         .with_context(|| format!("couldn't read Wasm file {}", wasm.display()))
         .unwrap();
     log::info!(
@@ -152,7 +152,7 @@ async fn setup_wasm(
 
     let request = schema::InitializeRequest {
         wasm_module: wasm_bytes,
-        constant_response_size: constant_response_size,
+        constant_response_size,
     };
 
     let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
@@ -162,5 +162,5 @@ async fn setup_wasm(
         .flatten()
         .expect("couldn't initialize the service");
 
-    return Ok(initialize_response);
+    Ok(initialize_response)
 }
