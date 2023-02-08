@@ -8,5 +8,10 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 env_logger = "*"
+futures-util = "*"
 log = "*"
-tonic = { version = "*", features = ["tls", "tls-roots"] }
+prost = "*"
+tonic = "*"
+
+[build-dependencies]
+oak_grpc_utils = { path = "../oak_grpc_utils" }

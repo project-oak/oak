@@ -14,22 +14,26 @@
 // limitations under the License.
 //
 
+pub mod proto {
+    #![allow(clippy::return_self_not_must_use)]
+    tonic::include_proto!("oak.session.noninteractive.v1");
+}
+
 pub mod transport;
-// pub mod rekor;
 pub mod verifier;
 
 #[cfg(test)]
 mod tests;
 
 use crate::{
-    transport::Transport,
     verifier::{EvidenceProvider, ReferenceValue, Verifier},
+    transport::AsyncTransport,
 };
-use alloc::{vec, vec::Vec};
+use std::{vec, vec::Vec};
 use anyhow::Context;
 
 pub struct OakClientBuilder {
-    transport: Box<dyn Transport>,
+    transport: Box<dyn AsyncTransport>,
     evidence_provider: Box<dyn EvidenceProvider>,
     reference_value: ReferenceValue,
     verifier: Box<dyn Verifier>,
@@ -37,7 +41,7 @@ pub struct OakClientBuilder {
 }
 
 impl OakClientBuilder {
-    pub fn new(transport: Box<dyn Transport>,
+    pub fn new(transport: Box<dyn AsyncTransport>,
                evidence_provider: Box<dyn EvidenceProvider>,
                reference_value: ReferenceValue,
                verifier: Box<dyn Verifier>,
@@ -60,9 +64,10 @@ impl OakClientBuilder {
             .get_encryptor(evidence.enclave_public_key)
             .context("couldn't create encryptor")?;
 
-        OakClient {
+        Ok(OakClient {
             transport: self.transport,
-        }
+            encryptor,
+        })
     }
 }
 
@@ -70,12 +75,12 @@ impl OakClientBuilder {
 /// Represents a Relying Party from the RATS Architecture:
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-relying-party>
 pub struct OakClient {
-    transport: Box<dyn Transport>, // RpcClient
-    encryptor: ClientEncryptor,
+    transport: Box<dyn AsyncTransport>,
+    encryptor: Encryptor,
 }
 
 impl OakClient {
-    pub fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
+    pub async fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
         let (encrypted_request, decryptor) = self.encryptor
             .encrypt(request_body)
             .context("couldn't encrypt request")?;
