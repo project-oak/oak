@@ -69,6 +69,7 @@ RUN apt-get --yes update \
   qemu-system-x86 \
   shellcheck \
   software-properties-common \
+  texinfo \
   vim \
   xml2 \
   # `unzip` and `zlib1g-dev` are needed for Bazel.

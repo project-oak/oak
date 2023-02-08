@@ -20,7 +20,7 @@ readonly DOCKER_IMAGE_NAME='europe-west2-docker.pkg.dev/oak-ci/oak-development/o
 # from a registry first.
 
 # Do not modify manually. This value is automatically updated by ./scripts/docker_build .
-readonly DOCKER_IMAGE_ID='sha256:56c100e3674788e7b84774084d1d5cc1c49da828e04f26bc23fb1711d33e1851'
+readonly DOCKER_IMAGE_ID='sha256:4e64310a2b3210c26cc0b55e148d6f2ad4a25cbe716bba057448fce919f2842d'
 
 # Do not modify manually. This value is automatically updated by ./scripts/docker_push .
 readonly DOCKER_IMAGE_REPO_DIGEST='europe-west2-docker.pkg.dev/oak-ci/oak-development/oak-development@sha256:d650c48659f23688099591e6924219658807eab585a7c8756aa83c568318145e'
