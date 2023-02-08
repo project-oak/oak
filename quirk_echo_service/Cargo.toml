@@ -1,0 +1,20 @@
+[package]
+name = "quirk_echo_service"
+version = "0.1.0"
+authors = ["Dzmitry Huba <huba@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+hashbrown = "*"
+log = "*"
+micro_rpc = { path = "../micro_rpc" }
+prost = { version = "0.11.2", default-features = false, features = [
+  "prost-derive"
+] }
+
+[build-dependencies]
+micro_rpc_build = { path = "../micro_rpc_build" }
+
+[dev-dependencies]
+async-trait = "*"

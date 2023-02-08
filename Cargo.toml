@@ -53,6 +53,7 @@ members = [
   "sev_serial",
   "snp_measurement",
   "testing/oak_echo_service",
+  "quirk_echo_service",
   "xtask",
 ]
 exclude = [
