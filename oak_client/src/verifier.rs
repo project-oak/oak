@@ -31,7 +31,8 @@ pub struct ReferenceValue {
     pub binary_hash: String,
 }
 
-/// Verifier that
+/// Verifier that appraises the attestation evidence and produces an attestation
+/// result.
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-verifier>
 pub trait Verifier {
     fn verify(&self, evidence: &Evidence, reference_value: &ReferenceValue) -> anyhow::Result<()>;
