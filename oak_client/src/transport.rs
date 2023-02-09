@@ -28,7 +28,9 @@ pub struct GrpcStreamingTransport {
 
 impl GrpcStreamingTransport {
     pub fn new(rpc_client: StreamingSessionClient<Channel>) -> Self {
-        Self { _rpc_client: rpc_client }
+        Self {
+            _rpc_client: rpc_client,
+        }
     }
 }
 

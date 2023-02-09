@@ -23,11 +23,11 @@ pub mod transport;
 pub mod verifier;
 
 use crate::{
-    verifier::{EvidenceProvider, ReferenceValue, Verifier},
     transport::AsyncTransport,
+    verifier::{EvidenceProvider, ReferenceValue, Verifier},
 };
-use std::{vec, vec::Vec};
 use anyhow::Context;
+use std::{vec, vec::Vec};
 
 pub struct OakClientBuilder {
     transport: Box<dyn AsyncTransport>,
@@ -38,12 +38,20 @@ pub struct OakClientBuilder {
 }
 
 impl OakClientBuilder {
-    pub fn new(transport: Box<dyn AsyncTransport>,
-               evidence_provider: Box<dyn EvidenceProvider>,
-               reference_value: ReferenceValue,
-               verifier: Box<dyn Verifier>,
-               crypto_provider: CryptoProvider) -> Self {
-        Self { transport, evidence_provider, reference_value, verifier, crypto_provider }
+    pub fn new(
+        transport: Box<dyn AsyncTransport>,
+        evidence_provider: Box<dyn EvidenceProvider>,
+        reference_value: ReferenceValue,
+        verifier: Box<dyn Verifier>,
+        crypto_provider: CryptoProvider,
+    ) -> Self {
+        Self {
+            transport,
+            evidence_provider,
+            reference_value,
+            verifier,
+            crypto_provider,
+        }
     }
 
     pub fn build(mut self) -> anyhow::Result<OakClient> {
@@ -52,9 +60,9 @@ impl OakClientBuilder {
             .get_evidence()
             .context("couldn't get evidence")?;
 
-        self.verifier.verify(
-            &evidence, &self.reference_value,
-        ).context("couldn't verify evidence")?;
+        self.verifier
+            .verify(&evidence, &self.reference_value)
+            .context("couldn't verify evidence")?;
 
         let encryptor = self
             .crypto_provider
@@ -78,7 +86,8 @@ pub struct OakClient {
 
 impl OakClient {
     pub async fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let (encrypted_request, decryptor) = self.encryptor
+        let (encrypted_request, decryptor) = self
+            .encryptor
             .encrypt(request_body)
             .context("couldn't encrypt request")?;
         let encrypted_response = self
@@ -97,25 +106,22 @@ pub struct CryptoProvider {}
 
 impl CryptoProvider {
     fn get_encryptor(&self, _enclave_public_key: &[u8]) -> anyhow::Result<Encryptor> {
-        Ok(Encryptor{})
+        Ok(Encryptor {})
     }
 }
 
 struct Encryptor {}
 
 impl Encryptor {
-    fn encrypt(&mut self, _message: &[u8]) -> anyhow::Result<(Vec<u8>, Decryptor)>{
-        Ok((
-            vec![],
-            Decryptor {},
-        ))
+    fn encrypt(&mut self, _message: &[u8]) -> anyhow::Result<(Vec<u8>, Decryptor)> {
+        Ok((vec![], Decryptor {}))
     }
 }
 
 struct Decryptor {}
 
 impl Decryptor {
-    fn decrypt(&self, _encrypted_message: &[u8]) -> anyhow::Result<Vec<u8>>{
+    fn decrypt(&self, _encrypted_message: &[u8]) -> anyhow::Result<Vec<u8>> {
         Ok(vec![])
     }
 }
