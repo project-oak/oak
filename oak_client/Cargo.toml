@@ -7,7 +7,6 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
-env_logger = "*"
 futures-util = "*"
 log = "*"
 prost = "*"
