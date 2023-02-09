@@ -2016,6 +2016,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_echo_linux_init"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "nix 0.22.3",
+ "simple_logger",
+]
+
+[[package]]
 name = "oak_echo_service"
 version = "0.1.0"
 dependencies = [
