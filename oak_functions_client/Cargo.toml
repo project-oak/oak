@@ -24,7 +24,6 @@ serde = "*"
 serde_jcs = "*"
 serde_json = "*"
 sha2 = { version = "*", default-features = false }
-signature = "*"
 tokio = { version = "*", features = [
   "fs",
   "macros",
