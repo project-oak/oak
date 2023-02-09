@@ -14,13 +14,30 @@
 // limitations under the License.
 //
 
-use crate::schema;
+use crate::{
+    channel::ConnectorHandle,
+    schema::{self, OakFunctionsAsyncClient},
+};
 use anyhow::{anyhow, Context};
 use hashbrown::HashMap;
 use prost::Message;
-use std::fs;
+use std::{fs, path::PathBuf};
 
-pub fn encode_lookup_data(data: HashMap<Vec<u8>, Vec<u8>>) -> anyhow::Result<schema::LookupData> {
+// Loads lookup data from the given path, encodes it, and sends it to the client.
+pub async fn update_lookup_data(
+    client: &mut OakFunctionsAsyncClient<ConnectorHandle>,
+    lookup_data_path: &PathBuf,
+) -> anyhow::Result<()> {
+    let lookup_data = load_lookup_data(lookup_data_path)?;
+    let encoded_lookup_data = encode_lookup_data(lookup_data)?;
+
+    match client.update_lookup_data(&encoded_lookup_data).await {
+        Ok(_) => Ok(()),
+        Err(err) => Err(anyhow!("couldn't send lookup data: {:?}", err)),
+    }
+}
+
+fn encode_lookup_data(data: HashMap<Vec<u8>, Vec<u8>>) -> anyhow::Result<schema::LookupData> {
     let entries: Vec<schema::LookupDataEntry> = data
         .into_iter()
         .map(|(key, value)| schema::LookupDataEntry { key, value })
@@ -28,9 +45,7 @@ pub fn encode_lookup_data(data: HashMap<Vec<u8>, Vec<u8>>) -> anyhow::Result<sch
     Ok(schema::LookupData { items: entries })
 }
 
-pub fn load_lookup_data(
-    file_path: &std::path::PathBuf,
-) -> anyhow::Result<HashMap<Vec<u8>, Vec<u8>>> {
+fn load_lookup_data(file_path: &std::path::PathBuf) -> anyhow::Result<HashMap<Vec<u8>, Vec<u8>>> {
     let bytes = fs::read(file_path).map_err(|error| {
         anyhow!(
             "couldn't read the lookup data file {}: {}",
