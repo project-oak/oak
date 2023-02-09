@@ -30,7 +30,7 @@ pub async fn update_lookup_data(
     lookup_data_path: &PathBuf,
 ) -> anyhow::Result<()> {
     // Fix the maximum size of a chunk to the proto limit size.
-    let max_chunk_size = 2 * 2 << 30; // ByteUnit::Gibibyte(2);
+    let max_chunk_size = 2 * (2 << 30); // ByteUnit::Gibibyte(2);
 
     let lookup_data = load_lookup_data(lookup_data_path)?;
     let encoded_lookup_data = encode_lookup_data(lookup_data, max_chunk_size)?;
