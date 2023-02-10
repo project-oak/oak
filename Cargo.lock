@@ -2031,7 +2031,7 @@ dependencies = [
 name = "oak_enclave_runtime_support"
 version = "0.1.0"
 dependencies = [
- "libm 0.1.4",
+ "libm 0.2.6",
  "linked_list_allocator",
  "log",
  "oak_restricted_kernel_api",
@@ -2109,7 +2109,7 @@ dependencies = [
  "oak_functions_test_utils",
  "oak_remote_attestation_noninteractive",
  "prost 0.11.2",
- "rand 0.4.6",
+ "rand 0.8.5",
  "serde",
  "tokio",
  "tonic",
@@ -2333,7 +2333,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "log",
- "nix 0.22.3",
+ "nix 0.26.1",
  "simple_logger",
 ]
 
@@ -2374,12 +2374,12 @@ dependencies = [
  "bytes",
  "getrandom 0.2.8",
  "hkdf",
- "p256 0.9.0",
+ "p256 0.10.1",
  "quickcheck",
  "quickcheck_macros",
  "rand_core 0.6.4",
  "ring",
- "sha2 0.9.9",
+ "sha2 0.10.6",
  "signature",
  "x25519-dalek",
 ]
@@ -2987,7 +2987,7 @@ name = "quirk_echo_service"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "hashbrown 0.12.3",
+ "hashbrown 0.13.1",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -3992,9 +3992,9 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "1.23.1"
+version = "1.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38a54aca0c15d014013256222ba0ebed095673f89345dd79119d912eb561b7a8"
+checksum = "c8e00990ebabbe4c14c08aca901caed183ecd5c09562a12c824bb53d3c3fd3af"
 dependencies = [
  "autocfg",
  "bytes",
