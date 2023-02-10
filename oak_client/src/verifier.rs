@@ -40,6 +40,7 @@ pub trait Verifier {
 
 pub struct AmdSevSnpVerifier {}
 
+// TODO(#3641): Implement client-side attestation verification.
 impl Verifier for AmdSevSnpVerifier {
     fn verify(
         &self,

@@ -85,6 +85,31 @@ pub struct OakClient {
 }
 
 impl OakClient {
+    pub fn create(
+        transport: Box<dyn AsyncTransport>,
+        mut evidence_provider: Box<dyn EvidenceProvider>,
+        reference_value: ReferenceValue,
+        verifier: Box<dyn Verifier>,
+        crypto_provider: CryptoProvider,
+    ) -> anyhow::Result<Self> {
+        let evidence = evidence_provider
+            .get_evidence()
+            .context("couldn't get evidence")?;
+
+        verifier
+            .verify(&evidence, &reference_value)
+            .context("couldn't verify evidence")?;
+
+        let encryptor = crypto_provider
+            .get_encryptor(&evidence.enclave_public_key)
+            .context("couldn't create encryptor")?;
+
+        Ok(Self {
+            transport,
+            encryptor,
+        })
+    }
+
     pub async fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
         let (encrypted_request, decryptor) = self
             .encryptor
@@ -113,6 +138,8 @@ impl CryptoProvider {
 struct Encryptor {}
 
 impl Encryptor {
+    /// Returns the encrypted `message` and a corresponding `Decryptor` that should be used
+    /// to decrypt the response message.
     fn encrypt(&mut self, _message: &[u8]) -> anyhow::Result<(Vec<u8>, Decryptor)> {
         Ok((vec![], Decryptor {}))
     }
