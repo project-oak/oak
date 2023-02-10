@@ -342,25 +342,109 @@
 <span id="342">342</span>
 <span id="343">343</span>
 <span id="344">344</span>
-</pre><pre class="rust"><code><span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>PublicKeyInfo {
-    <span class="doccomment">/// The serialized enclave public key.
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
+<span id="362">362</span>
+<span id="363">363</span>
+<span id="364">364</span>
+<span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
+<span id="375">375</span>
+<span id="376">376</span>
+<span id="377">377</span>
+<span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+</pre><pre class="rust"><code><span class="doccomment">/// AttestationEvidence contains the information that the untrusted launcher provides to the client
+/// in response to its request for the enclave&#39;s public key(s). The name is chosen to match the RATS
+/// terminology (see &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence&gt;).
+</span><span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>AttestationEvidence {
+    <span class="doccomment">/// The serialized public key part of the enclave encryption key.
     /// TODO(#3442): Specify key format.
     </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// The serialized attestation report binding the public key.
-    ///
-    /// TODO(#3442): Add evidence (endorsements and inclusion proofs) for the attested binary.
+    </span><span class="kw">pub </span>encryption_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// The serialized public key part of the enclave signing key. This field is optional, and can be
+    /// left empty if the protocol does not require it, e.g., if no application data is present.
+    /// TODO(#3442): Specify key format.
     </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>signing_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// The serialized attestation report binding the public key.
+    </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;3&quot;</span>)]
     </span><span class="kw">pub </span>attestation: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// The serialized TEE certificate(s). The details of the format and how the certificate(s) are
+    /// encoded into this byte array are implementation-specific. In case of AMD-SEV-SNP, as described
+    /// in &lt;https://www.amd.com/system/files/TechDocs/57230.pdf,&gt; there are three different certificates
+    /// packaged in two different files.
+    </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;4&quot;</span>)]
+    </span><span class="kw">pub </span>tee_certificates: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// The binary attestation evidence.
+    </span><span class="attribute">#[prost(message, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    </span><span class="kw">pub </span>binary_attestation: ::core::option::Option&lt;BinaryAttestation&gt;,
+    <span class="doccomment">/// The optional application-specific data.
+    </span><span class="attribute">#[prost(message, optional, tag = <span class="string">&quot;6&quot;</span>)]
+    </span><span class="kw">pub </span>application_data: ::core::option::Option&lt;ApplicationData&gt;,
+    <span class="doccomment">/// The signature over the application_data, signed by the enclave using its signing key. This
+    /// field is optional, and must be left empty if application_data is not provided.
+    /// TODO(#3442): Specify the signing details, or link to a specification.
+    </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
+    </span><span class="kw">pub </span>signed_application_data: ::prost::alloc::vec::Vec&lt;u8&gt;,
+}
+<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>BinaryAttestation {
+    <span class="doccomment">/// The serialized binary endorsement statement from the transparent release process.
+    </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>endorsement_statement: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// The serialized Rekor LogEntry as proof of the inclusion of the endorsement statement in Rekor.
+    </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>rekor_log_entry: ::prost::alloc::vec::Vec&lt;u8&gt;,
+}
+<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>ApplicationData {
+    <span class="doccomment">/// The cryptographic digest of the application, of the form &quot;&lt;algorithm&gt;:&lt;value&gt;&quot;.
+    </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>digest: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// The serialized application configuration. The format of the configuration is
+    /// application-specific. This field is optional and can be empty.
+    </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>config: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 <span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>GetPublicKeyRequest {}
 <span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>GetPublicKeyResponse {
-    <span class="doccomment">/// The enclave public key.
+    <span class="doccomment">/// The enclave&#39;s signing and encryption public keys and attestation evidence about them.
     </span><span class="attribute">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>public_key_info: ::core::option::Option&lt;PublicKeyInfo&gt;,
+    </span><span class="kw">pub </span>attestation_evidence: ::core::option::Option&lt;AttestationEvidence&gt;,
 }
 <span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InvokeRequest {
@@ -485,7 +569,7 @@
         /// messages exchanged by client and server, giving it a minimal amount of structure and type
         /// safety.
         ///
-        /// The expected message seqeuence starts with the client sending a `GetPublicKeyRequest` message
+        /// The expected message sequence starts with the client sending a `GetPublicKeyRequest` message
         /// in order to fetch the public key of the enclave. This method may be handled by the untrusted
         /// launcher or by the enclave, depending on the server implementation.
         ///
@@ -535,7 +619,7 @@
         /// messages exchanged by client and server, giving it a minimal amount of structure and type
         /// safety.
         ///
-        /// The expected message seqeuence starts with the client sending a `GetPublicKeyRequest` message
+        /// The expected message sequence starts with the client sending a `GetPublicKeyRequest` message
         /// in order to fetch the public key of the enclave. This method may be handled by the untrusted
         /// launcher or by the enclave, depending on the server implementation.
         ///
