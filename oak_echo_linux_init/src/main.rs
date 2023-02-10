@@ -17,6 +17,7 @@
 #![feature(file_create_new)]
 
 use log::{debug, info};
+use raw_tty::IntoRawMode;
 use std::{
     fs::OpenOptions,
     io::{Read, Write},
@@ -36,18 +37,24 @@ fn main() -> ! {
 
     let mut buf = [0u8; 1024];
     // We use the first Virtio Console port for communications with the host.
-    let mut file = OpenOptions::new()
+    let mut reader = OpenOptions::new()
         .read(true)
+        .open(DEVICE_PATH)
+        .expect("couldn't open virtio console port for reading")
+        .into_raw_mode()
+        .expect("couln't set virtio console into raw mode");
+    let mut writer = OpenOptions::new()
         .write(true)
         .open(DEVICE_PATH)
-        .expect("couldn't open virtio console port");
+        .expect("couldn't open virtio console port for writing");
 
     debug!("Listening on port");
     loop {
-        let len = file.read(&mut buf[..]).expect("coulnd't read request");
+        let len = reader.read(&mut buf[..]).expect("coulnd't read request");
         if len > 0 {
             debug!("Echoing {} bytes", len);
-            file.write_all(&buf[..len])
+            writer
+                .write_all(&buf[..len])
                 .expect("couldn't write response");
         }
     }
