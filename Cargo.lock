@@ -348,7 +348,7 @@ name = "benchmark"
 version = "0.1.0"
 dependencies = [
  "oak_functions_sdk",
- "prost 0.11.2",
+ "prost 0.11.6",
  "prost-build 0.11.2",
 ]
 
@@ -1715,7 +1715,7 @@ dependencies = [
  "location_utils",
  "log",
  "oak_functions_abi",
- "prost 0.11.2",
+ "prost 0.11.6",
  "serde",
 ]
 
@@ -1729,7 +1729,7 @@ dependencies = [
  "location_utils",
  "multimap",
  "oak_functions_abi",
- "prost 0.11.2",
+ "prost 0.11.6",
  "rand 0.8.5",
  "serde",
  "serde_json",
@@ -1792,7 +1792,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "micro_rpc_build",
- "prost 0.11.2",
+ "prost 0.11.6",
 ]
 
 [[package]]
@@ -1811,7 +1811,7 @@ dependencies = [
  "maplit",
  "micro_rpc",
  "micro_rpc_build",
- "prost 0.11.2",
+ "prost 0.11.6",
  "prost-types 0.11.2",
  "tokio",
 ]
@@ -2024,14 +2024,14 @@ dependencies = [
  "log",
  "micro_rpc",
  "micro_rpc_build",
- "prost 0.11.2",
+ "prost 0.11.6",
 ]
 
 [[package]]
 name = "oak_enclave_runtime_support"
 version = "0.1.0"
 dependencies = [
- "libm 0.1.4",
+ "libm 0.2.6",
  "linked_list_allocator",
  "log",
  "oak_restricted_kernel_api",
@@ -2044,7 +2044,7 @@ name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "prost 0.11.2",
+ "prost 0.11.6",
  "prost-build 0.11.2",
  "serde",
  "static_assertions",
@@ -2068,7 +2068,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_remote_attestation_noninteractive",
  "p256 0.10.1",
- "prost 0.11.2",
+ "prost 0.11.6",
  "regex",
  "serde",
  "serde_jcs",
@@ -2108,8 +2108,8 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_test_utils",
  "oak_remote_attestation_noninteractive",
- "prost 0.11.2",
- "rand 0.4.6",
+ "prost 0.11.6",
+ "rand 0.8.5",
  "serde",
  "tokio",
  "tonic",
@@ -2140,7 +2140,7 @@ dependencies = [
  "oak_channel",
  "oak_functions_service",
  "oak_remote_attestation_interactive",
- "prost 0.11.2",
+ "prost 0.11.6",
  "prost-build 0.11.2",
  "ringbuf",
  "vsock",
@@ -2229,7 +2229,7 @@ dependencies = [
  "oak_logger",
  "oak_remote_attestation_amd",
  "oak_remote_attestation_interactive",
- "prost 0.11.2",
+ "prost 0.11.6",
  "tokio",
 ]
 
@@ -2248,7 +2248,7 @@ dependencies = [
  "oak_functions_client",
  "oak_remote_attestation_noninteractive",
  "port_check",
- "prost 0.11.2",
+ "prost 0.11.6",
  "tempfile",
  "tokio",
 ]
@@ -2296,7 +2296,7 @@ dependencies = [
  "oak_remote_attestation_interactive",
  "oak_remote_attestation_sessions",
  "oak_remote_attestation_sessions_client",
- "prost 0.11.2",
+ "prost 0.11.6",
  "prost-build 0.11.2",
  "reqwest",
  "wasm-bindgen",
@@ -2321,7 +2321,7 @@ dependencies = [
 name = "oak_grpc_utils"
 version = "0.1.0"
 dependencies = [
- "prost 0.11.2",
+ "prost 0.9.0",
  "prost-build 0.11.2",
  "tempfile",
  "tonic-build",
@@ -2333,7 +2333,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "log",
- "nix 0.22.3",
+ "nix 0.26.1",
  "simple_logger",
 ]
 
@@ -2374,12 +2374,12 @@ dependencies = [
  "bytes",
  "getrandom 0.2.8",
  "hkdf",
- "p256 0.9.0",
+ "p256 0.10.1",
  "quickcheck",
  "quickcheck_macros",
  "rand_core 0.6.4",
  "ring",
- "sha2 0.9.9",
+ "sha2 0.10.6",
  "signature",
  "x25519-dalek",
 ]
@@ -2393,7 +2393,7 @@ dependencies = [
  "futures",
  "futures-util",
  "oak_grpc_utils",
- "prost 0.11.2",
+ "prost 0.11.6",
  "tokio",
  "tonic",
 ]
@@ -2508,7 +2508,7 @@ dependencies = [
  "micro_rpc_build",
  "oak_restricted_kernel_api",
  "oak_restricted_kernel_interface",
- "prost 0.11.2",
+ "prost 0.11.6",
 ]
 
 [[package]]
@@ -2858,12 +2858,12 @@ dependencies = [
 
 [[package]]
 name = "prost"
-version = "0.11.2"
+version = "0.11.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0841812012b2d4a6145fae9a6af1534873c32aa67fff26bd09f8fa42c83f95a"
+checksum = "21dc42e00223fc37204bd4aa177e69420c604ca4a183209a8f9de30c6d934698"
 dependencies = [
  "bytes",
- "prost-derive 0.11.2",
+ "prost-derive 0.11.6",
 ]
 
 [[package]]
@@ -2900,7 +2900,7 @@ dependencies = [
  "multimap",
  "petgraph",
  "prettyplease",
- "prost 0.11.2",
+ "prost 0.11.6",
  "prost-types 0.11.2",
  "regex",
  "syn",
@@ -2923,9 +2923,9 @@ dependencies = [
 
 [[package]]
 name = "prost-derive"
-version = "0.11.2"
+version = "0.11.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "164ae68b6587001ca506d3bf7f1000bfa248d0e1217b618108fba4ec1d0cc306"
+checksum = "8bda8c0881ea9f722eb9629376db3d0b903b462477c1aafcb0566610ac28ac5d"
 dependencies = [
  "anyhow",
  "itertools",
@@ -2951,7 +2951,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "747761bc3dc48f9a34553bf65605cf6cb6288ba219f3450b4275dbd81539551a"
 dependencies = [
  "bytes",
- "prost 0.11.2",
+ "prost 0.11.6",
 ]
 
 [[package]]
@@ -2987,11 +2987,11 @@ name = "quirk_echo_service"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "hashbrown 0.12.3",
+ "hashbrown 0.13.1",
  "log",
  "micro_rpc",
  "micro_rpc_build",
- "prost 0.11.2",
+ "prost 0.11.6",
 ]
 
 [[package]]
@@ -4117,8 +4117,8 @@ dependencies = [
  "hyper-timeout",
  "percent-encoding",
  "pin-project",
- "prost 0.11.2",
- "prost-derive 0.11.2",
+ "prost 0.11.6",
+ "prost-derive 0.11.6",
  "rustls-native-certs",
  "rustls-pemfile 1.0.1",
  "tokio",

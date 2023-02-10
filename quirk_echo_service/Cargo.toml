@@ -9,7 +9,7 @@ license = "Apache-2.0"
 hashbrown = "*"
 log = "*"
 micro_rpc = { path = "../micro_rpc" }
-prost = { version = "0.11.2", default-features = false, features = [
+prost = { version = "0.11.6", default-features = false, features = [
   "prost-derive"
 ] }
 
