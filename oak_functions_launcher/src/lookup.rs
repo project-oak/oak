@@ -22,16 +22,16 @@ use anyhow::{anyhow, Context};
 use hashbrown::HashMap;
 use prost::Message;
 use std::{fs, path::PathBuf};
-// TODO(#3680): Use once we updated dependencies.
-// use ubyte::{self, ByteUnit};
+
+// TODO(#3680): Use `byte` to make byte units explicit.
 
 // Loads lookup data from the given path, encodes it, and sends it to the client.
 pub async fn update_lookup_data(
     client: &mut OakFunctionsAsyncClient<ConnectorHandle>,
     lookup_data_path: &PathBuf,
 ) -> anyhow::Result<()> {
-    // Fix the maximum size of a chunk to the proto limit size.
-    let max_chunk_size = 2 * (2 << 30); // ByteUnit::Gibibyte(2);
+    // Fix the maximum size of a chunk to the proto limit size of ByteUnit::Gibibyte(2)
+    let max_chunk_size = 2 * (1 << 30);
 
     let lookup_data = load_lookup_data(lookup_data_path)?;
     let encoded_lookup_data = encode_lookup_data(lookup_data, max_chunk_size)?;
@@ -48,17 +48,17 @@ fn encode_lookup_data(
     // max_chunk_size: ByteUnit,
 ) -> anyhow::Result<schema::LookupData> {
     // We will add the estimated size of ever LookupDataEntry, and to account for the LookupData
-    // overhead, we generously estimate 50 bytes.
-    let mut estimated_size = 50; // ByteUnit::Byte(50);
+    // overhead, we generously estimate of ByteUnit::Byte(50).
+    let mut estimated_size = 50;
 
-    // Overestimate delimiter size based on https://github.com/tokio-rs/prost/blob/0c350dc6ad3cd61dc9a1398dffab5ac312f3b245/src/lib.rs#L55
-    let overestimated_delimiter_size = 10; // ByteUnit::Byte(10);
+    // Overestimate delimiter size as ByteUnit::Byte(10) based on https://github.com/tokio-rs/prost/blob/0c350dc6ad3cd61dc9a1398dffab5ac312f3b245/src/lib.rs#L55
+    let overestimated_delimiter_size = 10;
 
     let entries: Vec<schema::LookupDataEntry> = data
         .into_iter()
+        // Size of key and value: ByteUnit::Byte(key.len()) + ByteUnit::Byte(value.len())
         .map(|(key, value)| {
-            estimated_size += overestimated_delimiter_size + key.len() // ByteUnit::Byte(key.len() as u64)
-             + value.len(); //  + ByteUnit::Byte(value.len() as u64);
+            estimated_size += overestimated_delimiter_size + key.len() + value.len();
             schema::LookupDataEntry { key, value }
         })
         .collect();
@@ -100,7 +100,8 @@ fn parse_lookup_entries<B: prost::bytes::Buf>(
 
 #[test]
 fn test_encode_lookup_data_in_bound() {
-    let max_chunk_size_in_bytes = 1000; // ByteUnit::Kilobyte(1);
+    // ByteUnit::Kilobyte(1) as small-ish upper bound for tests.
+    let max_chunk_size_in_bytes = 1000;
 
     // Create data with 8 entries with 100 bytes each.
     let mut data = hashbrown::HashMap::new();
@@ -115,7 +116,8 @@ fn test_encode_lookup_data_in_bound() {
 
 #[test]
 fn test_encode_lookup_data_exceed_bound() {
-    let max_chunk_size_in_bytes = 1000; // ByteUnit::Kilobyte(1);
+    // ByteUnit::Kilobyte(1) as small-ish upper bound for tests.
+    let max_chunk_size_in_bytes = 1000;
 
     // Create data with 9 entries with 100 bytes each accounting for the added overhead.
     let mut data = hashbrown::HashMap::new();
@@ -130,7 +132,8 @@ fn test_encode_lookup_data_exceed_bound() {
 
 #[test]
 fn test_encode_lookup_data_empty() {
-    let max_chunk_size_in_bytes = 1000; // ByteUnit::Kilobyte(1);
+    // ByteUnit::Kilobyte(1) as small-ish upper bound for tests.
+    let max_chunk_size_in_bytes = 1000;
     let data = hashbrown::HashMap::new();
     let result = encode_lookup_data(data, max_chunk_size_in_bytes);
     assert!(result.is_ok())
