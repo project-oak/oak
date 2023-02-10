@@ -50,16 +50,15 @@ fn encode_lookup_data(
     // We will add the estimated size of ever LookupDataEntry, and to account for the LookupData
     // overhead, we generously estimate 50 bytes.
     let mut estimated_size = 50; // ByteUnit::Byte(50);
-                                 // Overestimate delimiter size based on https://github.com/tokio-rs/prost/blob/0c350dc6ad3cd61dc9a1398dffab5ac312f3b245/src/lib.rs#L55
+
+    // Overestimate delimiter size based on https://github.com/tokio-rs/prost/blob/0c350dc6ad3cd61dc9a1398dffab5ac312f3b245/src/lib.rs#L55
     let overestimated_delimiter_size = 10; // ByteUnit::Byte(10);
 
     let entries: Vec<schema::LookupDataEntry> = data
         .into_iter()
         .map(|(key, value)| {
-            estimated_size +=  // ByteUnit::Byte(key.len() as u64)
-               //  + ByteUnit::Byte(value.len() as u64)
-               key.len() + value.len()
-                + overestimated_delimiter_size;
+            estimated_size += overestimated_delimiter_size + key.len() // ByteUnit::Byte(key.len() as u64)
+             + value.len(); //  + ByteUnit::Byte(value.len() as u64);
             schema::LookupDataEntry { key, value }
         })
         .collect();
