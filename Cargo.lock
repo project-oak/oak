@@ -2389,9 +2389,12 @@ name = "oak_remote_attestation_noninteractive"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
+ "futures",
  "futures-util",
  "oak_grpc_utils",
  "prost 0.11.2",
+ "tokio",
  "tonic",
 ]
 
