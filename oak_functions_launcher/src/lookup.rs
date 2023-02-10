@@ -22,6 +22,7 @@ use anyhow::{anyhow, Context};
 use hashbrown::HashMap;
 use prost::Message;
 use std::{fs, path::PathBuf};
+// TODO(#3680): Use once we updated dependencies.
 // use ubyte::{self, ByteUnit};
 
 // Loads lookup data from the given path, encodes it, and sends it to the client.
