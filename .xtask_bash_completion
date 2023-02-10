@@ -1,5 +1,5 @@
 _xtask() {
-    local i cur prev opts cmd
+    local i cur prev opts cmds
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"

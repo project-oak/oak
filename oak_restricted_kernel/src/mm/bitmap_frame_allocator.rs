@@ -269,7 +269,7 @@ mod tests {
             .map(|_| alloc.allocate_frame().unwrap())
             .collect();
 
-        assert_set_eq_other!(expected_frames, got_frames);
+        assert_set_eq!(expected_frames, got_frames);
         assert_eq!(None, alloc.allocate_frame());
     }
 
@@ -332,7 +332,7 @@ mod tests {
         let got_frames: Vec<PhysFrame<Size4KiB>> = (0..expected_frames.len())
             .map(|_| alloc.allocate_frame().unwrap())
             .collect();
-        assert_set_eq_other!(expected_frames, got_frames);
+        assert_set_eq!(expected_frames, got_frames);
         assert_eq!(None, alloc.allocate_frame());
     }
 

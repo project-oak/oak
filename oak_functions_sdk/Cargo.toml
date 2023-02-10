@@ -6,6 +6,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
+bincode = "*"
 oak_functions_abi = { path = "../oak_functions_abi" }
 serde = "*"
 serde_derive = "*"

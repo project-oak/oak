@@ -21,6 +21,7 @@ use oak_functions_launcher::{
     schema::{self, InvokeRequest},
     Mode,
 };
+use rand::Rng;
 use std::path::PathBuf;
 
 lazy_static! {
@@ -86,6 +87,7 @@ async fn test_load_large_lookup_data() {
         enclave_binary: ENCLAVE_BINARY_PATH.to_path_buf(),
     };
 
+    let mut rng = rand::thread_rng();
     // Initialize > 2 GiB of lookup data to hit the proto limits.
     let lookup_data_size = 2 * (2 << 30);
     let entry_size = 2 << 10;
@@ -93,7 +95,8 @@ async fn test_load_large_lookup_data() {
     let mut entries = std::collections::HashMap::new(); // Vec::with_capacity(lookup_data_size / entry_size / 2);
     let entries_count = lookup_data_size / entry_size;
 
-    let key_prefix = vec![0u8; (entry_size / 2) - 4];
+    let mut key_prefix = vec![0u8; (entry_size / 2) - 4];
+    rng.fill_bytes(key_prefix.as_mut_slice());
 
     for i in 0..entries_count {
         let mut n = key_prefix.clone();
