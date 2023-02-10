@@ -29,53 +29,6 @@ use crate::{
 use anyhow::Context;
 use std::{vec, vec::Vec};
 
-pub struct OakClientBuilder {
-    transport: Box<dyn AsyncTransport>,
-    evidence_provider: Box<dyn EvidenceProvider>,
-    reference_value: ReferenceValue,
-    verifier: Box<dyn Verifier>,
-    crypto_provider: CryptoProvider,
-}
-
-impl OakClientBuilder {
-    pub fn new(
-        transport: Box<dyn AsyncTransport>,
-        evidence_provider: Box<dyn EvidenceProvider>,
-        reference_value: ReferenceValue,
-        verifier: Box<dyn Verifier>,
-        crypto_provider: CryptoProvider,
-    ) -> Self {
-        Self {
-            transport,
-            evidence_provider,
-            reference_value,
-            verifier,
-            crypto_provider,
-        }
-    }
-
-    pub fn build(mut self) -> anyhow::Result<OakClient> {
-        let evidence = self
-            .evidence_provider
-            .get_evidence()
-            .context("couldn't get evidence")?;
-
-        self.verifier
-            .verify(&evidence, &self.reference_value)
-            .context("couldn't verify evidence")?;
-
-        let encryptor = self
-            .crypto_provider
-            .get_encryptor(&evidence.enclave_public_key)
-            .context("couldn't create encryptor")?;
-
-        Ok(OakClient {
-            transport: self.transport,
-            encryptor,
-        })
-    }
-}
-
 /// Client for connecting to Oak.
 /// Represents a Relying Party from the RATS Architecture:
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-relying-party>
