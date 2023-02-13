@@ -54,6 +54,90 @@
 <span id="54">54</span>
 <span id="55">55</span>
 <span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
+<span id="99">99</span>
+<span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -70,23 +154,66 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::schema;
+</span><span class="kw">use crate</span>::{
+    channel::ConnectorHandle,
+    schema::{<span class="self">self</span>, OakFunctionsAsyncClient},
+};
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>hashbrown::HashMap;
 <span class="kw">use </span>prost::Message;
-<span class="kw">use </span>std::fs;
+<span class="kw">use </span>std::{fs, path::PathBuf};
 
-<span class="kw">pub fn </span>encode_lookup_data(data: HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;) -&gt; anyhow::Result&lt;schema::LookupData&gt; {
-    <span class="kw">let </span>entries: Vec&lt;schema::LookupDataEntry&gt; = data
-        .into_iter()
-        .map(|(key, value)| schema::LookupDataEntry { key, value })
-        .collect();
-    <span class="prelude-val">Ok</span>(schema::LookupData { items: entries })
+<span class="comment">// TODO(#3680): Use `byte` to make byte units explicit.
+
+// Loads lookup data from the given path, encodes it, and sends it to the client.
+</span><span class="kw">pub async fn </span>update_lookup_data(
+    client: <span class="kw-2">&amp;mut </span>OakFunctionsAsyncClient&lt;ConnectorHandle&gt;,
+    lookup_data_path: <span class="kw-2">&amp;</span>PathBuf,
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="comment">// Fix the maximum size of a chunk to the proto limit size of ByteUnit::Gibibyte(2)
+    </span><span class="kw">let </span>max_chunk_size = <span class="number">2 </span>* (<span class="number">1 </span>&lt;&lt; <span class="number">30</span>);
+
+    <span class="kw">let </span>lookup_data = load_lookup_data(lookup_data_path)<span class="question-mark">?</span>;
+    <span class="kw">let </span>encoded_lookup_data = encode_lookup_data(lookup_data, max_chunk_size)<span class="question-mark">?</span>;
+
+    <span class="kw">match </span>client.update_lookup_data(<span class="kw-2">&amp;</span>encoded_lookup_data).<span class="kw">await </span>{
+        <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(()),
+        <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t send lookup data: {:?}&quot;</span>, err)),
+    }
 }
 
-<span class="kw">pub fn </span>load_lookup_data(
-    file_path: <span class="kw-2">&amp;</span>std::path::PathBuf,
-) -&gt; anyhow::Result&lt;HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;&gt; {
+<span class="kw">fn </span>encode_lookup_data(
+    data: HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;,
+    max_chunk_size: usize,
+    <span class="comment">// max_chunk_size: ByteUnit,
+</span>) -&gt; anyhow::Result&lt;schema::LookupData&gt; {
+    <span class="comment">// We will add the estimated size of ever LookupDataEntry, and to account for the LookupData
+    // overhead, we generously estimate of ByteUnit::Byte(50).
+    </span><span class="kw">let </span><span class="kw-2">mut </span>estimated_size = <span class="number">50</span>;
+
+    <span class="comment">// Overestimate delimiter size as ByteUnit::Byte(10) based on https://github.com/tokio-rs/prost/blob/0c350dc6ad3cd61dc9a1398dffab5ac312f3b245/src/lib.rs#L55
+    </span><span class="kw">let </span>overestimated_delimiter_size = <span class="number">10</span>;
+
+    <span class="kw">let </span>entries: Vec&lt;schema::LookupDataEntry&gt; = data
+        .into_iter()
+        <span class="comment">// Size of key and value: ByteUnit::Byte(key.len()) + ByteUnit::Byte(value.len())
+        </span>.map(|(key, value)| {
+            estimated_size += overestimated_delimiter_size + key.len() + value.len();
+            schema::LookupDataEntry { key, value }
+        })
+        .collect();
+
+    <span class="kw">if </span>estimated_size &gt; max_chunk_size {
+        <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
+            <span class="string">&quot;lookup data size exceeds: {:?} bytes&quot;</span>,
+            max_chunk_size
+        ))
+    } <span class="kw">else </span>{
+        <span class="prelude-val">Ok</span>(schema::LookupData { items: entries })
+    }
+}
+
+<span class="kw">fn </span>load_lookup_data(file_path: <span class="kw-2">&amp;</span>std::path::PathBuf) -&gt; anyhow::Result&lt;HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;&gt; {
     <span class="kw">let </span>bytes = fs::read(file_path).map_err(|error| {
         <span class="macro">anyhow!</span>(
             <span class="string">&quot;couldn&#39;t read the lookup data file {}: {}&quot;</span>,
@@ -109,6 +236,47 @@
         entries.insert(entry.key, entry.value);
     }
     <span class="prelude-val">Ok</span>(entries)
+}
+
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_encode_lookup_data_in_bound() {
+    <span class="comment">// ByteUnit::Kilobyte(1) as small-ish upper bound for tests.
+    </span><span class="kw">let </span>max_chunk_size_in_bytes = <span class="number">1000</span>;
+
+    <span class="comment">// Create data with 8 entries with 100 bytes each.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>data = hashbrown::HashMap::new();
+    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">8 </span>{
+        <span class="kw">let </span>key = <span class="macro">format!</span>(<span class="string">&quot;{:050}&quot;</span>, i).into_bytes();
+        data.insert(key.clone(), key.clone());
+    }
+    <span class="kw">let </span>result = encode_lookup_data(data, max_chunk_size_in_bytes);
+    <span class="macro">assert!</span>(result.is_ok());
+    <span class="macro">assert_eq!</span>(result.unwrap().items.len(), <span class="number">8</span>)
+}
+
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_encode_lookup_data_exceed_bound() {
+    <span class="comment">// ByteUnit::Kilobyte(1) as small-ish upper bound for tests.
+    </span><span class="kw">let </span>max_chunk_size_in_bytes = <span class="number">1000</span>;
+
+    <span class="comment">// Create data with 9 entries with 100 bytes each accounting for the added overhead.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>data = hashbrown::HashMap::new();
+    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">9 </span>{
+        <span class="kw">let </span>key = <span class="macro">format!</span>(<span class="string">&quot;{:050}&quot;</span>, i).into_bytes();
+        data.insert(key.clone(), key.clone());
+    }
+
+    <span class="kw">let </span>result = encode_lookup_data(data, max_chunk_size_in_bytes);
+    <span class="macro">assert!</span>(result.is_err())
+}
+
+<span class="attribute">#[test]
+</span><span class="kw">fn </span>test_encode_lookup_data_empty() {
+    <span class="comment">// ByteUnit::Kilobyte(1) as small-ish upper bound for tests.
+    </span><span class="kw">let </span>max_chunk_size_in_bytes = <span class="number">1000</span>;
+    <span class="kw">let </span>data = hashbrown::HashMap::new();
+    <span class="kw">let </span>result = encode_lookup_data(data, max_chunk_size_in_bytes);
+    <span class="macro">assert!</span>(result.is_ok())
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_launcher" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

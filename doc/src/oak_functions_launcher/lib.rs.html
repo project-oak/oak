@@ -154,16 +154,6 @@
 <span id="154">154</span>
 <span id="155">155</span>
 <span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -229,7 +219,7 @@
     Box&lt;<span class="kw">dyn </span>std::error::Error&gt;,
 &gt; {
     <span class="kw">let </span>(launched_instance, connector_handle) = launch_instance(mode).<span class="kw">await</span><span class="question-mark">?</span>;
-    setup_lookup_data(connector_handle.clone(), lookup_data_path).<span class="kw">await</span>;
+    setup_lookup_data(connector_handle.clone(), lookup_data_path).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>intialization_response =
         setup_wasm(connector_handle.clone(), <span class="kw-2">&amp;</span>wasm_path, constant_response_size).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>((launched_instance, connector_handle, intialization_response))
@@ -269,18 +259,14 @@
 }
 
 <span class="comment">// Initially loads lookup data and spawns task to periodically refresh lookup data.
-</span><span class="kw">async fn </span>setup_lookup_data(connector_handle: ConnectorHandle, lookup_data_path: PathBuf) {
+</span><span class="kw">async fn </span>setup_lookup_data(
+    connector_handle: ConnectorHandle,
+    lookup_data_path: PathBuf,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>client = schema::OakFunctionsAsyncClient::new(connector_handle);
 
     <span class="comment">// Block for [invariant that lookup data is fully loaded](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-fully-loaded-lookup-data)
-    </span><span class="kw">let </span>lookup_data =
-        lookup::load_lookup_data(<span class="kw-2">&amp;</span>lookup_data_path).expect(<span class="string">&quot;couldn&#39;t load lookup data&quot;</span>);
-    <span class="kw">let </span>encoded_lookup_data =
-        lookup::encode_lookup_data(lookup_data).expect(<span class="string">&quot;couldn&#39;t encode lookup data&quot;</span>);
-
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = client.update_lookup_data(<span class="kw-2">&amp;</span>encoded_lookup_data).<span class="kw">await </span>{
-        <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t send lookup data: {:?}&quot;</span>, err)
-    }
+    </span>lookup::update_lookup_data(<span class="kw-2">&amp;mut </span>client, <span class="kw-2">&amp;</span>lookup_data_path).<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="comment">// Spawn task to periodically refresh lookup data.
     </span>tokio::spawn(<span class="kw">async move </span>{
@@ -288,17 +274,11 @@
         <span class="kw">loop </span>{
             <span class="comment">// Wait before updating because we just loaded the lookup data.
             </span>interval.tick().<span class="kw">await</span>;
-
-            <span class="kw">let </span>lookup_data =
-                lookup::load_lookup_data(<span class="kw-2">&amp;</span>lookup_data_path).expect(<span class="string">&quot;couldn&#39;t load lookup data&quot;</span>);
-            <span class="kw">let </span>encoded_lookup_data =
-                lookup::encode_lookup_data(lookup_data).expect(<span class="string">&quot;couldn&#39;t encode lookup data&quot;</span>);
-
-            <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = client.update_lookup_data(<span class="kw-2">&amp;</span>encoded_lookup_data).<span class="kw">await </span>{
-                <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t send lookup data: {:?}&quot;</span>, err)
-            }
-        }
+            <span class="kw">let _ </span>= lookup::update_lookup_data(<span class="kw-2">&amp;mut </span>client, <span class="kw-2">&amp;</span>lookup_data_path).<span class="kw">await</span>;
+            <span class="comment">// Ignore errors in updates of lookup data after the initial update.
+        </span>}
     });
+    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="comment">// Loads wasm bytes.

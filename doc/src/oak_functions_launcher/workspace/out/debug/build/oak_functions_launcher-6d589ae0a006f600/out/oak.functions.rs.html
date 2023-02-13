@@ -187,6 +187,8 @@
 <span id="187">187</span>
 <span id="188">188</span>
 <span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
 </pre><pre class="rust"><code><span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InitializeRequest {
     <span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
@@ -223,7 +225,9 @@
     <span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>value: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
-<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+<span class="doccomment">/// If the definition of LookupData changes, the estimation of the size of the LookupData when
+/// serialized in the Oak Functions Launcher needs to change, too.
+</span><span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>LookupData {
     <span class="attribute">#[prost(message, repeated, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>items: ::prost::alloc::vec::Vec&lt;LookupDataEntry&gt;,
