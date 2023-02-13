@@ -90,7 +90,7 @@ jobs:
         uses: actions/cache@v3
         env:
           # Increment this value to invalidate previous cache entries.
-          CACHE_VERSION: 16
+          CACHE_VERSION: 15
         with:
           path: |
             ./cargo-cache/bin
