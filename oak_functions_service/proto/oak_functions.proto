@@ -59,6 +59,8 @@ message LookupDataEntry {
   bytes value = 2;
 }
 
+// If the definition of LookupData changes, the estimation of the size of the LookupData when
+// serialized in the Oak Functions Launcher needs to change, too.
 message LookupData {
   repeated LookupDataEntry items = 1;
 }

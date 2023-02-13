@@ -63,7 +63,7 @@ pub async fn create(
     Box<dyn std::error::Error>,
 > {
     let (launched_instance, connector_handle) = launch_instance(mode).await?;
-    setup_lookup_data(connector_handle.clone(), lookup_data_path).await;
+    setup_lookup_data(connector_handle.clone(), lookup_data_path).await?;
     let intialization_response =
         setup_wasm(connector_handle.clone(), &wasm_path, constant_response_size).await?;
     Ok((launched_instance, connector_handle, intialization_response))
@@ -103,18 +103,14 @@ async fn launch_instance(
 }
 
 // Initially loads lookup data and spawns task to periodically refresh lookup data.
-async fn setup_lookup_data(connector_handle: ConnectorHandle, lookup_data_path: PathBuf) {
+async fn setup_lookup_data(
+    connector_handle: ConnectorHandle,
+    lookup_data_path: PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
     let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
 
     // Block for [invariant that lookup data is fully loaded](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-fully-loaded-lookup-data)
-    let lookup_data =
-        lookup::load_lookup_data(&lookup_data_path).expect("couldn't load lookup data");
-    let encoded_lookup_data =
-        lookup::encode_lookup_data(lookup_data).expect("couldn't encode lookup data");
-
-    if let Err(err) = client.update_lookup_data(&encoded_lookup_data).await {
-        panic!("couldn't send lookup data: {:?}", err)
-    }
+    lookup::update_lookup_data(&mut client, &lookup_data_path).await?;
 
     // Spawn task to periodically refresh lookup data.
     tokio::spawn(async move {
@@ -122,17 +118,11 @@ async fn setup_lookup_data(connector_handle: ConnectorHandle, lookup_data_path: 
         loop {
             // Wait before updating because we just loaded the lookup data.
             interval.tick().await;
-
-            let lookup_data =
-                lookup::load_lookup_data(&lookup_data_path).expect("couldn't load lookup data");
-            let encoded_lookup_data =
-                lookup::encode_lookup_data(lookup_data).expect("couldn't encode lookup data");
-
-            if let Err(err) = client.update_lookup_data(&encoded_lookup_data).await {
-                panic!("couldn't send lookup data: {:?}", err)
-            }
+            let _ = lookup::update_lookup_data(&mut client, &lookup_data_path).await;
+            // Ignore errors in updates of lookup data after the initial update.
         }
     });
+    Ok(())
 }
 
 // Loads wasm bytes.
