@@ -94,3 +94,6 @@ Makefile.conf
 
 # TensorFlow model server binary
 tensorflow_model_server
+
+# Do not ignore if the output of micro_rpc has changed.
+!/micro_rpc_tests/out/micro_rpc.tests.rs.txt 
