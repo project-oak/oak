@@ -261,7 +261,7 @@ pub struct Signer {
 
 impl Signer {
     pub fn create() -> anyhow::Result<Self> {
-        let signing_key = SigningKey::random(&mut signature::rand_core::OsRng);
+        let signing_key = SigningKey::random(&mut rand_core::OsRng);
         let verifying_key = VerifyingKey::from(&signing_key);
 
         Ok(Self {

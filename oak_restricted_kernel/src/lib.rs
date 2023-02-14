@@ -326,6 +326,7 @@ enum ChannelType {
 }
 
 /// Create a channel for communicating with the Untrusted Launcher.
+#[allow(unused_variables)]
 fn get_channel<'a, A: Allocator + Sync>(
     kernel_args: &args::Args,
     alloc: &'a A,

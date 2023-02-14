@@ -88,13 +88,7 @@ pub fn new(
         _attestation: attestation,
     };
 
-    #[cfg(feature = "grpc-web")]
-    return Server::builder()
-        .add_service(tonic_web::enable(StreamingSessionServer::new(server_impl)))
-        .serve(addr);
-
-    #[cfg(not(feature = "grpc-web"))]
-    return Server::builder()
+    Server::builder()
         .add_service(StreamingSessionServer::new(server_impl))
-        .serve(addr);
+        .serve(addr)
 }
