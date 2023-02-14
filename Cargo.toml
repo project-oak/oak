@@ -5,7 +5,6 @@ members = [
   "experimental/offline_attestation/server",
   "experimental/offline_attestation/shared",
   "experimental/vsock/echo",
-  "experimental/web_client",
   "linux_boot_params",
   "micro_rpc",
   "micro_rpc_build",
