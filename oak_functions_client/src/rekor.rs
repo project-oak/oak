@@ -18,8 +18,7 @@
 //! verifying signatures in a Rekor LogEntry.
 
 use anyhow::Context;
-
-use base64::{engine::general_purpose, Engine as _};
+use base64::{prelude::BASE64_STANDARD, Engine as _};
 use ecdsa::{signature::Verifier, Signature};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -189,7 +188,7 @@ pub fn verify_rekor_log_entry(
     let entry = parsed.values().next().context("no entry in the map")?;
 
     // Parse base64-encoded entry.body into an instance of Body.
-    let body_bytes: Vec<u8> = general_purpose::STANDARD
+    let body_bytes: Vec<u8> = BASE64_STANDARD
         .decode(entry.body.clone())
         .context("couldn't decode Base64 signature")?;
     let body: Body =
@@ -259,7 +258,7 @@ pub fn verify_rekor_body(
 
     // Check that the public key in the body matches the given public key. This in fact checks the
     // consistency of the Rekor LogEntry, and we expect these public keys to always be the same.
-    let public_key_bytes: Vec<u8> = general_purpose::STANDARD
+    let public_key_bytes: Vec<u8> = BASE64_STANDARD
         .decode(body.spec.signature.public_key.content.as_bytes())
         .expect("couldn't base64-decode the public key bytes in the Rekor LogEntry body");
     if compare_keys(&public_key_bytes, pem_encoded_public_key_bytes)? != Ordering::Equal {
@@ -287,7 +286,7 @@ pub fn verify_signature(
     content_bytes: &[u8],
     pem_encoded_public_key_bytes: &[u8],
 ) -> anyhow::Result<()> {
-    let sig: Vec<u8> = general_purpose::STANDARD
+    let sig: Vec<u8> = BASE64_STANDARD
         .decode(base64_signature_bytes)
         .context("couldn't decode Base64 signature")?;
     let signature = Signature::from_der(&sig).context("invalid ASN.1 signature")?;
