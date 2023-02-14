@@ -135,9 +135,6 @@
 <span id="135">135</span>
 <span id="136">136</span>
 <span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -162,16 +159,15 @@
 <span class="kw">use </span>hashbrown::HashMap;
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>std::{fs, path::PathBuf};
+<span class="kw">use </span>ubyte::ByteUnit;
 
-<span class="comment">// TODO(#3680): Use `byte` to make byte units explicit.
-
-// Loads lookup data from the given path, encodes it, and sends it to the client.
+<span class="comment">// Loads lookup data from the given path, encodes it, and sends it to the client.
 </span><span class="kw">pub async fn </span>update_lookup_data(
     client: <span class="kw-2">&amp;mut </span>OakFunctionsAsyncClient&lt;ConnectorHandle&gt;,
     lookup_data_path: <span class="kw-2">&amp;</span>PathBuf,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="comment">// Fix the maximum size of a chunk to the proto limit size of ByteUnit::Gibibyte(2)
-    </span><span class="kw">let </span>max_chunk_size = <span class="number">2 </span>* (<span class="number">1 </span>&lt;&lt; <span class="number">30</span>);
+    <span class="comment">// Fix the maximum size of a chunk to the proto limit size of 2 GiB.
+    </span><span class="kw">let </span>max_chunk_size = ByteUnit::Gibibyte(<span class="number">2</span>);
 
     <span class="kw">let </span>lookup_data = load_lookup_data(lookup_data_path)<span class="question-mark">?</span>;
     <span class="kw">let </span>encoded_lookup_data = encode_lookup_data(lookup_data, max_chunk_size)<span class="question-mark">?</span>;
@@ -184,21 +180,21 @@
 
 <span class="kw">fn </span>encode_lookup_data(
     data: HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;,
-    max_chunk_size: usize,
-    <span class="comment">// max_chunk_size: ByteUnit,
-</span>) -&gt; anyhow::Result&lt;schema::LookupData&gt; {
+    max_chunk_size: ByteUnit,
+) -&gt; anyhow::Result&lt;schema::LookupData&gt; {
     <span class="comment">// We will add the estimated size of ever LookupDataEntry, and to account for the LookupData
-    // overhead, we generously estimate of ByteUnit::Byte(50).
-    </span><span class="kw">let </span><span class="kw-2">mut </span>estimated_size = <span class="number">50</span>;
+    // overhead, we generously estimate 50 bytes.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>estimated_size = ByteUnit::Byte(<span class="number">50</span>);
 
-    <span class="comment">// Overestimate delimiter size as ByteUnit::Byte(10) based on https://github.com/tokio-rs/prost/blob/0c350dc6ad3cd61dc9a1398dffab5ac312f3b245/src/lib.rs#L55
-    </span><span class="kw">let </span>overestimated_delimiter_size = <span class="number">10</span>;
+    <span class="comment">// Overestimate delimiter size based on https://github.com/tokio-rs/prost/blob/0c350dc6ad3cd61dc9a1398dffab5ac312f3b245/src/lib.rs#L55
+    </span><span class="kw">let </span>overestimated_delimiter_size = ByteUnit::Byte(<span class="number">10</span>);
 
     <span class="kw">let </span>entries: Vec&lt;schema::LookupDataEntry&gt; = data
         .into_iter()
-        <span class="comment">// Size of key and value: ByteUnit::Byte(key.len()) + ByteUnit::Byte(value.len())
-        </span>.map(|(key, value)| {
-            estimated_size += overestimated_delimiter_size + key.len() + value.len();
+        .map(|(key, value)| {
+            estimated_size += overestimated_delimiter_size
+                + ByteUnit::Byte(key.len() <span class="kw">as </span>u64)
+                + ByteUnit::Byte(value.len() <span class="kw">as </span>u64);
             schema::LookupDataEntry { key, value }
         })
         .collect();
@@ -240,8 +236,7 @@
 
 <span class="attribute">#[test]
 </span><span class="kw">fn </span>test_encode_lookup_data_in_bound() {
-    <span class="comment">// ByteUnit::Kilobyte(1) as small-ish upper bound for tests.
-    </span><span class="kw">let </span>max_chunk_size_in_bytes = <span class="number">1000</span>;
+    <span class="kw">let </span>max_chunk_size = ByteUnit::Kibibyte(<span class="number">1</span>);
 
     <span class="comment">// Create data with 8 entries with 100 bytes each.
     </span><span class="kw">let </span><span class="kw-2">mut </span>data = hashbrown::HashMap::new();
@@ -249,15 +244,14 @@
         <span class="kw">let </span>key = <span class="macro">format!</span>(<span class="string">&quot;{:050}&quot;</span>, i).into_bytes();
         data.insert(key.clone(), key.clone());
     }
-    <span class="kw">let </span>result = encode_lookup_data(data, max_chunk_size_in_bytes);
+    <span class="kw">let </span>result = encode_lookup_data(data, max_chunk_size);
     <span class="macro">assert!</span>(result.is_ok());
     <span class="macro">assert_eq!</span>(result.unwrap().items.len(), <span class="number">8</span>)
 }
 
 <span class="attribute">#[test]
 </span><span class="kw">fn </span>test_encode_lookup_data_exceed_bound() {
-    <span class="comment">// ByteUnit::Kilobyte(1) as small-ish upper bound for tests.
-    </span><span class="kw">let </span>max_chunk_size_in_bytes = <span class="number">1000</span>;
+    <span class="kw">let </span>max_chunk_size = ByteUnit::Kibibyte(<span class="number">1</span>);
 
     <span class="comment">// Create data with 9 entries with 100 bytes each accounting for the added overhead.
     </span><span class="kw">let </span><span class="kw-2">mut </span>data = hashbrown::HashMap::new();
@@ -266,17 +260,17 @@
         data.insert(key.clone(), key.clone());
     }
 
-    <span class="kw">let </span>result = encode_lookup_data(data, max_chunk_size_in_bytes);
+    <span class="kw">let </span>result = encode_lookup_data(data, max_chunk_size);
     <span class="macro">assert!</span>(result.is_err())
 }
 
 <span class="attribute">#[test]
 </span><span class="kw">fn </span>test_encode_lookup_data_empty() {
-    <span class="comment">// ByteUnit::Kilobyte(1) as small-ish upper bound for tests.
-    </span><span class="kw">let </span>max_chunk_size_in_bytes = <span class="number">1000</span>;
+    <span class="kw">let </span>max_chunk_size = ByteUnit::Kibibyte(<span class="number">1</span>);
     <span class="kw">let </span>data = hashbrown::HashMap::new();
-    <span class="kw">let </span>result = encode_lookup_data(data, max_chunk_size_in_bytes);
-    <span class="macro">assert!</span>(result.is_ok())
+    <span class="kw">let </span>result = encode_lookup_data(data, max_chunk_size);
+    <span class="macro">assert!</span>(result.is_ok());
+    <span class="macro">assert_eq!</span>(result.unwrap().items.len(), <span class="number">0</span>)
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_launcher" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>
