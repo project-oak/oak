@@ -8,6 +8,7 @@ var sourcesIndex = JSON.parse('{\
 "micro_rpc":["",[],["lib.rs","status.rs"]],\
 "micro_rpc_build":["",[],["lib.rs"]],\
 "oak_channel":["",[],["client.rs","frame.rs","lib.rs","message.rs","server.rs"]],\
+"oak_client":["",[],["lib.rs","transport.rs","verifier.rs"]],\
 "oak_core":["",[],["lib.rs","sync.rs"]],\
 "oak_echo_linux_init":["",[],["init.rs","main.rs"]],\
 "oak_echo_service":["",[],["lib.rs"]],\
