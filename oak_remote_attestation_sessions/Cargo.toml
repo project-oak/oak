@@ -12,5 +12,5 @@ rust-crypto = ["oak_remote_attestation_interactive/rust-crypto"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
-oak_remote_attestation_interactive = { path = "../oak_remote_attestation_interactive", default-features = false }
+oak_remote_attestation_interactive = { workspace = true }
 lru = "*"

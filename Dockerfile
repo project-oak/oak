@@ -199,7 +199,7 @@ RUN curl --location https://sh.rustup.rs > /tmp/rustup \
 # We currently need the nightly version in order to be able to compile some of the examples.
 # See https://rust-lang.github.io/rustup-components-history/ for how to pick a version that supports
 # the appropriate set of components.
-ARG rust_version=nightly-2022-10-10
+ARG rust_version=nightly-2023-02-13
 RUN rustup toolchain install ${rust_version} \
   && rustup default ${rust_version}
 
@@ -240,28 +240,21 @@ ARG install_dir=${rustup_dir}/bin
 
 # Install grcov.
 # https://github.com/mozilla/grcov
-ARG grcov_version=v0.5.15
-ARG grcov_location=https://github.com/mozilla/grcov/releases/download/${grcov_version}/grcov-linux-x86_64.tar.bz2
+ARG grcov_version=v0.8.13
+ARG grcov_location=https://github.com/mozilla/grcov/releases/download/${grcov_version}/grcov-x86_64-unknown-linux-musl.tar.bz2
 RUN curl --location ${grcov_location} | tar --extract --bzip2 --directory=${install_dir}
 RUN chmod +x ${install_dir}/grcov
 
-# Install cargo-crev.
-# https://github.com/crev-dev/cargo-crev
-ARG crev_version=v0.23.0
-ARG crev_location=https://github.com/crev-dev/cargo-crev/releases/download/${crev_version}/cargo-crev-${crev_version}-x86_64-unknown-linux-musl.tar.gz
-RUN curl --location ${crev_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
-RUN chmod +x ${install_dir}/cargo-crev
-
 # Install cargo-deny
 # https://github.com/EmbarkStudios/cargo-deny
-ARG deny_version=0.11.3
+ARG deny_version=0.13.7
 ARG deny_location=https://github.com/EmbarkStudios/cargo-deny/releases/download/${deny_version}/cargo-deny-${deny_version}-x86_64-unknown-linux-musl.tar.gz
 RUN curl --location ${deny_location} | tar --extract --gzip --directory=${install_dir} --strip-components=1
 RUN chmod +x ${install_dir}/cargo-deny
 
 # Install cargo-udeps
 # https://github.com/est31/cargo-udeps
-ARG udeps_version=0.1.33
+ARG udeps_version=0.1.35
 ARG udeps_dir=cargo-udeps-v${udeps_version}-x86_64-unknown-linux-gnu
 ARG udeps_location=https://github.com/est31/cargo-udeps/releases/download/v${udeps_version}/cargo-udeps-v${udeps_version}-x86_64-unknown-linux-gnu.tar.gz
 RUN curl --location ${udeps_location} | tar --extract --gzip --directory=${install_dir} --strip-components=2 ./${udeps_dir}/cargo-udeps
@@ -269,7 +262,7 @@ RUN chmod +x ${install_dir}/cargo-udeps
 
 # Install rust-analyzer
 # https://github.com/rust-analyzer/rust-analyzer
-ARG rust_analyzer_version=2022-10-17
+ARG rust_analyzer_version=2023-02-13
 ARG rust_analyzer_location=https://github.com/rust-analyzer/rust-analyzer/releases/download/${rust_analyzer_version}/rust-analyzer-x86_64-unknown-linux-gnu.gz
 RUN curl --location ${rust_analyzer_location} | gzip --decompress "$@" > ${install_dir}/rust-analyzer
 RUN chmod +x ${install_dir}/rust-analyzer
@@ -280,27 +273,13 @@ ENV CARGO_HOME ""
 
 # Install sccache
 # https://github.com/mozilla/sccache
-ARG sccache_version=0.2.15
+ARG sccache_version=0.3.3
 ARG sccache_dir=/usr/local/sccache
 ARG sccache_location=https://github.com/mozilla/sccache/releases/download/v${sccache_version}/sccache-v${sccache_version}-x86_64-unknown-linux-musl.tar.gz
 ENV PATH "${sccache_dir}:${PATH}"
 RUN mkdir --parents ${sccache_dir} \
   && curl --location ${sccache_location} | tar --extract --gzip --directory=${sccache_dir} --strip-components=1 \
   && chmod +x ${sccache_dir}/sccache
-
-# Install flatbuffers
-# https://github.com/google/flatbuffers
-ARG flatc_version=22.9.29
-ARG flatc_digest=sha256:d5eeb01ff1a9b98573b4c92845ff3adea39be632746a0a0747a24511cac1453a
-ARG flatc_url=https://github.com/google/flatbuffers/releases/download/v${flatc_version}/Linux.flatc.binary.clang++-12.zip
-ARG flatc_temp=/tmp/flatc.zip
-ARG flatc_dir=/usr/local/flatc
-ENV PATH "${flatc_dir}:${PATH}"
-RUN ent get ${flatc_digest} --url=${flatc_url} > ${flatc_temp} \
-  && unzip ${flatc_temp} -d ${flatc_dir} \
-  && chmod +x ${flatc_dir}/flatc \
-  && rm -rf ${flatc_temp} \
-  && flatc --version
 
 # Install wasm-pack.
 # https://github.com/rustwasm/wasm-pack

@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+// TODO(#3703): Remove when fixed.
+#![allow(clippy::extra_unused_type_parameters)]
+
 use bitflags::bitflags;
 use core::{cmp::min, ffi::CStr};
 use oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};

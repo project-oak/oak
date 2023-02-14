@@ -169,16 +169,11 @@ pub struct BuildClient {
     pub client_rust_target: Option<String>,
 }
 
-#[derive(serde::Deserialize, Debug, Clone, PartialEq, EnumIter)]
+#[derive(serde::Deserialize, Default, Debug, Clone, PartialEq, EnumIter)]
 pub enum ServerVariant {
     /// Production-like server variant, without logging or any of the experimental features enabled
+    #[default]
     Base,
-}
-
-impl Default for ServerVariant {
-    fn default() -> Self {
-        ServerVariant::Base
-    }
 }
 
 impl std::str::FromStr for ServerVariant {

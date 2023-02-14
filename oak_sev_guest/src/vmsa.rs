@@ -17,6 +17,9 @@
 //! This module provides an implementation of the State Save Area (VMSA) that is used to store
 //! encrypted CPU-related state on AMD SEV-ES and SEV-SNP.
 
+// TODO(#3703): Remove when fixed.
+#![allow(clippy::extra_unused_type_parameters)]
+
 use zerocopy::{AsBytes, FromBytes};
 
 pub const VMSA_PAGE_SIZE: usize = 4096;

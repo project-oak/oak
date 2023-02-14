@@ -7,17 +7,17 @@ license = "Apache-2.0"
 
 [dependencies]
 bincode = "*"
-oak_functions_abi = { path = "../oak_functions_abi" }
+oak_functions_abi = { workspace = true }
 serde = "*"
 serde_derive = "*"
 
 [dev-dependencies]
 hashbrown = "*"
 lazy_static = "*"
-oak_functions_service = { path = "../oak_functions_service" }
-oak_functions_wasm = { path = "../oak_functions/wasm" }
-oak_functions_lookup = { path = "../oak_functions/lookup" }
-oak_functions_testing_extension = { path = "../oak_functions/testing" }
-oak_functions_workload_logging = { path = "../oak_functions/workload_logging" }
-oak_functions_test_utils = { path = "../oak_functions_test_utils" }
+oak_functions_service = { workspace = true }
+oak_functions_wasm = { workspace = true }
+oak_functions_lookup = { workspace = true }
+oak_functions_testing_extension = { workspace = true }
+oak_functions_workload_logging = { workspace = true }
+oak_functions_test_utils = { workspace = true }
 tokio = "*"

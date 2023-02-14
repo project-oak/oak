@@ -6,4 +6,4 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
-prost-build = "*"
+prost-build = { workspace = true }

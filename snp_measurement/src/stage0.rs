@@ -209,7 +209,7 @@ impl Stage0Info {
 /// Loads the Stage 0 firmware ROM image from the supplied path.
 pub fn load_stage0(stage0_rom_path: PathBuf) -> anyhow::Result<Stage0Info> {
     let stage0_bytes =
-        std::fs::read(&stage0_rom_path).context("couldn't load stage0 firmware ROM image")?;
+        std::fs::read(stage0_rom_path).context("couldn't load stage0 firmware ROM image")?;
     debug!("Stage0 size: {}", stage0_bytes.len());
 
     let mut stage0_hasher = Sha256::new();

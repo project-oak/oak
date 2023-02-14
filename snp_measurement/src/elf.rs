@@ -47,7 +47,7 @@ pub fn load_elf_segments(elf_path: PathBuf) -> anyhow::Result<Vec<MemorySegment>
 }
 
 fn load_elf_file(elf_path: PathBuf) -> anyhow::Result<Vec<u8>> {
-    let elf_bytes = std::fs::read(&elf_path).context("couldn't load ELF file")?;
+    let elf_bytes = std::fs::read(elf_path).context("couldn't load ELF file")?;
     debug!("ELF file size: {}", elf_bytes.len());
     let mut elf_hasher = Sha256::new();
     elf_hasher.update(&elf_bytes);

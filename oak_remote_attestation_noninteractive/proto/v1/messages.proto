@@ -63,7 +63,7 @@ message BinaryAttestation {
 }
 
 message ApplicationData {
-  // The cryptographic digest of the application, of the form "<algorithm>:<value>".
+  // The cryptographic digest of the application, of the form `<algorithm>:<value>`.
   bytes digest = 1;
 
   // The serialized application configuration. The format of the configuration is

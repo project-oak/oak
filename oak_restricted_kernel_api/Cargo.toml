@@ -7,8 +7,8 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
-oak_channel = { path = "../oak_channel" }
-oak_restricted_kernel_interface = { path = "../oak_restricted_kernel_interface" }
+oak_channel = { workspace = true }
+oak_restricted_kernel_interface = { workspace = true }
 log = "*"
 strum = { version = "*", default-features = false, features = ["derive"] }
 

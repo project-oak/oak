@@ -65,7 +65,6 @@ fn build_bazel_target(target_dir: &str, target: &str) -> PathBuf {
     let dependency_paths = from_utf8(&output.stdout)
         .expect("couldn't parse bazel query output")
         .split('\n')
-        .into_iter()
         .map(build_target_to_path)
         .collect::<Vec<_>>();
 
@@ -93,7 +92,6 @@ fn build_bazel_target(target_dir: &str, target: &str) -> PathBuf {
 fn build_target_to_path(target: &str) -> PathBuf {
     let file_path = target
         .split("//")
-        .into_iter()
         .last()
         .expect("couldn't remove bazel build target prefix")
         .replace(':', "/");

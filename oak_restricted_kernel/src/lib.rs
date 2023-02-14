@@ -32,7 +32,6 @@
 #![feature(abi_x86_interrupt)]
 #![feature(allocator_api)]
 #![feature(array_chunks)]
-#![feature(asm_sym)]
 #![feature(naked_functions)]
 #![feature(once_cell)]
 #![feature(c_size_t)]

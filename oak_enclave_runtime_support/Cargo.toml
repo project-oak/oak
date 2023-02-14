@@ -10,6 +10,6 @@ license = "Apache-2.0"
 libm = "*"
 linked_list_allocator = { version = "*", features = ["alloc_ref"] }
 log = "*"
-oak_restricted_kernel_api = { path = "../oak_restricted_kernel_api" }
-oak_restricted_kernel_interface = { path = "../oak_restricted_kernel_interface" }
+oak_restricted_kernel_api = { workspace = true }
+oak_restricted_kernel_interface = { workspace = true }
 spinning_top = { version = "*" }

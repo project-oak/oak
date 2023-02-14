@@ -8,9 +8,9 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 bencher = "*"
-oak_functions_client = { path = "../../oak_functions_client" }
+oak_functions_client = { workspace = true }
 rand = "*"
-tokio = { version = "*", features = [
+tokio = { workspace = true, features = [
   "fs",
   "macros",
   "sync",
