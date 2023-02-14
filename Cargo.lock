@@ -2023,7 +2023,7 @@ dependencies = [
  "futures-util",
  "log",
  "oak_grpc_utils",
- "prost 0.11.2",
+ "prost 0.11.6",
  "tonic",
 ]
 
