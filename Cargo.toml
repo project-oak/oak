@@ -11,6 +11,7 @@ members = [
   "micro_rpc_build",
   "micro_rpc_tests",
   "oak_channel",
+  "oak_client",
   "oak_core",
   "oak_echo_linux_init",
   "oak_enclave_runtime_support",

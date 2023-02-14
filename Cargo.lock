@@ -2040,6 +2040,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "futures-util",
+ "log",
+ "oak_grpc_utils",
+ "prost 0.11.2",
+ "tonic",
+]
+
+[[package]]
 name = "oak_core"
 version = "0.1.0"
 dependencies = [
