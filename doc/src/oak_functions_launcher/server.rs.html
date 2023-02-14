@@ -92,12 +92,6 @@
 <span id="92">92</span>
 <span id="93">93</span>
 <span id="94">94</span>
-<span id="95">95</span>
-<span id="96">96</span>
-<span id="97">97</span>
-<span id="98">98</span>
-<span id="99">99</span>
-<span id="100">100</span>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -188,15 +182,9 @@
         _attestation: attestation,
     };
 
-    <span class="attribute">#[cfg(feature = <span class="string">&quot;grpc-web&quot;</span>)]
-    </span><span class="kw">return </span>Server::builder()
-        .add_service(tonic_web::enable(StreamingSessionServer::new(server_impl)))
-        .serve(addr);
-
-    <span class="attribute">#[cfg(not(feature = <span class="string">&quot;grpc-web&quot;</span>))]
-    </span><span class="kw">return </span>Server::builder()
+    Server::builder()
         .add_service(StreamingSessionServer::new(server_impl))
-        .serve(addr);
+        .serve(addr)
 }
 </code></pre></div>
 </section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="oak_functions_launcher" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (81f391930 2022-10-09)" ></div></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/workspace/./out/debug/build/oak_remote_attestation_noninteractive-3a1321ebdd7f260c/out/oak.session.noninteractive.v1.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>oak.session.noninteractive.v1.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../../../../../normalize.css"><link rel="stylesheet" href="../../../../../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../../../../../dark.css" disabled><link rel="stylesheet" href="../../../../../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../../../../../storage.js"></script><script defer src="../../../../../../../../source-script.js"></script><script defer src="../../../../../../../../source-files.js"></script><script defer src="../../../../../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../../../../../../../oak_remote_attestation_noninteractive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../../../../oak_remote_attestation_noninteractive/index.html"><img class="rust-logo" src="../../../../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/workspace/./out/debug/build/oak_remote_attestation_noninteractive-f557ca9446736477/out/oak.session.noninteractive.v1.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>oak.session.noninteractive.v1.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../../../../../../normalize.css"><link rel="stylesheet" href="../../../../../../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../../../../../../ayu.css" disabled><link rel="stylesheet" href="../../../../../../../../dark.css" disabled><link rel="stylesheet" href="../../../../../../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../../../../../../storage.js"></script><script defer src="../../../../../../../../source-script.js"></script><script defer src="../../../../../../../../source-files.js"></script><script defer src="../../../../../../../../main.js"></script><noscript><link rel="stylesheet" href="../../../../../../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../../../../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../../../../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><a class="sidebar-logo" href="../../../../../../../../oak_remote_attestation_noninteractive/index.html"><div class="logo-container"><img class="rust-logo" src="../../../../../../../../rust-logo.svg" alt="logo"></div></a></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../../../../../../../oak_remote_attestation_noninteractive/index.html"><img class="rust-logo" src="../../../../../../../../rust-logo.svg" alt="logo"></a><nav class="sub"><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><button type="button">?</button></div><div id="settings-menu" tabindex="-1"><a href="../../../../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../../../../wheel.svg"></a></div></div></form></nav></div><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -384,10 +384,22 @@
 <span id="384">384</span>
 <span id="385">385</span>
 <span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
 </pre><pre class="rust"><code><span class="doccomment">/// AttestationEvidence contains the information that the untrusted launcher provides to the client
 /// in response to its request for the enclave&#39;s public key(s). The name is chosen to match the RATS
 /// terminology (see &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence&gt;).
-</span><span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="attribute">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>AttestationEvidence {
     <span class="doccomment">/// The serialized public key part of the enclave encryption key.
     /// TODO(#3442): Specify key format.
@@ -419,7 +431,8 @@
     </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
     </span><span class="kw">pub </span>signed_application_data: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
-<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+<span class="attribute">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>BinaryAttestation {
     <span class="doccomment">/// The serialized binary endorsement statement from the transparent release process.
     </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
@@ -428,7 +441,8 @@
     </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>rekor_log_entry: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
-<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+<span class="attribute">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ApplicationData {
     <span class="doccomment">/// The cryptographic digest of the application, of the form &quot;&lt;algorithm&gt;:&lt;value&gt;&quot;.
     </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
@@ -438,15 +452,18 @@
     </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>config: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
-<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+<span class="attribute">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>GetPublicKeyRequest {}
-<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+<span class="attribute">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>GetPublicKeyResponse {
     <span class="doccomment">/// The enclave&#39;s signing and encryption public keys and attestation evidence about them.
     </span><span class="attribute">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>attestation_evidence: ::core::option::Option&lt;AttestationEvidence&gt;,
 }
-<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+<span class="attribute">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InvokeRequest {
     <span class="doccomment">/// Body of the request, encrypted with the enclave public key.
     /// TODO(#3442): Specify encryption format.
@@ -455,21 +472,24 @@
     </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>encrypted_body: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
-<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+<span class="attribute">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InvokeResponse {
     <span class="doccomment">/// Body of the request, encrypted with the client public or symmetric key.
     /// TODO(#3442): Specify encryption format.
     </span><span class="attribute">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>encrypted_body: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
-<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+<span class="attribute">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>RequestWrapper {
     <span class="attribute">#[prost(oneof = <span class="string">&quot;request_wrapper::Request&quot;</span>, tags = <span class="string">&quot;1, 2&quot;</span>)]
     </span><span class="kw">pub </span>request: ::core::option::Option&lt;request_wrapper::Request&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `RequestWrapper`.
 </span><span class="kw">pub mod </span>request_wrapper {
-    <span class="attribute">#[derive(Clone, PartialEq, ::prost::Oneof)]
+    <span class="attribute">#[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>Request {
         <span class="attribute">#[prost(message, tag = <span class="string">&quot;1&quot;</span>)]
         </span>GetPublicKeyRequest(<span class="kw">super</span>::GetPublicKeyRequest),
@@ -477,14 +497,16 @@
         </span>InvokeRequest(<span class="kw">super</span>::InvokeRequest),
     }
 }
-<span class="attribute">#[derive(Clone, PartialEq, ::prost::Message)]
+<span class="attribute">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ResponseWrapper {
     <span class="attribute">#[prost(oneof = <span class="string">&quot;response_wrapper::Response&quot;</span>, tags = <span class="string">&quot;1, 2&quot;</span>)]
     </span><span class="kw">pub </span>response: ::core::option::Option&lt;response_wrapper::Response&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `ResponseWrapper`.
 </span><span class="kw">pub mod </span>response_wrapper {
-    <span class="attribute">#[derive(Clone, PartialEq, ::prost::Oneof)]
+    <span class="attribute">#[allow(clippy::derive_partial_eq_without_eq)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>Response {
         <span class="attribute">#[prost(message, tag = <span class="string">&quot;1&quot;</span>)]
         </span>GetPublicKeyResponse(<span class="kw">super</span>::GetPublicKeyResponse),
@@ -603,10 +625,10 @@
 </span><span class="kw">pub mod </span>streaming_session_server {
     <span class="attribute">#![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     </span><span class="kw">use </span>tonic::codegen::<span class="kw-2">*</span>;
-    <span class="doccomment">///Generated trait containing gRPC methods that should be implemented for use with StreamingSessionServer.
+    <span class="doccomment">/// Generated trait containing gRPC methods that should be implemented for use with StreamingSessionServer.
     </span><span class="attribute">#[async_trait]
     </span><span class="kw">pub trait </span>StreamingSession: Send + Sync + <span class="lifetime">&#39;static </span>{
-        <span class="doccomment">///Server streaming response type for the Stream method.
+        <span class="doccomment">/// Server streaming response type for the Stream method.
         </span><span class="kw">type </span>StreamStream: futures_core::Stream&lt;
                 Item = <span class="prelude-ty">Result</span>&lt;<span class="kw">super</span>::ResponseWrapper, tonic::Status&gt;,
             &gt;
