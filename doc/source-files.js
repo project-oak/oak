@@ -48,7 +48,6 @@ var sourcesIndex = JSON.parse('{\
 "quirk_echo_service":["",[],["lib.rs"]],\
 "sev_serial":["",[],["lib.rs"]],\
 "snp_measurement":["",[],["elf.rs","main.rs","page.rs","stage0.rs","vmsa.rs"]],\
-"vsock_echo":["",[],["main.rs"]],\
 "weather_lookup":["",[],["lib.rs"]],\
 "xtask":["",[],["check_build_licenses.rs","check_license.rs","check_todo.rs","diffs.rs","examples.rs","files.rs","internal.rs","launcher.rs","main.rs"]]\
 }');
