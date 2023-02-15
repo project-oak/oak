@@ -13,7 +13,7 @@ web = ["oak_remote_attestation_interactive/web"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
-oak_remote_attestation_interactive = { path = "../oak_remote_attestation_interactive", default-features = false }
-oak_remote_attestation_sessions = { path = "../oak_remote_attestation_sessions", default-features = false }
+oak_remote_attestation_interactive = { workspace = true }
+oak_remote_attestation_sessions = { workspace = true }
 async-trait = "*"
 rand = "*"

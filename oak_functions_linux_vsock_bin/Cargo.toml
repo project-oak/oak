@@ -9,12 +9,12 @@ license = "Apache-2.0"
 anyhow = { version = "*", default-features = false }
 clap = { version = "*", features = ["derive"] }
 libc = "*"
-oak_remote_attestation_interactive = { path = "../oak_remote_attestation_interactive", default-features = false, features = [
+oak_remote_attestation_interactive = { workspace = true, default-features = false, features = [
   "rust-crypto"
 ] }
-oak_channel = { path = "../oak_channel" }
-oak_functions_service = { path = "../oak_functions_service", default-features = false }
-prost = "*"
+oak_channel = { workspace = true }
+oak_functions_service = { workspace = true, default-features = false }
+prost = { workspace = true }
 ringbuf = "*"
 vsock = "*"
 
@@ -22,4 +22,4 @@ vsock = "*"
 assert_matches = "*"
 
 [build-dependencies]
-prost-build = "*"
+prost-build = { workspace = true }

@@ -212,7 +212,7 @@ fn create_test_wasm_state() -> WasmState<TestingLogger> {
         .expect("couldn't create TestingFactory");
 
     let wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
-    let wasm_module_bytes = std::fs::read(&wasm_module_path).unwrap();
+    let wasm_module_bytes = std::fs::read(wasm_module_path).unwrap();
 
     let wasm_handler = WasmHandler::create(&wasm_module_bytes, vec![testing_factory], logger)
         .expect("couldn't create WasmHandler");

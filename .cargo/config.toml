@@ -31,3 +31,8 @@ multiplexing = false
 # We can use WORKSPACE_ROOT instead of `std::env::current_dir()` to navigate in the repo.
 [env]
 WORKSPACE_ROOT = { value = "", relative = true }
+
+# Disable incompat report for future Rust version.
+# TODO(#3702): Remove exception when deps are updated.
+[future-incompat-report]
+frequency = "never"

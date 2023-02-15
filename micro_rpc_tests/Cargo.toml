@@ -9,10 +9,10 @@ license = "Apache-2.0"
 [dev-dependencies]
 async-trait = "*"
 maplit = "*"
-micro_rpc = { path = "../micro_rpc" }
-prost = "*"
-prost-types = "*"
+micro_rpc = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }
 tokio = { version = "*", features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
-micro_rpc_build = { path = "../micro_rpc_build" }
+micro_rpc_build = { workspace = true }

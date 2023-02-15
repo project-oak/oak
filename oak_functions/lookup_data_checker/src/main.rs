@@ -40,7 +40,7 @@ pub fn parse_lookup_entries<B: prost::bytes::Buf>(
     while lookup_data_buffer.has_remaining() {
         let entry =
             oak_functions_abi::proto::Entry::decode_length_delimited(&mut lookup_data_buffer)
-                .context("couldn't decode entry")?;
+                .map_err(|err| anyhow::anyhow!("couldn't decode entry: {err}"))?;
         entries.insert(entry.key, entry.value);
     }
     Ok(entries)

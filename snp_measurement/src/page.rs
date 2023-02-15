@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+// TODO(#3703): Remove when fixed.
+#![allow(clippy::extra_unused_type_parameters)]
+
 use log::{debug, trace};
 use oak_sev_guest::vmsa::VmsaPage;
 use sha2::{Digest, Sha384};

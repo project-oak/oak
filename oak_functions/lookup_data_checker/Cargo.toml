@@ -10,8 +10,8 @@ anyhow = "*"
 bytes = "*"
 clap = { version = "*", features = ["derive"] }
 env_logger = "*"
-location_utils = { path = "../location_utils" }
+location_utils = { workspace = true }
 log = "*"
-oak_functions_abi = { path = "../../oak_functions_abi" }
-prost = "*"
+oak_functions_abi = { workspace = true }
+prost = { workspace = true }
 serde = { version = "*", features = ["derive"] }

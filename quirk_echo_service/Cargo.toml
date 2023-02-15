@@ -8,13 +8,11 @@ license = "Apache-2.0"
 [dependencies]
 hashbrown = "*"
 log = "*"
-micro_rpc = { path = "../micro_rpc" }
-prost = { version = "0.11.2", default-features = false, features = [
-  "prost-derive"
-] }
+micro_rpc = { workspace = true }
+prost = { workspace = true }
 
 [build-dependencies]
-micro_rpc_build = { path = "../micro_rpc_build" }
+micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
 async-trait = "*"

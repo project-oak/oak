@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use anyhow::Context;
+use anyhow::anyhow;
 use bytes::BytesMut;
 use location_utils::{
     cell_id_to_bytes, find_covering_cells, location_from_degrees, location_to_bytes, Angle,
@@ -56,7 +56,7 @@ pub fn generate_and_serialize_random_entries<R: Rng>(
         let entry = create_random_entry(rng, key_size_bytes, value_size_bytes);
         entry
             .encode_length_delimited(&mut buf)
-            .context("couldn't encode entry")?;
+            .map_err(|err| anyhow!("couldn't encode entry: {err}"))?;
     }
     Ok(buf)
 }
@@ -91,7 +91,7 @@ pub fn generate_and_serialize_weather_entries<R: Rng>(rng: &mut R) -> anyhow::Re
             let entry = create_weather_entry(rng, lat, lng);
             entry
                 .encode_length_delimited(&mut buf)
-                .context("couldn't encode entry")?;
+                .map_err(|err| anyhow!("couldn't encode entry: {err}"))?;
         }
     }
     Ok(buf)
@@ -153,7 +153,7 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
         };
         entry
             .encode_length_delimited(&mut buf)
-            .context("couldn't encode entry")?;
+            .map_err(|err| anyhow!("couldn't encode entry: {err}"))?;
     }
     // Add the cell-based index entries.
     for (key, values) in cell_map.iter_all() {
@@ -163,7 +163,7 @@ pub fn generate_and_serialize_sparse_weather_entries<R: Rng>(
         };
         cell_entry
             .encode_length_delimited(&mut buf)
-            .context("couldn't encode cell index")?;
+            .map_err(|err| anyhow!("couldn't encode cell index: {err}"))?;
     }
     Ok(buf)
 }

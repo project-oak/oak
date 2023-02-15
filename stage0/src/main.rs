@@ -16,7 +16,6 @@
 
 #![no_std]
 #![no_main]
-#![feature(cstr_from_bytes_until_nul)]
 #![feature(int_roundings)]
 
 use core::{

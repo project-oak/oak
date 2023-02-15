@@ -12,6 +12,6 @@ chrono = { version = "*", default-features = false, features = [
   "std",
   "clock"
 ] }
-oak_logger = { path = "../logger" }
-oak_functions_abi = { path = "../../oak_functions_abi" }
-oak_functions_extension = { path = "../extension" }
+oak_logger = { workspace = true }
+oak_functions_abi = { workspace = true }
+oak_functions_extension = { workspace = true }

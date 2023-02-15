@@ -28,19 +28,19 @@ goblin = { version = "*", default-features = false, features = [
 linked_list_allocator = { version = "*", features = ["alloc_ref"] }
 log = "*"
 libm = "*"
-oak_channel = { path = "../oak_channel" }
-oak_core = { path = "../oak_core" }
-oak_simple_io = { path = "../oak_simple_io", optional = true }
-oak_linux_boot_params = { path = "../linux_boot_params" }
-oak_restricted_kernel_interface = { path = "../oak_restricted_kernel_interface" }
+oak_channel = { workspace = true }
+oak_core = { workspace = true }
+oak_simple_io = { workspace = true, optional = true }
+oak_linux_boot_params = { workspace = true }
+oak_restricted_kernel_interface = { workspace = true }
 rust-hypervisor-firmware-virtio = { path = "../third_party/rust-hypervisor-firmware-virtio" }
-oak_sev_guest = { path = "../oak_sev_guest" }
-sev_serial = { path = "../sev_serial" }
+oak_sev_guest = { workspace = true, features = ["rust-crypto"] }
+sev_serial = { workspace = true }
 spinning_top = { version = "*" }
 static_assertions = { version = "*" }
 strum = { version = "*", default-features = false, features = ["derive"] }
 uart_16550 = { version = "*", optional = true }
-oak_virtio = { path = "../oak_virtio", optional = true }
+oak_virtio = { workspace = true, optional = true }
 virtio-drivers = { version = "*", optional = true }
 x86_64 = "*"
 zerocopy = "*"

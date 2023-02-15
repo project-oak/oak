@@ -9,8 +9,8 @@ license = "Apache-2.0"
 anyhow = "*"
 futures-util = "*"
 log = "*"
-prost = "*"
-tonic = "*"
+prost = { workspace = true }
+tonic = { workspace = true }
 
 [build-dependencies]
-oak_grpc_utils = { path = "../oak_grpc_utils" }
+oak_grpc_utils = { workspace = true }

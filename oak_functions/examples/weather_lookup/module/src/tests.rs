@@ -119,7 +119,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     let elapsed_limit_millis = 20;
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("weather_lookup").unwrap();
-    let wasm_module_bytes = std::fs::read(&wasm_path).expect("couldn't read Wasm file");
+    let wasm_module_bytes = std::fs::read(wasm_path).expect("couldn't read Wasm file");
     let wasm_path_after_optimization =
         oak_functions_test_utils::write_to_temp_file(&wasm_module_bytes);
 

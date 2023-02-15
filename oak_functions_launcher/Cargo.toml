@@ -14,7 +14,7 @@ command-fds = { version = "*", features = ["tokio"] }
 futures = "*"
 log = "*"
 env_logger = "*"
-prost = "*"
+prost = { workspace = true }
 serde = "*"
 tokio = { version = "*", features = [
   "rt-multi-thread",
@@ -28,15 +28,15 @@ tonic = "*"
 tonic-web = { version = "*", optional = true }
 oak_functions_abi = { path = "../oak_functions_abi" }
 oak_remote_attestation_noninteractive = { path = "../oak_remote_attestation_noninteractive" }
-micro_rpc = { path = "../micro_rpc" }
-oak_channel = { path = "../oak_channel", features = ["client"] }
+micro_rpc = { workspace = true }
+oak_channel = { workspace = true, features = ["client"] }
 hashbrown = "*"
 ubyte = "*"
 
 [build-dependencies]
-micro_rpc_build = { path = "../micro_rpc_build" }
+micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
 lazy_static = "*"
-oak_functions_test_utils = { path = "../oak_functions_test_utils" }
+oak_functions_test_utils = { workspace = true }
 rand = "*"

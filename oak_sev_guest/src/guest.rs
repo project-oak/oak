@@ -16,6 +16,9 @@
 
 //! Utilities for creating and processing SNP Guest Request protocol messages.
 
+// TODO(#3703): Remove when fixed.
+#![allow(clippy::extra_unused_type_parameters)]
+
 use bitflags::bitflags;
 use core::mem::size_of;
 use strum::FromRepr;

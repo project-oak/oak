@@ -129,7 +129,7 @@ impl From<PageTableFlags> for BasePageTableFlags {
     }
 }
 
-/// Page mapper for pages of type <S>
+/// Page mapper for pages of type `<S>`.
 ///
 /// This is equivalent to <x86_64::structures::paging::mapper::Mapper>, but knows about memory
 /// encryption.

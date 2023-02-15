@@ -15,10 +15,10 @@ env_logger = "*"
 hex = "*"
 http = "*"
 log = "*"
-oak_functions_abi = { path = "../oak_functions_abi" }
-oak_remote_attestation_noninteractive = { path = "../oak_remote_attestation_noninteractive" }
+oak_functions_abi = { workspace = true }
+oak_remote_attestation_noninteractive = { workspace = true }
 p256 = { version = "*", features = ["ecdsa-core", "ecdsa", "pem"] }
-prost = "*"
+prost = { workspace = true }
 regex = "*"
 serde = "*"
 serde_jcs = "*"

@@ -7,14 +7,14 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 futures-util = "*"
-prost = "*"
-tonic = "*"
+prost = { workspace = true }
+tonic = { workspace = true }
 
 [dev-dependencies]
 async-trait = "*"
 futures = "*"
-tokio = { version = "*", features = ["rt-multi-thread", "net"] }
-tonic = "*"
+tokio = { workspace = true, features = ["rt-multi-thread", "net"] }
+tonic = { workspace = true }
 
 [build-dependencies]
-oak_grpc_utils = { path = "../oak_grpc_utils" }
+oak_grpc_utils = { workspace = true }

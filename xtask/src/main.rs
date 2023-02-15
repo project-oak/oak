@@ -456,7 +456,7 @@ fn run_hadolint() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                command: Cmd::new("hadolint", &[entry]),
+                command: Cmd::new("hadolint", [entry]),
             })
             .collect(),
     }

@@ -12,6 +12,6 @@ client = ["std"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
-micro_rpc = { path = "../micro_rpc" }
+micro_rpc = { workspace = true }
 static_assertions = "*"
 bitflags = "*"

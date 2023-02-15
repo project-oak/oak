@@ -15,22 +15,20 @@ wasm = []
 anyhow = { version = "*", default-features = false }
 hashbrown = "*"
 log = "*"
-micro_rpc = { path = "../micro_rpc" }
-oak_functions_wasm = { path = "../oak_functions/wasm" }
-oak_functions_abi = { path = "../oak_functions_abi" }
-oak_functions_lookup = { path = "../oak_functions/lookup" }
-oak_functions_workload_logging = { path = "../oak_functions/workload_logging" }
-oak_remote_attestation_interactive = { path = "../oak_remote_attestation_interactive", default-features = false }
-oak_logger = { path = "../oak_functions/logger" }
-prost = { version = "*", default-features = false, features = ["prost-derive"] }
+micro_rpc = { workspace = true }
+oak_functions_wasm = { workspace = true }
+oak_functions_abi = { workspace = true }
+oak_functions_lookup = { workspace = true }
+oak_functions_workload_logging = { workspace = true }
+oak_remote_attestation_interactive = { workspace = true }
+oak_logger = { workspace = true }
+prost = { workspace = true }
 
 [build-dependencies]
-micro_rpc_build = { path = "../micro_rpc_build" }
+micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
-oak_functions_test_utils = { path = "../oak_functions_test_utils" }
-oak_remote_attestation_amd = { path = "../oak_remote_attestation_amd", default-features = false, features = [
-  "rust-crypto"
-] }
+oak_functions_test_utils = { workspace = true }
+oak_remote_attestation_amd = { workspace = true }
 async-trait = "*"
-tokio = { version = "*", features = ["rt", "macros"] }
+tokio = { workspace = true, features = ["rt", "macros"] }

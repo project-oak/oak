@@ -67,3 +67,49 @@ exclude = [
   "third_party/rust-hypervisor-firmware-virtio",
   "third_party/x25519-dalek"
 ]
+
+[workspace.dependencies]
+# Declare workspace-wide dependencies so that they don't need to use relative paths to refer to each other, and they are always kept in sync.
+# Local crates.
+location_utils = { path = "./oak_functions/location_utils" }
+micro_rpc = { path = "./micro_rpc" }
+micro_rpc_build = { path = "./micro_rpc_build" }
+oak_channel = { path = "./oak_channel" }
+oak_core = { path = "./oak_core" }
+oak_enclave_runtime_support = { path = "./oak_enclave_runtime_support" }
+oak_functions_abi = { path = "./oak_functions_abi" }
+oak_functions_client = { path = "./oak_functions_client" }
+oak_functions_extension = { path = "./oak_functions/extension" }
+oak_functions_lookup = { path = "./oak_functions/lookup" }
+oak_functions_sdk = { path = "./oak_functions_sdk" }
+oak_functions_service = { path = "./oak_functions_service", default-features = false }
+oak_functions_test_utils = { path = "./oak_functions_test_utils" }
+oak_functions_testing_extension = { path = "./oak_functions/testing" }
+oak_functions_wasm = { path = "./oak_functions/wasm" }
+oak_functions_workload_logging = { path = "./oak_functions/workload_logging" }
+oak_grpc_utils = { path = "./oak_grpc_utils" }
+oak_linux_boot_params = { path = "./linux_boot_params" }
+oak_logger = { path = "./oak_functions/logger" }
+oak_remote_attestation_amd = { path = "./oak_remote_attestation_amd", default-features = false, features = [
+  "rust-crypto"
+] }
+oak_remote_attestation_interactive = { path = "./oak_remote_attestation_interactive", default-features = false, features = [
+  "rust-crypto"
+] }
+oak_remote_attestation_noninteractive = { path = "./oak_remote_attestation_noninteractive" }
+oak_remote_attestation_sessions = { path = "./oak_remote_attestation_sessions", default-features = false, features = [
+  "rust-crypto"
+] }
+oak_restricted_kernel_api = { path = "./oak_restricted_kernel_api" }
+oak_restricted_kernel_interface = { path = "./oak_restricted_kernel_interface" }
+oak_sev_guest = { path = "./oak_sev_guest", default-features = false }
+oak_simple_io = { path = "./oak_simple_io" }
+oak_virtio = { path = "./oak_virtio" }
+sev_serial = { path = "./sev_serial" }
+# Common external crates.
+prost = { version = "*", default-features = false, features = ["prost-derive"] }
+prost-build = "*"
+prost-types = "*"
+tokio = "*"
+tonic = "*"
+tonic-build = { version = "*", default-features = false }
