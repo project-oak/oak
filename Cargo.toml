@@ -1,9 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-  "experimental/offline_attestation/client",
-  "experimental/offline_attestation/server",
-  "experimental/offline_attestation/shared",
   "experimental/vsock/echo",
   "linux_boot_params",
   "micro_rpc",
