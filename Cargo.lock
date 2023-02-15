@@ -768,8 +768,11 @@ version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a19187fea3ac7e84da7dacf48de0c45d63c6a76f9490dae389aead16c243fce3"
 dependencies = [
+ "atty",
+ "humantime",
  "log",
  "regex",
+ "termcolor",
 ]
 
 [[package]]
@@ -2408,6 +2411,30 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "quirk_echo_launcher"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bmrng",
+ "clap",
+ "command-fds",
+ "env_logger 0.8.4",
+ "futures",
+ "hashbrown 0.12.3",
+ "lazy_static",
+ "log",
+ "micro_rpc",
+ "micro_rpc_build",
+ "oak_channel",
+ "prost 0.11.2",
+ "quirk_echo_service",
+ "rand 0.4.6",
+ "serde",
+ "tokio",
 ]
 
 [[package]]
