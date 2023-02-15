@@ -1,0 +1,16 @@
+# Build the Nix development shell.
+# Currently not used for anything, just to confirm it builds correctly.
+name: 'Nix'
+on:
+  pull_request:
+  push:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: cachix/install-nix-action@v19
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      # Create the development shell, but do not run anything in it yet.
+      - run: nix develop
