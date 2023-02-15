@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["WorkloadLogger","Wrapper that uses the underlying logger to provide workload logging."],["WorkloadLoggingFactory",""]]};
+window.SIDEBAR_ITEMS = {"struct":["WorkloadLogger","WorkloadLoggingFactory"]};

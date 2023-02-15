@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["CheckBuildLicenses","A [`Runnable`] command that checks for the existence of BUILD files without the necessary licenses declaration."]]};
+window.SIDEBAR_ITEMS = {"struct":["CheckBuildLicenses"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["new",""]],"struct":[["SessionProxy",""]]};
+window.SIDEBAR_ITEMS = {"fn":["new"],"struct":["SessionProxy"]};

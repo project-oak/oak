@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["SESSION_ID_LENGTH",""]],"enum":[["SessionState",""]],"struct":[["SessionTracker","Maintains remote attestation state for a number of sessions"]],"type":[["SessionId",""]]};
+window.SIDEBAR_ITEMS = {"constant":["SESSION_ID_LENGTH"],"enum":["SessionState"],"struct":["SessionTracker"],"type":["SessionId"]};

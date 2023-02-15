@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["OakClient","A client that allows interacting with an Oak server instance over gRPC, using the noninteractive remote attestation protocol."]]};
+window.SIDEBAR_ITEMS = {"struct":["OakClient"]};

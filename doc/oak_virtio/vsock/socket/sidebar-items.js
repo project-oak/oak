@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Socket","A connection-oriented socket."],["SocketConnector","Connector to initiate a connection to a listener on the host."],["SocketListener","Listener that waits for a connection initiated from the host."]]};
+window.SIDEBAR_ITEMS = {"struct":["Socket","SocketConnector","SocketListener"]};

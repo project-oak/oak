@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["DEFAULT_ENCLAVE_BINARY","The default workspace-relative path to the release Oak Functions enclave binary."],["DEFAULT_STAGE0_ROM","The default workspace-relative path to the Stage 0 firmware ROM image."]],"fn":[["main",""]],"mod":[["elf",""],["page",""],["stage0",""],["vmsa",""]],"struct":[["Cli",""]]};
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_ENCLAVE_BINARY","DEFAULT_STAGE0_ROM"],"fn":["main"],"mod":["elf","page","stage0","vmsa"],"struct":["Cli"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["init","Performs the minimum initialization required from the initial process on Linux to allow an application on an initial RAM disk to operate as expected."]]};
+window.SIDEBAR_ITEMS = {"fn":["init"]};

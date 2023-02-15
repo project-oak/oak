@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["client",""],["server",""]],"trait":[["Channel",""],["Read",""],["Write",""]]};
+window.SIDEBAR_ITEMS = {"mod":["client","server"],"trait":["Channel","Read","Write"]};

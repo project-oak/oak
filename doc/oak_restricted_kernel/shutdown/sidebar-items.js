@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["shutdown","Tries various ways to shut down the machine."]]};
+window.SIDEBAR_ITEMS = {"fn":["shutdown"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["GHCB_PAGE_SIZE","The size of the GHCB page."],["GHCB_PROTOCOL_VERSION","The version of the GHCB protocol and page layout that we expect to use."]],"struct":[["Ghcb","The guest-host communications block."],["GhcbProtocol","Implementation of the GHCB protocol using the wrapped GHCB data structure."],["ValidBitmap","Flags indicating which fields in a specific GHCB instance are valid."]]};
+window.SIDEBAR_ITEMS = {"constant":["GHCB_PAGE_SIZE","GHCB_PROTOCOL_VERSION"],"struct":["Ghcb","GhcbProtocol","ValidBitmap"]};

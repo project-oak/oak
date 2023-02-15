@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"macro":[["syscall","Invoke system calls based on the Linux calling convention using `SYSCALL`."]],"mod":[["syscall",""]],"struct":[["FileDescriptorChannel","Channel that communicates over a file descriptor."],["StderrLogger",""]]};
+window.SIDEBAR_ITEMS = {"macro":["syscall"],"mod":["syscall"],"struct":["FileDescriptorChannel","StderrLogger"]};

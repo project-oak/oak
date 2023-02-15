@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["main",""],["parse_lookup_entries",""]],"struct":[["Opt",""]]};
+window.SIDEBAR_ITEMS = {"fn":["main","parse_lookup_entries"],"struct":["Opt"]};

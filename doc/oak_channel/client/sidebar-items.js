@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["ClientChannelHandle",""],["RequestEncoder",""]]};
+window.SIDEBAR_ITEMS = {"struct":["ClientChannelHandle","RequestEncoder"]};

@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"oak_functions_wasm":[["impl&lt;L&gt; ModuleImportResolver for <a class=\"struct\" href=\"oak_functions_wasm/struct.WasmState.html\" title=\"struct oak_functions_wasm::WasmState\">WasmState</a>&lt;L&gt;<span class=\"where fmt-newline\">where<br>&nbsp;&nbsp;&nbsp;&nbsp;L: OakLogger,</span>"]]
+"oak_functions_wasm":[["impl&lt;L&gt; ModuleImportResolver for <a class=\"struct\" href=\"oak_functions_wasm/struct.WasmState.html\" title=\"struct oak_functions_wasm::WasmState\">WasmState</a>&lt;L&gt;<span class=\"where fmt-newline\">where\n    L: OakLogger,</span>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

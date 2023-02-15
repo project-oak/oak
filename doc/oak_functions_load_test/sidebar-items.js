@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["REQUEST",""],["TOTAL_REQUESTS",""],["URL",""]],"fn":[["main",""]]};
+window.SIDEBAR_ITEMS = {"constant":["REQUEST","TOTAL_REQUESTS","URL"],"fn":["main"]};

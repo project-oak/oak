@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["load_elf_file",""],["load_elf_segments","Loads an ELF file and extracts the non-zero loadable memory segments."]],"struct":[["MemorySegment","A memory segment extracted from an ELF file."]]};
+window.SIDEBAR_ITEMS = {"fn":["load_elf_file","load_elf_segments"],"struct":["MemorySegment"]};

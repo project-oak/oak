@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["Syscall","System calls implemented by Oak Restricted Kernel."]],"struct":[["MmapFlags",""],["MmapProtection",""]]};
+window.SIDEBAR_ITEMS = {"enum":["Syscall"],"struct":["MmapFlags","MmapProtection"]};

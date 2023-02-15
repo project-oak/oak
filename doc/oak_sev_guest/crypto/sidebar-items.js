@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["GuestMessageEncryptor","Wrapper for encrypting and decrypting guest messages."]]};
+window.SIDEBAR_ITEMS = {"struct":["GuestMessageEncryptor"]};

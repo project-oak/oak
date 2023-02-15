@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":[["Level","An enum representing the available verbosity levels of the logger."]],"trait":[["OakLogger",""]]};
+window.SIDEBAR_ITEMS = {"enum":["Level"],"trait":["OakLogger"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["proto",""],["transport",""],["verifier",""]],"struct":[["CryptoProvider",""],["OakClient","Client for connecting to Oak. Represents a Relying Party from the RATS Architecture: https://www.rfc-editor.org/rfc/rfc9334.html#name-relying-party"]]};
+window.SIDEBAR_ITEMS = {"mod":["proto","transport","verifier"],"struct":["CryptoProvider","OakClient"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["BUFFER_SIZE",""]],"struct":[["Channel",""]]};
+window.SIDEBAR_ITEMS = {"constant":["BUFFER_SIZE"],"struct":["Channel"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["StreamingSessionServer","Service definition for streaming communication with an Oak server."]],"trait":[["StreamingSession","Generated trait containing gRPC methods that should be implemented for use with StreamingSessionServer."]]};
+window.SIDEBAR_ITEMS = {"struct":["StreamingSessionServer"],"trait":["StreamingSession"]};

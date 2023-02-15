@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["MutableInterruptStackFrame","A reference to the interrupt stack frame will be passed as the first argument of the inner handler function."]]};
+window.SIDEBAR_ITEMS = {"macro":["mutable_interrupt_handler_with_error_code"],"struct":["MutableInterruptStackFrame"]};

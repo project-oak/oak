@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["PlaceholderAmdAttestationGenerator",""],["PlaceholderAmdAttestationVerifier",""],["PlaceholderAmdReport","Placeholder implementation of TEE report for remote attestation."]]};
+window.SIDEBAR_ITEMS = {"struct":["PlaceholderAmdAttestationGenerator","PlaceholderAmdAttestationVerifier","PlaceholderAmdReport"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["HEADER_SIZE","The size of the packet header in bytes."]],"enum":[["VSockOp","Vsock Ops."],["VSockType","Socket Type."]],"struct":[["Packet",""],["VSockFlags","Flags about a socket connection."]]};
+window.SIDEBAR_ITEMS = {"constant":["HEADER_SIZE"],"enum":["VSockOp","VSockType"],"struct":["Packet","VSockFlags"]};

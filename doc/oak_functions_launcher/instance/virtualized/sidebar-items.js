@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["Instance",""],["Params","Parameters used for launching VM instances"]]};
+window.SIDEBAR_ITEMS = {"struct":["Instance","Params"]};

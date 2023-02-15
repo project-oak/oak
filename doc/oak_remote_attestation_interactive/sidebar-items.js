@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["crypto",""],["handshaker",""],["message",""]]};
+window.SIDEBAR_ITEMS = {"mod":["crypto","handshaker","message"]};

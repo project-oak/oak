@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["TestingFactory",""],["TestingLogger","Implemenation of the `oak_loggger::OakLogger` trait to support testing with the `TestExtension` without needing a reference to the implementation in the Oak Functions Loader."]]};
+window.SIDEBAR_ITEMS = {"struct":["TestingFactory","TestingLogger"]};

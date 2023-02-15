@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["main",""]],"static":[["LOGGER",""]],"struct":[["Logger",""],["Opt",""]]};
+window.SIDEBAR_ITEMS = {"fn":["main"],"static":["LOGGER"],"struct":["Logger","Opt"]};
