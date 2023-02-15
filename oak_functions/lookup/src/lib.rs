@@ -137,8 +137,10 @@ where
     }
 
     /// Updates the backing data that will be used by new `LookupData` instances.
-    pub fn update_data(&self, data: Data) {
+    /// TODO(mschett): Return some status, but for now just bool if successful.
+    pub fn update_data(&self, data: Data) -> bool {
         *self.data.lock() = Arc::new(data);
+        true
     }
 
     /// Creates a new `LookupData` instance with a reference to the current backing data.

@@ -29,7 +29,7 @@ service OakFunctions {
 
   // Replaces the existing lookup data with the new value.
   // method_id: 2
-  rpc UpdateLookupData(LookupData) returns (Empty);
+  rpc UpdateLookupData(UpdateLookupDataRequest) returns (UpdateLookupDataResponse);
 }
 
 message InitializeRequest {
@@ -59,10 +59,38 @@ message LookupDataEntry {
   bytes value = 2;
 }
 
-// If the definition of LookupData changes, the estimation of the size of the LookupData when
-// serialized in the Oak Functions Launcher needs to change, too.
-message LookupData {
+message LookupDataChunk {
   repeated LookupDataEntry items = 1;
+}
+
+// Indicates to the LookupDataManager which action should be taken.
+enum LookupDataUpdateAction {
+  UNSPECIFIED = 0;
+  // The first chunk the sender sends in this update.
+  START = 1;
+  // The sender will send a further chunk in this update.
+  CONTINUE = 2;
+  // The FINISH chunk the sender will send in this update.
+  FINISH = 3;
+  // The sender needs to abort the update.
+  ABORT = 4;
+  // The sender needs to send only one chunk.
+  START_AND_FINISH = 5;
+}
+
+// A message to the LookupDataManager to process the lookup data chunk based on the current
+// action.
+//
+// If the definition of UpdateLookupDataRequest changes, the estimation of the size when
+// serialized in the Oak Functions Launcher needs to change, too.
+message UpdateLookupDataRequest {
+  optional LookupDataUpdateAction action = 2;
+  optional LookupDataChunk chunk = 3;
+}
+
+// TODO(mschett): Think which response we want to send.
+message UpdateLookupDataResponse {
+  optional bool success = 1;
 }
 
 message Empty {}

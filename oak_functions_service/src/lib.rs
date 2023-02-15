@@ -145,15 +145,31 @@ impl schema::OakFunctions for OakFunctionsService {
 
     fn update_lookup_data(
         &mut self,
-        lookup_data: &schema::LookupData,
-    ) -> Result<schema::Empty, micro_rpc::Status> {
-        let data = lookup_data
-            .items
-            .iter()
-            .map(|entry| Ok((entry.key.clone(), entry.value.clone())))
-            .collect::<Result<_, micro_rpc::Status>>()?;
+        request: &schema::UpdateLookupDataRequest,
+    ) -> Result<schema::UpdateLookupDataResponse, micro_rpc::Status> {
+        // TODO(mschett): Do not simply unwrap here.
+        let action = schema::LookupDataUpdateAction::from_i32(request.action.unwrap()).unwrap();
 
-        self.lookup_data_manager.update_data(data);
-        Ok(schema::Empty {})
+        // TODO(mschett): Give the action as argument to the lookup data manager to manage the
+        // state and move the matching logic.
+        match action {
+            schema::LookupDataUpdateAction::StartAndFinish => {
+                let chunk = request.chunk.as_ref().unwrap();
+                let data = chunk
+                    .items
+                    .iter()
+                    .map(|entry| Ok((entry.key.clone(), entry.value.clone())))
+                    .collect::<Result<_, micro_rpc::Status>>()?;
+
+                let success = self.lookup_data_manager.update_data(data);
+                Ok(schema::UpdateLookupDataResponse {
+                    success: Some(success),
+                })
+            }
+
+            _ => Ok(schema::UpdateLookupDataResponse {
+                success: Some(false),
+            }),
+        }
     }
 }

@@ -33,18 +33,25 @@ pub async fn update_lookup_data(
     let max_chunk_size = ByteUnit::Gibibyte(2);
 
     let lookup_data = load_lookup_data(lookup_data_path)?;
-    let encoded_lookup_data = encode_lookup_data(lookup_data, max_chunk_size)?;
+    let chunk = chunk_up_lookup_data(lookup_data, max_chunk_size)?;
 
-    match client.update_lookup_data(&encoded_lookup_data).await {
+    // We currently hard-code to send only one chunk.
+    let action = schema::LookupDataUpdateAction::StartAndFinish;
+    let request = schema::UpdateLookupDataRequest {
+        action: Some(action.into()),
+        chunk: Some(chunk),
+    };
+
+    match client.update_lookup_data(&request).await {
         Ok(_) => Ok(()),
         Err(err) => Err(anyhow!("couldn't send lookup data: {:?}", err)),
     }
 }
 
-fn encode_lookup_data(
+fn chunk_up_lookup_data(
     data: HashMap<Vec<u8>, Vec<u8>>,
     max_chunk_size: ByteUnit,
-) -> anyhow::Result<schema::LookupData> {
+) -> anyhow::Result<schema::LookupDataChunk> {
     // We will add the estimated size of ever LookupDataEntry, and to account for the LookupData
     // overhead, we generously estimate 50 bytes.
     let mut estimated_size = ByteUnit::Byte(50);
@@ -68,7 +75,7 @@ fn encode_lookup_data(
             max_chunk_size
         ))
     } else {
-        Ok(schema::LookupData { items: entries })
+        Ok(schema::LookupDataChunk { items: entries })
     }
 }
 
@@ -107,7 +114,7 @@ fn test_encode_lookup_data_in_bound() {
         let key = format!("{:050}", i).into_bytes();
         data.insert(key.clone(), key.clone());
     }
-    let result = encode_lookup_data(data, max_chunk_size);
+    let result = chunk_up_lookup_data(data, max_chunk_size);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().items.len(), 8)
 }
@@ -123,7 +130,7 @@ fn test_encode_lookup_data_exceed_bound() {
         data.insert(key.clone(), key.clone());
     }
 
-    let result = encode_lookup_data(data, max_chunk_size);
+    let result = chunk_up_lookup_data(data, max_chunk_size);
     assert!(result.is_err())
 }
 
@@ -131,7 +138,7 @@ fn test_encode_lookup_data_exceed_bound() {
 fn test_encode_lookup_data_empty() {
     let max_chunk_size = ByteUnit::Kibibyte(1);
     let data = hashbrown::HashMap::new();
-    let result = encode_lookup_data(data, max_chunk_size);
+    let result = chunk_up_lookup_data(data, max_chunk_size);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().items.len(), 0)
 }
