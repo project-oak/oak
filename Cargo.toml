@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-  "experimental/vsock/echo",
   "linux_boot_params",
   "micro_rpc",
   "micro_rpc_build",
