@@ -71,6 +71,7 @@ pub async fn launch(
 
     let guest_instance: Box<dyn GuestInstance> = match mode {
         GuestMode::Virtualized(params) => {
+            log::info!("launching instance");
             Box::new(virtualized::Instance::start(params, guest_writer)?)
         }
     };

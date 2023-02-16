@@ -54,6 +54,7 @@ pub struct Opt {
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
+    RunQuirkTest,
     RunLauncherTest,
     BuildEnclaveBinaryVariants(BuildEnclaveBinaryVariantsOpt),
     RunOakFunctionsExamples(RunOakExamplesOpt),

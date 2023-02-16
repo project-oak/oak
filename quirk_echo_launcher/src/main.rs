@@ -40,12 +40,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
     env_logger::init();
 
+    log::info!("calling launcher");
     let (guest_instance, connector_handle) = crate::launcher::launch(cli.mode).await?;
 
     let mut client = schema::EchoAsyncClient::new(connector_handle);
     let body = b"test_msg".to_vec();
     let echo_request = schema::EchoRequest { body: body.clone() };
 
+    log::info!("invoking remote method");
     let echo_response = client
         .echo(&echo_request)
         .await
@@ -54,6 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     assert!(echo_response.is_ok());
     assert_eq!(body, echo_response.unwrap().body);
 
+    log::info!("killing instance");
     guest_instance
         .kill()
         .await
