@@ -18,7 +18,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get --yes update && apt-get install --no-install-recommends --yes curl gnupg2 gnupg-agent ca-certificates
 
 # Install LLDB for debugging support.
-ARG llvm_version=14
+ARG llvm_version=16
 RUN curl --fail --silent --show-error --location https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
 RUN echo "deb http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-$llvm_version main" >> /etc/apt/sources.list.d/llvm.list
 
@@ -44,6 +44,7 @@ RUN apt-get --yes update \
   chromium-driver \
   clang-format \
   clang-tidy \
+  clang-${llvm_version} \
   # `cmake` is needed for flatbuffer.
   cmake \
   # `cpio` is needed for creating initial RAM disks.
@@ -54,6 +55,7 @@ RUN apt-get --yes update \
   gnupg2 \
   gnupg-agent \
   libcap-dev \
+  libc++-${llvm_version}-dev \
   libfl2 \
   libncurses5 \
   libssl-dev \
