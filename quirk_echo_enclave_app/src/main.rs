@@ -27,6 +27,8 @@ use oak_restricted_kernel_api::{FileDescriptorChannel, StderrLogger};
 
 static LOGGER: StderrLogger = StderrLogger {};
 
+// _start is the default entry point for a free-standing binary with [no_std] and
+// [no_main] attributes.
 #[no_mangle]
 fn _start() -> ! {
     log::set_logger(&LOGGER).unwrap();
