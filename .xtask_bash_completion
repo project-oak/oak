@@ -63,6 +63,9 @@ _xtask() {
             xtask,run-oak-functions-examples)
                 cmd="xtask__run__oak__functions__examples"
                 ;;
+            xtask,run-quirk-test)
+                cmd="xtask__run__quirk__test"
+                ;;
             xtask,run-tests)
                 cmd="xtask__run__tests"
                 ;;
@@ -117,6 +120,9 @@ _xtask() {
             xtask__help,run-oak-functions-examples)
                 cmd="xtask__help__run__oak__functions__examples"
                 ;;
+            xtask__help,run-quirk-test)
+                cmd="xtask__help__run__quirk__test"
+                ;;
             xtask__help,run-tests)
                 cmd="xtask__help__run__tests"
                 ;;
@@ -127,7 +133,7 @@ _xtask() {
 
     case "${cmd}" in
         xtask)
-            opts="-h --dry-run --logs --keep-going --scope --help run-launcher-test build-enclave-binary-variants run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
+            opts="-h --dry-run --logs --keep-going --scope --help run-quirk-test run-launcher-test build-enclave-binary-variants run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -293,7 +299,7 @@ _xtask() {
             return 0
             ;;
         xtask__help)
-            opts="run-launcher-test build-enclave-binary-variants run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
+            opts="run-quirk-test run-launcher-test build-enclave-binary-variants run-oak-functions-examples build-oak-functions-example build-oak-functions-server-variants format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -544,6 +550,20 @@ _xtask() {
             COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
             return 0
             ;;
+        xtask__help__run__quirk__test)
+            opts=""
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
         xtask__help__run__tests)
             opts=""
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
@@ -739,6 +759,20 @@ _xtask() {
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;
+                *)
+                    COMPREPLY=()
+                    ;;
+            esac
+            COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+            return 0
+            ;;
+        xtask__run__quirk__test)
+            opts="-h --help"
+            if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
+                COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
+                return 0
+            fi
+            case "${prev}" in
                 *)
                     COMPREPLY=()
                     ;;
