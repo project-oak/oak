@@ -20,7 +20,7 @@ use async_trait::async_trait;
 use clap::Parser;
 use command_fds::tokio::CommandFdAsyncExt;
 use log::info;
-use oak_channel::{Channel, Write};
+use oak_channel::Write;
 use std::{
     fs,
     net::Shutdown,
@@ -170,7 +170,8 @@ impl Instance {
         })
     }
 
-    /// Writes a chunk to a channel, and expects an acknowledgement containing the length of the chunk.
+    /// Writes a chunk to a channel, and expects an acknowledgement containing the length of the
+    /// chunk.
     fn write_chunk(channel: &mut dyn oak_channel::Channel, chunk: &[u8]) -> Result<()> {
         channel.write(chunk)?;
         let mut ack: [u8; 4] = Default::default();
