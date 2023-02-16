@@ -70,32 +70,6 @@ impl LauncherMode {
     }
 }
 
-pub fn build_enclave_binary_variants(opt: &BuildEnclaveBinaryVariantsOpt) -> Step {
-    Step::Multiple {
-        name: "Build enclave binary variants".to_string(),
-        steps: LauncherMode::iter()
-            .filter(|v| option_covers_variant(opt, v))
-            .map(|v| build_released_binary(&v.to_string(), &v.enclave_crate_path()))
-            .collect(),
-    }
-}
-
-fn option_covers_variant(opt: &BuildEnclaveBinaryVariantsOpt, variant: &LauncherMode) -> bool {
-    match &opt.variant {
-        None => true,
-        Some(var) => match *variant {
-            LauncherMode::Virtualized => var == "virtualized",
-        },
-    }
-}
-
-fn build_released_binary(name: &str, directory: &str) -> Step {
-    Step::Single {
-        name: name.to_string(),
-        command: Cmd::new_in_dir("cargo", vec!["build", "--release"], Path::new(directory)),
-    }
-}
-
 fn run_variant(variant: LauncherMode) -> Step {
     let mut steps = vec![build_binary(
         "build Quirk Echo enclave binary",
