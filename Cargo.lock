@@ -2434,7 +2434,6 @@ dependencies = [
  "clap",
  "command-fds",
  "env_logger 0.10.0",
- "futures",
  "hashbrown 0.12.3",
  "lazy_static",
  "log",
@@ -2442,9 +2441,6 @@ dependencies = [
  "micro_rpc_build",
  "oak_channel",
  "prost",
- "quirk_echo_service",
- "rand 0.4.6",
- "serde",
  "tokio",
 ]
 
