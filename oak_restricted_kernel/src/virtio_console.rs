@@ -32,68 +32,89 @@ use core::{
 use log::info;
 use oak_channel::{Read, Write};
 use spinning_top::Spinlock;
-use virtio_drivers::{DeviceType, Hal, MmioTransport, Transport, VirtIOConsole};
+use virtio_drivers::{
+    device::console::VirtIOConsole,
+    transport::{mmio::MmioTransport, DeviceType, Transport},
+    BufferDirection, Hal, PAGE_SIZE,
+};
 use x86_64::{PhysAddr, VirtAddr};
 
 struct OakHal;
 
-impl Hal for OakHal {
-    fn dma_alloc(pages: usize) -> virtio_drivers::PhysAddr {
-        // virtio_drivers::PAGE_SIZE is private right now, this has been fixed but not in the latest
-        // release
-        let vaddr = VirtAddr::from_ptr(
-            GUEST_HOST_HEAP
-                .get()
-                .unwrap()
-                .allocate(Layout::from_size_align(pages * 0x1000, 0x1000).unwrap())
-                .expect("Failed to allocate memory for virtio MMIO")
-                .cast::<u8>()
-                .as_ptr(),
-        );
-        PAGE_TABLES
+unsafe impl Hal for OakHal {
+    fn dma_alloc(
+        pages: usize,
+        _direction: BufferDirection,
+    ) -> (virtio_drivers::PhysAddr, NonNull<u8>) {
+        let vaddr = GUEST_HOST_HEAP
+            .get()
+            .unwrap()
+            .allocate(Layout::from_size_align(pages * PAGE_SIZE, PAGE_SIZE).unwrap())
+            .expect("Failed to allocate memory for virtio MMIO")
+            .cast::<u8>();
+        let phys_addr = PAGE_TABLES
             .get()
             .unwrap()
             .lock()
-            .translate_virtual(vaddr)
+            .translate_virtual(VirtAddr::from_ptr(vaddr.as_ptr()))
             .unwrap()
-            .as_u64() as usize
+            .as_u64() as usize;
+        (phys_addr, vaddr)
     }
 
-    fn dma_dealloc(paddr: virtio_drivers::PhysAddr, pages: usize) -> i32 {
-        let vaddr = PAGE_TABLES
-            .get()
-            .unwrap()
-            .lock()
-            .translate_physical(PhysAddr::new(paddr as u64))
-            .unwrap();
-        unsafe {
-            GUEST_HOST_HEAP.get().unwrap().deallocate(
-                NonNull::new(vaddr.as_mut_ptr()).unwrap(),
-                Layout::from_size_align(pages * 0x1000, 0x1000).unwrap(),
-            );
-        }
+    unsafe fn dma_dealloc(
+        paddr: virtio_drivers::PhysAddr,
+        vaddr: NonNull<u8>,
+        pages: usize,
+    ) -> i32 {
+        let vaddr_check = Self::mmio_phys_to_virt(paddr, 0);
+        assert_eq!(
+            vaddr_check, vaddr,
+            "dma buffer physical and virtual addresses don't match",
+        );
+        GUEST_HOST_HEAP.get().unwrap().deallocate(
+            vaddr,
+            Layout::from_size_align(pages * PAGE_SIZE, PAGE_SIZE).unwrap(),
+        );
 
         0
     }
 
-    fn phys_to_virt(paddr: virtio_drivers::PhysAddr) -> virtio_drivers::VirtAddr {
+    unsafe fn mmio_phys_to_virt(paddr: virtio_drivers::PhysAddr, _size: usize) -> NonNull<u8> {
+        NonNull::new(
+            PAGE_TABLES
+                .get()
+                .unwrap()
+                .lock()
+                .translate_physical(PhysAddr::new(paddr as u64))
+                .unwrap()
+                .as_mut_ptr(),
+        )
+        .unwrap()
+    }
+
+    unsafe fn share(
+        buffer: NonNull<[u8]>,
+        _direction: BufferDirection,
+    ) -> virtio_drivers::PhysAddr {
+        // No additional work needed for sharing as the buffer was allocated from the guest-host
+        // allocator.
         PAGE_TABLES
             .get()
             .unwrap()
             .lock()
-            .translate_physical(PhysAddr::new(paddr as u64))
+            .translate_virtual(VirtAddr::from_ptr(buffer.cast::<u8>().as_ptr()))
             .unwrap()
             .as_u64() as usize
     }
 
-    fn virt_to_phys(vaddr: virtio_drivers::VirtAddr) -> virtio_drivers::PhysAddr {
-        PAGE_TABLES
-            .get()
-            .unwrap()
-            .lock()
-            .translate_virtual(VirtAddr::new(vaddr as u64))
-            .unwrap()
-            .as_u64() as usize
+    unsafe fn unshare(
+        _paddr: virtio_drivers::PhysAddr,
+        _buffer: NonNull<[u8]>,
+        _direction: BufferDirection,
+    ) {
+        // No additional work needed for unsharing as the buffer was allocated from the guest-host
+        // allocator.
     }
 }
 
@@ -120,10 +141,6 @@ impl Read for MmioConsoleChannel<'_> {
             {
                 data[count] = char;
                 count += 1;
-            } else {
-                // If we didn't have any data to read, try acking any pending interrupts. We don't
-                // have general support for interrupts yet, so we need to do it blindly here.
-                console.ack_interrupt().unwrap();
             }
         }
 

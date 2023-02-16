@@ -25,3 +25,7 @@ oak_restricted_kernel = { path = "../oak_restricted_kernel", default-features = 
 name = "oak_restricted_kernel_bin"
 test = false
 bench = false
+
+# TODO(#3706): Remove when patching PR is merged upstream and released.
+[patch.crates-io]
+virtio-drivers = { git = 'https://github.com/conradgrobler/virtio-drivers', branch = 'fix-console' }
