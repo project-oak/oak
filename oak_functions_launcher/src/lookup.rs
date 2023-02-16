@@ -36,9 +36,9 @@ pub async fn update_lookup_data(
     let chunk = chunk_up_lookup_data(lookup_data, max_chunk_size)?;
 
     // We currently hard-code to send only one chunk.
-    let action = schema::LookupDataUpdateAction::StartAndFinish;
+    let action = schema::UpdateAction::StartAndFinish;
     let request = schema::UpdateLookupDataRequest {
-        action: Some(action.into()),
+        action: action.into(),
         chunk: Some(chunk),
     };
 
