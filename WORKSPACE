@@ -202,7 +202,7 @@ load("@build_bazel_rules_android//android:rules.bzl", "android_ndk_repository", 
 android_sdk_repository(
     name = "androidsdk",
     api_level = 30,
-    build_tools_version = "30.0.0",
+    build_tools_version = "32.0.0",
 )
 
 android_ndk_repository(

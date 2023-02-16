@@ -309,24 +309,24 @@ ARG android_sdk_version=8512546
 ENV ANDROID_HOME /opt/android-sdk
 ENV android_temp /tmp/android-sdk
 RUN mkdir --parents "{android_temp}" \
-    && mkdir --parents "${ANDROID_HOME}/cmdline-tools/latest" \
-    && curl --location "https://dl.google.com/android/repository/commandlinetools-linux-${android_sdk_version}_latest.zip" > android_sdk.zip \
-    && unzip android_sdk.zip -d "${android_temp}" \
-    && mv ${android_temp}/cmdline-tools/* "${ANDROID_HOME}/cmdline-tools/latest/" \
-    && rm android_sdk.zip
+  && mkdir --parents "${ANDROID_HOME}/cmdline-tools/latest" \
+  && curl --location "https://dl.google.com/android/repository/commandlinetools-linux-${android_sdk_version}_latest.zip" > android_sdk.zip \
+  && unzip android_sdk.zip -d "${android_temp}" \
+  && mv ${android_temp}/cmdline-tools/* "${ANDROID_HOME}/cmdline-tools/latest/" \
+  && rm android_sdk.zip
 
 # Install Android Platform Tools.
 # https://developer.android.com/studio/releases/platform-tools
 # https://developer.android.com/studio/releases/platforms
 # https://developer.android.com/studio/releases/build-tools
 ARG platform=30
-ARG tools=30.0.0
+ARG tools=32.0.0
 RUN "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --update \
-    && (yes || true) | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses \
-    && (yes || true) | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
-    'tools' 'platform-tools' 'cmake;3.6.4111459' \
-    "platforms;android-${platform}" "build-tools;${tools}" \
-    "system-images;android-${platform};default;x86_64"
+  && (yes || true) | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses \
+  && (yes || true) | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
+  'tools' 'platform-tools' 'cmake;3.6.4111459' \
+  "platforms;android-${platform}" "build-tools;${tools}" \
+  "system-images;android-${platform};default;x86_64"
 
 # Set up Android SDK paths.
 ENV PATH "${PATH}:${ANDROID_HOME}/emulator:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/tools/bin"
@@ -337,10 +337,10 @@ ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${ANDROID_HOME}/emulator/lib64:${ANDROID
 ARG android_ndk_version=r25b
 ENV ANDROID_NDK_HOME /opt/android-ndk
 RUN mkdir --parents "${ANDROID_NDK_HOME}" \
-    && curl --location "https://dl.google.com/android/repository/android-ndk-${android_ndk_version}-linux.zip" > android_ndk.zip \
-    && unzip android_ndk.zip -d "${ANDROID_NDK_HOME}" \
-    && mv ${ANDROID_NDK_HOME}/android-ndk-${android_ndk_version}/* "${ANDROID_NDK_HOME}" \
-    && rm android_ndk.zip
+  && curl --location "https://dl.google.com/android/repository/android-ndk-${android_ndk_version}-linux.zip" > android_ndk.zip \
+  && unzip android_ndk.zip -d "${ANDROID_NDK_HOME}" \
+  && mv ${ANDROID_NDK_HOME}/android-ndk-${android_ndk_version}/* "${ANDROID_NDK_HOME}" \
+  && rm android_ndk.zip
 
 # To make the scripts available to call from everywhere.
 ENV PATH "/workspace/scripts:${PATH}"
