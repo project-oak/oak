@@ -41,7 +41,7 @@ use x86_64::{PhysAddr, VirtAddr};
 
 struct OakHal;
 
-impl Hal for OakHal {
+unsafe impl Hal for OakHal {
     fn dma_alloc(
         pages: usize,
         _direction: BufferDirection,
@@ -62,23 +62,25 @@ impl Hal for OakHal {
         (phys_addr, vaddr)
     }
 
-    fn dma_dealloc(paddr: virtio_drivers::PhysAddr, vaddr: NonNull<u8>, pages: usize) -> i32 {
+    unsafe fn dma_dealloc(
+        paddr: virtio_drivers::PhysAddr,
+        vaddr: NonNull<u8>,
+        pages: usize,
+    ) -> i32 {
         let vaddr_check = Self::mmio_phys_to_virt(paddr, 0);
         assert_eq!(
             vaddr_check, vaddr,
             "dma buffer physical and virtual addresses don't match",
         );
-        unsafe {
-            GUEST_HOST_HEAP.get().unwrap().deallocate(
-                vaddr,
-                Layout::from_size_align(pages * 0x1000, 0x1000).unwrap(),
-            );
-        }
+        GUEST_HOST_HEAP.get().unwrap().deallocate(
+            vaddr,
+            Layout::from_size_align(pages * 0x1000, 0x1000).unwrap(),
+        );
 
         0
     }
 
-    fn mmio_phys_to_virt(paddr: virtio_drivers::PhysAddr, _size: usize) -> NonNull<u8> {
+    unsafe fn mmio_phys_to_virt(paddr: virtio_drivers::PhysAddr, _size: usize) -> NonNull<u8> {
         NonNull::new(
             PAGE_TABLES
                 .get()
@@ -91,7 +93,10 @@ impl Hal for OakHal {
         .unwrap()
     }
 
-    fn share(buffer: NonNull<[u8]>, _direction: BufferDirection) -> virtio_drivers::PhysAddr {
+    unsafe fn share(
+        buffer: NonNull<[u8]>,
+        _direction: BufferDirection,
+    ) -> virtio_drivers::PhysAddr {
         // No additional work needed for sharing as the buffer was allocated from the guest-host
         // allocator.
         PAGE_TABLES
@@ -103,7 +108,7 @@ impl Hal for OakHal {
             .as_u64() as usize
     }
 
-    fn unshare(
+    unsafe fn unshare(
         _paddr: virtio_drivers::PhysAddr,
         _buffer: NonNull<[u8]>,
         _direction: BufferDirection,
@@ -136,10 +141,6 @@ impl Read for MmioConsoleChannel<'_> {
             {
                 data[count] = char;
                 count += 1;
-            } else {
-                // If we didn't have any data to read, try acking any pending interrupts. We don't
-                // have general support for interrupts yet, so we need to do it blindly here.
-                console.ack_interrupt().unwrap();
             }
         }
 
