@@ -3514,7 +3514,7 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 [[package]]
 name = "virtio-drivers"
 version = "0.3.0"
-source = "git+https://github.com/conradgrobler/virtio-drivers?branch=fix-console#67183ee2622d3c267763e235b116992b85b0671c"
+source = "git+https://github.com/conradgrobler/virtio-drivers?branch=fix-console#5135aceffb9c69f950a7afa115abe9ed9ac7239c"
 dependencies = [
  "bitflags",
  "log",
