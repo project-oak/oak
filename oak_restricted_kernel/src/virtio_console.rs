@@ -74,7 +74,7 @@ unsafe impl Hal for OakHal {
         );
         GUEST_HOST_HEAP.get().unwrap().deallocate(
             vaddr,
-            Layout::from_size_align(pages * 0x1000, 0x1000).unwrap(),
+            Layout::from_size_align(pages * PAGE_SIZE, PAGE_SIZE).unwrap(),
         );
 
         0
