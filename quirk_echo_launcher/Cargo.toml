@@ -13,7 +13,7 @@ clap = { version = "*", features = ["derive"] }
 command-fds = { version = "*", features = ["tokio"] }
 futures = "*"
 log = "*"
-env_logger = "*"
+env_logger = "0.10.0"
 prost = "0.11.2"
 serde = "*"
 tokio = { version = "*", features = [
