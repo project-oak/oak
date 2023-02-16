@@ -23,24 +23,5 @@ package(
     licenses = ["notice"],
 )
 
-# Build configurations for different platforms.
-config_setting(
-    name = "arm_build",
-    values = {"cpu": "arm"},
-)
-
-config_setting(
-    name = "x86_build",
-    values = {"cpu": "x86"},
-)
-
 # Export LICENSE file for projects that reference Oak in Bazel as an external dependency.
 exports_files(["LICENSE"])
-
-# These files are built via cargo outside of Bazel.
-exports_files(srcs = glob(["target/x86_64-unknown-linux-musl/release/*oak_loader"]))
-
-exports_files(srcs = glob(["target/wasm32-unknown-unknown/release/*.wasm"]))
-
-# These files are necessary for the backend server in the Aggregator example application.
-exports_files(srcs = glob(["target/x86_64-unknown-linux-gnu/release/aggregator_*"]))

@@ -18,63 +18,6 @@ workspace(name = "oak")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-# https://github.com/bazelbuild/bazel-skylib
-http_archive(
-    name = "bazel_skylib",
-    sha256 = "74d544d96f4a5bb630d465ca8bbcfe231e3594e5aae57e1edbf17a6eb3ca2506",
-    urls = [
-        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.3.0/bazel-skylib-1.3.0.tar.gz",
-    ],
-)
-
-# https://github.com/bazelbuild/rules_cc
-http_archive(
-    name = "rules_cc",
-    sha256 = "af6cc82d87db94585bceeda2561cb8a9d55ad435318ccb4ddfee18a43580fb5d",
-    strip_prefix = "rules_cc-0.0.4",
-    urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.0.4/rules_cc-0.0.4.tar.gz"],
-)
-
-http_archive(
-    name = "com_google_absl",
-    sha256 = "0dbe936c51ad6567446b5a60ea5f2649bdfe5ed4e054972960a0799b74da9d43",
-    strip_prefix = "abseil-cpp-b0735979d778a768caee207f01f327535cbd2140",
-    urls = [
-        # Head commit on 2021-03-04.
-        "https://github.com/abseil/abseil-cpp/archive/b0735979d778a768caee207f01f327535cbd2140.zip",
-    ],
-)
-
-# Go rules.
-# https://github.com/bazelbuild/rules_go
-http_archive(
-    name = "io_bazel_rules_go",
-    sha256 = "099a9fb96a376ccbbb7d291ed4ecbdfd42f6bc822ab77ae6f1b5cb9e914e94fa",
-    urls = [
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.35.0/rules_go-v0.35.0.zip",
-    ],
-)
-
-load("@io_bazel_rules_go//go:deps.bzl", "go_rules_dependencies")
-
-go_rules_dependencies()
-
-# Java rules.
-# https://github.com/bazelbuild/rules_java
-http_archive(
-    name = "rules_java",
-    sha256 = "d974a2d6e1a534856d1b60ad6a15e57f3970d8596fbb0bb17b9ee26ca209332a",
-    urls = [
-        "https://github.com/bazelbuild/rules_java/releases/download/5.1.0/rules_java-5.1.0.tar.gz",
-    ],
-)
-
-load("@rules_java//java:repositories.bzl", "rules_java_dependencies", "rules_java_toolchains")
-
-rules_java_dependencies()
-
-rules_java_toolchains()
-
 # Google Protocol Buffers.
 # https://github.com/protocolbuffers/protobuf
 http_archive(
@@ -85,10 +28,6 @@ http_archive(
         "https://github.com/protocolbuffers/protobuf/archive/v3.21.7.tar.gz",
     ],
 )
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-protobuf_deps()
 
 http_archive(
     name = "tink_base",
@@ -122,15 +61,6 @@ http_archive(
     urls = [
         "https://github.com/google/tink/archive/58be99b3c4d09154d12643327f293cc45b2a6a7b.tar.gz",
     ],
-)
-
-# gRPC.
-# https://github.com/grpc/grpc
-http_archive(
-    name = "com_github_grpc_grpc",
-    sha256 = "76900ab068da86378395a8e125b5cc43dfae671e09ff6462ddfef18676e2165a",
-    strip_prefix = "grpc-1.50.0",
-    urls = ["https://github.com/grpc/grpc/archive/v1.50.0.tar.gz"],
 )
 
 # Java gRPC support for Android examples.
@@ -176,18 +106,6 @@ load("@maven//:compat.bzl", "compat_repositories")
 
 compat_repositories()
 
-# TensorFlow dependency.
-# https://github.com/bazelbuild/rules_closure
-http_archive(
-    name = "io_bazel_rules_closure",
-    sha256 = "5b00383d08dd71f28503736db0500b6fb4dda47489ff5fc6bed42557c07c6ba9",
-    strip_prefix = "rules_closure-308b05b2419edb5c8ee0471b67a40403df940149",
-    urls = [
-        # Head commit on 2019-06-13.
-        "https://github.com/bazelbuild/rules_closure/archive/308b05b2419edb5c8ee0471b67a40403df940149.tar.gz",
-    ],
-)
-
 # Bazel rules for Android applications.
 # https://github.com/bazelbuild/rules_android
 http_archive(
@@ -197,26 +115,13 @@ http_archive(
     urls = ["https://github.com/bazelbuild/rules_android/archive/v0.1.1.zip"],
 )
 
-load("@build_bazel_rules_android//android:rules.bzl", "android_ndk_repository", "android_sdk_repository")
+load("@build_bazel_rules_android//android:rules.bzl", "android_sdk_repository")
 
 android_sdk_repository(
     name = "androidsdk",
     api_level = 30,
     build_tools_version = "30.0.0",
 )
-
-android_ndk_repository(
-    name = "androidndk",
-    api_level = 28,
-)
-
-load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
-
-grpc_deps()
-
-load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
-
-grpc_extra_deps()
 
 http_archive(
     name = "rules_foreign_cc",
