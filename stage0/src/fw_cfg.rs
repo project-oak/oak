@@ -357,13 +357,11 @@ impl FwCfg {
         // safe.
         unsafe {
             self.dma_high.try_write(dma_high.to_be())?;
-            // Memory fence to make sure the high half is written before the low half.
-            core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
             self.dma_low.try_write(dma_low.to_be())?;
         }
 
         // Memory fence to make sure that the DMA operation is complete before we read the result.
-        core::sync::atomic::fence(core::sync::atomic::Ordering::Release);
+        core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
 
         // The control field will be cleared if the DMA operation is complete and successful.
         if dma_access.control != 0 {
