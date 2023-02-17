@@ -1,5 +1,5 @@
 [package]
-name = "quirk_echo_launcher"
+name = "oak_launcher_utils"
 version = "0.1.0"
 authors = ["Dzmitry Huba <huba@google.com>"]
 edition = "2021"
@@ -12,7 +12,6 @@ bmrng = "*"
 clap = { version = "*", features = ["derive"] }
 command-fds = { version = "*", features = ["tokio"] }
 log = "*"
-env_logger = "0.10.0"
 prost = "0.11.2"
 tokio = { version = "*", features = [
   "rt-multi-thread",
@@ -24,11 +23,7 @@ tokio = { version = "*", features = [
 ] }
 micro_rpc = { path = "../micro_rpc" }
 oak_channel = { path = "../oak_channel", features = ["client"] }
-oak_launcher_utils = { path = "../oak_launcher_utils" }
 hashbrown = "*"
 
 [build-dependencies]
 micro_rpc_build = { path = "../micro_rpc_build" }
-
-[dev-dependencies]
-lazy_static = "*"

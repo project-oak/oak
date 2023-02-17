@@ -16,61 +16,9 @@
 
 //! Functionality for testing variants of the enclave binary exposed by the launcher.
 
-use crate::internal::*;
-use std::path::Path;
-use strum::IntoEnumIterator;
-use strum_macros::{Display, EnumIter};
+use crate::{internal::*, launcher::*};
 
-#[derive(Debug, Display, Copy, Clone, PartialEq, EnumIter)]
-pub enum LauncherMode {
-    Virtualized,
-}
-
-impl LauncherMode {
-    /// Get the crate name of respective enclave binary variant
-    pub fn enclave_crate_name(&self) -> &'static str {
-        match self {
-            LauncherMode::Virtualized => "quirk_echo_enclave_app",
-        }
-    }
-
-    /// Get the path to the respective enclave binary variant that should be launched
-    pub fn enclave_crate_path(&self) -> String {
-        format!("./{}", self.enclave_crate_name())
-    }
-
-    /// Get the path to the respective enclave binary variant that should be launched
-    pub fn enclave_binary_path(&self) -> String {
-        match self {
-            LauncherMode::Virtualized => format!(
-                "{}/target/x86_64-unknown-none/debug/{}",
-                self.enclave_crate_path(),
-                self.enclave_crate_name()
-            ),
-        }
-    }
-
-    /// Get the subcommand for launching in this mode
-    pub fn variant_subcommand(&self) -> Vec<String> {
-        match self {
-            LauncherMode::Virtualized => vec![
-                "virtualized".to_string(),
-                format!(
-                    "--enclave-binary={}",
-                    "./oak_restricted_kernel_bin/target/x86_64-unknown-none/debug/oak_restricted_kernel_bin"
-                ),
-                format!("--vmm-binary={}", "/usr/bin/qemu-system-x86_64"),
-                format!("--app-binary={}", &self.enclave_binary_path()),
-                format!(
-                    "--bios-binary={}",
-                    "./stage0/target/x86_64-unknown-none/release/oak_stage0.bin"
-                ),
-            ],
-        }
-    }
-}
-
-fn run_variant(variant: LauncherMode) -> Step {
+fn run_variant(variant: &LauncherMode) -> Step {
     let mut steps = vec![build_binary(
         "build Quirk Echo enclave binary",
         &variant.enclave_crate_path(),
@@ -82,13 +30,14 @@ fn run_variant(variant: LauncherMode) -> Step {
     // (1) and (2) are needed to start the VMM, and the kernel expects to read (3) as the very first
     // thing over the communication channel.
     steps.extend(match variant {
-        LauncherMode::Virtualized => vec![
+        LauncherMode::Virtual(_) => vec![
             build_stage0(),
             build_binary(
                 "build Restricted Kernel binary",
                 "oak_restricted_kernel_bin",
             ),
         ],
+        LauncherMode::Native(_) => panic!("not supported"),
     });
     steps.push(Step::WithBackground {
         name: "background launcher".to_string(),
@@ -104,32 +53,7 @@ fn run_variant(variant: LauncherMode) -> Step {
     }
 }
 
-fn build_stage0() -> Step {
-    Step::Single {
-        name: "build stage0".to_string(),
-        command: Cmd::new_in_dir(
-            "cargo",
-            vec![
-                "objcopy",
-                "--release",
-                "--",
-                "-O",
-                "binary",
-                "target/x86_64-unknown-none/release/oak_stage0.bin",
-            ],
-            Path::new("./stage0"),
-        ),
-    }
-}
-
-fn build_binary(name: &str, directory: &str) -> Step {
-    Step::Single {
-        name: name.to_string(),
-        command: Cmd::new_in_dir("cargo", vec!["build"], Path::new(directory)),
-    }
-}
-
-fn run_launcher(variant: LauncherMode) -> Box<dyn Runnable> {
+fn run_launcher(variant: &LauncherMode) -> Box<dyn Runnable> {
     let args = variant.variant_subcommand();
     Cmd::new("./target/debug/quirk_echo_launcher", args)
 }
@@ -139,7 +63,8 @@ pub fn run_launcher_test() -> Step {
         "build Quirk Echo launcher",
         "./quirk_echo_launcher",
     )];
-    steps.extend(LauncherMode::iter().map(run_variant));
+    let virt = LauncherMode::Virtual("quirk_echo_enclave_app".to_string());
+    steps.push(run_variant(&virt));
 
     Step::Multiple {
         name: "End-to-end tests for the launcher and enclave binary".to_string(),

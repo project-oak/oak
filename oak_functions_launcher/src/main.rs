@@ -36,7 +36,7 @@ pub mod schema {
 struct Args {
     /// Execution mode.
     #[command(subcommand)]
-    mode: oak_functions_launcher::Mode,
+    mode: oak_launcher_utils::launcher::GuestMode,
 
     /// Consistent response size that the enclave should apply
     #[arg(long, default_value = "1024")]

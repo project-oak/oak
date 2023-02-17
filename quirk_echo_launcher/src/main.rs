@@ -19,9 +19,8 @@
 #![feature(array_chunks)]
 
 use clap::Parser;
+use oak_launcher_utils::launcher;
 
-mod channel;
-mod launcher;
 mod schema;
 
 #[derive(Parser, Debug)]
@@ -41,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     log::info!("calling launcher");
-    let (guest_instance, connector_handle) = crate::launcher::launch(cli.mode).await?;
+    let (guest_instance, connector_handle) = launcher::launch(cli.mode).await?;
 
     let mut client = schema::EchoAsyncClient::new(connector_handle);
     let body = b"test_msg".to_vec();

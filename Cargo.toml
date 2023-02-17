@@ -35,6 +35,7 @@ members = [
   "oak_functions_service",
   "oak_functions_test_utils",
   "oak_hello_world_linux_init",
+  "oak_launcher_utils",
   "oak_remote_attestation_amd",
   "oak_remote_attestation_interactive",
   "oak_remote_attestation_noninteractive",

@@ -22,12 +22,15 @@ use std::{
     os::unix::net::UnixStream,
 };
 
+pub mod native;
 pub mod virtualized;
 
 #[derive(clap::Subcommand, Clone, Debug, PartialEq)]
 pub enum GuestMode {
     /// Launch a virtual enclave binary
     Virtualized(virtualized::Params),
+    /// Launch a virtual enclave binary
+    Native(native::Params),
 }
 
 /// Defines the interface of a launched guest instance. Standardizes the interface of different
@@ -74,6 +77,7 @@ pub async fn launch(
             log::info!("launching instance");
             Box::new(virtualized::Instance::start(params, guest_writer)?)
         }
+        GuestMode::Native(params) => Box::new(native::Instance::start(params)?),
     };
     let channel = guest_instance.connect().await?;
     let connector_handle = Connector::spawn(channel);

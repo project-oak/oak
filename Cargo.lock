@@ -1760,6 +1760,7 @@ dependencies = [
  "oak_channel",
  "oak_functions_abi",
  "oak_functions_test_utils",
+ "oak_launcher_utils",
  "oak_remote_attestation_noninteractive",
  "prost",
  "rand 0.8.5",
@@ -1965,6 +1966,24 @@ dependencies = [
  "log",
  "nix 0.26.2",
  "simple_logger",
+]
+
+[[package]]
+name = "oak_launcher_utils"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bmrng",
+ "clap",
+ "command-fds",
+ "hashbrown 0.12.3",
+ "log",
+ "micro_rpc",
+ "micro_rpc_build",
+ "oak_channel",
+ "prost",
+ "tokio",
 ]
 
 [[package]]
@@ -2440,6 +2459,7 @@ dependencies = [
  "micro_rpc",
  "micro_rpc_build",
  "oak_channel",
+ "oak_launcher_utils",
  "prost",
  "tokio",
 ]

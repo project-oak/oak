@@ -17,10 +17,8 @@
 
 use lazy_static::lazy_static;
 
-use oak_functions_launcher::{
-    schema::{self, InvokeRequest},
-    Mode,
-};
+use oak_functions_launcher::schema::{self, InvokeRequest};
+use oak_launcher_utils::launcher;
 use std::path::PathBuf;
 
 lazy_static! {
@@ -45,7 +43,7 @@ lazy_static! {
 
 #[tokio::test]
 async fn test_launcher_looks_up_key() {
-    let params = oak_functions_launcher::instance::native::Params {
+    let params = launcher::native::Params {
         enclave_binary: ENCLAVE_BINARY_PATH.to_path_buf(),
     };
 
@@ -53,7 +51,7 @@ async fn test_launcher_looks_up_key() {
     let constant_response_size: u32 = 1024;
 
     let (launched_instance, connector_handle, _) = oak_functions_launcher::create(
-        Mode::Native(params),
+        launcher::GuestMode::Native(params),
         LOOKUP_DATA_PATH.to_path_buf(),
         WASM_PATH.to_path_buf(),
         constant_response_size,
@@ -82,7 +80,7 @@ async fn test_launcher_looks_up_key() {
 #[tokio::test]
 #[ignore]
 async fn test_load_large_lookup_data() {
-    let params = oak_functions_launcher::instance::native::Params {
+    let params = launcher::native::Params {
         enclave_binary: ENCLAVE_BINARY_PATH.to_path_buf(),
     };
 
@@ -108,7 +106,7 @@ async fn test_load_large_lookup_data() {
     let constant_response_size = (entry_size as u32 / 2) + 1024; // Add some margin be on the safe side.
 
     let status = oak_functions_launcher::create(
-        Mode::Native(params),
+        launcher::GuestMode::Native(params),
         lookup_data_file.path().to_path_buf(),
         WASM_PATH.to_path_buf(),
         constant_response_size,
