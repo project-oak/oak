@@ -752,6 +752,8 @@
 <a href="#752" id="752">752</a>
 <a href="#753" id="753">753</a>
 <a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -810,6 +812,7 @@
 <span class="kw">use </span>check_build_licenses::CheckBuildLicenses;
 
 <span class="kw">mod </span>launcher;
+<span class="kw">mod </span>quirk;
 
 <span class="kw">static </span>PROCESSES: Lazy&lt;Mutex&lt;Vec&lt;i32&gt;&gt;&gt; = Lazy::new(|| Mutex::new(Vec::new()));
 
@@ -868,6 +871,7 @@
 
 <span class="kw">fn </span>match_cmd(opt: <span class="kw-2">&amp;</span>Opt) -&gt; Step {
     <span class="kw">match </span>opt.cmd {
+        Command::RunQuirkTest =&gt; quirk::run_launcher_test(),
         Command::RunLauncherTest =&gt; launcher::run_launcher_test(),
         Command::BuildEnclaveBinaryVariants(<span class="kw-2">ref </span>opts) =&gt; {
             launcher::build_enclave_binary_variants(opts)

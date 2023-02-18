@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Mode"],"fn":["create"],"mod":["instance","schema","server"]};
+window.SIDEBAR_ITEMS = {"fn":["create"],"mod":["schema","server"]};

@@ -1003,6 +1003,7 @@
 <a href="#1003" id="1003">1003</a>
 <a href="#1004" id="1004">1004</a>
 <a href="#1005" id="1005">1005</a>
+<a href="#1006" id="1006">1006</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -1059,6 +1060,7 @@
 
 <span class="attr">#[derive(Subcommand, Clone, Debug)]
 </span><span class="kw">pub enum </span>Command {
+    RunQuirkTest,
     RunLauncherTest,
     BuildEnclaveBinaryVariants(BuildEnclaveBinaryVariantsOpt),
     RunOakFunctionsExamples(RunOakExamplesOpt),

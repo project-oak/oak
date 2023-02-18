@@ -210,6 +210,11 @@
 <a href="#210" id="210">210</a>
 <a href="#211" id="211">211</a>
 <a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -237,18 +242,20 @@
 <span class="kw">use </span>strum::IntoEnumIterator;
 <span class="kw">use </span>strum_macros::{Display, EnumIter};
 
-<span class="attr">#[derive(Debug, Display, Copy, Clone, PartialEq, EnumIter)]
+<span class="attr">#[derive(Debug, Display, Clone, PartialEq, EnumIter)]
 </span><span class="kw">pub enum </span>LauncherMode {
-    Virtual,
-    Native,
+    <span class="doccomment">/// Virtual launch mode parameterized by the app binary crate name.
+    </span>Virtual(String),
+    <span class="doccomment">/// Native launch mode parameterized by the app binary crate name.
+    </span>Native(String),
 }
 
 <span class="kw">impl </span>LauncherMode {
     <span class="doccomment">/// Get the crate name of respective enclave binary variant
-    </span><span class="kw">pub fn </span>enclave_crate_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+    </span><span class="kw">pub fn </span>enclave_crate_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="kw">match </span><span class="self">self </span>{
-            LauncherMode::Virtual =&gt; <span class="string">&quot;oak_functions_enclave_app&quot;</span>,
-            LauncherMode::Native =&gt; <span class="string">&quot;oak_functions_linux_fd_bin&quot;</span>,
+            LauncherMode::Virtual(s) =&gt; s.clone(),
+            LauncherMode::Native(s) =&gt; s.clone(),
         }
     }
 
@@ -260,20 +267,20 @@
     <span class="doccomment">/// Get the path to the respective enclave binary variant that should be launched
     </span><span class="kw">pub fn </span>enclave_binary_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="kw">match </span><span class="self">self </span>{
-            LauncherMode::Virtual =&gt; <span class="macro">format!</span>(
+            LauncherMode::Virtual(<span class="kw">_</span>) =&gt; <span class="macro">format!</span>(
                 <span class="string">&quot;{}/target/x86_64-unknown-none/debug/{}&quot;</span>,
                 <span class="self">self</span>.enclave_crate_path(),
                 <span class="self">self</span>.enclave_crate_name()
             ),
-            LauncherMode::Native =&gt; <span class="macro">format!</span>(<span class="string">&quot;./target/debug/{}&quot;</span>, <span class="self">self</span>.enclave_crate_name()),
+            LauncherMode::Native(<span class="kw">_</span>) =&gt; <span class="macro">format!</span>(<span class="string">&quot;./target/debug/{}&quot;</span>, <span class="self">self</span>.enclave_crate_name()),
         }
     }
 
     <span class="doccomment">/// Get the subcommand for launching in this mode
     </span><span class="kw">pub fn </span>variant_subcommand(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;String&gt; {
         <span class="kw">match </span><span class="self">self </span>{
-            LauncherMode::Virtual =&gt; <span class="macro">vec!</span>[
-                <span class="string">&quot;virtual&quot;</span>.to_string(),
+            LauncherMode::Virtual(<span class="kw">_</span>) =&gt; <span class="macro">vec!</span>[
+                <span class="string">&quot;virtualized&quot;</span>.to_string(),
                 <span class="macro">format!</span>(
                     <span class="string">&quot;--enclave-binary={}&quot;</span>,
                     <span class="string">&quot;./oak_restricted_kernel_bin/target/x86_64-unknown-none/debug/oak_restricted_kernel_bin&quot;
@@ -285,7 +292,7 @@
                     <span class="string">&quot;./stage0/target/x86_64-unknown-none/release/oak_stage0.bin&quot;
                 </span>),
             ],
-            LauncherMode::Native =&gt; <span class="macro">vec!</span>[
+            LauncherMode::Native(<span class="kw">_</span>) =&gt; <span class="macro">vec!</span>[
                 <span class="string">&quot;native&quot;</span>.to_string(),
                 <span class="macro">format!</span>(<span class="string">&quot;--enclave-binary={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_binary_path()),
             ],
@@ -307,8 +314,8 @@
     <span class="kw">match </span><span class="kw-2">&amp;</span>opt.variant {
         <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
         <span class="prelude-val">Some</span>(var) =&gt; <span class="kw">match </span><span class="kw-2">*</span>variant {
-            LauncherMode::Native =&gt; var == <span class="string">&quot;native&quot;</span>,
-            LauncherMode::Virtual =&gt; var == <span class="string">&quot;virtual&quot;</span>,
+            LauncherMode::Native(<span class="kw">_</span>) =&gt; var == <span class="string">&quot;native&quot;</span>,
+            LauncherMode::Virtual(<span class="kw">_</span>) =&gt; var == <span class="string">&quot;virtual&quot;</span>,
         },
     }
 }
@@ -320,20 +327,7 @@
     }
 }
 
-<span class="kw">pub fn </span>run_launcher_test() -&gt; Step {
-    <span class="kw">let </span><span class="kw-2">mut </span>steps = <span class="macro">vec!</span>[build_binary(
-        <span class="string">&quot;build Oak Functions launcher&quot;</span>,
-        <span class="string">&quot;./oak_functions_launcher&quot;</span>,
-    )];
-    steps.extend(LauncherMode::iter().map(run_variant));
-
-    Step::Multiple {
-        name: <span class="string">&quot;End-to-end tests for the launcher and enclave binary&quot;</span>.to_string(),
-        steps,
-    }
-}
-
-<span class="kw">fn </span>run_variant(variant: LauncherMode) -&gt; Step {
+<span class="kw">fn </span>run_variant(variant: <span class="kw-2">&amp;</span>LauncherMode) -&gt; Step {
     <span class="kw">let </span><span class="kw-2">mut </span>steps = <span class="macro">vec!</span>[build_binary(
         <span class="string">&quot;build Oak Functions enclave binary&quot;</span>,
         <span class="kw-2">&amp;</span>variant.enclave_crate_path(),
@@ -345,14 +339,14 @@
     // (1) and (2) are needed to start the VMM, and the kernel expects to read (3) as the very first
     // thing over the communication channel.
     </span>steps.extend(<span class="kw">match </span>variant {
-        LauncherMode::Virtual =&gt; <span class="macro">vec!</span>[
+        LauncherMode::Virtual(<span class="kw">_</span>) =&gt; <span class="macro">vec!</span>[
             build_stage0(),
             build_binary(
                 <span class="string">&quot;build Restricted Kernel binary&quot;</span>,
                 <span class="string">&quot;oak_restricted_kernel_bin&quot;</span>,
             ),
         ],
-        LauncherMode::Native =&gt; <span class="macro">vec!</span>[],
+        LauncherMode::Native(<span class="kw">_</span>) =&gt; <span class="macro">vec!</span>[],
     });
     steps.extend(<span class="macro">vec!</span>[Step::WithBackground {
         name: <span class="string">&quot;background launcher&quot;</span>.to_string(),
@@ -365,7 +359,7 @@
     }
 }
 
-<span class="kw">fn </span>build_stage0() -&gt; Step {
+<span class="kw">pub fn </span>build_stage0() -&gt; Step {
     Step::Single {
         name: <span class="string">&quot;build stage0&quot;</span>.to_string(),
         command: Cmd::new_in_dir(
@@ -383,14 +377,14 @@
     }
 }
 
-<span class="kw">fn </span>build_binary(name: <span class="kw-2">&amp;</span>str, directory: <span class="kw-2">&amp;</span>str) -&gt; Step {
+<span class="kw">pub fn </span>build_binary(name: <span class="kw-2">&amp;</span>str, directory: <span class="kw-2">&amp;</span>str) -&gt; Step {
     Step::Single {
         name: name.to_string(),
         command: Cmd::new_in_dir(<span class="string">&quot;cargo&quot;</span>, <span class="macro">vec!</span>[<span class="string">&quot;build&quot;</span>], Path::new(directory)),
     }
 }
 
-<span class="kw">fn </span>run_launcher(variant: LauncherMode) -&gt; Box&lt;<span class="kw">dyn </span>Runnable&gt; {
+<span class="kw">fn </span>run_launcher(variant: <span class="kw-2">&amp;</span>LauncherMode) -&gt; Box&lt;<span class="kw">dyn </span>Runnable&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>args = <span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">&quot;--wasm={}&quot;</span>, WASM_PATH),
         <span class="macro">format!</span>(<span class="string">&quot;--lookup-data={}&quot;</span>, LOOKUP_PATH),
@@ -420,6 +414,22 @@
                 command: Cmd::new(CLIENT_PATH, <span class="macro">vec!</span>[<span class="string">&quot;--test-large-message&quot;</span>]),
             },
         ],
+    }
+}
+
+<span class="kw">pub fn </span>run_launcher_test() -&gt; Step {
+    <span class="kw">let </span><span class="kw-2">mut </span>steps = <span class="macro">vec!</span>[build_binary(
+        <span class="string">&quot;build Oak Functions launcher&quot;</span>,
+        <span class="string">&quot;./oak_functions_launcher&quot;</span>,
+    )];
+    <span class="kw">let </span>virt = LauncherMode::Virtual(<span class="string">&quot;oak_functions_enclave_app&quot;</span>.to_string());
+    steps.push(run_variant(<span class="kw-2">&amp;</span>virt));
+    <span class="kw">let </span>nat = LauncherMode::Native(<span class="string">&quot;oak_functions_linux_fd_bin&quot;</span>.to_string());
+    steps.push(run_variant(<span class="kw-2">&amp;</span>nat));
+
+    Step::Multiple {
+        name: <span class="string">&quot;End-to-end tests for the launcher and enclave binary&quot;</span>.to_string(),
+        steps,
     }
 }
 </code></pre></div>

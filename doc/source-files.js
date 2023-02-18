@@ -16,7 +16,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_functions_abi":["",[],["lib.rs"]],\
 "oak_functions_client":["",[],["lib.rs","rekor.rs"]],\
 "oak_functions_extension":["",[],["lib.rs"]],\
-"oak_functions_launcher":["",[["instance",[],["mod.rs","native.rs","virtualized.rs"]]],["channel.rs","lib.rs","lookup.rs","server.rs"]],\
+"oak_functions_launcher":["",[],["lib.rs","lookup.rs","server.rs"]],\
 "oak_functions_linux_fd_bin":["",[],["main.rs"]],\
 "oak_functions_linux_vsock_bin":["",[],["channel.rs","main.rs"]],\
 "oak_functions_load_test":["",[],["main.rs"]],\
@@ -31,6 +31,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_functions_workload_logging":["",[],["lib.rs"]],\
 "oak_grpc_utils":["",[],["lib.rs"]],\
 "oak_hello_world_linux_init":["",[],["init.rs","main.rs"]],\
+"oak_launcher_utils":["",[["launcher",[],["native.rs","virtualized.rs"]]],["channel.rs","launcher.rs","lib.rs"]],\
 "oak_linux_boot_params":["",[],["lib.rs"]],\
 "oak_logger":["",[],["lib.rs"]],\
 "oak_remote_attestation_amd":["",[],["lib.rs"]],\
@@ -45,10 +46,11 @@ var sourcesIndex = JSON.parse('{\
 "oak_simple_io":["",[],["lib.rs"]],\
 "oak_tensorflow_service":["",[],["lib.rs","tflite.rs"]],\
 "oak_virtio":["",[["console",[],["mod.rs"]],["queue",[],["mod.rs","virtq.rs"]],["vsock",[["socket",[],["mod.rs"]]],["mod.rs","packet.rs"]]],["lib.rs"]],\
+"quirk_echo_launcher":["",[],["main.rs","schema.rs"]],\
 "quirk_echo_service":["",[],["lib.rs"]],\
 "sev_serial":["",[],["lib.rs"]],\
 "snp_measurement":["",[],["elf.rs","main.rs","page.rs","stage0.rs","vmsa.rs"]],\
 "weather_lookup":["",[],["lib.rs"]],\
-"xtask":["",[],["check_build_licenses.rs","check_license.rs","check_todo.rs","diffs.rs","examples.rs","files.rs","internal.rs","launcher.rs","main.rs"]]\
+"xtask":["",[],["check_build_licenses.rs","check_license.rs","check_todo.rs","diffs.rs","examples.rs","files.rs","internal.rs","launcher.rs","main.rs","quirk.rs"]]\
 }');
 createSourceSidebar();
