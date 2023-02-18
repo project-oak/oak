@@ -27,7 +27,9 @@ use strum_macros::{Display, EnumIter};
 
 #[derive(Debug, Display, Clone, PartialEq, EnumIter)]
 pub enum LauncherMode {
+    /// Virtual launch mode parameterized by the app binary crate name.
     Virtual(String),
+    /// Native launch mode parameterized by the app binary crate name.
     Native(String),
 }
 

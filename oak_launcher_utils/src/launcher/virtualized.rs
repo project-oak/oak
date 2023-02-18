@@ -35,19 +35,19 @@ const PAGE_SIZE: usize = 4096;
 #[derive(Parser, Clone, Debug, PartialEq)]
 pub struct Params {
     /// Path to the VMM binary to execute.
-    #[arg(long, value_parser = Params::path_exists)]
+    #[arg(long, value_parser = path_exists)]
     pub vmm_binary: PathBuf,
 
     /// Path to the enclave binary to load into the VM.
-    #[arg(long, value_parser = Params::path_exists)]
+    #[arg(long, value_parser = path_exists)]
     pub enclave_binary: PathBuf,
 
     /// Path to the Oak Functions application binary to be loaded into the enclave.
-    #[arg(long, value_parser = Params::path_exists)]
+    #[arg(long, value_parser = path_exists)]
     pub app_binary: PathBuf,
 
     /// Path to the BIOS image to use.
-    #[arg(long, value_parser = Params::path_exists)]
+    #[arg(long, value_parser = path_exists)]
     pub bios_binary: PathBuf,
 
     /// Port to use for debugging with gdb
@@ -55,15 +55,13 @@ pub struct Params {
     pub gdb: Option<u16>,
 }
 
-impl Params {
-    /// Checks if file with a given path exists.
-    fn path_exists(s: &str) -> Result<PathBuf, String> {
-        let path = PathBuf::from(s);
-        if !fs::metadata(s).map_err(|err| err.to_string())?.is_file() {
-            Err(String::from("path does not represent a file"))
-        } else {
-            Ok(path)
-        }
+/// Checks if file with a given path exists.
+fn path_exists(s: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(s);
+    if !fs::metadata(s).map_err(|err| err.to_string())?.is_file() {
+        Err(String::from("path does not represent a file"))
+    } else {
+        Ok(path)
     }
 }
 
