@@ -18,15 +18,9 @@
 #![feature(result_flattening)]
 #![feature(array_chunks)]
 
-use crate::channel::ConnectorHandle;
 use anyhow::Context;
-use instance::{native, virtualized, LaunchedInstance};
-use std::{
-    fs,
-    io::{BufRead, BufReader},
-    os::unix::net::UnixStream,
-    path::PathBuf,
-};
+use oak_launcher_utils::{channel, launcher};
+use std::{fs, path::PathBuf};
 
 use crate::schema::InitializeResponse;
 
@@ -36,75 +30,32 @@ pub mod schema {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
 }
 
-mod channel;
-pub mod instance;
 mod lookup;
 pub mod server;
 
-#[derive(clap::Subcommand, Clone, Debug, PartialEq)]
-pub enum Mode {
-    /// Launch a virtual enclave binary
-    Virtual(virtualized::Params),
-    /// Launch an enclave binary directly as a child process
-    Native(native::Params),
-}
-
 pub async fn create(
-    mode: Mode,
+    mode: launcher::GuestMode,
     lookup_data_path: PathBuf,
     wasm_path: PathBuf,
     constant_response_size: u32,
 ) -> Result<
     (
-        Box<dyn LaunchedInstance>,
-        ConnectorHandle,
+        Box<dyn launcher::GuestInstance>,
+        channel::ConnectorHandle,
         InitializeResponse,
     ),
     Box<dyn std::error::Error>,
 > {
-    let (launched_instance, connector_handle) = launch_instance(mode).await?;
+    let (launched_instance, connector_handle) = launcher::launch(mode).await?;
     setup_lookup_data(connector_handle.clone(), lookup_data_path).await?;
     let intialization_response =
         setup_wasm(connector_handle.clone(), &wasm_path, constant_response_size).await?;
     Ok((launched_instance, connector_handle, intialization_response))
 }
 
-async fn launch_instance(
-    mode: Mode,
-) -> Result<(Box<dyn LaunchedInstance>, ConnectorHandle), Box<dyn std::error::Error>> {
-    // Provide a way for the launched instance to send logs
-    let logs_console: UnixStream = {
-        // Create two linked consoles. Technically both can read/write, but we'll
-        // use them as a one way channel.
-        let (console_writer, console_receiver) = UnixStream::pair()?;
-
-        // Log everything sent by the writer.
-        tokio::spawn(async {
-            let mut reader = BufReader::new(console_receiver);
-
-            let mut line = String::new();
-            while reader.read_line(&mut line).expect("couldn't read line") > 0 {
-                log::info!("console: {:?}", line);
-                line.clear();
-            }
-        });
-
-        console_writer
-    };
-
-    let launched_instance: Box<dyn LaunchedInstance> = match mode {
-        Mode::Virtual(params) => Box::new(virtualized::Instance::start(params, logs_console)?),
-        Mode::Native(params) => Box::new(native::Instance::start(params)?),
-    };
-    let comms = launched_instance.create_comms_channel().await?;
-    let connector_handle = channel::Connector::spawn(comms);
-
-    Ok((launched_instance, connector_handle))
-}
-
 // Initially loads lookup data and spawns task to periodically refresh lookup data.
 async fn setup_lookup_data(
-    connector_handle: ConnectorHandle,
+    connector_handle: channel::ConnectorHandle,
     lookup_data_path: PathBuf,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
@@ -127,7 +78,7 @@ async fn setup_lookup_data(
 
 // Loads wasm bytes.
 async fn setup_wasm(
-    connector_handle: ConnectorHandle,
+    connector_handle: channel::ConnectorHandle,
     wasm: &PathBuf,
     constant_response_size: u32,
 ) -> Result<InitializeResponse, Box<dyn std::error::Error>> {
