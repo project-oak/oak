@@ -199,7 +199,11 @@ where
                 *data = Arc::new(next_data);
                 UpdateStatus::Finished
             }
-            (BuilderState::Updating, UpdateAction::StartAndFinish) => UpdateStatus::Aborted,
+            (BuilderState::Updating, UpdateAction::StartAndFinish) => {
+                // Clear the builder throwing away the intermediate result.
+                let _ = data_builder.build();
+                UpdateStatus::Aborted
+            }
         }
     }
 
