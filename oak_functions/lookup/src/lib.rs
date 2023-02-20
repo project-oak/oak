@@ -114,10 +114,6 @@ struct DataBuilder {
 }
 
 impl DataBuilder {
-    fn new() -> Self {
-        Default::default()
-    }
-
     /// Build data from the builder and set the builder back to the initial state.
     fn build(&mut self) -> Data {
         self.state = BuilderState::Empty;
@@ -175,7 +171,7 @@ where
     pub fn new_empty(logger: L) -> Self {
         Self {
             data: Spinlock::new(Arc::new(Data::new())),
-            data_builder: Spinlock::new(DataBuilder::new()),
+            data_builder: Spinlock::new(DataBuilder::default()),
             logger,
         }
     }
