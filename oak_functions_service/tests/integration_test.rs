@@ -119,7 +119,7 @@ async fn it_should_support_lookup_data() {
     };
 
     let request = schema::UpdateLookupDataRequest {
-        action: action,
+        action,
         chunk: Some(chunk),
     };
 

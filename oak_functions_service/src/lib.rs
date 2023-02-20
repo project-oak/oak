@@ -147,12 +147,12 @@ impl schema::OakFunctions for OakFunctionsService {
         &mut self,
         request: &schema::UpdateLookupDataRequest,
     ) -> Result<schema::UpdateLookupDataResponse, micro_rpc::Status> {
-        let action = schema::UpdateAction::from_i32(request.action).ok_or(
+        let action = schema::UpdateAction::from_i32(request.action).ok_or_else(|| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::InvalidArgument,
-                format!("could not map action from i32"),
-            ),
-        )?;
+                format!("could not map action from i32: {}", request.action),
+            )
+        })?;
 
         let data = request
             .chunk
