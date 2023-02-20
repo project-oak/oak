@@ -25,3 +25,16 @@ package(
 
 # Export LICENSE file for projects that reference Oak in Bazel as an external dependency.
 exports_files(["LICENSE"])
+
+constraint_value(
+    name = "os_oak",
+    constraint_setting = "@platforms//os:os",
+)
+
+platform(
+    name = "oak",
+    constraint_values = [
+        "//:os_oak",
+        "@platforms//cpu:x86_64",
+    ],
+)

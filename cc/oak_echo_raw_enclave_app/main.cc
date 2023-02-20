@@ -19,7 +19,8 @@
 
 constexpr int CHANNEL_FD = 10;
 
-int main(int argc, char* argv[]) {
+// Under C++ rules, the name is mangled to "_Z4mainiPPc" -- find out what's going on with that.
+extern "C" int main(int argc, char* argv[]) {
   char buf;
 
   fprintf(stderr, "In main!\n");
