@@ -1,0 +1,4 @@
+[profile.default.junit]
+path = "junit.xml"
+store-success-output = true
+store-failure-output = true
