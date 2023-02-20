@@ -27,9 +27,9 @@ service OakFunctions {
   // method_id: 1
   rpc Invoke(InvokeRequest) returns (InvokeResponse);
 
-  // Replaces the existing lookup data with the new value.
+  // Builds or replaces the existing lookup data with the new value.
   // method_id: 2
-  rpc UpdateLookupData(LookupData) returns (Empty);
+  rpc UpdateLookupData(UpdateLookupDataRequest) returns (UpdateLookupDataResponse);
 }
 
 message InitializeRequest {
@@ -59,10 +59,42 @@ message LookupDataEntry {
   bytes value = 2;
 }
 
-// If the definition of LookupData changes, the estimation of the size of the LookupData when
-// serialized in the Oak Functions Launcher needs to change, too.
-message LookupData {
+message LookupDataChunk {
   repeated LookupDataEntry items = 1;
+}
+
+// Indicates to the LookupDataManager which action should be taken.
+enum UpdateAction {
+  // The first chunk the sender sends.
+  START = 0;
+  // The sender sends this chunk and will send a further chunk.
+  CONTINUE = 1;
+  // The final chunk the sender sends.
+  FINISH = 2;
+  // The sender needs to abort the update.
+  ABORT = 3;
+  // The sender needs to send only one chunk.
+  START_AND_FINISH = 4;
+}
+
+// A message to the LookupDataManager to process the lookup data chunk based on the current
+// action.
+//
+// If the definition of UpdateLookupDataRequest changes, the estimation of the size when
+// serialized in the Oak Functions Launcher needs to change, too.
+message UpdateLookupDataRequest {
+  UpdateAction action = 1;
+  LookupDataChunk chunk = 2;
+}
+
+enum UpdateStatus {
+  STARTED = 0;
+  FINISHED = 1;
+  ABORTED = 2;
+}
+
+message UpdateLookupDataResponse {
+  UpdateStatus update_status = 1;
 }
 
 message Empty {}

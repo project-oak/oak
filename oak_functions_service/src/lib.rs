@@ -145,15 +145,64 @@ impl schema::OakFunctions for OakFunctionsService {
 
     fn update_lookup_data(
         &mut self,
-        lookup_data: &schema::LookupData,
-    ) -> Result<schema::Empty, micro_rpc::Status> {
-        let data = lookup_data
+        request: &schema::UpdateLookupDataRequest,
+    ) -> Result<schema::UpdateLookupDataResponse, micro_rpc::Status> {
+        let action = schema::UpdateAction::from_i32(request.action).ok_or_else(|| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::InvalidArgument,
+                format!("could not map action from i32: {}", request.action),
+            )
+        })?;
+
+        let data = request
+            .chunk
+            .as_ref()
+            .unwrap()
             .items
             .iter()
-            .map(|entry| Ok((entry.key.clone(), entry.value.clone())))
-            .collect::<Result<_, micro_rpc::Status>>()?;
+            .map(|entry| (entry.key.clone(), entry.value.clone()))
+            .collect();
 
-        self.lookup_data_manager.update_data(data);
-        Ok(schema::Empty {})
+        let update_status = self
+            .lookup_data_manager
+            .update_data(action.try_into()?, data);
+
+        let update_status2 = schema::UpdateStatus::from(update_status);
+        Ok(schema::UpdateLookupDataResponse {
+            update_status: update_status2.into(),
+        })
+    }
+}
+
+impl TryInto<oak_functions_lookup::UpdateAction> for schema::UpdateAction {
+    type Error = micro_rpc::Status;
+
+    // This crate depends on oak_functions_lookup and schema, so we cannot use schema in
+    // oak_functions_lookup. As a work-around we define and map a corresponding type for
+    // UpdateAction.
+    fn try_into(self) -> Result<oak_functions_lookup::UpdateAction, micro_rpc::Status> {
+        match self {
+            schema::UpdateAction::StartAndFinish => {
+                Ok(oak_functions_lookup::UpdateAction::StartAndFinish)
+            }
+            // TODO(#3718): Make this exhaustive once we have implemented all
+            // UpdateActions.
+            _ => Err(micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::InvalidArgument,
+                format!("action not implemented: {:?}", self),
+            )),
+        }
+    }
+}
+
+// This crate depends on oak_functions_lookup and schema, so we cannot use schema in
+// oak_functions_lookup. As a work-around we define and map a corresponding type for UpdateStatus.
+impl From<oak_functions_lookup::UpdateStatus> for schema::UpdateStatus {
+    fn from(value: oak_functions_lookup::UpdateStatus) -> Self {
+        match value {
+            oak_functions_lookup::UpdateStatus::Aborted => schema::UpdateStatus::Aborted,
+            oak_functions_lookup::UpdateStatus::Finished => schema::UpdateStatus::Finished,
+            oak_functions_lookup::UpdateStatus::Started => schema::UpdateStatus::Started,
+        }
     }
 }

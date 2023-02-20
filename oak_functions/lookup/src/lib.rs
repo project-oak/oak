@@ -99,6 +99,37 @@ impl<L: OakLogger> OakApiNativeExtension for LookupData<L> {
 // value](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-at-most-one-value)
 pub type Data = HashMap<Vec<u8>, Vec<u8>>;
 
+#[derive(Default)]
+enum BuilderState {
+    #[default]
+    Empty,
+    Updating,
+}
+
+// Incrementally build data backing the lookup data keeping track of the state.
+#[derive(Default)]
+struct DataBuilder {
+    data: Data,
+    state: BuilderState,
+}
+
+impl DataBuilder {
+    /// Build data from the builder and set the builder back to the initial state.
+    fn build(&mut self) -> Data {
+        self.state = BuilderState::Empty;
+        core::mem::take(&mut self.data)
+    }
+
+    /// Extends the DataBuilder with new data.
+    ///
+    /// Note, if new data contains a key already present in the existing data, calling extend
+    /// overwrites the value.
+    fn extend(&mut self, new_data: Data) {
+        self.state = BuilderState::Updating;
+        self.data.extend(new_data);
+    }
+}
+
 /// Utility for managing lookup data.
 ///
 /// `LookupDataManager` can be used to create `LookupData` instances that share the underlying data.
@@ -115,7 +146,21 @@ pub type Data = HashMap<Vec<u8>, Vec<u8>>;
 /// In the future we may replace both the mutex and the hash map with something like RCU.
 pub struct LookupDataManager<L: OakLogger + Clone> {
     data: Spinlock<Arc<Data>>,
+    // Behind a lock, because we have multiple references to LookupDataManager and need to mutate
+    // data builder.
+    data_builder: Spinlock<DataBuilder>,
     logger: L,
+}
+
+#[derive(Clone)]
+pub enum UpdateAction {
+    StartAndFinish,
+}
+
+pub enum UpdateStatus {
+    Started,
+    Finished,
+    Aborted,
 }
 
 impl<L> LookupDataManager<L>
@@ -125,20 +170,37 @@ where
     /// Creates a new instance with empty backing data.
     pub fn new_empty(logger: L) -> Self {
         Self {
-            data: Spinlock::new(Arc::new(HashMap::new())),
+            data: Spinlock::new(Arc::new(Data::new())),
+            data_builder: Spinlock::new(DataBuilder::default()),
             logger,
         }
     }
 
     /// Creates an instance of LookupData populated with the given entries.
-    pub fn for_test(entries: Data, logger: L) -> Self {
-        let data = Spinlock::new(Arc::new(entries));
-        Self { data, logger }
+    pub fn for_test(data: Data, logger: L) -> Self {
+        let test_manager = Self::new_empty(logger);
+        *test_manager.data.lock() = Arc::new(data);
+        test_manager
     }
 
     /// Updates the backing data that will be used by new `LookupData` instances.
-    pub fn update_data(&self, data: Data) {
-        *self.data.lock() = Arc::new(data);
+    pub fn update_data(&self, action: UpdateAction, new_data: Data) -> UpdateStatus {
+        let mut data_builder = self.data_builder.lock();
+
+        match (&data_builder.state, &action) {
+            (BuilderState::Empty, UpdateAction::StartAndFinish) => {
+                data_builder.extend(new_data);
+                let next_data = data_builder.build();
+                let mut data = self.data.lock();
+                *data = Arc::new(next_data);
+                UpdateStatus::Finished
+            }
+            (BuilderState::Updating, UpdateAction::StartAndFinish) => {
+                // Clear the builder throwing away the intermediate result.
+                let _ = data_builder.build();
+                UpdateStatus::Aborted
+            }
+        }
     }
 
     /// Creates a new `LookupData` instance with a reference to the current backing data.
@@ -219,20 +281,24 @@ mod tests {
         let lookup_data_0 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
 
-        manager.update_data(HashMap::from_iter(
-            [(b"key1".to_vec(), b"value1".to_vec())].into_iter(),
-        ));
+        manager.update_data(
+            UpdateAction::StartAndFinish,
+            HashMap::from_iter([(b"key1".to_vec(), b"value1".to_vec())].into_iter()),
+        );
         let lookup_data_1 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);
 
-        manager.update_data(HashMap::from_iter(
-            [
-                (b"key1".to_vec(), b"value1".to_vec()),
-                (b"key2".to_vec(), b"value2".to_vec()),
-            ]
-            .into_iter(),
-        ));
+        manager.update_data(
+            UpdateAction::StartAndFinish,
+            HashMap::from_iter(
+                [
+                    (b"key1".to_vec(), b"value1".to_vec()),
+                    (b"key2".to_vec(), b"value2".to_vec()),
+                ]
+                .into_iter(),
+            ),
+        );
         let lookup_data_2 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);

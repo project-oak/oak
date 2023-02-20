@@ -33,9 +33,16 @@ pub async fn update_lookup_data(
     let max_chunk_size = ByteUnit::Gibibyte(2);
 
     let lookup_data = load_lookup_data(lookup_data_path)?;
-    let encoded_lookup_data = encode_lookup_data(lookup_data, max_chunk_size)?;
+    let chunk = encode_lookup_data(lookup_data, max_chunk_size)?;
 
-    match client.update_lookup_data(&encoded_lookup_data).await {
+    // We currently hard-code to send only one chunk.
+    let action = schema::UpdateAction::StartAndFinish;
+    let request = schema::UpdateLookupDataRequest {
+        action: action.into(),
+        chunk: Some(chunk),
+    };
+
+    match client.update_lookup_data(&request).await {
         Ok(_) => Ok(()),
         Err(err) => Err(anyhow!("couldn't send lookup data: {:?}", err)),
     }
@@ -44,7 +51,7 @@ pub async fn update_lookup_data(
 fn encode_lookup_data(
     data: HashMap<Vec<u8>, Vec<u8>>,
     max_chunk_size: ByteUnit,
-) -> anyhow::Result<schema::LookupData> {
+) -> anyhow::Result<schema::LookupDataChunk> {
     // We will add the estimated size of ever LookupDataEntry, and to account for the LookupData
     // overhead, we generously estimate 50 bytes.
     let mut estimated_size = ByteUnit::Byte(50);
@@ -68,7 +75,7 @@ fn encode_lookup_data(
             max_chunk_size
         ))
     } else {
-        Ok(schema::LookupData { items: entries })
+        Ok(schema::LookupDataChunk { items: entries })
     }
 }
 
