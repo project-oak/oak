@@ -247,6 +247,72 @@
 <a href="#247" id="247">247</a>
 <a href="#248" id="248">248</a>
 <a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -348,6 +414,37 @@
 // value](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-at-most-one-value)
 </span><span class="kw">pub type </span>Data = HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;;
 
+<span class="attr">#[derive(Default)]
+</span><span class="kw">enum </span>BuilderState {
+    <span class="attr">#[default]
+    </span>Empty,
+    Updating,
+}
+
+<span class="comment">// Incrementally build data backing the lookup data keeping track of the state.
+</span><span class="attr">#[derive(Default)]
+</span><span class="kw">struct </span>DataBuilder {
+    data: Data,
+    state: BuilderState,
+}
+
+<span class="kw">impl </span>DataBuilder {
+    <span class="doccomment">/// Build data from the builder and set the builder back to the initial state.
+    </span><span class="kw">fn </span>build(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Data {
+        <span class="self">self</span>.state = BuilderState::Empty;
+        core::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.data)
+    }
+
+    <span class="doccomment">/// Extends the DataBuilder with new data.
+    ///
+    /// Note, if new data contains a key already present in the existing data, calling extend
+    /// overwrites the value.
+    </span><span class="kw">fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new_data: Data) {
+        <span class="self">self</span>.state = BuilderState::Updating;
+        <span class="self">self</span>.data.extend(new_data);
+    }
+}
+
 <span class="doccomment">/// Utility for managing lookup data.
 ///
 /// `LookupDataManager` can be used to create `LookupData` instances that share the underlying data.
@@ -364,7 +461,21 @@
 /// In the future we may replace both the mutex and the hash map with something like RCU.
 </span><span class="kw">pub struct </span>LookupDataManager&lt;L: OakLogger + Clone&gt; {
     data: Spinlock&lt;Arc&lt;Data&gt;&gt;,
+    <span class="comment">// Behind a lock, because we have multiple references to LookupDataManager and need to mutate
+    // data builder.
+    </span>data_builder: Spinlock&lt;DataBuilder&gt;,
     logger: L,
+}
+
+<span class="attr">#[derive(Clone)]
+</span><span class="kw">pub enum </span>UpdateAction {
+    StartAndFinish,
+}
+
+<span class="kw">pub enum </span>UpdateStatus {
+    Started,
+    Finished,
+    Aborted,
 }
 
 <span class="kw">impl</span>&lt;L&gt; LookupDataManager&lt;L&gt;
@@ -374,20 +485,37 @@
     <span class="doccomment">/// Creates a new instance with empty backing data.
     </span><span class="kw">pub fn </span>new_empty(logger: L) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            data: Spinlock::new(Arc::new(HashMap::new())),
+            data: Spinlock::new(Arc::new(Data::new())),
+            data_builder: Spinlock::new(DataBuilder::default()),
             logger,
         }
     }
 
     <span class="doccomment">/// Creates an instance of LookupData populated with the given entries.
-    </span><span class="kw">pub fn </span>for_test(entries: Data, logger: L) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>data = Spinlock::new(Arc::new(entries));
-        <span class="self">Self </span>{ data, logger }
+    </span><span class="kw">pub fn </span>for_test(data: Data, logger: L) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>test_manager = <span class="self">Self</span>::new_empty(logger);
+        <span class="kw-2">*</span>test_manager.data.lock() = Arc::new(data);
+        test_manager
     }
 
     <span class="doccomment">/// Updates the backing data that will be used by new `LookupData` instances.
-    </span><span class="kw">pub fn </span>update_data(<span class="kw-2">&amp;</span><span class="self">self</span>, data: Data) {
-        <span class="kw-2">*</span><span class="self">self</span>.data.lock() = Arc::new(data);
+    </span><span class="kw">pub fn </span>update_data(<span class="kw-2">&amp;</span><span class="self">self</span>, action: UpdateAction, new_data: Data) -&gt; UpdateStatus {
+        <span class="kw">let </span><span class="kw-2">mut </span>data_builder = <span class="self">self</span>.data_builder.lock();
+
+        <span class="kw">match </span>(<span class="kw-2">&amp;</span>data_builder.state, <span class="kw-2">&amp;</span>action) {
+            (BuilderState::Empty, UpdateAction::StartAndFinish) =&gt; {
+                data_builder.extend(new_data);
+                <span class="kw">let </span>next_data = data_builder.build();
+                <span class="kw">let </span><span class="kw-2">mut </span>data = <span class="self">self</span>.data.lock();
+                <span class="kw-2">*</span>data = Arc::new(next_data);
+                UpdateStatus::Finished
+            }
+            (BuilderState::Updating, UpdateAction::StartAndFinish) =&gt; {
+                <span class="comment">// Clear the builder throwing away the intermediate result.
+                </span><span class="kw">let _ </span>= data_builder.build();
+                UpdateStatus::Aborted
+            }
+        }
     }
 
     <span class="doccomment">/// Creates a new `LookupData` instance with a reference to the current backing data.
@@ -468,20 +596,24 @@
         <span class="kw">let </span>lookup_data_0 = manager.create_lookup_data();
         <span class="macro">assert_eq!</span>(lookup_data_0.len(), <span class="number">0</span>);
 
-        manager.update_data(HashMap::from_iter(
-            [(<span class="string">b&quot;key1&quot;</span>.to_vec(), <span class="string">b&quot;value1&quot;</span>.to_vec())].into_iter(),
-        ));
+        manager.update_data(
+            UpdateAction::StartAndFinish,
+            HashMap::from_iter([(<span class="string">b&quot;key1&quot;</span>.to_vec(), <span class="string">b&quot;value1&quot;</span>.to_vec())].into_iter()),
+        );
         <span class="kw">let </span>lookup_data_1 = manager.create_lookup_data();
         <span class="macro">assert_eq!</span>(lookup_data_0.len(), <span class="number">0</span>);
         <span class="macro">assert_eq!</span>(lookup_data_1.len(), <span class="number">1</span>);
 
-        manager.update_data(HashMap::from_iter(
-            [
-                (<span class="string">b&quot;key1&quot;</span>.to_vec(), <span class="string">b&quot;value1&quot;</span>.to_vec()),
-                (<span class="string">b&quot;key2&quot;</span>.to_vec(), <span class="string">b&quot;value2&quot;</span>.to_vec()),
-            ]
-            .into_iter(),
-        ));
+        manager.update_data(
+            UpdateAction::StartAndFinish,
+            HashMap::from_iter(
+                [
+                    (<span class="string">b&quot;key1&quot;</span>.to_vec(), <span class="string">b&quot;value1&quot;</span>.to_vec()),
+                    (<span class="string">b&quot;key2&quot;</span>.to_vec(), <span class="string">b&quot;value2&quot;</span>.to_vec()),
+                ]
+                .into_iter(),
+            ),
+        );
         <span class="kw">let </span>lookup_data_2 = manager.create_lookup_data();
         <span class="macro">assert_eq!</span>(lookup_data_0.len(), <span class="number">0</span>);
         <span class="macro">assert_eq!</span>(lookup_data_1.len(), <span class="number">1</span>);

@@ -135,6 +135,13 @@
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -170,9 +177,16 @@
     </span><span class="kw">let </span>max_chunk_size = ByteUnit::Gibibyte(<span class="number">2</span>);
 
     <span class="kw">let </span>lookup_data = load_lookup_data(lookup_data_path)<span class="question-mark">?</span>;
-    <span class="kw">let </span>encoded_lookup_data = encode_lookup_data(lookup_data, max_chunk_size)<span class="question-mark">?</span>;
+    <span class="kw">let </span>chunk = encode_lookup_data(lookup_data, max_chunk_size)<span class="question-mark">?</span>;
 
-    <span class="kw">match </span>client.update_lookup_data(<span class="kw-2">&amp;</span>encoded_lookup_data).<span class="kw">await </span>{
+    <span class="comment">// We currently hard-code to send only one chunk.
+    </span><span class="kw">let </span>action = schema::UpdateAction::StartAndFinish;
+    <span class="kw">let </span>request = schema::UpdateLookupDataRequest {
+        action: action.into(),
+        chunk: <span class="prelude-val">Some</span>(chunk),
+    };
+
+    <span class="kw">match </span>client.update_lookup_data(<span class="kw-2">&amp;</span>request).<span class="kw">await </span>{
         <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(()),
         <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t send lookup data: {:?}&quot;</span>, err)),
     }
@@ -181,7 +195,7 @@
 <span class="kw">fn </span>encode_lookup_data(
     data: HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;,
     max_chunk_size: ByteUnit,
-) -&gt; anyhow::Result&lt;schema::LookupData&gt; {
+) -&gt; anyhow::Result&lt;schema::LookupDataChunk&gt; {
     <span class="comment">// We will add the estimated size of ever LookupDataEntry, and to account for the LookupData
     // overhead, we generously estimate 50 bytes.
     </span><span class="kw">let </span><span class="kw-2">mut </span>estimated_size = ByteUnit::Byte(<span class="number">50</span>);
@@ -205,7 +219,7 @@
             max_chunk_size
         ))
     } <span class="kw">else </span>{
-        <span class="prelude-val">Ok</span>(schema::LookupData { items: entries })
+        <span class="prelude-val">Ok</span>(schema::LookupDataChunk { items: entries })
     }
 }
 
