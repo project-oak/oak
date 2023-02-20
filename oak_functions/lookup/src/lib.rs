@@ -99,12 +99,15 @@ impl<L: OakLogger> OakApiNativeExtension for LookupData<L> {
 // value](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-at-most-one-value)
 pub type Data = HashMap<Vec<u8>, Vec<u8>>;
 
+#[derive(Default)]
 enum BuilderState {
-    New,
+    #[default]
+    Empty,
     Updating,
 }
 
 // Incrementally build data backing the lookup data keeping track of the state.
+#[derive(Default)]
 struct DataBuilder {
     data: Data,
     state: BuilderState,
@@ -112,18 +115,19 @@ struct DataBuilder {
 
 impl DataBuilder {
     fn new() -> Self {
-        DataBuilder {
-            data: Data::new(),
-            state: BuilderState::New,
-        }
+        Default::default()
     }
 
+    /// Build data from the builder and set the builder back to the initial state.
     fn build(&mut self) -> Data {
-        self.state = BuilderState::New;
-        core::mem::replace(&mut self.data, Data::new())
+        self.state = BuilderState::Empty;
+        core::mem::take(&mut self.data)
     }
 
-    // Assumes data and new data and data are disjoint.
+    /// Extends the DataBuilder with new data.
+    ///
+    /// Note, if new data contains a key already present in the existing data, calling extend
+    /// overwrites the value.
     fn extend(&mut self, new_data: Data) {
         self.state = BuilderState::Updating;
         self.data.extend(new_data);
@@ -188,7 +192,7 @@ where
         let mut data_builder = self.data_builder.lock();
 
         match (&data_builder.state, &action) {
-            (BuilderState::New, UpdateAction::StartAndFinish) => {
+            (BuilderState::Empty, UpdateAction::StartAndFinish) => {
                 data_builder.extend(new_data);
                 let next_data = data_builder.build();
                 let mut data = self.data.lock();

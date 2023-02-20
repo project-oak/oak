@@ -33,7 +33,7 @@ pub async fn update_lookup_data(
     let max_chunk_size = ByteUnit::Gibibyte(2);
 
     let lookup_data = load_lookup_data(lookup_data_path)?;
-    let chunk = chunk_up_lookup_data(lookup_data, max_chunk_size)?;
+    let chunk = encode_lookup_data(lookup_data, max_chunk_size)?;
 
     // We currently hard-code to send only one chunk.
     let action = schema::UpdateAction::StartAndFinish;
@@ -48,7 +48,7 @@ pub async fn update_lookup_data(
     }
 }
 
-fn chunk_up_lookup_data(
+fn encode_lookup_data(
     data: HashMap<Vec<u8>, Vec<u8>>,
     max_chunk_size: ByteUnit,
 ) -> anyhow::Result<schema::LookupDataChunk> {
@@ -114,7 +114,7 @@ fn test_encode_lookup_data_in_bound() {
         let key = format!("{:050}", i).into_bytes();
         data.insert(key.clone(), key.clone());
     }
-    let result = chunk_up_lookup_data(data, max_chunk_size);
+    let result = encode_lookup_data(data, max_chunk_size);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().items.len(), 8)
 }
@@ -130,7 +130,7 @@ fn test_encode_lookup_data_exceed_bound() {
         data.insert(key.clone(), key.clone());
     }
 
-    let result = chunk_up_lookup_data(data, max_chunk_size);
+    let result = encode_lookup_data(data, max_chunk_size);
     assert!(result.is_err())
 }
 
@@ -138,7 +138,7 @@ fn test_encode_lookup_data_exceed_bound() {
 fn test_encode_lookup_data_empty() {
     let max_chunk_size = ByteUnit::Kibibyte(1);
     let data = hashbrown::HashMap::new();
-    let result = chunk_up_lookup_data(data, max_chunk_size);
+    let result = encode_lookup_data(data, max_chunk_size);
     assert!(result.is_ok());
     assert_eq!(result.unwrap().items.len(), 0)
 }

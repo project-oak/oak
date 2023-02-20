@@ -179,6 +179,8 @@ fn map_update_action(action: i32) -> Result<oak_functions_lookup::UpdateAction, 
         schema::UpdateAction::StartAndFinish => {
             Ok(oak_functions_lookup::UpdateAction::StartAndFinish)
         }
+        // TODO(#3718): Make this exhaustive once we have implemented all
+        // UpdateActions.
         _ => Err(micro_rpc::Status::new_with_message(
             micro_rpc::StatusCode::InvalidArgument,
             format!("action not implemented: {:?}", action),

@@ -65,11 +65,11 @@ message LookupDataChunk {
 
 // Indicates to the LookupDataManager which action should be taken.
 enum UpdateAction {
-  // The first chunk the sender sends in this update.
+  // The first chunk the sender sends.
   START = 0;
-  // The sender will send a further chunk in this update.
+  // The sender sends this chunk and will send a further chunk.
   CONTINUE = 1;
-  // The FINISH chunk the sender will send in this update.
+  // The final chunk the sender sends.
   FINISH = 2;
   // The sender needs to abort the update.
   ABORT = 3;
@@ -94,7 +94,7 @@ enum UpdateStatus {
 }
 
 message UpdateLookupDataResponse {
-  UpdateStatus updateStatus = 1;
+  UpdateStatus update_status = 1;
 }
 
 message Empty {}
