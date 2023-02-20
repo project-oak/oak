@@ -147,7 +147,12 @@ impl schema::OakFunctions for OakFunctionsService {
         &mut self,
         request: &schema::UpdateLookupDataRequest,
     ) -> Result<schema::UpdateLookupDataResponse, micro_rpc::Status> {
-        let update_action = map_update_action(request.action)?;
+        let action = schema::UpdateAction::from_i32(request.action).ok_or(
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::InvalidArgument,
+                format!("could not map action from i32"),
+            ),
+        )?;
 
         let data = request
             .chunk
@@ -158,42 +163,46 @@ impl schema::OakFunctions for OakFunctionsService {
             .map(|entry| (entry.key.clone(), entry.value.clone()))
             .collect();
 
-        let update_status = self.lookup_data_manager.update_data(update_action, data);
+        let update_status = self
+            .lookup_data_manager
+            .update_data(action.try_into()?, data);
 
+        let update_status2 = schema::UpdateStatus::from(update_status);
         Ok(schema::UpdateLookupDataResponse {
-            update_status: map_update_status(update_status).into(),
+            update_status: update_status2.into(),
         })
     }
 }
 
-// This crate depends on oak_functions_lookup and schema, so we cannot use schema in
-// oak_functions_lookup. As a work-around we define and map a corresponding type for UpdateAction.
-fn map_update_action(action: i32) -> Result<oak_functions_lookup::UpdateAction, micro_rpc::Status> {
-    let action =
-        schema::UpdateAction::from_i32(action).ok_or(micro_rpc::Status::new_with_message(
-            micro_rpc::StatusCode::InvalidArgument,
-            format!("could not map action from i32"),
-        ))?;
+impl TryInto<oak_functions_lookup::UpdateAction> for schema::UpdateAction {
+    type Error = micro_rpc::Status;
 
-    match action {
-        schema::UpdateAction::StartAndFinish => {
-            Ok(oak_functions_lookup::UpdateAction::StartAndFinish)
+    // This crate depends on oak_functions_lookup and schema, so we cannot use schema in
+    // oak_functions_lookup. As a work-around we define and map a corresponding type for
+    // UpdateAction.
+    fn try_into(self) -> Result<oak_functions_lookup::UpdateAction, micro_rpc::Status> {
+        match self {
+            schema::UpdateAction::StartAndFinish => {
+                Ok(oak_functions_lookup::UpdateAction::StartAndFinish)
+            }
+            // TODO(#3718): Make this exhaustive once we have implemented all
+            // UpdateActions.
+            _ => Err(micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::InvalidArgument,
+                format!("action not implemented: {:?}", self),
+            )),
         }
-        // TODO(#3718): Make this exhaustive once we have implemented all
-        // UpdateActions.
-        _ => Err(micro_rpc::Status::new_with_message(
-            micro_rpc::StatusCode::InvalidArgument,
-            format!("action not implemented: {:?}", action),
-        )),
     }
 }
 
 // This crate depends on oak_functions_lookup and schema, so we cannot use schema in
 // oak_functions_lookup. As a work-around we define and map a corresponding type for UpdateStatus.
-fn map_update_status(status: oak_functions_lookup::UpdateStatus) -> schema::UpdateStatus {
-    match status {
-        oak_functions_lookup::UpdateStatus::Aborted => schema::UpdateStatus::Aborted,
-        oak_functions_lookup::UpdateStatus::Finished => schema::UpdateStatus::Finished,
-        oak_functions_lookup::UpdateStatus::Started => schema::UpdateStatus::Started,
+impl From<oak_functions_lookup::UpdateStatus> for schema::UpdateStatus {
+    fn from(value: oak_functions_lookup::UpdateStatus) -> Self {
+        match value {
+            oak_functions_lookup::UpdateStatus::Aborted => schema::UpdateStatus::Aborted,
+            oak_functions_lookup::UpdateStatus::Finished => schema::UpdateStatus::Finished,
+            oak_functions_lookup::UpdateStatus::Started => schema::UpdateStatus::Started,
+        }
     }
 }
