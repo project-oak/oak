@@ -28,7 +28,11 @@ cc_binary(
     features = ["fully_static_link"],
     linkopts = [
         "-nostdlib",
-        "-zmax-page-size=0x200000",
+        "-Wl,-zmax-page-size=0x200000",
+    ],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "//:os_oak",
     ],
     deps = ["//third_party/newlib"],
 )
