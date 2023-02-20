@@ -59,14 +59,13 @@
             };
             bazel = with pkgs; mkShell {
               shellHook = ''
-                export A=$(dirname $(dirname $(which android)))
-                export ANDROID_HOME=$A/libexec/android-sdk
-                export ANDROID_NDK_HOME=$A/libexec/android-sdk/ndk/24.0.8215888
+                export ANDROID_BASE_DIR=$(dirname $(dirname $(which android)))
+                export ANDROID_HOME=$ANDROID_BASE_DIR/libexec/android-sdk
               '';
               packages = [
                 jdk11
                 (androidenv.composeAndroidPackages {
-                  includeNDK = true;
+                  includeNDK = false;
                   platformVersions = [ "30" "32" ];
                   buildToolsVersions = [ "30.0.0" ];
                 }).androidsdk
