@@ -22,7 +22,6 @@ use anyhow::{anyhow, Context};
 use hashbrown::HashMap;
 use prost::Message;
 use std::{fs, path::PathBuf};
-
 use ubyte::ByteUnit;
 
 // Loads lookup data from the given path, encodes it, and sends it to the client.
