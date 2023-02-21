@@ -193,19 +193,6 @@
 <a href="#193" id="193">193</a>
 <a href="#194" id="194">194</a>
 <a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -371,35 +358,22 @@
             .map(|entry| (entry.key.clone(), entry.value.clone()))
             .collect();
 
-        <span class="kw">let </span>update_status = <span class="self">self
-            </span>.lookup_data_manager
-            .update_data(action.try_into()<span class="question-mark">?</span>, data);
-
-        <span class="kw">let </span>update_status2 = schema::UpdateStatus::from(update_status);
-        <span class="prelude-val">Ok</span>(schema::UpdateLookupDataResponse {
-            update_status: update_status2.into(),
-        })
-    }
-}
-
-<span class="kw">impl </span>TryInto&lt;oak_functions_lookup::UpdateAction&gt; <span class="kw">for </span>schema::UpdateAction {
-    <span class="kw">type </span>Error = micro_rpc::Status;
-
-    <span class="comment">// This crate depends on oak_functions_lookup and schema, so we cannot use schema in
-    // oak_functions_lookup. As a work-around we define and map a corresponding type for
-    // UpdateAction.
-    </span><span class="kw">fn </span>try_into(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;oak_functions_lookup::UpdateAction, micro_rpc::Status&gt; {
-        <span class="kw">match </span><span class="self">self </span>{
+        <span class="kw">let </span>update_status = <span class="kw">match </span>action {
             schema::UpdateAction::StartAndFinish =&gt; {
-                <span class="prelude-val">Ok</span>(oak_functions_lookup::UpdateAction::StartAndFinish)
+                <span class="prelude-val">Ok</span>(<span class="self">self</span>.lookup_data_manager.update_start_and_finish(data))
             }
+            schema::UpdateAction::Start =&gt; <span class="prelude-val">Ok</span>(<span class="self">self</span>.lookup_data_manager.update_start(data)),
+            schema::UpdateAction::Finish =&gt; <span class="prelude-val">Ok</span>(<span class="self">self</span>.lookup_data_manager.update_finish(data)),
             <span class="comment">// TODO(#3718): Make this exhaustive once we have implemented all
             // UpdateActions.
             </span><span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::InvalidArgument,
-                <span class="macro">format!</span>(<span class="string">&quot;action not implemented: {:?}&quot;</span>, <span class="self">self</span>),
+                <span class="macro">format!</span>(<span class="string">&quot;action not implemented: {:?}&quot;</span>, action),
             )),
-        }
+        }<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(schema::UpdateLookupDataResponse {
+            update_status: update_status <span class="kw">as </span>i32,
+        })
     }
 }
 
