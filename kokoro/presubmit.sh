@@ -12,3 +12,4 @@ sudo /etc/init.d/docker start
 
 ./scripts/docker_pull
 ./scripts/docker_run ./scripts/xtask run-launcher-test
+./scripts/docker_run ./scripts/xtask run-quirk-test
