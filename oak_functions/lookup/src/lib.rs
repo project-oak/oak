@@ -186,7 +186,7 @@ where
             // Finish sending empty data.
             self.update_finish(Data::new())
         } else {
-            UpdateStatus::Aborted
+            self.update_abort()
         }
     }
 
@@ -196,9 +196,7 @@ where
             data_builder.extend(new_data);
             UpdateStatus::Started
         } else {
-            // Clear the builder throwing away the intermediate result.
-            let _ = data_builder.build();
-            UpdateStatus::Aborted
+            self.update_abort()
         }
     }
 
@@ -211,10 +209,15 @@ where
             *data = Arc::new(next_data);
             UpdateStatus::Finished
         } else {
-            // Clear the builder throwing away the intermediate result.
-            let _ = data_builder.build();
-            UpdateStatus::Aborted
+            self.update_abort()
         }
+    }
+
+    pub fn update_abort(&self) -> UpdateStatus {
+        let mut data_builder = self.data_builder.lock();
+        // Clear the builder throwing away the intermediate result.
+        let _ = data_builder.build();
+        UpdateStatus::Aborted
     }
 
     /// Creates a new `LookupData` instance with a reference to the current backing data.
@@ -369,6 +372,27 @@ mod tests {
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 0);
         assert_eq!(lookup_data_2.len(), 0);
+    }
+
+    #[test]
+    fn test_update_lookup_data_abort() {
+        let manager = LookupDataManager::new_empty(TestLogger {});
+        let lookup_data_0 = manager.create_lookup_data();
+
+        let update_status = manager.update_start(create_test_data(0, 2));
+        assert_eq!(update_status, UpdateStatus::Started);
+
+        let update_status = manager.update_abort();
+        assert_eq!(update_status, UpdateStatus::Aborted);
+        let lookup_data_1 = manager.create_lookup_data();
+
+        let update_status = manager.update_start_and_finish(create_test_data(0, 1));
+        assert_eq!(update_status, UpdateStatus::Finished);
+        let lookup_data_2 = manager.create_lookup_data();
+
+        assert_eq!(lookup_data_0.len(), 0);
+        assert_eq!(lookup_data_1.len(), 0);
+        assert_eq!(lookup_data_2.len(), 1);
     }
 
     #[test]
