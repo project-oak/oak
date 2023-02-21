@@ -144,7 +144,7 @@ impl Instance {
             cmd.arg("-S");
         }
 
-        info!("Executing: {:?}", cmd);
+        info!("executing: {:?}", cmd);
 
         let instance = cmd.spawn()?;
 
@@ -184,17 +184,19 @@ impl Instance {
 #[async_trait]
 impl GuestInstance for Instance {
     async fn wait(&mut self) -> Result<std::process::ExitStatus> {
+        info!("waiting for guest instance to terminate");
         self.instance.wait().await.map_err(anyhow::Error::from)
     }
 
     async fn kill(mut self: Box<Self>) -> Result<std::process::ExitStatus> {
-        info!("Cleaning up and shutting down.");
+        info!("killing guest instance; cleaning up and shutting down");
         self.guest_console.shutdown(Shutdown::Both)?;
         self.instance.start_kill()?;
         self.wait().await
     }
 
     async fn connect(&self) -> Result<Box<dyn oak_channel::Channel>> {
+        info!("connecting to guest instance");
         Ok(Box::new(self.host_socket.try_clone()?))
     }
 }

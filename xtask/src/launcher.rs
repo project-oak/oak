@@ -17,11 +17,19 @@
 //! Functionality for testing variants of the enclave binary exposed by the launcher.
 
 const CLIENT_PATH: &str = "./target/debug/oak_functions_client";
-const WASM_PATH: &str = "./oak_functions_launcher/key_value_lookup.wasm";
-const LOOKUP_PATH: &str = "./oak_functions_launcher/mock_lookup_data";
+pub static LOOKUP_DATA_PATH: Lazy<PathBuf> =
+    Lazy::new(|| workspace_path(&["oak_functions_launcher", "mock_lookup_data"]));
+pub static WASM_PATH: Lazy<PathBuf> =
+    Lazy::new(|| workspace_path(&["oak_functions_launcher", "key_value_lookup.wasm"]));
+static STAGE_0_DIR: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["stage0"]));
+pub static OAK_RESTRICTED_KERNEL_BIN_DIR: Lazy<PathBuf> =
+    Lazy::new(|| workspace_path(&["oak_restricted_kernel_bin"]));
+static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> =
+    Lazy::new(|| workspace_path(&["target", "debug", "oak_functions_launcher"]));
 
-use crate::internal::*;
-use std::path::Path;
+use crate::{internal::*, workspace_path};
+use once_cell::sync::Lazy;
+use std::path::{Path, PathBuf};
 use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter};
 
@@ -44,17 +52,25 @@ impl LauncherMode {
 
     /// Get the path to the respective enclave binary variant that should be launched
     pub fn enclave_crate_path(&self) -> String {
-        format!("./{}", self.enclave_crate_name())
+        workspace_path(&[&self.enclave_crate_name()])
+            .to_str()
+            .unwrap()
+            .to_string()
     }
 
     /// Get the path to the respective enclave binary variant that should be launched
     pub fn enclave_binary_path(&self) -> String {
         match self {
-            LauncherMode::Virtual(_) => format!(
-                "{}/target/x86_64-unknown-none/debug/{}",
-                self.enclave_crate_path(),
-                self.enclave_crate_name()
-            ),
+            LauncherMode::Virtual(_) => workspace_path(&[
+                &self.enclave_crate_name(),
+                "target",
+                "x86_64-unknown-none",
+                "debug",
+                &self.enclave_crate_name(),
+            ])
+            .to_str()
+            .unwrap()
+            .to_string(),
             LauncherMode::Native(_) => format!("./target/debug/{}", self.enclave_crate_name()),
         }
     }
@@ -66,13 +82,29 @@ impl LauncherMode {
                 "virtualized".to_string(),
                 format!(
                     "--enclave-binary={}",
-                    "./oak_restricted_kernel_bin/target/x86_64-unknown-none/debug/oak_restricted_kernel_bin"
+                    workspace_path(&[
+                        "oak_restricted_kernel_bin",
+                        "target",
+                        "x86_64-unknown-none",
+                        "debug",
+                        "oak_restricted_kernel_bin",
+                    ])
+                    .to_str()
+                    .unwrap()
                 ),
                 format!("--vmm-binary={}", "/usr/bin/qemu-system-x86_64"),
                 format!("--app-binary={}", &self.enclave_binary_path()),
                 format!(
                     "--bios-binary={}",
-                    "./stage0/target/x86_64-unknown-none/release/oak_stage0.bin"
+                    workspace_path(&[
+                        "stage0",
+                        "target",
+                        "x86_64-unknown-none",
+                        "release",
+                        "oak_stage0.bin",
+                    ])
+                    .to_str()
+                    .unwrap()
                 ),
             ],
             LauncherMode::Native(_) => vec![
@@ -112,7 +144,7 @@ fn build_released_binary(name: &str, directory: &str) -> Step {
 
 fn run_variant(variant: &LauncherMode) -> Step {
     let mut steps = vec![build_binary(
-        "build Oak Functions enclave binary",
+        "build Oak Functions enclave app",
         &variant.enclave_crate_path(),
     )];
     // If we want to run in an VMM, we need three binaries:
@@ -125,15 +157,15 @@ fn run_variant(variant: &LauncherMode) -> Step {
         LauncherMode::Virtual(_) => vec![
             build_stage0(),
             build_binary(
-                "build Restricted Kernel binary",
-                "oak_restricted_kernel_bin",
+                "build Oak Restricted Kernel binary",
+                OAK_RESTRICTED_KERNEL_BIN_DIR.to_str().unwrap(),
             ),
         ],
         LauncherMode::Native(_) => vec![],
     });
     steps.extend(vec![Step::WithBackground {
         name: "background launcher".to_string(),
-        background: run_launcher(variant),
+        background: run_oak_functions_launcher(variant),
         foreground: Box::new(run_client("test_key", "^test_value$", 300)),
     }]);
     Step::Multiple {
@@ -155,7 +187,7 @@ pub fn build_stage0() -> Step {
                 "binary",
                 "target/x86_64-unknown-none/release/oak_stage0.bin",
             ],
-            Path::new("./stage0"),
+            STAGE_0_DIR.as_path(),
         ),
     }
 }
@@ -167,13 +199,13 @@ pub fn build_binary(name: &str, directory: &str) -> Step {
     }
 }
 
-fn run_launcher(variant: &LauncherMode) -> Box<dyn Runnable> {
+pub fn run_oak_functions_launcher(variant: &LauncherMode) -> Box<dyn Runnable> {
     let mut args = vec![
-        format!("--wasm={}", WASM_PATH),
-        format!("--lookup-data={}", LOOKUP_PATH),
+        format!("--wasm={}", WASM_PATH.to_str().unwrap()),
+        format!("--lookup-data={}", LOOKUP_DATA_PATH.to_str().unwrap()),
     ];
     args.append(&mut variant.variant_subcommand());
-    Cmd::new("./target/debug/oak_functions_launcher", args)
+    Cmd::new(OAK_FUNCTIONS_LAUNCHER_BIN.to_str().unwrap(), args)
 }
 
 fn run_client(request: &str, expected_response: &str, iterations: usize) -> Step {

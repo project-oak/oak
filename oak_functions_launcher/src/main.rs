@@ -101,9 +101,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Wait until something dies or we get a signal to terminate.
     tokio::select! {
         _ = signal::ctrl_c() => {
+            log::info!("Ctrl-C received, terminating VMM");
             launched_instance.kill().await?;
         },
         _ = server_future => {
+            log::info!("server terminated, terminating VMM");
             launched_instance.kill().await?;
         },
         val = launched_instance.wait() => {

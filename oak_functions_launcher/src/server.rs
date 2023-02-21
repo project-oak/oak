@@ -40,7 +40,7 @@ impl oak_remote_attestation_noninteractive::proto::streaming_session_server::Str
         &self,
         request: Request<Streaming<RequestWrapper>>,
     ) -> Result<Response<Self::StreamStream>, tonic::Status> {
-        log::debug!("handling client request");
+        log::info!("handling client request");
         let mut request_stream = request.into_inner();
         let request = request_stream
             .next()
