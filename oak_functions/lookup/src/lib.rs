@@ -157,6 +157,7 @@ pub enum UpdateAction {
     StartAndFinish,
 }
 
+#[derive(Debug, PartialEq)]
 pub enum UpdateStatus {
     Started,
     Finished,
@@ -281,28 +282,27 @@ mod tests {
         let lookup_data_0 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
 
-        manager.update_data(
-            UpdateAction::StartAndFinish,
-            HashMap::from_iter([(b"key1".to_vec(), b"value1".to_vec())].into_iter()),
-        );
+        manager.update_data(UpdateAction::StartAndFinish, create_test_data(0, 1));
         let lookup_data_1 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);
 
-        manager.update_data(
-            UpdateAction::StartAndFinish,
-            HashMap::from_iter(
-                [
-                    (b"key1".to_vec(), b"value1".to_vec()),
-                    (b"key2".to_vec(), b"value2".to_vec()),
-                ]
-                .into_iter(),
-            ),
-        );
+        // Creating test data in the same range replaces some keys.
+        manager.update_data(UpdateAction::StartAndFinish, create_test_data(0, 2));
         let lookup_data_2 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);
         assert_eq!(lookup_data_2.len(), 2);
+    }
+
+    #[test]
+    fn test_update_lookup_data_one_chunk() {
+        let manager = LookupDataManager::new_empty(TestLogger {});
+        let update_status =
+            manager.update_data(UpdateAction::StartAndFinish, create_test_data(0, 2));
+        assert_eq!(update_status, UpdateStatus::Finished);
+        let lookup_data = manager.create_lookup_data();
+        assert_eq!(lookup_data.len(), 2);
     }
 
     #[test]
@@ -311,5 +311,17 @@ mod tests {
         assert_eq!("🚀oak⭐", format_bytes("🚀oak⭐".as_bytes()));
         // Incorrect UTF-8 bytes, as per https://doc.rust-lang.org/std/string/struct.String.html#examples-3.
         assert_eq!("[0, 159, 146, 150]", format_bytes(&[0, 159, 146, 150]));
+    }
+
+    // Create test data with size distinct keys between inclusive start and exclusive end.
+    fn create_test_data(start: i32, end: i32) -> Data {
+        let mut map = HashMap::new();
+        for i in start..end {
+            map.insert(
+                format!("key{}", i).into_bytes(),
+                format!("value{}", i).into_bytes(),
+            );
+        }
+        map
     }
 }
