@@ -262,6 +262,13 @@ ARG udeps_location=https://github.com/est31/cargo-udeps/releases/download/v${ude
 RUN curl --location ${udeps_location} | tar --extract --gzip --directory=${install_dir} --strip-components=2 ./${udeps_dir}/cargo-udeps
 RUN chmod +x ${install_dir}/cargo-udeps
 
+# Install cargo nextest
+# https://nexte.st/
+ARG nextest_version=0.9.49
+ARG nextest_location=https://get.nexte.st/${nextest_version}/x86_64-unknown-linux-musl.tar.gz
+RUN curl --location ${nextest_location} | tar --extract --gzip --directory=${install_dir}
+RUN cargo nextest help
+
 # Install rust-analyzer
 # https://github.com/rust-analyzer/rust-analyzer
 ARG rust_analyzer_version=2023-02-13
