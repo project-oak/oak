@@ -152,13 +152,6 @@ pub struct LookupDataManager<L: OakLogger + Clone> {
     logger: L,
 }
 
-#[derive(Clone)]
-pub enum UpdateAction {
-    Start,
-    Finish,
-    StartAndFinish,
-}
-
 #[derive(Debug, PartialEq)]
 pub enum UpdateStatus {
     Started,
@@ -174,6 +167,8 @@ where
     pub fn new_empty(logger: L) -> Self {
         Self {
             data: Spinlock::new(Arc::new(Data::new())),
+            /// Incrementally builds the backing data that will be used by new `LookupData`
+            /// instances when finished.
             data_builder: Spinlock::new(DataBuilder::default()),
             logger,
         }
@@ -186,16 +181,7 @@ where
         test_manager
     }
 
-    /// Updates the backing data that will be used by new `LookupData` instances.
-    pub fn update_data(&self, action: UpdateAction, new_data: Data) -> UpdateStatus {
-        match &action {
-            UpdateAction::StartAndFinish => self.update_start_and_finish(new_data),
-            UpdateAction::Start => self.update_start(new_data),
-            UpdateAction::Finish => self.update_finish(new_data),
-        }
-    }
-
-    fn update_start_and_finish(&self, new_data: Data) -> UpdateStatus {
+    pub fn update_start_and_finish(&self, new_data: Data) -> UpdateStatus {
         let mut data_builder = self.data_builder.lock();
         match &data_builder.state {
             BuilderState::Empty => {
@@ -213,7 +199,7 @@ where
         }
     }
 
-    fn update_start(&self, new_data: Data) -> UpdateStatus {
+    pub fn update_start(&self, new_data: Data) -> UpdateStatus {
         let mut data_builder = self.data_builder.lock();
         match &data_builder.state {
             BuilderState::Empty => {
@@ -228,7 +214,7 @@ where
         }
     }
 
-    fn update_finish(&self, new_data: Data) -> UpdateStatus {
+    pub fn update_finish(&self, new_data: Data) -> UpdateStatus {
         let mut data_builder = self.data_builder.lock();
         match &data_builder.state {
             BuilderState::Updating => {
@@ -324,7 +310,7 @@ mod tests {
         let lookup_data_0 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
 
-        manager.update_data(UpdateAction::StartAndFinish, create_test_data(0, 1));
+        manager.update_start_and_finish(create_test_data(0, 1));
         let lookup_data_1 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);
