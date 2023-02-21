@@ -182,53 +182,38 @@ where
     }
 
     pub fn update_start_and_finish(&self, new_data: Data) -> UpdateStatus {
-        let mut data_builder = self.data_builder.lock();
-        match &data_builder.state {
-            BuilderState::Empty => {
-                data_builder.extend(new_data);
-                let next_data = data_builder.build();
-                let mut data = self.data.lock();
-                *data = Arc::new(next_data);
-                UpdateStatus::Finished
-            }
-            _ => {
-                // Clear the builder throwing away the intermediate result.
-                let _ = data_builder.build();
-                UpdateStatus::Aborted
-            }
+        if let UpdateStatus::Started = self.update_start(new_data) {
+            // Finish sending empty data.
+            self.update_finish(Data::new())
+        } else {
+            UpdateStatus::Aborted
         }
     }
 
     pub fn update_start(&self, new_data: Data) -> UpdateStatus {
         let mut data_builder = self.data_builder.lock();
-        match &data_builder.state {
-            BuilderState::Empty => {
-                data_builder.extend(new_data);
-                UpdateStatus::Started
-            }
-            _ => {
-                // Clear the builder throwing away the intermediate result.
-                let _ = data_builder.build();
-                UpdateStatus::Aborted
-            }
+        if let BuilderState::Empty = &data_builder.state {
+            data_builder.extend(new_data);
+            UpdateStatus::Started
+        } else {
+            // Clear the builder throwing away the intermediate result.
+            let _ = data_builder.build();
+            UpdateStatus::Aborted
         }
     }
 
     pub fn update_finish(&self, new_data: Data) -> UpdateStatus {
         let mut data_builder = self.data_builder.lock();
-        match &data_builder.state {
-            BuilderState::Updating => {
-                data_builder.extend(new_data);
-                let next_data = data_builder.build();
-                let mut data = self.data.lock();
-                *data = Arc::new(next_data);
-                UpdateStatus::Finished
-            }
-            _ => {
-                // Clear the builder throwing away the intermediate result.
-                let _ = data_builder.build();
-                UpdateStatus::Aborted
-            }
+        if let BuilderState::Updating = &data_builder.state {
+            data_builder.extend(new_data);
+            let next_data = data_builder.build();
+            let mut data = self.data.lock();
+            *data = Arc::new(next_data);
+            UpdateStatus::Finished
+        } else {
+            // Clear the builder throwing away the intermediate result.
+            let _ = data_builder.build();
+            UpdateStatus::Aborted
         }
     }
 
@@ -396,13 +381,11 @@ mod tests {
 
     // Create test data with size distinct keys between inclusive start and exclusive end.
     fn create_test_data(start: i32, end: i32) -> Data {
-        let mut map = HashMap::new();
-        for i in start..end {
-            map.insert(
+        HashMap::from_iter((start..end).map(|i| {
+            (
                 format!("key{}", i).into_bytes(),
                 format!("value{}", i).into_bytes(),
-            );
-        }
-        map
+            )
+        }))
     }
 }
