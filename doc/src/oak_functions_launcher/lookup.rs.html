@@ -142,6 +142,18 @@
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -177,10 +189,19 @@
     </span><span class="kw">let </span>max_chunk_size = ByteUnit::Gibibyte(<span class="number">2</span>);
 
     <span class="kw">let </span>lookup_data = load_lookup_data(lookup_data_path)<span class="question-mark">?</span>;
-    <span class="kw">let </span>chunk = encode_lookup_data(lookup_data, max_chunk_size)<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>chunks = chunk_up_lookup_data(lookup_data, max_chunk_size);
 
-    <span class="comment">// We currently hard-code to send only one chunk.
-    </span><span class="kw">let </span>action = schema::UpdateAction::StartAndFinish;
+    <span class="comment">// We currently send only if we can fit the data in one chunk, otherwise we return an error.
+    // TODO(#3718): to send more than one chunk.
+    </span><span class="kw">if </span>chunks.len() != <span class="number">1 </span>{
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
+            <span class="string">&quot;lookup data size exceeds: {:?} bytes&quot;</span>,
+            max_chunk_size
+        ));
+    }
+    <span class="kw">let </span>chunk = chunks.pop().unwrap();
+
+    <span class="kw">let </span>action = schema::UpdateAction::StartAndFinish;
     <span class="kw">let </span>request = schema::UpdateLookupDataRequest {
         action: action.into(),
         chunk: <span class="prelude-val">Some</span>(chunk),
@@ -192,35 +213,36 @@
     }
 }
 
-<span class="kw">fn </span>encode_lookup_data(
-    data: HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;,
+<span class="kw">fn </span>chunk_up_lookup_data(
+    source_lookup_data: HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;,
     max_chunk_size: ByteUnit,
-) -&gt; anyhow::Result&lt;schema::LookupDataChunk&gt; {
+) -&gt; Vec&lt;schema::LookupDataChunk&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>chunks = Vec::new();
+
     <span class="comment">// We will add the estimated size of ever LookupDataEntry, and to account for the LookupData
     // overhead, we generously estimate 50 bytes.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>estimated_size = ByteUnit::Byte(<span class="number">50</span>);
-
+    </span><span class="kw">let </span><span class="kw-2">mut </span>estimated_chunk_size = ByteUnit::Byte(<span class="number">50</span>);
     <span class="comment">// Overestimate delimiter size based on https://github.com/tokio-rs/prost/blob/0c350dc6ad3cd61dc9a1398dffab5ac312f3b245/src/lib.rs#L55
     </span><span class="kw">let </span>overestimated_delimiter_size = ByteUnit::Byte(<span class="number">10</span>);
 
-    <span class="kw">let </span>entries: Vec&lt;schema::LookupDataEntry&gt; = data
-        .into_iter()
-        .map(|(key, value)| {
-            estimated_size += overestimated_delimiter_size
-                + ByteUnit::Byte(key.len() <span class="kw">as </span>u64)
-                + ByteUnit::Byte(value.len() <span class="kw">as </span>u64);
-            schema::LookupDataEntry { key, value }
-        })
-        .collect();
+    <span class="kw">let </span><span class="kw-2">mut </span>entries = Vec::new();
 
-    <span class="kw">if </span>estimated_size &gt; max_chunk_size {
-        <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-            <span class="string">&quot;lookup data size exceeds: {:?} bytes&quot;</span>,
-            max_chunk_size
-        ))
-    } <span class="kw">else </span>{
-        <span class="prelude-val">Ok</span>(schema::LookupDataChunk { items: entries })
+    <span class="kw">for </span>(key, value) <span class="kw">in </span>source_lookup_data {
+        estimated_chunk_size += overestimated_delimiter_size
+            + ByteUnit::Byte(key.len() <span class="kw">as </span>u64)
+            + ByteUnit::Byte(value.len() <span class="kw">as </span>u64);
+
+        <span class="comment">// If the next element would exceed the maximum chunk size, create a new chunk.
+        </span><span class="kw">if </span>estimated_chunk_size &gt; max_chunk_size {
+            chunks.push(schema::LookupDataChunk { items: entries });
+            estimated_chunk_size = ByteUnit::Byte(<span class="number">50</span>);
+            entries = Vec::new();
+        };
+
+        entries.push(schema::LookupDataEntry { key, value })
     }
+    chunks.push(schema::LookupDataChunk { items: entries });
+    chunks
 }
 
 <span class="kw">fn </span>load_lookup_data(file_path: <span class="kw-2">&amp;</span>std::path::PathBuf) -&gt; anyhow::Result&lt;HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;&gt; {
@@ -249,7 +271,7 @@
 }
 
 <span class="attr">#[test]
-</span><span class="kw">fn </span>test_encode_lookup_data_in_bound() {
+</span><span class="kw">fn </span>test_chunk_up_lookup_data_in_bound() {
     <span class="kw">let </span>max_chunk_size = ByteUnit::Kibibyte(<span class="number">1</span>);
 
     <span class="comment">// Create data with 8 entries with 100 bytes each.
@@ -258,13 +280,13 @@
         <span class="kw">let </span>key = <span class="macro">format!</span>(<span class="string">&quot;{:050}&quot;</span>, i).into_bytes();
         data.insert(key.clone(), key.clone());
     }
-    <span class="kw">let </span>result = encode_lookup_data(data, max_chunk_size);
-    <span class="macro">assert!</span>(result.is_ok());
-    <span class="macro">assert_eq!</span>(result.unwrap().items.len(), <span class="number">8</span>)
+    <span class="kw">let </span>chunks = chunk_up_lookup_data(data, max_chunk_size);
+    <span class="macro">assert_eq!</span>(chunks.len(), <span class="number">1</span>);
+    <span class="macro">assert_eq!</span>(chunks[<span class="number">0</span>].items.len(), <span class="number">8</span>)
 }
 
 <span class="attr">#[test]
-</span><span class="kw">fn </span>test_encode_lookup_data_exceed_bound() {
+</span><span class="kw">fn </span>test_chunk_up_lookup_data_exceed_bound() {
     <span class="kw">let </span>max_chunk_size = ByteUnit::Kibibyte(<span class="number">1</span>);
 
     <span class="comment">// Create data with 9 entries with 100 bytes each accounting for the added overhead.
@@ -274,17 +296,19 @@
         data.insert(key.clone(), key.clone());
     }
 
-    <span class="kw">let </span>result = encode_lookup_data(data, max_chunk_size);
-    <span class="macro">assert!</span>(result.is_err())
+    <span class="kw">let </span>chunks = chunk_up_lookup_data(data, max_chunk_size);
+    <span class="macro">assert_eq!</span>(chunks.len(), <span class="number">2</span>);
+    <span class="macro">assert_eq!</span>(chunks[<span class="number">0</span>].items.len(), <span class="number">8</span>);
+    <span class="macro">assert_eq!</span>(chunks[<span class="number">1</span>].items.len(), <span class="number">1</span>)
 }
 
 <span class="attr">#[test]
-</span><span class="kw">fn </span>test_encode_lookup_data_empty() {
+</span><span class="kw">fn </span>test_chunk_up_lookup_data_empty() {
     <span class="kw">let </span>max_chunk_size = ByteUnit::Kibibyte(<span class="number">1</span>);
     <span class="kw">let </span>data = hashbrown::HashMap::new();
-    <span class="kw">let </span>result = encode_lookup_data(data, max_chunk_size);
-    <span class="macro">assert!</span>(result.is_ok());
-    <span class="macro">assert_eq!</span>(result.unwrap().items.len(), <span class="number">0</span>)
+    <span class="kw">let </span>chunks = chunk_up_lookup_data(data, max_chunk_size);
+    <span class="macro">assert_eq!</span>(chunks.len(), <span class="number">1</span>);
+    <span class="macro">assert_eq!</span>(chunks[<span class="number">0</span>].items.len(), <span class="number">0</span>)
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_functions_launcher" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (5b8f28453 2023-02-12)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
