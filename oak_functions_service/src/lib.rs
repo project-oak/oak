@@ -177,7 +177,7 @@ impl schema::OakFunctions for OakFunctionsService {
             )),
         }?;
         Ok(schema::UpdateLookupDataResponse {
-            update_status: schema::UpdateStatus::from(update_status).into(),
+            update_status: update_status as i32,
         })
     }
 }
