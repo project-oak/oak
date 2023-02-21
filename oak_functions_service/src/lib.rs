@@ -176,10 +176,8 @@ impl schema::OakFunctions for OakFunctionsService {
                 format!("action not implemented: {:?}", action),
             )),
         }?;
-
-        let update_status2 = schema::UpdateStatus::from(update_status);
         Ok(schema::UpdateLookupDataResponse {
-            update_status: update_status2.into(),
+            update_status: schema::UpdateStatus::from(update_status).into(),
         })
     }
 }
