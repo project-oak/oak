@@ -35,14 +35,14 @@ pub async fn update_lookup_data(
     let lookup_data = load_lookup_data(lookup_data_path)?;
     let mut chunks = chunk_up_lookup_data(lookup_data, max_chunk_size);
 
+    // We currently send only if we can fit the data in one chunk, otherwise we return an error.
+    // TODO(#3718): to send more than one chunk.
     if chunks.len() != 1 {
         return Err(anyhow!(
             "lookup data size exceeds: {:?} bytes",
             max_chunk_size
         ));
     }
-    // We currently hard-code to send only one chunk. Because of the above check, we know there is
-    // exactly one chunk.
     let chunk = chunks.pop().unwrap();
 
     let action = schema::UpdateAction::StartAndFinish;
@@ -125,7 +125,7 @@ fn test_chunk_up_lookup_data_in_bound() {
         data.insert(key.clone(), key.clone());
     }
     let chunks = chunk_up_lookup_data(data, max_chunk_size);
-    assert!(chunks.len() == 1);
+    assert_eq!(chunks.len(), 1);
     assert_eq!(chunks[0].items.len(), 8)
 }
 
@@ -141,7 +141,7 @@ fn test_chunk_up_lookup_data_exceed_bound() {
     }
 
     let chunks = chunk_up_lookup_data(data, max_chunk_size);
-    assert!(chunks.len() == 2);
+    assert_eq!(chunks.len(), 2);
     assert_eq!(chunks[0].items.len(), 8);
     assert_eq!(chunks[1].items.len(), 1)
 }
@@ -151,6 +151,6 @@ fn test_chunk_up_lookup_data_empty() {
     let max_chunk_size = ByteUnit::Kibibyte(1);
     let data = hashbrown::HashMap::new();
     let chunks = chunk_up_lookup_data(data, max_chunk_size);
-    assert!(chunks.len() == 1);
+    assert_eq!(chunks.len(), 1);
     assert_eq!(chunks[0].items.len(), 0)
 }
