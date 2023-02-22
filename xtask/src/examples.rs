@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::{files::*, internal::*};
+use crate::{files::*, internal::*, spread};
 use maplit::hashmap;
 use std::collections::HashMap;
 use strum::IntoEnumIterator;
@@ -227,9 +227,7 @@ pub fn build_oak_functions_server_variants(opt: &BuildServerOpt) -> Step {
     }
 }
 
-/// Build every variant of the function server.
-/// It's easier to always build all variants than to keep track of which variant to build and
-/// the overhead of building all variants is acceptable.
+/// Build the linux version of the Oak Functions server.
 pub fn build_oak_functions_linux_fd_bin() -> Step {
     Step::Single {
         name: "cargo build Oak Functions loader for linux native".to_string(),

@@ -39,5 +39,7 @@ micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
 lazy_static = "*"
+oak_functions_client = { workspace = true }
 oak_functions_test_utils = { workspace = true }
 rand = "*"
+xtask = { workspace = true }

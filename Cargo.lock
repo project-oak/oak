@@ -1759,6 +1759,7 @@ dependencies = [
  "micro_rpc_build",
  "oak_channel",
  "oak_functions_abi",
+ "oak_functions_client",
  "oak_functions_test_utils",
  "oak_launcher_utils",
  "oak_remote_attestation_noninteractive",
@@ -1769,6 +1770,7 @@ dependencies = [
  "tonic",
  "tonic-web",
  "ubyte",
+ "xtask",
 ]
 
 [[package]]

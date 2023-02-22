@@ -17,6 +17,9 @@ docker_run_flags=(
   '--env=TERM=xterm-256color'
   '--env=BAZEL_REMOTE_CACHE_ENABLED'
   '--env=BAZEL_GOOGLE_CREDENTIALS'
+  '--env=OAK_KVM_TESTS'
+  '--env=RUST_BACKTRACE'
+  '--env=RUST_LOGS'
   "--volume=$PWD/bazel-cache:/home/docker/.cache/bazel"
   "--volume=$PWD/cargo-cache:/home/docker/.cargo"
   "--volume=$PWD/sccache-cache:/home/docker/.cache/sccache"

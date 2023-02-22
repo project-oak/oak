@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use super::*;
+use crate::internal::*;
 use once_cell::sync::Lazy;
 use regex::Regex;
 

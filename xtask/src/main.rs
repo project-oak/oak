@@ -27,38 +27,17 @@
 
 use clap::{CommandFactory, Parser};
 use colored::*;
-use once_cell::sync::Lazy;
-use std::{
-    path::{Path, PathBuf},
-    sync::Mutex,
+use std::path::{Path, PathBuf};
+use xtask::{
+    check_build_licenses::*,
+    check_license::*,
+    check_todo::*,
+    diffs::*,
+    examples::*,
+    files::*,
+    internal::{self, *},
+    launcher, quirk, spread,
 };
-
-#[macro_use]
-mod internal;
-use internal::*;
-
-mod examples;
-use examples::*;
-
-mod files;
-use files::*;
-
-mod diffs;
-use diffs::*;
-
-mod check_todo;
-use check_todo::CheckTodo;
-
-mod check_license;
-use check_license::CheckLicense;
-
-mod check_build_licenses;
-use check_build_licenses::CheckBuildLicenses;
-
-mod launcher;
-mod quirk;
-
-static PROCESSES: Lazy<Mutex<Vec<i32>>> = Lazy::new(|| Mutex::new(Vec::new()));
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -152,7 +131,7 @@ fn cleanup() {
             .bright_white()
             .on_red()
     );
-    for pid in PROCESSES
+    for pid in xtask::PROCESSES
         .lock()
         .expect("couldn't acquire processes lock")
         .iter()

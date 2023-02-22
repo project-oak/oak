@@ -18,11 +18,10 @@
 #![feature(result_flattening)]
 #![feature(array_chunks)]
 
+use crate::schema::InitializeResponse;
 use anyhow::Context;
 use oak_launcher_utils::{channel, launcher};
 use std::{fs, path::PathBuf};
-
-use crate::schema::InitializeResponse;
 
 pub mod schema {
     #![allow(dead_code)]
@@ -48,9 +47,9 @@ pub async fn create(
 > {
     let (launched_instance, connector_handle) = launcher::launch(mode).await?;
     setup_lookup_data(connector_handle.clone(), lookup_data_path).await?;
-    let intialization_response =
+    let intialize_response =
         setup_wasm(connector_handle.clone(), &wasm_path, constant_response_size).await?;
-    Ok((launched_instance, connector_handle, intialization_response))
+    Ok((launched_instance, connector_handle, intialize_response))
 }
 
 // Initially loads lookup data and spawns task to periodically refresh lookup data.
@@ -86,9 +85,9 @@ async fn setup_wasm(
         .with_context(|| format!("couldn't read Wasm file {}", wasm.display()))
         .unwrap();
     log::info!(
-        "read Wasm file from disk {} ({} bytes)",
+        "read Wasm file from disk {} ({})",
         &wasm.display(),
-        wasm_bytes.len()
+        ubyte::ByteUnit::Byte(wasm_bytes.len() as u64)
     );
 
     let request = schema::InitializeRequest {
@@ -101,7 +100,9 @@ async fn setup_wasm(
         .initialize(&request)
         .await
         .flatten()
-        .expect("couldn't initialize the service");
+        .expect("couldn't initialize service");
+
+    log::info!("service initialized: {:?}", initialize_response);
 
     Ok(initialize_response)
 }

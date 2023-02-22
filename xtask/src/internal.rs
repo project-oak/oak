@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use crate::PROCESSES;
 use async_recursion::async_recursion;
 use async_trait::async_trait;
 use clap::{Parser, Subcommand};
@@ -30,11 +31,11 @@ use tokio::io::{empty, AsyncRead, AsyncReadExt};
 #[derive(Parser, Clone)]
 pub struct Opt {
     #[arg(long, help = "do not execute commands")]
-    dry_run: bool,
+    pub dry_run: bool,
     #[arg(long, help = "show logs of commands")]
-    logs: bool,
+    pub logs: bool,
     #[arg(long, help = "continue execution after error")]
-    keep_going: bool,
+    pub keep_going: bool,
     #[arg(
         long,
         help = r#"Scope of the command [all, commits:<count>, diff_to_main].
@@ -114,10 +115,11 @@ pub struct RunOakExamplesOpt {
     pub build_docker: bool,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 
 pub enum Scope {
     // The entire code base.
+    #[default]
     All,
     // Parts of the code base, affected by the changes in the diff between this branch and main.
     DiffToMain,
@@ -501,19 +503,21 @@ impl Step {
             } => f.len(),
         }
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
+#[derive(Default)]
 pub struct StepResult {
     pub values: HashSet<StatusResultValue>,
     pub failed_steps_prefixes: Vec<String>,
 }
 
 impl StepResult {
-    fn new() -> Self {
-        Self {
-            values: HashSet::new(),
-            failed_steps_prefixes: vec![],
-        }
+    pub fn success(&self) -> bool {
+        self.values.len() == 1 && self.values.contains(&StatusResultValue::Ok)
     }
 }
 
@@ -532,11 +536,20 @@ where
     )
 }
 
+/// Reads the entire content of the provided future into a vector.
+pub async fn read_to_end<A: AsyncRead + Unpin>(mut io: A) -> Vec<u8> {
+    let mut buf = Vec::new();
+    io.read_to_end(&mut buf)
+        .await
+        .expect("couldn't read from future");
+    buf
+}
+
 /// Run the provided step, printing out information about the execution, and returning a set of
 /// status results from the single or multiple steps that were executed.
 #[async_recursion]
 pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> StepResult {
-    let mut step_result = StepResult::new();
+    let mut step_result = StepResult::default();
     fn prefix(run_status: &Status) -> String {
         let now = chrono::Utc::now();
         let time_of_day = now.format("%H:%M:%S");
@@ -645,14 +658,6 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
 
             // Small delay to make it more likely that the background process started.
             std::thread::sleep(std::time::Duration::from_millis(6_000));
-
-            async fn read_to_end<A: AsyncRead + Unpin>(mut io: A) -> Vec<u8> {
-                let mut buf = Vec::new();
-                io.read_to_end(&mut buf)
-                    .await
-                    .expect("couldn't read from future");
-                buf
-            }
 
             let background_stdout_future = tokio::spawn(read_to_end(running_background.stdout()));
             let background_stderr_future = tokio::spawn(read_to_end(running_background.stderr()));
@@ -773,6 +778,10 @@ impl Runnable for Cmd {
         let mut cmd = tokio::process::Command::new(&self.executable);
         cmd.args(&self.args);
 
+        // Ensure that the child process is killed when the `Running` instance is dropped (including
+        // on panic).
+        cmd.kill_on_drop(true);
+
         if opt.dry_run {
             Box::new(SingleStatusResult {
                 value: StatusResultValue::Skipped,
@@ -804,7 +813,7 @@ impl Runnable for Cmd {
                 .unwrap_or_else(|err| panic!("couldn't spawn command: {:?}: {}", cmd, err));
 
             if let Some(pid) = child.id() {
-                crate::PROCESSES
+                PROCESSES
                     .lock()
                     .expect("couldn't acquire processes lock")
                     .push(pid as i32);

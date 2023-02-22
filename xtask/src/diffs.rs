@@ -14,17 +14,17 @@
 // limitations under the License.
 //
 
+use crate::{
+    files::*,
+    internal::{CargoManifest, Scope},
+    spread,
+};
 use maplit::hashset;
 use std::{
     collections::{HashMap, HashSet},
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
     process::Command,
-};
-
-use crate::{
-    files::*,
-    internal::{CargoManifest, Scope},
 };
 
 #[derive(Debug)]

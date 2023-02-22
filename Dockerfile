@@ -84,6 +84,37 @@ RUN apt-get --yes update \
   && git --version \
   && shellcheck --version
 
+# Install Android SDK.
+# This is very large and rarely updated, therefore it's better to keep it in a separate layer at the top of the Dockerfile.
+# https://developer.android.com/studio/#downloads
+# https://developer.android.com/studio/index.html#command-tools
+ARG android_sdk_version=8512546
+ENV ANDROID_HOME /opt/android-sdk
+ENV android_temp /tmp/android-sdk
+RUN mkdir --parents "{android_temp}" \
+  && mkdir --parents "${ANDROID_HOME}/cmdline-tools/latest" \
+  && curl --location "https://dl.google.com/android/repository/commandlinetools-linux-${android_sdk_version}_latest.zip" > android_sdk.zip \
+  && unzip android_sdk.zip -d "${android_temp}" \
+  && mv ${android_temp}/cmdline-tools/* "${ANDROID_HOME}/cmdline-tools/latest/" \
+  && rm android_sdk.zip
+
+# Install Android Platform Tools.
+# https://developer.android.com/studio/releases/platform-tools
+# https://developer.android.com/studio/releases/platforms
+# https://developer.android.com/studio/releases/build-tools
+ARG platform=30
+ARG tools=30.0.0
+RUN "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --update \
+  && (yes || true) | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses \
+  && (yes || true) | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
+  'tools' 'platform-tools' 'cmake;3.6.4111459' \
+  "platforms;android-${platform}" "build-tools;${tools}" \
+  "system-images;android-${platform};default;x86_64"
+
+# Set up Android SDK paths.
+ENV PATH "${PATH}:${ANDROID_HOME}/emulator:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/tools/bin"
+ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${ANDROID_HOME}/emulator/lib64:${ANDROID_HOME}/emulator/lib64/qt/lib"
+
 # Install Ent CLI. We mostly then just use it in order to simplify the logic around fetching
 # artifacts by URL and ensuring that their digest is correct, in order to ensure reproducibility.
 ARG ent_server_url=https://ent-server-62sa4xcfia-ew.a.run.app
@@ -93,6 +124,7 @@ RUN curl --location ${ent_server_url}/raw/${ent_digest} > /usr/local/bin/ent \
   && ent
 
 # Use a fixed version of Bazel.
+# https://github.com/bazelbuild/bazel
 ARG bazel_version=5.3.1
 ARG bazel_digest=sha256:1e939b50d90f68d30fa4f3c12dfdf31429b83ddd8076c622429854f64253c23d
 ARG bazel_url=https://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_${bazel_version}_amd64.deb
@@ -265,7 +297,7 @@ RUN chmod +x ${install_dir}/cargo-udeps
 # Install cargo nextest
 # https://nexte.st/
 ARG nextest_version=0.9.49
-ARG nextest_location=https://get.nexte.st/${nextest_version}/x86_64-unknown-linux-musl.tar.gz
+ARG nextest_location=https://get.nexte.st/${nextest_version}/x86_64-unknown-linux-gnu.tar.gz
 RUN curl --location ${nextest_location} | tar --extract --gzip --directory=${install_dir}
 RUN cargo nextest help
 
@@ -310,36 +342,6 @@ ENV RUSTC_WRAPPER sccache
 
 # Disable cargo incremental compilation, as it conflicts with sccache: https://github.com/mozilla/sccache#rust
 ENV CARGO_INCREMENTAL false
-
-# Install Android SDK.
-# https://developer.android.com/studio/#downloads
-# https://developer.android.com/studio/index.html#command-tools
-ARG android_sdk_version=8512546
-ENV ANDROID_HOME /opt/android-sdk
-ENV android_temp /tmp/android-sdk
-RUN mkdir --parents "{android_temp}" \
-  && mkdir --parents "${ANDROID_HOME}/cmdline-tools/latest" \
-  && curl --location "https://dl.google.com/android/repository/commandlinetools-linux-${android_sdk_version}_latest.zip" > android_sdk.zip \
-  && unzip android_sdk.zip -d "${android_temp}" \
-  && mv ${android_temp}/cmdline-tools/* "${ANDROID_HOME}/cmdline-tools/latest/" \
-  && rm android_sdk.zip
-
-# Install Android Platform Tools.
-# https://developer.android.com/studio/releases/platform-tools
-# https://developer.android.com/studio/releases/platforms
-# https://developer.android.com/studio/releases/build-tools
-ARG platform=30
-ARG tools=30.0.0
-RUN "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --update \
-  && (yes || true) | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses \
-  && (yes || true) | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
-  'tools' 'platform-tools' 'cmake;3.6.4111459' \
-  "platforms;android-${platform}" "build-tools;${tools}" \
-  "system-images;android-${platform};default;x86_64"
-
-# Set up Android SDK paths.
-ENV PATH "${PATH}:${ANDROID_HOME}/emulator:${ANDROID_HOME}/tools:${ANDROID_HOME}/platform-tools:${ANDROID_HOME}/tools/bin"
-ENV LD_LIBRARY_PATH "${LD_LIBRARY_PATH}:${ANDROID_HOME}/emulator/lib64:${ANDROID_HOME}/emulator/lib64/qt/lib"
 
 # To make the scripts available to call from everywhere.
 ENV PATH "/workspace/scripts:${PATH}"
