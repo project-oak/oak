@@ -21,4 +21,4 @@ export RUST_LOG=debug
 ./scripts/docker_run ./scripts/xtask run-launcher-test
 ./scripts/docker_run ./scripts/xtask run-quirk-test
 
-cp ./target/nextest/default/junit.xml $KOKORO_ARTIFACTS_DIR/
+cp ./target/nextest/default/junit.xml "$KOKORO_ARTIFACTS_DIR/"

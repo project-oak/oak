@@ -26,7 +26,7 @@ fn opt_for_test() -> Opt {
     }
 }
 
-/// Runs a step, and returns the result.
+/// Runs a step, and asserts that it succeeds.
 pub async fn run_step(step: Step) {
     let context = Context::root(&opt_for_test());
     let run_status = Status::new(usize::MAX);

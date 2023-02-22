@@ -61,8 +61,10 @@ async fn test_launcher_virtual() {
     ))
     .await;
 
-    let _background =
-        xtask::testing::run_background(xtask::launcher::run_oak_functions_launcher(&variant)).await;
+    let _background = xtask::testing::run_background(
+        xtask::launcher::run_oak_functions_launcher_example(&variant),
+    )
+    .await;
 
     // Wait for the server to start up.
     tokio::time::sleep(Duration::from_secs(5)).await;
@@ -87,7 +89,7 @@ async fn test_launcher_looks_up_key() {
 
     let (launched_instance, connector_handle, _) = oak_functions_launcher::create(
         launcher::GuestMode::Native(params),
-        xtask::launcher::LOOKUP_DATA_PATH.to_path_buf(),
+        xtask::launcher::MOCK_LOOKUP_DATA_PATH.to_path_buf(),
         xtask::launcher::WASM_PATH.to_path_buf(),
         constant_response_size,
     )

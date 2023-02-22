@@ -17,7 +17,7 @@
 //! Functionality for testing variants of the enclave binary exposed by the launcher.
 
 const CLIENT_PATH: &str = "./target/debug/oak_functions_client";
-pub static LOOKUP_DATA_PATH: Lazy<PathBuf> =
+pub static MOCK_LOOKUP_DATA_PATH: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_functions_launcher", "mock_lookup_data"]));
 pub static WASM_PATH: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_functions_launcher", "key_value_lookup.wasm"]));
@@ -165,7 +165,7 @@ fn run_variant(variant: &LauncherMode) -> Step {
     });
     steps.extend(vec![Step::WithBackground {
         name: "background launcher".to_string(),
-        background: run_oak_functions_launcher(variant),
+        background: run_oak_functions_launcher_example(variant),
         foreground: Box::new(run_client("test_key", "^test_value$", 300)),
     }]);
     Step::Multiple {
@@ -199,10 +199,12 @@ pub fn build_binary(name: &str, directory: &str) -> Step {
     }
 }
 
-pub fn run_oak_functions_launcher(variant: &LauncherMode) -> Box<dyn Runnable> {
+/// Runs the Oak Functions launcher configured with a default Wasm module for key / value lookups
+/// and mock lookup data.
+pub fn run_oak_functions_launcher_example(variant: &LauncherMode) -> Box<dyn Runnable> {
     let mut args = vec![
         format!("--wasm={}", WASM_PATH.to_str().unwrap()),
-        format!("--lookup-data={}", LOOKUP_DATA_PATH.to_str().unwrap()),
+        format!("--lookup-data={}", MOCK_LOOKUP_DATA_PATH.to_str().unwrap()),
     ];
     args.append(&mut variant.variant_subcommand());
     Cmd::new(OAK_FUNCTIONS_LAUNCHER_BIN.to_str().unwrap(), args)

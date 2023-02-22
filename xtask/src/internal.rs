@@ -536,6 +536,7 @@ where
     )
 }
 
+/// Reads the entire content of the provided future into a vector.
 pub async fn read_to_end<A: AsyncRead + Unpin>(mut io: A) -> Vec<u8> {
     let mut buf = Vec::new();
     io.read_to_end(&mut buf)
