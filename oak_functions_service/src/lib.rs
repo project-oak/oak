@@ -169,6 +169,7 @@ impl schema::OakFunctions for OakFunctionsService {
             }
             schema::UpdateAction::Start => Ok(self.lookup_data_manager.update_start(data)),
             schema::UpdateAction::Finish => Ok(self.lookup_data_manager.update_finish(data)),
+            schema::UpdateAction::Abort => Ok(self.lookup_data_manager.update_abort()),
             // TODO(#3718): Make this exhaustive once we have implemented all
             // UpdateActions.
             _ => Err(micro_rpc::Status::new_with_message(
