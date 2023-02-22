@@ -389,6 +389,34 @@
 <a href="#389" id="389">389</a>
 <a href="#390" id="390">390</a>
 <a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -577,7 +605,7 @@
             <span class="comment">// Finish sending empty data.
             </span><span class="self">self</span>.update_finish(Data::new())
         } <span class="kw">else </span>{
-            UpdateStatus::Aborted
+            <span class="self">self</span>.update_abort()
         }
     }
 
@@ -606,6 +634,13 @@
             </span><span class="kw">let _ </span>= data_builder.build();
             UpdateStatus::Aborted
         }
+    }
+
+    <span class="kw">pub fn </span>update_abort(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; UpdateStatus {
+        <span class="kw">let </span><span class="kw-2">mut </span>data_builder = <span class="self">self</span>.data_builder.lock();
+        <span class="comment">// Clear the builder throwing away the intermediate result.
+        </span><span class="kw">let _ </span>= data_builder.build();
+        UpdateStatus::Aborted
     }
 
     <span class="doccomment">/// Creates a new `LookupData` instance with a reference to the current backing data.
@@ -760,6 +795,27 @@
         <span class="macro">assert_eq!</span>(lookup_data_0.len(), <span class="number">0</span>);
         <span class="macro">assert_eq!</span>(lookup_data_1.len(), <span class="number">0</span>);
         <span class="macro">assert_eq!</span>(lookup_data_2.len(), <span class="number">0</span>);
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_update_lookup_data_abort() {
+        <span class="kw">let </span>manager = LookupDataManager::new_empty(TestLogger {});
+        <span class="kw">let </span>lookup_data_0 = manager.create_lookup_data();
+
+        <span class="kw">let </span>update_status = manager.update_start(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
+        <span class="macro">assert_eq!</span>(update_status, UpdateStatus::Started);
+
+        <span class="kw">let </span>update_status = manager.update_abort();
+        <span class="macro">assert_eq!</span>(update_status, UpdateStatus::Aborted);
+        <span class="kw">let </span>lookup_data_1 = manager.create_lookup_data();
+
+        <span class="kw">let </span>update_status = manager.update_start_and_finish(create_test_data(<span class="number">0</span>, <span class="number">1</span>));
+        <span class="macro">assert_eq!</span>(update_status, UpdateStatus::Finished);
+        <span class="kw">let </span>lookup_data_2 = manager.create_lookup_data();
+
+        <span class="macro">assert_eq!</span>(lookup_data_0.len(), <span class="number">0</span>);
+        <span class="macro">assert_eq!</span>(lookup_data_1.len(), <span class="number">0</span>);
+        <span class="macro">assert_eq!</span>(lookup_data_2.len(), <span class="number">1</span>);
     }
 
     <span class="attr">#[test]

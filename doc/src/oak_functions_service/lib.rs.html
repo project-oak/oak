@@ -193,6 +193,7 @@
 <a href="#193" id="193">193</a>
 <a href="#194" id="194">194</a>
 <a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -364,6 +365,7 @@
             }
             schema::UpdateAction::Start =&gt; <span class="prelude-val">Ok</span>(<span class="self">self</span>.lookup_data_manager.update_start(data)),
             schema::UpdateAction::Finish =&gt; <span class="prelude-val">Ok</span>(<span class="self">self</span>.lookup_data_manager.update_finish(data)),
+            schema::UpdateAction::Abort =&gt; <span class="prelude-val">Ok</span>(<span class="self">self</span>.lookup_data_manager.update_abort()),
             <span class="comment">// TODO(#3718): Make this exhaustive once we have implemented all
             // UpdateActions.
             </span><span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(micro_rpc::Status::new_with_message(
