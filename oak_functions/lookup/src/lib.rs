@@ -196,7 +196,9 @@ where
             data_builder.extend(new_data);
             UpdateStatus::Started
         } else {
-            self.update_abort()
+            // Clear the builder throwing away the intermediate result.
+            let _ = data_builder.build();
+            UpdateStatus::Aborted
         }
     }
 
@@ -209,7 +211,9 @@ where
             *data = Arc::new(next_data);
             UpdateStatus::Finished
         } else {
-            self.update_abort()
+            // Clear the builder throwing away the intermediate result.
+            let _ = data_builder.build();
+            UpdateStatus::Aborted
         }
     }
 
