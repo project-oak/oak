@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["run_launcher","run_launcher_test","run_variant"]};
+window.SIDEBAR_ITEMS = {"fn":["run_launcher_test"]};

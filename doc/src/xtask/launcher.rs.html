@@ -215,6 +215,40 @@
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
 <a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -234,11 +268,19 @@
 </span><span class="doccomment">//! Functionality for testing variants of the enclave binary exposed by the launcher.
 
 </span><span class="kw">const </span>CLIENT_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;./target/debug/oak_functions_client&quot;</span>;
-<span class="kw">const </span>WASM_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;./oak_functions_launcher/key_value_lookup.wasm&quot;</span>;
-<span class="kw">const </span>LOOKUP_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;./oak_functions_launcher/mock_lookup_data&quot;</span>;
+<span class="kw">pub static </span>MOCK_LOOKUP_DATA_PATH: Lazy&lt;PathBuf&gt; =
+    Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;oak_functions_launcher&quot;</span>, <span class="string">&quot;mock_lookup_data&quot;</span>]));
+<span class="kw">pub static </span>WASM_PATH: Lazy&lt;PathBuf&gt; =
+    Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;oak_functions_launcher&quot;</span>, <span class="string">&quot;key_value_lookup.wasm&quot;</span>]));
+<span class="kw">static </span>STAGE_0_DIR: Lazy&lt;PathBuf&gt; = Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;stage0&quot;</span>]));
+<span class="kw">pub static </span>OAK_RESTRICTED_KERNEL_BIN_DIR: Lazy&lt;PathBuf&gt; =
+    Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;oak_restricted_kernel_bin&quot;</span>]));
+<span class="kw">static </span>OAK_FUNCTIONS_LAUNCHER_BIN: Lazy&lt;PathBuf&gt; =
+    Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;target&quot;</span>, <span class="string">&quot;debug&quot;</span>, <span class="string">&quot;oak_functions_launcher&quot;</span>]));
 
-<span class="kw">use </span><span class="kw">crate</span>::internal::<span class="kw-2">*</span>;
-<span class="kw">use </span>std::path::Path;
+<span class="kw">use crate</span>::{internal::<span class="kw-2">*</span>, workspace_path};
+<span class="kw">use </span>once_cell::sync::Lazy;
+<span class="kw">use </span>std::path::{Path, PathBuf};
 <span class="kw">use </span>strum::IntoEnumIterator;
 <span class="kw">use </span>strum_macros::{Display, EnumIter};
 
@@ -261,17 +303,25 @@
 
     <span class="doccomment">/// Get the path to the respective enclave binary variant that should be launched
     </span><span class="kw">pub fn </span>enclave_crate_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="macro">format!</span>(<span class="string">&quot;./{}&quot;</span>, <span class="self">self</span>.enclave_crate_name())
+        workspace_path(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="self">self</span>.enclave_crate_name()])
+            .to_str()
+            .unwrap()
+            .to_string()
     }
 
     <span class="doccomment">/// Get the path to the respective enclave binary variant that should be launched
     </span><span class="kw">pub fn </span>enclave_binary_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="kw">match </span><span class="self">self </span>{
-            LauncherMode::Virtual(<span class="kw">_</span>) =&gt; <span class="macro">format!</span>(
-                <span class="string">&quot;{}/target/x86_64-unknown-none/debug/{}&quot;</span>,
-                <span class="self">self</span>.enclave_crate_path(),
-                <span class="self">self</span>.enclave_crate_name()
-            ),
+            LauncherMode::Virtual(<span class="kw">_</span>) =&gt; workspace_path(<span class="kw-2">&amp;</span>[
+                <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_crate_name(),
+                <span class="string">&quot;target&quot;</span>,
+                <span class="string">&quot;x86_64-unknown-none&quot;</span>,
+                <span class="string">&quot;debug&quot;</span>,
+                <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_crate_name(),
+            ])
+            .to_str()
+            .unwrap()
+            .to_string(),
             LauncherMode::Native(<span class="kw">_</span>) =&gt; <span class="macro">format!</span>(<span class="string">&quot;./target/debug/{}&quot;</span>, <span class="self">self</span>.enclave_crate_name()),
         }
     }
@@ -283,14 +333,30 @@
                 <span class="string">&quot;virtualized&quot;</span>.to_string(),
                 <span class="macro">format!</span>(
                     <span class="string">&quot;--enclave-binary={}&quot;</span>,
-                    <span class="string">&quot;./oak_restricted_kernel_bin/target/x86_64-unknown-none/debug/oak_restricted_kernel_bin&quot;
-                </span>),
+                    workspace_path(<span class="kw-2">&amp;</span>[
+                        <span class="string">&quot;oak_restricted_kernel_bin&quot;</span>,
+                        <span class="string">&quot;target&quot;</span>,
+                        <span class="string">&quot;x86_64-unknown-none&quot;</span>,
+                        <span class="string">&quot;debug&quot;</span>,
+                        <span class="string">&quot;oak_restricted_kernel_bin&quot;</span>,
+                    ])
+                    .to_str()
+                    .unwrap()
+                ),
                 <span class="macro">format!</span>(<span class="string">&quot;--vmm-binary={}&quot;</span>, <span class="string">&quot;/usr/bin/qemu-system-x86_64&quot;</span>),
                 <span class="macro">format!</span>(<span class="string">&quot;--app-binary={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_binary_path()),
                 <span class="macro">format!</span>(
                     <span class="string">&quot;--bios-binary={}&quot;</span>,
-                    <span class="string">&quot;./stage0/target/x86_64-unknown-none/release/oak_stage0.bin&quot;
-                </span>),
+                    workspace_path(<span class="kw-2">&amp;</span>[
+                        <span class="string">&quot;stage0&quot;</span>,
+                        <span class="string">&quot;target&quot;</span>,
+                        <span class="string">&quot;x86_64-unknown-none&quot;</span>,
+                        <span class="string">&quot;release&quot;</span>,
+                        <span class="string">&quot;oak_stage0.bin&quot;</span>,
+                    ])
+                    .to_str()
+                    .unwrap()
+                ),
             ],
             LauncherMode::Native(<span class="kw">_</span>) =&gt; <span class="macro">vec!</span>[
                 <span class="string">&quot;native&quot;</span>.to_string(),
@@ -329,7 +395,7 @@
 
 <span class="kw">fn </span>run_variant(variant: <span class="kw-2">&amp;</span>LauncherMode) -&gt; Step {
     <span class="kw">let </span><span class="kw-2">mut </span>steps = <span class="macro">vec!</span>[build_binary(
-        <span class="string">&quot;build Oak Functions enclave binary&quot;</span>,
+        <span class="string">&quot;build Oak Functions enclave app&quot;</span>,
         <span class="kw-2">&amp;</span>variant.enclave_crate_path(),
     )];
     <span class="comment">// If we want to run in an VMM, we need three binaries:
@@ -342,15 +408,15 @@
         LauncherMode::Virtual(<span class="kw">_</span>) =&gt; <span class="macro">vec!</span>[
             build_stage0(),
             build_binary(
-                <span class="string">&quot;build Restricted Kernel binary&quot;</span>,
-                <span class="string">&quot;oak_restricted_kernel_bin&quot;</span>,
+                <span class="string">&quot;build Oak Restricted Kernel binary&quot;</span>,
+                OAK_RESTRICTED_KERNEL_BIN_DIR.to_str().unwrap(),
             ),
         ],
         LauncherMode::Native(<span class="kw">_</span>) =&gt; <span class="macro">vec!</span>[],
     });
     steps.extend(<span class="macro">vec!</span>[Step::WithBackground {
         name: <span class="string">&quot;background launcher&quot;</span>.to_string(),
-        background: run_launcher(variant),
+        background: run_oak_functions_launcher_example(variant),
         foreground: Box::new(run_client(<span class="string">&quot;test_key&quot;</span>, <span class="string">&quot;^test_value$&quot;</span>, <span class="number">300</span>)),
     }]);
     Step::Multiple {
@@ -372,7 +438,7 @@
                 <span class="string">&quot;binary&quot;</span>,
                 <span class="string">&quot;target/x86_64-unknown-none/release/oak_stage0.bin&quot;</span>,
             ],
-            Path::new(<span class="string">&quot;./stage0&quot;</span>),
+            STAGE_0_DIR.as_path(),
         ),
     }
 }
@@ -384,13 +450,15 @@
     }
 }
 
-<span class="kw">fn </span>run_launcher(variant: <span class="kw-2">&amp;</span>LauncherMode) -&gt; Box&lt;<span class="kw">dyn </span>Runnable&gt; {
+<span class="doccomment">/// Runs the Oak Functions launcher configured with a default Wasm module for key / value lookups
+/// and mock lookup data.
+</span><span class="kw">pub fn </span>run_oak_functions_launcher_example(variant: <span class="kw-2">&amp;</span>LauncherMode) -&gt; Box&lt;<span class="kw">dyn </span>Runnable&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>args = <span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">&quot;--wasm={}&quot;</span>, WASM_PATH),
-        <span class="macro">format!</span>(<span class="string">&quot;--lookup-data={}&quot;</span>, LOOKUP_PATH),
+        <span class="macro">format!</span>(<span class="string">&quot;--wasm={}&quot;</span>, WASM_PATH.to_str().unwrap()),
+        <span class="macro">format!</span>(<span class="string">&quot;--lookup-data={}&quot;</span>, MOCK_LOOKUP_DATA_PATH.to_str().unwrap()),
     ];
     args.append(<span class="kw-2">&amp;mut </span>variant.variant_subcommand());
-    Cmd::new(<span class="string">&quot;./target/debug/oak_functions_launcher&quot;</span>, args)
+    Cmd::new(OAK_FUNCTIONS_LAUNCHER_BIN.to_str().unwrap(), args)
 }
 
 <span class="kw">fn </span>run_client(request: <span class="kw-2">&amp;</span>str, expected_response: <span class="kw-2">&amp;</span>str, iterations: usize) -&gt; Step {

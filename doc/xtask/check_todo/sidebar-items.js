@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"static":["PATTERN"],"struct":["CheckTodo"]};
+window.SIDEBAR_ITEMS = {"struct":["CheckTodo"]};

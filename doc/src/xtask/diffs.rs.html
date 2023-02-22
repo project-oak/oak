@@ -336,17 +336,17 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>maplit::hashset;
+</span><span class="kw">use crate</span>::{
+    files::<span class="kw-2">*</span>,
+    internal::{CargoManifest, Scope},
+    spread,
+};
+<span class="kw">use </span>maplit::hashset;
 <span class="kw">use </span>std::{
     collections::{HashMap, HashSet},
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
     process::Command,
-};
-
-<span class="kw">use crate</span>::{
-    files::<span class="kw-2">*</span>,
-    internal::{CargoManifest, Scope},
 };
 
 <span class="attr">#[derive(Debug)]

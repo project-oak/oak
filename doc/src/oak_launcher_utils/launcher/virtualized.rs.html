@@ -198,6 +198,8 @@
 <a href="#198" id="198">198</a>
 <a href="#199" id="199">199</a>
 <a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -344,7 +346,7 @@
             cmd.arg(<span class="string">&quot;-S&quot;</span>);
         }
 
-        <span class="macro">info!</span>(<span class="string">&quot;Executing: {:?}&quot;</span>, cmd);
+        <span class="macro">info!</span>(<span class="string">&quot;executing: {:?}&quot;</span>, cmd);
 
         <span class="kw">let </span>instance = cmd.spawn()<span class="question-mark">?</span>;
 
@@ -384,17 +386,19 @@
 <span class="attr">#[async_trait]
 </span><span class="kw">impl </span>GuestInstance <span class="kw">for </span>Instance {
     <span class="kw">async fn </span>wait(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;std::process::ExitStatus&gt; {
+        <span class="macro">info!</span>(<span class="string">&quot;waiting for guest instance to terminate&quot;</span>);
         <span class="self">self</span>.instance.wait().<span class="kw">await</span>.map_err(anyhow::Error::from)
     }
 
     <span class="kw">async fn </span>kill(<span class="kw-2">mut </span><span class="self">self</span>: Box&lt;<span class="self">Self</span>&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;std::process::ExitStatus&gt; {
-        <span class="macro">info!</span>(<span class="string">&quot;Cleaning up and shutting down.&quot;</span>);
+        <span class="macro">info!</span>(<span class="string">&quot;killing guest instance; cleaning up and shutting down&quot;</span>);
         <span class="self">self</span>.guest_console.shutdown(Shutdown::Both)<span class="question-mark">?</span>;
         <span class="self">self</span>.instance.start_kill()<span class="question-mark">?</span>;
         <span class="self">self</span>.wait().<span class="kw">await
     </span>}
 
     <span class="kw">async fn </span>connect(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>oak_channel::Channel&gt;&gt; {
+        <span class="macro">info!</span>(<span class="string">&quot;connecting to guest instance&quot;</span>);
         <span class="prelude-val">Ok</span>(Box::new(<span class="self">self</span>.host_socket.try_clone()<span class="question-mark">?</span>))
     }
 }

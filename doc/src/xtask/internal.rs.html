@@ -1004,6 +1004,15 @@
 <a href="#1004" id="1004">1004</a>
 <a href="#1005" id="1005">1005</a>
 <a href="#1006" id="1006">1006</a>
+<a href="#1007" id="1007">1007</a>
+<a href="#1008" id="1008">1008</a>
+<a href="#1009" id="1009">1009</a>
+<a href="#1010" id="1010">1010</a>
+<a href="#1011" id="1011">1011</a>
+<a href="#1012" id="1012">1012</a>
+<a href="#1013" id="1013">1013</a>
+<a href="#1014" id="1014">1014</a>
+<a href="#1015" id="1015">1015</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -1020,7 +1029,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>async_recursion::async_recursion;
+</span><span class="kw">use </span><span class="kw">crate</span>::PROCESSES;
+<span class="kw">use </span>async_recursion::async_recursion;
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>clap::{Parser, Subcommand};
 <span class="kw">use </span>colored::<span class="kw-2">*</span>;
@@ -1036,11 +1046,11 @@
 <span class="attr">#[derive(Parser, Clone)]
 </span><span class="kw">pub struct </span>Opt {
     <span class="attr">#[arg(long, help = <span class="string">&quot;do not execute commands&quot;</span>)]
-    </span>dry_run: bool,
+    </span><span class="kw">pub </span>dry_run: bool,
     <span class="attr">#[arg(long, help = <span class="string">&quot;show logs of commands&quot;</span>)]
-    </span>logs: bool,
+    </span><span class="kw">pub </span>logs: bool,
     <span class="attr">#[arg(long, help = <span class="string">&quot;continue execution after error&quot;</span>)]
-    </span>keep_going: bool,
+    </span><span class="kw">pub </span>keep_going: bool,
     <span class="attr">#[arg(
         long,
         help = <span class="string">r#&quot;Scope of the command [all, commits:&lt;count&gt;, diff_to_main].
@@ -1120,10 +1130,11 @@
     </span><span class="kw">pub </span>build_docker: bool,
 }
 
-<span class="attr">#[derive(Clone, Debug, PartialEq)]
+<span class="attr">#[derive(Clone, Debug, PartialEq, Default)]
 
 </span><span class="kw">pub enum </span>Scope {
     <span class="comment">// The entire code base.
+    </span><span class="attr">#[default]
     </span>All,
     <span class="comment">// Parts of the code base, affected by the changes in the diff between this branch and main.
     </span>DiffToMain,
@@ -1507,19 +1518,21 @@
             } =&gt; f.len(),
         }
     }
+
+    <span class="kw">pub fn </span>is_empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.len() == <span class="number">0
+    </span>}
 }
 
-<span class="kw">pub struct </span>StepResult {
+<span class="attr">#[derive(Default)]
+</span><span class="kw">pub struct </span>StepResult {
     <span class="kw">pub </span>values: HashSet&lt;StatusResultValue&gt;,
     <span class="kw">pub </span>failed_steps_prefixes: Vec&lt;String&gt;,
 }
 
 <span class="kw">impl </span>StepResult {
-    <span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            values: HashSet::new(),
-            failed_steps_prefixes: <span class="macro">vec!</span>[],
-        }
+    <span class="kw">pub fn </span>success(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="self">self</span>.values.len() == <span class="number">1 </span>&amp;&amp; <span class="self">self</span>.values.contains(<span class="kw-2">&amp;</span>StatusResultValue::Ok)
     }
 }
 
@@ -1538,11 +1551,20 @@
     )
 }
 
+<span class="doccomment">/// Reads the entire content of the provided future into a vector.
+</span><span class="kw">pub async fn </span>read_to_end&lt;A: AsyncRead + Unpin&gt;(<span class="kw-2">mut </span>io: A) -&gt; Vec&lt;u8&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>buf = Vec::new();
+    io.read_to_end(<span class="kw-2">&amp;mut </span>buf)
+        .<span class="kw">await
+        </span>.expect(<span class="string">&quot;couldn&#39;t read from future&quot;</span>);
+    buf
+}
+
 <span class="doccomment">/// Run the provided step, printing out information about the execution, and returning a set of
 /// status results from the single or multiple steps that were executed.
 </span><span class="attr">#[async_recursion]
 </span><span class="kw">pub async fn </span>run_step(context: <span class="kw-2">&amp;</span>Context, step: Step, <span class="kw-2">mut </span>run_status: Status) -&gt; StepResult {
-    <span class="kw">let </span><span class="kw-2">mut </span>step_result = StepResult::new();
+    <span class="kw">let </span><span class="kw-2">mut </span>step_result = StepResult::default();
     <span class="kw">fn </span>prefix(run_status: <span class="kw-2">&amp;</span>Status) -&gt; String {
         <span class="kw">let </span>now = chrono::Utc::now();
         <span class="kw">let </span>time_of_day = now.format(<span class="string">&quot;%H:%M:%S&quot;</span>);
@@ -1651,14 +1673,6 @@
 
             <span class="comment">// Small delay to make it more likely that the background process started.
             </span>std::thread::sleep(std::time::Duration::from_millis(<span class="number">6_000</span>));
-
-            <span class="kw">async fn </span>read_to_end&lt;A: AsyncRead + Unpin&gt;(<span class="kw-2">mut </span>io: A) -&gt; Vec&lt;u8&gt; {
-                <span class="kw">let </span><span class="kw-2">mut </span>buf = Vec::new();
-                io.read_to_end(<span class="kw-2">&amp;mut </span>buf)
-                    .<span class="kw">await
-                    </span>.expect(<span class="string">&quot;couldn&#39;t read from future&quot;</span>);
-                buf
-            }
 
             <span class="kw">let </span>background_stdout_future = tokio::spawn(read_to_end(running_background.stdout()));
             <span class="kw">let </span>background_stderr_future = tokio::spawn(read_to_end(running_background.stderr()));
@@ -1779,6 +1793,10 @@
         <span class="kw">let </span><span class="kw-2">mut </span>cmd = tokio::process::Command::new(<span class="kw-2">&amp;</span><span class="self">self</span>.executable);
         cmd.args(<span class="kw-2">&amp;</span><span class="self">self</span>.args);
 
+        <span class="comment">// Ensure that the child process is killed when the `Running` instance is dropped (including
+        // on panic).
+        </span>cmd.kill_on_drop(<span class="bool-val">true</span>);
+
         <span class="kw">if </span>opt.dry_run {
             Box::new(SingleStatusResult {
                 value: StatusResultValue::Skipped,
@@ -1810,7 +1828,7 @@
                 .unwrap_or_else(|err| <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t spawn command: {:?}: {}&quot;</span>, cmd, err));
 
             <span class="kw">if let </span><span class="prelude-val">Some</span>(pid) = child.id() {
-                <span class="kw">crate</span>::PROCESSES
+                PROCESSES
                     .lock()
                     .expect(<span class="string">&quot;couldn&#39;t acquire processes lock&quot;</span>)
                     .push(pid <span class="kw">as </span>i32);

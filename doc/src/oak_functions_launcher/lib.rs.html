@@ -105,6 +105,7 @@
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -125,11 +126,10 @@
 #![feature(result_flattening)]
 #![feature(array_chunks)]
 
-</span><span class="kw">use </span>anyhow::Context;
+</span><span class="kw">use </span><span class="kw">crate</span>::schema::InitializeResponse;
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_launcher_utils::{channel, launcher};
 <span class="kw">use </span>std::{fs, path::PathBuf};
-
-<span class="kw">use </span><span class="kw">crate</span>::schema::InitializeResponse;
 
 <span class="kw">pub mod </span>schema {
     <span class="attr">#![allow(dead_code)]
@@ -155,9 +155,9 @@
 &gt; {
     <span class="kw">let </span>(launched_instance, connector_handle) = launcher::launch(mode).<span class="kw">await</span><span class="question-mark">?</span>;
     setup_lookup_data(connector_handle.clone(), lookup_data_path).<span class="kw">await</span><span class="question-mark">?</span>;
-    <span class="kw">let </span>intialization_response =
+    <span class="kw">let </span>intialize_response =
         setup_wasm(connector_handle.clone(), <span class="kw-2">&amp;</span>wasm_path, constant_response_size).<span class="kw">await</span><span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>((launched_instance, connector_handle, intialization_response))
+    <span class="prelude-val">Ok</span>((launched_instance, connector_handle, intialize_response))
 }
 
 <span class="comment">// Initially loads lookup data and spawns task to periodically refresh lookup data.
@@ -193,9 +193,9 @@
         .with_context(|| <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t read Wasm file {}&quot;</span>, wasm.display()))
         .unwrap();
     <span class="macro">log::info!</span>(
-        <span class="string">&quot;read Wasm file from disk {} ({} bytes)&quot;</span>,
+        <span class="string">&quot;read Wasm file from disk {} ({})&quot;</span>,
         <span class="kw-2">&amp;</span>wasm.display(),
-        wasm_bytes.len()
+        ubyte::ByteUnit::Byte(wasm_bytes.len() <span class="kw">as </span>u64)
     );
 
     <span class="kw">let </span>request = schema::InitializeRequest {
@@ -208,7 +208,9 @@
         .initialize(<span class="kw-2">&amp;</span>request)
         .<span class="kw">await
         </span>.flatten()
-        .expect(<span class="string">&quot;couldn&#39;t initialize the service&quot;</span>);
+        .expect(<span class="string">&quot;couldn&#39;t initialize service&quot;</span>);
+
+    <span class="macro">log::info!</span>(<span class="string">&quot;service initialized: {:?}&quot;</span>, initialize_response);
 
     <span class="prelude-val">Ok</span>(initialize_response)
 }

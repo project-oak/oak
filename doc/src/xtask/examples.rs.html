@@ -659,8 +659,6 @@
 <a href="#659" id="659">659</a>
 <a href="#660" id="660">660</a>
 <a href="#661" id="661">661</a>
-<a href="#662" id="662">662</a>
-<a href="#663" id="663">663</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -677,7 +675,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{files::<span class="kw-2">*</span>, internal::<span class="kw-2">*</span>};
+</span><span class="kw">use crate</span>::{files::<span class="kw-2">*</span>, internal::<span class="kw-2">*</span>, spread};
 <span class="kw">use </span>maplit::hashmap;
 <span class="kw">use </span>std::collections::HashMap;
 <span class="kw">use </span>strum::IntoEnumIterator;
@@ -890,9 +888,7 @@
     }
 }
 
-<span class="doccomment">/// Build every variant of the function server.
-/// It&#39;s easier to always build all variants than to keep track of which variant to build and
-/// the overhead of building all variants is acceptable.
+<span class="doccomment">/// Build the linux version of the Oak Functions server.
 </span><span class="kw">pub fn </span>build_oak_functions_linux_fd_bin() -&gt; Step {
     Step::Single {
         name: <span class="string">&quot;cargo build Oak Functions loader for linux native&quot;</span>.to_string(),

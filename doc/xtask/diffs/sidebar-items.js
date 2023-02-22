@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["add_affected_crates","add_affected_protos","affected_protos","all_affected_crates","crates_affected_by_files","crates_affected_by_protos","directly_modified_crates","find_crate_toml_file","get_local_dependencies","imported_proto_files","modified_files"],"struct":["ModifiedContent"]};
+window.SIDEBAR_ITEMS = {"fn":["all_affected_crates","directly_modified_crates","modified_files"],"struct":["ModifiedContent"]};
