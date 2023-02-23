@@ -37,7 +37,7 @@ proto_library(
 proto_library(
     name = "service_unary_proto",
     srcs = ["service_unary.proto"],
-    deps = ["messages_proto"],
+    deps = [":messages_proto"],
 )
 
 java_proto_library(
