@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["run_background","run_step"]};
+window.SIDEBAR_ITEMS = {"fn":["run_background","run_step","skip_test"]};

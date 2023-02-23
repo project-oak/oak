@@ -249,6 +249,14 @@
 <a href="#249" id="249">249</a>
 <a href="#250" id="250">250</a>
 <a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -277,6 +285,8 @@
     Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;oak_restricted_kernel_bin&quot;</span>]));
 <span class="kw">static </span>OAK_FUNCTIONS_LAUNCHER_BIN: Lazy&lt;PathBuf&gt; =
     Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;target&quot;</span>, <span class="string">&quot;debug&quot;</span>, <span class="string">&quot;oak_functions_launcher&quot;</span>]));
+<span class="kw">pub static </span>QUIRK_ECHO_LAUNCHER_BIN: Lazy&lt;PathBuf&gt; =
+    Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;target&quot;</span>, <span class="string">&quot;debug&quot;</span>, <span class="string">&quot;quirk_echo_launcher&quot;</span>]));
 
 <span class="kw">use crate</span>::{internal::<span class="kw-2">*</span>, workspace_path};
 <span class="kw">use </span>once_cell::sync::Lazy;
@@ -459,6 +469,12 @@
     ];
     args.append(<span class="kw-2">&amp;mut </span>variant.variant_subcommand());
     Cmd::new(OAK_FUNCTIONS_LAUNCHER_BIN.to_str().unwrap(), args)
+}
+
+<span class="kw">pub fn </span>run_launcher(launcher_bin: <span class="kw-2">&amp;</span>str, variant: <span class="kw-2">&amp;</span>LauncherMode) -&gt; Box&lt;<span class="kw">dyn </span>Runnable&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>args = <span class="macro">vec!</span>[];
+    args.append(<span class="kw-2">&amp;mut </span>variant.variant_subcommand());
+    Cmd::new(launcher_bin, args)
 }
 
 <span class="kw">fn </span>run_client(request: <span class="kw-2">&amp;</span>str, expected_response: <span class="kw-2">&amp;</span>str, iterations: usize) -&gt; Step {
