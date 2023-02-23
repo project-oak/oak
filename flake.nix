@@ -43,6 +43,7 @@
                 cargo-deadlinks
                 cargo-binutils
                 cargo-deny
+                cargo-nextest
                 cargo-udeps
                 protobuf
                 qemu_kvm
