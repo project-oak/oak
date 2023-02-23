@@ -36,7 +36,7 @@ use xtask::{
     examples::*,
     files::*,
     internal::{self, *},
-    launcher, quirk, spread,
+    launcher, spread,
 };
 
 #[tokio::main]
@@ -94,8 +94,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
-        Command::RunQuirkTest => quirk::run_launcher_test(),
-        Command::RunLauncherTest => launcher::run_launcher_test(),
         Command::BuildEnclaveBinaryVariants(ref opts) => {
             launcher::build_enclave_binary_variants(opts)
         }
