@@ -29,19 +29,10 @@ lazy_static! {
     };
 }
 
-/// Whether to skip the test. For instance, GitHub Actions does not support KVM, so we cannot run
-/// tests that require nested virtualization.
-fn skip_test() -> bool {
-    std::env::var("OAK_KVM_TESTS")
-        .unwrap_or_default()
-        .to_lowercase()
-        == "skip"
-}
-
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_virtual() {
-    if skip_test() {
+    if xtask::testing::skip_test() {
         log::info!("skipping test");
         return;
     }

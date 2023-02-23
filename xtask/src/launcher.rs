@@ -26,6 +26,8 @@ pub static OAK_RESTRICTED_KERNEL_BIN_DIR: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_restricted_kernel_bin"]));
 static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["target", "debug", "oak_functions_launcher"]));
+pub static QUIRK_ECHO_LAUNCHER_BIN: Lazy<PathBuf> =
+    Lazy::new(|| workspace_path(&["target", "debug", "quirk_echo_launcher"]));
 
 use crate::{internal::*, workspace_path};
 use once_cell::sync::Lazy;
@@ -208,6 +210,12 @@ pub fn run_oak_functions_launcher_example(variant: &LauncherMode) -> Box<dyn Run
     ];
     args.append(&mut variant.variant_subcommand());
     Cmd::new(OAK_FUNCTIONS_LAUNCHER_BIN.to_str().unwrap(), args)
+}
+
+pub fn run_launcher(launcher_bin: &str, variant: &LauncherMode) -> Box<dyn Runnable> {
+    let mut args = vec![];
+    args.append(&mut variant.variant_subcommand());
+    Cmd::new(launcher_bin, args)
 }
 
 fn run_client(request: &str, expected_response: &str, iterations: usize) -> Step {

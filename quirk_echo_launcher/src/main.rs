@@ -21,7 +21,11 @@
 use clap::Parser;
 use oak_launcher_utils::launcher;
 
-mod schema;
+pub mod schema {
+    #![allow(dead_code)]
+    use prost::Message;
+    include!(concat!(env!("OUT_DIR"), "/quirk.echo.rs"));
+}
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -42,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("calling launcher");
     let (guest_instance, connector_handle) = launcher::launch(cli.mode).await?;
 
-    let mut client = schema::EchoAsyncClient::new(connector_handle);
+    let mut client = crate::schema::EchoAsyncClient::new(connector_handle);
     let body = b"test_msg".to_vec();
     let echo_request = schema::EchoRequest { body: body.clone() };
 

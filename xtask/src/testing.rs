@@ -43,3 +43,12 @@ pub async fn run_background(step: Box<dyn Runnable>) -> Box<dyn Running> {
     tokio::spawn(read_to_end(running.stderr()));
     running
 }
+
+/// Whether to skip the test. For instance, GitHub Actions does not support KVM, so we cannot run
+/// tests that require nested virtualization.
+pub fn skip_test() -> bool {
+    std::env::var("OAK_KVM_TESTS")
+        .unwrap_or_default()
+        .to_lowercase()
+        == "skip"
+}
