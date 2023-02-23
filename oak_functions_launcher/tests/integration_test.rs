@@ -31,6 +31,7 @@ lazy_static! {
 
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
+#[cfg(oak_kvm_tests)]
 async fn test_launcher_virtual() {
     if xtask::testing::skip_test() {
         log::info!("skipping test");
