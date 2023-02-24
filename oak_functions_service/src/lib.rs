@@ -164,19 +164,14 @@ impl schema::OakFunctions for OakFunctionsService {
             .collect();
 
         let update_status = match action {
+            schema::UpdateAction::Start => self.lookup_data_manager.update_start(data),
+            schema::UpdateAction::Continue => self.lookup_data_manager.update_continue(data),
+            schema::UpdateAction::Finish => self.lookup_data_manager.update_finish(data),
+            schema::UpdateAction::Abort => self.lookup_data_manager.update_abort(),
             schema::UpdateAction::StartAndFinish => {
-                Ok(self.lookup_data_manager.update_start_and_finish(data))
+                self.lookup_data_manager.update_start_and_finish(data)
             }
-            schema::UpdateAction::Start => Ok(self.lookup_data_manager.update_start(data)),
-            schema::UpdateAction::Finish => Ok(self.lookup_data_manager.update_finish(data)),
-            schema::UpdateAction::Abort => Ok(self.lookup_data_manager.update_abort()),
-            // TODO(#3718): Make this exhaustive once we have implemented all
-            // UpdateActions.
-            _ => Err(micro_rpc::Status::new_with_message(
-                micro_rpc::StatusCode::InvalidArgument,
-                format!("action not implemented: {:?}", action),
-            )),
-        }?;
+        };
         Ok(schema::UpdateLookupDataResponse {
             update_status: update_status as i32,
         })
