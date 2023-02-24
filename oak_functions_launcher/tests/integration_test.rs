@@ -123,10 +123,15 @@ async fn test_load_large_lookup_data() {
         enclave_binary: ENCLAVE_BINARY_PATH.to_path_buf(),
     };
 
-    let max_chunk_size = ByteUnit::Kibibyte(2);
+    let max_chunk_size = ByteUnit::Kilobyte(2);
     let entry_size = ByteUnit::Byte(10);
-    let entries_count = (max_chunk_size / entry_size).as_u64() as u32;
-    let entries = oak_functions_test_utils::create_test_lookup_data(entry_size, 0, entries_count);
+    // This has to be consistent with the overhead set in chunking up lookup data.
+    let entry_overhead = ByteUnit::Byte(10);
+    let chunk_overhead = ByteUnit::Byte(50);
+    let max_entries_by_chunk =
+        ((max_chunk_size - chunk_overhead) / (entry_size + entry_overhead)).as_u64() as u32;
+
+    let entries = oak_functions_test_utils::create_test_lookup_data(0, max_entries_by_chunk + 1);
 
     let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
         &oak_functions_test_utils::serialize_entries(entries.clone()),

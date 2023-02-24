@@ -27,7 +27,6 @@ use std::{
     time::Duration,
 };
 use tokio::{sync::oneshot, task::JoinHandle};
-use ubyte::ByteUnit;
 
 /// Returns the path to the Wasm file produced by compiling the provided `Cargo.toml` file.
 fn build_wasm_module_path(metadata: &cargo_metadata::Metadata) -> String {
@@ -86,20 +85,13 @@ pub fn serialize_entries(entries: HashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
 }
 
 // Create lookup data entries mapping keys to themselves. The keys range from start
-// to exclusive end and are padded to entry size (which has to be larger than 8 to fit two u32).
-pub fn create_test_lookup_data(
-    entry_size: ByteUnit,
-    start: u32,
-    end: u32,
-) -> HashMap<Vec<u8>, Vec<u8>> {
+// to exclusive end and are padded to pad bytes.
+pub fn create_test_lookup_data(start: u32, end: u32) -> HashMap<Vec<u8>, Vec<u8>> {
     let mut entries = std::collections::HashMap::new();
-    let entry_size = entry_size.as_u64() as usize;
-
-    let key_prefix = vec![0u8; (entry_size / 2) - 4];
 
     for i in start..end {
-        let mut n = key_prefix.clone();
-        n.append(&mut format!("{}", i).into_bytes());
+        // Pad to 5 bytes to have 10 byte entries
+        let n = format!("{:05}", i).into_bytes();
         entries.insert(n.clone(), n);
     }
     entries
