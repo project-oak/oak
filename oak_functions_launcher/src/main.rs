@@ -19,12 +19,14 @@
 #![feature(array_chunks)]
 
 use clap::Parser;
+use oak_functions_launcher::LookupDataConfig;
 use std::{
     fs,
     net::{Ipv6Addr, SocketAddr},
     path::PathBuf,
 };
 use tokio::signal;
+use ubyte::ByteUnit;
 
 pub mod schema {
     #![allow(dead_code)]
@@ -74,10 +76,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
     env_logger::init();
 
+    let lookup_data_config = LookupDataConfig {
+        lookup_data_path: cli.lookup_data,
+        // Hard-coded because we are not sure whether we want to configure the update interval.
+        update_interval: Some(std::time::Duration::from_millis(1000 * 60 * 10)),
+        // Fix the maximum size of a chunk to the proto limit size of 2 GiB.
+        max_chunk_size: ByteUnit::Gibibyte(2),
+    };
+
     let (mut launched_instance, connector_handle, initialize_response) =
         oak_functions_launcher::create(
             cli.mode,
-            cli.lookup_data,
+            lookup_data_config,
             cli.wasm,
             cli.constant_response_size,
         )

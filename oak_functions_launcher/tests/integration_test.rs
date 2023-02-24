@@ -16,9 +16,13 @@
 //! Integration tests for the Oak Functions Launcher.
 
 use lazy_static::lazy_static;
-use oak_functions_launcher::schema::{self, InvokeRequest};
+use oak_functions_launcher::{
+    schema::{self, InvokeRequest},
+    LookupDataConfig,
+};
 use oak_launcher_utils::launcher;
 use std::{path::PathBuf, time::Duration};
+use ubyte::ByteUnit;
 
 lazy_static! {
     static ref ENCLAVE_BINARY_PATH: PathBuf = {
@@ -78,9 +82,15 @@ async fn test_launcher_looks_up_key() {
     // Make sure the response fits in the response size.
     let constant_response_size: u32 = 1024;
 
+    let lookup_data_config = LookupDataConfig {
+        lookup_data_path: xtask::launcher::MOCK_LOOKUP_DATA_PATH.to_path_buf(),
+        update_interval: None,
+        max_chunk_size: ByteUnit::Gibibyte(2),
+    };
+
     let (launched_instance, connector_handle, _) = oak_functions_launcher::create(
         launcher::GuestMode::Native(params),
-        xtask::launcher::MOCK_LOOKUP_DATA_PATH.to_path_buf(),
+        lookup_data_config,
         xtask::launcher::WASM_PATH.to_path_buf(),
         constant_response_size,
     )
@@ -107,18 +117,18 @@ async fn test_launcher_looks_up_key() {
 
 #[tokio::test]
 #[ignore]
+// TODO(#3668): fails until we can load more than max_chunk_size of lookup data.
 async fn test_load_large_lookup_data() {
     let params = launcher::native::Params {
         enclave_binary: ENCLAVE_BINARY_PATH.to_path_buf(),
     };
 
-    // Initialize > 2 GiB of lookup data to hit the proto limits.
-    let lookup_data_size = 2 * (2 << 30);
-    let entry_size = 2 << 10;
-    // The key in the lookup data maps to itself, so an entry has double key size.
-    let mut entries = std::collections::HashMap::new(); // Vec::with_capacity(lookup_data_size / entry_size / 2);
-    let entries_count = lookup_data_size / entry_size;
+    let max_chunk_size = ByteUnit::Kibibyte(2);
+    let entry_size: usize = ByteUnit::Byte(10).as_u64() as usize;
 
+    // The key in the lookup data maps to itself, so an entry has double key size.
+    let mut entries = std::collections::HashMap::new();
+    let entries_count = (max_chunk_size / entry_size).as_u64();
     let key_prefix = vec![0u8; (entry_size / 2) - 4];
 
     for i in 0..entries_count {
@@ -131,18 +141,24 @@ async fn test_load_large_lookup_data() {
         &oak_functions_test_utils::serialize_entries(entries),
     );
 
-    let constant_response_size = (entry_size as u32 / 2) + 1024; // Add some margin be on the safe side.
+    let lookup_data_config = LookupDataConfig {
+        lookup_data_path: lookup_data_file.path().to_path_buf(),
+        update_interval: None,
+        max_chunk_size,
+    };
+
+    let constant_response_size = (entry_size / 2) + 1024; // Add some margin be on the safe side.
 
     let status = oak_functions_launcher::create(
         launcher::GuestMode::Native(params),
-        lookup_data_file.path().to_path_buf(),
+        lookup_data_config,
         xtask::launcher::WASM_PATH.to_path_buf(),
-        constant_response_size,
+        constant_response_size as u32,
     )
     .await;
 
-    // TODO(#3668): status is currently not ok and the test is expected to fail until we can load 2
-    // GiB of lookup data.
+    // TODO(#3668): status is currently not ok and the test is expected to fail until we can load
+    // more than max_chunk_size of lookup data.
     assert!(status.is_ok());
 
     let (launched_instance, connector_handle, _) = status.unwrap();
