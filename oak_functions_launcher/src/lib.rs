@@ -76,7 +76,7 @@ async fn setup_lookup_data(
         .await?;
 
     // Spawn task to periodically refresh lookup data.
-    if let Some(_) = config.update_interval {
+    if config.update_interval.is_some() {
         tokio::spawn(setup_periodic_update(client, config));
     }
     Ok(())

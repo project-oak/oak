@@ -1908,6 +1908,7 @@ dependencies = [
  "prost",
  "tempfile",
  "tokio",
+ "ubyte",
 ]
 
 [[package]]

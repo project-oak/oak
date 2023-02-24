@@ -124,21 +124,12 @@ async fn test_load_large_lookup_data() {
     };
 
     let max_chunk_size = ByteUnit::Kibibyte(2);
-    let entry_size: usize = ByteUnit::Byte(10).as_u64() as usize;
-
-    // The key in the lookup data maps to itself, so an entry has double key size.
-    let mut entries = std::collections::HashMap::new();
-    let entries_count = (max_chunk_size / entry_size).as_u64();
-    let key_prefix = vec![0u8; (entry_size / 2) - 4];
-
-    for i in 0..entries_count {
-        let mut n = key_prefix.clone();
-        n.append(&mut format!("{}", i).into_bytes());
-        entries.insert(n.clone(), n);
-    }
+    let entry_size = ByteUnit::Byte(10);
+    let entries_count = (max_chunk_size / entry_size).as_u64() as u32;
+    let entries = oak_functions_test_utils::create_test_lookup_data(entry_size, 0, entries_count);
 
     let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
-        &oak_functions_test_utils::serialize_entries(entries),
+        &oak_functions_test_utils::serialize_entries(entries.clone()),
     );
 
     let lookup_data_config = LookupDataConfig {
@@ -147,7 +138,7 @@ async fn test_load_large_lookup_data() {
         max_chunk_size,
     };
 
-    let constant_response_size = (entry_size / 2) + 1024; // Add some margin be on the safe side.
+    let constant_response_size = (10 / 2) + 1024; // Add some margin be on the safe side.
 
     let status = oak_functions_launcher::create(
         launcher::GuestMode::Native(params),
@@ -161,14 +152,15 @@ async fn test_load_large_lookup_data() {
     // more than max_chunk_size of lookup data.
     assert!(status.is_ok());
 
-    let (launched_instance, connector_handle, _) = status.unwrap();
+    // Pick two keys for testing, but don't assume that they are first or last.
+    let (key1, value1) = entries.iter().next().unwrap();
+    let (key2, value2) = entries.iter().last().unwrap();
 
-    let mut first_key = key_prefix.clone();
-    first_key.append(&mut format!("{}", 1).into_bytes());
+    let (launched_instance, connector_handle, _) = status.unwrap();
 
     let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
     let invoke_request = InvokeRequest {
-        body: first_key.clone(),
+        body: key1.to_owned(),
     };
 
     let response = client
@@ -177,13 +169,10 @@ async fn test_load_large_lookup_data() {
         .expect("Failed to receive response.");
 
     assert!(response.is_ok());
-    assert_eq!(first_key, response.unwrap().body);
-
-    let mut last_key = key_prefix.clone();
-    last_key.append(&mut format!("{}", entries_count - 1).into_bytes());
+    assert_eq!(value1.to_owned(), response.unwrap().body);
 
     let invoke_request = InvokeRequest {
-        body: last_key.clone(),
+        body: key2.to_owned(),
     };
 
     let response = client
@@ -192,7 +181,7 @@ async fn test_load_large_lookup_data() {
         .expect("Failed to receive response.");
 
     assert!(response.is_ok());
-    assert_eq!(last_key, response.unwrap().body);
+    assert_eq!(value2.to_owned(), response.unwrap().body);
 
     launched_instance
         .kill()
