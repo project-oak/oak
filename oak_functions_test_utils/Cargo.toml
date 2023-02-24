@@ -20,3 +20,4 @@ port_check = "*"
 prost = { workspace = true }
 tempfile = "*"
 tokio = { workspace = true, features = ["sync"] }
+ubyte = "*"

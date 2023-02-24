@@ -20,8 +20,13 @@
 
 use crate::schema::InitializeResponse;
 use anyhow::Context;
-use oak_launcher_utils::{channel, launcher};
-use std::{fs, path::PathBuf};
+use oak_launcher_utils::{
+    channel::{self, ConnectorHandle},
+    launcher,
+};
+use schema::OakFunctionsAsyncClient;
+use std::{fs, path::PathBuf, time::Duration};
+use ubyte::ByteUnit;
 
 pub mod schema {
     #![allow(dead_code)]
@@ -32,9 +37,16 @@ pub mod schema {
 mod lookup;
 pub mod server;
 
+pub struct LookupDataConfig {
+    pub lookup_data_path: PathBuf,
+    // Only periodically updates if interval is given.
+    pub update_interval: Option<Duration>,
+    pub max_chunk_size: ByteUnit,
+}
+
 pub async fn create(
     mode: launcher::GuestMode,
-    lookup_data_path: PathBuf,
+    lookup_data_config: LookupDataConfig,
     wasm_path: PathBuf,
     constant_response_size: u32,
 ) -> Result<
@@ -46,7 +58,7 @@ pub async fn create(
     Box<dyn std::error::Error>,
 > {
     let (launched_instance, connector_handle) = launcher::launch(mode).await?;
-    setup_lookup_data(connector_handle.clone(), lookup_data_path).await?;
+    setup_lookup_data(connector_handle.clone(), lookup_data_config).await?;
     let intialize_response =
         setup_wasm(connector_handle.clone(), &wasm_path, constant_response_size).await?;
     Ok((launched_instance, connector_handle, intialize_response))
@@ -55,24 +67,39 @@ pub async fn create(
 // Initially loads lookup data and spawns task to periodically refresh lookup data.
 async fn setup_lookup_data(
     connector_handle: channel::ConnectorHandle,
-    lookup_data_path: PathBuf,
+    config: LookupDataConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
 
     // Block for [invariant that lookup data is fully loaded](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-fully-loaded-lookup-data)
-    lookup::update_lookup_data(&mut client, &lookup_data_path).await?;
+    lookup::update_lookup_data(&mut client, &config.lookup_data_path, config.max_chunk_size)
+        .await?;
 
     // Spawn task to periodically refresh lookup data.
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(std::time::Duration::from_millis(1000 * 60 * 10));
-        loop {
-            // Wait before updating because we just loaded the lookup data.
-            interval.tick().await;
-            let _ = lookup::update_lookup_data(&mut client, &lookup_data_path).await;
-            // Ignore errors in updates of lookup data after the initial update.
-        }
-    });
+    if config.update_interval.is_some() {
+        tokio::spawn(setup_periodic_update(client, config));
+    }
     Ok(())
+}
+
+async fn setup_periodic_update(
+    mut client: OakFunctionsAsyncClient<ConnectorHandle>,
+    config: LookupDataConfig,
+) {
+    // Only set periodic update if an interval is given.
+    let mut interval =
+        tokio::time::interval(config.update_interval.expect("No update interval given."));
+    loop {
+        // Wait before updating because we just loaded the lookup data.
+        interval.tick().await;
+        let _ = lookup::update_lookup_data(
+            &mut client,
+            &config.lookup_data_path,
+            config.max_chunk_size,
+        )
+        .await;
+        // Ignore errors in updates of lookup data after the initial update.
+    }
 }
 
 // Loads wasm bytes.

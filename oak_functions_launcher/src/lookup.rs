@@ -28,10 +28,8 @@ use ubyte::ByteUnit;
 pub async fn update_lookup_data(
     client: &mut OakFunctionsAsyncClient<ConnectorHandle>,
     lookup_data_path: &PathBuf,
+    max_chunk_size: ByteUnit,
 ) -> anyhow::Result<()> {
-    // Fix the maximum size of a chunk to the proto limit size of 2 GiB.
-    let max_chunk_size = ByteUnit::Gibibyte(2);
-
     let lookup_data = load_lookup_data(lookup_data_path)?;
     let mut chunks = chunk_up_lookup_data(lookup_data, max_chunk_size);
 
