@@ -189,11 +189,6 @@
 <a href="#189" id="189">189</a>
 <a href="#190" id="190">190</a>
 <a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -360,19 +355,14 @@
             .collect();
 
         <span class="kw">let </span>update_status = <span class="kw">match </span>action {
+            schema::UpdateAction::Start =&gt; <span class="self">self</span>.lookup_data_manager.update_start(data),
+            schema::UpdateAction::Continue =&gt; <span class="self">self</span>.lookup_data_manager.update_continue(data),
+            schema::UpdateAction::Finish =&gt; <span class="self">self</span>.lookup_data_manager.update_finish(data),
+            schema::UpdateAction::Abort =&gt; <span class="self">self</span>.lookup_data_manager.update_abort(),
             schema::UpdateAction::StartAndFinish =&gt; {
-                <span class="prelude-val">Ok</span>(<span class="self">self</span>.lookup_data_manager.update_start_and_finish(data))
+                <span class="self">self</span>.lookup_data_manager.update_start_and_finish(data)
             }
-            schema::UpdateAction::Start =&gt; <span class="prelude-val">Ok</span>(<span class="self">self</span>.lookup_data_manager.update_start(data)),
-            schema::UpdateAction::Finish =&gt; <span class="prelude-val">Ok</span>(<span class="self">self</span>.lookup_data_manager.update_finish(data)),
-            schema::UpdateAction::Abort =&gt; <span class="prelude-val">Ok</span>(<span class="self">self</span>.lookup_data_manager.update_abort()),
-            <span class="comment">// TODO(#3718): Make this exhaustive once we have implemented all
-            // UpdateActions.
-            </span><span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(micro_rpc::Status::new_with_message(
-                micro_rpc::StatusCode::InvalidArgument,
-                <span class="macro">format!</span>(<span class="string">&quot;action not implemented: {:?}&quot;</span>, action),
-            )),
-        }<span class="question-mark">?</span>;
+        };
         <span class="prelude-val">Ok</span>(schema::UpdateLookupDataResponse {
             update_status: update_status <span class="kw">as </span>i32,
         })
