@@ -138,7 +138,7 @@ async fn test_load_large_lookup_data() {
         max_chunk_size,
     };
 
-    let constant_response_size = (10 / 2) + 1024; // Add some margin be on the safe side.
+    let constant_response_size = (10 / 2) + 1024; // Add some margin to be on the safe side.
 
     let status = oak_functions_launcher::create(
         launcher::GuestMode::Native(params),

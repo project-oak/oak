@@ -95,7 +95,7 @@ pub fn create_test_lookup_data(
     let mut entries = std::collections::HashMap::new();
     let entry_size = entry_size.as_u64() as usize;
 
-    let key_prefix = vec![0u8; (entry_size / 2) - 8];
+    let key_prefix = vec![0u8; (entry_size / 2) - 4];
 
     for i in start..end {
         let mut n = key_prefix.clone();
