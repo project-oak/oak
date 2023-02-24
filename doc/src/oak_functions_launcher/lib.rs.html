@@ -106,6 +106,33 @@
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -128,8 +155,13 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::schema::InitializeResponse;
 <span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_launcher_utils::{channel, launcher};
-<span class="kw">use </span>std::{fs, path::PathBuf};
+<span class="kw">use </span>oak_launcher_utils::{
+    channel::{<span class="self">self</span>, ConnectorHandle},
+    launcher,
+};
+<span class="kw">use </span>schema::OakFunctionsAsyncClient;
+<span class="kw">use </span>std::{fs, path::PathBuf, time::Duration};
+<span class="kw">use </span>ubyte::ByteUnit;
 
 <span class="kw">pub mod </span>schema {
     <span class="attr">#![allow(dead_code)]
@@ -140,9 +172,16 @@
 <span class="kw">mod </span>lookup;
 <span class="kw">pub mod </span>server;
 
+<span class="kw">pub struct </span>LookupDataConfig {
+    <span class="kw">pub </span>lookup_data_path: PathBuf,
+    <span class="comment">// Only periodically updates if interval is given.
+    </span><span class="kw">pub </span>update_interval: <span class="prelude-ty">Option</span>&lt;Duration&gt;,
+    <span class="kw">pub </span>max_chunk_size: ByteUnit,
+}
+
 <span class="kw">pub async fn </span>create(
     mode: launcher::GuestMode,
-    lookup_data_path: PathBuf,
+    lookup_data_config: LookupDataConfig,
     wasm_path: PathBuf,
     constant_response_size: u32,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;
@@ -154,7 +193,7 @@
     Box&lt;<span class="kw">dyn </span>std::error::Error&gt;,
 &gt; {
     <span class="kw">let </span>(launched_instance, connector_handle) = launcher::launch(mode).<span class="kw">await</span><span class="question-mark">?</span>;
-    setup_lookup_data(connector_handle.clone(), lookup_data_path).<span class="kw">await</span><span class="question-mark">?</span>;
+    setup_lookup_data(connector_handle.clone(), lookup_data_config).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>intialize_response =
         setup_wasm(connector_handle.clone(), <span class="kw-2">&amp;</span>wasm_path, constant_response_size).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>((launched_instance, connector_handle, intialize_response))
@@ -163,24 +202,39 @@
 <span class="comment">// Initially loads lookup data and spawns task to periodically refresh lookup data.
 </span><span class="kw">async fn </span>setup_lookup_data(
     connector_handle: channel::ConnectorHandle,
-    lookup_data_path: PathBuf,
+    config: LookupDataConfig,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>client = schema::OakFunctionsAsyncClient::new(connector_handle);
 
     <span class="comment">// Block for [invariant that lookup data is fully loaded](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-fully-loaded-lookup-data)
-    </span>lookup::update_lookup_data(<span class="kw-2">&amp;mut </span>client, <span class="kw-2">&amp;</span>lookup_data_path).<span class="kw">await</span><span class="question-mark">?</span>;
+    </span>lookup::update_lookup_data(<span class="kw-2">&amp;mut </span>client, <span class="kw-2">&amp;</span>config.lookup_data_path, config.max_chunk_size)
+        .<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="comment">// Spawn task to periodically refresh lookup data.
-    </span>tokio::spawn(<span class="kw">async move </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>interval = tokio::time::interval(std::time::Duration::from_millis(<span class="number">1000 </span>* <span class="number">60 </span>* <span class="number">10</span>));
-        <span class="kw">loop </span>{
-            <span class="comment">// Wait before updating because we just loaded the lookup data.
-            </span>interval.tick().<span class="kw">await</span>;
-            <span class="kw">let _ </span>= lookup::update_lookup_data(<span class="kw-2">&amp;mut </span>client, <span class="kw-2">&amp;</span>lookup_data_path).<span class="kw">await</span>;
-            <span class="comment">// Ignore errors in updates of lookup data after the initial update.
-        </span>}
-    });
+    </span><span class="kw">if </span>config.update_interval.is_some() {
+        tokio::spawn(setup_periodic_update(client, config));
+    }
     <span class="prelude-val">Ok</span>(())
+}
+
+<span class="kw">async fn </span>setup_periodic_update(
+    <span class="kw-2">mut </span>client: OakFunctionsAsyncClient&lt;ConnectorHandle&gt;,
+    config: LookupDataConfig,
+) {
+    <span class="comment">// Only set periodic update if an interval is given.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>interval =
+        tokio::time::interval(config.update_interval.expect(<span class="string">&quot;No update interval given.&quot;</span>));
+    <span class="kw">loop </span>{
+        <span class="comment">// Wait before updating because we just loaded the lookup data.
+        </span>interval.tick().<span class="kw">await</span>;
+        <span class="kw">let _ </span>= lookup::update_lookup_data(
+            <span class="kw-2">&amp;mut </span>client,
+            <span class="kw-2">&amp;</span>config.lookup_data_path,
+            config.max_chunk_size,
+        )
+        .<span class="kw">await</span>;
+        <span class="comment">// Ignore errors in updates of lookup data after the initial update.
+    </span>}
 }
 
 <span class="comment">// Loads wasm bytes.
