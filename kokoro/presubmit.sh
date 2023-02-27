@@ -16,8 +16,7 @@ export RUST_BACKTRACE=1
 export RUST_LOG=debug
 
 ./scripts/docker_pull
-./scripts/docker_run cargo nextest run --hide-progress-bar --package=oak_functions_launcher
-./scripts/docker_run cargo nextest run --hide-progress-bar --package=quirk_echo_launcher
+./scripts/docker_run xtask --scope=all run-cargo-tests
 
 cp ./target/nextest/default/junit.xml "$KOKORO_ARTIFACTS_DIR/"
 ls -als "$KOKORO_ARTIFACTS_DIR"
