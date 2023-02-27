@@ -24,6 +24,71 @@ use prost::Message;
 use std::{fs, path::PathBuf, vec::IntoIter};
 use ubyte::ByteUnit;
 
+struct UpdateClient<'a> {
+    inner: &'a mut OakFunctionsAsyncClient<ConnectorHandle>,
+}
+
+impl<'a> UpdateClient<'_> {
+    async fn start(
+        &mut self,
+        mut chunks: IntoIter<LookupDataChunk>,
+        current_chunk: LookupDataChunk,
+        next_chunk: Option<LookupDataChunk>,
+    ) -> anyhow::Result<()> {
+        // Send the current chunk first.
+        let update_response = self
+            .send_request(UpdateAction::Start, current_chunk)
+            .await?;
+
+        if UpdateStatus::Started != update_response.update_status() {
+            return Err(anyhow!("Did not receive expected update status: Started"));
+        };
+
+        // Currently send only data which fits in two chunks.
+        // TODO(#3718): to send more chunks.
+        if chunks.next().is_some() {
+            return Err(anyhow!("Cannot send lookup data with more than 2 chunks"));
+        }
+        self.finish(next_chunk.unwrap()).await
+    }
+
+    async fn finish(&mut self, chunk: LookupDataChunk) -> anyhow::Result<()> {
+        let update_response = self.send_request(UpdateAction::Finish, chunk).await?;
+        if UpdateStatus::Finished != update_response.update_status() {
+            return Err(anyhow!("Did not receive expected update status: Finished"));
+        };
+        Ok(())
+    }
+
+    async fn start_and_finish(&mut self, chunk: LookupDataChunk) -> anyhow::Result<()> {
+        let update_response = self
+            .send_request(UpdateAction::StartAndFinish, chunk)
+            .await?;
+        if UpdateStatus::Finished != update_response.update_status() {
+            return Err(anyhow!("Did not receive expected update status: Finished"));
+        };
+        Ok(())
+    }
+
+    // Helper to send a request with the given action.
+    async fn send_request(
+        &mut self,
+        action: schema::UpdateAction,
+        chunk: LookupDataChunk,
+    ) -> anyhow::Result<schema::UpdateLookupDataResponse> {
+        let request = schema::UpdateLookupDataRequest {
+            action: action.into(),
+            chunk: Some(chunk),
+        };
+
+        self.inner
+            .update_lookup_data(&request)
+            .await
+            .flatten()
+            .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)))
+    }
+}
+
 // Loads lookup data from the given path, encodes it, and sends it to the client.
 pub async fn update_lookup_data(
     client: &mut OakFunctionsAsyncClient<ConnectorHandle>,
@@ -31,8 +96,9 @@ pub async fn update_lookup_data(
     max_chunk_size: ByteUnit,
 ) -> anyhow::Result<()> {
     let lookup_data = load_lookup_data(lookup_data_path)?;
-
     let mut chunks = chunk_up_lookup_data(lookup_data, max_chunk_size).into_iter();
+
+    let mut update_client = UpdateClient { inner: client };
 
     let current_chunk = chunks
         .next()
@@ -40,70 +106,9 @@ pub async fn update_lookup_data(
     let next_chunk = chunks.next();
 
     match next_chunk {
-        None => update_start_and_finish(client, current_chunk).await,
-        Some(_) => update_start(client, chunks, current_chunk, next_chunk).await,
+        None => update_client.start_and_finish(current_chunk).await,
+        Some(_) => update_client.start(chunks, current_chunk, next_chunk).await,
     }
-}
-
-async fn update_start(
-    client: &mut OakFunctionsAsyncClient<ConnectorHandle>,
-    mut chunks: IntoIter<LookupDataChunk>,
-    current_chunk: LookupDataChunk,
-    next_chunk: Option<LookupDataChunk>,
-) -> anyhow::Result<()> {
-    // Send the current chunk first.
-    let update_response = send_update_request(client, UpdateAction::Start, current_chunk).await?;
-
-    if UpdateStatus::Started != update_response.update_status() {
-        return Err(anyhow!("Did not receive expected update status: Started"));
-    };
-
-    // Currently send only data which fits in two chunks.
-    // TODO(#3718): to send more chunks.
-    if chunks.next().is_some() {
-        return Err(anyhow!("Cannot send lookup data with more than 2 chunks"));
-    }
-    update_finish(client, next_chunk.unwrap()).await
-}
-
-async fn update_finish(
-    client: &mut OakFunctionsAsyncClient<ConnectorHandle>,
-    chunk: LookupDataChunk,
-) -> anyhow::Result<()> {
-    let update_response = send_update_request(client, UpdateAction::Finish, chunk).await?;
-    if UpdateStatus::Finished != update_response.update_status() {
-        return Err(anyhow!("Did not receive expected update status: Finished"));
-    };
-    Ok(())
-}
-
-async fn update_start_and_finish(
-    client: &mut OakFunctionsAsyncClient<ConnectorHandle>,
-    chunk: LookupDataChunk,
-) -> anyhow::Result<()> {
-    let update_response = send_update_request(client, UpdateAction::StartAndFinish, chunk).await?;
-    if UpdateStatus::Finished != update_response.update_status() {
-        return Err(anyhow!("Did not receive expected update status: Finished"));
-    };
-    Ok(())
-}
-
-// Helper to send a request with the given action.
-async fn send_update_request(
-    client: &mut OakFunctionsAsyncClient<ConnectorHandle>,
-    action: schema::UpdateAction,
-    chunk: LookupDataChunk,
-) -> anyhow::Result<schema::UpdateLookupDataResponse> {
-    let request = schema::UpdateLookupDataRequest {
-        action: action.into(),
-        chunk: Some(chunk),
-    };
-
-    client
-        .update_lookup_data(&request)
-        .await
-        .flatten()
-        .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)))
 }
 
 fn chunk_up_lookup_data(
