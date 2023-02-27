@@ -131,7 +131,7 @@ async fn test_load_large_lookup_data() {
         &oak_functions_test_utils::serialize_entries(entries_1chunk),
     );
     let lookup_data_config = LookupDataConfig {
-        lookup_data_path: lookup_data_file.path().to_path_buf().clone(),
+        lookup_data_path: lookup_data_file.path().to_path_buf(),
         update_interval: None,
         max_chunk_size,
     };
@@ -148,7 +148,7 @@ async fn test_load_large_lookup_data() {
     let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
 
     let lookup_data_config = LookupDataConfig {
-        lookup_data_path: lookup_data_file.path().to_path_buf().clone(),
+        lookup_data_path: lookup_data_file.path().to_path_buf(),
         update_interval: None,
         max_chunk_size,
     };
