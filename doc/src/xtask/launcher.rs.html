@@ -184,79 +184,6 @@
 <a href="#184" id="184">184</a>
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
-<a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
-<a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
-<a href="#243" id="243">243</a>
-<a href="#244" id="244">244</a>
-<a href="#245" id="245">245</a>
-<a href="#246" id="246">246</a>
-<a href="#247" id="247">247</a>
-<a href="#248" id="248">248</a>
-<a href="#249" id="249">249</a>
-<a href="#250" id="250">250</a>
-<a href="#251" id="251">251</a>
-<a href="#252" id="252">252</a>
-<a href="#253" id="253">253</a>
-<a href="#254" id="254">254</a>
-<a href="#255" id="255">255</a>
-<a href="#256" id="256">256</a>
-<a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -275,8 +202,7 @@
 
 </span><span class="doccomment">//! Functionality for testing variants of the enclave binary exposed by the launcher.
 
-</span><span class="kw">const </span>CLIENT_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;./target/debug/oak_functions_client&quot;</span>;
-<span class="kw">pub static </span>MOCK_LOOKUP_DATA_PATH: Lazy&lt;PathBuf&gt; =
+</span><span class="kw">pub static </span>MOCK_LOOKUP_DATA_PATH: Lazy&lt;PathBuf&gt; =
     Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;oak_functions_launcher&quot;</span>, <span class="string">&quot;mock_lookup_data&quot;</span>]));
 <span class="kw">pub static </span>WASM_PATH: Lazy&lt;PathBuf&gt; =
     Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;oak_functions_launcher&quot;</span>, <span class="string">&quot;key_value_lookup.wasm&quot;</span>]));
@@ -403,38 +329,6 @@
     }
 }
 
-<span class="kw">fn </span>run_variant(variant: <span class="kw-2">&amp;</span>LauncherMode) -&gt; Step {
-    <span class="kw">let </span><span class="kw-2">mut </span>steps = <span class="macro">vec!</span>[build_binary(
-        <span class="string">&quot;build Oak Functions enclave app&quot;</span>,
-        <span class="kw-2">&amp;</span>variant.enclave_crate_path(),
-    )];
-    <span class="comment">// If we want to run in an VMM, we need three binaries:
-    // 1. the stage0 BIOS image,
-    // 2. the kernel binary,
-    // 3. the actual Oak Functions enclave application.
-    // (1) and (2) are needed to start the VMM, and the kernel expects to read (3) as the very first
-    // thing over the communication channel.
-    </span>steps.extend(<span class="kw">match </span>variant {
-        LauncherMode::Virtual(<span class="kw">_</span>) =&gt; <span class="macro">vec!</span>[
-            build_stage0(),
-            build_binary(
-                <span class="string">&quot;build Oak Restricted Kernel binary&quot;</span>,
-                OAK_RESTRICTED_KERNEL_BIN_DIR.to_str().unwrap(),
-            ),
-        ],
-        LauncherMode::Native(<span class="kw">_</span>) =&gt; <span class="macro">vec!</span>[],
-    });
-    steps.extend(<span class="macro">vec!</span>[Step::WithBackground {
-        name: <span class="string">&quot;background launcher&quot;</span>.to_string(),
-        background: run_oak_functions_launcher_example(variant),
-        foreground: Box::new(run_client(<span class="string">&quot;test_key&quot;</span>, <span class="string">&quot;^test_value$&quot;</span>, <span class="number">300</span>)),
-    }]);
-    Step::Multiple {
-        name: <span class="macro">format!</span>(<span class="string">&quot;run {} variant&quot;</span>, variant),
-        steps,
-    }
-}
-
 <span class="kw">pub fn </span>build_stage0() -&gt; Step {
     Step::Single {
         name: <span class="string">&quot;build stage0&quot;</span>.to_string(),
@@ -475,46 +369,6 @@
     <span class="kw">let </span><span class="kw-2">mut </span>args = <span class="macro">vec!</span>[];
     args.append(<span class="kw-2">&amp;mut </span>variant.variant_subcommand());
     Cmd::new(launcher_bin, args)
-}
-
-<span class="kw">fn </span>run_client(request: <span class="kw-2">&amp;</span>str, expected_response: <span class="kw-2">&amp;</span>str, iterations: usize) -&gt; Step {
-    Step::Multiple {
-        name: <span class="string">&quot;build and run client&quot;</span>.to_string(),
-        steps: <span class="macro">vec!</span>[
-            build_binary(<span class="string">&quot;build client binary&quot;</span>, <span class="string">&quot;./oak_functions_client&quot;</span>),
-            Step::Single {
-                name: <span class="string">&quot;run client&quot;</span>.to_string(),
-                command: Cmd::new(
-                    CLIENT_PATH,
-                    <span class="macro">vec!</span>[
-                        <span class="macro">format!</span>(<span class="string">&quot;--request={}&quot;</span>, request),
-                        <span class="macro">format!</span>(<span class="string">&quot;--expected-response-pattern={}&quot;</span>, expected_response),
-                        <span class="macro">format!</span>(<span class="string">&quot;--iterations={}&quot;</span>, iterations),
-                    ],
-                ),
-            },
-            Step::Single {
-                name: <span class="string">&quot;run client with a large message&quot;</span>.to_string(),
-                command: Cmd::new(CLIENT_PATH, <span class="macro">vec!</span>[<span class="string">&quot;--test-large-message&quot;</span>]),
-            },
-        ],
-    }
-}
-
-<span class="kw">pub fn </span>run_launcher_test() -&gt; Step {
-    <span class="kw">let </span><span class="kw-2">mut </span>steps = <span class="macro">vec!</span>[build_binary(
-        <span class="string">&quot;build Oak Functions launcher&quot;</span>,
-        <span class="string">&quot;./oak_functions_launcher&quot;</span>,
-    )];
-    <span class="kw">let </span>virt = LauncherMode::Virtual(<span class="string">&quot;oak_functions_enclave_app&quot;</span>.to_string());
-    steps.push(run_variant(<span class="kw-2">&amp;</span>virt));
-    <span class="kw">let </span>nat = LauncherMode::Native(<span class="string">&quot;oak_functions_linux_fd_bin&quot;</span>.to_string());
-    steps.push(run_variant(<span class="kw-2">&amp;</span>nat));
-
-    Step::Multiple {
-        name: <span class="string">&quot;End-to-end tests for the launcher and enclave binary&quot;</span>.to_string(),
-        steps,
-    }
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="xtask" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (5b8f28453 2023-02-12)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

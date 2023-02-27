@@ -51,6 +51,6 @@ var sourcesIndex = JSON.parse('{\
 "sev_serial":["",[],["lib.rs"]],\
 "snp_measurement":["",[],["elf.rs","main.rs","page.rs","stage0.rs","vmsa.rs"]],\
 "weather_lookup":["",[],["lib.rs"]],\
-"xtask":["",[],["check_build_licenses.rs","check_license.rs","check_todo.rs","diffs.rs","examples.rs","files.rs","internal.rs","launcher.rs","lib.rs","quirk.rs","testing.rs"]]\
+"xtask":["",[],["check_build_licenses.rs","check_license.rs","check_todo.rs","diffs.rs","examples.rs","files.rs","internal.rs","launcher.rs","lib.rs","testing.rs"]]\
 }');
 createSourceSidebar();
