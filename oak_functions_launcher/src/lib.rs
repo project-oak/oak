@@ -72,8 +72,7 @@ async fn setup_lookup_data(
     let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
 
     // Block for [invariant that lookup data is fully loaded](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-fully-loaded-lookup-data)
-    lookup::update_lookup_data(&mut client, &config.lookup_data_path, config.max_chunk_size)
-        .await?;
+    update_lookup_data(&mut client, &config).await?;
 
     // Spawn task to periodically refresh lookup data.
     if config.update_interval.is_some() {
@@ -92,14 +91,18 @@ async fn setup_periodic_update(
     loop {
         // Wait before updating because we just loaded the lookup data.
         interval.tick().await;
-        let _ = lookup::update_lookup_data(
-            &mut client,
-            &config.lookup_data_path,
-            config.max_chunk_size,
-        )
-        .await;
+        let _ = update_lookup_data(&mut client, &config).await;
         // Ignore errors in updates of lookup data after the initial update.
     }
+}
+
+// Trigger loading of lookup data from lookup data source.
+// Public for convenient testing.
+pub async fn update_lookup_data(
+    client: &mut OakFunctionsAsyncClient<ConnectorHandle>,
+    config: &LookupDataConfig,
+) -> anyhow::Result<()> {
+    lookup::update_lookup_data(client, &config.lookup_data_path, config.max_chunk_size).await
 }
 
 // Loads wasm bytes.
