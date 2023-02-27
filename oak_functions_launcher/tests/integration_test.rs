@@ -153,16 +153,26 @@ async fn test_load_large_lookup_data() {
         max_chunk_size,
     };
 
+    // Write 2 chunks in lookup data.
     let enteries_2chunks = oak_functions_test_utils::create_test_lookup_data(max_chunk_size, 2);
     let write_result = lookup_data_file.write_all(&oak_functions_test_utils::serialize_entries(
         enteries_2chunks,
     ));
     assert!(write_result.is_ok());
-
     let status_2chunks = update_lookup_data(&mut client, &lookup_data_config).await;
+    assert!(status_2chunks.is_ok());
+
+    let enteries_4chunks = oak_functions_test_utils::create_test_lookup_data(max_chunk_size, 4);
+    let write_result = lookup_data_file.write_all(&oak_functions_test_utils::serialize_entries(
+        enteries_4chunks,
+    ));
+    assert!(write_result.is_ok());
+
+    // Write 4 chunks in lookup data.
     // TODO(#3668): status is currently not ok and the test is expected to fail until we can load
     // more than max_chunk_size of lookup data.
-    assert!(status_2chunks.is_ok());
+    let status_4chunks = update_lookup_data(&mut client, &lookup_data_config).await;
+    assert!(status_4chunks.is_ok());
 
     launched_instance
         .kill()

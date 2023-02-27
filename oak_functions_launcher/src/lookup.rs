@@ -16,12 +16,12 @@
 
 use crate::{
     channel::ConnectorHandle,
-    schema::{self, OakFunctionsAsyncClient},
+    schema::{self, LookupDataChunk, OakFunctionsAsyncClient},
 };
 use anyhow::{anyhow, Context};
 use hashbrown::HashMap;
 use prost::Message;
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, vec::IntoIter};
 use ubyte::ByteUnit;
 
 // Loads lookup data from the given path, encodes it, and sends it to the client.
@@ -31,26 +31,71 @@ pub async fn update_lookup_data(
     max_chunk_size: ByteUnit,
 ) -> anyhow::Result<()> {
     let lookup_data = load_lookup_data(lookup_data_path)?;
-    let mut chunks = chunk_up_lookup_data(lookup_data, max_chunk_size);
 
-    // We currently send only if we can fit the data in one chunk, otherwise we return an error.
-    // TODO(#3718): to send more than one chunk.
-    if chunks.len() != 1 {
-        return Err(anyhow!(
-            "lookup data size exceeds: {:?} bytes",
-            max_chunk_size
-        ));
+    let mut chunks = chunk_up_lookup_data(lookup_data, max_chunk_size).into_iter();
+    let current_chunk = chunks.next();
+    let next_chunk = chunks.next();
+
+    match next_chunk {
+        None => update_start_and_finish(client, current_chunk).await,
+        Some(_) => update_start(client, chunks, current_chunk, next_chunk).await,
     }
-    let chunk = chunks.pop().unwrap();
+}
 
-    let action = schema::UpdateAction::StartAndFinish;
+async fn update_start(
+    client: &mut OakFunctionsAsyncClient<ConnectorHandle>,
+    mut chunks: IntoIter<LookupDataChunk>,
+    current_chunk: Option<LookupDataChunk>,
+    next_chunk: Option<LookupDataChunk>,
+) -> anyhow::Result<()> {
+    // First send the current chunk.
     let request = schema::UpdateLookupDataRequest {
-        action: action.into(),
-        chunk: Some(chunk),
+        action: schema::UpdateAction::Start.into(),
+        chunk: current_chunk,
+    };
+
+    // TODO(mschett): Do not ignore response and hope everything went well.
+    let _ = match client.update_lookup_data(&request).await {
+        Ok(_response) => Ok(()),
+        Err(err) => Err(anyhow!("couldn't send lookup data: {:?}", err)),
+    };
+
+    // We currently send only if we can fit the data in two chunks, otherwise we return an
+    // error.
+    // TODO(#3718): to send more than one chunk.
+    if chunks.next().is_some() {
+        return Err(anyhow!("couldn't send lookup data with more than 2 chunks"));
+    }
+    update_finish(client, next_chunk).await
+}
+
+async fn update_finish(
+    client: &mut OakFunctionsAsyncClient<ConnectorHandle>,
+    chunk: Option<LookupDataChunk>,
+) -> anyhow::Result<()> {
+    let request = schema::UpdateLookupDataRequest {
+        action: schema::UpdateAction::Finish.into(),
+        chunk: chunk,
     };
 
     match client.update_lookup_data(&request).await {
-        Ok(_) => Ok(()),
+        // TODO(mschett): Do not ignore response and hope everything went well.
+        Ok(_response) => Ok(()),
+        Err(err) => Err(anyhow!("couldn't send lookup data: {:?}", err)),
+    }
+}
+
+async fn update_start_and_finish(
+    client: &mut OakFunctionsAsyncClient<ConnectorHandle>,
+    chunk: Option<LookupDataChunk>,
+) -> anyhow::Result<()> {
+    let request = schema::UpdateLookupDataRequest {
+        action: schema::UpdateAction::StartAndFinish.into(),
+        chunk,
+    };
+    match client.update_lookup_data(&request).await {
+        // TODO(mschett): Do not ignore response and hope everything went well.
+        Ok(_response) => Ok(()),
         Err(err) => Err(anyhow!("couldn't send lookup data: {:?}", err)),
     }
 }
