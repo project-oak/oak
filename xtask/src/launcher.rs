@@ -16,7 +16,6 @@
 
 //! Functionality for testing variants of the enclave binary exposed by the launcher.
 
-const CLIENT_PATH: &str = "./target/debug/oak_functions_client";
 pub static MOCK_LOOKUP_DATA_PATH: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_functions_launcher", "mock_lookup_data"]));
 pub static WASM_PATH: Lazy<PathBuf> =
@@ -144,38 +143,6 @@ fn build_released_binary(name: &str, directory: &str) -> Step {
     }
 }
 
-fn run_variant(variant: &LauncherMode) -> Step {
-    let mut steps = vec![build_binary(
-        "build Oak Functions enclave app",
-        &variant.enclave_crate_path(),
-    )];
-    // If we want to run in an VMM, we need three binaries:
-    // 1. the stage0 BIOS image,
-    // 2. the kernel binary,
-    // 3. the actual Oak Functions enclave application.
-    // (1) and (2) are needed to start the VMM, and the kernel expects to read (3) as the very first
-    // thing over the communication channel.
-    steps.extend(match variant {
-        LauncherMode::Virtual(_) => vec![
-            build_stage0(),
-            build_binary(
-                "build Oak Restricted Kernel binary",
-                OAK_RESTRICTED_KERNEL_BIN_DIR.to_str().unwrap(),
-            ),
-        ],
-        LauncherMode::Native(_) => vec![],
-    });
-    steps.extend(vec![Step::WithBackground {
-        name: "background launcher".to_string(),
-        background: run_oak_functions_launcher_example(variant),
-        foreground: Box::new(run_client("test_key", "^test_value$", 300)),
-    }]);
-    Step::Multiple {
-        name: format!("run {} variant", variant),
-        steps,
-    }
-}
-
 pub fn build_stage0() -> Step {
     Step::Single {
         name: "build stage0".to_string(),
@@ -216,44 +183,4 @@ pub fn run_launcher(launcher_bin: &str, variant: &LauncherMode) -> Box<dyn Runna
     let mut args = vec![];
     args.append(&mut variant.variant_subcommand());
     Cmd::new(launcher_bin, args)
-}
-
-fn run_client(request: &str, expected_response: &str, iterations: usize) -> Step {
-    Step::Multiple {
-        name: "build and run client".to_string(),
-        steps: vec![
-            build_binary("build client binary", "./oak_functions_client"),
-            Step::Single {
-                name: "run client".to_string(),
-                command: Cmd::new(
-                    CLIENT_PATH,
-                    vec![
-                        format!("--request={}", request),
-                        format!("--expected-response-pattern={}", expected_response),
-                        format!("--iterations={}", iterations),
-                    ],
-                ),
-            },
-            Step::Single {
-                name: "run client with a large message".to_string(),
-                command: Cmd::new(CLIENT_PATH, vec!["--test-large-message"]),
-            },
-        ],
-    }
-}
-
-pub fn run_launcher_test() -> Step {
-    let mut steps = vec![build_binary(
-        "build Oak Functions launcher",
-        "./oak_functions_launcher",
-    )];
-    let virt = LauncherMode::Virtual("oak_functions_enclave_app".to_string());
-    steps.push(run_variant(&virt));
-    let nat = LauncherMode::Native("oak_functions_linux_fd_bin".to_string());
-    steps.push(run_variant(&nat));
-
-    Step::Multiple {
-        name: "End-to-end tests for the launcher and enclave binary".to_string(),
-        steps,
-    }
 }
