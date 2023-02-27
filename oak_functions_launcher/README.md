@@ -13,14 +13,17 @@ module by either (i) `sudo setfacl -m u:${USER}:rw /dev/kvm` on the host, or by
 Then, run the following from within the
 [Oak Developer Docker Container](../docs/development.md#docker-helper-scripts):
 
-To launch tests of the Oak Functions Launcher with `xtask`:
+To launch integration tests of the Oak Functions Launcher:
 
 ```shell
-xtask run-launcher-test
+cargo test --package=oak_functions_launcher
 ```
 
-Additional documentation is available via
-`cargo run --package=oak_functions_launcher -- --help`.
+Additional documentation is available via:
+
+```shell
+cargo run --package=oak_functions_launcher -- --help
+```
 
 To launch the Oak Functions binary directly as a child process:
 
@@ -37,6 +40,7 @@ cargo build --package=oak_functions_linux_fd_bin \
 Output:
 
 ```shell
-[2023-01-12T16:38:04Z INFO  oak_functions_launcher] read Wasm file from disk oak_functions_launcher/key_value_lookup.wasm (1728193 bytes)
-INFO: Connecting to the launcher via the file descriptor: 11
+[2023-02-27T16:54:15Z INFO  oak_functions_launcher] read Wasm file from disk oak_functions_launcher/key_value_lookup.wasm (1.65MiB)
+[2023-02-27T16:54:15Z INFO  oak_functions_launcher] service initialized: InitializeResponse { public_key_info: Some(PublicKeyInfo { public_key: [], attestation: [] }) }
+[2023-02-27T16:54:15Z INFO  oak_functions_launcher] obtained public key (0 bytes)
 ```
