@@ -28,7 +28,7 @@ struct UpdateClient<'a> {
     inner: &'a mut OakFunctionsAsyncClient<ConnectorHandle>,
 }
 
-impl<'a> UpdateClient<'_> {
+impl UpdateClient<'_> {
     async fn start(
         &mut self,
         mut chunks: IntoIter<LookupDataChunk>,
