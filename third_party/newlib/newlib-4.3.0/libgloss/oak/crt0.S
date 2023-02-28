@@ -18,6 +18,13 @@
 .global _start
 
 _start:
+    movq $0, %rbp
+    pushq %rbp
+    pushq %rbp
+    movq %rsp, %rbp
+
+    call _init
+    
     # argc = 0, argv = NULL, envp = NULL
     xor %rdi, %rdi
     xor %rsi, %rsi
