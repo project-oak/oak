@@ -85,21 +85,24 @@ pub fn serialize_entries(entries: HashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
     buf
 }
 
-// Create lookup data entries mapping keys to themselves. The keys range from start
-// to exclusive end and are padded to entry size (which has to be larger than 8 to fit two u32).
+// Create lookup data entries mapping keys to themselves which, when chunked, will be chunked to
+// chunk_count chunks of max_chunk_size.
 pub fn create_test_lookup_data(
-    entry_size: ByteUnit,
-    start: u32,
-    end: u32,
+    max_chunk_size: ByteUnit,
+    chunk_count: u32,
 ) -> HashMap<Vec<u8>, Vec<u8>> {
     let mut entries = std::collections::HashMap::new();
-    let entry_size = entry_size.as_u64() as usize;
 
-    let key_prefix = vec![0u8; (entry_size / 2) - 4];
+    let entry_size = ByteUnit::Byte(10);
+    // This has to be consistent with the overhead set in chunking up lookup data.
+    let entry_overhead = ByteUnit::Byte(10);
+    let chunk_overhead = ByteUnit::Byte(50);
+    let max_entries_by_chunk =
+        ((max_chunk_size - chunk_overhead) / (entry_size + entry_overhead)).as_u64() as u32;
 
-    for i in start..end {
-        let mut n = key_prefix.clone();
-        n.append(&mut format!("{}", i).into_bytes());
+    for i in 0..(max_entries_by_chunk * chunk_count) {
+        // Pad to 5 bytes to have 10 byte entries
+        let n = format!("{:05}", i).into_bytes();
         entries.insert(n.clone(), n);
     }
     entries

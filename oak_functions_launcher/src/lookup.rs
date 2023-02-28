@@ -16,13 +16,69 @@
 
 use crate::{
     channel::ConnectorHandle,
-    schema::{self, OakFunctionsAsyncClient},
+    schema::{self, LookupDataChunk, OakFunctionsAsyncClient, UpdateAction, UpdateStatus},
 };
 use anyhow::{anyhow, Context};
 use hashbrown::HashMap;
 use prost::Message;
-use std::{fs, path::PathBuf};
+use std::{fs, path::PathBuf, vec::IntoIter};
 use ubyte::ByteUnit;
+
+struct UpdateClient<'a> {
+    inner: &'a mut OakFunctionsAsyncClient<ConnectorHandle>,
+    chunks: IntoIter<LookupDataChunk>,
+}
+
+impl UpdateClient<'_> {
+    async fn start(&mut self) -> anyhow::Result<()> {
+        // Send the current chunk first.
+        let update_response = self.send_request(UpdateAction::Start).await?;
+
+        if UpdateStatus::Started != update_response.update_status() {
+            return Err(anyhow!("Did not receive expected update status: Started"));
+        };
+
+        // Currently send only data which fits in two chunks.
+        // TODO(#3718): to send more chunks.
+        if self.chunks.len() > 1 {
+            return Err(anyhow!("Cannot send lookup data with more than 2 chunks"));
+        }
+        self.finish().await
+    }
+
+    async fn finish(&mut self) -> anyhow::Result<()> {
+        let update_response = self.send_request(UpdateAction::Finish).await?;
+        if UpdateStatus::Finished != update_response.update_status() {
+            return Err(anyhow!("Did not receive expected update status: Finished"));
+        };
+        Ok(())
+    }
+
+    async fn start_and_finish(&mut self) -> anyhow::Result<()> {
+        let update_response = self.send_request(UpdateAction::StartAndFinish).await?;
+        if UpdateStatus::Finished != update_response.update_status() {
+            return Err(anyhow!("Did not receive expected update status: Finished"));
+        };
+        Ok(())
+    }
+
+    // Helper to send a request with the given action.
+    async fn send_request(
+        &mut self,
+        action: schema::UpdateAction,
+    ) -> anyhow::Result<schema::UpdateLookupDataResponse> {
+        let request = schema::UpdateLookupDataRequest {
+            action: action.into(),
+            chunk: self.chunks.next(),
+        };
+
+        self.inner
+            .update_lookup_data(&request)
+            .await
+            .flatten()
+            .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)))
+    }
+}
 
 // Loads lookup data from the given path, encodes it, and sends it to the client.
 pub async fn update_lookup_data(
@@ -31,27 +87,17 @@ pub async fn update_lookup_data(
     max_chunk_size: ByteUnit,
 ) -> anyhow::Result<()> {
     let lookup_data = load_lookup_data(lookup_data_path)?;
-    let mut chunks = chunk_up_lookup_data(lookup_data, max_chunk_size);
+    let chunks = chunk_up_lookup_data(lookup_data, max_chunk_size).into_iter();
 
-    // We currently send only if we can fit the data in one chunk, otherwise we return an error.
-    // TODO(#3718): to send more than one chunk.
-    if chunks.len() != 1 {
-        return Err(anyhow!(
-            "lookup data size exceeds: {:?} bytes",
-            max_chunk_size
-        ));
-    }
-    let chunk = chunks.pop().unwrap();
-
-    let action = schema::UpdateAction::StartAndFinish;
-    let request = schema::UpdateLookupDataRequest {
-        action: action.into(),
-        chunk: Some(chunk),
+    let mut update_client = UpdateClient {
+        inner: client,
+        chunks,
     };
 
-    match client.update_lookup_data(&request).await {
-        Ok(_) => Ok(()),
-        Err(err) => Err(anyhow!("couldn't send lookup data: {:?}", err)),
+    if update_client.chunks.len() == 1 {
+        update_client.start_and_finish().await
+    } else {
+        update_client.start().await
     }
 }
 

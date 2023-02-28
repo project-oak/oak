@@ -18,10 +18,10 @@
 use lazy_static::lazy_static;
 use oak_functions_launcher::{
     schema::{self, InvokeRequest},
-    LookupDataConfig,
+    update_lookup_data, LookupDataConfig,
 };
 use oak_launcher_utils::launcher;
-use std::{path::PathBuf, time::Duration};
+use std::{io::Write, path::PathBuf, time::Duration};
 use ubyte::ByteUnit;
 
 lazy_static! {
@@ -123,14 +123,29 @@ async fn test_load_large_lookup_data() {
         enclave_binary: ENCLAVE_BINARY_PATH.to_path_buf(),
     };
 
-    let max_chunk_size = ByteUnit::Kibibyte(2);
-    let entry_size = ByteUnit::Byte(10);
-    let entries_count = (max_chunk_size / entry_size).as_u64() as u32;
-    let entries = oak_functions_test_utils::create_test_lookup_data(entry_size, 0, entries_count);
+    let max_chunk_size = ByteUnit::Kilobyte(2);
 
-    let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
-        &oak_functions_test_utils::serialize_entries(entries.clone()),
+    // Initialize with 1 chunk.
+    let entries_one_chunk = oak_functions_test_utils::create_test_lookup_data(max_chunk_size, 1);
+    let mut lookup_data_file = oak_functions_test_utils::write_to_temp_file(
+        &oak_functions_test_utils::serialize_entries(entries_one_chunk),
     );
+    let lookup_data_config = LookupDataConfig {
+        lookup_data_path: lookup_data_file.path().to_path_buf(),
+        update_interval: None,
+        max_chunk_size,
+    };
+    let status_one_chunk = oak_functions_launcher::create(
+        launcher::GuestMode::Native(params),
+        lookup_data_config,
+        xtask::launcher::WASM_PATH.to_path_buf(),
+        1024,
+    )
+    .await;
+    assert!(status_one_chunk.is_ok());
+
+    let (launched_instance, connector_handle, _) = status_one_chunk.unwrap();
+    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
 
     let lookup_data_config = LookupDataConfig {
         lookup_data_path: lookup_data_file.path().to_path_buf(),
@@ -138,50 +153,26 @@ async fn test_load_large_lookup_data() {
         max_chunk_size,
     };
 
-    let constant_response_size = (10 / 2) + 1024; // Add some margin to be on the safe side.
+    // Write 2 chunks in lookup data.
+    let enteries_two_chunks = oak_functions_test_utils::create_test_lookup_data(max_chunk_size, 2);
+    let write_result = lookup_data_file.write_all(&oak_functions_test_utils::serialize_entries(
+        enteries_two_chunks,
+    ));
+    assert!(write_result.is_ok());
+    let status_two_chunks = update_lookup_data(&mut client, &lookup_data_config).await;
+    assert!(status_two_chunks.is_ok());
 
-    let status = oak_functions_launcher::create(
-        launcher::GuestMode::Native(params),
-        lookup_data_config,
-        xtask::launcher::WASM_PATH.to_path_buf(),
-        constant_response_size as u32,
-    )
-    .await;
+    let enteries_four_chunks = oak_functions_test_utils::create_test_lookup_data(max_chunk_size, 4);
+    let write_result = lookup_data_file.write_all(&oak_functions_test_utils::serialize_entries(
+        enteries_four_chunks,
+    ));
+    assert!(write_result.is_ok());
 
+    // Write 4 chunks in lookup data.
     // TODO(#3668): status is currently not ok and the test is expected to fail until we can load
     // more than max_chunk_size of lookup data.
-    assert!(status.is_ok());
-
-    // Pick two keys for testing, but don't assume that they are first or last.
-    let (key1, value1) = entries.iter().next().unwrap();
-    let (key2, value2) = entries.iter().last().unwrap();
-
-    let (launched_instance, connector_handle, _) = status.unwrap();
-
-    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
-    let invoke_request = InvokeRequest {
-        body: key1.to_owned(),
-    };
-
-    let response = client
-        .invoke(&invoke_request)
-        .await
-        .expect("Failed to receive response.");
-
-    assert!(response.is_ok());
-    assert_eq!(value1.to_owned(), response.unwrap().body);
-
-    let invoke_request = InvokeRequest {
-        body: key2.to_owned(),
-    };
-
-    let response = client
-        .invoke(&invoke_request)
-        .await
-        .expect("Failed to receive response.");
-
-    assert!(response.is_ok());
-    assert_eq!(value2.to_owned(), response.unwrap().body);
+    let status_four_chunks = update_lookup_data(&mut client, &lookup_data_config).await;
+    assert!(status_four_chunks.is_ok());
 
     launched_instance
         .kill()
