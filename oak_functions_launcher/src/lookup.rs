@@ -19,6 +19,7 @@ use crate::{
     schema::{self, LookupDataChunk, OakFunctionsAsyncClient, UpdateAction, UpdateStatus},
 };
 use anyhow::{anyhow, Context};
+use async_recursion::async_recursion;
 use hashbrown::HashMap;
 use prost::Message;
 use std::{fs, path::PathBuf, vec::IntoIter};
@@ -33,17 +34,23 @@ impl UpdateClient<'_> {
     async fn start(&mut self) -> anyhow::Result<()> {
         // Send the current chunk first.
         let update_response = self.send_request(UpdateAction::Start).await?;
-
         if UpdateStatus::Started != update_response.update_status() {
             return Err(anyhow!("Did not receive expected update status: Started"));
         };
+        self.continue_().await
+    }
 
-        // Currently send only data which fits in two chunks.
-        // TODO(#3718): to send more chunks.
-        if self.chunks.len() > 1 {
-            return Err(anyhow!("Cannot send lookup data with more than 2 chunks"));
+    #[async_recursion]
+    async fn continue_(&mut self) -> anyhow::Result<()> {
+        if self.chunks.len() == 1 {
+            self.finish().await
+        } else {
+            let update_response = self.send_request(UpdateAction::Continue).await?;
+            if UpdateStatus::Started != update_response.update_status() {
+                return Err(anyhow!("Did not receive expected update status: Started"));
+            };
+            self.continue_().await
         }
-        self.finish().await
     }
 
     async fn finish(&mut self) -> anyhow::Result<()> {

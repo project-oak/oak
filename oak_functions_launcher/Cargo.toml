@@ -33,6 +33,7 @@ micro_rpc = { workspace = true }
 oak_channel = { workspace = true, features = ["client"] }
 hashbrown = "*"
 ubyte = "*"
+async-recursion = "*"
 
 [build-dependencies]
 micro_rpc_build = { workspace = true }
