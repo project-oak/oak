@@ -133,6 +133,9 @@
 <a href="#133" id="133">133</a>
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -207,8 +210,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>client = schema::OakFunctionsAsyncClient::new(connector_handle);
 
     <span class="comment">// Block for [invariant that lookup data is fully loaded](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-fully-loaded-lookup-data)
-    </span>lookup::update_lookup_data(<span class="kw-2">&amp;mut </span>client, <span class="kw-2">&amp;</span>config.lookup_data_path, config.max_chunk_size)
-        .<span class="kw">await</span><span class="question-mark">?</span>;
+    </span>update_lookup_data(<span class="kw-2">&amp;mut </span>client, <span class="kw-2">&amp;</span>config).<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="comment">// Spawn task to periodically refresh lookup data.
     </span><span class="kw">if </span>config.update_interval.is_some() {
@@ -227,15 +229,19 @@
     <span class="kw">loop </span>{
         <span class="comment">// Wait before updating because we just loaded the lookup data.
         </span>interval.tick().<span class="kw">await</span>;
-        <span class="kw">let _ </span>= lookup::update_lookup_data(
-            <span class="kw-2">&amp;mut </span>client,
-            <span class="kw-2">&amp;</span>config.lookup_data_path,
-            config.max_chunk_size,
-        )
-        .<span class="kw">await</span>;
+        <span class="kw">let _ </span>= update_lookup_data(<span class="kw-2">&amp;mut </span>client, <span class="kw-2">&amp;</span>config).<span class="kw">await</span>;
         <span class="comment">// Ignore errors in updates of lookup data after the initial update.
     </span>}
 }
+
+<span class="comment">// Trigger loading of lookup data from lookup data source.
+// Public for convenient testing.
+</span><span class="kw">pub async fn </span>update_lookup_data(
+    client: <span class="kw-2">&amp;mut </span>OakFunctionsAsyncClient&lt;ConnectorHandle&gt;,
+    config: <span class="kw-2">&amp;</span>LookupDataConfig,
+) -&gt; anyhow::Result&lt;()&gt; {
+    lookup::update_lookup_data(client, <span class="kw-2">&amp;</span>config.lookup_data_path, config.max_chunk_size).<span class="kw">await
+</span>}
 
 <span class="comment">// Loads wasm bytes.
 </span><span class="kw">async fn </span>setup_wasm(

@@ -279,6 +279,9 @@
 <a href="#279" id="279">279</a>
 <a href="#280" id="280">280</a>
 <a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -366,21 +369,24 @@
     buf
 }
 
-<span class="comment">// Create lookup data entries mapping keys to themselves. The keys range from start
-// to exclusive end and are padded to entry size (which has to be larger than 8 to fit two u32).
+<span class="comment">// Create lookup data entries mapping keys to themselves which, when chunked, will be chunked to
+// chunk_count chunks of max_chunk_size.
 </span><span class="kw">pub fn </span>create_test_lookup_data(
-    entry_size: ByteUnit,
-    start: u32,
-    end: u32,
+    max_chunk_size: ByteUnit,
+    chunk_count: u32,
 ) -&gt; HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>entries = std::collections::HashMap::new();
-    <span class="kw">let </span>entry_size = entry_size.as_u64() <span class="kw">as </span>usize;
 
-    <span class="kw">let </span>key_prefix = <span class="macro">vec!</span>[<span class="number">0u8</span>; (entry_size / <span class="number">2</span>) - <span class="number">4</span>];
+    <span class="kw">let </span>entry_size = ByteUnit::Byte(<span class="number">10</span>);
+    <span class="comment">// This has to be consistent with the overhead set in chunking up lookup data.
+    </span><span class="kw">let </span>entry_overhead = ByteUnit::Byte(<span class="number">10</span>);
+    <span class="kw">let </span>chunk_overhead = ByteUnit::Byte(<span class="number">50</span>);
+    <span class="kw">let </span>max_entries_by_chunk =
+        ((max_chunk_size - chunk_overhead) / (entry_size + entry_overhead)).as_u64() <span class="kw">as </span>u32;
 
-    <span class="kw">for </span>i <span class="kw">in </span>start..end {
-        <span class="kw">let </span><span class="kw-2">mut </span>n = key_prefix.clone();
-        n.append(<span class="kw-2">&amp;mut </span><span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, i).into_bytes());
+    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..(max_entries_by_chunk * chunk_count) {
+        <span class="comment">// Pad to 5 bytes to have 10 byte entries
+        </span><span class="kw">let </span>n = <span class="macro">format!</span>(<span class="string">&quot;{:05}&quot;</span>, i).into_bytes();
         entries.insert(n.clone(), n);
     }
     entries
