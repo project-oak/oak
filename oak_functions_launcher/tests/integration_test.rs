@@ -15,23 +15,13 @@
 
 //! Integration tests for the Oak Functions Launcher.
 
-use lazy_static::lazy_static;
 use oak_functions_launcher::{
     schema::{self, InvokeRequest},
     update_lookup_data, LookupDataConfig,
 };
 use oak_launcher_utils::launcher;
-use std::{io::Write, path::PathBuf, time::Duration};
+use std::{io::Write, time::Duration};
 use ubyte::ByteUnit;
-
-lazy_static! {
-    static ref ENCLAVE_BINARY_PATH: PathBuf = {
-        let oak_functions_linux_fd_bin_path =
-            oak_functions_test_utils::build_rust_crate_linux("oak_functions_linux_fd_bin")
-                .expect("Failed to build oak_functions_linux_fd_bin");
-        PathBuf::from(oak_functions_linux_fd_bin_path)
-    };
-}
 
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
@@ -56,27 +46,33 @@ async fn test_launcher_virtual() {
     ))
     .await;
 
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
+        .expect("Failed to build Wasm module");
+
     let _background = xtask::testing::run_background(
-        xtask::launcher::run_oak_functions_launcher_example(&variant),
+        xtask::launcher::run_oak_functions_launcher_example(&variant, &wasm_path),
     )
     .await;
 
     // Wait for the server to start up.
     tokio::time::sleep(Duration::from_secs(5)).await;
 
-    let response = oak_functions_client::Client::new("http://localhost:8080")
+    let mut client = oak_functions_client::Client::new("http://localhost:8080")
         .await
-        .unwrap()
-        .invoke(b"test_key")
-        .await
-        .expect("failed to invoke");
+        .unwrap();
+
+    let response = client.invoke(b"test_key").await.expect("failed to invoke");
     assert_eq!(response, b"test_value");
 }
 
 #[tokio::test]
 async fn test_launcher_looks_up_key() {
+    let oak_functions_linux_fd_bin_path =
+        oak_functions_test_utils::build_rust_crate_linux("oak_functions_linux_fd_bin")
+            .expect("Failed to build oak_functions_linux_fd_bin");
+
     let params = launcher::native::Params {
-        enclave_binary: ENCLAVE_BINARY_PATH.to_path_buf(),
+        enclave_binary: oak_functions_linux_fd_bin_path.into(),
     };
 
     // Make sure the response fits in the response size.
@@ -88,10 +84,13 @@ async fn test_launcher_looks_up_key() {
         max_chunk_size: ByteUnit::Gibibyte(2),
     };
 
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
+        .expect("Failed to build Wasm module");
+
     let (launched_instance, connector_handle, _) = oak_functions_launcher::create(
         launcher::GuestMode::Native(params),
         lookup_data_config,
-        xtask::launcher::WASM_PATH.to_path_buf(),
+        wasm_path.into(),
         constant_response_size,
     )
     .await
@@ -119,8 +118,12 @@ async fn test_launcher_looks_up_key() {
 #[ignore]
 // TODO(#3668): fails until we can load more than max_chunk_size of lookup data.
 async fn test_load_large_lookup_data() {
+    let oak_functions_linux_fd_bin_path =
+        oak_functions_test_utils::build_rust_crate_linux("oak_functions_linux_fd_bin")
+            .expect("Failed to build oak_functions_linux_fd_bin");
+
     let params = launcher::native::Params {
-        enclave_binary: ENCLAVE_BINARY_PATH.to_path_buf(),
+        enclave_binary: oak_functions_linux_fd_bin_path.into(),
     };
 
     let max_chunk_size = ByteUnit::Kilobyte(2);
@@ -135,10 +138,12 @@ async fn test_load_large_lookup_data() {
         update_interval: None,
         max_chunk_size,
     };
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
+        .expect("Failed to build Wasm module");
     let status_one_chunk = oak_functions_launcher::create(
         launcher::GuestMode::Native(params),
         lookup_data_config,
-        xtask::launcher::WASM_PATH.to_path_buf(),
+        wasm_path.into(),
         1024,
     )
     .await;

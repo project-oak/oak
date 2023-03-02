@@ -26,9 +26,9 @@ tokio = { version = "*", features = [
 ] }
 tonic = "*"
 tonic-web = { version = "*", optional = true }
-oak_functions_abi = { path = "../oak_functions_abi" }
-oak_launcher_utils = { path = "../oak_launcher_utils" }
-oak_remote_attestation_noninteractive = { path = "../oak_remote_attestation_noninteractive" }
+oak_functions_abi = { workspace = true }
+oak_launcher_utils = { workspace = true }
+oak_remote_attestation_noninteractive = { workspace = true }
 micro_rpc = { workspace = true }
 oak_channel = { workspace = true, features = ["client"] }
 hashbrown = "*"
@@ -38,7 +38,6 @@ ubyte = "*"
 micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
-lazy_static = "*"
 oak_functions_client = { workspace = true }
 oak_functions_test_utils = { workspace = true }
 rand = "*"
