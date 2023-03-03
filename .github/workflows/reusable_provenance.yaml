@@ -75,28 +75,29 @@ jobs:
         # if: github.event_name == 'push'
         uses: actions/download-artifact@v3
         with:
-          name: ${{ needs.generate_provenance.outputs.provenance-name }}
+          name:
+            ${{ needs.generate_provenance.outputs.attestations-download-name }}
 
       - name: Upload to Ent (post-merge only)
         if: github.event_name == 'push'
         id: ent_upload
         run: |
-          echo "provenance_digest=$(ent put ${{ needs.generate_provenance.outputs.provenance-name }})" >> $GITHUB_OUTPUT
+          echo "provenance_digest=$(ent put ${{ needs.generate_provenance.outputs.attestations-download-name }})" >> $GITHUB_OUTPUT
 
-      - name: Download the built artifact
-        # if: github.event_name == 'push'
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ needs.generate_provenance.outputs.build-outputs-name }}
+      # - name: Download the built artifact
+      #   # if: github.event_name == 'push'
+      #   uses: actions/download-artifact@v3
+      #   with:
+      #     name: ${{ needs.generate_provenance.outputs.build-outputs-name }}
 
-      - name: Display structure of downloaded files
-        run: ls -R
-        working-directory:
-          ${{ needs.generate_provenance.outputs.build-outputs-name }}
+      # - name: Display structure of downloaded files
+      #   run: ls -R
+      #   working-directory:
+      #     ${{ needs.generate_provenance.outputs.build-outputs-name }}
 
       - name: Get artifact digest
         run: |
-          echo "artifact_digest=$(sha256sum ${{ needs.generate_provenance.outputs.provenance-name }})" >>$GITHUB_OUTPUT
+          echo "artifact_digest=$(sha256sum ${{ needs.generate_provenance.outputs.attestations-download-name }})" >>$GITHUB_OUTPUT
 
       # Add the artifact digest and name to the ./comment file.
       - name: Format artifact digest
@@ -147,4 +148,4 @@ jobs:
         if: github.event_name != 'push'
         run: |
           head ./comment
-          echo "attestation-name: ${{ needs.generate_provenance.outputs.provenance-name }}"
+          echo "attestation-name: ${{ needs.generate_provenance.outputs.attestations-download-name }}"
