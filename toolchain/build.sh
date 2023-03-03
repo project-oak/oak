@@ -1,5 +1,6 @@
 
 BINUTILS_VERSION=2.40
+GCC_VERSION=12.2.0
 
 TARGET=x86_64-unknown-oak
 
@@ -34,6 +35,40 @@ mkdir -p build-binutils
   make install > ../build.log 2>&1
   if [ $? -ne 0 ]; then
     echo "Failed to build binutils! See build.log for more details."
+    exit 1
+  fi
+)
+
+# Step 2: GCC. Just the compiler parts; we'll come back for the C++ standard library later.
+echo "Building GCC..."
+curl -O -L https://ftpmirror.gnu.org/gnu/gcc/gcc-$GCC_VERSION/gcc-$GCC_VERSION.tar.gz > build.log
+tar xf gcc-$GCC_VERSION.tar.gz
+(
+  cd gcc-$GCC_VERSION
+  patch -p1 < ../../gcc-12.2.0-oak.patch > ../build.log
+)
+mkdir -p build-gcc
+(
+  cd build-gcc
+  echo "  running configure"
+  ../gcc-$GCC_VERSION/configure \
+    --target=$TARGET \
+    --prefix=$DIR \
+    --with-sysroot=$DIR \
+    --enable-languages=c,c++ \
+    --enable-host-shared \
+    --with-gnu-as \
+    --with-gnu-ld \
+    --disable-multilib \
+    --disable-threads \
+    --disable-initifini-array \
+    --with-newlib >> ../build.log 2>&1 && \
+  echo "  running make" && \
+  make all-gcc all-target-libgcc >> ../build.log 2>&1 && \
+  echo "  running make install" && \
+  make install-gcc install-target-libgcc >> ../build.log 2>&1
+  if [ $? -ne 0 ]; then
+    echo "Failed to build GCC! See build.log for more details."
     exit 1
   fi
 )

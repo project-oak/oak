@@ -57,6 +57,8 @@ RUN apt-get --yes update \
   libcap-dev \
   libc++-${llvm_version}-dev \
   libfl2 \
+  libgmp-dev \
+  libmpc-dev \
   libncurses5 \
   libssl-dev \
   lldb-${llvm_version} \
