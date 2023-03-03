@@ -85,7 +85,6 @@ AllOpsResolver::AllOpsResolver() {
   AddPrelu();
   AddQuantize();
   AddReadVariable();
-  AddReduceAny();
   AddReduceMax();
   AddRelu();
   AddRelu6();

@@ -12,26 +12,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-#ifndef TENSORFLOW_LITE_KERNELS_INTERNAL_REDUCE_COMMON_H_
-#define TENSORFLOW_LITE_KERNELS_INTERNAL_REDUCE_COMMON_H_
+
+#include "tensorflow/lite/micro/tflite_bridge/op_resolver_bridge.h"
+
+#include "tensorflow/lite/c/common.h"
+#include "tensorflow/lite/core/api/error_reporter.h"
+#include "tensorflow/lite/core/api/op_resolver.h"
+#include "tensorflow/lite/micro/tflite_bridge/micro_error_reporter.h"
+#include "tensorflow/lite/schema/schema_utils.h"
 
 namespace tflite {
-namespace ops {
-namespace builtin {
-namespace reduce {
 
-enum ReduceType {
-  kSum,
-  kProd,
-  kMax,
-  kMin,
-  kAny,
-  kAll,
-};
-
-}  // namespace reduce
-}  // namespace builtin
-}  // namespace ops
+TfLiteStatus GetRegistrationFromOpCode(
+    const OperatorCode* opcode, const OpResolver& op_resolver,
+    const TfLiteRegistration** registration) {
+  return GetRegistrationFromOpCode(
+      opcode, op_resolver, tflite::GetMicroErrorReporter(), registration);
+}
 }  // namespace tflite
-
-#endif  // TENSORFLOW_LITE_KERNELS_INTERNAL_REDUCE_COMMON_H_

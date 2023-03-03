@@ -84,7 +84,7 @@ cc_library(
 cc_library(
     name = "hdrs",
     hdrs = [
-        "include/tflite_micro.h",
+        "tflite_micro.h",
         "//third_party/tflite-micro:hdrs",
     ],
     copts = oak_copts(),
