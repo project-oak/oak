@@ -39,3 +39,31 @@ jobs:
       build-config-path: ${{ matrix.buildconfig }}
     secrets:
       ENT_API_KEY: ${{ secrets.ENT_API_KEY }}
+
+  # build_oak_functions_binary:
+  #   permissions:
+  #     actions: read
+  #     id-token: write
+  #     # Allow the job to update the repo with the latest provenance info and index.
+  #     contents: write
+  #     # Allow the job to add a comment to the PR.
+  #     pull-requests: write
+  #   uses: ./.github/workflows/reusable_provenance.yaml
+  #   with:
+  #     build-config-path: buildconfigs/slsav1_oak_functions_enclave_app.toml
+  #   secrets:
+  #     ENT_API_KEY: ${{ secrets.ENT_API_KEY }}
+
+  # build_oak_tensorflow_binary:
+  #   permissions:
+  #     actions: read
+  #     id-token: write
+  #     # Allow the job to update the repo with the latest provenance info and index.
+  #     contents: write
+  #     # Allow the job to add a comment to the PR.
+  #     pull-requests: write
+  #   uses: ./.github/workflows/reusable_provenance.yaml
+  #   with:
+  #     build-config-path: buildconfigs/slsav1_oak_restricted_kernel_bin.toml
+  #   secrets:
+  #     ENT_API_KEY: ${{ secrets.ENT_API_KEY }}
