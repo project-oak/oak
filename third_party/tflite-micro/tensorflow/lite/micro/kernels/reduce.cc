@@ -32,19 +32,14 @@ void* InitReduce(TfLiteContext* context, const char* buffer, size_t length) {
   return context->AllocatePersistentBuffer(context, sizeof(OpDataReduce));
 }
 
-TfLiteStatus PrepareMaxOrAny(TfLiteContext* context, TfLiteNode* node) {
-  return PrepareReduceHelper(context, node,
-                             static_cast<OpDataReduce*>(node->user_data));
+TfLiteStatus PrepareMax(TfLiteContext* context, TfLiteNode* node) {
+  return PrepareMaxHelper(context, node,
+                          static_cast<OpDataReduce*>(node->user_data));
 }
 
 TfLiteStatus PrepareMeanOrSum(TfLiteContext* context, TfLiteNode* node) {
   return PrepareMeanOrSumHelper(context, node,
                                 static_cast<OpDataReduce*>(node->user_data));
-}
-
-TfLiteStatus EvalAny(TfLiteContext* context, TfLiteNode* node) {
-  OpDataReduce* op_data = static_cast<OpDataReduce*>(node->user_data);
-  return EvalReduceHelper(context, node, op_data, ReduceType::kAny);
 }
 
 TfLiteStatus EvalMean(TfLiteContext* context, TfLiteNode* node) {
@@ -54,7 +49,7 @@ TfLiteStatus EvalMean(TfLiteContext* context, TfLiteNode* node) {
 
 TfLiteStatus EvalMax(TfLiteContext* context, TfLiteNode* node) {
   OpDataReduce* op_data = static_cast<OpDataReduce*>(node->user_data);
-  return EvalReduceHelper(context, node, op_data, ReduceType::kMax);
+  return EvalMaxHelper(context, node, op_data);
 }
 
 TfLiteStatus EvalSum(TfLiteContext* context, TfLiteNode* node) {
@@ -66,12 +61,8 @@ TfLiteRegistration Register_MEAN() {
   return tflite::micro::RegisterOp(InitReduce, PrepareMeanOrSum, EvalMean);
 }
 
-TfLiteRegistration Register_REDUCE_ANY() {
-  return tflite::micro::RegisterOp(InitReduce, PrepareMaxOrAny, EvalAny);
-}
-
 TfLiteRegistration Register_REDUCE_MAX() {
-  return tflite::micro::RegisterOp(InitReduce, PrepareMaxOrAny, EvalMax);
+  return tflite::micro::RegisterOp(InitReduce, PrepareMax, EvalMax);
 }
 
 TfLiteRegistration Register_SUM() {
