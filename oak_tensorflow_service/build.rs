@@ -15,10 +15,9 @@
 //
 
 use std::{
-    path::{Path, PathBuf},
+    io::{self, Write},
     process::Command,
     str::from_utf8,
-    io::{self, Write},
 };
 
 const TFLITE_DIR: &str = "cc/tflite_micro";
