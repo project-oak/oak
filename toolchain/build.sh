@@ -81,6 +81,7 @@ tar xf newlib-$NEWLIB_VERSION.tar.gz
 (
   cd newlib-$NEWLIB_VERSION
   patch -p1 < ../../newlib-4.3.0-oak.patch >> ../build.log
+  cp ../../newlib/* libgloss/oak
 )
 mkdir -p build-newlib
 (
