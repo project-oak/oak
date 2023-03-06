@@ -184,6 +184,7 @@
 <a href="#184" id="184">184</a>
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -204,8 +205,6 @@
 
 </span><span class="kw">pub static </span>MOCK_LOOKUP_DATA_PATH: Lazy&lt;PathBuf&gt; =
     Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;oak_functions_launcher&quot;</span>, <span class="string">&quot;mock_lookup_data&quot;</span>]));
-<span class="kw">pub static </span>WASM_PATH: Lazy&lt;PathBuf&gt; =
-    Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;oak_functions_launcher&quot;</span>, <span class="string">&quot;key_value_lookup.wasm&quot;</span>]));
 <span class="kw">static </span>STAGE_0_DIR: Lazy&lt;PathBuf&gt; = Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;stage0&quot;</span>]));
 <span class="kw">pub static </span>OAK_RESTRICTED_KERNEL_BIN_DIR: Lazy&lt;PathBuf&gt; =
     Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;oak_restricted_kernel_bin&quot;</span>]));
@@ -356,9 +355,12 @@
 
 <span class="doccomment">/// Runs the Oak Functions launcher configured with a default Wasm module for key / value lookups
 /// and mock lookup data.
-</span><span class="kw">pub fn </span>run_oak_functions_launcher_example(variant: <span class="kw-2">&amp;</span>LauncherMode) -&gt; Box&lt;<span class="kw">dyn </span>Runnable&gt; {
+</span><span class="kw">pub fn </span>run_oak_functions_launcher_example(
+    variant: <span class="kw-2">&amp;</span>LauncherMode,
+    wasm_path: <span class="kw-2">&amp;</span>str,
+) -&gt; Box&lt;<span class="kw">dyn </span>Runnable&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>args = <span class="macro">vec!</span>[
-        <span class="macro">format!</span>(<span class="string">&quot;--wasm={}&quot;</span>, WASM_PATH.to_str().unwrap()),
+        <span class="macro">format!</span>(<span class="string">&quot;--wasm={}&quot;</span>, wasm_path),
         <span class="macro">format!</span>(<span class="string">&quot;--lookup-data={}&quot;</span>, MOCK_LOOKUP_DATA_PATH.to_str().unwrap()),
     ];
     args.append(<span class="kw-2">&amp;mut </span>variant.variant_subcommand());
