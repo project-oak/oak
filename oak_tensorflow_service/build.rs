@@ -18,6 +18,7 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
     str::from_utf8,
+    io::{self, Write},
 };
 
 const TFLITE_DIR: &str = "cc/tflite_micro";
@@ -60,6 +61,8 @@ fn build_bazel_target(target_dir: &str, target: &str) -> PathBuf {
         .output()
         .expect("couldn't run bazel query");
     if !output.status.success() {
+        io::stdout().write_all(&output.stdout).unwrap();
+        io::stderr().write_all(&output.stderr).unwrap();
         panic!("couldn't run bazel query: exit status is {}", output.status);
     }
     let dependency_paths = from_utf8(&output.stdout)
@@ -80,6 +83,8 @@ fn build_bazel_target(target_dir: &str, target: &str) -> PathBuf {
         .status()
         .expect("couldn't run bazel build");
     if !status.success() {
+        io::stdout().write_all(&output.stdout).unwrap();
+        io::stderr().write_all(&output.stderr).unwrap();
         panic!("couldn't run bazel build: exit status is {}", status);
     }
 
