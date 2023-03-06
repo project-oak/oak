@@ -1,6 +1,7 @@
 
 BINUTILS_VERSION=2.40
 GCC_VERSION=12.2.0
+NEWLIB_VERSION=4.3.0.20230120
 
 TARGET=x86_64-unknown-oak
 
@@ -69,6 +70,32 @@ mkdir -p build-gcc
   make install-gcc install-target-libgcc >> ../build.log 2>&1
   if [ $? -ne 0 ]; then
     echo "Failed to build GCC! See build.log for more details."
+    exit 1
+  fi
+)
+
+# Step 3: Newlib, aka libc, libm and libgloss
+echo "Building newlib..."
+curl -O -L ftp://sourceware.org/pub/newlib/newlib-$NEWLIB_VERSION.tar.gz > build.log
+tar xf newlib-$NEWLIB_VERSION.tar.gz
+(
+  cd newlib-$NEWLIB_VERSION
+  patch -p1 < ../../newlib-4.3.0-oak.patch >> ../build.log
+)
+mkdir -p build-newlib
+(
+  cd build-newlib
+  echo "  running configure"
+  PATH="$PATH:$DIR/bin" ../newlib-$NEWLIB_VERSION/configure \
+    --target=$TARGET \
+    --prefix=$DIR \
+    --disable-multilib >> ../build.log 2>&1 && \
+  echo "  running make" && \
+  PATH="$PATH:$DIR/bin" make >> ../build.log 2>&1 && \
+  echo "  running make install" && \
+  PATH="$PATH:$DIR/bin" make install >> ../build.log 2>&1
+  if [ $? -ne 0 ]; then
+    echo "Failed to build newlib! See build.log for more details."
     exit 1
   fi
 )
