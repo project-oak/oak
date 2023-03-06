@@ -100,5 +100,20 @@ mkdir -p build-newlib
   fi
 )
 
+# Step 4: now that we have a C library, build the C++ library
+echo "Building libstdc++..."
+# we should have the GCC build directory from Step 2
+(
+  cd build-gcc
+  echo "  running make" && \
+  make all-target-libstdc++-v3 >> ../build.log 2>&1 && \
+  echo "  running make install" && \
+  make install-target-libstdc++-v3 >> ../build.log 2>&1
+  if [ $? -ne 0 ]; then
+    echo "Failed to build libstdc++! See build.log for more details."
+    exit 1
+  fi
+)
+
 rm -rf build
 echo "Toolchain built in $DIR."
