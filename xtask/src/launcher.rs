@@ -18,8 +18,6 @@
 
 pub static MOCK_LOOKUP_DATA_PATH: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_functions_launcher", "mock_lookup_data"]));
-pub static WASM_PATH: Lazy<PathBuf> =
-    Lazy::new(|| workspace_path(&["oak_functions_launcher", "key_value_lookup.wasm"]));
 static STAGE_0_DIR: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["stage0"]));
 pub static OAK_RESTRICTED_KERNEL_BIN_DIR: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_restricted_kernel_bin"]));
@@ -170,9 +168,12 @@ pub fn build_binary(name: &str, directory: &str) -> Step {
 
 /// Runs the Oak Functions launcher configured with a default Wasm module for key / value lookups
 /// and mock lookup data.
-pub fn run_oak_functions_launcher_example(variant: &LauncherMode) -> Box<dyn Runnable> {
+pub fn run_oak_functions_launcher_example(
+    variant: &LauncherMode,
+    wasm_path: &str,
+) -> Box<dyn Runnable> {
     let mut args = vec![
-        format!("--wasm={}", WASM_PATH.to_str().unwrap()),
+        format!("--wasm={}", wasm_path),
         format!("--lookup-data={}", MOCK_LOOKUP_DATA_PATH.to_str().unwrap()),
     ];
     args.append(&mut variant.variant_subcommand());
