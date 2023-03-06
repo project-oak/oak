@@ -196,6 +196,89 @@ definitive configuration, dependencies and build scripts.
   Docker development image. This can also be used to run any commands described
   later in this document.
 
+## Nix
+
+Support for [Nix](https://nixos.org/) for local development is experimental.
+
+### Quick Installation
+
+Install Nix in single-user mode
+([source](https://nixos.wiki/wiki/Nix_Installation_Guide#Stable_Nix)):
+
+```console
+sudo install -d -m755 -o $(id -u) -g $(id -g) /nix
+curl --location https://releases.nixos.org/nix/nix-2.14.1/install > /tmp/install_nix \
+  && echo '565974057264f0536f600c68d59395927cd73e9fc5a60f33c1906e8f7bc33fcf  /tmp/install_nix' > /tmp/install_nix.sha256 \
+  && sha256sum --check /tmp/install_nix.sha256 \
+  && sh /tmp/install_nix
+```
+
+Enable support for [Nix Flakes](https://nixos.wiki/wiki/Flakes) by adding the
+following to your `~/.config/nix/nix.conf` (create it if necessary)
+([source](https://nixos.wiki/wiki/Flakes#Permanent)):
+
+```text
+experimental-features = nix-command flakes
+```
+
+## Quick Usage Guide
+
+Get a Nix development shell:
+
+```console
+nix develop
+```
+
+This will drop you into a subshell in which a completely deterministic
+environment (e.g. compilers, dev tools) is available, based on the configuration
+described in [`flake.nix`](/flake.nix).
+
+Note that this may take a while (up to 10 minutes) on the first run, since Nix
+has to download all the dependencies from scratch. It will be almost instant in
+future invocations, unless dependencies are changed again.
+
+Some things to try:
+
+- See where tools are installed from within the dev shell:
+
+  ```console
+  $ which rustc
+  /nix/store/mrf09022h38ykgsfb50xcv3q1izf5gac-rust-default-1.69.0-nightly-2023-02-15/bin/rustc
+  ```
+
+- Add a new tool to the list, and see it reflected in the dev shell:
+
+  - enter the default dev shell:
+
+    ```console
+    nix develop
+    ```
+
+  - check `ponysay` is not installed on the host or the default dev shell:
+
+    ```console
+    $ ponysay hello
+    zsh: command not found: ponysay
+    ```
+
+  - add `ponysay` to the list of packages in [`flake.nix`](/flake.nix), e.g.
+    next to `protobuf`
+  - exit the previous dev shell (e.g. via `Ctrl-D`)
+  - re-create a new dev shell:
+
+    ```console
+    nix develop
+    ```
+
+  - try the `ponysay` command again from within the dev shell:
+
+    ```console
+    $ ponysay hello
+    _______________________
+    < hello                 >
+    -----------------------
+    ```
+
 ## xtask
 
 `xtask` is a utility binary to perform a number of common tasks within the Oak

@@ -70,6 +70,7 @@
                   platformVersions = [ "30" "32" ];
                   buildToolsVersions = [ "30.0.0" ];
                 }).androidsdk
+                bazel_6
               ];
             };
             default = with pkgs; mkShell {
