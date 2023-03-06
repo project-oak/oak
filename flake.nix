@@ -65,6 +65,7 @@
               '';
               packages = [
                 jdk11
+                bazel_6
                 (androidenv.composeAndroidPackages {
                   includeNDK = false;
                   platformVersions = [ "30" "32" ];
