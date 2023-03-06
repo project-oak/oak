@@ -19,7 +19,6 @@ use crate::{
     schema::{self, LookupDataChunk, OakFunctionsAsyncClient, UpdateAction, UpdateStatus},
 };
 use anyhow::{anyhow, Context};
-use async_recursion::async_recursion;
 use hashbrown::HashMap;
 use prost::Message;
 use std::{fs, path::PathBuf, vec::IntoIter};
@@ -40,17 +39,14 @@ impl UpdateClient<'_> {
         self.continue_().await
     }
 
-    #[async_recursion]
     async fn continue_(&mut self) -> anyhow::Result<()> {
-        if self.chunks.len() == 1 {
-            self.finish().await
-        } else {
+        while self.chunks.len() > 1 {
             let update_response = self.send_request(UpdateAction::Continue).await?;
             if UpdateStatus::Started != update_response.update_status() {
                 return Err(anyhow!("Did not receive expected update status: Started"));
             };
-            self.continue_().await
         }
+        self.finish().await
     }
 
     async fn finish(&mut self) -> anyhow::Result<()> {
