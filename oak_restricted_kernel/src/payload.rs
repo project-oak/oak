@@ -115,7 +115,8 @@ pub fn run_payload(payload: &[u8]) -> ! {
     unsafe {
         asm! {
             "mov rsp, {}", // user stack
-            "and rsp, -10", // align stack to 16-byte boundary
+            "int 0x80",
+            // "and rsp, 10", // align stack to 16-byte boundary
             "sysretq",
             in(reg) rsp.as_u64() - 8, // maintain stack alignment
             in("rcx") elf.entry, // initial RIP

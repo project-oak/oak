@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+set -o errexit
+set -o nounset
+set -o xtrace
+set -o pipefail
+
 # On Kokoro instances /dev/kvm, /dev/vhost-vsock and /dev/vsock are owned by root:root.
 # Set the permissions so that these are owned by the `kvm` group as our scripts expect it to be.
 readonly KVM_GID="$(getent group kvm | cut -d: -f3)"
