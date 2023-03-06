@@ -94,8 +94,6 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
-pub use payload::run_payload;
-
 /// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 128 GiB of memory, for now.
 pub static FRAME_ALLOCATOR: OnceCell<Spinlock<PhysicalMemoryAllocator<1024>>> = OnceCell::new();
@@ -302,13 +300,14 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // We need to load the application binary before we hand the channel over to the syscalls, which
     // expose it to the user space.
     info!("Loading application binary...");
-    let payload = payload::read_payload(&mut *channel)
+    let application = payload::Application::load_raw(&mut *channel)
         .expect("failed to load application binary from channel");
-    info!("Binary loaded, size: {}", payload.len());
 
     syscall::enable_syscalls(channel);
 
-    payload::run_payload(&payload);
+    // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
+    // under the kernel's control.
+    unsafe { application.run() }
 }
 
 #[derive(EnumIter, EnumString)]
