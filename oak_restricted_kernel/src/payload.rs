@@ -15,12 +15,16 @@
 //
 
 use crate::syscall::mmap::mmap;
-use alloc::{vec, vec::Vec};
-use anyhow::Result;
+use alloc::{boxed::Box, vec};
+use anyhow::{anyhow, Result};
 use core::arch::asm;
-use goblin::elf64::program_header::{PF_W, PF_X, PT_LOAD};
+use goblin::{
+    elf::{Elf, ProgramHeader, ProgramHeaders},
+    elf64::program_header::{PF_W, PF_X, PT_LOAD},
+};
 use oak_channel::Channel;
 use oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
+use ouroboros::self_referencing;
 use x86_64::{
     structures::paging::{PageSize, Size2MiB, Size4KiB},
     VirtAddr,
@@ -37,37 +41,87 @@ fn read_chunk<C: Channel + ?Sized>(channel: &mut C, chunk: &mut [u8]) -> Result<
     channel.write(&len.to_le_bytes())
 }
 
-/// Reads a payload blob, one page at a time, from the given channel.
-pub fn read_payload<C: Channel + ?Sized>(channel: &mut C) -> Result<Vec<u8>> {
-    let payload_len = {
-        let mut buf: [u8; 4] = Default::default();
-        channel.read(&mut buf)?;
-        u32::from_le_bytes(buf)
-    };
-    let mut payload = vec![0; payload_len as usize];
-    let mut chunks_mut = payload.array_chunks_mut::<{ Size4KiB::SIZE as usize }>();
+/// Self-referential struct so that we don't have to parse the ELF file multiple times.
+#[self_referencing]
+struct Binary {
+    binary: Box<[u8]>,
 
-    for chunk in chunks_mut.by_ref() {
-        read_chunk(channel, chunk)?;
-    }
-    read_chunk(channel, chunks_mut.into_remainder())?;
-
-    Ok(payload)
+    #[borrows(binary)]
+    #[covariant]
+    elf: Elf<'this>,
 }
 
-/// Parses a pre-loaded ELF file, lays it out in memory, and passes control to it.
-pub fn run_payload(payload: &[u8]) -> ! {
-    let elf = goblin::elf::Elf::parse(payload).expect("failed to parse application binary");
+/// Representation of an Restricted Application that the Restricted Kernel can run.
+pub struct Application {
+    binary: Binary,
+}
 
-    for phdr in elf
-        .program_headers
-        .iter()
-        .filter(|&phdr| phdr.p_type == PT_LOAD)
-    {
+impl Application {
+    /// Loads a Restricted Application over the given channel using a basic framed format.
+    ///
+    /// This is intended for use after the kernel has started up to load the Restricted Application,
+    /// before we start the application and hand off the channel to it.
+    ///
+    /// The protocol to load the application is very simple:
+    /// 1. loader sends the size of the application binary, as u32
+    /// 2. loader sends max 4 KiB of data and waits for the kernel to acknowledge
+    /// 3. kernel reads up to 4 KiB of data and acks by responding with the amount of data read
+    /// 4. repeat (2) and (3) until all the data has been transmitted
+    pub fn load_raw<C: Channel + ?Sized>(channel: &mut C) -> Result<Self> {
+        let payload_len = {
+            let mut buf: [u8; 4] = Default::default();
+            channel.read(&mut buf)?;
+            u32::from_le_bytes(buf)
+        };
+        let mut payload = vec![0; payload_len as usize];
+        let mut chunks_mut = payload.array_chunks_mut::<{ Size4KiB::SIZE as usize }>();
+
+        for chunk in chunks_mut.by_ref() {
+            read_chunk(channel, chunk)?;
+        }
+        read_chunk(channel, chunks_mut.into_remainder())?;
+        log::info!("Binary loaded, size: {}", payload.len());
+
+        Self::new(payload.into_boxed_slice())
+    }
+
+    /// Attempts to parse the provided binary blob as an ELF file representing an Restricted
+    /// Application.
+    pub fn new(blob: Box<[u8]>) -> Result<Self> {
+        Ok(Application {
+            binary: BinaryTryBuilder {
+                binary: blob,
+                elf_builder: |boxed| {
+                    goblin::elf::Elf::parse(boxed)
+                        .map_err(|err| anyhow!("failed to parse ELF file: {}", err))
+                },
+            }
+            .try_build()?,
+        })
+    }
+
+    fn program_headers(&self) -> &ProgramHeaders {
+        &self.binary.borrow_elf().program_headers
+    }
+
+    fn entry(&self) -> VirtAddr {
+        VirtAddr::new(self.binary.borrow_elf().entry)
+    }
+
+    fn slice(&self, start: u64, limit: u64) -> &[u8] {
+        &self.binary.borrow_binary()[start as usize..(start + limit) as usize]
+    }
+
+    fn load_segment(&self, phdr: &ProgramHeader) -> Result<()> {
+        // In Oak Restricted Kernel, we prefer 2 MiB pages, so round down the segment address if it
+        // isn't aligned on a 2 MiB page boundary.
         let vaddr = VirtAddr::new(phdr.p_vaddr).align_down(Size2MiB::SIZE);
-        // As we've aligned the address down, we may need extra memory to account for the padding.
+        // As we've aligned the address down, we may need extra memory to account for the
+        // padding.
         let size = ((phdr.p_vaddr - vaddr.as_u64()) + phdr.p_memsz) as usize;
 
+        // PROT_READ is always implied; it's not possible to have a page that's, say, executable but
+        // not readable.
         let mut prot = MmapProtection::PROT_READ;
         if phdr.p_flags & PF_W > 0 {
             prot |= MmapProtection::PROT_WRITE;
@@ -76,8 +130,8 @@ pub fn run_payload(payload: &[u8]) -> ! {
             prot |= MmapProtection::PROT_EXEC;
         }
 
-        // As we need memory in the user space anyway, use the `mmap()` syscall that will allocate
-        // physical frames and sets up user-accessible page tables for us.
+        // As we need memory in the user space anyway, use the `mmap()` syscall that will
+        // allocate physical frames and sets up user-accessible page tables for us.
         // Note that the expectation here is that all the sections are nicely 2 MiB-aligned,
         // otherwise the mmap() will fail.
         mmap(
@@ -91,35 +145,56 @@ pub fn run_payload(payload: &[u8]) -> ! {
         // Safety: we know the target memory is valid as we've just allocated it with mmap().
         unsafe {
             core::ptr::copy_nonoverlapping(
-                (payload.as_ptr() as u64 + phdr.p_offset) as *const u8,
+                self.slice(phdr.p_offset, phdr.p_filesz).as_ptr(),
                 phdr.p_vaddr as *mut u8,
                 phdr.p_filesz as usize,
             );
         }
-    }
-    // Set up the userspace stack at the end of the lower half of the virtual address space.
-    // Well... almost. It's one page lower than the very end, as otherwise the initial stack pointer
-    // would need to be a noncanonical address, so let's avoid that whole mess by moving down a bit.
-    let rsp = VirtAddr::new(0x8000_0000_0000 - Size2MiB::SIZE);
-    mmap(
-        Some(rsp - Size2MiB::SIZE),
-        Size2MiB::SIZE as usize,
-        MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
-        MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
-    )
-    .expect("failed to allocate memory for user stack");
 
-    // Enter Ring 3 and jump to user code.
-    // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the user to
-    // guarantee that the file made sense.
-    unsafe {
-        asm! {
-            "mov rsp, {}", // user stack
-            "sysretq",
-            in(reg) rsp.as_u64() - 8, // maintain stack alignment
-            in("rcx") elf.entry, // initial RIP
-            in("r11") 0x202, // initial RFLAGS (interrupts enabled)
-            options(noreturn)
+        Ok(())
+    }
+
+    /// Maps the application into virtual memory and passes control to it.
+    ///
+    /// # Safety
+    ///
+    /// The application must be built from a valid ELF file representing an Oak Restricted
+    /// Application, and there must not be an active application as we alter the virtual memory
+    /// mappings.
+    pub unsafe fn run(&self) -> ! {
+        for phdr in self
+            .program_headers()
+            .iter()
+            .filter(|&phdr| phdr.p_type == PT_LOAD)
+        {
+            self.load_segment(phdr).unwrap();
+        }
+
+        // Set up the userspace stack at the end of the lower half of the virtual address space.
+        // Well... almost. It's one page lower than the very end, as otherwise the initial stack
+        // pointer would need to be a noncanonical address, so let's avoid that whole mess
+        // by moving down a bit.
+        let rsp = VirtAddr::new(0x8000_0000_0000 - Size2MiB::SIZE);
+        mmap(
+            Some(rsp - Size2MiB::SIZE),
+            Size2MiB::SIZE as usize,
+            MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
+            MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
+        )
+        .expect("failed to allocate memory for user stack");
+
+        // Enter Ring 3 and jump to user code.
+        // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the user to
+        // guarantee that the file made sense.
+        unsafe {
+            asm! {
+                "mov rsp, {}", // user stack
+                "sysretq",
+                in(reg) rsp.as_u64() - 8,
+                in("rcx") self.entry().as_u64(), // initial RIP
+                in("r11") 0x202, // initial RFLAGS (interrupts enabled)
+                options(noreturn)
+            }
         }
     }
 }
