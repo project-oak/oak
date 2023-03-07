@@ -198,6 +198,21 @@
 <a href="#198" id="198">198</a>
 <a href="#199" id="199">199</a>
 <a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -221,33 +236,44 @@
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>hashbrown::HashMap;
 <span class="kw">use </span>prost::Message;
-<span class="kw">use </span>std::{fs, path::PathBuf, vec::IntoIter};
+<span class="kw">use </span>std::{fs, path::PathBuf};
 <span class="kw">use </span>ubyte::ByteUnit;
 
-<span class="kw">struct </span>UpdateClient&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">struct </span>UpdateClient&lt;<span class="lifetime">&#39;a</span>, I: Iterator&lt;Item = LookupDataChunk&gt;&gt; {
     inner: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>OakFunctionsAsyncClient&lt;ConnectorHandle&gt;,
-    chunks: IntoIter&lt;LookupDataChunk&gt;,
+    chunks: I,
 }
 
-<span class="kw">impl </span>UpdateClient&lt;<span class="lifetime">&#39;_</span>&gt; {
+<span class="kw">impl</span>&lt;I: Iterator&lt;Item = LookupDataChunk&gt;&gt; UpdateClient&lt;<span class="lifetime">&#39;_</span>, I&gt; {
     <span class="kw">async fn </span>start(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
         <span class="comment">// Send the current chunk first.
-        </span><span class="kw">let </span>update_response = <span class="self">self</span>.send_request(UpdateAction::Start).<span class="kw">await</span><span class="question-mark">?</span>;
-
+        </span><span class="kw">let </span>chunk = <span class="self">self</span>.chunks.next();
+        <span class="kw">let </span>update_response = <span class="self">self</span>.send_request(UpdateAction::Start, chunk).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">if </span>UpdateStatus::Started != update_response.update_status() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Did not receive expected update status: Started&quot;</span>));
         };
-
-        <span class="comment">// Currently send only data which fits in two chunks.
-        // TODO(#3718): to send more chunks.
-        </span><span class="kw">if </span><span class="self">self</span>.chunks.len() &gt; <span class="number">1 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Cannot send lookup data with more than 2 chunks&quot;</span>));
-        }
-        <span class="self">self</span>.finish().<span class="kw">await
+        <span class="self">self</span>.continue_().<span class="kw">await
     </span>}
 
-    <span class="kw">async fn </span>finish(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="kw">let </span>update_response = <span class="self">self</span>.send_request(UpdateAction::Finish).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="comment">// Call continue with at least two chunks left to process.
+    </span><span class="kw">async fn </span>continue_(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="comment">// Check the next two chunks.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>next = <span class="self">self</span>.chunks.next();
+        <span class="kw">let </span><span class="kw-2">mut </span>next_next = <span class="self">self</span>.chunks.next();
+
+        <span class="kw">while </span>next_next.is_some() {
+            <span class="kw">let </span>update_response = <span class="self">self</span>.send_request(UpdateAction::Continue, next).<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="kw">if </span>UpdateStatus::Started != update_response.update_status() {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Did not receive expected update status: Started&quot;</span>));
+            };
+            next = next_next;
+            next_next = <span class="self">self</span>.chunks.next();
+        }
+        <span class="self">self</span>.finish(next).<span class="kw">await
+    </span>}
+
+    <span class="kw">async fn </span>finish(<span class="kw-2">&amp;mut </span><span class="self">self</span>, chunk: <span class="prelude-ty">Option</span>&lt;LookupDataChunk&gt;) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="kw">let </span>update_response = <span class="self">self</span>.send_request(UpdateAction::Finish, chunk).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">if </span>UpdateStatus::Finished != update_response.update_status() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Did not receive expected update status: Finished&quot;</span>));
         };
@@ -255,21 +281,25 @@
     }
 
     <span class="kw">async fn </span>start_and_finish(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="kw">let </span>update_response = <span class="self">self</span>.send_request(UpdateAction::StartAndFinish).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let </span>chunk = <span class="self">self</span>.chunks.next();
+        <span class="kw">let </span>update_response = <span class="self">self
+            </span>.send_request(UpdateAction::StartAndFinish, chunk)
+            .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">if </span>UpdateStatus::Finished != update_response.update_status() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Did not receive expected update status: Finished&quot;</span>));
         };
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="comment">// Helper to send a request with the given action.
+    <span class="comment">// Helper to send a request with the given action and chunk.
     </span><span class="kw">async fn </span>send_request(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         action: schema::UpdateAction,
+        chunk: <span class="prelude-ty">Option</span>&lt;LookupDataChunk&gt;,
     ) -&gt; anyhow::Result&lt;schema::UpdateLookupDataResponse&gt; {
         <span class="kw">let </span>request = schema::UpdateLookupDataRequest {
             action: action.into(),
-            chunk: <span class="self">self</span>.chunks.next(),
+            chunk,
         };
 
         <span class="self">self</span>.inner
