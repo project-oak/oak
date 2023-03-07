@@ -45,6 +45,8 @@ impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
     async fn extend(&mut self, chunk: Option<LookupDataChunk>) -> anyhow::Result<()> {
         let update_response = self.send_request(UpdateAction::Extend, chunk).await?;
         if UpdateStatus::Extended != update_response.update_status() {
+            // Try to abort, because receiver unexpectedly did not extend.
+            let _ = self.abort().await;
             return Err(anyhow!("Did not receive expected update status: Extended"));
         }
         Ok(())
@@ -54,6 +56,15 @@ impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
         let update_response = self.send_request(UpdateAction::Finish, chunk).await?;
         if UpdateStatus::Finished != update_response.update_status() {
             return Err(anyhow!("Did not receive expected update status: Finished"));
+        };
+        Ok(())
+    }
+
+    // Tries to abort the current update once.
+    async fn abort(&mut self) -> anyhow::Result<()> {
+        let update_response = self.send_request(UpdateAction::Abort, None).await?;
+        if UpdateStatus::Aborted != update_response.update_status() {
+            return Err(anyhow!("Did not receive expected update status: Aborted"));
         };
         Ok(())
     }
