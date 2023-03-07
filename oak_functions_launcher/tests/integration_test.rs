@@ -115,8 +115,6 @@ async fn test_launcher_looks_up_key() {
 }
 
 #[tokio::test]
-#[ignore]
-// TODO(#3668): fails until we can load more than max_chunk_size of lookup data.
 async fn test_load_large_lookup_data() {
     let oak_functions_linux_fd_bin_path =
         oak_functions_test_utils::build_rust_crate_linux("oak_functions_linux_fd_bin")
@@ -174,8 +172,6 @@ async fn test_load_large_lookup_data() {
     assert!(write_result.is_ok());
 
     // Write 4 chunks in lookup data.
-    // TODO(#3668): status is currently not ok and the test is expected to fail until we can load
-    // more than max_chunk_size of lookup data.
     let status_four_chunks = update_lookup_data(&mut client, &lookup_data_config).await;
     assert!(status_four_chunks.is_ok());
 
