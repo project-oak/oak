@@ -277,13 +277,6 @@
 <a href="#277" id="277">277</a>
 <a href="#278" id="278">278</a>
 <a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
-<a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a>
-<a href="#285" id="285">285</a>
-<a href="#286" id="286">286</a>
 </pre><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InitializeRequest {
@@ -358,16 +351,13 @@
 </span><span class="attr">#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 </span><span class="kw">pub enum </span>UpdateAction {
-    <span class="doccomment">/// The first chunk the sender sends.
-    </span>Start = <span class="number">0</span>,
-    <span class="doccomment">/// The sender sends this chunk and will send a further chunk.
-    </span>Continue = <span class="number">1</span>,
-    <span class="doccomment">/// The final chunk the sender sends.
-    </span>Finish = <span class="number">2</span>,
-    <span class="doccomment">/// The sender needs to abort the update.
-    </span>Abort = <span class="number">3</span>,
-    <span class="doccomment">/// The sender needs to send only one chunk.
-    </span>StartAndFinish = <span class="number">4</span>,
+    <span class="doccomment">/// The sender extends the lookup data builder with this chunk and will send a
+    /// further chunk.
+    </span>Extend = <span class="number">0</span>,
+    <span class="doccomment">/// The final chunk the sender sends to build the lookup data.
+    </span>Finish = <span class="number">1</span>,
+    <span class="doccomment">/// The sender needs to abort the building the lookup data.
+    </span>Abort = <span class="number">2</span>,
 }
 <span class="kw">impl </span>UpdateAction {
     <span class="doccomment">/// String value of the enum field names used in the ProtoBuf definition.
@@ -376,21 +366,17 @@
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
-            UpdateAction::Start =&gt; <span class="string">&quot;START&quot;</span>,
-            UpdateAction::Continue =&gt; <span class="string">&quot;CONTINUE&quot;</span>,
+            UpdateAction::Extend =&gt; <span class="string">&quot;EXTEND&quot;</span>,
             UpdateAction::Finish =&gt; <span class="string">&quot;FINISH&quot;</span>,
             UpdateAction::Abort =&gt; <span class="string">&quot;ABORT&quot;</span>,
-            UpdateAction::StartAndFinish =&gt; <span class="string">&quot;START_AND_FINISH&quot;</span>,
         }
     }
     <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
     </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
         <span class="kw">match </span>value {
-            <span class="string">&quot;START&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Start),
-            <span class="string">&quot;CONTINUE&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Continue),
+            <span class="string">&quot;EXTEND&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Extend),
             <span class="string">&quot;FINISH&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Finish),
             <span class="string">&quot;ABORT&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Abort),
-            <span class="string">&quot;START_AND_FINISH&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::StartAndFinish),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
         }
     }
@@ -398,7 +384,7 @@
 <span class="attr">#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 </span><span class="kw">pub enum </span>UpdateStatus {
-    Started = <span class="number">0</span>,
+    Extended = <span class="number">0</span>,
     Finished = <span class="number">1</span>,
     Aborted = <span class="number">2</span>,
 }
@@ -409,7 +395,7 @@
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
         <span class="kw">match </span><span class="self">self </span>{
-            UpdateStatus::Started =&gt; <span class="string">&quot;STARTED&quot;</span>,
+            UpdateStatus::Extended =&gt; <span class="string">&quot;EXTENDED&quot;</span>,
             UpdateStatus::Finished =&gt; <span class="string">&quot;FINISHED&quot;</span>,
             UpdateStatus::Aborted =&gt; <span class="string">&quot;ABORTED&quot;</span>,
         }
@@ -417,7 +403,7 @@
     <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
     </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
         <span class="kw">match </span>value {
-            <span class="string">&quot;STARTED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Started),
+            <span class="string">&quot;EXTENDED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Extended),
             <span class="string">&quot;FINISHED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Finished),
             <span class="string">&quot;ABORTED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Aborted),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,

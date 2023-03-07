@@ -185,10 +185,6 @@
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -355,13 +351,9 @@
             .collect();
 
         <span class="kw">let </span>update_status = <span class="kw">match </span>action {
-            schema::UpdateAction::Start =&gt; <span class="self">self</span>.lookup_data_manager.update_start(data),
-            schema::UpdateAction::Continue =&gt; <span class="self">self</span>.lookup_data_manager.update_continue(data),
+            schema::UpdateAction::Extend =&gt; <span class="self">self</span>.lookup_data_manager.update_extend(data),
             schema::UpdateAction::Finish =&gt; <span class="self">self</span>.lookup_data_manager.update_finish(data),
             schema::UpdateAction::Abort =&gt; <span class="self">self</span>.lookup_data_manager.update_abort(),
-            schema::UpdateAction::StartAndFinish =&gt; {
-                <span class="self">self</span>.lookup_data_manager.update_start_and_finish(data)
-            }
         };
         <span class="prelude-val">Ok</span>(schema::UpdateLookupDataResponse {
             update_status: update_status <span class="kw">as </span>i32,
@@ -376,7 +368,7 @@
         <span class="kw">match </span>value {
             oak_functions_lookup::UpdateStatus::Aborted =&gt; schema::UpdateStatus::Aborted,
             oak_functions_lookup::UpdateStatus::Finished =&gt; schema::UpdateStatus::Finished,
-            oak_functions_lookup::UpdateStatus::Started =&gt; schema::UpdateStatus::Started,
+            oak_functions_lookup::UpdateStatus::Extended =&gt; schema::UpdateStatus::Extended,
         }
     }
 }
