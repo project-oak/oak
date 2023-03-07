@@ -191,6 +191,17 @@
 <a href="#191" id="191">191</a>
 <a href="#192" id="192">192</a>
 <a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -238,6 +249,8 @@
     <span class="kw">async fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>, chunk: <span class="prelude-ty">Option</span>&lt;LookupDataChunk&gt;) -&gt; anyhow::Result&lt;()&gt; {
         <span class="kw">let </span>update_response = <span class="self">self</span>.send_request(UpdateAction::Extend, chunk).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">if </span>UpdateStatus::Extended != update_response.update_status() {
+            <span class="comment">// Try to abort, because receiver unexpectedly did not extend.
+            </span><span class="kw">let _ </span>= <span class="self">self</span>.abort().<span class="kw">await</span>;
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Did not receive expected update status: Extended&quot;</span>));
         }
         <span class="prelude-val">Ok</span>(())
@@ -247,6 +260,15 @@
         <span class="kw">let </span>update_response = <span class="self">self</span>.send_request(UpdateAction::Finish, chunk).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">if </span>UpdateStatus::Finished != update_response.update_status() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Did not receive expected update status: Finished&quot;</span>));
+        };
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="comment">// Tries to abort the current update once.
+    </span><span class="kw">async fn </span>abort(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
+        <span class="kw">let </span>update_response = <span class="self">self</span>.send_request(UpdateAction::Abort, <span class="prelude-val">None</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">if </span>UpdateStatus::Aborted != update_response.update_status() {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Did not receive expected update status: Aborted&quot;</span>));
         };
         <span class="prelude-val">Ok</span>(())
     }
