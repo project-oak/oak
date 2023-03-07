@@ -154,7 +154,7 @@ pub struct LookupDataManager<L: OakLogger + Clone> {
 
 #[derive(Debug, PartialEq)]
 pub enum UpdateStatus {
-    Started,
+    Extended,
     Finished,
     Aborted,
 }
@@ -181,52 +181,20 @@ where
         test_manager
     }
 
-    pub fn update_start_and_finish(&self, new_data: Data) -> UpdateStatus {
-        if let UpdateStatus::Started = self.update_start(new_data) {
-            // Finish sending empty data.
-            self.update_finish(Data::new())
-        } else {
-            self.update_abort()
-        }
-    }
-
-    pub fn update_start(&self, new_data: Data) -> UpdateStatus {
+    pub fn update_extend(&self, new_data: Data) -> UpdateStatus {
         let mut data_builder = self.data_builder.lock();
-        if let BuilderState::Empty = &data_builder.state {
-            data_builder.extend(new_data);
-            UpdateStatus::Started
-        } else {
-            // Clear the builder throwing away the intermediate result.
-            let _ = data_builder.build();
-            UpdateStatus::Aborted
-        }
+        data_builder.extend(new_data);
+        UpdateStatus::Extended
     }
 
-    pub fn update_continue(&self, new_data: Data) -> UpdateStatus {
-        let mut data_builder = self.data_builder.lock();
-        if let BuilderState::Updating = &data_builder.state {
-            data_builder.extend(new_data);
-            UpdateStatus::Started
-        } else {
-            // Clear the builder throwing away the intermediate result.
-            let _ = data_builder.build();
-            UpdateStatus::Aborted
-        }
-    }
-
+    // Finishing the update from every state.
     pub fn update_finish(&self, new_data: Data) -> UpdateStatus {
         let mut data_builder = self.data_builder.lock();
-        if let BuilderState::Updating = &data_builder.state {
-            data_builder.extend(new_data);
-            let next_data = data_builder.build();
-            let mut data = self.data.lock();
-            *data = Arc::new(next_data);
-            UpdateStatus::Finished
-        } else {
-            // Clear the builder throwing away the intermediate result.
-            let _ = data_builder.build();
-            UpdateStatus::Aborted
-        }
+        data_builder.extend(new_data);
+        let next_data = data_builder.build();
+        let mut data = self.data.lock();
+        *data = Arc::new(next_data);
+        UpdateStatus::Finished
     }
 
     pub fn update_abort(&self) -> UpdateStatus {
@@ -314,13 +282,13 @@ mod tests {
         let lookup_data_0 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
 
-        manager.update_start_and_finish(create_test_data(0, 1));
+        manager.update_finish(create_test_data(0, 1));
         let lookup_data_1 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);
 
         // Creating test data in the same range replaces some keys.
-        manager.update_start_and_finish(create_test_data(0, 2));
+        manager.update_finish(create_test_data(0, 2));
         let lookup_data_2 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);
@@ -330,7 +298,7 @@ mod tests {
     #[test]
     fn test_update_lookup_data_one_chunk() {
         let manager = LookupDataManager::new_empty(TestLogger {});
-        let update_status = manager.update_start_and_finish(create_test_data(0, 2));
+        let update_status = manager.update_finish(create_test_data(0, 2));
         assert_eq!(update_status, UpdateStatus::Finished);
         let lookup_data = manager.create_lookup_data();
         assert_eq!(lookup_data.len(), 2);
@@ -341,8 +309,8 @@ mod tests {
         let manager = LookupDataManager::new_empty(TestLogger {});
         let lookup_data_0 = manager.create_lookup_data();
 
-        let update_status = manager.update_start(create_test_data(0, 2));
-        assert_eq!(update_status, UpdateStatus::Started);
+        let update_status = manager.update_extend(create_test_data(0, 2));
+        assert_eq!(update_status, UpdateStatus::Extended);
         let lookup_data_1 = manager.create_lookup_data();
 
         let update_status = manager.update_finish(create_test_data(2, 4));
@@ -358,15 +326,15 @@ mod tests {
     fn test_update_lookup_four_chunks() {
         let manager = LookupDataManager::new_empty(TestLogger {});
 
-        let update_status = manager.update_start(create_test_data(0, 2));
-        assert_eq!(update_status, UpdateStatus::Started);
+        let update_status = manager.update_extend(create_test_data(0, 2));
+        assert_eq!(update_status, UpdateStatus::Extended);
 
-        let update_status = manager.update_continue(create_test_data(2, 3));
-        assert_eq!(update_status, UpdateStatus::Started);
+        let update_status = manager.update_extend(create_test_data(2, 3));
+        assert_eq!(update_status, UpdateStatus::Extended);
 
         // We have one key overlapping here.
-        let update_status = manager.update_continue(create_test_data(2, 6));
-        assert_eq!(update_status, UpdateStatus::Started);
+        let update_status = manager.update_extend(create_test_data(2, 6));
+        assert_eq!(update_status, UpdateStatus::Extended);
 
         let update_status = manager.update_finish(create_test_data(6, 7));
         assert_eq!(update_status, UpdateStatus::Finished);
@@ -381,72 +349,20 @@ mod tests {
         let manager = LookupDataManager::new_empty(TestLogger {});
         let lookup_data_0 = manager.create_lookup_data();
 
-        let update_status = manager.update_start(create_test_data(0, 2));
-        assert_eq!(update_status, UpdateStatus::Started);
+        let update_status = manager.update_extend(create_test_data(0, 2));
+        assert_eq!(update_status, UpdateStatus::Extended);
 
         let update_status = manager.update_abort();
         assert_eq!(update_status, UpdateStatus::Aborted);
         let lookup_data_1 = manager.create_lookup_data();
 
-        let update_status = manager.update_start_and_finish(create_test_data(0, 1));
+        let update_status = manager.update_finish(create_test_data(0, 1));
         assert_eq!(update_status, UpdateStatus::Finished);
         let lookup_data_2 = manager.create_lookup_data();
 
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 0);
         assert_eq!(lookup_data_2.len(), 1);
-    }
-
-    #[test]
-    fn test_update_lookup_data_abort_after_second_start() {
-        let manager = LookupDataManager::new_empty(TestLogger {});
-        let lookup_data_0 = manager.create_lookup_data();
-
-        let update_status = manager.update_start(create_test_data(0, 2));
-        assert_eq!(update_status, UpdateStatus::Started);
-        let lookup_data_1 = manager.create_lookup_data();
-
-        let update_status = manager.update_start(create_test_data(2, 4));
-        assert_eq!(update_status, UpdateStatus::Aborted);
-        let lookup_data_2 = manager.create_lookup_data();
-
-        assert_eq!(lookup_data_0.len(), 0);
-        assert_eq!(lookup_data_1.len(), 0);
-        assert_eq!(lookup_data_2.len(), 0);
-    }
-
-    #[test]
-    fn test_update_lookup_data_abort_after_second_start_and_finish() {
-        let manager = LookupDataManager::new_empty(TestLogger {});
-        let lookup_data_0 = manager.create_lookup_data();
-
-        let update_status = manager.update_start(create_test_data(0, 2));
-        assert_eq!(update_status, UpdateStatus::Started);
-        let lookup_data_1 = manager.create_lookup_data();
-
-        let update_status = manager.update_start_and_finish(create_test_data(2, 4));
-        assert_eq!(update_status, UpdateStatus::Aborted);
-        let lookup_data_2 = manager.create_lookup_data();
-
-        assert_eq!(lookup_data_0.len(), 0);
-        assert_eq!(lookup_data_1.len(), 0);
-        assert_eq!(lookup_data_2.len(), 0);
-    }
-
-    #[test]
-    fn test_update_lookup_data_abort_after_continue_without_start() {
-        let manager = LookupDataManager::new_empty(TestLogger {});
-
-        let update_status = manager.update_continue(create_test_data(0, 4));
-        assert_eq!(update_status, UpdateStatus::Aborted);
-    }
-
-    #[test]
-    fn test_update_lookup_data_abort_after_finish_without_start() {
-        let manager = LookupDataManager::new_empty(TestLogger {});
-
-        let update_status = manager.update_finish(create_test_data(0, 4));
-        assert_eq!(update_status, UpdateStatus::Aborted);
     }
 
     #[test]

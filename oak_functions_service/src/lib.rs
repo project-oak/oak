@@ -164,13 +164,9 @@ impl schema::OakFunctions for OakFunctionsService {
             .collect();
 
         let update_status = match action {
-            schema::UpdateAction::Start => self.lookup_data_manager.update_start(data),
-            schema::UpdateAction::Continue => self.lookup_data_manager.update_continue(data),
+            schema::UpdateAction::Extend => self.lookup_data_manager.update_extend(data),
             schema::UpdateAction::Finish => self.lookup_data_manager.update_finish(data),
             schema::UpdateAction::Abort => self.lookup_data_manager.update_abort(),
-            schema::UpdateAction::StartAndFinish => {
-                self.lookup_data_manager.update_start_and_finish(data)
-            }
         };
         Ok(schema::UpdateLookupDataResponse {
             update_status: update_status as i32,
@@ -185,7 +181,7 @@ impl From<oak_functions_lookup::UpdateStatus> for schema::UpdateStatus {
         match value {
             oak_functions_lookup::UpdateStatus::Aborted => schema::UpdateStatus::Aborted,
             oak_functions_lookup::UpdateStatus::Finished => schema::UpdateStatus::Finished,
-            oak_functions_lookup::UpdateStatus::Started => schema::UpdateStatus::Started,
+            oak_functions_lookup::UpdateStatus::Extended => schema::UpdateStatus::Extended,
         }
     }
 }
