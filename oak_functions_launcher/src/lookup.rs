@@ -21,36 +21,44 @@ use crate::{
 use anyhow::{anyhow, Context};
 use hashbrown::HashMap;
 use prost::Message;
-use std::{fs, path::PathBuf, vec::IntoIter};
+use std::{fs, path::PathBuf};
 use ubyte::ByteUnit;
 
-struct UpdateClient<'a> {
+struct UpdateClient<'a, I: Iterator<Item = LookupDataChunk>> {
     inner: &'a mut OakFunctionsAsyncClient<ConnectorHandle>,
-    chunks: IntoIter<LookupDataChunk>,
+    chunks: I,
 }
 
-impl UpdateClient<'_> {
+impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
     async fn start(&mut self) -> anyhow::Result<()> {
         // Send the current chunk first.
-        let update_response = self.send_request(UpdateAction::Start).await?;
+        let chunk = self.chunks.next();
+        let update_response = self.send_request(UpdateAction::Start, chunk).await?;
         if UpdateStatus::Started != update_response.update_status() {
             return Err(anyhow!("Did not receive expected update status: Started"));
         };
         self.continue_().await
     }
 
+    // Call continue with at least two chunks left to process.
     async fn continue_(&mut self) -> anyhow::Result<()> {
-        while self.chunks.len() > 1 {
-            let update_response = self.send_request(UpdateAction::Continue).await?;
+        // Check the next two chunks.
+        let mut next = self.chunks.next();
+        let mut next_next = self.chunks.next();
+
+        while next_next.is_some() {
+            let update_response = self.send_request(UpdateAction::Continue, next).await?;
             if UpdateStatus::Started != update_response.update_status() {
                 return Err(anyhow!("Did not receive expected update status: Started"));
             };
+            next = next_next;
+            next_next = self.chunks.next();
         }
-        self.finish().await
+        self.finish(next).await
     }
 
-    async fn finish(&mut self) -> anyhow::Result<()> {
-        let update_response = self.send_request(UpdateAction::Finish).await?;
+    async fn finish(&mut self, chunk: Option<LookupDataChunk>) -> anyhow::Result<()> {
+        let update_response = self.send_request(UpdateAction::Finish, chunk).await?;
         if UpdateStatus::Finished != update_response.update_status() {
             return Err(anyhow!("Did not receive expected update status: Finished"));
         };
@@ -58,21 +66,25 @@ impl UpdateClient<'_> {
     }
 
     async fn start_and_finish(&mut self) -> anyhow::Result<()> {
-        let update_response = self.send_request(UpdateAction::StartAndFinish).await?;
+        let chunk = self.chunks.next();
+        let update_response = self
+            .send_request(UpdateAction::StartAndFinish, chunk)
+            .await?;
         if UpdateStatus::Finished != update_response.update_status() {
             return Err(anyhow!("Did not receive expected update status: Finished"));
         };
         Ok(())
     }
 
-    // Helper to send a request with the given action.
+    // Helper to send a request with the given action and chunk.
     async fn send_request(
         &mut self,
         action: schema::UpdateAction,
+        chunk: Option<LookupDataChunk>,
     ) -> anyhow::Result<schema::UpdateLookupDataResponse> {
         let request = schema::UpdateLookupDataRequest {
             action: action.into(),
-            chunk: self.chunks.next(),
+            chunk,
         };
 
         self.inner
