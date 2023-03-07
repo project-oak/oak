@@ -65,16 +65,13 @@ message LookupDataChunk {
 
 // Indicates to the LookupDataManager which action should be taken.
 enum UpdateAction {
-  // The first chunk the sender sends.
-  START = 0;
-  // The sender sends this chunk and will send a further chunk.
-  CONTINUE = 1;
-  // The final chunk the sender sends.
-  FINISH = 2;
-  // The sender needs to abort the update.
-  ABORT = 3;
-  // The sender needs to send only one chunk.
-  START_AND_FINISH = 4;
+  // The sender extends the lookup data builder with this chunk and will send a
+  // further chunk.
+  EXTEND = 0;
+  // The final chunk the sender sends to build the lookup data.
+  FINISH = 1;
+  // The sender needs to abort the building the lookup data.
+  ABORT = 2;
 }
 
 // A message to the LookupDataManager to process the lookup data chunk based on the current
@@ -88,7 +85,7 @@ message UpdateLookupDataRequest {
 }
 
 enum UpdateStatus {
-  STARTED = 0;
+  EXTENDED = 0;
   FINISHED = 1;
   ABORTED = 2;
 }

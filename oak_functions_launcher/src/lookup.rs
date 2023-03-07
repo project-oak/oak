@@ -30,46 +30,28 @@ struct UpdateClient<'a, I: Iterator<Item = LookupDataChunk>> {
 }
 
 impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
-    async fn start(&mut self) -> anyhow::Result<()> {
-        // Send the current chunk first.
-        let chunk = self.chunks.next();
-        let update_response = self.send_request(UpdateAction::Start, chunk).await?;
-        if UpdateStatus::Started != update_response.update_status() {
-            return Err(anyhow!("Did not receive expected update status: Started"));
-        };
-        self.continue_().await
+    // Sends all chunks to the Oak Functions Service.
+    async fn update(&mut self) -> anyhow::Result<()> {
+        let mut current = self.chunks.next();
+        let mut next = self.chunks.next();
+        while next.is_some() {
+            self.extend(current).await?;
+            current = next;
+            next = self.chunks.next();
+        }
+        self.finish(current).await
     }
 
-    // Call continue with at least two chunks left to process.
-    async fn continue_(&mut self) -> anyhow::Result<()> {
-        // Check the next two chunks.
-        let mut next = self.chunks.next();
-        let mut next_next = self.chunks.next();
-
-        while next_next.is_some() {
-            let update_response = self.send_request(UpdateAction::Continue, next).await?;
-            if UpdateStatus::Started != update_response.update_status() {
-                return Err(anyhow!("Did not receive expected update status: Started"));
-            };
-            next = next_next;
-            next_next = self.chunks.next();
+    async fn extend(&mut self, chunk: Option<LookupDataChunk>) -> anyhow::Result<()> {
+        let update_response = self.send_request(UpdateAction::Extend, chunk).await?;
+        if UpdateStatus::Extended != update_response.update_status() {
+            return Err(anyhow!("Did not receive expected update status: Extended"));
         }
-        self.finish(next).await
+        Ok(())
     }
 
     async fn finish(&mut self, chunk: Option<LookupDataChunk>) -> anyhow::Result<()> {
         let update_response = self.send_request(UpdateAction::Finish, chunk).await?;
-        if UpdateStatus::Finished != update_response.update_status() {
-            return Err(anyhow!("Did not receive expected update status: Finished"));
-        };
-        Ok(())
-    }
-
-    async fn start_and_finish(&mut self) -> anyhow::Result<()> {
-        let chunk = self.chunks.next();
-        let update_response = self
-            .send_request(UpdateAction::StartAndFinish, chunk)
-            .await?;
         if UpdateStatus::Finished != update_response.update_status() {
             return Err(anyhow!("Did not receive expected update status: Finished"));
         };
@@ -104,16 +86,12 @@ pub async fn update_lookup_data(
     let lookup_data = load_lookup_data(lookup_data_path)?;
     let chunks = chunk_up_lookup_data(lookup_data, max_chunk_size).into_iter();
 
-    let mut update_client = UpdateClient {
+    UpdateClient {
         inner: client,
         chunks,
-    };
-
-    if update_client.chunks.len() == 1 {
-        update_client.start_and_finish().await
-    } else {
-        update_client.start().await
     }
+    .update()
+    .await
 }
 
 fn chunk_up_lookup_data(
