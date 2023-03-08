@@ -85,17 +85,16 @@ where
             OakStatus::ErrInvalidHandle
         })?;
 
-        let extension = match self.extensions.get_mut(&handle) {
-            // Can't convince the borrow checker to use `ok_or_else` to `self.log_error`.
-            Some(extension) => Ok(extension),
-            None => {
-                // TODO(mschett): Add logging.
-                // self.log_error(&format!("can't find extension with handle {:?}.", handle));
-                Err(OakStatus::ErrInvalidHandle)
-            }
-        };
+        let extensions = &mut self.extensions;
+        let logger = &self.logger;
 
-        extension
+        extensions.get_mut(&handle).ok_or_else(|| {
+            logger.log_sensitive(
+                Level::Error,
+                &format!("can't find extension with handle {:?}.", handle),
+            );
+            OakStatus::ErrInvalidHandle
+        })
     }
 
     fn log_error(&self, message: &str) {
