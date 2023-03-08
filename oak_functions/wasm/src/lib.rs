@@ -17,7 +17,7 @@
 //! Wasm business logic provider based on [Wasmi](https://github.com/paritytech/wasmi).
 
 // TODO(mschett) Add back no_std.
-// #![no_std]
+#![no_std]
 
 extern crate alloc;
 
@@ -504,7 +504,6 @@ pub struct WasmHandler<L: OakLogger> {
     logger: L,
 }
 
-// TODO(mschett): Check whether we need the WasmHandler.
 impl<L> WasmHandler<L>
 where
     L: OakLogger,
