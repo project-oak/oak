@@ -28,7 +28,6 @@ extern crate std;
 mod tests;
 
 use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
-use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use hashbrown::HashMap;
 use oak_functions_abi::{
@@ -37,7 +36,7 @@ use oak_functions_abi::{
 };
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::{Level, OakLogger};
-use wasmi::{core::ValueType, AsContext, AsContextMut, Func, MemoryType, Store};
+use wasmi::{AsContext, AsContextMut, Func, MemoryType};
 
 const MAIN_FUNCTION_NAME: &str = "main";
 const ALLOC_FUNCTION_NAME: &str = "alloc";
@@ -51,12 +50,7 @@ pub type AbiPointer = u32;
 pub type AbiPointerOffset = u32;
 // Type alias for the ExtensionHandle type, which has to be cast into a ExtensionHandle.
 pub type AbiExtensionHandle = i32;
-/// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of
-/// Wasm would use a different value.
-/// TODO(mschett): Changed from Value::I32 to u32. Check why this was needed.
-pub type AbiUsize = u32;
 
-// TODO(mschett): Check whether this needs to be public.
 pub struct UserState<L: OakLogger> {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
@@ -153,17 +147,16 @@ where
 
         let mut linker: wasmi::Linker<UserState<L>> = wasmi::Linker::new(&engine);
 
-        // TODO(mschett): It would be nice to define the linker in WasmHandler to reuse it for
-        // different WasmStates, but the externals Func and Memory defined in the linker depend on
-        // store, which needs to be new for every WasmState. In contrast, in wasmtime `func_wrap`
-        // does not depend on store (https://docs.rs/wasmtime/latest/wasmtime/struct.Linker.html#method.func_wrap).
+        // Although it would be nice to define the linker in WasmHandler to reuse it for
+        // different WasmStates, we can't because the externals Func and Memory defined in the
+        // linker depend on store, which needs to be new for every WasmState. In contrast,
+        // in wasmtime `func_wrap` does not depend on store (https://docs.rs/wasmtime/latest/wasmtime/struct.Linker.html#method.func_wrap).
 
         // Add memory to linker.
-        // TODO(mschett): Check what is a sensible initial value. Currently we put 4GiB, the
-        // absolute maximum.
-        let initial_memory_size = 65536;
+        // TODO(#3783): Find a sensible value for initial pages.
+        let initial_pages = 16384; // corresponds to 1 GiB
         let memory_type =
-            MemoryType::new(initial_memory_size, None).expect("failed to define Wasm memory type");
+            MemoryType::new(initial_pages, None).expect("failed to define Wasm memory type");
         let memory =
             wasmi::Memory::new(&mut store, memory_type).expect("failed to initialize Wasm memory");
 
@@ -176,8 +169,8 @@ where
             // The types in the signatures correspond to the parameters from
             // oak_functions_abi/src/lib.rs.
             |mut caller: wasmi::Caller<'_, UserState<L>>,
-             buf_ptr_ptr: AbiUsize,
-             buf_len_ptr: AbiUsize| {
+             buf_ptr_ptr: AbiPointer,
+             buf_len_ptr: AbiPointer| {
                 let result = read_request(&mut caller, buf_ptr_ptr, buf_len_ptr);
                 from_oak_status_result(result)
             },
@@ -191,7 +184,9 @@ where
             &mut store,
             // The types in the signatures correspond to the parameters from
             // oak_functions_abi/src/lib.rs.
-            |mut caller: wasmi::Caller<'_, UserState<L>>, buf_ptr: AbiUsize, buf_len: AbiUsize| {
+            |mut caller: wasmi::Caller<'_, UserState<L>>,
+             buf_ptr: AbiPointer,
+             buf_len: AbiPointerOffset| {
                 let result = write_response(&mut caller, buf_ptr, buf_len);
                 from_oak_status_result(result)
             },
@@ -207,10 +202,10 @@ where
             // oak_functions_abi/src/lib.rs.
             |mut caller: wasmi::Caller<'_, UserState<L>>,
              handle: AbiExtensionHandle,
-             request_ptr: AbiUsize,
-             request_len: AbiUsize,
-             response_ptr_ptr: AbiUsize,
-             response_len_ptr: AbiUsize| {
+             request_ptr: AbiPointer,
+             request_len: AbiPointerOffset,
+             response_ptr_ptr: AbiPointer,
+             response_len_ptr: AbiPointer| {
                 let result = invoke_extension(
                     &mut caller,
                     handle,
@@ -232,61 +227,39 @@ where
         let instance = linker
             .instantiate(&mut store, &module)
             .map_err(|err| anyhow::anyhow!("failed to instantiate Wasm module: {:?}", err))?
+            // Use `main` as entry point.
             .ensure_no_start(&mut store)
             .map_err(|err| {
                 anyhow::anyhow!("failed to ensure no start in Wasm module: {:?}", err)
             })?;
-        // TODO(mschett): Check why we do ensure no start.
-
-        // Check that the instance exports "main".
-        check_export_func_type(
-            &instance,
-            &store,
-            MAIN_FUNCTION_NAME,
-            // TODO(mschett): Check whether I give the right func_type for main.
-            wasmi::FuncType::new([], []),
-        )
-        .context("couldn't validate `main` export")?;
 
         // Check that the instance exports "alloc".
-        check_export_func_type(
-            &instance,
-            &store,
-            ALLOC_FUNCTION_NAME,
-            // TODO(mschett): Check whether I give the right func_type for alloc.
-            wasmi::FuncType::new([ValueType::I32], [ValueType::I32]),
-        )
-        .context("couldn't validate `alloc` export")?;
+        let _ = &instance
+            .get_typed_func::<i32, AbiPointer>(&store, ALLOC_FUNCTION_NAME)
+            .expect("couldn't validate `alloc` export");
 
         // Make sure that non-empty `memory` is attached to the instance. Fail early if
         // `memory` is not available.
         instance
-            .get_export(&store, "memory")
-            .ok_or(anyhow::anyhow!("couldn't find Wasm `memory` export"))?
-            .into_memory()
-            .ok_or(anyhow::anyhow!(
-                "couldn't interpret Wasm `memory` export as memory"
-            ))?;
+            .get_memory(&store, "memory")
+            .ok_or(anyhow::anyhow!("couldn't find Wasm `memory` export"))?;
 
         let wasm_state = Self { instance, store };
 
         Ok(wasm_state)
     }
 
+    // Invokes the Wasm module by calling main.
     fn invoke(&mut self) {
-        // TODO(mschett): Fix unwrap.
         let main = self
             .instance
-            .get_export(&self.store, MAIN_FUNCTION_NAME)
-            .unwrap()
-            .into_func()
-            .unwrap();
-        let result = main.call(&mut self.store, &[], &mut []);
-
-        self.store.data().log_error(&format!(
-            "running Wasm module completed with result: {:?}",
-            result
-        ));
+            .get_typed_func::<(), ()>(&self.store, MAIN_FUNCTION_NAME)
+            .expect("couldn't get `main` export");
+        let result = main.call(&mut self.store, ());
+        self.store.data().logger.log_sensitive(
+            Level::Info,
+            &format!("running Wasm module completed with result: {:?}", result),
+        );
     }
 
     // Needed for unit tests.
@@ -325,24 +298,6 @@ where
         }
     }
      */
-}
-
-// Calls given alloc Func with ctx and length as parameters.
-// alloc Func has to belong to given ctx.
-pub fn call_alloc(ctx: &mut impl AsContextMut, alloc: Func, len: i32) -> AbiPointer {
-    let inputs = &[wasmi::Value::I32(len)];
-    // TODO(mschett): Check whether putting default value 0 is a good idea.
-    let mut outputs = [wasmi::Value::I32(0); 1];
-    alloc
-        .call(ctx, inputs, &mut outputs)
-        .expect("`alloc` call failed");
-
-    let result_value = outputs;
-
-    match result_value[0] {
-        wasmi::Value::I32(v) => v as u32,
-        _ => panic!("invalid value type returned from `alloc`"),
-    }
 }
 
 /// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
@@ -409,6 +364,24 @@ pub fn write_buffer(
         );  */
         OakStatus::ErrInvalidArgs
     })
+}
+
+// Calls given alloc Func with ctx and length as parameters.
+// alloc Func has to belong to given ctx.
+pub fn call_alloc(ctx: &mut impl AsContextMut, alloc: Func, len: i32) -> AbiPointer {
+    let inputs = &[wasmi::Value::I32(len)];
+    // TODO(mschett): Check whether putting default value 0 is a good idea.
+    let mut outputs = [wasmi::Value::I32(0); 1];
+    alloc
+        .call(ctx, inputs, &mut outputs)
+        .expect("`alloc` call failed");
+
+    let result_value = outputs;
+
+    match result_value[0] {
+        wasmi::Value::I32(v) => v as u32,
+        _ => panic!("invalid value type returned from `alloc`"),
+    }
 }
 
 /// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address
@@ -525,32 +498,6 @@ pub fn invoke_extension<L: OakLogger>(
         response_ptr_ptr,
         response_len_ptr,
     )
-}
-
-// Checks that instance exports the given export name and the func type matches the expected func
-// type.
-// TODO(mschett): Check if that can be shorter.
-fn check_export_func_type<L: OakLogger>(
-    instance: &wasmi::Instance,
-    store: &Store<UserState<L>>,
-    export_name: &str,
-    expected_func_type: wasmi::FuncType,
-) -> anyhow::Result<()> {
-    let export_func_type = instance
-        .get_export(store, export_name)
-        .context("couldn't find Wasm export")?
-        .into_func()
-        .context("couldn't interpret Wasm export as function")?
-        .ty(store);
-    if export_func_type != expected_func_type {
-        anyhow::bail!(
-            "invalid signature for export: {:?}, expected: {:?}",
-            export_func_type,
-            expected_func_type
-        );
-    } else {
-        Ok(())
-    }
 }
 
 // An ephemeral request handler with a Wasm module for handling the requests.
