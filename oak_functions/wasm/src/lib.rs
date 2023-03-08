@@ -303,18 +303,18 @@ pub fn read_buffer(
     buf_len: AbiPointerOffset,
 ) -> Result<Vec<u8>, OakStatus> {
     let mut target = alloc::vec![0; buf_len as usize];
-    // TODO(mschett): check usize cast.
-    memory
-        .read(&ctx, buf_ptr as usize, &mut target)
-        .map_err(|_err| {
-            // TODO(mschett): Add logging.
-            /*
-            self.logger.log_sensitive(
-                Level::Error,
-                &format!("Unable to read buffer from guest memory: {:?}", err),
-            ); */
-            OakStatus::ErrInvalidArgs
-        })?;
+
+    let buf_ptr = usize::try_from(buf_ptr)
+        .expect("failed to convert AbiPointer to usize as required by wasmi API");
+    memory.read(&ctx, buf_ptr, &mut target).map_err(|_err| {
+        // TODO(mschett): Add logging.
+        /*
+        self.logger.log_sensitive(
+            Level::Error,
+            &format!("Unable to read buffer from guest memory: {:?}", err),
+        ); */
+        OakStatus::ErrInvalidArgs
+    })?;
     Ok(target)
 }
 
@@ -349,8 +349,10 @@ pub fn write_buffer(
 ) -> Result<(), OakStatus> {
     // TODO(mschett): Check whether we want to validate range.
     // self.validate_range(dest, source.len() as u32)?;
-    // TODO(mschett): check usize cast.
-    memory.write(ctx, dest as usize, source).map_err(|_err| {
+
+    let dest = usize::try_from(dest)
+        .expect("failed to convert AbiPointer to usize as required by wasmi API");
+    memory.write(ctx, dest, source).map_err(|_err| {
         // TODO(mschett): Add logging.
         /*
         self.logger.log_sensitive(
@@ -440,16 +442,15 @@ pub fn write_response<L: OakLogger>(
 
     let mut target = alloc::vec![0; buf_len as usize];
 
-    // TODO(mschett): check usize cast.
-    memory
-        .read(&caller, buf_ptr as usize, &mut target)
-        .map_err(|err| {
-            caller.data().log_error(&format!(
-                "write_response(): Unable to read name from guest memory: {:?}",
-                err
-            ));
-            OakStatus::ErrInvalidArgs
-        })?;
+    let buf_ptr = usize::try_from(buf_ptr)
+        .expect("failed to convert AbiPointer to usize as required by wasmi API");
+    memory.read(&caller, buf_ptr, &mut target).map_err(|err| {
+        caller.data().log_error(&format!(
+            "write_response(): Unable to read name from guest memory: {:?}",
+            err
+        ));
+        OakStatus::ErrInvalidArgs
+    })?;
 
     caller.data_mut().response_bytes = target;
     Ok(())
