@@ -28,7 +28,7 @@ fn test_invoke_extension_with_invalid_handle() {
     let mut wasm_state = create_test_wasm_state();
     // Assumes there is no negative ExtensionHandle. The remaining arguments don't matter, hence
     // they are 0.
-    let extension = wasm_state.store.state_mut().get_extension(-1);
+    let extension = wasm_state.store.data_mut().get_extension(-1);
     assert_eq!(OakStatus::ErrInvalidHandle, extension.unwrap_err())
 }
 
@@ -39,7 +39,7 @@ fn test_invoke_extension_not_available() {
     // matter, hence they are 0.
     let extension = wasm_state
         .store
-        .state_mut()
+        .data_mut()
         .get_extension(ExtensionHandle::LookupHandle as i32);
     assert_eq!(OakStatus::ErrInvalidHandle, extension.unwrap_err())
 }
@@ -333,7 +333,7 @@ fn test_invoke_extension() {
 
     let extension = wasm_state
         .store
-        .state_mut()
+        .data_mut()
         .get_extension(ExtensionHandle::TestingHandle as i32)
         .unwrap();
 

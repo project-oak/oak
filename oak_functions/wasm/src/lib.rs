@@ -147,7 +147,7 @@ where
         // For isolated requests we need to create a new store for every request.
         let mut store = wasmi::Store::new(&module.engine(), user_state);
 
-        let mut linker: wasmi::Linker<UserState<L>> = wasmi::Linker::new();
+        let mut linker: wasmi::Linker<UserState<L>> = wasmi::Linker::new(&engine);
 
         // TODO(mschett): Check what we need this variable for.
         let host = "oak_functions";
@@ -173,30 +173,8 @@ where
             &mut store,
             // TODO(mschett): Check types of params with oak_functions_resolve_funcs.
             |mut caller: wasmi::Caller<'_, UserState<L>>, buf_ptr_ptr: u32, buf_len_ptr: u32| {
-                let mut memory = caller
-                    .get_export("memory")
-                    // TODO(mschett): Fix unwrap.
-                    .unwrap()
-                    .into_memory()
-                    .expect("WasmState memory not attached!?");
-
-                // alloc call
-                let alloc = caller.get_export("alloc").unwrap().into_func().unwrap();
-
-                let request_bytes = caller.host_data().request_bytes.clone();
-
-                let oak_status = alloc_and_write_buffer(
-                    &mut caller,
-                    &mut memory,
-                    alloc,
-                    request_bytes,
-                    buf_ptr_ptr,
-                    buf_len_ptr,
-                );
-
-                // TODO(mschett)
-                // let oak_status = read_request(&mut caller, buf_ptr_ptr, buf_len_ptr);
-                from_oak_status_result(oak_status)
+                let result = read_request(&mut caller, buf_ptr_ptr, buf_len_ptr);
+                from_oak_status_result(result)
             },
         );
 
@@ -297,19 +275,21 @@ where
             .unwrap();
         let result = main.call(&mut self.store, &[], &mut []);
 
-        self.store.state().log_error(&format!(
+        self.store.data().log_error(&format!(
             "running Wasm module completed with result: {:?}",
             result
         ));
     }
 
+    // Needed for unit tests.
+    #[allow(dead_code)]
     fn get_request_bytes(&self) -> Vec<u8> {
-        let user_state = self.store.state();
+        let user_state = self.store.data();
         user_state.request_bytes.clone()
     }
 
     fn get_response_bytes(&self) -> Vec<u8> {
-        let user_state = self.store.state();
+        let user_state = self.store.data();
         user_state.response_bytes.clone()
     }
 
@@ -342,9 +322,9 @@ where
 // Calls given alloc Func with ctx and length as parameters.
 // alloc Func has to belong to given ctx.
 pub fn call_alloc(ctx: &mut impl AsContextMut, alloc: Func, len: i32) -> AbiPointer {
-    let inputs = &[wasmi::core::Value::I32(len)];
+    let inputs = &[wasmi::Value::I32(len)];
     // TODO(mschett): Check whether putting default value 0 is a good idea.
-    let mut outputs = [wasmi::core::Value::I32(0); 1];
+    let mut outputs = [wasmi::Value::I32(0); 1];
     alloc
         .call(ctx, inputs, &mut outputs)
         .expect("`alloc` call failed");
@@ -352,7 +332,7 @@ pub fn call_alloc(ctx: &mut impl AsContextMut, alloc: Func, len: i32) -> AbiPoin
     let result_value = outputs;
 
     match result_value[0] {
-        wasmi::core::Value::I32(v) => v as u32,
+        wasmi::Value::I32(v) => v as u32,
         _ => panic!("invalid value type returned from `alloc`"),
     }
 }
@@ -456,7 +436,7 @@ pub fn read_request<L: OakLogger>(
         .into_memory()
         .expect("WasmState memory not attached!?");
 
-    let request_bytes = caller.host_data().request_bytes.clone();
+    let request_bytes = caller.data().request_bytes.clone();
 
     alloc_and_write_buffer(
         caller,
@@ -488,14 +468,14 @@ pub fn write_response<L: OakLogger>(
     memory
         .read(&caller, buf_ptr as usize, &mut target)
         .map_err(|err| {
-            caller.host_data().log_error(&format!(
+            caller.data().log_error(&format!(
                 "write_response(): Unable to read name from guest memory: {:?}",
                 err
             ));
             OakStatus::ErrInvalidArgs
         })?;
 
-    caller.host_data_mut().response_bytes = target;
+    caller.data_mut().response_bytes = target;
     Ok(())
 }
 
@@ -518,14 +498,14 @@ pub fn invoke_extension<L: OakLogger>(
         .expect("WasmState memory not attached!?");
 
     let request = read_buffer(caller, &mut memory, request_ptr, request_len).map_err(|err| {
-        caller.host_data().log_error(&format!(
+        caller.data().log_error(&format!(
             "Handle {:?}: Unable to read input from guest memory: {:?}",
             handle, err
         ));
         OakStatus::ErrInvalidArgs
     })?;
 
-    let user_state = caller.host_data_mut();
+    let user_state = caller.data_mut();
     let extension = user_state.get_extension(handle)?;
     let response = extension.invoke(request)?;
 
@@ -611,7 +591,7 @@ fn check_export_func_type<L: OakLogger>(
         .context("couldn't find Wasm export")?
         .into_func()
         .context("couldn't interpret Wasm export as function")?
-        .func_type(store);
+        .ty(store);
     if export_func_type != expected_func_type {
         anyhow::bail!(
             "invalid signature for export: {:?}, expected: {:?}",
@@ -682,7 +662,7 @@ where
 
         wasm_state
             .store
-            .state_mut()
+            .data_mut()
             .extensions
             .values_mut()
             .try_for_each(|e| e.terminate())?;
