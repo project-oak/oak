@@ -17,7 +17,7 @@
 //! Wasm business logic provider based on [Wasmi](https://github.com/paritytech/wasmi).
 
 // TODO(mschett) Add back no_std.
-//#![no_std]
+// #![no_std]
 
 extern crate alloc;
 
@@ -42,6 +42,9 @@ use wasmi::{core::ValueType, AsContext, AsContextMut, Func, MemoryType, Store};
 const MAIN_FUNCTION_NAME: &str = "main";
 const ALLOC_FUNCTION_NAME: &str = "alloc";
 
+// Needs to be consistent with definition of the Wasm import module in the Oak Functions ABI.
+const HOST: &str = "oak_functions";
+
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
 pub type AbiPointer = u32;
@@ -50,7 +53,8 @@ pub type AbiPointerOffset = u32;
 pub type AbiExtensionHandle = i32;
 /// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of
 /// Wasm would use a different value.
-pub const ABI_USIZE: ValueType = ValueType::I32;
+/// TODO(mschett): Changed from Value::I32 to u32. Check why this was needed.
+pub type AbiUsize = u32;
 
 // TODO(mschett): Check whether this needs to be public.
 pub struct UserState<L: OakLogger> {
@@ -149,9 +153,6 @@ where
 
         let mut linker: wasmi::Linker<UserState<L>> = wasmi::Linker::new(&engine);
 
-        // TODO(mschett): Check what we need this variable for.
-        let host = "oak_functions";
-
         // TODO(mschett): It would be nice to define the linker in WasmHandler to reuse it for
         // different WasmStates, but the externals Func and Memory defined in the linker depend on
         // store, which needs to be new for every WasmState. In contrast, in wasmtime `func_wrap`
@@ -161,49 +162,55 @@ where
         // TODO(mschett): Check what is a sensible initial value. Currently we put 4GiB, the
         // absolute maximum.
         let initial_memory_size = 65536;
-        // TODO(mschett): Fix unwrap.
-        let memory_type = MemoryType::new(initial_memory_size, None).unwrap();
-        let memory = wasmi::Memory::new(&mut store, memory_type).unwrap();
-        // TODO(mschett): Fix to .context("Failed to initialize Wasm memory.");
+        let memory_type =
+            MemoryType::new(initial_memory_size, None).expect("failed to define Wasm memory type");
+        let memory =
+            wasmi::Memory::new(&mut store, memory_type).expect("failed to initialize Wasm memory");
+
         linker
-            .define(host, "memory", wasmi::Extern::Memory(memory))
-            .unwrap();
+            .define(HOST, "memory", wasmi::Extern::Memory(memory))
+            .expect("failed to define Wasm memory in linker");
 
         let read_request = wasmi::Func::wrap(
             &mut store,
-            // TODO(mschett): Check types of params with oak_functions_resolve_funcs.
-            |mut caller: wasmi::Caller<'_, UserState<L>>, buf_ptr_ptr: u32, buf_len_ptr: u32| {
+            // The types in the signatures correspond to the parameters from
+            // oak_functions_abi/src/lib.rs.
+            |mut caller: wasmi::Caller<'_, UserState<L>>,
+             buf_ptr_ptr: AbiUsize,
+             buf_len_ptr: AbiUsize| {
                 let result = read_request(&mut caller, buf_ptr_ptr, buf_len_ptr);
                 from_oak_status_result(result)
             },
         );
 
-        // TODO(mschett): Handle error.
-        linker.define(host, "read_request", read_request).unwrap();
+        linker
+            .define(HOST, "read_request", read_request)
+            .expect("failed to define read_request in linker");
 
         let write_response = wasmi::Func::wrap(
             &mut store,
-            // TODO(mschett): Check types of params with oak_functions_resolve_funcs.
-            |mut caller: wasmi::Caller<'_, UserState<L>>, buf_ptr: u32, buf_len: u32| {
+            // The types in the signatures correspond to the parameters from
+            // oak_functions_abi/src/lib.rs.
+            |mut caller: wasmi::Caller<'_, UserState<L>>, buf_ptr: AbiUsize, buf_len: AbiUsize| {
                 let result = write_response(&mut caller, buf_ptr, buf_len);
                 from_oak_status_result(result)
             },
         );
 
-        // TODO(mschett): Handle error.
         linker
-            .define(host, "write_response", write_response)
-            .unwrap();
+            .define(HOST, "write_response", write_response)
+            .expect("failed to define write_response in linker");
 
         let invoke_extension = wasmi::Func::wrap(
             &mut store,
-            // TODO(mschett): Check types of params with oak_functions_resolve_funcs.
+            // The types in the signatures correspond to the parameters from
+            // oak_functions_abi/src/lib.rs.
             |mut caller: wasmi::Caller<'_, UserState<L>>,
-             handle: i32,
-             request_ptr: u32,
-             request_len: u32,
-             response_ptr_ptr: u32,
-             response_len_ptr: u32| {
+             handle: AbiExtensionHandle,
+             request_ptr: AbiUsize,
+             request_len: AbiUsize,
+             response_ptr_ptr: AbiUsize,
+             response_len_ptr: AbiUsize| {
                 let result = invoke_extension(
                     &mut caller,
                     handle,
@@ -217,8 +224,9 @@ where
             },
         );
 
-        // TODO(mschett): Handle error.
-        linker.define(host, "invoke", invoke_extension).unwrap();
+        linker
+            .define(HOST, "invoke", invoke_extension)
+            .expect("failed to define invoke in linker");
 
         // Use linker and store to get instance of module.
         let instance = linker
@@ -518,64 +526,6 @@ pub fn invoke_extension<L: OakLogger>(
         response_len_ptr,
     )
 }
-
-// TODO(mschett): Use information from invoke_index for exported functions.
-/// Invocation of a host function specified by its registered index. Acts as a wrapper for
-/// the relevant native function, just:
-/// - checking argument types (which should be correct as `wasmi` will only pass through those types
-///   that were specified when the host function was registered with `resolve_func`).
-/// - mapping resulting return/error values.
-/*
-fn invoke_index(
-    wasm_state: WasmState,
-    index: usize,
-    args: wasmi::WasmParams,
-) -> Result<Option<wasmi::core::Value>, wasmi::core::Trap> {
-    match index {
-        READ_REQUEST => from_oak_status_result(
-            wasm_state.read_request(args.nth_checked(0)?, args.nth_checked(1)?),
-        ),
-        WRITE_RESPONSE => from_oak_status_result(
-            wasm_state.write_response(args.nth_checked(0)?, args.nth_checked(1)?),
-        ),
-        INVOKE => from_oak_status_result(wasm_state.invoke_extension(
-            args.nth_checked(0)?,
-            args.nth_checked(1)?,
-            args.nth_checked(2)?,
-            args.nth_checked(3)?,
-            args.nth_checked(4)?,
-        )),
-        _ => {
-            // Here https://paritytech.github.io/wasmi/wasmi/trait.Externals.html#examples panics with
-            //  panic!("Unimplemented function at {}.", index)
-            // We prefer not to panic, and trap in an unreachable state instead.
-            Err(wasmi::core::Trap::from(wasmi::core::TrapCode::Unreachable))
-        }
-    }
-}
-*/
-
-// TODO(mschett): Use information from resolve_func for exported functions.
-/*
-fn resolve_func(
-    wasm_state: WasmState,
-    field_name: &str,
-    signature: &wasmi::FuncType,
-) -> Result<wasmi::Func, wasmi::Error> {
-    // Look for the function (i.e., `field_name`) in the statically registered functions.
-    let (index, expected_signature) = oak_functions_resolve_func(field_name)
-        .ok_or_else(|| wasmi::Error::Instantiation(format!("Export {} not found", field_name)))?;
-
-    if signature == &expected_signature {
-        Ok(wasmi::Func::alloc_host(expected_signature, index))
-    } else {
-        Err(wasmi::Error::Instantiation(format!(
-            "Export `{}` doesn't match expected signature; got: {:?}, expected: {:?}",
-            field_name, signature, expected_signature
-        )))
-    }
-}
- */
 
 // Checks that instance exports the given export name and the func type matches the expected func
 // type.
