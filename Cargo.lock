@@ -1776,6 +1776,7 @@ dependencies = [
  "aes-gcm 0.10.1",
  "anyhow",
  "bytes",
+ "getrandom",
  "hkdf",
  "hpke",
  "micro_rpc_build",
@@ -2003,6 +2004,7 @@ dependencies = [
  "log",
  "micro_rpc",
  "micro_rpc_build",
+ "oak_crypto",
  "oak_functions_abi",
  "oak_functions_lookup",
  "oak_functions_test_utils",
@@ -2010,7 +2012,7 @@ dependencies = [
  "oak_functions_workload_logging",
  "oak_logger",
  "oak_remote_attestation_amd",
- "oak_remote_attestation_interactive",
+ "oak_remote_attestation_noninteractive",
  "prost",
  "tokio",
 ]
@@ -2136,7 +2138,7 @@ name = "oak_remote_attestation_amd"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "oak_remote_attestation_interactive",
+ "oak_remote_attestation_noninteractive",
  "serde",
  "serde_json",
 ]
@@ -2166,13 +2168,9 @@ name = "oak_remote_attestation_noninteractive"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
- "futures",
- "futures-util",
- "oak_grpc_utils",
+ "micro_rpc_build",
+ "oak_crypto",
  "prost",
- "tokio",
- "tonic",
 ]
 
 [[package]]

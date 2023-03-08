@@ -28,13 +28,12 @@ mod logger;
 mod remote_attestation;
 mod wasm;
 
-use crate::remote_attestation::{AttestationHandler, AttestationSessionHandler};
+use crate::remote_attestation::{AttestationHandler, AttestationSessionHandler, Handler};
 use alloc::{boxed::Box, format, sync::Arc};
 use oak_functions_abi::Request;
 use oak_functions_lookup::LookupDataManager;
 use oak_functions_wasm::WasmHandler;
-use oak_remote_attestation_interactive::handshaker::AttestationGenerator;
-use remote_attestation::Handler;
+use oak_remote_attestation_noninteractive::Attester;
 
 pub use crate::logger::StandaloneLogger;
 
@@ -44,15 +43,15 @@ enum InitializationState {
 }
 
 pub struct OakFunctionsService {
-    attestation_generator: Arc<dyn AttestationGenerator>,
+    attester: Arc<dyn Attester>,
     initialization_state: InitializationState,
     lookup_data_manager: Arc<LookupDataManager<logger::StandaloneLogger>>,
 }
 
 impl OakFunctionsService {
-    pub fn new(attestation_generator: Arc<dyn AttestationGenerator>) -> Self {
+    pub fn new(attester: Arc<dyn Attester>) -> Self {
         Self {
-            attestation_generator,
+            attester,
             initialization_state: InitializationState::Uninitialized,
             lookup_data_manager: Arc::new(
                 LookupDataManager::new_empty(StandaloneLogger::default()),
@@ -96,23 +95,25 @@ impl schema::OakFunctions for OakFunctionsService {
                     )
                 })?;
                 let attestation_handler = Box::new(
-                    AttestationSessionHandler::create(
-                        self.attestation_generator.clone(),
-                        wasm_handler,
-                    )
-                    .map_err(|err| {
-                        micro_rpc::Status::new_with_message(
-                            micro_rpc::StatusCode::Internal,
-                            format!("couldn't create attestation handler: {:?}", err),
-                        )
-                    })?,
+                    AttestationSessionHandler::create(self.attester.clone(), wasm_handler)
+                        .map_err(|err| {
+                            micro_rpc::Status::new_with_message(
+                                micro_rpc::StatusCode::Internal,
+                                format!("couldn't create attestation handler: {:?}", err),
+                            )
+                        })?,
                 );
-                let public_key_info = attestation_handler.get_public_key_info();
+                let public_key_info = attestation_handler.get_public_key_info().map_err(|err| {
+                    micro_rpc::Status::new_with_message(
+                        micro_rpc::StatusCode::Internal,
+                        format!("couldn't get public key info: {:?}", err),
+                    )
+                })?;
                 self.initialization_state = InitializationState::Initialized(attestation_handler);
                 Ok(schema::InitializeResponse {
                     public_key_info: Some(schema::PublicKeyInfo {
                         public_key: public_key_info.public_key,
-                        attestation: public_key_info.attestation,
+                        attestation: public_key_info.attestation_evidence,
                     }),
                 })
             }

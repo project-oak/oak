@@ -23,7 +23,7 @@ extern crate alloc;
 use alloc::{boxed::Box, sync::Arc};
 use core::panic::PanicInfo;
 use log::info;
-use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
+use oak_remote_attestation_amd::PlaceholderAmdAttester;
 use oak_restricted_kernel_api::{FileDescriptorChannel, StderrLogger};
 
 static LOGGER: StderrLogger = StderrLogger {};
@@ -38,9 +38,7 @@ fn _start() -> ! {
 
 fn main() -> ! {
     info!("In main!");
-    let service = oak_functions_service::OakFunctionsService::new(Arc::new(
-        PlaceholderAmdAttestationGenerator,
-    ));
+    let service = oak_functions_service::OakFunctionsService::new(Arc::new(PlaceholderAmdAttester));
     let server = oak_functions_service::schema::OakFunctionsServer::new(service);
     oak_channel::server::start_blocking_server(Box::<FileDescriptorChannel>::default(), server)
         .expect("server encountered an unrecoverable error");

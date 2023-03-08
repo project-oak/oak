@@ -23,17 +23,25 @@
 
 extern crate alloc;
 
-use alloc::{sync::Arc, vec::Vec};
-use oak_remote_attestation_interactive::handshaker::AttestationGenerator;
+use alloc::{sync::Arc, vec, vec::Vec};
+use anyhow::{anyhow, Context};
+use oak_crypto::{
+    schema::{AeadEncryptedMessage, HpkeRequest, HpkeResponse},
+    RecipientCryptoProvider,
+};
+use oak_remote_attestation_noninteractive::Attester;
+use prost::Message;
+
+const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 /// Information about a public key.
 #[derive(Debug, Clone)]
 pub struct PublicKeyInfo {
     /// The serialized public key.
     pub public_key: Vec<u8>,
-    /// The serialized attestation report that binds the public key to the specific version of the
-    /// code running in a TEE.
-    pub attestation: Vec<u8>,
+    /// The serialized attestation evidence that binds the public key to the specific version of
+    /// the code running in a TEE.
+    pub attestation_evidence: Vec<u8>,
 }
 
 pub trait Handler {
@@ -42,22 +50,21 @@ pub trait Handler {
 
 pub trait AttestationHandler {
     fn message(&mut self, body: &[u8]) -> anyhow::Result<Vec<u8>>;
-    fn get_public_key_info(&self) -> PublicKeyInfo;
+    fn get_public_key_info(&self) -> anyhow::Result<PublicKeyInfo>;
 }
 
 pub struct AttestationSessionHandler<H: Handler> {
     // TODO(#3442): Use attestation generator to attest to the public key.
-    _attestation_generator: Arc<dyn AttestationGenerator>,
+    attester: Arc<dyn Attester>,
+    crypto_provider: RecipientCryptoProvider,
     request_handler: H,
 }
 
 impl<H: Handler> AttestationSessionHandler<H> {
-    pub fn create(
-        attestation_generator: Arc<dyn AttestationGenerator>,
-        request_handler: H,
-    ) -> anyhow::Result<Self> {
+    pub fn create(attester: Arc<dyn Attester>, request_handler: H) -> anyhow::Result<Self> {
         Ok(Self {
-            _attestation_generator: attestation_generator,
+            attester: attester,
+            crypto_provider: RecipientCryptoProvider::new(),
             request_handler,
         })
     }
@@ -65,19 +72,67 @@ impl<H: Handler> AttestationSessionHandler<H> {
 
 impl<H: Handler> AttestationHandler for AttestationSessionHandler<H> {
     fn message(&mut self, body: &[u8]) -> anyhow::Result<Vec<u8>> {
-        // TODO(#3442): Decrypt request (currently not encrypted).
-        let decrypted_request = body;
-        let response = self.request_handler.handle(decrypted_request)?;
-        // TODO(#3442): Encrypt response.
-        let encrypted_response = response;
-        Ok(encrypted_response)
+        // Deserialize request.
+        let request = HpkeRequest::decode(body)
+            .map_err(|error| anyhow!("couldn't deserialize request: {:?}", error))?;
+
+        // Create decryptor.
+        let serialized_encapsulated_public_key = request
+            .serialized_encapsulated_public_key
+            .context("request doesn't contain serialized encapsulated public key")?;
+        let request_decryptor = self
+            .crypto_provider
+            .create_decryptor(&serialized_encapsulated_public_key)
+            .context("couldn't create decryptor")?;
+
+        // Decrypt request.
+        let encrypted_message = request
+            .encrypted_message
+            .context("request doesn't contain encrypted message")?;
+        let (request_plaintext, response_encryptor) = request_decryptor
+            .decrypt(
+                &encrypted_message.ciphertext,
+                &encrypted_message.associated_data,
+            )
+            .context("couldn't decrypt request")?;
+
+        // Handle request.
+        let response_plaintext = self
+            .request_handler
+            .handle(&request_plaintext)
+            .context("couldn't handle request")?;
+
+        // Encrypt response.
+        // The resulting decryptor for consequent requests is discarded.
+        let (response_ciphertext, _) = response_encryptor
+            .encrypt(&response_plaintext, EMPTY_ASSOCIATED_DATA)
+            .context("couldn't encrypt response")?;
+
+        // Serialize response.
+        let response = HpkeResponse {
+            encrypted_message: Some(AeadEncryptedMessage {
+                ciphertext: response_ciphertext,
+                associated_data: EMPTY_ASSOCIATED_DATA.to_vec(),
+            }),
+        };
+        let mut serialized_response = vec![];
+        response
+            .encode(&mut serialized_response)
+            .map_err(|error| anyhow!("couldn't serialize response: {:?}", error))?;
+
+        Ok(serialized_response)
     }
 
-    fn get_public_key_info(&self) -> PublicKeyInfo {
-        // TODO(#3442): Generate and return public key.
-        PublicKeyInfo {
-            public_key: Vec::new(),
-            attestation: Vec::new(),
-        }
+    fn get_public_key_info(&self) -> anyhow::Result<PublicKeyInfo> {
+        let public_key = self.crypto_provider.get_serialized_public_key();
+        let attestation_evidence = self
+            .attester
+            .generate_attestation_evidence(&public_key)
+            .context("couldn't generate attestation evidence")?;
+        Ok(PublicKeyInfo {
+            public_key,
+            // TODO(#3640): Return attestation evidence.
+            attestation_evidence: attestation_evidence.attestation_report,
+        })
     }
 }

@@ -17,6 +17,9 @@
 use crate::proto::streaming_session_client::StreamingSessionClient;
 use tonic::transport::Channel;
 
+// ........
+// Use async_trait crate!!!!!!!!!
+
 pub trait AsyncTransport {
     // TODO(#3643): Make transport async and update the Rust version to support this.
     fn invoke(&mut self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>>;

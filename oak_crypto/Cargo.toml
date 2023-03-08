@@ -12,6 +12,7 @@ aes-gcm = { version = "*", default-features = false, features = [
 ] }
 anyhow = { version = "*", default-features = false }
 bytes = { version = "*", default-features = false }
+getrandom = { version = "*", default-features = false, features = ["rdrand"] }
 hkdf = { version = "*", default-features = false }
 hpke = { version = "*" }
 p256 = { version = "*", default-features = false, features = ["ecdh"] }
