@@ -130,21 +130,17 @@ where
     L: OakLogger,
 {
     pub fn new(
-        wasm_module_bytes: Vec<u8>,
+        module: Arc<wasmi::Module>,
         request_bytes: Vec<u8>,
         logger: L,
         extensions: HashMap<ExtensionHandle, Box<dyn OakApiNativeExtension>>,
     ) -> anyhow::Result<Self> {
-        let engine = wasmi::Engine::default();
-        let module = wasmi::Module::new(&engine, &wasm_module_bytes[..])
-            .map_err(|err| anyhow::anyhow!("couldn't load module from buffer: {:?}", err))?;
-
         let user_state = UserState::init(request_bytes, extensions, logger);
 
         // For isolated requests we need to create a new store for every request.
         let mut store = wasmi::Store::new(&module.engine(), user_state);
 
-        let mut linker: wasmi::Linker<UserState<L>> = wasmi::Linker::new(&engine);
+        let mut linker: wasmi::Linker<UserState<L>> = wasmi::Linker::new(&module.engine());
 
         // Although it would be nice to define the linker in WasmHandler to reuse it for
         // different WasmStates, we can't because the externals Func and Memory defined in the
@@ -502,9 +498,7 @@ pub fn invoke_extension<L: OakLogger>(
 // An ephemeral request handler with a Wasm module for handling the requests.
 #[derive(Clone)]
 pub struct WasmHandler<L: OakLogger> {
-    // TODO(mschett): Check how we can avoid copying wasm_module_bytes.
-    // We cannot move wasmi::Module any more, it does not implement Send.
-    wasm_module_bytes: Arc<Vec<u8>>,
+    wasm_module: Arc<wasmi::Module>,
     extension_factories: Arc<Vec<Box<dyn ExtensionFactory<L>>>>,
     logger: L,
 }
@@ -519,8 +513,12 @@ where
         extension_factories: Vec<Box<dyn ExtensionFactory<L>>>,
         logger: L,
     ) -> anyhow::Result<Self> {
+        let engine = wasmi::Engine::default();
+        let module = wasmi::Module::new(&engine, &wasm_module_bytes[..])
+            .map_err(|err| anyhow::anyhow!("couldn't load module from buffer: {:?}", err))?;
+
         Ok(WasmHandler {
-            wasm_module_bytes: Arc::new(wasm_module_bytes.to_vec()),
+            wasm_module: Arc::new(module),
             extension_factories: Arc::new(extension_factories),
             logger,
         })
@@ -536,7 +534,7 @@ where
         }
 
         let wasm_state = WasmState::new(
-            self.wasm_module_bytes.to_vec(),
+            self.wasm_module.clone(),
             request_bytes,
             self.logger.clone(),
             extensions,
@@ -569,7 +567,7 @@ where
 
 /// A helper function to move between our specific result type `Result<(), OakStatus>` and the
 /// `wasmi` specific result type `Result<i32, wasmi::Trap>`.
-// TODO(mschett): Changed result time from Option<i32> to i32. Check implications.
+// TODO(mschett): Changed result type from Option<i32> to i32. Check implications.
 fn from_oak_status_result(result: Result<(), OakStatus>) -> Result<i32, wasmi::core::Trap> {
     let oak_status: OakStatus = match result {
         Ok(()) => OakStatus::Ok,
