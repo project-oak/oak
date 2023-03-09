@@ -269,31 +269,6 @@ where
         let user_state = self.store.data();
         user_state.response_bytes.clone()
     }
-
-    // Validates whether a given address range (inclusive) falls within the currently allocated
-    // range of guest memory.
-    /* TODO(mschett): Check if we still need this.
-
-    fn validate_range(&self, addr: AbiPointer, offset: AbiPointerOffset) -> Result<(), OakStatus> {
-        let memory = self
-            .instance
-            .get_export(&self.store, MEMORY_NAME)
-            // TODO(mschett): Fix unwrap.
-            .unwrap()
-            .into_memory()
-            .expect("WasmState memory not attached!?");
-
-        // TODO(mschett): Check if there is a better way to check the memory size.
-        let memory_size: wasmi::core::memory_units::Bytes =
-            wasmi::core::memory_units::Pages::from(memory.current_pages(&self.store)).into();
-        // Check whether the end address is below or equal to the size of the guest memory.
-        if wasmi::core::memory_units::Bytes((addr as usize) + (offset as usize)) <= memory_size {
-            Ok(())
-        } else {
-            Err(OakStatus::ErrInvalidArgs)
-        }
-    }
-     */
 }
 
 /// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
@@ -348,9 +323,6 @@ pub fn write_buffer(
     source: &[u8],
     dest: AbiPointer,
 ) -> Result<(), OakStatus> {
-    // TODO(mschett): Check whether we want to validate range.
-    // self.validate_range(dest, source.len() as u32)?;
-
     let dest = usize::try_from(dest)
         .expect("failed to convert AbiPointer to usize as required by wasmi API");
     memory.write(ctx, dest, source).map_err(|_err| {
