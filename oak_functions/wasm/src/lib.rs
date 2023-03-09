@@ -495,7 +495,7 @@ where
         logger: L,
     ) -> anyhow::Result<Self> {
         let engine = wasmi::Engine::default();
-        let module = wasmi::Module::new(&engine, &wasm_module_bytes[..])
+        let module = wasmi::Module::new(&engine, wasm_module_bytes)
             .map_err(|err| anyhow::anyhow!("couldn't load module from buffer: {:?}", err))?;
 
         Ok(WasmHandler {
