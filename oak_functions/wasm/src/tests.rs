@@ -16,7 +16,7 @@
 
 use crate::{
     alloc_and_write_buffer, read_buffer, write_buffer, write_u32, AbiPointer, AbiPointerOffset,
-    WasmHandler, WasmState, MEMORY_NAME, ALLOC_FUNCTION_NAME
+    WasmHandler, WasmState, ALLOC_FUNCTION_NAME, MEMORY_NAME,
 };
 use alloc::{string::ToString, vec};
 use byteorder::{ByteOrder, LittleEndian};
@@ -50,7 +50,7 @@ fn test_read_write_u32_in_wasm_memory() {
 
     let mut memory = wasm_state
         .instance
-        .get_export(&wasm_state.store, MEM)
+        .get_export(&wasm_state.store, MEMORY_NAME)
         .unwrap()
         .into_memory()
         .unwrap();
