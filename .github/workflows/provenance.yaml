@@ -8,11 +8,17 @@ concurrency:
 on:
   push:
     branches: [main]
+  # This workflow builds several binaries and is very time consuming. As a result it is disabled
+  # by default on pull-request events. If you need to test this workflow on your PR before merge,
+  # label it with `provenance:force-run` to trigger the workflow.
   pull_request:
     branches: [main]
 
 jobs:
   build_binary:
+    if: |
+      github.event_name == 'push' ||
+      github.event_name == 'pull-request' && ${{ contains(github.event.pull_request.labels.*.name, 'provenance:force-run') }}
     # We use the same job template to generate provenances for multiple binaries.
     strategy:
       fail-fast: false
@@ -39,31 +45,3 @@ jobs:
       build-config-path: ${{ matrix.buildconfig }}
     secrets:
       ENT_API_KEY: ${{ secrets.ENT_API_KEY }}
-
-  # build_oak_functions_binary:
-  #   permissions:
-  #     actions: read
-  #     id-token: write
-  #     # Allow the job to update the repo with the latest provenance info and index.
-  #     contents: write
-  #     # Allow the job to add a comment to the PR.
-  #     pull-requests: write
-  #   uses: ./.github/workflows/reusable_provenance.yaml
-  #   with:
-  #     build-config-path: buildconfigs/slsav1_oak_functions_enclave_app.toml
-  #   secrets:
-  #     ENT_API_KEY: ${{ secrets.ENT_API_KEY }}
-
-  # build_oak_tensorflow_binary:
-  #   permissions:
-  #     actions: read
-  #     id-token: write
-  #     # Allow the job to update the repo with the latest provenance info and index.
-  #     contents: write
-  #     # Allow the job to add a comment to the PR.
-  #     pull-requests: write
-  #   uses: ./.github/workflows/reusable_provenance.yaml
-  #   with:
-  #     build-config-path: buildconfigs/slsav1_oak_restricted_kernel_bin.toml
-  #   secrets:
-  #     ENT_API_KEY: ${{ secrets.ENT_API_KEY }}

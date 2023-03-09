@@ -8,17 +8,6 @@ on:
       build-config-path:
         required: true
         type: string
-    # # Map the workflow outputs to job outputs
-    # outputs:
-    #   artifact_digest:
-    #     description:
-    #       'Base64-encoded string containing the sha256 digest and name of the
-    #       artifact.'
-    #     value: ${{ jobs.upload_provenance.outputs.artifact_digest }}
-    #   provenance_digest:
-    #     description: 'SHA256 digest of the provenance.'
-    #     value: ${{ jobs.upload_provenance.outputs.provenance_digest }}
-    # usage: secrets: inherit
     secrets:
       ENT_API_KEY:
         required: true
@@ -73,8 +62,9 @@ jobs:
       compile-builder: true
 
   # This job uploads the signed provenance from the previous step to Ent, and
-  # publishes a comment about it on the PR.
+  # publishes a comment for each binary on the PR.
   upload_provenance:
+    if: github.event_name != 'pull_request'
     needs: [get_inputs, generate_provenance]
     runs-on: ubuntu-20.04
     permissions:
@@ -85,10 +75,8 @@ jobs:
 
     steps:
       # See https://github.com/google/ent
-      - name: Download Ent CLI (post-merge only)
-        if: |
-          github.event_name == 'push' &&
-          steps.cache-ent.outputs.cache-hit != 'true'
+      - name: Download Ent CLI
+        if: steps.cache-ent.outputs.cache-hit != 'true'
         env:
           ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
           ENT_DIGEST: sha256:944a34854a2bf9c5d32f3bffa93885ee1c7ef8ab0f4fcc30898a981050ae4233
@@ -104,69 +92,36 @@ jobs:
           api_key = '${{ secrets.ENT_API_KEY }}'
           EOF
 
-      # The provenance is not signed for pull-request events
-      - name: Download the DSSE document (post-merge only)
-        # if: github.event_name == 'push'
+      - name: Download the built artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.generate_provenance.outputs.build-outputs-name }}
+          path: downloads
+
+      - name: Download the DSSE document
         uses: actions/download-artifact@v3
         with:
           name:
             ${{ needs.generate_provenance.outputs.attestations-download-name }}
           path: downloads
 
-      - name: Print provenance digest (debug step)
-        if: github.event_name != 'push'
-        working-directory: downloads
-        run: |
-          echo "$(sha256sum ${{ needs.get_inputs.outputs.provenance-name }})"
-
-      - name: Upload provenance to Ent (post-merge only)
-        if: github.event_name == 'push'
-        id: ent_upload_provenance
-        working-directory: downloads
-        run: |
-          echo "provenance_digest=$(ent put ${{ needs.get_inputs.outputs.provenance-name }})" >> $GITHUB_OUTPUT
-
-      - name: Upload binary to Ent (post-merge only)
-        if: github.event_name == 'push'
+      - name: Upload binary to Ent
         id: ent_upload_binary
         working-directory: downloads
         run: |
           echo "binary_digest=$(ent put ${{ needs.get_inputs.outputs.artifact-path }})" >> $GITHUB_OUTPUT
 
-      - name: Download the built artifact
-        # if: github.event_name == 'push'
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ needs.generate_provenance.outputs.build-outputs-name }}
-          path: downloads
-
-      - name: Print binary digest (debug step)
-        if: github.event_name == 'pull_request'
+      - name: Upload provenance to Ent
+        id: ent_upload_provenance
         working-directory: downloads
         run: |
-          echo "$(sha256sum ${{ needs.get_inputs.outputs.artifact-path }})"
-
-      - name: Display structure after downloading the files (debug step)
-        run: ls -R
-        working-directory: downloads
-
-      # Add the artifact digest and name to the ./comment file.
-      - name: Format artifact and provenance digest (debug-step)
-        if: github.event_name != 'push'
-        working-directory: downloads
-        run: |
-          echo -e "Artifact digest and name:\n\n\`\`\`" >> ./comment
-          echo "$(sha256sum ${{ needs.get_inputs.outputs.artifact-path }})" | tee -a ./comment
-          echo -e "\`\`\`" >> ./comment
-          echo -e "\n\nProvenance digest:\n\n\`\`\`" >> ./comment
-          echo "$(sha256sum ${{ needs.get_inputs.outputs.provenance-name }})" | tee -a ./comment
-          echo -e "\`\`\`" >> ./comment
+          echo "provenance_digest=$(ent put ${{ needs.get_inputs.outputs.provenance-name }})" >> $GITHUB_OUTPUT
 
       # Add the provenance digest to the ./comment file.
       - name: Format artifact and provenance digest (post-merge only)
-        if: github.event_name == 'push'
         run: |
-          echo -e "Artifact digest and name:\n\n\`\`\`" >> ./comment
+          echo -e "Artifact name: $(basename ${{ needs.get_inputs.outputs.artifact-path }})" >> ./comment
+          echo -e "Artifact digest:\n\n\`\`\`" >> ./comment
           echo ${{ steps.ent_upload_binary.outputs.binary_digest }} | tee -a ./comment
           echo -e "\`\`\`" >> ./comment
           echo -e "\n\nProvenance digest:\n\n\`\`\`" >> ./comment
@@ -203,9 +158,54 @@ jobs:
               repo: context.repo.repo,
               body: `${comment_contents}`});
 
-      # Debug step: Print the content of the ./comment file & inputs to the workflow.
-      - name: Print ./comment & inputs
-        if: github.event_name != 'push'
+  # Debug step similar to `upload_provenance`, but runs on pull-request events. Differs from
+  # `upload_provenance` in that it does not publish the binary and its provenance into Ent and that
+  # it does not post a comment on the PR.
+  debug_provenance:
+    if: github.event_name == 'pull_request'
+    needs: [get_inputs, generate_provenance]
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Download the built artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.generate_provenance.outputs.build-outputs-name }}
+          path: downloads
+
+      - name: Download the DSSE document
+        uses: actions/download-artifact@v3
+        with:
+          name:
+            ${{ needs.generate_provenance.outputs.attestations-download-name }}
+          path: downloads
+
+      - name: Display structure after downloading the files (debug step)
+        run: ls -R
+        working-directory: downloads
+
+      - name: Print binary digest
+        working-directory: downloads
+        run: echo "$(sha256sum ${{ needs.get_inputs.outputs.artifact-path }})"
+
+      - name: Print provenance digest
         working-directory: downloads
         run: |
-          head ./comment
+          echo "$(sha256sum ${{ needs.get_inputs.outputs.provenance-name }})"
+
+      - name: Format artifact and provenance digest (debug-step)
+        working-directory: downloads
+        run: |
+          echo -e "Artifact name: $(basename ${{ needs.get_inputs.outputs.artifact-path }})" >> ./comment
+          echo -e "Artifact digest:\n\n\`\`\`" >> ./comment
+          echo "$(sha256sum ${{ needs.get_inputs.outputs.artifact-path }})" | tee -a ./comment
+          echo -e "\`\`\`" >> ./comment
+          echo -e "\n\nProvenance digest:\n\n\`\`\`" >> ./comment
+          echo "$(sha256sum ${{ needs.get_inputs.outputs.provenance-name }})" | tee -a ./comment
+          echo -e "\`\`\`" >> ./comment
+
+      # Debug step: Print the content of the ./comment file & inputs to the workflow.
+      - name: Print ./comment & inputs
+        working-directory: downloads
+        run: |
+          head -n 15 ./comment
