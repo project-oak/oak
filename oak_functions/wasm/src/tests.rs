@@ -246,7 +246,7 @@ fn test_read_request() {
 
     let alloc = wasm_state
         .instance
-        .get_export(&wasm_state.store, "alloc")
+        .get_export(&wasm_state.store, ALLOC_FUNCTION_NAME)
         .unwrap()
         .into_func()
         .unwrap();
@@ -283,14 +283,14 @@ fn test_invoke_extension() {
 
     let mut memory = wasm_state
         .instance
-        .get_export(&wasm_state.store, "memory")
+        .get_export(&wasm_state.store, MEMORY_NAME)
         .unwrap()
         .into_memory()
         .unwrap();
 
     let alloc = wasm_state
         .instance
-        .get_export(&wasm_state.store, "alloc")
+        .get_export(&wasm_state.store, ALLOC_FUNCTION_NAME)
         .unwrap()
         .into_func()
         .unwrap();

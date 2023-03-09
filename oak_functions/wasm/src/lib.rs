@@ -443,17 +443,17 @@ pub fn invoke_extension<L: OakLogger>(
 fn get_exported_memory<L: OakLogger>(
     caller: &mut wasmi::Caller<'_, UserState<L>>,
 ) -> Result<Memory, OakStatus> {
-    let ext = caller.get_export(MEMORY_NAME).ok_or({
+    let ext = caller.get_export(MEMORY_NAME).ok_or_else(|| {
         caller
             .data()
             .log_error(&format!("failed to get exported {}", MEMORY_NAME));
         OakStatus::ErrInternal
     })?;
 
-    ext.into_memory().ok_or({
+    ext.into_memory().ok_or_else(|| {
         caller
             .data()
-            .log_error(&format!("exported {} is not a memory", MEMORY_NAME));
+            .log_error(&format!("exported {} is not a memory: {}", MEMORY_NAME));
         OakStatus::ErrInternal
     })
 }
@@ -462,14 +462,14 @@ fn get_exported_memory<L: OakLogger>(
 fn get_exported_alloc<L: OakLogger>(
     caller: &mut wasmi::Caller<'_, UserState<L>>,
 ) -> Result<Func, OakStatus> {
-    let ext = caller.get_export(ALLOC_FUNCTION_NAME).ok_or({
+    let ext = caller.get_export(ALLOC_FUNCTION_NAME).ok_or_else(|| {
         caller
             .data()
             .log_error(&format!("failed to get exported {}", ALLOC_FUNCTION_NAME));
         OakStatus::ErrInternal
     })?;
 
-    ext.into_func().ok_or({
+    ext.into_func().ok_or_else(|| {
         caller
             .data()
             .log_error(&format!("exported {} is not a func", ALLOC_FUNCTION_NAME));
