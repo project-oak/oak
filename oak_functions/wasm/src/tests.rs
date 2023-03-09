@@ -16,7 +16,7 @@
 
 use crate::{
     alloc_and_write_buffer, read_buffer, write_buffer, write_u32, AbiPointer, AbiPointerOffset,
-    WasmHandler, WasmState,
+    WasmHandler, WasmState, MEMORY_NAME, ALLOC_FUNCTION_NAME
 };
 use alloc::{string::ToString, vec};
 use byteorder::{ByteOrder, LittleEndian};

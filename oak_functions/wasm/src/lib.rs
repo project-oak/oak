@@ -453,7 +453,7 @@ fn get_exported_memory<L: OakLogger>(
     ext.into_memory().ok_or_else(|| {
         caller
             .data()
-            .log_error(&format!("exported {} is not a memory: {}", MEMORY_NAME));
+            .log_error(&format!("exported {} is not a memory", MEMORY_NAME));
         OakStatus::ErrInternal
     })
 }
