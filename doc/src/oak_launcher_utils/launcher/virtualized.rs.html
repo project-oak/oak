@@ -200,6 +200,7 @@
 <a href="#200" id="200">200</a>
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -302,7 +303,8 @@
         <span class="comment">// Needed to expose advanced CPU features. Specifically RDRAND which is required for remote
         // attestation.
         </span>cmd.args([<span class="string">&quot;-cpu&quot;</span>, <span class="string">&quot;IvyBridge-IBRS,enforce&quot;</span>]);
-
+        <span class="comment">// TODO(#3786): Make memory configurable.
+        </span>cmd.args([<span class="string">&quot;-m&quot;</span>, <span class="string">&quot;1G&quot;</span>]);
         <span class="comment">// Disable a bunch of hardware we don&#39;t need.
         </span>cmd.arg(<span class="string">&quot;-nodefaults&quot;</span>);
         cmd.arg(<span class="string">&quot;-nographic&quot;</span>);
