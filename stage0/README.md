@@ -14,14 +14,14 @@ To create the BIOS blob, you need to turn it into a headerless file with
 
 ```shell
 cargo build --release
-objcopy --output-format binary target/x86_64-unknown-none/release/oak_stage0 \
+objcopy --output-target binary target/x86_64-unknown-none/release/oak_stage0 \
     target/x86_64-unknown-none/release/stage0.bin
 ```
 
 This can also be done in one step using cargo-binutils:
 
 ```shell
-cargo objcopy --release -- --output-format binary \
+cargo objcopy --release -- --output-target binary \
     target/x86_64-unknown-none/release/stage0.bin
 ```
 
