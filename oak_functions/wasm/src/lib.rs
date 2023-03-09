@@ -384,19 +384,17 @@ pub fn read_request<L: OakLogger>(
     dest_ptr_ptr: AbiPointer,
     dest_len_ptr: AbiPointer,
 ) -> Result<(), OakStatus> {
-    // TODO(mschett): Fix unwraps.
     let alloc = caller
         .get_export(ALLOC_FUNCTION_NAME)
-        .unwrap()
+        .expect(&format!("failed to get exported {}", ALLOC_FUNCTION_NAME))
         .into_func()
-        .unwrap();
+        .expect(&format!("exported {} is not a func", ALLOC_FUNCTION_NAME));
 
     let mut memory = caller
         .get_export(MEMORY_NAME)
-        // TODO(mschett): Fix unwrap.
-        .unwrap()
+        .expect(&format!("failed to get exported {}", MEMORY_NAME))
         .into_memory()
-        .expect("WasmState memory not attached!?");
+        .expect(&format!("exported {} is not a memory", MEMORY_NAME));
 
     let request_bytes = caller.data().request_bytes.clone();
 
@@ -416,27 +414,12 @@ pub fn write_response<L: OakLogger>(
     buf_ptr: AbiPointer,
     buf_len: AbiPointerOffset,
 ) -> Result<(), OakStatus> {
-    // TODO(mschett): Check what is the difference to read_buffer.
-    let memory = caller
+    let mut memory = caller
         .get_export(MEMORY_NAME)
-        // TODO(mschett): Fix unwrap.
-        .unwrap()
+        .expect(&format!("failed to get exported {}", MEMORY_NAME))
         .into_memory()
-        .expect("WasmState memory not attached!?");
-
-    let mut target = alloc::vec![0; buf_len as usize];
-
-    let buf_ptr = usize::try_from(buf_ptr)
-        .expect("failed to convert AbiPointer to usize as required by wasmi API");
-    memory.read(&caller, buf_ptr, &mut target).map_err(|err| {
-        caller.data().log_error(&format!(
-            "write_response(): Unable to read name from guest memory: {:?}",
-            err
-        ));
-        OakStatus::ErrInvalidArgs
-    })?;
-
-    caller.data_mut().response_bytes = target;
+        .expect(&format!("exported {} is not a memory", MEMORY_NAME));
+    caller.data_mut().response_bytes = read_buffer(caller, &mut memory, buf_ptr, buf_len)?;
     Ok(())
 }
 
@@ -448,15 +431,17 @@ pub fn invoke_extension<L: OakLogger>(
     response_ptr_ptr: AbiPointer,
     response_len_ptr: AbiPointer,
 ) -> Result<(), OakStatus> {
-    // TODO(mschett): Fix unwraps.
-    let alloc = caller.get_export("alloc").unwrap().into_func().unwrap();
+    let alloc = caller
+        .get_export(ALLOC_FUNCTION_NAME)
+        .expect(&format!("failed to get exported {}", ALLOC_FUNCTION_NAME))
+        .into_func()
+        .expect(&format!("exported {} is not a func", ALLOC_FUNCTION_NAME));
 
     let mut memory = caller
         .get_export(MEMORY_NAME)
-        // TODO(mschett): Fix unwrap.
-        .unwrap()
+        .expect(&format!("failed to get exported {}", MEMORY_NAME))
         .into_memory()
-        .expect("WasmState memory not attached!?");
+        .expect(&format!("exported {} is not a memory", MEMORY_NAME));
 
     let request = read_buffer(caller, &mut memory, request_ptr, request_len).map_err(|err| {
         caller.data().log_error(&format!(
