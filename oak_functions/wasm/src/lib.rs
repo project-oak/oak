@@ -142,12 +142,6 @@ where
 
         let mut linker: wasmi::Linker<UserState<L>> = wasmi::Linker::new(&module.engine());
 
-        // Although it would be nice to define the linker in WasmHandler to reuse it for
-        // different WasmStates, we can't because the externals Func and Memory defined in the
-        // linker depend on store, which needs to be new for every WasmState. In contrast,
-        // in wasmtime `func_wrap` does not depend on store (https://docs.rs/wasmtime/latest/wasmtime/struct.Linker.html#method.func_wrap).
-        // TODO(mschett): Update, we can use func_wrap.
-
         // Add memory to linker.
         // TODO(#3783): Find a sensible value for initial pages.
         let initial_pages = 16384; // corresponds to 1 GiB
@@ -155,6 +149,11 @@ where
             MemoryType::new(initial_pages, None).expect("failed to define Wasm memory type");
         let memory =
             wasmi::Memory::new(&mut store, memory_type).expect("failed to initialize Wasm memory");
+
+        // TODO(#3784): Use func_wrap. Maybe we can define the linker in WasmHandler to reuse it for
+        // different WasmStates, but so far we can't because the externals Func and Memory
+        // defined in the linker depend on store, which needs to be new for every WasmState.
+        // Related, wasmtime `func_wrap` does not depend on store (https://docs.rs/wasmtime/latest/wasmtime/struct.Linker.html#method.func_wrap).
 
         linker
             .define(HOST, MEMORY_NAME, wasmi::Extern::Memory(memory))
@@ -240,6 +239,7 @@ where
             .get_memory(&store, MEMORY_NAME)
             .ok_or(anyhow::anyhow!("couldn't find Wasm `memory` export"))?;
 
+        // TODO(#3785): Add logging and list exports.
         let wasm_state = Self { instance, store };
 
         Ok(wasm_state)
@@ -280,15 +280,16 @@ pub fn read_buffer(
 ) -> Result<Vec<u8>, OakStatus> {
     let mut target = alloc::vec![0; buf_len as usize];
 
-    let buf_ptr = usize::try_from(buf_ptr)
+    let buf_ptr = buf_ptr
+        .try_into()
         .expect("failed to convert AbiPointer to usize as required by wasmi API");
     memory.read(&ctx, buf_ptr, &mut target).map_err(|_err| {
-        // TODO(mschett): Add logging.
-        /*
-        self.logger.log_sensitive(
-            Level::Error,
-            &format!("Unable to read buffer from guest memory: {:?}", err),
-        ); */
+        // TODO(#3785): Add logging, which needs access to logger in the user state.
+        // We don't have access in ctx, so we either need to pass the logger as argument or
+        // think of a different refactoring.
+        // ctx.data().log_error(
+        //   &format!("Unable to read buffer from guest memory: {:?}", err),
+        // );
         OakStatus::ErrInvalidArgs
     })?;
     Ok(target)
@@ -304,13 +305,12 @@ pub fn write_u32(
     let value_bytes = &mut [0; 4];
     LittleEndian::write_u32(value_bytes, value);
     write_buffer(ctx, memory, value_bytes, address).map_err(|_err| {
-        // TODO(mschett): Fix logging
-        /*
-        self.logger.log_sensitive(
-            Level::Error,
-            &format!("Unable to write u32 value into guest memory: {:?}", err),
-        );
-        */
+        // TODO(#3785): Add logging, which needs access to logger in the user state.
+        // We don't have access in ctx, so we either need to pass the logger as argument or
+        // think of a different refactoring.
+        // ctx.data().log_error(
+        //    &format!("Unable to write u32 value into guest memory: {:?}", err),
+        // );
         OakStatus::ErrInvalidArgs
     })
 }
@@ -323,15 +323,16 @@ pub fn write_buffer(
     source: &[u8],
     dest: AbiPointer,
 ) -> Result<(), OakStatus> {
-    let dest = usize::try_from(dest)
+    let dest = dest
+        .try_into()
         .expect("failed to convert AbiPointer to usize as required by wasmi API");
     memory.write(ctx, dest, source).map_err(|_err| {
-        // TODO(mschett): Add logging.
-        /*
-        self.logger.log_sensitive(
-            Level::Error,
-            &format!("Unable to write buffer into guest memory: {:?}", err),
-        );  */
+        // TODO(#3785): Add logging, which needs access to logger in the user state.
+        // We don't have access in ctx, so we either need to pass the logger as argument or
+        // think of a different refactoring.
+        // ctx.data().log_error(
+        //    &format!("Unable to write buffer into guest memory: {:?}", err),
+        // );
         OakStatus::ErrInvalidArgs
     })
 }
@@ -350,9 +351,9 @@ pub fn call_alloc(
         .expect("`alloc` call failed");
     match address[0] {
         // Assumes 32-bit Wasm addresses.
-        wasmi::Value::I32(v) => {
-            u32::try_from(v).map_or_else(|_| Err(OakStatus::ErrInternal), |v| Ok(v))
-        }
+        wasmi::Value::I32(v) => v
+            .try_into()
+            .map_or_else(|_| Err(OakStatus::ErrInternal), |v| Ok(v)),
         _ => Err(OakStatus::ErrInternal),
     }
 }
