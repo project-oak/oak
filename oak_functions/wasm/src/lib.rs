@@ -337,27 +337,6 @@ pub fn write_buffer(
     })
 }
 
-// Calls given alloc func with ctx and length as parameters.
-// alloc func has to belong to given ctx.
-pub fn call_alloc(
-    ctx: &mut impl AsContextMut,
-    alloc: Func,
-    len: i32,
-) -> Result<AbiPointer, OakStatus> {
-    // Will hold address where memory of size len was allocated, initialized with -1.
-    let mut address = [wasmi::Value::I32(-1)];
-    alloc
-        .call(ctx, &[wasmi::Value::I32(len)], &mut address)
-        .expect("`alloc` call failed");
-    match address[0] {
-        // Assumes 32-bit Wasm addresses.
-        wasmi::Value::I32(v) => v
-            .try_into()
-            .map_or_else(|_| Err(OakStatus::ErrInternal), |v| Ok(v)),
-        _ => Err(OakStatus::ErrInternal),
-    }
-}
-
 /// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address
 /// of the allocated memory to `dest_ptr_ptr` and the length to `dest_len_ptr`.
 pub fn alloc_and_write_buffer(
@@ -368,9 +347,26 @@ pub fn alloc_and_write_buffer(
     dest_ptr_ptr: AbiPointer,
     dest_len_ptr: AbiPointer,
 ) -> Result<(), OakStatus> {
+    let len = buffer.len() as i32;
     // Call alloc.
-    // TODO(mschett): Borrow checker complains about ctx when inlining `call_alloc`.
-    let dest_ptr = call_alloc(ctx, alloc, buffer.len() as i32)?;
+
+    // Will hold address where memory of size len was allocated, initialized with -1.
+    let mut address = [wasmi::Value::I32(-1)];
+    alloc
+        .call(
+            ctx.as_context_mut(),
+            &[wasmi::Value::I32(len)],
+            &mut address,
+        )
+        .expect("`alloc` call failed");
+    let dest_ptr = match address[0] {
+        // Assumes 32-bit Wasm addresses.
+        wasmi::Value::I32(v) => v
+            .try_into()
+            .map_or_else(|_| Err(OakStatus::ErrInternal), |v| Ok(v)),
+        _ => Err(OakStatus::ErrInternal),
+    }?;
+
     // Write to buffer.
     write_buffer(ctx, memory, &buffer, dest_ptr)?;
     write_u32(ctx, memory, dest_ptr, dest_ptr_ptr)?;
