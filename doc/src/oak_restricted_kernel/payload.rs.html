@@ -123,6 +123,81 @@
 <a href="#123" id="123">123</a>
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -140,12 +215,16 @@
 //
 
 </span><span class="kw">use </span><span class="kw">crate</span>::syscall::mmap::mmap;
-<span class="kw">use </span>alloc::{vec, vec::Vec};
-<span class="kw">use </span>anyhow::Result;
+<span class="kw">use </span>alloc::{boxed::Box, vec};
+<span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>core::arch::asm;
-<span class="kw">use </span>goblin::elf64::program_header::{PF_W, PF_X, PT_LOAD};
+<span class="kw">use </span>goblin::{
+    elf::{Elf, ProgramHeader, ProgramHeaders},
+    elf64::program_header::{PF_W, PF_X, PT_LOAD},
+};
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
+<span class="kw">use </span>ouroboros::self_referencing;
 <span class="kw">use </span>x86_64::{
     structures::paging::{PageSize, Size2MiB, Size4KiB},
     VirtAddr,
@@ -162,38 +241,88 @@
     channel.write(<span class="kw-2">&amp;</span>len.to_le_bytes())
 }
 
-<span class="doccomment">/// Reads a payload blob, one page at a time, from the given channel.
-</span><span class="kw">pub fn </span>read_payload&lt;C: Channel + <span class="question-mark">?</span>Sized&gt;(channel: <span class="kw-2">&amp;mut </span>C) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;&gt; {
-    <span class="kw">let </span>payload_len = {
-        <span class="kw">let </span><span class="kw-2">mut </span>buf: [u8; <span class="number">4</span>] = Default::default();
-        channel.read(<span class="kw-2">&amp;mut </span>buf)<span class="question-mark">?</span>;
-        u32::from_le_bytes(buf)
-    };
-    <span class="kw">let </span><span class="kw-2">mut </span>payload = <span class="macro">vec!</span>[<span class="number">0</span>; payload_len <span class="kw">as </span>usize];
-    <span class="kw">let </span><span class="kw-2">mut </span>chunks_mut = payload.array_chunks_mut::&lt;{ Size4KiB::SIZE <span class="kw">as </span>usize }&gt;();
+<span class="doccomment">/// Self-referential struct so that we don&#39;t have to parse the ELF file multiple times.
+</span><span class="attr">#[self_referencing]
+</span><span class="kw">struct </span>Binary {
+    binary: Box&lt;[u8]&gt;,
 
-    <span class="kw">for </span>chunk <span class="kw">in </span>chunks_mut.by_ref() {
-        read_chunk(channel, chunk)<span class="question-mark">?</span>;
-    }
-    read_chunk(channel, chunks_mut.into_remainder())<span class="question-mark">?</span>;
-
-    <span class="prelude-val">Ok</span>(payload)
+    <span class="attr">#[borrows(binary)]
+    #[covariant]
+    </span>elf: Elf&lt;<span class="lifetime">&#39;this</span>&gt;,
 }
 
-<span class="doccomment">/// Parses a pre-loaded ELF file, lays it out in memory, and passes control to it.
-</span><span class="kw">pub fn </span>run_payload(payload: <span class="kw-2">&amp;</span>[u8]) -&gt; ! {
-    <span class="kw">let </span>elf = goblin::elf::Elf::parse(payload).expect(<span class="string">&quot;failed to parse application binary&quot;</span>);
+<span class="doccomment">/// Representation of an Restricted Application that the Restricted Kernel can run.
+</span><span class="kw">pub struct </span>Application {
+    binary: Binary,
+}
 
-    <span class="kw">for </span>phdr <span class="kw">in </span>elf
-        .program_headers
-        .iter()
-        .filter(|<span class="kw-2">&amp;</span>phdr| phdr.p_type == PT_LOAD)
-    {
-        <span class="kw">let </span>vaddr = VirtAddr::new(phdr.p_vaddr).align_down(Size2MiB::SIZE);
-        <span class="comment">// As we&#39;ve aligned the address down, we may need extra memory to account for the padding.
+<span class="kw">impl </span>Application {
+    <span class="doccomment">/// Loads a Restricted Application over the given channel using a basic framed format.
+    ///
+    /// This is intended for use after the kernel has started up to load the Restricted Application,
+    /// before we start the application and hand off the channel to it.
+    ///
+    /// The protocol to load the application is very simple:
+    /// 1. loader sends the size of the application binary, as u32
+    /// 2. loader sends max 4 KiB of data and waits for the kernel to acknowledge
+    /// 3. kernel reads up to 4 KiB of data and acks by responding with the amount of data read
+    /// 4. repeat (2) and (3) until all the data has been transmitted
+    </span><span class="kw">pub fn </span>load_raw&lt;C: Channel + <span class="question-mark">?</span>Sized&gt;(channel: <span class="kw-2">&amp;mut </span>C) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>payload_len = {
+            <span class="kw">let </span><span class="kw-2">mut </span>buf: [u8; <span class="number">4</span>] = Default::default();
+            channel.read(<span class="kw-2">&amp;mut </span>buf)<span class="question-mark">?</span>;
+            u32::from_le_bytes(buf)
+        };
+        <span class="kw">let </span><span class="kw-2">mut </span>payload = <span class="macro">vec!</span>[<span class="number">0</span>; payload_len <span class="kw">as </span>usize];
+        <span class="kw">let </span><span class="kw-2">mut </span>chunks_mut = payload.array_chunks_mut::&lt;{ Size4KiB::SIZE <span class="kw">as </span>usize }&gt;();
+
+        <span class="kw">for </span>chunk <span class="kw">in </span>chunks_mut.by_ref() {
+            read_chunk(channel, chunk)<span class="question-mark">?</span>;
+        }
+        read_chunk(channel, chunks_mut.into_remainder())<span class="question-mark">?</span>;
+        <span class="macro">log::info!</span>(<span class="string">&quot;Binary loaded, size: {}&quot;</span>, payload.len());
+
+        <span class="self">Self</span>::new(payload.into_boxed_slice())
+    }
+
+    <span class="doccomment">/// Attempts to parse the provided binary blob as an ELF file representing an Restricted
+    /// Application.
+    </span><span class="kw">pub fn </span>new(blob: Box&lt;[u8]&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="prelude-val">Ok</span>(Application {
+            binary: BinaryTryBuilder {
+                binary: blob,
+                elf_builder: |boxed| {
+                    goblin::elf::Elf::parse(boxed)
+                        .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;failed to parse ELF file: {}&quot;</span>, err))
+                },
+            }
+            .try_build()<span class="question-mark">?</span>,
+        })
+    }
+
+    <span class="kw">fn </span>program_headers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>ProgramHeaders {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.binary.borrow_elf().program_headers
+    }
+
+    <span class="kw">fn </span>entry(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VirtAddr {
+        VirtAddr::new(<span class="self">self</span>.binary.borrow_elf().entry)
+    }
+
+    <span class="kw">fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, start: u64, limit: u64) -&gt; <span class="kw-2">&amp;</span>[u8] {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.binary.borrow_binary()[start <span class="kw">as </span>usize..(start + limit) <span class="kw">as </span>usize]
+    }
+
+    <span class="kw">fn </span>load_segment(<span class="kw-2">&amp;</span><span class="self">self</span>, phdr: <span class="kw-2">&amp;</span>ProgramHeader) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="comment">// In Oak Restricted Kernel, we prefer 2 MiB pages, so round down the segment address if it
+        // isn&#39;t aligned on a 2 MiB page boundary.
+        </span><span class="kw">let </span>vaddr = VirtAddr::new(phdr.p_vaddr).align_down(Size2MiB::SIZE);
+        <span class="comment">// As we&#39;ve aligned the address down, we may need extra memory to account for the
+        // padding.
         </span><span class="kw">let </span>size = ((phdr.p_vaddr - vaddr.as_u64()) + phdr.p_memsz) <span class="kw">as </span>usize;
 
-        <span class="kw">let </span><span class="kw-2">mut </span>prot = MmapProtection::PROT_READ;
+        <span class="comment">// PROT_READ is always implied; it&#39;s not possible to have a page that&#39;s, say, executable but
+        // not readable.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>prot = MmapProtection::PROT_READ;
         <span class="kw">if </span>phdr.p_flags &amp; PF_W &gt; <span class="number">0 </span>{
             prot |= MmapProtection::PROT_WRITE;
         }
@@ -201,8 +330,8 @@
             prot |= MmapProtection::PROT_EXEC;
         }
 
-        <span class="comment">// As we need memory in the user space anyway, use the `mmap()` syscall that will allocate
-        // physical frames and sets up user-accessible page tables for us.
+        <span class="comment">// As we need memory in the user space anyway, use the `mmap()` syscall that will
+        // allocate physical frames and sets up user-accessible page tables for us.
         // Note that the expectation here is that all the sections are nicely 2 MiB-aligned,
         // otherwise the mmap() will fail.
         </span>mmap(
@@ -216,35 +345,56 @@
         <span class="comment">// Safety: we know the target memory is valid as we&#39;ve just allocated it with mmap().
         </span><span class="kw">unsafe </span>{
             core::ptr::copy_nonoverlapping(
-                (payload.as_ptr() <span class="kw">as </span>u64 + phdr.p_offset) <span class="kw">as </span><span class="kw-2">*const </span>u8,
+                <span class="self">self</span>.slice(phdr.p_offset, phdr.p_filesz).as_ptr(),
                 phdr.p_vaddr <span class="kw">as </span><span class="kw-2">*mut </span>u8,
                 phdr.p_filesz <span class="kw">as </span>usize,
             );
         }
-    }
-    <span class="comment">// Set up the userspace stack at the end of the lower half of the virtual address space.
-    // Well... almost. It&#39;s one page lower than the very end, as otherwise the initial stack pointer
-    // would need to be a noncanonical address, so let&#39;s avoid that whole mess by moving down a bit.
-    </span><span class="kw">let </span>rsp = VirtAddr::new(<span class="number">0x8000_0000_0000 </span>- Size2MiB::SIZE);
-    mmap(
-        <span class="prelude-val">Some</span>(rsp - Size2MiB::SIZE),
-        Size2MiB::SIZE <span class="kw">as </span>usize,
-        MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
-        MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
-    )
-    .expect(<span class="string">&quot;failed to allocate memory for user stack&quot;</span>);
 
-    <span class="comment">// Enter Ring 3 and jump to user code.
-    // Safety: by now, if we&#39;re here, we&#39;ve loaded a valid ELF file. It&#39;s up to the user to
-    // guarantee that the file made sense.
-    </span><span class="kw">unsafe </span>{
-        <span class="macro">asm! </span>{
-            <span class="string">&quot;mov rsp, {}&quot;</span>, <span class="comment">// user stack
-            </span><span class="string">&quot;sysretq&quot;</span>,
-            <span class="kw">in</span>(reg) rsp.as_u64() - <span class="number">8</span>, <span class="comment">// maintain stack alignment
-            </span><span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) elf.entry, <span class="comment">// initial RIP
-            </span><span class="kw">in</span>(<span class="string">&quot;r11&quot;</span>) <span class="number">0x202</span>, <span class="comment">// initial RFLAGS (interrupts enabled)
-            </span>options(noreturn)
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="doccomment">/// Maps the application into virtual memory and passes control to it.
+    ///
+    /// # Safety
+    ///
+    /// The application must be built from a valid ELF file representing an Oak Restricted
+    /// Application, and there must not be an active application as we alter the virtual memory
+    /// mappings.
+    </span><span class="kw">pub unsafe fn </span>run(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ! {
+        <span class="kw">for </span>phdr <span class="kw">in </span><span class="self">self
+            </span>.program_headers()
+            .iter()
+            .filter(|<span class="kw-2">&amp;</span>phdr| phdr.p_type == PT_LOAD)
+        {
+            <span class="self">self</span>.load_segment(phdr).unwrap();
+        }
+
+        <span class="comment">// Set up the userspace stack at the end of the lower half of the virtual address space.
+        // Well... almost. It&#39;s one page lower than the very end, as otherwise the initial stack
+        // pointer would need to be a noncanonical address, so let&#39;s avoid that whole mess
+        // by moving down a bit.
+        </span><span class="kw">let </span>rsp = VirtAddr::new(<span class="number">0x8000_0000_0000 </span>- Size2MiB::SIZE);
+        mmap(
+            <span class="prelude-val">Some</span>(rsp - Size2MiB::SIZE),
+            Size2MiB::SIZE <span class="kw">as </span>usize,
+            MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
+            MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
+        )
+        .expect(<span class="string">&quot;failed to allocate memory for user stack&quot;</span>);
+
+        <span class="comment">// Enter Ring 3 and jump to user code.
+        // Safety: by now, if we&#39;re here, we&#39;ve loaded a valid ELF file. It&#39;s up to the user to
+        // guarantee that the file made sense.
+        </span><span class="kw">unsafe </span>{
+            <span class="macro">asm! </span>{
+                <span class="string">&quot;mov rsp, {}&quot;</span>, <span class="comment">// user stack
+                </span><span class="string">&quot;sysretq&quot;</span>,
+                <span class="kw">in</span>(reg) rsp.as_u64() - <span class="number">8</span>,
+                <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) <span class="self">self</span>.entry().as_u64(), <span class="comment">// initial RIP
+                </span><span class="kw">in</span>(<span class="string">&quot;r11&quot;</span>) <span class="number">0x202</span>, <span class="comment">// initial RFLAGS (interrupts enabled)
+                </span>options(noreturn)
+            }
         }
     }
 }

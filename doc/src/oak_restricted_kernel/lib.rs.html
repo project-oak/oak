@@ -359,7 +359,6 @@
 <a href="#359" id="359">359</a>
 <a href="#360" id="360">360</a>
 <a href="#361" id="361">361</a>
-<a href="#362" id="362">362</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -455,8 +454,6 @@
     structures::paging::{MappedPageTable, Page, Size2MiB},
     PhysAddr, VirtAddr,
 };
-
-<span class="kw">pub use </span>payload::run_payload;
 
 <span class="doccomment">/// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 128 GiB of memory, for now.
@@ -664,13 +661,14 @@
     <span class="comment">// We need to load the application binary before we hand the channel over to the syscalls, which
     // expose it to the user space.
     </span><span class="macro">info!</span>(<span class="string">&quot;Loading application binary...&quot;</span>);
-    <span class="kw">let </span>payload = payload::read_payload(<span class="kw-2">&amp;mut *</span>channel)
+    <span class="kw">let </span>application = payload::Application::load_raw(<span class="kw-2">&amp;mut *</span>channel)
         .expect(<span class="string">&quot;failed to load application binary from channel&quot;</span>);
-    <span class="macro">info!</span>(<span class="string">&quot;Binary loaded, size: {}&quot;</span>, payload.len());
 
     syscall::enable_syscalls(channel);
 
-    payload::run_payload(<span class="kw-2">&amp;</span>payload);
+    <span class="comment">// Safety: we&#39;ve loaded the Restricted Application. Whether that&#39;s valid or not is no longer
+    // under the kernel&#39;s control.
+    </span><span class="kw">unsafe </span>{ application.run() }
 }
 
 <span class="attr">#[derive(EnumIter, EnumString)]
