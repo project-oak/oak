@@ -16,7 +16,6 @@
 
 //! Wasm business logic provider based on [Wasmi](https://github.com/paritytech/wasmi).
 
-// TODO(mschett) Add back no_std.
 #![no_std]
 
 extern crate alloc;
@@ -40,6 +39,7 @@ use wasmi::{AsContext, AsContextMut, Func, MemoryType};
 
 const MAIN_FUNCTION_NAME: &str = "main";
 const ALLOC_FUNCTION_NAME: &str = "alloc";
+const MEMORY_NAME: &str = "memory";
 
 // Needs to be consistent with definition of the Wasm import module in the Oak Functions ABI.
 const HOST: &str = "oak_functions";
@@ -146,6 +146,7 @@ where
         // different WasmStates, we can't because the externals Func and Memory defined in the
         // linker depend on store, which needs to be new for every WasmState. In contrast,
         // in wasmtime `func_wrap` does not depend on store (https://docs.rs/wasmtime/latest/wasmtime/struct.Linker.html#method.func_wrap).
+        // TODO(mschett): Update, we can use func_wrap.
 
         // Add memory to linker.
         // TODO(#3783): Find a sensible value for initial pages.
@@ -156,7 +157,7 @@ where
             wasmi::Memory::new(&mut store, memory_type).expect("failed to initialize Wasm memory");
 
         linker
-            .define(HOST, "memory", wasmi::Extern::Memory(memory))
+            .define(HOST, MEMORY_NAME, wasmi::Extern::Memory(memory))
             .expect("failed to define Wasm memory in linker");
 
         let read_request = wasmi::Func::wrap(
@@ -167,7 +168,7 @@ where
              buf_ptr_ptr: AbiPointer,
              buf_len_ptr: AbiPointer| {
                 let result = read_request(&mut caller, buf_ptr_ptr, buf_len_ptr);
-                from_oak_status_result(result)
+                from_oak_status(result)
             },
         );
 
@@ -183,7 +184,7 @@ where
              buf_ptr: AbiPointer,
              buf_len: AbiPointerOffset| {
                 let result = write_response(&mut caller, buf_ptr, buf_len);
-                from_oak_status_result(result)
+                from_oak_status(result)
             },
         );
 
@@ -210,7 +211,7 @@ where
                     response_len_ptr,
                 );
 
-                from_oak_status_result(result)
+                from_oak_status(result)
             },
         );
 
@@ -236,7 +237,7 @@ where
         // Make sure that non-empty `memory` is attached to the instance. Fail early if
         // `memory` is not available.
         instance
-            .get_memory(&store, "memory")
+            .get_memory(&store, MEMORY_NAME)
             .ok_or(anyhow::anyhow!("couldn't find Wasm `memory` export"))?;
 
         let wasm_state = Self { instance, store };
@@ -276,7 +277,7 @@ where
     fn validate_range(&self, addr: AbiPointer, offset: AbiPointerOffset) -> Result<(), OakStatus> {
         let memory = self
             .instance
-            .get_export(&self.store, "memory")
+            .get_export(&self.store, MEMORY_NAME)
             // TODO(mschett): Fix unwrap.
             .unwrap()
             .into_memory()
@@ -405,10 +406,14 @@ pub fn read_request<L: OakLogger>(
     dest_len_ptr: AbiPointer,
 ) -> Result<(), OakStatus> {
     // TODO(mschett): Fix unwraps.
-    let alloc = caller.get_export("alloc").unwrap().into_func().unwrap();
+    let alloc = caller
+        .get_export(ALLOC_FUNC_NAME)
+        .unwrap()
+        .into_func()
+        .unwrap();
 
     let mut memory = caller
-        .get_export("memory")
+        .get_export(MEMORY_NAME)
         // TODO(mschett): Fix unwrap.
         .unwrap()
         .into_memory()
@@ -434,7 +439,7 @@ pub fn write_response<L: OakLogger>(
 ) -> Result<(), OakStatus> {
     // TODO(mschett): Check what is the difference to read_buffer.
     let memory = caller
-        .get_export("memory")
+        .get_export(MEMORY_NAME)
         // TODO(mschett): Fix unwrap.
         .unwrap()
         .into_memory()
@@ -468,7 +473,7 @@ pub fn invoke_extension<L: OakLogger>(
     let alloc = caller.get_export("alloc").unwrap().into_func().unwrap();
 
     let mut memory = caller
-        .get_export("memory")
+        .get_export(MEMORY_NAME)
         // TODO(mschett): Fix unwrap.
         .unwrap()
         .into_memory()
@@ -567,11 +572,7 @@ where
 
 /// A helper function to move between our specific result type `Result<(), OakStatus>` and the
 /// `wasmi` specific result type `Result<i32, wasmi::Trap>`.
-// TODO(mschett): Changed result type from Option<i32> to i32. Check implications.
-fn from_oak_status_result(result: Result<(), OakStatus>) -> Result<i32, wasmi::core::Trap> {
-    let oak_status: OakStatus = match result {
-        Ok(()) => OakStatus::Ok,
-        Err(oak_status) => oak_status,
-    };
+fn from_oak_status(result: Result<(), OakStatus>) -> Result<i32, wasmi::core::Trap> {
+    let oak_status = result.err().unwrap_or(OakStatus::Ok);
     Ok(oak_status as i32)
 }
