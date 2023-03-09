@@ -14,7 +14,7 @@ oak_logger = { workspace = true }
 oak_functions_abi = { workspace = true }
 oak_functions_extension = { workspace = true }
 # Use wasmi in `no_std` mode.
-wasmi = { version = "*", default-features = false, features = ["core"] }
+wasmi = { version = "*", default-features = false }
 
 [dev-dependencies]
 bincode = "*"

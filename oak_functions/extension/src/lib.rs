@@ -35,6 +35,12 @@ pub trait OakApiNativeExtension: Send + Sync {
     fn get_handle(&self) -> ExtensionHandle;
 }
 
+impl alloc::fmt::Debug for dyn OakApiNativeExtension {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter.write_fmt(format_args!("OakApiNativeExtenxion {:?}", self))
+    }
+}
+
 /// An ExtensionFactory creates a new [`OakApiNativeExtension`].
 pub trait ExtensionFactory<L: OakLogger>: Send + Sync {
     fn create(&self) -> anyhow::Result<Box<dyn OakApiNativeExtension>>;

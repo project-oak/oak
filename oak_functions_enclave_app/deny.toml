@@ -10,10 +10,6 @@ vulnerability = "deny"
 unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
-ignore = [
-  # TODO(#3377): Remove when updated.
-  "RUSTSEC-2022-0061"
-]
 
 [bans]
 multiple-versions = "allow"
@@ -28,10 +24,9 @@ unknown-git = "allow"
 [licenses]
 allow = [
   "Apache-2.0",
-  "BSD-2-Clause",
+  "Apache-2.0 WITH LLVM-exception",
   "BSD-3-Clause",
   "MIT",
-  "MPL-2.0",
   "Unicode-DFS-2016"
 ]
 copyleft = "deny"

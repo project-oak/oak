@@ -27,7 +27,6 @@ extern crate std;
 mod tests;
 
 use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
-use anyhow::Context;
 use byteorder::{ByteOrder, LittleEndian};
 use hashbrown::HashMap;
 use oak_functions_abi::{
@@ -36,16 +35,14 @@ use oak_functions_abi::{
 };
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::{Level, OakLogger};
-use wasmi::ValueType;
+use wasmi::{AsContext, AsContextMut, Func, Memory, MemoryType};
 
-const MAIN_FUNCTION_NAME: &str = "main";
-const ALLOC_FUNCTION_NAME: &str = "alloc";
+pub const MAIN_FUNCTION_NAME: &str = "main";
+pub const ALLOC_FUNCTION_NAME: &str = "alloc";
+pub const MEMORY_NAME: &str = "memory";
 
-/// Wasm host function index numbers for `wasmi` to map import names with. This numbering is not
-/// exposed to the Wasm client. See <https://docs.rs/wasmi/0.6.2/wasmi/trait.Externals.html>
-const READ_REQUEST: usize = 0;
-const WRITE_RESPONSE: usize = 1;
-const INVOKE: usize = 4;
+// Needs to be consistent with definition of the Wasm import module in the Oak Functions ABI.
+const OAK_FUNCTIONS: &str = "oak_functions";
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -53,272 +50,51 @@ pub type AbiPointer = u32;
 pub type AbiPointerOffset = u32;
 // Type alias for the ExtensionHandle type, which has to be cast into a ExtensionHandle.
 pub type AbiExtensionHandle = i32;
-/// Wasm type identifier for position/offset values in linear memory. Any future 64-bit version of
-/// Wasm would use a different value.
-pub const ABI_USIZE: ValueType = ValueType::I32;
 
-/// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
-/// single user request. The methods here correspond to the ABI host functions that allow the Wasm
-/// module to exchange the request and the response with the Oak functions server. These functions
-/// translate values between Wasm linear memory and Rust types.
-pub struct WasmState<L: OakLogger> {
+pub struct UserState<L: OakLogger> {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
-    instance: Option<wasmi::ModuleRef>,
-    memory: Option<wasmi::MemoryRef>,
-    logger: L,
     extensions: HashMap<ExtensionHandle, Box<dyn OakApiNativeExtension>>,
+    logger: L,
 }
 
-impl<L> WasmState<L>
+impl<L> UserState<L>
 where
     L: OakLogger,
 {
-    pub fn new(
-        module: &wasmi::Module,
+    // We initialize user state with the empty response.
+    fn init(
         request_bytes: Vec<u8>,
-        logger: L,
         extensions: HashMap<ExtensionHandle, Box<dyn OakApiNativeExtension>>,
-    ) -> anyhow::Result<Self> {
-        let mut abi = Self {
+        logger: L,
+    ) -> Self {
+        UserState {
             request_bytes,
             response_bytes: Vec::new(),
-            instance: None,
-            memory: None,
-            logger,
             extensions,
-        };
-
-        let instance = wasmi::ModuleInstance::new(
-            module,
-            &wasmi::ImportsBuilder::new().with_resolver("oak_functions", &abi),
-        )
-        .map_err(|err| anyhow::anyhow!("couldn't instantiate Wasm module: {:?}", err))?
-        .assert_no_start();
-
-        check_export_function_signature(
-            &instance,
-            MAIN_FUNCTION_NAME,
-            &wasmi::Signature::new(&[][..], None),
-        )
-        .context("couldn't validate `main` export")?;
-        check_export_function_signature(
-            &instance,
-            ALLOC_FUNCTION_NAME,
-            &wasmi::Signature::new(&[ValueType::I32][..], Some(ValueType::I32)),
-        )
-        .context("couldn't validate `alloc` export")?;
-
-        abi.instance = Some(instance.clone());
-        // Make sure that non-empty `memory` is attached to the WasmState. Fail early if
-        // `memory` is not available.
-        abi.memory = Some(
-            instance
-                .export_by_name("memory")
-                .context("couldn't find Wasm `memory` export")?
-                .as_memory()
-                .cloned()
-                .context("couldn't interpret Wasm `memory` export as memory")?,
-        );
-
-        Ok(abi)
-    }
-
-    fn invoke(&mut self) {
-        let instance = self.instance.as_ref().expect("no instance").clone();
-        let result = instance.invoke_export(MAIN_FUNCTION_NAME, &[], self);
-        self.logger.log_sensitive(
-            Level::Info,
-            &format!("running Wasm module completed with result: {:?}", result),
-        );
-    }
-
-    fn get_response_bytes(&self) -> Vec<u8> {
-        self.response_bytes.clone()
-    }
-
-    /// Helper function to get memory.
-    pub fn get_memory(&self) -> &wasmi::MemoryRef {
-        self.memory.as_ref().expect("WasmState memory not attached")
-    }
-
-    /// Validates whether a given address range (inclusive) falls within the currently allocated
-    /// range of guest memory.
-    fn validate_range(&self, addr: AbiPointer, offset: AbiPointerOffset) -> Result<(), OakStatus> {
-        let memory_size: wasmi::memory_units::Bytes = self.get_memory().current_size().into();
-        // Check whether the end address is below or equal to the size of the guest memory.
-        if wasmi::memory_units::Bytes((addr as usize) + (offset as usize)) <= memory_size {
-            Ok(())
-        } else {
-            Err(OakStatus::ErrInvalidArgs)
+            logger,
         }
     }
 
-    /// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
-    pub fn read_buffer_from_wasm_memory(
-        &self,
-        buf_ptr: AbiPointer,
-        buf_len: AbiPointerOffset,
-    ) -> Result<Vec<u8>, OakStatus> {
-        self.get_memory()
-            .get(buf_ptr, buf_len as usize)
-            .map_err(|err| {
-                self.logger.log_sensitive(
-                    Level::Error,
-                    &format!("Unable to read buffer from guest memory: {:?}", err),
-                );
-                OakStatus::ErrInvalidArgs
-            })
-    }
-
-    /// Writes the buffer `source` at the address `dest` of the Wasm memory, if `source` fits in the
-    /// allocated memory.
-    pub fn write_buffer_to_wasm_memory(
-        &self,
-        source: &[u8],
-        dest: AbiPointer,
-    ) -> Result<(), OakStatus> {
-        self.validate_range(dest, source.len() as u32)?;
-        self.get_memory().set(dest, source).map_err(|err| {
-            self.logger.log_sensitive(
-                Level::Error,
-                &format!("Unable to write buffer into guest memory: {:?}", err),
-            );
-            OakStatus::ErrInvalidArgs
-        })
-    }
-
-    ///  Writes the u32 `value` at the `address` of the Wasm memory.
-    pub fn write_u32_to_wasm_memory(
-        &self,
-        value: u32,
-        address: AbiPointer,
-    ) -> Result<(), OakStatus> {
-        let value_bytes = &mut [0; 4];
-        LittleEndian::write_u32(value_bytes, value);
-        self.get_memory().set(address, value_bytes).map_err(|err| {
-            self.logger.log_sensitive(
-                Level::Error,
-                &format!("Unable to write u32 value into guest memory: {:?}", err),
-            );
-            OakStatus::ErrInvalidArgs
-        })
-    }
-
-    //// Read the u32 value at the `address` from the Wasm memory.
-    pub fn read_u32_from_wasm_memory(&self, address: AbiPointer) -> Result<u32, OakStatus> {
-        let address = self.get_memory().get(address, 4).map_err(|err| {
-            self.logger.log_sensitive(
-                Level::Error,
-                &format!("Unable to read u32 value from guest memory: {:?}", err),
-            );
-            OakStatus::ErrInvalidArgs
-        })?;
-        Ok(LittleEndian::read_u32(&address))
-    }
-
-    /// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address
-    /// of the allocated memory to `dest_ptr_ptr` and the length to `dest_len_ptr`.
-    pub fn alloc_and_write_buffer_to_wasm_memory(
+    pub fn get_extension(
         &mut self,
-        buffer: Vec<u8>,
-        dest_ptr_ptr: AbiPointer,
-        dest_len_ptr: AbiPointer,
-    ) -> Result<(), OakStatus> {
-        let dest_ptr = self.alloc(buffer.len() as u32);
-        self.write_buffer_to_wasm_memory(&buffer, dest_ptr)?;
-        self.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)?;
-        self.write_u32_to_wasm_memory(buffer.len() as u32, dest_len_ptr)?;
-        Ok(())
-    }
-
-    /// Corresponds to the host ABI function [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
-    pub fn read_request(
-        &mut self,
-        dest_ptr_ptr: AbiPointer,
-        dest_len_ptr: AbiPointer,
-    ) -> Result<(), OakStatus> {
-        let dest_ptr = self.alloc(self.request_bytes.len() as u32);
-        self.write_buffer_to_wasm_memory(&self.request_bytes, dest_ptr)?;
-        self.write_u32_to_wasm_memory(dest_ptr, dest_ptr_ptr)?;
-        self.write_u32_to_wasm_memory(self.request_bytes.len() as u32, dest_len_ptr)?;
-        Ok(())
-    }
-
-    /// Corresponds to the host ABI function [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
-    pub fn write_response(
-        &mut self,
-        buf_ptr: AbiPointer,
-        buf_len: AbiPointerOffset,
-    ) -> Result<(), OakStatus> {
-        let response = self
-            .get_memory()
-            .get(buf_ptr, buf_len as usize)
-            .map_err(|err| {
-                self.logger.log_sensitive(
-                    Level::Error,
-                    &format!(
-                        "write_response(): Unable to read name from guest memory: {:?}",
-                        err
-                    ),
-                );
-                OakStatus::ErrInvalidArgs
-            })?;
-        self.response_bytes = response;
-        Ok(())
-    }
-
-    pub fn invoke_extension(
-        &mut self,
-        handle: AbiExtensionHandle,
-        request_ptr: AbiPointer,
-        request_len: AbiPointerOffset,
-        response_ptr_ptr: AbiPointer,
-        response_len_ptr: AbiPointer,
-    ) -> Result<(), OakStatus> {
+        handle: i32,
+    ) -> Result<&mut Box<dyn OakApiNativeExtension>, OakStatus> {
         let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or_else(|| {
-            self.log_error(&format!("couldn't convert handle {:?} from i32", handle));
+            self.log_error(&format!("failed to convert handle {:?} from i32.", handle));
             OakStatus::ErrInvalidHandle
         })?;
 
-        let request = self
-            .read_buffer_from_wasm_memory(request_ptr, request_len)
-            .map_err(|err| {
-                self.log_error(&format!(
-                    "handle {:?}: unable to read input from guest memory: {:?}",
-                    handle, err
-                ));
-                OakStatus::ErrInvalidArgs
-            })?;
+        let extensions = &mut self.extensions;
+        let logger = &self.logger;
 
-        let extension = match self.extensions.get_mut(&handle) {
-            // Can't convince the borrow checker to use `ok_or_else` to `self.log_error`.
-            Some(extension) => Ok(extension),
-            None => {
-                self.log_error(&format!("cannot find extension with handle {:?}", handle));
-                Err(OakStatus::ErrInvalidHandle)
-            }
-        }?;
-
-        let response = extension.invoke(request)?;
-        self.alloc_and_write_buffer_to_wasm_memory(response, response_ptr_ptr, response_len_ptr)
-    }
-
-    pub fn alloc(&mut self, len: u32) -> AbiPointer {
-        let result = self.instance.as_ref().unwrap().invoke_export(
-            ALLOC_FUNCTION_NAME,
-            &[wasmi::RuntimeValue::I32(len as i32)],
-            // When calling back into `alloc` we don't need to expose any of the rest of the ABI
-            // methods.
-            &mut wasmi::NopExternals,
-        );
-        let result_value = result
-            .expect("`alloc` call failed")
-            .expect("no value returned from `alloc`");
-        match result_value {
-            wasmi::RuntimeValue::I32(v) => v as u32,
-            _ => panic!("invalid value type returned from `alloc`"),
-        }
+        extensions.get_mut(&handle).ok_or_else(|| {
+            logger.log_sensitive(
+                Level::Error,
+                &format!("can't find extension with handle {:?}.", handle),
+            );
+            OakStatus::ErrInvalidHandle
+        })
     }
 
     fn log_error(&self, message: &str) {
@@ -326,98 +102,385 @@ where
     }
 }
 
-impl<L> wasmi::Externals for WasmState<L>
+impl<L> alloc::fmt::Debug for UserState<L>
 where
     L: OakLogger,
 {
-    /// Invocation of a host function specified by its registered index. Acts as a wrapper for
-    /// the relevant native function, just:
-    /// - checking argument types (which should be correct as `wasmi` will only pass through those
-    ///   types that were specified when the host function was registered with `resolve_func`).
-    /// - mapping resulting return/error values.
-    fn invoke_index(
-        &mut self,
-        index: usize,
-        args: wasmi::RuntimeArgs,
-    ) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
-        match index {
-            READ_REQUEST => from_oak_status_result(
-                self.read_request(args.nth_checked(0)?, args.nth_checked(1)?),
-            ),
-            WRITE_RESPONSE => from_oak_status_result(
-                self.write_response(args.nth_checked(0)?, args.nth_checked(1)?),
-            ),
-            INVOKE => from_oak_status_result(self.invoke_extension(
-                args.nth_checked(0)?,
-                args.nth_checked(1)?,
-                args.nth_checked(2)?,
-                args.nth_checked(3)?,
-                args.nth_checked(4)?,
-            )),
-            _ => {
-                // Here https://paritytech.github.io/wasmi/wasmi/trait.Externals.html#examples panics with
-                //  panic!("Unimplemented function at {}.", index)
-                // We prefer not to panic, and trap in an unreachable state instead.
-                Err(wasmi::Trap::new(wasmi::TrapKind::Unreachable))
-            }
-        }
+    fn fmt(&self, formatter: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+        formatter
+            .debug_struct("UserState")
+            .field("request_bytes", &self.request_bytes)
+            .field("response_bytes", &self.response_bytes)
+            .field("extensions", &self.extensions)
+            .finish()
     }
 }
 
-impl<L> wasmi::ModuleImportResolver for WasmState<L>
+/// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
+/// single user request. The methods here correspond to the ABI OAK_FUNCTIONS functions that allow
+/// the Wasm module to exchange the request and the response with the Oak functions server. These
+/// functions translate values between Wasm linear memory and Rust types.
+pub struct WasmState<L: OakLogger> {
+    instance: wasmi::Instance,
+    store: wasmi::Store<UserState<L>>,
+}
+
+impl<L> WasmState<L>
 where
     L: OakLogger,
 {
-    fn resolve_func(
-        &self,
-        field_name: &str,
-        signature: &wasmi::Signature,
-    ) -> Result<wasmi::FuncRef, wasmi::Error> {
-        // Look for the function (i.e., `field_name`) in the statically registered functions.
-        let (index, expected_signature) =
-            oak_functions_resolve_func(field_name).ok_or_else(|| {
-                wasmi::Error::Instantiation(format!("export {} not found", field_name))
+    pub fn new(
+        module: Arc<wasmi::Module>,
+        request_bytes: Vec<u8>,
+        logger: L,
+        extensions: HashMap<ExtensionHandle, Box<dyn OakApiNativeExtension>>,
+    ) -> anyhow::Result<Self> {
+        let user_state = UserState::init(request_bytes, extensions, logger);
+
+        // For isolated requests we need to create a new store for every request.
+        let mut store = wasmi::Store::new(module.engine(), user_state);
+
+        let mut linker: wasmi::Linker<UserState<L>> = wasmi::Linker::new(module.engine());
+
+        // Add memory to linker.
+        // TODO(#3783): Find a sensible value for initial pages.
+        let initial_pages = 100;
+        let memory_type =
+            MemoryType::new(initial_pages, None).expect("failed to define Wasm memory type");
+        let memory =
+            wasmi::Memory::new(&mut store, memory_type).expect("failed to initialize Wasm memory");
+
+        // TODO(#3784): Use func_wrap. Maybe we can define the linker in WasmHandler to reuse it for
+        // different WasmStates, but so far we can't because the externals Func and Memory
+        // defined in the linker depend on store, which needs to be new for every WasmState.
+        // Related, wasmtime `func_wrap` does not depend on store (https://docs.rs/wasmtime/latest/wasmtime/struct.Linker.html#method.func_wrap).
+
+        linker
+            .define(OAK_FUNCTIONS, MEMORY_NAME, wasmi::Extern::Memory(memory))
+            .expect("failed to define Wasm memory in linker");
+
+        let read_request = wasmi::Func::wrap(
+            &mut store,
+            // The types in the signatures correspond to the parameters from
+            // oak_functions_abi/src/lib.rs.
+            |mut caller: wasmi::Caller<'_, UserState<L>>,
+             buf_ptr_ptr: AbiPointer,
+             buf_len_ptr: AbiPointer| {
+                let result = read_request(&mut caller, buf_ptr_ptr, buf_len_ptr);
+                from_oak_status(result)
+            },
+        );
+
+        linker
+            .define(OAK_FUNCTIONS, "read_request", read_request)
+            .expect("failed to define read_request in linker");
+
+        let write_response = wasmi::Func::wrap(
+            &mut store,
+            // The types in the signatures correspond to the parameters from
+            // oak_functions_abi/src/lib.rs.
+            |mut caller: wasmi::Caller<'_, UserState<L>>,
+             buf_ptr: AbiPointer,
+             buf_len: AbiPointerOffset| {
+                let result = write_response(&mut caller, buf_ptr, buf_len);
+                from_oak_status(result)
+            },
+        );
+
+        linker
+            .define(OAK_FUNCTIONS, "write_response", write_response)
+            .expect("failed to define write_response in linker");
+
+        let invoke_extension = wasmi::Func::wrap(
+            &mut store,
+            // The types in the signatures correspond to the parameters from
+            // oak_functions_abi/src/lib.rs.
+            |mut caller: wasmi::Caller<'_, UserState<L>>,
+             handle: AbiExtensionHandle,
+             request_ptr: AbiPointer,
+             request_len: AbiPointerOffset,
+             response_ptr_ptr: AbiPointer,
+             response_len_ptr: AbiPointer| {
+                let result = invoke_extension(
+                    &mut caller,
+                    handle,
+                    request_ptr,
+                    request_len,
+                    response_ptr_ptr,
+                    response_len_ptr,
+                );
+
+                from_oak_status(result)
+            },
+        );
+
+        linker
+            .define(OAK_FUNCTIONS, "invoke", invoke_extension)
+            .expect("failed to define invoke in linker");
+
+        // Use linker and store to get instance of module.
+        let instance = linker
+            .instantiate(&mut store, &module)
+            .map_err(|err| anyhow::anyhow!("failed to instantiate Wasm module: {:?}", err))?
+            // Use `main` as entry point.
+            .ensure_no_start(&mut store)
+            .map_err(|err| {
+                anyhow::anyhow!("failed to ensure no start in Wasm module: {:?}", err)
             })?;
 
-        if signature == &expected_signature {
-            Ok(wasmi::FuncInstance::alloc_host(expected_signature, index))
-        } else {
-            Err(wasmi::Error::Instantiation(format!(
-                "export `{}` doesn't match expected signature; got: {:?}, expected: {:?}",
-                field_name, signature, expected_signature
-            )))
-        }
+        // Check that the instance exports "alloc".
+        let _ = &instance
+            .get_typed_func::<i32, AbiPointer>(&store, ALLOC_FUNCTION_NAME)
+            .expect("couldn't validate `alloc` export");
+
+        // Make sure that non-empty `memory` is attached to the instance. Fail early if
+        // `memory` is not available.
+        instance
+            .get_memory(&store, MEMORY_NAME)
+            .ok_or(anyhow::anyhow!("couldn't find Wasm `memory` export"))?;
+
+        // TODO(#3785): Add logging and list exports.
+        let wasm_state = Self { instance, store };
+
+        Ok(wasm_state)
+    }
+
+    // Invokes the Wasm module by calling main.
+    fn invoke(&mut self) {
+        let main = self
+            .instance
+            .get_typed_func::<(), ()>(&self.store, MAIN_FUNCTION_NAME)
+            .expect("couldn't get `main` export");
+        let result = main.call(&mut self.store, ());
+        self.store.data().logger.log_sensitive(
+            Level::Info,
+            &format!("running Wasm module completed with result: {:?}", result),
+        );
+    }
+
+    // Needed for unit tests.
+    #[allow(dead_code)]
+    fn get_request_bytes(&self) -> Vec<u8> {
+        let user_state = self.store.data();
+        user_state.request_bytes.clone()
+    }
+
+    fn get_response_bytes(&self) -> Vec<u8> {
+        let user_state = self.store.data();
+        user_state.response_bytes.clone()
     }
 }
 
-fn check_export_function_signature(
-    instance: &wasmi::ModuleInstance,
-    export_name: &str,
-    expected_signature: &wasmi::Signature,
-) -> anyhow::Result<()> {
-    let export_function = instance
-        .export_by_name(export_name)
-        .context("couldn't find Wasm export")?
-        .as_func()
-        .cloned()
-        .context("couldn't interpret Wasm export as function")?;
-    if export_function.signature() != expected_signature {
-        anyhow::bail!(
-            "invalid signature for export: {:?}, expected: {:?}",
-            export_function.signature(),
-            expected_signature
-        );
-    } else {
-        Ok(())
-    }
+/// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
+pub fn read_buffer(
+    ctx: &mut impl AsContext,
+    memory: &mut wasmi::Memory,
+    buf_ptr: AbiPointer,
+    buf_len: AbiPointerOffset,
+) -> Result<Vec<u8>, OakStatus> {
+    let mut target = alloc::vec![0; buf_len as usize];
+
+    let buf_ptr = buf_ptr
+        .try_into()
+        .expect("failed to convert AbiPointer to usize as required by wasmi API");
+    memory.read(ctx, buf_ptr, &mut target).map_err(|_err| {
+        // TODO(#3785): Add logging, which needs access to logger in the user state.
+        // We don't have access in ctx, so we either need to pass the logger as argument or
+        // think of a different refactoring.
+        // ctx.data().log_error(
+        //   &format!("Unable to read buffer from guest memory: {:?}", err),
+        // );
+        OakStatus::ErrInvalidArgs
+    })?;
+    Ok(target)
+}
+
+///  Writes the u32 `value` at the `address` of the Wasm memory.
+pub fn write_u32(
+    ctx: &mut impl AsContextMut,
+    memory: &mut wasmi::Memory,
+    value: u32,
+    address: AbiPointer,
+) -> Result<(), OakStatus> {
+    let value_bytes = &mut [0; 4];
+    LittleEndian::write_u32(value_bytes, value);
+    write_buffer(ctx, memory, value_bytes, address).map_err(|_err| {
+        // TODO(#3785): Add logging, which needs access to logger in the user state.
+        // We don't have access in ctx, so we either need to pass the logger as argument or
+        // think of a different refactoring.
+        // ctx.data().log_error(
+        //    &format!("Unable to write u32 value into guest memory: {:?}", err),
+        // );
+        OakStatus::ErrInvalidArgs
+    })
+}
+
+/// Writes the buffer `source` at the address `dest` of the Wasm memory, if `source` fits in the
+/// allocated memory.
+pub fn write_buffer(
+    ctx: &mut impl AsContextMut,
+    memory: &mut wasmi::Memory,
+    source: &[u8],
+    dest: AbiPointer,
+) -> Result<(), OakStatus> {
+    let dest = dest
+        .try_into()
+        .expect("failed to convert AbiPointer to usize as required by wasmi API");
+    memory.write(ctx, dest, source).map_err(|_err| {
+        // TODO(#3785): Add logging, which needs access to logger in the user state.
+        // We don't have access in ctx, so we either need to pass the logger as argument or
+        // think of a different refactoring.
+        // ctx.data().log_error(
+        //    &format!("Unable to write buffer into guest memory: {:?}", err),
+        // );
+        OakStatus::ErrInvalidArgs
+    })
+}
+
+/// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address
+/// of the allocated memory to `dest_ptr_ptr` and the length to `dest_len_ptr`.
+pub fn alloc_and_write_buffer(
+    ctx: &mut impl AsContextMut,
+    memory: &mut wasmi::Memory,
+    alloc: Func,
+    buffer: Vec<u8>,
+    dest_ptr_ptr: AbiPointer,
+    dest_len_ptr: AbiPointer,
+) -> Result<(), OakStatus> {
+    let len = buffer.len() as i32;
+    // Call alloc.
+
+    // Will hold address where memory of size len was allocated, initialized with -1.
+    let mut address = [wasmi::Value::I32(-1)];
+    alloc
+        .call(
+            ctx.as_context_mut(),
+            &[wasmi::Value::I32(len)],
+            &mut address,
+        )
+        .expect("`alloc` call failed");
+    let dest_ptr = match address[0] {
+        // Assumes 32-bit Wasm addresses.
+        wasmi::Value::I32(v) => v
+            .try_into()
+            .map_or_else(|_| Err(OakStatus::ErrInternal), Ok),
+        _ => Err(OakStatus::ErrInternal),
+    }?;
+
+    // Write to buffer.
+    write_buffer(ctx, memory, &buffer, dest_ptr)?;
+    write_u32(ctx, memory, dest_ptr, dest_ptr_ptr)?;
+    write_u32(ctx, memory, buffer.len() as u32, dest_len_ptr)?;
+    Ok(())
+}
+
+/// Corresponds to the OAK_FUNCTIONS ABI function [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
+pub fn read_request<L: OakLogger>(
+    caller: &mut wasmi::Caller<'_, UserState<L>>,
+    dest_ptr_ptr: AbiPointer,
+    dest_len_ptr: AbiPointer,
+) -> Result<(), OakStatus> {
+    let alloc = get_exported_alloc(caller)?;
+    let mut memory = get_exported_memory(caller)?;
+    let request_bytes = caller.data().request_bytes.clone();
+
+    alloc_and_write_buffer(
+        caller,
+        &mut memory,
+        alloc,
+        request_bytes,
+        dest_ptr_ptr,
+        dest_len_ptr,
+    )
+}
+
+/// Corresponds to the OAK_FUNCTIONS ABI function [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
+pub fn write_response<L: OakLogger>(
+    caller: &mut wasmi::Caller<'_, UserState<L>>,
+    buf_ptr: AbiPointer,
+    buf_len: AbiPointerOffset,
+) -> Result<(), OakStatus> {
+    let mut memory = get_exported_memory(caller)?;
+    caller.data_mut().response_bytes = read_buffer(caller, &mut memory, buf_ptr, buf_len)?;
+    Ok(())
+}
+
+pub fn invoke_extension<L: OakLogger>(
+    caller: &mut wasmi::Caller<'_, UserState<L>>,
+    handle: i32,
+    request_ptr: AbiPointer,
+    request_len: AbiPointerOffset,
+    response_ptr_ptr: AbiPointer,
+    response_len_ptr: AbiPointer,
+) -> Result<(), OakStatus> {
+    let alloc = get_exported_alloc(caller)?;
+
+    let mut memory = get_exported_memory(caller)?;
+
+    let request = read_buffer(caller, &mut memory, request_ptr, request_len).map_err(|err| {
+        caller.data().log_error(&format!(
+            "Handle {:?}: Unable to read input from guest memory: {:?}",
+            handle, err
+        ));
+        OakStatus::ErrInvalidArgs
+    })?;
+
+    let user_state = caller.data_mut();
+    let extension = user_state.get_extension(handle)?;
+    let response = extension.invoke(request)?;
+
+    alloc_and_write_buffer(
+        caller,
+        &mut memory,
+        alloc,
+        response,
+        response_ptr_ptr,
+        response_len_ptr,
+    )
+}
+
+// Helper function to get exported MEMORY from caller.
+fn get_exported_memory<L: OakLogger>(
+    caller: &mut wasmi::Caller<'_, UserState<L>>,
+) -> Result<Memory, OakStatus> {
+    let ext = caller.get_export(MEMORY_NAME).ok_or_else(|| {
+        caller
+            .data()
+            .log_error(&format!("failed to get exported {}", MEMORY_NAME));
+        OakStatus::ErrInternal
+    })?;
+
+    ext.into_memory().ok_or_else(|| {
+        caller
+            .data()
+            .log_error(&format!("exported {} is not a memory", MEMORY_NAME));
+        OakStatus::ErrInternal
+    })
+}
+
+// Helper function to get exported ALLOC_FUNCTION_NAME from caller.
+fn get_exported_alloc<L: OakLogger>(
+    caller: &mut wasmi::Caller<'_, UserState<L>>,
+) -> Result<Func, OakStatus> {
+    let ext = caller.get_export(ALLOC_FUNCTION_NAME).ok_or_else(|| {
+        caller
+            .data()
+            .log_error(&format!("failed to get exported {}", ALLOC_FUNCTION_NAME));
+        OakStatus::ErrInternal
+    })?;
+
+    ext.into_func().ok_or_else(|| {
+        caller
+            .data()
+            .log_error(&format!("exported {} is not a func", ALLOC_FUNCTION_NAME));
+        OakStatus::ErrInternal
+    })
 }
 
 // An ephemeral request handler with a Wasm module for handling the requests.
 #[derive(Clone)]
 pub struct WasmHandler<L: OakLogger> {
-    // Wasm module to be served on each invocation. `Arc` is needed to make `WasmHandler`
-    // cloneable.
-    module: Arc<wasmi::Module>,
+    wasm_module: Arc<wasmi::Module>,
     extension_factories: Arc<Vec<Box<dyn ExtensionFactory<L>>>>,
     logger: L,
 }
@@ -431,11 +494,12 @@ where
         extension_factories: Vec<Box<dyn ExtensionFactory<L>>>,
         logger: L,
     ) -> anyhow::Result<Self> {
-        let module = wasmi::Module::from_buffer(wasm_module_bytes)
+        let engine = wasmi::Engine::default();
+        let module = wasmi::Module::new(&engine, wasm_module_bytes)
             .map_err(|err| anyhow::anyhow!("couldn't load module from buffer: {:?}", err))?;
 
         Ok(WasmHandler {
-            module: Arc::new(module),
+            wasm_module: Arc::new(module),
             extension_factories: Arc::new(extension_factories),
             logger,
         })
@@ -450,8 +514,12 @@ where
             extensions.insert(extension.get_handle(), extension);
         }
 
-        let wasm_state =
-            WasmState::new(&self.module, request_bytes, self.logger.clone(), extensions)?;
+        let wasm_state = WasmState::new(
+            self.wasm_module.clone(),
+            request_bytes,
+            self.logger.clone(),
+            extensions,
+        )?;
 
         Ok(wasm_state)
     }
@@ -468,6 +536,8 @@ where
         wasm_state.invoke();
 
         wasm_state
+            .store
+            .data_mut()
             .extensions
             .values_mut()
             .try_for_each(|e| e.terminate())?;
@@ -476,59 +546,9 @@ where
     }
 }
 
-/// A resolver function, mapping `oak_functions` host function names to an index and a type
-/// signature.
-fn oak_functions_resolve_func(field_name: &str) -> Option<(usize, wasmi::Signature)> {
-    // The types in the signatures correspond to the parameters from
-    // oak_functions_abi/src/lib.rs
-    let (index, expected_signature) = match field_name {
-        "read_request" => (
-            READ_REQUEST,
-            wasmi::Signature::new(
-                &[
-                    ABI_USIZE, // buf_ptr_ptr
-                    ABI_USIZE, // buf_len_ptr
-                ][..],
-                Some(ValueType::I32),
-            ),
-        ),
-        "write_response" => (
-            WRITE_RESPONSE,
-            wasmi::Signature::new(
-                &[
-                    ABI_USIZE, // buf_ptr
-                    ABI_USIZE, // buf_len
-                ][..],
-                Some(ValueType::I32),
-            ),
-        ),
-        "invoke" => (
-            INVOKE,
-            wasmi::Signature::new(
-                &[
-                    ABI_USIZE, // handle
-                    ABI_USIZE, // request_ptr
-                    ABI_USIZE, // request_len
-                    ABI_USIZE, // response_ptr_ptr
-                    ABI_USIZE, // response_len_ptr
-                ][..],
-                Some(ValueType::I32),
-            ),
-        ),
-        _ => return None,
-    };
-
-    Some((index, expected_signature))
-}
-
 /// A helper function to move between our specific result type `Result<(), OakStatus>` and the
-/// `wasmi` specific result type `Result<Option<wasmi::RuntimeValue>, wasmi::Trap>`, mapping:
-/// - `Ok(())` to `Ok(Some(OakStatus::Ok))`
-/// - `Err(x)` to `Ok(Some(x))`
-fn from_oak_status_result(
-    result: Result<(), OakStatus>,
-) -> Result<Option<wasmi::RuntimeValue>, wasmi::Trap> {
-    let oak_status_from_result = result.map_or_else(|x: OakStatus| x, |()| OakStatus::Ok);
-    let wasmi_value = wasmi::RuntimeValue::I32(oak_status_from_result as i32);
-    Ok(Some(wasmi_value))
+/// `wasmi` specific result type `Result<i32, wasmi::Trap>`.
+fn from_oak_status(result: Result<(), OakStatus>) -> Result<i32, wasmi::core::Trap> {
+    let oak_status = result.err().unwrap_or(OakStatus::Ok);
+    Ok(oak_status as i32)
 }
