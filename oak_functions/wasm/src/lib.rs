@@ -37,12 +37,12 @@ use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::{Level, OakLogger};
 use wasmi::{AsContext, AsContextMut, Func, Memory, MemoryType};
 
-const MAIN_FUNCTION_NAME: &str = "main";
-const ALLOC_FUNCTION_NAME: &str = "alloc";
-const MEMORY_NAME: &str = "memory";
+pub const MAIN_FUNCTION_NAME: &str = "main";
+pub const ALLOC_FUNCTION_NAME: &str = "alloc";
+pub const MEMORY_NAME: &str = "memory";
 
 // Needs to be consistent with definition of the Wasm import module in the Oak Functions ABI.
-const HOST: &str = "oak_functions";
+const OAK_FUNCTIONS: &str = "oak_functions";
 
 // Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
 // of Wasm would use different types.
@@ -117,9 +117,9 @@ where
 }
 
 /// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
-/// single user request. The methods here correspond to the ABI host functions that allow the Wasm
-/// module to exchange the request and the response with the Oak functions server. These functions
-/// translate values between Wasm linear memory and Rust types.
+/// single user request. The methods here correspond to the ABI OAK_FUNCTIONS functions that allow
+/// the Wasm module to exchange the request and the response with the Oak functions server. These
+/// functions translate values between Wasm linear memory and Rust types.
 pub struct WasmState<L: OakLogger> {
     instance: wasmi::Instance,
     store: wasmi::Store<UserState<L>>,
@@ -156,7 +156,7 @@ where
         // Related, wasmtime `func_wrap` does not depend on store (https://docs.rs/wasmtime/latest/wasmtime/struct.Linker.html#method.func_wrap).
 
         linker
-            .define(HOST, MEMORY_NAME, wasmi::Extern::Memory(memory))
+            .define(OAK_FUNCTIONS, MEMORY_NAME, wasmi::Extern::Memory(memory))
             .expect("failed to define Wasm memory in linker");
 
         let read_request = wasmi::Func::wrap(
@@ -172,7 +172,7 @@ where
         );
 
         linker
-            .define(HOST, "read_request", read_request)
+            .define(OAK_FUNCTIONS, "read_request", read_request)
             .expect("failed to define read_request in linker");
 
         let write_response = wasmi::Func::wrap(
@@ -188,7 +188,7 @@ where
         );
 
         linker
-            .define(HOST, "write_response", write_response)
+            .define(OAK_FUNCTIONS, "write_response", write_response)
             .expect("failed to define write_response in linker");
 
         let invoke_extension = wasmi::Func::wrap(
@@ -215,7 +215,7 @@ where
         );
 
         linker
-            .define(HOST, "invoke", invoke_extension)
+            .define(OAK_FUNCTIONS, "invoke", invoke_extension)
             .expect("failed to define invoke in linker");
 
         // Use linker and store to get instance of module.
@@ -374,7 +374,7 @@ pub fn alloc_and_write_buffer(
     Ok(())
 }
 
-/// Corresponds to the host ABI function [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
+/// Corresponds to the OAK_FUNCTIONS ABI function [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
 pub fn read_request<L: OakLogger>(
     caller: &mut wasmi::Caller<'_, UserState<L>>,
     dest_ptr_ptr: AbiPointer,
@@ -394,7 +394,7 @@ pub fn read_request<L: OakLogger>(
     )
 }
 
-/// Corresponds to the host ABI function [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
+/// Corresponds to the OAK_FUNCTIONS ABI function [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
 pub fn write_response<L: OakLogger>(
     caller: &mut wasmi::Caller<'_, UserState<L>>,
     buf_ptr: AbiPointer,

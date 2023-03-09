@@ -50,7 +50,7 @@ fn test_read_write_u32_in_wasm_memory() {
 
     let mut memory = wasm_state
         .instance
-        .get_export(&wasm_state.store, "memory")
+        .get_export(&wasm_state.store, MEM)
         .unwrap()
         .into_memory()
         .unwrap();
@@ -70,14 +70,14 @@ fn test_alloc_and_write_empty() {
 
     let mut memory = wasm_state
         .instance
-        .get_export(&wasm_state.store, "memory")
+        .get_export(&wasm_state.store, MEMORY_NAME)
         .unwrap()
         .into_memory()
         .unwrap();
 
     let alloc = wasm_state
         .instance
-        .get_export(&wasm_state.store, "alloc")
+        .get_export(&wasm_state.store, ALLOC_FUNCTION_NAME)
         .unwrap()
         .into_func()
         .unwrap();
@@ -120,14 +120,14 @@ fn test_alloc_and_write() {
 
     let mut memory = wasm_state
         .instance
-        .get_export(&wasm_state.store, "memory")
+        .get_export(&wasm_state.store, MEMORY_NAME)
         .unwrap()
         .into_memory()
         .unwrap();
 
     let alloc = wasm_state
         .instance
-        .get_export(&wasm_state.store, "alloc")
+        .get_export(&wasm_state.store, ALLOC_FUNCTION_NAME)
         .unwrap()
         .into_func()
         .unwrap();
@@ -168,14 +168,14 @@ fn test_write_read_buffer_in_wasm_memory() {
 
     let mut memory = wasm_state
         .instance
-        .get_export(&wasm_state.store, "memory")
+        .get_export(&wasm_state.store, MEMORY_NAME)
         .unwrap()
         .into_memory()
         .unwrap();
 
     let alloc = wasm_state
         .instance
-        .get_export(&wasm_state.store, "alloc")
+        .get_export(&wasm_state.store, ALLOC_FUNCTION_NAME)
         .unwrap()
         .into_func()
         .unwrap();
@@ -212,7 +212,7 @@ fn test_read_empty_buffer_in_wasm_memory() {
 
     let mut memory = wasm_state
         .instance
-        .get_export(&wasm_state.store, "memory")
+        .get_export(&wasm_state.store, MEMORY_NAME)
         .unwrap()
         .into_memory()
         .unwrap();
@@ -239,7 +239,7 @@ fn test_read_request() {
 
     let mut memory = wasm_state
         .instance
-        .get_export(&wasm_state.store, "memory")
+        .get_export(&wasm_state.store, MEMORY_NAME)
         .unwrap()
         .into_memory()
         .unwrap();

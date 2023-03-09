@@ -101,7 +101,7 @@ impl Instance {
         // attestation.
         cmd.args(["-cpu", "IvyBridge-IBRS,enforce"]);
         // TODO(#3786): Make memory configurable.
-        cmd.args(["-m", "4G"]);
+        cmd.args(["-m", "1G"]);
         // Disable a bunch of hardware we don't need.
         cmd.arg("-nodefaults");
         cmd.arg("-nographic");
