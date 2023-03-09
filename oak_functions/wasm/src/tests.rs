@@ -388,11 +388,10 @@ fn create_test_wasm_state() -> WasmState<TestingLogger> {
 
     let wasm_handler = WasmHandler::create(&wasm_module_bytes[..], vec![testing_factory], logger)
         .expect("Could not create WasmHandler.");
-    let wasm_state = wasm_handler
-        .init_wasm_state(b"2".to_vec())
-        .expect("Could not create WasmState.");
 
-    wasm_state
+    wasm_handler
+        .init_wasm_state(b"2".to_vec())
+        .expect("Could not create WasmState.")
 }
 
 // Read the u32 value at the `address` from the Wasm memory.

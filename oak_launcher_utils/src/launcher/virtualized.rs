@@ -100,7 +100,8 @@ impl Instance {
         // Needed to expose advanced CPU features. Specifically RDRAND which is required for remote
         // attestation.
         cmd.args(["-cpu", "IvyBridge-IBRS,enforce"]);
-
+        // TODO(#3786): Make memory configurable.
+        cmd.args(["-m", "4G"]);
         // Disable a bunch of hardware we don't need.
         cmd.arg("-nodefaults");
         cmd.arg("-nographic");
