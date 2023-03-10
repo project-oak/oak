@@ -28,8 +28,29 @@ service OakFunctions {
   rpc Invoke(InvokeRequest) returns (InvokeResponse);
 
   // Builds or replaces the existing lookup data with the new value.
+  // The value has to be below 2 GiB.
+  //
   // method_id: 2
   rpc UpdateLookupData(UpdateLookupDataRequest) returns (UpdateLookupDataResponse);
+
+  // Extends the next lookup data by the given chunk of lookup data. Only
+  // after the sender calls finishes building the next lookup data, the receiver replaces the
+  // current lookup data with the next lookup data, and only then chunk is will be served in
+  // lookups.
+  //
+  // method_id: 3
+  rpc ExtendNextLookupData(ExtendNextLookupDataRequest) returns (ExtendNextLookupDataResponse);
+
+  // Finishes building the next lookup data with the given chunk of lookup data. The receiver
+  // replaces the current lookup data and the next lookup data will be served in lookups.
+  //
+  // method_id: 4
+  rpc FinishNextLookupData(FinishNextLookupDataRequest) returns (FinishNextLookupDataResponse);
+
+  // Aborts building the next lookup data.option
+  //
+  // method_id: 5
+  rpc AbortNextLookupData(Empty) returns (AbortNextLookupDataResponse);
 }
 
 message InitializeRequest {
@@ -63,35 +84,36 @@ message LookupDataChunk {
   repeated LookupDataEntry items = 1;
 }
 
-// Indicates to the LookupDataManager which action should be taken.
-enum UpdateAction {
-  // The sender extends the lookup data builder with this chunk and will send a
-  // further chunk.
-  EXTEND = 0;
-  // The final chunk the sender sends to build the lookup data.
-  FINISH = 1;
-  // The sender needs to abort the building the lookup data.
-  ABORT = 2;
-}
-
-// A message to the LookupDataManager to process the lookup data chunk based on the current
-// action.
-//
-// If the definition of UpdateLookupDataRequest changes, the estimation of the size when
+// If the definition of ExtendNextLookupData changes, the estimation of the size when
 // serialized in the Oak Functions Launcher needs to change, too.
-message UpdateLookupDataRequest {
-  UpdateAction action = 1;
-  LookupDataChunk chunk = 2;
+message ExtendNextLookupDataRequest {
+  LookupDataChunk chunk = 1;
 }
 
-enum UpdateStatus {
-  EXTENDED = 0;
-  FINISHED = 1;
-  ABORTED = 2;
+message ExtendNextLookupDataResponse {
+  bool ok = 1;
+}
+
+// If the definition of FinishNextLookupData changes, the estimation of the size when
+// serialized in the Oak Functions Launcher needs to change, too.
+message FinishNextLookupDataRequest {
+  LookupDataChunk chunk = 1;
+}
+
+message FinishNextLookupDataResponse {
+  bool ok = 1;
+}
+
+message AbortNextLookupDataResponse {
+  bool ok = 1;
+}
+
+message UpdateLookupDataRequest {
+  LookupDataChunk chunk = 1;
 }
 
 message UpdateLookupDataResponse {
-  UpdateStatus update_status = 1;
+  bool ok = 1;
 }
 
 message Empty {}

@@ -110,7 +110,6 @@ async fn it_should_support_lookup_data() {
 
     client.initialize(&request).into_ok().unwrap();
 
-    let action = schema::UpdateAction::Finish.into();
     let chunk = schema::LookupDataChunk {
         items: vec![schema::LookupDataEntry {
             key: LOOKUP_TEST_KEY.to_vec(),
@@ -118,10 +117,7 @@ async fn it_should_support_lookup_data() {
         }],
     };
 
-    let request = schema::UpdateLookupDataRequest {
-        action,
-        chunk: Some(chunk),
-    };
+    let request = schema::UpdateLookupDataRequest { chunk: Some(chunk) };
 
     client.update_lookup_data(&request).into_ok().unwrap();
 

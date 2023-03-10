@@ -16,7 +16,10 @@
 
 use crate::{
     channel::ConnectorHandle,
-    schema::{self, LookupDataChunk, OakFunctionsAsyncClient, UpdateAction, UpdateStatus},
+    schema::{
+        self, Empty, ExtendNextLookupDataRequest, FinishNextLookupDataRequest, LookupDataChunk,
+        OakFunctionsAsyncClient,
+    },
 };
 use anyhow::{anyhow, Context};
 use hashbrown::HashMap;
@@ -43,48 +46,55 @@ impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
     }
 
     async fn extend(&mut self, chunk: Option<LookupDataChunk>) -> anyhow::Result<()> {
-        let update_response = self.send_request(UpdateAction::Extend, chunk).await?;
-        if UpdateStatus::Extended != update_response.update_status() {
+        let response = self
+            .inner
+            .extend_next_lookup_data(&ExtendNextLookupDataRequest { chunk })
+            .await
+            .flatten()
+            .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)));
+
+        // TODO(mschett): Make more idiomatic.
+        if response.is_ok() && !response.unwrap().ok {
             // Try to abort, because receiver unexpectedly did not extend.
             let _ = self.abort().await;
-            return Err(anyhow!("Did not receive expected update status: Extended"));
+            return Err(anyhow!("extend was not ok, aborted"));
         }
         Ok(())
     }
 
     async fn finish(&mut self, chunk: Option<LookupDataChunk>) -> anyhow::Result<()> {
-        let update_response = self.send_request(UpdateAction::Finish, chunk).await?;
-        if UpdateStatus::Finished != update_response.update_status() {
-            return Err(anyhow!("Did not receive expected update status: Finished"));
+        let response = self
+            .inner
+            .finish_next_lookup_data(&FinishNextLookupDataRequest { chunk })
+            .await
+            .flatten()
+            .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)));
+
+        // TODO(mschett): Make more idiomatic.
+        if response.is_ok() && !response.unwrap().ok {
+            // Try to abort, because receiver unexpectedly did not extend.
+            let _ = self.abort().await;
+            return Err(anyhow!("finish was not ok, aborted"));
         };
+
         Ok(())
     }
 
     // Tries to abort the current update once.
     async fn abort(&mut self) -> anyhow::Result<()> {
-        let update_response = self.send_request(UpdateAction::Abort, None).await?;
-        if UpdateStatus::Aborted != update_response.update_status() {
+        let response = self
+            .inner
+            .abort_next_lookup_data(&Empty {})
+            .await
+            .flatten()
+            .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)));
+
+        // TODO(mschett): Make more idiomatic
+
+        if response.is_ok() && !response.unwrap().ok {
             return Err(anyhow!("Did not receive expected update status: Aborted"));
         };
         Ok(())
-    }
-
-    // Helper to send a request with the given action and chunk.
-    async fn send_request(
-        &mut self,
-        action: schema::UpdateAction,
-        chunk: Option<LookupDataChunk>,
-    ) -> anyhow::Result<schema::UpdateLookupDataResponse> {
-        let request = schema::UpdateLookupDataRequest {
-            action: action.into(),
-            chunk,
-        };
-
-        self.inner
-            .update_lookup_data(&request)
-            .await
-            .flatten()
-            .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)))
     }
 }
 
