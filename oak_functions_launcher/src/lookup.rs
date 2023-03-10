@@ -53,13 +53,14 @@ impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
             .flatten()
             .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)));
 
-        // TODO(mschett): Make more idiomatic.
         if response.is_ok() && !response.unwrap().ok {
             // Try to abort, because receiver unexpectedly did not extend.
+            // Even if the receiver has already aborted, the sender aborting again does not hurt.
             let _ = self.abort().await;
-            return Err(anyhow!("extend was not ok, aborted"));
+            Err(anyhow!("extend was not ok, aborted"))
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 
     async fn finish(&mut self, chunk: Option<LookupDataChunk>) -> anyhow::Result<()> {
@@ -70,14 +71,14 @@ impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
             .flatten()
             .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)));
 
-        // TODO(mschett): Make more idiomatic.
         if response.is_ok() && !response.unwrap().ok {
             // Try to abort, because receiver unexpectedly did not extend.
+            // Even if the receiver has already aborted, the sender aborting again does not hurt.
             let _ = self.abort().await;
-            return Err(anyhow!("finish was not ok, aborted"));
-        };
-
-        Ok(())
+            Err(anyhow!("finish was not ok, aborted"))
+        } else {
+            Ok(())
+        }
     }
 
     // Tries to abort the current update once.
@@ -89,12 +90,11 @@ impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
             .flatten()
             .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)));
 
-        // TODO(mschett): Make more idiomatic
-
         if response.is_ok() && !response.unwrap().ok {
-            return Err(anyhow!("Did not receive expected update status: Aborted"));
-        };
-        Ok(())
+            Err(anyhow!("Did not receive expected update status: Aborted"))
+        } else {
+            Ok(())
+        }
     }
 }
 
