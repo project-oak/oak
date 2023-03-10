@@ -183,7 +183,8 @@ impl schema::OakFunctions for OakFunctionsService {
     }
 }
 
-// Helper function
+// Helper function to convert LookupDataChunk to Data.
+// TODO(#3791): Check if we really have to copy here.
 fn to_data(chunk: &Option<LookupDataChunk>) -> oak_functions_lookup::Data {
     chunk
         .as_ref()

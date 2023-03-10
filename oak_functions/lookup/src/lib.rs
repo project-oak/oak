@@ -297,7 +297,7 @@ mod tests {
     fn test_update_lookup_data_one_chunk() {
         let manager = LookupDataManager::new_empty(TestLogger {});
         let status = manager.finish_next_lookup_data(create_test_data(0, 2));
-        assert_eq!(status.ok, true);
+        assert!(status.ok);
         let lookup_data = manager.create_lookup_data();
         assert_eq!(lookup_data.len(), 2);
     }
@@ -308,11 +308,11 @@ mod tests {
         let lookup_data_0 = manager.create_lookup_data();
 
         let status = manager.extend_next_lookup_data(create_test_data(0, 2));
-        assert_eq!(status.ok, true);
+        assert!(status.ok);
         let lookup_data_1 = manager.create_lookup_data();
 
         let status = manager.finish_next_lookup_data(create_test_data(2, 4));
-        assert_eq!(status.ok, true);
+        assert!(status.ok);
         let lookup_data_2 = manager.create_lookup_data();
 
         assert_eq!(lookup_data_0.len(), 0);
@@ -325,17 +325,17 @@ mod tests {
         let manager = LookupDataManager::new_empty(TestLogger {});
 
         let status = manager.extend_next_lookup_data(create_test_data(0, 2));
-        assert_eq!(status.ok, true);
+        assert!(status.ok);
 
         let status = manager.extend_next_lookup_data(create_test_data(2, 3));
-        assert_eq!(status.ok, true);
+        assert!(status.ok);
 
         // We have one key overlapping here.
         let status = manager.extend_next_lookup_data(create_test_data(2, 6));
-        assert_eq!(status.ok, true);
+        assert!(status.ok);
 
         let status = manager.finish_next_lookup_data(create_test_data(6, 7));
-        assert_eq!(status.ok, true);
+        assert!(status.ok);
 
         let lookup_data = manager.create_lookup_data();
 
@@ -348,14 +348,14 @@ mod tests {
         let lookup_data_0 = manager.create_lookup_data();
 
         let status = manager.extend_next_lookup_data(create_test_data(0, 2));
-        assert_eq!(status.ok, true);
+        assert!(status.ok);
 
         let status = manager.abort_next_lookup_data();
-        assert_eq!(status.ok, true);
+        assert!(status.ok);
         let lookup_data_1 = manager.create_lookup_data();
 
         let status = manager.finish_next_lookup_data(create_test_data(0, 1));
-        assert_eq!(status.ok, true);
+        assert!(status.ok);
         let lookup_data_2 = manager.create_lookup_data();
 
         assert_eq!(lookup_data_0.len(), 0);
