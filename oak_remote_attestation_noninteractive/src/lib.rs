@@ -46,7 +46,7 @@ pub struct ReferenceValue {
 
 /// A trait implementing the functionality of an attester that generates an attestation evidence.
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-attester>
-pub trait Attester: Send + Sync {
+pub trait Attester: Clone + Send + Sync {
     /// Generate an attestation evidence containing a remote attestation report and ensuring that
     /// `attested_data` is cryptographically bound to the result (e.g. via a signature).
     ///

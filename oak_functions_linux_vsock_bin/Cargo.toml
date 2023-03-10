@@ -13,7 +13,7 @@ oak_remote_attestation_interactive = { workspace = true, default-features = fals
   "rust-crypto"
 ] }
 oak_channel = { workspace = true }
-oak_functions_service = { workspace = true, default-features = false }
+oak_functions_service = { workspace = true }
 prost = { workspace = true }
 ringbuf = "*"
 vsock = "*"

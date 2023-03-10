@@ -23,43 +23,55 @@ pub mod transport;
 pub mod verifier;
 
 use crate::{
-    transport::AsyncTransport,
-    verifier::{EvidenceProvider, ReferenceValue, Verifier},
+    // verifier::{EvidenceProvider, ReferenceValue, Verifier},
+    proto::AttestationEvidence,
 };
 use anyhow::Context;
+use oak_crypto::SenderCryptoProvider;
+use oak_remote_attestation_noninteractive::{
+    AttestationVerifier, ReferenceValue,
+    // AttestationEvidence,
+};
+use micro_rpc::AsyncTransport;
 use std::{vec, vec::Vec};
+
+pub trait EvidenceProvider {
+    fn get_evidence(&mut self) -> anyhow::Result<AttestationEvidence>;
+}
 
 /// Client for connecting to Oak.
 /// Represents a Relying Party from the RATS Architecture:
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-relying-party>
-pub struct OakClient {
-    transport: Box<dyn AsyncTransport>,
-    encryptor: Encryptor,
+pub struct OakClient<V: AttestationVerifier> {
+    transport: Box<dyn AsyncTransport<Error = anyhow::Error>>,
+    verifier: V,
+    crypto_provider: SenderCryptoProvider,
 }
 
-impl OakClient {
+impl<V: AttestationVerifier> OakClient<V> {
     pub fn create(
-        transport: Box<dyn AsyncTransport>,
+        transport: Box<dyn AsyncTransport<Error = anyhow::Error>>,
         mut evidence_provider: Box<dyn EvidenceProvider>,
         reference_value: ReferenceValue,
-        verifier: Box<dyn Verifier>,
-        crypto_provider: CryptoProvider,
+        // verifier: Box<dyn AttestationVerifier>,
+        verifier: V,
     ) -> anyhow::Result<Self> {
         let evidence = evidence_provider
             .get_evidence()
             .context("couldn't get evidence")?;
 
         verifier
-            .verify(&evidence, &reference_value)
+            .verify_attestation(&evidence, &reference_value)
             .context("couldn't verify evidence")?;
 
-        let encryptor = crypto_provider
-            .get_encryptor(&evidence.enclave_public_key)
-            .context("couldn't create encryptor")?;
+        // let encryptor = crypto_provider
+        //     .get_encryptor(&evidence.enclave_public_key)
+        //     .context("couldn't create encryptor")?;
+        let crypto_provider = SenderCryptoProvider::new(&evidence.encryption_public_key);
 
         Ok(Self {
             transport,
-            encryptor,
+            crypto_provider,
         })
     }
 
@@ -79,29 +91,29 @@ impl OakClient {
     }
 }
 
-// TODO(#3654): Implement client crypto provider.
-pub struct CryptoProvider {}
+// // TODO(#3654): Implement client crypto provider.
+// pub struct CryptoProvider {}
 
-impl CryptoProvider {
-    fn get_encryptor(&self, _enclave_public_key: &[u8]) -> anyhow::Result<Encryptor> {
-        Ok(Encryptor {})
-    }
-}
+// impl CryptoProvider {
+//     fn get_encryptor(&self, _enclave_public_key: &[u8]) -> anyhow::Result<Encryptor> {
+//         Ok(Encryptor {})
+//     }
+// }
 
-struct Encryptor {}
+// struct Encryptor {}
 
-impl Encryptor {
-    /// Returns the encrypted `message` and a corresponding `Decryptor` that should be used
-    /// to decrypt the response message.
-    fn encrypt(&mut self, _message: &[u8]) -> anyhow::Result<(Vec<u8>, Decryptor)> {
-        Ok((vec![], Decryptor {}))
-    }
-}
+// impl Encryptor {
+//     /// Returns the encrypted `message` and a corresponding `Decryptor` that should be used
+//     /// to decrypt the response message.
+//     fn encrypt(&mut self, _message: &[u8]) -> anyhow::Result<(Vec<u8>, Decryptor)> {
+//         Ok((vec![], Decryptor {}))
+//     }
+// }
 
-struct Decryptor {}
+// struct Decryptor {}
 
-impl Decryptor {
-    fn decrypt(&self, _encrypted_message: &[u8]) -> anyhow::Result<Vec<u8>> {
-        Ok(vec![])
-    }
-}
+// impl Decryptor {
+//     fn decrypt(&self, _encrypted_message: &[u8]) -> anyhow::Result<Vec<u8>> {
+//         Ok(vec![])
+//     }
+// }

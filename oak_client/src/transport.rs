@@ -14,32 +14,50 @@
 // limitations under the License.
 //
 
-use crate::proto::streaming_session_client::StreamingSessionClient;
+use crate::proto::{
+    request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
+    RequestWrapper, ResponseWrapper,
+    InvokeRequest, InvokeResponse,
+};
+use micro_rpc::AsyncTransport;
 use tonic::transport::Channel;
 
-// ........
-// Use async_trait crate!!!!!!!!!
-
-pub trait AsyncTransport {
-    // TODO(#3643): Make transport async and update the Rust version to support this.
-    fn invoke(&mut self, request_bytes: &[u8]) -> anyhow::Result<Vec<u8>>;
-}
-
 pub struct GrpcStreamingTransport {
-    _rpc_client: StreamingSessionClient<Channel>,
+    rpc_client: StreamingSessionClient<Channel>,
 }
 
 impl GrpcStreamingTransport {
     pub fn new(rpc_client: StreamingSessionClient<Channel>) -> Self {
         Self {
-            _rpc_client: rpc_client,
+            rpc_client: rpc_client,
         }
     }
 }
 
+#[async_trait::async_trait]
 impl AsyncTransport for GrpcStreamingTransport {
-    // TODO(#3643): Implement gRPC Rust client.
-    fn invoke(&mut self, _request_bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
-        Ok(vec![])
+    type Error = anyhow::Error;
+    async fn invoke(&mut self, request_bytes: &[u8]) -> Result<Vec<u8>, Self::Error> {
+        let mut response_stream = self
+            .rpc_client
+            .stream(futures_util::stream::iter(vec![RequestWrapper {
+                request: Some(request_wrapper::Request::InvokeRequest(request_bytes.to_vec())),
+            }]))
+            .await
+            .context("couldn't send message")?
+            .into_inner();
+
+        // Read the next (and only) message from the response stream.
+        let response_wrapper = response_stream
+            .message()
+            .await
+            .context("gRPC server error when invoking method")?
+            .context("received empty response stream")?;
+
+        let Some(response_wrapper::Response::InvokeResponse(invoke_response)) = response_wrapper.response  else {
+            return Err(anyhow::anyhow!("response_wrapper does not have a valid invoke_response message"))
+        };
+
+        Ok(invoke_response.encrypted_body)
     }
 }
