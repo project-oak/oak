@@ -71,9 +71,9 @@ impl<H: Handler> AttestationSessionHandler<H> {
 }
 
 impl<H: Handler> AttestationHandler for AttestationSessionHandler<H> {
-    fn message(&mut self, body: &[u8]) -> anyhow::Result<Vec<u8>> {
+    fn message(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
         // Deserialize request.
-        let request = HpkeRequest::decode(body)
+        let request = HpkeRequest::decode(request_body)
             .map_err(|error| anyhow!("couldn't deserialize request: {:?}", error))?;
 
         // Create decryptor.
@@ -102,13 +102,12 @@ impl<H: Handler> AttestationHandler for AttestationSessionHandler<H> {
             .handle(&request_plaintext)
             .context("couldn't handle request")?;
 
-        // Encrypt response.
-        // The resulting decryptor for consequent requests is discarded.
+        // Encrypt and serialize response.
+        // The resulting decryptor for consequent requests is discarded because we don't expect
+        // another message from the stream.
         let (response_ciphertext, _) = response_encryptor
             .encrypt(&response_plaintext, EMPTY_ASSOCIATED_DATA)
             .context("couldn't encrypt response")?;
-
-        // Serialize response.
         let response = HpkeResponse {
             encrypted_message: Some(AeadEncryptedMessage {
                 ciphertext: response_ciphertext,

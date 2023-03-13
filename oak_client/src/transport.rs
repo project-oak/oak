@@ -16,10 +16,13 @@
 
 use crate::proto::{
     request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
-    RequestWrapper, ResponseWrapper,
-    InvokeRequest, InvokeResponse,
+    GetEvidenceRequest,
+    RequestWrapper,
+    InvokeRequest,
 };
+use anyhow::Context;
 use micro_rpc::AsyncTransport;
+use oak_remote_attestation_noninteractive::AttestationEvidence;
 use tonic::transport::Channel;
 
 pub struct GrpcStreamingTransport {
@@ -41,10 +44,12 @@ impl AsyncTransport for GrpcStreamingTransport {
         let mut response_stream = self
             .rpc_client
             .stream(futures_util::stream::iter(vec![RequestWrapper {
-                request: Some(request_wrapper::Request::InvokeRequest(request_bytes.to_vec())),
+                request: Some(request_wrapper::Request::InvokeRequest(InvokeRequest { 
+                    encrypted_body: request_bytes.to_vec(),
+                })),
             }]))
             .await
-            .context("couldn't send message")?
+            .context("couldn't send invoke request")?
             .into_inner();
 
         // Read the next (and only) message from the response stream.
@@ -59,5 +64,44 @@ impl AsyncTransport for GrpcStreamingTransport {
         };
 
         Ok(invoke_response.encrypted_body)
+    }
+}
+
+#[async_trait::async_trait]
+pub trait AsyncEvidenceProvider {
+    async fn get_evidence(&mut self) -> anyhow::Result<AttestationEvidence>;
+}
+
+#[async_trait::async_trait]
+impl AsyncEvidenceProvider for GrpcStreamingTransport {
+    async fn get_evidence(&mut self) -> anyhow::Result<AttestationEvidence> {
+        let mut response_stream = self
+            .rpc_client
+            .stream(futures_util::stream::iter(vec![RequestWrapper {
+                request: Some(request_wrapper::Request::GetEvidenceRequest(GetEvidenceRequest{})),
+            }]))
+            .await
+            .context("couldn't get attestation evidence")?
+            .into_inner();
+
+        // Read the next (and only) message from the response stream.
+        let response_wrapper = response_stream
+            .message()
+            .await
+            .context("gRPC server error when requesting attestation evidence")?
+            .context("received empty response stream")?;
+
+        let Some(response_wrapper::Response::GetEvidenceResponse(get_evidence_response)) = response_wrapper.response else {
+            return Err(anyhow::anyhow!("response_wrapper doesn't contain a valid get_evidence_response message"))
+        };
+
+        let attestation_evidence = get_evidence_response
+            .attestation_evidence
+            .context("get_evidence_response message doesn't contain an attestation evidence")?;
+
+        Ok(AttestationEvidence {
+            attestation_report: attestation_evidence.attestation_report,
+            encryption_public_key: attestation_evidence.encryption_public_key,
+        })
     }
 }

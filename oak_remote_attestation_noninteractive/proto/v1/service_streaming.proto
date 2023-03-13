@@ -25,14 +25,14 @@ option java_package = "oak.session.noninteractive.v1";
 
 message RequestWrapper {
   oneof request {
-    GetPublicKeyRequest get_public_key_request = 1;
+    GetEvidenceRequest get_evidence_request = 1;
     InvokeRequest invoke_request = 2;
   }
 }
 
 message ResponseWrapper {
   oneof response {
-    GetPublicKeyResponse get_public_key_response = 1;
+    GetEvidenceResponse get_evidence_response = 1;
     InvokeResponse invoke_response = 2;
   }
 }

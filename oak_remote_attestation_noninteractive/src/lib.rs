@@ -35,25 +35,25 @@ use alloc::vec::Vec;
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence>
 pub struct AttestationEvidence {
     pub attestation_report: Vec<u8>,
+    pub encryption_public_key: Vec<u8>,
 }
 
 /// Reference values used by the verifier to appraise the attestation evidence.
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
 pub struct ReferenceValue {
     pub binary_hash: Vec<u8>,
-    pub attested_data: Vec<u8>,
 }
 
 /// A trait implementing the functionality of an attester that generates an attestation evidence.
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-attester>
 pub trait Attester: Clone + Send + Sync {
     /// Generate an attestation evidence containing a remote attestation report and ensuring that
-    /// `attested_data` is cryptographically bound to the result (e.g. via a signature).
+    /// `encryption_public_key` is cryptographically bound to the result (e.g. via a signature).
     ///
     /// That is usually verified by [`AttestationVerifier::verify_attestation`].
     fn generate_attestation_evidence(
         &self,
-        attested_data: &[u8],
+        encryption_public_key: &[u8],
     ) -> anyhow::Result<AttestationEvidence>;
 }
 
@@ -67,10 +67,11 @@ pub struct EmptyAttester;
 impl Attester for EmptyAttester {
     fn generate_attestation_evidence(
         &self,
-        _attested_data: &[u8],
+        encryption_public_key: &[u8],
     ) -> anyhow::Result<AttestationEvidence> {
         Ok(AttestationEvidence {
             attestation_report: Vec::new(),
+            encryption_public_key: encryption_public_key.to_vec(),
         })
     }
 }

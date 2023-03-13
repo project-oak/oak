@@ -24,70 +24,107 @@ pub mod verifier;
 
 use crate::{
     // verifier::{EvidenceProvider, ReferenceValue, Verifier},
-    proto::AttestationEvidence,
+    transport::AsyncEvidenceProvider,
 };
-use anyhow::Context;
-use oak_crypto::SenderCryptoProvider;
+use anyhow::{anyhow, Context};
+use oak_crypto::{
+    schema::{AeadEncryptedMessage, HpkeRequest, HpkeResponse},
+    SenderCryptoProvider,
+};
 use oak_remote_attestation_noninteractive::{
     AttestationVerifier, ReferenceValue,
-    // AttestationEvidence,
 };
 use micro_rpc::AsyncTransport;
-use std::{vec, vec::Vec};
+use prost::Message;
+use std::{vec, vec::Vec, marker::PhantomData};
 
-pub trait EvidenceProvider {
-    fn get_evidence(&mut self) -> anyhow::Result<AttestationEvidence>;
-}
+const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 /// Client for connecting to Oak.
 /// Represents a Relying Party from the RATS Architecture:
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-relying-party>
-pub struct OakClient<V: AttestationVerifier> {
-    transport: Box<dyn AsyncTransport<Error = anyhow::Error>>,
-    verifier: V,
+pub struct OakClient<T, V>
+where
+    T: AsyncTransport<Error = anyhow::Error> + AsyncEvidenceProvider,
+    V: AttestationVerifier,
+{
+    transport: T,
+    verifier: core::marker::PhantomData<V>,
     crypto_provider: SenderCryptoProvider,
 }
 
-impl<V: AttestationVerifier> OakClient<V> {
-    pub fn create(
-        transport: Box<dyn AsyncTransport<Error = anyhow::Error>>,
-        mut evidence_provider: Box<dyn EvidenceProvider>,
-        reference_value: ReferenceValue,
-        // verifier: Box<dyn AttestationVerifier>,
+impl<T, V> OakClient<T, V>
+where
+    T: AsyncTransport<Error = anyhow::Error> + AsyncEvidenceProvider,
+    V: AttestationVerifier,
+{
+    pub async fn create(
+        mut transport: T,
         verifier: V,
+        reference_value: ReferenceValue,
     ) -> anyhow::Result<Self> {
-        let evidence = evidence_provider
+        let evidence = transport
             .get_evidence()
-            .context("couldn't get evidence")?;
-
+            .await
+            .context("couldn't get attestation evidence")?;
         verifier
             .verify_attestation(&evidence, &reference_value)
-            .context("couldn't verify evidence")?;
-
-        // let encryptor = crypto_provider
-        //     .get_encryptor(&evidence.enclave_public_key)
-        //     .context("couldn't create encryptor")?;
+            .context("couldn't verify attestation evidence")?;
         let crypto_provider = SenderCryptoProvider::new(&evidence.encryption_public_key);
 
         Ok(Self {
             transport,
+            verifier: PhantomData,
             crypto_provider,
         })
     }
 
     pub async fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let (encrypted_request, decryptor) = self
-            .encryptor
-            .encrypt(request_body)
+        // Create encryptor.
+        let (serialized_encapsulated_public_key, request_encryptor) = self
+            .crypto_provider
+            .create_encryptor()
+            .context("couldn't create encryptor")?;
+
+        // Encrypt and serialize request.
+        let (request_ciphertext, response_decryptor) = request_encryptor
+            .encrypt(request_body, EMPTY_ASSOCIATED_DATA)
             .context("couldn't encrypt request")?;
-        let encrypted_response = self
+        let request = HpkeRequest {
+            encrypted_message: Some(AeadEncryptedMessage {
+                ciphertext: request_ciphertext,
+                associated_data: EMPTY_ASSOCIATED_DATA.to_vec(),
+            }),
+            serialized_encapsulated_public_key: Some(serialized_encapsulated_public_key),
+        };
+        let mut serialized_request = vec![];
+        request
+            .encode(&mut serialized_request)
+            .map_err(|error| anyhow!("couldn't serialize request: {:?}", error))?;
+
+        // Send request.
+        let serialized_response = self
             .transport
-            .invoke(&encrypted_request)
-            .context("couldn't send request")?;
-        let decrypted_response = decryptor
-            .decrypt(&encrypted_response)
+            .invoke(&serialized_request)
+            .await
+            .map_err(|error| anyhow!("couldn't send request: {:?}", error))?;
+
+        // Deserialize and decrypt response.
+        let response = HpkeResponse::decode(serialized_response.as_ref())
+            .map_err(|error| anyhow!("couldn't deserialize response: {:?}", error))?;
+        let encrypted_message = response
+            .encrypted_message
+            .context("response doesn't contain encrypted message")?;
+        // The resulting encryptor for consequent requests is discarded because we don't send
+        // another message to the stream.
+        let (response_plaintext, _) = response_decryptor
+            .decrypt(
+                &encrypted_message.ciphertext,
+                &encrypted_message.associated_data,
+            )
             .context("couldn't decrypt response")?;
-        Ok(decrypted_response)
+
+        Ok(response_plaintext)
     }
 }
 

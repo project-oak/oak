@@ -35,7 +35,7 @@ message AttestationEvidence {
   bytes signing_public_key = 2;
 
   // The serialized attestation report binding the public key.
-  bytes attestation = 3;
+  bytes attestation_report = 3;
 
   // The serialized TEE certificate(s). The details of the format and how the certificate(s) are
   // encoded into this byte array are implementation-specific. In case of AMD-SEV-SNP, as described
@@ -71,9 +71,9 @@ message ApplicationData {
   bytes config = 2;
 }
 
-message GetPublicKeyRequest {}
+message GetEvidenceRequest {}
 
-message GetPublicKeyResponse {
+message GetEvidenceResponse {
   // The enclave's signing and encryption public keys and attestation evidence about them.
   AttestationEvidence attestation_evidence = 1;
 }
