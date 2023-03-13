@@ -101,3 +101,4 @@ tensorflow_model_server
 # Toolchain build
 toolchain/build
 toolchain/toolchain
+toolchain/toolchain.tar.bz2
