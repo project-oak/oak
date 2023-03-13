@@ -28,6 +28,11 @@ use schema::OakFunctionsAsyncClient;
 use std::{fs, path::PathBuf, time::Duration};
 use ubyte::ByteUnit;
 
+pub mod proto {
+    #![allow(clippy::return_self_not_must_use)]
+    tonic::include_proto!("oak.session.noninteractive.v1");
+}
+
 pub mod schema {
     #![allow(dead_code)]
     use prost::Message;

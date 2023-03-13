@@ -29,7 +29,7 @@ use oak_crypto::{
     schema::{AeadEncryptedMessage, HpkeRequest, HpkeResponse},
     RecipientCryptoProvider,
 };
-use oak_remote_attestation_noninteractive::Attester;
+use oak_remote_attestation_noninteractive::AttestationReportGenerator;
 use prost::Message;
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
@@ -39,9 +39,9 @@ const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 pub struct PublicKeyInfo {
     /// The serialized public key.
     pub public_key: Vec<u8>,
-    /// The serialized attestation evidence that binds the public key to the specific version of
+    /// The serialized attestation report that binds the public key to the specific version of
     /// the code running in a TEE.
-    pub attestation_evidence: Vec<u8>,
+    pub attestation_report: Vec<u8>,
 }
 
 pub trait Handler {
@@ -55,15 +55,15 @@ pub trait AttestationHandler {
 
 pub struct AttestationSessionHandler<H: Handler> {
     // TODO(#3442): Use attestation generator to attest to the public key.
-    attester: Arc<dyn Attester>,
+    attestation_report_generator: Arc<dyn AttestationReportGenerator>,
     crypto_provider: RecipientCryptoProvider,
     request_handler: H,
 }
 
 impl<H: Handler> AttestationSessionHandler<H> {
-    pub fn create(attester: Arc<dyn Attester>, request_handler: H) -> anyhow::Result<Self> {
+    pub fn create(attestation_report_generator: Arc<dyn AttestationReportGenerator>, request_handler: H) -> anyhow::Result<Self> {
         Ok(Self {
-            attester: attester,
+            attestation_report_generator,
             crypto_provider: RecipientCryptoProvider::new(),
             request_handler,
         })
@@ -124,14 +124,13 @@ impl<H: Handler> AttestationHandler for AttestationSessionHandler<H> {
 
     fn get_public_key_info(&self) -> anyhow::Result<PublicKeyInfo> {
         let public_key = self.crypto_provider.get_serialized_public_key();
-        let attestation_evidence = self
+        let attestation_report = self
             .attester
-            .generate_attestation_evidence(&public_key)
-            .context("couldn't generate attestation evidence")?;
+            .generate_attestation_report(&public_key)
+            .context("couldn't generate attestation report")?;
         Ok(PublicKeyInfo {
             public_key,
-            // TODO(#3640): Return attestation evidence.
-            attestation_evidence: attestation_evidence.attestation_report,
+            attestation_report: attestation_report.value,
         })
     }
 }

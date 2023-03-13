@@ -33,7 +33,7 @@ use alloc::{boxed::Box, format, sync::Arc};
 use oak_functions_abi::Request;
 use oak_functions_lookup::LookupDataManager;
 use oak_functions_wasm::WasmHandler;
-use oak_remote_attestation_noninteractive::Attester;
+use oak_remote_attestation_noninteractive::AttestationReportGenerator;
 
 pub use crate::logger::StandaloneLogger;
 
@@ -43,15 +43,15 @@ enum InitializationState {
 }
 
 pub struct OakFunctionsService {
-    attester: Arc<dyn Attester>,
+    attestation_report_generator: Arc<dyn AttestationReportGenerator>,
     initialization_state: InitializationState,
     lookup_data_manager: Arc<LookupDataManager<logger::StandaloneLogger>>,
 }
 
 impl OakFunctionsService {
-    pub fn new(attester: Arc<dyn Attester>) -> Self {
+    pub fn new(attestation_report_generator: Arc<dyn AttestationReportGenerator>) -> Self {
         Self {
-            attester,
+            attestation_report_generator,
             initialization_state: InitializationState::Uninitialized,
             lookup_data_manager: Arc::new(
                 LookupDataManager::new_empty(StandaloneLogger::default()),
@@ -113,7 +113,7 @@ impl schema::OakFunctions for OakFunctionsService {
                 Ok(schema::InitializeResponse {
                     public_key_info: Some(schema::PublicKeyInfo {
                         public_key: public_key_info.public_key,
-                        attestation: public_key_info.attestation_evidence,
+                        attestation_report: public_key_info.attestation_report,
                     }),
                 })
             }

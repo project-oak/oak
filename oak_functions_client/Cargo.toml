@@ -15,6 +15,7 @@ env_logger = "*"
 hex = "*"
 http = "*"
 log = "*"
+oak_client = { workspace = true }
 oak_functions_abi = { workspace = true }
 oak_remote_attestation_noninteractive = { workspace = true }
 p256 = { version = "*", features = ["ecdsa-core", "ecdsa", "pem"] }

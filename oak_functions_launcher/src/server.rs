@@ -14,12 +14,15 @@
 // limitations under the License.
 //
 
-use crate::{channel::ConnectorHandle, schema};
-use futures::{Future, Stream, StreamExt};
-use oak_remote_attestation_noninteractive::proto::{
-    request_wrapper, response_wrapper, streaming_session_server::StreamingSessionServer,
-    InvokeResponse, RequestWrapper, ResponseWrapper,
+use crate::{
+    channel::ConnectorHandle, schema,
+    proto::{
+        request_wrapper, response_wrapper,
+        streaming_session_server::{StreamingSession, StreamingSessionServer},
+        InvokeResponse, RequestWrapper, ResponseWrapper,
+    },
 };
+use futures::{Future, Stream, StreamExt};
 use std::{net::SocketAddr, pin::Pin};
 use tonic::{transport::Server, Request, Response, Status, Streaming};
 
@@ -31,9 +34,7 @@ pub struct SessionProxy {
 }
 
 #[tonic::async_trait]
-impl oak_remote_attestation_noninteractive::proto::streaming_session_server::StreamingSession
-    for SessionProxy
-{
+impl StreamingSession for SessionProxy {
     type StreamStream = Pin<Box<dyn Stream<Item = Result<ResponseWrapper, Status>> + Send>>;
 
     async fn stream(

@@ -36,6 +36,7 @@ ubyte = "*"
 
 [build-dependencies]
 micro_rpc_build = { workspace = true }
+oak_grpc_utils = { workspace = true }
 
 [dev-dependencies]
 oak_functions_client = { workspace = true }

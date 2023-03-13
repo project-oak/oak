@@ -20,7 +20,7 @@
 use anyhow::Context;
 use clap::Parser;
 use oak_functions_abi::Request;
-use oak_functions_client::Client;
+use oak_functions_client::OakFunctionsClient;
 use regex::Regex;
 
 const TWO_MIB: usize = 2 * 1024 * 1024;
@@ -61,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::parse();
 
-    let mut client = Client::new(&opt.uri)
+    let mut client = OakFunctionsClient::new(&opt.uri)
         .await
         .context("couldn't create Oak Functions client")?;
 

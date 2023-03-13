@@ -30,24 +30,24 @@ use alloc::{
 };
 use anyhow::Context;
 use oak_remote_attestation_noninteractive::{
-    AttestationEvidence, AttestationVerifier, Attester, ReferenceValue,
+    AttestationReportVerifier, AttestationReportGenerator, AttestationReport,
 };
 use serde::{Deserialize, Serialize};
 
 // TODO(#2842): Add remote attestation support.
 #[derive(Clone)]
-pub struct PlaceholderAmdAttester;
+pub struct PlaceholderAmdAttestationReportGenerator;
 
-impl Attester for PlaceholderAmdAttester {
-    fn generate_attestation_evidence(
+impl AttestationReportGenerator for PlaceholderAmdAttestationReportGenerator {
+    fn generate_attestation_report(
         &self,
         attested_data: &[u8],
-    ) -> anyhow::Result<AttestationEvidence> {
+    ) -> anyhow::Result<AttestationReport> {
         let attestation_report = PlaceholderAmdReport::new(attested_data)
             .to_string()
             .map(|s| s.as_bytes().to_vec())
             .context("couldn't generate attestation report")?;
-        Ok(AttestationEvidence { attestation_report })
+        Ok(AttestationReport { value: attestation_report })
     }
 }
 
@@ -55,24 +55,24 @@ impl Attester for PlaceholderAmdAttester {
 #[derive(Clone)]
 pub struct PlaceholderAmdAttestationVerifier;
 
-impl AttestationVerifier for PlaceholderAmdAttestationVerifier {
-    fn verify_attestation(
+impl AttestationReportVerifier for PlaceholderAmdAttestationVerifier {
+    fn verify_attestation_evidence(
         &self,
-        evidence: &AttestationEvidence,
-        reference_value: &ReferenceValue,
+        attestation_report: &AttestationReport,
+        expected_attested_data: &[u8],
     ) -> anyhow::Result<()> {
         let attestation_report = PlaceholderAmdReport::from_string(
-            core::str::from_utf8(&evidence.attestation_report)
+            core::str::from_utf8(&attestation_report.value)
                 .map_err(|_err| anyhow::anyhow!("couldn't parse remote attestation report"))?,
         )?;
         let actual_attested_data = attestation_report.data;
-        if actual_attested_data == reference_value.attested_data {
+        if actual_attested_data == expected_attested_data {
             Ok(())
         } else {
             Err(anyhow::anyhow!(
                 "invalid attested data; got: {:?}, expected: {:?}",
                 actual_attested_data,
-                reference_value.attested_data
+                expected_attested_data
             ))
         }
     }

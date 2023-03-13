@@ -43,7 +43,7 @@ message InitializeResponse {
 
 message PublicKeyInfo {
   bytes public_key = 1;
-  bytes attestation = 2;
+  bytes attestation_report = 2;
 }
 
 message InvokeRequest {

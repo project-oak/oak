@@ -16,31 +16,46 @@
 pub mod rekor;
 
 use anyhow::Context;
+use oak_client::{
+    OakClient,
+    transport::GrpcStreamingTransport,
+    proto::streaming_session_client::StreamingSessionClient,
+};
+use oak_remote_attestation_noninteractive::{
+    EmptyAttestationVerifier, ReferenceValue,
+};
+use tonic::transport::Channel;
 
 #[cfg(test)]
 mod tests;
 
-pub struct Client {
-    inner: oak_remote_attestation_noninteractive::client::OakClient,
+pub struct OakFunctionsClient {
+    oak_client: oak_client::OakClient<GrpcStreamingTransport, EmptyAttestationVerifier>,
 }
 
-impl Client {
+impl OakFunctionsClient {
     pub async fn new(uri: &str) -> anyhow::Result<Self> {
-        let inner = oak_remote_attestation_noninteractive::client::OakClient::create(uri)
-            .await
-            .context("couldn't create Oak Functions client")?;
-        Ok(Client { inner })
+        let channel = Channel::from_shared(uri.to_string())
+            .context("couldn't create gRPC channel")?
+            .connect()
+            .await?;
+        let transport = GrpcStreamingTransport::new(StreamingSessionClient::new(channel));
+        let oak_client = OakClient::create(
+            transport,
+            EmptyAttestationVerifier,
+            ReferenceValue { binary_hash: vec![] }
+        )
+        .await
+        .context("couldn't create Oak client")?;
+        Ok(Self { oak_client })
     }
 
     pub async fn invoke(&mut self, request: &[u8]) -> anyhow::Result<Vec<u8>> {
-        // TODO(#3442): Fetch enclave public key.
-        // TODO(#3442): Encrypt request.
         let response = self
-            .inner
-            .message(request)
+            .oak_client
+            .invoke(request)
             .await
-            .context("error invoking Oak Functions instance")?;
-        // TODO(#3442): Decrypt response.
+            .context("couldn't invoke Oak Functions instance")?;
         Ok(response)
     }
 }
