@@ -68,7 +68,6 @@ jobs:
           api_key = '${{ secrets.ENT_API_KEY }}'
           EOF
       - name: Upload to Ent
-        if: github.event_name == 'push'
         run: |
           ent put ./toolchain/toolchain.tar.bz2
 
