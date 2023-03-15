@@ -35,7 +35,7 @@ use oak_functions_abi::{
 };
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::{Level, OakLogger};
-use wasmi::{AsContext, AsContextMut, Func, Memory, MemoryType};
+use wasmi::{AsContext, AsContextMut, Func, Memory, MemoryType, Store};
 
 pub const MAIN_FUNCTION_NAME: &str = "main";
 pub const ALLOC_FUNCTION_NAME: &str = "alloc";
@@ -120,6 +120,7 @@ where
 /// single user request. The methods here correspond to the ABI OAK_FUNCTIONS functions that allow
 /// the Wasm module to exchange the request and the response with the Oak functions server. These
 /// functions translate values between Wasm linear memory and Rust types.
+// TODO(#3796): Remove WasmState.
 pub struct WasmState<L: OakLogger> {
     instance: wasmi::Instance,
     store: wasmi::Store<UserState<L>>,
@@ -136,112 +137,12 @@ where
         extensions: HashMap<ExtensionHandle, Box<dyn OakApiNativeExtension>>,
     ) -> anyhow::Result<Self> {
         let user_state = UserState::init(request_bytes, extensions, logger);
-
         // For isolated requests we need to create a new store for every request.
         let mut store = wasmi::Store::new(module.engine(), user_state);
-
-        let mut linker: wasmi::Linker<UserState<L>> = wasmi::Linker::new(module.engine());
-
-        // Add memory to linker.
-        // TODO(#3783): Find a sensible value for initial pages.
-        let initial_pages = 100;
-        let memory_type =
-            MemoryType::new(initial_pages, None).expect("failed to define Wasm memory type");
-        let memory =
-            wasmi::Memory::new(&mut store, memory_type).expect("failed to initialize Wasm memory");
-
-        // TODO(#3784): Use func_wrap. Maybe we can define the linker in WasmHandler to reuse it for
-        // different WasmStates, but so far we can't because the externals Func and Memory
-        // defined in the linker depend on store, which needs to be new for every WasmState.
-        // Related, wasmtime `func_wrap` does not depend on store (https://docs.rs/wasmtime/latest/wasmtime/struct.Linker.html#method.func_wrap).
-
-        linker
-            .define(OAK_FUNCTIONS, MEMORY_NAME, wasmi::Extern::Memory(memory))
-            .expect("failed to define Wasm memory in linker");
-
-        let read_request = wasmi::Func::wrap(
-            &mut store,
-            // The types in the signatures correspond to the parameters from
-            // oak_functions_abi/src/lib.rs.
-            |mut caller: wasmi::Caller<'_, UserState<L>>,
-             buf_ptr_ptr: AbiPointer,
-             buf_len_ptr: AbiPointer| {
-                let result = read_request(&mut caller, buf_ptr_ptr, buf_len_ptr);
-                from_oak_status(result)
-            },
-        );
-
-        linker
-            .define(OAK_FUNCTIONS, "read_request", read_request)
-            .expect("failed to define read_request in linker");
-
-        let write_response = wasmi::Func::wrap(
-            &mut store,
-            // The types in the signatures correspond to the parameters from
-            // oak_functions_abi/src/lib.rs.
-            |mut caller: wasmi::Caller<'_, UserState<L>>,
-             buf_ptr: AbiPointer,
-             buf_len: AbiPointerOffset| {
-                let result = write_response(&mut caller, buf_ptr, buf_len);
-                from_oak_status(result)
-            },
-        );
-
-        linker
-            .define(OAK_FUNCTIONS, "write_response", write_response)
-            .expect("failed to define write_response in linker");
-
-        let invoke_extension = wasmi::Func::wrap(
-            &mut store,
-            // The types in the signatures correspond to the parameters from
-            // oak_functions_abi/src/lib.rs.
-            |mut caller: wasmi::Caller<'_, UserState<L>>,
-             handle: AbiExtensionHandle,
-             request_ptr: AbiPointer,
-             request_len: AbiPointerOffset,
-             response_ptr_ptr: AbiPointer,
-             response_len_ptr: AbiPointer| {
-                let result = invoke_extension(
-                    &mut caller,
-                    handle,
-                    request_ptr,
-                    request_len,
-                    response_ptr_ptr,
-                    response_len_ptr,
-                );
-
-                from_oak_status(result)
-            },
-        );
-
-        linker
-            .define(OAK_FUNCTIONS, "invoke", invoke_extension)
-            .expect("failed to define invoke in linker");
-
-        // Use linker and store to get instance of module.
-        let instance = linker
-            .instantiate(&mut store, &module)
-            .map_err(|err| anyhow::anyhow!("failed to instantiate Wasm module: {:?}", err))?
-            // Use `main` as entry point.
-            .ensure_no_start(&mut store)
-            .map_err(|err| {
-                anyhow::anyhow!("failed to ensure no start in Wasm module: {:?}", err)
-            })?;
-
-        // Check that the instance exports "alloc".
-        let _ = &instance
-            .get_typed_func::<i32, AbiPointer>(&store, ALLOC_FUNCTION_NAME)
-            .expect("couldn't validate `alloc` export");
-
-        // Make sure that non-empty `memory` is attached to the instance. Fail early if
-        // `memory` is not available.
-        instance
-            .get_memory(&store, MEMORY_NAME)
-            .ok_or(anyhow::anyhow!("couldn't find Wasm `memory` export"))?;
-
+        let linker = OakLinker::new(module.engine(), &mut store);
+        let (instance, store) = linker.instantiate(store, module)?;
         // TODO(#3785): Add logging and list exports.
         let wasm_state = Self { instance, store };
-
         Ok(wasm_state)
     }
 
@@ -268,6 +169,126 @@ where
     fn get_response_bytes(&self) -> Vec<u8> {
         let user_state = self.store.data();
         user_state.response_bytes.clone()
+    }
+}
+
+// Exports the functions from oak_functions_abi/src/lib.rs.
+struct OakLinker<L: OakLogger> {
+    linker: wasmi::Linker<UserState<L>>,
+}
+
+impl<L> OakLinker<L>
+where
+    L: OakLogger,
+{
+    fn new(engine: &wasmi::Engine, store: &mut Store<UserState<L>>) -> Self {
+        let mut linker: wasmi::Linker<UserState<L>> = wasmi::Linker::new(engine);
+
+        // Add memory to linker.
+        // TODO(#3783): Find a sensible value for initial pages.
+        let initial_pages = 100;
+        let memory_type =
+            MemoryType::new(initial_pages, None).expect("failed to define Wasm memory type");
+        let memory =
+            wasmi::Memory::new(store, memory_type).expect("failed to initialize Wasm memory");
+        linker
+            .define(OAK_FUNCTIONS, MEMORY_NAME, wasmi::Extern::Memory(memory))
+            .expect("failed to define Wasm memory in linker");
+
+        linker
+            .func_wrap(
+                OAK_FUNCTIONS,
+                "read_request",
+                // The types in the signatures correspond to the parameters from
+                // oak_functions_abi/src/lib.rs.
+                // TODO(#3797): Simplify wrapped functions.
+                |mut caller: wasmi::Caller<'_, UserState<L>>,
+                 buf_ptr_ptr: AbiPointer,
+                 buf_len_ptr: AbiPointer| {
+                    let result = read_request(&mut caller, buf_ptr_ptr, buf_len_ptr);
+                    from_oak_status(result)
+                },
+            )
+            .expect("failed to define read_request in linker");
+
+        linker
+            .func_wrap(
+                OAK_FUNCTIONS,
+                "write_response",
+                // The types in the signatures correspond to the parameters from
+                // oak_functions_abi/src/lib.rs.
+                |mut caller: wasmi::Caller<'_, UserState<L>>,
+                 buf_ptr: AbiPointer,
+                 buf_len: AbiPointerOffset| {
+                    let result = write_response(&mut caller, buf_ptr, buf_len);
+                    from_oak_status(result)
+                },
+            )
+            .expect("failed to define write_response in linker");
+
+        linker
+            .func_wrap(
+                OAK_FUNCTIONS,
+                "invoke",
+                // The types in the signatures correspond to the parameters from
+                // oak_functions_abi/src/lib.rs.
+                |mut caller: wasmi::Caller<'_, UserState<L>>,
+                 handle: AbiExtensionHandle,
+                 request_ptr: AbiPointer,
+                 request_len: AbiPointerOffset,
+                 response_ptr_ptr: AbiPointer,
+                 response_len_ptr: AbiPointer| {
+                    let result = invoke_extension(
+                        &mut caller,
+                        handle,
+                        request_ptr,
+                        request_len,
+                        response_ptr_ptr,
+                        response_len_ptr,
+                    );
+                    from_oak_status(result)
+                },
+            )
+            .expect("failed to define invoke in linker");
+        OakLinker { linker }
+    }
+
+    /// Instantiates the Oak Linker and checks whether the instance exports `main`, `alloc` and a
+    /// memory is attached.
+    ///
+    /// Use the same store used when creating the linker.
+    fn instantiate(
+        self,
+        mut store: Store<UserState<L>>,
+        module: Arc<wasmi::Module>,
+    ) -> anyhow::Result<(wasmi::Instance, Store<UserState<L>>)> {
+        let instance = self
+            .linker
+            .instantiate(&mut store, &module)
+            .map_err(|err| anyhow::anyhow!("failed to instantiate Wasm module: {:?}", err))?
+            // Use `main` as entry point.
+            .ensure_no_start(&mut store)
+            .map_err(|err| {
+                anyhow::anyhow!("failed to ensure no start in Wasm module: {:?}", err)
+            })?;
+
+        // Check that the instance exports "main".
+        let _ = &instance
+            .get_typed_func::<(), ()>(&store, MAIN_FUNCTION_NAME)
+            .expect("couldn't validate `main` export");
+
+        // Check that the instance exports "alloc".
+        let _ = &instance
+            .get_typed_func::<i32, AbiPointer>(&store, ALLOC_FUNCTION_NAME)
+            .expect("couldn't validate `alloc` export");
+
+        // Make sure that non-empty `memory` is attached to the instance. Fail early if
+        // `memory` is not available.
+        instance
+            .get_memory(&store, MEMORY_NAME)
+            .ok_or(anyhow::anyhow!("couldn't find Wasm `memory` export"))?;
+
+        Ok((instance, store))
     }
 }
 
