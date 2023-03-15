@@ -53,6 +53,11 @@ pub struct Params {
     /// Port to use for debugging with gdb
     #[arg(long = "gdb")]
     pub gdb: Option<u16>,
+
+    /// How much memory to give to the enclave binary, e.g., 256M (M stands for Megabyte, G for
+    /// Gigabyte).
+    #[arg(long)]
+    pub memory_size: Option<String>,
 }
 
 /// Checks if file with a given path exists.
@@ -100,8 +105,10 @@ impl Instance {
         // Needed to expose advanced CPU features. Specifically RDRAND which is required for remote
         // attestation.
         cmd.args(["-cpu", "IvyBridge-IBRS,enforce"]);
-        // TODO(#3786): Make memory configurable.
-        cmd.args(["-m", "1G"]);
+        // Set memory size if given.
+        if let Some(memory_size) = params.memory_size {
+            cmd.args(["-m", &memory_size]);
+        };
         // Disable a bunch of hardware we don't need.
         cmd.arg("-nodefaults");
         cmd.arg("-nographic");
