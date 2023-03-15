@@ -552,6 +552,27 @@
 <a href="#552" id="552">552</a>
 <a href="#553" id="553">553</a>
 <a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -589,7 +610,7 @@
 };
 <span class="kw">use </span>oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 <span class="kw">use </span>oak_logger::{Level, OakLogger};
-<span class="kw">use </span>wasmi::{AsContext, AsContextMut, Func, Memory, MemoryType};
+<span class="kw">use </span>wasmi::{AsContext, AsContextMut, Func, Memory, MemoryType, Store};
 
 <span class="kw">pub const </span>MAIN_FUNCTION_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;main&quot;</span>;
 <span class="kw">pub const </span>ALLOC_FUNCTION_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;alloc&quot;</span>;
@@ -674,6 +695,7 @@
 /// single user request. The methods here correspond to the ABI OAK_FUNCTIONS functions that allow
 /// the Wasm module to exchange the request and the response with the Oak functions server. These
 /// functions translate values between Wasm linear memory and Rust types.
+</span><span class="comment">// TODO(#3796): Remove WasmState.
 </span><span class="kw">pub struct </span>WasmState&lt;L: OakLogger&gt; {
     instance: wasmi::Instance,
     store: wasmi::Store&lt;UserState&lt;L&gt;&gt;,
@@ -690,112 +712,12 @@
         extensions: HashMap&lt;ExtensionHandle, Box&lt;<span class="kw">dyn </span>OakApiNativeExtension&gt;&gt;,
     ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>user_state = UserState::init(request_bytes, extensions, logger);
-
         <span class="comment">// For isolated requests we need to create a new store for every request.
         </span><span class="kw">let </span><span class="kw-2">mut </span>store = wasmi::Store::new(module.engine(), user_state);
-
-        <span class="kw">let </span><span class="kw-2">mut </span>linker: wasmi::Linker&lt;UserState&lt;L&gt;&gt; = wasmi::Linker::new(module.engine());
-
-        <span class="comment">// Add memory to linker.
-        // TODO(#3783): Find a sensible value for initial pages.
-        </span><span class="kw">let </span>initial_pages = <span class="number">100</span>;
-        <span class="kw">let </span>memory_type =
-            MemoryType::new(initial_pages, <span class="prelude-val">None</span>).expect(<span class="string">&quot;failed to define Wasm memory type&quot;</span>);
-        <span class="kw">let </span>memory =
-            wasmi::Memory::new(<span class="kw-2">&amp;mut </span>store, memory_type).expect(<span class="string">&quot;failed to initialize Wasm memory&quot;</span>);
-
-        <span class="comment">// TODO(#3784): Use func_wrap. Maybe we can define the linker in WasmHandler to reuse it for
-        // different WasmStates, but so far we can&#39;t because the externals Func and Memory
-        // defined in the linker depend on store, which needs to be new for every WasmState.
-        // Related, wasmtime `func_wrap` does not depend on store (https://docs.rs/wasmtime/latest/wasmtime/struct.Linker.html#method.func_wrap).
-
-        </span>linker
-            .define(OAK_FUNCTIONS, MEMORY_NAME, wasmi::Extern::Memory(memory))
-            .expect(<span class="string">&quot;failed to define Wasm memory in linker&quot;</span>);
-
-        <span class="kw">let </span>read_request = wasmi::Func::wrap(
-            <span class="kw-2">&amp;mut </span>store,
-            <span class="comment">// The types in the signatures correspond to the parameters from
-            // oak_functions_abi/src/lib.rs.
-            </span>|<span class="kw-2">mut </span>caller: wasmi::Caller&lt;<span class="lifetime">&#39;_</span>, UserState&lt;L&gt;&gt;,
-             buf_ptr_ptr: AbiPointer,
-             buf_len_ptr: AbiPointer| {
-                <span class="kw">let </span>result = read_request(<span class="kw-2">&amp;mut </span>caller, buf_ptr_ptr, buf_len_ptr);
-                from_oak_status(result)
-            },
-        );
-
-        linker
-            .define(OAK_FUNCTIONS, <span class="string">&quot;read_request&quot;</span>, read_request)
-            .expect(<span class="string">&quot;failed to define read_request in linker&quot;</span>);
-
-        <span class="kw">let </span>write_response = wasmi::Func::wrap(
-            <span class="kw-2">&amp;mut </span>store,
-            <span class="comment">// The types in the signatures correspond to the parameters from
-            // oak_functions_abi/src/lib.rs.
-            </span>|<span class="kw-2">mut </span>caller: wasmi::Caller&lt;<span class="lifetime">&#39;_</span>, UserState&lt;L&gt;&gt;,
-             buf_ptr: AbiPointer,
-             buf_len: AbiPointerOffset| {
-                <span class="kw">let </span>result = write_response(<span class="kw-2">&amp;mut </span>caller, buf_ptr, buf_len);
-                from_oak_status(result)
-            },
-        );
-
-        linker
-            .define(OAK_FUNCTIONS, <span class="string">&quot;write_response&quot;</span>, write_response)
-            .expect(<span class="string">&quot;failed to define write_response in linker&quot;</span>);
-
-        <span class="kw">let </span>invoke_extension = wasmi::Func::wrap(
-            <span class="kw-2">&amp;mut </span>store,
-            <span class="comment">// The types in the signatures correspond to the parameters from
-            // oak_functions_abi/src/lib.rs.
-            </span>|<span class="kw-2">mut </span>caller: wasmi::Caller&lt;<span class="lifetime">&#39;_</span>, UserState&lt;L&gt;&gt;,
-             handle: AbiExtensionHandle,
-             request_ptr: AbiPointer,
-             request_len: AbiPointerOffset,
-             response_ptr_ptr: AbiPointer,
-             response_len_ptr: AbiPointer| {
-                <span class="kw">let </span>result = invoke_extension(
-                    <span class="kw-2">&amp;mut </span>caller,
-                    handle,
-                    request_ptr,
-                    request_len,
-                    response_ptr_ptr,
-                    response_len_ptr,
-                );
-
-                from_oak_status(result)
-            },
-        );
-
-        linker
-            .define(OAK_FUNCTIONS, <span class="string">&quot;invoke&quot;</span>, invoke_extension)
-            .expect(<span class="string">&quot;failed to define invoke in linker&quot;</span>);
-
-        <span class="comment">// Use linker and store to get instance of module.
-        </span><span class="kw">let </span>instance = linker
-            .instantiate(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;</span>module)
-            .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;failed to instantiate Wasm module: {:?}&quot;</span>, err))<span class="question-mark">?
-            </span><span class="comment">// Use `main` as entry point.
-            </span>.ensure_no_start(<span class="kw-2">&amp;mut </span>store)
-            .map_err(|err| {
-                <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;failed to ensure no start in Wasm module: {:?}&quot;</span>, err)
-            })<span class="question-mark">?</span>;
-
-        <span class="comment">// Check that the instance exports &quot;alloc&quot;.
-        </span><span class="kw">let _ </span>= <span class="kw-2">&amp;</span>instance
-            .get_typed_func::&lt;i32, AbiPointer&gt;(<span class="kw-2">&amp;</span>store, ALLOC_FUNCTION_NAME)
-            .expect(<span class="string">&quot;couldn&#39;t validate `alloc` export&quot;</span>);
-
-        <span class="comment">// Make sure that non-empty `memory` is attached to the instance. Fail early if
-        // `memory` is not available.
-        </span>instance
-            .get_memory(<span class="kw-2">&amp;</span>store, MEMORY_NAME)
-            .ok_or(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t find Wasm `memory` export&quot;</span>))<span class="question-mark">?</span>;
-
+        <span class="kw">let </span>linker = OakLinker::new(module.engine(), <span class="kw-2">&amp;mut </span>store);
+        <span class="kw">let </span>(instance, store) = linker.instantiate(store, module)<span class="question-mark">?</span>;
         <span class="comment">// TODO(#3785): Add logging and list exports.
         </span><span class="kw">let </span>wasm_state = <span class="self">Self </span>{ instance, store };
-
         <span class="prelude-val">Ok</span>(wasm_state)
     }
 
@@ -822,6 +744,126 @@
     <span class="kw">fn </span>get_response_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
         <span class="kw">let </span>user_state = <span class="self">self</span>.store.data();
         user_state.response_bytes.clone()
+    }
+}
+
+<span class="comment">// Exports the functions from oak_functions_abi/src/lib.rs.
+</span><span class="kw">struct </span>OakLinker&lt;L: OakLogger&gt; {
+    linker: wasmi::Linker&lt;UserState&lt;L&gt;&gt;,
+}
+
+<span class="kw">impl</span>&lt;L&gt; OakLinker&lt;L&gt;
+<span class="kw">where
+    </span>L: OakLogger,
+{
+    <span class="kw">fn </span>new(engine: <span class="kw-2">&amp;</span>wasmi::Engine, store: <span class="kw-2">&amp;mut </span>Store&lt;UserState&lt;L&gt;&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>linker: wasmi::Linker&lt;UserState&lt;L&gt;&gt; = wasmi::Linker::new(engine);
+
+        <span class="comment">// Add memory to linker.
+        // TODO(#3783): Find a sensible value for initial pages.
+        </span><span class="kw">let </span>initial_pages = <span class="number">100</span>;
+        <span class="kw">let </span>memory_type =
+            MemoryType::new(initial_pages, <span class="prelude-val">None</span>).expect(<span class="string">&quot;failed to define Wasm memory type&quot;</span>);
+        <span class="kw">let </span>memory =
+            wasmi::Memory::new(store, memory_type).expect(<span class="string">&quot;failed to initialize Wasm memory&quot;</span>);
+        linker
+            .define(OAK_FUNCTIONS, MEMORY_NAME, wasmi::Extern::Memory(memory))
+            .expect(<span class="string">&quot;failed to define Wasm memory in linker&quot;</span>);
+
+        linker
+            .func_wrap(
+                OAK_FUNCTIONS,
+                <span class="string">&quot;read_request&quot;</span>,
+                <span class="comment">// The types in the signatures correspond to the parameters from
+                // oak_functions_abi/src/lib.rs.
+                // TODO(#3797): Simplify wrapped functions.
+                </span>|<span class="kw-2">mut </span>caller: wasmi::Caller&lt;<span class="lifetime">&#39;_</span>, UserState&lt;L&gt;&gt;,
+                 buf_ptr_ptr: AbiPointer,
+                 buf_len_ptr: AbiPointer| {
+                    <span class="kw">let </span>result = read_request(<span class="kw-2">&amp;mut </span>caller, buf_ptr_ptr, buf_len_ptr);
+                    from_oak_status(result)
+                },
+            )
+            .expect(<span class="string">&quot;failed to define read_request in linker&quot;</span>);
+
+        linker
+            .func_wrap(
+                OAK_FUNCTIONS,
+                <span class="string">&quot;write_response&quot;</span>,
+                <span class="comment">// The types in the signatures correspond to the parameters from
+                // oak_functions_abi/src/lib.rs.
+                </span>|<span class="kw-2">mut </span>caller: wasmi::Caller&lt;<span class="lifetime">&#39;_</span>, UserState&lt;L&gt;&gt;,
+                 buf_ptr: AbiPointer,
+                 buf_len: AbiPointerOffset| {
+                    <span class="kw">let </span>result = write_response(<span class="kw-2">&amp;mut </span>caller, buf_ptr, buf_len);
+                    from_oak_status(result)
+                },
+            )
+            .expect(<span class="string">&quot;failed to define write_response in linker&quot;</span>);
+
+        linker
+            .func_wrap(
+                OAK_FUNCTIONS,
+                <span class="string">&quot;invoke&quot;</span>,
+                <span class="comment">// The types in the signatures correspond to the parameters from
+                // oak_functions_abi/src/lib.rs.
+                </span>|<span class="kw-2">mut </span>caller: wasmi::Caller&lt;<span class="lifetime">&#39;_</span>, UserState&lt;L&gt;&gt;,
+                 handle: AbiExtensionHandle,
+                 request_ptr: AbiPointer,
+                 request_len: AbiPointerOffset,
+                 response_ptr_ptr: AbiPointer,
+                 response_len_ptr: AbiPointer| {
+                    <span class="kw">let </span>result = invoke_extension(
+                        <span class="kw-2">&amp;mut </span>caller,
+                        handle,
+                        request_ptr,
+                        request_len,
+                        response_ptr_ptr,
+                        response_len_ptr,
+                    );
+                    from_oak_status(result)
+                },
+            )
+            .expect(<span class="string">&quot;failed to define invoke in linker&quot;</span>);
+        OakLinker { linker }
+    }
+
+    <span class="doccomment">/// Instantiates the Oak Linker and checks whether the instance exports `main`, `alloc` and a
+    /// memory is attached.
+    ///
+    /// Use the same store used when creating the linker.
+    </span><span class="kw">fn </span>instantiate(
+        <span class="self">self</span>,
+        <span class="kw-2">mut </span>store: Store&lt;UserState&lt;L&gt;&gt;,
+        module: Arc&lt;wasmi::Module&gt;,
+    ) -&gt; anyhow::Result&lt;(wasmi::Instance, Store&lt;UserState&lt;L&gt;&gt;)&gt; {
+        <span class="kw">let </span>instance = <span class="self">self
+            </span>.linker
+            .instantiate(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;</span>module)
+            .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;failed to instantiate Wasm module: {:?}&quot;</span>, err))<span class="question-mark">?
+            </span><span class="comment">// Use `main` as entry point.
+            </span>.ensure_no_start(<span class="kw-2">&amp;mut </span>store)
+            .map_err(|err| {
+                <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;failed to ensure no start in Wasm module: {:?}&quot;</span>, err)
+            })<span class="question-mark">?</span>;
+
+        <span class="comment">// Check that the instance exports &quot;main&quot;.
+        </span><span class="kw">let _ </span>= <span class="kw-2">&amp;</span>instance
+            .get_typed_func::&lt;(), ()&gt;(<span class="kw-2">&amp;</span>store, MAIN_FUNCTION_NAME)
+            .expect(<span class="string">&quot;couldn&#39;t validate `main` export&quot;</span>);
+
+        <span class="comment">// Check that the instance exports &quot;alloc&quot;.
+        </span><span class="kw">let _ </span>= <span class="kw-2">&amp;</span>instance
+            .get_typed_func::&lt;i32, AbiPointer&gt;(<span class="kw-2">&amp;</span>store, ALLOC_FUNCTION_NAME)
+            .expect(<span class="string">&quot;couldn&#39;t validate `alloc` export&quot;</span>);
+
+        <span class="comment">// Make sure that non-empty `memory` is attached to the instance. Fail early if
+        // `memory` is not available.
+        </span>instance
+            .get_memory(<span class="kw-2">&amp;</span>store, MEMORY_NAME)
+            .ok_or(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t find Wasm `memory` export&quot;</span>))<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>((instance, store))
     }
 }
 
