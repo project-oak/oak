@@ -159,40 +159,38 @@ where
             .define(OAK_FUNCTIONS, MEMORY_NAME, wasmi::Extern::Memory(memory))
             .expect("failed to define Wasm memory in linker");
 
-        let read_request = wasmi::Func::wrap(
-            &mut store,
-            // The types in the signatures correspond to the parameters from
-            // oak_functions_abi/src/lib.rs.
-            |mut caller: wasmi::Caller<'_, UserState<L>>,
-             buf_ptr_ptr: AbiPointer,
-             buf_len_ptr: AbiPointer| {
-                let result = read_request(&mut caller, buf_ptr_ptr, buf_len_ptr);
-                from_oak_status(result)
-            },
-        );
-
         linker
-            .define(OAK_FUNCTIONS, "read_request", read_request)
+            .func_wrap(
+                OAK_FUNCTIONS,
+                "read_request",
+                // The types in the signatures correspond to the parameters from
+                // oak_functions_abi/src/lib.rs.
+                |mut caller: wasmi::Caller<'_, UserState<L>>,
+                 buf_ptr_ptr: AbiPointer,
+                 buf_len_ptr: AbiPointer| {
+                    let result = read_request(&mut caller, buf_ptr_ptr, buf_len_ptr);
+                    from_oak_status(result)
+                },
+            )
             .expect("failed to define read_request in linker");
 
-        let write_response = wasmi::Func::wrap(
-            &mut store,
-            // The types in the signatures correspond to the parameters from
-            // oak_functions_abi/src/lib.rs.
-            |mut caller: wasmi::Caller<'_, UserState<L>>,
-             buf_ptr: AbiPointer,
-             buf_len: AbiPointerOffset| {
-                let result = write_response(&mut caller, buf_ptr, buf_len);
-                from_oak_status(result)
-            },
-        );
 
         linker
-            .define(OAK_FUNCTIONS, "write_response", write_response)
+            .func_wrap(
+                OAK_FUNCTIONS, "write_response",       
+                // The types in the signatures correspond to the parameters from
+                // oak_functions_abi/src/lib.rs.
+                |mut caller: wasmi::Caller<'_, UserState<L>>,
+                 buf_ptr: AbiPointer,
+                 buf_len: AbiPointerOffset| {
+                    let result = write_response(&mut caller, buf_ptr, buf_len);
+                    from_oak_status(result)
+                },
+            )
             .expect("failed to define write_response in linker");
 
-        let invoke_extension = wasmi::Func::wrap(
-            &mut store,
+        linker
+            .func_wrap(OAK_FUNCTIONS, "invoke", 
             // The types in the signatures correspond to the parameters from
             // oak_functions_abi/src/lib.rs.
             |mut caller: wasmi::Caller<'_, UserState<L>>,
@@ -211,11 +209,8 @@ where
                 );
 
                 from_oak_status(result)
-            },
-        );
-
-        linker
-            .define(OAK_FUNCTIONS, "invoke", invoke_extension)
+            }
+        )
             .expect("failed to define invoke in linker");
 
         // Use linker and store to get instance of module.
