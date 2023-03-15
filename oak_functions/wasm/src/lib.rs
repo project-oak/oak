@@ -247,7 +247,6 @@ where
                  response_ptr_ptr: AbiPointer,
                  response_len_ptr: AbiPointer| {
                     let mut caller = OakCaller { caller };
-
                     let status = caller
                         .read_buffer(request_ptr, request_len)
                         .map_err(|err| {
@@ -260,9 +259,7 @@ where
                         .and_then(|request| {
                             let user_state = caller.data_mut();
                             let extension = user_state.get_extension(handle)?;
-
                             let response = extension.invoke(request.clone())?;
-
                             caller.alloc_and_write(response_ptr_ptr, response_len_ptr, response)
                         });
 
@@ -371,6 +368,7 @@ where
         self.caller.data()
     }
 
+    // Helper function to get exported MEMORY_NAME from caller.
     fn get_memory(&mut self) -> Result<Memory, OakStatus> {
         let ext = self.caller.get_export(MEMORY_NAME).ok_or_else(|| {
             self.caller
