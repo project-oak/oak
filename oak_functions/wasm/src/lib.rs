@@ -137,36 +137,12 @@ where
         extensions: HashMap<ExtensionHandle, Box<dyn OakApiNativeExtension>>,
     ) -> anyhow::Result<Self> {
         let user_state = UserState::init(request_bytes, extensions, logger);
-
         // For isolated requests we need to create a new store for every request.
         let mut store = wasmi::Store::new(module.engine(), user_state);
-
-        let linker = OakLinker::new(module.engine(), &mut store).linker;
-
-        // Use linker and store to get instance of module.
-        let instance = linker
-            .instantiate(&mut store, &module)
-            .map_err(|err| anyhow::anyhow!("failed to instantiate Wasm module: {:?}", err))?
-            // Use `main` as entry point.
-            .ensure_no_start(&mut store)
-            .map_err(|err| {
-                anyhow::anyhow!("failed to ensure no start in Wasm module: {:?}", err)
-            })?;
-
-        // Check that the instance exports "alloc".
-        let _ = &instance
-            .get_typed_func::<i32, AbiPointer>(&store, ALLOC_FUNCTION_NAME)
-            .expect("couldn't validate `alloc` export");
-
-        // Make sure that non-empty `memory` is attached to the instance. Fail early if
-        // `memory` is not available.
-        instance
-            .get_memory(&store, MEMORY_NAME)
-            .ok_or(anyhow::anyhow!("couldn't find Wasm `memory` export"))?;
-
+        let linker = OakLinker::new(module.engine(), &mut store);
+        let (instance, store) = linker.instantiate(store, module)?;
         // TODO(#3785): Add logging and list exports.
         let wasm_state = Self { instance, store };
-
         Ok(wasm_state)
     }
 
@@ -197,7 +173,6 @@ where
 }
 
 // Exports the functions from oak_functions_abi/src/lib.rs.
-// To instantiate this linker, use the same store used creating the new linter.
 struct OakLinker<L: OakLogger> {
     linker: wasmi::Linker<UserState<L>>,
 }
@@ -277,10 +252,47 @@ where
             .expect("failed to define invoke in linker");
         OakLinker { linker }
     }
+
+    /// Instantiates the Oak Linker and checks whether the instance exports `main`, `alloc` and a
+    /// memory is attached.
+    ///
+    /// Use the same store used when creating the linker.
+    fn instantiate(
+        self,
+        mut store: Store<UserState<L>>,
+        module: Arc<wasmi::Module>,
+    ) -> anyhow::Result<(wasmi::Instance, Store<UserState<L>>)> {
+        let instance = self
+            .linker
+            .instantiate(&mut store, &module)
+            .map_err(|err| anyhow::anyhow!("failed to instantiate Wasm module: {:?}", err))?
+            // Use `main` as entry point.
+            .ensure_no_start(&mut store)
+            .map_err(|err| {
+                anyhow::anyhow!("failed to ensure no start in Wasm module: {:?}", err)
+            })?;
+
+        // Check that the instance exports "main".
+        let _ = &instance
+            .get_typed_func::<(), ()>(&store, MAIN_FUNCTION_NAME)
+            .expect("couldn't validate `main` export");
+
+        // Check that the instance exports "alloc".
+        let _ = &instance
+            .get_typed_func::<i32, AbiPointer>(&store, ALLOC_FUNCTION_NAME)
+            .expect("couldn't validate `alloc` export");
+
+        // Make sure that non-empty `memory` is attached to the instance. Fail early if
+        // `memory` is not available.
+        instance
+            .get_memory(&store, MEMORY_NAME)
+            .ok_or(anyhow::anyhow!("couldn't find Wasm `memory` export"))?;
+
+        Ok((instance, store))
+    }
 }
 
 /// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
-
 pub fn read_buffer(
     ctx: &mut impl AsContext,
     memory: &mut wasmi::Memory,
