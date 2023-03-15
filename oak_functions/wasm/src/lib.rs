@@ -120,6 +120,7 @@ where
 /// single user request. The methods here correspond to the ABI OAK_FUNCTIONS functions that allow
 /// the Wasm module to exchange the request and the response with the Oak functions server. These
 /// functions translate values between Wasm linear memory and Rust types.
+// TODO(#3796): Remove WasmState.
 pub struct WasmState<L: OakLogger> {
     instance: wasmi::Instance,
     store: wasmi::Store<UserState<L>>,
@@ -225,6 +226,7 @@ where
                 "read_request",
                 // The types in the signatures correspond to the parameters from
                 // oak_functions_abi/src/lib.rs.
+                // TODO(#3797): Simplify wrapped functions.
                 |mut caller: wasmi::Caller<'_, UserState<L>>,
                  buf_ptr_ptr: AbiPointer,
                  buf_len_ptr: AbiPointer| {
@@ -269,7 +271,6 @@ where
                         response_ptr_ptr,
                         response_len_ptr,
                     );
-
                     from_oak_status(result)
                 },
             )
@@ -279,6 +280,7 @@ where
 }
 
 /// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
+
 pub fn read_buffer(
     ctx: &mut impl AsContext,
     memory: &mut wasmi::Memory,
