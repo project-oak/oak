@@ -27,29 +27,23 @@ service OakFunctions {
   // method_id: 1
   rpc Invoke(InvokeRequest) returns (InvokeResponse);
 
-  // Builds or replaces the existing lookup data with the new value.
-  // The value has to be below 2 GiB.
-  //
-  // method_id: 2
-  rpc UpdateLookupData(UpdateLookupDataRequest) returns (UpdateLookupDataResponse);
-
   // Extends the next lookup data by the given chunk of lookup data. Only
   // after the sender calls finishes building the next lookup data, the receiver replaces the
   // current lookup data with the next lookup data, and only then chunk is will be served in
   // lookups.
   //
-  // method_id: 3
+  // method_id: 2
   rpc ExtendNextLookupData(ExtendNextLookupDataRequest) returns (ExtendNextLookupDataResponse);
 
   // Finishes building the next lookup data with the given chunk of lookup data. The receiver
   // replaces the current lookup data and the next lookup data will be served in lookups.
   //
-  // method_id: 4
+  // method_id: 3
   rpc FinishNextLookupData(FinishNextLookupDataRequest) returns (FinishNextLookupDataResponse);
 
   // Aborts building the next lookup data.option
   //
-  // method_id: 5
+  // method_id: 4
   rpc AbortNextLookupData(Empty) returns (AbortNextLookupDataResponse);
 }
 
@@ -90,30 +84,12 @@ message ExtendNextLookupDataRequest {
   LookupDataChunk chunk = 1;
 }
 
-message ExtendNextLookupDataResponse {
-  bool ok = 1;
-}
+message ExtendNextLookupDataResponse {}
 
-// If the definition of FinishNextLookupData changes, the estimation of the size when
-// serialized in the Oak Functions Launcher needs to change, too.
-message FinishNextLookupDataRequest {
-  LookupDataChunk chunk = 1;
-}
+message FinishNextLookupDataRequest {}
 
-message FinishNextLookupDataResponse {
-  bool ok = 1;
-}
+message FinishNextLookupDataResponse {}
 
-message AbortNextLookupDataResponse {
-  bool ok = 1;
-}
-
-message UpdateLookupDataRequest {
-  LookupDataChunk chunk = 1;
-}
-
-message UpdateLookupDataResponse {
-  bool ok = 1;
-}
+message AbortNextLookupDataResponse {}
 
 message Empty {}

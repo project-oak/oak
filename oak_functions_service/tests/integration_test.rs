@@ -117,9 +117,13 @@ async fn it_should_support_lookup_data() {
         }],
     };
 
-    let request = schema::UpdateLookupDataRequest { chunk: Some(chunk) };
+    let request = schema::ExtendNextLookupDataRequest { chunk: Some(chunk) };
 
-    client.update_lookup_data(&request).into_ok().unwrap();
+    client.extend_next_lookup_data(&request).into_ok().unwrap();
+    client
+        .finish_next_lookup_data(&schema::FinishNextLookupDataRequest {})
+        .into_ok()
+        .unwrap();
 
     let lookup_response = client
         .invoke(&schema::InvokeRequest {

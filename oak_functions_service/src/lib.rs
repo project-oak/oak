@@ -144,42 +144,29 @@ impl schema::OakFunctions for OakFunctionsService {
         }
     }
 
-    fn update_lookup_data(
-        &mut self,
-        request: &schema::UpdateLookupDataRequest,
-    ) -> Result<schema::UpdateLookupDataResponse, micro_rpc::Status> {
-        let status = self
-            .lookup_data_manager
-            .finish_next_lookup_data(to_data(&request.chunk));
-        Ok(schema::UpdateLookupDataResponse { ok: status.ok })
-    }
-
     fn extend_next_lookup_data(
         &mut self,
         request: &schema::ExtendNextLookupDataRequest,
     ) -> Result<schema::ExtendNextLookupDataResponse, micro_rpc::Status> {
-        let status = self
-            .lookup_data_manager
+        self.lookup_data_manager
             .extend_next_lookup_data(to_data(&request.chunk));
-        Ok(schema::ExtendNextLookupDataResponse { ok: status.ok })
+        Ok(schema::ExtendNextLookupDataResponse {})
     }
 
     fn finish_next_lookup_data(
         &mut self,
-        request: &schema::FinishNextLookupDataRequest,
+        _request: &schema::FinishNextLookupDataRequest,
     ) -> Result<schema::FinishNextLookupDataResponse, micro_rpc::Status> {
-        let status = self
-            .lookup_data_manager
-            .finish_next_lookup_data(to_data(&request.chunk));
-        Ok(schema::FinishNextLookupDataResponse { ok: status.ok })
+        self.lookup_data_manager.finish_next_lookup_data();
+        Ok(schema::FinishNextLookupDataResponse {})
     }
 
     fn abort_next_lookup_data(
         &mut self,
         _request: &schema::Empty,
     ) -> Result<schema::AbortNextLookupDataResponse, micro_rpc::Status> {
-        let status = self.lookup_data_manager.abort_next_lookup_data();
-        Ok(schema::AbortNextLookupDataResponse { ok: status.ok })
+        self.lookup_data_manager.abort_next_lookup_data();
+        Ok(schema::AbortNextLookupDataResponse {})
     }
 }
 

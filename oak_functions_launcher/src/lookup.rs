@@ -35,66 +35,46 @@ struct UpdateClient<'a, I: Iterator<Item = LookupDataChunk>> {
 impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
     // Sends all chunks to the Oak Functions Service.
     async fn update(&mut self) -> anyhow::Result<()> {
+        // TODO(mschett): Simplify
         let mut current = self.chunks.next();
-        let mut next = self.chunks.next();
-        while next.is_some() {
+        while current.is_some() {
             self.extend(current).await?;
-            current = next;
-            next = self.chunks.next();
+            current = self.chunks.next();
         }
-        self.finish(current).await
+        self.finish().await
     }
 
     async fn extend(&mut self, chunk: Option<LookupDataChunk>) -> anyhow::Result<()> {
-        let response = self
+        let _ = self
             .inner
             .extend_next_lookup_data(&ExtendNextLookupDataRequest { chunk })
             .await
             .flatten()
-            .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)));
+            .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)))?;
 
-        if response.is_ok() && !response.unwrap().ok {
-            // Try to abort, because receiver unexpectedly did not extend.
-            // Even if the receiver has already aborted, the sender aborting again does not hurt.
-            let _ = self.abort().await;
-            Err(anyhow!("extend was not ok, aborted"))
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 
-    async fn finish(&mut self, chunk: Option<LookupDataChunk>) -> anyhow::Result<()> {
-        let response = self
+    async fn finish(&mut self) -> anyhow::Result<()> {
+        let _ = self
             .inner
-            .finish_next_lookup_data(&FinishNextLookupDataRequest { chunk })
+            .finish_next_lookup_data(&FinishNextLookupDataRequest {})
             .await
             .flatten()
             .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)));
-
-        if response.is_ok() && !response.unwrap().ok {
-            // Try to abort, because receiver unexpectedly did not extend.
-            // Even if the receiver has already aborted, the sender aborting again does not hurt.
-            let _ = self.abort().await;
-            Err(anyhow!("finish was not ok, aborted"))
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 
     // Tries to abort the current update once.
+    #[allow(dead_code)]
     async fn abort(&mut self) -> anyhow::Result<()> {
-        let response = self
+        let _ = self
             .inner
             .abort_next_lookup_data(&Empty {})
             .await
             .flatten()
             .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)));
-
-        if response.is_ok() && !response.unwrap().ok {
-            Err(anyhow!("Did not receive expected update status: Aborted"))
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 }
 

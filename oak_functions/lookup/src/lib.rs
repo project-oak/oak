@@ -25,7 +25,7 @@ use alloc::{
     vec::Vec,
 };
 use hashbrown::HashMap;
-use log::Level;
+use log::{info, Level};
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, StorageGetItemResponse};
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::OakLogger;
@@ -152,11 +152,6 @@ pub struct LookupDataManager<L: OakLogger + Clone> {
     logger: L,
 }
 
-#[derive(Debug, PartialEq)]
-pub struct NextDataStatus {
-    pub ok: bool,
-}
-
 impl<L> LookupDataManager<L>
 where
     L: OakLogger + Clone,
@@ -179,33 +174,52 @@ where
         test_manager
     }
 
-    pub fn extend_next_lookup_data(&self, new_data: Data) -> NextDataStatus {
+    pub fn extend_next_lookup_data(&self, new_data: Data) {
+        info!("Start extending next lookup data");
         let mut data_builder = self.data_builder.lock();
         data_builder.extend(new_data);
-        NextDataStatus { ok: true }
+        info!("Finish extending next lookup data");
     }
 
     // Finish building the next lookup data and replace the current lookup data in place.
-    pub fn finish_next_lookup_data(&self, new_data: Data) -> NextDataStatus {
-        let mut data_builder = self.data_builder.lock();
-        data_builder.extend(new_data);
-        let next_data = data_builder.build();
-        let mut data = self.data.lock();
-        *data = Arc::new(next_data);
-        NextDataStatus { ok: true }
+    pub fn finish_next_lookup_data(&self) {
+        let data_len;
+        let next_data_len;
+        info!("Start replacing lookup data by next lookup data");
+        {
+            let mut data_builder = self.data_builder.lock();
+            let next_data = data_builder.build();
+            next_data_len = next_data.len();
+            let mut data = self.data.lock();
+            *data = Arc::new(next_data);
+            data_len = data.len();
+        }
+        info!(
+            "Finished replacing lookup data with len {} by next lookup data with len {}",
+            data_len, next_data_len
+        );
     }
 
-    pub fn abort_next_lookup_data(&self) -> NextDataStatus {
-        let mut data_builder = self.data_builder.lock();
-        // Clear the builder throwing away the intermediate result.
-        let _ = data_builder.build();
-        NextDataStatus { ok: true }
+    pub fn abort_next_lookup_data(&self) {
+        info!("Start aborting next lookup data");
+        {
+            let mut data_builder = self.data_builder.lock();
+            // Clear the builder throwing away the intermediate result.
+            let _ = data_builder.build();
+        }
+        info!("Finish aborting next lookup data");
     }
 
     /// Creates a new `LookupData` instance with a reference to the current backing data.
     pub fn create_lookup_data(&self) -> LookupData<L> {
-        let data = self.data.lock().clone();
-        LookupData::new(data, self.logger.clone())
+        let keys;
+        let data = {
+            let data = self.data.lock().clone();
+            keys = data.len();
+            LookupData::new(data, self.logger.clone())
+        };
+        info!("Create lookup data with len: {}", keys);
+        data
     }
 }
 
@@ -280,13 +294,16 @@ mod tests {
         let lookup_data_0 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
 
-        manager.finish_next_lookup_data(create_test_data(0, 1));
+        manager.extend_next_lookup_data(create_test_data(0, 1));
+        manager.finish_next_lookup_data();
         let lookup_data_1 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);
 
         // Creating test data in the same range replaces some keys.
-        manager.finish_next_lookup_data(create_test_data(0, 2));
+        manager.extend_next_lookup_data(create_test_data(0, 2));
+        manager.finish_next_lookup_data();
+
         let lookup_data_2 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);
@@ -296,8 +313,8 @@ mod tests {
     #[test]
     fn test_update_lookup_data_one_chunk() {
         let manager = LookupDataManager::new_empty(TestLogger {});
-        let status = manager.finish_next_lookup_data(create_test_data(0, 2));
-        assert!(status.ok);
+        manager.extend_next_lookup_data(create_test_data(0, 2));
+        manager.finish_next_lookup_data();
         let lookup_data = manager.create_lookup_data();
         assert_eq!(lookup_data.len(), 2);
     }
@@ -307,12 +324,11 @@ mod tests {
         let manager = LookupDataManager::new_empty(TestLogger {});
         let lookup_data_0 = manager.create_lookup_data();
 
-        let status = manager.extend_next_lookup_data(create_test_data(0, 2));
-        assert!(status.ok);
+        manager.extend_next_lookup_data(create_test_data(0, 2));
         let lookup_data_1 = manager.create_lookup_data();
 
-        let status = manager.finish_next_lookup_data(create_test_data(2, 4));
-        assert!(status.ok);
+        manager.extend_next_lookup_data(create_test_data(2, 4));
+        manager.finish_next_lookup_data();
         let lookup_data_2 = manager.create_lookup_data();
 
         assert_eq!(lookup_data_0.len(), 0);
@@ -324,18 +340,12 @@ mod tests {
     fn test_update_lookup_four_chunks() {
         let manager = LookupDataManager::new_empty(TestLogger {});
 
-        let status = manager.extend_next_lookup_data(create_test_data(0, 2));
-        assert!(status.ok);
-
-        let status = manager.extend_next_lookup_data(create_test_data(2, 3));
-        assert!(status.ok);
-
+        manager.extend_next_lookup_data(create_test_data(0, 2));
+        manager.extend_next_lookup_data(create_test_data(2, 3));
         // We have one key overlapping here.
-        let status = manager.extend_next_lookup_data(create_test_data(2, 6));
-        assert!(status.ok);
-
-        let status = manager.finish_next_lookup_data(create_test_data(6, 7));
-        assert!(status.ok);
+        manager.extend_next_lookup_data(create_test_data(2, 6));
+        manager.extend_next_lookup_data(create_test_data(6, 7));
+        manager.finish_next_lookup_data();
 
         let lookup_data = manager.create_lookup_data();
 
@@ -347,15 +357,12 @@ mod tests {
         let manager = LookupDataManager::new_empty(TestLogger {});
         let lookup_data_0 = manager.create_lookup_data();
 
-        let status = manager.extend_next_lookup_data(create_test_data(0, 2));
-        assert!(status.ok);
-
-        let status = manager.abort_next_lookup_data();
-        assert!(status.ok);
+        manager.extend_next_lookup_data(create_test_data(0, 2));
+        manager.abort_next_lookup_data();
         let lookup_data_1 = manager.create_lookup_data();
 
-        let status = manager.finish_next_lookup_data(create_test_data(0, 1));
-        assert!(status.ok);
+        manager.extend_next_lookup_data(create_test_data(0, 1));
+        manager.finish_next_lookup_data();
         let lookup_data_2 = manager.create_lookup_data();
 
         assert_eq!(lookup_data_0.len(), 0);
