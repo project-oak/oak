@@ -392,7 +392,7 @@ fn test_invoke_extension() {
         Dest {
             ptr_ptr: response_ptr_ptr,
             len_ptr: response_len_ptr,
-            buf: response.clone(),
+            buf: response,
         },
     );
 

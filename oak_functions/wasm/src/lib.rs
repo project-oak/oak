@@ -224,9 +224,8 @@ where
                  buf_ptr: AbiPointer,
                  buf_len: AbiPointerOffset| {
                     let mut caller = OakCaller { caller };
-                    let status = caller.read_buffer(buf_ptr, buf_len).and_then(|buffer| {
+                    let status = caller.read_buffer(buf_ptr, buf_len).map(|buffer| {
                         caller.data_mut().response_bytes = buffer;
-                        Ok(())
                     });
                     from_oak_status(status)
                 },
@@ -259,10 +258,9 @@ where
                         .and_then(|request| {
                             let user_state = caller.data_mut();
                             let extension = user_state.get_extension(handle)?;
-                            let response = extension.invoke(request.clone())?;
+                            let response = extension.invoke(request)?;
                             caller.alloc_and_write(response_ptr_ptr, response_len_ptr, response)
                         });
-
                     from_oak_status(status)
                 },
             )
@@ -353,7 +351,7 @@ where
         let dest = Dest {
             ptr_ptr: buf_ptr_ptr,
             len_ptr: buf_ptr_len,
-            buf: buf,
+            buf,
         };
         let alloc = self.get_alloc()?;
         let mut memory = self.get_memory()?;
