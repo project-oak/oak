@@ -21,4 +21,8 @@ package(
 cc_binary(
     name = "oak_echo_raw_enclave_app",
     srcs = ["main.cc"],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "//:os_oak",
+    ],
 )
