@@ -21,18 +21,4 @@ package(
 cc_binary(
     name = "oak_echo_raw_enclave_app",
     srcs = ["main.cc"],
-    copts = [
-        "-nostdlib",
-        "-ffreestanding",
-    ],
-    features = ["fully_static_link"],
-    linkopts = [
-        "-nostdlib",
-        "-Wl,-zmax-page-size=0x200000",
-    ],
-    target_compatible_with = [
-        "@platforms//cpu:x86_64",
-        "//:os_oak",
-    ],
-    deps = ["//third_party/newlib"],
 )
