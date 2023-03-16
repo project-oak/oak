@@ -1,0 +1,2 @@
+# Should not be needed after Bazel 7.0 is released.
+build --incompatible_enable_cc_toolchain_resolution

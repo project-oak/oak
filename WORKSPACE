@@ -135,3 +135,14 @@ load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_depende
 # This sets up some common toolchains for building targets. For more details, please see
 # https://bazelbuild.github.io/rules_foreign_cc/0.9.0/flatten.html#rules_foreign_cc_dependencies
 rules_foreign_cc_dependencies()
+
+http_archive(
+    name = "x86_64-unknown-oak",
+    build_file = "//toolchain:x86_64-unknown-oak.BUILD",
+    sha256 = "6f82ea9ac935810aeafd10cc9ca46456b01a15353d9c14d962764ad77f3ab457",
+    strip_prefix = "toolchain",
+    type = "tar.bz2",
+    url = "https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:6f82ea9ac935810aeafd10cc9ca46456b01a15353d9c14d962764ad77f3ab457",
+)
+
+register_toolchains("//toolchain:oak")

@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-#include <stdio.h>
 #include <unistd.h>
+
+#include <iostream>
 
 constexpr int CHANNEL_FD = 10;
 
-// Under C++ rules, the name is mangled to "_Z4mainiPPc" -- find out what's going on with that.
-extern "C" int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) {
   char buf;
 
-  fprintf(stderr, "In main!\n");
+  // This should be set up by the runtime for us, but it isn't. It's a bug in the toolchain we need
+  // to fix.
+  std::ios_base::Init init;
+
+  std::cerr << "In main!" << std::endl;
 
   while (true) {
     if (read(CHANNEL_FD, &buf, sizeof(buf)) != 1) {

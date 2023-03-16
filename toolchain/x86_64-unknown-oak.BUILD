@@ -1,5 +1,5 @@
 #
-# Copyright 2019 The Project Oak Authors
+# Copyright 2023 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,27 +14,14 @@
 # limitations under the License.
 #
 
-# An empty BUILD file in the project root is required for `bazel-gazelle` that is
-# loaded by `rules_docker`:
-# https://github.com/bazelbuild/bazel-gazelle/issues/609
-
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-# Export LICENSE file for projects that reference Oak in Bazel as an external dependency.
-exports_files(["LICENSE"])
-
-constraint_value(
-    name = "os_oak",
-    constraint_setting = "@platforms//os:os",
-)
-
-platform(
-    name = "oak",
-    constraint_values = [
-        "//:os_oak",
-        "@platforms//cpu:x86_64",
-    ],
+filegroup(
+    name = "toolchain",
+    srcs = glob([
+        "**",
+    ]),
 )
