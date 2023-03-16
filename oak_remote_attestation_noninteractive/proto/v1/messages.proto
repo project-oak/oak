@@ -21,9 +21,7 @@ package oak.session.noninteractive.v1;
 option java_multiple_files = true;
 option java_package = "oak.session.noninteractive.v1";
 
-// AttestationEvidence contains the information that the untrusted launcher provides to the client
-// in response to its request for the enclave's public key(s). The name is chosen to match the RATS
-// terminology (see https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence).
+// AttestationEvidence contains the evidence provided by the enclave.
 message AttestationEvidence {
   // The serialized public key part of the enclave encryption key.
   // TODO(#3442): Specify key format.
@@ -37,22 +35,30 @@ message AttestationEvidence {
   // The serialized attestation report binding the public key.
   bytes attestation = 3;
 
+  // The signature over the application_data, signed by the enclave using its signing key. This
+  // field is optional, and must be left empty if application_data is not provided.
+  // TODO(#3442): Specify the signing details, or link to a specification.
+  bytes signed_application_data = 4;
+}
+
+// AttestationVerificationEvidence contains the information that the untrusted launcher provides to
+// the client in response to its request for the enclave's public key(s). The name is chosen to
+// match the RATS terminology (see https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence).
+message AttestationVerificationEvidence {
+  // Attestation evidence from the enclave.
+  AttestationEvidence attestation_evidence = 1;
+
   // The serialized TEE certificate(s). The details of the format and how the certificate(s) are
   // encoded into this byte array are implementation-specific. In case of AMD-SEV-SNP, as described
   // in https://www.amd.com/system/files/TechDocs/57230.pdf, there are three different certificates
   // packaged in two different files.
-  bytes tee_certificates = 4;
+  bytes tee_certificates = 2;
 
   // The binary attestation evidence.
-  BinaryAttestation binary_attestation = 5;
+  BinaryAttestation binary_attestation = 3;
 
   // The optional application-specific data.
-  optional ApplicationData application_data = 6;
-
-  // The signature over the application_data, signed by the enclave using its signing key. This
-  // field is optional, and must be left empty if application_data is not provided.
-  // TODO(#3442): Specify the signing details, or link to a specification.
-  bytes signed_application_data = 7;
+  optional ApplicationData application_data = 4;
 }
 
 message BinaryAttestation {
@@ -75,7 +81,7 @@ message GetPublicKeyRequest {}
 
 message GetPublicKeyResponse {
   // The enclave's signing and encryption public keys and attestation evidence about them.
-  AttestationEvidence attestation_evidence = 1;
+  AttestationVerificationEvidence attestation_verification_evidence = 1;
 }
 
 message InvokeRequest {
