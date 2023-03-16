@@ -35,12 +35,8 @@ struct UpdateClient<'a, I: Iterator<Item = LookupDataChunk>> {
 impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
     // Sends all chunks to the Oak Functions Service.
     async fn update(&mut self) -> anyhow::Result<()> {
-        // TODO(mschett): Simplify
-        let mut current = self.chunks.next();
-        while current.is_some() {
-            self.extend(current).await?;
-            current = self.chunks.next();
-        }
+        self.chunks
+            .for_each(|chunk| self.extend(Some(chunk)).await?);
         self.finish().await
     }
 
@@ -51,7 +47,6 @@ impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
             .await
             .flatten()
             .map_err(|err| anyhow!(format!("error handling client request: {:?}", err)))?;
-
         Ok(())
     }
 
@@ -65,7 +60,6 @@ impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
         Ok(())
     }
 
-    // Tries to abort the current update once.
     #[allow(dead_code)]
     async fn abort(&mut self) -> anyhow::Result<()> {
         let _ = self

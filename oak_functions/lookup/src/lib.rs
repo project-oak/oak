@@ -176,8 +176,10 @@ where
 
     pub fn extend_next_lookup_data(&self, new_data: Data) {
         info!("Start extending next lookup data");
-        let mut data_builder = self.data_builder.lock();
-        data_builder.extend(new_data);
+        {
+            let mut data_builder = self.data_builder.lock();
+            data_builder.extend(new_data);
+        }
         info!("Finish extending next lookup data");
     }
 
@@ -218,7 +220,7 @@ where
             keys = data.len();
             LookupData::new(data, self.logger.clone())
         };
-        info!("Create lookup data with len: {}", keys);
+        info!("Created lookup data with len: {}", keys);
         data
     }
 }
