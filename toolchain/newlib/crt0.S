@@ -18,6 +18,9 @@
 .global _start
 
 _start:
+    # Ensure the stack is 16-byte aligned (0x10) before we start, otherwise we may violate
+    # the calling convention for some instructions (SSE ones in particular).
+    andq $-10, %rsp
     movq $0, %rbp
     pushq %rbp
     pushq %rbp
