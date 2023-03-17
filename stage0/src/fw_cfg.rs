@@ -129,6 +129,7 @@ pub struct FwCfg {
     dma_high: PortWrapper<u32>,
     dma_low: PortWrapper<u32>,
     dma_buf: &'static mut DmaBuffer,
+    dma_access: &'static mut FwCfgDmaAccess,
 }
 
 impl FwCfg {
@@ -143,6 +144,7 @@ impl FwCfg {
     pub unsafe fn new(
         port_factory: PortFactoryWrapper,
         dma_buf: &'static mut DmaBuffer,
+        dma_access: &'static mut FwCfgDmaAccess,
     ) -> Result<Self, &'static str> {
         let mut fwcfg = Self {
             selector: port_factory.new_writer(FWCFG_PORT_SELECTOR),
@@ -152,6 +154,7 @@ impl FwCfg {
             // than the high address.
             dma_low: port_factory.new_writer(FWCFG_PORT_DMA + 4),
             dma_buf,
+            dma_access,
         };
 
         // Make sure the fw_cfg device is available. If the device is not available, writing and
@@ -347,8 +350,8 @@ impl FwCfg {
         // The length of the buffer will always fit in 32 bits, since we only map the first 1GiB of
         // physical memory to virtual memory.
         let length = chunk.len() as u32;
-        let dma_access = FwCfgDmaAccess::new(ControlFlags::READ, length, address);
-        let dma_access_address = &dma_access as *const _ as usize as u64;
+        *self.dma_access = FwCfgDmaAccess::new(ControlFlags::READ, length, address);
+        let dma_access_address = self.dma_access as *const _ as usize as u64;
         let dma_low = (dma_access_address & 0xFFFFFFFF) as u32;
         let dma_high = (dma_access_address >> 32) as u32;
         // The DMA address halves must be written in big endian format, and the high half must be
@@ -364,7 +367,7 @@ impl FwCfg {
         core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
 
         // The control field will be cleared if the DMA operation is complete and successful.
-        if dma_access.control != 0 {
+        if self.dma_access.control != 0 {
             Err("fw_cfg DMA failed")
         } else {
             chunk.copy_from_slice(&self.dma_buf.data[..chunk.len()]);
@@ -384,11 +387,27 @@ bitflags! {
 }
 
 /// Definition for a DMA access request.
-#[repr(C)]
-struct FwCfgDmaAccess {
+/// We also force it to be on a page boundary as we need to share it with the host.
+#[repr(C, align(4096))]
+#[derive(Debug)]
+pub struct FwCfgDmaAccess {
     control: u32,
     length: u32,
     address: u64,
+    // Eat up the rest of the memory to ensure we're the only data structure on this page.
+    padding: [u8; 4080],
+}
+static_assertions::assert_eq_size!(FwCfgDmaAccess, [u8; Size4KiB::SIZE as usize]);
+
+impl Default for FwCfgDmaAccess {
+    fn default() -> Self {
+        FwCfgDmaAccess {
+            control: 0,
+            length: 0,
+            address: 0,
+            padding: [0u8; 4080],
+        }
+    }
 }
 
 impl FwCfgDmaAccess {
@@ -398,6 +417,7 @@ impl FwCfgDmaAccess {
             control: flags.bits().to_be(),
             length: length.to_be(),
             address: address.as_u64().to_be(),
+            padding: [0u8; 4080],
         }
     }
 }

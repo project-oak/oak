@@ -179,8 +179,11 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
 
     let dma_buf = BOOT_ALLOC.leak(fw_cfg::DmaBuffer::default()).unwrap();
     let dma_buf_address = VirtAddr::from_ptr(dma_buf as *const _);
+    let dma_access = BOOT_ALLOC.leak(fw_cfg::FwCfgDmaAccess::default()).unwrap();
+    let dma_access_address = VirtAddr::from_ptr(dma_access as *const _);
     if encrypted > 0 {
         sev::share_page(Page::containing_address(dma_buf_address), snp, encrypted);
+        sev::share_page(Page::containing_address(dma_access_address), snp, encrypted);
     }
 
     // Safety: we assume there won't be any other hardware devices using the fw_cfg IO ports.
@@ -191,6 +194,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
                 None => PortFactoryWrapper::new_raw(),
             },
             dma_buf,
+            dma_access,
         )
     }
     .expect("fw_cfg device not found!");
@@ -355,6 +359,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     }
     if encrypted > 0 {
         sev::unshare_page(Page::containing_address(dma_buf_address), snp, encrypted);
+        sev::unshare_page(Page::containing_address(dma_access_address), snp, encrypted);
     }
 
     // Allow identity-op to keep the fact that the address we're talking about here is 0x00.
