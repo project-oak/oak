@@ -35,6 +35,7 @@ use oak_functions_lookup::LookupDataManager;
 use oak_functions_wasm::WasmHandler;
 use oak_remote_attestation_interactive::handshaker::AttestationGenerator;
 use remote_attestation::Handler;
+use schema::LookupDataChunk;
 
 pub use crate::logger::StandaloneLogger;
 
@@ -143,45 +144,40 @@ impl schema::OakFunctions for OakFunctionsService {
         }
     }
 
-    fn update_lookup_data(
+    fn extend_next_lookup_data(
         &mut self,
-        request: &schema::UpdateLookupDataRequest,
-    ) -> Result<schema::UpdateLookupDataResponse, micro_rpc::Status> {
-        let action = schema::UpdateAction::from_i32(request.action).ok_or_else(|| {
-            micro_rpc::Status::new_with_message(
-                micro_rpc::StatusCode::InvalidArgument,
-                format!("could not map action from i32: {}", request.action),
-            )
-        })?;
+        request: &schema::ExtendNextLookupDataRequest,
+    ) -> Result<schema::ExtendNextLookupDataResponse, micro_rpc::Status> {
+        self.lookup_data_manager
+            .extend_next_lookup_data(to_data(&request.chunk));
+        Ok(schema::ExtendNextLookupDataResponse {})
+    }
 
-        let data = request
-            .chunk
-            .as_ref()
-            .unwrap()
-            .items
-            .iter()
-            .map(|entry| (entry.key.clone(), entry.value.clone()))
-            .collect();
+    fn finish_next_lookup_data(
+        &mut self,
+        _request: &schema::FinishNextLookupDataRequest,
+    ) -> Result<schema::FinishNextLookupDataResponse, micro_rpc::Status> {
+        self.lookup_data_manager.finish_next_lookup_data();
+        Ok(schema::FinishNextLookupDataResponse {})
+    }
 
-        let update_status = match action {
-            schema::UpdateAction::Extend => self.lookup_data_manager.update_extend(data),
-            schema::UpdateAction::Finish => self.lookup_data_manager.update_finish(data),
-            schema::UpdateAction::Abort => self.lookup_data_manager.update_abort(),
-        };
-        Ok(schema::UpdateLookupDataResponse {
-            update_status: update_status as i32,
-        })
+    fn abort_next_lookup_data(
+        &mut self,
+        _request: &schema::Empty,
+    ) -> Result<schema::AbortNextLookupDataResponse, micro_rpc::Status> {
+        self.lookup_data_manager.abort_next_lookup_data();
+        Ok(schema::AbortNextLookupDataResponse {})
     }
 }
 
-// This crate depends on oak_functions_lookup and schema, so we cannot use schema in
-// oak_functions_lookup. As a work-around we define and map a corresponding type for UpdateStatus.
-impl From<oak_functions_lookup::UpdateStatus> for schema::UpdateStatus {
-    fn from(value: oak_functions_lookup::UpdateStatus) -> Self {
-        match value {
-            oak_functions_lookup::UpdateStatus::Aborted => schema::UpdateStatus::Aborted,
-            oak_functions_lookup::UpdateStatus::Finished => schema::UpdateStatus::Finished,
-            oak_functions_lookup::UpdateStatus::Extended => schema::UpdateStatus::Extended,
-        }
-    }
+// Helper function to convert LookupDataChunk to Data.
+// TODO(#3791): Check if we really have to copy here.
+fn to_data(chunk: &Option<LookupDataChunk>) -> oak_functions_lookup::Data {
+    chunk
+        .as_ref()
+        .unwrap()
+        .items
+        .iter()
+        .map(|entry| (entry.key.clone(), entry.value.clone()))
+        .collect()
 }
