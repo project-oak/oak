@@ -181,10 +181,6 @@
 <a href="#181" id="181">181</a>
 <a href="#182" id="182">182</a>
 <a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -222,6 +218,7 @@
 <span class="kw">use </span>oak_functions_wasm::WasmHandler;
 <span class="kw">use </span>oak_remote_attestation_interactive::handshaker::AttestationGenerator;
 <span class="kw">use </span>remote_attestation::Handler;
+<span class="kw">use </span>schema::LookupDataChunk;
 
 <span class="kw">pub use </span><span class="kw">crate</span>::logger::StandaloneLogger;
 
@@ -330,47 +327,42 @@
         }
     }
 
-    <span class="kw">fn </span>update_lookup_data(
+    <span class="kw">fn </span>extend_next_lookup_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request: <span class="kw-2">&amp;</span>schema::UpdateLookupDataRequest,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::UpdateLookupDataResponse, micro_rpc::Status&gt; {
-        <span class="kw">let </span>action = schema::UpdateAction::from_i32(request.action).ok_or_else(|| {
-            micro_rpc::Status::new_with_message(
-                micro_rpc::StatusCode::InvalidArgument,
-                <span class="macro">format!</span>(<span class="string">&quot;could not map action from i32: {}&quot;</span>, request.action),
-            )
-        })<span class="question-mark">?</span>;
+        request: <span class="kw-2">&amp;</span>schema::ExtendNextLookupDataRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::ExtendNextLookupDataResponse, micro_rpc::Status&gt; {
+        <span class="self">self</span>.lookup_data_manager
+            .extend_next_lookup_data(to_data(<span class="kw-2">&amp;</span>request.chunk));
+        <span class="prelude-val">Ok</span>(schema::ExtendNextLookupDataResponse {})
+    }
 
-        <span class="kw">let </span>data = request
-            .chunk
-            .as_ref()
-            .unwrap()
-            .items
-            .iter()
-            .map(|entry| (entry.key.clone(), entry.value.clone()))
-            .collect();
+    <span class="kw">fn </span>finish_next_lookup_data(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        _request: <span class="kw-2">&amp;</span>schema::FinishNextLookupDataRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::FinishNextLookupDataResponse, micro_rpc::Status&gt; {
+        <span class="self">self</span>.lookup_data_manager.finish_next_lookup_data();
+        <span class="prelude-val">Ok</span>(schema::FinishNextLookupDataResponse {})
+    }
 
-        <span class="kw">let </span>update_status = <span class="kw">match </span>action {
-            schema::UpdateAction::Extend =&gt; <span class="self">self</span>.lookup_data_manager.update_extend(data),
-            schema::UpdateAction::Finish =&gt; <span class="self">self</span>.lookup_data_manager.update_finish(data),
-            schema::UpdateAction::Abort =&gt; <span class="self">self</span>.lookup_data_manager.update_abort(),
-        };
-        <span class="prelude-val">Ok</span>(schema::UpdateLookupDataResponse {
-            update_status: update_status <span class="kw">as </span>i32,
-        })
+    <span class="kw">fn </span>abort_next_lookup_data(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        _request: <span class="kw-2">&amp;</span>schema::Empty,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::AbortNextLookupDataResponse, micro_rpc::Status&gt; {
+        <span class="self">self</span>.lookup_data_manager.abort_next_lookup_data();
+        <span class="prelude-val">Ok</span>(schema::AbortNextLookupDataResponse {})
     }
 }
 
-<span class="comment">// This crate depends on oak_functions_lookup and schema, so we cannot use schema in
-// oak_functions_lookup. As a work-around we define and map a corresponding type for UpdateStatus.
-</span><span class="kw">impl </span>From&lt;oak_functions_lookup::UpdateStatus&gt; <span class="kw">for </span>schema::UpdateStatus {
-    <span class="kw">fn </span>from(value: oak_functions_lookup::UpdateStatus) -&gt; <span class="self">Self </span>{
-        <span class="kw">match </span>value {
-            oak_functions_lookup::UpdateStatus::Aborted =&gt; schema::UpdateStatus::Aborted,
-            oak_functions_lookup::UpdateStatus::Finished =&gt; schema::UpdateStatus::Finished,
-            oak_functions_lookup::UpdateStatus::Extended =&gt; schema::UpdateStatus::Extended,
-        }
-    }
+<span class="comment">// Helper function to convert LookupDataChunk to Data.
+// TODO(#3791): Check if we really have to copy here.
+</span><span class="kw">fn </span>to_data(chunk: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;LookupDataChunk&gt;) -&gt; oak_functions_lookup::Data {
+    chunk
+        .as_ref()
+        .unwrap()
+        .items
+        .iter()
+        .map(|entry| (entry.key.clone(), entry.value.clone()))
+        .collect()
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_functions_service" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0-nightly (5b8f28453 2023-02-12)" data-search-js="search-28136cea55c34037.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

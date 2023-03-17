@@ -383,6 +383,13 @@
 <a href="#383" id="383">383</a>
 <a href="#384" id="384">384</a>
 <a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -410,7 +417,7 @@
     vec::Vec,
 };
 <span class="kw">use </span>hashbrown::HashMap;
-<span class="kw">use </span>log::Level;
+<span class="kw">use </span>log::{info, Level};
 <span class="kw">use </span>oak_functions_abi::{proto::OakStatus, ExtensionHandle, StorageGetItemResponse};
 <span class="kw">use </span>oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 <span class="kw">use </span>oak_logger::OakLogger;
@@ -488,10 +495,10 @@
 </span><span class="kw">enum </span>BuilderState {
     <span class="attr">#[default]
     </span>Empty,
-    Updating,
+    Extending,
 }
 
-<span class="comment">// Incrementally build data backing the lookup data keeping track of the state.
+<span class="comment">// Incrementally build next lookup data keeping track of the state.
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">struct </span>DataBuilder {
     data: Data,
@@ -510,7 +517,7 @@
     /// Note, if new data contains a key already present in the existing data, calling extend
     /// overwrites the value.
     </span><span class="kw">fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new_data: Data) {
-        <span class="self">self</span>.state = BuilderState::Updating;
+        <span class="self">self</span>.state = BuilderState::Extending;
         <span class="self">self</span>.data.extend(new_data);
     }
 }
@@ -537,13 +544,6 @@
     logger: L,
 }
 
-<span class="attr">#[derive(Debug, PartialEq)]
-</span><span class="kw">pub enum </span>UpdateStatus {
-    Extended,
-    Finished,
-    Aborted,
-}
-
 <span class="kw">impl</span>&lt;L&gt; LookupDataManager&lt;L&gt;
 <span class="kw">where
     </span>L: OakLogger + Clone,
@@ -566,33 +566,54 @@
         test_manager
     }
 
-    <span class="kw">pub fn </span>update_extend(<span class="kw-2">&amp;</span><span class="self">self</span>, new_data: Data) -&gt; UpdateStatus {
-        <span class="kw">let </span><span class="kw-2">mut </span>data_builder = <span class="self">self</span>.data_builder.lock();
-        data_builder.extend(new_data);
-        UpdateStatus::Extended
+    <span class="kw">pub fn </span>extend_next_lookup_data(<span class="kw-2">&amp;</span><span class="self">self</span>, new_data: Data) {
+        <span class="macro">info!</span>(<span class="string">&quot;Start extending next lookup data&quot;</span>);
+        {
+            <span class="kw">let </span><span class="kw-2">mut </span>data_builder = <span class="self">self</span>.data_builder.lock();
+            data_builder.extend(new_data);
+        }
+        <span class="macro">info!</span>(<span class="string">&quot;Finish extending next lookup data&quot;</span>);
     }
 
-    <span class="comment">// Finishing the update from every state.
-    </span><span class="kw">pub fn </span>update_finish(<span class="kw-2">&amp;</span><span class="self">self</span>, new_data: Data) -&gt; UpdateStatus {
-        <span class="kw">let </span><span class="kw-2">mut </span>data_builder = <span class="self">self</span>.data_builder.lock();
-        data_builder.extend(new_data);
-        <span class="kw">let </span>next_data = data_builder.build();
-        <span class="kw">let </span><span class="kw-2">mut </span>data = <span class="self">self</span>.data.lock();
-        <span class="kw-2">*</span>data = Arc::new(next_data);
-        UpdateStatus::Finished
+    <span class="comment">// Finish building the next lookup data and replace the current lookup data in place.
+    </span><span class="kw">pub fn </span>finish_next_lookup_data(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="kw">let </span>data_len;
+        <span class="kw">let </span>next_data_len;
+        <span class="macro">info!</span>(<span class="string">&quot;Start replacing lookup data by next lookup data&quot;</span>);
+        {
+            <span class="kw">let </span><span class="kw-2">mut </span>data_builder = <span class="self">self</span>.data_builder.lock();
+            <span class="kw">let </span>next_data = data_builder.build();
+            next_data_len = next_data.len();
+            <span class="kw">let </span><span class="kw-2">mut </span>data = <span class="self">self</span>.data.lock();
+            <span class="kw-2">*</span>data = Arc::new(next_data);
+            data_len = data.len();
+        }
+        <span class="macro">info!</span>(
+            <span class="string">&quot;Finished replacing lookup data with len {} by next lookup data with len {}&quot;</span>,
+            data_len, next_data_len
+        );
     }
 
-    <span class="kw">pub fn </span>update_abort(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; UpdateStatus {
-        <span class="kw">let </span><span class="kw-2">mut </span>data_builder = <span class="self">self</span>.data_builder.lock();
-        <span class="comment">// Clear the builder throwing away the intermediate result.
-        </span><span class="kw">let _ </span>= data_builder.build();
-        UpdateStatus::Aborted
+    <span class="kw">pub fn </span>abort_next_lookup_data(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+        <span class="macro">info!</span>(<span class="string">&quot;Start aborting next lookup data&quot;</span>);
+        {
+            <span class="kw">let </span><span class="kw-2">mut </span>data_builder = <span class="self">self</span>.data_builder.lock();
+            <span class="comment">// Clear the builder throwing away the intermediate result.
+            </span><span class="kw">let _ </span>= data_builder.build();
+        }
+        <span class="macro">info!</span>(<span class="string">&quot;Finish aborting next lookup data&quot;</span>);
     }
 
     <span class="doccomment">/// Creates a new `LookupData` instance with a reference to the current backing data.
     </span><span class="kw">pub fn </span>create_lookup_data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; LookupData&lt;L&gt; {
-        <span class="kw">let </span>data = <span class="self">self</span>.data.lock().clone();
-        LookupData::new(data, <span class="self">self</span>.logger.clone())
+        <span class="kw">let </span>keys;
+        <span class="kw">let </span>data = {
+            <span class="kw">let </span>data = <span class="self">self</span>.data.lock().clone();
+            keys = data.len();
+            LookupData::new(data, <span class="self">self</span>.logger.clone())
+        };
+        <span class="macro">info!</span>(<span class="string">&quot;Created lookup data with len: {}&quot;</span>, keys);
+        data
     }
 }
 
@@ -667,13 +688,16 @@
         <span class="kw">let </span>lookup_data_0 = manager.create_lookup_data();
         <span class="macro">assert_eq!</span>(lookup_data_0.len(), <span class="number">0</span>);
 
-        manager.update_finish(create_test_data(<span class="number">0</span>, <span class="number">1</span>));
+        manager.extend_next_lookup_data(create_test_data(<span class="number">0</span>, <span class="number">1</span>));
+        manager.finish_next_lookup_data();
         <span class="kw">let </span>lookup_data_1 = manager.create_lookup_data();
         <span class="macro">assert_eq!</span>(lookup_data_0.len(), <span class="number">0</span>);
         <span class="macro">assert_eq!</span>(lookup_data_1.len(), <span class="number">1</span>);
 
         <span class="comment">// Creating test data in the same range replaces some keys.
-        </span>manager.update_finish(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
+        </span>manager.extend_next_lookup_data(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
+        manager.finish_next_lookup_data();
+
         <span class="kw">let </span>lookup_data_2 = manager.create_lookup_data();
         <span class="macro">assert_eq!</span>(lookup_data_0.len(), <span class="number">0</span>);
         <span class="macro">assert_eq!</span>(lookup_data_1.len(), <span class="number">1</span>);
@@ -683,8 +707,8 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_update_lookup_data_one_chunk() {
         <span class="kw">let </span>manager = LookupDataManager::new_empty(TestLogger {});
-        <span class="kw">let </span>update_status = manager.update_finish(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
-        <span class="macro">assert_eq!</span>(update_status, UpdateStatus::Finished);
+        manager.extend_next_lookup_data(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
+        manager.finish_next_lookup_data();
         <span class="kw">let </span>lookup_data = manager.create_lookup_data();
         <span class="macro">assert_eq!</span>(lookup_data.len(), <span class="number">2</span>);
     }
@@ -694,12 +718,11 @@
         <span class="kw">let </span>manager = LookupDataManager::new_empty(TestLogger {});
         <span class="kw">let </span>lookup_data_0 = manager.create_lookup_data();
 
-        <span class="kw">let </span>update_status = manager.update_extend(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
-        <span class="macro">assert_eq!</span>(update_status, UpdateStatus::Extended);
+        manager.extend_next_lookup_data(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
         <span class="kw">let </span>lookup_data_1 = manager.create_lookup_data();
 
-        <span class="kw">let </span>update_status = manager.update_finish(create_test_data(<span class="number">2</span>, <span class="number">4</span>));
-        <span class="macro">assert_eq!</span>(update_status, UpdateStatus::Finished);
+        manager.extend_next_lookup_data(create_test_data(<span class="number">2</span>, <span class="number">4</span>));
+        manager.finish_next_lookup_data();
         <span class="kw">let </span>lookup_data_2 = manager.create_lookup_data();
 
         <span class="macro">assert_eq!</span>(lookup_data_0.len(), <span class="number">0</span>);
@@ -711,18 +734,12 @@
     </span><span class="kw">fn </span>test_update_lookup_four_chunks() {
         <span class="kw">let </span>manager = LookupDataManager::new_empty(TestLogger {});
 
-        <span class="kw">let </span>update_status = manager.update_extend(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
-        <span class="macro">assert_eq!</span>(update_status, UpdateStatus::Extended);
-
-        <span class="kw">let </span>update_status = manager.update_extend(create_test_data(<span class="number">2</span>, <span class="number">3</span>));
-        <span class="macro">assert_eq!</span>(update_status, UpdateStatus::Extended);
-
+        manager.extend_next_lookup_data(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
+        manager.extend_next_lookup_data(create_test_data(<span class="number">2</span>, <span class="number">3</span>));
         <span class="comment">// We have one key overlapping here.
-        </span><span class="kw">let </span>update_status = manager.update_extend(create_test_data(<span class="number">2</span>, <span class="number">6</span>));
-        <span class="macro">assert_eq!</span>(update_status, UpdateStatus::Extended);
-
-        <span class="kw">let </span>update_status = manager.update_finish(create_test_data(<span class="number">6</span>, <span class="number">7</span>));
-        <span class="macro">assert_eq!</span>(update_status, UpdateStatus::Finished);
+        </span>manager.extend_next_lookup_data(create_test_data(<span class="number">2</span>, <span class="number">6</span>));
+        manager.extend_next_lookup_data(create_test_data(<span class="number">6</span>, <span class="number">7</span>));
+        manager.finish_next_lookup_data();
 
         <span class="kw">let </span>lookup_data = manager.create_lookup_data();
 
@@ -734,15 +751,12 @@
         <span class="kw">let </span>manager = LookupDataManager::new_empty(TestLogger {});
         <span class="kw">let </span>lookup_data_0 = manager.create_lookup_data();
 
-        <span class="kw">let </span>update_status = manager.update_extend(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
-        <span class="macro">assert_eq!</span>(update_status, UpdateStatus::Extended);
-
-        <span class="kw">let </span>update_status = manager.update_abort();
-        <span class="macro">assert_eq!</span>(update_status, UpdateStatus::Aborted);
+        manager.extend_next_lookup_data(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
+        manager.abort_next_lookup_data();
         <span class="kw">let </span>lookup_data_1 = manager.create_lookup_data();
 
-        <span class="kw">let </span>update_status = manager.update_finish(create_test_data(<span class="number">0</span>, <span class="number">1</span>));
-        <span class="macro">assert_eq!</span>(update_status, UpdateStatus::Finished);
+        manager.extend_next_lookup_data(create_test_data(<span class="number">0</span>, <span class="number">1</span>));
+        manager.finish_next_lookup_data();
         <span class="kw">let </span>lookup_data_2 = manager.create_lookup_data();
 
         <span class="macro">assert_eq!</span>(lookup_data_0.len(), <span class="number">0</span>);

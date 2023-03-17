@@ -277,6 +277,8 @@
 <a href="#277" id="277">277</a>
 <a href="#278" id="278">278</a>
 <a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
 </pre><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InitializeRequest {
@@ -325,91 +327,29 @@
     <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>items: ::prost::alloc::vec::Vec&lt;LookupDataEntry&gt;,
 }
-<span class="doccomment">/// A message to the LookupDataManager to process the lookup data chunk based on the current
-/// action.
-///
-/// If the definition of UpdateLookupDataRequest changes, the estimation of the size when
+<span class="doccomment">/// If the definition of ExtendNextLookupData changes, the estimation of the size when
 /// serialized in the Oak Functions Launcher needs to change, too.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>UpdateLookupDataRequest {
-    <span class="attr">#[prost(enumeration = <span class="string">&quot;UpdateAction&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>action: i32,
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+</span><span class="kw">pub struct </span>ExtendNextLookupDataRequest {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>chunk: ::core::option::Option&lt;LookupDataChunk&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>UpdateLookupDataResponse {
-    <span class="attr">#[prost(enumeration = <span class="string">&quot;UpdateStatus&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>update_status: i32,
-}
+</span><span class="kw">pub struct </span>ExtendNextLookupDataResponse {}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>FinishNextLookupDataRequest {}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>FinishNextLookupDataResponse {}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>AbortNextLookupDataResponse {}
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>Empty {}
-<span class="doccomment">/// Indicates to the LookupDataManager which action should be taken.
-</span><span class="attr">#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
-#[repr(i32)]
-</span><span class="kw">pub enum </span>UpdateAction {
-    <span class="doccomment">/// The sender extends the lookup data builder with this chunk and will send a
-    /// further chunk.
-    </span>Extend = <span class="number">0</span>,
-    <span class="doccomment">/// The final chunk the sender sends to build the lookup data.
-    </span>Finish = <span class="number">1</span>,
-    <span class="doccomment">/// The sender needs to abort the building the lookup data.
-    </span>Abort = <span class="number">2</span>,
-}
-<span class="kw">impl </span>UpdateAction {
-    <span class="doccomment">/// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
-        <span class="kw">match </span><span class="self">self </span>{
-            UpdateAction::Extend =&gt; <span class="string">&quot;EXTEND&quot;</span>,
-            UpdateAction::Finish =&gt; <span class="string">&quot;FINISH&quot;</span>,
-            UpdateAction::Abort =&gt; <span class="string">&quot;ABORT&quot;</span>,
-        }
-    }
-    <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
-    </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">match </span>value {
-            <span class="string">&quot;EXTEND&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Extend),
-            <span class="string">&quot;FINISH&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Finish),
-            <span class="string">&quot;ABORT&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Abort),
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-        }
-    }
-}
-<span class="attr">#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
-#[repr(i32)]
-</span><span class="kw">pub enum </span>UpdateStatus {
-    Extended = <span class="number">0</span>,
-    Finished = <span class="number">1</span>,
-    Aborted = <span class="number">2</span>,
-}
-<span class="kw">impl </span>UpdateStatus {
-    <span class="doccomment">/// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    </span><span class="kw">pub fn </span>as_str_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
-        <span class="kw">match </span><span class="self">self </span>{
-            UpdateStatus::Extended =&gt; <span class="string">&quot;EXTENDED&quot;</span>,
-            UpdateStatus::Finished =&gt; <span class="string">&quot;FINISHED&quot;</span>,
-            UpdateStatus::Aborted =&gt; <span class="string">&quot;ABORTED&quot;</span>,
-        }
-    }
-    <span class="doccomment">/// Creates an enum from field names used in the ProtoBuf definition.
-    </span><span class="kw">pub fn </span>from_str_name(value: <span class="kw-2">&amp;</span>str) -&gt; ::core::option::Option&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">match </span>value {
-            <span class="string">&quot;EXTENDED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Extended),
-            <span class="string">&quot;FINISHED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Finished),
-            <span class="string">&quot;ABORTED&quot; </span>=&gt; <span class="prelude-val">Some</span>(<span class="self">Self</span>::Aborted),
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-        }
-    }
-}
 <span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>OakFunctionsServer&lt;S&gt; {
     service: S,
@@ -473,7 +413,9 @@
                 <span class="prelude-val">Ok</span>(response_body)
             }
             <span class="number">2 </span>=&gt; {
-                <span class="kw">let </span>request = &lt;UpdateLookupDataRequest&gt;::decode(request.body.as_ref())
+                <span class="kw">let </span>request = &lt;ExtendNextLookupDataRequest&gt;::decode(
+                        request.body.as_ref(),
+                    )
                     .map_err(|err| {
                         ::micro_rpc::Status::new_with_message(
                             ::micro_rpc::StatusCode::Internal,
@@ -482,7 +424,37 @@
                             ),
                         )
                     })<span class="question-mark">?</span>;
-                <span class="kw">let </span>response = <span class="self">self</span>.service.update_lookup_data(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>response = <span class="self">self</span>.service.extend_next_lookup_data(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>response_body = response.encode_to_vec();
+                <span class="prelude-val">Ok</span>(response_body)
+            }
+            <span class="number">3 </span>=&gt; {
+                <span class="kw">let </span>request = &lt;FinishNextLookupDataRequest&gt;::decode(
+                        request.body.as_ref(),
+                    )
+                    .map_err(|err| {
+                        ::micro_rpc::Status::new_with_message(
+                            ::micro_rpc::StatusCode::Internal,
+                            <span class="macro">::micro_rpc::format!</span>(
+                                <span class="string">&quot;Service failed to deserialize the request: {:?}&quot;</span>, err
+                            ),
+                        )
+                    })<span class="question-mark">?</span>;
+                <span class="kw">let </span>response = <span class="self">self</span>.service.finish_next_lookup_data(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>response_body = response.encode_to_vec();
+                <span class="prelude-val">Ok</span>(response_body)
+            }
+            <span class="number">4 </span>=&gt; {
+                <span class="kw">let </span>request = &lt;Empty&gt;::decode(request.body.as_ref())
+                    .map_err(|err| {
+                        ::micro_rpc::Status::new_with_message(
+                            ::micro_rpc::StatusCode::Internal,
+                            <span class="macro">::micro_rpc::format!</span>(
+                                <span class="string">&quot;Service failed to deserialize the request: {:?}&quot;</span>, err
+                            ),
+                        )
+                    })<span class="question-mark">?</span>;
+                <span class="kw">let </span>response = <span class="self">self</span>.service.abort_next_lookup_data(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
                 <span class="kw">let </span>response_body = response.encode_to_vec();
                 <span class="prelude-val">Ok</span>(response_body)
             }
@@ -499,10 +471,18 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request: <span class="kw-2">&amp;</span>InvokeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, ::micro_rpc::Status&gt;;
-    <span class="kw">fn </span>update_lookup_data(
+    <span class="kw">fn </span>extend_next_lookup_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request: <span class="kw-2">&amp;</span>UpdateLookupDataRequest,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;UpdateLookupDataResponse, ::micro_rpc::Status&gt;;
+        request: <span class="kw-2">&amp;</span>ExtendNextLookupDataRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;ExtendNextLookupDataResponse, ::micro_rpc::Status&gt;;
+    <span class="kw">fn </span>finish_next_lookup_data(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request: <span class="kw-2">&amp;</span>FinishNextLookupDataRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;FinishNextLookupDataResponse, ::micro_rpc::Status&gt;;
+    <span class="kw">fn </span>abort_next_lookup_data(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request: <span class="kw-2">&amp;</span>Empty,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;AbortNextLookupDataResponse, ::micro_rpc::Status&gt;;
 }
 <span class="kw">pub struct </span>OakFunctionsClient&lt;T: ::micro_rpc::Transport&gt; {
     transport: T,
@@ -523,11 +503,23 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;InvokeResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
         ::micro_rpc::client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">1</span>, request)
     }
-    <span class="kw">pub fn </span>update_lookup_data(
+    <span class="kw">pub fn </span>extend_next_lookup_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request: <span class="kw-2">&amp;</span>UpdateLookupDataRequest,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;UpdateLookupDataResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
+        request: <span class="kw-2">&amp;</span>ExtendNextLookupDataRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;ExtendNextLookupDataResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
         ::micro_rpc::client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">2</span>, request)
+    }
+    <span class="kw">pub fn </span>finish_next_lookup_data(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request: <span class="kw-2">&amp;</span>FinishNextLookupDataRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;FinishNextLookupDataResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
+        ::micro_rpc::client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">3</span>, request)
+    }
+    <span class="kw">pub fn </span>abort_next_lookup_data(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request: <span class="kw-2">&amp;</span>Empty,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;AbortNextLookupDataResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
+        ::micro_rpc::client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">4</span>, request)
     }
 }
 <span class="kw">pub struct </span>OakFunctionsAsyncClient&lt;T: ::micro_rpc::AsyncTransport&gt; {
@@ -549,11 +541,23 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;InvokeResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
         ::micro_rpc::async_client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">1</span>, request).<span class="kw">await
     </span>}
-    <span class="kw">pub async fn </span>update_lookup_data(
+    <span class="kw">pub async fn </span>extend_next_lookup_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request: <span class="kw-2">&amp;</span>UpdateLookupDataRequest,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;UpdateLookupDataResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
+        request: <span class="kw-2">&amp;</span>ExtendNextLookupDataRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;ExtendNextLookupDataResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
         ::micro_rpc::async_client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">2</span>, request).<span class="kw">await
+    </span>}
+    <span class="kw">pub async fn </span>finish_next_lookup_data(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request: <span class="kw-2">&amp;</span>FinishNextLookupDataRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;FinishNextLookupDataResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
+        ::micro_rpc::async_client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">3</span>, request).<span class="kw">await
+    </span>}
+    <span class="kw">pub async fn </span>abort_next_lookup_data(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request: <span class="kw-2">&amp;</span>Empty,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;AbortNextLookupDataResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
+        ::micro_rpc::async_client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">4</span>, request).<span class="kw">await
     </span>}
 }
 </code></pre></div>
