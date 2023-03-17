@@ -35,8 +35,11 @@ struct UpdateClient<'a, I: Iterator<Item = LookupDataChunk>> {
 impl<I: Iterator<Item = LookupDataChunk>> UpdateClient<'_, I> {
     // Sends all chunks to the Oak Functions Service.
     async fn update(&mut self) -> anyhow::Result<()> {
-        self.chunks
-            .for_each(|chunk| self.extend(Some(chunk)).await?);
+        let mut next = self.chunks.next();
+        while next.is_some() {
+            self.extend(next).await?;
+            next = self.chunks.next();
+        }
         self.finish().await
     }
 
