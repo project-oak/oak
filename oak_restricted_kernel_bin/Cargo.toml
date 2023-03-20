@@ -25,6 +25,14 @@ oak_restricted_kernel = { path = "../oak_restricted_kernel", default-features = 
 name = "oak_restricted_kernel_bin"
 test = false
 bench = false
+required-features = ["virtio_console_channel"]
+
+[[bin]]
+path = "src/main.rs"
+name = "oak_restricted_kernel_simple_io_bin"
+test = false
+bench = false
+required-features = ["simple_io_channel"]
 
 # TODO(#3706): Remove when patching PR is merged upstream and released.
 [patch.crates-io]
