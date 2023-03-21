@@ -19,10 +19,11 @@
 
 use bitflags::bitflags;
 use core::{cmp::min, ffi::CStr};
+use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
 use x86_64::{
-    structures::paging::{PageSize, Size4KiB},
-    PhysAddr,
+    structures::paging::{PageSize, Size2MiB, Size4KiB},
+    PhysAddr, VirtAddr,
 };
 use zerocopy::{AsBytes, FromBytes};
 
@@ -216,33 +217,12 @@ impl FwCfg {
         name: &CStr,
         object: &mut T,
     ) -> Result<usize, &'static str> {
-        let mut entry: Option<DirEntry> = None;
-        for file in self.dir() {
-            if file.name() != name {
-                continue;
-            };
-            entry = Some(file);
-            break;
-        }
+        let entry = self.find(name);
         if let Some(file) = entry {
             self.read_file(&file, object.as_bytes_mut())
         } else {
             Err("couldn't find requested file")
         }
-    }
-
-    pub fn read_cmdline_size(&mut self) -> Result<u32, &'static str> {
-        let mut cmdline_size: u32 = 0;
-        self.write_selector(FwCfgItems::CmdlineSize as u16)?;
-        self.read(&mut cmdline_size)?;
-        Ok(cmdline_size)
-    }
-
-    pub fn read_cmdline(&mut self, buf: &mut [u8]) -> Result<usize, &'static str> {
-        let len = min(buf.len(), self.read_cmdline_size()? as usize);
-        self.write_selector(FwCfgItems::CmdlineData as u16)?;
-        self.read_buf(&mut buf[..len])?;
-        Ok(len)
     }
 
     /// Reads the size of the E820 reservation table.
@@ -255,51 +235,6 @@ impl FwCfg {
         Ok(reservation_count)
     }
 
-    /// Reads the size of the initial RAM disk.
-    pub fn read_initrd_size(&mut self) -> Result<u32, &'static str> {
-        let mut initrd_size: u32 = 0;
-        self.write_selector(FwCfgItems::InitrdSize as u16)?;
-        self.read(&mut initrd_size)?;
-        Ok(initrd_size)
-    }
-
-    /// Reads the address for the intended location or the initial RAM disk.
-    pub fn read_initrd_address(&mut self) -> Result<PhysAddr, &'static str> {
-        let mut initrd_addr: u32 = 0;
-        self.write_selector(FwCfgItems::InitrdAddr as u16)?;
-        self.read(&mut initrd_addr)?;
-        Ok(PhysAddr::new(initrd_addr as u64))
-    }
-
-    /// Reads the contents of the initial RAM disk into the supplied buffer.
-    ///
-    /// The initial RAM disk is not available via the file interface but has its own selector.
-    pub fn read_initrd_data(&mut self, buf: &mut [u8]) -> Result<usize, &'static str> {
-        if buf.len() != self.read_initrd_size()? as usize {
-            return Err("invalid buffer length");
-        }
-
-        self.write_selector(FwCfgItems::InitrdData as u16)?;
-        self.read_buf_dma(buf)?;
-        Ok(buf.len())
-    }
-
-    /// Reads the size of the kernel.
-    pub fn read_kernel_size(&mut self) -> Result<u32, &'static str> {
-        let mut kernel_size: u32 = 0;
-        self.write_selector(FwCfgItems::KernelSize as u16)?;
-        self.read(&mut kernel_size)?;
-        Ok(kernel_size)
-    }
-
-    /// Reads the address for the intended start of the kernel.
-    pub fn read_kernel_address(&mut self) -> Result<PhysAddr, &'static str> {
-        let mut kernel_addr: u32 = 0;
-        self.write_selector(FwCfgItems::KernelAddr as u16)?;
-        self.read(&mut kernel_addr)?;
-        Ok(PhysAddr::new(kernel_addr as u64))
-    }
-
     /// Reads contents of a file; returns the number of bytes actually read.
     ///
     /// The buffer `buf` will be filled to capacity if the file is larger;
@@ -307,7 +242,7 @@ impl FwCfg {
     pub fn read_file(&mut self, file: &DirEntry, buf: &mut [u8]) -> Result<usize, &'static str> {
         self.write_selector(file.selector())?;
         let len = min(buf.len(), file.size());
-        self.read_buf(&mut buf[..len])?;
+        self.read_buf_dma(&mut buf[..len])?;
         Ok(len)
     }
 
@@ -384,6 +319,72 @@ bitflags! {
         /// A DMA guest read operation is requested.
         const READ = 1 << 1;
     }
+}
+
+// Finds the highest section of RAM that is big enough to hold the DMA buffer, and falls below 1GiB.
+pub fn find_suitable_dma_address(
+    size: usize,
+    e820_table: &[BootE820Entry],
+) -> Result<PhysAddr, &'static str> {
+    let padded_size = (size as u64)
+        .checked_next_multiple_of(Size4KiB::SIZE)
+        .unwrap();
+    e820_table
+        .iter()
+        .filter_map(|entry| {
+            if entry.entry_type() != Some(E820EntryType::RAM) {
+                return None;
+            }
+            let start = entry.addr() as u64;
+            let end = crate::TOP_OF_VIRTUAL_MEMORY.min(start + entry.size() as u64);
+            if padded_size.checked_add(start).unwrap() > end {
+                return None;
+            }
+
+            // Align the start address down in case the end was not aligned.
+            Some(PhysAddr::new(end.checked_sub(padded_size).unwrap()).align_down(Size4KiB::SIZE))
+        })
+        .max_by(PhysAddr::cmp)
+        .ok_or("no suitable memory available for dma buffer")
+}
+
+/// Makes sure that a chunk of memory is valid
+pub fn check_memory(
+    start: VirtAddr,
+    size: usize,
+    e820_table: &[BootE820Entry],
+) -> Result<(), &'static str> {
+    let end = start + (size as u64);
+    if start.as_u64() < Size2MiB::SIZE {
+        return Err("address falls in the first 2MiB");
+    }
+    if end.as_u64() > crate::TOP_OF_VIRTUAL_MEMORY {
+        return Err("region ends above the mapped virtual memory");
+    }
+    if !e820_table.iter().any(|entry| {
+        entry.entry_type() == Some(E820EntryType::RAM)
+            && entry.addr() as u64 <= start.as_u64()
+            && (entry.addr() + entry.size()) as u64 >= end.as_u64()
+    }) {
+        return Err("region is not backed by physical memory");
+    }
+
+    Ok(())
+}
+
+/// Ensures that two ranges don't overlap.
+pub fn check_non_overlapping(
+    range_1_start: VirtAddr,
+    range_1_size: usize,
+    range_2_start: VirtAddr,
+    range_2_size: usize,
+) -> Result<(), &'static str> {
+    let range_1_end = range_1_start + (range_1_size as u64);
+    let range_2_end = range_2_start + (range_2_size as u64);
+    if range_1_start < range_2_end && range_1_end > range_2_start {
+        return Err("regions overlap");
+    }
+    Ok(())
 }
 
 /// Definition for a DMA access request.
