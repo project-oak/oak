@@ -80,35 +80,34 @@ impl InvocationChannel {
         let mut encoded_message: Vec<u8> = Vec::new();
         let mut first_frame = self.inner.read_frame().context("couldn't read frame")?;
 
-        if first_frame.flags.contains(frame::Flags::START) {
-            if first_frame.flags.contains(frame::Flags::END) {
-                return Ok(M::decode(first_frame.body));
-            } else {
-                let required_additional_capacity_to_hold_message = {
-                    let message_length: usize = {
-                        let mut message_length_bytes: [u8; message::LENGTH_SIZE] =
-                            [0; message::LENGTH_SIZE];
-                        let message_length_offset = message::LENGTH_OFFSET;
-                        let message_length_range =
-                            message_length_offset..(message_length_offset + message::LENGTH_SIZE);
-                        message_length_bytes
-                            .copy_from_slice(&first_frame.body[message_length_range]);
-                        usize::try_from(message::Length::from_le_bytes(message_length_bytes))
-                            .expect("couldn't convert message lemgth to usize")
-                    };
-                    message_length
-                        .checked_sub(encoded_message.capacity())
-                        .expect("message length underflow")
-                };
-                if required_additional_capacity_to_hold_message > 0 {
-                    encoded_message.reserve_exact(required_additional_capacity_to_hold_message);
-                }
-
-                encoded_message.append(&mut first_frame.body);
-            }
-        } else {
+        if !first_frame.flags.contains(frame::Flags::START) {
             anyhow::bail!("expected a frame with the START flag set");
         }
+
+        if first_frame.flags.contains(frame::Flags::END) {
+            return Ok(M::decode(first_frame.body));
+        }
+
+        let required_additional_capacity_to_hold_message = {
+            let message_length: usize = {
+                let mut message_length_bytes: [u8; message::LENGTH_SIZE] =
+                    [0; message::LENGTH_SIZE];
+                let message_length_offset = message::LENGTH_OFFSET;
+                let message_length_range =
+                    message_length_offset..(message_length_offset + message::LENGTH_SIZE);
+                message_length_bytes.copy_from_slice(&first_frame.body[message_length_range]);
+                usize::try_from(message::Length::from_le_bytes(message_length_bytes))
+                    .expect("couldn't convert message lemgth to usize")
+            };
+            message_length
+                .checked_sub(encoded_message.capacity())
+                .expect("message length underflow")
+        };
+        if required_additional_capacity_to_hold_message > 0 {
+            encoded_message.reserve_exact(required_additional_capacity_to_hold_message);
+        }
+
+        encoded_message.append(&mut first_frame.body);
 
         loop {
             let mut frame = self.inner.read_frame().context("couldn't read frame")?;
