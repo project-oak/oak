@@ -15,6 +15,7 @@
 //
 
 use crate::fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg};
+use alloc::vec;
 use core::{ffi::CStr, slice};
 use goblin::{
     container::{Container, Ctx, Endian},
@@ -36,6 +37,9 @@ const DEFAULT_KERNEL_SIZE: usize = 0x100000;
 /// The file path used by Stage0 to read the kernel from the fw_cfg device.
 const KERNEL_FILE_PATH: &[u8] = b"opt/stage0/elf_kernel\0";
 
+/// The file path used by Stage0 to read the kernel command-line from the fw_cfg device.
+const CMDLINE_FILE_PATH: &[u8] = b"opt/stage0/cmdline\0";
+
 /// Information about the kernel image.
 pub struct KernelInfo {
     pub start_address: VirtAddr,
@@ -51,6 +55,28 @@ impl Default for KernelInfo {
             entry: VirtAddr::new(DEFAULT_KERNEL_START),
         }
     }
+}
+
+pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<&'static CStr> {
+    let cmdline_path = CStr::from_bytes_with_nul(CMDLINE_FILE_PATH).expect("invalid c-string");
+    let cmdline_file = fw_cfg.find(cmdline_path)?;
+    let cmdline_size = cmdline_file.size();
+    // Make the buffer one byte longer so that the kernel command-line is null-terminated.
+    let buf = vec![0u8; cmdline_size + 1].leak();
+    let actual_size = fw_cfg
+        .read_file(&cmdline_file, buf)
+        .expect("could not read cmdline");
+    assert_eq!(
+        actual_size, cmdline_size,
+        "cmdline size did not match expected size"
+    );
+
+    let cmdline = &CStr::from_bytes_with_nul(buf).expect("invalid kernel command-line");
+    log::debug!(
+        "Kernel cmdline: {}",
+        cmdline.to_str().expect("invalid kernel commande-line")
+    );
+    Some(cmdline)
 }
 
 /// Tries to load a kernel image from the QEMU fw_cfg device.
