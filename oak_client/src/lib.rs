@@ -22,86 +22,34 @@ pub mod proto {
 pub mod transport;
 pub mod verifier;
 
-use crate::{
-    transport::AsyncTransport,
-    verifier::{EvidenceProvider, ReferenceValue, Verifier},
-};
 use anyhow::Context;
-use std::{vec, vec::Vec};
+use std::vec::Vec;
 
 /// Client for connecting to Oak.
 /// Represents a Relying Party from the RATS Architecture:
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-relying-party>
-pub struct OakClient {
-    transport: Box<dyn AsyncTransport>,
-    encryptor: Encryptor,
+pub struct OakClient<T>
+where
+    T: micro_rpc::AsyncTransport<Error = anyhow::Error>,
+{
+    transport: T,
 }
 
-impl OakClient {
-    pub fn create(
-        transport: Box<dyn AsyncTransport>,
-        mut evidence_provider: Box<dyn EvidenceProvider>,
-        reference_value: ReferenceValue,
-        verifier: Box<dyn Verifier>,
-        crypto_provider: CryptoProvider,
-    ) -> anyhow::Result<Self> {
-        let evidence = evidence_provider
-            .get_evidence()
-            .context("couldn't get evidence")?;
-
-        verifier
-            .verify(&evidence, &reference_value)
-            .context("couldn't verify evidence")?;
-
-        let encryptor = crypto_provider
-            .get_encryptor(&evidence.enclave_public_key)
-            .context("couldn't create encryptor")?;
-
-        Ok(Self {
-            transport,
-            encryptor,
-        })
+impl<T> OakClient<T>
+where
+    T: micro_rpc::AsyncTransport<Error = anyhow::Error>,
+{
+    pub async fn create(transport: T) -> anyhow::Result<Self> {
+        // TODO(#3442): Fetch enclave public key.
+        // TODO(#3641): Implement client-side attestation verification.
+        Ok(Self { transport })
     }
 
     pub async fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let (encrypted_request, decryptor) = self
-            .encryptor
-            .encrypt(request_body)
-            .context("couldn't encrypt request")?;
-        let encrypted_response = self
-            .transport
-            .invoke(&encrypted_request)
-            .context("couldn't send request")?;
-        let decrypted_response = decryptor
-            .decrypt(&encrypted_response)
-            .context("couldn't decrypt response")?;
-        Ok(decrypted_response)
-    }
-}
-
-// TODO(#3654): Implement client crypto provider.
-pub struct CryptoProvider {}
-
-impl CryptoProvider {
-    fn get_encryptor(&self, _enclave_public_key: &[u8]) -> anyhow::Result<Encryptor> {
-        Ok(Encryptor {})
-    }
-}
-
-struct Encryptor {}
-
-impl Encryptor {
-    /// Returns the encrypted `message` and a corresponding `Decryptor` that should be used
-    /// to decrypt the response message.
-    fn encrypt(&mut self, _message: &[u8]) -> anyhow::Result<(Vec<u8>, Decryptor)> {
-        Ok((vec![], Decryptor {}))
-    }
-}
-
-struct Decryptor {}
-
-impl Decryptor {
-    fn decrypt(&self, _encrypted_message: &[u8]) -> anyhow::Result<Vec<u8>> {
-        Ok(vec![])
+        // TODO(#3767): Use hybrid encryption for messages.
+        self.transport
+            .invoke(request_body)
+            .await
+            .context("couldn't send request")
     }
 }

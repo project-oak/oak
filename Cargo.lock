@@ -1754,9 +1754,12 @@ name = "oak_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "futures-util",
  "log",
+ "micro_rpc",
  "oak_grpc_utils",
+ "oak_remote_attestation_noninteractive",
  "prost",
  "tonic",
 ]
@@ -1845,6 +1848,7 @@ dependencies = [
  "hex",
  "http",
  "log",
+ "oak_client",
  "oak_functions_abi",
  "oak_remote_attestation_noninteractive",
  "p256",
@@ -1886,8 +1890,8 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_client",
  "oak_functions_test_utils",
+ "oak_grpc_utils",
  "oak_launcher_utils",
- "oak_remote_attestation_noninteractive",
  "prost",
  "rand 0.8.5",
  "serde",

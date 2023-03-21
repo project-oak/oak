@@ -24,7 +24,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "oak_remote_attestation_noninteractive/proto/v1/service_streaming.proto",
         ],
         CodegenOptions {
-            build_server: true,
             build_client: true,
             ..Default::default()
         },
