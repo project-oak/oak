@@ -11,7 +11,11 @@ members = ["."]
 
 [dependencies]
 bitflags = "*"
-goblin = { version = "*", default-features = false, features = ["elf64"] }
+goblin = { version = "*", default-features = false, features = [
+  "elf32",
+  "elf64",
+  "endian_fd"
+] }
 log = "*"
 oak_core = { path = "../oak_core", default-features = false }
 oak_linux_boot_params = { path = "../linux_boot_params" }

@@ -64,18 +64,20 @@ mkfifo /tmp/comms.in /tmp/comms.out
 Execute the initial RAM disk with QEMU:
 
 Note: this assumes that an appropiate uncompressed Linux kernel ELF binary has
-been copied to `bin/vmlinux`. The Linux Kernel must be built with PVH guest
-support so that it can be loaded as a kernel by QEMU. It must also be built with
-ACPI, ACPI Plug-and-Play, Virtio MMIO, and Virtio Console support, as this is
-needed for the `/dev/hvc0` device to become available.
+been copied to `bin/vmlinux`. The Linux Kernel must be built with ACPI, ACPI
+Plug-and-Play, Virtio MMIO, and Virtio Console support, as this is needed for
+the `/dev/hvc0` device to become available.
 
 ```bash
 qemu-system-x86_64 -cpu host -enable-kvm -machine "microvm" -m 1G \
-    -nographic -nodefaults -no-reboot -serial stdio -append "console=ttyS0 quiet" \
+    -nographic -nodefaults -no-reboot -serial stdio \
     -chardev "pipe,id=comms,path=/tmp/comms" \
     -device "virtio-serial-device,max_ports=1" \
     -device "virtconsole,chardev=comms" \
-    -bios "bin/stage0.bin" -kernel "bin/vmlinux" -initrd "bin/initramfs"
+    -bios "bin/stage0.bin" \
+    -fw_cfg "name=opt/stage0/elf_kernel,file=bin/vmlinux" \
+    -fw_cfg "name=opt/stage0/initramfs,file=bin/initramfs" \
+    -fw_cfg "name=opt/stage0/cmdline,string=console=ttyS0 quiet"
 ```
 
 While the VM is running, listen for bytes on the output pipe in a separate

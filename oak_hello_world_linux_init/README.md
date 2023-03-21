@@ -64,6 +64,8 @@ copied to `bin/vmlinux`.
 
 ```bash
 qemu-system-x86_64 -cpu host -enable-kvm -machine "microvm,acpi=on" -m 1G \
-    -nographic -nodefaults -no-reboot -serial stdio -append "console=ttyS0 quiet" \
-    -bios "bin/stage0.bin" -kernel "bin/vmlinux" -initrd "bin/initramfs"
+    -nographic -nodefaults -no-reboot -serial stdio -bios "bin/stage0.bin" \
+    -fw_cfg "name=opt/stage0/elf_kernel,file=bin/vmlinux" \
+    -fw_cfg "name=opt/stage0/initramfs,file=bin/initramfs" \
+    -fw_cfg "name=opt/stage0/cmdline,string=console=ttyS0 quiet"
 ```

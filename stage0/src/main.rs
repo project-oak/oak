@@ -18,13 +18,9 @@
 #![no_main]
 #![feature(int_roundings)]
 
-use core::{
-    alloc::Layout,
-    arch::asm,
-    ffi::{c_void, CStr},
-    mem::MaybeUninit,
-    panic::PanicInfo,
-};
+extern crate alloc;
+
+use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use goblin::elf::header;
 use oak_sev_guest::io::PortFactoryWrapper;
 use static_alloc::bump::Bump;
@@ -50,10 +46,12 @@ mod asm;
 mod cmos;
 mod fw_cfg;
 mod initramfs;
+mod kernel;
 mod logging;
 mod sev;
 mod zero_page;
 
+#[global_allocator]
 static BOOT_ALLOC: Bump<[u8; 128 * 1024]> = Bump::uninit();
 
 #[link_section = ".boot"]
@@ -62,9 +60,6 @@ static SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUnin
 #[link_section = ".boot"]
 #[no_mangle]
 static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
-
-/// The default entry point for the kernel if one wasn't supplied via the QEMU fw_cfg device.
-const DEFAULT_KERNEL_ENTRY: u64 = 0x200000;
 
 /// We create an identity map for the first 1GiB of memory.
 const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
@@ -290,38 +285,13 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         zero_page.add_setup_data(setup_data);
     }
 
-    if let Ok(cmdline_size) = fwcfg.read_cmdline_size() {
-        if cmdline_size > 0 {
-            let mut buf = BOOT_ALLOC
-                .alloc(
-                    Layout::from_size_align(cmdline_size as usize, 1)
-                        .expect("failed to create layout for kernel command line"),
-                )
-                .expect("failed to allocate memory for kernel command line");
-            // Safety: we've now allocated (at least) `cmdline_size` worth of bytes, so turning the
-            // memory into a slice is safe.
-            let buf =
-                unsafe { core::slice::from_raw_parts_mut(buf.as_mut(), cmdline_size as usize) };
-            fwcfg
-                .read_cmdline(buf)
-                .expect("failed to read kernel command line from fw_cfg");
-            zero_page
-                .set_cmdline(CStr::from_bytes_with_nul(buf).expect("invalid kernel command line"));
-        }
+    if let Some(cmdline) = kernel::try_load_cmdline(&mut fwcfg) {
+        zero_page.set_cmdline(cmdline);
     }
 
-    // For the Linux boot protocol we use the start address as the entry point. The kernel entry
-    // point provided by the fw_cfg device actually points to the entry point for the PVH boot
-    // protocol. We use an identity mapping.
-    let mut entry = VirtAddr::new(
-        fwcfg
-            .read_kernel_address()
-            .expect("failed to read kernel start addres from fw_cfg")
-            .as_u64(),
-    );
-    if entry.is_null() {
-        entry = VirtAddr::new(DEFAULT_KERNEL_ENTRY);
-    }
+    let kernel_info = kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table())
+        .unwrap_or(kernel::KernelInfo::default());
+    let mut entry = kernel_info.entry;
 
     // Attempt to parse 64 bytes at the suggested entry point as an ELF header. If it works, extract
     // the entry point address from there; if there is no valid ELF header at that address, assume
@@ -345,7 +315,8 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
 
     zero_page.set_acpi_rsdp_addr(acpi::build_acpi_tables(&mut fwcfg).unwrap());
 
-    if let Some(ram_disk) = initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table())
+    if let Some(ram_disk) =
+        initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel_info)
     {
         zero_page.set_initial_ram_disk(ram_disk);
     }
@@ -386,4 +357,9 @@ fn panic(info: &PanicInfo) -> ! {
     loop {
         hlt();
     }
+}
+
+fn phys_to_virt(address: PhysAddr) -> VirtAddr {
+    // We use an identity mapping throughout.
+    VirtAddr::new(address.as_u64())
 }
