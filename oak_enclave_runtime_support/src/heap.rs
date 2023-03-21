@@ -16,13 +16,46 @@
 
 use core::{
     alloc::{GlobalAlloc, Layout},
-    ffi::c_void,
     ops::Deref,
     ptr::NonNull,
 };
-use linked_list_allocator::Heap;
 use oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
+use rlsf::{FlexSource, FlexTlsf};
 use spinning_top::Spinlock;
+
+struct Source {}
+
+impl Source {
+    // Restricted Kernel deals in 2 MiB pages, so that's what we use to request memory.
+    const PAGE_SIZE: usize = 0x20_0000usize;
+}
+
+unsafe impl FlexSource for Source {
+    unsafe fn alloc(&mut self, min_size: usize) -> Option<NonNull<[u8]>> {
+        // Ensure that we're allocating page-sized chunks of memory.
+        let size = if min_size % Self::PAGE_SIZE != 0 {
+            Self::PAGE_SIZE * ((min_size / Self::PAGE_SIZE) + 1)
+        } else {
+            min_size
+        };
+
+        oak_restricted_kernel_api::syscall::mmap(
+            None,
+            size.try_into().ok()?,
+            MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
+            MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
+            -1,
+            0,
+        )
+        .map(|r| NonNull::new(r))
+        .ok()
+        .flatten()
+    }
+
+    fn min_align(&self) -> usize {
+        Self::PAGE_SIZE
+    }
+}
 
 /// Heap implementation that asks Restricted Kernel for more memory when allocations fail.
 ///
@@ -33,89 +66,26 @@ use spinning_top::Spinlock;
 /// machine runs out memory).
 pub struct GrowableHeap {
     /// Underlying heap implementation.
-    heap: Heap,
-
-    /// Address of the base of the heap.
-    base: Option<usize>,
-
-    /// Address of the next virtual memory page to use for the heap.
-    cursor: Option<usize>,
+    heap: FlexTlsf<Source, usize, usize, { usize::BITS as usize }, { usize::BITS as usize }>,
 }
 
 impl GrowableHeap {
-    // Restricted Kernel deals in 2 MiB pages, so that's what we use to request memory.
-    const PAGE_SIZE: usize = 0x20_0000usize;
-
     pub const fn empty() -> Self {
         Self {
-            heap: Heap::empty(),
-            base: None,
-            cursor: None,
+            heap: FlexTlsf::new(Source {}),
         }
     }
 
-    pub unsafe fn init(&mut self) {
-        // Get the first PAGE_SIZE MiB of memory for the heap.
-        self.extend(1).unwrap();
+    pub unsafe fn init(&mut self) {}
 
+    pub fn allocate(&mut self, layout: Layout) -> Result<NonNull<u8>, ()> {
         self.heap
-            .init(self.base.unwrap() as *mut u8, Self::PAGE_SIZE);
+            .allocate(layout)
+            .ok_or_else(|| log::error!("failed to allocate memory with layout: {:?}", layout))
     }
 
-    /// Extends the current pool of memory by some number of pages.
-    fn extend(&mut self, pages: usize) -> Result<(), &'static str> {
-        if pages == 0 {
-            return Ok(());
-        }
-
-        // If this is the first allocation, we don't want MAP_FIXED; however, for every consecutive
-        // allocation, we want it to come immediately after the initial allocation so we need
-        // MAP_FIXED.
-        let flags = MmapFlags::MAP_ANONYMOUS
-            | MmapFlags::MAP_PRIVATE
-            | self
-                .cursor
-                .map_or_else(MmapFlags::empty, |_| MmapFlags::MAP_FIXED);
-
-        let mem = oak_restricted_kernel_api::syscall::mmap(
-            self.cursor.map(|x| x as *const c_void),
-            (pages * Self::PAGE_SIZE) as isize,
-            MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
-            flags,
-            -1,
-            0,
-        )
-        .map_err(|_| "failed to acquire memory")?;
-
-        // Move the cursor to the next unallocated page.
-        self.cursor = Some(mem.as_ptr() as usize + (pages * Self::PAGE_SIZE));
-        self.base.get_or_insert(mem.as_ptr() as usize);
-
-        Ok(())
-    }
-
-    pub fn allocate_first_fit(&mut self, layout: Layout) -> Result<NonNull<u8>, ()> {
-        // Try allocating the data structure; if the allocation fails, grow the heap and try again
-        // until we succeed (or until we can't extend ourselves any further)
-        // We extend the heap by powers of two until the allocation succeeds; this can be
-        // inefficient, but will converge faster than just adding one page at a time until the data
-        // structure fits.
-        for pages in (0..).map(|n| 2usize.pow(n)) {
-            match self.heap.allocate_first_fit(layout) {
-                Ok(ptr) => return Ok(ptr),
-                Err(()) => {
-                    self.extend(pages).map_err(|err| log::error!("{}", err))?;
-                    // Safety: this is safe as we've just mapped page(s) for the heap.
-                    unsafe { self.heap.extend(pages * Self::PAGE_SIZE) };
-                }
-            }
-        }
-
-        unreachable!("allocation loop did not run even once");
-    }
-
-    pub unsafe fn deallocate(&mut self, ptr: NonNull<u8>, layout: Layout) {
-        self.heap.deallocate(ptr, layout)
+    pub unsafe fn deallocate(&mut self, ptr: NonNull<u8>, align: usize) {
+        self.heap.deallocate(ptr, align)
     }
 }
 
@@ -140,14 +110,14 @@ unsafe impl GlobalAlloc for LockedGrowableHeap {
     unsafe fn alloc(&self, layout: core::alloc::Layout) -> *mut u8 {
         self.0
             .lock()
-            .allocate_first_fit(layout)
-            .ok()
-            .map_or(core::ptr::null_mut(), |allocation| allocation.as_ptr())
+            .allocate(layout)
+            .map(NonNull::as_ptr)
+            .unwrap_or(core::ptr::null_mut())
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: core::alloc::Layout) {
         self.0
             .lock()
-            .deallocate(NonNull::new_unchecked(ptr), layout)
+            .deallocate(NonNull::new_unchecked(ptr), layout.align())
     }
 }
