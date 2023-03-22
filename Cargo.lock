@@ -1759,7 +1759,6 @@ dependencies = [
  "log",
  "micro_rpc",
  "oak_grpc_utils",
- "oak_remote_attestation_noninteractive",
  "prost",
  "tonic",
 ]
@@ -1850,7 +1849,6 @@ dependencies = [
  "log",
  "oak_client",
  "oak_functions_abi",
- "oak_remote_attestation_noninteractive",
  "p256",
  "prost",
  "regex",
@@ -2032,7 +2030,6 @@ dependencies = [
  "nix 0.26.2",
  "oak_functions_abi",
  "oak_functions_client",
- "oak_remote_attestation_noninteractive",
  "port_check",
  "prost",
  "tempfile",
