@@ -51,7 +51,7 @@ impl RequestEncoder {
         let invocation_id = self.invocation_id_counter.next_invocation_id();
         RequestMessage {
             invocation_id,
-            body: request_body.to_vec(),
+            body: request_body.into(),
         }
     }
 }

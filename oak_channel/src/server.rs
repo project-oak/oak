@@ -30,7 +30,10 @@ pub fn start_blocking_server<T: micro_rpc::Transport<Error = !>>(
             .read_request()
             .context("couldn't receive message")?;
         let request_message_invocation_id = request_message.invocation_id;
-        let response = server.invoke(request_message.body.as_ref()).into_ok();
+        let response = server
+            .invoke(request_message.body.as_ref())
+            .into_ok()
+            .into_boxed_slice();
         let response_message = message::ResponseMessage {
             invocation_id: request_message_invocation_id,
             body: response,

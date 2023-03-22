@@ -52,7 +52,7 @@ pub const MAX_BODY_SIZE: usize = MAX_SIZE - BODY_OFFSET;
 #[derive(Clone, Default, Debug)]
 pub struct Frame {
     pub flags: Flags,
-    pub body: Vec<u8>,
+    pub body: Box<[u8]>,
 }
 
 impl TryFrom<Frame> for Vec<u8> {
@@ -116,7 +116,7 @@ impl Framed {
             let body_length: usize = length
                 .checked_sub(BODY_OFFSET)
                 .expect("body length underflow");
-            let mut body: Vec<u8> = vec![0; body_length];
+            let mut body: Box<[u8]> = vec![0; body_length].into_boxed_slice();
             self.inner.read(&mut body)?;
             body
         };
@@ -132,7 +132,7 @@ impl Framed {
     }
 }
 
-pub fn bytes_into_frames(data: Vec<u8>) -> anyhow::Result<Vec<Frame>> {
+pub fn bytes_into_frames(data: &[u8]) -> anyhow::Result<Vec<Frame>> {
     if data.is_empty() {
         anyhow::bail!("cannot convert empty payloads into frames")
     }
@@ -145,7 +145,7 @@ pub fn bytes_into_frames(data: Vec<u8>) -> anyhow::Result<Vec<Frame>> {
         // reference counting.
         .map(|frame_body| Frame {
             flags: Flags::default(),
-            body: frame_body.to_vec(),
+            body: frame_body.into(),
         })
         .collect();
 

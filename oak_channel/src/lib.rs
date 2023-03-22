@@ -31,7 +31,7 @@ mod message;
 mod tests;
 
 extern crate alloc;
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
 use anyhow::Context;
 
 pub trait Read {
@@ -77,56 +77,50 @@ impl InvocationChannel {
     }
 
     pub fn read_message<M: message::Message>(&mut self) -> anyhow::Result<M> {
-        let mut encoded_message: Vec<u8> = Vec::new();
-        let mut first_frame = self.inner.read_frame().context("couldn't read frame")?;
+        let first_frame = self.inner.read_frame().context("couldn't read frame")?;
 
         if !first_frame.flags.contains(frame::Flags::START) {
             anyhow::bail!("expected a frame with the START flag set");
         }
 
         if first_frame.flags.contains(frame::Flags::END) {
-            return Ok(M::decode(first_frame.body));
+            return Ok(M::decode(&first_frame.body[..]));
         }
 
-        let required_additional_capacity_to_hold_message = {
-            let message_length: usize = {
-                let mut message_length_bytes: [u8; message::LENGTH_SIZE] =
-                    [0; message::LENGTH_SIZE];
-                let message_length_offset = message::LENGTH_OFFSET;
-                let message_length_range =
-                    message_length_offset..(message_length_offset + message::LENGTH_SIZE);
-                message_length_bytes.copy_from_slice(&first_frame.body[message_length_range]);
-                usize::try_from(message::Length::from_le_bytes(message_length_bytes))
-                    .expect("couldn't convert message lemgth to usize")
-            };
-            message_length
-                .checked_sub(encoded_message.capacity())
-                .expect("message length underflow")
+        let message_length: usize = {
+            let mut message_length_bytes: [u8; message::LENGTH_SIZE] = [0; message::LENGTH_SIZE];
+            let message_length_offset = message::LENGTH_OFFSET;
+            let message_length_range =
+                message_length_offset..(message_length_offset + message::LENGTH_SIZE);
+            message_length_bytes.copy_from_slice(&first_frame.body[message_length_range]);
+            usize::try_from(message::Length::from_le_bytes(message_length_bytes))
+                .expect("couldn't convert message lemgth to usize")
         };
-        if required_additional_capacity_to_hold_message > 0 {
-            encoded_message.reserve_exact(required_additional_capacity_to_hold_message);
-        }
 
-        encoded_message.append(&mut first_frame.body);
+        let mut encoded_message: Box<[u8]> = vec![0; message_length].into_boxed_slice();
+        encoded_message[..first_frame.body.len()].clone_from_slice(&first_frame.body);
+        let mut cursor = first_frame.body.len();
 
         loop {
-            let mut frame = self.inner.read_frame().context("couldn't read frame")?;
+            let frame = self.inner.read_frame().context("couldn't read frame")?;
 
             if frame.flags.contains(frame::Flags::START) {
                 anyhow::bail!("received two frames with the START flag set");
-            } else {
-                encoded_message.append(&mut frame.body);
-                if frame.flags.contains(frame::Flags::END) {
-                    break;
-                }
-            };
+            }
+
+            encoded_message[cursor..cursor + frame.body.len()].clone_from_slice(&frame.body);
+            cursor += frame.body.len();
+
+            if frame.flags.contains(frame::Flags::END) {
+                break;
+            }
         }
 
-        Ok(M::decode(encoded_message))
+        Ok(M::decode(&encoded_message[..]))
     }
 
     pub fn write_message<M: message::Message>(&mut self, message: M) -> anyhow::Result<()> {
-        let frames: Vec<frame::Frame> = frame::bytes_into_frames(message.encode())?;
+        let frames: Vec<frame::Frame> = frame::bytes_into_frames(&message.encode())?;
         for frame in frames.into_iter() {
             self.inner
                 .write_frame(frame)

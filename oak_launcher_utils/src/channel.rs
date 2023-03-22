@@ -71,7 +71,7 @@ impl Connector {
             response_message.invocation_id
         );
 
-        Ok(response_message.body)
+        Ok(response_message.body.to_vec())
     }
 }
 
