@@ -266,7 +266,9 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {
     let uri = format!("http://localhost:{port}/");
 
     // Create client
-    let mut client = OakFunctionsClient::new(&uri).await.expect("couldn't create client");
+    let mut client = OakFunctionsClient::new(&uri)
+        .await
+        .expect("couldn't create client");
 
     client
         .invoke(request_body)
