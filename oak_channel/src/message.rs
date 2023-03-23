@@ -33,7 +33,7 @@ pub const BODY_OFFSET: usize = 8;
 pub trait Message {
     fn len(&self) -> usize;
     fn encode(self) -> Vec<u8>;
-    fn decode(frames: Vec<u8>) -> Self;
+    fn decode(frames: &[u8]) -> Self;
 }
 
 /// Rust implementation of the Request Message structure defined in
@@ -64,7 +64,7 @@ impl Message for RequestMessage {
         message_bytes
     }
 
-    fn decode(mut encoded_message: Vec<u8>) -> Self {
+    fn decode(encoded_message: &[u8]) -> Self {
         let invocation_id = {
             let mut invocation_id_bytes: [u8; INVOCATION_ID_SIZE] = [0; INVOCATION_ID_SIZE];
             invocation_id_bytes.copy_from_slice(
@@ -74,7 +74,7 @@ impl Message for RequestMessage {
         };
         // TODO(#2848): Avoid reallocating here by using slices + lifetimes, or
         // reference counting.
-        let body: Vec<u8> = encoded_message.drain(BODY_OFFSET..).collect();
+        let body: Vec<u8> = encoded_message[BODY_OFFSET..].into();
 
         Self {
             invocation_id,
@@ -111,7 +111,7 @@ impl Message for ResponseMessage {
         message_bytes
     }
 
-    fn decode(mut encoded_message: Vec<u8>) -> Self {
+    fn decode(encoded_message: &[u8]) -> Self {
         let invocation_id = {
             let mut invocation_id_bytes: [u8; INVOCATION_ID_SIZE] = [0; INVOCATION_ID_SIZE];
             invocation_id_bytes.copy_from_slice(
@@ -121,7 +121,7 @@ impl Message for ResponseMessage {
         };
         // TODO(#2848): Avoid reallocating here by using slices + lifetimes, or
         // reference counting.
-        let body: Vec<u8> = encoded_message.drain(BODY_OFFSET..).collect();
+        let body: Vec<u8> = encoded_message[BODY_OFFSET..].into();
 
         Self {
             invocation_id,

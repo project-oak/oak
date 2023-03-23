@@ -19,7 +19,7 @@
 extern crate alloc;
 
 use crate::Channel;
-use alloc::{boxed::Box, format, vec, vec::Vec};
+use alloc::{boxed::Box, format, vec::Vec};
 use bitflags::bitflags;
 
 pub const PADDING_SIZE: usize = 4;
@@ -50,12 +50,12 @@ pub const MAX_BODY_SIZE: usize = MAX_SIZE - BODY_OFFSET;
 /// Rust implementation of the Frame structure defined in
 /// `/oak_channel/SPEC.md`.
 #[derive(Clone, Default, Debug)]
-pub struct Frame {
+pub struct Frame<'a> {
     pub flags: Flags,
-    pub body: Vec<u8>,
+    pub body: &'a [u8],
 }
 
-impl TryFrom<Frame> for Vec<u8> {
+impl TryFrom<Frame<'_>> for Vec<u8> {
     type Error = anyhow::Error;
     fn try_from(frame: Frame) -> Result<Self, Self::Error> {
         let length = BODY_OFFSET
@@ -74,7 +74,7 @@ impl TryFrom<Frame> for Vec<u8> {
             frame_bytes.extend_from_slice(&frame_length.to_le_bytes());
         }
         frame_bytes.extend_from_slice(&frame.flags.bits.to_le_bytes());
-        frame_bytes.extend_from_slice(&frame.body);
+        frame_bytes.extend_from_slice(frame.body);
 
         Ok(frame_bytes)
     }
@@ -89,7 +89,10 @@ impl Framed {
         Self { inner: socket }
     }
 
-    pub fn read_frame(&mut self) -> anyhow::Result<Frame> {
+    pub fn read_frame<'a, F>(&mut self, allocate_fn: F) -> anyhow::Result<Frame<'a>>
+    where
+        F: FnOnce(usize) -> &'a mut [u8],
+    {
         {
             let mut padding_bytes = [0; PADDING_SIZE];
             self.inner.read(&mut padding_bytes)?;
@@ -116,8 +119,8 @@ impl Framed {
             let body_length: usize = length
                 .checked_sub(BODY_OFFSET)
                 .expect("body length underflow");
-            let mut body: Vec<u8> = vec![0; body_length];
-            self.inner.read(&mut body)?;
+            let body = allocate_fn(body_length);
+            self.inner.read(body)?;
             body
         };
 
@@ -132,20 +135,16 @@ impl Framed {
     }
 }
 
-pub fn bytes_into_frames(data: Vec<u8>) -> anyhow::Result<Vec<Frame>> {
+pub fn bytes_into_frames(data: &[u8]) -> anyhow::Result<Vec<Frame<'_>>> {
     if data.is_empty() {
         anyhow::bail!("cannot convert empty payloads into frames")
     }
 
     let mut frames: Vec<Frame> = data
         .chunks(MAX_BODY_SIZE)
-        // TODO(#2848): It'd be nice if we didn't have to reallocate here.
-        // We may be able to avoid doing so by making [`Frame`] use
-        // slices and lifetimes. Or alternatively use the Bytes crate for
-        // reference counting.
         .map(|frame_body| Frame {
             flags: Flags::default(),
-            body: frame_body.to_vec(),
+            body: frame_body,
         })
         .collect();
 
