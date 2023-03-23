@@ -57,7 +57,7 @@ async fn test_launcher_virtual() {
     // Wait for the server to start up.
     tokio::time::sleep(Duration::from_secs(8)).await;
 
-    let mut client = oak_functions_client::Client::new("http://localhost:8080")
+    let mut client = oak_functions_client::OakFunctionsClient::new("http://localhost:8080")
         .await
         .unwrap();
 

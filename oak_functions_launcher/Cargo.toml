@@ -28,7 +28,6 @@ tonic = "*"
 tonic-web = { version = "*", optional = true }
 oak_functions_abi = { workspace = true }
 oak_launcher_utils = { workspace = true }
-oak_remote_attestation_noninteractive = { workspace = true }
 micro_rpc = { workspace = true }
 oak_channel = { workspace = true, features = ["client"] }
 hashbrown = "*"
@@ -36,6 +35,7 @@ ubyte = "*"
 
 [build-dependencies]
 micro_rpc_build = { workspace = true }
+oak_grpc_utils = { workspace = true }
 
 [dev-dependencies]
 oak_functions_client = { workspace = true }

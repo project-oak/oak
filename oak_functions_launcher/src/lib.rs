@@ -18,6 +18,19 @@
 #![feature(result_flattening)]
 #![feature(array_chunks)]
 
+mod lookup;
+pub mod server;
+
+pub mod proto {
+    #![allow(clippy::return_self_not_must_use)]
+    tonic::include_proto!("oak.session.noninteractive.v1");
+}
+pub mod schema {
+    #![allow(dead_code)]
+    use prost::Message;
+    include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
+}
+
 use crate::schema::InitializeResponse;
 use anyhow::Context;
 use oak_launcher_utils::{
@@ -27,15 +40,6 @@ use oak_launcher_utils::{
 use schema::OakFunctionsAsyncClient;
 use std::{fs, path::PathBuf, time::Duration};
 use ubyte::ByteUnit;
-
-pub mod schema {
-    #![allow(dead_code)]
-    use prost::Message;
-    include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
-}
-
-mod lookup;
-pub mod server;
 
 pub struct LookupDataConfig {
     pub lookup_data_path: PathBuf,
