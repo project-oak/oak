@@ -42,12 +42,13 @@ fn mock_payload() -> Vec<u8> {
 fn test_fragmenting_bytes_into_frames() {
     let payload = mock_payload();
 
-    let mut frames = frame::bytes_into_frames(payload.clone()).unwrap();
+    let mut frames = frame::bytes_into_frames(&payload).unwrap();
     assert_eq!(frames.len(), BODY_LEN_MULTIPLIER);
 
     let mut reconstructed_payload: Vec<u8> = Vec::new();
     frames.iter_mut().for_each(|frame: &mut frame::Frame| {
-        let _ = &mut reconstructed_payload.append(&mut frame.body);
+        assert!(frame.body.len() <= frame::MAX_BODY_SIZE);
+        let _ = &mut reconstructed_payload.extend_from_slice(frame.body);
     });
     assert_eq!(payload, reconstructed_payload);
 }
@@ -58,7 +59,7 @@ fn test_request_message_encoding() {
         invocation_id: 0,
         body: mock_payload(),
     };
-    let reconstructed_message = message::RequestMessage::decode(message.clone().encode());
+    let reconstructed_message = message::RequestMessage::decode(&message.clone().encode());
     assert_eq!(message, reconstructed_message);
 }
 
@@ -68,7 +69,7 @@ fn test_response_message_encoding() {
         invocation_id: 0,
         body: mock_payload(),
     };
-    let reconstructed_message = message::ResponseMessage::decode(message.clone().encode());
+    let reconstructed_message = message::ResponseMessage::decode(&message.clone().encode());
     assert_eq!(message, reconstructed_message);
 }
 
@@ -117,8 +118,9 @@ fn test_invocation_channel_double_start_frame() {
         let message = message::RequestMessage {
             invocation_id: 0,
             body: mock_payload(),
-        };
-        let start_frame = frame::bytes_into_frames(message.encode())
+        }
+        .encode();
+        let start_frame = frame::bytes_into_frames(&message)
             .unwrap()
             .first()
             .unwrap()
@@ -140,8 +142,9 @@ fn test_invocation_channel_expected_start_frame() {
         let message = message::RequestMessage {
             invocation_id: 0,
             body: mock_payload(),
-        };
-        let end_frame = frame::bytes_into_frames(message.encode())
+        }
+        .encode();
+        let end_frame = frame::bytes_into_frames(&message)
             .unwrap()
             .last()
             .unwrap()
