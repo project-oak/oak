@@ -212,7 +212,7 @@ where
                 |caller: wasmi::Caller<'_, UserState<L>>,
                  buf_ptr_ptr: AbiPointer,
                  buf_len_ptr: AbiPointer| {
-                    let mut caller = OakCaller { caller };
+                    let mut caller = OakCaller::new(caller)?;
                     let request_bytes = caller.data().request_bytes.clone();
                     let status = caller.alloc_and_write(buf_ptr_ptr, buf_len_ptr, request_bytes);
                     from_oak_status(status)
@@ -230,7 +230,7 @@ where
                 |caller: wasmi::Caller<'_, UserState<L>>,
                  buf_ptr: AbiPointer,
                  buf_len: AbiPointerOffset| {
-                    let mut caller = OakCaller { caller };
+                    let mut caller = OakCaller::new(caller)?;
                     let status = caller.read_buffer(buf_ptr, buf_len).map(|buffer| {
                         caller.data_mut().response_bytes = buffer;
                     });
@@ -252,7 +252,7 @@ where
                  request_len: AbiPointerOffset,
                  response_ptr_ptr: AbiPointer,
                  response_len_ptr: AbiPointer| {
-                    let mut caller = OakCaller { caller };
+                    let mut caller = OakCaller::new(caller)?;
                     let status = caller
                         .read_buffer(request_ptr, request_len)
                         .map_err(|err| {
@@ -320,10 +320,15 @@ struct OakCaller<'a, L: OakLogger> {
     caller: wasmi::Caller<'a, UserState<L>>,
 }
 
-impl<L> OakCaller<'_, L>
+impl<'a, L> OakCaller<'a, L>
 where
     L: OakLogger,
 {
+    fn new(caller: wasmi::Caller<'a, UserState<L>>) -> Result<Self, wasmi::core::Trap> {
+        let caller = OakCaller { caller };
+        Ok(caller)
+    }
+
     /// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
     fn read_buffer(
         &mut self,
