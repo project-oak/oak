@@ -35,7 +35,7 @@ use oak_functions_abi::{
 };
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::{Level, OakLogger};
-use wasmi::{Memory, MemoryType, Store};
+use wasmi::{MemoryType, Store};
 
 pub const MAIN_FUNCTION_NAME: &str = "main";
 pub const ALLOC_FUNCTION_NAME: &str = "alloc";
@@ -322,7 +322,7 @@ where
 struct OakCaller<'a, L: OakLogger> {
     caller: wasmi::Caller<'a, UserState<L>>,
     alloc: wasmi::TypedFunc<i32, AbiPointer>,
-    // TODO(mschett): Store memory, too.
+    memory: wasmi::Memory,
 }
 
 impl<'a, L> OakCaller<'a, L>
@@ -353,9 +353,25 @@ where
             OakStatus::ErrInternal
         })?;
 
+        // Get memory to store.
+        let ext = caller.get_export(MEMORY_NAME).ok_or_else(|| {
+            caller
+                .data()
+                .log_error(&format!("failed to get exported {}", MEMORY_NAME));
+            OakStatus::ErrInternal
+        })?;
+
+        let memory = ext.into_memory().ok_or_else(|| {
+            caller
+                .data()
+                .log_error(&format!("exported {} is not a memory", MEMORY_NAME));
+            OakStatus::ErrInternal
+        })?;
+
         let caller = OakCaller {
             caller,
             alloc: typed_alloc,
+            memory,
         };
 
         Ok(caller)
@@ -371,7 +387,7 @@ where
         let buf_ptr = buf_ptr
             .try_into()
             .expect("failed to convert AbiPointer to usize as required by wasmi API");
-        self.get_memory()?
+        self.memory
             .read(&mut self.caller, buf_ptr, &mut buf)
             .map_err(|err| {
                 self.data().log_error(&format!(
@@ -413,7 +429,7 @@ where
         let dest = dest
             .try_into()
             .expect("failed to convert AbiPointer to usize as required by wasmi API");
-        self.get_memory()?
+        self.memory
             .write(&mut self.caller, dest, source)
             .map_err(|err| {
                 self.data().log_error(&format!(
@@ -443,23 +459,6 @@ where
 
     fn data(&mut self) -> &UserState<L> {
         self.caller.data()
-    }
-
-    // Helper function to get exported MEMORY_NAME from caller.
-    fn get_memory(&mut self) -> Result<Memory, OakStatus> {
-        let ext = self.caller.get_export(MEMORY_NAME).ok_or_else(|| {
-            self.caller
-                .data()
-                .log_error(&format!("failed to get exported {}", MEMORY_NAME));
-            OakStatus::ErrInternal
-        })?;
-
-        ext.into_memory().ok_or_else(|| {
-            self.caller
-                .data()
-                .log_error(&format!("exported {} is not a memory", MEMORY_NAME));
-            OakStatus::ErrInternal
-        })
     }
 }
 
