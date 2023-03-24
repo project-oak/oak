@@ -15,10 +15,9 @@
 //
 
 use crate::{
-    alloc_and_write_buffer, read_buffer, write_buffer, write_u32, AbiPointer, AbiPointerOffset,
-    Dest, Src, WasmHandler, WasmState, ALLOC_FUNCTION_NAME, MEMORY_NAME,
+    AbiPointer, AbiPointerOffset, WasmHandler, WasmState, ALLOC_FUNCTION_NAME, MEMORY_NAME,
 };
-use alloc::{string::ToString, vec};
+use alloc::{string::ToString, vec::Vec};
 use byteorder::{ByteOrder, LittleEndian};
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingRequest, TestingResponse};
 use oak_functions_testing_extension::{TestingFactory, TestingLogger};
@@ -47,223 +46,76 @@ fn test_invoke_extension_not_available() {
 #[test]
 fn test_read_write_u32_in_wasm_memory() {
     let wasm_state = &mut create_test_wasm_state();
-
-    let mut memory = wasm_state
-        .instance
-        .get_export(&wasm_state.store, MEMORY_NAME)
-        .unwrap()
-        .into_memory()
-        .unwrap();
-
     // Guess some memory address in linear Wasm memory to write to.
     let address: AbiPointer = 100;
     let value: u32 = 32;
-    let write_status = write_u32(&mut wasm_state.store, &mut memory, value, address);
-    assert!(write_status.is_ok());
-    let read_value = read_u32(&mut wasm_state.store, &mut memory, address).unwrap();
+    write_u32(wasm_state, value, address);
+    let read_value = read_u32(wasm_state, address);
     assert_eq!(read_value, value);
 }
 
 #[test]
 fn test_alloc_and_write_empty() {
     let wasm_state = &mut create_test_wasm_state();
-
-    let mut memory = wasm_state
-        .instance
-        .get_export(&wasm_state.store, MEMORY_NAME)
-        .unwrap()
-        .into_memory()
-        .unwrap();
-
-    let alloc = wasm_state
-        .instance
-        .get_export(&wasm_state.store, ALLOC_FUNCTION_NAME)
-        .unwrap()
-        .into_func()
-        .unwrap();
-
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_ptr_ptr: AbiPointer = 100;
     let dest_len_ptr: AbiPointer = 150;
-    let write_status = alloc_and_write_buffer(
-        &mut wasm_state.store,
-        &mut memory,
-        alloc,
-        Dest {
-            ptr_ptr: dest_ptr_ptr,
-            len_ptr: dest_len_ptr,
-            buf: vec![],
-        },
-    );
-
-    // Assert that we can write the empty vector.
-    assert!(write_status.is_ok());
-
+    alloc_and_write(wasm_state, dest_ptr_ptr, dest_len_ptr, alloc::vec![]);
     // Get dest_len from dest_len_ptr.
-    let dest_len: AbiPointerOffset =
-        read_u32(&mut wasm_state.store, &mut memory, dest_len_ptr).unwrap();
-
+    let dest_len: AbiPointerOffset = read_u32(wasm_state, dest_len_ptr);
     // Assert that we write a vector of length 0.
     assert_eq!(dest_len, 0);
-
-    let dest_ptr: AbiPointer = read_u32(&mut wasm_state.store, &mut memory, dest_ptr_ptr).unwrap();
-
+    let dest_ptr: AbiPointer = read_u32(wasm_state, dest_ptr_ptr);
+    // Reading the empty vector from response_ptr.
+    let buf = read_buffer(wasm_state, dest_ptr, dest_len);
     // Assert that reponse_ptr holds expected empty vector.
-    assert!(read_buffer(
-        &mut wasm_state.store,
-        &mut memory,
-        Src {
-            ptr: dest_ptr,
-            len: dest_len
-        }
-    )
-    .unwrap()
-    .is_empty());
+    assert!(buf.is_empty());
 }
 
 #[test]
-fn test_alloc_and_write() {
+fn test_alloc_and_write_buffer() {
     let wasm_state = &mut create_test_wasm_state();
-
-    let mut memory = wasm_state
-        .instance
-        .get_export(&wasm_state.store, MEMORY_NAME)
-        .unwrap()
-        .into_memory()
-        .unwrap();
-
-    let alloc = wasm_state
-        .instance
-        .get_export(&wasm_state.store, ALLOC_FUNCTION_NAME)
-        .unwrap()
-        .into_func()
-        .unwrap();
-
-    let buffer = vec![42];
+    let buffer = alloc::vec![42];
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_ptr_ptr: AbiPointer = 100;
     let dest_len_ptr: AbiPointer = 150;
-    let write_status = alloc_and_write_buffer(
-        &mut wasm_state.store,
-        &mut memory,
-        alloc,
-        Dest {
-            ptr_ptr: dest_ptr_ptr,
-            len_ptr: dest_len_ptr,
-            buf: buffer.clone(),
-        },
-    );
-    assert!(write_status.is_ok());
-
+    alloc_and_write(wasm_state, dest_ptr_ptr, dest_len_ptr, buffer.clone());
     // Get dest_len from dest_len_ptr.
-    let dest_len: AbiPointerOffset =
-        read_u32(&mut wasm_state.store, &mut memory, dest_len_ptr).unwrap();
-
+    let dest_len: AbiPointerOffset = read_u32(wasm_state, dest_len_ptr);
     // Assert that we write a vector of correct length.
     assert_eq!(dest_len, buffer.len() as u32);
-
-    let dest_ptr: AbiPointer = read_u32(&mut wasm_state.store, &mut memory, dest_ptr_ptr).unwrap();
-
+    let dest_ptr: AbiPointer = read_u32(wasm_state, dest_ptr_ptr);
     // Assert that reponse_ptr holds expected empty vector.
-    assert_eq!(
-        read_buffer(
-            &mut wasm_state.store,
-            &mut memory,
-            Src {
-                ptr: dest_ptr,
-                len: dest_len
-            }
-        )
-        .unwrap(),
-        buffer
-    );
+    assert_eq!(read_buffer(wasm_state, dest_ptr, dest_len), buffer);
 }
 
 #[test]
 fn test_write_read_buffer_in_wasm_memory() {
     let wasm_state = &mut create_test_wasm_state();
-
-    let mut memory = wasm_state
-        .instance
-        .get_export(&wasm_state.store, MEMORY_NAME)
-        .unwrap()
-        .into_memory()
-        .unwrap();
-
-    let alloc = wasm_state
-        .instance
-        .get_export(&wasm_state.store, ALLOC_FUNCTION_NAME)
-        .unwrap()
-        .into_func()
-        .unwrap();
-
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_ptr_ptr: AbiPointer = 100;
     let dest_len_ptr: AbiPointer = 150;
-    let buffer = vec![42, 21];
-
-    let write_status = alloc_and_write_buffer(
-        &mut wasm_state.store,
-        &mut memory,
-        alloc,
-        Dest {
-            ptr_ptr: dest_ptr_ptr,
-            len_ptr: dest_len_ptr,
-            buf: buffer.clone(),
-        },
-    );
-    assert!(write_status.is_ok());
-
+    let buffer = alloc::vec![42, 21];
+    alloc_and_write(wasm_state, dest_ptr_ptr, dest_len_ptr, buffer.clone());
     // Get dest_len from dest_len_ptr and dest_prt from dest_ptr_ptr.
-    let dest_len: AbiPointerOffset =
-        read_u32(&mut wasm_state.store, &mut memory, dest_len_ptr).unwrap();
-    let dest_ptr: AbiPointer =
-        read_u32(&mut &mut wasm_state.store, &mut memory, dest_ptr_ptr).unwrap();
-
-    let read_buffer = read_buffer(
-        &mut &mut wasm_state.store,
-        &mut memory,
-        Src {
-            ptr: dest_ptr,
-            len: dest_len,
-        },
-    )
-    .unwrap();
+    let dest_len: AbiPointerOffset = read_u32(wasm_state, dest_len_ptr);
+    let dest_ptr: AbiPointer = read_u32(wasm_state, dest_ptr_ptr);
+    let read_buffer = read_buffer(wasm_state, dest_ptr, dest_len);
     assert_eq!(read_buffer, buffer);
 }
 
 #[test]
 fn test_read_empty_buffer_in_wasm_memory() {
     let wasm_state = &mut create_test_wasm_state();
-
-    let mut memory = wasm_state
-        .instance
-        .get_export(&wasm_state.store, MEMORY_NAME)
-        .unwrap()
-        .into_memory()
-        .unwrap();
-
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_len_ptr: AbiPointer = 150;
-    let buffer: vec::Vec<u8> = vec![];
-
-    write_u32(&mut wasm_state.store, &mut memory, dest_len_ptr, 0).unwrap();
-
+    let buffer: Vec<u8> = alloc::vec![];
+    write_u32(wasm_state, dest_len_ptr, 0);
     // Get dest_len from dest_len_ptr.
-    let dest_len: AbiPointerOffset =
-        read_u32(&mut wasm_state.store, &mut memory, dest_len_ptr).unwrap();
-
+    let dest_len: AbiPointerOffset = read_u32(wasm_state, dest_len_ptr);
     // If dest_len is 0, then dest_ptr is irrelevant, so we set it 0, too.
     let dest_ptr = 0;
-    let read_buffer = read_buffer(
-        &mut wasm_state.store,
-        &mut memory,
-        Src {
-            ptr: dest_ptr,
-            len: dest_len,
-        },
-    )
-    .unwrap();
+    let read_buffer = read_buffer(wasm_state, dest_ptr, dest_len);
     assert_eq!(read_buffer, buffer);
 }
 
@@ -271,52 +123,18 @@ fn test_read_empty_buffer_in_wasm_memory() {
 fn test_read_request() {
     let wasm_state = &mut create_test_wasm_state();
 
-    let mut memory = wasm_state
-        .instance
-        .get_export(&wasm_state.store, MEMORY_NAME)
-        .unwrap()
-        .into_memory()
-        .unwrap();
-
-    let alloc = wasm_state
-        .instance
-        .get_export(&wasm_state.store, ALLOC_FUNCTION_NAME)
-        .unwrap()
-        .into_func()
-        .unwrap();
-
     // Instead of calling read_request, we mimick the functionality here. This is not pretty,
     // but the best I can do for now.
     let request_bytes = wasm_state.get_request_bytes();
-
+    // Guess some memory addresses in linear Wasm memory to write to.
     let dest_ptr_ptr: AbiPointer = 100;
     let dest_len_ptr: AbiPointer = 150;
-
-    let oak_status = alloc_and_write_buffer(
-        &mut wasm_state.store,
-        &mut memory,
-        alloc,
-        Dest {
-            ptr_ptr: dest_ptr_ptr,
-            len_ptr: dest_len_ptr,
-            buf: request_bytes,
-        },
-    );
-
-    assert!(oak_status.is_ok());
+    alloc_and_write(wasm_state, dest_ptr_ptr, dest_len_ptr, request_bytes);
 
     // Actually read the request back.
-    let req_ptr = read_u32(&mut wasm_state.store, &mut memory, dest_ptr_ptr).unwrap();
-    let req_len = read_u32(&mut wasm_state.store, &mut memory, dest_len_ptr).unwrap();
-    let request_bytes = read_buffer(
-        &mut wasm_state.store,
-        &mut memory,
-        Src {
-            ptr: req_ptr,
-            len: req_len,
-        },
-    )
-    .unwrap();
+    let req_ptr = read_u32(wasm_state, dest_ptr_ptr);
+    let req_len = read_u32(wasm_state, dest_len_ptr);
+    let request_bytes = read_buffer(wasm_state, req_ptr, req_len);
 
     assert_eq!(request_bytes, wasm_state.get_request_bytes())
 }
@@ -325,20 +143,6 @@ fn test_read_request() {
 fn test_invoke_extension() {
     let wasm_state = &mut create_test_wasm_state();
 
-    let mut memory = wasm_state
-        .instance
-        .get_export(&wasm_state.store, MEMORY_NAME)
-        .unwrap()
-        .into_memory()
-        .unwrap();
-
-    let alloc = wasm_state
-        .instance
-        .get_export(&wasm_state.store, ALLOC_FUNCTION_NAME)
-        .unwrap()
-        .into_func()
-        .unwrap();
-
     // Assumes we have a Testing extension in our test caller.
     let message = "Hello!".to_string();
     let request = bincode::serialize(&TestingRequest::Echo(message.clone()))
@@ -346,8 +150,7 @@ fn test_invoke_extension() {
 
     // Guess some memory addresses in linear Wasm memory to write the request to.
     let request_ptr: AbiPointer = 100;
-    let result = write_buffer(&mut wasm_state.store, &mut memory, &request, request_ptr);
-    assert!(result.is_ok());
+    write_buffer(wasm_state, &request, request_ptr);
 
     // Guess some memory addresses in linear Wasm memory to write the response to.
     let response_ptr_ptr: AbiPointer = 200;
@@ -355,27 +158,7 @@ fn test_invoke_extension() {
 
     // Instead of calling invoke extension, we mimick the functionality here. This is not pretty,
     // but the best I can do for now.
-    /* let result = invoke_extension(
-        &mut wasm_state.store,
-        &mut memory,
-        alloc,
-        extension,
-        request_ptr,
-        request.len() as u32,
-        response_ptr_ptr,
-        response_len_ptr,
-    );
-    */
-
-    let request = read_buffer(
-        &mut wasm_state.store,
-        &mut memory,
-        Src {
-            ptr: request_ptr,
-            len: request.len() as AbiPointerOffset,
-        },
-    )
-    .unwrap();
+    let request = read_buffer(wasm_state, request_ptr, request.len() as AbiPointerOffset);
 
     let extension = wasm_state
         .store
@@ -385,44 +168,20 @@ fn test_invoke_extension() {
 
     let response = extension.invoke(request).unwrap();
 
-    let result = alloc_and_write_buffer(
-        &mut wasm_state.store,
-        &mut memory,
-        alloc,
-        Dest {
-            ptr_ptr: response_ptr_ptr,
-            len_ptr: response_len_ptr,
-            buf: response,
-        },
-    );
-
-    assert!(result.is_ok());
+    alloc_and_write(wasm_state, response_ptr_ptr, response_len_ptr, response);
 
     let expected_response =
         bincode::serialize(&TestingResponse::Echo(message)).expect("couldn't serialize response");
 
     // Get response_len from response_len_ptr.
-    let response_len: AbiPointerOffset =
-        read_u32(&mut wasm_state.store, &mut memory, response_len_ptr).unwrap();
-
+    let response_len: AbiPointerOffset = read_u32(wasm_state, response_len_ptr);
     // Assert that response_len holds length of expected response.
     assert_eq!(response_len as usize, expected_response.len());
-
     // Get response_ptr from response_ptr_ptr.
-    let response_ptr: AbiPointer =
-        read_u32(&mut wasm_state.store, &mut memory, response_ptr_ptr).unwrap();
-
+    let response_ptr: AbiPointer = read_u32(wasm_state, response_ptr_ptr);
     // Assert that reponse_ptr holds expected response.
     assert_eq!(
-        read_buffer(
-            &mut wasm_state.store,
-            &mut memory,
-            Src {
-                ptr: response_ptr,
-                len: response_len
-            }
-        )
-        .unwrap(),
+        read_buffer(wasm_state, response_ptr, response_len),
         expected_response
     );
 }
@@ -436,8 +195,9 @@ fn create_test_wasm_state() -> WasmState<TestingLogger> {
     let wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
     let wasm_module_bytes = std::fs::read(wasm_module_path).unwrap();
 
-    let wasm_handler = WasmHandler::create(&wasm_module_bytes[..], vec![testing_factory], logger)
-        .expect("Could not create WasmHandler.");
+    let wasm_handler =
+        WasmHandler::create(&wasm_module_bytes[..], alloc::vec![testing_factory], logger)
+            .expect("Could not create WasmHandler.");
 
     wasm_handler
         .init_wasm_state(b"2".to_vec())
@@ -446,20 +206,89 @@ fn create_test_wasm_state() -> WasmState<TestingLogger> {
 
 // Read the u32 value at the `address` from the Wasm memory.
 // Only needed in tests.
-fn read_u32(
-    ctx: &mut impl wasmi::AsContext,
-    memory: &mut wasmi::Memory,
-    address: AbiPointer,
-) -> Result<u32, OakStatus> {
-    let address = read_buffer(
-        ctx,
-        memory,
-        Src {
-            ptr: address,
-            len: 4,
-        },
-    )
-    .map_err(|_err| OakStatus::ErrInvalidArgs)?;
-    let address = LittleEndian::read_u32(&address);
-    Ok(address)
+fn read_u32(wasm_state: &mut WasmState<TestingLogger>, address: AbiPointer) -> u32 {
+    let address = read_buffer(wasm_state, address, 4);
+    LittleEndian::read_u32(&address)
+}
+
+// Mirrors the implementation `read_buffer` with less error handling. I have found no other way
+// to unit-test whether our use of the wasmi API is correct, as we cannot create a test `Caller`.
+fn read_buffer(
+    wasm_state: &mut WasmState<TestingLogger>,
+    buf_ptr: AbiPointer,
+    buf_len: AbiPointerOffset,
+) -> Vec<u8> {
+    let mut buf = alloc::vec![0; buf_len as usize];
+    let buf_ptr = buf_ptr.try_into().unwrap();
+    let memory = wasm_state
+        .instance
+        .get_export(&mut wasm_state.store, MEMORY_NAME)
+        .unwrap()
+        .into_memory()
+        .unwrap();
+
+    memory.read(&wasm_state.store, buf_ptr, &mut buf).unwrap();
+    buf
+}
+
+// Mirrors the implementation `alloc_and_write` with less error handling. I have found no other way
+// to unit-test whether our use of the wasmi API is correct, as we cannot create a test `Caller`.
+fn alloc_and_write(
+    wasm_state: &mut WasmState<TestingLogger>,
+    buf_ptr_ptr: AbiPointer,
+    buf_ptr_len: AbiPointer,
+    buf: Vec<u8>,
+) {
+    let len = buf.len() as i32;
+    let mut address = [wasmi::Value::I32(-1)];
+
+    let alloc = wasm_state
+        .instance
+        .get_export(&mut wasm_state.store, ALLOC_FUNCTION_NAME)
+        .unwrap()
+        .into_func()
+        .unwrap();
+
+    alloc
+        .call(
+            &mut wasm_state.store,
+            &[wasmi::Value::I32(len)],
+            &mut address,
+        )
+        .unwrap();
+
+    let dest_ptr = match address[0] {
+        wasmi::Value::I32(v) => v as u32,
+        _ => panic!("could not match address"),
+    };
+
+    write_buffer(wasm_state, &buf, dest_ptr);
+    write_u32(wasm_state, dest_ptr, buf_ptr_ptr);
+    write_u32(wasm_state, len as u32, buf_ptr_len)
+}
+
+// Mirrors the implementation `write_buffer` with less error handling. I have found no other way to
+// unit-test whether our use of the wasmi API is correct, as we cannot create a test `Caller`.
+fn write_buffer(wasm_state: &mut WasmState<TestingLogger>, source: &[u8], dest: AbiPointer) {
+    let dest = dest
+        .try_into()
+        .expect("failed to convert AbiPointer to usize as required by wasmi API");
+
+    // Get memory.
+    let memory = wasm_state
+        .instance
+        .get_export(&wasm_state.store, MEMORY_NAME)
+        .unwrap()
+        .into_memory()
+        .unwrap();
+
+    memory.write(&mut wasm_state.store, dest, source).unwrap()
+}
+
+// Mirrors the implementation `write_u32` with less error handling. I have found no other way to
+// unit-test whether our use of the wasmi API is correct, as we cannot create a test `Caller`.
+fn write_u32(wasm_state: &mut WasmState<TestingLogger>, value: u32, address: AbiPointer) {
+    let value_bytes = &mut [0; 4];
+    LittleEndian::write_u32(value_bytes, value);
+    write_buffer(wasm_state, value_bytes, address);
 }
