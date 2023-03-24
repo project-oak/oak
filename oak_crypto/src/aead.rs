@@ -34,7 +34,7 @@ pub(crate) type AeadNonce = [u8; AEAD_NONCE_SIZE_BYTES];
 
 /// Encrypts `plaintext` with associated data using AES-GCM encryption scheme.
 /// Note: the corresponding associated data is NOT encrypted.
-pub(crate) fn encrypt(
+pub(crate) fn _encrypt(
     secret_key: &AeadKey,
     nonce: &AeadNonce,
     plaintext: &[u8],
@@ -51,7 +51,7 @@ pub(crate) fn encrypt(
 }
 
 /// Decrypts `ciphertext` and authenticates `associated_data` using AES-GCM encryption scheme.
-pub(crate) fn decrypt(
+pub(crate) fn _decrypt(
     secret_key: &AeadKey,
     nonce: &AeadNonce,
     ciphertext: &[u8],
