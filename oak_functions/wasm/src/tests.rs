@@ -261,13 +261,16 @@ fn read_u32(
     Ok(address)
 }
 
-// Mirrors the implementation in lib.
-// TODO(mschett): Explain why this is a good idea.
+// Mirrors the implementation `read_buffer` with less error handling. I have found no other way
+// to unit-test whether our use of the wasmi API is correct, as we cannot create a test `Caller`.
 fn test_read_buffer(
     wasm_state: &mut WasmState<TestingLogger>,
     buf_ptr: AbiPointer,
     buf_len: AbiPointerOffset,
 ) -> Vec<u8> {
+    let mut buf = alloc::vec![0; buf_len as usize];
+    let buf_ptr = buf_ptr.try_into().unwrap();
+
     let memory = wasm_state
         .instance
         .get_export(&mut wasm_state.store, MEMORY_NAME)
@@ -275,20 +278,21 @@ fn test_read_buffer(
         .into_memory()
         .unwrap();
 
-    let mut buf = alloc::vec![0; buf_len as usize];
-    let buf_ptr = buf_ptr.try_into().unwrap();
     memory.read(&wasm_state.store, buf_ptr, &mut buf).unwrap();
     buf
 }
 
-// Mirrors the implementation in lib.
-// TODO(mschett): Explain why this is a good idea.
+// Mirrors the implementation `alloc_and_write` with less error handling. I have found no other way
+// to unit-test whether our use of the wasmi API is correct, as we cannot create a test `Caller`.
 fn test_alloc_and_write(
     wasm_state: &mut WasmState<TestingLogger>,
     buf_ptr_ptr: AbiPointer,
     buf_ptr_len: AbiPointer,
     buf: Vec<u8>,
 ) {
+    let len = buf.len() as i32;
+    let mut address = [wasmi::Value::I32(-1)];
+
     let alloc = wasm_state
         .instance
         .get_export(&mut wasm_state.store, ALLOC_FUNCTION_NAME)
@@ -296,8 +300,6 @@ fn test_alloc_and_write(
         .into_func()
         .unwrap();
 
-    let len = buf.len() as i32;
-    let mut address = [wasmi::Value::I32(-1)];
     alloc
         .call(
             &mut wasm_state.store,
@@ -316,17 +318,14 @@ fn test_alloc_and_write(
     test_write_u32(wasm_state, len as u32, buf_ptr_len)
 }
 
-// Mirrors the implementation in lib.
-// TODO(mschett): Explain why this is a good idea.
-fn test_write_u32(wasm_state: &mut WasmState<TestingLogger>, value: u32, address: AbiPointer) {
-    let value_bytes = &mut [0; 4];
-    LittleEndian::write_u32(value_bytes, value);
-    test_write_buffer(wasm_state, value_bytes, address);
-}
-
-// Mirrors the implementation in lib.
-// TODO(mschett): Explain why this is a good idea.
+// Mirrors the implementation `write_buffer` with less error handling. I have found no other way to
+// unit-test whether our use of the wasmi API is correct, as we cannot create a test `Caller`.
 fn test_write_buffer(wasm_state: &mut WasmState<TestingLogger>, source: &[u8], dest: AbiPointer) {
+    let dest = dest
+        .try_into()
+        .expect("failed to convert AbiPointer to usize as required by wasmi API");
+
+    // Get memory.
     let memory = wasm_state
         .instance
         .get_export(&wasm_state.store, MEMORY_NAME)
@@ -334,8 +333,13 @@ fn test_write_buffer(wasm_state: &mut WasmState<TestingLogger>, source: &[u8], d
         .into_memory()
         .unwrap();
 
-    let dest = dest
-        .try_into()
-        .expect("failed to convert AbiPointer to usize as required by wasmi API");
     memory.write(&mut wasm_state.store, dest, source).unwrap()
+}
+
+// Mirrors the implementation `write_u32` with less error handling. I have found no other way to
+// unit-test whether our use of the wasmi API is correct, as we cannot create a test `Caller`.
+fn test_write_u32(wasm_state: &mut WasmState<TestingLogger>, value: u32, address: AbiPointer) {
+    let value_bytes = &mut [0; 4];
+    LittleEndian::write_u32(value_bytes, value);
+    test_write_buffer(wasm_state, value_bytes, address);
 }

@@ -349,7 +349,6 @@ where
         buf_ptr_len: AbiPointer,
         buf: Vec<u8>,
     ) -> Result<(), OakStatus> {
-        // alloc_and_write_buffer(&mut self.caller, &mut memory, alloc, dest)
         let len = buf.len() as i32;
 
         // Allocate the memory from the Wasm module.
