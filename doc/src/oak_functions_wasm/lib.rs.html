@@ -525,63 +525,6 @@
 <a href="#525" id="525">525</a>
 <a href="#526" id="526">526</a>
 <a href="#527" id="527">527</a>
-<a href="#528" id="528">528</a>
-<a href="#529" id="529">529</a>
-<a href="#530" id="530">530</a>
-<a href="#531" id="531">531</a>
-<a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a>
-<a href="#535" id="535">535</a>
-<a href="#536" id="536">536</a>
-<a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a>
-<a href="#539" id="539">539</a>
-<a href="#540" id="540">540</a>
-<a href="#541" id="541">541</a>
-<a href="#542" id="542">542</a>
-<a href="#543" id="543">543</a>
-<a href="#544" id="544">544</a>
-<a href="#545" id="545">545</a>
-<a href="#546" id="546">546</a>
-<a href="#547" id="547">547</a>
-<a href="#548" id="548">548</a>
-<a href="#549" id="549">549</a>
-<a href="#550" id="550">550</a>
-<a href="#551" id="551">551</a>
-<a href="#552" id="552">552</a>
-<a href="#553" id="553">553</a>
-<a href="#554" id="554">554</a>
-<a href="#555" id="555">555</a>
-<a href="#556" id="556">556</a>
-<a href="#557" id="557">557</a>
-<a href="#558" id="558">558</a>
-<a href="#559" id="559">559</a>
-<a href="#560" id="560">560</a>
-<a href="#561" id="561">561</a>
-<a href="#562" id="562">562</a>
-<a href="#563" id="563">563</a>
-<a href="#564" id="564">564</a>
-<a href="#565" id="565">565</a>
-<a href="#566" id="566">566</a>
-<a href="#567" id="567">567</a>
-<a href="#568" id="568">568</a>
-<a href="#569" id="569">569</a>
-<a href="#570" id="570">570</a>
-<a href="#571" id="571">571</a>
-<a href="#572" id="572">572</a>
-<a href="#573" id="573">573</a>
-<a href="#574" id="574">574</a>
-<a href="#575" id="575">575</a>
-<a href="#576" id="576">576</a>
-<a href="#577" id="577">577</a>
-<a href="#578" id="578">578</a>
-<a href="#579" id="579">579</a>
-<a href="#580" id="580">580</a>
-<a href="#581" id="581">581</a>
-<a href="#582" id="582">582</a>
-<a href="#583" id="583">583</a>
-<a href="#584" id="584">584</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -619,7 +562,7 @@
 };
 <span class="kw">use </span>oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 <span class="kw">use </span>oak_logger::{Level, OakLogger};
-<span class="kw">use </span>wasmi::{AsContext, AsContextMut, Func, Memory, MemoryType, Store};
+<span class="kw">use </span>wasmi::{Func, Memory, MemoryType, Store};
 
 <span class="kw">pub const </span>MAIN_FUNCTION_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;main&quot;</span>;
 <span class="kw">pub const </span>ALLOC_FUNCTION_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;alloc&quot;</span>;
@@ -897,54 +840,98 @@
     caller: wasmi::Caller&lt;<span class="lifetime">&#39;a</span>, UserState&lt;L&gt;&gt;,
 }
 
-<span class="doccomment">/// The source from which pointer to read length from memory
-</span><span class="kw">pub struct </span>Src {
-    ptr: AbiPointer,
-    len: AbiPointerOffset,
-}
-
-<span class="doccomment">/// The destination of the buffer in memory given by a pointer pointing to the pointer where buffer
-/// resides and a pointer holding the length of the buffer.
-</span><span class="kw">pub struct </span>Dest {
-    ptr_ptr: AbiPointer,
-    len_ptr: AbiPointer,
-    buf: Vec&lt;u8&gt;,
-}
-
 <span class="kw">impl</span>&lt;L&gt; OakCaller&lt;<span class="lifetime">&#39;_</span>, L&gt;
 <span class="kw">where
     </span>L: OakLogger,
 {
-    <span class="kw">fn </span>read_buffer(
+    <span class="doccomment">/// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
+    </span><span class="kw">fn </span>read_buffer(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         buf_ptr: AbiPointer,
         buf_len: AbiPointerOffset,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, OakStatus&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>memory = <span class="self">self</span>.get_memory()<span class="question-mark">?</span>;
-        read_buffer(
-            <span class="kw-2">&amp;mut </span><span class="self">self</span>.caller,
-            <span class="kw-2">&amp;mut </span>memory,
-            Src {
-                ptr: buf_ptr,
-                len: buf_len,
-            },
-        )
+        <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">alloc::vec!</span>[<span class="number">0</span>; buf_len <span class="kw">as </span>usize];
+        <span class="kw">let </span>buf_ptr = buf_ptr
+            .try_into()
+            .expect(<span class="string">&quot;failed to convert AbiPointer to usize as required by wasmi API&quot;</span>);
+        <span class="self">self</span>.get_memory()<span class="question-mark">?
+            </span>.read(<span class="kw-2">&amp;mut </span><span class="self">self</span>.caller, buf_ptr, <span class="kw-2">&amp;mut </span>buf)
+            .map_err(|_err| {
+                <span class="comment">// TODO(#3785): Add logging, which needs access to logger in the user state.
+                // We don&#39;t have access in ctx, so we either need to pass the logger as argument or
+                // think of a different refactoring.
+                // ctx.data().log_error(
+                //   &amp;format!(&quot;Unable to read buffer from guest memory: {:?}&quot;, err),
+                // );
+                </span>OakStatus::ErrInvalidArgs
+            })<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(buf)
     }
 
-    <span class="kw">fn </span>alloc_and_write(
+    <span class="doccomment">/// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address
+    /// of the allocated memory to `dest_ptr_ptr` and the length to `dest_len_ptr`.
+    </span><span class="kw">fn </span>alloc_and_write(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         buf_ptr_ptr: AbiPointer,
         buf_ptr_len: AbiPointer,
         buf: Vec&lt;u8&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
-        <span class="kw">let </span>dest = Dest {
-            ptr_ptr: buf_ptr_ptr,
-            len_ptr: buf_ptr_len,
-            buf,
-        };
-        <span class="kw">let </span>alloc = <span class="self">self</span>.get_alloc()<span class="question-mark">?</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>memory = <span class="self">self</span>.get_memory()<span class="question-mark">?</span>;
-        alloc_and_write_buffer(<span class="kw-2">&amp;mut </span><span class="self">self</span>.caller, <span class="kw-2">&amp;mut </span>memory, alloc, dest)
+        <span class="kw">let </span>len = buf.len() <span class="kw">as </span>i32;
+
+        <span class="comment">// Allocate the memory from the Wasm module.
+        // `address` will hold the address where memory of size len was allocated, initialized with
+        // -1.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>address = [wasmi::Value::I32(-<span class="number">1</span>)];
+        <span class="self">self</span>.get_alloc()<span class="question-mark">?
+            </span>.call(<span class="kw-2">&amp;mut </span><span class="self">self</span>.caller, <span class="kw-2">&amp;</span>[wasmi::Value::I32(len)], <span class="kw-2">&amp;mut </span>address)
+            .expect(<span class="string">&quot;`alloc` call failed&quot;</span>);
+        <span class="kw">let </span>dest_ptr = <span class="kw">match </span>address[<span class="number">0</span>] {
+            <span class="comment">// Assumes 32-bit Wasm addresses.
+            </span>wasmi::Value::I32(v) =&gt; v
+                .try_into()
+                .map_or_else(|<span class="kw">_</span>| <span class="prelude-val">Err</span>(OakStatus::ErrInternal), <span class="prelude-val">Ok</span>),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(OakStatus::ErrInternal),
+        }<span class="question-mark">?</span>;
+
+        <span class="comment">// Write to the allocated memory.
+        </span><span class="self">self</span>.write_buffer(<span class="kw-2">&amp;</span>buf, dest_ptr)<span class="question-mark">?</span>;
+        <span class="self">self</span>.write_u32(dest_ptr, buf_ptr_ptr)<span class="question-mark">?</span>;
+        <span class="self">self</span>.write_u32(len <span class="kw">as </span>u32, buf_ptr_len)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="doccomment">/// Helper function to write the buffer `source` at the address `dest` of the Wasm memory, if
+    /// `source` fits in the allocated memory.
+    </span><span class="kw">pub fn </span>write_buffer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, source: <span class="kw-2">&amp;</span>[u8], dest: AbiPointer) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
+        <span class="kw">let </span>dest = dest
+            .try_into()
+            .expect(<span class="string">&quot;failed to convert AbiPointer to usize as required by wasmi API&quot;</span>);
+        <span class="self">self</span>.get_memory()<span class="question-mark">?
+            </span>.write(<span class="kw-2">&amp;mut </span><span class="self">self</span>.caller, dest, source)
+            .map_err(|_err| {
+                <span class="comment">// TODO(#3785): Add logging, which needs access to logger in the user state.
+                // We don&#39;t have access in ctx, so we either need to pass the logger as argument or
+                // think of a different refactoring.
+                // ctx.data().log_error(
+                //    &amp;format!(&quot;Unable to write buffer into guest memory: {:?}&quot;, err),
+                // );
+                </span>OakStatus::ErrInvalidArgs
+            })
+    }
+
+    <span class="doccomment">/// Helper function to write the u32 `value` at the `address` of the Wasm memory.
+    </span><span class="kw">fn </span>write_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32, address: AbiPointer) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
+        <span class="kw">let </span>value_bytes = <span class="kw-2">&amp;mut </span>[<span class="number">0</span>; <span class="number">4</span>];
+        LittleEndian::write_u32(value_bytes, value);
+        <span class="self">self</span>.write_buffer(value_bytes, address).map_err(|_err| {
+            <span class="comment">// TODO(#3785): Add logging, which needs access to logger in the user state.
+            // We don&#39;t have access in ctx, so we either need to pass the logger as argument or
+            // think of a different refactoring.
+            // ctx.data().log_error(
+            //    &amp;format!(&quot;Unable to write u32 value into guest memory: {:?}&quot;, err),
+            // );
+            </span>OakStatus::ErrInvalidArgs
+        })
     }
 
     <span class="kw">fn </span>data_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>UserState&lt;L&gt; {
@@ -988,107 +975,6 @@
             OakStatus::ErrInternal
         })
     }
-}
-
-<span class="doccomment">/// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
-</span><span class="kw">pub fn </span>read_buffer(
-    ctx: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>AsContext,
-    memory: <span class="kw-2">&amp;mut </span>wasmi::Memory,
-    src: Src,
-) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, OakStatus&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>target = <span class="macro">alloc::vec!</span>[<span class="number">0</span>; src.len <span class="kw">as </span>usize];
-
-    <span class="kw">let </span>ptr = src
-        .ptr
-        .try_into()
-        .expect(<span class="string">&quot;failed to convert AbiPointer to usize as required by wasmi API&quot;</span>);
-    memory.read(ctx, ptr, <span class="kw-2">&amp;mut </span>target).map_err(|_err| {
-        <span class="comment">// TODO(#3785): Add logging, which needs access to logger in the user state.
-        // We don&#39;t have access in ctx, so we either need to pass the logger as argument or
-        // think of a different refactoring.
-        // ctx.data().log_error(
-        //   &amp;format!(&quot;Unable to read buffer from guest memory: {:?}&quot;, err),
-        // );
-        </span>OakStatus::ErrInvalidArgs
-    })<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(target)
-}
-
-<span class="doccomment">///  Writes the u32 `value` at the `address` of the Wasm memory.
-</span><span class="kw">pub fn </span>write_u32(
-    ctx: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>AsContextMut,
-    memory: <span class="kw-2">&amp;mut </span>wasmi::Memory,
-    value: u32,
-    address: AbiPointer,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
-    <span class="kw">let </span>value_bytes = <span class="kw-2">&amp;mut </span>[<span class="number">0</span>; <span class="number">4</span>];
-    LittleEndian::write_u32(value_bytes, value);
-    write_buffer(ctx, memory, value_bytes, address).map_err(|_err| {
-        <span class="comment">// TODO(#3785): Add logging, which needs access to logger in the user state.
-        // We don&#39;t have access in ctx, so we either need to pass the logger as argument or
-        // think of a different refactoring.
-        // ctx.data().log_error(
-        //    &amp;format!(&quot;Unable to write u32 value into guest memory: {:?}&quot;, err),
-        // );
-        </span>OakStatus::ErrInvalidArgs
-    })
-}
-
-<span class="doccomment">/// Writes the buffer `source` at the address `dest` of the Wasm memory, if `source` fits in the
-/// allocated memory.
-</span><span class="kw">pub fn </span>write_buffer(
-    ctx: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>AsContextMut,
-    memory: <span class="kw-2">&amp;mut </span>wasmi::Memory,
-    source: <span class="kw-2">&amp;</span>[u8],
-    dest: AbiPointer,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
-    <span class="kw">let </span>dest = dest
-        .try_into()
-        .expect(<span class="string">&quot;failed to convert AbiPointer to usize as required by wasmi API&quot;</span>);
-    memory.write(ctx, dest, source).map_err(|_err| {
-        <span class="comment">// TODO(#3785): Add logging, which needs access to logger in the user state.
-        // We don&#39;t have access in ctx, so we either need to pass the logger as argument or
-        // think of a different refactoring.
-        // ctx.data().log_error(
-        //    &amp;format!(&quot;Unable to write buffer into guest memory: {:?}&quot;, err),
-        // );
-        </span>OakStatus::ErrInvalidArgs
-    })
-}
-
-<span class="doccomment">/// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address
-/// of the allocated memory to `dest_ptr_ptr` and the length to `dest_len_ptr`.
-</span><span class="kw">pub fn </span>alloc_and_write_buffer(
-    ctx: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>AsContextMut,
-    memory: <span class="kw-2">&amp;mut </span>wasmi::Memory,
-    alloc: Func,
-    dest: Dest,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
-    <span class="kw">let </span>len = dest.buf.len() <span class="kw">as </span>i32;
-
-    <span class="comment">// Allocate the memory from the Wasm module.
-    // `address` will hold the address where memory of size len was allocated, initialized with -1.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>address = [wasmi::Value::I32(-<span class="number">1</span>)];
-    alloc
-        .call(
-            ctx.as_context_mut(),
-            <span class="kw-2">&amp;</span>[wasmi::Value::I32(len)],
-            <span class="kw-2">&amp;mut </span>address,
-        )
-        .expect(<span class="string">&quot;`alloc` call failed&quot;</span>);
-    <span class="kw">let </span>dest_ptr = <span class="kw">match </span>address[<span class="number">0</span>] {
-        <span class="comment">// Assumes 32-bit Wasm addresses.
-        </span>wasmi::Value::I32(v) =&gt; v
-            .try_into()
-            .map_or_else(|<span class="kw">_</span>| <span class="prelude-val">Err</span>(OakStatus::ErrInternal), <span class="prelude-val">Ok</span>),
-        <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(OakStatus::ErrInternal),
-    }<span class="question-mark">?</span>;
-
-    <span class="comment">// Write to the allocated memory.
-    </span>write_buffer(ctx, memory, <span class="kw-2">&amp;</span>dest.buf, dest_ptr)<span class="question-mark">?</span>;
-    write_u32(ctx, memory, dest_ptr, dest.ptr_ptr)<span class="question-mark">?</span>;
-    write_u32(ctx, memory, dest.buf.len() <span class="kw">as </span>u32, dest.len_ptr)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="comment">// An ephemeral request handler with a Wasm module for handling the requests.

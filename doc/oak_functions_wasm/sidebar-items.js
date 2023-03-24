@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["ALLOC_FUNCTION_NAME","MAIN_FUNCTION_NAME","MEMORY_NAME"],"fn":["alloc_and_write_buffer","read_buffer","write_buffer","write_u32"],"struct":["Dest","Src","UserState","WasmHandler","WasmState"],"type":["AbiExtensionHandle","AbiPointer","AbiPointerOffset"]};
+window.SIDEBAR_ITEMS = {"constant":["ALLOC_FUNCTION_NAME","MAIN_FUNCTION_NAME","MEMORY_NAME"],"struct":["UserState","WasmHandler","WasmState"],"type":["AbiExtensionHandle","AbiPointer","AbiPointerOffset"]};
