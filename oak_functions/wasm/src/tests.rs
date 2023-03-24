@@ -240,27 +240,17 @@ fn alloc_and_write(
     buf: Vec<u8>,
 ) {
     let len = buf.len() as i32;
-    let mut address = [wasmi::Value::I32(-1)];
 
     let alloc = wasm_state
         .instance
         .get_export(&mut wasm_state.store, ALLOC_FUNCTION_NAME)
         .unwrap()
         .into_func()
+        .unwrap()
+        .typed(&wasm_state.store)
         .unwrap();
 
-    alloc
-        .call(
-            &mut wasm_state.store,
-            &[wasmi::Value::I32(len)],
-            &mut address,
-        )
-        .unwrap();
-
-    let dest_ptr = match address[0] {
-        wasmi::Value::I32(v) => v as u32,
-        _ => panic!("could not match address"),
-    };
+    let dest_ptr = alloc.call(&mut wasm_state.store, len).unwrap();
 
     write_buffer(wasm_state, &buf, dest_ptr);
     write_u32(wasm_state, dest_ptr, buf_ptr_ptr);
