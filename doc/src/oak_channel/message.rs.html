@@ -164,7 +164,7 @@
 <span class="kw">pub trait </span>Message {
     <span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize;
     <span class="kw">fn </span>encode(<span class="self">self</span>) -&gt; Vec&lt;u8&gt;;
-    <span class="kw">fn </span>decode(frames: Vec&lt;u8&gt;) -&gt; <span class="self">Self</span>;
+    <span class="kw">fn </span>decode(frames: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self</span>;
 }
 
 <span class="doccomment">/// Rust implementation of the Request Message structure defined in
@@ -195,7 +195,7 @@
         message_bytes
     }
 
-    <span class="kw">fn </span>decode(<span class="kw-2">mut </span>encoded_message: Vec&lt;u8&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>decode(encoded_message: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>invocation_id = {
             <span class="kw">let </span><span class="kw-2">mut </span>invocation_id_bytes: [u8; INVOCATION_ID_SIZE] = [<span class="number">0</span>; INVOCATION_ID_SIZE];
             invocation_id_bytes.copy_from_slice(
@@ -205,7 +205,7 @@
         };
         <span class="comment">// TODO(#2848): Avoid reallocating here by using slices + lifetimes, or
         // reference counting.
-        </span><span class="kw">let </span>body: Vec&lt;u8&gt; = encoded_message.drain(BODY_OFFSET..).collect();
+        </span><span class="kw">let </span>body: Vec&lt;u8&gt; = encoded_message[BODY_OFFSET..].into();
 
         <span class="self">Self </span>{
             invocation_id,
@@ -242,7 +242,7 @@
         message_bytes
     }
 
-    <span class="kw">fn </span>decode(<span class="kw-2">mut </span>encoded_message: Vec&lt;u8&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>decode(encoded_message: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>invocation_id = {
             <span class="kw">let </span><span class="kw-2">mut </span>invocation_id_bytes: [u8; INVOCATION_ID_SIZE] = [<span class="number">0</span>; INVOCATION_ID_SIZE];
             invocation_id_bytes.copy_from_slice(
@@ -252,7 +252,7 @@
         };
         <span class="comment">// TODO(#2848): Avoid reallocating here by using slices + lifetimes, or
         // reference counting.
-        </span><span class="kw">let </span>body: Vec&lt;u8&gt; = encoded_message.drain(BODY_OFFSET..).collect();
+        </span><span class="kw">let </span>body: Vec&lt;u8&gt; = encoded_message[BODY_OFFSET..].into();
 
         <span class="self">Self </span>{
             invocation_id,
