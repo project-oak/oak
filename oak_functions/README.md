@@ -52,7 +52,7 @@ from the conventional computing model.
 
 ## Features
 
-### Oak Functions Loader and the Trusted Runtime
+### Oak Functions Launcher and the Trusted Runtime
 
 The [Oak Functions Launcher](/oak_functions_launcher/) starts the Oak Functions
 trusted runtime and loads a Wasm module as workload. The Oak Functions trusted
