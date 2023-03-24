@@ -92,6 +92,8 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -108,12 +110,16 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{channel::ConnectorHandle, schema};
-<span class="kw">use </span>futures::{Future, Stream, StreamExt};
-<span class="kw">use </span>oak_remote_attestation_noninteractive::proto::{
-    request_wrapper, response_wrapper, streaming_session_server::StreamingSessionServer,
-    InvokeResponse, RequestWrapper, ResponseWrapper,
+</span><span class="kw">use crate</span>::{
+    channel::ConnectorHandle,
+    proto::{
+        request_wrapper, response_wrapper,
+        streaming_session_server::{StreamingSession, StreamingSessionServer},
+        InvokeResponse, RequestWrapper, ResponseWrapper,
+    },
+    schema,
 };
+<span class="kw">use </span>futures::{Future, Stream, StreamExt};
 <span class="kw">use </span>std::{net::SocketAddr, pin::Pin};
 <span class="kw">use </span>tonic::{transport::Server, Request, Response, Status, Streaming};
 
@@ -125,9 +131,7 @@
 }
 
 <span class="attr">#[tonic::async_trait]
-</span><span class="kw">impl </span>oak_remote_attestation_noninteractive::proto::streaming_session_server::StreamingSession
-    <span class="kw">for </span>SessionProxy
-{
+</span><span class="kw">impl </span>StreamingSession <span class="kw">for </span>SessionProxy {
     <span class="kw">type </span>StreamStream = Pin&lt;Box&lt;<span class="kw">dyn </span>Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;ResponseWrapper, Status&gt;&gt; + Send&gt;&gt;;
 
     <span class="kw">async fn </span>stream(

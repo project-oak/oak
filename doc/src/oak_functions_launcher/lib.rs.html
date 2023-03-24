@@ -136,6 +136,10 @@
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -156,7 +160,20 @@
 #![feature(result_flattening)]
 #![feature(array_chunks)]
 
-</span><span class="kw">use </span><span class="kw">crate</span>::schema::InitializeResponse;
+</span><span class="kw">mod </span>lookup;
+<span class="kw">pub mod </span>server;
+
+<span class="kw">pub mod </span>proto {
+    <span class="attr">#![allow(clippy::return_self_not_must_use)]
+    </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.session.noninteractive.v1&quot;</span>);
+}
+<span class="kw">pub mod </span>schema {
+    <span class="attr">#![allow(dead_code)]
+    </span><span class="kw">use </span>prost::Message;
+    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.rs&quot;</span>));
+}
+
+<span class="kw">use </span><span class="kw">crate</span>::schema::InitializeResponse;
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_launcher_utils::{
     channel::{<span class="self">self</span>, ConnectorHandle},
@@ -165,15 +182,6 @@
 <span class="kw">use </span>schema::OakFunctionsAsyncClient;
 <span class="kw">use </span>std::{fs, path::PathBuf, time::Duration};
 <span class="kw">use </span>ubyte::ByteUnit;
-
-<span class="kw">pub mod </span>schema {
-    <span class="attr">#![allow(dead_code)]
-    </span><span class="kw">use </span>prost::Message;
-    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.rs&quot;</span>));
-}
-
-<span class="kw">mod </span>lookup;
-<span class="kw">pub mod </span>server;
 
 <span class="kw">pub struct </span>LookupDataConfig {
     <span class="kw">pub </span>lookup_data_path: PathBuf,

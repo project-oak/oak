@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["proto","transport","verifier"],"struct":["CryptoProvider","OakClient"]};
+window.SIDEBAR_ITEMS = {"mod":["proto","transport","verifier"],"struct":["OakClient"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["GrpcStreamingTransport"],"trait":["AsyncTransport"]};
+window.SIDEBAR_ITEMS = {"struct":["GrpcStreamingTransport"]};
