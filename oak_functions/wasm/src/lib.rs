@@ -212,8 +212,11 @@ where
                 |caller: wasmi::Caller<'_, UserState<L>>,
                  buf_ptr_ptr: AbiPointer,
                  buf_len_ptr: AbiPointer| {
-                    // TODO(mschett): Remove unwrap.
-                    let mut caller = OakCaller::new(caller).unwrap();
+                    let mut caller = match OakCaller::new(caller) {
+                        Ok(caller) => caller,
+                        Err(oak_status) => return Ok(oak_status as i32),
+                    };
+
                     let request_bytes = caller.data().request_bytes.clone();
                     let status = caller.alloc_and_write(buf_ptr_ptr, buf_len_ptr, request_bytes);
                     from_oak_status(status)
@@ -231,8 +234,11 @@ where
                 |caller: wasmi::Caller<'_, UserState<L>>,
                  buf_ptr: AbiPointer,
                  buf_len: AbiPointerOffset| {
-                    // TODO(mschett): Remove unwrap.
-                    let mut caller = OakCaller::new(caller).unwrap();
+                    let mut caller = match OakCaller::new(caller) {
+                        Ok(caller) => caller,
+                        Err(oak_status) => return Ok(oak_status as i32),
+                    };
+
                     let status = caller.read_buffer(buf_ptr, buf_len).map(|buffer| {
                         caller.data_mut().response_bytes = buffer;
                     });
@@ -254,8 +260,11 @@ where
                  request_len: AbiPointerOffset,
                  response_ptr_ptr: AbiPointer,
                  response_len_ptr: AbiPointer| {
-                    // TODO(mschett): Remove unwrap.
-                    let mut caller = OakCaller::new(caller).unwrap();
+                    let mut caller = match OakCaller::new(caller) {
+                        Ok(caller) => caller,
+                        Err(oak_status) => return Ok(oak_status as i32),
+                    };
+
                     let status = caller
                         .read_buffer(request_ptr, request_len)
                         .map_err(|err| {
