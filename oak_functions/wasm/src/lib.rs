@@ -35,7 +35,7 @@ use oak_functions_abi::{
 };
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::{Level, OakLogger};
-use wasmi::{AsContextMut, Func, Memory, MemoryType, Store};
+use wasmi::{Func, Memory, MemoryType, Store};
 
 pub const MAIN_FUNCTION_NAME: &str = "main";
 pub const ALLOC_FUNCTION_NAME: &str = "alloc";
@@ -349,7 +349,6 @@ where
         buf_ptr_len: AbiPointer,
         buf: Vec<u8>,
     ) -> Result<(), OakStatus> {
-        let mut memory = self.get_memory()?;
         // alloc_and_write_buffer(&mut self.caller, &mut memory, alloc, dest)
         let len = buf.len() as i32;
 
@@ -369,10 +368,44 @@ where
         }?;
 
         // Write to the allocated memory.
-        write_buffer(&mut self.caller, &mut memory, &buf, dest_ptr)?;
-        write_u32(&mut self.caller, &mut memory, dest_ptr, buf_ptr_ptr)?;
-        write_u32(&mut self.caller, &mut memory, len as u32, buf_ptr_len)?;
+        self.write_buffer(&buf, dest_ptr)?;
+        self.write_u32(dest_ptr, buf_ptr_ptr)?;
+        self.write_u32(len as u32, buf_ptr_len)?;
         Ok(())
+    }
+
+    /// Helper function to write the buffer `source` at the address `dest` of the Wasm memory, if
+    /// `source` fits in the allocated memory.
+    pub fn write_buffer(&mut self, source: &[u8], dest: AbiPointer) -> Result<(), OakStatus> {
+        let dest = dest
+            .try_into()
+            .expect("failed to convert AbiPointer to usize as required by wasmi API");
+        self.get_memory()?
+            .write(&mut self.caller, dest, source)
+            .map_err(|_err| {
+                // TODO(#3785): Add logging, which needs access to logger in the user state.
+                // We don't have access in ctx, so we either need to pass the logger as argument or
+                // think of a different refactoring.
+                // ctx.data().log_error(
+                //    &format!("Unable to write buffer into guest memory: {:?}", err),
+                // );
+                OakStatus::ErrInvalidArgs
+            })
+    }
+
+    /// Helper function to write the u32 `value` at the `address` of the Wasm memory.
+    fn write_u32(&mut self, value: u32, address: AbiPointer) -> Result<(), OakStatus> {
+        let value_bytes = &mut [0; 4];
+        LittleEndian::write_u32(value_bytes, value);
+        self.write_buffer(value_bytes, address).map_err(|_err| {
+            // TODO(#3785): Add logging, which needs access to logger in the user state.
+            // We don't have access in ctx, so we either need to pass the logger as argument or
+            // think of a different refactoring.
+            // ctx.data().log_error(
+            //    &format!("Unable to write u32 value into guest memory: {:?}", err),
+            // );
+            OakStatus::ErrInvalidArgs
+        })
     }
 
     fn data_mut(&mut self) -> &mut UserState<L> {
@@ -416,48 +449,6 @@ where
             OakStatus::ErrInternal
         })
     }
-}
-
-///  Writes the u32 `value` at the `address` of the Wasm memory.
-pub fn write_u32(
-    ctx: &mut impl AsContextMut,
-    memory: &mut wasmi::Memory,
-    value: u32,
-    address: AbiPointer,
-) -> Result<(), OakStatus> {
-    let value_bytes = &mut [0; 4];
-    LittleEndian::write_u32(value_bytes, value);
-    write_buffer(ctx, memory, value_bytes, address).map_err(|_err| {
-        // TODO(#3785): Add logging, which needs access to logger in the user state.
-        // We don't have access in ctx, so we either need to pass the logger as argument or
-        // think of a different refactoring.
-        // ctx.data().log_error(
-        //    &format!("Unable to write u32 value into guest memory: {:?}", err),
-        // );
-        OakStatus::ErrInvalidArgs
-    })
-}
-
-/// Writes the buffer `source` at the address `dest` of the Wasm memory, if `source` fits in the
-/// allocated memory.
-pub fn write_buffer(
-    ctx: &mut impl AsContextMut,
-    memory: &mut wasmi::Memory,
-    source: &[u8],
-    dest: AbiPointer,
-) -> Result<(), OakStatus> {
-    let dest = dest
-        .try_into()
-        .expect("failed to convert AbiPointer to usize as required by wasmi API");
-    memory.write(ctx, dest, source).map_err(|_err| {
-        // TODO(#3785): Add logging, which needs access to logger in the user state.
-        // We don't have access in ctx, so we either need to pass the logger as argument or
-        // think of a different refactoring.
-        // ctx.data().log_error(
-        //    &format!("Unable to write buffer into guest memory: {:?}", err),
-        // );
-        OakStatus::ErrInvalidArgs
-    })
 }
 
 // An ephemeral request handler with a Wasm module for handling the requests.
