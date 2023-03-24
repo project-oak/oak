@@ -15,10 +15,10 @@
 //
 
 use crate::{
-    alloc_and_write_buffer, read_buffer, write_buffer, write_u32, AbiPointer, AbiPointerOffset,
-    Dest, Src, WasmHandler, WasmState, ALLOC_FUNCTION_NAME, MEMORY_NAME,
+    alloc_and_write_buffer, write_buffer, write_u32, AbiPointer, AbiPointerOffset, Dest,
+    WasmHandler, WasmState, ALLOC_FUNCTION_NAME, MEMORY_NAME,
 };
-use alloc::{string::ToString, vec};
+use alloc::{string::ToString, vec::Vec};
 use byteorder::{ByteOrder, LittleEndian};
 use oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingRequest, TestingResponse};
 use oak_functions_testing_extension::{TestingFactory, TestingLogger};
@@ -92,7 +92,7 @@ fn test_alloc_and_write_empty() {
         Dest {
             ptr_ptr: dest_ptr_ptr,
             len_ptr: dest_len_ptr,
-            buf: vec![],
+            buf: alloc::vec![],
         },
     );
 
@@ -108,17 +108,11 @@ fn test_alloc_and_write_empty() {
 
     let dest_ptr: AbiPointer = read_u32(&mut wasm_state.store, &mut memory, dest_ptr_ptr).unwrap();
 
+    // Reading the empty vector from response_ptr.
+    let buf = test_read_buffer(&mut wasm_state.store, &mut memory, dest_ptr, dest_len);
+
     // Assert that reponse_ptr holds expected empty vector.
-    assert!(read_buffer(
-        &mut wasm_state.store,
-        &mut memory,
-        Src {
-            ptr: dest_ptr,
-            len: dest_len
-        }
-    )
-    .unwrap()
-    .is_empty());
+    assert!(buf.is_empty());
 }
 
 #[test]
@@ -139,7 +133,7 @@ fn test_alloc_and_write() {
         .into_func()
         .unwrap();
 
-    let buffer = vec![42];
+    let buffer = alloc::vec![42];
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_ptr_ptr: AbiPointer = 100;
     let dest_len_ptr: AbiPointer = 150;
@@ -166,15 +160,7 @@ fn test_alloc_and_write() {
 
     // Assert that reponse_ptr holds expected empty vector.
     assert_eq!(
-        read_buffer(
-            &mut wasm_state.store,
-            &mut memory,
-            Src {
-                ptr: dest_ptr,
-                len: dest_len
-            }
-        )
-        .unwrap(),
+        test_read_buffer(&mut wasm_state.store, &mut memory, dest_ptr, dest_len),
         buffer
     );
 }
@@ -200,7 +186,7 @@ fn test_write_read_buffer_in_wasm_memory() {
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_ptr_ptr: AbiPointer = 100;
     let dest_len_ptr: AbiPointer = 150;
-    let buffer = vec![42, 21];
+    let buffer = alloc::vec![42, 21];
 
     let write_status = alloc_and_write_buffer(
         &mut wasm_state.store,
@@ -220,15 +206,7 @@ fn test_write_read_buffer_in_wasm_memory() {
     let dest_ptr: AbiPointer =
         read_u32(&mut &mut wasm_state.store, &mut memory, dest_ptr_ptr).unwrap();
 
-    let read_buffer = read_buffer(
-        &mut &mut wasm_state.store,
-        &mut memory,
-        Src {
-            ptr: dest_ptr,
-            len: dest_len,
-        },
-    )
-    .unwrap();
+    let read_buffer = test_read_buffer(&mut wasm_state.store, &mut memory, dest_ptr, dest_len);
     assert_eq!(read_buffer, buffer);
 }
 
@@ -245,7 +223,7 @@ fn test_read_empty_buffer_in_wasm_memory() {
 
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_len_ptr: AbiPointer = 150;
-    let buffer: vec::Vec<u8> = vec![];
+    let buffer: Vec<u8> = alloc::vec![];
 
     write_u32(&mut wasm_state.store, &mut memory, dest_len_ptr, 0).unwrap();
 
@@ -255,15 +233,7 @@ fn test_read_empty_buffer_in_wasm_memory() {
 
     // If dest_len is 0, then dest_ptr is irrelevant, so we set it 0, too.
     let dest_ptr = 0;
-    let read_buffer = read_buffer(
-        &mut wasm_state.store,
-        &mut memory,
-        Src {
-            ptr: dest_ptr,
-            len: dest_len,
-        },
-    )
-    .unwrap();
+    let read_buffer = test_read_buffer(&mut wasm_state.store, &mut memory, dest_ptr, dest_len);
     assert_eq!(read_buffer, buffer);
 }
 
@@ -308,15 +278,7 @@ fn test_read_request() {
     // Actually read the request back.
     let req_ptr = read_u32(&mut wasm_state.store, &mut memory, dest_ptr_ptr).unwrap();
     let req_len = read_u32(&mut wasm_state.store, &mut memory, dest_len_ptr).unwrap();
-    let request_bytes = read_buffer(
-        &mut wasm_state.store,
-        &mut memory,
-        Src {
-            ptr: req_ptr,
-            len: req_len,
-        },
-    )
-    .unwrap();
+    let request_bytes = test_read_buffer(&mut wasm_state.store, &mut memory, req_ptr, req_len);
 
     assert_eq!(request_bytes, wasm_state.get_request_bytes())
 }
@@ -367,15 +329,12 @@ fn test_invoke_extension() {
     );
     */
 
-    let request = read_buffer(
+    let request = test_read_buffer(
         &mut wasm_state.store,
         &mut memory,
-        Src {
-            ptr: request_ptr,
-            len: request.len() as AbiPointerOffset,
-        },
-    )
-    .unwrap();
+        request_ptr,
+        request.len() as AbiPointerOffset,
+    );
 
     let extension = wasm_state
         .store
@@ -414,15 +373,12 @@ fn test_invoke_extension() {
 
     // Assert that reponse_ptr holds expected response.
     assert_eq!(
-        read_buffer(
+        test_read_buffer(
             &mut wasm_state.store,
             &mut memory,
-            Src {
-                ptr: response_ptr,
-                len: response_len
-            }
-        )
-        .unwrap(),
+            response_ptr,
+            response_len
+        ),
         expected_response
     );
 }
@@ -436,8 +392,9 @@ fn create_test_wasm_state() -> WasmState<TestingLogger> {
     let wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
     let wasm_module_bytes = std::fs::read(wasm_module_path).unwrap();
 
-    let wasm_handler = WasmHandler::create(&wasm_module_bytes[..], vec![testing_factory], logger)
-        .expect("Could not create WasmHandler.");
+    let wasm_handler =
+        WasmHandler::create(&wasm_module_bytes[..], alloc::vec![testing_factory], logger)
+            .expect("Could not create WasmHandler.");
 
     wasm_handler
         .init_wasm_state(b"2".to_vec())
@@ -447,19 +404,25 @@ fn create_test_wasm_state() -> WasmState<TestingLogger> {
 // Read the u32 value at the `address` from the Wasm memory.
 // Only needed in tests.
 fn read_u32(
-    ctx: &mut impl wasmi::AsContext,
+    ctx: &mut impl wasmi::AsContextMut,
     memory: &mut wasmi::Memory,
     address: AbiPointer,
 ) -> Result<u32, OakStatus> {
-    let address = read_buffer(
-        ctx,
-        memory,
-        Src {
-            ptr: address,
-            len: 4,
-        },
-    )
-    .map_err(|_err| OakStatus::ErrInvalidArgs)?;
+    let address = test_read_buffer(ctx, memory, address, 4);
     let address = LittleEndian::read_u32(&address);
     Ok(address)
+}
+
+// Mirrors the implementation in lib.
+// TODO(mschett): Explain why this is a good idea.
+fn test_read_buffer(
+    ctx: &mut impl wasmi::AsContextMut,
+    memory: &mut wasmi::Memory,
+    buf_ptr: AbiPointer,
+    buf_len: AbiPointerOffset,
+) -> Vec<u8> {
+    let mut buf = alloc::vec![0; buf_len as usize];
+    let buf_ptr = buf_ptr.try_into().unwrap();
+    memory.read(ctx, buf_ptr, &mut buf).unwrap();
+    buf
 }

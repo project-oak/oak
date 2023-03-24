@@ -35,7 +35,7 @@ use oak_functions_abi::{
 };
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::{Level, OakLogger};
-use wasmi::{AsContext, AsContextMut, Func, Memory, MemoryType, Store};
+use wasmi::{AsContextMut, Func, Memory, MemoryType, Store};
 
 pub const MAIN_FUNCTION_NAME: &str = "main";
 pub const ALLOC_FUNCTION_NAME: &str = "alloc";
@@ -313,12 +313,6 @@ struct OakCaller<'a, L: OakLogger> {
     caller: wasmi::Caller<'a, UserState<L>>,
 }
 
-/// The source from which pointer to read length from memory
-pub struct Src {
-    ptr: AbiPointer,
-    len: AbiPointerOffset,
-}
-
 /// The destination of the buffer in memory given by a pointer pointing to the pointer where buffer
 /// resides and a pointer holding the length of the buffer.
 pub struct Dest {
@@ -331,20 +325,28 @@ impl<L> OakCaller<'_, L>
 where
     L: OakLogger,
 {
+    /// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
     fn read_buffer(
         &mut self,
         buf_ptr: AbiPointer,
         buf_len: AbiPointerOffset,
     ) -> Result<Vec<u8>, OakStatus> {
-        let mut memory = self.get_memory()?;
-        read_buffer(
-            &mut self.caller,
-            &mut memory,
-            Src {
-                ptr: buf_ptr,
-                len: buf_len,
-            },
-        )
+        let mut buf = alloc::vec![0; buf_len as usize];
+        let buf_ptr = buf_ptr
+            .try_into()
+            .expect("failed to convert AbiPointer to usize as required by wasmi API");
+        self.get_memory()?
+            .read(&mut self.caller, buf_ptr, &mut buf)
+            .map_err(|_err| {
+                // TODO(#3785): Add logging, which needs access to logger in the user state.
+                // We don't have access in ctx, so we either need to pass the logger as argument or
+                // think of a different refactoring.
+                // ctx.data().log_error(
+                //   &format!("Unable to read buffer from guest memory: {:?}", err),
+                // );
+                OakStatus::ErrInvalidArgs
+            })?;
+        Ok(buf)
     }
 
     fn alloc_and_write(
@@ -404,30 +406,6 @@ where
             OakStatus::ErrInternal
         })
     }
-}
-
-/// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
-pub fn read_buffer(
-    ctx: &mut impl AsContext,
-    memory: &mut wasmi::Memory,
-    src: Src,
-) -> Result<Vec<u8>, OakStatus> {
-    let mut target = alloc::vec![0; src.len as usize];
-
-    let ptr = src
-        .ptr
-        .try_into()
-        .expect("failed to convert AbiPointer to usize as required by wasmi API");
-    memory.read(ctx, ptr, &mut target).map_err(|_err| {
-        // TODO(#3785): Add logging, which needs access to logger in the user state.
-        // We don't have access in ctx, so we either need to pass the logger as argument or
-        // think of a different refactoring.
-        // ctx.data().log_error(
-        //   &format!("Unable to read buffer from guest memory: {:?}", err),
-        // );
-        OakStatus::ErrInvalidArgs
-    })?;
-    Ok(target)
 }
 
 ///  Writes the u32 `value` at the `address` of the Wasm memory.
