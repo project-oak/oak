@@ -74,57 +74,54 @@ fn test_alloc_and_write_empty() {
 
 #[test]
 fn test_alloc_and_write_buffer() {
-    let  wasm_state = &mut create_test_wasm_state();
+    let wasm_state = &mut create_test_wasm_state();
     let buffer = alloc::vec![42];
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_ptr_ptr: AbiPointer = 100;
     let dest_len_ptr: AbiPointer = 150;
     test_alloc_and_write(wasm_state, dest_ptr_ptr, dest_len_ptr, buffer.clone());
     // Get dest_len from dest_len_ptr.
-    let dest_len: AbiPointerOffset = test_read_u32( wasm_state, dest_len_ptr);
+    let dest_len: AbiPointerOffset = test_read_u32(wasm_state, dest_len_ptr);
     // Assert that we write a vector of correct length.
     assert_eq!(dest_len, buffer.len() as u32);
-    let dest_ptr: AbiPointer = test_read_u32( wasm_state, dest_ptr_ptr);
+    let dest_ptr: AbiPointer = test_read_u32(wasm_state, dest_ptr_ptr);
     // Assert that reponse_ptr holds expected empty vector.
-    assert_eq!(
-        test_read_buffer(wasm_state, dest_ptr, dest_len),
-        buffer
-    );
+    assert_eq!(test_read_buffer(wasm_state, dest_ptr, dest_len), buffer);
 }
 
 #[test]
 fn test_write_read_buffer_in_wasm_memory() {
-    let  wasm_state = &mut create_test_wasm_state();
+    let wasm_state = &mut create_test_wasm_state();
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_ptr_ptr: AbiPointer = 100;
     let dest_len_ptr: AbiPointer = 150;
     let buffer = alloc::vec![42, 21];
-    test_alloc_and_write( wasm_state, dest_ptr_ptr, dest_len_ptr, buffer.clone());
+    test_alloc_and_write(wasm_state, dest_ptr_ptr, dest_len_ptr, buffer.clone());
     // Get dest_len from dest_len_ptr and dest_prt from dest_ptr_ptr.
-    let dest_len: AbiPointerOffset = test_read_u32( wasm_state, dest_len_ptr);
+    let dest_len: AbiPointerOffset = test_read_u32(wasm_state, dest_len_ptr);
     let dest_ptr: AbiPointer = test_read_u32(wasm_state, dest_ptr_ptr);
-    let read_buffer = test_read_buffer( wasm_state, dest_ptr, dest_len);
+    let read_buffer = test_read_buffer(wasm_state, dest_ptr, dest_len);
     assert_eq!(read_buffer, buffer);
 }
 
 #[test]
 fn test_read_empty_buffer_in_wasm_memory() {
-    let  wasm_state = &mut create_test_wasm_state();
+    let wasm_state = &mut create_test_wasm_state();
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_len_ptr: AbiPointer = 150;
     let buffer: Vec<u8> = alloc::vec![];
-    test_write_u32( wasm_state, dest_len_ptr, 0);
+    test_write_u32(wasm_state, dest_len_ptr, 0);
     // Get dest_len from dest_len_ptr.
-    let dest_len: AbiPointerOffset = test_read_u32( wasm_state, dest_len_ptr);
+    let dest_len: AbiPointerOffset = test_read_u32(wasm_state, dest_len_ptr);
     // If dest_len is 0, then dest_ptr is irrelevant, so we set it 0, too.
     let dest_ptr = 0;
-    let read_buffer = test_read_buffer( wasm_state, dest_ptr, dest_len);
+    let read_buffer = test_read_buffer(wasm_state, dest_ptr, dest_len);
     assert_eq!(read_buffer, buffer);
 }
 
 #[test]
 fn test_read_request() {
-    let  wasm_state = &mut create_test_wasm_state();
+    let wasm_state = &mut create_test_wasm_state();
 
     // Instead of calling read_request, we mimick the functionality here. This is not pretty,
     // but the best I can do for now.
@@ -137,7 +134,7 @@ fn test_read_request() {
     // Actually read the request back.
     let req_ptr = test_read_u32(wasm_state, dest_ptr_ptr);
     let req_len = test_read_u32(wasm_state, dest_len_ptr);
-    let request_bytes = test_read_buffer( wasm_state, req_ptr, req_len);
+    let request_bytes = test_read_buffer(wasm_state, req_ptr, req_len);
 
     assert_eq!(request_bytes, wasm_state.get_request_bytes())
 }
@@ -161,11 +158,7 @@ fn test_invoke_extension() {
 
     // Instead of calling invoke extension, we mimick the functionality here. This is not pretty,
     // but the best I can do for now.
-    let request = test_read_buffer(
-         wasm_state,
-        request_ptr,
-        request.len() as AbiPointerOffset,
-    );
+    let request = test_read_buffer(wasm_state, request_ptr, request.len() as AbiPointerOffset);
 
     let extension = wasm_state
         .store
@@ -175,12 +168,7 @@ fn test_invoke_extension() {
 
     let response = extension.invoke(request).unwrap();
 
-    test_alloc_and_write(
-        wasm_state,
-        response_ptr_ptr,
-        response_len_ptr,
-        response,
-    );
+    test_alloc_and_write(wasm_state, response_ptr_ptr, response_len_ptr, response);
 
     let expected_response =
         bincode::serialize(&TestingResponse::Echo(message)).expect("couldn't serialize response");
@@ -190,7 +178,7 @@ fn test_invoke_extension() {
     // Assert that response_len holds length of expected response.
     assert_eq!(response_len as usize, expected_response.len());
     // Get response_ptr from response_ptr_ptr.
-    let response_ptr: AbiPointer = test_read_u32( wasm_state, response_ptr_ptr);
+    let response_ptr: AbiPointer = test_read_u32(wasm_state, response_ptr_ptr);
     // Assert that reponse_ptr holds expected response.
     assert_eq!(
         test_read_buffer(wasm_state, response_ptr, response_len),
