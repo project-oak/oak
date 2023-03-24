@@ -198,15 +198,17 @@ where
         linker
             .func_wrap(
                 OAK_FUNCTIONS,
+                // Corresponds to the OAK_FUNCTIONS ABI function [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
                 "read_request",
                 // The types in the signatures correspond to the parameters from
                 // oak_functions_abi/src/lib.rs.
-                // TODO(#3797): Simplify wrapped functions.
-                |mut caller: wasmi::Caller<'_, UserState<L>>,
+                |caller: wasmi::Caller<'_, UserState<L>>,
                  buf_ptr_ptr: AbiPointer,
                  buf_len_ptr: AbiPointer| {
-                    let result = read_request(&mut caller, buf_ptr_ptr, buf_len_ptr);
-                    from_oak_status(result)
+                    let mut caller = OakCaller { caller };
+                    let request_bytes = caller.data().request_bytes.clone();
+                    let status = caller.alloc_and_write(buf_ptr_ptr, buf_len_ptr, request_bytes);
+                    from_oak_status(status)
                 },
             )
             .expect("failed to define read_request in linker");
@@ -214,14 +216,18 @@ where
         linker
             .func_wrap(
                 OAK_FUNCTIONS,
+                // Corresponds to the OAK_FUNCTIONS ABI function [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
                 "write_response",
                 // The types in the signatures correspond to the parameters from
                 // oak_functions_abi/src/lib.rs.
-                |mut caller: wasmi::Caller<'_, UserState<L>>,
+                |caller: wasmi::Caller<'_, UserState<L>>,
                  buf_ptr: AbiPointer,
                  buf_len: AbiPointerOffset| {
-                    let result = write_response(&mut caller, buf_ptr, buf_len);
-                    from_oak_status(result)
+                    let mut caller = OakCaller { caller };
+                    let status = caller.read_buffer(buf_ptr, buf_len).map(|buffer| {
+                        caller.data_mut().response_bytes = buffer;
+                    });
+                    from_oak_status(status)
                 },
             )
             .expect("failed to define write_response in linker");
@@ -229,24 +235,33 @@ where
         linker
             .func_wrap(
                 OAK_FUNCTIONS,
+                // Corresponds to the OAK_FUNCTIONS ABI function [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#invoke).
                 "invoke",
                 // The types in the signatures correspond to the parameters from
                 // oak_functions_abi/src/lib.rs.
-                |mut caller: wasmi::Caller<'_, UserState<L>>,
+                |caller: wasmi::Caller<'_, UserState<L>>,
                  handle: AbiExtensionHandle,
                  request_ptr: AbiPointer,
                  request_len: AbiPointerOffset,
                  response_ptr_ptr: AbiPointer,
                  response_len_ptr: AbiPointer| {
-                    let result = invoke_extension(
-                        &mut caller,
-                        handle,
-                        request_ptr,
-                        request_len,
-                        response_ptr_ptr,
-                        response_len_ptr,
-                    );
-                    from_oak_status(result)
+                    let mut caller = OakCaller { caller };
+                    let status = caller
+                        .read_buffer(request_ptr, request_len)
+                        .map_err(|err| {
+                            caller.caller.data().log_error(&format!(
+                                "Handle {:?}: Unable to read input from guest memory: {:?}",
+                                handle, err
+                            ));
+                            err
+                        })
+                        .and_then(|request| {
+                            let user_state = caller.data_mut();
+                            let extension = user_state.get_extension(handle)?;
+                            let response = extension.invoke(request)?;
+                            caller.alloc_and_write(response_ptr_ptr, response_len_ptr, response)
+                        });
+                    from_oak_status(status)
                 },
             )
             .expect("failed to define invoke in linker");
@@ -292,19 +307,118 @@ where
     }
 }
 
+/// OakCaller implements reading and allocating and write the memory defined in the `OakLinker`.
+/// OakCaller relies on `alloc`, which every Oak Wasm module must provide.
+struct OakCaller<'a, L: OakLogger> {
+    caller: wasmi::Caller<'a, UserState<L>>,
+}
+
+/// The source from which pointer to read length from memory
+pub struct Src {
+    ptr: AbiPointer,
+    len: AbiPointerOffset,
+}
+
+/// The destination of the buffer in memory given by a pointer pointing to the pointer where buffer
+/// resides and a pointer holding the length of the buffer.
+pub struct Dest {
+    ptr_ptr: AbiPointer,
+    len_ptr: AbiPointer,
+    buf: Vec<u8>,
+}
+
+impl<L> OakCaller<'_, L>
+where
+    L: OakLogger,
+{
+    fn read_buffer(
+        &mut self,
+        buf_ptr: AbiPointer,
+        buf_len: AbiPointerOffset,
+    ) -> Result<Vec<u8>, OakStatus> {
+        let mut memory = self.get_memory()?;
+        read_buffer(
+            &mut self.caller,
+            &mut memory,
+            Src {
+                ptr: buf_ptr,
+                len: buf_len,
+            },
+        )
+    }
+
+    fn alloc_and_write(
+        &mut self,
+        buf_ptr_ptr: AbiPointer,
+        buf_ptr_len: AbiPointer,
+        buf: Vec<u8>,
+    ) -> Result<(), OakStatus> {
+        let dest = Dest {
+            ptr_ptr: buf_ptr_ptr,
+            len_ptr: buf_ptr_len,
+            buf,
+        };
+        let alloc = self.get_alloc()?;
+        let mut memory = self.get_memory()?;
+        alloc_and_write_buffer(&mut self.caller, &mut memory, alloc, dest)
+    }
+
+    fn data_mut(&mut self) -> &mut UserState<L> {
+        self.caller.data_mut()
+    }
+
+    fn data(&mut self) -> &UserState<L> {
+        self.caller.data()
+    }
+
+    // Helper function to get exported MEMORY_NAME from caller.
+    fn get_memory(&mut self) -> Result<Memory, OakStatus> {
+        let ext = self.caller.get_export(MEMORY_NAME).ok_or_else(|| {
+            self.caller
+                .data()
+                .log_error(&format!("failed to get exported {}", MEMORY_NAME));
+            OakStatus::ErrInternal
+        })?;
+
+        ext.into_memory().ok_or_else(|| {
+            self.caller
+                .data()
+                .log_error(&format!("exported {} is not a memory", MEMORY_NAME));
+            OakStatus::ErrInternal
+        })
+    }
+
+    // Helper function to get exported ALLOC_FUNCTION_NAME from caller.
+    fn get_alloc(&mut self) -> Result<Func, OakStatus> {
+        let ext = self.caller.get_export(ALLOC_FUNCTION_NAME).ok_or_else(|| {
+            self.caller
+                .data()
+                .log_error(&format!("failed to get exported {}", ALLOC_FUNCTION_NAME));
+            OakStatus::ErrInternal
+        })?;
+
+        ext.into_func().ok_or_else(|| {
+            self.caller
+                .data()
+                .log_error(&format!("exported {} is not a func", ALLOC_FUNCTION_NAME));
+            OakStatus::ErrInternal
+        })
+    }
+}
+
 /// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
 pub fn read_buffer(
     ctx: &mut impl AsContext,
     memory: &mut wasmi::Memory,
-    buf_ptr: AbiPointer,
-    buf_len: AbiPointerOffset,
+    src: Src,
 ) -> Result<Vec<u8>, OakStatus> {
-    let mut target = alloc::vec![0; buf_len as usize];
+    let mut target = alloc::vec![0; src.len as usize];
 
-    let buf_ptr = buf_ptr
+    let ptr = src
+        .ptr
         .try_into()
         .expect("failed to convert AbiPointer to usize as required by wasmi API");
-    memory.read(ctx, buf_ptr, &mut target).map_err(|_err| {
+    memory.read(ctx, ptr, &mut target).map_err(|_err| {
         // TODO(#3785): Add logging, which needs access to logger in the user state.
         // We don't have access in ctx, so we either need to pass the logger as argument or
         // think of a different refactoring.
@@ -364,14 +478,12 @@ pub fn alloc_and_write_buffer(
     ctx: &mut impl AsContextMut,
     memory: &mut wasmi::Memory,
     alloc: Func,
-    buffer: Vec<u8>,
-    dest_ptr_ptr: AbiPointer,
-    dest_len_ptr: AbiPointer,
+    dest: Dest,
 ) -> Result<(), OakStatus> {
-    let len = buffer.len() as i32;
-    // Call alloc.
+    let len = dest.buf.len() as i32;
 
-    // Will hold address where memory of size len was allocated, initialized with -1.
+    // Allocate the memory from the Wasm module.
+    // `address` will hold the address where memory of size len was allocated, initialized with -1.
     let mut address = [wasmi::Value::I32(-1)];
     alloc
         .call(
@@ -388,114 +500,11 @@ pub fn alloc_and_write_buffer(
         _ => Err(OakStatus::ErrInternal),
     }?;
 
-    // Write to buffer.
-    write_buffer(ctx, memory, &buffer, dest_ptr)?;
-    write_u32(ctx, memory, dest_ptr, dest_ptr_ptr)?;
-    write_u32(ctx, memory, buffer.len() as u32, dest_len_ptr)?;
+    // Write to the allocated memory.
+    write_buffer(ctx, memory, &dest.buf, dest_ptr)?;
+    write_u32(ctx, memory, dest_ptr, dest.ptr_ptr)?;
+    write_u32(ctx, memory, dest.buf.len() as u32, dest.len_ptr)?;
     Ok(())
-}
-
-/// Corresponds to the OAK_FUNCTIONS ABI function [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
-pub fn read_request<L: OakLogger>(
-    caller: &mut wasmi::Caller<'_, UserState<L>>,
-    dest_ptr_ptr: AbiPointer,
-    dest_len_ptr: AbiPointer,
-) -> Result<(), OakStatus> {
-    let alloc = get_exported_alloc(caller)?;
-    let mut memory = get_exported_memory(caller)?;
-    let request_bytes = caller.data().request_bytes.clone();
-
-    alloc_and_write_buffer(
-        caller,
-        &mut memory,
-        alloc,
-        request_bytes,
-        dest_ptr_ptr,
-        dest_len_ptr,
-    )
-}
-
-/// Corresponds to the OAK_FUNCTIONS ABI function [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
-pub fn write_response<L: OakLogger>(
-    caller: &mut wasmi::Caller<'_, UserState<L>>,
-    buf_ptr: AbiPointer,
-    buf_len: AbiPointerOffset,
-) -> Result<(), OakStatus> {
-    let mut memory = get_exported_memory(caller)?;
-    caller.data_mut().response_bytes = read_buffer(caller, &mut memory, buf_ptr, buf_len)?;
-    Ok(())
-}
-
-pub fn invoke_extension<L: OakLogger>(
-    caller: &mut wasmi::Caller<'_, UserState<L>>,
-    handle: i32,
-    request_ptr: AbiPointer,
-    request_len: AbiPointerOffset,
-    response_ptr_ptr: AbiPointer,
-    response_len_ptr: AbiPointer,
-) -> Result<(), OakStatus> {
-    let alloc = get_exported_alloc(caller)?;
-
-    let mut memory = get_exported_memory(caller)?;
-
-    let request = read_buffer(caller, &mut memory, request_ptr, request_len).map_err(|err| {
-        caller.data().log_error(&format!(
-            "Handle {:?}: Unable to read input from guest memory: {:?}",
-            handle, err
-        ));
-        OakStatus::ErrInvalidArgs
-    })?;
-
-    let user_state = caller.data_mut();
-    let extension = user_state.get_extension(handle)?;
-    let response = extension.invoke(request)?;
-
-    alloc_and_write_buffer(
-        caller,
-        &mut memory,
-        alloc,
-        response,
-        response_ptr_ptr,
-        response_len_ptr,
-    )
-}
-
-// Helper function to get exported MEMORY from caller.
-fn get_exported_memory<L: OakLogger>(
-    caller: &mut wasmi::Caller<'_, UserState<L>>,
-) -> Result<Memory, OakStatus> {
-    let ext = caller.get_export(MEMORY_NAME).ok_or_else(|| {
-        caller
-            .data()
-            .log_error(&format!("failed to get exported {}", MEMORY_NAME));
-        OakStatus::ErrInternal
-    })?;
-
-    ext.into_memory().ok_or_else(|| {
-        caller
-            .data()
-            .log_error(&format!("exported {} is not a memory", MEMORY_NAME));
-        OakStatus::ErrInternal
-    })
-}
-
-// Helper function to get exported ALLOC_FUNCTION_NAME from caller.
-fn get_exported_alloc<L: OakLogger>(
-    caller: &mut wasmi::Caller<'_, UserState<L>>,
-) -> Result<Func, OakStatus> {
-    let ext = caller.get_export(ALLOC_FUNCTION_NAME).ok_or_else(|| {
-        caller
-            .data()
-            .log_error(&format!("failed to get exported {}", ALLOC_FUNCTION_NAME));
-        OakStatus::ErrInternal
-    })?;
-
-    ext.into_func().ok_or_else(|| {
-        caller
-            .data()
-            .log_error(&format!("exported {} is not a func", ALLOC_FUNCTION_NAME));
-        OakStatus::ErrInternal
-    })
 }
 
 // An ephemeral request handler with a Wasm module for handling the requests.
