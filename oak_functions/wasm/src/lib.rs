@@ -313,14 +313,6 @@ struct OakCaller<'a, L: OakLogger> {
     caller: wasmi::Caller<'a, UserState<L>>,
 }
 
-/// The destination of the buffer in memory given by a pointer pointing to the pointer where buffer
-/// resides and a pointer holding the length of the buffer.
-pub struct Dest {
-    ptr_ptr: AbiPointer,
-    len_ptr: AbiPointer,
-    buf: Vec<u8>,
-}
-
 impl<L> OakCaller<'_, L>
 where
     L: OakLogger,
@@ -349,20 +341,38 @@ where
         Ok(buf)
     }
 
+    /// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address
+    /// of the allocated memory to `dest_ptr_ptr` and the length to `dest_len_ptr`.
     fn alloc_and_write(
         &mut self,
         buf_ptr_ptr: AbiPointer,
         buf_ptr_len: AbiPointer,
         buf: Vec<u8>,
     ) -> Result<(), OakStatus> {
-        let dest = Dest {
-            ptr_ptr: buf_ptr_ptr,
-            len_ptr: buf_ptr_len,
-            buf,
-        };
-        let alloc = self.get_alloc()?;
         let mut memory = self.get_memory()?;
-        alloc_and_write_buffer(&mut self.caller, &mut memory, alloc, dest)
+        // alloc_and_write_buffer(&mut self.caller, &mut memory, alloc, dest)
+        let len = buf.len() as i32;
+
+        // Allocate the memory from the Wasm module.
+        // `address` will hold the address where memory of size len was allocated, initialized with
+        // -1.
+        let mut address = [wasmi::Value::I32(-1)];
+        self.get_alloc()?
+            .call(&mut self.caller, &[wasmi::Value::I32(len)], &mut address)
+            .expect("`alloc` call failed");
+        let dest_ptr = match address[0] {
+            // Assumes 32-bit Wasm addresses.
+            wasmi::Value::I32(v) => v
+                .try_into()
+                .map_or_else(|_| Err(OakStatus::ErrInternal), Ok),
+            _ => Err(OakStatus::ErrInternal),
+        }?;
+
+        // Write to the allocated memory.
+        write_buffer(&mut self.caller, &mut memory, &buf, dest_ptr)?;
+        write_u32(&mut self.caller, &mut memory, dest_ptr, buf_ptr_ptr)?;
+        write_u32(&mut self.caller, &mut memory, len as u32, buf_ptr_len)?;
+        Ok(())
     }
 
     fn data_mut(&mut self) -> &mut UserState<L> {
@@ -448,41 +458,6 @@ pub fn write_buffer(
         // );
         OakStatus::ErrInvalidArgs
     })
-}
-
-/// Writes the given `buffer` by allocating `buffer.len()` Wasm memory and writing the address
-/// of the allocated memory to `dest_ptr_ptr` and the length to `dest_len_ptr`.
-pub fn alloc_and_write_buffer(
-    ctx: &mut impl AsContextMut,
-    memory: &mut wasmi::Memory,
-    alloc: Func,
-    dest: Dest,
-) -> Result<(), OakStatus> {
-    let len = dest.buf.len() as i32;
-
-    // Allocate the memory from the Wasm module.
-    // `address` will hold the address where memory of size len was allocated, initialized with -1.
-    let mut address = [wasmi::Value::I32(-1)];
-    alloc
-        .call(
-            ctx.as_context_mut(),
-            &[wasmi::Value::I32(len)],
-            &mut address,
-        )
-        .expect("`alloc` call failed");
-    let dest_ptr = match address[0] {
-        // Assumes 32-bit Wasm addresses.
-        wasmi::Value::I32(v) => v
-            .try_into()
-            .map_or_else(|_| Err(OakStatus::ErrInternal), Ok),
-        _ => Err(OakStatus::ErrInternal),
-    }?;
-
-    // Write to the allocated memory.
-    write_buffer(ctx, memory, &dest.buf, dest_ptr)?;
-    write_u32(ctx, memory, dest_ptr, dest.ptr_ptr)?;
-    write_u32(ctx, memory, dest.buf.len() as u32, dest.len_ptr)?;
-    Ok(())
 }
 
 // An ephemeral request handler with a Wasm module for handling the requests.
