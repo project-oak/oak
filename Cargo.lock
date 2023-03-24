@@ -1819,7 +1819,7 @@ dependencies = [
 name = "oak_enclave_runtime_support"
 version = "0.1.0"
 dependencies = [
- "libm 0.2.6",
+ "libm 0.1.4",
  "log",
  "oak_restricted_kernel_api",
  "oak_restricted_kernel_interface",
@@ -2215,7 +2215,7 @@ dependencies = [
  "bitflags",
  "bitvec",
  "goblin",
- "libm 0.2.6",
+ "libm 0.1.4",
  "linked_list_allocator",
  "log",
  "oak_channel",
@@ -3189,6 +3189,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "smallvec"
+version = "1.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
+
+[[package]]
 name = "snafu"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3894,10 +3900,11 @@ checksum = "0046fef7e28c3804e5e38bfa31ea2a0f73905319b677e57ebe37e49358989b5d"
 
 [[package]]
 name = "wasmi"
-version = "0.28.0"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e61a7006b0fdf24f6bbe8dcfdad5ca1b350de80061fb2827f31c82fbbb9565a"
+checksum = "677160b1166881badada1137afc6457777126f328ae63a18058b504f546f0828"
 dependencies = [
+ "smallvec",
  "spin 0.9.6",
  "wasmi_arena",
  "wasmi_core",
