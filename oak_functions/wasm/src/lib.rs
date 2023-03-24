@@ -307,15 +307,20 @@ where
     }
 }
 
-pub struct OakCaller<'a, L: OakLogger> {
+/// OakCaller implements reading and allocating and write the memory defined in the `OakLinker`.
+/// OakCaller relies on `alloc`, which every Oak Wasm module must provide.
+struct OakCaller<'a, L: OakLogger> {
     caller: wasmi::Caller<'a, UserState<L>>,
 }
 
+/// The source from which pointer to read length from memory
 pub struct Src {
     ptr: AbiPointer,
     len: AbiPointerOffset,
 }
 
+/// The destination of the buffer in memory given by a pointer pointing to the pointer where buffer
+/// resides and a pointer holding the length of the buffer.
 pub struct Dest {
     ptr_ptr: AbiPointer,
     len_ptr: AbiPointer,
