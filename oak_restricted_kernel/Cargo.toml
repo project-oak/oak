@@ -37,6 +37,7 @@ ouroboros = { version = "*", default-features = false }
 rust-hypervisor-firmware-virtio = { path = "../third_party/rust-hypervisor-firmware-virtio" }
 oak_sev_guest = { workspace = true, features = ["rust-crypto"] }
 sev_serial = { workspace = true }
+sha2 = { version = "*", default-features = false }
 spinning_top = { version = "*" }
 static_assertions = { version = "*" }
 strum = { version = "*", default-features = false, features = ["derive"] }
