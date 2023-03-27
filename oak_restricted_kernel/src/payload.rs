@@ -15,7 +15,7 @@
 //
 
 use crate::syscall::mmap::mmap;
-use alloc::{boxed::Box, vec};
+use alloc::{boxed::Box, format, vec};
 use anyhow::{anyhow, Result};
 use core::arch::asm;
 use goblin::{
@@ -25,6 +25,7 @@ use goblin::{
 use oak_channel::Channel;
 use oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 use ouroboros::self_referencing;
+use sha2::{Digest, Sha256};
 use x86_64::{
     structures::paging::{PageSize, Size2MiB, Size4KiB},
     VirtAddr,
@@ -54,6 +55,7 @@ struct Binary {
 /// Representation of an Restricted Application that the Restricted Kernel can run.
 pub struct Application {
     binary: Binary,
+    digest: [u8; 32],
 }
 
 impl Application {
@@ -88,6 +90,8 @@ impl Application {
     /// Attempts to parse the provided binary blob as an ELF file representing an Restricted
     /// Application.
     pub fn new(blob: Box<[u8]>) -> Result<Self> {
+        let digest = Sha256::digest(&blob[..]).into();
+
         Ok(Application {
             binary: BinaryTryBuilder {
                 binary: blob,
@@ -97,6 +101,7 @@ impl Application {
                 },
             }
             .try_build()?,
+            digest,
         })
     }
 
@@ -182,6 +187,11 @@ impl Application {
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
         )
         .expect("failed to allocate memory for user stack");
+
+        log::info!(
+            "Running application; binary hash: {}",
+            self.digest.map(|x| format!("{:02x}", x)).join("")
+        );
 
         // Enter Ring 3 and jump to user code.
         // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the user to

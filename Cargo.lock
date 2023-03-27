@@ -2231,6 +2231,7 @@ dependencies = [
  "ouroboros",
  "rust-hypervisor-firmware-virtio",
  "sev_serial",
+ "sha2 0.9.9",
  "spinning_top",
  "static_assertions",
  "strum",
