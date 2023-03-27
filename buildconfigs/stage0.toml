@@ -11,6 +11,6 @@ command = [
   "--release",
   "--",
   "--output-target=binary",
-  "target/x86_64-unknown-none/release/stage0.bin"
+  "target/x86_64-unknown-none/release/stage0"
 ]
-output_path = "./stage0/target/x86_64-unknown-none/release/stage0.bin"
+output_path = "./stage0/target/x86_64-unknown-none/release/stage0"
