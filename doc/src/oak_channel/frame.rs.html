@@ -159,9 +159,6 @@
 <a href="#159" id="159">159</a>
 <a href="#160" id="160">160</a>
 <a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -185,6 +182,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::Channel;
 <span class="kw">use </span>alloc::{boxed::Box, format, vec::Vec};
 <span class="kw">use </span>bitflags::bitflags;
+<span class="kw">use </span>core::borrow::BorrowMut;
 
 <span class="kw">pub const </span>PADDING_SIZE: usize = <span class="number">4</span>;
 
@@ -207,6 +205,7 @@
     [u8; BODY_OFFSET],
     [u8; PADDING_SIZE + LENGTH_SIZE + FLAGS_SIZE]
 );
+<span class="kw">static </span>PADDING: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0</span>; PADDING_SIZE];
 
 <span class="kw">pub const </span>MAX_SIZE: usize = <span class="number">4000</span>;
 <span class="kw">pub const </span>MAX_BODY_SIZE: usize = MAX_SIZE - BODY_OFFSET;
@@ -219,28 +218,24 @@
     <span class="kw">pub </span>body: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8],
 }
 
-<span class="kw">impl </span>TryFrom&lt;Frame&lt;<span class="lifetime">&#39;_</span>&gt;&gt; <span class="kw">for </span>Vec&lt;u8&gt; {
-    <span class="kw">type </span>Error = anyhow::Error;
-    <span class="kw">fn </span>try_from(frame: Frame) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="self">Self</span>::Error&gt; {
-        <span class="kw">let </span>length = BODY_OFFSET
-            .checked_add(frame.body.len())
-            .expect(<span class="string">&quot;body length overflow&quot;</span>);
-        <span class="kw">let </span><span class="kw-2">mut </span>frame_bytes: Vec&lt;u8&gt; = Vec::with_capacity(length);
-
-        frame_bytes.extend_from_slice(<span class="kw-2">&amp;</span>[<span class="number">0</span>; PADDING_SIZE]);
-        {
-            <span class="kw">let </span>frame_length = Length::try_from(length).map_err(|_error| {
+<span class="kw">impl </span>Frame&lt;<span class="lifetime">&#39;_</span>&gt; {
+    <span class="kw">fn </span>write&lt;C: Channel + <span class="question-mark">?</span>Sized&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, channel: <span class="kw-2">&amp;mut </span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
+        <span class="kw">let </span>frame_length = {
+            <span class="kw">let </span>length = BODY_OFFSET
+                .checked_add(<span class="self">self</span>.body.len())
+                .expect(<span class="string">&quot;body length overflow&quot;</span>);
+            Length::try_from(length).map_err(|_error| {
                 anyhow::Error::msg(<span class="macro">format!</span>(
                     <span class="string">&quot;could convert the frame length usize to {:?}&quot;</span>,
                     core::any::type_name::&lt;Length&gt;()
                 ))
-            })<span class="question-mark">?</span>;
-            frame_bytes.extend_from_slice(<span class="kw-2">&amp;</span>frame_length.to_le_bytes());
-        }
-        frame_bytes.extend_from_slice(<span class="kw-2">&amp;</span>frame.flags.bits.to_le_bytes());
-        frame_bytes.extend_from_slice(frame.body);
-
-        <span class="prelude-val">Ok</span>(frame_bytes)
+            })<span class="question-mark">?
+        </span>};
+        channel.write(PADDING)<span class="question-mark">?</span>;
+        channel.write(<span class="kw-2">&amp;</span>frame_length.to_le_bytes())<span class="question-mark">?</span>;
+        channel.write(<span class="kw-2">&amp;</span><span class="self">self</span>.flags.bits.to_le_bytes())<span class="question-mark">?</span>;
+        channel.write(<span class="self">self</span>.body)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
     }
 }
 
@@ -292,10 +287,9 @@
     }
 
     <span class="kw">pub fn </span>write_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>, frame: Frame) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="kw">let </span>frame_bytes: Vec&lt;u8&gt; = frame.try_into()<span class="question-mark">?</span>;
-        <span class="self">self</span>.inner.write(<span class="kw-2">&amp;</span>frame_bytes)<span class="question-mark">?</span>;
-        <span class="self">self</span>.inner.flush()<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(())
+        <span class="kw">let </span>channel: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Channel = <span class="self">self</span>.inner.borrow_mut();
+        frame.write(channel)<span class="question-mark">?</span>;
+        channel.flush()
     }
 }
 
