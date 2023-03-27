@@ -21,6 +21,7 @@ extern crate alloc;
 use crate::Channel;
 use alloc::{boxed::Box, format, vec::Vec};
 use bitflags::bitflags;
+use core::borrow::BorrowMut;
 
 pub const PADDING_SIZE: usize = 4;
 
@@ -43,6 +44,7 @@ static_assertions::assert_eq_size!(
     [u8; BODY_OFFSET],
     [u8; PADDING_SIZE + LENGTH_SIZE + FLAGS_SIZE]
 );
+static PADDING: &[u8] = &[0; PADDING_SIZE];
 
 pub const MAX_SIZE: usize = 4000;
 pub const MAX_BODY_SIZE: usize = MAX_SIZE - BODY_OFFSET;
@@ -55,28 +57,24 @@ pub struct Frame<'a> {
     pub body: &'a [u8],
 }
 
-impl TryFrom<Frame<'_>> for Vec<u8> {
-    type Error = anyhow::Error;
-    fn try_from(frame: Frame) -> Result<Self, Self::Error> {
-        let length = BODY_OFFSET
-            .checked_add(frame.body.len())
-            .expect("body length overflow");
-        let mut frame_bytes: Vec<u8> = Vec::with_capacity(length);
-
-        frame_bytes.extend_from_slice(&[0; PADDING_SIZE]);
-        {
-            let frame_length = Length::try_from(length).map_err(|_error| {
+impl Frame<'_> {
+    fn write<C: Channel + ?Sized>(&self, channel: &mut C) -> Result<(), anyhow::Error> {
+        let frame_length = {
+            let length = BODY_OFFSET
+                .checked_add(self.body.len())
+                .expect("body length overflow");
+            Length::try_from(length).map_err(|_error| {
                 anyhow::Error::msg(format!(
                     "could convert the frame length usize to {:?}",
                     core::any::type_name::<Length>()
                 ))
-            })?;
-            frame_bytes.extend_from_slice(&frame_length.to_le_bytes());
-        }
-        frame_bytes.extend_from_slice(&frame.flags.bits.to_le_bytes());
-        frame_bytes.extend_from_slice(frame.body);
-
-        Ok(frame_bytes)
+            })?
+        };
+        channel.write(PADDING)?;
+        channel.write(&frame_length.to_le_bytes())?;
+        channel.write(&self.flags.bits.to_le_bytes())?;
+        channel.write(self.body)?;
+        Ok(())
     }
 }
 
@@ -128,10 +126,9 @@ impl Framed {
     }
 
     pub fn write_frame(&mut self, frame: Frame) -> anyhow::Result<()> {
-        let frame_bytes: Vec<u8> = frame.try_into()?;
-        self.inner.write(&frame_bytes)?;
-        self.inner.flush()?;
-        Ok(())
+        let channel: &mut dyn Channel = self.inner.borrow_mut();
+        frame.write(channel)?;
+        channel.flush()
     }
 }
 
