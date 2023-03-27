@@ -35,7 +35,7 @@ use oak_functions_abi::{
 };
 use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::{Level, OakLogger};
-use wasmi::{Func, Memory, MemoryType, Store};
+use wasmi::{MemoryType, Store};
 
 pub const MAIN_FUNCTION_NAME: &str = "main";
 pub const ALLOC_FUNCTION_NAME: &str = "alloc";
@@ -212,7 +212,11 @@ where
                 |caller: wasmi::Caller<'_, UserState<L>>,
                  buf_ptr_ptr: AbiPointer,
                  buf_len_ptr: AbiPointer| {
-                    let mut caller = OakCaller { caller };
+                    let mut caller = match OakCaller::new(caller) {
+                        Ok(caller) => caller,
+                        Err(oak_status) => return Ok(oak_status as i32),
+                    };
+
                     let request_bytes = caller.data().request_bytes.clone();
                     let status = caller.alloc_and_write(buf_ptr_ptr, buf_len_ptr, request_bytes);
                     from_oak_status(status)
@@ -230,7 +234,11 @@ where
                 |caller: wasmi::Caller<'_, UserState<L>>,
                  buf_ptr: AbiPointer,
                  buf_len: AbiPointerOffset| {
-                    let mut caller = OakCaller { caller };
+                    let mut caller = match OakCaller::new(caller) {
+                        Ok(caller) => caller,
+                        Err(oak_status) => return Ok(oak_status as i32),
+                    };
+
                     let status = caller.read_buffer(buf_ptr, buf_len).map(|buffer| {
                         caller.data_mut().response_bytes = buffer;
                     });
@@ -252,7 +260,11 @@ where
                  request_len: AbiPointerOffset,
                  response_ptr_ptr: AbiPointer,
                  response_len_ptr: AbiPointer| {
-                    let mut caller = OakCaller { caller };
+                    let mut caller = match OakCaller::new(caller) {
+                        Ok(caller) => caller,
+                        Err(oak_status) => return Ok(oak_status as i32),
+                    };
+
                     let status = caller
                         .read_buffer(request_ptr, request_len)
                         .map_err(|err| {
@@ -318,12 +330,62 @@ where
 /// OakCaller relies on `alloc`, which every Oak Wasm module must provide.
 struct OakCaller<'a, L: OakLogger> {
     caller: wasmi::Caller<'a, UserState<L>>,
+    alloc: wasmi::TypedFunc<i32, AbiPointer>,
+    memory: wasmi::Memory,
 }
 
-impl<L> OakCaller<'_, L>
+impl<'a, L> OakCaller<'a, L>
 where
     L: OakLogger,
 {
+    fn new(caller: wasmi::Caller<'a, UserState<L>>) -> Result<Self, OakStatus> {
+        // Get typed `alloc` to store.
+        let ext = caller.get_export(ALLOC_FUNCTION_NAME).ok_or_else(|| {
+            caller
+                .data()
+                .log_error(&format!("failed to get exported {}", ALLOC_FUNCTION_NAME));
+            OakStatus::ErrInternal
+        })?;
+
+        let alloc = ext.into_func().ok_or_else(|| {
+            caller
+                .data()
+                .log_error(&format!("exported {} is not a func", ALLOC_FUNCTION_NAME));
+            OakStatus::ErrInternal
+        })?;
+
+        let typed_alloc = alloc.typed(&caller).ok().ok_or_else(|| {
+            caller.data().log_error(&format!(
+                "exported {} could not be typed",
+                ALLOC_FUNCTION_NAME
+            ));
+            OakStatus::ErrInternal
+        })?;
+
+        // Get memory to store.
+        let ext = caller.get_export(MEMORY_NAME).ok_or_else(|| {
+            caller
+                .data()
+                .log_error(&format!("failed to get exported {}", MEMORY_NAME));
+            OakStatus::ErrInternal
+        })?;
+
+        let memory = ext.into_memory().ok_or_else(|| {
+            caller
+                .data()
+                .log_error(&format!("exported {} is not a memory", MEMORY_NAME));
+            OakStatus::ErrInternal
+        })?;
+
+        let caller = OakCaller {
+            caller,
+            alloc: typed_alloc,
+            memory,
+        };
+
+        Ok(caller)
+    }
+
     /// Reads the buffer starting at address `buf_ptr` with length `buf_len` from the Wasm memory.
     fn read_buffer(
         &mut self,
@@ -334,7 +396,7 @@ where
         let buf_ptr = buf_ptr
             .try_into()
             .expect("failed to convert AbiPointer to usize as required by wasmi API");
-        self.get_memory()?
+        self.memory
             .read(&mut self.caller, buf_ptr, &mut buf)
             .map_err(|err| {
                 self.data().log_error(&format!(
@@ -357,19 +419,11 @@ where
         let len = buf.len() as i32;
 
         // Allocate the memory from the Wasm module.
-        // `address` will hold the address where memory of size len was allocated, initialized with
-        // -1.
-        let mut address = [wasmi::Value::I32(-1)];
-        self.get_alloc()?
-            .call(&mut self.caller, &[wasmi::Value::I32(len)], &mut address)
+        // `address` will hold the address where memory of size len was allocated.
+        let dest_ptr = self
+            .alloc
+            .call(&mut self.caller, len)
             .expect("`alloc` call failed");
-        let dest_ptr = match address[0] {
-            // Assumes 32-bit Wasm addresses.
-            wasmi::Value::I32(v) => v
-                .try_into()
-                .map_or_else(|_| Err(OakStatus::ErrInternal), Ok),
-            _ => Err(OakStatus::ErrInternal),
-        }?;
 
         // Write to the allocated memory.
         self.write_buffer(&buf, dest_ptr)?;
@@ -384,7 +438,7 @@ where
         let dest = dest
             .try_into()
             .expect("failed to convert AbiPointer to usize as required by wasmi API");
-        self.get_memory()?
+        self.memory
             .write(&mut self.caller, dest, source)
             .map_err(|err| {
                 self.data().log_error(&format!(
@@ -414,40 +468,6 @@ where
 
     fn data(&mut self) -> &UserState<L> {
         self.caller.data()
-    }
-
-    // Helper function to get exported MEMORY_NAME from caller.
-    fn get_memory(&mut self) -> Result<Memory, OakStatus> {
-        let ext = self.caller.get_export(MEMORY_NAME).ok_or_else(|| {
-            self.caller
-                .data()
-                .log_error(&format!("failed to get exported {}", MEMORY_NAME));
-            OakStatus::ErrInternal
-        })?;
-
-        ext.into_memory().ok_or_else(|| {
-            self.caller
-                .data()
-                .log_error(&format!("exported {} is not a memory", MEMORY_NAME));
-            OakStatus::ErrInternal
-        })
-    }
-
-    // Helper function to get exported ALLOC_FUNCTION_NAME from caller.
-    fn get_alloc(&mut self) -> Result<Func, OakStatus> {
-        let ext = self.caller.get_export(ALLOC_FUNCTION_NAME).ok_or_else(|| {
-            self.caller
-                .data()
-                .log_error(&format!("failed to get exported {}", ALLOC_FUNCTION_NAME));
-            OakStatus::ErrInternal
-        })?;
-
-        ext.into_func().ok_or_else(|| {
-            self.caller
-                .data()
-                .log_error(&format!("exported {} is not a func", ALLOC_FUNCTION_NAME));
-            OakStatus::ErrInternal
-        })
     }
 }
 
