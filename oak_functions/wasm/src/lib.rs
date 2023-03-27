@@ -141,7 +141,14 @@ where
         let mut store = wasmi::Store::new(module.engine(), user_state);
         let linker = OakLinker::new(module.engine(), &mut store);
         let (instance, store) = linker.instantiate(store, module)?;
-        // TODO(#3785): Add logging and list exports.
+
+        instance.exports(&store).for_each(|export| {
+            store
+                .data()
+                .logger
+                .log_sensitive(Level::Info, &format!("instance exports: {:?}", export))
+        });
+
         let wasm_state = Self { instance, store };
         Ok(wasm_state)
     }
@@ -329,13 +336,11 @@ where
             .expect("failed to convert AbiPointer to usize as required by wasmi API");
         self.get_memory()?
             .read(&mut self.caller, buf_ptr, &mut buf)
-            .map_err(|_err| {
-                // TODO(#3785): Add logging, which needs access to logger in the user state.
-                // We don't have access in ctx, so we either need to pass the logger as argument or
-                // think of a different refactoring.
-                // ctx.data().log_error(
-                //   &format!("Unable to read buffer from guest memory: {:?}", err),
-                // );
+            .map_err(|err| {
+                self.data().log_error(&format!(
+                    "Unable to read buffer from guest memory: {:?}",
+                    err
+                ));
                 OakStatus::ErrInvalidArgs
             })?;
         Ok(buf)
@@ -381,13 +386,11 @@ where
             .expect("failed to convert AbiPointer to usize as required by wasmi API");
         self.get_memory()?
             .write(&mut self.caller, dest, source)
-            .map_err(|_err| {
-                // TODO(#3785): Add logging, which needs access to logger in the user state.
-                // We don't have access in ctx, so we either need to pass the logger as argument or
-                // think of a different refactoring.
-                // ctx.data().log_error(
-                //    &format!("Unable to write buffer into guest memory: {:?}", err),
-                // );
+            .map_err(|err| {
+                self.data().log_error(&format!(
+                    "Unable to write buffer into guest memory: {:?}",
+                    err
+                ));
                 OakStatus::ErrInvalidArgs
             })
     }
@@ -396,13 +399,11 @@ where
     fn write_u32(&mut self, value: u32, address: AbiPointer) -> Result<(), OakStatus> {
         let value_bytes = &mut [0; 4];
         LittleEndian::write_u32(value_bytes, value);
-        self.write_buffer(value_bytes, address).map_err(|_err| {
-            // TODO(#3785): Add logging, which needs access to logger in the user state.
-            // We don't have access in ctx, so we either need to pass the logger as argument or
-            // think of a different refactoring.
-            // ctx.data().log_error(
-            //    &format!("Unable to write u32 value into guest memory: {:?}", err),
-            // );
+        self.write_buffer(value_bytes, address).map_err(|err| {
+            self.data().log_error(&format!(
+                "Unable to write u32 value into guest memory: {:?}",
+                err
+            ));
             OakStatus::ErrInvalidArgs
         })
     }
