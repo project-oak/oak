@@ -59,7 +59,7 @@ objcopy --output-format binary stage0/target/x86_64-unknown-none/release/oak_sta
 
 Execute the initial RAM disk with QEMU:
 
-Note: this assumes an appropiate uncompressed Linux kernel ELF binary has been
+Note: this assumes an appropiate [uncompressed Linux kernel ELF binary](docs/development.md#extracting-vmlinux-from-your-linux-installation) has been
 copied to `bin/vmlinux`.
 
 ```bash

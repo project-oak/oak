@@ -63,7 +63,7 @@ mkfifo /tmp/comms.in /tmp/comms.out
 
 Execute the initial RAM disk with QEMU:
 
-Note: this assumes that an appropiate uncompressed Linux kernel ELF binary has
+Note: this assumes that an appropiate [uncompressed Linux kernel ELF binary](docs/development.md#extracting-vmlinux-from-your-linux-installation) has
 been copied to `bin/vmlinux`. The Linux Kernel must be built with ACPI, ACPI
 Plug-and-Play, Virtio MMIO, and Virtio Console support, as this is needed for
 the `/dev/hvc0` device to become available.
