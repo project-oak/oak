@@ -395,9 +395,28 @@
 <a href="#395" id="395">395</a>
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
-</pre><pre class="rust"><code><span class="doccomment">/// AttestationEvidence contains the information that the untrusted launcher provides to the client
-/// in response to its request for the enclave&#39;s public key(s). The name is chosen to match the RATS
-/// terminology (see &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence&gt;).
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+</pre><pre class="rust"><code><span class="doccomment">/// AttestationEvidence contains all the information that originates in the TEE and can serve as
+/// claims about the Target Environment. The name is chosen to match the RATS terminology
+/// (see &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence&gt;).
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>AttestationEvidence {
@@ -413,23 +432,42 @@
     <span class="doccomment">/// The serialized attestation report binding the public key.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;3&quot;</span>)]
     </span><span class="kw">pub </span>attestation: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// The signature over the application_data, signed by the enclave using its signing key. This
+    /// field is optional, and must be left empty if application_data is not provided.
+    /// TODO(#3442): Specify the signing details, or link to a specification.
+    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;4&quot;</span>)]
+    </span><span class="kw">pub </span>signed_application_data: ::prost::alloc::vec::Vec&lt;u8&gt;,
+}
+<span class="doccomment">/// AttestationBundle contains the information that the untrusted launcher provides to the client
+/// in response to its request for the enclave&#39;s public key(s).
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>AttestationBundle {
+    <span class="doccomment">/// Attestation evidence from the enclave.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>attestation_evidence: ::core::option::Option&lt;AttestationEvidence&gt;,
+    <span class="doccomment">/// Supporting evidence required for verifying the integrity of attestation evidence.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>attestation_endorsement: ::core::option::Option&lt;AttestationEndorsement&gt;,
+}
+<span class="doccomment">/// AttestationEndorsement contains statements that some entity (e.g., a hardware provider) vouches
+/// for the integrity of claims about the TEE or the software running on it.
+/// (see &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements&gt;).
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>AttestationEndorsement {
     <span class="doccomment">/// The serialized TEE certificate(s). The details of the format and how the certificate(s) are
     /// encoded into this byte array are implementation-specific. In case of AMD-SEV-SNP, as described
     /// in &lt;https://www.amd.com/system/files/TechDocs/57230.pdf,&gt; there are three different certificates
     /// packaged in two different files.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;4&quot;</span>)]
+    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>tee_certificates: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// The binary attestation evidence.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    <span class="doccomment">/// The binary attestation.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>binary_attestation: ::core::option::Option&lt;BinaryAttestation&gt;,
     <span class="doccomment">/// The optional application-specific data.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;6&quot;</span>)]
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
     </span><span class="kw">pub </span>application_data: ::core::option::Option&lt;ApplicationData&gt;,
-    <span class="doccomment">/// The signature over the application_data, signed by the enclave using its signing key. This
-    /// field is optional, and must be left empty if application_data is not provided.
-    /// TODO(#3442): Specify the signing details, or link to a specification.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;7&quot;</span>)]
-    </span><span class="kw">pub </span>signed_application_data: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -460,7 +498,7 @@
 </span><span class="kw">pub struct </span>GetPublicKeyResponse {
     <span class="doccomment">/// The enclave&#39;s signing and encryption public keys and attestation evidence about them.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>attestation_evidence: ::core::option::Option&lt;AttestationEvidence&gt;,
+    </span><span class="kw">pub </span>attestation_bundle: ::core::option::Option&lt;AttestationBundle&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
