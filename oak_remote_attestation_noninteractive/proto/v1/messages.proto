@@ -21,7 +21,9 @@ package oak.session.noninteractive.v1;
 option java_multiple_files = true;
 option java_package = "oak.session.noninteractive.v1";
 
-// AttestationEvidence contains the evidence provided by the enclave.
+// AttestationEvidence contains all the information that originates in the TEE and can serve as
+// claims about the Target Environment. The name is chosen to match the RATS terminology
+// (see https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence).
 message AttestationEvidence {
   // The serialized public key part of the enclave encryption key.
   // TODO(#3442): Specify key format.
@@ -41,24 +43,31 @@ message AttestationEvidence {
   bytes signed_application_data = 4;
 }
 
-// AttestationVerificationEvidence contains the information that the untrusted launcher provides to
-// the client in response to its request for the enclave's public key(s). The name is chosen to
-// match the RATS terminology (see https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence).
-message AttestationVerificationEvidence {
+// AttestationBundle contains the information that the untrusted launcher provides to the client
+// in response to its request for the enclave's public key(s).
+message AttestationBundle {
   // Attestation evidence from the enclave.
   AttestationEvidence attestation_evidence = 1;
 
+  // Supporting evidence required for verifying the integrity of attestation evidence.
+  AttestationEndorsement attestation_endorsement = 2;
+}
+
+// AttestationEndorsement contains statements that some entity (e.g., a hardware provider) vouches
+// for the integrity of claims about the TEE or the software running on it.
+// (see https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements).
+message AttestationEndorsement {
   // The serialized TEE certificate(s). The details of the format and how the certificate(s) are
   // encoded into this byte array are implementation-specific. In case of AMD-SEV-SNP, as described
   // in https://www.amd.com/system/files/TechDocs/57230.pdf, there are three different certificates
   // packaged in two different files.
-  bytes tee_certificates = 2;
+  bytes tee_certificates = 1;
 
-  // The binary attestation evidence.
-  BinaryAttestation binary_attestation = 3;
+  // The binary attestation.
+  BinaryAttestation binary_attestation = 2;
 
   // The optional application-specific data.
-  optional ApplicationData application_data = 4;
+  optional ApplicationData application_data = 3;
 }
 
 message BinaryAttestation {
@@ -81,7 +90,7 @@ message GetPublicKeyRequest {}
 
 message GetPublicKeyResponse {
   // The enclave's signing and encryption public keys and attestation evidence about them.
-  AttestationVerificationEvidence attestation_verification_evidence = 1;
+  AttestationBundle attestation_bundle = 1;
 }
 
 message InvokeRequest {

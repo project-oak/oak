@@ -20,8 +20,7 @@ use oak_remote_attestation_noninteractive::proto::{
     request_wrapper, response_wrapper,
     streaming_session_client::StreamingSessionClient,
     streaming_session_server::{StreamingSession, StreamingSessionServer},
-    AttestationVerificationEvidence, GetPublicKeyRequest, GetPublicKeyResponse, RequestWrapper,
-    ResponseWrapper,
+    AttestationBundle, GetPublicKeyRequest, GetPublicKeyResponse, RequestWrapper, ResponseWrapper,
 };
 use std::pin::Pin;
 use tonic::{
@@ -108,14 +107,12 @@ impl StreamingSession for TestEvidenceProviderServer {
             return Err(tonic::Status::invalid_argument("request wrapper must have get_public_key_request field set"));
         };
 
-        // TODO(#3641): Respond with a more interesting AttestationVerificationEvidence.
-        let attestation_verification_evidence = Some(AttestationVerificationEvidence::default());
+        // TODO(#3641): Respond with a more interesting AttestationBundle.
+        let attestation_bundle = Some(AttestationBundle::default());
         Ok(Response::new(Box::pin(futures::stream::iter(vec![Ok(
             ResponseWrapper {
                 response: Some(response_wrapper::Response::GetPublicKeyResponse(
-                    GetPublicKeyResponse {
-                        attestation_verification_evidence,
-                    },
+                    GetPublicKeyResponse { attestation_bundle },
                 )),
             },
         )]))))
