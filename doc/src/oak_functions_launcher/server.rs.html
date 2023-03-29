@@ -94,6 +94,31 @@
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -115,6 +140,7 @@
     proto::{
         request_wrapper, response_wrapper,
         streaming_session_server::{StreamingSession, StreamingSessionServer},
+        AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
         InvokeResponse, RequestWrapper, ResponseWrapper,
     },
     schema,
@@ -125,9 +151,8 @@
 
 <span class="kw">pub struct </span>SessionProxy {
     connector_handle: ConnectorHandle,
-    <span class="comment">// TODO(#3442): Return cached key and attestation when clients ask for it.
-    </span>_signing_public_key: Vec&lt;u8&gt;,
-    _attestation: Vec&lt;u8&gt;,
+    encryption_public_key: Vec&lt;u8&gt;,
+    attestation: Vec&lt;u8&gt;,
 }
 
 <span class="attr">#[tonic::async_trait]
@@ -146,29 +171,54 @@
             </span>.ok_or_else(|| tonic::Status::invalid_argument(<span class="string">&quot;empty request stream&quot;</span>))<span class="question-mark">?
             </span>.map_err(|err| {
                 tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;error reading message from request stream: {err}&quot;</span>))
-            })<span class="question-mark">?</span>;
-        <span class="kw">let </span><span class="prelude-val">Some</span>(request_wrapper::Request::InvokeRequest(invoke_request)) = request.request <span class="kw">else </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(tonic::Status::invalid_argument(<span class="string">&quot;request wrapper must have invoke_request field set&quot;</span>));
-        };
-        <span class="kw">let </span>encoded_request = schema::InvokeRequest {
-            body: invoke_request.encrypted_body,
-        };
+            })<span class="question-mark">?
+            </span>.request
+            .ok_or_else(|| tonic::Status::invalid_argument(<span class="string">&quot;empty request message&quot;</span>))<span class="question-mark">?</span>;
 
-        <span class="kw">let </span><span class="kw-2">mut </span>client = schema::OakFunctionsAsyncClient::new(<span class="self">self</span>.connector_handle.clone());
-
-        <span class="kw">let </span>response = client
-            .invoke(<span class="kw-2">&amp;</span>encoded_request)
-            .<span class="kw">await
-            </span>.flatten()
-            .map_err(|err| {
-                tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;error handling client request: {:?}&quot;</span>, err))
-            })<span class="question-mark">?</span>;
+        <span class="kw">let </span>response = <span class="kw">match </span>request {
+            request_wrapper::Request::GetPublicKeyRequest(<span class="kw">_</span>) =&gt; {
+                <span class="comment">// TODO(#3641): Initialize all evidence fields.
+                </span><span class="kw">let </span>attestation_evidence = AttestationEvidence {
+                    encryption_public_key: <span class="self">self</span>.encryption_public_key.to_vec(),
+                    signing_public_key: <span class="macro">vec!</span>[],
+                    attestation: <span class="self">self</span>.attestation.to_vec(),
+                    signed_application_data: <span class="macro">vec!</span>[],
+                };
+                <span class="kw">let </span>attestation_endorsement = AttestationEndorsement {
+                    tee_certificates: <span class="macro">vec!</span>[],
+                    binary_attestation: <span class="prelude-val">None</span>,
+                    application_data: <span class="prelude-val">None</span>,
+                };
+                <span class="kw">let </span>attestation_bundle = AttestationBundle {
+                    attestation_evidence: <span class="prelude-val">Some</span>(attestation_evidence),
+                    attestation_endorsement: <span class="prelude-val">Some</span>(attestation_endorsement),
+                };
+                response_wrapper::Response::GetPublicKeyResponse(GetPublicKeyResponse {
+                    attestation_bundle: <span class="prelude-val">Some</span>(attestation_bundle),
+                })
+            }
+            request_wrapper::Request::InvokeRequest(invoke_request) =&gt; {
+                <span class="kw">let </span>enclave_invoke_request = schema::InvokeRequest {
+                    body: invoke_request.encrypted_body,
+                };
+                <span class="kw">let </span><span class="kw-2">mut </span>enclave_client =
+                    schema::OakFunctionsAsyncClient::new(<span class="self">self</span>.connector_handle.clone());
+                <span class="kw">let </span>enclave_invoke_response = enclave_client
+                    .invoke(<span class="kw-2">&amp;</span>enclave_invoke_request)
+                    .<span class="kw">await
+                    </span>.flatten()
+                    .map_err(|err| {
+                        tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;error handling client request: {:?}&quot;</span>, err))
+                    })<span class="question-mark">?</span>;
+                response_wrapper::Response::InvokeResponse(InvokeResponse {
+                    encrypted_body: enclave_invoke_response.body,
+                })
+            }
+        };
 
         <span class="prelude-val">Ok</span>(Response::new(Box::pin(futures::stream::iter(<span class="macro">vec!</span>[<span class="prelude-val">Ok</span>(
             ResponseWrapper {
-                response: <span class="prelude-val">Some</span>(response_wrapper::Response::InvokeResponse(InvokeResponse {
-                    encrypted_body: response.body,
-                })),
+                response: <span class="prelude-val">Some</span>(response),
             },
         )]))))
     }
@@ -177,13 +227,13 @@
 <span class="kw">pub fn </span>new(
     addr: SocketAddr,
     connector_handle: ConnectorHandle,
-    signing_public_key: Vec&lt;u8&gt;,
+    encryption_public_key: Vec&lt;u8&gt;,
     attestation: Vec&lt;u8&gt;,
 ) -&gt; <span class="kw">impl </span>Future&lt;Output = <span class="prelude-ty">Result</span>&lt;(), tonic::transport::Error&gt;&gt; {
     <span class="kw">let </span>server_impl = SessionProxy {
         connector_handle,
-        _signing_public_key: signing_public_key,
-        _attestation: attestation,
+        encryption_public_key,
+        attestation,
     };
 
     Server::builder()

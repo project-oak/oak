@@ -103,7 +103,7 @@
 
 <span class="doccomment">/// Encrypts `plaintext` with associated data using AES-GCM encryption scheme.
 /// Note: the corresponding associated data is NOT encrypted.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>encrypt(
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>_encrypt(
     secret_key: <span class="kw-2">&amp;</span>AeadKey,
     nonce: <span class="kw-2">&amp;</span>AeadNonce,
     plaintext: <span class="kw-2">&amp;</span>[u8],
@@ -120,7 +120,7 @@
 }
 
 <span class="doccomment">/// Decrypts `ciphertext` and authenticates `associated_data` using AES-GCM encryption scheme.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>decrypt(
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>_decrypt(
     secret_key: <span class="kw-2">&amp;</span>AeadKey,
     nonce: <span class="kw-2">&amp;</span>AeadNonce,
     ciphertext: <span class="kw-2">&amp;</span>[u8],

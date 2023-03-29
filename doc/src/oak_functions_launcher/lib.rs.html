@@ -140,6 +140,7 @@
 <a href="#140" id="140">140</a>
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -206,7 +207,7 @@
     <span class="kw">let </span>(launched_instance, connector_handle) = launcher::launch(mode).<span class="kw">await</span><span class="question-mark">?</span>;
     setup_lookup_data(connector_handle.clone(), lookup_data_config).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>intialize_response =
-        setup_wasm(connector_handle.clone(), <span class="kw-2">&amp;</span>wasm_path, constant_response_size).<span class="kw">await</span><span class="question-mark">?</span>;
+        intialize_enclave(connector_handle.clone(), <span class="kw-2">&amp;</span>wasm_path, constant_response_size).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>((launched_instance, connector_handle, intialize_response))
 }
 
@@ -251,8 +252,9 @@
     lookup::update_lookup_data(client, <span class="kw-2">&amp;</span>config.lookup_data_path, config.max_chunk_size).<span class="kw">await
 </span>}
 
-<span class="comment">// Loads wasm bytes.
-</span><span class="kw">async fn </span>setup_wasm(
+<span class="comment">// Loads application config (including wasm bytes) into the enclave and returns a remote attestation
+// evidence.
+</span><span class="kw">async fn </span>intialize_enclave(
     connector_handle: channel::ConnectorHandle,
     wasm: <span class="kw-2">&amp;</span>PathBuf,
     constant_response_size: u32,
