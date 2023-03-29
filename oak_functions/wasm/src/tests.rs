@@ -213,7 +213,7 @@ fn create_test_state() -> TestState {
         WasmHandler::create(&wasm_module_bytes[..], alloc::vec![testing_factory], logger)
             .expect("couldn't create WasmHandler");
 
-    let user_state = UserState::init(
+    let user_state = UserState::new(
         b"2".to_vec(),
         wasm_handler
             .create_extensions()
