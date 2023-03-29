@@ -153,19 +153,6 @@ where
         Ok(wasm_state)
     }
 
-    // Invokes the Wasm module by calling main.
-    fn invoke(&mut self) {
-        let main = self
-            .instance
-            .get_typed_func::<(), ()>(&self.store, MAIN_FUNCTION_NAME)
-            .expect("couldn't get `main` export");
-        let result = main.call(&mut self.store, ());
-        self.store.data().logger.log_sensitive(
-            Level::Info,
-            &format!("running Wasm module completed with result: {:?}", result),
-        );
-    }
-
     // Needed for unit tests.
     #[allow(dead_code)]
     fn get_request_bytes(&self) -> Vec<u8> {
@@ -523,7 +510,16 @@ where
     pub fn handle_invoke(&self, invoke_request: Request) -> anyhow::Result<Response> {
         let mut wasm_state = self.init_wasm_state(invoke_request.body)?;
 
-        wasm_state.invoke();
+        // Invokes the Wasm module by calling main.
+        let main = wasm_state
+            .instance
+            .get_typed_func::<(), ()>(&wasm_state.store, MAIN_FUNCTION_NAME)
+            .expect("couldn't get `main` export");
+        let result = main.call(&mut wasm_state.store, ());
+        wasm_state.store.data().logger.log_sensitive(
+            Level::Info,
+            &format!("running Wasm module completed with result: {:?}", result),
+        );
 
         // Terminate the extensions.
         wasm_state
