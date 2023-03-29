@@ -323,16 +323,15 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 
-    // Clean-ups we need to do just before we jump to the kernel proper: clean up the early GHCB we
-    // used and switch back to a hugepage for the first 2M of memory.
-    if ghcb_protocol.is_some() {
-        sev::deinit_ghcb(snp, encrypted);
+    // Clean-ups we need to do just before we jump to the kernel proper: clean up the early GHCB and
+    // FW_CFG DMA buffers we used, and switch back to a hugepage for the first 2M of memory.
+    if snp {
+        sev::unshare_page(Page::containing_address(dma_buf_address));
+        sev::unshare_page(Page::containing_address(dma_access_address));
+        if ghcb_protocol.is_some() {
+            sev::deinit_ghcb();
+        }
     }
-    if encrypted > 0 {
-        sev::unshare_page(Page::containing_address(dma_buf_address), snp, encrypted);
-        sev::unshare_page(Page::containing_address(dma_access_address), snp, encrypted);
-    }
-
     // Allow identity-op to keep the fact that the address we're talking about here is 0x00.
     #[allow(clippy::identity_op)]
     pd[0].set_addr(
