@@ -94,6 +94,8 @@ impl AsyncEvidenceProvider for GrpcStreamingTransport {
         };
 
         get_evidence_response
+            .attestation_bundle
+            .context("get_evidence_response message doesn't contain an attestation bundle")?
             .attestation_evidence
             .context("get_evidence_response message doesn't contain an attestation evidence")
     }

@@ -19,7 +19,8 @@ use crate::{
     proto::{
         request_wrapper, response_wrapper,
         streaming_session_server::{StreamingSession, StreamingSessionServer},
-        AttestationEvidence, GetPublicKeyResponse, InvokeResponse, RequestWrapper, ResponseWrapper,
+        AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
+        InvokeResponse, RequestWrapper, ResponseWrapper,
     },
     schema,
 };
@@ -60,13 +61,19 @@ impl StreamingSession for SessionProxy {
                     encryption_public_key: self.encryption_public_key.to_vec(),
                     signing_public_key: vec![],
                     attestation: self.attestation.to_vec(),
+                    signed_application_data: vec![],
+                };
+                let attestation_endorsement = AttestationEndorsement {
                     tee_certificates: vec![],
                     binary_attestation: None,
                     application_data: None,
-                    signed_application_data: vec![],
+                };
+                let attestation_bundle = AttestationBundle {
+                    attestation_evidence: Some(attestation_evidence),
+                    attestation_endorsement: Some(attestation_endorsement),
                 };
                 response_wrapper::Response::GetPublicKeyResponse(GetPublicKeyResponse {
-                    attestation_evidence: Some(attestation_evidence),
+                    attestation_bundle: Some(attestation_bundle),
                 })
             }
             request_wrapper::Request::InvokeRequest(invoke_request) => {
