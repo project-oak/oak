@@ -518,17 +518,14 @@ where
         Ok(wasm_state)
     }
 
-    pub fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
-        let response_bytes = self.handle_raw_invoke(request.body)?;
-        Ok(Response::create(StatusCode::Success, response_bytes))
-    }
-
-    /// Handles an invocation using raw bytes and returns the response as raw bytes.
-    pub fn handle_raw_invoke(&self, request_bytes: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-        let mut wasm_state = self.init_wasm_state(request_bytes)?;
+    /// Handles a call to invoke by getting the raw request bytes from the body of the request to
+    /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
+    pub fn handle_invoke(&self, invoke_request: Request) -> anyhow::Result<Response> {
+        let mut wasm_state = self.init_wasm_state(invoke_request.body)?;
 
         wasm_state.invoke();
 
+        // Terminate the extensions.
         wasm_state
             .store
             .data_mut()
@@ -536,7 +533,9 @@ where
             .values_mut()
             .try_for_each(|e| e.terminate())?;
 
-        Ok(wasm_state.get_response_bytes())
+        let invoke_response =
+            Response::create(StatusCode::Success, wasm_state.get_response_bytes());
+        Ok(invoke_response)
     }
 }
 
