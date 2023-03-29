@@ -124,34 +124,6 @@ pub struct WasmState<L: OakLogger> {
     store: wasmi::Store<UserState<L>>,
 }
 
-impl<L> WasmState<L>
-where
-    L: OakLogger,
-{
-    pub fn new(
-        module: Arc<wasmi::Module>,
-        request_bytes: Vec<u8>,
-        logger: L,
-        extensions: HashMap<ExtensionHandle, Box<dyn OakApiNativeExtension>>,
-    ) -> anyhow::Result<Self> {
-        let user_state = UserState::init(request_bytes, extensions, logger);
-        // For isolated requests we need to create a new store for every request.
-        let mut store = wasmi::Store::new(module.engine(), user_state);
-        let linker = OakLinker::new(module.engine(), &mut store);
-        let (instance, store) = linker.instantiate(store, module)?;
-
-        instance.exports(&store).for_each(|export| {
-            store
-                .data()
-                .logger
-                .log_sensitive(Level::Info, &format!("instance exports: {:?}", export))
-        });
-
-        let wasm_state = Self { instance, store };
-        Ok(wasm_state)
-    }
-}
-
 // TODO(mschett): Check this description.
 /// Exports the functions from oak_functions_abi/src/lib.rs.
 /// The functions correspond to the ABI OAK_FUNCTIONS functions that allow
@@ -489,12 +461,26 @@ where
     }
 
     fn init_wasm_state(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState<L>> {
-        let wasm_state = WasmState::new(
-            self.wasm_module.clone(),
+        let module = self.wasm_module.clone();
+
+        let user_state = UserState::init(
             request_bytes,
-            self.logger.clone(),
             self.create_extensions()?,
-        )?;
+            self.logger.clone(),
+        );
+        // For isolated requests we need to create a new store for every request.
+        let mut store = wasmi::Store::new(module.engine(), user_state);
+        let linker = OakLinker::new(module.engine(), &mut store);
+        let (instance, store) = linker.instantiate(store, module)?;
+
+        instance.exports(&store).for_each(|export| {
+            store
+                .data()
+                .logger
+                .log_sensitive(Level::Info, &format!("instance exports: {:?}", export))
+        });
+
+        let wasm_state = WasmState { instance, store };
 
         Ok(wasm_state)
     }
