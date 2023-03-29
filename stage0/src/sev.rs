@@ -82,9 +82,10 @@ pub fn init_ghcb(
     GHCB_WRAPPER.get().unwrap()
 }
 
-pub fn deinit_ghcb(snp: bool, encrypted: u64) {
+/// Stops sharing the GHCB with the hypervisor when running with AMD SEV-SNP enabled.
+pub fn deinit_ghcb() {
     let ghcb_addr = VirtAddr::new(GHCB_WRAPPER.get().unwrap().lock().get_gpa().as_u64());
-    unshare_page(Page::containing_address(ghcb_addr), snp, encrypted);
+    unshare_page(Page::containing_address(ghcb_addr));
 }
 
 /// Shares a single 4KiB page with the hypervisor.
@@ -108,29 +109,12 @@ pub fn share_page(page: Page<Size4KiB>, snp: bool, encrypted: u64) {
     }
 }
 
-/// Stops sharing a single 4KiB page with the hypervisor.
-pub fn unshare_page(page: Page<Size4KiB>, snp: bool, encrypted: u64) {
+/// Stops sharing a single 4KiB page with the hypervisor when running with AMD SEV-SNP enabled.
+pub fn unshare_page(page: Page<Size4KiB>) {
     let page_start = page.start_address().as_u64();
-    if snp {
-        let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Private)
-            .expect("invalid address for page location");
-        change_snp_page_state(request).expect("couldn't change SNP state for page");
-        pvalidate(
-            page_start as usize,
-            SevPageSize::Page4KiB,
-            Validation::Validated,
-        )
-        .unwrap();
-    }
-
-    let PageTables { pdpt: _, pd } = get_page_tables(encrypted);
-    let pt = unsafe { &mut *((pd[0].addr().as_u64() & !encrypted) as *mut PageTable) };
-    let idx = (page_start / Size4KiB::SIZE) as usize;
-    pt[idx].set_addr(
-        PhysAddr::new(page_start | encrypted),
-        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-    );
-    tlb::flush_all();
+    let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Private)
+        .expect("invalid address for page location");
+    change_snp_page_state(request).expect("couldn't change SNP state for page");
 }
 
 // Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However, `PVALIDATE` can only
