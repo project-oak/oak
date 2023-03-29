@@ -402,7 +402,7 @@ Response: "{\"temperature_degrees_celsius\":29}"
 
 On Linux installations, you can extract the uncompressed Linux kernel ELF binary
 from the compressed kernel at `/boot/vmlinuz-$(uname -r)`. You will need the
-[extract-vmlinux](https://elixir.bootlin.com/linux/v6.2.8/source/scripts/extract-vmlinux)
+[extract-vmlinux](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/scripts/extract-vmlinux)
 script from the kernel source code.
 
 Assuming you have extract-vmlinux on your path, you can get vmlinux as follows:
