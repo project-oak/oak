@@ -118,12 +118,6 @@ where
     }
 }
 
-// TODO(#3796): Remove WasmState.
-pub struct WasmState<L: OakLogger> {
-    instance: wasmi::Instance,
-    store: wasmi::Store<UserState<L>>,
-}
-
 // TODO(mschett): Check this description.
 /// Exports the functions from oak_functions_abi/src/lib.rs.
 /// The functions correspond to the ABI OAK_FUNCTIONS functions that allow
@@ -460,18 +454,20 @@ where
         Ok(extensions)
     }
 
-    fn init_wasm_state(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState<L>> {
+    /// Handles a call to invoke by getting the raw request bytes from the body of the request to
+    /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
+    pub fn handle_invoke(&self, invoke_request: Request) -> anyhow::Result<Response> {
         let module = self.wasm_module.clone();
 
         let user_state = UserState::init(
-            request_bytes,
+            invoke_request.body,
             self.create_extensions()?,
             self.logger.clone(),
         );
         // For isolated requests we need to create a new store for every request.
         let mut store = wasmi::Store::new(module.engine(), user_state);
         let linker = OakLinker::new(module.engine(), &mut store);
-        let (instance, store) = linker.instantiate(store, module)?;
+        let (instance, mut store) = linker.instantiate(store, module)?;
 
         instance.exports(&store).for_each(|export| {
             store
@@ -480,39 +476,25 @@ where
                 .log_sensitive(Level::Info, &format!("instance exports: {:?}", export))
         });
 
-        let wasm_state = WasmState { instance, store };
-
-        Ok(wasm_state)
-    }
-
-    /// Handles a call to invoke by getting the raw request bytes from the body of the request to
-    /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
-    pub fn handle_invoke(&self, invoke_request: Request) -> anyhow::Result<Response> {
-        let mut wasm_state = self.init_wasm_state(invoke_request.body)?;
-
         // Invokes the Wasm module by calling main.
-        let main = wasm_state
-            .instance
-            .get_typed_func::<(), ()>(&wasm_state.store, MAIN_FUNCTION_NAME)
+        let main = instance
+            .get_typed_func::<(), ()>(&store, MAIN_FUNCTION_NAME)
             .expect("couldn't get `main` export");
-        let result = main.call(&mut wasm_state.store, ());
-        wasm_state.store.data().logger.log_sensitive(
+        let result = main.call(&mut store, ());
+        store.data().logger.log_sensitive(
             Level::Info,
             &format!("running Wasm module completed with result: {:?}", result),
         );
 
         // Terminate the extensions.
-        wasm_state
-            .store
+        store
             .data_mut()
             .extensions
             .values_mut()
             .try_for_each(|e| e.terminate())?;
 
-        let invoke_response = Response::create(
-            StatusCode::Success,
-            wasm_state.store.data().response_bytes.clone(),
-        );
+        let invoke_response =
+            Response::create(StatusCode::Success, store.data().response_bytes.clone());
         Ok(invoke_response)
     }
 }

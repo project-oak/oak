@@ -15,7 +15,8 @@
 //
 
 use crate::{
-    AbiPointer, AbiPointerOffset, UserState, WasmHandler, ALLOC_FUNCTION_NAME, MEMORY_NAME,
+    AbiPointer, AbiPointerOffset, OakLinker, UserState, WasmHandler, ALLOC_FUNCTION_NAME,
+    MEMORY_NAME,
 };
 use alloc::{string::ToString, vec::Vec};
 use byteorder::{ByteOrder, LittleEndian};
@@ -210,16 +211,24 @@ fn create_test_state() -> TestState {
 
     let wasm_handler =
         WasmHandler::create(&wasm_module_bytes[..], alloc::vec![testing_factory], logger)
-            .expect("Could not create WasmHandler.");
+            .expect("couldn't create WasmHandler");
 
-    let wasm_state = wasm_handler
-        .init_wasm_state(b"2".to_vec())
-        .expect("Could not create WasmState.");
+    let user_state = UserState::init(
+        b"2".to_vec(),
+        wasm_handler
+            .create_extensions()
+            .expect("couldn't create extensions"),
+        wasm_handler.logger.clone(),
+    );
 
-    TestState {
-        store: wasm_state.store,
-        instance: wasm_state.instance,
-    }
+    let module = wasm_handler.wasm_module.clone();
+    let mut store = wasmi::Store::new(module.engine(), user_state);
+    let linker = OakLinker::new(module.engine(), &mut store);
+    let (instance, store) = linker
+        .instantiate(store, module)
+        .expect("couldn't instantiate Wasm module");
+
+    TestState { store, instance }
 }
 
 // Read the u32 value at the `address` from the Wasm memory.
