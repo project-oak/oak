@@ -118,11 +118,11 @@ where
     }
 }
 
-// TODO(mschett): Check this description.
-/// Exports the functions from oak_functions_abi/src/lib.rs.
-/// The functions correspond to the ABI OAK_FUNCTIONS functions that allow
-/// the Wasm module to exchange the request and the response with the Oak Functions server. These
-/// functions translate values between Wasm linear memory and Rust types.
+/// The `OakLinker` exports the functions from the ABI of Oak Functions. These functions allow the
+/// Wasm module to exchange data with Oak Functions and need the Wasm module (or, more specifically,
+/// the Oak Caller) to provide `alloc` to allocate memory. The `OakLinker` checks that Wasm module
+/// provides `alloc` and `main`, which every Oak Wasm module must provide, and defines the memory
+/// which the `OakCaller` uses.
 struct OakLinker<L: OakLogger> {
     linker: wasmi::Linker<UserState<L>>,
 }
@@ -269,8 +269,9 @@ where
     }
 }
 
-/// OakCaller implements reading and allocating and write the memory defined in the `OakLinker`.
-/// OakCaller relies on `alloc`, which every Oak Wasm module must provide.
+/// The `OakCaller` provides functionality to reading from the Wasm memory, as well as allocating
+/// and writing to the Wasm memory. The Wasm memory is defined by the `OakLinker`. `OakCaller`
+/// relies on `alloc`, which every Oak Wasm module must provide.
 struct OakCaller<'a, L: OakLogger> {
     caller: wasmi::Caller<'a, UserState<L>>,
     alloc: wasmi::TypedFunc<i32, AbiPointer>,
