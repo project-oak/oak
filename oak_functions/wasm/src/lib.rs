@@ -51,6 +51,8 @@ pub type AbiPointerOffset = u32;
 // Type alias for the ExtensionHandle type, which has to be cast into a ExtensionHandle.
 pub type AbiExtensionHandle = i32;
 
+/// `UserState` holds the user request and response for a particular execution instance of Wasm, a
+/// reference to the logger and the extensions.
 pub struct UserState<L: OakLogger> {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
@@ -116,10 +118,6 @@ where
     }
 }
 
-/// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
-/// single user request. The methods here correspond to the ABI OAK_FUNCTIONS functions that allow
-/// the Wasm module to exchange the request and the response with the Oak functions server. These
-/// functions translate values between Wasm linear memory and Rust types.
 // TODO(#3796): Remove WasmState.
 pub struct WasmState<L: OakLogger> {
     instance: wasmi::Instance,
@@ -152,21 +150,13 @@ where
         let wasm_state = Self { instance, store };
         Ok(wasm_state)
     }
-
-    // Needed for unit tests.
-    #[allow(dead_code)]
-    fn get_request_bytes(&self) -> Vec<u8> {
-        let user_state = self.store.data();
-        user_state.request_bytes.clone()
-    }
-
-    fn get_response_bytes(&self) -> Vec<u8> {
-        let user_state = self.store.data();
-        user_state.response_bytes.clone()
-    }
 }
 
-// Exports the functions from oak_functions_abi/src/lib.rs.
+// TODO(mschett): Check this description.
+/// Exports the functions from oak_functions_abi/src/lib.rs.
+/// The functions correspond to the ABI OAK_FUNCTIONS functions that allow
+/// the Wasm module to exchange the request and the response with the Oak Functions server. These
+/// functions translate values between Wasm linear memory and Rust types.
 struct OakLinker<L: OakLogger> {
     linker: wasmi::Linker<UserState<L>>,
 }
@@ -529,8 +519,10 @@ where
             .values_mut()
             .try_for_each(|e| e.terminate())?;
 
-        let invoke_response =
-            Response::create(StatusCode::Success, wasm_state.get_response_bytes());
+        let invoke_response = Response::create(
+            StatusCode::Success,
+            wasm_state.store.data().response_bytes.clone(),
+        );
         Ok(invoke_response)
     }
 }
