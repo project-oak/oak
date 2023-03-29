@@ -91,10 +91,10 @@ pub(crate) fn setup_base_sender(
     Ok((
         encapped_key.to_bytes().to_vec(),
         SenderContext {
-            inner: sender_context,
+            _inner: sender_context,
         },
         SenderResponseContext {
-            response_key,
+            _response_key: response_key,
             response_base_nonce,
             sequence_number: 0,
         },
@@ -135,10 +135,10 @@ pub(crate) fn setup_base_recipient(
 
     Ok((
         RecipientContext {
-            inner: recipient_context,
+            _inner: recipient_context,
         },
         RecipientResponseContext {
-            response_key,
+            _response_key: response_key,
             response_base_nonce,
             sequence_number: 0,
         },
@@ -146,7 +146,7 @@ pub(crate) fn setup_base_recipient(
 }
 
 pub(crate) struct SenderContext {
-    inner: AeadCtxS<Aead, Kdf, Kem>,
+    _inner: AeadCtxS<Aead, Kdf, Kem>,
 }
 
 impl SenderContext {
@@ -155,16 +155,18 @@ impl SenderContext {
     pub(crate) fn seal(
         &mut self,
         plaintext: &[u8],
-        associated_data: &[u8],
+        _associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        self.inner
-            .seal(plaintext, associated_data)
-            .map_err(|error| anyhow!("couldn't encrypt message: {}", error))
+        // TODO(#3642): Uncomment message encryption/decryption once Java encryption is implemented.
+        Ok(plaintext.to_vec())
+        // self.inner
+        //     .seal(plaintext, associated_data)
+        //     .map_err(|error| anyhow!("couldn't encrypt message: {}", error))
     }
 }
 
 pub(crate) struct RecipientContext {
-    inner: AeadCtxR<Aead, Kdf, Kem>,
+    _inner: AeadCtxR<Aead, Kdf, Kem>,
 }
 
 impl RecipientContext {
@@ -173,16 +175,18 @@ impl RecipientContext {
     pub(crate) fn open(
         &mut self,
         ciphertext: &[u8],
-        associated_data: &[u8],
+        _associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        self.inner
-            .open(ciphertext, associated_data)
-            .map_err(|error| anyhow!("couldn't decrypt message: {}", error))
+        // TODO(#3642): Uncomment message encryption/decryption once Java encryption is implemented.
+        Ok(ciphertext.to_vec())
+        // self.inner
+        //     .open(ciphertext, associated_data)
+        //     .map_err(|error| anyhow!("couldn't decrypt message: {}", error))
     }
 }
 
 pub(crate) struct SenderResponseContext {
-    response_key: AeadKey,
+    _response_key: AeadKey,
     response_base_nonce: AeadNonce,
     /// Sequence number that is XORed with the base nonce values to get AEAD nonces.
     /// Is represented as [`u128`] because the [`AEAD_NONCE_SIZE_BYTES`] is 12 bytes.
@@ -196,21 +200,23 @@ impl SenderResponseContext {
     pub(crate) fn open(
         &mut self,
         ciphertext: &[u8],
-        associated_data: &[u8],
+        _associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        let nonce = compute_nonce(self.sequence_number, &self.response_base_nonce)
+        let _nonce = compute_nonce(self.sequence_number, &self.response_base_nonce)
             .context("couldn't compute nonce")?;
-        let plaintext =
-            crate::aead::decrypt(&self.response_key, &nonce, ciphertext, associated_data)
-                .context("couldn't decrypt response message")?;
+        // TODO(#3642): Uncomment message encryption/decryption once Java encryption is implemented.
+        // let plaintext =
+        //     crate::aead::decrypt(&self.response_key, &nonce, ciphertext, associated_data)
+        //         .context("couldn't decrypt response message")?;
         increment_sequence_number(&mut self.sequence_number)
             .context("couldn't increment sequence number")?;
-        Ok(plaintext)
+        Ok(ciphertext.to_vec())
+        // Ok(plaintext)
     }
 }
 
 pub(crate) struct RecipientResponseContext {
-    response_key: AeadKey,
+    _response_key: AeadKey,
     response_base_nonce: AeadNonce,
     /// Sequence number that is XORed with the base nonce values to get AEAD nonces.
     /// Is represented as [`u128`] because the [`AEAD_NONCE_SIZE_BYTES`] is 12 bytes.
@@ -224,16 +230,18 @@ impl RecipientResponseContext {
     pub(crate) fn seal(
         &mut self,
         plaintext: &[u8],
-        associated_data: &[u8],
+        _associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        let nonce = compute_nonce(self.sequence_number, &self.response_base_nonce)
+        let _nonce = compute_nonce(self.sequence_number, &self.response_base_nonce)
             .context("couldn't compute nonce")?;
-        let ciphertext =
-            crate::aead::encrypt(&self.response_key, &nonce, plaintext, associated_data)
-                .context("couldn't encrypt response message")?;
+        // TODO(#3642): Uncomment message encryption/decryption once Java encryption is implemented.
+        // let ciphertext =
+        //     crate::aead::encrypt(&self.response_key, &nonce, plaintext, associated_data)
+        //         .context("couldn't encrypt response message")?;
         increment_sequence_number(&mut self.sequence_number)
             .context("couldn't increment sequence number")?;
-        Ok(ciphertext)
+        Ok(plaintext.to_vec())
+        // Ok(ciphertext)
     }
 }
 

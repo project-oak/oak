@@ -23,8 +23,16 @@
 
 extern crate alloc;
 
-use alloc::{sync::Arc, vec::Vec};
+use alloc::{sync::Arc, vec, vec::Vec};
+use anyhow::{anyhow, Context};
+use oak_crypto::{
+    schema::{AeadEncryptedMessage, HpkeRequest, HpkeResponse},
+    RecipientCryptoProvider,
+};
 use oak_remote_attestation_interactive::handshaker::AttestationGenerator;
+use prost::Message;
+
+const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 /// Information about a public key.
 #[derive(Debug, Clone)]
@@ -48,6 +56,7 @@ pub trait AttestationHandler {
 pub struct AttestationSessionHandler<H: Handler> {
     // TODO(#3442): Use attestation generator to attest to the public key.
     _attestation_generator: Arc<dyn AttestationGenerator>,
+    crypto_provider: RecipientCryptoProvider,
     request_handler: H,
 }
 
@@ -58,25 +67,68 @@ impl<H: Handler> AttestationSessionHandler<H> {
     ) -> anyhow::Result<Self> {
         Ok(Self {
             _attestation_generator: attestation_generator,
+            crypto_provider: RecipientCryptoProvider::new(),
             request_handler,
         })
     }
 }
 
 impl<H: Handler> AttestationHandler for AttestationSessionHandler<H> {
-    fn message(&mut self, body: &[u8]) -> anyhow::Result<Vec<u8>> {
-        // TODO(#3442): Decrypt request (currently not encrypted).
-        let decrypted_request = body;
-        let response = self.request_handler.handle(decrypted_request)?;
-        // TODO(#3442): Encrypt response.
-        let encrypted_response = response;
-        Ok(encrypted_response)
+    fn message(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
+        // Deserialize request.
+        let request = HpkeRequest::decode(request_body)
+            .map_err(|error| anyhow!("couldn't deserialize request: {:?}", error))?;
+
+        // Create decryptor.
+        let serialized_encapsulated_public_key = request
+            .serialized_encapsulated_public_key
+            .context("request doesn't contain serialized encapsulated public key")?;
+        let request_decryptor = self
+            .crypto_provider
+            .create_decryptor(&serialized_encapsulated_public_key)
+            .context("couldn't create decryptor")?;
+
+        // Decrypt request.
+        let encrypted_message = request
+            .encrypted_message
+            .context("request doesn't contain encrypted message")?;
+        let (request_plaintext, response_encryptor) = request_decryptor
+            .decrypt(
+                &encrypted_message.ciphertext,
+                &encrypted_message.associated_data,
+            )
+            .context("couldn't decrypt request")?;
+
+        // Handle request.
+        let response_plaintext = self
+            .request_handler
+            .handle(&request_plaintext)
+            .context("couldn't handle request")?;
+
+        // Encrypt and serialize response.
+        // The resulting decryptor for consequent requests is discarded because we don't expect
+        // another message from the stream.
+        let (response_ciphertext, _) = response_encryptor
+            .encrypt(&response_plaintext, EMPTY_ASSOCIATED_DATA)
+            .context("couldn't encrypt response")?;
+        let response = HpkeResponse {
+            encrypted_message: Some(AeadEncryptedMessage {
+                ciphertext: response_ciphertext,
+                associated_data: EMPTY_ASSOCIATED_DATA.to_vec(),
+            }),
+        };
+        let mut serialized_response = vec![];
+        response
+            .encode(&mut serialized_response)
+            .map_err(|error| anyhow!("couldn't serialize response: {:?}", error))?;
+
+        Ok(serialized_response)
     }
 
     fn get_public_key_info(&self) -> PublicKeyInfo {
         // TODO(#3442): Generate and return public key.
         PublicKeyInfo {
-            public_key: Vec::new(),
+            public_key: self.crypto_provider.get_serialized_public_key(),
             attestation: Vec::new(),
         }
     }

@@ -64,7 +64,7 @@ pub async fn create(
     let (launched_instance, connector_handle) = launcher::launch(mode).await?;
     setup_lookup_data(connector_handle.clone(), lookup_data_config).await?;
     let intialize_response =
-        setup_wasm(connector_handle.clone(), &wasm_path, constant_response_size).await?;
+        intialize_enclave(connector_handle.clone(), &wasm_path, constant_response_size).await?;
     Ok((launched_instance, connector_handle, intialize_response))
 }
 
@@ -109,8 +109,9 @@ pub async fn update_lookup_data(
     lookup::update_lookup_data(client, &config.lookup_data_path, config.max_chunk_size).await
 }
 
-// Loads wasm bytes.
-async fn setup_wasm(
+// Loads application config (including wasm bytes) into the enclave and returns a remote attestation
+// evidence.
+async fn intialize_enclave(
     connector_handle: channel::ConnectorHandle,
     wasm: &PathBuf,
     constant_response_size: u32,

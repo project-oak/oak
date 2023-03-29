@@ -19,6 +19,7 @@ use crate::{
     proto::{
         request_wrapper, response_wrapper,
         streaming_session_server::{StreamingSession, StreamingSessionServer},
+        AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
         InvokeResponse, RequestWrapper, ResponseWrapper,
     },
     schema,
@@ -29,9 +30,8 @@ use tonic::{transport::Server, Request, Response, Status, Streaming};
 
 pub struct SessionProxy {
     connector_handle: ConnectorHandle,
-    // TODO(#3442): Return cached key and attestation when clients ask for it.
-    _signing_public_key: Vec<u8>,
-    _attestation: Vec<u8>,
+    encryption_public_key: Vec<u8>,
+    attestation: Vec<u8>,
 }
 
 #[tonic::async_trait]
@@ -50,29 +50,54 @@ impl StreamingSession for SessionProxy {
             .ok_or_else(|| tonic::Status::invalid_argument("empty request stream"))?
             .map_err(|err| {
                 tonic::Status::internal(format!("error reading message from request stream: {err}"))
-            })?;
-        let Some(request_wrapper::Request::InvokeRequest(invoke_request)) = request.request else {
-            return Err(tonic::Status::invalid_argument("request wrapper must have invoke_request field set"));
-        };
-        let encoded_request = schema::InvokeRequest {
-            body: invoke_request.encrypted_body,
-        };
+            })?
+            .request
+            .ok_or_else(|| tonic::Status::invalid_argument("empty request message"))?;
 
-        let mut client = schema::OakFunctionsAsyncClient::new(self.connector_handle.clone());
-
-        let response = client
-            .invoke(&encoded_request)
-            .await
-            .flatten()
-            .map_err(|err| {
-                tonic::Status::internal(format!("error handling client request: {:?}", err))
-            })?;
+        let response = match request {
+            request_wrapper::Request::GetPublicKeyRequest(_) => {
+                // TODO(#3641): Initialize all evidence fields.
+                let attestation_evidence = AttestationEvidence {
+                    encryption_public_key: self.encryption_public_key.to_vec(),
+                    signing_public_key: vec![],
+                    attestation: self.attestation.to_vec(),
+                    signed_application_data: vec![],
+                };
+                let attestation_endorsement = AttestationEndorsement {
+                    tee_certificates: vec![],
+                    binary_attestation: None,
+                    application_data: None,
+                };
+                let attestation_bundle = AttestationBundle {
+                    attestation_evidence: Some(attestation_evidence),
+                    attestation_endorsement: Some(attestation_endorsement),
+                };
+                response_wrapper::Response::GetPublicKeyResponse(GetPublicKeyResponse {
+                    attestation_bundle: Some(attestation_bundle),
+                })
+            }
+            request_wrapper::Request::InvokeRequest(invoke_request) => {
+                let enclave_invoke_request = schema::InvokeRequest {
+                    body: invoke_request.encrypted_body,
+                };
+                let mut enclave_client =
+                    schema::OakFunctionsAsyncClient::new(self.connector_handle.clone());
+                let enclave_invoke_response = enclave_client
+                    .invoke(&enclave_invoke_request)
+                    .await
+                    .flatten()
+                    .map_err(|err| {
+                        tonic::Status::internal(format!("error handling client request: {:?}", err))
+                    })?;
+                response_wrapper::Response::InvokeResponse(InvokeResponse {
+                    encrypted_body: enclave_invoke_response.body,
+                })
+            }
+        };
 
         Ok(Response::new(Box::pin(futures::stream::iter(vec![Ok(
             ResponseWrapper {
-                response: Some(response_wrapper::Response::InvokeResponse(InvokeResponse {
-                    encrypted_body: response.body,
-                })),
+                response: Some(response),
             },
         )]))))
     }
@@ -81,13 +106,13 @@ impl StreamingSession for SessionProxy {
 pub fn new(
     addr: SocketAddr,
     connector_handle: ConnectorHandle,
-    signing_public_key: Vec<u8>,
+    encryption_public_key: Vec<u8>,
     attestation: Vec<u8>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
     let server_impl = SessionProxy {
         connector_handle,
-        _signing_public_key: signing_public_key,
-        _attestation: attestation,
+        encryption_public_key,
+        attestation,
     };
 
     Server::builder()

@@ -41,7 +41,7 @@ const TEST_SESSION_SIZE: usize = 8;
 
 #[test]
 fn test_aead() {
-    let encrypted_message = crate::aead::encrypt(
+    let encrypted_message = crate::aead::_encrypt(
         &TEST_AEAD_KEY,
         &TEST_NONCE,
         TEST_REQUEST_MESSAGE,
@@ -50,7 +50,7 @@ fn test_aead() {
     .expect("couldn't encrypt test message");
     // Check that the message was encrypted.
     assert_ne!(TEST_REQUEST_MESSAGE, encrypted_message);
-    let decrypted_message = crate::aead::decrypt(
+    let decrypted_message = crate::aead::_decrypt(
         &TEST_AEAD_KEY,
         &TEST_NONCE,
         &encrypted_message,
@@ -87,7 +87,8 @@ fn test_hpke() {
             .seal(&test_request_message, &test_request_associated_data)
             .expect("sender context couldn't seal request");
         // Check that the message was encrypted.
-        assert_ne!(test_request_message, encrypted_request);
+        // TODO(#3642): Uncomment message encryption/decryption once Java encryption is implemented.
+        // assert_ne!(test_request_message, encrypted_request);
         let decrypted_request = recipient_context
             .open(&encrypted_request, &test_request_associated_data)
             .expect("recipient context couldn't open request");
@@ -97,7 +98,8 @@ fn test_hpke() {
             .seal(&test_response_message, &test_response_associated_data)
             .expect("recipient context couldn't seal response");
         // Check that the message was encrypted.
-        assert_ne!(test_response_message, encrypted_response);
+        // TODO(#3642): Uncomment message encryption/decryption once Java encryption is implemented.
+        // assert_ne!(test_response_message, encrypted_response);
         let decrypted_response = sender_response_context
             .open(&encrypted_response, &test_response_associated_data)
             .expect("sender couldn't open response");
@@ -128,7 +130,8 @@ fn test_crypto_provider() {
             .encrypt(&test_request_message, &test_request_associated_data)
             .expect("sender couldn't encrypt request");
         // Check that the message was encrypted.
-        assert_ne!(test_request_message, encrypted_request);
+        // TODO(#3642): Uncomment message encryption/decryption once Java encryption is implemented.
+        // assert_ne!(test_request_message, encrypted_request);
         let (decrypted_request, recipient_response_encryptor) = recipient_request_decryptor
             .decrypt(&encrypted_request, &test_request_associated_data)
             .expect("recipient couldn't decrypt request");
@@ -138,7 +141,8 @@ fn test_crypto_provider() {
             .encrypt(&test_response_message, &test_response_associated_data)
             .expect("recipient couldn't encrypt response");
         // Check that the message was encrypted.
-        assert_ne!(test_response_message, encrypted_response);
+        // TODO(#3642): Uncomment message encryption/decryption once Java encryption is implemented.
+        // assert_ne!(test_response_message, encrypted_response);
         let (decrypted_response, new_sender_request_encryptor) = sender_response_decryptor
             .decrypt(&encrypted_response, &test_response_associated_data)
             .expect("sender couldn't decrypt response");

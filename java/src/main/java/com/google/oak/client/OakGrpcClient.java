@@ -20,6 +20,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.ManagedChannel;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -29,6 +30,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import oak.crypto.AeadEncryptedMessage;
+import oak.crypto.HpkeRequest;
+import oak.crypto.HpkeResponse;
 import oak.session.noninteractive.v1.InvokeRequest;
 import oak.session.noninteractive.v1.InvokeResponse;
 import oak.session.noninteractive.v1.RequestWrapper;
@@ -47,7 +51,7 @@ public class OakGrpcClient {
   // TODO(#3466): Actually implement attestation and encryption.
   public static byte[] invoke(
       Function<StreamObserver<ResponseWrapper>, StreamObserver<RequestWrapper>> stream,
-      byte[] requestBody) throws InterruptedException {
+      byte[] requestBody) throws InterruptedException, InvalidProtocolBufferException {
     // We expect to receive a single response message.
     BlockingQueue<ResponseWrapper> messageQueue = new ArrayBlockingQueue<>(1);
     StreamObserver<ResponseWrapper> responseObserver = new StreamObserver<ResponseWrapper>() {
@@ -76,10 +80,19 @@ public class OakGrpcClient {
     };
     StreamObserver<RequestWrapper> requestObserver = stream.apply(responseObserver);
 
+    // TODO(#3642): Use HPKE to encrypt/decrypt messages.
+    HpkeRequest hpkeRequest =
+        HpkeRequest.newBuilder()
+            .setSerializedEncapsulatedPublicKey(ByteString.EMPTY)
+            .setEncryptedMessage(AeadEncryptedMessage.newBuilder()
+                                     .setCiphertext(ByteString.copyFrom(requestBody))
+                                     .setAssociatedData(ByteString.EMPTY))
+            .build();
+
     RequestWrapper requestWrapper =
         RequestWrapper.newBuilder()
-            .setInvokeRequest(
-                InvokeRequest.newBuilder().setEncryptedBody(ByteString.copyFrom(requestBody)))
+            .setInvokeRequest(InvokeRequest.newBuilder().setEncryptedBody(
+                ByteString.copyFrom(hpkeRequest.toByteArray())))
             .build();
     logger.log(Level.INFO, "request wrapper: " + requestWrapper);
     requestObserver.onNext(requestWrapper);
@@ -87,6 +100,11 @@ public class OakGrpcClient {
     ResponseWrapper responseWrapper = messageQueue.poll(10, SECONDS);
     logger.log(Level.INFO, "response wrapper: " + responseWrapper);
     InvokeResponse response = responseWrapper.getInvokeResponse();
-    return response.getEncryptedBody().toByteArray();
+
+    byte[] responseBody = HpkeResponse.parseFrom(response.getEncryptedBody().toByteArray())
+                              .getEncryptedMessage()
+                              .getCiphertext()
+                              .toByteArray();
+    return responseBody;
   }
 }
