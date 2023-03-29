@@ -398,6 +398,19 @@ Response: "{\"temperature_degrees_celsius\":29}"
 [07:56:11 ✓:1,✗:0,⠇:0] └[oak-functions examples]─▶[OK] 17s
 ```
 
+## Extracing vmlinux from your Linux installation
+
+On Linux installations, you can extract the uncompressed Linux kernel ELF binary
+from the compressed kernel at `/boot/vmlinuz-$(uname -r)`. You will need the
+[extract-vmlinux](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/scripts/extract-vmlinux)
+script from the kernel source code.
+
+Assuming you have extract-vmlinux on your path, you can get vmlinux as follows:
+
+```bash
+extract-vmlinux /boot/vmlinuz-$(uname -r) > vmlinux
+```
+
 ## Fuzz testing
 
 We currently have fuzz testing enabled for Oak Functions on
