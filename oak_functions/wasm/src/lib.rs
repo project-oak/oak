@@ -476,20 +476,24 @@ where
         })
     }
 
-    fn init_wasm_state(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState<L>> {
+    // Create an extension from every factory in the WasmHandler.
+    fn create_extensions(
+        &self,
+    ) -> anyhow::Result<HashMap<ExtensionHandle, Box<dyn OakApiNativeExtension>>> {
         let mut extensions = HashMap::new();
-
-        // Create an extension from every factory.
         for factory in self.extension_factories.iter() {
             let extension = factory.create()?;
             extensions.insert(extension.get_handle(), extension);
         }
+        Ok(extensions)
+    }
 
+    fn init_wasm_state(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState<L>> {
         let wasm_state = WasmState::new(
             self.wasm_module.clone(),
             request_bytes,
             self.logger.clone(),
-            extensions,
+            self.create_extensions()?,
         )?;
 
         Ok(wasm_state)
