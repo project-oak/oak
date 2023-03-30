@@ -37,9 +37,9 @@ use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::{Level, OakLogger};
 use wasmi::{MemoryType, Store};
 
-/// Fixed name of the function to start a Wasm. Every Oak Wasm module has to provide this function.
+/// Fixed name of the function to start a Wasm. Every Oak Wasm module must provide this function.
 pub const MAIN_FUNCTION_NAME: &str = "main";
-/// Fixed name of the function to allocate memory. Every Oak Wasm module has to provide this
+/// Fixed name of the function to allocate memory. Every Oak Wasm module must provide this
 /// function.
 pub const ALLOC_FUNCTION_NAME: &str = "alloc";
 /// The name of the memory every Oak Wasm module has.
@@ -53,7 +53,7 @@ const OAK_FUNCTIONS: &str = "oak_functions";
 pub type AbiPointer = u32;
 /// Type aliases for offsets in Wasm linear memory.
 pub type AbiPointerOffset = u32;
-/// Type alias for the ExtensionHandle type, which has to be cast into a ExtensionHandle.
+/// Type alias for the ExtensionHandle type, which must be cast into a ExtensionHandle.
 pub type AbiExtensionHandle = i32;
 
 /// `UserState` holds the user request bytes and response bytes for a particular execution of an Oak
@@ -69,9 +69,9 @@ impl<L> UserState<L>
 where
     L: OakLogger,
 {
-    /// Stores the user request bytes, extensions, and logger. The response bytes are  initialize
-    /// user state with the empty response. The empty response is the default response, as every
-    /// request needs to have a response.
+    /// Stores the user request bytes, extensions, and logger. The response bytes are initialized
+    /// with the empty response because every request needs to have a response and we fixed the
+    /// empty response as the default response.
     fn new(
         request_bytes: Vec<u8>,
         extensions: HashMap<ExtensionHandle, Box<dyn OakApiNativeExtension>>,
@@ -127,11 +127,11 @@ where
     }
 }
 
-/// The `OakLinker` exports the functions from the ABI of Oak Functions. These functions allow the
-/// Wasm module to exchange data with Oak Functions and need the Wasm module (or, more specifically,
-/// the `OakCaller`) to provide `alloc` for allocating memory. The `OakLinker` checks that the Wasm
-/// module provides `alloc` and `main`, which every Oak Wasm module must provide, and defines the
-/// memory which the `OakCaller` uses.
+/// Exports the functions from the ABI of Oak Functions. These functions allow the Wasm module to
+/// exchange data with Oak Functions and need the Wasm module (or, more specifically,
+/// the [`OakCaller`]) to provide `alloc` for allocating memory. The [`OakLinker`] checks that the
+/// Wasm module provides `alloc` and `main`, which every Oak Wasm module must provide, and defines
+/// the memory which the [`OakCaller`] uses.
 struct OakLinker<L: OakLogger> {
     linker: wasmi::Linker<UserState<L>>,
 }
@@ -278,8 +278,8 @@ where
     }
 }
 
-/// The `OakCaller` provides functionality for reading from the Wasm memory, as well as allocating
-/// and writing to the Wasm memory. The Wasm memory is defined by the `OakLinker`. `OakCaller`
+/// Provides functionality for reading from the Wasm memory, as well as allocating and writing to
+/// the Wasm memory. The Wasm memory is defined by the [`OakLinker`]. [`OakCaller`]
 /// relies on `alloc`, which every Oak Wasm module must provide.
 struct OakCaller<'a, L: OakLogger> {
     caller: wasmi::Caller<'a, UserState<L>>,
