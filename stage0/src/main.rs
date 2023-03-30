@@ -177,6 +177,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     let dma_access = BOOT_ALLOC.leak(fw_cfg::FwCfgDmaAccess::default()).unwrap();
     let dma_access_address = VirtAddr::from_ptr(dma_access as *const _);
     if encrypted > 0 {
+        sev::enable_mtrr();
         sev::share_page(Page::containing_address(dma_buf_address), snp, encrypted);
         sev::share_page(Page::containing_address(dma_access_address), snp, encrypted);
     }

@@ -28,13 +28,36 @@ use oak_sev_guest::{
 use spinning_top::Spinlock;
 use x86_64::{
     instructions::tlb,
-    registers::control::Cr3,
+    registers::{control::Cr3, model_specific::Msr},
     structures::paging::{
         frame::PhysFrameRange, page::AddressNotAligned, Page, PageSize, PageTable, PageTableFlags,
         PhysFrame, Size1GiB, Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
+
+/// The identifier for the MSR used to set the default caching mode.
+const IA32_MTRR_DEFTYPE: u32 = 0x2ff;
+
+/// Value for enanabling MTRR with write-protect mode by default.
+const MTRR_EN_WITH_WP: u64 = 0x805;
+
+/// Write a config value to IA32_MTRR_DefTpype MSR register to set the default caching mode to
+/// write-protected (WP).  This is required by Linux kernels since July, 2022, with this
+/// requirement back-ported to 5.15.X.
+///
+/// The Linux kernel gives a warning that MTRR is not setup properly, and that BOIOS proably
+/// only set the MTRR mode on one CPU, which is the case, since we do not want to deal with
+/// the complexity of setting up multiple cores.  The Linux kernel propagates the MTRR set
+/// on this core to the others, and reports that MTRR settings have been fixed.
+pub fn enable_mtrr() {
+    // Potentially unsafe: we write to the IA32_MTRRdefType MSR to enable write-protect mode for
+    // page table entries by defailt.  This is expected by the Linux code to enable SEV.
+    // Only call this if SEV/SEV-ES/SEV-SNP is going to be enabled.
+    unsafe {
+        Msr::new(IA32_MTRR_DEFTYPE).write(MTRR_EN_WITH_WP);
+    }
+}
 
 static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
