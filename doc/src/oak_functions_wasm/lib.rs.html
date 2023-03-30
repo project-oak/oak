@@ -515,37 +515,6 @@
 <a href="#515" id="515">515</a>
 <a href="#516" id="516">516</a>
 <a href="#517" id="517">517</a>
-<a href="#518" id="518">518</a>
-<a href="#519" id="519">519</a>
-<a href="#520" id="520">520</a>
-<a href="#521" id="521">521</a>
-<a href="#522" id="522">522</a>
-<a href="#523" id="523">523</a>
-<a href="#524" id="524">524</a>
-<a href="#525" id="525">525</a>
-<a href="#526" id="526">526</a>
-<a href="#527" id="527">527</a>
-<a href="#528" id="528">528</a>
-<a href="#529" id="529">529</a>
-<a href="#530" id="530">530</a>
-<a href="#531" id="531">531</a>
-<a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a>
-<a href="#535" id="535">535</a>
-<a href="#536" id="536">536</a>
-<a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a>
-<a href="#539" id="539">539</a>
-<a href="#540" id="540">540</a>
-<a href="#541" id="541">541</a>
-<a href="#542" id="542">542</a>
-<a href="#543" id="543">543</a>
-<a href="#544" id="544">544</a>
-<a href="#545" id="545">545</a>
-<a href="#546" id="546">546</a>
-<a href="#547" id="547">547</a>
-<a href="#548" id="548">548</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -585,21 +554,28 @@
 <span class="kw">use </span>oak_logger::{Level, OakLogger};
 <span class="kw">use </span>wasmi::{MemoryType, Store};
 
-<span class="kw">pub const </span>MAIN_FUNCTION_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;main&quot;</span>;
-<span class="kw">pub const </span>ALLOC_FUNCTION_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;alloc&quot;</span>;
-<span class="kw">pub const </span>MEMORY_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;memory&quot;</span>;
+<span class="doccomment">/// Fixed name of the function to start a Wasm. Every Oak Wasm module must provide this function.
+</span><span class="kw">pub const </span>MAIN_FUNCTION_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;main&quot;</span>;
+<span class="doccomment">/// Fixed name of the function to allocate memory. Every Oak Wasm module must provide this
+/// function.
+</span><span class="kw">pub const </span>ALLOC_FUNCTION_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;alloc&quot;</span>;
+<span class="doccomment">/// The name of the memory every Oak Wasm module has.
+</span><span class="kw">pub const </span>MEMORY_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;memory&quot;</span>;
 
-<span class="comment">// Needs to be consistent with definition of the Wasm import module in the Oak Functions ABI.
+<span class="comment">// Needs to be consistent with the definition of the Wasm import module in the Oak Functions ABI.
 </span><span class="kw">const </span>OAK_FUNCTIONS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;oak_functions&quot;</span>;
 
-<span class="comment">// Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
-// of Wasm would use different types.
+<span class="doccomment">/// Type aliases for positions in Wasm linear memory. Any future 64-bit version
+/// of Wasm would use different types.
 </span><span class="kw">pub type </span>AbiPointer = u32;
-<span class="kw">pub type </span>AbiPointerOffset = u32;
-<span class="comment">// Type alias for the ExtensionHandle type, which has to be cast into a ExtensionHandle.
+<span class="doccomment">/// Type aliases for offsets in Wasm linear memory.
+</span><span class="kw">pub type </span>AbiPointerOffset = u32;
+<span class="doccomment">/// Type alias for the ExtensionHandle type, which must be cast into a ExtensionHandle.
 </span><span class="kw">pub type </span>AbiExtensionHandle = i32;
 
-<span class="kw">pub struct </span>UserState&lt;L: OakLogger&gt; {
+<span class="doccomment">/// `UserState` holds the user request bytes and response bytes for a particular execution of an Oak
+/// Wasm module. The `UserState` also holds a reference to the logger and the enabled extensions.
+</span><span class="kw">pub struct </span>UserState&lt;L: OakLogger&gt; {
     request_bytes: Vec&lt;u8&gt;,
     response_bytes: Vec&lt;u8&gt;,
     extensions: HashMap&lt;ExtensionHandle, Box&lt;<span class="kw">dyn </span>OakApiNativeExtension&gt;&gt;,
@@ -610,8 +586,10 @@
 <span class="kw">where
     </span>L: OakLogger,
 {
-    <span class="comment">// We initialize user state with the empty response.
-    </span><span class="kw">fn </span>init(
+    <span class="doccomment">/// Stores the user request bytes, extensions, and logger. The response bytes are initialized
+    /// with the empty response because every request needs to have a response and we fixed the
+    /// empty response as the default response.
+    </span><span class="kw">fn </span>new(
         request_bytes: Vec&lt;u8&gt;,
         extensions: HashMap&lt;ExtensionHandle, Box&lt;<span class="kw">dyn </span>OakApiNativeExtension&gt;&gt;,
         logger: L,
@@ -624,9 +602,10 @@
         }
     }
 
-    <span class="kw">pub fn </span>get_extension(
+    <span class="comment">// Get the extension for the given handle.
+    </span><span class="kw">fn </span>get_extension(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        handle: i32,
+        handle: AbiExtensionHandle,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;mut </span>Box&lt;<span class="kw">dyn </span>OakApiNativeExtension&gt;, OakStatus&gt; {
         <span class="kw">let </span>handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or_else(|| {
             <span class="self">self</span>.log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;failed to convert handle {:?} from i32.&quot;</span>, handle));
@@ -645,7 +624,8 @@
         })
     }
 
-    <span class="kw">fn </span>log_error(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>str) {
+    <span class="comment">// Use an `OakLogger` to log.
+    </span><span class="kw">fn </span>log_error(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>str) {
         <span class="self">self</span>.logger.log_sensitive(Level::Error, message)
     }
 }
@@ -664,70 +644,11 @@
     }
 }
 
-<span class="doccomment">/// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
-/// single user request. The methods here correspond to the ABI OAK_FUNCTIONS functions that allow
-/// the Wasm module to exchange the request and the response with the Oak functions server. These
-/// functions translate values between Wasm linear memory and Rust types.
-</span><span class="comment">// TODO(#3796): Remove WasmState.
-</span><span class="kw">pub struct </span>WasmState&lt;L: OakLogger&gt; {
-    instance: wasmi::Instance,
-    store: wasmi::Store&lt;UserState&lt;L&gt;&gt;,
-}
-
-<span class="kw">impl</span>&lt;L&gt; WasmState&lt;L&gt;
-<span class="kw">where
-    </span>L: OakLogger,
-{
-    <span class="kw">pub fn </span>new(
-        module: Arc&lt;wasmi::Module&gt;,
-        request_bytes: Vec&lt;u8&gt;,
-        logger: L,
-        extensions: HashMap&lt;ExtensionHandle, Box&lt;<span class="kw">dyn </span>OakApiNativeExtension&gt;&gt;,
-    ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>user_state = UserState::init(request_bytes, extensions, logger);
-        <span class="comment">// For isolated requests we need to create a new store for every request.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>store = wasmi::Store::new(module.engine(), user_state);
-        <span class="kw">let </span>linker = OakLinker::new(module.engine(), <span class="kw-2">&amp;mut </span>store);
-        <span class="kw">let </span>(instance, store) = linker.instantiate(store, module)<span class="question-mark">?</span>;
-
-        instance.exports(<span class="kw-2">&amp;</span>store).for_each(|export| {
-            store
-                .data()
-                .logger
-                .log_sensitive(Level::Info, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;instance exports: {:?}&quot;</span>, export))
-        });
-
-        <span class="kw">let </span>wasm_state = <span class="self">Self </span>{ instance, store };
-        <span class="prelude-val">Ok</span>(wasm_state)
-    }
-
-    <span class="comment">// Invokes the Wasm module by calling main.
-    </span><span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">let </span>main = <span class="self">self
-            </span>.instance
-            .get_typed_func::&lt;(), ()&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>.store, MAIN_FUNCTION_NAME)
-            .expect(<span class="string">&quot;couldn&#39;t get `main` export&quot;</span>);
-        <span class="kw">let </span>result = main.call(<span class="kw-2">&amp;mut </span><span class="self">self</span>.store, ());
-        <span class="self">self</span>.store.data().logger.log_sensitive(
-            Level::Info,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;running Wasm module completed with result: {:?}&quot;</span>, result),
-        );
-    }
-
-    <span class="comment">// Needed for unit tests.
-    </span><span class="attr">#[allow(dead_code)]
-    </span><span class="kw">fn </span>get_request_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
-        <span class="kw">let </span>user_state = <span class="self">self</span>.store.data();
-        user_state.request_bytes.clone()
-    }
-
-    <span class="kw">fn </span>get_response_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
-        <span class="kw">let </span>user_state = <span class="self">self</span>.store.data();
-        user_state.response_bytes.clone()
-    }
-}
-
-<span class="comment">// Exports the functions from oak_functions_abi/src/lib.rs.
+<span class="doccomment">/// Exports the functions from the ABI of Oak Functions. These functions allow the Wasm module to
+/// exchange data with Oak Functions and need the Wasm module (or, more specifically,
+/// the [`OakCaller`]) to provide `alloc` for allocating memory. The [`OakLinker`] checks that the
+/// Wasm module provides `alloc` and `main`, which every Oak Wasm module must provide, and defines
+/// the memory which the [`OakCaller`] uses.
 </span><span class="kw">struct </span>OakLinker&lt;L: OakLogger&gt; {
     linker: wasmi::Linker&lt;UserState&lt;L&gt;&gt;,
 }
@@ -874,8 +795,9 @@
     }
 }
 
-<span class="doccomment">/// OakCaller implements reading and allocating and write the memory defined in the `OakLinker`.
-/// OakCaller relies on `alloc`, which every Oak Wasm module must provide.
+<span class="doccomment">/// Provides functionality for reading from the Wasm memory, as well as allocating and writing to
+/// the Wasm memory. The Wasm memory is defined by the [`OakLinker`]. [`OakCaller`]
+/// relies on `alloc`, which every Oak Wasm module must provide.
 </span><span class="kw">struct </span>OakCaller&lt;<span class="lifetime">&#39;a</span>, L: OakLogger&gt; {
     caller: wasmi::Caller&lt;<span class="lifetime">&#39;a</span>, UserState&lt;L&gt;&gt;,
     alloc: wasmi::TypedFunc&lt;i32, AbiPointer&gt;,
@@ -1047,44 +969,60 @@
         })
     }
 
-    <span class="kw">fn </span>init_wasm_state(<span class="kw-2">&amp;</span><span class="self">self</span>, request_bytes: Vec&lt;u8&gt;) -&gt; anyhow::Result&lt;WasmState&lt;L&gt;&gt; {
+    <span class="comment">// Create an extension from every factory in the WasmHandler.
+    </span><span class="kw">fn </span>create_extensions(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+    ) -&gt; anyhow::Result&lt;HashMap&lt;ExtensionHandle, Box&lt;<span class="kw">dyn </span>OakApiNativeExtension&gt;&gt;&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>extensions = HashMap::new();
-
-        <span class="comment">// Create an extension from every factory.
-        </span><span class="kw">for </span>factory <span class="kw">in </span><span class="self">self</span>.extension_factories.iter() {
+        <span class="kw">for </span>factory <span class="kw">in </span><span class="self">self</span>.extension_factories.iter() {
             <span class="kw">let </span>extension = factory.create()<span class="question-mark">?</span>;
             extensions.insert(extension.get_handle(), extension);
         }
+        <span class="prelude-val">Ok</span>(extensions)
+    }
 
-        <span class="kw">let </span>wasm_state = WasmState::new(
-            <span class="self">self</span>.wasm_module.clone(),
-            request_bytes,
+    <span class="doccomment">/// Handles a call to invoke by getting the raw request bytes from the body of the request to
+    /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
+    </span><span class="kw">pub fn </span>handle_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, invoke_request: Request) -&gt; anyhow::Result&lt;Response&gt; {
+        <span class="kw">let </span>module = <span class="self">self</span>.wasm_module.clone();
+
+        <span class="kw">let </span>user_state = UserState::new(
+            invoke_request.body,
+            <span class="self">self</span>.create_extensions()<span class="question-mark">?</span>,
             <span class="self">self</span>.logger.clone(),
-            extensions,
-        )<span class="question-mark">?</span>;
+        );
+        <span class="comment">// For isolated requests we need to create a new store for every request.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>store = wasmi::Store::new(module.engine(), user_state);
+        <span class="kw">let </span>linker = OakLinker::new(module.engine(), <span class="kw-2">&amp;mut </span>store);
+        <span class="kw">let </span>(instance, <span class="kw-2">mut </span>store) = linker.instantiate(store, module)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(wasm_state)
-    }
+        instance.exports(<span class="kw-2">&amp;</span>store).for_each(|export| {
+            store
+                .data()
+                .logger
+                .log_sensitive(Level::Info, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;instance exports: {:?}&quot;</span>, export))
+        });
 
-    <span class="kw">pub fn </span>handle_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, request: Request) -&gt; anyhow::Result&lt;Response&gt; {
-        <span class="kw">let </span>response_bytes = <span class="self">self</span>.handle_raw_invoke(request.body)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(Response::create(StatusCode::Success, response_bytes))
-    }
+        <span class="comment">// Invokes the Wasm module by calling main.
+        </span><span class="kw">let </span>main = instance
+            .get_typed_func::&lt;(), ()&gt;(<span class="kw-2">&amp;</span>store, MAIN_FUNCTION_NAME)
+            .expect(<span class="string">&quot;couldn&#39;t get `main` export&quot;</span>);
+        <span class="kw">let </span>result = main.call(<span class="kw-2">&amp;mut </span>store, ());
+        store.data().logger.log_sensitive(
+            Level::Info,
+            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;running Wasm module completed with result: {:?}&quot;</span>, result),
+        );
 
-    <span class="doccomment">/// Handles an invocation using raw bytes and returns the response as raw bytes.
-    </span><span class="kw">pub fn </span>handle_raw_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, request_bytes: Vec&lt;u8&gt;) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>wasm_state = <span class="self">self</span>.init_wasm_state(request_bytes)<span class="question-mark">?</span>;
-
-        wasm_state.invoke();
-
-        wasm_state
-            .store
+        <span class="comment">// Terminate the extensions.
+        </span>store
             .data_mut()
             .extensions
             .values_mut()
             .try_for_each(|e| e.terminate())<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(wasm_state.get_response_bytes())
+        <span class="kw">let </span>invoke_response =
+            Response::create(StatusCode::Success, store.data().response_bytes.clone());
+        <span class="prelude-val">Ok</span>(invoke_response)
     }
 }
 
