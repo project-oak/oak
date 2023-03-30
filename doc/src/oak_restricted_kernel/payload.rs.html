@@ -198,6 +198,16 @@
 <a href="#198" id="198">198</a>
 <a href="#199" id="199">199</a>
 <a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -215,7 +225,7 @@
 //
 
 </span><span class="kw">use </span><span class="kw">crate</span>::syscall::mmap::mmap;
-<span class="kw">use </span>alloc::{boxed::Box, vec};
+<span class="kw">use </span>alloc::{boxed::Box, format, vec};
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>core::arch::asm;
 <span class="kw">use </span>goblin::{
@@ -225,6 +235,7 @@
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 <span class="kw">use </span>ouroboros::self_referencing;
+<span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>x86_64::{
     structures::paging::{PageSize, Size2MiB, Size4KiB},
     VirtAddr,
@@ -254,6 +265,7 @@
 <span class="doccomment">/// Representation of an Restricted Application that the Restricted Kernel can run.
 </span><span class="kw">pub struct </span>Application {
     binary: Binary,
+    digest: [u8; <span class="number">32</span>],
 }
 
 <span class="kw">impl </span>Application {
@@ -288,6 +300,8 @@
     <span class="doccomment">/// Attempts to parse the provided binary blob as an ELF file representing an Restricted
     /// Application.
     </span><span class="kw">pub fn </span>new(blob: Box&lt;[u8]&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>digest = Sha256::digest(<span class="kw-2">&amp;</span>blob[..]).into();
+
         <span class="prelude-val">Ok</span>(Application {
             binary: BinaryTryBuilder {
                 binary: blob,
@@ -297,6 +311,7 @@
                 },
             }
             .try_build()<span class="question-mark">?</span>,
+            digest,
         })
     }
 
@@ -382,6 +397,11 @@
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
         )
         .expect(<span class="string">&quot;failed to allocate memory for user stack&quot;</span>);
+
+        <span class="macro">log::info!</span>(
+            <span class="string">&quot;Running application; binary hash: {}&quot;</span>,
+            <span class="self">self</span>.digest.map(|x| <span class="macro">format!</span>(<span class="string">&quot;{:02x}&quot;</span>, x)).join(<span class="string">&quot;&quot;</span>)
+        );
 
         <span class="comment">// Enter Ring 3 and jump to user code.
         // Safety: by now, if we&#39;re here, we&#39;ve loaded a valid ELF file. It&#39;s up to the user to
