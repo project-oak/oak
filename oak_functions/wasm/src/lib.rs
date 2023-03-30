@@ -37,20 +37,27 @@ use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::{Level, OakLogger};
 use wasmi::{MemoryType, Store};
 
+/// Fixed name of the function to start a Wasm. Every Oak Wasm module must provide this function.
 pub const MAIN_FUNCTION_NAME: &str = "main";
+/// Fixed name of the function to allocate memory. Every Oak Wasm module must provide this
+/// function.
 pub const ALLOC_FUNCTION_NAME: &str = "alloc";
+/// The name of the memory every Oak Wasm module has.
 pub const MEMORY_NAME: &str = "memory";
 
-// Needs to be consistent with definition of the Wasm import module in the Oak Functions ABI.
+// Needs to be consistent with the definition of the Wasm import module in the Oak Functions ABI.
 const OAK_FUNCTIONS: &str = "oak_functions";
 
-// Type aliases for positions and offsets in Wasm linear memory. Any future 64-bit version
-// of Wasm would use different types.
+/// Type aliases for positions in Wasm linear memory. Any future 64-bit version
+/// of Wasm would use different types.
 pub type AbiPointer = u32;
+/// Type aliases for offsets in Wasm linear memory.
 pub type AbiPointerOffset = u32;
-// Type alias for the ExtensionHandle type, which has to be cast into a ExtensionHandle.
+/// Type alias for the ExtensionHandle type, which must be cast into a ExtensionHandle.
 pub type AbiExtensionHandle = i32;
 
+/// `UserState` holds the user request bytes and response bytes for a particular execution of an Oak
+/// Wasm module. The `UserState` also holds a reference to the logger and the enabled extensions.
 pub struct UserState<L: OakLogger> {
     request_bytes: Vec<u8>,
     response_bytes: Vec<u8>,
@@ -62,8 +69,10 @@ impl<L> UserState<L>
 where
     L: OakLogger,
 {
-    // We initialize user state with the empty response.
-    fn init(
+    /// Stores the user request bytes, extensions, and logger. The response bytes are initialized
+    /// with the empty response because every request needs to have a response and we fixed the
+    /// empty response as the default response.
+    fn new(
         request_bytes: Vec<u8>,
         extensions: HashMap<ExtensionHandle, Box<dyn OakApiNativeExtension>>,
         logger: L,
@@ -76,9 +85,10 @@ where
         }
     }
 
-    pub fn get_extension(
+    // Get the extension for the given handle.
+    fn get_extension(
         &mut self,
-        handle: i32,
+        handle: AbiExtensionHandle,
     ) -> Result<&mut Box<dyn OakApiNativeExtension>, OakStatus> {
         let handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or_else(|| {
             self.log_error(&format!("failed to convert handle {:?} from i32.", handle));
@@ -97,6 +107,7 @@ where
         })
     }
 
+    // Use an `OakLogger` to log.
     fn log_error(&self, message: &str) {
         self.logger.log_sensitive(Level::Error, message)
     }
@@ -116,70 +127,11 @@ where
     }
 }
 
-/// `WasmState` holds runtime values for a particular execution instance of Wasm, handling a
-/// single user request. The methods here correspond to the ABI OAK_FUNCTIONS functions that allow
-/// the Wasm module to exchange the request and the response with the Oak functions server. These
-/// functions translate values between Wasm linear memory and Rust types.
-// TODO(#3796): Remove WasmState.
-pub struct WasmState<L: OakLogger> {
-    instance: wasmi::Instance,
-    store: wasmi::Store<UserState<L>>,
-}
-
-impl<L> WasmState<L>
-where
-    L: OakLogger,
-{
-    pub fn new(
-        module: Arc<wasmi::Module>,
-        request_bytes: Vec<u8>,
-        logger: L,
-        extensions: HashMap<ExtensionHandle, Box<dyn OakApiNativeExtension>>,
-    ) -> anyhow::Result<Self> {
-        let user_state = UserState::init(request_bytes, extensions, logger);
-        // For isolated requests we need to create a new store for every request.
-        let mut store = wasmi::Store::new(module.engine(), user_state);
-        let linker = OakLinker::new(module.engine(), &mut store);
-        let (instance, store) = linker.instantiate(store, module)?;
-
-        instance.exports(&store).for_each(|export| {
-            store
-                .data()
-                .logger
-                .log_sensitive(Level::Info, &format!("instance exports: {:?}", export))
-        });
-
-        let wasm_state = Self { instance, store };
-        Ok(wasm_state)
-    }
-
-    // Invokes the Wasm module by calling main.
-    fn invoke(&mut self) {
-        let main = self
-            .instance
-            .get_typed_func::<(), ()>(&self.store, MAIN_FUNCTION_NAME)
-            .expect("couldn't get `main` export");
-        let result = main.call(&mut self.store, ());
-        self.store.data().logger.log_sensitive(
-            Level::Info,
-            &format!("running Wasm module completed with result: {:?}", result),
-        );
-    }
-
-    // Needed for unit tests.
-    #[allow(dead_code)]
-    fn get_request_bytes(&self) -> Vec<u8> {
-        let user_state = self.store.data();
-        user_state.request_bytes.clone()
-    }
-
-    fn get_response_bytes(&self) -> Vec<u8> {
-        let user_state = self.store.data();
-        user_state.response_bytes.clone()
-    }
-}
-
-// Exports the functions from oak_functions_abi/src/lib.rs.
+/// Exports the functions from the ABI of Oak Functions. These functions allow the Wasm module to
+/// exchange data with Oak Functions and need the Wasm module (or, more specifically,
+/// the [`OakCaller`]) to provide `alloc` for allocating memory. The [`OakLinker`] checks that the
+/// Wasm module provides `alloc` and `main`, which every Oak Wasm module must provide, and defines
+/// the memory which the [`OakCaller`] uses.
 struct OakLinker<L: OakLogger> {
     linker: wasmi::Linker<UserState<L>>,
 }
@@ -326,8 +278,9 @@ where
     }
 }
 
-/// OakCaller implements reading and allocating and write the memory defined in the `OakLinker`.
-/// OakCaller relies on `alloc`, which every Oak Wasm module must provide.
+/// Provides functionality for reading from the Wasm memory, as well as allocating and writing to
+/// the Wasm memory. The Wasm memory is defined by the [`OakLinker`]. [`OakCaller`]
+/// relies on `alloc`, which every Oak Wasm module must provide.
 struct OakCaller<'a, L: OakLogger> {
     caller: wasmi::Caller<'a, UserState<L>>,
     alloc: wasmi::TypedFunc<i32, AbiPointer>,
@@ -499,44 +452,60 @@ where
         })
     }
 
-    fn init_wasm_state(&self, request_bytes: Vec<u8>) -> anyhow::Result<WasmState<L>> {
+    // Create an extension from every factory in the WasmHandler.
+    fn create_extensions(
+        &self,
+    ) -> anyhow::Result<HashMap<ExtensionHandle, Box<dyn OakApiNativeExtension>>> {
         let mut extensions = HashMap::new();
-
-        // Create an extension from every factory.
         for factory in self.extension_factories.iter() {
             let extension = factory.create()?;
             extensions.insert(extension.get_handle(), extension);
         }
+        Ok(extensions)
+    }
 
-        let wasm_state = WasmState::new(
-            self.wasm_module.clone(),
-            request_bytes,
+    /// Handles a call to invoke by getting the raw request bytes from the body of the request to
+    /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
+    pub fn handle_invoke(&self, invoke_request: Request) -> anyhow::Result<Response> {
+        let module = self.wasm_module.clone();
+
+        let user_state = UserState::new(
+            invoke_request.body,
+            self.create_extensions()?,
             self.logger.clone(),
-            extensions,
-        )?;
+        );
+        // For isolated requests we need to create a new store for every request.
+        let mut store = wasmi::Store::new(module.engine(), user_state);
+        let linker = OakLinker::new(module.engine(), &mut store);
+        let (instance, mut store) = linker.instantiate(store, module)?;
 
-        Ok(wasm_state)
-    }
+        instance.exports(&store).for_each(|export| {
+            store
+                .data()
+                .logger
+                .log_sensitive(Level::Info, &format!("instance exports: {:?}", export))
+        });
 
-    pub fn handle_invoke(&self, request: Request) -> anyhow::Result<Response> {
-        let response_bytes = self.handle_raw_invoke(request.body)?;
-        Ok(Response::create(StatusCode::Success, response_bytes))
-    }
+        // Invokes the Wasm module by calling main.
+        let main = instance
+            .get_typed_func::<(), ()>(&store, MAIN_FUNCTION_NAME)
+            .expect("couldn't get `main` export");
+        let result = main.call(&mut store, ());
+        store.data().logger.log_sensitive(
+            Level::Info,
+            &format!("running Wasm module completed with result: {:?}", result),
+        );
 
-    /// Handles an invocation using raw bytes and returns the response as raw bytes.
-    pub fn handle_raw_invoke(&self, request_bytes: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-        let mut wasm_state = self.init_wasm_state(request_bytes)?;
-
-        wasm_state.invoke();
-
-        wasm_state
-            .store
+        // Terminate the extensions.
+        store
             .data_mut()
             .extensions
             .values_mut()
             .try_for_each(|e| e.terminate())?;
 
-        Ok(wasm_state.get_response_bytes())
+        let invoke_response =
+            Response::create(StatusCode::Success, store.data().response_bytes.clone());
+        Ok(invoke_response)
     }
 }
 
