@@ -221,7 +221,7 @@ fn create_test_state() -> TestState {
         wasm_handler.logger.clone(),
     );
 
-    let module = wasm_handler.wasm_module.clone();
+    let module = wasm_handler.wasm_module;
     let mut store = wasmi::Store::new(module.engine(), user_state);
     let linker = OakLinker::new(module.engine(), &mut store);
     let (instance, store) = linker
