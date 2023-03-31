@@ -23,7 +23,7 @@ option java_package = "oak.crypto";
 
 // Request message encrypted using Hybrid Public Key Encryption (HPKE).
 // <https://www.rfc-editor.org/rfc/rfc9180.html>
-message HpkeRequest {
+message EncryptedRequest {
   // Message encrypted with Authenticated Encryption with Associated Data (AEAD)
   // using the derived session key.
   AeadEncryptedMessage encrypted_message = 1;
@@ -35,7 +35,7 @@ message HpkeRequest {
 // Response message encrypted Hybrid Public Key Encryption (HPKE), which uses a
 // response key generated as part of bidirectional encryption.
 // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
-message HpkeResponse {
+message EncryptedResponse {
   // Message encrypted with Authenticated Encryption with Associated Data (AEAD)
   // using the derived session key.
   AeadEncryptedMessage encrypted_message = 1;

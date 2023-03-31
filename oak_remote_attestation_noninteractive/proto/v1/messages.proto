@@ -98,11 +98,13 @@ message InvokeRequest {
   // TODO(#3442): Specify encryption format.
   // TODO(#3442): Also pass client public or symmetric key to use for response encryption. Note that
   // needs to be at least authenticated by the client, if not encrypted within this field.
+  // TODO(#3843): Use explicit `oak_crypto` messages.
   bytes encrypted_body = 1;
 }
 
 message InvokeResponse {
   // Body of the request, encrypted with the client public or symmetric key.
   // TODO(#3442): Specify encryption format.
+  // TODO(#3843): Use explicit `oak_crypto` messages.
   bytes encrypted_body = 1;
 }

@@ -14,19 +14,5 @@
 // limitations under the License.
 //
 
-#![no_std]
-
-extern crate alloc;
-
-pub mod schema {
-    #![allow(dead_code)]
-    include!(concat!(env!("OUT_DIR"), "/oak.crypto.rs"));
-}
-
-pub mod encryptor;
-mod hpke;
-pub mod service;
-pub mod signer;
-#[cfg(test)]
-mod tests;
-mod util;
+// TODO(#3836): Implement signature generation and verification.
+pub struct Signer {}

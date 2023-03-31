@@ -14,8 +14,10 @@
 // limitations under the License.
 //
 
+pub(crate) mod aead;
+
 use crate::{
-    aead::{AeadKey, AeadNonce, AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
+    hpke::aead::{AeadKey, AeadNonce, AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
     util::{i2osp, xor},
 };
 use alloc::vec::Vec;
@@ -66,7 +68,7 @@ impl KeyPair {
 pub(crate) fn setup_base_sender(
     serialized_recipient_public_key: &[u8],
     info: &[u8],
-) -> anyhow::Result<(Vec<u8>, SenderContext, SenderResponseContext)> {
+) -> anyhow::Result<(Vec<u8>, SenderRequestContext, SenderResponseContext)> {
     let recipient_public_key = PublicKey::from_bytes(serialized_recipient_public_key)
         .map_err(|error| anyhow!("couldn't deserialize recipient public key: {}", error))?;
 
@@ -90,7 +92,7 @@ pub(crate) fn setup_base_sender(
 
     Ok((
         encapped_key.to_bytes().to_vec(),
-        SenderContext {
+        SenderRequestContext {
             _inner: sender_context,
         },
         SenderResponseContext {
@@ -107,7 +109,7 @@ pub(crate) fn setup_base_recipient(
     serialized_encapped_key: &[u8],
     recipient_key_pair: &KeyPair,
     info: &[u8],
-) -> anyhow::Result<(RecipientContext, RecipientResponseContext)> {
+) -> anyhow::Result<(RecipientRequestContext, RecipientResponseContext)> {
     let encapped_key = EncappedKey::from_bytes(serialized_encapped_key).map_err(|error| {
         anyhow!(
             "couldn't deserialize the encapsulated public key: {}",
@@ -134,7 +136,7 @@ pub(crate) fn setup_base_recipient(
         .map_err(|error| anyhow!("couldn't export response nonce: {}", error))?;
 
     Ok((
-        RecipientContext {
+        RecipientRequestContext {
             _inner: recipient_context,
         },
         RecipientResponseContext {
@@ -145,11 +147,11 @@ pub(crate) fn setup_base_recipient(
     ))
 }
 
-pub(crate) struct SenderContext {
+pub(crate) struct SenderRequestContext {
     _inner: AeadCtxS<Aead, Kdf, Kem>,
 }
 
-impl SenderContext {
+impl SenderRequestContext {
     /// Encrypts message with associated data using AEAD.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
     pub(crate) fn seal(
@@ -165,11 +167,11 @@ impl SenderContext {
     }
 }
 
-pub(crate) struct RecipientContext {
+pub(crate) struct RecipientRequestContext {
     _inner: AeadCtxR<Aead, Kdf, Kem>,
 }
 
-impl RecipientContext {
+impl RecipientRequestContext {
     /// Decrypts message and validates associated data using AEAD.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
     pub(crate) fn open(
