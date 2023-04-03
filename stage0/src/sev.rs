@@ -63,8 +63,9 @@ impl From<MTRRDefType> for u64 {
 }
 
 /// Write a config value to IA32_MTRR_DefType MSR register to set the default caching mode to
-/// write-protected (WP).  This is required by Linux kernels since July, 2022, with this
-/// requirement back-ported to 5.15.X.
+/// `default_type`.   The Linux kernel requires the mode be set to `MemoryType::WP` since July,
+/// 2022, with this requirement back-ported to 5.15.X, or it will silently crash when SEV is
+/// enabled.
 ///
 /// The Linux kernel gives a warning that MTRR is not setup properly, which we can igore:
 /// [    0.120763] mtrr: your CPUs had inconsistent MTRRdefType settings
