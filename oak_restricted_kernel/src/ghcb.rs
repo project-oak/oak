@@ -91,16 +91,33 @@ pub fn reshare_ghcb<M: Mapper<Size4KiB>>(mapper: &mut M) {
             Err(error) => panic!("couldn't update page table flags for GHCB: {:?}", error),
         };
     }
+
+    // Reset the GHCB in case something touched it while it was marked as encrypted.
+    GHCB_PROTOCOL
+        .get()
+        .expect("GHCB not initialized")
+        .lock()
+        .reset();
 }
 
 /// Initializes the GHCB and shares it with the hypervisor during early boot.
 fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
     // Safety: This is called only during early boot, so there is only a single execution context.
     let ghcb = unsafe { &mut GHCB_WRAPPER.ghcb };
-    ghcb.reset();
 
     let ghcb_page = get_ghcb_page();
     let mut mapper = get_identity_mapped_encrypted_page_table();
+    // Safety: we only remove the encrypted bit as the initial pages created by the stage 0 firmware
+    // are only marked as present and writable, and possibly encrypted.
+    unsafe {
+        match mapper.update_flags(
+            ghcb_page,
+            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+        ) {
+            Ok(mapper_flush) => mapper_flush.flush(),
+            Err(error) => panic!("couldn't update page table flags for GHCB: {:?}", error),
+        };
+    }
     if snp_enabled {
         // It is OK to crash if we cannot find the physical frame that contains the GHCB.
         let ghcb_frame = PhysFrame::<Size2MiB>::from_start_address(
@@ -123,17 +140,7 @@ fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
             .expect("couldn't register the GHCB address with the hypervisor");
     }
 
-    // Safety: we only remove the encrypted bit as the initial pages created by the stage 0 firmware
-    // are only marked as present and writable, and possibly encrypted.
-    unsafe {
-        match mapper.update_flags(
-            ghcb_page,
-            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-        ) {
-            Ok(mapper_flush) => mapper_flush.flush(),
-            Err(error) => panic!("couldn't update page table flags for GHCB: {:?}", error),
-        };
-    }
+    ghcb.reset();
 
     GhcbProtocol::new(ghcb, |virt_addr: VirtAddr| {
         mapper.translate_virtual(virt_addr)
