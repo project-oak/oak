@@ -70,11 +70,11 @@ impl From<MTRRDefType> for u64 {
 /// [    0.120763] mtrr: your CPUs had inconsistent MTRRdefType settings
 /// [    0.121529] mtrr: probably your BIOS does not setup all CPUs.
 /// [    0.122245] mtrr: corrected configuration.
-pub fn enable_mtrr() {
+pub fn enable(default_type: MemoryType) {
     let enable_mtrr_in_wp_mode = MTRRDefType {
       mtrr_enable: true,
       fixed_range_enable: false,
-      default_memory_type: MemoryType::WP,
+      default_memory_type: default_type,
     };
 
     // Safety: This operation is safe because this specific MSR has been supported since the P6
