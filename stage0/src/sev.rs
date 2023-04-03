@@ -39,23 +39,52 @@ use x86_64::{
 /// The identifier for the MSR used to set the default caching mode.
 const IA32_MTRR_DEFTYPE: u32 = 0x2ff;
 
-/// Value for enanabling MTRR with write-protect mode by default.
-const MTRR_EN_WITH_WP: u64 = 0x805;
+/// The cache memory type used with MTRR.  We only use Write-Protect mode which the Linux kernel
+/// expects to be enabled by the firmware in order to enable SEV.
+pub enum MemoryType {
+    WP = 5, // Write-Protect.
+}
 
-/// Write a config value to IA32_MTRR_DefTpype MSR register to set the default caching mode to
+/// Contains the IA32_MTRR_DefType value.
+struct MTRRDefType {
+    mtrr_enable: bool,               // Set this to enable MTRR.
+    fixed_range_enable: bool,        // Set to enable fixed-range support.
+    default_memory_type: MemoryType, // The default caching mode.
+}
+
+impl From<MTRRDefType> for u64 {
+    fn from(deftype: MTRRDefType) -> Self {
+        let mtrr_enable = if deftype.mtrr_enable { 1 } else { 0 };
+        let mtrr_enable = mtrr_enable << 11; // MTRR enable bit is bit 11.
+        let fixed_range_enable = if deftype.fixed_range_enable { 1 } else { 0 };
+        let fixed_range_enable = fixed_range_enable << 10; // Fixed range nable is bit 10.
+        mtrr_enable | fixed_range_enable | deftype.default_memory_type as u64
+    }
+}
+
+/// Write a config value to IA32_MTRR_DefType MSR register to set the default caching mode to
 /// write-protected (WP).  This is required by Linux kernels since July, 2022, with this
 /// requirement back-ported to 5.15.X.
 ///
-/// The Linux kernel gives a warning that MTRR is not setup properly, and that BOIOS proably
-/// only set the MTRR mode on one CPU, which is the case, since we do not want to deal with
-/// the complexity of setting up multiple cores.  The Linux kernel propagates the MTRR set
-/// on this core to the others, and reports that MTRR settings have been fixed.
+/// The Linux kernel gives a warning that MTRR is not setup properly, which we can igore:
+/// [    0.120763] mtrr: your CPUs had inconsistent MTRRdefType settings
+/// [    0.121529] mtrr: probably your BIOS does not setup all CPUs.
+/// [    0.122245] mtrr: corrected configuration.
 pub fn enable_mtrr() {
-    // Potentially unsafe: we write to the IA32_MTRRdefType MSR to enable write-protect mode for
-    // page table entries by defailt.  This is expected by the Linux code to enable SEV.
-    // Only call this if SEV/SEV-ES/SEV-SNP is going to be enabled.
+    let enable_mtrr_in_wp_mode = MTRRDefType {
+      mtrr_enable: true,
+      fixed_range_enable: false,
+      default_memory_type: MemoryType::WP,
+    };
+
+    // Safety: This operation is safe because this specific MSR has been supported since the P6
+    // family of Pentium processors (see https://en.wikipedia.org/wiki/Memory_type_range_register).
+    // We use only an originally supported mode of MTRR: setting the default cache mode to WP.
+    // What this does is fix errors that would otherwise occur if we try to write to ROM (BIOS).
+    // In other modes, the value written is cached, and reads incorrectly return the value that
+    // failed to write to ROM.
     unsafe {
-        Msr::new(IA32_MTRR_DEFTYPE).write(MTRR_EN_WITH_WP);
+        Msr::new(IA32_MTRR_DEFTYPE).write(u64::from(enable_mtrr_in_wp_mode));
     }
 }
 
