@@ -8,12 +8,12 @@ targets = [{ triple = "x86_64-unknown-linux-musl" }]
 [advisories]
 vulnerability = "deny"
 unmaintained = "deny"
+unsound = "deny"
 yanked = "deny"
 notice = "deny"
 ignore = [
-  "RUSTSEC-2021-0146",
-  # TODO(#3377): Remove when updated.
-  "RUSTSEC-2022-0061",
+  # TODO(#3845): Stop ignoring when the colored crate no longer relies on atty.
+  "RUSTSEC-2021-0145",
 ]
 
 [bans]
@@ -32,12 +32,10 @@ allow = [
   "Apache-2.0 WITH LLVM-exception",
   "BSD-2-Clause",
   "BSD-3-Clause",
-  "CC0-1.0",
   "ISC",
   "MIT",
   "MPL-2.0",
   "OpenSSL",
-  "Zlib",
   "Unicode-DFS-2016",
 ]
 copyleft = "deny"
