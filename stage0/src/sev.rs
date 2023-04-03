@@ -45,7 +45,7 @@ pub enum MemoryType {
     WP = 5, // Write-Protect.
 }
 
-/// Contains the IA32_MTRR_DefType value.
+/// Models fields of the IA32_MTRR_DefType MSR.
 struct MTRRDefType {
     mtrr_enable: bool,               // Set this to enable MTRR.
     fixed_range_enable: bool,        // Set to enable fixed-range support.
@@ -80,9 +80,6 @@ pub fn enable_mtrr() {
     // Safety: This operation is safe because this specific MSR has been supported since the P6
     // family of Pentium processors (see https://en.wikipedia.org/wiki/Memory_type_range_register).
     // We use only an originally supported mode of MTRR: setting the default cache mode to WP.
-    // What this does is fix errors that would otherwise occur if we try to write to ROM (BIOS).
-    // In other modes, the value written is cached, and reads incorrectly return the value that
-    // failed to write to ROM.
     unsafe {
         Msr::new(IA32_MTRR_DEFTYPE).write(u64::from(enable_mtrr_in_wp_mode));
     }
