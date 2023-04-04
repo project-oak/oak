@@ -68,13 +68,6 @@ impl EncryptionKeyProvider {
         }
     }
 
-    // /// Creates a crypto provider from a `key_pair`.
-    // pub fn create_from_private_key(key_pair: KeyPair) -> Self {
-    //     Self {
-    //         key_pair,
-    //     }
-    // }
-
     /// Returns a NIST P-256 SEC1 encoded point public key.
     /// <https://secg.org/sec1-v2.pdf>
     pub fn get_serialized_public_key(&self) -> Vec<u8> {
