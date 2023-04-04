@@ -167,6 +167,13 @@
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -260,16 +267,33 @@
             <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t update page table flags for GHCB: {:?}&quot;</span>, error),
         };
     }
+
+    <span class="comment">// Reset the GHCB in case something touched it while it was marked as encrypted.
+    </span>GHCB_PROTOCOL
+        .get()
+        .expect(<span class="string">&quot;GHCB not initialized&quot;</span>)
+        .lock()
+        .reset();
 }
 
 <span class="doccomment">/// Initializes the GHCB and shares it with the hypervisor during early boot.
 </span><span class="kw">fn </span>init_ghcb_early(snp_enabled: bool) -&gt; GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt; {
     <span class="comment">// Safety: This is called only during early boot, so there is only a single execution context.
     </span><span class="kw">let </span>ghcb = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut </span>GHCB_WRAPPER.ghcb };
-    ghcb.reset();
 
     <span class="kw">let </span>ghcb_page = get_ghcb_page();
     <span class="kw">let </span><span class="kw-2">mut </span>mapper = get_identity_mapped_encrypted_page_table();
+    <span class="comment">// Safety: we only remove the encrypted bit as the initial pages created by the stage 0 firmware
+    // are only marked as present and writable, and possibly encrypted.
+    </span><span class="kw">unsafe </span>{
+        <span class="kw">match </span>mapper.update_flags(
+            ghcb_page,
+            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+        ) {
+            <span class="prelude-val">Ok</span>(mapper_flush) =&gt; mapper_flush.flush(),
+            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t update page table flags for GHCB: {:?}&quot;</span>, error),
+        };
+    }
     <span class="kw">if </span>snp_enabled {
         <span class="comment">// It is OK to crash if we cannot find the physical frame that contains the GHCB.
         </span><span class="kw">let </span>ghcb_frame = PhysFrame::&lt;Size2MiB&gt;::from_start_address(
@@ -292,17 +316,7 @@
             .expect(<span class="string">&quot;couldn&#39;t register the GHCB address with the hypervisor&quot;</span>);
     }
 
-    <span class="comment">// Safety: we only remove the encrypted bit as the initial pages created by the stage 0 firmware
-    // are only marked as present and writable, and possibly encrypted.
-    </span><span class="kw">unsafe </span>{
-        <span class="kw">match </span>mapper.update_flags(
-            ghcb_page,
-            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-        ) {
-            <span class="prelude-val">Ok</span>(mapper_flush) =&gt; mapper_flush.flush(),
-            <span class="prelude-val">Err</span>(error) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t update page table flags for GHCB: {:?}&quot;</span>, error),
-        };
-    }
+    ghcb.reset();
 
     GhcbProtocol::new(ghcb, |virt_addr: VirtAddr| {
         mapper.translate_virtual(virt_addr)
