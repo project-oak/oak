@@ -73,9 +73,9 @@ impl From<MTRRDefType> for u64 {
 /// [    0.122245] mtrr: corrected configuration.
 pub fn enable(default_type: MemoryType) {
     let enable_mtrr_in_wp_mode = MTRRDefType {
-      mtrr_enable: true,
-      fixed_range_enable: false,
-      default_memory_type: default_type,
+        mtrr_enable: true,
+        fixed_range_enable: false,
+        default_memory_type: default_type,
     };
 
     // Safety: This operation is safe because this specific MSR has been supported since the P6
