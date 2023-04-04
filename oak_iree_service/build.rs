@@ -39,8 +39,8 @@ fn main() {
     println!("cargo:rustc-link-search={}", "/workspace/cc/iree");
     // rustc_link_lib("iree");
     rustc_link_lib("c");
-    rustc_link_lib("m");
     rustc_link_lib("gloss");
+    rustc_link_lib("m");
     // link_iree_dependencies("/workspace/cc/iree/deps/");
     // panic!();
 }

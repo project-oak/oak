@@ -134,7 +134,7 @@ impl TfliteModel {
             0
             // iree_init()
         };
-        let output_buffer_len = 4096usize;
+        let output_buffer_len = 18520usize;
         // if self.output_buffer_len.is_some() {
         //     return Err(anyhow!("TFLite model has already been initialized"));
         // }
@@ -191,7 +191,7 @@ impl TfliteModel {
                 // Panicking since if the output bytes length is bigger than the output buffer
                 // length, then there is a potential for memory corruption and we can't rely on any
                 // of the Rust memory safety assumptions.
-                panic!("output bytes length is bigger than the output buffer length");
+                panic!("output bytes length of {} is bigger than the output buffer length of {}", output_bytes_len, output_buffer_len);
             }
         } else {
             log!(Level::Error, "couldn't run IREE inference, code: {}", result_code);
