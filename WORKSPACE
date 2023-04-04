@@ -29,6 +29,17 @@ http_archive(
     ],
 )
 
+# Google Abseil.
+# https://github.com/abseil/abseil-cpp
+http_archive(
+    name = "com_google_absl",
+    sha256 = "91ac87d30cc6d79f9ab974c51874a704de9c2647c40f6932597329a282217ba8",
+    strip_prefix = "abseil-cpp-20220623.1",
+    urls = [
+        "https://github.com/abseil/abseil-cpp/archive/20220623.1.tar.gz",
+    ],
+)
+
 http_archive(
     name = "tink_base",
     sha256 = "536a4ceb3e9e7e35bf52f7cc99838679de8463ab2a1a12b90121c00ee25fe252",
