@@ -70,6 +70,8 @@ pub fn init_ghcb(
             .expect("couldn't register the GHCB address with the hypervisor");
     }
 
+    ghcb.reset();
+
     // We can't use `.expect()` here as Spinlock doesn't implement `fmt::Debug`.
     if GHCB_WRAPPER
         .set(Spinlock::new(GhcbProtocol::new(ghcb, |vaddr: VirtAddr| {

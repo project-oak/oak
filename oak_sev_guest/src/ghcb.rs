@@ -287,6 +287,11 @@ where
         Self { ghcb, gpa }
     }
 
+    /// Resets all of the inner GHCB information to its original state.
+    pub fn reset(&mut self) {
+        self.ghcb.as_mut().reset();
+    }
+
     /// Gets the guest-physical address for the guest-hypervisor communication block.
     pub fn get_gpa(&self) -> PhysAddr {
         self.gpa
@@ -438,11 +443,11 @@ where
     fn do_vmg_exit(&mut self) -> Result<(), &'static str> {
         self.ghcb.as_mut().protocol_version = GHCB_PROTOCOL_VERSION;
         // Use a memory fence to ensure all writes happen before we hand over to the VMM.
-        core::sync::atomic::fence(core::sync::atomic::Ordering::Release);
+        core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
         set_ghcb_address_and_exit(GhcbGpa::new(self.get_gpa().as_u64() as usize)?);
         // Use a memory fence to ensure that all earlier writes are commited before we read from the
         // GHCB.
-        core::sync::atomic::fence(core::sync::atomic::Ordering::Acquire);
+        core::sync::atomic::fence(core::sync::atomic::Ordering::SeqCst);
 
         // The mask for extracting the hypervisor's return value from the sw_exit_info_1 field.
         const SW_EXIT_INFO_1_RETURN_MASK: u64 = 0xffff_ffff;
