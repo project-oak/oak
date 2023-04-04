@@ -25,7 +25,7 @@ pub mod verifier;
 
 use crate::transport::AsyncEvidenceProvider;
 use anyhow::{anyhow, Context};
-use oak_crypto::{encryptor::SenderEncryptor, schema::EncryptedResponse};
+use oak_crypto::{encryptor::ClientEncryptor, schema::EncryptedResponse};
 use prost::Message;
 use std::vec::Vec;
 
@@ -60,9 +60,9 @@ where
 
     pub async fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
         // Encrypt request.
-        let mut sender_encryptor = SenderEncryptor::create(&self.enclave_encryption_public_key)
+        let mut client_encryptor = ClientEncryptor::create(&self.enclave_encryption_public_key)
             .context("couldn't create encryptor")?;
-        let encrypted_request = sender_encryptor
+        let encrypted_request = client_encryptor
             .encrypt(request_body, EMPTY_ASSOCIATED_DATA)
             .context("couldn't encrypt request")?;
 
@@ -85,9 +85,9 @@ where
 
         // Decrypt response.
         // Currently we ignore the associated data.
-        let (response, _) = sender_encryptor
+        let (response, _) = client_encryptor
             .decrypt(&encrypted_response)
-            .context("sender couldn't decrypt response")?;
+            .context("client couldn't decrypt response")?;
 
         Ok(response)
     }

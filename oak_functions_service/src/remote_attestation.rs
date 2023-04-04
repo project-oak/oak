@@ -23,7 +23,7 @@ extern crate alloc;
 use alloc::{sync::Arc, vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use oak_crypto::{
-    encryptor::{EncryptionKeyProvider, RecipientEncryptor},
+    encryptor::{EncryptionKeyProvider, ServerEncryptor},
     schema::EncryptedRequest,
 };
 use oak_remote_attestation_interactive::handshaker::AttestationGenerator;
@@ -72,14 +72,14 @@ impl<H: Handler> AttestationSessionHandler<H> {
 
 impl<H: Handler> AttestationHandler for AttestationSessionHandler<H> {
     fn message(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let mut recipient_encryptor = RecipientEncryptor::new(self.encryption_key_provider.clone());
+        let mut server_encryptor = ServerEncryptor::new(self.encryption_key_provider.clone());
 
         // Deserialize and decrypt request.
         let encrypted_request = EncryptedRequest::decode(request_body)
             .map_err(|error| anyhow!("couldn't deserialize request: {:?}", error))?;
-        let (request, _) = recipient_encryptor
+        let (request, _) = server_encryptor
             .decrypt(&encrypted_request)
-            .context("recipient couldn't decrypt request")?;
+            .context("couldn't decrypt request")?;
 
         // Handle request.
         let response = self
@@ -90,7 +90,7 @@ impl<H: Handler> AttestationHandler for AttestationSessionHandler<H> {
         // Encrypt and serialize response.
         // The resulting decryptor for consequent requests is discarded because we don't expect
         // another message from the stream.
-        let encrypted_response = recipient_encryptor
+        let encrypted_response = server_encryptor
             .encrypt(&response, EMPTY_ASSOCIATED_DATA)
             .context("couldn't encrypt response")?;
         let mut serialized_response = vec![];

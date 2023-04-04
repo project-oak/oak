@@ -15,7 +15,7 @@
 
 //! Integration tests for the Oak Functions Launcher.
 
-use oak_crypto::{encryptor::SenderEncryptor, schema::EncryptedResponse};
+use oak_crypto::{encryptor::ClientEncryptor, schema::EncryptedResponse};
 use oak_functions_launcher::{
     schema::{self, InvokeRequest},
     update_lookup_data, LookupDataConfig,
@@ -109,9 +109,9 @@ async fn test_launcher_looks_up_key() {
     let request_body = b"test_key".to_vec();
 
     // Encrypt request.
-    let mut sender_encryptor =
-        SenderEncryptor::create(&enclave_encryption_public_key).expect("couldn't create encryptor");
-    let encrypted_request = sender_encryptor
+    let mut client_encryptor =
+        ClientEncryptor::create(&enclave_encryption_public_key).expect("couldn't create encryptor");
+    let encrypted_request = client_encryptor
         .encrypt(&request_body, EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
@@ -137,9 +137,9 @@ async fn test_launcher_looks_up_key() {
         .expect("couldn't deserialize response");
 
     // Decrypt response.
-    let (response, _) = sender_encryptor
+    let (response, _) = client_encryptor
         .decrypt(&encrypted_response)
-        .expect("sender couldn't decrypt response");
+        .expect("client couldn't decrypt response");
 
     assert_eq!(b"test_value".to_vec(), response);
 

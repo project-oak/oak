@@ -20,7 +20,7 @@
 extern crate alloc;
 
 use core::assert_matches::assert_matches;
-use oak_crypto::{encryptor::SenderEncryptor, schema::EncryptedResponse};
+use oak_crypto::{encryptor::ClientEncryptor, schema::EncryptedResponse};
 use oak_functions_service::{
     schema::{self, OakFunctionsServer},
     OakFunctionsService,
@@ -72,9 +72,9 @@ fn it_should_handle_user_requests_after_initialization() {
         .public_key;
 
     // Encrypt request.
-    let mut sender_encryptor =
-        SenderEncryptor::create(&enclave_encryption_public_key).expect("couldn't create encryptor");
-    let encrypted_request = sender_encryptor
+    let mut client_encryptor =
+        ClientEncryptor::create(&enclave_encryption_public_key).expect("couldn't create encryptor");
+    let encrypted_request = client_encryptor
         .encrypt(&[1, 2, 3], EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
@@ -150,9 +150,9 @@ async fn it_should_support_lookup_data() {
         .unwrap();
 
     // Encrypt request.
-    let mut sender_encryptor =
-        SenderEncryptor::create(&enclave_encryption_public_key).expect("couldn't create encryptor");
-    let encrypted_request = sender_encryptor
+    let mut client_encryptor =
+        ClientEncryptor::create(&enclave_encryption_public_key).expect("couldn't create encryptor");
+    let encrypted_request = client_encryptor
         .encrypt(LOOKUP_TEST_KEY, EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
@@ -176,9 +176,9 @@ async fn it_should_support_lookup_data() {
         .expect("couldn't deserialize response");
 
     // Decrypt response.
-    let (response, _) = sender_encryptor
+    let (response, _) = client_encryptor
         .decrypt(&encrypted_response)
-        .expect("sender couldn't decrypt response");
+        .expect("client couldn't decrypt response");
 
     assert_eq!(LOOKUP_TEST_VALUE, response);
 }

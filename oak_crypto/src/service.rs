@@ -16,7 +16,7 @@
 
 use crate::{
     encryptor::{
-        CryptoContext, CryptoContextGenerator, OAK_HPKE_INFO, TEST_ENCAPSULATED_PUBLIC_KEY,
+        CryptoContextGenerator, RecipientContext, OAK_HPKE_INFO, TEST_ENCAPSULATED_PUBLIC_KEY,
     },
     hpke::{setup_base_recipient, KeyPair},
 };
@@ -49,11 +49,11 @@ impl EnclaveEncryptionKeyProvider {
 }
 
 impl CryptoContextGenerator for EnclaveEncryptionKeyProvider {
-    fn generate_context(&self) -> anyhow::Result<CryptoContext> {
+    fn generate_context(&self) -> anyhow::Result<RecipientContext> {
         let (recipient_request_context, recipient_response_context) =
             setup_base_recipient(&TEST_ENCAPSULATED_PUBLIC_KEY, &self.key_pair, OAK_HPKE_INFO)
                 .context("couldn't generate recipient crypto context")?;
-        Ok(CryptoContext {
+        Ok(RecipientContext {
             recipient_request_context,
             recipient_response_context,
         })

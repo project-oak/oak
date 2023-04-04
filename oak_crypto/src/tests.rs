@@ -15,7 +15,7 @@
 //
 
 use crate::{
-    encryptor::{EncryptionKeyProvider, RecipientEncryptor, SenderEncryptor},
+    encryptor::{ClientEncryptor, EncryptionKeyProvider, ServerEncryptor},
     hpke::{
         aead::{AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
         setup_base_recipient, setup_base_sender, KeyPair,
@@ -113,11 +113,11 @@ fn test_hpke() {
 #[test]
 fn test_encryptor() {
     let key_provider = Arc::new(EncryptionKeyProvider::new());
-    let serialized_recipient_public_key = key_provider.get_serialized_public_key();
+    let serialized_server_public_key = key_provider.get_serialized_public_key();
 
-    let mut sender_encryptor = SenderEncryptor::create(&serialized_recipient_public_key)
-        .expect("couldn't create sender encryptor");
-    let mut recipient_encryptor = RecipientEncryptor::new(key_provider);
+    let mut client_encryptor = ClientEncryptor::create(&serialized_server_public_key)
+        .expect("couldn't create client encryptor");
+    let mut server_encryptor = ServerEncryptor::new(key_provider);
 
     for i in 0..TEST_SESSION_SIZE {
         let test_request_message = [TEST_REQUEST_MESSAGE, &[i as u8]].concat();
@@ -125,27 +125,27 @@ fn test_encryptor() {
         let test_response_message = [TEST_RESPONSE_MESSAGE, &[i as u8]].concat();
         let test_response_associated_data = [TEST_RESPONSE_ASSOCIATED_DATA, &[i as u8]].concat();
 
-        let encrypted_request = sender_encryptor
+        let encrypted_request = client_encryptor
             .encrypt(&test_request_message, &test_request_associated_data)
-            .expect("sender couldn't encrypt request");
+            .expect("client couldn't encrypt request");
         // Check that the message was encrypted.
         // TODO(#3642): Uncomment message encryption/decryption once Java encryption is implemented.
         // assert_ne!(test_request_message, encrypted_request);
-        let (decrypted_request, request_associated_data) = recipient_encryptor
+        let (decrypted_request, request_associated_data) = server_encryptor
             .decrypt(&encrypted_request)
-            .expect("recipient couldn't decrypt request");
+            .expect("server couldn't decrypt request");
         assert_eq!(test_request_message, decrypted_request);
         assert_eq!(test_request_associated_data, request_associated_data);
 
-        let encrypted_response = recipient_encryptor
+        let encrypted_response = server_encryptor
             .encrypt(&test_response_message, &test_response_associated_data)
-            .expect("recipient couldn't encrypt response");
+            .expect("server couldn't encrypt response");
         // Check that the message was encrypted.
         // TODO(#3642): Uncomment message encryption/decryption once Java encryption is implemented.
         // assert_ne!(test_response_message, encrypted_response);
-        let (decrypted_response, response_associated_data) = sender_encryptor
+        let (decrypted_response, response_associated_data) = client_encryptor
             .decrypt(&encrypted_response)
-            .expect("sender couldn't decrypt response");
+            .expect("client couldn't decrypt response");
         assert_eq!(test_response_message, decrypted_response);
         assert_eq!(test_response_associated_data, response_associated_data);
     }
