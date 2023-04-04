@@ -42,7 +42,7 @@ pub(crate) const OAK_HPKE_INFO: &[u8] = b"Oak Hybrid Public Key Encryption v1";
 
 pub trait CryptoContextGenerator {
     // TODO(#3841): Implement Oak Kernel Crypto API and return corresponding session keys instead.
-    fn generate_context(&self) -> anyhow::Result<RecipientContext>;
+    fn generate_context(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<RecipientContext>;
 }
 
 pub struct EncryptionKeyProvider {
@@ -71,9 +71,9 @@ impl EncryptionKeyProvider {
 }
 
 impl CryptoContextGenerator for EncryptionKeyProvider {
-    fn generate_context(&self) -> anyhow::Result<RecipientContext> {
+    fn generate_context(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<RecipientContext> {
         let (recipient_request_context, recipient_response_context) =
-            setup_base_recipient(&TEST_ENCAPSULATED_PUBLIC_KEY, &self.key_pair, OAK_HPKE_INFO)
+            setup_base_recipient(encapsulated_public_key, &self.key_pair, OAK_HPKE_INFO)
                 .context("couldn't generate recipient crypto context")?;
         Ok(RecipientContext {
             recipient_request_context,
@@ -197,7 +197,7 @@ impl ServerEncryptor {
             None => {
                 let crypto_context = self
                     .crypto_context_generator
-                    .generate_context()
+                    .generate_context(&TEST_ENCAPSULATED_PUBLIC_KEY)
                     .context("couldn't generate recipient crypto context")?;
                 let (mut recipient_request_context, recipient_response_context) = (
                     crypto_context.recipient_request_context,
