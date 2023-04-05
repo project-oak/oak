@@ -15,10 +15,7 @@
 
 //! Integration tests for the Oak Functions Launcher.
 
-use oak_crypto::{
-    schema::{AeadEncryptedMessage, HpkeRequest, HpkeResponse},
-    SenderCryptoProvider,
-};
+use oak_crypto::{encryptor::ClientEncryptor, schema::EncryptedResponse};
 use oak_functions_launcher::{
     schema::{self, InvokeRequest},
     update_lookup_data, LookupDataConfig,
@@ -103,33 +100,24 @@ async fn test_launcher_looks_up_key() {
         )
         .await
         .expect("Failed to create launcher");
-
-    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
-    let body = b"test_key".to_vec();
-
-    // TODO(#3767): Refactor `oak_crypto` API to encapsulate the proto messages.
-    // Encrypt request.
-    let encryption_public_key = initialize_response
+    let server_encryption_public_key = initialize_response
         .public_key_info
         .expect("no public key info returned")
         .public_key;
-    let crypto_provider = SenderCryptoProvider::new(&encryption_public_key);
-    let (serialized_encapsulated_public_key, request_encryptor) = crypto_provider
-        .create_encryptor()
-        .expect("couldn't create encryptor");
-    let (request_ciphertext, response_decryptor) = request_encryptor
-        .encrypt(&body, EMPTY_ASSOCIATED_DATA)
+
+    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
+    let request_body = b"test_key".to_vec();
+
+    // Encrypt request.
+    let mut client_encryptor =
+        ClientEncryptor::create(&server_encryption_public_key).expect("couldn't create encryptor");
+    let encrypted_request = client_encryptor
+        .encrypt(&request_body, EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
-    let request = HpkeRequest {
-        encrypted_message: Some(AeadEncryptedMessage {
-            ciphertext: request_ciphertext,
-            associated_data: EMPTY_ASSOCIATED_DATA.to_vec(),
-        }),
-        serialized_encapsulated_public_key: Some(serialized_encapsulated_public_key),
-    };
+    // Serialize request.
     let mut serialized_request = vec![];
-    request
+    encrypted_request
         .encode(&mut serialized_request)
         .expect("couldn't serialize request");
 
@@ -140,24 +128,20 @@ async fn test_launcher_looks_up_key() {
     let invoke_response = client
         .invoke(&invoke_request)
         .await
-        .expect("couldn't to receive response");
+        .expect("couldn't receive response");
     assert!(invoke_response.is_ok());
+    let serialized_response = invoke_response.unwrap().body;
+
+    // Deserialize response.
+    let encrypted_response = EncryptedResponse::decode(serialized_response.as_ref())
+        .expect("couldn't deserialize response");
 
     // Decrypt response.
-    let serialized_response = invoke_response.unwrap().body;
-    let response =
-        HpkeResponse::decode(serialized_response.as_ref()).expect("couldn't deserialize response");
-    let encrypted_message = response
-        .encrypted_message
-        .expect("response doesn't contain encrypted message");
-    let (response_plaintext, _) = response_decryptor
-        .decrypt(
-            &encrypted_message.ciphertext,
-            &encrypted_message.associated_data,
-        )
-        .expect("couldn't decrypt response");
+    let (response, _) = client_encryptor
+        .decrypt(&encrypted_response)
+        .expect("client couldn't decrypt response");
 
-    assert_eq!(b"test_value".to_vec(), response_plaintext);
+    assert_eq!(b"test_value".to_vec(), response);
 
     launched_instance
         .kill()

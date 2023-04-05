@@ -31,8 +31,8 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import oak.crypto.AeadEncryptedMessage;
-import oak.crypto.HpkeRequest;
-import oak.crypto.HpkeResponse;
+import oak.crypto.EncryptedRequest;
+import oak.crypto.EncryptedResponse;
 import oak.session.noninteractive.v1.InvokeRequest;
 import oak.session.noninteractive.v1.InvokeResponse;
 import oak.session.noninteractive.v1.RequestWrapper;
@@ -81,8 +81,8 @@ public class OakGrpcClient {
     StreamObserver<RequestWrapper> requestObserver = stream.apply(responseObserver);
 
     // TODO(#3642): Use HPKE to encrypt/decrypt messages.
-    HpkeRequest hpkeRequest =
-        HpkeRequest.newBuilder()
+    EncryptedRequest encryptedRequest =
+        EncryptedRequest.newBuilder()
             .setSerializedEncapsulatedPublicKey(ByteString.EMPTY)
             .setEncryptedMessage(AeadEncryptedMessage.newBuilder()
                                      .setCiphertext(ByteString.copyFrom(requestBody))
@@ -92,7 +92,7 @@ public class OakGrpcClient {
     RequestWrapper requestWrapper =
         RequestWrapper.newBuilder()
             .setInvokeRequest(InvokeRequest.newBuilder().setEncryptedBody(
-                ByteString.copyFrom(hpkeRequest.toByteArray())))
+                ByteString.copyFrom(encryptedRequest.toByteArray())))
             .build();
     logger.log(Level.INFO, "request wrapper: " + requestWrapper);
     requestObserver.onNext(requestWrapper);
@@ -101,7 +101,7 @@ public class OakGrpcClient {
     logger.log(Level.INFO, "response wrapper: " + responseWrapper);
     InvokeResponse response = responseWrapper.getInvokeResponse();
 
-    byte[] responseBody = HpkeResponse.parseFrom(response.getEncryptedBody().toByteArray())
+    byte[] responseBody = EncryptedResponse.parseFrom(response.getEncryptedBody().toByteArray())
                               .getEncryptedMessage()
                               .getCiphertext()
                               .toByteArray();
