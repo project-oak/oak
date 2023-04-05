@@ -50,7 +50,8 @@ _protected_mode_start:
     # instead of using a 2MiB hugepage because we may need to change the encrypted bit and the
     # RMP state on individual 4K pages.
     mov $pt_addr, %ecx      # base for page table
-    xor %eax, %eax          # loop counter
+    mov $1, %eax            # loop counter: we start at 1 so that 0 (the first 4K) would remain
+                            # unmapped (so that null pointers would trigger a page fault)
     1:
     mov %eax, %edx          # edx = eax
     sal $12, %edx           # edx = edx << 12 (2^12 == 4K)
@@ -76,7 +77,7 @@ _protected_mode_start:
     and $0b100, %eax          # eax &= 0b100; -- SEV-SNP active
     test %eax, %eax           # is eax zero?
     je 2f                     # if yes, no SNP, skip validation and jump ahead
-    xor %ebx, %ebx            # ebx = 0 -- start address
+    mov $0x1000, %ebx         # ebx = 0x1000 -- start address (skipping first page as that's not mapped)
     xor %ecx, %ecx            # ecx = 0 -- we're using 4K pages
     mov $0b1, %edx            # edx = 1 -- set RMP VALIDATED bit
     1:
