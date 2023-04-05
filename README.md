@@ -8,21 +8,22 @@
 [![Docs](https://img.shields.io/badge/docs-rust-brightgreen?style=for-the-badge)](https://project-oak.github.io/oak)
 
 The goal of Project Oak is to provide infrastructure to transfer, store and
-process data in a secure and transparent way.
+process sensitive user data in a secure and transparent way.
 
-To do so, Oak relies on running _Oak Trusted Enclave Applications_ in a
+To do so, Oak relies on running a _Trusted Enclave Application_ in a
 [Trusted Execution Environment (TEE)](https://en.wikipedia.org/wiki/Trusted_execution_environment).
 An example of a Trusted Enclave Application is
 [Oak Functions](/oak_functions/README.md). The Trusted Enclave Application can
-provide the client cryptographically attested evidence of the security
-properties by [Remote Attestation](./docs/remote-attestation.md). Together with
-[Transparent Release](https://github.com/project-oak/transparent-release) this
-binds the open-source source code to the remotely attested binary running inside
-the TEE. In order to feasibly review all the source code running inside the TEE,
-and minimize our trusted computing base, Oak provides the following
+provide the client cryptographically attested evidence of the executable state
+of the TEE through [Remote Attestation](./docs/remote-attestation.md). Together
+with [Transparent Release](https://github.com/project-oak/transparent-release)
+this binds the open-source source code to the remotely attested binary running
+inside the TEE. In order to feasibly review all the source code running inside
+the TEE, and minimize our trusted computing base, Oak provides the following
 infrastructure: [stage 0](/stage0/),
-[Oak Restricted Kernel](/oak_restricted_kernel/) and a controlled communications
-interfaces---the [Oak Comms Channel](/oak_channel/) and [microRPC](/micro_rpc/).
+[Oak Restricted Kernel](/oak_restricted_kernel/) and controlled communications
+interfaces, i.e., the [Oak Comms Channel](/oak_channel/) and
+[microRPC](/micro_rpc/).
 
 ## Parties involved
 
@@ -44,11 +45,9 @@ interfaces---the [Oak Comms Channel](/oak_channel/) and [microRPC](/micro_rpc/).
   - Platform Provider
   - Host Operating System (kernel, drivers, libraries, applications)
   - Hypervisor / VMM
-- **trusted-but-verifiable**:
+- **trusted-but-[transparent](https://github.com/project-oak/transparent-release))**
   - Oak Infrastructure Authors
   - Trusted Enclave Application Authors
-  - (their actions are verifiable via
-    https://github.com/project-oak/transparent-release)
 - **trusted**:
   - TEE Manufacturer
 
