@@ -66,14 +66,14 @@ fn it_should_handle_user_requests_after_initialization() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
-    let enclave_encryption_public_key = initialize_response
+    let server_encryption_public_key = initialize_response
         .public_key_info
         .expect("no public key info returned")
         .public_key;
 
     // Encrypt request.
     let mut client_encryptor =
-        ClientEncryptor::create(&enclave_encryption_public_key).expect("couldn't create encryptor");
+        ClientEncryptor::create(&server_encryption_public_key).expect("couldn't create encryptor");
     let encrypted_request = client_encryptor
         .encrypt(&[1, 2, 3], EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
@@ -129,7 +129,7 @@ async fn it_should_support_lookup_data() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
-    let enclave_encryption_public_key = initialize_response
+    let server_encryption_public_key = initialize_response
         .public_key_info
         .expect("no public key info returned")
         .public_key;
@@ -151,7 +151,7 @@ async fn it_should_support_lookup_data() {
 
     // Encrypt request.
     let mut client_encryptor =
-        ClientEncryptor::create(&enclave_encryption_public_key).expect("couldn't create encryptor");
+        ClientEncryptor::create(&server_encryption_public_key).expect("couldn't create encryptor");
     let encrypted_request = client_encryptor
         .encrypt(LOOKUP_TEST_KEY, EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");

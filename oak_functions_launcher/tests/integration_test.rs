@@ -100,7 +100,7 @@ async fn test_launcher_looks_up_key() {
         )
         .await
         .expect("Failed to create launcher");
-    let enclave_encryption_public_key = initialize_response
+    let server_encryption_public_key = initialize_response
         .public_key_info
         .expect("no public key info returned")
         .public_key;
@@ -110,7 +110,7 @@ async fn test_launcher_looks_up_key() {
 
     // Encrypt request.
     let mut client_encryptor =
-        ClientEncryptor::create(&enclave_encryption_public_key).expect("couldn't create encryptor");
+        ClientEncryptor::create(&server_encryption_public_key).expect("couldn't create encryptor");
     let encrypted_request = client_encryptor
         .encrypt(&request_body, EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");

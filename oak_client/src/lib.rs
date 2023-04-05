@@ -39,7 +39,7 @@ where
     T: micro_rpc::AsyncTransport<Error = anyhow::Error>,
 {
     transport: T,
-    enclave_encryption_public_key: Vec<u8>,
+    server_encryption_public_key: Vec<u8>,
 }
 
 impl<T> OakClient<T>
@@ -54,13 +54,13 @@ where
             .context("couldn't get attestation evidence")?;
         Ok(Self {
             transport,
-            enclave_encryption_public_key: evidence.encryption_public_key.to_vec(),
+            server_encryption_public_key: evidence.encryption_public_key.to_vec(),
         })
     }
 
     pub async fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
         // Encrypt request.
-        let mut client_encryptor = ClientEncryptor::create(&self.enclave_encryption_public_key)
+        let mut client_encryptor = ClientEncryptor::create(&self.server_encryption_public_key)
             .context("couldn't create encryptor")?;
         let encrypted_request = client_encryptor
             .encrypt(request_body, EMPTY_ASSOCIATED_DATA)
