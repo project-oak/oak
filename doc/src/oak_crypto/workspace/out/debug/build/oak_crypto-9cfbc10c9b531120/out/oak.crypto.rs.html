@@ -39,7 +39,7 @@
 /// &lt;&lt;https://www.rfc-editor.org/rfc/rfc9180.html&gt;&gt;
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>HpkeRequest {
+</span><span class="kw">pub struct </span>EncryptedRequest {
     <span class="doccomment">/// Message encrypted with Authenticated Encryption with Associated Data (AEAD)
     /// using the derived session key.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
@@ -56,7 +56,7 @@
 /// &lt;&lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption&gt;&gt;
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>HpkeResponse {
+</span><span class="kw">pub struct </span>EncryptedResponse {
     <span class="doccomment">/// Message encrypted with Authenticated Encryption with Associated Data (AEAD)
     /// using the derived session key.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]

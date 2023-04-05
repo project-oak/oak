@@ -92,25 +92,6 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -127,6 +108,7 @@
 // limitations under the License.
 //
 
+// TODO(#3843): Rename `proto` to `grpc`.
 </span><span class="kw">pub mod </span>proto {
     <span class="attr">#![allow(clippy::return_self_not_must_use)]
     </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.session.noninteractive.v1&quot;</span>);
@@ -137,10 +119,7 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::transport::AsyncEvidenceProvider;
 <span class="kw">use </span>anyhow::{anyhow, Context};
-<span class="kw">use </span>oak_crypto::{
-    schema::{AeadEncryptedMessage, HpkeRequest, HpkeResponse},
-    SenderCryptoProvider,
-};
+<span class="kw">use </span>oak_crypto::{encryptor::ClientEncryptor, schema::EncryptedResponse};
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>std::vec::Vec;
 
@@ -154,7 +133,7 @@
     </span>T: micro_rpc::AsyncTransport&lt;Error = anyhow::Error&gt;,
 {
     transport: T,
-    crypto_provider: SenderCryptoProvider,
+    server_encryption_public_key: Vec&lt;u8&gt;,
 }
 
 <span class="kw">impl</span>&lt;T&gt; OakClient&lt;T&gt;
@@ -162,40 +141,28 @@
     </span>T: micro_rpc::AsyncTransport&lt;Error = anyhow::Error&gt; + AsyncEvidenceProvider,
 {
     <span class="kw">pub async fn </span>create(<span class="kw-2">mut </span>transport: T) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="comment">// TODO(#3442): Fetch enclave public key.
-        // TODO(#3641): Implement client-side attestation verification.
+        <span class="comment">// TODO(#3641): Implement client-side attestation verification.
         </span><span class="kw">let </span>evidence = transport
             .get_evidence()
             .<span class="kw">await
             </span>.context(<span class="string">&quot;couldn&#39;t get attestation evidence&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>crypto_provider = SenderCryptoProvider::new(<span class="kw-2">&amp;</span>evidence.encryption_public_key);
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             transport,
-            crypto_provider,
+            server_encryption_public_key: evidence.encryption_public_key.to_vec(),
         })
     }
 
     <span class="kw">pub async fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request_body: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-        <span class="comment">// Create encryptor.
-        </span><span class="kw">let </span>(serialized_encapsulated_public_key, request_encryptor) = <span class="self">self
-            </span>.crypto_provider
-            .create_encryptor()
+        <span class="comment">// Encrypt request.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>client_encryptor = ClientEncryptor::create(<span class="kw-2">&amp;</span><span class="self">self</span>.server_encryption_public_key)
             .context(<span class="string">&quot;couldn&#39;t create encryptor&quot;</span>)<span class="question-mark">?</span>;
-
-        <span class="comment">// Encrypt and serialize request.
-        </span><span class="kw">let </span>(request_ciphertext, response_decryptor) = request_encryptor
+        <span class="kw">let </span>encrypted_request = client_encryptor
             .encrypt(request_body, EMPTY_ASSOCIATED_DATA)
             .context(<span class="string">&quot;couldn&#39;t encrypt request&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>request = HpkeRequest {
-            encrypted_message: <span class="prelude-val">Some</span>(AeadEncryptedMessage {
-                ciphertext: request_ciphertext,
-                associated_data: EMPTY_ASSOCIATED_DATA.to_vec(),
-            }),
-            serialized_encapsulated_public_key: <span class="prelude-val">Some</span>(serialized_encapsulated_public_key),
-        };
-        <span class="kw">let </span><span class="kw-2">mut </span>serialized_request = <span class="macro">vec!</span>[];
-        request
+        <span class="comment">// Serialize request.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>serialized_request = <span class="macro">vec!</span>[];
+        encrypted_request
             .encode(<span class="kw-2">&amp;mut </span>serialized_request)
             .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t serialize request: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
@@ -206,22 +173,17 @@
             .<span class="kw">await
             </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t send request: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
-        <span class="comment">// Deserialize and decrypt response.
-        </span><span class="kw">let </span>response = HpkeResponse::decode(serialized_response.as_ref())
+        <span class="comment">// Deserialize response.
+        </span><span class="kw">let </span>encrypted_response = EncryptedResponse::decode(serialized_response.as_ref())
             .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialize response: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
-        <span class="kw">let </span>encrypted_message = response
-            .encrypted_message
-            .context(<span class="string">&quot;response doesn&#39;t contain encrypted message&quot;</span>)<span class="question-mark">?</span>;
-        <span class="comment">// The resulting encryptor for subsequent requests is discarded because we don&#39;t send
-        // another message to the stream.
-        </span><span class="kw">let </span>(response_plaintext, <span class="kw">_</span>) = response_decryptor
-            .decrypt(
-                <span class="kw-2">&amp;</span>encrypted_message.ciphertext,
-                <span class="kw-2">&amp;</span>encrypted_message.associated_data,
-            )
-            .context(<span class="string">&quot;couldn&#39;t decrypt response&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(response_plaintext)
+        <span class="comment">// Decrypt response.
+        // Currently we ignore the associated data.
+        </span><span class="kw">let </span>(response, <span class="kw">_</span>) = client_encryptor
+            .decrypt(<span class="kw-2">&amp;</span>encrypted_response)
+            .context(<span class="string">&quot;client couldn&#39;t decrypt response&quot;</span>)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(response)
     }
 }
 </code></pre></div>

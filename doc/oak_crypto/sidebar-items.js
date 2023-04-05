@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["aead","hpke","schema","util"],"struct":["RecipientCryptoProvider","RecipientRequestDecryptor","RecipientResponseEncryptor","SenderCryptoProvider","SenderRequestEncryptor","SenderResponseDecryptor"]};
+window.SIDEBAR_ITEMS = {"mod":["encryptor","schema","service","signer"]};

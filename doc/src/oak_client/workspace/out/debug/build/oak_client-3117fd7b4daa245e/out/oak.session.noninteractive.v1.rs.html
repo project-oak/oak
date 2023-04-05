@@ -243,6 +243,8 @@
 <a href="#243" id="243">243</a>
 <a href="#244" id="244">244</a>
 <a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
 </pre><pre class="rust"><code><span class="doccomment">/// AttestationEvidence contains all the information that originates in the TEE and can serve as
 /// claims about the Target Environment. The name is chosen to match the RATS terminology
 /// (see &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence&gt;).
@@ -336,6 +338,7 @@
     /// TODO(#3442): Specify encryption format.
     /// TODO(#3442): Also pass client public or symmetric key to use for response encryption. Note that
     /// needs to be at least authenticated by the client, if not encrypted within this field.
+    /// TODO(#3843): Use explicit `oak_crypto` messages.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>encrypted_body: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
@@ -344,6 +347,7 @@
 </span><span class="kw">pub struct </span>InvokeResponse {
     <span class="doccomment">/// Body of the request, encrypted with the client public or symmetric key.
     /// TODO(#3442): Specify encryption format.
+    /// TODO(#3843): Use explicit `oak_crypto` messages.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>encrypted_body: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }

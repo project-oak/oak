@@ -10,7 +10,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_channel":["",[],["client.rs","frame.rs","lib.rs","message.rs","server.rs"]],\
 "oak_client":["",[],["lib.rs","transport.rs","verifier.rs"]],\
 "oak_core":["",[],["lib.rs","sync.rs"]],\
-"oak_crypto":["",[],["aead.rs","hpke.rs","lib.rs","util.rs"]],\
+"oak_crypto":["",[["hpke",[],["aead.rs","mod.rs"]]],["encryptor.rs","lib.rs","service.rs","signer.rs","util.rs"]],\
 "oak_echo_linux_init":["",[],["init.rs","main.rs"]],\
 "oak_echo_service":["",[],["lib.rs"]],\
 "oak_enclave_runtime_support":["",[],["heap.rs","lib.rs","libm.rs"]],\
