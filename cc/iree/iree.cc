@@ -23,4 +23,4 @@ int iree_run(const uint8_t* input_bytes_ptr, size_t input_bytes_len, uint8_t* ou
   return 0;
 }
 
-void iree_cleanup();
+void iree_cleanup() {}
