@@ -4,10 +4,10 @@
 <h1><picture><source media="(prefers-color-scheme: dark)" srcset="../docs/oak-logo/svgs/oak-logo-negative.svg?sanitize=true"><source media="(prefers-color-scheme: light)" srcset="../docs/oak-logo/svgs/oak-logo.svg?sanitize=true"><img alt="Project Oak Logo" src="../docs/oak-logo/svgs/oak-logo.svg?sanitize=true"></picture></h1>
 <!-- Oak Logo End -->
 
-# Running a docker container from stage0
+# Running a Docker container from stage0
 
-This example shows how to run a docker container from Oak's stage0 firmware
-binary. We can achieve this by simply extracting the filesystem of the docker
+This example shows how to run a Docker container from Oak's stage0 firmware
+binary. We can achieve this by simply extracting the filesystem of the Docker
 container and packaging it as the
 [initial RAM disk](https://en.wikipedia.org/wiki/Initial_ramdisk) (initramfs)
 disk with an appropriate init binary. The easiest way to execute the initial RAM
@@ -18,7 +18,7 @@ Note: these steps assume that the commands will be executed from the project
 root.
 
 Suppose that we want to run the
-[`hello-world:latest`](https://hub.docker.com/_/hello-world) docker image, we
+[`hello-world:latest`](https://hub.docker.com/_/hello-world) Docker image, we
 can convert it to a initramfs with the
 [docker_to_initramfs.sh](docker_to_initramfs.sh) script as follows:
 
@@ -50,9 +50,11 @@ qemu-system-x86_64 -cpu host -enable-kvm -machine "microvm" -m 1G \
 ```
 
 After initializing the rootfs, the `/init` in the initramfs will execute the
-`CMD` or `ENTRYPOINT` from the docker image.
+`CMD` or `ENTRYPOINT` from the Docker image.
 
 _Note:_ the initramfs can only be at most half the size of the machine's memory.
 You may get an error like '`Initramfs unpacking failed: write error`' if the
 size of the memory is not big enough. Increase the size of the virtual machine's
 memory should usually fix this error.
+_Note:_ the compressed initramfs image should also fit within the first 1G along
+with the Linux kernel. Otherwise, this approach of using initramfs will not work.
