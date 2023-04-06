@@ -20,10 +20,7 @@
 extern crate alloc;
 
 use core::assert_matches::assert_matches;
-use oak_crypto::{
-    schema::{AeadEncryptedMessage, HpkeRequest, HpkeResponse},
-    SenderCryptoProvider,
-};
+use oak_crypto::{encryptor::ClientEncryptor, schema::EncryptedResponse};
 use oak_functions_service::{
     schema::{self, OakFunctionsServer},
     OakFunctionsService,
@@ -69,30 +66,21 @@ fn it_should_handle_user_requests_after_initialization() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
-
-    // TODO(#3767): Refactor `oak_crypto` API to encapsulate the proto messages.
-    // Encrypt request.
-    let encryption_public_key = initialize_response
+    let server_encryption_public_key = initialize_response
         .public_key_info
         .expect("no public key info returned")
         .public_key;
-    let crypto_provider = SenderCryptoProvider::new(&encryption_public_key);
-    let (serialized_encapsulated_public_key, request_encryptor) = crypto_provider
-        .create_encryptor()
-        .expect("couldn't create encryptor");
-    let (request_ciphertext, _) = request_encryptor
+
+    // Encrypt request.
+    let mut client_encryptor =
+        ClientEncryptor::create(&server_encryption_public_key).expect("couldn't create encryptor");
+    let encrypted_request = client_encryptor
         .encrypt(&[1, 2, 3], EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
-    let request = HpkeRequest {
-        encrypted_message: Some(AeadEncryptedMessage {
-            ciphertext: request_ciphertext,
-            associated_data: EMPTY_ASSOCIATED_DATA.to_vec(),
-        }),
-        serialized_encapsulated_public_key: Some(serialized_encapsulated_public_key),
-    };
+    // Serialize request.
     let mut serialized_request = vec![];
-    request
+    encrypted_request
         .encode(&mut serialized_request)
         .expect("couldn't serialize request");
 
@@ -101,7 +89,6 @@ fn it_should_handle_user_requests_after_initialization() {
         body: serialized_request,
     };
     let result = client.invoke(&invoke_request).into_ok();
-
     assert!(result.is_ok());
 }
 
@@ -142,6 +129,10 @@ async fn it_should_support_lookup_data() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
+    let server_encryption_public_key = initialize_response
+        .public_key_info
+        .expect("no public key info returned")
+        .public_key;
 
     let chunk = schema::LookupDataChunk {
         items: vec![schema::LookupDataEntry {
@@ -158,52 +149,36 @@ async fn it_should_support_lookup_data() {
         .into_ok()
         .unwrap();
 
-    // TODO(#3767): Refactor `oak_crypto` API to encapsulate the proto messages.
     // Encrypt request.
-    let encryption_public_key = initialize_response
-        .public_key_info
-        .expect("no public key info returned")
-        .public_key;
-    let crypto_provider = SenderCryptoProvider::new(&encryption_public_key);
-    let (serialized_encapsulated_public_key, request_encryptor) = crypto_provider
-        .create_encryptor()
-        .expect("couldn't create encryptor");
-    let (request_ciphertext, response_decryptor) = request_encryptor
+    let mut client_encryptor =
+        ClientEncryptor::create(&server_encryption_public_key).expect("couldn't create encryptor");
+    let encrypted_request = client_encryptor
         .encrypt(LOOKUP_TEST_KEY, EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
-    let request = HpkeRequest {
-        encrypted_message: Some(AeadEncryptedMessage {
-            ciphertext: request_ciphertext,
-            associated_data: EMPTY_ASSOCIATED_DATA.to_vec(),
-        }),
-        serialized_encapsulated_public_key: Some(serialized_encapsulated_public_key),
-    };
+    // Serialize request.
     let mut serialized_request = vec![];
-    request
+    encrypted_request
         .encode(&mut serialized_request)
         .expect("couldn't serialize request");
 
+    // Send invoke request.
     let lookup_response = client
         .invoke(&schema::InvokeRequest {
             body: serialized_request,
         })
-        .into_ok()
-        .unwrap();
+        .expect("couldn't receive response");
+    assert!(lookup_response.is_ok());
+    let serialized_response = lookup_response.unwrap().body;
+
+    // Deserialize response.
+    let encrypted_response = EncryptedResponse::decode(serialized_response.as_ref())
+        .expect("couldn't deserialize response");
 
     // Decrypt response.
-    let serialized_response = lookup_response.body;
-    let response =
-        HpkeResponse::decode(serialized_response.as_ref()).expect("couldn't deserialize response");
-    let encrypted_message = response
-        .encrypted_message
-        .expect("response doesn't contain encrypted message");
-    let (response_plaintext, _) = response_decryptor
-        .decrypt(
-            &encrypted_message.ciphertext,
-            &encrypted_message.associated_data,
-        )
-        .expect("couldn't decrypt response");
+    let (response, _) = client_encryptor
+        .decrypt(&encrypted_response)
+        .expect("client couldn't decrypt response");
 
-    assert_eq!(LOOKUP_TEST_VALUE, response_plaintext);
+    assert_eq!(LOOKUP_TEST_VALUE, response);
 }

@@ -112,7 +112,7 @@ bitflags! {
 }
 
 /// Whether the page can be used as a VM save area.
-#[derive(Debug, FromRepr)]
+#[derive(Debug, Clone, FromRepr, PartialEq)]
 #[repr(u8)]
 pub enum Vmsa {
     /// The page cannot be used as a VM save area.
@@ -123,6 +123,7 @@ pub enum Vmsa {
 
 /// Representation of the RMP permission used by the RMPADJUST instruction.
 #[repr(C, align(8))]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RmpPermission {
     /// The target VMPL to which the permission applies.
     pub target_vmpl: u8,
@@ -144,6 +145,23 @@ impl From<RmpPermission> for u64 {
         // have the same size and the struct is 8-byte aligned. We are not making any assumptions
         // about the individual bits.
         unsafe { core::mem::transmute(permission) }
+    }
+}
+
+impl TryInto<RmpPermission> for u64 {
+    type Error = &'static str;
+
+    fn try_into(self) -> Result<RmpPermission, Self::Error> {
+        let bytes = self.to_le_bytes();
+
+        Ok(RmpPermission {
+            target_vmpl: bytes[0],
+            perm_mask: PermissionMask::from_bits(bytes[1])
+                .ok_or("invalid permission mask value")?,
+            vmsa: Vmsa::from_repr(bytes[2]).ok_or("invalid VMSA value")?,
+            _reserved_0: bytes[3],
+            _reserved_1: u32::from_le_bytes(bytes[4..].try_into().unwrap()),
+        })
     }
 }
 
@@ -179,6 +197,43 @@ pub fn rmpadjust(
     }
 }
 
+/// Reads an RMP permission mask for a guest page.
+///
+/// See the RMPQUERY instruction in <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
+///
+/// # Safety
+///
+/// If the page is not in `VALIDATED` state, calling this will cause an `#VC` exception.
+#[inline]
+pub unsafe fn rmpquery(
+    page_guest_physical_address: usize,
+) -> Result<(RmpPermission, PageSize), InstructionError> {
+    let permissions: u64;
+    let page_size: u64;
+    let result: u64;
+    asm!(
+        // As the assembler doesn't recognize RMPQUERY (F3 0F 01 FD) yet, we use the REP (F3)
+        // modifier on RDPRU (0F 01 FD) instruction to get the same result.
+        "rep rdpru",
+        in("rax") page_guest_physical_address,
+        out("rdx") permissions,
+        out("rcx") page_size,
+        lateout("rax") result,
+        options(nomem, nostack)
+    );
+
+    if result == 0 {
+        Ok((
+            permissions.try_into().expect("invalid permissions bitmap"),
+            PageSize::from_repr(page_size as u32)
+                .expect("invalid page size value from RMPQUERY instruction"),
+        ))
+    } else {
+        Err(InstructionError::from_repr(result as u32)
+            .expect("invalid return value from RMPQUERY instruction"))
+    }
+}
+
 /// Unconditionally exits from the guest to the hypervisor.
 ///
 /// See the VMGEXIT instruction in <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
@@ -189,5 +244,24 @@ pub fn vmgexit() {
         // The REP instruction modifier changes the VMMCALL instruction to be equivalent to the
         // VMGEXIT call. This is used as the assembler does not recognise the VMGEXIT mnemonic.
         asm!("rep vmmcall", options(nomem, nostack, preserves_flags));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rmp_permission_encdec() {
+        let perms = RmpPermission {
+            target_vmpl: 10,
+            perm_mask: PermissionMask::all(),
+            vmsa: Vmsa::Yes,
+            _reserved_0: 123,
+            _reserved_1: 456,
+        };
+        let perm_u64: u64 = perms.clone().into();
+        let perms2: RmpPermission = perm_u64.try_into().unwrap();
+        assert_eq!(perms, perms2);
     }
 }
