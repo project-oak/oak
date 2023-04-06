@@ -10,8 +10,6 @@ anyhow = { version = "*", default-features = false }
 log = "*"
 hashbrown = "*"
 micro_rpc = { workspace = true }
-oak_restricted_kernel_api = { workspace = true }
-oak_restricted_kernel_interface = { workspace = true }
 prost = { workspace = true }
 
 [build-dependencies]

@@ -40,7 +40,8 @@ unsafe impl FlexSource for Source {
         };
 
         oak_restricted_kernel_api::syscall::mmap(
-            // None,
+            // TODO(b/277197979): One we start compiling C++ applications internally using the Oak
+            // Toolchain, we won't need to manually separate Rust and C++ heaps.
             Some(0x100_0000_0000 as *const core::ffi::c_void),
             size.try_into().ok()?,
             MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
