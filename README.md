@@ -45,7 +45,7 @@ interfaces, i.e., the [Oak Comms Channel](/oak_channel/) and
   - Platform Provider
   - Host Operating System (kernel, drivers, libraries, applications)
   - Hypervisor / VMM
-- **trusted-but-[transparent](https://github.com/project-oak/transparent-release))**
+- **trusted-but-[transparent](https://github.com/project-oak/transparent-release)**
   - Oak Infrastructure Authors
   - Trusted Enclave Application Authors
 - **trusted**:
