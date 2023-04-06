@@ -10,16 +10,16 @@
 The goal of Project Oak is to provide infrastructure to transfer, store and
 process sensitive user data in a secure and transparent way.
 
-To do so, Oak relies on running a _Trusted Enclave Application_ in a
+To do so, Oak relies on running a _Trusted Application_ in a
 [Trusted Execution Environment (TEE)](https://en.wikipedia.org/wiki/Trusted_execution_environment).
-An example of a Trusted Enclave Application is
-[Oak Functions](/oak_functions/README.md). The Trusted Enclave Application can
-provide the client cryptographically attested evidence of the executable state
-of the TEE through [Remote Attestation](./docs/remote-attestation.md). Together
-with [Transparent Release](https://github.com/project-oak/transparent-release)
-this binds the open-source source code to the remotely attested binary running
-inside the TEE. In order to feasibly review all the source code running inside
-the TEE, and minimize our trusted computing base, Oak provides the following
+An example of a Trusted Application is
+[Oak Functions](/oak_functions/README.md). The Trusted Application can provide
+the client cryptographically attested evidence of the executable state of the
+TEE through [Remote Attestation](./docs/remote-attestation.md). Together with
+[Transparent Release](https://github.com/project-oak/transparent-release) this
+binds the open-source source code to the remotely attested binary running inside
+the TEE. In order to feasibly review all the source code running inside the TEE,
+and minimize our trusted computing base, Oak provides the following
 infrastructure: [stage 0](/stage0/),
 [Oak Restricted Kernel](/oak_restricted_kernel/) and controlled communications
 interfaces, i.e., the [Oak Comms Channel](/oak_channel/) and
@@ -27,8 +27,8 @@ interfaces, i.e., the [Oak Comms Channel](/oak_channel/) and
 
 ## Parties involved
 
-- **Trusted Enclave Application Authors**: The authors writing the Trusted
-  Enclave Application running on Oak.
+- **Trusted Application Authors**: The authors writing the Trusted Application
+  running on Oak Infrastructure.
 - **Oak Infrastructure Authors**: The authors of the code in this repository;
   mostly this corresponds to the Project Oak team, but also any contributors,
   and, by extension, the authors of third party dependencies used in Oak.
@@ -47,7 +47,7 @@ interfaces, i.e., the [Oak Comms Channel](/oak_channel/) and
   - Hypervisor / VMM
 - **trusted-but-[transparent](https://github.com/project-oak/transparent-release)**
   - Oak Infrastructure Authors
-  - Trusted Enclave Application Authors
+  - Trusted Application Authors
 - **trusted**:
   - TEE Manufacturer
 
