@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,8 +41,8 @@ fn main() -> ! {
 }
 
 fn start_server() -> ! {
-    let service = oak_iree_service::TensorflowService::new();
-    let server = oak_iree_service::schema::TensorflowServer::new(service);
+    let service = oak_iree_service::IreeService::new();
+    let server = oak_iree_service::schema::IreeServer::new(service);
     oak_channel::server::start_blocking_server(Box::<FileDescriptorChannel>::default(), server)
         .expect("server encountered an unrecoverable error")
 }

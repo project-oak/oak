@@ -16,13 +16,11 @@
 
 #include "iree.h"
 
-int iree_init() {
-    return 0;
-}
+int iree_init(size_t* expected_output_bytes_len_ptr) { return 0; }
 
 int iree_run(const uint8_t* input_bytes_ptr, size_t input_bytes_len, uint8_t* output_bytes_ptr,
              size_t* output_bytes_len_ptr) {
-    return 0;
+  return 0;
 }
 
-
+void iree_cleanup();

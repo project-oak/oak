@@ -22,30 +22,30 @@ extern crate alloc;
 pub mod schema {
     #![allow(dead_code)]
     use prost::Message;
-    include!(concat!(env!("OUT_DIR"), "/oak.tensorflow.rs"));
+    include!(concat!(env!("OUT_DIR"), "/oak.iree.rs"));
 }
 mod iree;
 
 #[derive(Default)]
-pub struct TensorflowService {
-    tflite_model: iree::TfliteModel,
+pub struct IreeService {
+    iree_model: iree::IreeModel,
 }
 
-impl TensorflowService {
+impl IreeService {
     pub fn new() -> Self {
         Self {
-            tflite_model: iree::TfliteModel::new(),
+            iree_model: iree::IreeModel::new(),
         }
     }
 }
 
-impl schema::Tensorflow for TensorflowService {
+impl schema::Iree for IreeService {
     fn initialize(
         &mut self,
-        initialization: &schema::InitializeRequest,
+        _initialization: &schema::InitializeRequest,
     ) -> Result<schema::InitializeResponse, micro_rpc::Status> {
-        self.tflite_model
-            .initialize(&initialization.tensorflow_model)
+        self.iree_model
+            .initialize()
             .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
         Ok(schema::InitializeResponse {})
     }
@@ -55,7 +55,7 @@ impl schema::Tensorflow for TensorflowService {
         request_message: &schema::InvokeRequest,
     ) -> Result<schema::InvokeResponse, micro_rpc::Status> {
         let response = self
-            .tflite_model
+            .iree_model
             .run(&request_message.body)
             .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
         Ok(schema::InvokeResponse { body: response })

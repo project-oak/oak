@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,18 +16,16 @@
 
 syntax = "proto3";
 
-package oak.tensorflow;
+package oak.iree;
 
-service Tensorflow {
+service Iree {
   // method_id: 0
   rpc Initialize(InitializeRequest) returns (InitializeResponse);
   // method_id: 1
   rpc Invoke(InvokeRequest) returns (InvokeResponse);
 }
 
-message InitializeRequest {
-  bytes tensorflow_model = 1;
-}
+message InitializeRequest {}
 
 message InitializeResponse {}
 

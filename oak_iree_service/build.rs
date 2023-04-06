@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ use std::{
 
 const LIBRARY_DIR: &str = "cc/iree";
 const LIBRARY_NAME: &str = "iree";
+const LIBRARY_DEPENDENCIES_DIR: &str = "/workspace/cc/iree/deps";
 
 fn main() {
     micro_rpc_build::compile(
@@ -29,20 +30,17 @@ fn main() {
             "{}oak_iree_service/proto/oak_iree.proto",
             env!("WORKSPACE_ROOT")
         )],
-        &[format!(
-            "{}oak_iree_service/proto",
-            env!("WORKSPACE_ROOT")
-        )],
+        &[format!("{}oak_iree_service/proto", env!("WORKSPACE_ROOT"))],
     );
 
     build_library();
-    println!("cargo:rustc-link-search={}", "/workspace/cc/iree");
-    // rustc_link_lib("iree");
+
+    // Link `newlib` to the library.
+    // TODO(b/277197979): Use Oak Toolchain to compile the library.
+    println!("cargo:rustc-link-search={}", LIBRARY_DEPENDENCIES_DIR);
     rustc_link_lib("c");
     rustc_link_lib("gloss");
     rustc_link_lib("m");
-    // link_iree_dependencies("/workspace/cc/iree/deps/");
-    // panic!();
 }
 
 /// Builds a static library and adds the corresponding build
@@ -95,18 +93,6 @@ fn build_bazel_target(target_dir: &str, target: &str) -> PathBuf {
     return [env!("WORKSPACE_ROOT"), "bazel-bin", target_dir]
         .iter()
         .collect();
-}
-
-fn link_iree_dependencies(dir: &str) {
-    println!("cargo:rustc-link-search={}", dir);
-
-    for result in std::fs::read_dir(dir).expect("couldn't read directory") {
-        // println!("Name: {}", result.unwrap().path().display());
-        let path = result.expect("couldn't read path").path();
-        let filename = path.file_name().expect("couldn't get filename").to_str().unwrap();
-        let libname = &filename[3..filename.len()-2];
-        rustc_link_lib(libname);
-    }
 }
 
 fn build_target_to_path(target: &str) -> PathBuf {

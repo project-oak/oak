@@ -21,40 +21,20 @@ package(
 )
 
 cc_library(
-    # name = "iree",
     name = "iree_wrapper",
     srcs = [
-        "libiree_core.a",
+        # To link with an internally compiled IREE model - replace `iree.cc` with `libiree.a`.
         # "iree.cc",
+        "libiree_core.a",
     ],
-    hdrs = ["iree_core.h"],
-    linkstatic = 1,
+    hdrs = ["iree.h"],
     features = ["fully_static_link"],
-    deps = [
-        # "//third_party/newlib",
-        # "//cc/glibc"
-    ],
+    linkstatic = 1,
     target_compatible_with = [
         "@platforms//cpu:x86_64",
         "//:os_oak",
     ],
 )
-
-# cc_library(
-#     name = "iree_wrapper",
-#     srcs = ["iree.cc"],
-#     hdrs = ["iree.h"],
-#     linkstatic = 1,
-#     copts = [
-#         "-nostdlib",
-#         "-ffreestanding",
-#     ],
-#     features = ["fully_static_link"],
-#     deps = [
-#         # ":iree_core",
-#         "//third_party/newlib",
-#     ],
-# )
 
 # Fully static library linked by an Oak enclave application.
 cc_static_library(
