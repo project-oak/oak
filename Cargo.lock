@@ -1795,6 +1795,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_docker_linux_init"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "nix 0.26.2",
+ "simple_logger",
+ "subprocess",
+]
+
+[[package]]
 name = "oak_echo_linux_init"
 version = "0.1.0"
 dependencies = [
@@ -1820,7 +1831,7 @@ dependencies = [
 name = "oak_enclave_runtime_support"
 version = "0.1.0"
 dependencies = [
- "libm 0.1.4",
+ "libm 0.2.6",
  "log",
  "oak_restricted_kernel_api",
  "oak_restricted_kernel_interface",
@@ -2218,7 +2229,7 @@ dependencies = [
  "bitflags",
  "bitvec",
  "goblin",
- "libm 0.1.4",
+ "libm 0.2.6",
  "linked_list_allocator",
  "log",
  "oak_channel",
@@ -2231,7 +2242,7 @@ dependencies = [
  "ouroboros",
  "rust-hypervisor-firmware-virtio",
  "sev_serial",
- "sha2 0.9.9",
+ "sha2 0.10.6",
  "spinning_top",
  "static_assertions",
  "strum",
@@ -3311,6 +3322,16 @@ dependencies = [
  "quote",
  "rustversion",
  "syn",
+]
+
+[[package]]
+name = "subprocess"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c2e86926081dda636c546d8c5e641661049d7562a68f5488be4a1f7f66f6086"
+dependencies = [
+ "libc",
+ "winapi",
 ]
 
 [[package]]
