@@ -14,17 +14,12 @@
 // limitations under the License.
 //
 
-//! SDK functionality that provides idiomatic Rust wrappers around the underlying Oak Functions
-//! platform functionality.
+#![doc = include_str!("../README.md")]
 
 use oak_functions_abi::{proto::OakStatus, StorageGetItemResponse};
 use std::convert::AsRef;
 
-/// Reads and returns the user request.
-///
-/// This function is idempotent. Multiple calls to this function all return the same value.
-///
-/// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
+/// See [`read_request`](/oak_functions_abi.md#read_request).
 pub fn read_request() -> Result<Vec<u8>, OakStatus> {
     let mut buf_ptr: *mut u8 = std::ptr::null_mut();
     let mut buf_len: usize = 0;

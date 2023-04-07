@@ -1,8 +1,8 @@
 # Oak Functions WebAssembly ABI
 
-An Oak Functions WebAssembly module interacts with the Oak Functions runtime
-through the **Oak Functions WebAssembly ABI**. The Oak Functions WebAssembly
-module interacts with the client only through the Oak Functions runtime.
+An Oak Functions WebAssembly module interacts with Oak Functions through the
+**Oak Functions WebAssembly ABI**. The Oak Functions WebAssembly module can
+interact with the client _only_ through the Oak Functions runtime.
 
 The Oak Functions WebAssembly module
 
@@ -11,8 +11,7 @@ The Oak Functions WebAssembly module
 
 As the Oak Functions WebAssembly ABI is quite low-level, an Oak Functions
 WebAssembly modules will typically use more convenient (and safer) wrappers from
-the higher-level
-[Oak Functions SDK](https://project-oak.github.io/oak/oak_functions/sdk/).
+the higher-level [Oak Functions SDK](/oak_functions_sdk/).
 
 ## Exported Functions
 
@@ -73,8 +72,8 @@ address and length in `dest_ptr_ptr` and `dest_len_ptr`. The Oak Functions
 runtime returns an
 [`OakStatus`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/abi.proto).
 
-Multiple calls result in the same values in the request buffer and return the
-same status.
+`read_request` is idempotent. Multiple calls result in the same values in the
+request buffer and return the same status.
 
 ### `write_response`
 
