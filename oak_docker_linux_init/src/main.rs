@@ -36,7 +36,11 @@ fn main() -> ! {
 
     info!("Docker command: {:?} {:?}", cmd[0], args);
 
-    let _exec_status = Exec::cmd(&cmd[0]).args(args).join();
+    let exit_status = Exec::cmd(cmd[0]).args(args).join();
+    match exit_status {
+        Ok(_) => println!("Docker command finished successfully!"),
+        Err(error) => println!("Error running docker command: {:?}", error),
+    }
 
     // Linux does not expect the initial process to ever exit, so we keep sleeping 1 second at a
     // time.

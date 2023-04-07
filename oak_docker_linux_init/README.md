@@ -56,5 +56,7 @@ _Note:_ the initramfs can only be at most half the size of the machine's memory.
 You may get an error like '`Initramfs unpacking failed: write error`' if the
 size of the memory is not big enough. Increase the size of the virtual machine's
 memory should usually fix this error.
+
 _Note:_ the compressed initramfs image should also fit within the first 1G along
-with the Linux kernel. Otherwise, this approach of using initramfs will not work.
+with the Linux kernel. Otherwise, this approach of using initramfs will not
+work.
