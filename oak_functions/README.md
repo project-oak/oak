@@ -57,9 +57,9 @@ from the conventional computing model.
 The [Oak Functions Launcher](/oak_functions_launcher/) starts the Oak Functions
 trusted runtime and loads a Wasm module as workload. The Oak Functions trusted
 runtime and the Wasm module communicate through
-[ABI Functions](/oak_functions_abi/) and [a Rust SDK](oak_functions_sdk).The Oak
-Functions trusted runtime allows to specify policies such as a fixed size and
-processing time for responses returned by the trusted runtime, and a fixed
+[ABI Functions](/oak_functions_abi/) and [a Rust SDK](/oak_functions_sdk/).The
+Oak Functions trusted runtime allows to specify policies such as a fixed size
+and processing time for responses returned by the trusted runtime, and a fixed
 processing time.
 
 ### Remote Attestation
