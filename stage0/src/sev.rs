@@ -27,6 +27,7 @@ use oak_sev_guest::{
     },
 };
 use spinning_top::Spinlock;
+use strum::FromRepr;
 use x86_64::{
     instructions::tlb,
     registers::{control::Cr3, model_specific::Msr},
@@ -41,6 +42,7 @@ use x86_64::{
 /// expects to be enabled by the firmware in order to enable SEV.
 #[repr(u8)]
 #[allow(dead_code)] // Remove if this is ever ported to a public crate.
+#[derive(FromRepr)]
 pub enum MemoryType {
     UC = 0, // Uncacheable.
     WC = 1, // Write-Combining.
@@ -52,13 +54,9 @@ pub enum MemoryType {
 impl TryFrom<u8> for MemoryType {
     type Error = &'static str;
     fn try_from(value: u8) -> Result<MemoryType, &'static str> {
-         match value {
-            x if x == MemoryType::UC as u8 => Ok(MemoryType::UC),
-            x if x == MemoryType::WC as u8 => Ok(MemoryType::WC),
-            x if x == MemoryType::WT as u8 => Ok(MemoryType::WT),
-            x if x == MemoryType::WP as u8 => Ok(MemoryType::WP),
-            x if x == MemoryType::WB as u8 => Ok(MemoryType::WB),
-            _ => Err("invalid memory type"),
+        match MemoryType::from_repr(value) {
+            Some(memory_type) => Ok(memory_type),
+            None => Err("invalid value for MemoryType"),
         }
     }
 }
