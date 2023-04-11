@@ -22,7 +22,7 @@ use std::{
 
 const LIBRARY_DIR: &str = "cc/iree";
 const LIBRARY_NAME: &str = "iree";
-const LIBRARY_DEPENDENCIES_DIR: &str = "/workspace/cc/iree/deps";
+const LIBRARY_DEPENDENCIES_DIR: &str = "/workspace/cc/iree";
 
 fn main() {
     micro_rpc_build::compile(
@@ -40,7 +40,7 @@ fn main() {
     println!("cargo:rustc-link-search={}", LIBRARY_DEPENDENCIES_DIR);
     rustc_link_lib("c");
     rustc_link_lib("gloss");
-    rustc_link_lib("m");
+    // rustc_link_lib("m");
 }
 
 /// Builds a static library and adds the corresponding build
