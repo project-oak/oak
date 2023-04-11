@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use bitflags::bitflags;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 pub use oak_sev_guest::ghcb::Ghcb;
@@ -36,53 +37,95 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
-/// The identifier for the MSR used to set the default caching mode.
-const IA32_MTRR_DEFTYPE: u32 = 0x2ff;
-
 /// The cache memory type used with MTRR.  We only use Write-Protect mode which the Linux kernel
 /// expects to be enabled by the firmware in order to enable SEV.
+#[repr(u8)]
+#[allow(dead_code)] // Remove if this is ever ported to a public crate.
 pub enum MemoryType {
+    UC = 0, // Uncacheable.
+    WC = 1, // Write-Combining.
+    WT = 4, // Writethrough	Reads.
     WP = 5, // Write-Protect.
+    WB = 6, // Writeback.
 }
 
-/// Models fields of the IA32_MTRR_DefType MSR.
-struct MTRRDefType {
-    mtrr_enable: bool,               // Set this to enable MTRR.
-    fixed_range_enable: bool,        // Set to enable fixed-range support.
-    default_memory_type: MemoryType, // The default caching mode.
-}
-
-impl From<MTRRDefType> for u64 {
-    fn from(deftype: MTRRDefType) -> Self {
-        let mtrr_enable = if deftype.mtrr_enable { 1 } else { 0 };
-        let mtrr_enable = mtrr_enable << 11; // MTRR enable bit is bit 11.
-        let fixed_range_enable = if deftype.fixed_range_enable { 1 } else { 0 };
-        let fixed_range_enable = fixed_range_enable << 10; // Fixed range nable is bit 10.
-        mtrr_enable | fixed_range_enable | deftype.default_memory_type as u64
+impl MemoryType {
+    pub fn from_u8(value: u8) -> MemoryType {
+        match value {
+            0 => MemoryType::UC,
+            1 => MemoryType::WC,
+            4 => MemoryType::WT,
+            5 => MemoryType::WP,
+            6 => MemoryType::WB,
+            _ => panic!("invalid memory type"),
+        }
     }
 }
 
-/// Write a config value to IA32_MTRR_DefType MSR register to set the default caching mode to
-/// `default_type`.   The Linux kernel requires the mode be set to `MemoryType::WP` since July,
-/// 2022, with this requirement back-ported to 5.15.X, or it will silently crash when SEV is
-/// enabled.
-///
-/// The Linux kernel gives a warning that MTRR is not setup properly, which we can igore:
-/// [    0.120763] mtrr: your CPUs had inconsistent MTRRdefType settings
-/// [    0.121529] mtrr: probably your BIOS does not setup all CPUs.
-/// [    0.122245] mtrr: corrected configuration.
-pub fn enable(default_type: MemoryType) {
-    let enable_mtrr_in_wp_mode = MTRRDefType {
-        mtrr_enable: true,
-        fixed_range_enable: false,
-        default_memory_type: default_type,
-    };
+/// IA32_MTRR_DefType base model specific register.
+/// See https://wiki.osdev.org/MTRR for documentation.
+#[derive(Debug)]
+pub struct MTRRDefType;
 
-    // Safety: This operation is safe because this specific MSR has been supported since the P6
-    // family of Pentium processors (see https://en.wikipedia.org/wiki/Memory_type_range_register).
-    // We use only an originally supported mode of MTRR: setting the default cache mode to WP.
-    unsafe {
-        Msr::new(IA32_MTRR_DEFTYPE).write(u64::from(enable_mtrr_in_wp_mode));
+bitflags! {
+    /// Flags of the MTRRDefType Register.
+    pub struct MTRRDefTypeFlags: u64 {
+        /// Set this to enable MTRR.
+        const MTRR_ENABLE = 1 << 11;
+        /// Set to enable fixed-range support.
+        const FIXED_RANGE_ENABLE = 1 << 10;
+    }
+}
+
+impl MTRRDefType {
+    /// The underlying model specific register.
+    const MSR: Msr = Msr::new(0x2ff);
+
+    #[allow(dead_code)] // Remove if this is ever ported to a public crate.
+    pub fn read() -> (MTRRDefTypeFlags, MemoryType) {
+        let msr_value = Self::read_raw();
+        (
+            MTRRDefTypeFlags::from_bits_truncate(msr_value),
+            MemoryType::from_u8(msr_value as u8),
+        )
+    }
+
+    fn read_raw() -> u64 {
+        let msr_value = unsafe { Self::MSR.read() };
+        msr_value.try_into().unwrap()
+    }
+
+    /// Write the MTRRDefType flags and caching mode, preserving reserved values.
+    /// The Linux kernel requires the mode be set to `MemoryType::WP` since
+    /// July, 2022, with this requirement back-ported to 5.15.X, or it will silently crash when
+    /// SEV is enabled.
+    ///
+    /// The Linux kernel gives a warning that MTRR is not setup properly, which we can igore:
+    /// [    0.120763] mtrr: your CPUs had inconsistent MTRRdefType settings
+    /// [    0.121529] mtrr: probably your BIOS does not setup all CPUs.
+    /// [    0.122245] mtrr: corrected configuration.
+    ///
+    /// ## Safety
+    ///
+    /// Unsafe in rare cases such as when ROM is memory mapped, and we write to ROM, in a mode that
+    /// caches the write, although this would require unsafe code to do.
+    ///
+    /// When called with MTRRDefType::MTRR_ENABLE and MemoryType::WP, this operation is safe because
+    /// this specific MSR and mode has been supported since the P6 family of Pentium processors
+    /// (see https://en.wikipedia.org/wiki/Memory_type_range_register).
+    pub fn write(flags: MTRRDefTypeFlags, default_type: MemoryType) {
+        // Preserve values of reserved bits.
+        let old_value = Self::read_raw();
+        let reserved = old_value & !(MTRRDefTypeFlags::all().bits() | u8::MAX as u64);
+        let new_value = reserved | flags.bits() | (default_type as u64);
+        unsafe { Self::write_raw(new_value) }
+    }
+
+    unsafe fn write_raw(value: u64) {
+        let mut msr = Self::MSR;
+        unsafe {
+            msr.write(value);
+        }
     }
 }
 
