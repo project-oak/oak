@@ -49,15 +49,16 @@ pub enum MemoryType {
     WB = 6, // Writeback.
 }
 
-impl MemoryType {
-    pub fn from_u8(value: u8) -> MemoryType {
-        match value {
-            0 => MemoryType::UC,
-            1 => MemoryType::WC,
-            4 => MemoryType::WT,
-            5 => MemoryType::WP,
-            6 => MemoryType::WB,
-            _ => panic!("invalid memory type"),
+impl TryFrom<u8> for MemoryType {
+    type Error = &'static str;
+    fn try_from(value: u8) -> Result<MemoryType, &'static str> {
+         match value {
+            x if x == MemoryType::UC as u8 => Ok(MemoryType::UC),
+            x if x == MemoryType::WC as u8 => Ok(MemoryType::WC),
+            x if x == MemoryType::WT as u8 => Ok(MemoryType::WT),
+            x if x == MemoryType::WP as u8 => Ok(MemoryType::WP),
+            x if x == MemoryType::WB as u8 => Ok(MemoryType::WB),
+            _ => Err("invalid memory type"),
         }
     }
 }
@@ -84,9 +85,10 @@ impl MTRRDefType {
     #[allow(dead_code)] // Remove if this is ever ported to a public crate.
     pub fn read() -> (MTRRDefTypeFlags, MemoryType) {
         let msr_value = Self::read_raw();
+        let memory_type:Result<MemoryType, &'static str>  = (msr_value as u8).try_into();
         (
             MTRRDefTypeFlags::from_bits_truncate(msr_value),
-            MemoryType::from_u8(msr_value as u8),
+            memory_type.unwrap(),
         )
     }
 
