@@ -1,6 +1,6 @@
 # Uses the Docker-based SLSA3 generator to build the binary and its provenance.
 # Then uploads the binary and its provenance to Ent.
-name: Build Provenance
+name: Build SLSA3 Provenance
 
 on:
   workflow_call:
