@@ -63,8 +63,6 @@ exclude = [
   "oak_enclave_binary",
   "oak_functions/loader/fuzz",
   "oak_functions_app",
-  # TODO(b/277197979): Use Oak Toolchain to compile the library and remove it from the excluded list.
-  "oak_iree_service",
   "oak_tensorflow_app",
   "stage0",
   "testing/oak_echo_app",

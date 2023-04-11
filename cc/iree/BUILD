@@ -25,6 +25,7 @@ cc_library(
     srcs = [
         # To link with an internally compiled IREE model - replace `iree.cc` with `libiree_core.a`.
         "iree.cc",
+        # "libiree_core.a",
     ],
     hdrs = ["iree.h"],
     features = ["fully_static_link"],
