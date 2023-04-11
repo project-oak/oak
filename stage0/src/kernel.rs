@@ -17,11 +17,7 @@
 use crate::fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg};
 use alloc::vec;
 use core::{ffi::CStr, slice};
-use goblin::{
-    container::{Container, Ctx, Endian},
-    elf::{header, Elf, ProgramHeader},
-    elf64::program_header::PT_LOAD,
-};
+use elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
 use oak_linux_boot_params::BootE820Entry;
 use x86_64::{PhysAddr, VirtAddr};
 
@@ -114,30 +110,11 @@ pub fn try_load_kernel_image(
     let mut kernel_end = VirtAddr::new(0);
 
     // We expect an uncompressed ELF kernel, so we parse it and lay it out in memory.
-    let header = Elf::parse_header(buf).expect("couldn't parse kernel header");
-    if header.e_ident[0] != header::ELFMAG[0]
-        || header.e_ident[1] != header::ELFMAG[1]
-        || header.e_ident[2] != header::ELFMAG[2]
-        || header.e_ident[3] != header::ELFMAG[3]
-        || header.e_ident[4] != header::ELFCLASS64
-        || header.e_ident[5] != header::ELFDATA2LSB
-        || header.e_ident[6] != header::EV_CURRENT
-        || header.e_ident[7] != header::ELFOSABI_SYSV
-    {
-        panic!("kernel is not a valid little-endian 64-bit ELF file");
-    }
+    let file = ElfBytes::<AnyEndian>::minimal_parse(buf).expect("couldn't parse kernel header");
 
-    // We already confirmed that the kernel is 64-bit and uses little endian encoding.
-    let ctx = Ctx {
-        container: Container::Big,
-        le: Endian::Little,
-    };
-
-    let program_headers =
-        ProgramHeader::parse(buf, header.e_phoff as usize, header.e_phnum as usize, ctx)
-            .expect("couldn't parse ELF program headers");
-
-    for phdr in program_headers
+    for ref phdr in file
+        .segments()
+        .expect("couldn't parse ELF program headers")
         .iter()
         .filter(|&phdr| phdr.p_type == PT_LOAD)
     {
@@ -154,7 +131,7 @@ pub fn try_load_kernel_image(
     }
 
     let kernel_size = (kernel_end - kernel_start) as usize;
-    let entry = crate::phys_to_virt(PhysAddr::new(header.e_entry));
+    let entry = crate::phys_to_virt(PhysAddr::new(file.ehdr.e_entry));
     log::debug!("Kernel size {}", kernel_size);
     log::debug!("Kernel start address {:#018x}", kernel_start.as_u64());
     log::debug!("Kernel entry point {:#018x}", entry.as_u64());
