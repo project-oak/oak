@@ -1,4 +1,3 @@
-repo = "https://github.com/project-oak/oak"
 command = [
   "env",
   "--chdir=oak_restricted_kernel_bin",
@@ -9,4 +8,4 @@ command = [
   "--features",
   "simple_io_channel"
 ]
-output_path = "./oak_restricted_kernel_bin/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_bin"
+artifact_path = "./oak_restricted_kernel_bin/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_bin"
