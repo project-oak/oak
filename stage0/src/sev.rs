@@ -113,7 +113,7 @@ impl MTRRDefType {
     /// When called with MTRRDefType::MTRR_ENABLE and MemoryType::WP, this operation is safe because
     /// this specific MSR and mode has been supported since the P6 family of Pentium processors
     /// (see https://en.wikipedia.org/wiki/Memory_type_range_register).
-    pub fn write(flags: MTRRDefTypeFlags, default_type: MemoryType) {
+    pub unsafe fn write(flags: MTRRDefTypeFlags, default_type: MemoryType) {
         // Preserve values of reserved bits.
         let old_value = Self::read_raw();
         let reserved = old_value & !(MTRRDefTypeFlags::all().bits() | u8::MAX as u64);
