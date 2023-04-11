@@ -24,9 +24,9 @@ use log::{log, Level};
 extern "C" {
     /// Initializes the IREE model and returns a corresponding error code.
     ///
-    /// This function returns a buffer size value in the `expected_output_bytes_len_ptr`. This
-    /// buffer should be allocated before calling `iree_run` to store inference results.
-    fn iree_init(expected_output_bytes_len_ptr: *mut usize) -> i32;
+    /// This function returns a buffer size value in the `expected_output_len_ptr`. This buffer
+    /// should be allocated before calling `iree_run` to store inference results.
+    fn iree_init(expected_output_len_ptr: *mut usize) -> i32;
 
     /// Performs inference on `input_bytes_ptr` and pass inference result to `output_bytes_ptr` and
     /// returns an error code.
@@ -67,10 +67,10 @@ impl IreeModel {
 
     pub fn initialize(&mut self) -> anyhow::Result<()> {
         log!(Level::Info, "Initializing the IREE model");
-        let mut expected_output_bytes_len = 0usize;
-        let result_code = unsafe { iree_init(&mut expected_output_bytes_len) };
+        let mut expected_output_len = 0usize;
+        let result_code = unsafe { iree_init(&mut expected_output_len) };
         if result_code == 0 {
-            self.output_buffer_len = Some(expected_output_bytes_len);
+            self.output_buffer_len = Some(expected_output_len);
             log!(Level::Info, "IREE model has been successfully initialized");
             Ok(())
         } else {

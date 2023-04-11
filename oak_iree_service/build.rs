@@ -40,7 +40,6 @@ fn main() {
     println!("cargo:rustc-link-search={}", LIBRARY_DEPENDENCIES_DIR);
     rustc_link_lib("c");
     rustc_link_lib("gloss");
-    // rustc_link_lib("m");
 }
 
 /// Builds a static library and adds the corresponding build

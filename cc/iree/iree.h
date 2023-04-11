@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-int iree_init(size_t* expected_output_bytes_len_ptr);
+int iree_init(size_t* expected_output_len_ptr);
 
 int iree_run(const uint8_t* input_bytes_ptr, size_t input_bytes_len, uint8_t* output_bytes_ptr,
              size_t* output_bytes_len_ptr);
