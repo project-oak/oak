@@ -29,13 +29,40 @@ gp_handler:
     pop %eax              # pop the return address
     cmpw $0x320F, (%eax)  # are we trying to execute RDMSR?
     jne 2f                # if not, skip ahead
-    add $2, %eax          # increment it by 2 (size of the CPUID instruction)
+    add $2, %eax          # increment it by 2 (size of the RDMSR instruction)
     push %eax             # push it back on stack for iret
     xor %eax, %eax        # zero out RAX
     xor %edx, %edx        # zero out RDX
     iret                  # go back
     2:                    # this wasn't because RDMSR
     int $8                # trigger a double fault and crash
+.global vc_handler
+# Really limited #VC handler that only knows how to fill in EBX in case of CPUID.
+# As CPUID can alter EAX, EBX, ECX and EDX we zero out the other three registers.
+vc_handler:
+    pop %ebx              # get the error code
+    cmp $0x72, %ebx       # is this about CPUID?
+    jne 2f                # if not, skip ahead
+    cmp $0x0, %ecx        # are we asked for a CPUID subleaf?
+    jne 2f                # if yes, skip ahead, as we don't support subleaves
+    # Use the GHCB MSR protocol to request one page of CPUID information. The protocol itself is
+    # described in Section 2.3.1 of SEV-ES Guest-Hypervisor Communication Block Standardization spec.
+    mov %eax, %edx        # EDX = EAX (move the CPUID function number to GHCBData[63:32])
+    mov $0x40000004, %eax # EAX = Request EBX (0b01 << 30) | CPUID Request (0x004)
+    mov $0xC0010130, %ecx # ECX = 0xC001_0130 -- GHCB MSR
+    wrmsr                 # MSR[ECX] = EDX:EAX
+    rep vmmcall           # VMGEXIT
+    rdmsr                 # EDX:EAX = MSR[ECX]
+    cmp $0x40000005, %eax # EAX should contain EBX data (0b01 << 30) | CPUID Response (0x005)
+    jne 2f                # if not, crash
+    addl $2, (%esp)       # move return address forward past the CPUID instruction
+    xor %eax, %eax        # EAX = 0
+    mov %edx, %ebx        # EBX = EDX (that's where the cpuid value is)
+    xor %ecx, %ecx        # ECX = 0
+    xor %edx, %edx        # EDX = 0
+    iret                  # go back
+    2:                    # this wasn't because CPUID or the response wasn't what we expected
+    int $8                # trigger double fault and crash
 
 _protected_mode_start:
     # Switch to a flat 32-bit data segment, giving us access to all 4G of memory.
@@ -89,7 +116,17 @@ _protected_mode_start:
     2:
 
     # Memory encryption enabled: set encrypted bits in the page tables.
-    # We assume the encrypted bit is bit 51, for now.
+    # First, determine the location of the C-bit in the page tables.
+    mov $0x8000001F, %eax     # EAX = Fn8000_001F - Encrypted Memory Capabilities
+    xor %ecx, %ecx            # ECX = 0 - we're not interested in a subpage
+    cpuid                     # EAX, EBX, ECX, EDX = CPUID(EAX, ECX)
+    and $0b111111, %ebx       # zero out all but EBX[5:0], which the C-bit location
+    push %ebx                 # save the full C-bit location value for later
+    sub $32, %ebx             # let's assume the encrypted bit is > 32, as it simplifies logic below
+    mov $1, %edi
+    mov %ebx, %ecx
+    shl %cl, %edi             # construct the bit mask for the loop, store it in EDI
+
     # Note that this sets the encrypted bit for _all_ entries in the page tables, even
     # if they are unused. This is fine, as those entries will still not have the PRESENT
     # bit set and thus will be ignored by the CPU.
@@ -100,14 +137,14 @@ _protected_mode_start:
     xor %esi, %esi            # zero out esi for use as the loop counter
     1:
     # Page tables are 8 bytes, so these offsets boil down to base + (ESI * 8) + 4
-    orl $0x80000, 4(%eax,%esi,8) # PML4[esi] |= (1 << 51)
-    orl $0x80000, 4(%ebx,%esi,8) # PDPT[esi] |= (1 << 51)
-    orl $0x80000, 4(%ecx,%esi,8) # PD[esi] |= (1 << 51)
-    orl $0x80000, 4(%edx,%esi,8) # PT[esi] |= (1 << 51)
-    inc %esi                  # esi = esi + 1
+    or %edi, 4(%eax,%esi,8)   # PML4[ESI] |= EDI
+    or %edi, 4(%ebx,%esi,8)   # PDPT[ESI] |= EDI
+    or %edi, 4(%ecx,%esi,8)   # PD[ESI] |= EDI
+    or %edi, 4(%edx,%esi,8)   # PT[ESI] |= EDI
+    inc %esi                  # ESI = ESI + 1
     cmp $512, %esi            # have we changed all 512 entries?
-    jne 1b                    # esi < 512, go back to square 1
-    mov $51, %esi             # keep track of the encrypted bit for main
+    jne 1b                    # ESI < 512, go back to square 1
+    pop %esi                  # keep track of the encrypted bit for main
 no_encryption:
 
     # Load PML4

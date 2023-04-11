@@ -237,7 +237,12 @@ SECTIONS {
         QUAD(0) /* 26 - reserved */
         QUAD(0) /* 27 - reserved */
         QUAD(0) /* 28 - #HV */
-        QUAD(0) /* 29 - #VC */
+        QUAD(   /* 29 - #VC */
+            (vc_handler & 0xFFFF0000) << 32 | /* target offset [31:16] */
+            DESCRIPTOR_PRESENT |
+            DESCRIPTOR_INTERRUPT_GATE |
+            cs32 << 16 |                      /* code segment selector */
+            vc_handler & 0xFFFF)              /* target offset [15:0] */
         QUAD(0) /* 30 - #SX */
         QUAD(0) /* 31 - reserved */
     } > bios
