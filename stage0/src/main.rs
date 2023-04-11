@@ -176,7 +176,12 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     let dma_access = BOOT_ALLOC.leak(fw_cfg::FwCfgDmaAccess::default()).unwrap();
     let dma_access_address = VirtAddr::from_ptr(dma_access as *const _);
     if encrypted > 0 {
-        sev::MTRRDefType::write(sev::MTRRDefTypeFlags::MTRR_ENABLE, sev::MemoryType::WP);
+        // This is safe because we're using an originally supported mode of the Pentium 6:
+        // Write-protect, with MTRR enabled.  If we get CPUID reads working, we may want to check
+        // that MTRR is supported, but only if we want to support very old processors.
+        unsafe {
+            sev::MTRRDefType::write(sev::MTRRDefTypeFlags::MTRR_ENABLE, sev::MemoryType::WP);
+        }
         sev::share_page(Page::containing_address(dma_buf_address), snp, encrypted);
         sev::share_page(Page::containing_address(dma_access_address), snp, encrypted);
     }
