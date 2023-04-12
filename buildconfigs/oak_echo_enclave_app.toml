@@ -1,4 +1,3 @@
-repo = "https://github.com/project-oak/oak"
 command = [
   "env",
   "--chdir=testing/oak_echo_enclave_app",
@@ -6,4 +5,4 @@ command = [
   "build",
   "--release"
 ]
-output_path = "./testing/oak_echo_enclave_app/target/x86_64-unknown-none/release/oak_echo_enclave_app"
+artifact_path = "./testing/oak_echo_enclave_app/target/x86_64-unknown-none/release/oak_echo_enclave_app"
