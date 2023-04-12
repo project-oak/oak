@@ -23,7 +23,10 @@ use std::{
 const LIBRARY_DIR: &str = "cc/iree";
 const LIBRARY_NAME: &str = "iree";
 const LIBRARY_DEPENDENCIES_DIR: &str = "/workspace/cc/iree";
-const LIBRARY_DEPENDENCIES: [&str; 2] = ["c", "gloss"];
+// TODO(#3864): Use Oak Toolchain to compile the library.
+// In order to compile with internally built IREE library - uncomment the following line.
+// const LIBRARY_DEPENDENCIES: [&str; 2] = ["c", "gloss"];
+const LIBRARY_DEPENDENCIES: [&str; 0] = [];
 
 fn main() {
     micro_rpc_build::compile(
@@ -39,7 +42,6 @@ fn main() {
     // Link `newlib` to the library.
     // TODO(#3864): Use Oak Toolchain to compile the library.
     println!("cargo:rustc-link-search={}", LIBRARY_DEPENDENCIES_DIR);
-    // In order to compile with internally built IREE library - uncomment the following lines.
     for dependency in LIBRARY_DEPENDENCIES {
         rustc_link_lib(dependency);
     }
