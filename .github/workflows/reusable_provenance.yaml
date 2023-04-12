@@ -106,6 +106,10 @@ jobs:
             ${{ needs.generate_provenance.outputs.attestations-download-name }}
           path: downloads
 
+      - name: Debug step - Display structure of downloaded files
+        run: ls -R
+        working-directory: downloads
+
       - name: Upload binary to Ent
         id: ent_upload_binary
         working-directory: downloads
@@ -115,8 +119,10 @@ jobs:
       - name: Upload provenance to Ent
         id: ent_upload_provenance
         working-directory: downloads
+        # The output on any trigger other than "pull_request" has an addition ".sigstore" suffix.
+        # See https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/docker#workflow-outputs
         run: |
-          echo "provenance_digest=$(ent put ${{ needs.get_inputs.outputs.provenance-name }})" >> $GITHUB_OUTPUT
+          echo "provenance_digest=$(ent put ${{ needs.get_inputs.outputs.provenance-name }}.sigstore)" >> $GITHUB_OUTPUT
 
       # Add the provenance digest to the ./comment file.
       - name: Format artifact and provenance digest (post-merge only)
