@@ -54,10 +54,7 @@ pub enum MemoryType {
 impl TryFrom<u8> for MemoryType {
     type Error = &'static str;
     fn try_from(value: u8) -> Result<MemoryType, &'static str> {
-        match MemoryType::from_repr(value) {
-            Some(memory_type) => Ok(memory_type),
-            None => Err("invalid value for MemoryType"),
-        }
+        MemoryType::from_repr(value).ok_or("invalid value for MemoryType")
     }
 }
 
