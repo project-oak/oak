@@ -80,19 +80,12 @@ impl MTRRDefType {
     /// The underlying model specific register.
     const MSR: Msr = Msr::new(0x2ff);
 
-    #[allow(dead_code)] // Remove if this is ever ported to a public crate.
     pub fn read() -> (MTRRDefTypeFlags, MemoryType) {
-        let msr_value = Self::read_raw();
-        let memory_type:Result<MemoryType, &'static str>  = (msr_value as u8).try_into();
-        (
-            MTRRDefTypeFlags::from_bits_truncate(msr_value),
-            memory_type.unwrap(),
-        )
-    }
-
-    fn read_raw() -> u64 {
         let msr_value = unsafe { Self::MSR.read() };
-        msr_value.try_into().unwrap()
+        let memory_type: MemoryType = (msr_value as u8)
+            .try_into()
+            .expect("invalid MemoryType value");
+        (MTRRDefTypeFlags::from_bits_truncate(msr_value), memory_type)
     }
 
     /// Write the MTRRDefType flags and caching mode, preserving reserved values.
@@ -115,16 +108,12 @@ impl MTRRDefType {
     /// (see https://en.wikipedia.org/wiki/Memory_type_range_register).
     pub unsafe fn write(flags: MTRRDefTypeFlags, default_type: MemoryType) {
         // Preserve values of reserved bits.
-        let old_value = Self::read_raw();
-        let reserved = old_value & !(MTRRDefTypeFlags::all().bits() | u8::MAX as u64);
+        let (old_flags, _old_memory_type) = Self::read();
+        let reserved = old_flags.bits() & !MTRRDefTypeFlags::all().bits();
         let new_value = reserved | flags.bits() | (default_type as u64);
-        unsafe { Self::write_raw(new_value) }
-    }
-
-    unsafe fn write_raw(value: u64) {
         let mut msr = Self::MSR;
         unsafe {
-            msr.write(value);
+            msr.write(new_value);
         }
     }
 }
