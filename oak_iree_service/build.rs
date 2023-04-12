@@ -37,14 +37,12 @@ fn main() {
     build_library();
 
     // Link `newlib` to the library.
-    // TODO(b/277197979): Use Oak Toolchain to compile the library.
+    // TODO(#3864): Use Oak Toolchain to compile the library.
     println!("cargo:rustc-link-search={}", LIBRARY_DEPENDENCIES_DIR);
     // In order to compile with internally built IREE library - uncomment the following lines.
     for dependency in LIBRARY_DEPENDENCIES {
         rustc_link_lib(dependency);
     }
-    // rustc_link_lib("c");
-    // rustc_link_lib("gloss");
 }
 
 /// Builds a static library and adds the corresponding build
