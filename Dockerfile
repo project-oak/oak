@@ -271,6 +271,10 @@ RUN cargo install --git https://github.com/rust-fuzz/cargo-fuzz/ --rev 8c964bf18
 ARG binutils_version=0.3.6
 RUN cargo install --version=${binutils_version} cargo-binutils
 
+# Install cargo-vet.
+ARG vet_version=0.6.1
+RUN cargo install --version=${vet_version} cargo-vet
+
 # Where to install rust tooling
 ARG install_dir=${rustup_dir}/bin
 
