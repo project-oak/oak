@@ -57,6 +57,7 @@ pub fn mmap(
     let addr = if flags.contains(MmapFlags::MAP_FIXED) {
         let addr = addr.ok_or(Errno::EINVAL)?;
         if !addr.is_aligned(Size2MiB::SIZE) || addr.as_u64() < Size2MiB::SIZE {
+            log::warn!("mmap: requested address invalid: {:?}", addr);
             return Err(Errno::EINVAL);
         }
         addr
@@ -105,7 +106,10 @@ pub fn mmap(
         } else {
             pt.find_unallocated_pages(Page::<Size2MiB>::containing_address(addr), count)
         }
-        .ok_or(Errno::ENOMEM)?;
+        .ok_or_else(|| {
+            log::warn!("mmap: could not find suitable virtual addresses for request");
+            Errno::ENOMEM
+        })?;
 
         // For each page we also need a physical frame to back it to create a mapping.
         for (page, frame) in pages.zip(frames) {
@@ -115,7 +119,12 @@ pub fn mmap(
             unsafe {
                 pt.map_to_with_table_flags(
                     page,
-                    frame.ok_or(Errno::ENOMEM)?,
+                    frame.ok_or_else(|| {
+                        log::warn!(
+                            "mmap: could not get physical frame for request (memory exhausted?)"
+                        );
+                        Errno::ENOMEM
+                    })?,
                     pt_flags,
                     PageTableFlags::PRESENT
                         | PageTableFlags::WRITABLE
@@ -143,7 +152,6 @@ pub fn mmap(
     let buf = unsafe { slice::from_raw_parts_mut(pages.start.start_address().as_mut_ptr(), size) };
     // Zero out the memory, as required by mmap() semantics.
     buf.fill(0u8);
-
     Ok(buf)
 }
 
