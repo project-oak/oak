@@ -37,7 +37,7 @@ impl log::Log for Logger {
     fn log(&self, record: &log::Record) {
         writeln!(
             SERIAL1.lock().as_mut().unwrap(),
-            "{}: {}",
+            "kernel {}: {}",
             record.level(),
             record.args()
         )
