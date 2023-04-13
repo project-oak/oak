@@ -111,7 +111,7 @@
     <span class="kw">fn </span>log(<span class="kw-2">&amp;</span><span class="self">self</span>, record: <span class="kw-2">&amp;</span>log::Record) {
         <span class="macro">writeln!</span>(
             SERIAL1.lock().as_mut().unwrap(),
-            <span class="string">&quot;{}: {}&quot;</span>,
+            <span class="string">&quot;kernel {}: {}&quot;</span>,
             record.level(),
             record.args()
         )
