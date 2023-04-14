@@ -121,6 +121,8 @@
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
 <a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -163,7 +165,9 @@
         };
 
         oak_restricted_kernel_api::syscall::mmap(
-            <span class="prelude-val">None</span>,
+            <span class="comment">// TODO(#3864): One we start compiling C++ applications internally using the Oak
+            // Toolchain, we won&#39;t need to manually separate Rust and C++ heaps.
+            </span><span class="prelude-val">Some</span>(<span class="number">0x100_0000_0000 </span><span class="kw">as </span><span class="kw-2">*const </span>core::ffi::c_void),
             size.try_into().ok()<span class="question-mark">?</span>,
             MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE,
