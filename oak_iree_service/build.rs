@@ -86,7 +86,6 @@ fn build_bazel_target(target_dir: &str, target: &str) -> PathBuf {
     let status = Command::new("bazel")
         .arg("build")
         .arg(build_target)
-        .arg("--platforms=//:oak")
         .status()
         .expect("couldn't run bazel build");
     if !status.success() {

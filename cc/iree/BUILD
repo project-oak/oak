@@ -24,16 +24,10 @@ cc_library(
     name = "iree_wrapper",
     srcs = [
         # To link with an internally compiled IREE model - replace `iree.cc` with `libiree_core.a`.
-        "iree.cc",
         # "libiree_core.a",
+        "iree.cc",
     ],
     hdrs = ["iree.h"],
-    features = ["fully_static_link"],
-    linkstatic = 1,
-    target_compatible_with = [
-        "@platforms//cpu:x86_64",
-        "//:os_oak",
-    ],
 )
 
 # Fully static library linked by an Oak enclave application.
