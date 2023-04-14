@@ -37,17 +37,22 @@ pub const GHCB_PROTOCOL_VERSION: u16 = 2;
 
 /// The value of the sw_exit_code field when doing the IOIO protocol.
 ///
-/// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+/// See section 4.1.2 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
 const SW_EXIT_CODE_IOIO_PROT: u64 = 0x7B;
+
+/// The value of the sw_exit_code field when doing the MSR reading or writing protocol.
+///
+/// See section 4.1.3 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
+const SW_EXIT_CODE_MSR_PROT: u64 = 0x7C;
 
 /// The value of the sw_exit_code field when doing a CPUID request.
 ///
-/// See section 4 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+/// See section 4 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
 const SW_EXIT_CODE_CPUID: u64 = 0x72;
 
 /// The value of the sw_exit_code field when doing a Guest Message request.
 ///
-/// See table 6 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+/// See table 6 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
 const SW_EXIT_CODE_GUEST_REQUEST: u64 = 0x8000_0011;
 
 /// Indicator bit that the address is a 16 bit number.
@@ -80,9 +85,15 @@ const BASE_VALID_BITMAP: ValidBitmap = ValidBitmap::SW_EXIT_CODE
     .union(ValidBitmap::SW_EXIT_INFO_1)
     .union(ValidBitmap::SW_EXIT_INFO_2);
 
+/// The mask to use on MSR register values.
+///
+/// RDMSR and WRMSR only use the 32-bit EAX and EDX registers, not 64-bit RAX and RDX, so we only
+/// use the least significant 32 bits.
+const MSR_REGISTER_MASK: u64 = 0xffff_ffff;
+
 /// The guest-host communications block.
 ///
-/// See: Table 3 in <https://developer.amd.com/wp-content/resources/56421.pdf>
+/// See: Table 3 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>
 #[repr(C, align(4096))]
 #[derive(Debug, FromBytes)]
 pub struct Ghcb {
@@ -306,7 +317,7 @@ where
 
     /// Writes an 8 bit number to an IO port via the IOIO protocol.
     ///
-    /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+    /// See section 4.1.2 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
     pub fn io_write_u8(&mut self, port: u16, data: u8) -> Result<(), &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | ((port as u64) << 16);
 
@@ -320,7 +331,7 @@ where
 
     /// Read an 8 bit number from an IO port via the IOIO protocol.
     ///
-    /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+    /// See section 4.1.2 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
     pub fn io_read_u8(&mut self, port: u16) -> Result<u8, &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_8 | IOIO_READ | ((port as u64) << 16);
 
@@ -334,7 +345,7 @@ where
 
     /// Writes a 16 bit number to an IO port via the IOIO protocol.
     ///
-    /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+    /// See section 4.1.2 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
     pub fn io_write_u16(&mut self, port: u16, data: u16) -> Result<(), &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_16 | ((port as u64) << 16);
 
@@ -348,7 +359,7 @@ where
 
     /// Read a 16 bit number from an IO port via the IOIO protocol.
     ///
-    /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+    /// See section 4.1.2 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
     pub fn io_read_u16(&mut self, port: u16) -> Result<u16, &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_16 | IOIO_READ | ((port as u64) << 16);
 
@@ -362,7 +373,7 @@ where
 
     /// Writes a 32 bit number to an IO port via the IOIO protocol.
     ///
-    /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+    /// See section 4.1.2 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
     pub fn io_write_u32(&mut self, port: u16, data: u32) -> Result<(), &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_32 | ((port as u64) << 16);
 
@@ -376,7 +387,7 @@ where
 
     /// Read a 32 bit number from an IO port via the IOIO protocol.
     ///
-    /// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+    /// See section 4.1.2 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
     pub fn io_read_u32(&mut self, port: u16) -> Result<u32, &'static str> {
         let io_port = IOIO_ADDRESS_SIZE_16 | IOIO_DATA_SIZE_32 | IOIO_READ | ((port as u64) << 16);
 
@@ -412,6 +423,40 @@ where
             ecx: ghcb.rcx as u32,
             edx: ghcb.rdx as u32,
         })
+    }
+
+    /// Writes a value to the specified model-specific register.
+    ///
+    /// See section 4.1.3 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
+    pub fn msr_write(&mut self, msr: u32, data: u64) -> Result<(), &'static str> {
+        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_MSR_PROT;
+        self.ghcb.as_mut().sw_exit_info_1 = 0;
+        self.ghcb.as_mut().sw_exit_info_2 = 0;
+        self.ghcb.as_mut().rcx = msr as u64;
+        // Split the data into the lower halves of RDX and RAX.
+        self.ghcb.as_mut().rax = data & MSR_REGISTER_MASK;
+        self.ghcb.as_mut().rdx = data >> 32;
+        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP
+            .union(ValidBitmap::RAX)
+            .union(ValidBitmap::RCX)
+            .union(ValidBitmap::RDX);
+        self.do_vmg_exit()
+    }
+
+    /// Reads a value from the specified model-specific register.
+    ///
+    /// See section 4.1.2 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
+    pub fn msr_read(&mut self, msr: u32) -> Result<u64, &'static str> {
+        self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_MSR_PROT;
+        self.ghcb.as_mut().sw_exit_info_1 = 0;
+        self.ghcb.as_mut().sw_exit_info_2 = 0;
+        self.ghcb.as_mut().rcx = msr as u64;
+        self.ghcb.as_mut().valid_bitmap = BASE_VALID_BITMAP.union(ValidBitmap::RCX);
+        self.do_vmg_exit()?;
+        // Reconstruct the value from the lower halves of RAX and RDX.
+        let low = self.ghcb.as_mut().rax & MSR_REGISTER_MASK;
+        let high = self.ghcb.as_mut().rdx & MSR_REGISTER_MASK;
+        Ok(low | (high << 32))
     }
 
     /// Sends a guest request message to the Platform Secure Processor via the Guest Message

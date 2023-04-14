@@ -61,7 +61,7 @@ const OUTPUT_EMPTY: u8 = 1 << 5;
 /// IOIO protocol, or using direct port-based IO, depending on which IO port factory is used in the
 /// wrapper enum.
 ///
-/// See section 4.1.2 in <https://developer.amd.com/wp-content/resources/56421.pdf> for more
+/// See section 4.1.2 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf> for more
 /// information on the GHCB IOIO protocol.
 pub struct SerialPort {
     /// The base address of the serial port.
