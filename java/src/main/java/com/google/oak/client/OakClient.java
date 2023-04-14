@@ -18,16 +18,25 @@ package com.google.oak.client;
 
 import com.google.oak.client.transport.EvidenceProvider;
 import com.google.oak.client.transport.Transport;
-import com.google.oak.evidence.Evidence;
+// import com.google.oak.evidence.Evidence;
 import com.google.oak.util.Result;
 
-public class OakClient {
-    public static OakClient Create() {
+public class OakClient <T extends Transport> {
+    private final Class<T> transport;
 
+    public static <E extends EvidenceProvider & Transport> OakClient<E> Create(Class<E> transport) {
+        transport.getEvidence();
+        
+        return new OakClient<E>(transport);
+    }
+
+    private OakClient(Class<T> transport) {
+        this.transport = transport;
     }
 
     public Result<byte[], Exception> invoke(byte[] requestBody) {
 
+        return Result.success(requestBody);
     }
 }
 
