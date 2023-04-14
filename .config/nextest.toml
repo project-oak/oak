@@ -2,6 +2,6 @@
 threads-required = 4
 
 [profile.default.junit]
-path = "junit.xml"
+path = "sponge_log.xml"
 store-success-output = true
 store-failure-output = true
