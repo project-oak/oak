@@ -194,7 +194,7 @@
         <span class="kw">let </span>eax = value.rax <span class="kw">as </span>u32;
         <span class="kw">let </span>ecx = value.rcx <span class="kw">as </span>u32;
         <span class="comment">// We only set the value of XCR0 for CPUID 0x0000_000D.
-        // See table 6 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;.
+        // See table 6 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
         </span><span class="kw">let </span>xcr0 = <span class="kw">if </span>eax == <span class="number">0xD </span>{
             x86_64::registers::xcontrol::XCr0::read_raw()
         } <span class="kw">else </span>{

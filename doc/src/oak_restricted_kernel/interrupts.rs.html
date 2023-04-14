@@ -556,7 +556,7 @@
                 } <span class="kw">else </span>{
                     <span class="kw">let </span>leaf = stack_frame.rax <span class="kw">as </span>u32;
                     <span class="comment">// The MSR protocol does not support sub-leaf requests or leaf 0x0000_000D.
-                    // See section 2.3.1 in &lt;https://developer.amd.com/wp-content/resources/56421.pdf&gt;
+                    // See section 2.3.1 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;
                     // TODO(#3470): Improve handling of incorrect/missing CPUID requests.
                     </span><span class="kw">if </span>stack_frame.rcx != <span class="number">0 </span>|| leaf == <span class="number">0x0000_000D </span>{
                         <span class="macro">error!</span>(<span class="string">&quot;KERNEL PANIC: CPUID SUB-LEAF OR INVALID LEAD REQUESTED&quot;</span>);
