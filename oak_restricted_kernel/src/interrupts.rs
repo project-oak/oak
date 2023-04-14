@@ -141,7 +141,7 @@ mutable_interrupt_handler_with_error_code!(
                 } else {
                     let leaf = stack_frame.rax as u32;
                     // The MSR protocol does not support sub-leaf requests or leaf 0x0000_000D.
-                    // See section 2.3.1 in <https://developer.amd.com/wp-content/resources/56421.pdf>
+                    // See section 2.3.1 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>
                     // TODO(#3470): Improve handling of incorrect/missing CPUID requests.
                     if stack_frame.rcx != 0 || leaf == 0x0000_000D {
                         error!("KERNEL PANIC: CPUID SUB-LEAF OR INVALID LEAD REQUESTED");

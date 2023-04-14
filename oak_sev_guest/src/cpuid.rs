@@ -64,7 +64,7 @@ impl From<&mut MutableInterruptStackFrame> for CpuidInput {
         let eax = value.rax as u32;
         let ecx = value.rcx as u32;
         // We only set the value of XCR0 for CPUID 0x0000_000D.
-        // See table 6 in <https://developer.amd.com/wp-content/resources/56421.pdf>.
+        // See table 6 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
         let xcr0 = if eax == 0xD {
             x86_64::registers::xcontrol::XCr0::read_raw()
         } else {

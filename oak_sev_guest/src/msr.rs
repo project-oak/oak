@@ -27,12 +27,12 @@
 //!
 //! The MSR protocol is primarily used to set up the GHCB communications with the hypervisor.
 //!
-//! See section 2.3.1 in <https://developer.amd.com/wp-content/resources/56421.pdf> for more detail.
+//! See section 2.3.1 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf> for more detail.
 //!
 //! Note: This implementation does not include the AP Reset Hold operations seeing that it is not
 //! the preferred mechanism for starting a new application processor (AP) under AMD SEV-SNP. The
 //! SEV-SNP AP creation NAE should be used instead. See section 4.3.2 of
-//! <https://developer.amd.com/wp-content/resources/56421.pdf>.
+//! <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
 
 use crate::{instructions::vmgexit, interrupts::MutableInterruptStackFrame};
 //use anyhow::{anyhow, bail, Result};
@@ -584,7 +584,7 @@ mod tests {
     //! These tests check the conversion logic between convenience request and response structs, and
     //! the u64 values used for the MSR protocol.
     //!
-    //! See section 2.3.1 in <https://developer.amd.com/wp-content/resources/56421.pdf> for details of
+    //! See section 2.3.1 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf> for details of
     //! how the requests and responses are represented as u64 values.
 
     use super::*;
