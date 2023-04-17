@@ -430,7 +430,7 @@ where
     /// See section 4.1.3 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
     pub fn msr_write(&mut self, msr: u32, data: u64) -> Result<(), &'static str> {
         self.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_MSR_PROT;
-        self.ghcb.as_mut().sw_exit_info_1 = 0;
+        self.ghcb.as_mut().sw_exit_info_1 = 1;
         self.ghcb.as_mut().sw_exit_info_2 = 0;
         self.ghcb.as_mut().rcx = msr as u64;
         // Split the data into the lower halves of RDX and RAX.
