@@ -74,11 +74,23 @@ bitflags! {
 }
 
 impl MTRRDefType {
-    /// The underlying model specific register.
-    const MSR: Msr = Msr::new(0x2ff);
+    // The numeric ID of the model specific register.
+    const MSR_ID: u32 = 0x2ff;
+    // The underlying model specific register.
+    const MSR: Msr = Msr::new(Self::MSR_ID);
 
     pub fn read() -> (MTRRDefTypeFlags, MemoryType) {
-        let msr_value = unsafe { Self::MSR.read() };
+        // If the GHCB is available we are running on SEV-ES or SEV-SNP, so we use the GHCB protocol
+        // to read the MSR, otherwise we read the MSR directly.
+        let msr_value = if let Some(ghcb) = GHCB_WRAPPER.get() {
+            ghcb.lock()
+                .msr_read(Self::MSR_ID)
+                .expect("couldn't read the MSR using the GHCB protocol")
+        } else {
+            // Safety: This is safe because this MSR has been supported since the P6 family of
+            // Pentium processors (see https://en.wikipedia.org/wiki/Memory_type_range_register).
+            unsafe { Self::MSR.read() }
+        };
         let memory_type: MemoryType = (msr_value as u8)
             .try_into()
             .expect("invalid MemoryType value");
@@ -109,7 +121,13 @@ impl MTRRDefType {
         let reserved = old_flags.bits() & !MTRRDefTypeFlags::all().bits();
         let new_value = reserved | flags.bits() | (default_type as u64);
         let mut msr = Self::MSR;
-        unsafe {
+        // If the GHCB is available we are running on SEV-ES or SEV-SNP, so we use the GHCB protocol
+        // to write the MSR, otherwise we write the MSR directly.
+        if let Some(ghcb) = GHCB_WRAPPER.get() {
+            ghcb.lock()
+                .msr_write(Self::MSR_ID, new_value)
+                .expect("couldn't write the MSR using the GHCB protocol");
+        } else {
             msr.write(new_value);
         }
     }
