@@ -115,12 +115,12 @@ pub struct Ghcb {
     pub rax: u64,
     /// Reserved. Must be 0.
     _reserved_4: [u8; 264],
-    /// The value of the RBX register.
-    pub rbx: u64,
     /// The value of the RCX register.
     pub rcx: u64,
     /// The value of the RDX register.
     pub rdx: u64,
+    /// The value of the RBX register.
+    pub rbx: u64,
     /// Reserved. Must be 0.
     _reserved_5: [u8; 112],
     /// Guest-controlled exit code.
@@ -206,9 +206,9 @@ bitflags! {
         const XSS = (1 << 40);
         const DR7 = (1 << 44);
         const RAX = (1 << 63);
-        const RBX = (1 << 97);
-        const RCX = (1 << 98);
-        const RDX = (1 << 99);
+        const RCX = (1 << 97);
+        const RDX = (1 << 98);
+        const RBX = (1 << 99);
         const SW_EXIT_CODE = (1 << 114);
         const SW_EXIT_INFO_1 = (1 << 115);
         const SW_EXIT_INFO_2 = (1 << 116);
