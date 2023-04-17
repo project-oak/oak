@@ -347,7 +347,7 @@ impl Validatable4KiB for PhysFrameRange<Size4KiB> {
             pt,
             encrypted,
             PageTableFlags::empty(),
-            |addr, err| match err {
+            |_addr, err| match err {
                 InstructionError::ValidationStatusNotUpdated => {
                     // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
                     // or it is already validated. See the PVALIDATE instruction in
