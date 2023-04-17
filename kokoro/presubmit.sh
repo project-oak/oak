@@ -15,4 +15,6 @@ export RUST_LOG=debug
 
 mkdir "$KOKORO_ARTIFACTS_DIR/test_logs/"
 cp ./target/nextest/default/*.xml "$KOKORO_ARTIFACTS_DIR/test_logs/"
+cp ./target/nextest/default/*.xml "$KOKORO_ARTIFACTS_DIR/"
 ls -als "$KOKORO_ARTIFACTS_DIR"
+ls -als "$KOKORO_ARTIFACTS_DIR/test_logs/"
