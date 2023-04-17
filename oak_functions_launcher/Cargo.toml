@@ -7,6 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
+async-stream = "*"
 async-trait = "*"
 bmrng = "*"
 clap = { version = "*", features = ["derive"] }

@@ -36,7 +36,8 @@ pub struct SessionProxy {
 
 #[tonic::async_trait]
 impl StreamingSession for SessionProxy {
-    type StreamStream = Pin<Box<dyn Stream<Item = Result<ResponseWrapper, Status>> + Send>>;
+    type StreamStream =
+        Pin<Box<dyn Stream<Item = Result<ResponseWrapper, Status>> + Send + 'static>>;
 
     async fn stream(
         &self,
@@ -44,62 +45,69 @@ impl StreamingSession for SessionProxy {
     ) -> Result<Response<Self::StreamStream>, tonic::Status> {
         log::info!("handling client request");
         let mut request_stream = request.into_inner();
-        let request = request_stream
-            .next()
-            .await
-            .ok_or_else(|| tonic::Status::invalid_argument("empty request stream"))?
-            .map_err(|err| {
-                tonic::Status::internal(format!("error reading message from request stream: {err}"))
-            })?
-            .request
-            .ok_or_else(|| tonic::Status::invalid_argument("empty request message"))?;
 
-        let response = match request {
-            request_wrapper::Request::GetPublicKeyRequest(_) => {
-                // TODO(#3641): Initialize all evidence fields.
-                let attestation_evidence = AttestationEvidence {
-                    encryption_public_key: self.encryption_public_key.to_vec(),
-                    signing_public_key: vec![],
-                    attestation: self.attestation.to_vec(),
-                    signed_application_data: vec![],
-                };
-                let attestation_endorsement = AttestationEndorsement {
-                    tee_certificates: vec![],
-                    binary_attestation: None,
-                    application_data: None,
-                };
-                let attestation_bundle = AttestationBundle {
-                    attestation_evidence: Some(attestation_evidence),
-                    attestation_endorsement: Some(attestation_endorsement),
-                };
-                response_wrapper::Response::GetPublicKeyResponse(GetPublicKeyResponse {
-                    attestation_bundle: Some(attestation_bundle),
-                })
-            }
-            request_wrapper::Request::InvokeRequest(invoke_request) => {
-                let enclave_invoke_request = schema::InvokeRequest {
-                    body: invoke_request.encrypted_body,
-                };
-                let mut enclave_client =
-                    schema::OakFunctionsAsyncClient::new(self.connector_handle.clone());
-                let enclave_invoke_response = enclave_client
-                    .invoke(&enclave_invoke_request)
-                    .await
-                    .flatten()
+        // TODO(#3641): Initialize all evidence fields.
+        let attestation_evidence = AttestationEvidence {
+            encryption_public_key: self.encryption_public_key.to_vec(),
+            signing_public_key: vec![],
+            attestation: self.attestation.to_vec(),
+            signed_application_data: vec![],
+        };
+        let attestation_endorsement = AttestationEndorsement {
+            tee_certificates: vec![],
+            binary_attestation: None,
+            application_data: None,
+        };
+        let attestation_bundle = AttestationBundle {
+            attestation_evidence: Some(attestation_evidence),
+            attestation_endorsement: Some(attestation_endorsement),
+        };
+
+        let connector_handle = self.connector_handle.clone();
+
+        let response_stream = async_stream::try_stream! {
+            while let Some(request) = request_stream.next().await {
+                let request = request
                     .map_err(|err| {
-                        tonic::Status::internal(format!("error handling client request: {:?}", err))
-                    })?;
-                response_wrapper::Response::InvokeResponse(InvokeResponse {
-                    encrypted_body: enclave_invoke_response.body,
-                })
+                        tonic::Status::internal(format!("error reading message from request stream: {err}"))
+                    })?
+                    .request
+                    .ok_or_else(|| tonic::Status::invalid_argument("empty request message"))?;
+
+                let response = match request {
+                    request_wrapper::Request::GetPublicKeyRequest(_) => {
+
+                        response_wrapper::Response::GetPublicKeyResponse(GetPublicKeyResponse {
+                            attestation_bundle: Some(attestation_bundle.clone()),
+                        })
+                    }
+                    request_wrapper::Request::InvokeRequest(invoke_request) => {
+                        let enclave_invoke_request = schema::InvokeRequest {
+                            body: invoke_request.encrypted_body,
+                        };
+                        let mut enclave_client =
+                            schema::OakFunctionsAsyncClient::new(connector_handle.clone());
+                        let enclave_invoke_response = enclave_client
+                            .invoke(&enclave_invoke_request)
+                            .await
+                            .flatten()
+                            .map_err(|err| {
+                                tonic::Status::internal(format!("error handling client request: {:?}", err))
+                            })?;
+                        response_wrapper::Response::InvokeResponse(InvokeResponse {
+                            encrypted_body: enclave_invoke_response.body,
+                        })
+                    }
+                };
+                yield ResponseWrapper {
+                    response: Some(response),
+                };
             }
         };
 
-        Ok(Response::new(Box::pin(futures::stream::iter(vec![Ok(
-            ResponseWrapper {
-                response: Some(response),
-            },
-        )]))))
+        Ok(Response::new(
+            Box::pin(response_stream) as Self::StreamStream
+        ))
     }
 }
 
