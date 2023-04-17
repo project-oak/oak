@@ -304,14 +304,14 @@ where
         // to validate.
         tlb::flush_all();
 
-        if let Some((_, err)) = memory
+        if let Some(err) = memory
             .page_table
             .iter()
             .zip(pages)
             .filter(|(entry, _)| !entry.is_unused())
             .map(|(entry, page)| (entry, page.pvalidate()))
-            .map(|(entry, result)| (entry, result.or_else(|err| f(entry.addr(), err))))
-            .find(|(_, result)| result.is_err())
+            .map(|(entry, result)| result.or_else(|err| f(entry.addr(), err)))
+            .find(|result| result.is_err())
         {
             return err;
         }
@@ -347,17 +347,11 @@ impl Validatable4KiB for PhysFrameRange<Size4KiB> {
             pt,
             encrypted,
             PageTableFlags::empty(),
-            |addr, err| match err {
+            |_addr, err| match err {
                 InstructionError::ValidationStatusNotUpdated => {
-                    let addr = addr.as_u64() & !encrypted;
-
-                    // Failing validation for addresses < 1 MiB is fine, as that memory was
-                    // validated in bootstrap assembly.
-                    if addr < 0x100000 {
-                        return Ok(());
-                    }
-
-                    log::warn!("validation status not updated for address {:#018x}", addr);
+                    // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
+                    // or it is already validated. See the PVALIDATE instruction in
+                    // <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
                     Ok(())
                 }
                 other => Err(other),
@@ -405,14 +399,13 @@ impl Validatable2MiB for PhysFrameRange<Size2MiB> {
                     let range = PhysFrame::range(start, start + 512);
                     range.pvalidate(pt, encrypted)
                 }
-                other => {
-                    log::error!(
-                        "validation failure for address {:#018x}: {:?}",
-                        addr.as_u64() & !encrypted,
-                        other
-                    );
-                    Err(other)
+                InstructionError::ValidationStatusNotUpdated => {
+                    // We don't treat this as an error. It only happens if SEV-SNP is not enabled,
+                    // or it is already validated. See the PVALIDATE instruction in
+                    // <https://www.amd.com/system/files/TechDocs/24594.pdf> for more details.
+                    Ok(())
                 }
+                other => Err(other),
             },
         )
     }
