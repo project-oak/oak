@@ -14,12 +14,12 @@
 // limitations under the License.
 //
 
-package com.google.oak.client.transport;
+package com.google.oak.transport;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-import com.google.oak.client.transport.EvidenceProvider;
-import com.google.oak.client.transport.Transport;
+import com.google.oak.transport.EvidenceProvider;
+import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;

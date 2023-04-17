@@ -27,8 +27,8 @@ java_library(
         "OakClient.java",
     ],
     deps = [
-        "//java/src/main/java/com/google/oak/client/transport",
         "//java/src/main/java/com/google/oak/crypto:encryptor",
+        "//java/src/main/java/com/google/oak/transport",
         "//java/src/main/java/com/google/oak/util",
         "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
     ],
@@ -59,13 +59,5 @@ java_library(
         "@com_google_protobuf//:protobuf_javalite",
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//stub",
-    ],
-)
-
-java_library(
-    name = "api_key_interceptor",
-    srcs = ["ApiKeyInterceptor.java"],
-    deps = [
-        "@io_grpc_grpc_java//api",
     ],
 )

@@ -16,10 +16,9 @@
 
 package com.google.oak.client;
 
-import com.google.oak.client.transport.EvidenceProvider;
-import com.google.oak.client.transport.Transport;
 import com.google.oak.crypto.ClientEncryptor;
-// import com.google.oak.evidence.Evidence;
+import com.google.oak.transport.EvidenceProvider;
+import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
 import oak.session.noninteractive.v1.AttestationBundle;
 import oak.session.noninteractive.v1.AttestationEvidence;
@@ -51,13 +50,6 @@ public class OakClient<T extends Transport> {
     }
     AttestationEvidence attestationEvidence =
         getEvidenceResult.success().get().getAttestationEvidence();
-
-    Result<AttestationBundle, Exception> getEvidenceResult1 = transport.getEvidence();
-    if (!getEvidenceResult1.isSuccess()) {
-      return Result.error(getEvidenceResult1.error().get());
-    }
-    AttestationEvidence attestationEvidence1 =
-        getEvidenceResult1.success().get().getAttestationEvidence();
 
     OakClient<E> oakClient =
         new OakClient<E>(transport, attestationEvidence.getEncryptionPublicKey().toByteArray());

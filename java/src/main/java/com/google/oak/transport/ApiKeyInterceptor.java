@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package com.google.oak.client;
+package com.google.oak.transport;
 
 import io.grpc.CallOptions;
 import io.grpc.Channel;

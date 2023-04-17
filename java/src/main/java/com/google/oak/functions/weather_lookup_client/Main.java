@@ -18,9 +18,9 @@ package com.google.oak.functions.weather_lookup_client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.oak.client.ApiKeyInterceptor;
 import com.google.oak.client.OakClient;
-import com.google.oak.client.transport.GrpcStreamingTransport;
+import com.google.oak.transport.ApiKeyInterceptor;
+import com.google.oak.transport.GrpcStreamingTransport;
 import com.google.oak.util.Result;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;

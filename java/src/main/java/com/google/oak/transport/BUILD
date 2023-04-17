@@ -49,3 +49,11 @@ java_library(
         "@io_grpc_grpc_java//stub",
     ],
 )
+
+java_library(
+    name = "api_key_interceptor",
+    srcs = ["ApiKeyInterceptor.java"],
+    deps = [
+        "@io_grpc_grpc_java//api",
+    ],
+)

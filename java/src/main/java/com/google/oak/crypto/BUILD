@@ -26,5 +26,7 @@ java_library(
     srcs = ["ClientEncryptor.java"],
     deps = [
         "//java/src/main/java/com/google/oak/util",
+        "//oak_crypto/proto:crypto_java_proto",
+        "@com_google_protobuf//:protobuf_javalite",
     ],
 )

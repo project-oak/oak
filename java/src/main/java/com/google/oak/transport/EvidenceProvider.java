@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package com.google.oak.client.transport;
+package com.google.oak.transport;
 
 import com.google.oak.util.Result;
 import oak.session.noninteractive.v1.AttestationBundle;
