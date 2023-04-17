@@ -215,3 +215,38 @@ async fn test_load_large_lookup_data() {
         .await
         .expect("Failed to stop launcher");
 }
+
+#[ignore = "too expensive"]
+#[tokio::test]
+async fn test_load_two_gib_lookup_data() {
+    let oak_functions_linux_fd_bin_path =
+        oak_functions_test_utils::build_rust_crate_linux("oak_functions_linux_fd_bin")
+            .expect("Failed to build oak_functions_linux_fd_bin");
+
+    let params = launcher::native::Params {
+        enclave_binary: oak_functions_linux_fd_bin_path.into(),
+    };
+
+    let max_chunk_size = ByteUnit::Gibibyte(2);
+    // Initialize with 2 chunks.
+    let entries_two_chunks = oak_functions_test_utils::create_test_lookup_data(max_chunk_size, 2);
+    let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
+        &oak_functions_test_utils::serialize_entries(entries_two_chunks),
+    );
+    // This takes >5 min but will get there eventually.
+    let lookup_data_config = LookupDataConfig {
+        lookup_data_path: lookup_data_file.path().to_path_buf(),
+        update_interval: None,
+        max_chunk_size,
+    };
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
+        .expect("Failed to build Wasm module");
+    let status = oak_functions_launcher::create(
+        launcher::GuestMode::Native(params),
+        lookup_data_config,
+        wasm_path.into(),
+        1024,
+    )
+    .await;
+    assert!(status.is_ok());
+}
