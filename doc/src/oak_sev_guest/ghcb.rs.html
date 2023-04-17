@@ -629,12 +629,12 @@
     </span><span class="kw">pub </span>rax: u64,
     <span class="doccomment">/// Reserved. Must be 0.
     </span>_reserved_4: [u8; <span class="number">264</span>],
-    <span class="doccomment">/// The value of the RBX register.
-    </span><span class="kw">pub </span>rbx: u64,
     <span class="doccomment">/// The value of the RCX register.
     </span><span class="kw">pub </span>rcx: u64,
     <span class="doccomment">/// The value of the RDX register.
     </span><span class="kw">pub </span>rdx: u64,
+    <span class="doccomment">/// The value of the RBX register.
+    </span><span class="kw">pub </span>rbx: u64,
     <span class="doccomment">/// Reserved. Must be 0.
     </span>_reserved_5: [u8; <span class="number">112</span>],
     <span class="doccomment">/// Guest-controlled exit code.
@@ -720,9 +720,9 @@
         <span class="kw">const </span>XSS = (<span class="number">1 </span>&lt;&lt; <span class="number">40</span>);
         <span class="kw">const </span>DR7 = (<span class="number">1 </span>&lt;&lt; <span class="number">44</span>);
         <span class="kw">const </span>RAX = (<span class="number">1 </span>&lt;&lt; <span class="number">63</span>);
-        <span class="kw">const </span>RBX = (<span class="number">1 </span>&lt;&lt; <span class="number">97</span>);
-        <span class="kw">const </span>RCX = (<span class="number">1 </span>&lt;&lt; <span class="number">98</span>);
-        <span class="kw">const </span>RDX = (<span class="number">1 </span>&lt;&lt; <span class="number">99</span>);
+        <span class="kw">const </span>RCX = (<span class="number">1 </span>&lt;&lt; <span class="number">97</span>);
+        <span class="kw">const </span>RDX = (<span class="number">1 </span>&lt;&lt; <span class="number">98</span>);
+        <span class="kw">const </span>RBX = (<span class="number">1 </span>&lt;&lt; <span class="number">99</span>);
         <span class="kw">const </span>SW_EXIT_CODE = (<span class="number">1 </span>&lt;&lt; <span class="number">114</span>);
         <span class="kw">const </span>SW_EXIT_INFO_1 = (<span class="number">1 </span>&lt;&lt; <span class="number">115</span>);
         <span class="kw">const </span>SW_EXIT_INFO_2 = (<span class="number">1 </span>&lt;&lt; <span class="number">116</span>);
@@ -944,7 +944,7 @@
     /// See section 4.1.3 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
     </span><span class="kw">pub fn </span>msr_write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msr: u32, data: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="self">self</span>.ghcb.as_mut().sw_exit_code = SW_EXIT_CODE_MSR_PROT;
-        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = <span class="number">0</span>;
+        <span class="self">self</span>.ghcb.as_mut().sw_exit_info_1 = <span class="number">1</span>;
         <span class="self">self</span>.ghcb.as_mut().sw_exit_info_2 = <span class="number">0</span>;
         <span class="self">self</span>.ghcb.as_mut().rcx = msr <span class="kw">as </span>u64;
         <span class="comment">// Split the data into the lower halves of RDX and RAX.
