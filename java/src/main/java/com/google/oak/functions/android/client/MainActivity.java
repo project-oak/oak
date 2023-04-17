@@ -26,8 +26,10 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import com.google.common.base.VerifyException;
-import com.google.oak.client.OakGrpcClient;
+import com.google.oak.client.OakClient;
 import com.google.oak.transport.ApiKeyInterceptor;
+import com.google.oak.transport.GrpcStreamingTransport;
+import com.google.oak.util.Result;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
@@ -79,7 +81,22 @@ public class MainActivity extends Activity {
 
       // Create gRPC client stub.
       StreamingSessionGrpc.StreamingSessionStub client = StreamingSessionGrpc.newStub(channel);
-      byte[] response = OakGrpcClient.invoke(client::stream, request);
+
+      // Create Oak Client.
+      GrpcStreamingTransport transport = new GrpcStreamingTransport(client::stream);
+      Result<OakClient<GrpcStreamingTransport>, Exception> oakClientCreateResult =
+          OakClient.Create(transport);
+      if (oakClientCreateResult.isError()) {
+        throw oakClientCreateResult.error().get();
+      }
+      OakClient<GrpcStreamingTransport> oakClient = oakClientCreateResult.success().get();
+
+      // Send request.
+      Result<byte[], Exception> oakClientInvokeResult = oakClient.invoke(request);
+      if (oakClientInvokeResult.isError()) {
+        throw oakClientInvokeResult.error().get();
+      }
+      byte[] response = oakClientInvokeResult.success().get();
       String decodedResponse = new String(response, StandardCharsets.UTF_8);
 
       Log.v("Oak", "Received response: " + decodedResponse);
