@@ -27,5 +27,5 @@ public interface Transport {
    *     Result}
    * @return a serialized {@code oak.crypto.EncryptedResponse} wrapped in a {@code Result}
    */
-  Result<byte[], Exception> invoke(byte[] requestBytes) throws Exception;
+  Result<byte[], Exception> invoke(byte[] requestBytes);
 }

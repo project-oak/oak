@@ -43,21 +43,22 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
 
   private BlockingQueue<ResponseWrapper> messageQueue;
   private StreamObserver<RequestWrapper> requestObserver;
-  private StreamObserver<ResponseWrapper> responseObserver;
 
   /**
    * Creates an instance of {@code GrpcStreamingTransport}.
-   * 
+   *
    * @param stream a method reference to a gRPC client streaming method with the appropriate request
    * and response types.
    */
   public GrpcStreamingTransport(
-    Function<StreamObserver<ResponseWrapper>, StreamObserver<RequestWrapper>> stream) {
+      Function<StreamObserver<ResponseWrapper>, StreamObserver<RequestWrapper>> stream) {
+    // We expect to receive a single response message for each request.
     this.messageQueue = new ArrayBlockingQueue<>(1);
-    this.responseObserver = new StreamObserver<ResponseWrapper>() {
+    StreamObserver<ResponseWrapper> responseObserver = new StreamObserver<ResponseWrapper>() {
       @Override
       public void onNext(ResponseWrapper response) {
         try {
+          logger.log(Level.INFO, "messageQueue.put(", response);
           messageQueue.put(response);
         } catch (Exception e) {
           if (e instanceof InterruptedException) {
@@ -86,18 +87,22 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
    *
    * @return {@code AttestationBundle} wrapped in a {@code Result}
    */
-  public Result<AttestationBundle, Exception> getEvidence() throws InterruptedException {
-    RequestWrapper requestWrapper = RequestWrapper.newBuilder()
-                                        .setGetPublicKeyRequest(GetPublicKeyRequest.newBuilder())
-                                        .build();
-    logger.log(Level.INFO, "sending get evidence request: " + requestWrapper);
-    this.requestObserver.onNext(requestWrapper);
+  public Result<AttestationBundle, Exception> getEvidence() {
+    try {
+      RequestWrapper requestWrapper = RequestWrapper.newBuilder()
+                                          .setGetPublicKeyRequest(GetPublicKeyRequest.newBuilder())
+                                          .build();
+      logger.log(Level.INFO, "sending get evidence request: " + requestWrapper);
+      this.requestObserver.onNext(requestWrapper);
 
-    ResponseWrapper responseWrapper = this.messageQueue.poll(10, SECONDS);
-    logger.log(Level.INFO, "received get evidence response: " + responseWrapper);
-    GetPublicKeyResponse response = responseWrapper.getGetPublicKeyResponse();
+      ResponseWrapper responseWrapper = this.messageQueue.poll(10, SECONDS);
+      logger.log(Level.INFO, "received get evidence response: " + responseWrapper);
+      GetPublicKeyResponse response = responseWrapper.getGetPublicKeyResponse();
 
-    return Result.success(response.getAttestationBundle());
+      return Result.success(response.getAttestationBundle());
+    } catch (InterruptedException e) {
+      return Result.error(e);
+    }
   }
 
   /**
@@ -107,19 +112,23 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
    *     Result}
    * @return a serialized {@code oak.crypto.EncryptedResponse} wrapped in a {@code Result}
    */
-  public Result<byte[], Exception> invoke(byte[] requestBytes) throws InterruptedException {
-    RequestWrapper requestWrapper =
-        RequestWrapper.newBuilder()
-            .setInvokeRequest(
-                InvokeRequest.newBuilder().setEncryptedBody(ByteString.copyFrom(requestBytes)))
-            .build();
-    logger.log(Level.INFO, "sending invoke request: " + requestWrapper);
-    this.requestObserver.onNext(requestWrapper);
+  public Result<byte[], Exception> invoke(byte[] requestBytes) {
+    try {
+      RequestWrapper requestWrapper =
+          RequestWrapper.newBuilder()
+              .setInvokeRequest(
+                  InvokeRequest.newBuilder().setEncryptedBody(ByteString.copyFrom(requestBytes)))
+              .build();
+      logger.log(Level.INFO, "sending invoke request: " + requestWrapper);
+      this.requestObserver.onNext(requestWrapper);
 
-    ResponseWrapper responseWrapper = this.messageQueue.poll(10, SECONDS);
-    logger.log(Level.INFO, "received invoke response: " + responseWrapper);
-    InvokeResponse response = responseWrapper.getInvokeResponse();
+      ResponseWrapper responseWrapper = this.messageQueue.poll(10, SECONDS);
+      logger.log(Level.INFO, "received invoke response: " + responseWrapper);
+      InvokeResponse response = responseWrapper.getInvokeResponse();
 
-    return Result.success(response.getEncryptedBody().toByteArray());
+      return Result.success(response.getEncryptedBody().toByteArray());
+    } catch (InterruptedException e) {
+      return Result.error(e);
+    }
   }
 }

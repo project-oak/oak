@@ -27,10 +27,10 @@ java_library(
         "OakClient.java",
     ],
     deps = [
-        "//java/src/main/java/com/google/oak/client/transport:transport",
-        # "//java/src/main/java/com/google/oak/evidence",
-        # "//java/src/main/java/com/google/oak/remote_attestation",
+        "//java/src/main/java/com/google/oak/client/transport",
+        "//java/src/main/java/com/google/oak/crypto:encryptor",
         "//java/src/main/java/com/google/oak/util",
+        "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
     ],
 )
 
