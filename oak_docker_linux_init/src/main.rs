@@ -17,7 +17,10 @@
 #![feature(file_create_new)]
 
 use log::info;
-use std::fs;
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+};
 use subprocess::Exec;
 
 mod init;
@@ -30,13 +33,16 @@ fn main() -> ! {
     // Set up the Linux environment, since we expect to be the initial process.
     init::init().unwrap();
 
-    let contents = fs::read_to_string(DOCKER_COMMAND_PATH).expect("Error reading file");
-    let content_vec = contents.split_whitespace().collect::<Vec<_>>();
+    let file = File::open(DOCKER_COMMAND_PATH).expect("Error reading file");
+    let content_vec = BufReader::new(file)
+        .lines()
+        .map(|line| line.expect("Could not read line from docker command file!"))
+        .collect::<Vec<_>>();
     let (cmd, args) = content_vec.split_at(1);
 
-    info!("Docker command: {:?} {:?}", cmd[0], args);
+    info!("Docker command: {:?} {:?}", &cmd[0], args);
 
-    let exit_status = Exec::cmd(cmd[0]).args(args).join();
+    let exit_status = Exec::cmd(&cmd[0]).args(args).join();
     match exit_status {
         Ok(_) => println!("Docker command finished successfully!"),
         Err(error) => println!("Error running docker command: {:?}", error),
