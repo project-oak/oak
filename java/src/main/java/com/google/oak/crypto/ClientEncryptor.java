@@ -83,16 +83,6 @@ public class ClientEncryptor implements AeadEncryptor {
     return Result.success(encryptedRequest.toByteArray());
   }
 
-  // public static final class DecryptionResult {
-  //   public final byte[] plaintext;
-  //   public final byte[] associatedData;
-
-  //   public DecryptionResult(byte[] plaintext, byte[] associatedData) {
-  //     this.plaintext = plaintext;
-  //     this.associatedData = associatedData;
-  //   }
-  // }
-
   /**
    * Decrypts a [`EncryptedResponse`] proto message using AEAD.
    * <https://datatracker.ietf.org/doc/html/rfc5116>
