@@ -22,18 +22,12 @@ package(
 )
 
 java_library(
-    name = "aead_encryptor",
-    srcs = ["AeadEncryptor.java"],
-    deps = [
-        "//java/src/main/java/com/google/oak/util",
-    ],
-)
-
-java_library(
     name = "client_encryptor",
-    srcs = ["ClientEncryptor.java"],
+    srcs = [
+        "AeadEncryptor.java",
+        "ClientEncryptor.java",
+    ],
     deps = [
-        ":aead_encryptor",
         "//java/src/main/java/com/google/oak/util",
         "//oak_crypto/proto:crypto_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
