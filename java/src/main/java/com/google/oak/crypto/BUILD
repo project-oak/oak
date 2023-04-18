@@ -24,7 +24,7 @@ package(
 java_library(
     name = "client_encryptor",
     srcs = [
-        "AeadEncryptor.java",
+        "Encryptor.java",
         "ClientEncryptor.java",
     ],
     deps = [

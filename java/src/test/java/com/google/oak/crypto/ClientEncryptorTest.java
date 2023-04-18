@@ -16,7 +16,7 @@
 
 package com.google.oak.crypto;
 
-import com.google.oak.crypto.AeadEncryptor;
+import com.google.oak.crypto.Encryptor;
 import com.google.oak.crypto.ClientEncryptor;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
@@ -71,7 +71,7 @@ public class ClientEncryptorTest {
                                      .build())
             .build();
 
-    Result<AeadEncryptor.DecryptionResult, Exception> decryptResult =
+    Result<Encryptor.DecryptionResult, Exception> decryptResult =
         encryptor.decrypt(encryptedResponse.toByteArray());
     Assert.assertTrue(decryptResult.isSuccess());
     Assert.assertArrayEquals(decryptResult.success().get().plaintext, TEST_PLAINTEXT);
