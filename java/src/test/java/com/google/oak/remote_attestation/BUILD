@@ -21,6 +21,16 @@ package(
 )
 
 java_test(
+    name = "amd_attestation_verifier_test",
+    srcs = ["AmdAttestationVerifierTest.java"],
+    test_class = "com.google.oak.remote_attestation.AmdAttestationVerifierTest",
+    deps = [
+        "//java/src/main/java/com/google/oak/remote_attestation:amd_attestation_verifier",
+        "//java/src/main/java/com/google/oak/util",
+    ],
+)
+
+java_test(
     name = "message_test",
     srcs = ["MessageTest.java"],
     test_class = "com.google.oak.remote_attestation.MessageTest",
