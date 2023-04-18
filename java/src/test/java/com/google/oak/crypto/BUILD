@@ -21,7 +21,7 @@ package(
 )
 
 java_test(
-    name = "encryptor_test",
+    name = "client_encryptor_test",
     srcs = ["ClientEncryptorTest.java"],
     test_class = "com.google.oak.crypto.ClientEncryptorTest",
     deps = [

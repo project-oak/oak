@@ -42,10 +42,10 @@ public class ClientEncryptorTest {
     // TODO(#3644): Implement and test Java hybrid encryption.
     ClientEncryptor encryptor = new ClientEncryptor(TEST_SERIALIZED_SERVER_PUBLIC_KEY);
 
-    Result<byte[], Exception> encrypt_result =
+    Result<byte[], Exception> encryptResult =
         encryptor.encrypt(TEST_PLAINTEXT, TEST_ASSOCIATED_DATA);
-    Assert.assertTrue(encrypt_result.isSuccess());
-    byte[] serializedEncryptedRequest = encrypt_result.success().get();
+    Assert.assertTrue(encryptResult.isSuccess());
+    byte[] serializedEncryptedRequest = encryptResult.success().get();
 
     EncryptedRequest encryptedRequest = EncryptedRequest.parseFrom(serializedEncryptedRequest);
     // TODO(#3644): Once we implement Java hybrid encryption, we need to add a test for checking
@@ -71,10 +71,10 @@ public class ClientEncryptorTest {
                                      .build())
             .build();
 
-    Result<AeadEncryptor.DecryptionResult, Exception> decrypt_result =
+    Result<AeadEncryptor.DecryptionResult, Exception> decryptResult =
         encryptor.decrypt(encryptedResponse.toByteArray());
-    Assert.assertTrue(decrypt_result.isSuccess());
-    Assert.assertArrayEquals(decrypt_result.success().get().plaintext, TEST_PLAINTEXT);
-    Assert.assertArrayEquals(decrypt_result.success().get().associatedData, TEST_ASSOCIATED_DATA);
+    Assert.assertTrue(decryptResult.isSuccess());
+    Assert.assertArrayEquals(decryptResult.success().get().plaintext, TEST_PLAINTEXT);
+    Assert.assertArrayEquals(decryptResult.success().get().associatedData, TEST_ASSOCIATED_DATA);
   }
 }
