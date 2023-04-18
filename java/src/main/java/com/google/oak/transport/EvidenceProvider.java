@@ -19,7 +19,7 @@ package com.google.oak.transport;
 import com.google.oak.util.Result;
 import oak.session.noninteractive.v1.AttestationBundle;
 
-/** * An interface for providing an enclave evidence. */
+/** An interface for providing an enclave evidence. */
 public interface EvidenceProvider {
   /**
    * Returns evidence about the trustworthiness of a remote server.
