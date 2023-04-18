@@ -18,8 +18,8 @@ package com.google.oak.functions.weather_lookup_client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.oak.client.ApiKeyInterceptor;
 import com.google.oak.client.OakGrpcClient;
+import com.google.oak.transport.ApiKeyInterceptor;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
