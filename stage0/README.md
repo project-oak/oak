@@ -37,3 +37,39 @@ To use the binary, pass it to `qemu -bios`; for example:
 ```shell
 qemu-system-x86_64 -nodefaults -nographic -no-reboot -machine microvm -bios stage0.bin
 ```
+
+Memory layout
+
+Stage 0 only maps the first 1GiB of physical RAM using an identity mapping. The
+Stage 0 ROM image is mapped just below the 4GiB boundary.
+
+The diagram below assumes the guest VM has at least 3GiB of guest-physical RAM
+assigned.
+
+```text
+            |                      ...                       |
+0x100000000 +------------------------------------------------+ 4GiB
+            |               Stage 0 ROM Image                |
+ 0xFFFE0000 +------------------------------------------------+ 4GiB - 128MiB
+            |                    PCI Hole                    |
+ 0xC0000000 +------------------------------------------------+ 3GiB
+            |                  Unmapped RAM                  |
+ 0x40000000 +------------------------------------------------+ 1GiB
+            |                                                |
+            +------------------------------------------------+
+            |                                                |
+            |               Restricted Kernel                |
+            |                                                |    Kernel
+   0x201000 +------------------------------------------------+ <- Entry Point
+            |          Restricted Kernel ELF Header          |
+   0x200000 +------------------------------------------------+ 2MiB
+            |                                                |
+    0xA0000 +------------------------------------------------+ 640KiB
+            |     Extended BIOS Data Area (ACPI Tables)      |
+    0x80000 +------------------------------------------------+ 512KiB
+            |             Stage 0 Stack and Heap             |
+            | (Includes Secrets and CPUID pages on SEV-SNP)  |
+     0x1000 +------------------------------------------------+ 4KiB
+            |                 Unmapped Page                  |
+        0x0 +------------------------------------------------+
+```
