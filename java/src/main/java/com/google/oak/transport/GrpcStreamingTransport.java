@@ -58,7 +58,6 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
       @Override
       public void onNext(ResponseWrapper response) {
         try {
-          logger.log(Level.INFO, "messageQueue.put(", response);
           messageQueue.put(response);
         } catch (Exception e) {
           if (e instanceof InterruptedException) {
