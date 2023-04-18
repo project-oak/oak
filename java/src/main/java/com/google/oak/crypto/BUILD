@@ -24,8 +24,8 @@ package(
 java_library(
     name = "client_encryptor",
     srcs = [
-        "Encryptor.java",
         "ClientEncryptor.java",
+        "Encryptor.java",
     ],
     deps = [
         "//java/src/main/java/com/google/oak/util",

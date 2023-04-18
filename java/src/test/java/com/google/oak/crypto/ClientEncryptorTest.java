@@ -16,8 +16,8 @@
 
 package com.google.oak.crypto;
 
-import com.google.oak.crypto.Encryptor;
 import com.google.oak.crypto.ClientEncryptor;
+import com.google.oak.crypto.Encryptor;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
 import java.nio.charset.StandardCharsets;
