@@ -26,5 +26,5 @@ public interface EvidenceProvider {
    *
    * @return {@code AttestationBundle} wrapped in a {@code Result}
    */
-  Result<AttestationBundle, Exception> getEvidence();
+  abstract Result<AttestationBundle, Exception> getEvidence();
 }

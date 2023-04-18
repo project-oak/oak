@@ -19,7 +19,7 @@ package com.google.oak.transport;
 import com.google.oak.util.Result;
 
 /** An interface for sending messages to the enclave. */
-public interface Transport {
+public interface Transport extends AutoCloseable {
   /**
    * Sends a request to the enclave and returns a response.
    *
@@ -27,5 +27,5 @@ public interface Transport {
    *     Result}
    * @return a serialized {@code oak.crypto.EncryptedResponse} wrapped in a {@code Result}
    */
-  Result<byte[], Exception> invoke(byte[] requestBytes);
+  abstract Result<byte[], Exception> invoke(byte[] requestBytes);
 }

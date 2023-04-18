@@ -131,4 +131,9 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
       return Result.error(e);
     }
   }
+
+  @Override
+  public void close() throws Exception {
+    this.requestObserver.onCompleted();
+  }
 }

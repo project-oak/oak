@@ -19,7 +19,8 @@ package com.google.oak.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.google.oak.evidence.Evidence;
+import com.google.oak.transport.EvidenceProvider;
+import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
@@ -27,11 +28,10 @@ import org.junit.Test;
 
 public class OakClientTest {
   /**
-   * This test demonstrates the use of the API provided by the classes and interfaces in {@code
-   * com.google.oak.client}.
+   * This test demonstrates the use of the API provided by the {@code com.google.oak.client}.
    */
   @Test
-  public void testSend() {
+  public void testInvoke() {
     PilotAttestationClient attestationClient = new PilotAttestationClient();
     PilotOakClient oakClient = new PilotOakClient.Builder(attestationClient).build();
     Result<String, Exception> response = oakClient.send("Hello!");
@@ -115,15 +115,15 @@ public class OakClientTest {
     }
   }
 
-  private static class PilotRpcClient implements RpcClient {
+  private static class PilotTransport implements EvidenceProvider, Transport {
     @Override
-    public void close() throws Exception {
-      // No resources to close
+    public Result<AttestationBundle, Exception> getEvidence() {
+      return Result.success(requestBytes);
     }
 
     @Override
-    public Result<byte[], Exception> send(final byte[] request) {
-      return Result.success(request);
+    public Result<byte[], Exception> invoke(byte[] requestBytes) {
+      return Result.success(requestBytes);
     }
   }
 }
