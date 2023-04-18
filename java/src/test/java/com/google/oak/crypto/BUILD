@@ -25,7 +25,10 @@ java_test(
     srcs = ["ClientEncryptorTest.java"],
     test_class = "com.google.oak.crypto.ClientEncryptorTest",
     deps = [
-        "//java/src/main/java/com/google/oak/crypto:encryptor",
+        "//java/src/main/java/com/google/oak/crypto:aead_encryptor",
+        "//java/src/main/java/com/google/oak/crypto:client_encryptor",
         "//java/src/main/java/com/google/oak/util",
+        "//oak_crypto/proto:crypto_java_proto",
+        "@com_google_protobuf//:protobuf_javalite",
     ],
 )
