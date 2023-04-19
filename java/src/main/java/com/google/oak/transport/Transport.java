@@ -27,5 +27,5 @@ public interface Transport extends AutoCloseable {
    *     Result}
    * @return a serialized {@code oak.crypto.EncryptedResponse} wrapped in a {@code Result}
    */
-  abstract Result<byte[], Exception> invoke(byte[] requestBytes);
+  abstract Result<byte[], String> invoke(byte[] requestBytes);
 }
