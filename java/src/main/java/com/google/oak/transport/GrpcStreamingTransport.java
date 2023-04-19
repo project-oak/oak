@@ -41,6 +41,8 @@ import oak.session.noninteractive.v1.ResponseWrapper;
 public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   private static final Logger logger = Logger.getLogger(GrpcStreamingTransport.class.getName());
 
+  private static final int MESSAGE_QUEUE_TIMEOUT_SECONDS = 10;
+
   private BlockingQueue<ResponseWrapper> messageQueue;
   private StreamObserver<RequestWrapper> requestObserver;
 
@@ -95,7 +97,8 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
 
     ResponseWrapper responseWrapper;
     try {
-      responseWrapper = this.messageQueue.poll(10, SECONDS);
+      // TODO(#3644): Add retry for client messages.
+      responseWrapper = this.messageQueue.poll(MESSAGE_QUEUE_TIMEOUT_SECONDS, SECONDS);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Result.error(e.toString());
@@ -125,7 +128,8 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
 
     ResponseWrapper responseWrapper;
     try {
-      responseWrapper = this.messageQueue.poll(10, SECONDS);
+      // TODO(#3644): Add retry for client messages.
+      responseWrapper = this.messageQueue.poll(MESSAGE_QUEUE_TIMEOUT_SECONDS, SECONDS);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Result.error(e.toString());
