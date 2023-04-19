@@ -51,10 +51,14 @@ public class ClientEncryptor implements Encryptor {
 
   /**
    * Creates a new instance of [`ClientEncryptor`].
+   * The corresponding encryption and decryption keys are generated using the server public key with
+   * Hybrid Public Key Encryption (HPKE).
+   * <https://www.rfc-editor.org/rfc/rfc9180.html>.
    *
-   * @param serializedServerPublicKey a NIST P-256 SEC1 encoded point public key.
+   * @param serializedServerPublicKey a NIST P-256 SEC1 encoded point public key; see
    * <https://secg.org/sec1-v2.pdf>
    */
+  // TODO(#3642): Implement Java Hybrid Encryption.
   public ClientEncryptor(final byte[] serializedServerPublicKey) {
     this.serializedServerPublicKey = serializedServerPublicKey;
   }
