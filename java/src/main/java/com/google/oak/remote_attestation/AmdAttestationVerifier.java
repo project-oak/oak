@@ -37,6 +37,7 @@ public class AmdAttestationVerifier implements AttestationVerifier {
    * <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
    * @return boolean corresponding to the sussess of the verification wrapped in a {@code Result}
    */
+  // TODO(#3641): Rewrite java-doc to represent actual AMD attestation verification.
   @Override
   public final Result<Boolean, Exception> verify(final AttestationEvidence evidence,
       final AttestationEndorsement endorsement, byte[] reference_value) {

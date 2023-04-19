@@ -25,7 +25,7 @@ import oak.session.noninteractive.v1.AttestationEvidence;
  */
 public class InsecureAttestationVerifier implements AttestationVerifier {
   /**
-   * Verify that the provided evidence was endorsed and contains specified reference values.
+   * Doesn't perform attestation verification and just returns a success value.
    *
    * @param evidence contains claims about the Trusted Execution Environment
    * <https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence>
