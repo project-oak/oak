@@ -20,7 +20,7 @@ must be provided, and added to the provenance generation workflow.
 
 ### Step 1: Add a new buildconfig file
 
-A buildconfig is a `.toml` file containing two fields:
+A buildconfig is a `.toml` file containing the following fields:
 
 - `command`: The command for building the binary that will be passed to
   `docker run`. It must be specified as an array.
@@ -238,6 +238,4 @@ Once the team is ready to transparently release a binary, they have to endorse
 it, using the
 [`endorser tool`](https://github.com/project-oak/transparent-release/tree/main/internal/endorser).
 This tool takes as input the hash of a binary and one or more provenances, then
-it verifies the provenances, and generates an endorsement statement. For more
-details on using the endorser tool see
-[these instructions (currently WIP)](https://github.com/project-oak/transparent-release/tree/main/cmd).
+it verifies the provenances, and generates an endorsement statement.
