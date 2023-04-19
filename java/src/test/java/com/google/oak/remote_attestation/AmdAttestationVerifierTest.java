@@ -30,5 +30,8 @@ public class AmdAttestationVerifierTest {
   @Test
   public void testVerify() throws Exception {
     // TODO(#3641): Implement AMD SEV-SNP attestation verification.
+    AmdAttestationVerifier verifier = new AmdAttestationVerifier();
+    Result<Boolean, Exception> verifyResult = verifier.verify(null, null, new byte[0]);
+    Assert.assertTrue(verifyResult.isSuccess());
   }
 }

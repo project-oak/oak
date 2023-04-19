@@ -28,12 +28,12 @@ public interface AttestationVerifier {
   /**
    * Verify that the provided evidence was endorsed and contains specified reference values.
    *
-   * @param evidence contains claims about the Trusted Execution Environment
+   * @param evidence contains claims about the Trusted Execution Environment; see
    * <https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence>
    * @param endorsement contains statements that the endorsers vouch for the integrity of claims
-   * provided in the evidence
+   * provided in the evidence; see
    * <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
-   * @param reference_value contains values used to verify the evidence
+   * @param reference_value contains values used to verify the evidence; see
    * <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
    * @return boolean corresponding to the sussess of the verification wrapped in a {@code Result}
    */
