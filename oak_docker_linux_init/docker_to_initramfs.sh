@@ -30,14 +30,14 @@ echo "done."
 # Extract the docker CMD if it is present.
 DOCKER_CMD=$(docker \
              inspect \
-             --format='{{join .Config.Cmd " "}}' \
+             --format='{{join .Config.Cmd "\n"}}' \
              "${DOCKER_IMAGE}")
 
 if [ -z "${DOCKER_CMD}" ]; then
   echo "[INFO] 'CMD' not found in docker image. Searching for 'ENTRY_POINT'"
   DOCKER_CMD=$(docker \
                inspect \
-               --format='{{join .Config.Entrypoint " "}}' \
+               --format='{{join .Config.Entrypoint "\n"}}' \
                "${DOCKER_IMAGE}") 
 fi
 
