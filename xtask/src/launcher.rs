@@ -92,6 +92,7 @@ impl LauncherMode {
                     .unwrap()
                 ),
                 format!("--vmm-binary={}", "/usr/bin/qemu-system-x86_64"),
+                "--memory-size=256M".to_string(),
                 format!("--app-binary={}", &self.enclave_binary_path()),
                 format!(
                     "--bios-binary={}",
@@ -171,10 +172,26 @@ pub fn build_binary(name: &str, directory: &str) -> Step {
 pub fn run_oak_functions_launcher_example(
     variant: &LauncherMode,
     wasm_path: &str,
+    port: u16,
+) -> Box<dyn Runnable> {
+    run_oak_functions_launcher_example_with_lookup_data(
+        variant,
+        wasm_path,
+        port,
+        MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
+    )
+}
+
+pub fn run_oak_functions_launcher_example_with_lookup_data(
+    variant: &LauncherMode,
+    wasm_path: &str,
+    port: u16,
+    lookup_data_path: &str,
 ) -> Box<dyn Runnable> {
     let mut args = vec![
         format!("--wasm={}", wasm_path),
-        format!("--lookup-data={}", MOCK_LOOKUP_DATA_PATH.to_str().unwrap()),
+        format!("--port={}", port),
+        format!("--lookup-data={}", lookup_data_path),
     ];
     args.append(&mut variant.variant_subcommand());
     Cmd::new(OAK_FUNCTIONS_LAUNCHER_BIN.to_str().unwrap(), args)

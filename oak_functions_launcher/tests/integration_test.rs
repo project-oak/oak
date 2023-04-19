@@ -16,6 +16,7 @@
 //! Integration tests for the Oak Functions Launcher.
 
 use oak_crypto::{encryptor::ClientEncryptor, schema::EncryptedResponse};
+use oak_functions_client::OakFunctionsClient;
 use oak_functions_launcher::{
     schema::{self, InvokeRequest},
     update_lookup_data, LookupDataConfig,
@@ -24,17 +25,16 @@ use oak_launcher_utils::launcher;
 use prost::Message;
 use std::{io::Write, time::Duration};
 use ubyte::ByteUnit;
+use xtask::{internal::Running, launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
-// Allow enough worker threads to collect output from background tasks.
-#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
-async fn test_launcher_virtual() {
-    if xtask::testing::skip_test() {
-        log::info!("skipping test");
-        return;
-    }
-
+/// Runs the specified example and returns a reference to the running background server and a client
+/// instance that can be used to send requests to the server.
+async fn run_oak_functions_example(
+    wasm_module_crate_name: &str,
+    lookup_data_path: &str,
+) -> (Box<dyn Running>, OakFunctionsClient) {
     xtask::testing::run_step(xtask::launcher::build_stage0()).await;
     xtask::testing::run_step(xtask::launcher::build_binary(
         "build Oak Restricted Kernel binary",
@@ -50,23 +50,94 @@ async fn test_launcher_virtual() {
     ))
     .await;
 
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm(wasm_module_crate_name)
         .expect("Failed to build Wasm module");
+    eprintln!("using wasm module {}", wasm_path);
 
-    let _background = xtask::testing::run_background(
-        xtask::launcher::run_oak_functions_launcher_example(&variant, &wasm_path),
+    let port = portpicker::pick_unused_port().expect("failed to pick a port");
+    eprintln!("using port {}", port);
+
+    let background = xtask::testing::run_background(
+        xtask::launcher::run_oak_functions_launcher_example_with_lookup_data(
+            &variant,
+            &wasm_path,
+            port,
+            lookup_data_path,
+        ),
     )
     .await;
 
     // Wait for the server to start up.
     tokio::time::sleep(Duration::from_secs(20)).await;
 
-    let mut client = oak_functions_client::OakFunctionsClient::new("http://localhost:8080")
+    let client = oak_functions_client::OakFunctionsClient::new(&format!("http://localhost:{port}"))
         .await
-        .unwrap();
+        .expect("failed to create client");
+
+    (background, client)
+}
+
+// Allow enough worker threads to collect output from background tasks.
+#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
+async fn test_launcher_key_value_lookup_virtual() {
+    if xtask::testing::skip_test() {
+        log::info!("skipping test");
+        return;
+    }
+
+    let (_background, mut client) =
+        run_oak_functions_example("key_value_lookup", MOCK_LOOKUP_DATA_PATH.to_str().unwrap())
+            .await;
 
     let response = client.invoke(b"test_key").await.expect("failed to invoke");
     assert_eq!(response, b"test_value");
+}
+
+// Allow enough worker threads to collect output from background tasks.
+#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
+async fn test_launcher_echo_virtual() {
+    if xtask::testing::skip_test() {
+        log::info!("skipping test");
+        return;
+    }
+
+    let (_background, mut client) =
+        run_oak_functions_example("echo", MOCK_LOOKUP_DATA_PATH.to_str().unwrap()).await;
+
+    let response = client.invoke(b"xxxyyyzzz").await.expect("failed to invoke");
+    assert_eq!(std::str::from_utf8(&response).unwrap(), "xxxyyyzzz");
+}
+
+// Allow enough worker threads to collect output from background tasks.
+#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
+async fn test_launcher_weather_lookup_virtual() {
+    if xtask::testing::skip_test() {
+        log::info!("skipping test");
+        return;
+    }
+
+    let (_background, mut client) = run_oak_functions_example(
+        "weather_lookup",
+        workspace_path(&[
+            "oak_functions",
+            "examples",
+            "weather_lookup",
+            "testdata",
+            "lookup_data_weather_sparse_s2",
+        ])
+        .to_str()
+        .unwrap(),
+    )
+    .await;
+
+    let response = client
+        .invoke(br#"{"lat":0,"lng":0}"#)
+        .await
+        .expect("failed to invoke");
+    assert_eq!(
+        std::str::from_utf8(&response).unwrap(),
+        r#"{"temperature_degrees_celsius":29}"#
+    );
 }
 
 #[tokio::test]
@@ -141,7 +212,7 @@ async fn test_launcher_looks_up_key() {
         .decrypt(&encrypted_response)
         .expect("client couldn't decrypt response");
 
-    assert_eq!(b"test_value".to_vec(), response);
+    assert_eq!(std::str::from_utf8(&response).unwrap(), "test_value");
 
     launched_instance
         .kill()

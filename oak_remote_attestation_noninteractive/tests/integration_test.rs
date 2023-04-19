@@ -22,7 +22,7 @@ use oak_remote_attestation_noninteractive::proto::{
     streaming_session_server::{StreamingSession, StreamingSessionServer},
     AttestationBundle, GetPublicKeyRequest, GetPublicKeyResponse, RequestWrapper, ResponseWrapper,
 };
-use std::pin::Pin;
+use std::{pin::Pin, time::Duration};
 use tonic::{
     transport::{Channel, Server},
     Request, Response, Status, Streaming,
@@ -35,6 +35,8 @@ async fn test_get_public_key() {
     let handle = tokio::spawn(async move {
         let _ = start_server(port).await;
     });
+
+    tokio::time::sleep(Duration::from_secs(2)).await;
 
     let result = run_client(port).await;
     assert!(result.is_ok());
