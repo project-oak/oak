@@ -51,8 +51,8 @@ import org.mockito.Mockito;
 
 @RunWith(JUnit4.class)
 public class GrpcStreamingTransportTest {
-  private static final byte[] TEST_REQUEST = {0, 1, 2, 3, 4};
-  private static final byte[] TEST_RESPONSE = {5, 6, 7, 8};
+  private static final byte[] TEST_REQUEST = new byte[] {'R', 'e', 'q', 'u', 'e', 's', 't'};
+  private static final byte[] TEST_RESPONSE = new byte[] {'R', 'e', 's', 'p', 'o', 'n', 's', 'e'};
 
   private class RequestStreamObserver implements StreamObserver<RequestWrapper> {
     private final StreamObserver<ResponseWrapper> responseObserver;
@@ -149,6 +149,8 @@ public class GrpcStreamingTransportTest {
     Assert.assertTrue(invokeResult.isSuccess());
     Assert.assertArrayEquals(invokeResult.success().get(), TEST_RESPONSE);
 
+    // The following call may throw a general {@code Exception}.
+    // The test succeeds if it doesn't throw an exception.
     transport.close();
   }
 }

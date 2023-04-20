@@ -68,8 +68,12 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     }
   }
 
-  private BlockingQueue<ResponseWrapper> messageQueue;
-  private StreamObserver<RequestWrapper> requestObserver;
+  /**
+   * Message queue containing responses received from the server.
+   * The queue size is 1 because we expect to receive a single response message for each request.
+   */
+  private final BlockingQueue<ResponseWrapper> messageQueue = new ArrayBlockingQueue<>(1);
+  private final StreamObserver<RequestWrapper> requestObserver;
 
   /**
    * Creates an instance of {@code GrpcStreamingTransport}.
@@ -79,8 +83,6 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
    */
   public GrpcStreamingTransport(
       Function<StreamObserver<ResponseWrapper>, StreamObserver<RequestWrapper>> stream) {
-    // We expect to receive a single response message for each request.
-    this.messageQueue = new ArrayBlockingQueue<>(1);
     StreamObserver<ResponseWrapper> responseObserver = new ResponseStreamObserver();
     this.requestObserver = stream.apply(responseObserver);
   }
@@ -94,7 +96,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     RequestWrapper requestWrapper = RequestWrapper.newBuilder()
                                         .setGetPublicKeyRequest(GetPublicKeyRequest.newBuilder())
                                         .build();
-    logger.log(Level.INFO, "sending get public key request: {0}", requestWrapper.toString());
+    logger.log(Level.INFO, "sending get public key request: {0}", requestWrapper);
     this.requestObserver.onNext(requestWrapper);
 
     ResponseWrapper responseWrapper;
@@ -103,10 +105,13 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
       responseWrapper = this.messageQueue.poll(MESSAGE_QUEUE_TIMEOUT_SECONDS, SECONDS);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      return Result.error(e.toString());
+      return Result.error("Thread interrupted while waiting for a response");
+    }
+    if (responseWrapper == null) {
+      return Result.error("No response message received");
     }
 
-    logger.log(Level.INFO, "received get public key response: {0}", responseWrapper.toString());
+    logger.log(Level.INFO, "received get public key response: {0}", responseWrapper);
     GetPublicKeyResponse response = responseWrapper.getGetPublicKeyResponse();
 
     return Result.success(response.getAttestationBundle());
@@ -134,7 +139,10 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
       responseWrapper = this.messageQueue.poll(MESSAGE_QUEUE_TIMEOUT_SECONDS, SECONDS);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      return Result.error(e.toString());
+      return Result.error("Thread interrupted while waiting for a response");
+    }
+    if (responseWrapper == null) {
+      return Result.error("No response message received");
     }
 
     logger.log(Level.INFO, "received invoke response: {0}", responseWrapper);
