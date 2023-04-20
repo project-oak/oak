@@ -37,6 +37,7 @@ allow = [
   "MPL-2.0",
   "OpenSSL",
   "Unicode-DFS-2016",
+  "Unlicense",
 ]
 copyleft = "deny"
 
