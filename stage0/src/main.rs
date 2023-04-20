@@ -24,18 +24,12 @@ use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use oak_sev_guest::io::PortFactoryWrapper;
 use static_alloc::bump::Bump;
 use x86_64::{
-    instructions::{hlt, interrupts::int3, segmentation::Segment, tlb},
-    registers::{
-        control::{Cr3, Cr3Flags},
-        segmentation::*,
-    },
+    instructions::{hlt, interrupts::int3, segmentation::Segment},
+    registers::segmentation::*,
     structures::{
         gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector},
         idt::InterruptDescriptorTable,
-        paging::{
-            page_table::{PageTable, PageTableFlags},
-            Page, PageSize, PhysFrame, Size1GiB, Size2MiB,
-        },
+        paging::{Page, PageSize, Size1GiB},
     },
     PhysAddr, VirtAddr,
 };
@@ -47,6 +41,7 @@ mod fw_cfg;
 mod initramfs;
 mod kernel;
 mod logging;
+mod paging;
 mod sev;
 mod zero_page;
 
@@ -64,41 +59,8 @@ static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::un
 const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
 
 extern "C" {
-    #[link_name = "pd_addr"]
-    static BIOS_PD: c_void;
-
-    #[link_name = "pt_addr"]
-    static BIOS_PT: c_void;
-
     #[link_name = "stack_start"]
     static BOOT_STACK_POINTER: c_void;
-}
-
-/// Creates page tables that identity-map the first 1GiB of memory using 2MiB hugepages.
-pub fn create_page_tables(
-    pml4: &mut PageTable,
-    pdpt: &mut PageTable,
-    pd: &mut PageTable,
-    encrypted: u64,
-) {
-    pml4.zero();
-    pml4[0].set_addr(
-        PhysAddr::new(pdpt as *const _ as u64 | encrypted),
-        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-    );
-
-    pdpt.zero();
-    pdpt[0].set_addr(
-        PhysAddr::new(pd as *const _ as u64 | encrypted),
-        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-    );
-
-    pd.iter_mut().enumerate().for_each(|(i, entry)| {
-        entry.set_addr(
-            PhysAddr::new(((i as u64) * Size2MiB::SIZE) | encrypted),
-            PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
-        );
-    });
 }
 
 pub fn create_gdt(gdt: &mut GlobalDescriptorTable) -> (SegmentSelector, SegmentSelector) {
@@ -164,6 +126,8 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     } else {
         None
     };
+
+    paging::init_page_table_refs();
 
     logging::init_logging(match ghcb_protocol {
         Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
@@ -242,39 +206,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     create_idt(idt);
     idt.load();
 
-    let pml4 = BOOT_ALLOC
-        .leak(PageTable::new())
-        .expect("Failed to allocate memory for PML4");
-    let pdpt = BOOT_ALLOC
-        .leak(PageTable::new())
-        .expect("Failed to allocate memory for PDPT");
-    let pd = BOOT_ALLOC
-        .leak(PageTable::new())
-        .expect("Failed to allocate memory for PD");
-    create_page_tables(pml4, pdpt, pd, encrypted);
-    /* We need to do some trickery here. All of the stage0 code is somewhere within [4G-2M; 4G).
-     * Thus, let's keep our own last PD, so that we can continue executing after reloading the
-     * page tables.
-     * Same for the first 2M of memory; we're using 4K pages there, so keep that around.
-     */
-    // Safety: dereferencing the raw pointer is safe as that's the currently in-use page directory.
-    pd[0].set_addr(
-        PhysAddr::new(unsafe { &BIOS_PT } as *const _ as u64 | encrypted),
-        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-    );
-    pdpt[3].set_addr(
-        PhysAddr::new(unsafe { &BIOS_PD } as *const _ as u64 | encrypted),
-        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-    );
-    // Safety: changing the page tables here is safe because (a) we've populated the new page tables
-    // at the well-known address of BOOT_PML4_ADDR and (b) we've ensured we keep the mapping for our
-    // own code.
-    unsafe {
-        Cr3::write(
-            PhysFrame::from_start_address(PhysAddr::new(pml4 as *const _ as u64)).unwrap(),
-            Cr3Flags::empty(),
-        );
-    }
+    paging::map_additional_memory(encrypted);
 
     if snp {
         let cc_blob = BOOT_ALLOC
@@ -335,13 +267,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
             sev::deinit_ghcb();
         }
     }
-    // Allow identity-op to keep the fact that the address we're talking about here is 0x00.
-    #[allow(clippy::identity_op)]
-    pd[0].set_addr(
-        PhysAddr::new(0x00 | encrypted),
-        PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
-    );
-    tlb::flush_all();
+    paging::remap_first_huge_page(encrypted);
 
     unsafe {
         jump_to_kernel(entry, zero_page as *const _ as usize);

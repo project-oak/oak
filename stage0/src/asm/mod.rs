@@ -16,5 +16,12 @@
 
 use core::arch::global_asm;
 
-global_asm!(include_str!("boot.s"), options(att_syntax, raw));
+global_asm!(
+    include_str!("boot.s"),
+    pml4 = sym crate::paging::PML4,
+    pdpt = sym crate::paging::PDPT,
+    pd_0 = sym crate::paging::PD_0,
+    pd_3 = sym crate::paging::PD_3,
+    pt_0 = sym crate::paging::PT_0,
+    options(att_syntax));
 global_asm!(include_str!("reset_vector.s"), options(att_syntax, raw));
