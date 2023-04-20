@@ -185,6 +185,23 @@
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -279,6 +296,7 @@
                     .unwrap()
                 ),
                 <span class="macro">format!</span>(<span class="string">&quot;--vmm-binary={}&quot;</span>, <span class="string">&quot;/usr/bin/qemu-system-x86_64&quot;</span>),
+                <span class="string">&quot;--memory-size=256M&quot;</span>.to_string(),
                 <span class="macro">format!</span>(<span class="string">&quot;--app-binary={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_binary_path()),
                 <span class="macro">format!</span>(
                     <span class="string">&quot;--bios-binary={}&quot;</span>,
@@ -358,10 +376,26 @@
 </span><span class="kw">pub fn </span>run_oak_functions_launcher_example(
     variant: <span class="kw-2">&amp;</span>LauncherMode,
     wasm_path: <span class="kw-2">&amp;</span>str,
+    port: u16,
+) -&gt; Box&lt;<span class="kw">dyn </span>Runnable&gt; {
+    run_oak_functions_launcher_example_with_lookup_data(
+        variant,
+        wasm_path,
+        port,
+        MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
+    )
+}
+
+<span class="kw">pub fn </span>run_oak_functions_launcher_example_with_lookup_data(
+    variant: <span class="kw-2">&amp;</span>LauncherMode,
+    wasm_path: <span class="kw-2">&amp;</span>str,
+    port: u16,
+    lookup_data_path: <span class="kw-2">&amp;</span>str,
 ) -&gt; Box&lt;<span class="kw">dyn </span>Runnable&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>args = <span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">&quot;--wasm={}&quot;</span>, wasm_path),
-        <span class="macro">format!</span>(<span class="string">&quot;--lookup-data={}&quot;</span>, MOCK_LOOKUP_DATA_PATH.to_str().unwrap()),
+        <span class="macro">format!</span>(<span class="string">&quot;--port={}&quot;</span>, port),
+        <span class="macro">format!</span>(<span class="string">&quot;--lookup-data={}&quot;</span>, lookup_data_path),
     ];
     args.append(<span class="kw-2">&amp;mut </span>variant.variant_subcommand());
     Cmd::new(OAK_FUNCTIONS_LAUNCHER_BIN.to_str().unwrap(), args)
