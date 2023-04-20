@@ -22,6 +22,35 @@ package(
 )
 
 java_library(
+    name = "attestation_verifier",
+    srcs = ["AttestationVerifier.java"],
+    deps = [
+        "//java/src/main/java/com/google/oak/util",
+        "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
+    ],
+)
+
+java_library(
+    name = "amd_attestation_verifier",
+    srcs = ["AmdAttestationVerifier.java"],
+    deps = [
+        ":attestation_verifier",
+        "//java/src/main/java/com/google/oak/util",
+        "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
+    ],
+)
+
+java_library(
+    name = "insecure_attestation_verifier",
+    srcs = ["InsecureAttestationVerifier.java"],
+    deps = [
+        ":attestation_verifier",
+        "//java/src/main/java/com/google/oak/util",
+        "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
+    ],
+)
+
+java_library(
     name = "remote_attestation",
     srcs = [
         "AeadEncryptor.java",
