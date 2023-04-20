@@ -31,14 +31,13 @@ import oak.session.noninteractive.v1.StreamingSessionGrpc;
 
 public class Main {
   private static Logger logger = Logger.getLogger(Main.class.getName());
-  private static final String OAK_URL = "http://localhost:8080";
   private static final String EMPTY_API_KEY = "";
   private static final String EXPECTED_RESPONSE_PATTERN =
       "\\{\"temperature_degrees_celsius\":.*\\}";
 
   public static void main(String[] args) throws Exception {
     // Create a gRPC channel.
-    URL parsedUrl = new URL(OAK_URL);
+    URL parsedUrl = new URL(args[0]);
     ManagedChannelBuilder builder =
         ManagedChannelBuilder.forAddress(parsedUrl.getHost(), parsedUrl.getPort()).usePlaintext();
     builder.intercept(new ApiKeyInterceptor(EMPTY_API_KEY));

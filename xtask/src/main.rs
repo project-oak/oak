@@ -97,15 +97,7 @@ fn match_cmd(opt: &Opt) -> Step {
         Command::BuildEnclaveBinaryVariants(ref opts) => {
             launcher::build_enclave_binary_variants(opts)
         }
-        Command::RunOakFunctionsExamples(ref run_opt) => {
-            run_oak_functions_examples(run_opt, &opt.scope)
-        }
-        Command::BuildOakFunctionsExample(ref opts) => {
-            build_oak_functions_example(opts, &opt.scope)
-        }
-        Command::BuildOakFunctionsServerVariants(ref opt) => {
-            build_oak_functions_server_variants(opt)
-        }
+        Command::RunOakFunctionsExample(ref run_opt) => run_oak_functions_example(run_opt),
         Command::RunTests => run_tests(),
         Command::RunCargoClippy => run_cargo_clippy(&opt.scope),
         Command::RunCargoTests(ref run_opt) => run_cargo_tests(run_opt, &opt.scope),
