@@ -21,21 +21,28 @@ import static org.mockito.Mockito.mock;
 
 import com.google.oak.transport.GrpcStreamingTransport;
 import com.google.oak.util.Result;
+import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
-import io.grpc.stub.StreamObserver;
-import io.grpc.testing.GrpcCleanupRule;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
+import io.grpc.stub.StreamObserver;
+import io.grpc.testing.GrpcCleanupRule;
+import java.lang.IllegalArgumentException;
 import java.nio.charset.StandardCharsets;
-import java.util.function.Function;
 import java.util.Optional;
+import java.util.function.Function;
+import oak.session.noninteractive.v1.AttestationBundle;
+import oak.session.noninteractive.v1.GetPublicKeyRequest;
+import oak.session.noninteractive.v1.GetPublicKeyResponse;
+import oak.session.noninteractive.v1.InvokeRequest;
+import oak.session.noninteractive.v1.InvokeResponse;
 import oak.session.noninteractive.v1.RequestWrapper;
 import oak.session.noninteractive.v1.ResponseWrapper;
 import oak.session.noninteractive.v1.StreamingSessionGrpc;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Test;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Matchers;
@@ -44,31 +51,70 @@ import org.mockito.Mockito;
 
 @RunWith(JUnit4.class)
 public class GrpcStreamingTransportTest {
-  @Rule
-  public final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
+  private static final byte[] TEST_REQUEST = {0, 1, 2, 3, 4};
+  private static final byte[] TEST_RESPONSE = {5, 6, 7, 8};
+
+  private class RequestStreamObserver implements StreamObserver<RequestWrapper> {
+    private final StreamObserver<ResponseWrapper> responseObserver;
+
+    RequestStreamObserver(StreamObserver<ResponseWrapper> responseObserver) {
+      this.responseObserver = responseObserver;
+    }
+
+    @Override
+    public void onNext(RequestWrapper request) {
+      ResponseWrapper responseWrapper;
+      RequestWrapper.RequestCase requestCase = request.getRequestCase();
+      switch (requestCase) {
+        case GET_PUBLIC_KEY_REQUEST:
+          responseWrapper =
+              ResponseWrapper.newBuilder()
+                  .setGetPublicKeyResponse(GetPublicKeyResponse.newBuilder().setAttestationBundle(
+                      AttestationBundle.getDefaultInstance()))
+                  .build();
+          responseObserver.onNext(responseWrapper);
+          break;
+        case INVOKE_REQUEST:
+          responseWrapper = ResponseWrapper.newBuilder()
+                                .setInvokeResponse(InvokeResponse.newBuilder().setEncryptedBody(
+                                    ByteString.copyFrom(TEST_RESPONSE)))
+                                .build();
+          responseObserver.onNext(responseWrapper);
+          break;
+        case REQUEST_NOT_SET:
+          responseObserver.onError(new IllegalArgumentException());
+          break;
+      }
+    }
+
+    @Override
+    public void onError(Throwable t) {
+      responseObserver.onError(t);
+    }
+
+    @Override
+    public void onCompleted() {
+      responseObserver.onCompleted();
+    }
+  }
 
   private final StreamingSessionGrpc.StreamingSessionImplBase serviceImpl =
-      mock(StreamingSessionGrpc.StreamingSessionImplBase.class, delegatesTo(
-          new StreamingSessionGrpc.StreamingSessionImplBase() {
+      mock(StreamingSessionGrpc.StreamingSessionImplBase.class,
+          delegatesTo(new StreamingSessionGrpc.StreamingSessionImplBase() {
             @Override
-            public StreamObserver<RequestWrapper> stream(StreamObserver<ResponseWrapper> responseObserver) {
-              StreamObserver<RequestWrapper> requestObserver = new StreamObserver<RequestWrapper>() {
-                @Override
-                public void onNext(RequestWrapper request) {
-                  responseObserver.onNext(ResponseWrapper.getDefaultInstance());
-                }
-
-                @Override
-                public void onError(Throwable t) {}
-
-                @Override
-                public void onCompleted() {
-                  responseObserver.onCompleted();
-                }
-              };
+            public StreamObserver<RequestWrapper> stream(
+                StreamObserver<ResponseWrapper> responseObserver) {
+              StreamObserver<RequestWrapper> requestObserver =
+                  new RequestStreamObserver(responseObserver);
               return requestObserver;
             }
           }));
+
+  /**
+   * This rule manages automatic graceful shutdown for the registered servers and channels at the
+   * end of test.
+   */
+  @Rule public final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
 
   private StreamingSessionGrpc.StreamingSessionStub client;
 
@@ -78,36 +124,31 @@ public class GrpcStreamingTransportTest {
     String serverName = InProcessServerBuilder.generateName();
 
     // Create a server, add service, start, and register for automatic graceful shutdown.
-    grpcCleanup.register(InProcessServerBuilder
-        .forName(serverName).directExecutor().addService(serviceImpl).build().start());
+    grpcCleanup.register(InProcessServerBuilder.forName(serverName)
+                             .directExecutor()
+                             .addService(serviceImpl)
+                             .build()
+                             .start());
 
     // Create a client channel and register for automatic graceful shutdown.
-    ManagedChannel channel = grpcCleanup.register(
-        InProcessChannelBuilder.forName(serverName).directExecutor().build());
+    ManagedChannel channel =
+        grpcCleanup.register(InProcessChannelBuilder.forName(serverName).directExecutor().build());
 
     // Create a client using the in-process channel;
-    StreamingSessionGrpc.StreamingSessionStub client = StreamingSessionGrpc.newStub(channel);
+    client = StreamingSessionGrpc.newStub(channel);
   }
 
   @Test
-  public void testGetEvidence() throws Exception {
-    // TODO(#3644): Implement a unit test for gRPC streaming.
-    Assert.assertNotNull(client);
+  public void testGrpcStreamingTransport() throws Exception {
     GrpcStreamingTransport transport = new GrpcStreamingTransport(client::stream);
 
-    // Function<StreamObserver<ResponseWrapper>, StreamObserver<RequestWrapper>> stream =
-    //     client::stream;
+    Result<AttestationBundle, String> getEvidenceResult = transport.getEvidence();
+    Assert.assertTrue(getEvidenceResult.isSuccess());
 
-    // StreamObserver<ResponseWrapper> responseObserver = new StreamObserver<ResponseWrapper>() {
-    //   @Override
-    //   public void onNext(ResponseWrapper response) {}
+    Result<byte[], String> invokeResult = transport.invoke(TEST_REQUEST);
+    Assert.assertTrue(invokeResult.isSuccess());
+    Assert.assertArrayEquals(invokeResult.success().get(), TEST_RESPONSE);
 
-    //   @Override
-    //   public void onError(Throwable t) {}
-
-    //   @Override
-    //   public void onCompleted() {}
-    // };
-    // StreamObserver<RequestWrapper> requestObserver = client.stream(responseObserver);
+    transport.close();
   }
 }

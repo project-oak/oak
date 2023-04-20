@@ -43,6 +43,31 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
 
   private static final int MESSAGE_QUEUE_TIMEOUT_SECONDS = 10;
 
+  private class ResponseStreamObserver implements StreamObserver<ResponseWrapper> {
+    @Override
+    public void onNext(ResponseWrapper response) {
+      try {
+        messageQueue.put(response);
+      } catch (Exception e) {
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
+        logger.log(Level.WARNING, "Couldn't send server response to the message queue: {0}", e);
+      }
+    }
+
+    @Override
+    public void onError(Throwable t) {
+      Status status = Status.fromThrowable(t);
+      logger.log(Level.WARNING, "Couldn't receive response: {0}", status);
+    }
+
+    @Override
+    public void onCompleted() {
+      logger.log(Level.FINE, "response message queue completed");
+    }
+  }
+
   private BlockingQueue<ResponseWrapper> messageQueue;
   private StreamObserver<RequestWrapper> requestObserver;
 
@@ -56,30 +81,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
       Function<StreamObserver<ResponseWrapper>, StreamObserver<RequestWrapper>> stream) {
     // We expect to receive a single response message for each request.
     this.messageQueue = new ArrayBlockingQueue<>(1);
-    StreamObserver<ResponseWrapper> responseObserver = new StreamObserver<ResponseWrapper>() {
-      @Override
-      public void onNext(ResponseWrapper response) {
-        try {
-          messageQueue.put(response);
-        } catch (Exception e) {
-          if (e instanceof InterruptedException) {
-            Thread.currentThread().interrupt();
-          }
-          logger.log(Level.WARNING, "Couldn't send server response to the message queue: %s", e);
-        }
-      }
-
-      @Override
-      public void onError(Throwable t) {
-        Status status = Status.fromThrowable(t);
-        logger.log(Level.WARNING, "Couldn't receive response: %s", status);
-      }
-
-      @Override
-      public void onCompleted() {
-        logger.log(Level.FINE, "response message queue completed");
-      }
-    };
+    StreamObserver<ResponseWrapper> responseObserver = new ResponseStreamObserver();
     this.requestObserver = stream.apply(responseObserver);
   }
 
@@ -92,7 +94,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     RequestWrapper requestWrapper = RequestWrapper.newBuilder()
                                         .setGetPublicKeyRequest(GetPublicKeyRequest.newBuilder())
                                         .build();
-    logger.log(Level.INFO, "sending get public key request: %s", requestWrapper);
+    logger.log(Level.INFO, "sending get public key request: {0}", requestWrapper.toString());
     this.requestObserver.onNext(requestWrapper);
 
     ResponseWrapper responseWrapper;
@@ -104,7 +106,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
       return Result.error(e.toString());
     }
 
-    logger.log(Level.INFO, "received get public key response: %s", responseWrapper);
+    logger.log(Level.INFO, "received get public key response: {0}", responseWrapper.toString());
     GetPublicKeyResponse response = responseWrapper.getGetPublicKeyResponse();
 
     return Result.success(response.getAttestationBundle());
@@ -123,7 +125,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
             .setInvokeRequest(
                 InvokeRequest.newBuilder().setEncryptedBody(ByteString.copyFrom(requestBytes)))
             .build();
-    logger.log(Level.INFO, "sending invoke request: %s", requestWrapper);
+    logger.log(Level.INFO, "sending invoke request: {0}", requestWrapper);
     this.requestObserver.onNext(requestWrapper);
 
     ResponseWrapper responseWrapper;
@@ -135,7 +137,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
       return Result.error(e.toString());
     }
 
-    logger.log(Level.INFO, "received invoke response: %s", responseWrapper);
+    logger.log(Level.INFO, "received invoke response: {0}", responseWrapper);
     InvokeResponse response = responseWrapper.getInvokeResponse();
 
     return Result.success(response.getEncryptedBody().toByteArray());
