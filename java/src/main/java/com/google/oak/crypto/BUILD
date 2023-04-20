@@ -22,9 +22,14 @@ package(
 )
 
 java_library(
-    name = "encryptor",
-    srcs = ["ClientEncryptor.java"],
+    name = "client_encryptor",
+    srcs = [
+        "ClientEncryptor.java",
+        "Encryptor.java",
+    ],
     deps = [
         "//java/src/main/java/com/google/oak/util",
+        "//oak_crypto/proto:crypto_java_proto",
+        "@com_google_protobuf//:protobuf_javalite",
     ],
 )
