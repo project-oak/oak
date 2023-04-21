@@ -1,5 +1,5 @@
 #
-# Copyright 2022 The Project Oak Authors
+# Copyright 2023 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,37 +14,27 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:defs.bzl", "java_test")
 
 package(
-    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-java_library(
-    name = "client",
-    srcs = [
-        "AeadEncryptor.java",
-        "Encryptor.java",
-        "OakClient.java",
-        "RpcClient.java",
-    ],
+java_test(
+    name = "grpc_streaming_transport_test",
+    srcs = ["GrpcStreamingTransportTest.java"],
+    test_class = "com.google.oak.transport.GrpcStreamingTransportTest",
     deps = [
-        "//java/src/main/java/com/google/oak/evidence",
-        "//java/src/main/java/com/google/oak/remote_attestation",
+        "//java/src/main/java/com/google/oak/transport:grpc_streaming_transport",
         "//java/src/main/java/com/google/oak/util",
-    ],
-)
-
-java_library(
-    name = "oak_grpc_client",
-    srcs = ["OakGrpcClient.java"],
-    deps = [
-        "//oak_crypto/proto:crypto_java_proto",
         "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
+        "//oak_remote_attestation_noninteractive/proto/v1:service_streaming_java_grpc",
         "//oak_remote_attestation_noninteractive/proto/v1:service_streaming_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
         "@io_grpc_grpc_java//api",
+        "@io_grpc_grpc_java//core:inprocess",
         "@io_grpc_grpc_java//stub",
+        "@io_grpc_grpc_java//testing",
+        "@org_mockito_mockito_core",
     ],
 )

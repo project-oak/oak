@@ -1,5 +1,5 @@
 #
-# Copyright 2022 The Project Oak Authors
+# Copyright 2023 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,29 +22,38 @@ package(
 )
 
 java_library(
-    name = "client",
+    name = "transport",
     srcs = [
-        "AeadEncryptor.java",
-        "Encryptor.java",
-        "OakClient.java",
-        "RpcClient.java",
+        "EvidenceProvider.java",
+        "Transport.java",
     ],
     deps = [
-        "//java/src/main/java/com/google/oak/evidence",
-        "//java/src/main/java/com/google/oak/remote_attestation",
         "//java/src/main/java/com/google/oak/util",
+        "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
     ],
 )
 
 java_library(
-    name = "oak_grpc_client",
-    srcs = ["OakGrpcClient.java"],
+    name = "grpc_streaming_transport",
+    srcs = [
+        "GrpcStreamingTransport.java",
+    ],
     deps = [
+        ":transport",
+        "//java/src/main/java/com/google/oak/util",
         "//oak_crypto/proto:crypto_java_proto",
         "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
         "//oak_remote_attestation_noninteractive/proto/v1:service_streaming_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//stub",
+    ],
+)
+
+java_library(
+    name = "api_key_interceptor",
+    srcs = ["ApiKeyInterceptor.java"],
+    deps = [
+        "@io_grpc_grpc_java//api",
     ],
 )
