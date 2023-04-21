@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["ALL_CLIENTS","NO_CLIENTS"],"enum":["Target"],"fn":["build_oak_functions_example","build_oak_functions_linux_fd_bin","build_oak_functions_server_variants","build_wasm_module","run_oak_functions_examples"],"struct":["OakExample","OakFunctionsExample"]};
+window.SIDEBAR_ITEMS = {"fn":["build_rust_crate_wasm","run_oak_functions_example"]};
