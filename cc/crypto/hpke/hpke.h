@@ -26,6 +26,11 @@
 
 namespace oak::crypto {
 
+struct KeyPair {
+  std::string private_key;
+  std::string public_key;
+};
+
 class SenderRequestContext {
  public:
   // Encrypts message with associated data using AEAD.
@@ -41,6 +46,21 @@ class SenderResponseContext {
   absl::StatusOr<std::string> open(absl::string_view ciphertext, absl::string_view associated_data);
 };
 
+class RecipientRequestContext {
+ public:
+  // Decrypts message and validates associated data using AEAD.
+  // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
+  absl::StatusOr<std::string> open(absl::string_view ciphertext, absl::string_view associated_data);
+};
+
+class RecipientResponseContext {
+ public:
+  // Encrypts response message with associated data using AEAD as part of bidirectional
+  // communication.
+  // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
+  absl::StatusOr<std::string> seal(absl::string_view plaintext, absl::string_view associated_data);
+};
+
 // Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
 // public key) and creating a sender context.
 // Returns a tuple with an encapsulated public key, sender request and sender response contexts.
@@ -48,9 +68,18 @@ class SenderResponseContext {
 //
 // Encapsulated public key is represented as a NIST P-256 SEC1 encoded point public key.
 // <https://secg.org/sec1-v2.pdf>
-std::tuple<std::string, std::unique_ptr<SenderRequestContext>,
-           std::unique_ptr<SenderResponseContext>>
+absl::StatusOr<std::tuple<std::string, std::unique_ptr<SenderRequestContext>,
+                          std::unique_ptr<SenderResponseContext>>>
 setup_base_sender(absl::string_view serialized_recipient_public_key, absl::string_view info);
+
+// Sets up an HPKE recipient by creating a recipient context.
+// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
+// Returns a tuple with a recipient request and recipient response contexts.
+// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
+absl::StatusOr<
+    std::tuple<std::unique_ptr<RecipientRequestContext>, std::unique_ptr<RecipientResponseContext>>>
+setup_base_recipient(absl::string_view serialized_encapsulated_public_key,
+                     KeyPair recipient_key_pair);
 
 }  // namespace oak::crypto
 

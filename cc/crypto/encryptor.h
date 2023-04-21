@@ -23,7 +23,7 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "cc/crypto/hpke.h"
+#include "cc/crypto/hpke/hpke.h"
 
 namespace oak::crypto {
 
@@ -31,13 +31,18 @@ namespace oak::crypto {
 constexpr absl::string_view OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1";
 
 // Encryptor class for encrypting client requests that will be sent to the server and decrypting
-// server responses that are received by the client. Each Encryptor object corresponds to a
-// single crypto session between the client and the server.
+// server responses that are received by the client. Each Encryptor corresponds to a single crypto
+// session between the client and the server.
 //
 // Sequence numbers for requests and responses are incremented separately, meaning that there could
 // be multiple responses per request and multiple requests per response.
 class ClientEncryptor {
  public:
+  // Creates a new instance of [`ClientEncryptor`].
+  // The corresponding encryption and decryption keys are generated using the server public key with
+  // Hybrid Public Key Encryption (HPKE).
+  // <https://www.rfc-editor.org/rfc/rfc9180.html>
+  //
   // `serialized_server_public_key` must be a NIST P-256 SEC1 encoded point public key.
   // <https://secg.org/sec1-v2.pdf>
   static absl::StatusOr<std::unique_ptr<ClientEncryptor>> Create(
@@ -48,7 +53,7 @@ class ClientEncryptor {
   //
   // Returns a serialized [`oak.crypto.EncryptedRequest`] message.
   // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
-  absl::StatusOr<std::string> encrypt(absl::string_view plaintext,
+  absl::StatusOr<std::string> Encrypt(absl::string_view plaintext,
                                       absl::string_view associated_data);
 
   // Decrypts a [`EncryptedResponse`] proto message using AEAD.
@@ -57,7 +62,8 @@ class ClientEncryptor {
   // `encrypted_response` must be a serialized [`oak.crypto.EncryptedResponse`] message.
   // Returns a response message plaintext and associated data.
   // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
-  std::tuple<std::string, std::string> decrypt(absl::string_view encrypted_response);
+  absl::StatusOr<std::tuple<std::string, std::string>> Decrypt(
+      absl::string_view encrypted_response);
 
  private:
   // Encapsulated public key needed to establish a symmetric session key.
@@ -65,6 +71,38 @@ class ClientEncryptor {
   std::string serialized_encapsulated_public_key;
   std::unique_ptr<SenderRequestContext> sender_request_context;
   std::unique_ptr<SenderResponseContext> sender_response_context;
+};
+
+// Encryptor class for decrypting client requests that are received by the server and encrypting
+// server responses that will be sent back to the client. Each Encryptor corresponds to a single
+// crypto session between the client and the server.
+//
+// Sequence numbers for requests and responses are incremented separately, meaning that there could
+// be multiple responses per request and multiple requests per response.
+class ServerEncryptor {
+ public:
+  ServerEncryptor(KeyPair server_key_pair);
+
+  // Decrypts a [`EncryptedRequest`] proto message using AEAD.
+  // <https://datatracker.ietf.org/doc/html/rfc5116>
+  //
+  // `encrypted_request` must be a serialized [`oak.crypto.EncryptedRequest`] message.
+  // Returns a response message plaintext and associated data.
+  // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
+  std::tuple<std::string, std::string> Decrypt(absl::string_view encrypted_request);
+
+  // Encrypts `plaintext` and authenticates `associated_data` using AEAD.
+  // <https://datatracker.ietf.org/doc/html/rfc5116>
+  //
+  // Returns a serialized [`oak.crypto.EncryptedResponse`] message.
+  // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
+  absl::StatusOr<absl::StatusOr<std::string>> Encrypt(absl::string_view plaintext,
+                                                      absl::string_view associated_data);
+
+ private:
+  KeyPair server_key_pair;
+  std::unique_ptr<RecipientRequestContext> recipient_request_context;
+  std::unique_ptr<RecipientResponseContext> recipient_response_context;
 };
 
 }  // namespace oak::crypto
