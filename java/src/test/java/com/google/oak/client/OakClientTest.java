@@ -80,7 +80,7 @@ public class OakClientTest {
   @Test
   public void testOakClient() {
     Result<OakClient<TestTransport>, Exception> oakClientCreateResult =
-        OakClient.Create(new TestTransport(), new InsecureAttestationVerifier());
+        OakClient.create(new TestTransport(), new InsecureAttestationVerifier());
     assertTrue(oakClientCreateResult.isSuccess());
     OakClient<TestTransport> oakClient = oakClientCreateResult.success().get();
 

@@ -52,7 +52,7 @@ public class Main {
     // Create Oak Client.
     GrpcStreamingTransport transport = new GrpcStreamingTransport(client::stream);
     Result<OakClient<GrpcStreamingTransport>, Exception> oakClientCreateResult =
-        OakClient.Create(transport, new InsecureAttestationVerifier());
+        OakClient.create(transport, new InsecureAttestationVerifier());
     if (oakClientCreateResult.isError()) {
       throw oakClientCreateResult.error().get();
     }

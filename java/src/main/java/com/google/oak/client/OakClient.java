@@ -45,7 +45,7 @@ public class OakClient<T extends Transport> {
    * @param E type that implements interfaces for the transport and for the evidence provider.
    */
   public static <E extends EvidenceProvider & Transport, V extends AttestationVerifier>
-      Result<OakClient<E>, Exception> Create(E transport, V verifier) {
+      Result<OakClient<E>, Exception> create(E transport, V verifier) {
     // TODO(#3641): Implement client-side attestation verification.
     Result<AttestationBundle, String> getEvidenceResult = transport.getEvidence();
     if (getEvidenceResult.isError()) {
