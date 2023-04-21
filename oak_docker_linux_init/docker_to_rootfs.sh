@@ -6,16 +6,40 @@
 # exit when any command fails
 set -e
 
-# Just a simple commandline handling for now.
-if [ $# -ne 2 ]; then
+print_usage_and_exit() {
   echo "Usage:"
-  echo "  $0 <docker-image> <output-initramfs-file> "
+  echo "  $0 [-h] -d <docker-image> [-r <rootfsdir>] [-o <output-initramfs-file>]"
+  exit 0
+}
+
+while getopts "hd:r:o:" opt; do
+  case $opt in
+    h)
+      print_usage_and_exit;;
+    o)
+      readonly INITRAMFS_FILE="${OPTARG}";;
+    r)
+      readonly ROOTFS_DIR="${OPTARG}";;
+    d)
+      readonly DOCKER_IMAGE="${OPTARG}";;
+    *)
+      echo "Invalid argument: ${OPTARG}"
+      exit 1;;
+  esac
+done
+
+if [ -z "${DOCKER_IMAGE}" ]; then
+  echo "Missing required option: -d <docker-image>"
   exit 1
 fi
-DOCKER_IMAGE=$1
-INITRAMFS_FILE=$2
 
-echo "[Info] Building init process..."
+if [ -z "${ROOTFS_DIR}" ]; then
+  ROOTFS_DIR=$(mktemp -d)
+  echo "[WARN] Directory for the rootfs is not specified. Created ${ROOTFS_DIR}."
+fi
+
+echo "[INFO] Rootfs directory is ${ROOTFS_DIR}"
+echo "[INFO] Building init process for docker rootfs..."
 cargo build --release --target=x86_64-unknown-linux-musl --package=oak_docker_linux_init
 
 # Create a temporary workspace directory.
@@ -48,32 +72,33 @@ fi
 
 echo "[INFO] Docker entry point cmd: \"${DOCKER_CMD}\""
 
-# Create initramfs 
-RAMDIR=$(mktemp -d)
-
 # Extract the contents of the docker filesystem
-tar xf "${DOCKER_IMAGE_FS}" -C "${RAMDIR}"
+tar xf "${DOCKER_IMAGE_FS}" -C "${ROOTFS_DIR}"
 
 # Create a shell script for the docker command.
-cat > "${RAMDIR}/docker_cmd" <<EOF
+cat > "${ROOTFS_DIR}/docker_cmd" <<EOF
 ${DOCKER_CMD}
 EOF
-chmod a+x "${RAMDIR}/docker_cmd"
+chmod a+x "${ROOTFS_DIR}/docker_cmd"
 
 # Create the init file for the initramfs
 cp --archive target/x86_64-unknown-linux-musl/release/oak_docker_linux_init \
-    "${RAMDIR}/init"
-chmod a+x "${RAMDIR}/init"
+    "${ROOTFS_DIR}/init"
+chmod a+x "${ROOTFS_DIR}/init"
 
 # If /dev/console is present, we are not able to see the output
 # from qemu. I presume this is caused by incorrect setup  of character
 # devices or terminal. Remove it for now. 
-rm -f "${RAMDIR}/dev/console"
+rm -f "${ROOTFS_DIR}/dev/console"
 
-echo "[INFO] Creating initramfs file at ${INITRAMFS_FILE}..."
-( cd "${RAMDIR}"; find . -print0 \
-    | cpio --null --create --format=newc ) \
-    | gzip \
-    > "${INITRAMFS_FILE}"
-echo "[INFO] Creating initramfs file at ${INITRAMFS_FILE}...done"
+if [ -z "${INITRAMFS_FILE}" ]; then
+  echo "[INFO] Leaving docker image as rootfs."
+else
+  echo "[INFO] Creating initramfs file at ${INITRAMFS_FILE}..."
+  ( cd "${ROOTFS_DIR}"; find . -print0 \
+      | cpio --null --create --format=newc ) \
+      | gzip \
+      > "${INITRAMFS_FILE}"
+  echo "[INFO] Creating initramfs file at ${INITRAMFS_FILE}...done"
+fi
 
