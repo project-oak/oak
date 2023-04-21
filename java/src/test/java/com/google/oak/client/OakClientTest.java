@@ -16,23 +16,23 @@
 
 package com.google.oak.client;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.oak.remote_attestation.InsecureAttestationVerifier;
 import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
-import com.google.oak.remote_attestation.InsecureAttestationVerifier;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
-import org.junit.Test;
 import oak.crypto.AeadEncryptedMessage;
 import oak.crypto.EncryptedResponse;
 import oak.session.noninteractive.v1.AttestationBundle;
-import oak.session.noninteractive.v1.AttestationEvidence;
 import oak.session.noninteractive.v1.AttestationEndorsement;
+import oak.session.noninteractive.v1.AttestationEvidence;
+import org.junit.Test;
 
 public class OakClientTest {
   private static final byte[] TEST_SERVER_ENCRYPTION_PUBLIC_KEY = new byte[0];
@@ -44,14 +44,15 @@ public class OakClientTest {
     @Override
     public Result<AttestationBundle, String> getEvidence() {
       // TODO(#3642): Use hybrid encryption and return server encryption public key.
-      AttestationEvidence attestationEvidence = AttestationEvidence.newBuilder()
-          .setEncryptionPublicKey(ByteString.copyFrom(TEST_SERVER_ENCRYPTION_PUBLIC_KEY))
-          .build();
+      AttestationEvidence attestationEvidence =
+          AttestationEvidence.newBuilder()
+              .setEncryptionPublicKey(ByteString.copyFrom(TEST_SERVER_ENCRYPTION_PUBLIC_KEY))
+              .build();
       AttestationEndorsement attestationEndorsement = AttestationEndorsement.getDefaultInstance();
       AttestationBundle attestationBundle = AttestationBundle.newBuilder()
-          .setAttestationEvidence(attestationEvidence)
-          .setAttestationEndorsement(attestationEndorsement)
-          .build();
+                                                .setAttestationEvidence(attestationEvidence)
+                                                .setAttestationEndorsement(attestationEndorsement)
+                                                .build();
 
       return Result.success(attestationBundle);
     }
@@ -62,9 +63,9 @@ public class OakClientTest {
       EncryptedResponse encryptedResponse =
           EncryptedResponse.newBuilder()
               .setEncryptedMessage(AeadEncryptedMessage.newBuilder()
-                                      .setCiphertext(ByteString.copyFrom(TEST_RESPONSE))
-                                      .setAssociatedData(ByteString.copyFrom(TEST_ASSOCIATED_DATA))
-                                      .build())
+                                       .setCiphertext(ByteString.copyFrom(TEST_RESPONSE))
+                                       .setAssociatedData(ByteString.copyFrom(TEST_ASSOCIATED_DATA))
+                                       .build())
               .build();
       return Result.success(encryptedResponse.toByteArray());
     }
@@ -78,10 +79,11 @@ public class OakClientTest {
   /** This test demonstrates the use of the {@code com.google.oak.client.OakClient} API. */
   @Test
   public void testOakClient() {
-    Result<OakClient<TestTransport>, Exception> oakClientCreateResult = OakClient.Create(new TestTransport(), new InsecureAttestationVerifier());
+    Result<OakClient<TestTransport>, Exception> oakClientCreateResult =
+        OakClient.Create(new TestTransport(), new InsecureAttestationVerifier());
     assertTrue(oakClientCreateResult.isSuccess());
     OakClient<TestTransport> oakClient = oakClientCreateResult.success().get();
-  
+
     Result<byte[], Exception> oakClientInvokeResult = oakClient.invoke(TEST_REQUEST);
     assertTrue(oakClientInvokeResult.isSuccess());
     assertArrayEquals(oakClientInvokeResult.success().get(), TEST_RESPONSE);

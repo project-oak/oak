@@ -35,6 +35,6 @@ public interface AttestationVerifier {
    * <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
    * @return boolean corresponding to the sussess of the verification wrapped in a {@code Result}
    */
-  Result<Boolean, Exception> verify(final AttestationEvidence evidence,
-      final AttestationEndorsement endorsement);
+  Result<Boolean, Exception> verify(
+      final AttestationEvidence evidence, final AttestationEndorsement endorsement);
 }

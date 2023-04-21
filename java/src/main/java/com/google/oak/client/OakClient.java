@@ -23,8 +23,8 @@ import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
 import oak.session.noninteractive.v1.AttestationBundle;
-import oak.session.noninteractive.v1.AttestationEvidence;
 import oak.session.noninteractive.v1.AttestationEndorsement;
+import oak.session.noninteractive.v1.AttestationEvidence;
 
 /**
  * Oak Client class for exchanging encrypted messages with an Oak Enclave which is being run by the
@@ -44,8 +44,8 @@ public class OakClient<T extends Transport> {
    *
    * @param E type that implements interfaces for the transport and for the evidence provider.
    */
-  public static <E extends EvidenceProvider & Transport, V extends AttestationVerifier> Result<OakClient<E>, Exception> Create(
-      E transport, V verifier) {
+  public static <E extends EvidenceProvider & Transport, V extends AttestationVerifier>
+      Result<OakClient<E>, Exception> Create(E transport, V verifier) {
     // TODO(#3641): Implement client-side attestation verification.
     Result<AttestationBundle, String> getEvidenceResult = transport.getEvidence();
     if (getEvidenceResult.isError()) {
@@ -56,7 +56,8 @@ public class OakClient<T extends Transport> {
     AttestationEndorsement attestationEndorsement =
         getEvidenceResult.success().get().getAttestationEndorsement();
 
-    Result<Boolean, Exception> verifyResult = verifier.verify(attestationEvidence, attestationEndorsement);
+    Result<Boolean, Exception> verifyResult =
+        verifier.verify(attestationEvidence, attestationEndorsement);
     if (getEvidenceResult.isError()) {
       return Result.error(new Exception(getEvidenceResult.error().get()));
     }

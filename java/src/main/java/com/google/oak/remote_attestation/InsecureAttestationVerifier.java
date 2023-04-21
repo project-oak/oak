@@ -35,8 +35,8 @@ public class InsecureAttestationVerifier implements AttestationVerifier {
    * @return success value wrapped in a {@code Result}
    */
   @Override
-  public final Result<Boolean, Exception> verify(final AttestationEvidence evidence,
-      final AttestationEndorsement endorsement) {
+  public final Result<Boolean, Exception> verify(
+      final AttestationEvidence evidence, final AttestationEndorsement endorsement) {
     return Result.success(true);
   }
 }

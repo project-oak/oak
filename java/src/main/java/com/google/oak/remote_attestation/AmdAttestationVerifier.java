@@ -30,7 +30,7 @@ public class AmdAttestationVerifier implements AttestationVerifier {
 
   /**
    * Creates an instance of {@code com.google.oak.remote_attestation.AmdAttestationVerifier}.
-   * 
+   *
    * @param reference_value contains values used to verify the evidence
    * <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
    */
@@ -50,8 +50,8 @@ public class AmdAttestationVerifier implements AttestationVerifier {
    */
   // TODO(#3641): Rewrite java-doc to represent actual AMD attestation verification.
   @Override
-  public final Result<Boolean, Exception> verify(final AttestationEvidence evidence,
-      final AttestationEndorsement endorsement) {
+  public final Result<Boolean, Exception> verify(
+      final AttestationEvidence evidence, final AttestationEndorsement endorsement) {
     // TODO(#3641): Implement AMD SEV-SNP attestation verification.
     return Result.success(true);
   }
