@@ -109,22 +109,28 @@ following commands:
 
 ```bash
 ./scripts/docker_pull  # Retrieve cached Docker development image, locked from the current commit.
-./scripts/docker_run xtask --logs --scope=all run-oak-functions-examples --example-name=weather_lookup --client-variant=rust
+./scripts/docker_run cargo nextest run --package=oak_functions_launcher
 ```
 
-This should build the Oak Functions Runtime, an Oak Functions Application and a
-client for the Application, then run them all, with log output ending something
-like the following:
+This will run integration tests for Oak Functions, which involve building the
+Oak Functions Enclave Application, its untrusted launcher, various Oak Functions
+Wasm modules and a client for the Application, then run them all, with log
+output ending something like the following:
 
 ```log
-[19:12:46 ✓:0,✗:0,⠇:1] ││││││└─▶OK 1s
-[19:12:46 ✓:0,✗:0,⠇:1] │││││└[rust]─▶[OK] 64s
-[19:12:46 ✓:0,✗:0,⠇:1] ││││└[run clients]─▶[OK] 64s
-[19:12:48 ✓:0,✗:0,⠇:1] ││││ (waiting for completion)
-[19:12:48 ✓:0,✗:0,⠇:1] │││└[background server]─▶OK
-[19:12:48 ✓:0,✗:0,⠇:1] ││└[run]─▶[OK] 72s
-[19:12:48 ✓:0,✗:0,⠇:1] │└[weather_lookup]─▶[OK] 270s
-[19:12:48 ✓:1,✗:0,⠇:0] └[oak-functions examples]─▶[OK] 270s
+        PASS [   0.003s] oak_functions_launcher lookup::test_chunk_up_lookup_data_empty
+        PASS [   0.003s] oak_functions_launcher lookup::test_chunk_up_lookup_data_exceed_bound
+        PASS [   0.003s] oak_functions_launcher lookup::test_chunk_up_lookup_data_in_bound
+        PASS [  50.348s] oak_functions_launcher::integration_test test_launcher_looks_up_key
+        PASS [   1.260s] oak_functions_launcher::integration_test test_load_large_lookup_data
+        SLOW [> 60.000s] oak_functions_launcher::integration_test test_launcher_echo_virtual
+        SLOW [> 60.000s] oak_functions_launcher::integration_test test_launcher_key_value_lookup_virtual
+        SLOW [> 60.000s] oak_functions_launcher::integration_test test_launcher_weather_lookup_virtual
+        LEAK [ 103.272s] oak_functions_launcher::integration_test test_launcher_key_value_lookup_virtual
+        LEAK [ 103.278s] oak_functions_launcher::integration_test test_launcher_echo_virtual
+        LEAK [ 109.041s] oak_functions_launcher::integration_test test_launcher_weather_lookup_virtual
+------------
+     Summary [ 109.045s] 8 tests run: 8 passed (3 slow, 3 leaky), 1 skipped
 ```
 
 The remainder of this document explores what's going on under the covers here,
@@ -291,112 +297,30 @@ For commands that use `cargo`, by default the `xtask` runs the command only for
 the modified files and the crates affected by those changes. Use `--scope=all`
 to run the command for the entire code base.
 
-## Run Example Application
+## Run Oak Functions Examples
 
-Running one of the example Oak applications will confirm that all core
-prerequisites have been installed. Run one inside Docker with:
+Running the integration tests for Oak Functions will confirm that all core
+prerequisites have been installed.
+
+Run them inside Docker with:
 
 ```bash
-xtask --logs --scope=all run-oak-functions-examples --example-name=weather_lookup --client-variant=rust
+cargo nextest run --package=oak_functions_launcher
 ```
 
-That script:
+Each test:
 
-- builds the Oak Functions Runtime (in Rust, built to run on the host system)
-- builds a particular example, including both:
-  - the Oak Application itself (Rust code that is compiled to a WebAssembly
-    binary)
-  - an external client (Rust code built to run on the host system)
-- starts the Oak Functions Runtime as a background process, passing it the
+- builds the Oak Stage0 firmware
+- builds the Oak Restricted Kernel binary
+- builds the Oak Functions Enclave Application
+- builds the Oak Functions Launcher
+- builds a particular Oak Functions Application, i.e. Rust code that is compiled
+  to a WebAssembly module binary
+- starts the Oak Functions Launcher as a background process, passing it the
   compiled WebAssembly for the Oak Functins Application (which it then runs in a
   WebAssembly engine)
-- runs the external client for the Application
+- invokes the Rust gRPC client for the Application
 - closes everything down.
-
-Those steps are broken down in the following subsections; this helps figure out
-where the problem is if something goes wrong.
-
-### Build Application
-
-The following command compiles the code for an example Oak Functions Application
-from Rust to a WebAssembly module to be loaded by the Oak Functions Server:
-
-```bash
-xtask --logs --scope=all run-oak-functions-examples --example-name=weather_lookup --client-variant=none --run-server=false
-```
-
-### Build Oak Functions Server
-
-The following command builds the Oak Functions Runtime server. An initial build
-will take some time, but subsequent builds should be cached and so run much
-faster.
-
-```bash
-xtask build-oak-functions-server-variants
-```
-
-### Run Oak Functions Server
-
-The following command builds and runs an Oak Functions Server instance, running
-a specific Oak Application (which must already have been compiled into
-WebAssembly, as [described above](#build-application).
-
-```bash
-xtask --scope=all --logs run-oak-functions-examples --example-name=weather_lookup --client-variant=none
-```
-
-In the end, you should end up with an Oak server running, and with log output
-something like:
-
-```log
-[2023-01-17T07:52:51Z INFO  oak_functions_launcher] read Wasm file from disk bin/weather_lookup.wasm (2045311 bytes)
-[2023-01-17T07:52:51Z INFO  oak_functions_launcher] obtained public key (0 bytes)
-```
-
-### Run Example Client
-
-The following command (run in a separate terminal) compiles the code for the
-client of an example Oak Application (as [described above](#build-application)),
-and runs the client code locally.
-
-```bash
-xtask --scope=all --logs run-oak-functions-examples --example-name=weather_lookup --run-server=false --client-variant=rust
-```
-
-The client should run to completion and give output something like:
-
-```log
-[07:55:54 ✓:0,✗:0,⠇:1] ┌[oak-functions examples]
-[07:55:54 ✓:0,✗:0,⠇:1] │┌[weather_lookup]
-[07:55:54 ✓:0,✗:0,⠇:1] ││┌[wasm:weather_lookup:oak_functions/examples/weather_lookup/module/Cargo.toml]
-[07:55:54 ✓:0,✗:0,⠇:1] │││ cargo -Zunstable-options build --target=wasm32-unknown-unknown --target-dir=/workspace/target/wasm --manifest-path=oak_functions/examples/weather_lookup/module/Cargo.toml --out-dir=/workspace/bin --release
-    Finished release [optimized] target(s) in 0.20s
-[07:55:54 ✓:0,✗:0,⠇:1] ││└─▶OK 263ms
-[07:55:54 ✓:0,✗:0,⠇:1] ││┌[run]
-[07:55:54 ✓:0,✗:0,⠇:1] │││┌[run clients]
-[07:55:54 ✓:0,✗:0,⠇:1] ││││┌[rust]
-[07:55:54 ✓:0,✗:0,⠇:1] │││││┌[build]
-[07:55:54 ✓:0,✗:0,⠇:1] ││││││ cargo build --release --target=x86_64-unknown-linux-gnu --manifest-path=oak_functions_client/Cargo.toml
-   Compiling oak_remote_attestation_noninteractive v0.1.0 (/workspace/oak_remote_attestation_noninteractive)
-   Compiling oak_functions_client v0.1.0 (/workspace/oak_functions_client)
-    Finished release [optimized] target(s) in 8.01s
-[07:56:02 ✓:0,✗:0,⠇:1] │││││└─▶OK 8s
-[07:56:02 ✓:0,✗:0,⠇:1] │││││┌[run]
-[07:56:02 ✓:0,✗:0,⠇:1] ││││││ cargo run --release --target=x86_64-unknown-linux-gnu --manifest-path=oak_functions_client/Cargo.toml -- --uri=http://localhost:8080 --request={"lat":0,"lng":0} --expected-response-pattern=\{"temperature_degrees_celsius":.*\}
-   Compiling oak_remote_attestation_noninteractive v0.1.0 (/workspace/oak_remote_attestation_noninteractive)
-   Compiling oak_functions_client v0.1.0 (/workspace/oak_functions_client)
-    Finished release [optimized] target(s) in 8.08s
-     Running `target/x86_64-unknown-linux-gnu/release/oak_functions_client '--uri=http://localhost:8080' '--request={"lat":0,"lng":0}' '--expected-response-pattern=\{"temperature_degrees_celsius":.*\}'`
-req: Request { body: [123, 34, 108, 97, 116, 34, 58, 48, 44, 34, 108, 110, 103, 34, 58, 48, 125] }
-Response: [123, 34, 116, 101, 109, 112, 101, 114, 97, 116, 117, 114, 101, 95, 100, 101, 103, 114, 101, 101, 115, 95, 99, 101, 108, 115, 105, 117, 115, 34, 58, 50, 57, 125]
-Response: "{\"temperature_degrees_celsius\":29}"
-[07:56:11 ✓:0,✗:0,⠇:1] │││││└─▶OK 8s
-[07:56:11 ✓:0,✗:0,⠇:1] ││││└[rust]─▶[OK] 16s
-[07:56:11 ✓:0,✗:0,⠇:1] │││└[run clients]─▶[OK] 16s
-[07:56:11 ✓:0,✗:0,⠇:1] ││└[run]─▶[OK] 16s
-[07:56:11 ✓:0,✗:0,⠇:1] │└[weather_lookup]─▶[OK] 17s
-[07:56:11 ✓:1,✗:0,⠇:0] └[oak-functions examples]─▶[OK] 17s
-```
 
 ## Extracting vmlinux from your Linux installation
 

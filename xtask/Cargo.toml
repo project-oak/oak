@@ -8,7 +8,6 @@ license = "Apache-2.0"
 [dependencies]
 async-recursion = "*"
 async-trait = "*"
-cargo_metadata = "*"
 chrono = { version = "*", default-features = false, features = [
   "std",
   "clock"
@@ -19,6 +18,7 @@ colored = "*"
 itertools = "*"
 maplit = "*"
 nix = "*"
+oak_functions_test_utils = { workspace = true }
 once_cell = "*"
 regex = "*"
 serde = { version = "*", features = ["derive"] }
