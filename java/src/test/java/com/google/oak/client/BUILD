@@ -21,12 +21,16 @@ package(
 )
 
 java_test(
-    name = "client_test",
+    name = "oak_client_test",
     srcs = glob(["*.java"]),
     test_class = "com.google.oak.client.OakClientTest",
     deps = [
-        "//java/src/main/java/com/google/oak/client",
-        "//java/src/main/java/com/google/oak/evidence",
+        "//java/src/main/java/com/google/oak/remote_attestation:insecure_attestation_verifier",
+        "//java/src/main/java/com/google/oak/client:oak_client",
+        "//java/src/main/java/com/google/oak/transport:transport",
         "//java/src/main/java/com/google/oak/util",
+        "//oak_crypto/proto:crypto_java_proto",
+        "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
+        "@com_google_protobuf//:protobuf_javalite",
     ],
 )
