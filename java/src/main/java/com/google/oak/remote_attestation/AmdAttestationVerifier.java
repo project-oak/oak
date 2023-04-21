@@ -26,16 +26,16 @@ import oak.session.noninteractive.v1.AttestationEvidence;
  */
 public class AmdAttestationVerifier implements AttestationVerifier {
   // TODO(#3641): Add reference value implementation.
-  private final byte[] reference_value;
+  private final byte[] referenceValue;
 
   /**
    * Creates an instance of {@code com.google.oak.remote_attestation.AmdAttestationVerifier}.
    *
-   * @param reference_value contains values used to verify the evidence
+   * @param referenceValue contains values used to verify the evidence
    * <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
    */
-  public AmdAttestationVerifier(byte[] reference_value) {
-    this.reference_value = reference_value;
+  public AmdAttestationVerifier(byte[] referenceValue) {
+    this.referenceValue = referenceValue;
   }
 
   /**
