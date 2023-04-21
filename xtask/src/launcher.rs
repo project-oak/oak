@@ -62,7 +62,6 @@ impl LauncherMode {
         match self {
             LauncherMode::Virtual(_) => workspace_path(&[
                 "enclave_apps",
-                &self.enclave_crate_name(),
                 "target",
                 "x86_64-unknown-none",
                 "debug",
