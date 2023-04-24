@@ -30,6 +30,11 @@ namespace oak::crypto {
 // Info string used by Hybrid Public Key Encryption.
 constexpr absl::string_view OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1";
 
+struct DecryptionResult {
+  std::string plaintext;
+  std::string associated_data;
+};
+
 // Encryptor class for encrypting client requests that will be sent to the server and decrypting
 // server responses that are received by the client. Each Encryptor corresponds to a single crypto
 // session between the client and the server.
@@ -62,8 +67,7 @@ class ClientEncryptor {
   // `encrypted_response` must be a serialized [`oak.crypto.EncryptedResponse`] message.
   // Returns a response message plaintext and associated data.
   // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
-  absl::StatusOr<std::tuple<std::string, std::string>> Decrypt(
-      absl::string_view encrypted_response);
+  absl::StatusOr<DecryptionResult> Decrypt(absl::string_view encrypted_response);
 
  private:
   // Encapsulated public key needed to establish a symmetric session key.
@@ -89,15 +93,15 @@ class ServerEncryptor {
   // `encrypted_request` must be a serialized [`oak.crypto.EncryptedRequest`] message.
   // Returns a response message plaintext and associated data.
   // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
-  std::tuple<std::string, std::string> Decrypt(absl::string_view encrypted_request);
+  absl::StatusOr<DecryptionResult> Decrypt(absl::string_view encrypted_request);
 
   // Encrypts `plaintext` and authenticates `associated_data` using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
   // Returns a serialized [`oak.crypto.EncryptedResponse`] message.
   // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
-  absl::StatusOr<absl::StatusOr<std::string>> Encrypt(absl::string_view plaintext,
-                                                      absl::string_view associated_data);
+  absl::StatusOr<std::string> Encrypt(absl::string_view plaintext,
+                                      absl::string_view associated_data);
 
  private:
   KeyPair server_key_pair;
