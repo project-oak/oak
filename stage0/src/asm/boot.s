@@ -73,10 +73,56 @@ _protected_mode_start:
     # Set up a basic stack, as we may get interrupts.
     mov $stack_start, %esp
 
+    # Zero-out all the page tables: start address in EDI, value in AL, count in ECX.
+    mov $0x1000, %ecx         # each table is exactly 4096 bytes long.
+    xor %eax, %eax            # zero out eax
+    mov ${pml4}, %edi
+    rep stosb
+
+    mov ${pdpt}, %edi
+    rep stosb
+
+    mov ${pd_0}, %edi
+    rep stosb
+
+    mov ${pd_3}, %edi
+    rep stosb
+
+    mov ${pt_0}, %edi
+    rep stosb
+
+    # Set the first entry of PML4 to point to PDPT (0..512GiB).
+    mov ${pdpt}, %edi
+    orl $3, %edi              # edi |= 3 (PRESENT and WRITABLE)
+    mov %edi, ({pml4})          # set first half of PML4[0]
+
+    # Set the first entry of PDPT to point to PD_0 (0..1GiB).
+    mov ${pd_0}, %edi
+    orl $3, %edi              # edi |= 3 (PRESENT and WRITABLE)
+    mov %edi, ({pdpt})          # set first half of PDPT[0]
+
+    # Set the fourth entry of PDPT to point to PD_3 (3..4GiB).
+    mov ${pdpt}, %eax
+    mov ${pd_3}, %edi
+    orl $3, %edi              # edi |= 3 (PRESENT and WRITABLE)
+    mov %edi, 24(%eax)        # set first half of PDPT[3], each entry is 8 bytes
+
+    # Set the first entry of PD_0 to point to PT_0 (0..2MiB).
+    mov ${pt_0}, %edi
+    orl $3, %edi              # edi |= 3 (PRESENT and WRITABLE)
+    mov %edi, ({pd_0})          # set first half of PD_0[0]
+
+    # Set the last entry of PD_3 to point to an identity-mapped 2MiB huge page ((4GiB-2MiB)..4GiB).
+    # This is where the firmware ROM image is mapped, so we don't make it writable.
+    mov ${pd_3}, %eax
+    mov $0xFFE00000, %edi     # address of 4GiB-2MiB
+    orl $0x81, %edi           # edi |= 129 (PRESENT and HUGE_PAGE)
+    mov %edi, 0xFF8(%eax)     # set first half of PML4[511], each entry is 8 bytes
+
     # Set up the 4K page table for the lowest 2 MiB of memory. We set up an individual page table
     # instead of using a 2MiB hugepage because we may need to change the encrypted bit and the
     # RMP state on individual 4K pages.
-    mov $pt_addr, %ecx      # base for page table
+    mov ${pt_0}, %ecx       # base for page table
     mov $1, %eax            # loop counter: we start at 1 so that 0 (the first 4K) would remain
                             # unmapped (so that null pointers would trigger a page fault)
     1:
@@ -130,17 +176,20 @@ _protected_mode_start:
     # Note that this sets the encrypted bit for _all_ entries in the page tables, even
     # if they are unused. This is fine, as those entries will still not have the PRESENT
     # bit set and thus will be ignored by the CPU.
-    mov $pml4_addr, %eax      # Base values for all page tables.
-    mov $pdpt_addr, %ebx
-    mov $pd_addr, %ecx
-    mov $pt_addr, %edx
+    mov ${pml4}, %eax         # Base values for all page tables.
+    mov ${pdpt}, %ebx
+    mov ${pd_0}, %ecx
+    mov ${pd_3}, %edx
+    mov ${pt_0}, %ebp
     xor %esi, %esi            # zero out esi for use as the loop counter
     1:
-    # Page tables are 8 bytes, so these offsets boil down to base + (ESI * 8) + 4
+    # Page table entries are 8 bytes and the encrypted bit is in the second 4 bytes,
+    # so these offsets boil down to base + (ESI * 8) + 4.
     or %edi, 4(%eax,%esi,8)   # PML4[ESI] |= EDI
     or %edi, 4(%ebx,%esi,8)   # PDPT[ESI] |= EDI
-    or %edi, 4(%ecx,%esi,8)   # PD[ESI] |= EDI
-    or %edi, 4(%edx,%esi,8)   # PT[ESI] |= EDI
+    or %edi, 4(%ecx,%esi,8)   # PD_0[ESI] |= EDI
+    or %edi, 4(%edx,%esi,8)   # PD_3[ESI] |= EDI
+    or %edi, 4(%ebp,%esi,8)   # PT_0[ESI] |= EDI
     inc %esi                  # ESI = ESI + 1
     cmp $512, %esi            # have we changed all 512 entries?
     jne 1b                    # ESI < 512, go back to square 1
@@ -148,7 +197,7 @@ _protected_mode_start:
 no_encryption:
 
     # Load PML4
-    mov $pml4_addr, %eax
+    mov ${pml4}, %eax
     mov %eax, %cr3
 
     # PAE + PGE

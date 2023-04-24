@@ -98,7 +98,7 @@ pub fn try_load_kernel_image(
         "Kernel image start address {:#018x}",
         start_address.as_u64()
     );
-    // Safety: We checked that the MDA address is suitable and big enough.
+    // Safety: We checked that the DMA address is suitable and big enough.
     let buf = unsafe { slice::from_raw_parts_mut::<u8>(start_address.as_mut_ptr(), size) };
 
     let actual_size = fw_cfg
