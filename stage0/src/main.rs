@@ -127,7 +127,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         None
     };
 
-    paging::init_page_table_refs();
+    paging::init_page_table_refs(encrypted);
 
     logging::init_logging(match ghcb_protocol {
         Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),

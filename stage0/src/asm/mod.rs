@@ -22,6 +22,5 @@ global_asm!(
     pdpt = sym crate::paging::PDPT,
     pd_0 = sym crate::paging::PD_0,
     pd_3 = sym crate::paging::PD_3,
-    pt_0 = sym crate::paging::PT_0,
     options(att_syntax));
 global_asm!(include_str!("reset_vector.s"), options(att_syntax, raw));
