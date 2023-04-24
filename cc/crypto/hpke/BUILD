@@ -20,11 +20,10 @@ package(
 )
 
 cc_library(
-    name = "encryptor",
-    srcs = ["encryptor.cc"],
-    hdrs = ["encryptor.h"],
+    name = "hpke",
+    srcs = ["hpke.cc"],
+    hdrs = ["hpke.h"],
     deps = [
-        "//cc/crypto/hpke",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
