@@ -39,10 +39,12 @@ public class OakClient<T extends Transport> {
   private final byte[] serverEncryptionPublicKey;
 
   /**
-   * Oak Client class for exchanging encrypted messages with an Oak Enclave which is being run by
-   * the Oak Launcher.
+   * Create an instance of the Oak Client by remotely attesting an Oak Enclave and creating an
+   * encrypted channel.
    *
-   * @param E type that implements interfaces for the transport and for the evidence provider.
+   * @param <E> type that implements interfaces for the transport and for the evidence provider.
+   * @param <V> type that implements an interface for the attestation verifier.
+   * @return an instance of the {@code OakClient} wrapped in a {@code Result}
    */
   public static <E extends EvidenceProvider & Transport, V extends AttestationVerifier>
       Result<OakClient<E>, Exception> create(E transport, V verifier) {
@@ -77,6 +79,7 @@ public class OakClient<T extends Transport> {
    * using it to encrypt the request body.
    *
    * @param requestBody request byte representation.
+   * @return response byte representation wrapped in a {@code Result}
    */
   // TODO(#3466): Actually implement attestation and encryption.
   public Result<byte[], Exception> invoke(byte[] requestBody) {
