@@ -83,7 +83,12 @@ public class OakClient<T extends Transport> {
    */
   // TODO(#3466): Actually implement attestation and encryption.
   public Result<byte[], Exception> invoke(byte[] requestBody) {
-    ClientEncryptor encryptor = new ClientEncryptor(this.serverEncryptionPublicKey);
+    Result<ClientEncryptor, Exception> encryptorCreateResult =
+        ClientEncryptor.create(this.serverEncryptionPublicKey);
+    if (encryptorCreateResult.isError()) {
+      return Result.error(new Exception(encryptorCreateResult.error().get()));
+    }
+    ClientEncryptor encryptor = encryptorCreateResult.success().get();
 
     // Encrypt request.
     Result<byte[], Exception> encryptResult = encryptor.encrypt(requestBody, EMPTY_ASSOCIATED_DATA);
