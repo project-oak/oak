@@ -67,27 +67,51 @@ public class ServerEncryptor implements Encryptor {
    */
   @Override
   public final Result<Encryptor.DecryptionResult, Exception> decrypt(
-      final byte[] encryptedRequest) {
+      final byte[] serializedEncryptedRequest) {
+    // Deserialize request message.
+    EncryptedRequest encryptedRequest;
     try {
-      // Deserialize request message.
-      AeadEncryptedMessage aeadEncryptedMessage =
-          EncryptedRequest.parseFrom(encryptedRequest).getEncryptedMessage();
-      byte[] plaintext = aeadEncryptedMessage.getCiphertext().toByteArray();
-      byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
-
-      // Decrypt request.
-      Result<byte[], Exception> openResult =
-          this.senderResponseContext.open(ciphertext, associatedData);
-      if (openResult.isError()) {
-        return Result.error(openResult.error().get());
-      }
-      byte[] plaintext = openResult.success().get();
-
-      // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
-      return Result.success(new Encryptor.DecryptionResult(plaintext, associatedData));
+      encryptedRequest = EncryptedRequest.parseFrom(serializedEncryptedRequest);
     } catch (InvalidProtocolBufferException e) {
       return Result.error(e);
     }
+    AeadEncryptedMessage aeadEncryptedMessage = encryptedRequest.getEncryptedMessage();
+    byte[] ciphertext = aeadEncryptedMessage.getCiphertext().toByteArray();
+    byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
+
+    // Get recipient context;
+    if (!this.recipientRequestContext.isPresent()) {
+      // Get serialized encapsulated public key.
+      if (encryptedRequest.getSerializedEncapsulatedPublicKey()
+          == com.google.protobuf.ByteString.EMPTY) {
+        return Result.error(new Exception(
+            "serialized encapsulated public key is not present in the initial request message"));
+      }
+      byte[] serializedEncapsulatedPublicKey =
+          encryptedRequest.getSerializedEncapsulatedPublicKey().toByteArray();
+
+      // Create recipient context.
+      Result<Hpke.RecipientContext, Exception> setupBaseRecipientResult = Hpke.setupBaseRecipient(
+          serializedEncapsulatedPublicKey, this.serverKeyPair, OAK_HPKE_INFO);
+      if (setupBaseRecipientResult.isError()) {
+        return Result.error(setupBaseRecipientResult.error().get());
+      }
+      Hpke.RecipientContext recipientContext = setupBaseRecipientResult.success().get();
+
+      this.recipientRequestContext = Optional.of(recipientContext.recipientRequestContext);
+      this.recipientResponseContext = Optional.of(recipientContext.recipientResponseContext);
+    }
+    Context.RecipientRequestContext recipientRequestContext = this.recipientRequestContext.get();
+
+    // Decrypt request.
+    Result<byte[], Exception> openResult = recipientRequestContext.open(ciphertext, associatedData);
+    if (openResult.isError()) {
+      return Result.error(openResult.error().get());
+    }
+    byte[] plaintext = openResult.success().get();
+
+    // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
+    return Result.success(new Encryptor.DecryptionResult(plaintext, associatedData));
   }
 
   /**
@@ -101,13 +125,28 @@ public class ServerEncryptor implements Encryptor {
   @Override
   public final Result<byte[], Exception> encrypt(
       final byte[] plaintext, final byte[] associatedData) {
+    // Get recipient context;
+    if (!this.recipientResponseContext.isPresent()) {
+      return Result.error(new Exception("server encryptor is not initialized"));
+    }
+    Context.RecipientResponseContext recipientResponseContext = this.recipientResponseContext.get();
+
+    // Encrypt response.
+    Result<byte[], Exception> sealResult = recipientResponseContext.seal(plaintext, associatedData);
+    if (sealResult.isError()) {
+      return Result.error(sealResult.error().get());
+    }
+    byte[] ciphertext = sealResult.success().get();
+
+    // Create response message.
     EncryptedResponse encryptedResponse =
         EncryptedResponse.newBuilder()
             .setEncryptedMessage(AeadEncryptedMessage.newBuilder()
-                                     .setCiphertext(ByteString.copyFrom(plaintext))
+                                     .setCiphertext(ByteString.copyFrom(ciphertext))
                                      .setAssociatedData(ByteString.copyFrom(associatedData))
                                      .build())
             .build();
+
     // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
     return Result.success(encryptedResponse.toByteArray());
   }

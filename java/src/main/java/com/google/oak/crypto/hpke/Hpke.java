@@ -69,7 +69,7 @@ public class Hpke {
    *
    */
   public static final Result<RecipientContext, Exception> setupBaseRecipient(
-      final byte[] serializedEncapsulatedPublicKey, KeyPair recipient_key_pair) {
+      final byte[] serializedEncapsulatedPublicKey, KeyPair recipient_key_pair, final byte[] info) {
     return Result.success(new RecipientContext(
         new Context.RecipientRequestContext(), new Context.RecipientResponseContext()));
   }
