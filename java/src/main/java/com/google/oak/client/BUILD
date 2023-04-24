@@ -22,29 +22,15 @@ package(
 )
 
 java_library(
-    name = "client",
+    name = "oak_client",
     srcs = [
-        "AeadEncryptor.java",
-        "Encryptor.java",
         "OakClient.java",
-        "RpcClient.java",
     ],
     deps = [
-        "//java/src/main/java/com/google/oak/evidence",
-        "//java/src/main/java/com/google/oak/remote_attestation",
+        "//java/src/main/java/com/google/oak/crypto:client_encryptor",
+        "//java/src/main/java/com/google/oak/remote_attestation:attestation_verifier",
+        "//java/src/main/java/com/google/oak/transport",
         "//java/src/main/java/com/google/oak/util",
-    ],
-)
-
-java_library(
-    name = "oak_grpc_client",
-    srcs = ["OakGrpcClient.java"],
-    deps = [
-        "//oak_crypto/proto:crypto_java_proto",
         "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
-        "//oak_remote_attestation_noninteractive/proto/v1:service_streaming_java_proto",
-        "@com_google_protobuf//:protobuf_javalite",
-        "@io_grpc_grpc_java//api",
-        "@io_grpc_grpc_java//stub",
     ],
 )

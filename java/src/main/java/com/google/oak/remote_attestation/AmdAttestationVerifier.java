@@ -25,6 +25,19 @@ import oak.session.noninteractive.v1.AttestationEvidence;
  * <https://www.amd.com/system/files/TechDocs/SEV-SNP-strengthening-vm-isolation-with-integrity-protection-and-more.pdf>
  */
 public class AmdAttestationVerifier implements AttestationVerifier {
+  // TODO(#3641): Add reference value implementation.
+  private final byte[] referenceValue;
+
+  /**
+   * Creates an instance of {@code com.google.oak.remote_attestation.AmdAttestationVerifier}.
+   *
+   * @param referenceValue contains values used to verify the evidence
+   * <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
+   */
+  public AmdAttestationVerifier(byte[] referenceValue) {
+    this.referenceValue = referenceValue;
+  }
+
   /**
    * Verify that the provided evidence was endorsed and contains specified reference values.
    *
@@ -33,14 +46,12 @@ public class AmdAttestationVerifier implements AttestationVerifier {
    * @param endorsement contains statements that the endorsers vouch for the integrity of claims
    * provided in the evidence
    * <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
-   * @param reference_value contains values used to verify the evidence
-   * <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
    * @return boolean corresponding to the sussess of the verification wrapped in a {@code Result}
    */
   // TODO(#3641): Rewrite java-doc to represent actual AMD attestation verification.
   @Override
-  public final Result<Boolean, Exception> verify(final AttestationEvidence evidence,
-      final AttestationEndorsement endorsement, byte[] reference_value) {
+  public final Result<Boolean, Exception> verify(
+      final AttestationEvidence evidence, final AttestationEndorsement endorsement) {
     // TODO(#3641): Implement AMD SEV-SNP attestation verification.
     return Result.success(true);
   }

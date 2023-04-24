@@ -33,11 +33,8 @@ public interface AttestationVerifier {
    * @param endorsement contains statements that the endorsers vouch for the integrity of claims
    * provided in the evidence; see
    * <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
-   * @param reference_value contains values used to verify the evidence; see
-   * <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
    * @return boolean corresponding to the sussess of the verification wrapped in a {@code Result}
    */
-  // TODO(#3641): Add reference value implementation.
-  Result<Boolean, Exception> verify(final AttestationEvidence evidence,
-      final AttestationEndorsement endorsement, byte[] reference_value);
+  Result<Boolean, Exception> verify(
+      final AttestationEvidence evidence, final AttestationEndorsement endorsement);
 }

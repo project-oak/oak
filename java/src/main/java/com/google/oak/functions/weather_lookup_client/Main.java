@@ -18,8 +18,11 @@ package com.google.oak.functions.weather_lookup_client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.oak.client.OakGrpcClient;
+import com.google.oak.client.OakClient;
+import com.google.oak.remote_attestation.InsecureAttestationVerifier;
 import com.google.oak.transport.ApiKeyInterceptor;
+import com.google.oak.transport.GrpcStreamingTransport;
+import com.google.oak.util.Result;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
@@ -46,9 +49,22 @@ public class Main {
     // Create gRPC client stub.
     StreamingSessionGrpc.StreamingSessionStub client = StreamingSessionGrpc.newStub(channel);
 
+    // Create Oak Client.
+    GrpcStreamingTransport transport = new GrpcStreamingTransport(client::stream);
+    Result<OakClient<GrpcStreamingTransport>, Exception> oakClientCreateResult =
+        OakClient.create(transport, new InsecureAttestationVerifier());
+    if (oakClientCreateResult.isError()) {
+      throw oakClientCreateResult.error().get();
+    }
+    OakClient<GrpcStreamingTransport> oakClient = oakClientCreateResult.success().get();
+
     // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
     byte[] requestBody = "{\"lat\":0,\"lng\":0}".getBytes(UTF_8);
-    byte[] response = OakGrpcClient.invoke(client::stream, requestBody);
+    Result<byte[], Exception> oakClientInvokeResult = oakClient.invoke(requestBody);
+    if (oakClientInvokeResult.isError()) {
+      throw oakClientInvokeResult.error().get();
+    }
+    byte[] response = oakClientInvokeResult.success().get();
     String decodedResponse = new String(response, StandardCharsets.UTF_8);
 
     if (decodedResponse.matches(EXPECTED_RESPONSE_PATTERN)) {

@@ -27,8 +27,11 @@ android_library(
     manifest = "AndroidManifest.xml",
     resource_files = glob(["res/**"]),
     deps = [
-        "//java/src/main/java/com/google/oak/client:oak_grpc_client",
+        "//java/src/main/java/com/google/oak/client:oak_client",
+        "//java/src/main/java/com/google/oak/remote_attestation:insecure_attestation_verifier",
         "//java/src/main/java/com/google/oak/transport:api_key_interceptor",
+        "//java/src/main/java/com/google/oak/transport:grpc_streaming_transport",
+        "//java/src/main/java/com/google/oak/util",
         "//oak_remote_attestation_noninteractive/proto/v1:service_streaming_java_grpc",
         "@com_google_guava_guava",
         "@com_google_protobuf//:protobuf_javalite",

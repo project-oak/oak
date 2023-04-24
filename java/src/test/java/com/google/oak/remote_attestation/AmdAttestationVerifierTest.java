@@ -27,11 +27,14 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class AmdAttestationVerifierTest {
+  // TODO(#3641): Add reference value implementation.
+  private static final byte[] TEST_REFERENCE_VALUE = new byte[0];
+
   @Test
   public void testVerify() throws Exception {
     // TODO(#3641): Implement AMD SEV-SNP attestation verification.
-    AmdAttestationVerifier verifier = new AmdAttestationVerifier();
-    Result<Boolean, Exception> verifyResult = verifier.verify(null, null, new byte[0]);
+    AmdAttestationVerifier verifier = new AmdAttestationVerifier(TEST_REFERENCE_VALUE);
+    Result<Boolean, Exception> verifyResult = verifier.verify(null, null);
     Assert.assertTrue(verifyResult.isSuccess());
   }
 }
