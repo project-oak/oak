@@ -33,6 +33,11 @@ fn main() -> ! {
     // Set up the Linux environment, since we expect to be the initial process.
     init::init().unwrap();
 
+    // For now, just set PATH to some common locations. Docker image has information about
+    // the environment variables that need to be set up before the container is launched. We
+    // should use that information to set up all the necessary environment variables.
+    std::env::set_var("PATH", "/usr/local/bin:/sbin:/usr/sbin:/bin:/usr/bin");
+
     let file = File::open(DOCKER_COMMAND_PATH).expect("Error reading file");
     let content_vec = BufReader::new(file)
         .lines()
