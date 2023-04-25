@@ -1,8 +1,8 @@
 command = [
   "env",
-  "--chdir=testing/oak_echo_enclave_app",
+  "--chdir=enclave_apps/oak_echo_enclave_app",
   "cargo",
   "build",
   "--release"
 ]
-artifact_path = "./testing/oak_echo_enclave_app/target/x86_64-unknown-none/release/oak_echo_enclave_app"
+artifact_path = "./enclave_apps/target/x86_64-unknown-none/release/oak_echo_enclave_app"

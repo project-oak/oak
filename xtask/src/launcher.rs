@@ -51,7 +51,7 @@ impl LauncherMode {
 
     /// Get the path to the respective enclave binary variant that should be launched
     pub fn enclave_crate_path(&self) -> String {
-        workspace_path(&[&self.enclave_crate_name()])
+        workspace_path(&["enclave_apps", &self.enclave_crate_name()])
             .to_str()
             .unwrap()
             .to_string()
@@ -61,7 +61,7 @@ impl LauncherMode {
     pub fn enclave_binary_path(&self) -> String {
         match self {
             LauncherMode::Virtual(_) => workspace_path(&[
-                &self.enclave_crate_name(),
+                "enclave_apps",
                 "target",
                 "x86_64-unknown-none",
                 "debug",
