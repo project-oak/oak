@@ -80,7 +80,7 @@ public class ServerEncryptor implements Encryptor {
     byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
 
     // Get recipient context;
-    if (!this.recipientRequestContext.isPresent()) {
+    if (this.recipientRequestContext.isEmpty()) {
       // Get serialized encapsulated public key.
       if (encryptedRequest.getSerializedEncapsulatedPublicKey()
           == com.google.protobuf.ByteString.EMPTY) {
@@ -93,25 +93,21 @@ public class ServerEncryptor implements Encryptor {
       // Create recipient context.
       Result<Hpke.RecipientContext, Exception> setupBaseRecipientResult = Hpke.setupBaseRecipient(
           serializedEncapsulatedPublicKey, this.serverKeyPair, OAK_HPKE_INFO);
-      if (setupBaseRecipientResult.isError()) {
-        return Result.error(setupBaseRecipientResult.error().get());
-      }
-      Hpke.RecipientContext recipientContext = setupBaseRecipientResult.success().get();
 
-      this.recipientRequestContext = Optional.of(recipientContext.recipientRequestContext);
-      this.recipientResponseContext = Optional.of(recipientContext.recipientResponseContext);
+      this.recipientRequestContext =
+          setupBaseRecipientResult.success().map(r -> r.recipientRequestContext);
+      this.recipientResponseContext =
+          setupBaseRecipientResult.success().map(r -> r.recipientResponseContext);
     }
     Context.RecipientRequestContext recipientRequestContext = this.recipientRequestContext.get();
 
     // Decrypt request.
-    Result<byte[], Exception> openResult = recipientRequestContext.open(ciphertext, associatedData);
-    if (openResult.isError()) {
-      return Result.error(openResult.error().get());
-    }
-    byte[] plaintext = openResult.success().get();
-
-    // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
-    return Result.success(new Encryptor.DecryptionResult(plaintext, associatedData));
+    return recipientRequestContext.open(ciphertext, associatedData)
+        .map(plaintext
+            ->
+            // TODO(#3843): Accept unserialized proto messages once we have Java encryption
+            // without JNI.
+            new Encryptor.DecryptionResult(plaintext, associatedData));
   }
 
   /**
@@ -126,28 +122,22 @@ public class ServerEncryptor implements Encryptor {
   public final Result<byte[], Exception> encrypt(
       final byte[] plaintext, final byte[] associatedData) {
     // Get recipient context;
-    if (!this.recipientResponseContext.isPresent()) {
+    if (this.recipientResponseContext.isEmpty()) {
       return Result.error(new Exception("server encryptor is not initialized"));
     }
     Context.RecipientResponseContext recipientResponseContext = this.recipientResponseContext.get();
 
     // Encrypt response.
     Result<byte[], Exception> sealResult = recipientResponseContext.seal(plaintext, associatedData);
-    if (sealResult.isError()) {
-      return Result.error(sealResult.error().get());
-    }
-    byte[] ciphertext = sealResult.success().get();
 
     // Create response message.
-    EncryptedResponse encryptedResponse =
-        EncryptedResponse.newBuilder()
-            .setEncryptedMessage(AeadEncryptedMessage.newBuilder()
-                                     .setCiphertext(ByteString.copyFrom(ciphertext))
-                                     .setAssociatedData(ByteString.copyFrom(associatedData))
-                                     .build())
-            .build();
-
-    // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
-    return Result.success(encryptedResponse.toByteArray());
+    return sealResult.map(ciphertext
+        -> EncryptedResponse.newBuilder()
+               .setEncryptedMessage(AeadEncryptedMessage.newBuilder()
+                                        .setCiphertext(ByteString.copyFrom(ciphertext))
+                                        .setAssociatedData(ByteString.copyFrom(associatedData))
+                                        .build())
+               .build()
+               .toByteArray());
   }
 }
