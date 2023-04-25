@@ -14,29 +14,18 @@
 // limitations under the License.
 //
 
-use core::mem::MaybeUninit;
 use oak_core::sync::OnceCell;
 use spinning_top::Spinlock;
 use x86_64::{
     instructions::tlb::flush_all,
-    structures::paging::{page_table::PageTableFlags, PageSize, PageTable, Size2MiB},
+    structures::paging::{page_table::PageTableFlags, PageSize, PageTable, Size2MiB, Size4KiB},
     PhysAddr,
 };
 
-#[link_section = ".boot"]
-pub static mut PML4: MaybeUninit<PageTable> = MaybeUninit::uninit();
-
-#[link_section = ".boot"]
-pub static mut PDPT: MaybeUninit<PageTable> = MaybeUninit::uninit();
-
-#[link_section = ".boot"]
-pub static mut PD_0: MaybeUninit<PageTable> = MaybeUninit::uninit();
-
-#[link_section = ".boot"]
-pub static mut PD_3: MaybeUninit<PageTable> = MaybeUninit::uninit();
-
-#[link_section = ".boot"]
-pub static mut PT_0: MaybeUninit<PageTable> = MaybeUninit::uninit();
+pub static mut PML4: PageTable = PageTable::new();
+pub static mut PDPT: PageTable = PageTable::new();
+pub static mut PD_0: PageTable = PageTable::new();
+pub static mut PD_3: PageTable = PageTable::new();
 
 /// Wrapper for the page table references so that we can access them via a mutex rather than
 /// directly via unsafe code.
@@ -55,7 +44,7 @@ pub struct PageTableRefs {
     /// The page directory covering virtual memory range 3..4GiB.
     pub pd_3: &'static mut PageTable,
 
-    /// The page table covering virtual memory rane 0..2MiB where we want 4KiB pages.
+    /// The page table covering virtual memory range 0..2MiB where we want 4KiB pages.
     pub pt_0: &'static mut PageTable,
 }
 
@@ -63,14 +52,29 @@ pub struct PageTableRefs {
 pub static PAGE_TABLE_REFS: OnceCell<Spinlock<PageTableRefs>> = OnceCell::new();
 
 /// Initialises the page table references.
-pub fn init_page_table_refs() {
-    // Safety: this is safe because these page tables were fully initialised in the initial
-    // bootstrap assembly.
-    let pml4 = unsafe { PML4.assume_init_mut() };
-    let pdpt = unsafe { PDPT.assume_init_mut() };
-    let pd_0 = unsafe { PD_0.assume_init_mut() };
-    let pd_3 = unsafe { PD_3.assume_init_mut() };
-    let pt_0 = unsafe { PT_0.assume_init_mut() };
+pub fn init_page_table_refs(encrypted: u64) {
+    // Safety: accessing the mutable statics here is safe since we only do it once and protect the
+    // mutable references with a mutex. This function can only be called once, since updating
+    // `PAGE_TABLE_REFS` twice will panic.
+    let pml4 = unsafe { &mut PML4 };
+    let pdpt = unsafe { &mut PDPT };
+    let pd_0 = unsafe { &mut PD_0 };
+    let pd_3 = unsafe { &mut PD_3 };
+
+    // Set up a new page table that maps the first 2MiB as 4KiB pages, so that we can share
+    // individual 4KiB pages with the hypervisor as needed. We are using an identity mapping
+    // between virtual and physical addresses.
+    let pt_0 = crate::BOOT_ALLOC.leak(PageTable::new()).unwrap();
+    pt_0.iter_mut().enumerate().skip(1).for_each(|(i, entry)| {
+        entry.set_addr(
+            PhysAddr::new(((i as u64) * Size4KiB::SIZE) | encrypted),
+            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+        );
+    });
+    pd_0[0].set_addr(
+        PhysAddr::new(pt_0 as *const _ as usize as u64 | encrypted),
+        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+    );
 
     let page_tables = PageTableRefs {
         pml4,
@@ -83,10 +87,12 @@ pub fn init_page_table_refs() {
     if PAGE_TABLE_REFS.set(Spinlock::new(page_tables)).is_err() {
         panic!("page table wrapper already initialized");
     }
+
+    flush_all();
 }
 
 /// Maps the first 1GiB of memory using 2MiB hugepages, except for the first 2MiB that was already
-/// mapped as 512 4KiB pages in the bootstrap assembly.
+/// mapped as 512 4KiB pages.
 pub fn map_additional_memory(encrypted: u64) {
     {
         let mut page_tables = PAGE_TABLE_REFS
@@ -105,8 +111,8 @@ pub fn map_additional_memory(encrypted: u64) {
     flush_all();
 }
 
-// Remaps the first 2MiB of memory, which was mapped as 512 4KiB pages in the bootstrap assembly, as
-// a single 2MiB huge page.
+// Remaps the first 2MiB of memory, which was previously mapped as 512 4KiB pages, as a single 2MiB
+// huge page again.
 pub fn remap_first_huge_page(encrypted: u64) {
     {
         let mut page_tables = PAGE_TABLE_REFS
