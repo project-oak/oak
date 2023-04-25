@@ -14,23 +14,22 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_test")
+load("@rules_java//java:defs.bzl", "java_library")
 
 package(
+    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-java_test(
-    name = "encryptor_test",
-    srcs = ["EncryptorTest.java"],
-    test_class = "com.google.oak.crypto.EncryptorTest",
+java_library(
+    name = "hpke",
+    srcs = [
+        "Context.java",
+        "Hpke.java",
+        "KeyPair.java",
+    ],
     deps = [
-        "//java/src/main/java/com/google/oak/crypto:client_encryptor",
         "//java/src/main/java/com/google/oak/crypto:encryptor",
-        "//java/src/main/java/com/google/oak/crypto:server_encryptor",
-        "//java/src/main/java/com/google/oak/crypto/hpke",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_crypto/proto:crypto_java_proto",
-        "@com_google_protobuf//:protobuf_javalite",
     ],
 )
