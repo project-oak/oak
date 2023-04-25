@@ -15,10 +15,10 @@
 
 //! Integration tests for the Oak Functions Launcher.
 
-use oak_crypto::{encryptor::ClientEncryptor, schema::EncryptedResponse};
+use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedResponse};
 use oak_functions_client::OakFunctionsClient;
 use oak_functions_launcher::{
-    schema::{self, InvokeRequest},
+    proto::oak::functions::{InvokeRequest, OakFunctionsAsyncClient},
     update_lookup_data, LookupDataConfig,
 };
 use oak_launcher_utils::launcher;
@@ -205,7 +205,7 @@ async fn test_launcher_looks_up_key() {
         .expect("no public key info returned")
         .public_key;
 
-    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
+    let mut client = OakFunctionsAsyncClient::new(connector_handle);
     let request_body = b"test_key".to_vec();
 
     // Encrypt request.
@@ -283,7 +283,7 @@ async fn test_load_large_lookup_data() {
     assert!(status_one_chunk.is_ok());
 
     let (launched_instance, connector_handle, _) = status_one_chunk.unwrap();
-    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
+    let mut client = OakFunctionsAsyncClient::new(connector_handle);
 
     let lookup_data_config = LookupDataConfig {
         lookup_data_path: lookup_data_file.path().to_path_buf(),

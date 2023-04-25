@@ -30,7 +30,7 @@ pub mod verifier;
 
 use crate::transport::AsyncEvidenceProvider;
 use anyhow::{anyhow, Context};
-use oak_crypto::{encryptor::ClientEncryptor, schema::EncryptedResponse};
+use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedResponse};
 use prost::Message;
 use std::vec::Vec;
 

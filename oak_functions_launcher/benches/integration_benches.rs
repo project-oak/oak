@@ -20,7 +20,7 @@
 extern crate test;
 
 use oak_functions_launcher::{
-    schema::{self, InvokeRequest},
+    proto::oak::functions::{InvokeRequest, OakFunctionsAsyncClient},
     LookupDataConfig,
 };
 use oak_launcher_utils::launcher;
@@ -72,7 +72,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         ))
         .expect("Failed to create launcher");
 
-    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
+    let mut client = OakFunctionsAsyncClient::new(connector_handle);
     let invoke_request = InvokeRequest {
         body: config.request.clone(),
     };
