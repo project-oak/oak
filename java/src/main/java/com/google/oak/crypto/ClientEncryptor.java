@@ -138,14 +138,11 @@ public class ClientEncryptor implements Encryptor {
     byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
 
     // Decrypt response.
-    Result<byte[], Exception> openResult =
-        this.senderResponseContext.open(ciphertext, associatedData);
-    if (openResult.isError()) {
-      return Result.error(openResult.error().get());
-    }
-    byte[] plaintext = openResult.success().get();
-
-    // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
-    return Result.success(new ClientEncryptor.DecryptionResult(plaintext, associatedData));
+    return this.senderResponseContext.open(ciphertext, associatedData)
+        .map(plaintext
+            ->
+            // TODO(#3843): Accept unserialized proto messages once we have Java encryption without
+            // JNI.
+            new ClientEncryptor.DecryptionResult(plaintext, associatedData));
   }
 }
