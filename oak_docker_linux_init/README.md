@@ -117,8 +117,8 @@ to use as the Linux kernel when launching QEMU later:
 cp ${NETBOOT_VMLINUX} bin/vmlinux
 ```
 
-Note that you need to extract the kernel from so that it will be compatible with
-the drivers we will extract from the Alpine's initramfs file.
+Note that you need to extract the kernel from Alpine's distribution so that it will
+be compatible with the drivers we will extract from the Alpine's initramfs file.
 
 Build the initramfs with minirootfs, drivers, and a Docker image
 ([`tensorflow/tensorflow`](https://hub.docker.com/r/tensorflow/tensorflow/)

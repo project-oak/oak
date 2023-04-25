@@ -7,7 +7,7 @@
 #
 #
 
- # exit when any command fails
+ # exit when any command fails.
 set -e
 
 readonly SCRIPT_DIR=$(dirname "$0")
@@ -86,7 +86,7 @@ readonly LINUX_KERNEL_VERSION="$(strings "${LINUX_KERNEL}" | \
 echo "[INFO] Linux kernel version is ${LINUX_KERNEL_VERSION}"
 
 
-# Extract Alpine's initramfs to a scratch directory
+# Extract Alpine's initramfs to a scratch directory.
 ALPINE_INITRAMFS_DIR="${SCRATCH_DIR}/alpine-initramfs"
 echo "[INFO] Extracting  ${ALPINE_INITRAMFS} to ${ALPINE_INITRAMFS_DIR}"
 mkdir "${ALPINE_INITRAMFS_DIR}"
@@ -94,11 +94,10 @@ mkdir "${ALPINE_INITRAMFS_DIR}"
 (cd "${ALPINE_INITRAMFS_DIR}" && \
   gzip -cd "${ALPINE_INITRAMFS}" | cpio -idm)
 
-# Extract the minirootfs to the root of the ramdisk
+# Extract the minirootfs to the root of the ramdisk.
 tar xzf "${ALPINE_MINIROOTFS_TAR}" -C "${RAMDIR}"
 
-# Extract the drivers from the initramfs and put them in ${RAMDIR}
-#
+# Extract the drivers from the initramfs and put them in ${RAMDIR}.
 echo "[INFO] Extracting necessary drivers from ${ALPINE_INITRAMFS}"
 readonly DRIVERS="
 kernel/drivers/net/virtio_net.ko
@@ -135,7 +134,7 @@ cp -f /etc/resolv.conf /docker_rootfs/etc/resolv.conf
 exec /usr/sbin/chroot /docker_rootfs /init"
 fi
 
-# Create the /init file in the initramfs file
+# Create the /init file in the initramfs file.
 echo "[INFO] Preparing /init file for initramfs"
 cat > "${RAMDIR}/init" <<EOF
 #!/bin/sh
@@ -155,7 +154,7 @@ ip link set up dev lo
 ip link set eth0 up
 udhcpc -i eth0
 
-# Launch terminal or docker as needed
+# Launch terminal or docker as needed.
 ${LAUNCH_CMD}
 EOF
 chmod a+x "${RAMDIR}/init"
