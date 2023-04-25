@@ -20,6 +20,8 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.oak.crypto.v1.AeadEncryptedMessage;
+import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.remote_attestation.InsecureAttestationVerifier;
 import com.google.oak.session.v1.AttestationBundle;
 import com.google.oak.session.v1.AttestationEndorsement;
@@ -30,8 +32,6 @@ import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
-import oak.crypto.AeadEncryptedMessage;
-import oak.crypto.EncryptedResponse;
 import org.junit.Test;
 
 public class OakClientTest {
