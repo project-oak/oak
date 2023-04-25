@@ -68,7 +68,7 @@ _protected_mode_start:
     # Switch to a flat 32-bit data segment, giving us access to all 4G of memory.
     mov $ds, %eax
     mov %eax, %ds
-    mov %eax, %es
+    mov %eax, %es         # needed for destination of stosb and movsb
     mov %eax, %ss
 
     # Set up a basic stack, as we may get interrupts.
@@ -79,6 +79,13 @@ _protected_mode_start:
     mov $bss_size, %ecx
     xor %eax, %eax
     rep stosb
+
+    # Copy DATA from ROM image just after TEXT.
+    # Source address goes to ESI, destination goes to EDI, count goes to ECX.
+    mov $text_end, %esi
+    mov $data_start, %edi
+    mov $data_size, %ecx
+    rep movsb
 
     # Set the first entry of PML4 to point to PDPT (0..512GiB).
     mov ${pdpt}, %edi

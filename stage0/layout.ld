@@ -75,6 +75,13 @@ SECTIONS {
         bss_size = . - bss_start;
     } > ram_low
 
+    .data : 
+    AT ( ADDR (.text) + SIZEOF (.text) ) {
+        data_start = .;
+        *(.data .data.*)
+        data_size = . - data_start;
+    } > ram_low
+
     /* Put the stack just below the EBDA, at the end of 512K. */
     .stack (0x80000 - 32K) (NOLOAD) : {
         . += 32K;
@@ -101,10 +108,7 @@ SECTIONS {
 
     .text : {
         *(.text .text.*)
-    } > bios
-
-    .data : {
-        *(.data .data.*)
+        text_end = .;
     } > bios
 
     /* Everything below this line interacts with 16-bit code, so should be kept as close to the end of the file as
