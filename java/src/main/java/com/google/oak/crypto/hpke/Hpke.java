@@ -20,6 +20,10 @@ import com.google.oak.util.Result;
 
 // TODO(#3642): Implement Java Hybrid Encryption.
 public final class Hpke {
+  static {
+    System.loadLibrary("hpke-jni");
+  }
+
   public static final class SenderContext {
     public final byte[] serializedEncapsulatedPublicKey;
     public final Context.SenderRequestContext senderRequestContext;
@@ -34,6 +38,8 @@ public final class Hpke {
     }
   }
 
+  private static native SenderContext nativeSetupBaseSender(final byte[] serializedRecipientPublicKey, final byte[] info);
+
   /**
    * Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
    * public key) and creating a sender context.
@@ -45,8 +51,8 @@ public final class Hpke {
    */
   public static final Result<SenderContext, Exception> setupBaseSender(
       final byte[] serializedRecipientPublicKey, final byte[] info) {
-    return Result.success(new SenderContext(
-        new byte[0], new Context.SenderRequestContext(), new Context.SenderResponseContext()));
+    SenderContext ctx = nativeSetupBaseSender(serializedRecipientPublicKey, info);
+    return Result.success(ctx);
   }
 
   public static final class RecipientContext {
@@ -60,6 +66,8 @@ public final class Hpke {
     }
   }
 
+  private static native RecipientContext nativeSetupBaseRecipient(final byte[] serializedEncapsulatedPublicKey, KeyPair recipient_key_pair, final byte[] info);
+
   /**
    * Sets up an HPKE recipient by creating a recipient context.
    * <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
@@ -69,9 +77,9 @@ public final class Hpke {
    *
    */
   public static final Result<RecipientContext, Exception> setupBaseRecipient(
-      final byte[] serializedEncapsulatedPublicKey, KeyPair recipientKeyPair, final byte[] info) {
-    return Result.success(new RecipientContext(
-        new Context.RecipientRequestContext(), new Context.RecipientResponseContext()));
+      final byte[] serializedEncapsulatedPublicKey, KeyPair recipient_key_pair, final byte[] info) {
+    RecipientContext ctx = nativeSetupBaseRecipient(serializedEncapsulatedPublicKey, recipient_key_pair, info);
+    return Result.success(ctx);
   }
 
   private Hpke() {}

@@ -62,6 +62,20 @@ public class ServerEncryptor implements Encryptor {
   }
 
   /**
+   * Cleans up resources allocated by recipient contexts.
+   */
+  public void destroy() {
+    if (this.recipientRequestContext.isPresent()) {
+      this.recipientRequestContext.get().destroy();
+      this.recipientRequestContext = Optional.empty();
+    }
+    if (this.recipientResponseContext.isPresent()) {
+      this.recipientResponseContext.get().destroy();
+      this.recipientResponseContext = Optional.empty();
+    }
+  }
+
+  /**
    * Decrypts a {@code com.google.oak.crypto.v1.EncryptedRequest} proto message using AEAD.
    * <https://datatracker.ietf.org/doc/html/rfc5116>
    *

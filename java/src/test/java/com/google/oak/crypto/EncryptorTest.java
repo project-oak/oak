@@ -102,5 +102,7 @@ public class EncryptorTest {
       Assert.assertArrayEquals(
           decryptResponseResult.success().get().associatedData, TEST_RESPONSE_ASSOCIATED_DATA);
     }
+    serverEncryptor.destroy();
+    clientEncryptor.destroy();
   }
 }

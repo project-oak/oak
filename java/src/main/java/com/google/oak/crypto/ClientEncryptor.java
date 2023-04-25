@@ -72,6 +72,14 @@ public class ClientEncryptor implements Encryptor {
     return Hpke.setupBaseSender(serializedServerPublicKey, OAK_HPKE_INFO).map(ClientEncryptor::new);
   }
 
+  /**
+   * Cleans up resources allocated by sender contexts.
+   */
+  public void destroy() {
+    senderRequestContext.destroy();
+    senderResponseContext.destroy();
+  }
+
   private ClientEncryptor(Hpke.SenderContext senderContext) {
     // TODO(#3642): Use real serialized encapsulated public key.
     this.serializedEncapsulatedPublicKey = Optional.of(TEST_ENCAPSULATED_PUBLIC_KEY);

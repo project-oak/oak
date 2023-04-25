@@ -75,7 +75,7 @@ public class OakClient<T extends Transport> {
     Result<ClientEncryptor, Exception> encryptorCreateResult =
         ClientEncryptor.create(this.serverEncryptionPublicKey);
 
-    return encryptorCreateResult
+    Result result =  encryptorCreateResult
         .andThen(encryptor
             // Encrypt request.
             -> encryptor
@@ -85,5 +85,9 @@ public class OakClient<T extends Transport> {
                    // Decrypt response.
                    .andThen(r -> encryptor.decrypt(r)))
         .map(d -> d.plaintext);
+    if (encryptorCreateResult.isSuccess()) {
+      encryptorCreateResult.success().get().destroy();
+    }
+    return result;
   }
 }

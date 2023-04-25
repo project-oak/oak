@@ -21,46 +21,138 @@ import com.google.oak.util.Result;
 // TODO(#3642): Implement Java Hybrid Encryption.
 public final class Context {
   public static final class SenderRequestContext {
+    private final long nativePtr;
+    public SenderRequestContext(long nativePtr) {
+      this.nativePtr = nativePtr;
+    }
+
+    static {
+      System.loadLibrary("hpke-jni");
+    }
+    private native byte[] nativeSeal(final byte[] plaintext, final byte[] associatedData);
+
+    private native void nativeDestroy();
+
     /**
      * Encrypts message with associated data using AEAD.
      * <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
      */
     public final Result<byte[], Exception> seal(
         final byte[] plaintext, final byte[] associatedData) {
-      return Result.success(plaintext);
+      byte[] nativeResult = nativeSeal(plaintext, associatedData);
+      if (nativeResult == null) {
+        return Result.error(new Exception("SenderRequestContext seal failed."));
+      }
+      return Result.success(nativeResult);
+    }
+
+    /**
+     * Destroys any allocated native resources for this object.
+     */
+    public void destroy() {
+      nativeDestroy();
     }
   }
 
   public static final class SenderResponseContext {
+    private final long nativePtr;
+    public SenderResponseContext(long nativePtr) {
+      this.nativePtr = nativePtr;
+    }
+
+    static {
+      System.loadLibrary("hpke-jni");
+    }
+    private native byte[] nativeOpen(final byte[] ciphertext, final byte[] associatedData);
+
+    private native void nativeDestroy();
+
     /**
      * Decrypts response message and validates associated data using AEAD as part of bidirectional
      * communication. <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
      */
     public final Result<byte[], Exception> open(
         final byte[] ciphertext, final byte[] associatedData) {
-      return Result.success(ciphertext);
+      byte[] nativeResult = nativeOpen(ciphertext, associatedData);
+      if (nativeResult == null) {
+        return Result.error(new Exception("SenderResponseContext open failed."));
+      }
+      return Result.success(nativeResult);
+    }
+
+    /**
+     * Destroys any allocated native resources for this object.
+     */
+    public void destroy() {
+      nativeDestroy();
     }
   };
 
   public static final class RecipientRequestContext {
+    private final long nativePtr;
+    public RecipientRequestContext(long nativePtr) {
+      this.nativePtr = nativePtr;
+    }
+
+    static {
+      System.loadLibrary("hpke-jni");
+    }
+    private native byte[] nativeOpen(final byte[] ciphertext, final byte[] associatedData);
+
+    private native void nativeDestroy();
+
     /**
      * Decrypts message and validates associated data using AEAD.
      * <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
      */
     public final Result<byte[], Exception> open(
         final byte[] ciphertext, final byte[] associatedData) {
-      return Result.success(ciphertext);
+      byte[] nativeResult = nativeOpen(ciphertext, associatedData);
+      if (nativeResult == null) {
+        return Result.error(new Exception("RecipientRequestContext open failed."));
+      }
+      return Result.success(nativeResult);
+    }
+
+    /**
+     * Destroys any allocated native resources for this object.
+     */
+    public void destroy() {
+      nativeDestroy();
     }
   };
 
   public static final class RecipientResponseContext {
+    private final long nativePtr;
+    public RecipientResponseContext(long nativePtr) {
+      this.nativePtr = nativePtr;
+    }
+
+    static {
+      System.loadLibrary("hpke-jni");
+    }
+    private native byte[] nativeSeal(final byte[] plaintext, final byte[] associatedData);
+
+    private native void nativeDestroy();
+
     /**
      * Encrypts response message with associated data using AEAD as part of bidirectional
      * communication. <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
      */
     public final Result<byte[], Exception> seal(
         final byte[] plaintext, final byte[] associatedData) {
-      return Result.success(plaintext);
+      byte[] nativeResult = nativeSeal(plaintext, associatedData);
+      if (nativeResult == null) {
+        return Result.error(new Exception("RecipientResponseContext seal failed."));
+      }
+      return Result.success(nativeResult);
+    }
+
+    /**
+     * Destroys any allocated native resources for this object.
+     */
+    public void destroy() {
+      nativeDestroy();
     }
   };
 

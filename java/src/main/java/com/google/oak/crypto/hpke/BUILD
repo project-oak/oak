@@ -28,6 +28,9 @@ java_library(
         "Hpke.java",
         "KeyPair.java",
     ],
+    data = [
+        "//cc/crypto/hpke:libhpke-jni.so",
+    ],
     deps = [
         "//java/src/main/java/com/google/oak/util",
     ],
