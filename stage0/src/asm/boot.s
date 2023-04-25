@@ -74,13 +74,11 @@ _protected_mode_start:
     # Set up a basic stack, as we may get interrupts.
     mov $stack_start, %esp
 
-    # Clear BSS: base address goes to RDI, value (0) goes to AX,
-    # count/4 (we are updating 4 bytes at a time) goes into CX.
+    # Clear BSS: base address goes to EDI, value (0) goes to EAX, count goes into ECX.
     mov $bss_start, %edi
     mov $bss_size, %ecx
-    shr $2, %ecx
     xor %eax, %eax
-    rep stosl
+    rep stosb
 
     # Set the first entry of PML4 to point to PDPT (0..512GiB).
     mov ${pdpt}, %edi
@@ -110,7 +108,7 @@ _protected_mode_start:
     mov %edi, 0xFF8(%eax)     # set first half of PML4[511], each entry is 8 bytes
 
     # Determine if we're running under SEV. Keep track of which bit is the encrypted bit in %rsi.
-    mov $0, %esi              # by default, no encryption
+    mov $0, %edi              # by default, no encryption
     mov $0xc0010131, %ecx     # SEV_STATUS MSR. See Section 15.34.10 in AMD64 Architecture Programmer's
                               # Manual, Volume 2 for more details.
     rdmsr                     # EDX:EAX <- MSR[ECX]
@@ -142,24 +140,25 @@ _protected_mode_start:
     xor %ecx, %ecx            # ECX = 0 - we're not interested in a subpage
     cpuid                     # EAX, EBX, ECX, EDX = CPUID(EAX, ECX)
     and $0b111111, %ebx       # zero out all but EBX[5:0], which the C-bit location
-    mov %ebx, %esi            # save the full C-bit location value for later to pass into main
+    mov %ebx, %edi            # save the full C-bit location value for later to pass into the Rust
+                              # entry point (EDI contains the first argument according to sysv ABI)
     sub $32, %ebx             # let's assume the encrypted bit is > 32, as it simplifies logic below
-    mov $1, %edi
+    mov $1, %esi
     mov %ebx, %ecx
-    shl %cl, %edi             # construct the encrypted bit mask, store it in EDI
+    shl %cl, %esi             # construct the encrypted bit mask, store it in ESI
 
     # We set the encrypted bit for each of the page table entries that we previously created.
     # The encrypted bit is in the second half of each 8-byte entry, so we add an extra offset of 4 bytes.
     mov ${pml4}, %eax
-    mov %edi, 4(%eax)         # set second half of PML4[0]
+    mov %esi, 4(%eax)         # set second half of PML4[0]
     mov ${pdpt}, %eax
-    mov %edi, 4(%eax)         # set second half of PDPT[0]
+    mov %esi, 4(%eax)         # set second half of PDPT[0]
     mov ${pdpt}, %eax
-    mov %edi, 28(%eax)        # set second half of PDPT[3], each entry is 8 bytes
+    mov %esi, 28(%eax)        # set second half of PDPT[3], each entry is 8 bytes
     mov ${pd_0}, %eax
-    mov %edi, 4(%eax)         # set second half of PD_0[0]
+    mov %esi, 4(%eax)         # set second half of PD_0[0]
     mov ${pd_3}, %eax
-    mov %edi, 0xFFC(%eax)     # set second half of PML4[511], each entry is 8 bytes
+    mov %esi, 0xFFC(%eax)     # set second half of PML4[511], each entry is 8 bytes
 no_encryption:
 
     # Load PML4
@@ -199,9 +198,5 @@ _long_mode_start:
     mov $stack_start, %esp
     push $0
     
-    # ESI should contain the encrypted bit number. Move it to EDI, as that's the first argument
-    # according to sysv ABI.
-    mov %esi, %edi
-
     # ...and jump to Rust code.
     jmp rust64_start
