@@ -54,6 +54,11 @@
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -88,6 +93,11 @@
 
     <span class="comment">// Set up the Linux environment, since we expect to be the initial process.
     </span>init::init().unwrap();
+
+    <span class="comment">// For now, just set PATH to some common locations. Docker image has information about
+    // the environment variables that need to be set up before the container is launched. We
+    // should use that information to set up all the necessary environment variables.
+    </span>std::env::set_var(<span class="string">&quot;PATH&quot;</span>, <span class="string">&quot;/usr/local/bin:/sbin:/usr/sbin:/bin:/usr/bin&quot;</span>);
 
     <span class="kw">let </span>file = File::open(DOCKER_COMMAND_PATH).expect(<span class="string">&quot;Error reading file&quot;</span>);
     <span class="kw">let </span>content_vec = BufReader::new(file)
