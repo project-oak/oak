@@ -17,8 +17,8 @@ pub mod rekor;
 
 use anyhow::Context;
 use oak_client::{
-    proto::streaming_session_client::StreamingSessionClient, transport::GrpcStreamingTransport,
-    OakClient,
+    proto::oak::session::v1::streaming_session_client::StreamingSessionClient,
+    transport::GrpcStreamingTransport, OakClient,
 };
 use tonic::transport::Channel;
 

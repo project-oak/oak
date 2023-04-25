@@ -28,6 +28,7 @@ import android.widget.TextView;
 import com.google.common.base.VerifyException;
 import com.google.oak.client.OakClient;
 import com.google.oak.remote_attestation.InsecureAttestationVerifier;
+import com.google.oak.session.v1.StreamingSessionGrpc;
 import com.google.oak.transport.ApiKeyInterceptor;
 import com.google.oak.transport.GrpcStreamingTransport;
 import com.google.oak.util.Result;
@@ -36,7 +37,6 @@ import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import oak.session.noninteractive.v1.StreamingSessionGrpc;
 
 /** Main class for the Oak Functions Client application. */
 public class MainActivity extends Activity {

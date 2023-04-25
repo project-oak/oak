@@ -14,10 +14,15 @@
 // limitations under the License.
 //
 
-// TODO(#3843): Rename `proto` to `grpc`.
 pub mod proto {
-    #![allow(clippy::return_self_not_must_use)]
-    tonic::include_proto!("oak.session.v1");
+    pub mod oak {
+        pub mod session {
+            pub mod v1 {
+                #![allow(clippy::return_self_not_must_use)]
+                tonic::include_proto!("oak.session.v1");
+            }
+        }
+    }
 }
 
 pub mod transport;

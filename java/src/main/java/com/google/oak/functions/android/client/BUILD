@@ -32,7 +32,7 @@ android_library(
         "//java/src/main/java/com/google/oak/transport:api_key_interceptor",
         "//java/src/main/java/com/google/oak/transport:grpc_streaming_transport",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation_noninteractive/proto/v1:service_streaming_java_grpc",
+        "//oak_remote_attestation/proto/v1:service_streaming_java_grpc",
         "@com_google_guava_guava",
         "@com_google_protobuf//:protobuf_javalite",
         "@io_grpc_grpc_java//api",

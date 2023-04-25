@@ -18,6 +18,13 @@ package com.google.oak.transport;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+import com.google.oak.session.v1.AttestationBundle;
+import com.google.oak.session.v1.GetPublicKeyRequest;
+import com.google.oak.session.v1.GetPublicKeyResponse;
+import com.google.oak.session.v1.InvokeRequest;
+import com.google.oak.session.v1.InvokeResponse;
+import com.google.oak.session.v1.RequestWrapper;
+import com.google.oak.session.v1.ResponseWrapper;
 import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
@@ -30,13 +37,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import oak.session.noninteractive.v1.AttestationBundle;
-import oak.session.noninteractive.v1.GetPublicKeyRequest;
-import oak.session.noninteractive.v1.GetPublicKeyResponse;
-import oak.session.noninteractive.v1.InvokeRequest;
-import oak.session.noninteractive.v1.InvokeResponse;
-import oak.session.noninteractive.v1.RequestWrapper;
-import oak.session.noninteractive.v1.ResponseWrapper;
 
 public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   private static final Logger logger = Logger.getLogger(GrpcStreamingTransport.class.getName());

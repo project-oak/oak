@@ -19,12 +19,12 @@ package com.google.oak.client;
 import com.google.oak.crypto.ClientEncryptor;
 import com.google.oak.crypto.Encryptor;
 import com.google.oak.remote_attestation.AttestationVerifier;
+import com.google.oak.session.v1.AttestationBundle;
+import com.google.oak.session.v1.AttestationEndorsement;
+import com.google.oak.session.v1.AttestationEvidence;
 import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
-import oak.session.noninteractive.v1.AttestationBundle;
-import oak.session.noninteractive.v1.AttestationEndorsement;
-import oak.session.noninteractive.v1.AttestationEvidence;
 
 /**
  * Oak Client class for exchanging encrypted messages with an Oak Enclave which is being run by the

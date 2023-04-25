@@ -30,7 +30,7 @@ java_test(
         "//java/src/main/java/com/google/oak/transport",
         "//java/src/main/java/com/google/oak/util",
         "//oak_crypto/proto:crypto_java_proto",
-        "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
+        "//oak_remote_attestation/proto/v1:messages_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
     ],
 )

@@ -21,6 +21,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.google.oak.remote_attestation.InsecureAttestationVerifier;
+import com.google.oak.session.v1.AttestationBundle;
+import com.google.oak.session.v1.AttestationEndorsement;
+import com.google.oak.session.v1.AttestationEvidence;
 import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
@@ -29,9 +32,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import oak.crypto.AeadEncryptedMessage;
 import oak.crypto.EncryptedResponse;
-import oak.session.noninteractive.v1.AttestationBundle;
-import oak.session.noninteractive.v1.AttestationEndorsement;
-import oak.session.noninteractive.v1.AttestationEvidence;
 import org.junit.Test;
 
 public class OakClientTest {

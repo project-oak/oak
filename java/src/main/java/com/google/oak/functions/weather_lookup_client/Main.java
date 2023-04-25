@@ -20,6 +20,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.oak.client.OakClient;
 import com.google.oak.remote_attestation.InsecureAttestationVerifier;
+import com.google.oak.session.v1.StreamingSessionGrpc;
 import com.google.oak.transport.ApiKeyInterceptor;
 import com.google.oak.transport.GrpcStreamingTransport;
 import com.google.oak.util.Result;
@@ -30,7 +31,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import oak.session.noninteractive.v1.StreamingSessionGrpc;
 
 public class Main {
   private static Logger logger = Logger.getLogger(Main.class.getName());

@@ -21,18 +21,6 @@
 mod lookup;
 pub mod server;
 
-// // TODO(#3843): Rename `proto` to `grpc`.
-// pub mod proto {
-//     #![allow(clippy::return_self_not_must_use)]
-//     tonic::include_proto!("oak.session.v1");
-// }
-// // TODO(#3843): Rename `schema` to `proto` and use a correct mod hierarchy.
-// pub mod schema {
-//     #![allow(dead_code)]
-//     use prost::Message;
-//     include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
-// }
-
 pub mod proto {
     pub mod oak {
         pub mod functions {
@@ -49,7 +37,9 @@ pub mod proto {
     }
 }
 
-use crate::proto::oak::functions::{InitializeRequest, InitializeResponse, OakFunctionsAsyncClient};
+use crate::proto::oak::functions::{
+    InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
+};
 use anyhow::Context;
 use oak_launcher_utils::{
     channel::{self, ConnectorHandle},
