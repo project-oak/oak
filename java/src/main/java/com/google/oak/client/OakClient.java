@@ -51,12 +51,12 @@ public class OakClient<T extends Transport> {
     // TODO(#3641): Implement client-side attestation verification.
     Result<AttestationBundle, String> getEvidenceResult = transport.getEvidence();
 
-    Result<Boolean, Exception> verifyResult = getEvidenceResult.map(
-        e -> verifier.verify(e.getAttestationEvidence(), e.getAttestationEndorsement()));
-
-    return verifyResult.map(e
-        -> new OakClient<E>(
-            transport, e.getAttestationEvidence().getEncryptionPublicKey().toByteArray()));
+    return getEvidenceResult.mapError(Exception::new)
+        .andThen(e
+            -> verifier.verify(e.getAttestationEvidence(), e.getAttestationEndorsement())
+                   .map(b
+                       -> new OakClient<E>(transport,
+                           e.getAttestationEvidence().getEncryptionPublicKey().toByteArray())));
   }
 
   private OakClient(T transport, byte[] serverEncryptionPublicKey) {
@@ -75,34 +75,16 @@ public class OakClient<T extends Transport> {
   public Result<byte[], Exception> invoke(byte[] requestBody) {
     Result<ClientEncryptor, Exception> encryptorCreateResult =
         ClientEncryptor.create(this.serverEncryptionPublicKey);
-    if (encryptorCreateResult.isError()) {
-      return Result.error(new Exception(encryptorCreateResult.error().get()));
-    }
-    ClientEncryptor encryptor = encryptorCreateResult.success().get();
 
-    // Encrypt request.
-    Result<byte[], Exception> encryptResult = encryptor.encrypt(requestBody, EMPTY_ASSOCIATED_DATA);
-    if (encryptResult.isError()) {
-      return Result.error(new Exception(encryptResult.error().get()));
-    }
-    byte[] encryptedRequest = encryptResult.success().get();
-
-    // Send request.
-    Result<byte[], String> invokeResult = this.transport.invoke(encryptedRequest);
-    if (invokeResult.isError()) {
-      return Result.error(new Exception(invokeResult.error().get()));
-    }
-    byte[] encryptedResponse = invokeResult.success().get();
-
-    // Decrypt response.
-    Result<Encryptor.DecryptionResult, Exception> decryptResult =
-        encryptor.decrypt(encryptedResponse);
-    if (decryptResult.isError()) {
-      return Result.error(new Exception(decryptResult.error().get()));
-    }
-    // Currently we ignore the associated data.
-    byte[] responseBody = decryptResult.success().get().plaintext;
-
-    return Result.success(responseBody);
+    return encryptorCreateResult
+        .andThen(encryptor
+            // Encrypt request.
+            -> encryptor
+                   .encrypt(requestBody, EMPTY_ASSOCIATED_DATA)
+                   // Send request.
+                   .andThen(r -> this.transport.invoke(r).mapError(Exception::new))
+                   // Decrypt response.
+                   .andThen(r -> encryptor.decrypt(r)))
+        .map(d -> d.plaintext);
   }
 }
