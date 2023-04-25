@@ -20,7 +20,7 @@ extern crate alloc;
 
 pub mod schema {
     #![allow(dead_code)]
-    include!(concat!(env!("OUT_DIR"), "/oak.crypto.rs"));
+    include!(concat!(env!("OUT_DIR"), "/oak.crypto.v1.rs"));
 }
 
 pub mod encryptor;

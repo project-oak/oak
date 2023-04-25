@@ -16,9 +16,9 @@
 
 use crate::{
     channel::ConnectorHandle,
-    schema::{
-        self, Empty, ExtendNextLookupDataRequest, FinishNextLookupDataRequest, LookupDataChunk,
-        OakFunctionsAsyncClient,
+    proto::oak::functions::{
+        Empty, ExtendNextLookupDataRequest, FinishNextLookupDataRequest, LookupDataChunk,
+        LookupDataEntry, OakFunctionsAsyncClient,
     },
 };
 use anyhow::{anyhow, Context};
@@ -95,7 +95,7 @@ pub async fn update_lookup_data(
 fn chunk_up_lookup_data(
     source_lookup_data: HashMap<Vec<u8>, Vec<u8>>,
     max_chunk_size: ByteUnit,
-) -> Vec<schema::LookupDataChunk> {
+) -> Vec<LookupDataChunk> {
     let mut chunks = Vec::new();
 
     // We will add the estimated size of ever LookupDataEntry, and to account for the LookupData
@@ -113,14 +113,14 @@ fn chunk_up_lookup_data(
 
         // If the next element would exceed the maximum chunk size, create a new chunk.
         if estimated_chunk_size > max_chunk_size {
-            chunks.push(schema::LookupDataChunk { items: entries });
+            chunks.push(LookupDataChunk { items: entries });
             estimated_chunk_size = ByteUnit::Byte(50);
             entries = Vec::new();
         };
 
-        entries.push(schema::LookupDataEntry { key, value })
+        entries.push(LookupDataEntry { key, value })
     }
-    chunks.push(schema::LookupDataChunk { items: entries });
+    chunks.push(LookupDataChunk { items: entries });
     chunks
 }
 

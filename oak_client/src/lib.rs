@@ -17,7 +17,7 @@
 // TODO(#3843): Rename `proto` to `grpc`.
 pub mod proto {
     #![allow(clippy::return_self_not_must_use)]
-    tonic::include_proto!("oak.session.noninteractive.v1");
+    tonic::include_proto!("oak.session.v1");
 }
 
 pub mod transport;

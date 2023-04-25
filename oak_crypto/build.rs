@@ -17,7 +17,7 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     micro_rpc_build::compile(
         &[format!(
-            "{}oak_crypto/proto/crypto.proto",
+            "{}oak_crypto/proto/v1/crypto.proto",
             env!("WORKSPACE_ROOT")
         )],
         &[format!("{}oak_crypto/proto", env!("WORKSPACE_ROOT"))],
