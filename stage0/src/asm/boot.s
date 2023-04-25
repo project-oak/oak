@@ -80,7 +80,7 @@ _protected_mode_start:
     xor %eax, %eax
     rep stosb
 
-    # Copy DATA from ROM image just after TEXT.
+    # Copy DATA from the ROM image (stored just after TEXT) to the expected location.
     # Source address goes to ESI, destination goes to EDI, count goes to ECX.
     mov $text_end, %esi
     mov $data_start, %edi
