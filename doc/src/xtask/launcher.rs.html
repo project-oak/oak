@@ -255,7 +255,7 @@
 
     <span class="doccomment">/// Get the path to the respective enclave binary variant that should be launched
     </span><span class="kw">pub fn </span>enclave_crate_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        workspace_path(<span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span><span class="self">self</span>.enclave_crate_name()])
+        workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;enclave_apps&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_crate_name()])
             .to_str()
             .unwrap()
             .to_string()
@@ -265,7 +265,7 @@
     </span><span class="kw">pub fn </span>enclave_binary_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="kw">match </span><span class="self">self </span>{
             LauncherMode::Virtual(<span class="kw">_</span>) =&gt; workspace_path(<span class="kw-2">&amp;</span>[
-                <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_crate_name(),
+                <span class="string">&quot;enclave_apps&quot;</span>,
                 <span class="string">&quot;target&quot;</span>,
                 <span class="string">&quot;x86_64-unknown-none&quot;</span>,
                 <span class="string">&quot;debug&quot;</span>,
