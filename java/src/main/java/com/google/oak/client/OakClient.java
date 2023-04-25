@@ -50,23 +50,13 @@ public class OakClient<T extends Transport> {
       Result<OakClient<E>, Exception> create(E transport, V verifier) {
     // TODO(#3641): Implement client-side attestation verification.
     Result<AttestationBundle, String> getEvidenceResult = transport.getEvidence();
-    if (getEvidenceResult.isError()) {
-      return Result.error(new Exception(getEvidenceResult.error().get()));
-    }
-    AttestationEvidence attestationEvidence =
-        getEvidenceResult.success().get().getAttestationEvidence();
-    AttestationEndorsement attestationEndorsement =
-        getEvidenceResult.success().get().getAttestationEndorsement();
 
-    Result<Boolean, Exception> verifyResult =
-        verifier.verify(attestationEvidence, attestationEndorsement);
-    if (getEvidenceResult.isError()) {
-      return Result.error(new Exception(getEvidenceResult.error().get()));
-    }
+    Result<Boolean, Exception> verifyResult = getEvidenceResult.map(
+        e -> verifier.verify(e.getAttestationEvidence(), e.getAttestationEndorsement()));
 
-    OakClient<E> oakClient =
-        new OakClient<E>(transport, attestationEvidence.getEncryptionPublicKey().toByteArray());
-    return Result.success(oakClient);
+    return verifyResult.map(e
+        -> new OakClient<E>(
+            transport, e.getAttestationEvidence().getEncryptionPublicKey().toByteArray()));
   }
 
   private OakClient(T transport, byte[] serverEncryptionPublicKey) {
