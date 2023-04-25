@@ -66,13 +66,7 @@ public class ClientEncryptor implements Encryptor {
   // TODO(#3642): Implement Java Hybrid Encryption.
   public static final Result<ClientEncryptor, Exception> create(
       final byte[] serializedServerPublicKey) {
-    Result<Hpke.SenderContext, Exception> setupBaseSenderResult =
-        Hpke.setupBaseSender(serializedServerPublicKey, OAK_HPKE_INFO);
-    if (setupBaseSenderResult.isError()) {
-      return Result.error(setupBaseSenderResult.error().get());
-    }
-    Hpke.SenderContext senderContext = setupBaseSenderResult.success().get();
-    return Result.success(new ClientEncryptor(senderContext));
+    return Hpke.setupBaseSender(serializedServerPublicKey, OAK_HPKE_INFO).map(ClientEncryptor::new);
   }
 
   private ClientEncryptor(Hpke.SenderContext senderContext) {
