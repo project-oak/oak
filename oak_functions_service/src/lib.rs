@@ -19,10 +19,14 @@
 
 extern crate alloc;
 
-pub mod schema {
-    #![allow(dead_code)]
-    use prost::Message;
-    include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
+pub mod proto {
+    pub mod oak {
+        pub mod functions {
+            #![allow(dead_code)]
+            use prost::Message;
+            include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
+        }
+    }
 }
 mod logger;
 mod remote_attestation;
@@ -34,8 +38,13 @@ use oak_functions_abi::Request;
 use oak_functions_lookup::LookupDataManager;
 use oak_functions_wasm::WasmHandler;
 use oak_remote_attestation_interactive::handshaker::AttestationGenerator;
+use proto::oak::functions::{
+    AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
+    FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
+    InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk, OakFunctions,
+    PublicKeyInfo,
+};
 use remote_attestation::Handler;
-use schema::LookupDataChunk;
 
 pub use crate::logger::StandaloneLogger;
 
@@ -72,11 +81,11 @@ impl<L: oak_logger::OakLogger> Handler for WasmHandler<L> {
     }
 }
 
-impl schema::OakFunctions for OakFunctionsService {
+impl OakFunctions for OakFunctionsService {
     fn initialize(
         &mut self,
-        initialization: &schema::InitializeRequest,
-    ) -> Result<schema::InitializeResponse, micro_rpc::Status> {
+        initialization: &InitializeRequest,
+    ) -> Result<InitializeResponse, micro_rpc::Status> {
         match &mut self.initialization_state {
             InitializationState::Initialized(_attestation_handler) => {
                 Err(micro_rpc::Status::new_with_message(
@@ -110,8 +119,8 @@ impl schema::OakFunctions for OakFunctionsService {
                 );
                 let public_key_info = attestation_handler.get_public_key_info();
                 self.initialization_state = InitializationState::Initialized(attestation_handler);
-                Ok(schema::InitializeResponse {
-                    public_key_info: Some(schema::PublicKeyInfo {
+                Ok(InitializeResponse {
+                    public_key_info: Some(PublicKeyInfo {
                         public_key: public_key_info.public_key,
                         attestation: public_key_info.attestation,
                     }),
@@ -122,8 +131,8 @@ impl schema::OakFunctions for OakFunctionsService {
 
     fn invoke(
         &mut self,
-        request_message: &schema::InvokeRequest,
-    ) -> Result<schema::InvokeResponse, micro_rpc::Status> {
+        request_message: &InvokeRequest,
+    ) -> Result<InvokeResponse, micro_rpc::Status> {
         match &mut self.initialization_state {
             InitializationState::Uninitialized => Err(micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::FailedPrecondition,
@@ -139,34 +148,34 @@ impl schema::OakFunctions for OakFunctionsService {
                                 format!("{:?}", err),
                             )
                         })?;
-                Ok(schema::InvokeResponse { body: response })
+                Ok(InvokeResponse { body: response })
             }
         }
     }
 
     fn extend_next_lookup_data(
         &mut self,
-        request: &schema::ExtendNextLookupDataRequest,
-    ) -> Result<schema::ExtendNextLookupDataResponse, micro_rpc::Status> {
+        request: &ExtendNextLookupDataRequest,
+    ) -> Result<ExtendNextLookupDataResponse, micro_rpc::Status> {
         self.lookup_data_manager
             .extend_next_lookup_data(to_data(&request.chunk));
-        Ok(schema::ExtendNextLookupDataResponse {})
+        Ok(ExtendNextLookupDataResponse {})
     }
 
     fn finish_next_lookup_data(
         &mut self,
-        _request: &schema::FinishNextLookupDataRequest,
-    ) -> Result<schema::FinishNextLookupDataResponse, micro_rpc::Status> {
+        _request: &FinishNextLookupDataRequest,
+    ) -> Result<FinishNextLookupDataResponse, micro_rpc::Status> {
         self.lookup_data_manager.finish_next_lookup_data();
-        Ok(schema::FinishNextLookupDataResponse {})
+        Ok(FinishNextLookupDataResponse {})
     }
 
     fn abort_next_lookup_data(
         &mut self,
-        _request: &schema::Empty,
-    ) -> Result<schema::AbortNextLookupDataResponse, micro_rpc::Status> {
+        _request: &Empty,
+    ) -> Result<AbortNextLookupDataResponse, micro_rpc::Status> {
         self.lookup_data_manager.abort_next_lookup_data();
-        Ok(schema::AbortNextLookupDataResponse {})
+        Ok(AbortNextLookupDataResponse {})
     }
 }
 
