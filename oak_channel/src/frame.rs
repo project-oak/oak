@@ -127,12 +127,11 @@ impl Framed {
 
     pub fn write_frame(&mut self, frame: Frame) -> anyhow::Result<()> {
         let channel: &mut dyn Channel = self.inner.borrow_mut();
-        frame.write(channel)?; 
+        frame.write(channel)?;
         channel.flush()
     }
 }
 
-// Hello
 pub fn bytes_into_frames(data: &[u8]) -> anyhow::Result<Vec<Frame<'_>>> {
     if data.is_empty() {
         anyhow::bail!("cannot convert empty payloads into frames")
