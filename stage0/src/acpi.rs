@@ -384,6 +384,15 @@ impl RomfileCommand {
             );
             return Ok(());
         }
+        if self.tag == 0 {
+            // Safety: interpreting the union as a byte array is safe, as it makes no assumptions
+            // about the meaning of any of the bytes.
+            log::debug!(
+                "ignoring empty ACPI linker command with body {:?}",
+                unsafe { &self.body.padding }
+            );
+            return Ok(());
+        }
         self.extract()?.invoke(fwcfg)
     }
 }
