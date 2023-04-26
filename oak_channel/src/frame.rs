@@ -22,6 +22,7 @@ use crate::Channel;
 use alloc::{boxed::Box, format, vec::Vec};
 use bitflags::bitflags;
 use core::borrow::BorrowMut;
+use bytes::BytesMut;
 
 pub const PADDING_SIZE: usize = 4;
 
@@ -87,10 +88,7 @@ impl Framed {
         Self { inner: socket }
     }
 
-    pub fn read_frame<'a, F>(&mut self, allocate_fn: F) -> anyhow::Result<Frame<'a>>
-    where
-        F: FnOnce(usize) -> &'a mut [u8],
-    {
+    pub fn read_frame<'a>(&mut self, bytes: &'a mut BytesMut) -> anyhow::Result<Frame<'a>> {
         {
             let mut padding_bytes = [0; PADDING_SIZE];
             self.inner.read(&mut padding_bytes)?;
@@ -117,9 +115,11 @@ impl Framed {
             let body_length: usize = length
                 .checked_sub(BODY_OFFSET)
                 .expect("body length underflow");
-            let body = allocate_fn(body_length);
-            self.inner.read(body)?;
-            body
+            let mut body_buffer = Vec::with_capacity(body_length);
+            body_buffer.resize(body_length, 0);
+            self.inner.read(&mut body_buffer)?;
+            bytes.extend_from_slice(&body_buffer);
+            bytes
         };
 
         Ok(Frame { flags, body })
@@ -127,11 +127,12 @@ impl Framed {
 
     pub fn write_frame(&mut self, frame: Frame) -> anyhow::Result<()> {
         let channel: &mut dyn Channel = self.inner.borrow_mut();
-        frame.write(channel)?;
+        frame.write(channel)?; 
         channel.flush()
     }
 }
 
+// Hello
 pub fn bytes_into_frames(data: &[u8]) -> anyhow::Result<Vec<Frame<'_>>> {
     if data.is_empty() {
         anyhow::bail!("cannot convert empty payloads into frames")
