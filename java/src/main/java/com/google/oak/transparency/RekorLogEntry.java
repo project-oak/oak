@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package com.google.oak.transparent_release;
+package com.google.oak.transparency;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
