@@ -22,24 +22,27 @@ extern crate alloc;
 use log::info;
 
 pub mod proto {
-    #![allow(dead_code)]
-    use prost::Message;
-    include!(concat!(env!("OUT_DIR"), "/quirk.echo.rs"));
+    pub mod quirk {
+        pub mod echo {
+            #![allow(dead_code)]
+            use prost::Message;
+            include!(concat!(env!("OUT_DIR"), "/quirk.echo.rs"));
+        }
+    }
 }
+
+use crate::proto::quirk::echo::{Echo, EchoRequest, EchoResponse};
 
 #[derive(Default)]
 pub struct EchoService;
 
-impl proto::Echo for EchoService {
-    fn echo(
-        &mut self,
-        request: &proto::EchoRequest,
-    ) -> Result<proto::EchoResponse, micro_rpc::Status> {
+impl Echo for EchoService {
+    fn echo(&mut self, request: &EchoRequest) -> Result<EchoResponse, micro_rpc::Status> {
         let request_body: &[u8] = request.body.as_ref();
         info!("Received a request, size: {}", request_body.len());
         let response_body = request_body;
 
-        Ok(proto::EchoResponse {
+        Ok(EchoResponse {
             body: response_body.to_vec(),
         })
     }

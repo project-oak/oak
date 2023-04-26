@@ -19,12 +19,20 @@
 
 extern crate alloc;
 
-pub mod schema {
-    #![allow(dead_code)]
-    use prost::Message;
-    include!(concat!(env!("OUT_DIR"), "/oak.iree.rs"));
+pub mod proto {
+    pub mod oak {
+        pub mod iree {
+            #![allow(dead_code)]
+            use prost::Message;
+            include!(concat!(env!("OUT_DIR"), "/oak.iree.rs"));
+        }
+    }
 }
 mod iree;
+
+use crate::proto::oak::iree::{
+    InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, Iree,
+};
 
 #[derive(Default)]
 pub struct IreeService {
@@ -39,25 +47,25 @@ impl IreeService {
     }
 }
 
-impl schema::Iree for IreeService {
+impl Iree for IreeService {
     fn initialize(
         &mut self,
-        _initialization: &schema::InitializeRequest,
-    ) -> Result<schema::InitializeResponse, micro_rpc::Status> {
+        _initialization: &InitializeRequest,
+    ) -> Result<InitializeResponse, micro_rpc::Status> {
         self.iree_model
             .initialize()
             .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
-        Ok(schema::InitializeResponse {})
+        Ok(InitializeResponse {})
     }
 
     fn invoke(
         &mut self,
-        request_message: &schema::InvokeRequest,
-    ) -> Result<schema::InvokeResponse, micro_rpc::Status> {
+        request_message: &InvokeRequest,
+    ) -> Result<InvokeResponse, micro_rpc::Status> {
         let response = self
             .iree_model
             .run(&request_message.body)
             .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
-        Ok(schema::InvokeResponse { body: response })
+        Ok(InvokeResponse { body: response })
     }
 }
