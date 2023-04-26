@@ -34,8 +34,9 @@ HIDDEN(SEGMENT_LONG = 1 << (32 + 21));
 HIDDEN(SEGMENT_PRESENT = 1 << (32 + 15)); /* P */
 HIDDEN(SEGMENT_USER = 1 << (32 + 12)); /* S */
 HIDDEN(SEGMENT_CODE = 1 << (32 + 11));
-HIDDEN(SEGMENT_WRITABLE = 1 << (32 + 9));
 HIDDEN(SEGMENT_CONFORMING = 1 << (32 + 10));
+HIDDEN(SEGMENT_WRITABLE = 1 << (32 + 9));
+HIDDEN(SEGMENT_ACCESSED = 1 << (32 + 8));
 
 /* Page table flags */
 HIDDEN(PAGE_PRESENT = 1 << 0);
@@ -131,7 +132,11 @@ SECTIONS {
          *  - C=0
          */
         cs = . - ADDR(.rodata.gdt);
-        QUAD(SEGMENT_LONG | SEGMENT_PRESENT | SEGMENT_USER | SEGMENT_CODE)
+        QUAD(SEGMENT_LONG |
+             SEGMENT_PRESENT |
+             SEGMENT_USER |
+             SEGMENT_CODE |
+             SEGMENT_ACCESSED)
         /* 64-bit data segment (see Section 4.8.2):
          *  - P=1 (present)
          *  - S=1 (user)
@@ -150,6 +155,7 @@ SECTIONS {
              SEGMENT_PRESENT |
              SEGMENT_USER |
              SEGMENT_WRITABLE |
+             SEGMENT_ACCESSED |
              (0xF << (32 + 16)) | /* Segment Limit [19:16] */
              0xFFFF)              /* Segment Limit [15:0] */
         /* 32-bit code segment, although we only need it for a really short time (see Section 4.7.2):
@@ -166,6 +172,7 @@ SECTIONS {
              SEGMENT_PRESENT |
              SEGMENT_USER |
              SEGMENT_CODE |
+             SEGMENT_ACCESSED |
              (0xF << (32 + 16)) | /* Segment Limit [19:16] */
              0xFFFF)              /* Segment Limit [15:0] */
     } > bios
