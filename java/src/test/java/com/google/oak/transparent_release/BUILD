@@ -24,8 +24,8 @@ java_test(
     name = "rekor_log_entry_test",
     srcs = ["RekorLogEntryTest.java"],
     data = ["//oak_functions_client/testdata:logentry.json"],
-    test_class = "com.google.oak.rekor.RekorLogEntryTest",
+    test_class = "com.google.oak.transparent_release.RekorLogEntryTest",
     deps = [
-        "//java/src/main/java/com/google/oak/rekor",
+        "//java/src/main/java/com/google/oak/transparent_release:rekor",
     ],
 )

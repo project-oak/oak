@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.oak.functions.android.client;
+package com.google.oak.client.android;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 

@@ -14,18 +14,16 @@
 # limitations under the License.
 #
 
-load("@build_bazel_rules_android//android:rules.bzl", "android_binary", "android_library")
+load("@rules_java//java:defs.bzl", "java_binary")
 
 package(
     licenses = ["notice"],
 )
 
-android_library(
-    name = "client_activity",
-    srcs = ["MainActivity.java"],
-    custom_package = "com.google.oak.functions.android.client",
-    manifest = "AndroidManifest.xml",
-    resource_files = glob(["res/**"]),
+java_binary(
+    name = "weather_lookup_client",
+    srcs = ["Main.java"],
+    main_class = "com.google.oak.client.weather_lookup_client.Main",
     deps = [
         "//java/src/main/java/com/google/oak/client:oak_client",
         "//java/src/main/java/com/google/oak/remote_attestation:insecure_attestation_verifier",
@@ -33,19 +31,11 @@ android_library(
         "//java/src/main/java/com/google/oak/transport:grpc_streaming_transport",
         "//java/src/main/java/com/google/oak/util",
         "//oak_remote_attestation/proto/v1:service_streaming_java_grpc",
-        "@com_google_guava_guava",
-        "@com_google_protobuf//:protobuf_javalite",
+        "@com_google_protobuf//:protobuf_java",
+        "@com_google_protobuf//:protobuf_java_util",
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//netty",
-    ],
-)
-
-android_binary(
-    name = "client_app",
-    custom_package = "com.google.oak.functions.android.client",
-    manifest = "AndroidManifest.xml",
-    multidex = "native",
-    deps = [
-        ":client_activity",
+        "@io_grpc_grpc_java//protobuf",
+        "@io_grpc_grpc_java//stub",
     ],
 )

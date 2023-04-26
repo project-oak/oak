@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package com.google.oak.functions.weather_lookup_client;
+package com.google.oak.client.weather_lookup_client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
