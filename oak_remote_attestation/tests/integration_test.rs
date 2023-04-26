@@ -16,7 +16,7 @@
 
 use anyhow::Context;
 use futures::{Stream, StreamExt};
-use oak_remote_attestation_noninteractive::proto::{
+use oak_remote_attestation::proto::{
     request_wrapper, response_wrapper,
     streaming_session_client::StreamingSessionClient,
     streaming_session_server::{StreamingSession, StreamingSessionServer},

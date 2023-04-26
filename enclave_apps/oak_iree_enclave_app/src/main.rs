@@ -42,7 +42,7 @@ fn main() -> ! {
 
 fn start_server() -> ! {
     let service = oak_iree_service::IreeService::new();
-    let server = oak_iree_service::schema::IreeServer::new(service);
+    let server = oak_iree_service::proto::oak::iree::IreeServer::new(service);
     oak_channel::server::start_blocking_server(Box::<FileDescriptorChannel>::default(), server)
         .expect("server encountered an unrecoverable error")
 }

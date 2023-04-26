@@ -21,7 +21,7 @@
 extern crate alloc;
 
 use quirk_echo_service::{
-    proto::{EchoClient, EchoRequest, EchoServer},
+    proto::quirk::echo::{EchoClient, EchoRequest, EchoServer},
     EchoService,
 };
 

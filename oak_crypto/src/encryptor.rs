@@ -23,7 +23,7 @@ use crate::{
         setup_base_recipient, setup_base_sender, KeyPair, RecipientRequestContext,
         RecipientResponseContext, SenderRequestContext, SenderResponseContext,
     },
-    schema::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
+    proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
 use alloc::{sync::Arc, vec::Vec};
 use anyhow::{anyhow, Context};

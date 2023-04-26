@@ -26,7 +26,7 @@ java_library(
     srcs = ["AttestationVerifier.java"],
     deps = [
         "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
+        "//oak_remote_attestation/proto/v1:messages_java_proto",
     ],
 )
 
@@ -36,7 +36,7 @@ java_library(
     deps = [
         ":attestation_verifier",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
+        "//oak_remote_attestation/proto/v1:messages_java_proto",
     ],
 )
 
@@ -46,7 +46,7 @@ java_library(
     deps = [
         ":attestation_verifier",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
+        "//oak_remote_attestation/proto/v1:messages_java_proto",
     ],
 )
 

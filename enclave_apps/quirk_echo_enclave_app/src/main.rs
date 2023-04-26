@@ -46,7 +46,7 @@ fn main() -> ! {
 // https://github.com/project-oak/oak/blob/main/oak_channel/SPEC.md
 fn start_echo_server() -> ! {
     let service = quirk_echo_service::EchoService::default();
-    let server = quirk_echo_service::proto::EchoServer::new(service);
+    let server = quirk_echo_service::proto::quirk::echo::EchoServer::new(service);
     oak_channel::server::start_blocking_server(Box::<FileDescriptorChannel>::default(), server)
         .expect("server encountered an unrecoverable error");
 }

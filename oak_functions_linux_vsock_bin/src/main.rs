@@ -75,7 +75,7 @@ fn main() -> ! {
         oak_functions_service::OakFunctionsService::new(Arc::new(EmptyAttestationGenerator));
     oak_channel::server::start_blocking_server(
         channel,
-        oak_functions_service::schema::OakFunctionsServer::new(service),
+        oak_functions_service::proto::oak::functions::OakFunctionsServer::new(service),
     )
     .expect("server encountered an unrecoverable error");
 }

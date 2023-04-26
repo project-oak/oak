@@ -24,7 +24,7 @@ use alloc::{sync::Arc, vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use oak_crypto::{
     encryptor::{EncryptionKeyProvider, ServerEncryptor},
-    schema::EncryptedRequest,
+    proto::oak::crypto::v1::EncryptedRequest,
 };
 use oak_remote_attestation_interactive::handshaker::AttestationGenerator;
 use prost::Message;

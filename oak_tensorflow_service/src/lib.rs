@@ -19,12 +19,20 @@
 
 extern crate alloc;
 
-pub mod schema {
-    #![allow(dead_code)]
-    use prost::Message;
-    include!(concat!(env!("OUT_DIR"), "/oak.tensorflow.rs"));
+pub mod proto {
+    pub mod oak {
+        pub mod tensorflow {
+            #![allow(dead_code)]
+            use prost::Message;
+            include!(concat!(env!("OUT_DIR"), "/oak.tensorflow.rs"));
+        }
+    }
 }
 mod tflite;
+
+use crate::proto::oak::tensorflow::{
+    InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, Tensorflow,
+};
 
 #[derive(Default)]
 pub struct TensorflowService {
@@ -39,25 +47,25 @@ impl TensorflowService {
     }
 }
 
-impl schema::Tensorflow for TensorflowService {
+impl Tensorflow for TensorflowService {
     fn initialize(
         &mut self,
-        initialization: &schema::InitializeRequest,
-    ) -> Result<schema::InitializeResponse, micro_rpc::Status> {
+        initialization: &InitializeRequest,
+    ) -> Result<InitializeResponse, micro_rpc::Status> {
         self.tflite_model
             .initialize(&initialization.tensorflow_model)
             .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
-        Ok(schema::InitializeResponse {})
+        Ok(InitializeResponse {})
     }
 
     fn invoke(
         &mut self,
-        request_message: &schema::InvokeRequest,
-    ) -> Result<schema::InvokeResponse, micro_rpc::Status> {
+        request_message: &InvokeRequest,
+    ) -> Result<InvokeResponse, micro_rpc::Status> {
         let response = self
             .tflite_model
             .run(&request_message.body)
             .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
-        Ok(schema::InvokeResponse { body: response })
+        Ok(InvokeResponse { body: response })
     }
 }

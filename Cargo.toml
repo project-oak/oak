@@ -39,9 +39,9 @@ members = [
   "oak_hello_world_linux_init",
   "oak_iree_service",
   "oak_launcher_utils",
+  "oak_remote_attestation",
   "oak_remote_attestation_amd",
   "oak_remote_attestation_interactive",
-  "oak_remote_attestation_noninteractive",
   "oak_remote_attestation_sessions",
   "oak_remote_attestation_sessions_client",
   "oak_restricted_kernel",
@@ -98,13 +98,13 @@ oak_grpc_utils = { path = "./oak_grpc_utils" }
 oak_launcher_utils = { path = "./oak_launcher_utils" }
 oak_linux_boot_params = { path = "./linux_boot_params" }
 oak_logger = { path = "./oak_functions/logger" }
+oak_remote_attestation = { path = "./oak_remote_attestation" }
 oak_remote_attestation_amd = { path = "./oak_remote_attestation_amd", default-features = false, features = [
   "rust-crypto"
 ] }
 oak_remote_attestation_interactive = { path = "./oak_remote_attestation_interactive", default-features = false, features = [
   "rust-crypto"
 ] }
-oak_remote_attestation_noninteractive = { path = "./oak_remote_attestation_noninteractive" }
 oak_remote_attestation_sessions = { path = "./oak_remote_attestation_sessions", default-features = false, features = [
   "rust-crypto"
 ] }

@@ -18,13 +18,13 @@ package com.google.oak.crypto;
 
 import com.google.oak.crypto.hpke.Context;
 import com.google.oak.crypto.hpke.Hpke;
+import com.google.oak.crypto.v1.AeadEncryptedMessage;
+import com.google.oak.crypto.v1.EncryptedRequest;
+import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.Optional;
-import oak.crypto.AeadEncryptedMessage;
-import oak.crypto.EncryptedRequest;
-import oak.crypto.EncryptedResponse;
 
 /**
  * Encryptor class for encrypting client requests that will be sent to the server and decrypting

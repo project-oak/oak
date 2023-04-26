@@ -16,9 +16,9 @@
 
 package com.google.oak.remote_attestation;
 
+import com.google.oak.session.v1.AttestationEndorsement;
+import com.google.oak.session.v1.AttestationEvidence;
 import com.google.oak.util.Result;
-import oak.session.noninteractive.v1.AttestationEndorsement;
-import oak.session.noninteractive.v1.AttestationEvidence;
 
 /**
  * A test verifier implementation that doesn't verify attestation evidence and is used for testing.

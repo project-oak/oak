@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::proto::{
+use crate::proto::oak::session::v1::{
     request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
     AttestationEvidence, GetPublicKeyRequest, InvokeRequest, RequestWrapper,
 };

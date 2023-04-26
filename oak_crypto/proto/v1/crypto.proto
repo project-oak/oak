@@ -16,10 +16,10 @@
 
 syntax = "proto3";
 
-package oak.crypto;
+package oak.crypto.v1;
 
 option java_multiple_files = true;
-option java_package = "oak.crypto";
+option java_package = "com.google.oak.crypto.v1";
 
 // Request message encrypted using Hybrid Public Key Encryption (HPKE).
 // <https://www.rfc-editor.org/rfc/rfc9180.html>

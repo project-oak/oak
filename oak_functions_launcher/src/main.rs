@@ -28,12 +28,6 @@ use std::{
 use tokio::signal;
 use ubyte::ByteUnit;
 
-pub mod schema {
-    #![allow(dead_code)]
-    use prost::Message;
-    include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
-}
-
 #[derive(Parser, Debug)]
 struct Args {
     /// Execution mode.

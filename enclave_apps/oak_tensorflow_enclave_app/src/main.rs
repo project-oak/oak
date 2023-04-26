@@ -42,7 +42,7 @@ fn main() -> ! {
 
 fn start_server() -> ! {
     let service = oak_tensorflow_service::TensorflowService::new();
-    let server = oak_tensorflow_service::schema::TensorflowServer::new(service);
+    let server = oak_tensorflow_service::proto::oak::tensorflow::TensorflowServer::new(service);
     oak_channel::server::start_blocking_server(Box::<FileDescriptorChannel>::default(), server)
         .expect("server encountered an unrecoverable error")
 }

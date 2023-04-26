@@ -21,25 +21,30 @@
 mod lookup;
 pub mod server;
 
-// TODO(#3843): Rename `proto` to `grpc`.
 pub mod proto {
-    #![allow(clippy::return_self_not_must_use)]
-    tonic::include_proto!("oak.session.noninteractive.v1");
-}
-// TODO(#3843): Rename `schema` to `proto` and use a correct mod hierarchy.
-pub mod schema {
-    #![allow(dead_code)]
-    use prost::Message;
-    include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
+    pub mod oak {
+        pub mod functions {
+            #![allow(dead_code)]
+            use prost::Message;
+            include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
+        }
+        pub mod session {
+            pub mod v1 {
+                #![allow(clippy::return_self_not_must_use)]
+                tonic::include_proto!("oak.session.v1");
+            }
+        }
+    }
 }
 
-use crate::schema::InitializeResponse;
+use crate::proto::oak::functions::{
+    InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
+};
 use anyhow::Context;
 use oak_launcher_utils::{
     channel::{self, ConnectorHandle},
     launcher,
 };
-use schema::OakFunctionsAsyncClient;
 use std::{fs, path::PathBuf, time::Duration};
 use ubyte::ByteUnit;
 
@@ -75,7 +80,7 @@ async fn setup_lookup_data(
     connector_handle: channel::ConnectorHandle,
     config: LookupDataConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
+    let mut client = OakFunctionsAsyncClient::new(connector_handle);
 
     // Block for [invariant that lookup data is fully loaded](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-fully-loaded-lookup-data)
     update_lookup_data(&mut client, &config).await?;
@@ -127,12 +132,12 @@ async fn intialize_enclave(
         ubyte::ByteUnit::Byte(wasm_bytes.len() as u64)
     );
 
-    let request = schema::InitializeRequest {
+    let request = InitializeRequest {
         wasm_module: wasm_bytes,
         constant_response_size,
     };
 
-    let mut client = schema::OakFunctionsAsyncClient::new(connector_handle);
+    let mut client = OakFunctionsAsyncClient::new(connector_handle);
     let initialize_response = client
         .initialize(&request)
         .await

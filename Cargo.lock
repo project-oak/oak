@@ -2168,6 +2168,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_remote_attestation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "futures",
+ "futures-util",
+ "oak_grpc_utils",
+ "prost",
+ "tokio",
+ "tonic",
+]
+
+[[package]]
 name = "oak_remote_attestation_amd"
 version = "0.1.0"
 dependencies = [
@@ -2195,20 +2209,6 @@ dependencies = [
  "sha2 0.10.6",
  "signature 2.0.0",
  "x25519-dalek 1.2.0",
-]
-
-[[package]]
-name = "oak_remote_attestation_noninteractive"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "futures",
- "futures-util",
- "oak_grpc_utils",
- "prost",
- "tokio",
- "tonic",
 ]
 
 [[package]]

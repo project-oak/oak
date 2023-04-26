@@ -16,13 +16,15 @@
 
 use crate::{
     channel::ConnectorHandle,
-    proto::{
-        request_wrapper, response_wrapper,
-        streaming_session_server::{StreamingSession, StreamingSessionServer},
-        AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
-        InvokeResponse, RequestWrapper, ResponseWrapper,
+    proto::oak::{
+        functions,
+        session::v1::{
+            request_wrapper, response_wrapper,
+            streaming_session_server::{StreamingSession, StreamingSessionServer},
+            AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
+            InvokeResponse, RequestWrapper, ResponseWrapper,
+        },
     },
-    schema,
 };
 use futures::{Future, Stream, StreamExt};
 use std::{net::SocketAddr, pin::Pin};
@@ -82,11 +84,11 @@ impl StreamingSession for SessionProxy {
                         })
                     }
                     request_wrapper::Request::InvokeRequest(invoke_request) => {
-                        let enclave_invoke_request = schema::InvokeRequest {
+                        let enclave_invoke_request = functions::InvokeRequest {
                             body: invoke_request.encrypted_body,
                         };
                         let mut enclave_client =
-                            schema::OakFunctionsAsyncClient::new(connector_handle.clone());
+                            functions::OakFunctionsAsyncClient::new(connector_handle.clone());
                         let enclave_invoke_response = enclave_client
                             .invoke(&enclave_invoke_request)
                             .await
