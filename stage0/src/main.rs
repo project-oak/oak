@@ -113,6 +113,8 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     // We assume 0-th bit is never the encrypted bit.
     let encrypted = if encrypted > 0 { 1 << encrypted } else { 0 };
 
+    paging::init_page_table_refs(encrypted);
+
     // If we're under SEV-ES or SNP, we need a GHCB block for communication.
     let ghcb_protocol = if es {
         // No point in calling expect() here, the logging isn't set up yet.
@@ -122,12 +124,10 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         // If the allocation does fail, something is horribly broken and we have no hope of
         // continuing.
         let ghcb = BOOT_ALLOC.leak(sev::Ghcb::new()).unwrap();
-        Some(sev::init_ghcb(ghcb, snp, encrypted))
+        Some(sev::init_ghcb(ghcb, snp))
     } else {
         None
     };
-
-    paging::init_page_table_refs(encrypted);
 
     logging::init_logging(match ghcb_protocol {
         Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
@@ -146,8 +146,8 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
         unsafe {
             sev::MTRRDefType::write(sev::MTRRDefTypeFlags::MTRR_ENABLE, sev::MemoryType::WP);
         }
-        sev::share_page(Page::containing_address(dma_buf_address), snp, encrypted);
-        sev::share_page(Page::containing_address(dma_access_address), snp, encrypted);
+        sev::share_page(Page::containing_address(dma_buf_address), snp);
+        sev::share_page(Page::containing_address(dma_access_address), snp);
     }
 
     // Safety: we assume there won't be any other hardware devices using the fw_cfg IO ports.

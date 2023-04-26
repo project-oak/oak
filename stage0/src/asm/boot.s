@@ -160,12 +160,11 @@ _protected_mode_start:
     mov %esi, 4(%eax)         # set second half of PML4[0]
     mov ${pdpt}, %eax
     mov %esi, 4(%eax)         # set second half of PDPT[0]
-    mov ${pdpt}, %eax
     mov %esi, 28(%eax)        # set second half of PDPT[3], each entry is 8 bytes
     mov ${pd_0}, %eax
     mov %esi, 4(%eax)         # set second half of PD_0[0]
     mov ${pd_3}, %eax
-    mov %esi, 0xFFC(%eax)     # set second half of PML4[511], each entry is 8 bytes
+    mov %esi, 0xFFC(%eax)     # set second half of PD_3[511], each entry is 8 bytes
 no_encryption:
 
     # Load PML4
