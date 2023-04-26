@@ -127,6 +127,8 @@
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -145,13 +147,15 @@
 
 </span><span class="kw">use crate</span>::{
     channel::ConnectorHandle,
-    proto::{
-        request_wrapper, response_wrapper,
-        streaming_session_server::{StreamingSession, StreamingSessionServer},
-        AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
-        InvokeResponse, RequestWrapper, ResponseWrapper,
+    proto::oak::{
+        functions,
+        session::v1::{
+            request_wrapper, response_wrapper,
+            streaming_session_server::{StreamingSession, StreamingSessionServer},
+            AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
+            InvokeResponse, RequestWrapper, ResponseWrapper,
+        },
     },
-    schema,
 };
 <span class="kw">use </span>futures::{Future, Stream, StreamExt};
 <span class="kw">use </span>std::{net::SocketAddr, pin::Pin};
@@ -211,11 +215,11 @@
                         })
                     }
                     request_wrapper::Request::InvokeRequest(invoke_request) =&gt; {
-                        <span class="kw">let </span>enclave_invoke_request = schema::InvokeRequest {
+                        <span class="kw">let </span>enclave_invoke_request = functions::InvokeRequest {
                             body: invoke_request.encrypted_body,
                         };
                         <span class="kw">let </span><span class="kw-2">mut </span>enclave_client =
-                            schema::OakFunctionsAsyncClient::new(connector_handle.clone());
+                            functions::OakFunctionsAsyncClient::new(connector_handle.clone());
                         <span class="kw">let </span>enclave_invoke_response = enclave_client
                             .invoke(<span class="kw-2">&amp;</span>enclave_invoke_request)
                             .<span class="kw">await

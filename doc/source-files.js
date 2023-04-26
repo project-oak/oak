@@ -37,9 +37,9 @@ var sourcesIndex = JSON.parse('{\
 "oak_launcher_utils":["",[["launcher",[],["native.rs","virtualized.rs"]]],["channel.rs","launcher.rs","lib.rs"]],\
 "oak_linux_boot_params":["",[],["lib.rs"]],\
 "oak_logger":["",[],["lib.rs"]],\
+"oak_remote_attestation":["",[],["client.rs","lib.rs"]],\
 "oak_remote_attestation_amd":["",[],["lib.rs"]],\
 "oak_remote_attestation_interactive":["",[["crypto",[],["mod.rs","ring_crypto.rs"]]],["handshaker.rs","lib.rs","message.rs"]],\
-"oak_remote_attestation_noninteractive":["",[],["client.rs","lib.rs"]],\
 "oak_remote_attestation_sessions":["",[],["lib.rs"]],\
 "oak_remote_attestation_sessions_client":["",[],["lib.rs"]],\
 "oak_restricted_kernel":["",[["boot",[],["mod.rs"]],["mm",[],["bitmap_frame_allocator.rs","encrypted_mapper.rs","frame_allocator.rs","mod.rs","page_tables.rs","virtual_address_allocator.rs"]],["syscall",[],["channel.rs","fd.rs","mmap.rs","mod.rs","process.rs","stdio.rs"]]],["acpi.rs","args.rs","attestation.rs","avx.rs","descriptors.rs","elf.rs","ghcb.rs","interrupts.rs","lib.rs","libm.rs","logging.rs","memory.rs","payload.rs","shutdown.rs","snp.rs","virtio.rs"]],\

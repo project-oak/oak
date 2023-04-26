@@ -69,8 +69,8 @@
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_client::{
-    proto::streaming_session_client::StreamingSessionClient, transport::GrpcStreamingTransport,
-    OakClient,
+    proto::oak::session::v1::streaming_session_client::StreamingSessionClient,
+    transport::GrpcStreamingTransport, OakClient,
 };
 <span class="kw">use </span>tonic::transport::Channel;
 

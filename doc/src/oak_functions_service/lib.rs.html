@@ -181,6 +181,15 @@
 <a href="#181" id="181">181</a>
 <a href="#182" id="182">182</a>
 <a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -202,10 +211,14 @@
 
 </span><span class="kw">extern crate </span>alloc;
 
-<span class="kw">pub mod </span>schema {
-    <span class="attr">#![allow(dead_code)]
-    </span><span class="kw">use </span>prost::Message;
-    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.rs&quot;</span>));
+<span class="kw">pub mod </span>proto {
+    <span class="kw">pub mod </span>oak {
+        <span class="kw">pub mod </span>functions {
+            <span class="attr">#![allow(dead_code)]
+            </span><span class="kw">use </span>prost::Message;
+            <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.rs&quot;</span>));
+        }
+    }
 }
 <span class="kw">mod </span>logger;
 <span class="kw">mod </span>remote_attestation;
@@ -217,8 +230,13 @@
 <span class="kw">use </span>oak_functions_lookup::LookupDataManager;
 <span class="kw">use </span>oak_functions_wasm::WasmHandler;
 <span class="kw">use </span>oak_remote_attestation_interactive::handshaker::AttestationGenerator;
+<span class="kw">use </span>proto::oak::functions::{
+    AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
+    FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
+    InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk, OakFunctions,
+    PublicKeyInfo,
+};
 <span class="kw">use </span>remote_attestation::Handler;
-<span class="kw">use </span>schema::LookupDataChunk;
 
 <span class="kw">pub use </span><span class="kw">crate</span>::logger::StandaloneLogger;
 
@@ -255,11 +273,11 @@
     }
 }
 
-<span class="kw">impl </span>schema::OakFunctions <span class="kw">for </span>OakFunctionsService {
+<span class="kw">impl </span>OakFunctions <span class="kw">for </span>OakFunctionsService {
     <span class="kw">fn </span>initialize(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        initialization: <span class="kw-2">&amp;</span>schema::InitializeRequest,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::InitializeResponse, micro_rpc::Status&gt; {
+        initialization: <span class="kw-2">&amp;</span>InitializeRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;InitializeResponse, micro_rpc::Status&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.initialization_state {
             InitializationState::Initialized(_attestation_handler) =&gt; {
                 <span class="prelude-val">Err</span>(micro_rpc::Status::new_with_message(
@@ -293,8 +311,8 @@
                 );
                 <span class="kw">let </span>public_key_info = attestation_handler.get_public_key_info();
                 <span class="self">self</span>.initialization_state = InitializationState::Initialized(attestation_handler);
-                <span class="prelude-val">Ok</span>(schema::InitializeResponse {
-                    public_key_info: <span class="prelude-val">Some</span>(schema::PublicKeyInfo {
+                <span class="prelude-val">Ok</span>(InitializeResponse {
+                    public_key_info: <span class="prelude-val">Some</span>(PublicKeyInfo {
                         public_key: public_key_info.public_key,
                         attestation: public_key_info.attestation,
                     }),
@@ -305,8 +323,8 @@
 
     <span class="kw">fn </span>invoke(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request_message: <span class="kw-2">&amp;</span>schema::InvokeRequest,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::InvokeResponse, micro_rpc::Status&gt; {
+        request_message: <span class="kw-2">&amp;</span>InvokeRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, micro_rpc::Status&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.initialization_state {
             InitializationState::Uninitialized =&gt; <span class="prelude-val">Err</span>(micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::FailedPrecondition,
@@ -322,34 +340,34 @@
                                 <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, err),
                             )
                         })<span class="question-mark">?</span>;
-                <span class="prelude-val">Ok</span>(schema::InvokeResponse { body: response })
+                <span class="prelude-val">Ok</span>(InvokeResponse { body: response })
             }
         }
     }
 
     <span class="kw">fn </span>extend_next_lookup_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request: <span class="kw-2">&amp;</span>schema::ExtendNextLookupDataRequest,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::ExtendNextLookupDataResponse, micro_rpc::Status&gt; {
+        request: <span class="kw-2">&amp;</span>ExtendNextLookupDataRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;ExtendNextLookupDataResponse, micro_rpc::Status&gt; {
         <span class="self">self</span>.lookup_data_manager
             .extend_next_lookup_data(to_data(<span class="kw-2">&amp;</span>request.chunk));
-        <span class="prelude-val">Ok</span>(schema::ExtendNextLookupDataResponse {})
+        <span class="prelude-val">Ok</span>(ExtendNextLookupDataResponse {})
     }
 
     <span class="kw">fn </span>finish_next_lookup_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        _request: <span class="kw-2">&amp;</span>schema::FinishNextLookupDataRequest,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::FinishNextLookupDataResponse, micro_rpc::Status&gt; {
+        _request: <span class="kw-2">&amp;</span>FinishNextLookupDataRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;FinishNextLookupDataResponse, micro_rpc::Status&gt; {
         <span class="self">self</span>.lookup_data_manager.finish_next_lookup_data();
-        <span class="prelude-val">Ok</span>(schema::FinishNextLookupDataResponse {})
+        <span class="prelude-val">Ok</span>(FinishNextLookupDataResponse {})
     }
 
     <span class="kw">fn </span>abort_next_lookup_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        _request: <span class="kw-2">&amp;</span>schema::Empty,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::AbortNextLookupDataResponse, micro_rpc::Status&gt; {
+        _request: <span class="kw-2">&amp;</span>Empty,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;AbortNextLookupDataResponse, micro_rpc::Status&gt; {
         <span class="self">self</span>.lookup_data_manager.abort_next_lookup_data();
-        <span class="prelude-val">Ok</span>(schema::AbortNextLookupDataResponse {})
+        <span class="prelude-val">Ok</span>(AbortNextLookupDataResponse {})
     }
 }
 

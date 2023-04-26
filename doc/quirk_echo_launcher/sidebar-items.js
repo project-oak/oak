@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["schema"]};
+window.SIDEBAR_ITEMS = {"mod":["proto"]};

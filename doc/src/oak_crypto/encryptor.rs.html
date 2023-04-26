@@ -284,7 +284,7 @@
         setup_base_recipient, setup_base_sender, KeyPair, RecipientRequestContext,
         RecipientResponseContext, SenderRequestContext, SenderResponseContext,
     },
-    schema::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
+    proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
 <span class="kw">use </span>alloc::{sync::Arc, vec::Vec};
 <span class="kw">use </span>anyhow::{anyhow, Context};

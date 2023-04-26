@@ -61,6 +61,14 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -82,12 +90,20 @@
 
 </span><span class="kw">extern crate </span>alloc;
 
-<span class="kw">pub mod </span>schema {
-    <span class="attr">#![allow(dead_code)]
-    </span><span class="kw">use </span>prost::Message;
-    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.iree.rs&quot;</span>));
+<span class="kw">pub mod </span>proto {
+    <span class="kw">pub mod </span>oak {
+        <span class="kw">pub mod </span>iree {
+            <span class="attr">#![allow(dead_code)]
+            </span><span class="kw">use </span>prost::Message;
+            <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.iree.rs&quot;</span>));
+        }
+    }
 }
 <span class="kw">mod </span>iree;
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::iree::{
+    InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, Iree,
+};
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>IreeService {
@@ -102,26 +118,26 @@
     }
 }
 
-<span class="kw">impl </span>schema::Iree <span class="kw">for </span>IreeService {
+<span class="kw">impl </span>Iree <span class="kw">for </span>IreeService {
     <span class="kw">fn </span>initialize(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        _initialization: <span class="kw-2">&amp;</span>schema::InitializeRequest,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::InitializeResponse, micro_rpc::Status&gt; {
+        _initialization: <span class="kw-2">&amp;</span>InitializeRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;InitializeResponse, micro_rpc::Status&gt; {
         <span class="self">self</span>.iree_model
             .initialize()
             .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(schema::InitializeResponse {})
+        <span class="prelude-val">Ok</span>(InitializeResponse {})
     }
 
     <span class="kw">fn </span>invoke(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request_message: <span class="kw-2">&amp;</span>schema::InvokeRequest,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;schema::InvokeResponse, micro_rpc::Status&gt; {
+        request_message: <span class="kw-2">&amp;</span>InvokeRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, micro_rpc::Status&gt; {
         <span class="kw">let </span>response = <span class="self">self
             </span>.iree_model
             .run(<span class="kw-2">&amp;</span>request_message.body)
             .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(schema::InvokeResponse { body: response })
+        <span class="prelude-val">Ok</span>(InvokeResponse { body: response })
     }
 }
 </code></pre></div>

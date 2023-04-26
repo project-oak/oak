@@ -143,6 +143,11 @@
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -166,25 +171,30 @@
 </span><span class="kw">mod </span>lookup;
 <span class="kw">pub mod </span>server;
 
-<span class="comment">// TODO(#3843): Rename `proto` to `grpc`.
-</span><span class="kw">pub mod </span>proto {
-    <span class="attr">#![allow(clippy::return_self_not_must_use)]
-    </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.session.noninteractive.v1&quot;</span>);
-}
-<span class="comment">// TODO(#3843): Rename `schema` to `proto` and use a correct mod hierarchy.
-</span><span class="kw">pub mod </span>schema {
-    <span class="attr">#![allow(dead_code)]
-    </span><span class="kw">use </span>prost::Message;
-    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.rs&quot;</span>));
+<span class="kw">pub mod </span>proto {
+    <span class="kw">pub mod </span>oak {
+        <span class="kw">pub mod </span>functions {
+            <span class="attr">#![allow(dead_code)]
+            </span><span class="kw">use </span>prost::Message;
+            <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.rs&quot;</span>));
+        }
+        <span class="kw">pub mod </span>session {
+            <span class="kw">pub mod </span>v1 {
+                <span class="attr">#![allow(clippy::return_self_not_must_use)]
+                </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.session.v1&quot;</span>);
+            }
+        }
+    }
 }
 
-<span class="kw">use </span><span class="kw">crate</span>::schema::InitializeResponse;
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::{
+    InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
+};
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_launcher_utils::{
     channel::{<span class="self">self</span>, ConnectorHandle},
     launcher,
 };
-<span class="kw">use </span>schema::OakFunctionsAsyncClient;
 <span class="kw">use </span>std::{fs, path::PathBuf, time::Duration};
 <span class="kw">use </span>ubyte::ByteUnit;
 
@@ -220,7 +230,7 @@
     connector_handle: channel::ConnectorHandle,
     config: LookupDataConfig,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>client = schema::OakFunctionsAsyncClient::new(connector_handle);
+    <span class="kw">let </span><span class="kw-2">mut </span>client = OakFunctionsAsyncClient::new(connector_handle);
 
     <span class="comment">// Block for [invariant that lookup data is fully loaded](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-fully-loaded-lookup-data)
     </span>update_lookup_data(<span class="kw-2">&amp;mut </span>client, <span class="kw-2">&amp;</span>config).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -272,12 +282,12 @@
         ubyte::ByteUnit::Byte(wasm_bytes.len() <span class="kw">as </span>u64)
     );
 
-    <span class="kw">let </span>request = schema::InitializeRequest {
+    <span class="kw">let </span>request = InitializeRequest {
         wasm_module: wasm_bytes,
         constant_response_size,
     };
 
-    <span class="kw">let </span><span class="kw-2">mut </span>client = schema::OakFunctionsAsyncClient::new(connector_handle);
+    <span class="kw">let </span><span class="kw-2">mut </span>client = OakFunctionsAsyncClient::new(connector_handle);
     <span class="kw">let </span>initialize_response = client
         .initialize(<span class="kw-2">&amp;</span>request)
         .<span class="kw">await

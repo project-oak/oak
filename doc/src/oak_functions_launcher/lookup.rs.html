@@ -207,9 +207,9 @@
 
 </span><span class="kw">use crate</span>::{
     channel::ConnectorHandle,
-    schema::{
-        <span class="self">self</span>, Empty, ExtendNextLookupDataRequest, FinishNextLookupDataRequest, LookupDataChunk,
-        OakFunctionsAsyncClient,
+    proto::oak::functions::{
+        Empty, ExtendNextLookupDataRequest, FinishNextLookupDataRequest, LookupDataChunk,
+        LookupDataEntry, OakFunctionsAsyncClient,
     },
 };
 <span class="kw">use </span>anyhow::{anyhow, Context};
@@ -286,7 +286,7 @@
 <span class="kw">fn </span>chunk_up_lookup_data(
     source_lookup_data: HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;,
     max_chunk_size: ByteUnit,
-) -&gt; Vec&lt;schema::LookupDataChunk&gt; {
+) -&gt; Vec&lt;LookupDataChunk&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>chunks = Vec::new();
 
     <span class="comment">// We will add the estimated size of ever LookupDataEntry, and to account for the LookupData
@@ -304,14 +304,14 @@
 
         <span class="comment">// If the next element would exceed the maximum chunk size, create a new chunk.
         </span><span class="kw">if </span>estimated_chunk_size &gt; max_chunk_size {
-            chunks.push(schema::LookupDataChunk { items: entries });
+            chunks.push(LookupDataChunk { items: entries });
             estimated_chunk_size = ByteUnit::Byte(<span class="number">50</span>);
             entries = Vec::new();
         };
 
-        entries.push(schema::LookupDataEntry { key, value })
+        entries.push(LookupDataEntry { key, value })
     }
-    chunks.push(schema::LookupDataChunk { items: entries });
+    chunks.push(LookupDataChunk { items: entries });
     chunks
 }
 
