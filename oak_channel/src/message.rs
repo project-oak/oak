@@ -20,6 +20,7 @@ use alloc::vec::Vec;
 
 pub type Length = u32;
 pub const LENGTH_SIZE: usize = 4;
+pub const LENGTH_OFFSET: usize = 0;
 static_assertions::assert_eq_size!([u8; LENGTH_SIZE], Length);
 
 pub type InvocationId = u32;

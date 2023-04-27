@@ -21,8 +21,9 @@ extern crate alloc;
 use crate::Channel;
 use alloc::{boxed::Box, format, vec::Vec};
 use bitflags::bitflags;
-use core::borrow::BorrowMut;
+use bytes::BufMut;
 use bytes::BytesMut;
+use core::borrow::BorrowMut;
 
 pub const PADDING_SIZE: usize = 4;
 
@@ -88,7 +89,8 @@ impl Framed {
         Self { inner: socket }
     }
 
-    pub fn read_frame<'a>(&mut self, bytes: &'a mut BytesMut) -> anyhow::Result<Frame<'a>> {
+    pub fn read_frame<'a>(&mut self, message_buffer: &'a mut BytesMut) ->
+        anyhow::Result<Frame<'a>> {
         {
             let mut padding_bytes = [0; PADDING_SIZE];
             self.inner.read(&mut padding_bytes)?;
@@ -115,11 +117,11 @@ impl Framed {
             let body_length: usize = length
                 .checked_sub(BODY_OFFSET)
                 .expect("body length underflow");
-            let mut body_buffer = Vec::with_capacity(body_length);
-            body_buffer.resize(body_length, 0);
-            self.inner.read(&mut body_buffer)?;
-            bytes.extend_from_slice(&body_buffer);
-            bytes
+            let tail = message_buffer.len();
+            // Lack of capacity indicates corrupted frames and causes panic.
+            message_buffer.put_bytes(0x00, body_length);
+            self.inner.read(&mut message_buffer[tail..])?;
+            message_buffer
         };
 
         Ok(Frame { flags, body })

@@ -80,12 +80,12 @@ impl InvocationChannel {
     pub fn read_message<M: message::Message>(&mut self) -> anyhow::Result<M> {
         // `encoded_message` will contain the full message we are going to read. Instead of
         // allocating separate buffers and copying data into `encoded_message`, we will ensure that
-        // `encoded_message` has enough space and pass mutable slices pointing into it to the
-        // `read_frame` calls.
-        let mut encoded_message = BytesMut::new();
+        // `encoded_message` has enough capacity. There will be at least a START and an END frame
+        // (4k each), so we start with a reasonable initial capacity.
+        let mut message_buffer = BytesMut::with_capacity(4096);
         let first_frame = self
             .inner
-            .read_frame(&mut encoded_message)
+            .read_frame(&mut message_buffer)
             .context("couldn't read frame")?;
 
         if !first_frame.flags.contains(frame::Flags::START) {
@@ -96,10 +96,24 @@ impl InvocationChannel {
             return Ok(M::decode(first_frame.body));
         }
 
+        // The length of the entire message is encoded in the body of the first frame. The
+        // length includes the first frame. Decode it so the buffer needs to be resized/copied
+        // at most once.
+        let message_length: usize = {
+            let mut buffer = [0u8; message::LENGTH_SIZE];
+            let range = message::LENGTH_OFFSET..(message::LENGTH_OFFSET + message::LENGTH_SIZE);
+            buffer.copy_from_slice(&first_frame.body[range]);
+            usize::try_from(message::Length::from_le_bytes(buffer))
+                .expect("couldn't convert message length to usize")
+        };
+
+        // Bodies of all frames make up the entire message. No more resizes are going to happen.
+        message_buffer.reserve(message_length);
+
         loop {
             let frame = self
                 .inner
-                .read_frame(&mut encoded_message)
+                .read_frame(&mut message_buffer)
                 .context("couldn't read frame")?;
 
             if frame.flags.contains(frame::Flags::START) {
@@ -111,7 +125,7 @@ impl InvocationChannel {
             }
         }
 
-        Ok(M::decode(&encoded_message[..]))
+        Ok(M::decode(&message_buffer[..]))
     }
 
     pub fn write_message<M: message::Message>(&mut self, message: M) -> anyhow::Result<()> {
