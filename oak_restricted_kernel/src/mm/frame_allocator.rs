@@ -15,8 +15,12 @@
 //
 
 use super::bitmap_frame_allocator::BitmapAllocator;
-use x86_64::structures::paging::{
-    frame::PhysFrameRange, FrameAllocator, FrameDeallocator, PhysFrame, Size2MiB, Size4KiB,
+use x86_64::{
+    structures::paging::{
+        frame::PhysFrameRange, FrameAllocator, FrameDeallocator, PageSize, PhysFrame, Size2MiB,
+        Size4KiB,
+    },
+    PhysAddr,
 };
 
 /// Allocator to track physical memory frames.
@@ -39,7 +43,22 @@ pub struct PhysicalMemoryAllocator<const N: usize> {
 }
 
 impl<const N: usize> PhysicalMemoryAllocator<N> {
-    pub fn new(range: PhysFrameRange<Size2MiB>) -> Self {
+    /// Assumes valid physical memory ranges from [0 ... N * 64 * Size2MiB::SIZE].
+    pub const fn new() -> Self {
+        // Safety: we have to resort to `unsafe` as we need to call the const fn-s, but both
+        // addresses are definitely Size2MiB::SIZE-aligned, so these operations are safe.
+        Self::new_range(PhysFrame::range(
+            unsafe { PhysFrame::from_start_address_unchecked(PhysAddr::zero()) },
+            // N u64-s * 64 frames per u64 * 2 MiB per frame
+            unsafe {
+                PhysFrame::from_start_address_unchecked(PhysAddr::new(
+                    N as u64 * 64 * Size2MiB::SIZE,
+                ))
+            },
+        ))
+    }
+
+    pub const fn new_range(range: PhysFrameRange<Size2MiB>) -> Self {
         PhysicalMemoryAllocator {
             large_frames: BitmapAllocator::new(range),
             small_frames: None,
@@ -117,7 +136,7 @@ mod tests {
     #[test]
     fn simple_allocator() {
         let mut allocator =
-            PhysicalMemoryAllocator::<1>::new(create_frame_range(0, 2 * Size2MiB::SIZE));
+            PhysicalMemoryAllocator::<1>::new_range(create_frame_range(0, 2 * Size2MiB::SIZE));
         allocator.mark_valid(create_frame_range(0, 2 * Size2MiB::SIZE), true);
         (&mut allocator as &mut dyn FrameAllocator<Size2MiB>)
             .allocate_frame()
@@ -130,7 +149,7 @@ mod tests {
     #[test]
     fn fill_small_frames() {
         let mut allocator =
-            PhysicalMemoryAllocator::<1>::new(create_frame_range(0, Size2MiB::SIZE));
+            PhysicalMemoryAllocator::<1>::new_range(create_frame_range(0, Size2MiB::SIZE));
         allocator.mark_valid(create_frame_range(0, Size2MiB::SIZE), true);
         let alloc_ref = &mut allocator as &mut dyn FrameAllocator<Size4KiB>;
         // 512 allocations should succeed (512 * 4K = 2M)

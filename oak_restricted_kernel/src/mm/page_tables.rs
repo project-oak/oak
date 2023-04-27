@@ -18,8 +18,7 @@ use goblin::elf64::program_header::{ProgramHeader, PF_W, PF_X, PT_LOAD};
 use x86_64::{
     align_down, align_up,
     structures::paging::{
-        frame::PhysFrameRange, mapper::MapToError, FrameAllocator, Page, PageSize, PhysFrame,
-        Size2MiB, Size4KiB,
+        frame::PhysFrameRange, mapper::MapToError, Page, PageSize, PhysFrame, Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
@@ -32,12 +31,11 @@ use super::{Mapper, PageTableFlags, KERNEL_OFFSET};
 ///
 /// There are many ways you can cause memory safety errors and undefined behaviour when creating
 /// page mappings. See <Mapper::map_to_with_table_flags> for examples.
-pub unsafe fn create_offset_map<S: PageSize, A: FrameAllocator<Size4KiB>, M: Mapper<S>>(
+pub unsafe fn create_offset_map<S: PageSize, M: Mapper<S>>(
     range: PhysFrameRange<S>,
     offset: VirtAddr,
     flags: PageTableFlags,
     mapper: &mut M,
-    frame_allocator: &mut A,
 ) -> Result<(), MapToError<S>> {
     for (i, frame) in range.enumerate() {
         // We don't set `PageTableFlags::GLOBAL` in `parent_table_flags` because Intel and AMD CPUs
@@ -50,7 +48,6 @@ pub unsafe fn create_offset_map<S: PageSize, A: FrameAllocator<Size4KiB>, M: Map
                 frame,
                 flags,
                 PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::ENCRYPTED,
-                frame_allocator,
             )?
             .ignore();
     }
@@ -80,13 +77,9 @@ pub unsafe fn create_offset_map<S: PageSize, A: FrameAllocator<Size4KiB>, M: Map
 ///
 /// `EferFlags::NO_EXECUTE_ENABLE` needs to be enabled before loading the page tables created by
 /// this function.
-pub unsafe fn create_kernel_map<
-    A: FrameAllocator<Size4KiB>,
-    M: Mapper<Size2MiB> + Mapper<Size4KiB>,
->(
+pub unsafe fn create_kernel_map<M: Mapper<Size2MiB> + Mapper<Size4KiB>>(
     program_headers: &[ProgramHeader],
     mapper: &mut M,
-    frame_allocator: &mut A,
 ) -> Result<(), MapToError<Size4KiB>> {
     program_headers
         .iter()
@@ -122,7 +115,5 @@ pub unsafe fn create_kernel_map<
                     },
             )
         })
-        .try_for_each(|(range, offset, flags)| {
-            create_offset_map(range, offset, flags, mapper, frame_allocator)
-        })
+        .try_for_each(|(range, offset, flags)| create_offset_map(range, offset, flags, mapper))
 }

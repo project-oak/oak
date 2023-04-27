@@ -51,14 +51,14 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
     /// Creates a new bitmap allocator for a physical frame range.
     /// Panics if N does not match the number of u64-s required to track all frames in that range.
     /// Initially, the allocator will mark the whole range as invalid.
-    pub fn new(range: PhysFrameRange<S>) -> Self {
+    pub const fn new(range: PhysFrameRange<S>) -> Self {
         // Unfortunately there doesn't seem to be a way to hoist this to the type system.
-        let expected = bitvec::mem::elts::<u64>(range.count());
+        // We also have to crudely reimplement `range.count()` here as `count()` is not a const fn.
+        let num_frames =
+            (range.end.start_address().as_u64() - range.start.start_address().as_u64()) / S::SIZE;
+        let expected = bitvec::mem::elts::<u64>(num_frames as usize);
         if expected != N {
-            panic!(
-                "BitmapAllocator bitmap size does not match FrameRange size; expected {}, got {}",
-                expected, N
-            );
+            panic!("BitmapAllocator bitmap size does not match FrameRange size",);
         }
 
         Self {

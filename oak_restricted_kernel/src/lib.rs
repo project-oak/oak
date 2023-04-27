@@ -96,7 +96,8 @@ use x86_64::{
 
 /// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 128 GiB of memory, for now.
-pub static FRAME_ALLOCATOR: OnceCell<Spinlock<PhysicalMemoryAllocator<1024>>> = OnceCell::new();
+pub static FRAME_ALLOCATOR: Spinlock<PhysicalMemoryAllocator<1024>> =
+    Spinlock::new(PhysicalMemoryAllocator::new());
 
 /// The allocator for allocating space in the memory area that is shared with the hypervisor.
 pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
@@ -161,17 +162,11 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
 
     // Physical frame allocator
-    FRAME_ALLOCATOR
-        .set(Spinlock::new(mm::init(info.e820_table(), program_headers)))
-        .map_err(|_| ())
-        .expect("did not expect frame allocator to be already set!");
+    mm::init(info.e820_table(), program_headers);
 
     // Note: `info` will not be valid after calling this!
     if PAGE_TABLES
-        .set(Spinlock::new({
-            let mut frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
-            mm::init_paging(frame_allocator.deref_mut(), program_headers).unwrap()
-        }))
+        .set(Spinlock::new(mm::init_paging(program_headers).unwrap()))
         .is_err()
     {
         panic!("couldn't initialize page tables");
@@ -211,10 +206,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     // Allocate a section for guest-host communication (without the `ENCRYPTED` bit set)
     // We'll allocate 2*2MiB, as virtio needs more than 2 MiB for its data structures.
-    let guest_host_frames = {
-        let mut frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
-        frame_allocator.allocate_contiguous(2).unwrap()
-    };
+    let guest_host_frames = FRAME_ALLOCATOR.lock().allocate_contiguous(2).unwrap();
 
     let guest_host_pages = {
         let pt = PAGE_TABLES.get().unwrap().lock();
