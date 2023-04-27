@@ -22,7 +22,6 @@ use core::{
     cmp::max,
     ffi::{c_int, c_size_t, c_void},
     iter::repeat_with,
-    ops::DerefMut,
     slice,
 };
 use oak_restricted_kernel_interface::{
@@ -75,7 +74,7 @@ pub fn mmap(
 
     // Allocate enough physical frames to cover the request.
     // Iterator that keeps allocating physical frames.
-    let frames = repeat_with(|| FRAME_ALLOCATOR.get().unwrap().lock().allocate_frame());
+    let frames = repeat_with(|| FRAME_ALLOCATOR.lock().allocate_frame());
 
     let pt_flags = PageTableFlags::PRESENT
         | PageTableFlags::USER_ACCESSIBLE
@@ -130,7 +129,6 @@ pub fn mmap(
                         | PageTableFlags::WRITABLE
                         | PageTableFlags::ENCRYPTED
                         | PageTableFlags::USER_ACCESSIBLE,
-                    FRAME_ALLOCATOR.get().unwrap().lock().deref_mut(),
                 )
                 .map_err(|err| {
                     log::error!(
