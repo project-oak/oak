@@ -8,7 +8,16 @@ set -e
 
 print_usage_and_exit() {
   echo "Usage:"
-  echo "  $0 [-h] -d <docker-image> [-r <rootfsdir>] [-o <output-initramfs-file>]"
+  echo "  $0 [options] -d <docker-image>
+
+  Exports the filesystem in the Docker image to a directory or an initramfs image.
+
+Options:
+    -h                    Display this help and exit.
+    -r <rootfs-dir>       Export the Docker filesystem as chroot tree at given directory.
+                          If this is not specified, the image will be exported to a newly
+                          created temporary directory.
+    -o <initramfs-file>   Export the Docker filesystem as the given initramfs file."
   exit 0
 }
 
@@ -101,4 +110,3 @@ else
       > "${INITRAMFS_FILE}"
   echo "[INFO] Creating initramfs file at ${INITRAMFS_FILE}...done"
 fi
-
