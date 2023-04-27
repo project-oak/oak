@@ -129,8 +129,8 @@ jobs:
         run: |
           echo -e "\n" >> ./comment
           echo -e "artifact_name = \"$(basename ${{ needs.get_inputs.outputs.artifact-path }})\"" >> ./comment
-          echo -e "artifact_digest = \"$(cut -d' ' -f1 <<<${{ steps.ent_upload_binary.outputs.binary_digest }})\"" >> ./comment
-          echo -e "provenance_digest = \"$(cut -d' ' -f1 <<<${{ steps.ent_upload_provenance.outputs.provenance_digest }})\"" >> ./comment
+          echo -e "artifact_digest = \"$(cut -d' ' -f1 <<<'${{ steps.ent_upload_binary.outputs.binary_digest }})'\"" >> ./comment
+          echo -e "provenance_digest = \"$(cut -d' ' -f1 <<<'${{ steps.ent_upload_provenance.outputs.provenance_digest }})'\"" >> ./comment
 
       # Post a comment on the PR containing the sha256 digests of the binary and its provenance.
       - name: Post the comment (post-merge only)
