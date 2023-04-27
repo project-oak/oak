@@ -107,7 +107,9 @@ impl InvocationChannel {
                 .expect("couldn't convert message length to usize")
         };
 
-        // Bodies of all frames make up the entire message. No more resizes are going to happen.
+        // This likely causes a copy of the pre-existing data, but we needed to read the first
+        // frame to figure out how much space we need for the entire message. No more resizes
+        // are going to happen from here.
         message_buffer.reserve(message_length);
 
         loop {
