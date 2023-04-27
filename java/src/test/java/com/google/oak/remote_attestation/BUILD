@@ -29,30 +29,3 @@ java_test(
         "//java/src/main/java/com/google/oak/util",
     ],
 )
-
-java_test(
-    name = "message_test",
-    srcs = ["MessageTest.java"],
-    test_class = "com.google.oak.remote_attestation.MessageTest",
-    deps = [
-        "//java/src/main/java/com/google/oak/remote_attestation",
-    ],
-)
-
-java_test(
-    name = "key_negotiator_test",
-    srcs = ["KeyNegotiatorTest.java"],
-    test_class = "com.google.oak.remote_attestation.KeyNegotiatorTest",
-    deps = [
-        "//java/src/main/java/com/google/oak/remote_attestation",
-    ],
-)
-
-java_test(
-    name = "client_handshaker_test",
-    srcs = ["ClientHandshakerTest.java"],
-    test_class = "com.google.oak.remote_attestation.ClientHandshakerTest",
-    deps = [
-        "//java/src/main/java/com/google/oak/remote_attestation",
-    ],
-)

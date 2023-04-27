@@ -156,7 +156,7 @@ async fn test_launcher_weather_lookup_virtual() {
     // Run Java client via Bazel.
     let status = tokio::process::Command::new("bazel")
         .arg("run")
-        .arg("//java/src/main/java/com/google/oak/functions/weather_lookup_client")
+        .arg("//java/src/main/java/com/google/oak/client/weather_lookup_client")
         .arg("--")
         .arg(format!("http://localhost:{port}"))
         .current_dir(workspace_path(&[]))
