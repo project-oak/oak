@@ -74,48 +74,8 @@ _protected_mode_start:
     # Set up a basic stack, as we may get interrupts.
     mov $stack_start, %esp
 
-    # Clear BSS: base address goes to EDI, value (0) goes to EAX, count goes into ECX.
-    mov $bss_start, %edi
-    mov $bss_size, %ecx
-    xor %eax, %eax
-    rep stosb
-
-    # Copy DATA from the ROM image (stored just after TEXT) to the expected location.
-    # Source address goes to ESI, destination goes to EDI, count goes to ECX.
-    mov $text_end, %esi
-    mov $data_start, %edi
-    mov $data_size, %ecx
-    rep movsb
-
-    # Set the first entry of PML4 to point to PDPT (0..512GiB).
-    mov ${pdpt}, %edi
-    orl $3, %edi              # edi |= 3 (PRESENT and WRITABLE)
-    mov %edi, ({pml4})        # set first half of PML4[0]
-
-    # Set the first entry of PDPT to point to PD_0 (0..1GiB).
-    mov ${pd_0}, %edi
-    orl $3, %edi              # edi |= 3 (PRESENT and WRITABLE)
-    mov %edi, ({pdpt})        # set first half of PDPT[0]
-
-    # Set the fourth entry of PDPT to point to PD_3 (3..4GiB).
-    mov ${pdpt}, %eax
-    mov ${pd_3}, %edi
-    orl $3, %edi              # edi |= 3 (PRESENT and WRITABLE)
-    mov %edi, 24(%eax)        # set first half of PDPT[3], each entry is 8 bytes
-
-    # Set the first entry of PD_0 to point to and identity mapped huge page (0..2MiB).
-    mov $0x83, %edi           # edi = 0x0 | 131 (PRESENT and WRITABLE and HUGE_PAGE)
-    mov %edi, ({pd_0})        # set first half of PD_0[0]
-
-    # Set the last entry of PD_3 to point to an identity-mapped 2MiB huge page ((4GiB-2MiB)..4GiB).
-    # This is where the firmware ROM image is mapped, so we don't make it writable.
-    mov ${pd_3}, %eax
-    mov $0xFFE00000, %edi     # address of 4GiB-2MiB
-    orl $0x81, %edi           # edi |= 129 (PRESENT and HUGE_PAGE)
-    mov %edi, 0xFF8(%eax)     # set first half of PML4[511], each entry is 8 bytes
-
-    # Determine if we're running under SEV. Keep track of which bit is the encrypted bit in %rsi.
-    mov $0, %edi              # by default, no encryption
+    # Determine if we're running under SEV.
+    # Keep track of whether encryption is enabled in %ebp.
     mov $0xc0010131, %ecx     # SEV_STATUS MSR. See Section 15.34.10 in AMD64 Architecture Programmer's
                               # Manual, Volume 2 for more details.
     rdmsr                     # EDX:EAX <- MSR[ECX]
@@ -123,8 +83,8 @@ _protected_mode_start:
                               # Bit 0 - SEV enabled
                               # Bit 1 - SEV-ES enabled
                               # Bit 2 - SEV-SNP active
-    test %eax, %eax           # is it zero?
-    je no_encryption          # if yes, jump to no_encryption
+    mov %eax, %ebp            # store the result in EBP for later use
+
     # See if we're under SEV-SNP, and if yes, pre-emptively PVALIDATE the first megabyte of memory, as that's
     # where we'll be storing many data structures.
     and $0b100, %eax          # eax &= 0b100; -- SEV-SNP active
@@ -141,14 +101,63 @@ _protected_mode_start:
     jl 1b                     # if no, go back
     2:
 
+    # Clear BSS: base address goes to EDI, value (0) goes to EAX, count goes into ECX.
+    mov $bss_start, %edi
+    mov $bss_size, %ecx
+    xor %eax, %eax
+    rep stosb
+
+    # Copy DATA from the ROM image (stored just after TEXT) to the expected location.
+    # Source address goes to ESI, destination goes to EDI, count goes to ECX.
+    mov $text_end, %esi
+    mov $data_start, %edi
+    mov $data_size, %ecx
+    rep movsb
+
+    # Set the first entry of PML4 to point to PDPT (0..512GiB).
+    mov ${pdpt}, %esi
+    orl $3, %esi              # esi |= 3 (PRESENT and WRITABLE)
+    mov %esi, ({pml4})        # set first half of PML4[0]
+
+    # Set the first entry of PDPT to point to PD_0 (0..1GiB).
+    mov ${pd_0}, %esi
+    orl $3, %esi              # esi |= 3 (PRESENT and WRITABLE)
+    mov %esi, ({pdpt})        # set first half of PDPT[0]
+
+    # Set the fourth entry of PDPT to point to PD_3 (3..4GiB).
+    mov ${pdpt}, %eax
+    mov ${pd_3}, %esi
+    orl $3, %esi              # esi |= 3 (PRESENT and WRITABLE)
+    mov %esi, 24(%eax)        # set first half of PDPT[3], each entry is 8 bytes
+
+    # Set the first entry of PD_0 to point to and identity mapped huge page (0..2MiB).
+    mov $0x83, %esi           # esi = 0x0 | 131 (PRESENT and WRITABLE and HUGE_PAGE)
+    mov %esi, ({pd_0})        # set first half of PD_0[0]
+
+    # Set the last entry of PD_3 to point to an identity-mapped 2MiB huge page ((4GiB-2MiB)..4GiB).
+    # This is where the firmware ROM image is mapped, so we don't make it writable.
+    mov ${pd_3}, %eax
+    mov $0xFFE00000, %esi     # address of 4GiB-2MiB
+    orl $0x81, %esi           # esi |= 129 (PRESENT and HUGE_PAGE)
+    mov %esi, 0xFF8(%eax)     # set first half of PML4[511], each entry is 8 bytes
+
+    # Clear EDI, since we will use it later as the encrypted bit location to pass
+    # into the 64-bit Rust entry point and by default we assume no encryption.
+    xor %edi, %edi
+
+    # Check whether encryption is enabled. The SEV status is stored in %ebp.
+    test %ebp, %ebp           # is it zero?
+    je no_encryption          # if yes, jump to no_encryption
+
     # Memory encryption enabled: set encrypted bits in the page tables.
     # First, determine the location of the C-bit in the page tables.
+    # Keep track of which bit is the encrypted bit in EDI.
     mov $0x8000001F, %eax     # EAX = Fn8000_001F - Encrypted Memory Capabilities
     xor %ecx, %ecx            # ECX = 0 - we're not interested in a subpage
     cpuid                     # EAX, EBX, ECX, EDX = CPUID(EAX, ECX)
     and $0b111111, %ebx       # zero out all but EBX[5:0], which the C-bit location
     mov %ebx, %edi            # save the full C-bit location value for later to pass into the Rust
-                              # entry point (EDI contains the first argument according to sysv ABI)
+                              # entry point (RDI contains the first argument according to sysv ABI)
     sub $32, %ebx             # let's assume the encrypted bit is > 32, as it simplifies logic below
     mov $1, %esi
     mov %ebx, %ecx
