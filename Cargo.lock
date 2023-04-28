@@ -2312,6 +2312,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_tdx_guest"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+]
+
+[[package]]
 name = "oak_tensorflow_service"
 version = "0.1.0"
 dependencies = [

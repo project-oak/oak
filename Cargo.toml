@@ -49,6 +49,7 @@ members = [
   "oak_restricted_kernel_interface",
   "oak_sev_guest",
   "oak_simple_io",
+  "oak_tdx_guest",
   "oak_tensorflow_service",
   "oak_virtio",
   "sev_serial",
@@ -112,6 +113,7 @@ oak_restricted_kernel_api = { path = "./oak_restricted_kernel_api" }
 oak_restricted_kernel_interface = { path = "./oak_restricted_kernel_interface" }
 oak_sev_guest = { path = "./oak_sev_guest", default-features = false }
 oak_simple_io = { path = "./oak_simple_io" }
+oak_tdx_guest = { path = "./oak_tdx_guest" }
 oak_virtio = { path = "./oak_virtio" }
 sev_serial = { path = "./sev_serial" }
 xtask = { path = "./xtask" }
