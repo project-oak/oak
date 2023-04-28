@@ -95,8 +95,8 @@ use x86_64::{
 };
 
 /// Allocator for physical memory frames in the system.
-/// We reserve enough room to handle up to 128 GiB of memory, for now.
-pub static FRAME_ALLOCATOR: Spinlock<PhysicalMemoryAllocator<1024>> =
+/// We reserve enough room to handle up to 512 GiB of memory, for now.
+pub static FRAME_ALLOCATOR: Spinlock<PhysicalMemoryAllocator<4096>> =
     Spinlock::new(PhysicalMemoryAllocator::new());
 
 /// The allocator for allocating space in the memory area that is shared with the hypervisor.
