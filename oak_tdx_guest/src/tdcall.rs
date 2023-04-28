@@ -25,13 +25,14 @@ const SUCCESS: u64 = 0;
 bitflags! {
     /// Attributes of a TD.
     ///
-    /// See section 18.2.1 of <https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-module-1eas.pdf>
+    /// See section 18.2.1 of [Architecture Specification: Intel® Trust Domain Extensions(Intel® TDX)
+    /// Module](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-module-1eas.pdf)
     /// for more information.
     #[derive(Default)]
     pub struct Attributes: u64 {
         /// The guest TD runs in off-TD debug mode.
         ///
-        /// If this is enabled the TD should be consisdered untrusted.
+        /// If this is enabled the TD should be considered untrusted.
         const DEBUG = 1 << 0;
         /// Whether system profiling is enabled on the TD.
         ///
@@ -50,7 +51,8 @@ bitflags! {
 
 /// Information about the TD's execution environment.
 ///
-/// See section 2.4.2 of <https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf>
+/// See section 2.4.2 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
+/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 pub struct TdInfo {
     /// The effective GPA width. The "shared" bit is at position gpa_width - 1.
@@ -68,7 +70,8 @@ pub struct TdInfo {
 /// Gets information about the TD's execution environment by calling the TDCALL[TDG.VP.INFO]
 /// leaf.
 ///
-/// See section 2.4.2 of <https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf>
+/// See section 2.4.2 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
+/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 pub fn get_td_info() -> TdInfo {
     // The TDCALL leaf for TDG.VP.INFO.
@@ -116,7 +119,8 @@ pub fn get_td_info() -> TdInfo {
 
 /// Information about a virtualization exception (#VE).
 ///
-/// See section 2.4.4 of <https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf>
+/// See section 2.4.4 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
+/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 pub struct VeInfo {
     /// The exit reason.
@@ -136,7 +140,8 @@ pub struct VeInfo {
 /// Gets information about the recent virtualization exception (#VE) by calling the
 /// TDCALL[TDG.VP.VEINFO.GET] leaf.
 ///
-/// See section 2.4.4 of <https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf>
+/// See section 2.4.4 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
+/// Extensions (Intel® TDX)]( https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 pub fn get_ve_info() -> Option<VeInfo> {
     // The TDCALL leaf for TDG.VP.VEINFO.GET.
@@ -200,8 +205,8 @@ pub fn get_ve_info() -> Option<VeInfo> {
 /// The first value represents the lower 32-bits and the second the higher bits.
 fn split_u64(value: u64) -> (u32, u32) {
     const SIZE: usize = size_of::<u32>();
-    let mut bytes = value.to_le_bytes();
-    let (lower, higher) = bytes.split_array_mut::<SIZE>();
+    let bytes = value.to_le_bytes();
+    let (lower, higher) = bytes.split_array_ref::<SIZE>();
     (
         u32::from_le_bytes(*lower),
         u32::from_le_bytes(higher.try_into().unwrap()),
