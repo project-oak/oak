@@ -84,7 +84,8 @@ pub fn get_td_info() -> TdInfo {
     // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). RCX returns the GPA
     // width in the first 6 bits. RDX returns the TD attributes. R8 contains the number of active or
     // ready vCPUs in bits 0..32 and the maximum number of vCPUs in bits 32..64. R9, R10 and R11 are
-    // reserved for future use.
+    // reserved for future use. We zero out all output registers in the input to make sure old
+    // register values don't accidentally leak to the hypervisor.
     //
     // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
     // registers are specified, so no unspecified registers will be clobbered.
@@ -92,12 +93,12 @@ pub fn get_td_info() -> TdInfo {
         asm!(
             "tdcall",
             inout("rax") LEAF => result,
-            out("rcx") gpa_width,
-            out("rdx") attributes,
-            out("r8") vcpu_info,
-            out("r9") _,
-            out("r10") _,
-            out("r11") _,
+            inout("rcx") 0u64 => gpa_width,
+            inout("rdx") 0u64 => attributes,
+            inout("r8") 0u64 => vcpu_info,
+            inout("r9") 0u64 => _,
+            inout("r10") 0u64 => _,
+            inout("r11") 0u64 => _,
 
             options(nomem, nostack),
         );
@@ -159,7 +160,8 @@ pub fn get_ve_info() -> Option<VeInfo> {
     // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). RCX returns the exit
     // reason. RDX returns the exit qualification. R8 returns the guest-linear address. R9 returns
     // the guest-physical address. R10 returns the instructions length in bits 0..32 and the
-    // additional instruction info in bits 32..64.
+    // additional instruction info in bits 32..64. We zero out all output registers in the input to
+    // make sure old register values don't accidentally leak to the hypervisor.
     //
     // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
     // registers are specified, so no unspecified registers will be clobbered.
@@ -167,11 +169,11 @@ pub fn get_ve_info() -> Option<VeInfo> {
         asm!(
             "tdcall",
             inout("rax") LEAF => result,
-            out("rcx") exit_reason,
-            out("rdx") exit_qualification,
-            out("r8") guest_linear_address,
-            out("r9") guest_physical_address,
-            out("r10") instruction,
+            inout("rcx") 0u64 => exit_reason,
+            inout("rdx") 0u64 => exit_qualification,
+            inout("r8") 0u64 => guest_linear_address,
+            inout("r9") 0u64 => guest_physical_address,
+            inout("r10") 0u64 => instruction,
 
             options(nomem, nostack),
         );

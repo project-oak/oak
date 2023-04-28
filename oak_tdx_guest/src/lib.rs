@@ -21,3 +21,4 @@
 #![feature(split_array)]
 
 pub mod tdcall;
+pub mod vmcall;
