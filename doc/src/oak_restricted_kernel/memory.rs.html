@@ -220,7 +220,6 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -243,7 +242,7 @@
 };
 <span class="kw">use </span>core::{
     alloc::{GlobalAlloc, Layout},
-    ops::{Deref, DerefMut},
+    ops::Deref,
     ptr::NonNull,
     result::Result,
 };
@@ -294,8 +293,8 @@
     </span><span class="kw">fn </span>extend(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="comment">// We might want to do something more clever here, such as exponentially increasing the
         // number of frames we allocate. For now, let&#39;s just keep extending by one frame.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
-        <span class="kw">let </span>frame: PhysFrame&lt;Size2MiB&gt; = frame_allocator
+        </span><span class="kw">let </span>frame: PhysFrame&lt;Size2MiB&gt; = FRAME_ALLOCATOR
+            .lock()
             .allocate_frame()
             .ok_or(<span class="string">&quot;failed to allocate memory for kernel heap&quot;</span>)<span class="question-mark">?</span>;
 
@@ -319,7 +318,6 @@
                         | PageTableFlags::WRITABLE
                         | PageTableFlags::NO_EXECUTE
                         | PageTableFlags::ENCRYPTED,
-                    frame_allocator.deref_mut(),
                 )
                 .map_err(|<span class="kw">_</span>| <span class="string">&quot;unable to create page mapping for kernel heap&quot;</span>)<span class="question-mark">?
                 </span>.flush();

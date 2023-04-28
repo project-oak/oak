@@ -433,14 +433,14 @@
     <span class="doccomment">/// Creates a new bitmap allocator for a physical frame range.
     /// Panics if N does not match the number of u64-s required to track all frames in that range.
     /// Initially, the allocator will mark the whole range as invalid.
-    </span><span class="kw">pub fn </span>new(range: PhysFrameRange&lt;S&gt;) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub const fn </span>new(range: PhysFrameRange&lt;S&gt;) -&gt; <span class="self">Self </span>{
         <span class="comment">// Unfortunately there doesn&#39;t seem to be a way to hoist this to the type system.
-        </span><span class="kw">let </span>expected = bitvec::mem::elts::&lt;u64&gt;(range.count());
+        // We also have to crudely reimplement `range.count()` here as `count()` is not a const fn.
+        </span><span class="kw">let </span>num_frames =
+            (range.end.start_address().as_u64() - range.start.start_address().as_u64()) / S::SIZE;
+        <span class="kw">let </span>expected = bitvec::mem::elts::&lt;u64&gt;(num_frames <span class="kw">as </span>usize);
         <span class="kw">if </span>expected != N {
-            <span class="macro">panic!</span>(
-                <span class="string">&quot;BitmapAllocator bitmap size does not match FrameRange size; expected {}, got {}&quot;</span>,
-                expected, N
-            );
+            <span class="macro">panic!</span>(<span class="string">&quot;BitmapAllocator bitmap size does not match FrameRange size&quot;</span>,);
         }
 
         <span class="self">Self </span>{

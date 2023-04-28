@@ -351,14 +351,6 @@
 <a href="#351" id="351">351</a>
 <a href="#352" id="352">352</a>
 <a href="#353" id="353">353</a>
-<a href="#354" id="354">354</a>
-<a href="#355" id="355">355</a>
-<a href="#356" id="356">356</a>
-<a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -457,7 +449,8 @@
 
 <span class="doccomment">/// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 128 GiB of memory, for now.
-</span><span class="kw">pub static </span>FRAME_ALLOCATOR: OnceCell&lt;Spinlock&lt;PhysicalMemoryAllocator&lt;<span class="number">1024</span>&gt;&gt;&gt; = OnceCell::new();
+</span><span class="kw">pub static </span>FRAME_ALLOCATOR: Spinlock&lt;PhysicalMemoryAllocator&lt;<span class="number">1024</span>&gt;&gt; =
+    Spinlock::new(PhysicalMemoryAllocator::new());
 
 <span class="doccomment">/// The allocator for allocating space in the memory area that is shared with the hypervisor.
 </span><span class="kw">pub static </span>GUEST_HOST_HEAP: OnceCell&lt;LockedHeap&gt; = OnceCell::new();
@@ -522,17 +515,11 @@
     </span><span class="kw">let </span>program_headers = <span class="kw">unsafe </span>{ elf::get_phdrs(VirtAddr::new(<span class="number">0x20_0000</span>)) };
 
     <span class="comment">// Physical frame allocator
-    </span>FRAME_ALLOCATOR
-        .set(Spinlock::new(mm::init(info.e820_table(), program_headers)))
-        .map_err(|<span class="kw">_</span>| ())
-        .expect(<span class="string">&quot;did not expect frame allocator to be already set!&quot;</span>);
+    </span>mm::init(info.e820_table(), program_headers);
 
     <span class="comment">// Note: `info` will not be valid after calling this!
     </span><span class="kw">if </span>PAGE_TABLES
-        .set(Spinlock::new({
-            <span class="kw">let </span><span class="kw-2">mut </span>frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
-            mm::init_paging(frame_allocator.deref_mut(), program_headers).unwrap()
-        }))
+        .set(Spinlock::new(mm::init_paging(program_headers).unwrap()))
         .is_err()
     {
         <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t initialize page tables&quot;</span>);
@@ -572,10 +559,7 @@
 
     <span class="comment">// Allocate a section for guest-host communication (without the `ENCRYPTED` bit set)
     // We&#39;ll allocate 2*2MiB, as virtio needs more than 2 MiB for its data structures.
-    </span><span class="kw">let </span>guest_host_frames = {
-        <span class="kw">let </span><span class="kw-2">mut </span>frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
-        frame_allocator.allocate_contiguous(<span class="number">2</span>).unwrap()
-    };
+    </span><span class="kw">let </span>guest_host_frames = FRAME_ALLOCATOR.lock().allocate_contiguous(<span class="number">2</span>).unwrap();
 
     <span class="kw">let </span>guest_host_pages = {
         <span class="kw">let </span>pt = PAGE_TABLES.get().unwrap().lock();

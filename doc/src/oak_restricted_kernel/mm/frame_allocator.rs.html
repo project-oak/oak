@@ -141,6 +141,25 @@
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -158,8 +177,12 @@
 //
 
 </span><span class="kw">use </span><span class="kw">super</span>::bitmap_frame_allocator::BitmapAllocator;
-<span class="kw">use </span>x86_64::structures::paging::{
-    frame::PhysFrameRange, FrameAllocator, FrameDeallocator, PhysFrame, Size2MiB, Size4KiB,
+<span class="kw">use </span>x86_64::{
+    structures::paging::{
+        frame::PhysFrameRange, FrameAllocator, FrameDeallocator, PageSize, PhysFrame, Size2MiB,
+        Size4KiB,
+    },
+    PhysAddr,
 };
 
 <span class="doccomment">/// Allocator to track physical memory frames.
@@ -182,7 +205,22 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>N: usize&gt; PhysicalMemoryAllocator&lt;N&gt; {
-    <span class="kw">pub fn </span>new(range: PhysFrameRange&lt;Size2MiB&gt;) -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Assumes valid physical memory ranges from [0 ... N * 64 * Size2MiB::SIZE].
+    </span><span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
+        <span class="comment">// Safety: we have to resort to `unsafe` as we need to call the const fn-s, but both
+        // addresses are definitely Size2MiB::SIZE-aligned, so these operations are safe.
+        </span><span class="self">Self</span>::new_range(PhysFrame::range(
+            <span class="kw">unsafe </span>{ PhysFrame::from_start_address_unchecked(PhysAddr::zero()) },
+            <span class="comment">// N u64-s * 64 frames per u64 * 2 MiB per frame
+            </span><span class="kw">unsafe </span>{
+                PhysFrame::from_start_address_unchecked(PhysAddr::new(
+                    N <span class="kw">as </span>u64 * <span class="number">64 </span>* Size2MiB::SIZE,
+                ))
+            },
+        ))
+    }
+
+    <span class="kw">pub const fn </span>new_range(range: PhysFrameRange&lt;Size2MiB&gt;) -&gt; <span class="self">Self </span>{
         PhysicalMemoryAllocator {
             large_frames: BitmapAllocator::new(range),
             small_frames: <span class="prelude-val">None</span>,
@@ -260,7 +298,7 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>simple_allocator() {
         <span class="kw">let </span><span class="kw-2">mut </span>allocator =
-            PhysicalMemoryAllocator::&lt;<span class="number">1</span>&gt;::new(create_frame_range(<span class="number">0</span>, <span class="number">2 </span>* Size2MiB::SIZE));
+            PhysicalMemoryAllocator::&lt;<span class="number">1</span>&gt;::new_range(create_frame_range(<span class="number">0</span>, <span class="number">2 </span>* Size2MiB::SIZE));
         allocator.mark_valid(create_frame_range(<span class="number">0</span>, <span class="number">2 </span>* Size2MiB::SIZE), <span class="bool-val">true</span>);
         (<span class="kw-2">&amp;mut </span>allocator <span class="kw">as </span><span class="kw-2">&amp;mut </span><span class="kw">dyn </span>FrameAllocator&lt;Size2MiB&gt;)
             .allocate_frame()
@@ -273,7 +311,7 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>fill_small_frames() {
         <span class="kw">let </span><span class="kw-2">mut </span>allocator =
-            PhysicalMemoryAllocator::&lt;<span class="number">1</span>&gt;::new(create_frame_range(<span class="number">0</span>, Size2MiB::SIZE));
+            PhysicalMemoryAllocator::&lt;<span class="number">1</span>&gt;::new_range(create_frame_range(<span class="number">0</span>, Size2MiB::SIZE));
         allocator.mark_valid(create_frame_range(<span class="number">0</span>, Size2MiB::SIZE), <span class="bool-val">true</span>);
         <span class="kw">let </span>alloc_ref = <span class="kw-2">&amp;mut </span>allocator <span class="kw">as </span><span class="kw-2">&amp;mut </span><span class="kw">dyn </span>FrameAllocator&lt;Size4KiB&gt;;
         <span class="comment">// 512 allocations should succeed (512 * 4K = 2M)

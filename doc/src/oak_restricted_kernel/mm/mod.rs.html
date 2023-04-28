@@ -365,24 +365,6 @@
 <a href="#365" id="365">365</a>
 <a href="#366" id="366">366</a>
 <a href="#367" id="367">367</a>
-<a href="#368" id="368">368</a>
-<a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -401,7 +383,6 @@
 
 </span><span class="kw">use </span><span class="self">self</span>::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset};
 <span class="kw">use crate</span>::{FRAME_ALLOCATOR, PAGE_TABLES, VMA_ALLOCATOR};
-<span class="kw">use </span>core::ops::DerefMut;
 <span class="kw">use </span>goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 <span class="kw">use </span>log::info;
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
@@ -415,7 +396,7 @@
     structures::paging::{
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
         FrameAllocator, MappedPageTable, Page, PageSize, PageTable,
-        PageTableFlags <span class="kw">as </span>BasePageTableFlags, PhysFrame, Size2MiB, Size4KiB,
+        PageTableFlags <span class="kw">as </span>BasePageTableFlags, PhysFrame, Size2MiB,
     },
     PhysAddr, VirtAddr,
 };
@@ -519,16 +500,13 @@
 /// This is equivalent to &lt;x86_64::structures::paging::mapper::Mapper&gt;, but knows about memory
 /// encryption.
 </span><span class="kw">pub trait </span>Mapper&lt;S: PageSize&gt; {
-    <span class="kw">unsafe fn </span>map_to_with_table_flags&lt;A&gt;(
+    <span class="kw">unsafe fn </span>map_to_with_table_flags(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         page: Page&lt;S&gt;,
         frame: PhysFrame&lt;S&gt;,
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
-        frame_allocator: <span class="kw-2">&amp;mut </span>A,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;MapperFlush&lt;S&gt;, MapToError&lt;S&gt;&gt;
-    <span class="kw">where
-        </span>A: FrameAllocator&lt;Size4KiB&gt;;
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;MapperFlush&lt;S&gt;, MapToError&lt;S&gt;&gt;;
 
     <span class="doccomment">/// Unmaps a page.
     ///
@@ -552,16 +530,8 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;MapperFlush&lt;S&gt;, FlagUpdateError&gt;;
 }
 
-<span class="kw">pub fn </span>init&lt;<span class="kw">const </span>N: usize&gt;(
-    memory_map: <span class="kw-2">&amp;</span>[BootE820Entry],
-    program_headers: <span class="kw-2">&amp;</span>[ProgramHeader],
-) -&gt; frame_allocator::PhysicalMemoryAllocator&lt;N&gt; {
-    <span class="comment">// This assumes all memory is in the lower end of the address space.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>alloc = frame_allocator::PhysicalMemoryAllocator::new(PhysFrame::range(
-        PhysFrame::from_start_address(PhysAddr::new(<span class="number">0x0</span>)).unwrap(),
-        <span class="comment">// N u64-s * 64 frames per u64 * 2 MiB per frame
-        </span>PhysFrame::from_start_address(PhysAddr::new(N <span class="kw">as </span>u64 * <span class="number">64 </span>* Size2MiB::SIZE)).unwrap(),
-    ));
+<span class="kw">pub fn </span>init(memory_map: <span class="kw-2">&amp;</span>[BootE820Entry], program_headers: <span class="kw-2">&amp;</span>[ProgramHeader]) {
+    <span class="kw">let </span><span class="kw-2">mut </span>alloc = FRAME_ALLOCATOR.lock();
 
     <span class="comment">/* Step 1: mark all RAM as available (event though it may contain data!) */
     </span>memory_map
@@ -632,8 +602,6 @@
             );
             alloc.mark_valid(range, <span class="bool-val">false</span>)
         });
-
-    alloc
 }
 
 <span class="doccomment">/// Initializes the page tables used by the kernel.
@@ -651,14 +619,14 @@
 /// |                     |          |                     |         | physical memory             |
 /// | FFFF_8820_0000_0000 | ~-120 TB | FFFF_FFFF_7FFF_FFFF | ~120 TB | ... unused hole             |
 /// | FFFF_FFFF_8000_0000 |    -2 GB | FFFF_FFFF_FFFF_FFFF |    2 GB | Kernel code                 |
-</span><span class="kw">pub fn </span>init_paging&lt;A: FrameAllocator&lt;Size4KiB&gt;&gt;(
-    frame_allocator: <span class="kw-2">&amp;mut </span>A,
+</span><span class="kw">pub fn </span>init_paging(
     program_headers: <span class="kw-2">&amp;</span>[ProgramHeader],
 ) -&gt; <span class="prelude-ty">Result</span>&lt;EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;static</span>, PhysOffset&gt;&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// Safety: this expects the frame allocator to be initialized and the memory region it&#39;s handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     // This reference will no longer be valid after we reload the page tables!
-    </span><span class="kw">let </span>pml4_frame = frame_allocator
+    </span><span class="kw">let </span>pml4_frame = FRAME_ALLOCATOR
+        .lock()
         .allocate_frame()
         .ok_or(<span class="string">&quot;couldn&#39;t allocate a frame for PML4&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>pml4 = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(pml4_frame.start_address().as_u64() <span class="kw">as </span><span class="kw-2">*mut </span>PageTable) };
@@ -692,13 +660,12 @@
                 | PageTableFlags::NO_EXECUTE
                 | PageTableFlags::ENCRYPTED,
             <span class="kw-2">&amp;mut </span>page_table,
-            frame_allocator,
         )
         .map_err(|<span class="kw">_</span>| <span class="string">&quot;couldn&#39;t set up paging for physical memory&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Mapping for the kernel itself in the upper -2G of memory, based on the mappings (and
         // permissions) in the program header.
-        </span>page_tables::create_kernel_map(program_headers, <span class="kw-2">&amp;mut </span>page_table, frame_allocator)
+        </span>page_tables::create_kernel_map(program_headers, <span class="kw-2">&amp;mut </span>page_table)
             .map_err(|<span class="kw">_</span>| <span class="string">&quot;couldn&#39;t set up paging for the kernel&quot;</span>)<span class="question-mark">?</span>;
     }
 
@@ -740,8 +707,6 @@
         .allocate(<span class="number">2</span>)
         .expect(<span class="string">&quot;unable to allocate virtual memory for syscall stack&quot;</span>);
     <span class="kw">let </span>frame = FRAME_ALLOCATOR
-        .get()
-        .unwrap()
         .lock()
         .allocate_frame()
         .expect(<span class="string">&quot;unable to allocate physical memory for syscall stack&quot;</span>);
@@ -760,7 +725,6 @@
                     | PageTableFlags::NO_EXECUTE
                     | PageTableFlags::WRITABLE,
                 PageTableFlags::ENCRYPTED | PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                FRAME_ALLOCATOR.get().unwrap().lock().deref_mut(),
             )
             .expect(<span class="string">&quot;failed to update page tables for syscall stack&quot;</span>)
             .flush();
