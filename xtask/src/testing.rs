@@ -36,7 +36,8 @@ pub async fn run_step(step: Step) {
 
 /// Runs a step in the background, and returns a reference to the running process.
 ///
-/// The running process is killed when the returned `Running` is dropped.
+/// The running process is NOT killed when the returned `Running` is dropped. It must be killed
+/// manually.
 pub async fn run_background(step: Box<dyn Runnable>) -> Box<dyn Running> {
     let mut running = step.run(&opt_for_test());
     tokio::spawn(read_to_end(running.stdout()));
