@@ -34,15 +34,25 @@ pub async fn run_step(step: Step) {
     assert!(result.success());
 }
 
+/// Thin wrapper around an inner `Running` that drops the inner when dropped.
+pub struct BackgroundStep {
+    pub inner: Box<dyn Running>,
+}
+
+impl std::ops::Drop for BackgroundStep {
+    fn drop(&mut self) {
+        self.inner.kill();
+    }
+}
+
 /// Runs a step in the background, and returns a reference to the running process.
 ///
-/// The running process is NOT killed when the returned `Running` is dropped. It must be killed
-/// manually.
-pub async fn run_background(step: Box<dyn Runnable>) -> Box<dyn Running> {
+/// The running process is killed when the returned `BackgroundStep` is dropped.
+pub async fn run_background(step: Box<dyn Runnable>) -> BackgroundStep {
     let mut running = step.run(&opt_for_test());
     tokio::spawn(read_to_end(running.stdout()));
     tokio::spawn(read_to_end(running.stderr()));
-    running
+    BackgroundStep { inner: running }
 }
 
 /// Whether to skip the test. For instance, GitHub Actions does not support KVM, so we cannot run

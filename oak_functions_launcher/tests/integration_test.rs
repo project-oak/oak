@@ -25,7 +25,7 @@ use oak_launcher_utils::launcher;
 use prost::Message;
 use std::{io::Write, time::Duration};
 use ubyte::ByteUnit;
-use xtask::{internal::Running, launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
+use xtask::{launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
@@ -34,7 +34,7 @@ const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 async fn run_oak_functions_example(
     wasm_module_crate_name: &str,
     lookup_data_path: &str,
-) -> (Box<dyn Running>, u16) {
+) -> (xtask::testing::BackgroundStep, u16) {
     xtask::testing::run_step(xtask::launcher::build_stage0()).await;
     xtask::testing::run_step(xtask::launcher::build_binary(
         "build Oak Restricted Kernel binary",
@@ -78,7 +78,7 @@ async fn test_launcher_key_value_lookup_virtual() {
         return;
     }
 
-    let (mut background, port) =
+    let (mut _background, port) =
         run_oak_functions_example("key_value_lookup", MOCK_LOOKUP_DATA_PATH.to_str().unwrap())
             .await;
 
@@ -91,8 +91,6 @@ async fn test_launcher_key_value_lookup_virtual() {
 
     let response = client.invoke(b"test_key").await.expect("failed to invoke");
     assert_eq!(response, b"test_value");
-
-    background.kill();
 }
 
 // Allow enough worker threads to collect output from background tasks.
@@ -103,7 +101,7 @@ async fn test_launcher_echo_virtual() {
         return;
     }
 
-    let (mut background, port) =
+    let (_background, port) =
         run_oak_functions_example("echo", MOCK_LOOKUP_DATA_PATH.to_str().unwrap()).await;
 
     // Wait for the server to start up.
@@ -115,8 +113,6 @@ async fn test_launcher_echo_virtual() {
 
     let response = client.invoke(b"xxxyyyzzz").await.expect("failed to invoke");
     assert_eq!(std::str::from_utf8(&response).unwrap(), "xxxyyyzzz");
-
-    background.kill();
 }
 
 // Allow enough worker threads to collect output from background tasks.
@@ -127,7 +123,7 @@ async fn test_launcher_weather_lookup_virtual() {
         return;
     }
 
-    let (mut background, port) = run_oak_functions_example(
+    let (_background, port) = run_oak_functions_example(
         "weather_lookup",
         workspace_path(&[
             "oak_functions",
@@ -171,8 +167,6 @@ async fn test_launcher_weather_lookup_virtual() {
         .expect("failed to wait for bazel");
     eprintln!("bazel status: {:?}", status);
     assert!(status.success());
-
-    background.kill();
 }
 
 #[tokio::test]
