@@ -1,5 +1,4 @@
 (function() {var implementors = {
 "oak_channel":[],
-"oak_functions_linux_vsock_bin":[["impl&lt;T&gt; Read for <a class=\"struct\" href=\"oak_functions_linux_vsock_bin/channel/struct.Channel.html\" title=\"struct oak_functions_linux_vsock_bin::channel::Channel\">Channel</a>&lt;T&gt;<span class=\"where fmt-newline\">where\n    T: <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/std/io/trait.Read.html\" title=\"trait std::io::Read\">Read</a> + <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/std/io/trait.Write.html\" title=\"trait std::io::Write\">Write</a>,</span>"]],
 "oak_restricted_kernel_api":[["impl Read for <a class=\"struct\" href=\"oak_restricted_kernel_api/struct.FileDescriptorChannel.html\" title=\"struct oak_restricted_kernel_api::FileDescriptorChannel\">FileDescriptorChannel</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
