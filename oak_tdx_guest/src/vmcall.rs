@@ -100,7 +100,8 @@ pub enum MapGpaError {
 /// shared.
 ///
 /// If the guest changes pages back from shared to private, these will be added to the guest as
-/// pending pages, so the guest must also call TDCALL[TDG.MEM.PAGE.ACCEPT] before using them again.
+/// pending pages, so the guest must also call `TDCALL[TDG.MEM.PAGE.ACCEPT]` before using them
+/// again.
 ///
 /// The function will return an error if the page was already mapped in the desired state (e.g.
 /// trying to share a page that was already shared).
@@ -142,16 +143,18 @@ pub unsafe fn map_gpa(frames: PhysFrameRange<Size4KiB>) -> Result<(), MapGpaErro
     // Safety: as long as the changed physical address of the page is handled correctly by the
     // caller, calling TDCALL here is safe since it does not alter memory directly and all the
     // affected registers are specified, so no unspecified registers will be clobbered.
-    asm!(
-        "tdcall",
-        inout("rax") VM_CALL_LEAF => vm_call_result,
-        in("rcx") registers.bits,
-        inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
-        inout("r11") SUB_FUNCTION => failing_gpa,
-        in("r12") gpa_start,
-        in("r13") gpa_size,
-        options(nomem, nostack),
-    );
+    unsafe {
+        asm!(
+            "tdcall",
+            inout("rax") VM_CALL_LEAF => vm_call_result,
+            in("rcx") registers.bits,
+            inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
+            inout("r11") SUB_FUNCTION => failing_gpa,
+            in("r12") gpa_start,
+            in("r13") gpa_size,
+            options(nomem, nostack),
+        );
+    }
 
     // According to the spec the top-level result for this sub-function will aways be 0 as long as
     // the specified sub-function leaf is correct.
@@ -316,7 +319,7 @@ fn io_read(port: u32, size: IoWidth) -> Result<u64, &'static str> {
     // bitflags of registers to be passed through to the VMM goes into RCX. The sub-function
     // usage (always 0 when conforming to the GHCI spec) goes into R10, and the result of the
     // subfunction is returned in R10. The sub-function to call goes into R11 and the data is
-    // returned in R11 if the read is successful. The size of the read (1,2 or 4 bytes) goest
+    // returned in R11 if the read is successful. The size of the read (1,2 or 4 bytes) goes
     // into R12. The direction (read) goes into R13. The IO port number goes into R14.
     //
     // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
@@ -377,7 +380,7 @@ fn io_write(port: u32, size: IoWidth, data: u64) -> Result<(), &'static str> {
     // bitflags of registers to be passed through to the VMM goes into RCX. The sub-function
     // usage (always 0 when conforming to the GHCI spec) goes into R10, and the result of the
     // subfunction is returned in R10. The sub-function to call goes into R11. The size of the
-    // write (1,2 or 4 bytes) goest into R12. The direction (write) goes into R13. The IO port
+    // write (1,2 or 4 bytes) goes into R12. The direction (write) goes into R13. The IO port
     // number goes into R14. The data to write goes into R15.
     //
     // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
@@ -422,7 +425,7 @@ fn io_write(port: u32, size: IoWidth, data: u64) -> Result<(), &'static str> {
 /// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
 ///
-/// #Safety
+/// # Safety
 ///
 /// Modifying an MSR could impact the execution environment, so the caller must ensure that the MSR
 /// modification will not lead to undefined behavior.
@@ -443,16 +446,18 @@ pub unsafe fn msr_write(msr: u32, data: u64) -> Result<(), &'static str> {
     // Safety: if the MSR modification is safe, calling TDCALL here is safe since it does not alter
     // memory and all the affected registers are specified, so no unspecified registers will be
     // clobbered. It is up to the caller to ensure that the MSR modification itself is safe.
-    asm!(
-        "tdcall",
-        inout("rax") VM_CALL_LEAF => vm_call_result,
-        in("rcx") registers.bits,
-        inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
-        in("r11") SUB_FUNCTION,
-        in("r12") msr as u64,
-        in("r13") data,
-        options(nomem, nostack),
-    );
+    unsafe {
+        asm!(
+            "tdcall",
+            inout("rax") VM_CALL_LEAF => vm_call_result,
+            in("rcx") registers.bits,
+            inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
+            in("r11") SUB_FUNCTION,
+            in("r12") msr as u64,
+            in("r13") data,
+            options(nomem, nostack),
+        );
+    }
 
     // According to the spec the top-level result for this sub-function will aways be 0 as long as
     // the specified sub-function leaf is correct.

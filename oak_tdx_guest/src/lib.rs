@@ -19,6 +19,7 @@
 
 #![no_std]
 #![feature(split_array)]
+#![deny(unsafe_op_in_unsafe_fn)]
 
 pub mod tdcall;
 pub mod vmcall;
