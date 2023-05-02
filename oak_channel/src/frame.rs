@@ -21,8 +21,7 @@ extern crate alloc;
 use crate::Channel;
 use alloc::{boxed::Box, format, vec::Vec};
 use bitflags::bitflags;
-use bytes::BufMut;
-use bytes::BytesMut;
+use bytes::{BufMut, BytesMut};
 use core::borrow::BorrowMut;
 
 pub const PADDING_SIZE: usize = 4;
@@ -89,8 +88,10 @@ impl Framed {
         Self { inner: socket }
     }
 
-    pub fn read_frame<'a>(&mut self, message_buffer: &'a mut BytesMut) ->
-        anyhow::Result<Frame<'a>> {
+    pub fn read_frame<'a>(
+        &mut self,
+        message_buffer: &'a mut BytesMut,
+    ) -> anyhow::Result<Frame<'a>> {
         {
             let mut padding_bytes = [0; PADDING_SIZE];
             self.inner.read(&mut padding_bytes)?;

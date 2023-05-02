@@ -15,4 +15,4 @@ anyhow = { version = "*", default-features = false }
 micro_rpc = { workspace = true }
 static_assertions = "*"
 bitflags = "*"
-bytes = "*"
+bytes = { version = "*", default-features = false }
