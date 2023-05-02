@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["tdcall"]};
+window.SIDEBAR_ITEMS = {"mod":["tdcall","vmcall"]};

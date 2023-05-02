@@ -212,6 +212,8 @@
 <a href="#212" id="212">212</a>
 <a href="#213" id="213">213</a>
 <a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -298,7 +300,8 @@
     <span class="comment">// The TDCALL leaf goes into RAX. RAX returns the result (0 is success). RCX returns the GPA
     // width in the first 6 bits. RDX returns the TD attributes. R8 contains the number of active or
     // ready vCPUs in bits 0..32 and the maximum number of vCPUs in bits 32..64. R9, R10 and R11 are
-    // reserved for future use.
+    // reserved for future use. We zero out all output registers in the input to make sure old
+    // register values don&#39;t accidentally leak to the hypervisor.
     //
     // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
     // registers are specified, so no unspecified registers will be clobbered.
@@ -306,12 +309,12 @@
         <span class="macro">asm!</span>(
             <span class="string">&quot;tdcall&quot;</span>,
             inout(<span class="string">&quot;rax&quot;</span>) LEAF =&gt; result,
-            out(<span class="string">&quot;rcx&quot;</span>) gpa_width,
-            out(<span class="string">&quot;rdx&quot;</span>) attributes,
-            out(<span class="string">&quot;r8&quot;</span>) vcpu_info,
-            out(<span class="string">&quot;r9&quot;</span>) <span class="kw">_</span>,
-            out(<span class="string">&quot;r10&quot;</span>) <span class="kw">_</span>,
-            out(<span class="string">&quot;r11&quot;</span>) <span class="kw">_</span>,
+            inout(<span class="string">&quot;rcx&quot;</span>) <span class="number">0u64 </span>=&gt; gpa_width,
+            inout(<span class="string">&quot;rdx&quot;</span>) <span class="number">0u64 </span>=&gt; attributes,
+            inout(<span class="string">&quot;r8&quot;</span>) <span class="number">0u64 </span>=&gt; vcpu_info,
+            inout(<span class="string">&quot;r9&quot;</span>) <span class="number">0u64 </span>=&gt; <span class="kw">_</span>,
+            inout(<span class="string">&quot;r10&quot;</span>) <span class="number">0u64 </span>=&gt; <span class="kw">_</span>,
+            inout(<span class="string">&quot;r11&quot;</span>) <span class="number">0u64 </span>=&gt; <span class="kw">_</span>,
 
             options(nomem, nostack),
         );
@@ -373,7 +376,8 @@
     <span class="comment">// The TDCALL leaf goes into RAX. RAX returns the result (0 is success). RCX returns the exit
     // reason. RDX returns the exit qualification. R8 returns the guest-linear address. R9 returns
     // the guest-physical address. R10 returns the instructions length in bits 0..32 and the
-    // additional instruction info in bits 32..64.
+    // additional instruction info in bits 32..64. We zero out all output registers in the input to
+    // make sure old register values don&#39;t accidentally leak to the hypervisor.
     //
     // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
     // registers are specified, so no unspecified registers will be clobbered.
@@ -381,11 +385,11 @@
         <span class="macro">asm!</span>(
             <span class="string">&quot;tdcall&quot;</span>,
             inout(<span class="string">&quot;rax&quot;</span>) LEAF =&gt; result,
-            out(<span class="string">&quot;rcx&quot;</span>) exit_reason,
-            out(<span class="string">&quot;rdx&quot;</span>) exit_qualification,
-            out(<span class="string">&quot;r8&quot;</span>) guest_linear_address,
-            out(<span class="string">&quot;r9&quot;</span>) guest_physical_address,
-            out(<span class="string">&quot;r10&quot;</span>) instruction,
+            inout(<span class="string">&quot;rcx&quot;</span>) <span class="number">0u64 </span>=&gt; exit_reason,
+            inout(<span class="string">&quot;rdx&quot;</span>) <span class="number">0u64 </span>=&gt; exit_qualification,
+            inout(<span class="string">&quot;r8&quot;</span>) <span class="number">0u64 </span>=&gt; guest_linear_address,
+            inout(<span class="string">&quot;r9&quot;</span>) <span class="number">0u64 </span>=&gt; guest_physical_address,
+            inout(<span class="string">&quot;r10&quot;</span>) <span class="number">0u64 </span>=&gt; instruction,
 
             options(nomem, nostack),
         );

@@ -46,7 +46,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_restricted_kernel_interface":["",[],["errno.rs","lib.rs","syscalls.rs"]],\
 "oak_sev_guest":["",[],["cpuid.rs","crypto.rs","ghcb.rs","guest.rs","instructions.rs","interrupts.rs","io.rs","lib.rs","msr.rs","secrets.rs","vmsa.rs"]],\
 "oak_simple_io":["",[],["lib.rs"]],\
-"oak_tdx_guest":["",[],["lib.rs","tdcall.rs"]],\
+"oak_tdx_guest":["",[],["lib.rs","tdcall.rs","vmcall.rs"]],\
 "oak_tensorflow_service":["",[],["lib.rs","tflite.rs"]],\
 "oak_virtio":["",[["console",[],["mod.rs"]],["queue",[],["mod.rs","virtq.rs"]],["vsock",[["socket",[],["mod.rs"]]],["mod.rs","packet.rs"]]],["lib.rs"]],\
 "quirk_echo_launcher":["",[],["lib.rs"]],\
