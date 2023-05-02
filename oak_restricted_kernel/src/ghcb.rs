@@ -73,7 +73,7 @@ pub fn init(snp_enabled: bool) {
 ///
 /// This should be called as soon as the kernel memory has been initialised, as that would have
 /// caused the page to be marked as encrypted.
-pub fn reshare_ghcb<M: Mapper<Size4KiB>>(mapper: &mut M) {
+pub fn reshare_ghcb<M: Mapper<Size4KiB>>(mapper: &M) {
     let ghcb_page = get_ghcb_page();
     // Safety: we only change the encrypted flag, all other flags for the GHCB pages are as they
     // were set during the kernel memory initialisation.
@@ -106,7 +106,7 @@ fn init_ghcb_early(snp_enabled: bool) -> GhcbProtocol<'static, Ghcb> {
     let ghcb = unsafe { &mut GHCB_WRAPPER.ghcb };
 
     let ghcb_page = get_ghcb_page();
-    let mut mapper = get_identity_mapped_encrypted_page_table();
+    let mapper = get_identity_mapped_encrypted_page_table();
     // Safety: we only remove the encrypted bit as the initial pages created by the stage 0 firmware
     // are only marked as present and writable, and possibly encrypted.
     unsafe {

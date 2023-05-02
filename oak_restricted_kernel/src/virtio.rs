@@ -57,8 +57,8 @@ pub fn get_vsock_channel<A: Allocator>(
     use crate::PAGE_TABLES;
 
     let vsock = oak_virtio::vsock::VSock::find_and_configure_device(
-        |vaddr: VirtAddr| PAGE_TABLES.get().unwrap().lock().translate_virtual(vaddr),
-        |paddr: PhysAddr| PAGE_TABLES.get().unwrap().lock().translate_physical(paddr),
+        |vaddr: VirtAddr| PAGE_TABLES.get().unwrap().translate_virtual(vaddr),
+        |paddr: PhysAddr| PAGE_TABLES.get().unwrap().translate_physical(paddr),
         alloc,
     )
     .expect("couldn't configure PCI virtio vsock device");

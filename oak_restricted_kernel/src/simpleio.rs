@@ -40,7 +40,7 @@ impl<'a, A: Allocator> SimpleIoChannel<'a, A> {
         };
         let device = SimpleIo::new_with_defaults(
             io_port_factory,
-            |vaddr: VirtAddr| PAGE_TABLES.get().unwrap().lock().translate_virtual(vaddr),
+            |vaddr: VirtAddr| PAGE_TABLES.get().unwrap().translate_virtual(vaddr),
             alloc,
         )
         .expect("couldn't create IO device");
