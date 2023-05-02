@@ -118,17 +118,15 @@ Wasm modules and a client for the Application, then run them all, with log
 output ending something like the following:
 
 ```log
-        PASS [   0.003s] oak_functions_launcher lookup::test_chunk_up_lookup_data_empty
-        PASS [   0.003s] oak_functions_launcher lookup::test_chunk_up_lookup_data_exceed_bound
-        PASS [   0.003s] oak_functions_launcher lookup::test_chunk_up_lookup_data_in_bound
-        PASS [  50.348s] oak_functions_launcher::integration_test test_launcher_looks_up_key
-        PASS [   1.260s] oak_functions_launcher::integration_test test_load_large_lookup_data
-        SLOW [> 60.000s] oak_functions_launcher::integration_test test_launcher_echo_virtual
-        SLOW [> 60.000s] oak_functions_launcher::integration_test test_launcher_key_value_lookup_virtual
+        PASS [   0.007s] oak_functions_launcher lookup::test_chunk_up_lookup_data_empty
+        PASS [   0.007s] oak_functions_launcher lookup::test_chunk_up_lookup_data_exceed_bound
+        PASS [   0.007s] oak_functions_launcher lookup::test_chunk_up_lookup_data_in_bound
+        PASS [   1.472s] oak_functions_launcher::integration_test test_launcher_looks_up_key
+        PASS [   1.472s] oak_functions_launcher::integration_test test_load_large_lookup_data
+        PASS [  49.419s] oak_functions_launcher::integration_test test_launcher_echo_virtual
+        PASS [  49.425s] oak_functions_launcher::integration_test test_launcher_key_value_lookup_virtual
         SLOW [> 60.000s] oak_functions_launcher::integration_test test_launcher_weather_lookup_virtual
-        LEAK [ 103.272s] oak_functions_launcher::integration_test test_launcher_key_value_lookup_virtual
-        LEAK [ 103.278s] oak_functions_launcher::integration_test test_launcher_echo_virtual
-        LEAK [ 109.041s] oak_functions_launcher::integration_test test_launcher_weather_lookup_virtual
+        PASS [ 115.656s] oak_functions_launcher::integration_test test_launcher_weather_lookup_virtual
 ------------
      Summary [ 109.045s] 8 tests run: 8 passed (3 slow, 3 leaky), 1 skipped
 ```
