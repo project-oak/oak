@@ -34,7 +34,7 @@ pub async fn run_step(step: Step) {
     assert!(result.success());
 }
 
-/// Thin wrapper around an inner `Running` that drops the inner when dropped.
+/// Thin wrapper around an inner `Running` that kills the inner `Running` when dropped.
 pub struct BackgroundStep {
     pub inner: Box<dyn Running>,
 }
