@@ -46,7 +46,9 @@
     // Hide git lens artifacts
     "gitlens.showWhatsNewAfterUpgrades": false,
     // Hide git lens artifacts
-    "gitlens.currentLine.enabled": false
+    "gitlens.currentLine.enabled": false,
+    // Hide git lens artifacts
+    "gitlens.codeLens.enabled": false
   },
   // Ensure that the workspace is mounted consistently with the `/docker_run` script.
   // See https://code.visualstudio.com/docs/remote/containers-advanced#_changing-the-default-source-code-mount.
