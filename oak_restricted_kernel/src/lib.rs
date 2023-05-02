@@ -70,12 +70,7 @@ use crate::{
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 use alloc::{alloc::Allocator, boxed::Box};
-use core::{
-    marker::Sync,
-    ops::{Deref, DerefMut},
-    panic::PanicInfo,
-    str::FromStr,
-};
+use core::{marker::Sync, panic::PanicInfo, str::FromStr};
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
@@ -103,9 +98,8 @@ pub static FRAME_ALLOCATOR: Spinlock<PhysicalMemoryAllocator<4096>> =
 pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
 
 /// Active page tables.
-pub static PAGE_TABLES: OnceCell<
-    Spinlock<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>>,
-> = OnceCell::new();
+pub static PAGE_TABLES: OnceCell<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>> =
+    OnceCell::new();
 
 /// Allocator for long-lived pages in the kernel.
 pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
@@ -166,7 +160,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     // Note: `info` will not be valid after calling this!
     if PAGE_TABLES
-        .set(Spinlock::new(mm::init_paging(program_headers).unwrap()))
+        .set(mm::init_paging(program_headers).unwrap())
         .is_err()
     {
         panic!("couldn't initialize page tables");
@@ -179,7 +173,6 @@ pub fn start_kernel(info: &BootParams) -> ! {
         (PAGE_TABLES
             .get()
             .unwrap()
-            .lock()
             .translate_physical(PhysAddr::new(info as *const _ as u64))
             .unwrap()
             .as_ptr() as *const BootParams)
@@ -188,17 +181,17 @@ pub fn start_kernel(info: &BootParams) -> ! {
     };
 
     if sev_es_enabled {
-        let mut mapper = PAGE_TABLES.get().unwrap().lock();
+        let mapper = PAGE_TABLES.get().unwrap();
         // Now that the page tables have been updated, we have to re-share the GHCB with the
         // hypervisor.
-        ghcb::reshare_ghcb(mapper.deref_mut());
+        ghcb::reshare_ghcb(mapper);
         if sev_snp_enabled {
             // We must also initialise the CPUID and secrets pages and the guest message encryptor
             // when SEV-SNP is active. Panicking is OK at this point, because these pages are
             // required to support the full features and we don't want to run without them.
             init_snp_pages(
                 snp_pages.expect("missing SNP CPUID and secrets pages"),
-                mapper.deref(),
+                mapper,
             );
             snp::init_guest_message_encryptor();
         }
@@ -209,7 +202,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let guest_host_frames = FRAME_ALLOCATOR.lock().allocate_contiguous(2).unwrap();
 
     let guest_host_pages = {
-        let pt = PAGE_TABLES.get().unwrap().lock();
+        let pt = PAGE_TABLES.get().unwrap();
         Page::range(
             pt.translate_physical_frame(guest_host_frames.start)
                 .unwrap(),
@@ -232,13 +225,8 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // initialization code and thus there can be no concurrent access.
     if GUEST_HOST_HEAP
         .set(
-            unsafe {
-                memory::init_guest_host_heap(
-                    guest_host_pages,
-                    PAGE_TABLES.get().unwrap().lock().deref_mut(),
-                )
-            }
-            .unwrap(),
+            unsafe { memory::init_guest_host_heap(guest_host_pages, PAGE_TABLES.get().unwrap()) }
+                .unwrap(),
         )
         .is_err()
     {

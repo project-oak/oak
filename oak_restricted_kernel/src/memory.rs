@@ -76,7 +76,7 @@ impl GrowableHeap {
             .allocate_frame()
             .ok_or("failed to allocate memory for kernel heap")?;
 
-        let mut mapper = PAGE_TABLES.get().unwrap().lock();
+        let mapper = PAGE_TABLES.get().unwrap();
 
         // Safety: if the page is already mapped, then we'll get an error and thus we won't
         // overwrite any existing mappings, Otherwise, creating a new mapping is safe as
@@ -195,7 +195,7 @@ pub fn init_kernel_heap(range: PageRange<Size2MiB>) -> Result<(), &'static str> 
 /// table flags for pages in that range.
 pub unsafe fn init_guest_host_heap<S: PageSize, M: Mapper<S>>(
     pages: PageRange<S>,
-    mapper: &mut M,
+    mapper: &M,
 ) -> Result<LockedHeap, FlagUpdateError> {
     for page in pages {
         mapper

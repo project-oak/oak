@@ -134,7 +134,7 @@ impl From<PageTableFlags> for BasePageTableFlags {
 /// encryption.
 pub trait Mapper<S: PageSize> {
     unsafe fn map_to_with_table_flags(
-        &mut self,
+        &self,
         page: Page<S>,
         frame: PhysFrame<S>,
         flags: PageTableFlags,
@@ -146,8 +146,7 @@ pub trait Mapper<S: PageSize> {
     /// # Safety
     ///
     /// No checks are done whether the page is actually in use or not.
-    unsafe fn unmap(&mut self, page: Page<S>)
-        -> Result<(PhysFrame<S>, MapperFlush<S>), UnmapError>;
+    unsafe fn unmap(&self, page: Page<S>) -> Result<(PhysFrame<S>, MapperFlush<S>), UnmapError>;
 
     /// Changes the flags on a page table entry by unmapping and remapping it.
     ///
@@ -157,7 +156,7 @@ pub trait Mapper<S: PageSize> {
     /// failures, e.g. by setting the `NO_EXECUTE` bit on pages that contain your code or removing
     /// `WRITABLE` from the page that contains your stack.
     unsafe fn update_flags(
-        &mut self,
+        &self,
         page: Page<S>,
         flags: PageTableFlags,
     ) -> Result<MapperFlush<S>, FlagUpdateError>;
@@ -348,7 +347,6 @@ pub fn allocate_stack() -> VirtAddr {
         PAGE_TABLES
             .get()
             .unwrap()
-            .lock()
             .map_to_with_table_flags(
                 stack_page,
                 frame,

@@ -54,8 +54,7 @@ pub fn get_attestation(report_data: [u8; REPORT_DATA_SIZE]) -> anyhow::Result<At
 
     let translator = PAGE_TABLES
         .get()
-        .ok_or_else(|| anyhow::anyhow!("address translator is not initialized"))?
-        .lock();
+        .ok_or_else(|| anyhow::anyhow!("address translator is not initialized"))?;
     let request_address = translator
         .translate_virtual(VirtAddr::from_ptr(
             request_message.as_ref() as *const GuestMessage
