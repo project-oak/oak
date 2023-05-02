@@ -17,7 +17,7 @@
     "zxh404.vscode-proto3",
     "rust-lang.rust-analyzer",
     "fabiospampinato.vscode-open-in-github",
-    "waderyan.gitblame"
+    "eamodio.gitlens"
   ],
   "mounts": [
     // Crosvm wants access to syslog.
@@ -41,6 +41,12 @@
     "rust-analyzer.serverPath": "rust-analyzer",
     // Ensure protobuf generated files are loaded correctly.
     "rust-analyzer.cargo.loadOutDirsFromCheck": true
+    // Hide git lens artifacts
+    "gitlens.showWelcomeOnInstall": false,
+    // Hide git lens artifacts
+    "gitlens.showWhatsNewAfterUpgrades": false,
+    // Hide git lens artifacts
+    "gitlens.currentLine.enabled": false
   },
   // Ensure that the workspace is mounted consistently with the `/docker_run` script.
   // See https://code.visualstudio.com/docs/remote/containers-advanced#_changing-the-default-source-code-mount.
