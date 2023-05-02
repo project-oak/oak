@@ -40,7 +40,7 @@
     // Use the `rust-analyzer` binary installed in the Docker image.
     "rust-analyzer.serverPath": "rust-analyzer",
     // Ensure protobuf generated files are loaded correctly.
-    "rust-analyzer.cargo.loadOutDirsFromCheck": true
+    "rust-analyzer.cargo.loadOutDirsFromCheck": true,
     // Hide git lens artifacts
     "gitlens.showWelcomeOnInstall": false,
     // Hide git lens artifacts
