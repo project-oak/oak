@@ -78,9 +78,9 @@ impl InvocationChannel {
     }
 
     pub fn read_message<M: message::Message>(&mut self) -> anyhow::Result<M> {
-        // `encoded_message` will contain the full message we are going to read. Instead of
-        // allocating separate buffers and copying data into `encoded_message`, we will ensure that
-        // `encoded_message` has enough capacity. There will be at least one frame, so we start with
+        // `message_buffer` will contain the full message we are going to read. Instead of
+        // allocating separate buffers and copying data into `message_buffer`, we will ensure that
+        // `message_buffer` has enough capacity. There will be at least one frame, so we start with
         // the maximum size of a single frame as initial capacity.
         let mut message_buffer = BytesMut::with_capacity(4096);
         let first_frame = self
