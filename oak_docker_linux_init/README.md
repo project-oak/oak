@@ -17,7 +17,7 @@ to use
 **Note:** these steps assume that the commands will be executed from the project
 root.
 
-## Prepare the initial RAM disk (initramfs)
+## Prepare the initial RAM disk (initramfs) and extract kernel
 
 To run a Docker image on top of stage0 firmware binary, the key idea is to
 extract the filesystem from the Docker image and package it either as an
@@ -59,90 +59,30 @@ from the Docker image.
 If the Docker image requires drivers and additional setup, we can have custom
 Docker launcher that is packaged as an initramfs image and then launch the
 docker container. We will use an [Alpine Linux](https://www.alpinelinux.org/)
-distribution for the purposes of this prototype. Ideally, we want to implement
-the Docker launcher from scratch and build a custom Linux kernel with all
-drivers, but the Alpine Linux distribution will help illustrate and derisk the
-changes needed to support Docker on top of Oak stage0.
+distribution (packaged as a Docker image) for the purposes of this prototype.
+Ideally, we want to implement the Docker launcher from scratch and build a
+custom Linux kernel with all drivers, but the Alpine Linux distribution will
+help illustrate and derisk the changes needed to support Docker on top of Oak
+stage0.
 
-We will need the following packages from
-[Alpine Linux Downloads](https://www.alpinelinux.org/downloads/) Page:
-
-- [Alpine Minirootfs](https://dl-cdn.alpinelinux.org/alpine/v3.17/releases/x86_64/alpine-minirootfs-3.17.3-x86_64.tar.gz):
-  for an initial filesystem.
-- [Alpine Netboot](https://dl-cdn.alpinelinux.org/alpine/v3.17/releases/x86_64/alpine-netboot-3.17.3-x86_64.tar.gz):
-  for a Linux kernel and drivers.
-
-Download the necesary files:
-
-```bash
-OAK_DOCKER_PREP_DIR=$(mktemp -d)
-MINIROOTFS_TGZ="${OAK_DOCKER_PREP_DIR}/alpine-minirootfs.tar.gz"
-wget https://dl-cdn.alpinelinux.org/alpine/v3.17/releases/x86_64/alpine-minirootfs-3.17.3-x86_64.tar.gz \
- -O "${MINIROOTFS_TGZ}"
-
-NETBOOT_TGZ="${OAK_DOCKER_PREP_DIR}/alpine-netboot.tar.gz"
-wget https://dl-cdn.alpinelinux.org/alpine/v3.17/releases/x86_64/alpine-netboot-3.17.3-x86_64.tar.gz \
- -O "${NETBOOT_TGZ}"
-
-EXTRACT_VMLINUX="${OAK_DOCKER_PREP_DIR}/extract-vmlinux.sh"
-wget https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/scripts/extract-vmlinux \
- -O "${EXTRACT_VMLINUX}"
-
-```
-
-Extract the initramfs from netboot:
-
-```bash
-NETBOOT_INITRAMFS="${OAK_DOCKER_PREP_DIR}/netboot-initramfs"
-tar xzvf "${NETBOOT_TGZ}" boot/initramfs-virt -O > "${NETBOOT_INITRAMFS}"
-```
-
-Also extract the corresponding compressed kernel and extract the vmlinux file.
-You will need the
-[extract-vmlinux](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/plain/scripts/extract-vmlinux)
-script from the kernel source code.
-
-```bash
-NETBOOT_COMPRESSED_KERNEL="${OAK_DOCKER_PREP_DIR}/netboot-vmlinuz"
-NETBOOT_VMLINUX="${OAK_DOCKER_PREP_DIR}/netboot-vmlinux"
-
-tar xzvf "${NETBOOT_TGZ}" boot/vmlinuz-virt -O > "${NETBOOT_COMPRESSED_KERNEL}"
-sh "${EXTRACT_VMLINUX}" "${NETBOOT_COMPRESSED_KERNEL}" > "${NETBOOT_VMLINUX}"
-```
-
-You might want to copy the kernel to the `bin/` at the root of Oak's workspace
-to use as the Linux kernel when launching QEMU later:
-
-```bash
-cp ${NETBOOT_VMLINUX} bin/vmlinux
-```
-
-Note that you need to extract the kernel from Alpine's distribution so that it
-will be compatible with the drivers we will extract from the Alpine's initramfs
-file.
-
-Build the initramfs with minirootfs, drivers, and a Docker image
-([`tensorflow/tensorflow`](https://hub.docker.com/r/tensorflow/tensorflow/)
-here):
+To extract the Linux kernel and prepare an initramfs with the necessary drivers,
+minirootfs, and a working shell, use the following command:
 
 ```bash
 sh oak_docker_linux_init/prepare_docker_launcher_initramfs.sh \
-  -k ${NETBOOT_VMLINUX} \
-  -i ${NETBOOT_INITRAMFS} \
-  -m ${MINIROOTFS_TGZ} \
+  -k bin/vmlinux \
+  -o bin/initramfs
+```
+
+To prepare an initramfs that launches a specific Docker image (e.g.,
+[`tensorflow/tensorflow`](https://hub.docker.com/r/tensorflow/tensorflow/)), you
+can use the `-d` option to specify the docker image as follows:
+
+```bash
+sh oak_docker_linux_init/prepare_docker_launcher_initramfs.sh \
+  -k bin/vmlinux \
   -o bin/initramfs \
   -d tensorflow/tensorflow
-```
-
-To create an initramfs that will simply boot into a working shell, you can skip
-the `-d` option:
-
-```bash
-sh oak_docker_linux_init/prepare_docker_launcher_initramfs.sh \
-  -k ${NETBOOT_VMLINUX} \
-  -i ${NETBOOT_INITRAMFS} \
-  -m ${MINIROOTFS_TGZ} \
-  -o bin/initramfs
 ```
 
 ## Build the Stage 0 Firmware image
@@ -198,9 +138,7 @@ Build initramfs:
 
 ```bash
 sh oak_docker_linux_init/prepare_docker_launcher_initramfs.sh \
-  -k ${NETBOOT_VMLINUX} \
-  -i ${NETBOOT_INITRAMFS} \
-  -m ${MINIROOTFS_TGZ} \
+  -k bin/vmlinux \
   -o bin/initramfs \
   -d tensorflow/tensorflow:nightly-jupyter
 ```
