@@ -40,13 +40,15 @@
     // Use the `rust-analyzer` binary installed in the Docker image.
     "rust-analyzer.serverPath": "rust-analyzer",
     // Ensure protobuf generated files are loaded correctly.
-    "rust-analyzer.cargo.loadOutDirsFromCheck": true
+    "rust-analyzer.cargo.loadOutDirsFromCheck": true,
     // Hide git lens artifacts
     "gitlens.showWelcomeOnInstall": false,
     // Hide git lens artifacts
     "gitlens.showWhatsNewAfterUpgrades": false,
     // Hide git lens artifacts
-    "gitlens.currentLine.enabled": false
+    "gitlens.currentLine.enabled": false,
+    // Hide git lens artifacts
+    "gitlens.codeLens.enabled": false
   },
   // Ensure that the workspace is mounted consistently with the `/docker_run` script.
   // See https://code.visualstudio.com/docs/remote/containers-advanced#_changing-the-default-source-code-mount.
