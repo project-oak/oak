@@ -74,8 +74,7 @@ use core::{marker::Sync, panic::PanicInfo, str::FromStr};
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
-    encrypted_mapper::{EncryptedPageTable, PhysOffset},
-    frame_allocator::PhysicalMemoryAllocator,
+    frame_allocator::PhysicalMemoryAllocator, page_tables::RootPageTable,
     virtual_address_allocator::VirtualAddressAllocator,
 };
 use oak_channel::Channel;
@@ -85,7 +84,7 @@ use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignm
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
-    structures::paging::{MappedPageTable, Page, Size2MiB},
+    structures::paging::{Page, Size2MiB},
     PhysAddr, VirtAddr,
 };
 
@@ -98,8 +97,7 @@ pub static FRAME_ALLOCATOR: Spinlock<PhysicalMemoryAllocator<4096>> =
 pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
 
 /// Active page tables.
-pub static PAGE_TABLES: OnceCell<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>> =
-    OnceCell::new();
+pub static PAGE_TABLES: OnceCell<RootPageTable> = OnceCell::new();
 
 /// Allocator for long-lived pages in the kernel.
 pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =

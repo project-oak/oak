@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
-use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset};
+use self::{
+    encrypted_mapper::{EncryptedPageTable, MemoryEncryption},
+    page_tables::RootPageTable,
+};
 use crate::{FRAME_ALLOCATOR, PAGE_TABLES, VMA_ALLOCATOR};
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
@@ -28,8 +31,8 @@ use x86_64::{
     },
     structures::paging::{
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
-        FrameAllocator, MappedPageTable, Page, PageSize, PageTable,
-        PageTableFlags as BasePageTableFlags, PhysFrame, Size2MiB,
+        FrameAllocator, Page, PageSize, PageTable, PageTableFlags as BasePageTableFlags, PhysFrame,
+        Size2MiB,
     },
     PhysAddr, VirtAddr,
 };
@@ -251,9 +254,7 @@ pub fn init(memory_map: &[BootE820Entry], program_headers: &[ProgramHeader]) {
 /// |                     |          |                     |         | physical memory             |
 /// | FFFF_8820_0000_0000 | ~-120 TB | FFFF_FFFF_7FFF_FFFF | ~120 TB | ... unused hole             |
 /// | FFFF_FFFF_8000_0000 |    -2 GB | FFFF_FFFF_FFFF_FFFF |    2 GB | Kernel code                 |
-pub fn init_paging(
-    program_headers: &[ProgramHeader],
-) -> Result<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>, &'static str> {
+pub fn init_paging(program_headers: &[ProgramHeader]) -> Result<RootPageTable, &'static str> {
     // Safety: this expects the frame allocator to be initialized and the memory region it's handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     // This reference will no longer be valid after we reload the page tables!
@@ -316,11 +317,7 @@ pub fn init_paging(
     let pml4 =
         unsafe { &mut *(DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr() };
 
-    Ok(EncryptedPageTable::new(
-        pml4,
-        DIRECT_MAPPING_OFFSET,
-        encrypted,
-    ))
+    Ok(RootPageTable::new(pml4, DIRECT_MAPPING_OFFSET, encrypted))
 }
 
 /// Allocates memory usable as a stack.
