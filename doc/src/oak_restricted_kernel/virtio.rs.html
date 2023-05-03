@@ -127,8 +127,8 @@
     <span class="kw">use </span><span class="kw">crate</span>::PAGE_TABLES;
 
     <span class="kw">let </span>vsock = oak_virtio::vsock::VSock::find_and_configure_device(
-        |vaddr: VirtAddr| PAGE_TABLES.get().unwrap().lock().translate_virtual(vaddr),
-        |paddr: PhysAddr| PAGE_TABLES.get().unwrap().lock().translate_physical(paddr),
+        |vaddr: VirtAddr| PAGE_TABLES.get().unwrap().translate_virtual(vaddr),
+        |paddr: PhysAddr| PAGE_TABLES.get().unwrap().translate_physical(paddr),
         alloc,
     )
     .expect(<span class="string">&quot;couldn&#39;t configure PCI virtio vsock device&quot;</span>);

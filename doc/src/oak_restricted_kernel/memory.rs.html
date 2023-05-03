@@ -298,7 +298,7 @@
             .allocate_frame()
             .ok_or(<span class="string">&quot;failed to allocate memory for kernel heap&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span><span class="kw-2">mut </span>mapper = PAGE_TABLES.get().unwrap().lock();
+        <span class="kw">let </span>mapper = PAGE_TABLES.get().unwrap();
 
         <span class="comment">// Safety: if the page is already mapped, then we&#39;ll get an error and thus we won&#39;t
         // overwrite any existing mappings, Otherwise, creating a new mapping is safe as
@@ -417,7 +417,7 @@
 /// table flags for pages in that range.
 </span><span class="kw">pub unsafe fn </span>init_guest_host_heap&lt;S: PageSize, M: Mapper&lt;S&gt;&gt;(
     pages: PageRange&lt;S&gt;,
-    mapper: <span class="kw-2">&amp;mut </span>M,
+    mapper: <span class="kw-2">&amp;</span>M,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;LockedHeap, FlagUpdateError&gt; {
     <span class="kw">for </span>page <span class="kw">in </span>pages {
         mapper

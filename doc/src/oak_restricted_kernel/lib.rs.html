@@ -339,18 +339,6 @@
 <a href="#339" id="339">339</a>
 <a href="#340" id="340">340</a>
 <a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
-<a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
-<a href="#352" id="352">352</a>
-<a href="#353" id="353">353</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -423,12 +411,7 @@
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 <span class="kw">use </span>alloc::{alloc::Allocator, boxed::Box};
-<span class="kw">use </span>core::{
-    marker::Sync,
-    ops::{Deref, DerefMut},
-    panic::PanicInfo,
-    str::FromStr,
-};
+<span class="kw">use </span>core::{marker::Sync, panic::PanicInfo, str::FromStr};
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>log::{error, info};
 <span class="kw">use </span>mm::{
@@ -456,9 +439,8 @@
 </span><span class="kw">pub static </span>GUEST_HOST_HEAP: OnceCell&lt;LockedHeap&gt; = OnceCell::new();
 
 <span class="doccomment">/// Active page tables.
-</span><span class="kw">pub static </span>PAGE_TABLES: OnceCell&lt;
-    Spinlock&lt;EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;static</span>, PhysOffset&gt;&gt;&gt;,
-&gt; = OnceCell::new();
+</span><span class="kw">pub static </span>PAGE_TABLES: OnceCell&lt;EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;static</span>, PhysOffset&gt;&gt;&gt; =
+    OnceCell::new();
 
 <span class="doccomment">/// Allocator for long-lived pages in the kernel.
 </span><span class="kw">pub static </span>VMA_ALLOCATOR: Spinlock&lt;VirtualAddressAllocator&lt;Size2MiB&gt;&gt; =
@@ -519,7 +501,7 @@
 
     <span class="comment">// Note: `info` will not be valid after calling this!
     </span><span class="kw">if </span>PAGE_TABLES
-        .set(Spinlock::new(mm::init_paging(program_headers).unwrap()))
+        .set(mm::init_paging(program_headers).unwrap())
         .is_err()
     {
         <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t initialize page tables&quot;</span>);
@@ -532,7 +514,6 @@
         (PAGE_TABLES
             .get()
             .unwrap()
-            .lock()
             .translate_physical(PhysAddr::new(info <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64))
             .unwrap()
             .as_ptr() <span class="kw">as </span><span class="kw-2">*const </span>BootParams)
@@ -541,17 +522,17 @@
     };
 
     <span class="kw">if </span>sev_es_enabled {
-        <span class="kw">let </span><span class="kw-2">mut </span>mapper = PAGE_TABLES.get().unwrap().lock();
+        <span class="kw">let </span>mapper = PAGE_TABLES.get().unwrap();
         <span class="comment">// Now that the page tables have been updated, we have to re-share the GHCB with the
         // hypervisor.
-        </span>ghcb::reshare_ghcb(mapper.deref_mut());
+        </span>ghcb::reshare_ghcb(mapper);
         <span class="kw">if </span>sev_snp_enabled {
             <span class="comment">// We must also initialise the CPUID and secrets pages and the guest message encryptor
             // when SEV-SNP is active. Panicking is OK at this point, because these pages are
             // required to support the full features and we don&#39;t want to run without them.
             </span>init_snp_pages(
                 snp_pages.expect(<span class="string">&quot;missing SNP CPUID and secrets pages&quot;</span>),
-                mapper.deref(),
+                mapper,
             );
             snp::init_guest_message_encryptor();
         }
@@ -562,7 +543,7 @@
     </span><span class="kw">let </span>guest_host_frames = FRAME_ALLOCATOR.lock().allocate_contiguous(<span class="number">2</span>).unwrap();
 
     <span class="kw">let </span>guest_host_pages = {
-        <span class="kw">let </span>pt = PAGE_TABLES.get().unwrap().lock();
+        <span class="kw">let </span>pt = PAGE_TABLES.get().unwrap();
         Page::range(
             pt.translate_physical_frame(guest_host_frames.start)
                 .unwrap(),
@@ -585,13 +566,8 @@
     // initialization code and thus there can be no concurrent access.
     </span><span class="kw">if </span>GUEST_HOST_HEAP
         .set(
-            <span class="kw">unsafe </span>{
-                memory::init_guest_host_heap(
-                    guest_host_pages,
-                    PAGE_TABLES.get().unwrap().lock().deref_mut(),
-                )
-            }
-            .unwrap(),
+            <span class="kw">unsafe </span>{ memory::init_guest_host_heap(guest_host_pages, PAGE_TABLES.get().unwrap()) }
+                .unwrap(),
         )
         .is_err()
     {

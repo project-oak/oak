@@ -279,7 +279,7 @@
 
     <span class="kw">let </span>pages = {
         <span class="comment">// This critical section is rather long...
-        </span><span class="kw">let </span><span class="kw-2">mut </span>pt = PAGE_TABLES.get().unwrap().lock();
+        </span><span class="kw">let </span>pt = PAGE_TABLES.get().unwrap();
 
         <span class="comment">// Now, find a gap in the page tables that satisifies the following:
         //  - in the lower half of virtual memory (user space)

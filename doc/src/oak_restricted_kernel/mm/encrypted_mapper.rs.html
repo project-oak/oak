@@ -777,6 +777,7 @@
 
 <span class="kw">use super</span>::{Mapper, PageTableFlags, Translator};
 <span class="kw">use </span>core::ops::DerefMut;
+<span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>x86_64::{
     structures::paging::{
         mapper::{
@@ -889,7 +890,7 @@
 <span class="kw">pub struct </span>EncryptedPageTable&lt;N: MapperAllSizes&gt; {
     encryption: MemoryEncryption,
     offset: VirtAddr,
-    inner: N,
+    inner: Spinlock&lt;N&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;a</span>, PhysOffset&gt;&gt; {
@@ -897,7 +898,9 @@
         <span class="self">Self </span>{
             encryption,
             offset,
-            inner: <span class="kw">unsafe </span>{ MappedPageTable::new(pml4, PhysOffset { offset, encryption }) },
+            inner: Spinlock::new(<span class="kw">unsafe </span>{
+                MappedPageTable::new(pml4, PhysOffset { offset, encryption })
+            }),
         }
     }
 
@@ -963,7 +966,7 @@
 
 <span class="kw">impl</span>&lt;S: PageSize, N: MapperAllSizes + BaseMapper&lt;S&gt;&gt; Mapper&lt;S&gt; <span class="kw">for </span>EncryptedPageTable&lt;N&gt; {
     <span class="kw">unsafe fn </span>map_to_with_table_flags(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         page: Page&lt;S&gt;,
         frame: PhysFrame&lt;S&gt;,
         flags: PageTableFlags,
@@ -976,7 +979,7 @@
             frame
         };
 
-        <span class="self">self</span>.inner.map_to_with_table_flags(
+        <span class="self">self</span>.inner.lock().map_to_with_table_flags(
             page,
             frame,
             flags.into(),
@@ -985,11 +988,8 @@
         )
     }
 
-    <span class="kw">unsafe fn </span>unmap(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        page: Page&lt;S&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(PhysFrame&lt;S&gt;, MapperFlush&lt;S&gt;), UnmapError&gt; {
-        <span class="kw">let </span>(frame, flush) = <span class="self">self</span>.inner.unmap(page)<span class="question-mark">?</span>;
+    <span class="kw">unsafe fn </span>unmap(<span class="kw-2">&amp;</span><span class="self">self</span>, page: Page&lt;S&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(PhysFrame&lt;S&gt;, MapperFlush&lt;S&gt;), UnmapError&gt; {
+        <span class="kw">let </span>(frame, flush) = <span class="self">self</span>.inner.lock().unmap(page)<span class="question-mark">?</span>;
         <span class="comment">// if the frame had the encrypted bit set, strip it
         </span><span class="kw">let </span>frame = PhysFrame::from_start_address(PhysAddr::new(
             frame.start_address().as_u64() &amp; !<span class="self">self</span>.encryption.bit(),
@@ -999,7 +999,7 @@
     }
 
     <span class="kw">unsafe fn </span>update_flags(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         page: Page&lt;S&gt;,
         flags: PageTableFlags,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;MapperFlush&lt;S&gt;, FlagUpdateError&gt; {
@@ -1032,7 +1032,7 @@
 <span class="kw">impl</span>&lt;N: MapperAllSizes + BaseTranslate&gt; Translator <span class="kw">for </span>EncryptedPageTable&lt;N&gt; {
     <span class="kw">fn </span>translate_virtual(<span class="kw-2">&amp;</span><span class="self">self</span>, addr: VirtAddr) -&gt; <span class="prelude-ty">Option</span>&lt;PhysAddr&gt; {
         <span class="prelude-val">Some</span>(PhysAddr::new(
-            <span class="self">self</span>.inner.translate_addr(addr)<span class="question-mark">?</span>.as_u64() &amp; !<span class="self">self</span>.encryption.bit(),
+            <span class="self">self</span>.inner.lock().translate_addr(addr)<span class="question-mark">?</span>.as_u64() &amp; !<span class="self">self</span>.encryption.bit(),
         ))
     }
 
@@ -1385,13 +1385,13 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>mapper_unencrypted() {
-        <span class="kw">let </span><span class="kw-2">mut </span>mapper = EncryptedPageTable {
+        <span class="kw">let </span>mapper = EncryptedPageTable {
             encryption: MemoryEncryption::NoEncryption,
             offset: VirtAddr::new(<span class="number">0x1234000</span>),
-            inner: FakeMapper {
+            inner: Spinlock::new(FakeMapper {
                 expected_phys_frame: PhysFrame::from_start_address(PhysAddr::new(<span class="number">0x12341000</span>))
                     .unwrap(),
-            },
+            }),
         };
 
         <span class="kw">unsafe </span>{
@@ -1414,15 +1414,15 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>mapper_encrypted() {
-        <span class="kw">let </span><span class="kw-2">mut </span>mapper = EncryptedPageTable {
+        <span class="kw">let </span>mapper = EncryptedPageTable {
             encryption: MemoryEncryption::Encrypted(<span class="number">51</span>),
             offset: VirtAddr::new(<span class="number">0x1234000</span>),
-            inner: FakeMapper {
+            inner: Spinlock::new(FakeMapper {
                 expected_phys_frame: PhysFrame::from_start_address(PhysAddr::new(
                     <span class="number">0x12341000 </span>+ (<span class="number">1u64 </span>&lt;&lt; <span class="number">51</span>),
                 ))
                 .unwrap(),
-            },
+            }),
         };
 
         <span class="kw">unsafe </span>{
@@ -1445,15 +1445,15 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>remap_encrypted() {
-        <span class="kw">let </span><span class="kw-2">mut </span>mapper = EncryptedPageTable {
+        <span class="kw">let </span>mapper = EncryptedPageTable {
             encryption: MemoryEncryption::Encrypted(<span class="number">51</span>),
             offset: VirtAddr::new(<span class="number">0x1234000</span>),
-            inner: FakeMapper {
+            inner: Spinlock::new(FakeMapper {
                 expected_phys_frame: PhysFrame::from_start_address(PhysAddr::new(
                     <span class="number">0x12341000 </span>+ (<span class="number">1u64 </span>&lt;&lt; <span class="number">51</span>),
                 ))
                 .unwrap(),
-            },
+            }),
         };
 
         <span class="kw">unsafe </span>{
@@ -1466,13 +1466,13 @@
                 .ignore();
         }
 
-        <span class="kw">let </span><span class="kw-2">mut </span>mapper = EncryptedPageTable {
+        <span class="kw">let </span>mapper = EncryptedPageTable {
             encryption: MemoryEncryption::Encrypted(<span class="number">51</span>),
             offset: VirtAddr::new(<span class="number">0x1234000</span>),
-            inner: FakeMapper {
+            inner: Spinlock::new(FakeMapper {
                 expected_phys_frame: PhysFrame::from_start_address(PhysAddr::new(<span class="number">0x12341000</span>))
                     .unwrap(),
-            },
+            }),
         };
 
         <span class="kw">unsafe </span>{
@@ -1488,13 +1488,13 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>remap_unencrypted() {
-        <span class="kw">let </span><span class="kw-2">mut </span>mapper = EncryptedPageTable {
+        <span class="kw">let </span>mapper = EncryptedPageTable {
             encryption: MemoryEncryption::NoEncryption,
             offset: VirtAddr::new(<span class="number">0x1234000</span>),
-            inner: FakeMapper {
+            inner: Spinlock::new(FakeMapper {
                 expected_phys_frame: PhysFrame::from_start_address(PhysAddr::new(<span class="number">0x12341000</span>))
                     .unwrap(),
-            },
+            }),
         };
 
         <span class="kw">unsafe </span>{

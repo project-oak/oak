@@ -363,8 +363,6 @@
 <a href="#363" id="363">363</a>
 <a href="#364" id="364">364</a>
 <a href="#365" id="365">365</a>
-<a href="#366" id="366">366</a>
-<a href="#367" id="367">367</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -501,7 +499,7 @@
 /// encryption.
 </span><span class="kw">pub trait </span>Mapper&lt;S: PageSize&gt; {
     <span class="kw">unsafe fn </span>map_to_with_table_flags(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         page: Page&lt;S&gt;,
         frame: PhysFrame&lt;S&gt;,
         flags: PageTableFlags,
@@ -513,8 +511,7 @@
     /// # Safety
     ///
     /// No checks are done whether the page is actually in use or not.
-    </span><span class="kw">unsafe fn </span>unmap(<span class="kw-2">&amp;mut </span><span class="self">self</span>, page: Page&lt;S&gt;)
-        -&gt; <span class="prelude-ty">Result</span>&lt;(PhysFrame&lt;S&gt;, MapperFlush&lt;S&gt;), UnmapError&gt;;
+    </span><span class="kw">unsafe fn </span>unmap(<span class="kw-2">&amp;</span><span class="self">self</span>, page: Page&lt;S&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(PhysFrame&lt;S&gt;, MapperFlush&lt;S&gt;), UnmapError&gt;;
 
     <span class="doccomment">/// Changes the flags on a page table entry by unmapping and remapping it.
     ///
@@ -524,7 +521,7 @@
     /// failures, e.g. by setting the `NO_EXECUTE` bit on pages that contain your code or removing
     /// `WRITABLE` from the page that contains your stack.
     </span><span class="kw">unsafe fn </span>update_flags(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         page: Page&lt;S&gt;,
         flags: PageTableFlags,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;MapperFlush&lt;S&gt;, FlagUpdateError&gt;;
@@ -715,7 +712,6 @@
         PAGE_TABLES
             .get()
             .unwrap()
-            .lock()
             .map_to_with_table_flags(
                 stack_page,
                 frame,

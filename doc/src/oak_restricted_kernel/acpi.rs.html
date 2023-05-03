@@ -424,8 +424,6 @@
 <a href="#424" id="424">424</a>
 <a href="#425" id="425">425</a>
 <a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -492,7 +490,6 @@
                 PAGE_TABLES
                     .get()
                     .unwrap()
-                    .lock()
                     .translate_physical(PhysAddr::new(physical_address <span class="kw">as </span>u64))
                     .unwrap()
                     .as_mut_ptr(),
@@ -639,7 +636,6 @@
         <span class="kw">let </span>virt_addr = PAGE_TABLES
             .get()
             .unwrap()
-            .lock()
             .translate_physical(PhysAddr::new(<span class="self">self</span>.address <span class="kw">as </span>u64))
             .unwrap();
         <span class="comment">// Safety: this address was specified in the ACPI tables by the firmware, so if the tables
