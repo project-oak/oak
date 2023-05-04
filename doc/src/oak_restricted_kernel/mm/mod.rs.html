@@ -360,9 +360,6 @@
 <a href="#360" id="360">360</a>
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
-<a href="#365" id="365">365</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -379,7 +376,10 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="self">self</span>::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset};
+</span><span class="kw">use </span><span class="self">self</span>::{
+    encrypted_mapper::{EncryptedPageTable, MemoryEncryption},
+    page_tables::RootPageTable,
+};
 <span class="kw">use crate</span>::{FRAME_ALLOCATOR, PAGE_TABLES, VMA_ALLOCATOR};
 <span class="kw">use </span>goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 <span class="kw">use </span>log::info;
@@ -393,8 +393,8 @@
     },
     structures::paging::{
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
-        FrameAllocator, MappedPageTable, Page, PageSize, PageTable,
-        PageTableFlags <span class="kw">as </span>BasePageTableFlags, PhysFrame, Size2MiB,
+        FrameAllocator, Page, PageSize, PageTable, PageTableFlags <span class="kw">as </span>BasePageTableFlags, PhysFrame,
+        Size2MiB,
     },
     PhysAddr, VirtAddr,
 };
@@ -616,9 +616,7 @@
 /// |                     |          |                     |         | physical memory             |
 /// | FFFF_8820_0000_0000 | ~-120 TB | FFFF_FFFF_7FFF_FFFF | ~120 TB | ... unused hole             |
 /// | FFFF_FFFF_8000_0000 |    -2 GB | FFFF_FFFF_FFFF_FFFF |    2 GB | Kernel code                 |
-</span><span class="kw">pub fn </span>init_paging(
-    program_headers: <span class="kw-2">&amp;</span>[ProgramHeader],
-) -&gt; <span class="prelude-ty">Result</span>&lt;EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;static</span>, PhysOffset&gt;&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>init_paging(program_headers: <span class="kw-2">&amp;</span>[ProgramHeader]) -&gt; <span class="prelude-ty">Result</span>&lt;RootPageTable, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// Safety: this expects the frame allocator to be initialized and the memory region it&#39;s handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     // This reference will no longer be valid after we reload the page tables!
@@ -681,11 +679,7 @@
     </span><span class="kw">let </span>pml4 =
         <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr() };
 
-    <span class="prelude-val">Ok</span>(EncryptedPageTable::new(
-        pml4,
-        DIRECT_MAPPING_OFFSET,
-        encrypted,
-    ))
+    <span class="prelude-val">Ok</span>(RootPageTable::new(pml4, DIRECT_MAPPING_OFFSET, encrypted))
 }
 
 <span class="doccomment">/// Allocates memory usable as a stack.

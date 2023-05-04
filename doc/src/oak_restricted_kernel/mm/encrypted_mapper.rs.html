@@ -697,66 +697,6 @@
 <a href="#697" id="697">697</a>
 <a href="#698" id="698">698</a>
 <a href="#699" id="699">699</a>
-<a href="#700" id="700">700</a>
-<a href="#701" id="701">701</a>
-<a href="#702" id="702">702</a>
-<a href="#703" id="703">703</a>
-<a href="#704" id="704">704</a>
-<a href="#705" id="705">705</a>
-<a href="#706" id="706">706</a>
-<a href="#707" id="707">707</a>
-<a href="#708" id="708">708</a>
-<a href="#709" id="709">709</a>
-<a href="#710" id="710">710</a>
-<a href="#711" id="711">711</a>
-<a href="#712" id="712">712</a>
-<a href="#713" id="713">713</a>
-<a href="#714" id="714">714</a>
-<a href="#715" id="715">715</a>
-<a href="#716" id="716">716</a>
-<a href="#717" id="717">717</a>
-<a href="#718" id="718">718</a>
-<a href="#719" id="719">719</a>
-<a href="#720" id="720">720</a>
-<a href="#721" id="721">721</a>
-<a href="#722" id="722">722</a>
-<a href="#723" id="723">723</a>
-<a href="#724" id="724">724</a>
-<a href="#725" id="725">725</a>
-<a href="#726" id="726">726</a>
-<a href="#727" id="727">727</a>
-<a href="#728" id="728">728</a>
-<a href="#729" id="729">729</a>
-<a href="#730" id="730">730</a>
-<a href="#731" id="731">731</a>
-<a href="#732" id="732">732</a>
-<a href="#733" id="733">733</a>
-<a href="#734" id="734">734</a>
-<a href="#735" id="735">735</a>
-<a href="#736" id="736">736</a>
-<a href="#737" id="737">737</a>
-<a href="#738" id="738">738</a>
-<a href="#739" id="739">739</a>
-<a href="#740" id="740">740</a>
-<a href="#741" id="741">741</a>
-<a href="#742" id="742">742</a>
-<a href="#743" id="743">743</a>
-<a href="#744" id="744">744</a>
-<a href="#745" id="745">745</a>
-<a href="#746" id="746">746</a>
-<a href="#747" id="747">747</a>
-<a href="#748" id="748">748</a>
-<a href="#749" id="749">749</a>
-<a href="#750" id="750">750</a>
-<a href="#751" id="751">751</a>
-<a href="#752" id="752">752</a>
-<a href="#753" id="753">753</a>
-<a href="#754" id="754">754</a>
-<a href="#755" id="755">755</a>
-<a href="#756" id="756">756</a>
-<a href="#757" id="757">757</a>
-<a href="#758" id="758">758</a>
-<a href="#759" id="759">759</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -784,7 +724,6 @@
             FlagUpdateError, MapToError, MapperAllSizes, MapperFlush, PageTableFrameMapping,
             UnmapError,
         },
-        page::PageRange,
         FrameAllocator, FrameDeallocator, MappedPageTable, Mapper <span class="kw">as </span>BaseMapper, Page, PageSize,
         PageTable, PhysFrame, Size4KiB, Translate <span class="kw">as </span>BaseTranslate,
     },
@@ -903,65 +842,6 @@
             }),
         }
     }
-
-    <span class="doccomment">/// Checks wheter all the pages in the range are unallocated.
-    ///
-    /// Even though the pages may be of arbitrary size, we check all 4KiB-aligned addresses in the
-    /// range, as the mappings may be done with a smaller page size.
-    ///
-    /// If we find an address with a valid mapping, we return the page which contains a valid
-    /// mapping.
-    </span><span class="kw">pub fn </span>is_unallocated&lt;S: PageSize&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, range: PageRange&lt;S&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Page&lt;S&gt;&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(item) = Page::&lt;Size4KiB&gt;::range(
-            Page::containing_address(range.start.start_address()),
-            Page::containing_address(range.end.start_address()),
-        )
-        .find(|page| <span class="self">self</span>.translate_virtual(page.start_address()).is_some())
-        {
-            <span class="comment">// We found a page that had a valid mapping in that range, bail out.
-            </span><span class="prelude-val">Err</span>(Page::&lt;S&gt;::containing_address(item.start_address()))
-        } <span class="kw">else </span>{
-            <span class="comment">// No valid mappings found, the whole range is unmapped!
-            </span><span class="prelude-val">Ok</span>(())
-        }
-    }
-
-    <span class="doccomment">/// Finds a range of unallocated pages of the requested size.
-    ///
-    /// Args:
-    ///   - start: the pages must start at, or after, `start`
-    ///   - count: number of pages to allocate
-    ///
-    /// Returns:
-    /// The range of unallocated pages, if there was a big enough unallocated gap in the virtual
-    /// address space. The range may start at exactly `start`.
-    </span><span class="kw">pub fn </span>find_unallocated_pages&lt;S: PageSize&gt;(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut </span>start: Page&lt;S&gt;,
-        count: usize,
-    ) -&gt; <span class="prelude-ty">Option</span>&lt;PageRange&lt;S&gt;&gt; {
-        <span class="comment">// This is highly inefficient, but it should be called rarely enough that it doesn&#39;t matter
-        // (famous last words...)
-        // We assume virtual addresses are 48 bits, with the gap in the middle.
-        </span><span class="kw">let </span>limit = Page::containing_address(<span class="kw">if </span>start.start_address().as_u64() &lt; u64::pow(<span class="number">2</span>, <span class="number">47</span>) {
-            VirtAddr::new(u64::pow(<span class="number">2</span>, <span class="number">47</span>) - <span class="number">1</span>)
-        } <span class="kw">else </span>{
-            VirtAddr::new(<span class="number">0xFFFF_FFFF_FFFF_FFFF </span>- <span class="number">1</span>)
-        });
-        <span class="kw">while </span>start &lt; limit {
-            <span class="kw">let </span>range = Page::range(start, start + count <span class="kw">as </span>u64);
-
-            <span class="comment">// If it turns out something in that range was allocated, we move forward to the page
-            // after that and try again.
-            </span><span class="kw">match </span><span class="self">self</span>.is_unallocated(range) {
-                <span class="prelude-val">Ok</span>(()) =&gt; <span class="kw">return </span><span class="prelude-val">Some</span>(range),
-                <span class="prelude-val">Err</span>(page) =&gt; start = page + <span class="number">1</span>,
-            }
-        }
-
-        <span class="comment">// given the size of the 64-bit address space, this should never happen
-        </span><span class="prelude-val">None
-    </span>}
 }
 
 <span class="kw">impl</span>&lt;S: PageSize, N: MapperAllSizes + BaseMapper&lt;S&gt;&gt; Mapper&lt;S&gt; <span class="kw">for </span>EncryptedPageTable&lt;N&gt; {
