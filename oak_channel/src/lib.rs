@@ -81,8 +81,8 @@ impl InvocationChannel {
         // `message_buffer` will contain the full message we are going to read. Instead of
         // allocating separate buffers and copying data into `message_buffer`, we will ensure that
         // `message_buffer` has enough capacity. There will be at least one frame, so we start with
-        // the maximum size of a single frame as initial capacity.
-        let mut message_buffer = BytesMut::with_capacity(4096);
+        // the maximum size of a single frame body as initial capacity.
+        let mut message_buffer = BytesMut::with_capacity(frame::MAX_BODY_SIZE);
         let first_frame = self
             .inner
             .read_frame(&mut message_buffer)
@@ -93,7 +93,7 @@ impl InvocationChannel {
         }
 
         if first_frame.flags.contains(frame::Flags::END) {
-            return Ok(M::decode(first_frame.body));
+            return Ok(M::decode(&message_buffer[..]));
         }
 
         // The length of the entire message is encoded in the body of the first frame. The
@@ -110,7 +110,7 @@ impl InvocationChannel {
         // This likely causes a copy of the pre-existing data, but we needed to read the first
         // frame to figure out how much space we need for the entire message. No more resizes
         // are going to happen from here.
-        message_buffer.reserve(message_length);
+        message_buffer.reserve(message_length - frame::MAX_BODY_SIZE);
 
         loop {
             let frame = self

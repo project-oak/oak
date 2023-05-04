@@ -47,6 +47,7 @@ static_assertions::assert_eq_size!(
 );
 static PADDING: &[u8] = &[0; PADDING_SIZE];
 
+// The maximum size of a frame, in bytes.
 pub const MAX_SIZE: usize = 4000;
 pub const MAX_BODY_SIZE: usize = MAX_SIZE - BODY_OFFSET;
 
@@ -122,7 +123,7 @@ impl Framed {
             // Lack of capacity indicates corrupted frames and causes panic.
             message_buffer.put_bytes(0x00, body_length);
             self.inner.read(&mut message_buffer[tail..])?;
-            message_buffer
+            &message_buffer[tail..]
         };
 
         Ok(Frame { flags, body })
