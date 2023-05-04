@@ -21,6 +21,7 @@ extern crate alloc;
 use crate::Channel;
 use alloc::{boxed::Box, format, vec::Vec};
 use bitflags::bitflags;
+use bytes::{BufMut, BytesMut};
 use core::borrow::BorrowMut;
 
 pub const PADDING_SIZE: usize = 4;
@@ -46,6 +47,7 @@ static_assertions::assert_eq_size!(
 );
 static PADDING: &[u8] = &[0; PADDING_SIZE];
 
+// The maximum size of a frame, in bytes.
 pub const MAX_SIZE: usize = 4000;
 pub const MAX_BODY_SIZE: usize = MAX_SIZE - BODY_OFFSET;
 
@@ -87,10 +89,10 @@ impl Framed {
         Self { inner: socket }
     }
 
-    pub fn read_frame<'a, F>(&mut self, allocate_fn: F) -> anyhow::Result<Frame<'a>>
-    where
-        F: FnOnce(usize) -> &'a mut [u8],
-    {
+    pub fn read_frame<'a>(
+        &mut self,
+        message_buffer: &'a mut BytesMut,
+    ) -> anyhow::Result<Frame<'a>> {
         {
             let mut padding_bytes = [0; PADDING_SIZE];
             self.inner.read(&mut padding_bytes)?;
@@ -117,9 +119,11 @@ impl Framed {
             let body_length: usize = length
                 .checked_sub(BODY_OFFSET)
                 .expect("body length underflow");
-            let body = allocate_fn(body_length);
-            self.inner.read(body)?;
-            body
+            let tail = message_buffer.len();
+            // Lack of capacity indicates corrupted frames and causes panic.
+            message_buffer.put_bytes(0x00, body_length);
+            self.inner.read(&mut message_buffer[tail..])?;
+            &message_buffer[tail..]
         };
 
         Ok(Frame { flags, body })

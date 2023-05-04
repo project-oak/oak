@@ -690,6 +690,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bitflags",
+ "bytes",
  "micro_rpc",
  "static_assertions",
 ]
