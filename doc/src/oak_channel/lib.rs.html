@@ -141,16 +141,6 @@
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -186,6 +176,7 @@
 <span class="kw">extern crate </span>alloc;
 <span class="kw">use </span>alloc::{boxed::Box, vec::Vec};
 <span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>bytes::BytesMut;
 
 <span class="kw">pub trait </span>Read {
     <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;mut </span>[u8]) -&gt; anyhow::Result&lt;()&gt;;
@@ -230,53 +221,45 @@
     }
 
     <span class="kw">pub fn </span>read_message&lt;M: message::Message&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;M&gt; {
-        <span class="comment">// `encoded_message` will contain the full message we are going to read. Instead of
-        // allocating separate buffers and copying data into `encoded_message`, we will ensure that
-        // `encoded_message` has enough space and pass mutable slices pointing into it to the
-        // `read_frame` calls.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>encoded_message: Vec&lt;u8&gt; = Vec::new();
+        <span class="comment">// `message_buffer` will contain the full message we are going to read. Instead of
+        // allocating separate buffers and copying data into `message_buffer`, we will ensure that
+        // `message_buffer` has enough capacity. There will be at least one frame, so we start with
+        // the maximum size of a single frame body as initial capacity.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>message_buffer = BytesMut::with_capacity(frame::MAX_BODY_SIZE);
         <span class="kw">let </span>first_frame = <span class="self">self
             </span>.inner
-            .read_frame(|new_len| {
-                <span class="comment">// encoded_message is initially empty, so we need to reserve space for the first
-                // frame
-                </span>encoded_message.resize(new_len, <span class="number">0</span>);
-                <span class="kw-2">&amp;mut </span>encoded_message[..]
-            })
+            .read_frame(<span class="kw-2">&amp;mut </span>message_buffer)
             .context(<span class="string">&quot;couldn&#39;t read frame&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>cursor = first_frame.body.len();
 
         <span class="kw">if </span>!first_frame.flags.contains(frame::Flags::START) {
             <span class="macro">anyhow::bail!</span>(<span class="string">&quot;expected a frame with the START flag set&quot;</span>);
         }
 
         <span class="kw">if </span>first_frame.flags.contains(frame::Flags::END) {
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(M::decode(first_frame.body));
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(M::decode(<span class="kw-2">&amp;</span>message_buffer[..]));
         }
 
-        <span class="kw">let </span>message_length: usize = {
-            <span class="kw">let </span><span class="kw-2">mut </span>message_length_bytes = [<span class="number">0u8</span>; message::LENGTH_SIZE];
-            <span class="kw">let </span>message_length_offset = message::LENGTH_OFFSET;
-            <span class="kw">let </span>message_length_range =
-                message_length_offset..(message_length_offset + message::LENGTH_SIZE);
-            message_length_bytes.copy_from_slice(<span class="kw-2">&amp;</span>first_frame.body[message_length_range]);
-            usize::try_from(message::Length::from_le_bytes(message_length_bytes))
+        <span class="comment">// The length of the entire message is encoded in the body of the first frame. The
+        // length includes the first frame. Decode it so the buffer needs to be resized/copied
+        // at most once.
+        </span><span class="kw">let </span>message_length: usize = {
+            <span class="kw">let </span><span class="kw-2">mut </span>buffer = [<span class="number">0u8</span>; message::LENGTH_SIZE];
+            <span class="kw">let </span>range = message::LENGTH_OFFSET..(message::LENGTH_OFFSET + message::LENGTH_SIZE);
+            buffer.copy_from_slice(<span class="kw-2">&amp;</span>first_frame.body[range]);
+            usize::try_from(message::Length::from_le_bytes(buffer))
                 .expect(<span class="string">&quot;couldn&#39;t convert message length to usize&quot;</span>)
         };
 
-        <span class="comment">// This *may* cause a copy of the pre-existing data, but we needed to read the first frame
-        // to figure out how much space we need for the rest of it.
-        </span>encoded_message.resize(message_length, <span class="number">0</span>);
+        <span class="comment">// This likely causes a copy of the pre-existing data, but we needed to read the first
+        // frame to figure out how much space we need for the entire message. No more resizes
+        // are going to happen from here.
+        </span>message_buffer.reserve(message_length - frame::MAX_BODY_SIZE);
 
-        <span class="comment">// `cursor` will point to the starting point of the data for the next frame; each
-        // iteration, we keep pusing it forward. As we&#39;re supposed to know the size of the
-        // message, at the very end of the loop `cursor` should point to the end of the vector.
-        </span><span class="kw">loop </span>{
+        <span class="kw">loop </span>{
             <span class="kw">let </span>frame = <span class="self">self
                 </span>.inner
-                .read_frame(|len| <span class="kw-2">&amp;mut </span>encoded_message[cursor..cursor + len])
+                .read_frame(<span class="kw-2">&amp;mut </span>message_buffer)
                 .context(<span class="string">&quot;couldn&#39;t read frame&quot;</span>)<span class="question-mark">?</span>;
-            cursor += frame.body.len();
 
             <span class="kw">if </span>frame.flags.contains(frame::Flags::START) {
                 <span class="macro">anyhow::bail!</span>(<span class="string">&quot;received two frames with the START flag set&quot;</span>);
@@ -286,11 +269,8 @@
                 <span class="kw">break</span>;
             }
         }
-        <span class="kw">if </span>cursor != encoded_message.len() {
-            <span class="macro">anyhow::bail!</span>(<span class="string">&quot;we received last frame before reading all of expected data&quot;</span>);
-        }
 
-        <span class="prelude-val">Ok</span>(M::decode(<span class="kw-2">&amp;</span>encoded_message[..]))
+        <span class="prelude-val">Ok</span>(M::decode(<span class="kw-2">&amp;</span>message_buffer[..]))
     }
 
     <span class="kw">pub fn </span>write_message&lt;M: message::Message&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, message: M) -&gt; anyhow::Result&lt;()&gt; {
