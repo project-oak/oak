@@ -52,6 +52,17 @@
 <a href="#52" id="52">52</a>
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -88,14 +99,25 @@
     <span class="macro">assert!</span>(result.success());
 }
 
+<span class="doccomment">/// Thin wrapper around an inner `Running` that kills the inner `Running` when dropped.
+</span><span class="kw">pub struct </span>BackgroundStep {
+    <span class="kw">pub </span>inner: Box&lt;<span class="kw">dyn </span>Running&gt;,
+}
+
+<span class="kw">impl </span>std::ops::Drop <span class="kw">for </span>BackgroundStep {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="self">self</span>.inner.kill();
+    }
+}
+
 <span class="doccomment">/// Runs a step in the background, and returns a reference to the running process.
 ///
-/// The running process is killed when the returned `Running` is dropped.
-</span><span class="kw">pub async fn </span>run_background(step: Box&lt;<span class="kw">dyn </span>Runnable&gt;) -&gt; Box&lt;<span class="kw">dyn </span>Running&gt; {
+/// The running process is killed when the returned `BackgroundStep` is dropped.
+</span><span class="kw">pub async fn </span>run_background(step: Box&lt;<span class="kw">dyn </span>Runnable&gt;) -&gt; BackgroundStep {
     <span class="kw">let </span><span class="kw-2">mut </span>running = step.run(<span class="kw-2">&amp;</span>opt_for_test());
     tokio::spawn(read_to_end(running.stdout()));
     tokio::spawn(read_to_end(running.stderr()));
-    running
+    BackgroundStep { inner: running }
 }
 
 <span class="doccomment">/// Whether to skip the test. For instance, GitHub Actions does not support KVM, so we cannot run
