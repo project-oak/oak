@@ -237,9 +237,9 @@ where
             )
             .expect("failed to define invoke in linker");
 
-        // One of our dependency requires this WASI function to be linked, but, to the best of our
-        // knowledge, does not use it at run time.
-        // As a workaround, we stub it for now.
+        // TODO(#3929): One of our dependency requires this WASI function to be linked, but, to the
+        // best of our knowledge, does not use it at run time. As a workaround, we stub it
+        // for now but we should remove them, if possible.
         linker
             .func_wrap(
                 "wasi_snapshot_preview1",
