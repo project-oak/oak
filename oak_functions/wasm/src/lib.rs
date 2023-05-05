@@ -236,6 +236,25 @@ where
                 },
             )
             .expect("failed to define invoke in linker");
+
+        // TODO(#3929): One of our dependency requires this WASI function to be linked, but, to the
+        // best of our knowledge, does not use it at run time. As a workaround, we stub it
+        // for now but we should remove them, if possible.
+        linker
+            .func_wrap(
+                "wasi_snapshot_preview1",
+                "clock_time_get",
+                |caller: wasmi::Caller<'_, UserState<L>>, _: i32, _: i64, _: i32| {
+                    caller
+                        .data()
+                        .log_error("Called stubbed wasi_snapshot_preview1.clock_time_get");
+                    Err::<i32, wasmi::core::Trap>(wasmi::core::Trap::new(
+                        "wasi_snapshot_preview1.clock_time_get",
+                    ))
+                },
+            )
+            .expect("failed to define clock_time_get in linker");
+
         OakLinker { linker }
     }
 
