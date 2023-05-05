@@ -25,7 +25,7 @@ use oak_launcher_utils::launcher;
 use prost::Message;
 use std::{io::Write, time::Duration};
 use ubyte::ByteUnit;
-use xtask::{internal::Running, launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
+use xtask::{launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
@@ -34,7 +34,7 @@ const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 async fn run_oak_functions_example(
     wasm_module_crate_name: &str,
     lookup_data_path: &str,
-) -> (Box<dyn Running>, u16) {
+) -> (xtask::testing::BackgroundStep, u16) {
     xtask::testing::run_step(xtask::launcher::build_stage0()).await;
     xtask::testing::run_step(xtask::launcher::build_binary(
         "build Oak Restricted Kernel binary",
@@ -57,7 +57,7 @@ async fn run_oak_functions_example(
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
     eprintln!("using port {}", port);
 
-    let _background = xtask::testing::run_background(
+    let background = xtask::testing::run_background(
         xtask::launcher::run_oak_functions_launcher_example_with_lookup_data(
             &variant,
             &wasm_path,
@@ -67,7 +67,7 @@ async fn run_oak_functions_example(
     )
     .await;
 
-    (_background, port)
+    (background, port)
 }
 
 // Allow enough worker threads to collect output from background tasks.
@@ -78,7 +78,7 @@ async fn test_launcher_key_value_lookup_virtual() {
         return;
     }
 
-    let (_background, port) =
+    let (mut _background, port) =
         run_oak_functions_example("key_value_lookup", MOCK_LOOKUP_DATA_PATH.to_str().unwrap())
             .await;
 
