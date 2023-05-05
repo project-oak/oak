@@ -136,6 +136,19 @@ struct OakLinker<L: OakLogger> {
     linker: wasmi::Linker<UserState<L>>,
 }
 
+#[derive(Debug, Copy, Clone)]
+struct OnlyStubError {
+    name: &'static str,
+}
+
+impl wasmi::core::HostError for OnlyStubError {}
+
+impl core::fmt::Display for OnlyStubError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Stub not implemented: {}", self.name)
+    }
+}
+
 impl<L> OakLinker<L>
 where
     L: OakLogger,
@@ -236,6 +249,20 @@ where
                 },
             )
             .expect("failed to define invoke in linker");
+
+        // Stub WASI
+        linker
+            .func_wrap(
+                "wasi_snapshot_preview1",
+                "clock_time_get",
+                |_caller: wasmi::Caller<'_, _>, _: i32, _: i64, _: i32| {
+                    Err::<i32, wasmi::core::Trap>(wasmi::core::Trap::new(
+                        "wasi_snapshot_preview1.clock_time_get",
+                    ))
+                },
+            )
+            .expect("failed to define clock_time_get in linker");
+
         OakLinker { linker }
     }
 
