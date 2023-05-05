@@ -136,11 +136,6 @@ struct OakLinker<L: OakLogger> {
     linker: wasmi::Linker<UserState<L>>,
 }
 
-#[derive(Debug, Copy, Clone)]
-struct OnlyStubError {
-    name: &'static str,
-}
-
 impl<L> OakLinker<L>
 where
     L: OakLogger,
@@ -242,7 +237,9 @@ where
             )
             .expect("failed to define invoke in linker");
 
-        // Stub WASI
+        // One of our dependency requires this WASI function to be linked, but, to the best of our
+        // knowledge, does not use it at run time.
+        // As a workaround, we stub it for now.
         linker
             .func_wrap(
                 "wasi_snapshot_preview1",
@@ -250,11 +247,10 @@ where
                 |caller: wasmi::Caller<'_, UserState<L>>, _: i32, _: i64, _: i32| {
                     caller
                         .data()
-                        .log_error("Needed wasi_snapshot_preview1.clock_time_get");
-                    0
-                    // Err::<i32, wasmi::core::Trap>(wasmi::core::Trap::new(
-                    //    "wasi_snapshot_preview1.clock_time_get",
-                    // ))
+                        .log_error("Called stubbed wasi_snapshot_preview1.clock_time_get");
+                    Err::<i32, wasmi::core::Trap>(wasmi::core::Trap::new(
+                        "wasi_snapshot_preview1.clock_time_get",
+                    ))
                 },
             )
             .expect("failed to define clock_time_get in linker");
