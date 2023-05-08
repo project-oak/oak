@@ -1,13 +1,13 @@
 #!/bin/bash
 #
-# Prepares an initramfs file by combining the following:
+# Extract a Linux kernel and prepares an initramfs directory by
+# combining the following:
 #    - Alpine Linux's minirootfs.
 #    - Necessary drivers copied from an Alpine Linux distribution.
 #    - Filesystem extracted from the given docker image.
 #
-#
 
- # exit when any command fails.
+# exit when any command fails.
 set -e
 
 readonly SCRIPT_DIR=$(dirname "$0")
@@ -15,34 +15,26 @@ readonly SCRIPT_DIR=$(dirname "$0")
 print_usage_and_exit() {
   echo "Usage:
   ${0} [-h] \\
-       -k <uncompressed-kernel> \\
-       -i <alpine-initiramfs>   \\
-       -m <alpine-minirootfs>   \\
+       -k <output-linux-kernel> \\
        -o <output-initramfs>    \\
        -d <docker-image>
 
 Creates an initramfs with minirootfs+networking support as docker launcher.
 
 Options:
-  -k      Uncompressed kernel with which we use the drivers.
-  -i      Initramfs extracted from an Alpine iso distribution.
-  -m      Alpine's minirootfs tarball.
+  -k      Location for the extracted Linux kernel.
   -d      Docker image that should be launched.
   -o      Output initramfs file.
   -h      Print this help message and exit."
   exit 0
 }
 
-while getopts "hk:i:m:d:o:" opt; do
+while getopts "hk:d:o:" opt; do
   case $opt in
     h)
       print_usage_and_exit;;
     k)
       readonly LINUX_KERNEL="${OPTARG}";;
-    i)
-      readonly ALPINE_INITRAMFS="${OPTARG}";;
-    m)
-      readonly ALPINE_MINIROOTFS_TAR="${OPTARG}";;
     d)
       readonly DOCKER_IMAGE="${OPTARG}";;
     o)
@@ -54,22 +46,12 @@ while getopts "hk:i:m:d:o:" opt; do
 done
 
 if [ -z "${LINUX_KERNEL}" ]; then
-  echo "Missing required option: -k <uncompressed-kernel>"
-  exit 1
-fi
-
-if [ -z "${ALPINE_INITRAMFS}" ]; then
-  echo "Missing required option: -i <alpine-initramfs>"
+  echo "Missing required option: -k <output-linux-kernel>"
   exit 1
 fi
 
 if [ -z "${OUTPUT_INITRAMFS}" ]; then
   echo "Missing required option: -o <output-initramfs>"
-  exit 1
-fi
-
-if [ -z "${ALPINE_MINIROOTFS_TAR}" ]; then
-  echo "Missing required option: -m <alpine-minirootfs>"
   exit 1
 fi
 
@@ -79,44 +61,15 @@ echo "[INFO] Scratch directory is ${SCRATCH_DIR}"
 # Make a directory for the initramfs.
 readonly RAMDIR=$(mktemp -d)
 echo "[INFO] Ramdisk staging directory is ${RAMDIR}"
+echo "[INFO] Preparing ${RAMDIR} with a minimal rootfs and drivers."
+echo "[INFO] Preparing docker image for extraction..."
+docker build -t mkinitramfs "${SCRIPT_DIR}"
+echo "[INFO] Extracting a minimal rootfs and drivers..."
+docker run -v "${RAMDIR}:/output" -it mkinitramfs \
+  sh -c "/app/mk_base_initramfs.sh -k /output/vmlinux -r /output"
 
-# Extract the linux version string from the kernel image.
-readonly LINUX_KERNEL_VERSION="$(strings "${LINUX_KERNEL}" | \
-                                 grep "Linux version" | cut -d\  -f3)"
-echo "[INFO] Linux kernel version is ${LINUX_KERNEL_VERSION}"
-
-
-# Extract Alpine's initramfs to a scratch directory.
-ALPINE_INITRAMFS_DIR="${SCRATCH_DIR}/alpine-initramfs"
-echo "[INFO] Extracting  ${ALPINE_INITRAMFS} to ${ALPINE_INITRAMFS_DIR}"
-mkdir "${ALPINE_INITRAMFS_DIR}"
-# () is necessary to avoid changing pwd to ${ALPINE_INITRAMFS_DIR}
-(cd "${ALPINE_INITRAMFS_DIR}" && \
-  gzip -cd "${ALPINE_INITRAMFS}" | cpio -idm)
-
-# Extract the minirootfs to the root of the ramdisk.
-tar xzf "${ALPINE_MINIROOTFS_TAR}" -C "${RAMDIR}"
-
-# Extract the drivers from the initramfs and put them in ${RAMDIR}.
-echo "[INFO] Extracting necessary drivers from ${ALPINE_INITRAMFS}"
-readonly DRIVERS="
-kernel/drivers/net/virtio_net.ko
-kernel/drivers/net/net_failover.ko
-kernel/net/core/failover.ko
-kernel/net/packet/af_packet.ko
-"
-
-readonly MODULES_DEP="lib/modules/${LINUX_KERNEL_VERSION}/modules.dep"
-for DRIVER in ${DRIVERS}; do
-  DRIVER_PATH="lib/modules/${LINUX_KERNEL_VERSION}/${DRIVER}"
-  DRIVER_DIR=$(dirname "${DRIVER_PATH}")
-  echo "[INFO] Extracting ${DRIVER}"
-  mkdir -p "${RAMDIR}/${DRIVER_DIR}" &&
-    cp "${ALPINE_INITRAMFS_DIR}/${DRIVER_PATH}" "${RAMDIR}/${DRIVER_PATH}"
-  # Extract the module depedency info.
-  grep "^$DRIVER:" "${ALPINE_INITRAMFS_DIR}/${MODULES_DEP}" \
-    >> "${RAMDIR}/${MODULES_DEP}"
-done
+echo "[INFO] Updating Linux kernel at ${LINUX_KERNEL}"
+mv "${RAMDIR}/vmlinux" "${LINUX_KERNEL}"
 
 if [ -z "${DOCKER_IMAGE}" ]; then
   echo "[WARN] No docker image specified. initramfs will launch a shell."
@@ -131,32 +84,14 @@ else
   LAUNCH_CMD="
 # copy the resolv.conf file to the chroot.
 cp -f /etc/resolv.conf /docker_rootfs/etc/resolv.conf
-exec /usr/sbin/chroot /docker_rootfs /init"
+exec /usr/sbin/chroot /docker_rootfs /init
+"
 fi
 
 # Create the /init file in the initramfs file.
-echo "[INFO] Preparing /init file for initramfs"
-cat > "${RAMDIR}/init" <<EOF
-#!/bin/sh
-#
-# /init executable file in the initramfs
-#
-mount -t devtmpfs dev /dev
-mount -t proc proc /proc
-mount -t sysfs sysfs /sys
-
-# Load drivers
-modprobe virtio-net
-modprobe af_packet
-
-# Bring up network interfaces.
-ip link set up dev lo
-ip link set eth0 up
-udhcpc -i eth0
-
-# Launch terminal or docker as needed.
-${LAUNCH_CMD}
-EOF
+echo "[INFO] Appending necessary commands to end of /init file"
+echo "${MOUNT_DOCKER_ROOTFS_CMD}" >> "${RAMDIR}/init"
+echo "${LAUNCH_CMD}" >> "${RAMDIR}/init"
 chmod a+x "${RAMDIR}/init"
 
 echo "[INFO] Creating initramfs file at ${OUTPUT_INITRAMFS}..."
