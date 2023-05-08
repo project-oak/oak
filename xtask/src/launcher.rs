@@ -202,3 +202,44 @@ pub fn run_launcher(launcher_bin: &str, variant: &LauncherMode) -> Box<dyn Runna
     args.append(&mut variant.variant_subcommand());
     Cmd::new(launcher_bin, args)
 }
+
+/// Runs the specified example as a background task. Returns a reference to the running server and
+/// the port on which the server is listening.
+pub async fn run_oak_functions_example_in_background(
+    wasm_module_crate_name: &str,
+    lookup_data_path: &str,
+) -> (crate::testing::BackgroundStep, u16) {
+    crate::testing::run_step(crate::launcher::build_stage0()).await;
+    crate::testing::run_step(crate::launcher::build_binary(
+        "build Oak Restricted Kernel binary",
+        crate::launcher::OAK_RESTRICTED_KERNEL_BIN_DIR
+            .to_str()
+            .unwrap(),
+    ))
+    .await;
+    let variant = crate::launcher::LauncherMode::Virtual("oak_functions_enclave_app".to_string());
+    crate::testing::run_step(crate::launcher::build_binary(
+        "build Oak Functions enclave app",
+        &variant.enclave_crate_path(),
+    ))
+    .await;
+
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm(wasm_module_crate_name)
+        .expect("Failed to build Wasm module");
+    eprintln!("using wasm module {}", wasm_path);
+
+    let port = portpicker::pick_unused_port().expect("failed to pick a port");
+    eprintln!("using port {}", port);
+
+    let background = crate::testing::run_background(
+        crate::launcher::run_oak_functions_launcher_example_with_lookup_data(
+            &variant,
+            &wasm_path,
+            port,
+            lookup_data_path,
+        ),
+    )
+    .await;
+
+    (background, port)
+}

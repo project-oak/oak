@@ -20,6 +20,7 @@ maplit = "*"
 nix = "*"
 oak_functions_test_utils = { workspace = true }
 once_cell = "*"
+portpicker = "*"
 regex = "*"
 serde = { version = "*", features = ["derive"] }
 serde_yaml = "*"

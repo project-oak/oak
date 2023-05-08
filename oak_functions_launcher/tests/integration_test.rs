@@ -29,47 +29,6 @@ use xtask::{launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
-/// Runs the specified example and returns a reference to the running server and the port on which
-/// the server is listening.
-async fn run_oak_functions_example(
-    wasm_module_crate_name: &str,
-    lookup_data_path: &str,
-) -> (xtask::testing::BackgroundStep, u16) {
-    xtask::testing::run_step(xtask::launcher::build_stage0()).await;
-    xtask::testing::run_step(xtask::launcher::build_binary(
-        "build Oak Restricted Kernel binary",
-        xtask::launcher::OAK_RESTRICTED_KERNEL_BIN_DIR
-            .to_str()
-            .unwrap(),
-    ))
-    .await;
-    let variant = xtask::launcher::LauncherMode::Virtual("oak_functions_enclave_app".to_string());
-    xtask::testing::run_step(xtask::launcher::build_binary(
-        "build Oak Functions enclave app",
-        &variant.enclave_crate_path(),
-    ))
-    .await;
-
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm(wasm_module_crate_name)
-        .expect("Failed to build Wasm module");
-    eprintln!("using wasm module {}", wasm_path);
-
-    let port = portpicker::pick_unused_port().expect("failed to pick a port");
-    eprintln!("using port {}", port);
-
-    let background = xtask::testing::run_background(
-        xtask::launcher::run_oak_functions_launcher_example_with_lookup_data(
-            &variant,
-            &wasm_path,
-            port,
-            lookup_data_path,
-        ),
-    )
-    .await;
-
-    (background, port)
-}
-
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_key_value_lookup_virtual() {
@@ -78,9 +37,11 @@ async fn test_launcher_key_value_lookup_virtual() {
         return;
     }
 
-    let (mut _background, port) =
-        run_oak_functions_example("key_value_lookup", MOCK_LOOKUP_DATA_PATH.to_str().unwrap())
-            .await;
+    let (mut _background, port) = xtask::launcher::run_oak_functions_example_in_background(
+        "key_value_lookup",
+        MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
+    )
+    .await;
 
     // Wait for the server to start up.
     tokio::time::sleep(Duration::from_secs(20)).await;
@@ -101,8 +62,11 @@ async fn test_launcher_echo_virtual() {
         return;
     }
 
-    let (_background, port) =
-        run_oak_functions_example("echo", MOCK_LOOKUP_DATA_PATH.to_str().unwrap()).await;
+    let (_background, port) = xtask::launcher::run_oak_functions_example_in_background(
+        "echo",
+        MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
+    )
+    .await;
 
     // Wait for the server to start up.
     tokio::time::sleep(Duration::from_secs(20)).await;
@@ -123,7 +87,7 @@ async fn test_launcher_weather_lookup_virtual() {
         return;
     }
 
-    let (_background, port) = run_oak_functions_example(
+    let (_background, port) = xtask::launcher::run_oak_functions_example_in_background(
         "weather_lookup",
         workspace_path(&[
             "oak_functions",
