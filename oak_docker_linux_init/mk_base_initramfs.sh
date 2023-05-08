@@ -8,7 +8,6 @@
 # exit when any command fails.
 set -e
 
-readonly SCRIPT_DIR=$(dirname "$0")
 readonly DEFAULT_MINIROOTFS_TAR="/app/alpine-minirootfs.tar.gz"
 
 print_usage_and_exit() {
@@ -57,7 +56,7 @@ if [ -z "${RAMDIR}" ]; then
   exit 1
 fi
 
-if [ -z "${ALPINE_MINIROOTFS_TAR}"]; then
+if [ -z "${ALPINE_MINIROOTFS_TAR}" ]; then
   echo "Missing option: -m <alpine-minirootfs>."
   echo "Using ${DEFAULT_MINIROOTFS_TAR} as the minirootfs tar."
   ALPINE_MINIROOTFS_TAR="${DEFAULT_MINIROOTFS_TAR}"

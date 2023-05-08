@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Extract a Linux kernel and prepares an initramfs directory by 
+# Extract a Linux kernel and prepares an initramfs directory by
 # combining the following:
 #    - Alpine Linux's minirootfs.
 #    - Necessary drivers copied from an Alpine Linux distribution.
@@ -15,34 +15,26 @@ readonly SCRIPT_DIR=$(dirname "$0")
 print_usage_and_exit() {
   echo "Usage:
   ${0} [-h] \\
-       -k <uncompressed-kernel> \\
-       -i <alpine-initiramfs>   \\
-       -m <alpine-minirootfs>   \\
+       -k <output-linux-kernel> \\
        -o <output-initramfs>    \\
        -d <docker-image>
 
 Creates an initramfs with minirootfs+networking support as docker launcher.
 
 Options:
-  -k      Uncompressed kernel with which we use the drivers.
-  -i      Initramfs extracted from an Alpine iso distribution.
-  -m      Alpine's minirootfs tarball.
+  -k      Location for the extracted Linux kernel.
   -d      Docker image that should be launched.
   -o      Output initramfs file.
   -h      Print this help message and exit."
   exit 0
 }
 
-while getopts "hk:i:m:d:o:" opt; do
+while getopts "hk:d:o:" opt; do
   case $opt in
     h)
       print_usage_and_exit;;
     k)
       readonly LINUX_KERNEL="${OPTARG}";;
-    i)
-      readonly ALPINE_INITRAMFS="${OPTARG}";;
-    m)
-      readonly ALPINE_MINIROOTFS_TAR="${OPTARG}";;
     d)
       readonly DOCKER_IMAGE="${OPTARG}";;
     o)
@@ -54,22 +46,12 @@ while getopts "hk:i:m:d:o:" opt; do
 done
 
 if [ -z "${LINUX_KERNEL}" ]; then
-  echo "Missing required option: -k <uncompressed-kernel>"
-  exit 1
-fi
-
-if [ -z "${ALPINE_INITRAMFS}" ]; then
-  echo "Missing required option: -i <alpine-initramfs>"
+  echo "Missing required option: -k <output-linux-kernel>"
   exit 1
 fi
 
 if [ -z "${OUTPUT_INITRAMFS}" ]; then
   echo "Missing required option: -o <output-initramfs>"
-  exit 1
-fi
-
-if [ -z "${ALPINE_MINIROOTFS_TAR}" ]; then
-  echo "Missing required option: -m <alpine-minirootfs>"
   exit 1
 fi
 
