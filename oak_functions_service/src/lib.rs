@@ -34,9 +34,7 @@ mod wasm;
 
 use crate::remote_attestation::{AttestationHandler, AttestationSessionHandler};
 use alloc::{boxed::Box, format, sync::Arc};
-use oak_functions_abi::Request;
 use oak_functions_lookup::LookupDataManager;
-use oak_functions_wasm::WasmHandler;
 use oak_remote_attestation_interactive::handshaker::AttestationGenerator;
 use proto::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
@@ -44,7 +42,6 @@ use proto::oak::functions::{
     InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk, OakFunctions,
     PublicKeyInfo,
 };
-use remote_attestation::Handler;
 
 pub use crate::logger::StandaloneLogger;
 
@@ -68,16 +65,6 @@ impl OakFunctionsService {
                 LookupDataManager::new_empty(StandaloneLogger::default()),
             ),
         }
-    }
-}
-
-impl<L: oak_logger::OakLogger> Handler for WasmHandler<L> {
-    fn handle(&mut self, request: &[u8]) -> anyhow::Result<micro_rpc::Vec<u8>> {
-        let request = Request {
-            body: request.to_vec(),
-        };
-        let response = self.handle_invoke(request)?;
-        Ok(response.body)
     }
 }
 
@@ -141,7 +128,7 @@ impl OakFunctions for OakFunctionsService {
             InitializationState::Initialized(attestation_handler) => {
                 let response =
                     attestation_handler
-                        .message(&request_message.body)
+                        .invoke(&request_message.body)
                         .map_err(|err| {
                             micro_rpc::Status::new_with_message(
                                 micro_rpc::StatusCode::Internal,

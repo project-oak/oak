@@ -528,6 +528,17 @@ where
     }
 }
 
+impl<L: oak_logger::OakLogger> micro_rpc::Transport for WasmHandler<L> {
+    type Error = anyhow::Error;
+    fn invoke(&mut self, request: &[u8]) -> anyhow::Result<Vec<u8>> {
+        let request = Request {
+            body: request.to_vec(),
+        };
+        let response = self.handle_invoke(request)?;
+        Ok(response.body)
+    }
+}
+
 /// A helper function to move between our specific result type `Result<(), OakStatus>` and the
 /// `wasmi` specific result type `Result<i32, wasmi::Trap>`.
 fn from_oak_status(result: Result<(), OakStatus>) -> Result<i32, wasmi::core::Trap> {
