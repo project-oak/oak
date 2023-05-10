@@ -24,23 +24,3 @@ Additional documentation is available via:
 ```shell
 cargo run --package=oak_functions_launcher -- --help
 ```
-
-To launch the Oak Functions binary directly as a child process:
-
-```shell
-cargo build --package=oak_functions_linux_fd_bin \
-    && RUST_LOG=debug cargo run \
-    --package=oak_functions_launcher -- \
-    --wasm=oak_functions_launcher/key_value_lookup.wasm \
-    --lookup-data=oak_functions_launcher/mock_lookup_data \
-    native \
-    --enclave-binary=target/debug/oak_functions_linux_fd_bin
-```
-
-Output:
-
-```shell
-[2023-02-27T16:54:15Z INFO  oak_functions_launcher] read Wasm file from disk oak_functions_launcher/key_value_lookup.wasm (1.65MiB)
-[2023-02-27T16:54:15Z INFO  oak_functions_launcher] service initialized: InitializeResponse { public_key_info: Some(PublicKeyInfo { public_key: [], attestation: [] }) }
-[2023-02-27T16:54:15Z INFO  oak_functions_launcher] obtained public key (0 bytes)
-```

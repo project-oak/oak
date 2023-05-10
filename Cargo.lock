@@ -1902,19 +1902,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_linux_fd_bin"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "log",
- "oak_channel",
- "oak_functions_service",
- "oak_remote_attestation_amd",
- "oak_remote_attestation_interactive",
-]
-
-[[package]]
 name = "oak_functions_load_test"
 version = "0.1.0"
 dependencies = [
