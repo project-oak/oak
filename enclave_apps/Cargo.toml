@@ -2,9 +2,10 @@
 resolver = "2"
 members = [
   "oak_echo_enclave_app",
+  "oak_echo_raw_enclave_app",
   "oak_functions_enclave_app",
   "oak_iree_enclave_app",
-  "oak_echo_raw_enclave_app",
+  "oak_lookup_enclave_app",
   "oak_tensorflow_enclave_app",
   "quirk_echo_enclave_app",
 ]

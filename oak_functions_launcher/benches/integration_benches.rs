@@ -39,6 +39,7 @@ struct OakFunctionsTestConfig {
     lookup_data_path: PathBuf,
     request: Vec<u8>,
     expected_response: Vec<u8>,
+    enclave_app_name: String,
 }
 
 /// Runs a benchmark for the Oak Functions Launcher, invoking the given Wasm module with the given
@@ -47,7 +48,7 @@ struct OakFunctionsTestConfig {
 /// Similar to the integration test, but wrapped in a non-async function, and invoking the Wasm
 /// module in the benchmark loop.
 fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
-    env_logger::init();
+    let _ = env_logger::try_init();
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -62,8 +63,8 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
     )));
 
     let oak_functions_enclave_app_path =
-        oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
-            .expect("Failed to build oak_functions_enclave_app");
+        oak_functions_test_utils::build_rust_crate_enclave(&config.enclave_app_name)
+            .expect("Failed to build enclave app");
 
     let params = launcher::virtualized::Params {
         enclave_binary: workspace_path(&[
@@ -161,6 +162,23 @@ fn bench_key_value_lookup(b: &mut Bencher) {
     run_bench(
         b,
         &OakFunctionsTestConfig {
+            enclave_app_name: "oak_functions_enclave_app".to_string(),
+            wasm_path: wasm_path.into(),
+            lookup_data_path: xtask::launcher::MOCK_LOOKUP_DATA_PATH.to_path_buf(),
+            request: b"test_key".to_vec(),
+            expected_response: b"test_value".to_vec(),
+        },
+    );
+}
+
+#[bench]
+fn bench_key_value_lookup_native(b: &mut Bencher) {
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
+        .expect("Failed to build Wasm module");
+    run_bench(
+        b,
+        &OakFunctionsTestConfig {
+            enclave_app_name: "oak_lookup_enclave_app".to_string(),
             wasm_path: wasm_path.into(),
             lookup_data_path: xtask::launcher::MOCK_LOOKUP_DATA_PATH.to_path_buf(),
             request: b"test_key".to_vec(),
