@@ -48,13 +48,12 @@ async fn test_server() {
         }),
     );
 
-    let server_port = oak_functions_test_utils::free_port();
-    let server_background = oak_functions_test_utils::create_and_start_oak_functions_server(
-        server_port,
-        &wasm_path,
-        lookup_data_file.path().to_str().unwrap(),
-    )
-    .unwrap();
+    let (_server_background, server_port) =
+        xtask::launcher::run_oak_functions_example_in_background(
+            &wasm_path,
+            lookup_data_file.path().to_str().unwrap(),
+        )
+        .await;
 
     // Wait for the server to start up.
     std::thread::sleep(Duration::from_secs(2));
@@ -108,13 +107,16 @@ async fn test_server() {
             std::str::from_utf8(&response).unwrap()
         );
     }
-
-    oak_functions_test_utils::kill_process(server_background);
 }
 
 /// Run a benchmark of the wasm module.
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+
     let entry_count = 200_000;
     let elapsed_limit_millis = 20;
 
@@ -127,13 +129,11 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     let lookup_data = generate_and_serialize_sparse_weather_entries(&mut rng, entry_count).unwrap();
     let lookup_data_file = oak_functions_test_utils::write_to_temp_file(&lookup_data);
 
-    let server_port = oak_functions_test_utils::free_port();
-    let server_background = oak_functions_test_utils::create_and_start_oak_functions_server(
-        server_port,
-        wasm_path_after_optimization.path().to_str().unwrap(),
-        lookup_data_file.path().to_str().unwrap(),
-    )
-    .unwrap();
+    let (_server_background, server_port) =
+        runtime.block_on(xtask::launcher::run_oak_functions_example_in_background(
+            wasm_path_after_optimization.path().to_str().unwrap(),
+            lookup_data_file.path().to_str().unwrap(),
+        ));
 
     // Wait for the server to start up.
     std::thread::sleep(Duration::from_secs(2));
@@ -167,6 +167,4 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             elapsed
         );
     }
-
-    oak_functions_test_utils::kill_process(server_background);
 }

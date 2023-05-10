@@ -1420,6 +1420,7 @@ dependencies = [
  "oak_functions_sdk",
  "oak_functions_test_utils",
  "tokio",
+ "xtask",
 ]
 
 [[package]]
@@ -3953,6 +3954,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "tonic",
+ "xtask",
 ]
 
 [[package]]
