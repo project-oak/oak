@@ -87,6 +87,9 @@ kernel/drivers/net/net_failover.ko.gz
 kernel/net/core/failover.ko.gz
 kernel/net/packet/af_packet.ko.gz
 "
+readonly IPV6_DRIVERS="
+kernel/net/ipv6/ipv6.ko.gz
+"
 readonly BLOCK_DEVICE_DRIVERS="
 kernel/drivers/block/virtio_blk.ko.gz
 "
@@ -99,6 +102,7 @@ kernel/crypto/crc32c_generic.ko.gz
 "
 readonly DRIVERS="
 ${NETWORK_DRIVERS}
+${IPV6_DRIVERS}
 ${BLOCK_DEVICE_DRIVERS}
 ${EXT4_DRIVERS}
 "
@@ -129,6 +133,7 @@ mount -t sysfs sysfs /sys
 # Load drivers
 modprobe virtio_net
 modprobe af_packet
+modprobe ipv6
 modprobe virtio_blk
 modprobe crc32c_generic
 modprobe ext4
