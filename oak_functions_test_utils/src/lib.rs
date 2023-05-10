@@ -179,6 +179,23 @@ pub fn build_rust_crate_linux(crate_name: &str) -> anyhow::Result<String> {
     ))
 }
 
+pub fn build_rust_crate_enclave(crate_name: &str) -> anyhow::Result<String> {
+    duct::cmd!(
+        "cargo",
+        "build",
+        "--target=x86_64-unknown-none",
+        "--release",
+        format!("--package={crate_name}"),
+    )
+    .dir(format!("{}enclave_apps", env!("WORKSPACE_ROOT")))
+    .run()
+    .context(format!("couldn't compile enclave app {crate_name}"))?;
+    Ok(format!(
+        "{}enclave_apps/target/x86_64-unknown-none/release/{crate_name}",
+        env!("WORKSPACE_ROOT")
+    ))
+}
+
 /// Builds the crate identified by the given package name (as per the `name` attribute in a
 /// Cargo.toml file included in the root cargo workspace) as a Wasm module, and returns the path of
 /// the resulting binary.
@@ -192,7 +209,7 @@ pub fn build_rust_crate_wasm(crate_name: &str) -> anyhow::Result<String> {
     )
     .dir(env!("WORKSPACE_ROOT"))
     .run()
-    .context(format!("couldn't compile {crate_name}"))?;
+    .context(format!("couldn't compile Wasm module {crate_name}"))?;
     Ok(rust_crate_wasm_out_path(crate_name))
 }
 

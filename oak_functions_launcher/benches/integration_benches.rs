@@ -19,14 +19,20 @@
 
 extern crate test;
 
+use oak_crypto::{
+    encryptor::{ClientEncryptor, EncryptionKeyProvider},
+    proto::oak::crypto::v1::EncryptedResponse,
+};
 use oak_functions_launcher::{
     proto::oak::functions::{InvokeRequest, OakFunctionsAsyncClient},
     LookupDataConfig,
 };
 use oak_launcher_utils::launcher;
-use std::path::PathBuf;
+use prost::Message;
+use std::{path::PathBuf, sync::Arc};
 use test::Bencher;
 use ubyte::ByteUnit;
+use xtask::workspace_path;
 
 struct OakFunctionsTestConfig {
     wasm_path: PathBuf,
@@ -41,18 +47,45 @@ struct OakFunctionsTestConfig {
 /// Similar to the integration test, but wrapped in a non-async function, and invoking the Wasm
 /// module in the benchmark loop.
 fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
+    env_logger::init();
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
         .unwrap();
 
-    let oak_functions_linux_fd_bin_path =
-        oak_functions_test_utils::build_rust_crate_linux("oak_functions_linux_fd_bin")
-            .expect("Failed to build oak_functions_linux_fd_bin");
+    runtime.block_on(xtask::testing::run_step(xtask::launcher::build_stage0()));
+    runtime.block_on(xtask::testing::run_step(xtask::launcher::build_binary(
+        "build Oak Restricted Kernel binary",
+        xtask::launcher::OAK_RESTRICTED_KERNEL_BIN_DIR
+            .to_str()
+            .unwrap(),
+    )));
 
-    let params = launcher::native::Params {
-        enclave_binary: oak_functions_linux_fd_bin_path.into(),
+    let oak_functions_enclave_app_path =
+        oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
+            .expect("Failed to build oak_functions_enclave_app");
+
+    let params = launcher::virtualized::Params {
+        enclave_binary: workspace_path(&[
+            "oak_restricted_kernel_bin",
+            "target",
+            "x86_64-unknown-none",
+            "debug",
+            "oak_restricted_kernel_bin",
+        ]),
+        vmm_binary: "/usr/bin/qemu-system-x86_64".into(),
+        app_binary: oak_functions_enclave_app_path.into(),
+        bios_binary: workspace_path(&[
+            "stage0",
+            "target",
+            "x86_64-unknown-none",
+            "release",
+            "oak_stage0.bin",
+        ]),
+        gdb: None,
+        memory_size: Some("256M".to_string()),
     };
+    log::debug!("launcher params: {:?}", params);
 
     // Make sure the response fits in the response size.
     let constant_response_size: u32 = 1024;
@@ -65,17 +98,45 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
 
     let (launched_instance, connector_handle, _) = runtime
         .block_on(oak_functions_launcher::create(
-            launcher::GuestMode::Native(params),
+            launcher::GuestMode::Virtualized(params),
             lookup_data_config,
             config.wasm_path.to_path_buf(),
             constant_response_size,
         ))
         .expect("Failed to create launcher");
+    log::info!("created launcher instance");
+
+    let key_provider = Arc::new(EncryptionKeyProvider::new());
+    let serialized_server_public_key = key_provider.get_serialized_public_key();
+
+    let mut client_encryptor = ClientEncryptor::create(&serialized_server_public_key)
+        .expect("couldn't create client encryptor");
 
     let mut client = OakFunctionsAsyncClient::new(connector_handle);
+    let encrypted_request = client_encryptor
+        .encrypt(&config.request, &[])
+        .expect("could not encrypt request");
     let invoke_request = InvokeRequest {
-        body: config.request.clone(),
+        body: encrypted_request.encode_to_vec(),
     };
+
+    // Invoke the function once outside of the benchmark loop to make sure it's ready.
+    {
+        log::debug!("invoking function");
+        let response = runtime
+            .block_on(client.invoke(&invoke_request))
+            .expect("Failed to receive response.");
+        log::debug!("received response {:?}", response);
+        assert!(response.is_ok());
+
+        // Only check this outside of the benchmark loop.
+        let encrypted_response =
+            EncryptedResponse::decode(response.unwrap().body.as_ref()).unwrap();
+        let (decrypted_response, _authenticated_data) = client_encryptor
+            .decrypt(&encrypted_response)
+            .expect("could not decrypt response");
+        assert_eq!(decrypted_response, config.expected_response);
+    }
 
     // We need to make sure to block on the future returned by `invoke`, otherwise the benchmark
     // will finish before the request is sent.
@@ -84,8 +145,9 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
             .block_on(client.invoke(&invoke_request))
             .expect("Failed to receive response.");
         assert!(response.is_ok());
-        assert_eq!(config.expected_response, response.unwrap().body);
     });
+
+    log::info!("stopping launcher");
 
     runtime
         .block_on(launched_instance.kill())
