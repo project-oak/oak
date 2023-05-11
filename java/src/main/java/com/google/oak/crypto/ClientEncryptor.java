@@ -90,30 +90,26 @@ public class ClientEncryptor implements Encryptor {
     // Encrypt request.
     Result<byte[], Exception> sealResult =
         this.senderRequestContext.seal(plaintext, associatedData);
-    if (sealResult.isError()) {
-      return Result.error(sealResult.error().get());
-    }
-    byte[] ciphertext = sealResult.success().get();
 
-    // Create request message.
-    EncryptedRequest.Builder encryptedRequestBuilder =
-        EncryptedRequest.newBuilder().setEncryptedMessage(
-            AeadEncryptedMessage.newBuilder()
-                .setCiphertext(ByteString.copyFrom(ciphertext))
-                .setAssociatedData(ByteString.copyFrom(associatedData))
-                .build());
+    return sealResult.map(ciphertext -> {
+      // Create request message.
+      EncryptedRequest.Builder encryptedRequestBuilder =
+          EncryptedRequest.newBuilder().setEncryptedMessage(
+              AeadEncryptedMessage.newBuilder()
+                  .setCiphertext(ByteString.copyFrom(ciphertext))
+                  .setAssociatedData(ByteString.copyFrom(associatedData))
+                  .build());
 
-    // Encapsulated public key is only sent in the initial request message of the session.
-    if (this.serializedEncapsulatedPublicKey.isPresent()) {
-      byte[] serializedEncapsulatedPublicKey = this.serializedEncapsulatedPublicKey.get();
-      encryptedRequestBuilder.setSerializedEncapsulatedPublicKey(
-          ByteString.copyFrom(serializedEncapsulatedPublicKey));
-      this.serializedEncapsulatedPublicKey = Optional.empty();
-    }
-    EncryptedRequest encryptedRequest = encryptedRequestBuilder.build();
-
-    // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
-    return Result.success(encryptedRequest.toByteArray());
+      // Encapsulated public key is only sent in the initial request message of the session.
+      if (this.serializedEncapsulatedPublicKey.isPresent()) {
+        byte[] serializedEncapsulatedPublicKey = this.serializedEncapsulatedPublicKey.get();
+        encryptedRequestBuilder.setSerializedEncapsulatedPublicKey(
+            ByteString.copyFrom(serializedEncapsulatedPublicKey));
+        this.serializedEncapsulatedPublicKey = Optional.empty();
+      }
+      // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
+      return encryptedRequestBuilder.build().toByteArray();
+    });
   }
 
   /**
