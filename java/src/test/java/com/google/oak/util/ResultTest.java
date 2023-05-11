@@ -19,7 +19,6 @@ package com.google.oak.util;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.google.oak.util.Result;
 import org.junit.Test;
 
 public class ResultTest {
