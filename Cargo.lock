@@ -2042,6 +2042,7 @@ dependencies = [
  "byteorder",
  "hashbrown 0.13.2",
  "log",
+ "micro_rpc",
  "oak_functions_abi",
  "oak_functions_extension",
  "oak_functions_test_utils",

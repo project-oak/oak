@@ -10,6 +10,7 @@ anyhow = { version = "*", default-features = false }
 byteorder = { version = "*", default-features = false }
 hashbrown = "*"
 log = "*"
+micro_rpc = { workspace = true }
 oak_logger = { workspace = true }
 oak_functions_abi = { workspace = true }
 oak_functions_extension = { workspace = true }
