@@ -145,3 +145,20 @@ public class ResultTest {
     assertTrue(result.success().isEmpty());
   }
 }
+
+@Test
+public void testUnwrapError() {
+  Result<Integer, String> error = Result.error(ERR_MSG);
+  assertTrue(error.isError());
+  try {
+    error.unwrap("Expecting error");
+  } catch (RuntimeException e) {
+    assertEquals(String.format("Expecting error: %s", ERR_MSG), e.getMessage());
+  }
+}
+
+@Test
+public void testUnwrapSuccess() {
+  Result<Integer, String> success = Result.success(1);
+  assertEquals(1, success.unwrap("No error!"));
+}

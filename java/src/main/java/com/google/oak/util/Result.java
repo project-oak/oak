@@ -137,14 +137,14 @@ public class Result<R, E> {
   /**
    * Unwraps and returns the success value in this Result, if one is present.
    * Otherwise throws a RuntimeException containing the given error message.
-   * 
+   *
    * @param message the error message to include in the exception
    * @return the success value, if present
    * @throws RuntimeException
    */
   public R unwrap(String message) throws RuntimeException {
-    if (isSuccess()){
-      return success().get();    
+    if (isSuccess()) {
+      return success().get();
     }
     throw new RuntimeException(String.format("%s: %s", message, error().get()));
   }
