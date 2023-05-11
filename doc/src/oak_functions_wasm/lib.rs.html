@@ -534,6 +534,17 @@
 <a href="#534" id="534">534</a>
 <a href="#535" id="535">535</a>
 <a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -1061,6 +1072,17 @@
         <span class="kw">let </span>invoke_response =
             Response::create(StatusCode::Success, store.data().response_bytes.clone());
         <span class="prelude-val">Ok</span>(invoke_response)
+    }
+}
+
+<span class="kw">impl</span>&lt;L: oak_logger::OakLogger&gt; micro_rpc::Transport <span class="kw">for </span>WasmHandler&lt;L&gt; {
+    <span class="kw">type </span>Error = anyhow::Error;
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+        <span class="kw">let </span>request = Request {
+            body: request.to_vec(),
+        };
+        <span class="kw">let </span>response = <span class="self">self</span>.handle_invoke(request)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(response.body)
     }
 }
 
