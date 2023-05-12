@@ -1,4 +1,6 @@
+
 # cargo-vet config file
+
 [cargo-vet]
 version = "0.6"
 
