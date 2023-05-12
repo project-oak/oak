@@ -147,7 +147,7 @@ public class GrpcStreamingTransportTest {
 
     Result<byte[], String> invokeResult = transport.invoke(TEST_REQUEST);
     Assert.assertTrue(invokeResult.isSuccess());
-    Assert.assertArrayEquals(invokeResult.success().get(), TEST_RESPONSE);
+    Assert.assertArrayEquals(invokeResult.unwrap("missing result"), TEST_RESPONSE);
 
     // The following call may throw a general {@code Exception}.
     // The test succeeds if it doesn't throw an exception.
