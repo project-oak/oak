@@ -41,7 +41,7 @@ async fn test_server() {
         .await;
 
     // Wait for the server to start up.
-    tokio::time::sleep(Duration::from_secs(20)).await;
+    std::thread::sleep(Duration::from_secs(20));
 
     {
         // Lookup match.
