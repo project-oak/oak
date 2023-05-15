@@ -232,7 +232,7 @@ pub async fn run_oak_functions_example_in_background(
     let background = crate::testing::run_background(
         crate::launcher::run_oak_functions_launcher_example_with_lookup_data(
             &variant,
-            &wasm_path,
+            wasm_path,
             port,
             lookup_data_path,
         ),
