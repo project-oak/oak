@@ -175,6 +175,14 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
             )
         }
     }
+
+    pub fn num_valid(&self) -> usize {
+        self.valid.count_ones()
+    }
+
+    pub fn num_allocated(&self) -> usize {
+        self.allocated.count_ones()
+    }
 }
 
 unsafe impl<S: PageSize, const N: usize> FrameAllocator<S> for BitmapAllocator<S, N> {
@@ -237,7 +245,11 @@ mod tests {
     fn silly_allocator_valid() {
         let mut alloc = create_allocator::<1>(0x0000, 0x1000);
         alloc.mark_valid(create_frame_range(0x0000, 0x1000), true);
+        assert_eq!(1, alloc.num_valid());
+        assert_eq!(0, alloc.num_allocated());
         assert_eq!(Some(create_frame(0x0000)), alloc.allocate_frame());
+        assert_eq!(1, alloc.num_valid());
+        assert_eq!(1, alloc.num_allocated());
     }
 
     #[should_panic]
@@ -252,6 +264,7 @@ mod tests {
         alloc.mark_valid(create_frame_range(0x0000, 0x1000), true);
         assert_eq!(Some(create_frame(0x0000)), alloc.allocate_frame());
         assert_eq!(None, alloc.allocate_frame());
+        assert_eq!(1, alloc.num_allocated());
     }
 
     #[test]
@@ -264,6 +277,8 @@ mod tests {
             create_frame_range(0x0000, expected_frames.len() as u64 * 0x1000),
             true,
         );
+        assert_eq!(9, alloc.num_valid());
+        assert_eq!(0, alloc.num_allocated());
 
         let got_frames: Vec<PhysFrame<Size4KiB>> = (0..expected_frames.len())
             .map(|_| alloc.allocate_frame().unwrap())
@@ -271,19 +286,25 @@ mod tests {
 
         assert_set_eq_other!(expected_frames, got_frames);
         assert_eq!(None, alloc.allocate_frame());
+        assert_eq!(9, alloc.num_allocated());
     }
 
     #[test]
     fn realloc() {
         let mut alloc = create_allocator::<1>(0x0000, 0x1000);
         alloc.mark_valid(create_frame_range(0x0000, 0x1000), true);
+        assert_eq!(1, alloc.num_valid());
+        assert_eq!(0, alloc.num_allocated());
         assert_eq!(Some(create_frame(0x0000)), alloc.allocate_frame());
         assert_eq!(None, alloc.allocate_frame());
+        assert_eq!(1, alloc.num_allocated());
         unsafe {
             alloc.deallocate_frame(create_frame(0x0000));
         }
+        assert_eq!(0, alloc.num_allocated());
         assert_eq!(Some(create_frame(0x0000)), alloc.allocate_frame());
         assert_eq!(None, alloc.allocate_frame());
+        assert_eq!(1, alloc.num_allocated());
     }
 
     #[should_panic]
