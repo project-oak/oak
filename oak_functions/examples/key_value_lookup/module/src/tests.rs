@@ -41,7 +41,7 @@ async fn test_server() {
         .await;
 
     // Wait for the server to start up.
-    std::thread::sleep(Duration::from_secs(2));
+    tokio::time::sleep(Duration::from_secs(20)).await;
 
     {
         // Lookup match.
@@ -85,7 +85,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         ));
 
     // Wait for the server to start up.
-    std::thread::sleep(Duration::from_secs(2));
+    std::thread::sleep(Duration::from_secs(20));
 
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_io()

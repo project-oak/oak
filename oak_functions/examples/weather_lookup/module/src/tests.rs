@@ -56,7 +56,7 @@ async fn test_server() {
         .await;
 
     // Wait for the server to start up.
-    std::thread::sleep(Duration::from_secs(2));
+    std::thread::sleep(Duration::from_secs(20));
 
     // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
     {
@@ -136,7 +136,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         ));
 
     // Wait for the server to start up.
-    std::thread::sleep(Duration::from_secs(2));
+    std::thread::sleep(Duration::from_secs(20));
 
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_io()
