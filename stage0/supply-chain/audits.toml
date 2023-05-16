@@ -62,3 +62,12 @@ who = "Conrad Grobler <grobler@google.com>"
 criteria = "does-not-implement-crypto"
 version = "0.2.4"
 notes = "This crate does not implement any cryptographic algorithms."
+
+[[audits.zerocopy-derive]]
+who = "Andri Saar <andrisaar@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.3.1"
+notes = """
+Handling of untrusted input data is delegated to the `zerocopy` crate itself.
+This crate does not implement any cryptographic algorithms.
+"""
