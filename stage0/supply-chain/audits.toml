@@ -25,3 +25,9 @@ who = "Andri Saar <andrisaar@google.com>"
 criteria = ["safe-to-deploy", "does-not-implement-crypto"]
 version = "0.1.1"
 notes = "Crate has no dependecies, includes a safe wrapper for `Layout` that makes unsafe code safer, and has no crypto code."
+
+[[audits.doc-comment]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = "does-not-implement-crypto"
+version = "0.3.3"
+notes = "This crate does not implement any cryptographic algorithms."
