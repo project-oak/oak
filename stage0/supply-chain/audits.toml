@@ -1,6 +1,4 @@
-
 # cargo-vet audits file
-
 [criteria.crypto-safe]
 description = """
 All crypto algorithms in this crate have been reviewed by a relevant expert.
@@ -40,3 +38,9 @@ notes = """
 By design, all the macros in `static_assertions` run at compile time, which means they do not deal with untrusted input at all.
 Only one short block of unsafe code in `assert_eq_size_ptr`, which looks reasonable.
 """
+
+[[audits.synstructure]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = "does-not-implement-crypto"
+version = "0.12.6"
+notes = "Crate does not implement any cryptographic algorithms"
