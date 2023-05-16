@@ -16,6 +16,8 @@
 
 package com.google.oak.crypto;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import com.google.oak.crypto.hpke.Context;
 import com.google.oak.crypto.hpke.Hpke;
 import com.google.oak.crypto.hpke.KeyPair;
@@ -24,6 +26,7 @@ import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.Optional;
 
@@ -37,7 +40,7 @@ import java.util.Optional;
  */
 public class ServerEncryptor implements Encryptor {
   // Info string used by Hybrid Public Key Encryption.
-  private static final byte[] OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1".getBytes();
+  private static final byte[] OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1".getBytes(UTF_8);
 
   private final KeyPair serverKeyPair;
 
@@ -59,10 +62,10 @@ public class ServerEncryptor implements Encryptor {
   }
 
   /**
-   * Decrypts a {@code EncryptedRequest} proto message using AEAD.
+   * Decrypts a {@code com.google.oak.crypto.v1.EncryptedRequest} proto message using AEAD.
    * <https://datatracker.ietf.org/doc/html/rfc5116>
    *
-   * @param encryptedRequest a serialized {@code EncryptedRequest} message
+   * @param encryptedRequest a serialized {@code com.google.oak.crypto.v1.EncryptedRequest} message
    * @return a response message plaintext and associated data wrapped in a {@code Result}
    */
   @Override
@@ -71,7 +74,8 @@ public class ServerEncryptor implements Encryptor {
     // Deserialize request message.
     EncryptedRequest encryptedRequest;
     try {
-      encryptedRequest = EncryptedRequest.parseFrom(serializedEncryptedRequest);
+      encryptedRequest = EncryptedRequest.parseFrom(
+          serializedEncryptedRequest, ExtensionRegistry.getEmptyRegistry());
     } catch (InvalidProtocolBufferException e) {
       return Result.error(e);
     }
@@ -82,8 +86,7 @@ public class ServerEncryptor implements Encryptor {
     // Get recipient context;
     if (this.recipientRequestContext.isEmpty()) {
       // Get serialized encapsulated public key.
-      if (encryptedRequest.getSerializedEncapsulatedPublicKey()
-          == com.google.protobuf.ByteString.EMPTY) {
+      if (encryptedRequest.getSerializedEncapsulatedPublicKey().equals(ByteString.EMPTY)) {
         return Result.error(new Exception(
             "serialized encapsulated public key is not present in the initial request message"));
       }
@@ -116,7 +119,8 @@ public class ServerEncryptor implements Encryptor {
    *
    * @param plaintext the input byte array to be encrypted
    * @param associatedData the input byte array with associated data to be authenticated
-   * @return a serialized {@code EncryptedResponse} message wrapped in a {@code Result}
+   * @return a serialized {@code com.google.oak.crypto.v1.EncryptedResponse} message wrapped in a
+   *     {@code Result}
    */
   @Override
   public final Result<byte[], Exception> encrypt(

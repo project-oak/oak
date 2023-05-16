@@ -34,8 +34,5 @@ java_binary(
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
         "@io_grpc_grpc_java//api",
-        "@io_grpc_grpc_java//netty",
-        "@io_grpc_grpc_java//protobuf",
-        "@io_grpc_grpc_java//stub",
     ],
 )

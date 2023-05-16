@@ -16,6 +16,8 @@
 
 package com.google.oak.crypto;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import com.google.oak.crypto.hpke.Context;
 import com.google.oak.crypto.hpke.Hpke;
 import com.google.oak.crypto.v1.AeadEncryptedMessage;
@@ -23,6 +25,7 @@ import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.Optional;
 
@@ -46,7 +49,7 @@ public class ClientEncryptor implements Encryptor {
       117, (byte) 254, (byte) 171, (byte) 248, 77, 4, (byte) 242, 118};
 
   // Info string used by Hybrid Public Key Encryption.
-  private static final byte[] OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1".getBytes();
+  private static final byte[] OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1".getBytes(UTF_8);
 
   // Encapsulated public key needed to establish a symmetric session key.
   // Only sent in the initial request message of the session.
@@ -125,7 +128,8 @@ public class ClientEncryptor implements Encryptor {
     // Deserialize response message.
     EncryptedResponse encryptedResponse;
     try {
-      encryptedResponse = EncryptedResponse.parseFrom(serializedEncryptedResponse);
+      encryptedResponse = EncryptedResponse.parseFrom(
+          serializedEncryptedResponse, ExtensionRegistry.getEmptyRegistry());
     } catch (InvalidProtocolBufferException e) {
       return Result.error(e);
     }
@@ -139,6 +143,6 @@ public class ClientEncryptor implements Encryptor {
             ->
             // TODO(#3843): Accept unserialized proto messages once we have Java encryption without
             // JNI.
-            new ClientEncryptor.DecryptionResult(plaintext, associatedData));
+            new DecryptionResult(plaintext, associatedData));
   }
 }

@@ -140,7 +140,8 @@ public class Result<R, E> {
    *
    * @param message the error message to include in the exception
    * @return the success value, if present
-   * @throws RuntimeException
+   * @throws RuntimeException containing the given error message, if the success value in not
+   *     present in the Result
    */
   public R unwrap(String message) throws RuntimeException {
     if (isSuccess()) {
