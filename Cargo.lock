@@ -1744,6 +1744,7 @@ dependencies = [
  "bitflags",
  "bytes",
  "micro_rpc",
+ "oak_core",
  "static_assertions",
 ]
 
@@ -1921,6 +1922,7 @@ dependencies = [
  "clap",
  "log",
  "oak_channel",
+ "oak_core",
  "oak_functions_service",
  "oak_remote_attestation_amd",
  "oak_remote_attestation_interactive",

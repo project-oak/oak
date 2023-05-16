@@ -58,7 +58,7 @@ impl Connector {
             .write_request(request_message)
             .map_err(|_| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
 
-        let response_message = self
+        let (response_message, _) = self
             .inner
             .read_response()
             .map_err(|_| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;

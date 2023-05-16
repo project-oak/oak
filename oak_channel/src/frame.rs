@@ -23,6 +23,7 @@ use alloc::{boxed::Box, format, vec::Vec};
 use bitflags::bitflags;
 use bytes::{BufMut, BytesMut};
 use core::borrow::BorrowMut;
+use oak_core::timer::Timer;
 
 pub const PADDING_SIZE: usize = 4;
 
@@ -92,11 +93,16 @@ impl Framed {
     pub fn read_frame<'a>(
         &mut self,
         message_buffer: &'a mut BytesMut,
-    ) -> anyhow::Result<Frame<'a>> {
+    ) -> anyhow::Result<(Frame<'a>, Timer)> {
         {
             let mut padding_bytes = [0; PADDING_SIZE];
             self.inner.read(&mut padding_bytes)?;
         };
+        // As the read() above can block indefinitely we'll start measuring the time it took to read
+        // the data _after_ we've read the padding bytes. Strictly speaking we should start
+        // measuring the time as we're reading the first padding byte, but this should be close
+        // enough to get a rough idea.
+        let timer = Timer::new_rdtsc();
         let length: usize = {
             let mut length_bytes = [0; LENGTH_SIZE];
             self.inner.read(&mut length_bytes)?;
@@ -126,7 +132,7 @@ impl Framed {
             &message_buffer[tail..]
         };
 
-        Ok(Frame { flags, body })
+        Ok((Frame { flags, body }, timer))
     }
 
     pub fn write_frame(&mut self, frame: Frame) -> anyhow::Result<()> {

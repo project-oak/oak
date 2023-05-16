@@ -23,6 +23,7 @@ extern crate alloc;
 use alloc::boxed::Box;
 use core::panic::PanicInfo;
 use log::info;
+use oak_core::samplestore::StaticSampleStore;
 use oak_restricted_kernel_api::{FileDescriptorChannel, StderrLogger};
 
 static LOGGER: StderrLogger = StderrLogger {};
@@ -41,10 +42,15 @@ fn main() -> ! {
 }
 
 fn start_server() -> ! {
+    let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
     let service = oak_tensorflow_service::TensorflowService::new();
     let server = oak_tensorflow_service::proto::oak::tensorflow::TensorflowServer::new(service);
-    oak_channel::server::start_blocking_server(Box::<FileDescriptorChannel>::default(), server)
-        .expect("server encountered an unrecoverable error")
+    oak_channel::server::start_blocking_server(
+        Box::<FileDescriptorChannel>::default(),
+        server,
+        &mut invocation_stats,
+    )
+    .expect("server encountered an unrecoverable error")
 }
 
 #[alloc_error_handler]

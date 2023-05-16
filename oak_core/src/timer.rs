@@ -40,17 +40,19 @@ pub fn rdtsc() -> u64 {
 /// Measures the number of clock cycles between `new()` and `elapsed()`. This measurement only makes
 /// sense if the process is running on the same CPU, as different CPUs will have different tick
 /// counter values.
+#[derive(Debug)]
 pub struct Timer {
     start: u64,
 }
 
-// Don't implement `Default` on purpose, as we'll be reading the TSC when calling `new()` and thus
-// two calls to `Timer::default()` would yield different Timers.
-#[allow(clippy::new_without_default)]
 impl Timer {
+    pub fn new(start: u64) -> Self {
+        Self { start }
+    }
+
     /// Constructs a new timer, recording the current tick counter value.
-    pub fn new() -> Self {
-        Self { start: rdtsc() }
+    pub fn new_rdtsc() -> Self {
+        Self::new(rdtsc())
     }
 
     /// Returns the approximate number of clock cycles it took to execute `func`.
@@ -58,7 +60,7 @@ impl Timer {
     where
         F: FnOnce(),
     {
-        let timer = Timer::new();
+        let timer = Timer::new_rdtsc();
         func();
         timer.elapsed()
     }
@@ -77,7 +79,7 @@ mod tests {
 
     #[test]
     pub fn simple_timer() {
-        let timer = Timer::new();
+        let timer = Timer::new_rdtsc();
         let duration = timer.elapsed();
         assert!(duration > 0);
     }

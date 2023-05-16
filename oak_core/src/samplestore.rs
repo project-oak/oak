@@ -18,12 +18,24 @@
 /// N is the number of elements kept in memory; it must be larger than 0.
 /// The array is allocated statically; SampleStore does not use heap allocation.
 #[derive(Debug, PartialEq)]
-pub struct SampleStore<const N: usize> {
+pub struct StaticSampleStore<const N: usize> {
     data: [u64; N],
     samples: usize,
 }
 
-impl<const N: usize> SampleStore<N> {
+pub trait SampleStore {
+    /// Records a new data point value.
+    ///
+    /// If the store has already been filled, it will probabilistically replace one of the
+    /// existing entries based on reservoir sampling.
+    fn record(&mut self, value: u64);
+
+    /// Gets the n-th percentile. n needs to be between 0 and 100, otherwise None is returned; also,
+    /// the store must have at least one recorded data point.
+    fn percentile(&self, n: f64) -> Option<u64>;
+}
+
+impl<const N: usize> StaticSampleStore<N> {
     pub fn new() -> Option<Self> {
         if N == 0 {
             None
@@ -34,12 +46,10 @@ impl<const N: usize> SampleStore<N> {
             })
         }
     }
+}
 
-    /// Records a new data point value.
-    ///
-    /// If the store has already been filled, it will probabilistically replace one of the
-    /// existing entries based on reservoir sampling.
-    pub fn record(&mut self, value: u64) {
+impl<const N: usize> SampleStore for StaticSampleStore<N> {
+    fn record(&mut self, value: u64) {
         // Reservoir sampling. See https://en.wikipedia.org/wiki/Reservoir_sampling for the description.
         let j = if self.samples < self.data.len() {
             self.samples
@@ -59,9 +69,7 @@ impl<const N: usize> SampleStore<N> {
         self.samples += 1;
     }
 
-    /// Gets the n-th percentile. n needs to be between 0 and 100, otherwise None is returned; also,
-    /// the store must have at least one recorded data point.
-    pub fn percentile(&self, n: f64) -> Option<u64> {
+    fn percentile(&self, n: f64) -> Option<u64> {
         if n > 100.0 || self.samples == 0 {
             return None;
         }
@@ -83,19 +91,19 @@ mod tests {
 
     #[test]
     pub fn empty() {
-        let store = SampleStore::<1>::new().unwrap();
+        let store = StaticSampleStore::<1>::new().unwrap();
         assert_eq!(store.percentile(10.0), None)
     }
 
     #[test]
     pub fn invalid() {
-        let store = SampleStore::<0>::new();
+        let store = StaticSampleStore::<0>::new();
         assert_eq!(store, None)
     }
 
     #[test]
     pub fn one_entry() {
-        let mut store = SampleStore::<1>::new().unwrap();
+        let mut store = StaticSampleStore::<1>::new().unwrap();
         store.record(10);
         assert_eq!(store.percentile(0.0), Some(10));
         assert_eq!(store.percentile(50.0), Some(10));
@@ -106,7 +114,7 @@ mod tests {
 
     #[test]
     pub fn filled() {
-        let mut store = SampleStore::<10>::new().unwrap();
+        let mut store = StaticSampleStore::<10>::new().unwrap();
         for x in 1..=10 {
             store.record(x);
         }
@@ -117,7 +125,7 @@ mod tests {
 
     #[test]
     pub fn probabilistic_replacement() {
-        let mut store = SampleStore::<10>::new().unwrap();
+        let mut store = StaticSampleStore::<10>::new().unwrap();
         (1..=10).for_each(|_| store.record(0));
         // This will now get difficult, as replacing entries is probabilistic. But we should get at
         // least one hit.
@@ -127,7 +135,7 @@ mod tests {
 
     #[test]
     pub fn large() {
-        let mut store = SampleStore::<1000>::new().unwrap();
+        let mut store = StaticSampleStore::<1000>::new().unwrap();
         (1..=1000).for_each(|x| store.record(x));
         assert_eq!(store.percentile(0.0), Some(1));
         assert_eq!(store.percentile(32.5), Some(325));
