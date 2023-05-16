@@ -31,3 +31,12 @@ who = "Conrad Grobler <grobler@google.com>"
 criteria = "does-not-implement-crypto"
 version = "0.3.3"
 notes = "This crate does not implement any cryptographic algorithms."
+
+[[audits.static_assertions]]
+who = "Andri Saar <andrisaar@google.com>"
+criteria = "safe-to-deploy"
+version = "1.1.0"
+notes = """
+By design, all the macros in `static_assertions` run at compile time, which means they do not deal with untrusted input at all.
+Only one short block of unsafe code in `assert_eq_size_ptr`, which looks reasonable.
+"""
