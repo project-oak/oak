@@ -29,7 +29,6 @@ java_library(
         "KeyPair.java",
     ],
     deps = [
-        "//java/src/main/java/com/google/oak/crypto:encryptor",
         "//java/src/main/java/com/google/oak/util",
     ],
 )

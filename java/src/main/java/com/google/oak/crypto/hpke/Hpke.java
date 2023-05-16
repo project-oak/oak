@@ -19,7 +19,7 @@ package com.google.oak.crypto.hpke;
 import com.google.oak.util.Result;
 
 // TODO(#3642): Implement Java Hybrid Encryption.
-public class Hpke {
+public final class Hpke {
   public static final class SenderContext {
     public final byte[] serializedEncapsulatedPublicKey;
     public final Context.SenderRequestContext senderRequestContext;
@@ -69,8 +69,10 @@ public class Hpke {
    *
    */
   public static final Result<RecipientContext, Exception> setupBaseRecipient(
-      final byte[] serializedEncapsulatedPublicKey, KeyPair recipient_key_pair, final byte[] info) {
+      final byte[] serializedEncapsulatedPublicKey, KeyPair recipientKeyPair, final byte[] info) {
     return Result.success(new RecipientContext(
         new Context.RecipientRequestContext(), new Context.RecipientResponseContext()));
   }
+
+  private Hpke() {}
 }
