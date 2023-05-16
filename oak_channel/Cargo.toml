@@ -13,6 +13,7 @@ client = ["std"]
 [dependencies]
 anyhow = { version = "*", default-features = false }
 micro_rpc = { workspace = true }
+oak_core = { workspace = true }
 static_assertions = "*"
 bitflags = "*"
 bytes = { version = "*", default-features = false }

@@ -21,6 +21,7 @@ use crate::{
     Channel, InvocationChannel,
 };
 use alloc::boxed::Box;
+use oak_core::timer::Timer;
 
 pub struct ClientChannelHandle {
     inner: InvocationChannel,
@@ -35,9 +36,9 @@ impl ClientChannelHandle {
     pub fn write_request(&mut self, request: RequestMessage) -> anyhow::Result<()> {
         self.inner.write_message(request)
     }
-    pub fn read_response(&mut self) -> anyhow::Result<ResponseMessage> {
-        let message = self.inner.read_message()?;
-        Ok(message)
+
+    pub fn read_response(&mut self) -> anyhow::Result<(ResponseMessage, Timer)> {
+        self.inner.read_message()
     }
 }
 

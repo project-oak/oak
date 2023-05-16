@@ -450,6 +450,7 @@ dependencies = [
  "bitflags",
  "bytes",
  "micro_rpc",
+ "oak_core",
  "static_assertions",
 ]
 
