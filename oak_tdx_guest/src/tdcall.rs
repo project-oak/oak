@@ -224,20 +224,25 @@ pub enum TdxPageSize {
     Size1GiB = 2,
 }
 
-impl From<PhysFrame<Size4KiB>> for TdxPageSize {
-    fn from(_value: PhysFrame<Size4KiB>) -> Self {
+/// Trait for getting the associated `TdxPageSize` enum for a memory page of the given size.
+pub trait TdxSize {
+    fn tdx_size() -> TdxPageSize;
+}
+
+impl TdxSize for Size4KiB {
+    fn tdx_size() -> TdxPageSize {
         TdxPageSize::Size4KiB
     }
 }
 
-impl From<PhysFrame<Size2MiB>> for TdxPageSize {
-    fn from(_value: PhysFrame<Size2MiB>) -> Self {
+impl TdxSize for Size2MiB {
+    fn tdx_size() -> TdxPageSize {
         TdxPageSize::Size2MiB
     }
 }
 
-impl From<PhysFrame<Size1GiB>> for TdxPageSize {
-    fn from(_value: PhysFrame<Size1GiB>) -> Self {
+impl TdxSize for Size1GiB {
+    fn tdx_size() -> TdxPageSize {
         TdxPageSize::Size1GiB
     }
 }
@@ -250,17 +255,13 @@ impl From<PhysFrame<Size1GiB>> for TdxPageSize {
 /// See section 2.4.7 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
 /// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 /// for more information.
-pub fn accept_memory<S>(frame: PhysFrame<S>) -> Result<(), AcceptMemoryError>
-where
-    S: PageSize,
-    PhysFrame<S>: Into<TdxPageSize>,
-{
+pub fn accept_memory<S: PageSize + TdxSize>(frame: PhysFrame<S>) -> Result<(), AcceptMemoryError> {
     // The TDCALL leaf for TDG.MEM.PAGE.ACCEPT.
     const LEAF: u64 = 6;
 
     let mut result: u64;
     let gpa = frame.start_address().as_u64();
-    let page_size: TdxPageSize = frame.into();
+    let page_size = S::tdx_size() as u64;
 
     // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). The guest-physical
     // address of the start of the memory page goes into RCX. The size of the page goes into RDX.
@@ -273,7 +274,7 @@ where
             "tdcall",
             inout("rax") LEAF => result,
             in("rcx") gpa,
-            in("rdx") page_size as u64,
+            in("rdx") page_size,
 
             options(nomem, nostack),
         );
