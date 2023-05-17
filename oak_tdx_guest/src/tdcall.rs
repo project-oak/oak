@@ -18,6 +18,8 @@
 
 use bitflags::bitflags;
 use core::{arch::asm, mem::size_of};
+use strum::{Display, FromRepr};
+use x86_64::structures::paging::{PageSize, PhysFrame, Size1GiB, Size2MiB, Size4KiB};
 
 /// The result from an instruction that indicates success.
 const SUCCESS: u64 = 0;
@@ -200,6 +202,91 @@ pub fn get_ve_info() -> Option<VeInfo> {
         instruction_length,
         instruction_info,
     })
+}
+
+/// Error when accepting guest-physical memory.
+#[derive(Debug, Display, FromRepr)]
+#[repr(u64)]
+pub enum AcceptMemoryError {
+    /// The supplied address is not valid.
+    InvalidOperand = 0x8000_0000_0000_0000,
+    /// The page is not pending and has already been accepted.
+    AlreadyAccepted = 0x8000_0000_0000_0001,
+    /// The specified page size is invalid.
+    InvalidSize = 0x8000_0000_0000_0002,
+}
+
+#[derive(Debug)]
+#[repr(u64)]
+pub enum TdxPageSize {
+    Size4KiB = 0,
+    Size2MiB = 1,
+    Size1GiB = 2,
+}
+
+impl From<PhysFrame<Size4KiB>> for TdxPageSize {
+    fn from(_value: PhysFrame<Size4KiB>) -> Self {
+        TdxPageSize::Size4KiB
+    }
+}
+
+impl From<PhysFrame<Size2MiB>> for TdxPageSize {
+    fn from(_value: PhysFrame<Size2MiB>) -> Self {
+        TdxPageSize::Size2MiB
+    }
+}
+
+impl From<PhysFrame<Size1GiB>> for TdxPageSize {
+    fn from(_value: PhysFrame<Size1GiB>) -> Self {
+        TdxPageSize::Size1GiB
+    }
+}
+
+/// Accepts a pending private memory page to make it usable in the guest, by calling the TDCALL
+/// [TDG.MEM.PAGE.ACCEPT] leaf.
+///
+/// This call also zeros the memory in the page.
+///
+/// See section 2.4.7 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
+/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// for more information.
+pub fn accept_memory<S>(frame: PhysFrame<S>) -> Result<(), AcceptMemoryError>
+where
+    S: PageSize,
+    PhysFrame<S>: Into<TdxPageSize>,
+{
+    // The TDCALL leaf for TDG.MEM.PAGE.ACCEPT.
+    const LEAF: u64 = 6;
+
+    let mut result: u64;
+    let gpa = frame.start_address().as_u64();
+    let page_size: TdxPageSize = frame.into();
+
+    // The TDCALL leaf goes into RAX. RAX returns the result (0 is success). The guest-physical
+    // address of the start of the memory page goes into RCX. The size of the page goes into RDX.
+    //
+    // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
+    // registers are specified, so no unspecified registers will be clobbered. The newly added page
+    // cannot be a previously accepted page, so it will not affect memory that is already in use.
+    unsafe {
+        asm!(
+            "tdcall",
+            inout("rax") LEAF => result,
+            in("rcx") gpa,
+            in("rdx") page_size as u64,
+
+            options(nomem, nostack),
+        );
+    }
+
+    if result > 0 {
+        // According to the spec the result will either be 0 (Success) or one of the defined error
+        // values.
+        return Err(AcceptMemoryError::from_repr(result)
+            .expect("TDCALL[TDG.MEM.PAGE.ACCEPT] returned an invalid result"));
+    }
+
+    Ok(())
 }
 
 /// Splits a 64-bit little-endian unsigned integer into two 32-bit little-endian unsigned integers.
