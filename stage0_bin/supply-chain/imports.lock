@@ -28,6 +28,12 @@ so they'll at least be forthcoming if they try to implement something
 cryptographic. When in doubt, please ask an expert."""
 aggregated-from = "https://chromium.googlesource.com/chromiumos/third_party/rust_crates/+/refs/heads/main/cargo-vet/audits.toml?format=TEXT"
 
+[[audits.google.audits.heck]]
+who = "ChromeOS"
+criteria = ["safe-to-run", "does-not-implement-crypto"]
+version = "0.4.0"
+aggregated-from = "https://chromium.googlesource.com/chromiumos/third_party/rust_crates/+/refs/heads/main/cargo-vet/audits.toml?format=TEXT"
+
 [[audits.google.audits.log]]
 who = "ChromeOS"
 criteria = ["safe-to-run", "does-not-implement-crypto"]
