@@ -18,7 +18,7 @@
 
 pub static MOCK_LOOKUP_DATA_PATH: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_functions_launcher", "mock_lookup_data"]));
-static STAGE_0_DIR: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["stage0"]));
+static STAGE_0_DIR: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["stage0_bin"]));
 pub static OAK_RESTRICTED_KERNEL_BIN_DIR: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_restricted_kernel_bin"]));
 static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {

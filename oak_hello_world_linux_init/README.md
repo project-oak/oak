@@ -52,8 +52,8 @@ cp --archive target/x86_64-unknown-linux-musl/release/oak_hello_world_linux_init
 Build the Stage 0 Firmware image:
 
 ```bash
-( cd stage0; cargo build --release; )
-objcopy --output-format binary stage0/target/x86_64-unknown-none/release/oak_stage0 \
+( cd stage0_bin; cargo build --release; )
+objcopy --output-format binary stage0/target/x86_64-unknown-none/release/oak_stage0_bin \
     bin/stage0.bin
 ```
 
