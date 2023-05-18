@@ -109,7 +109,7 @@ impl LauncherMode {
                 format!(
                     "--bios-binary={}",
                     workspace_path(&[
-                        "stage0",
+                        "stage0_bin",
                         "target",
                         "x86_64-unknown-none",
                         "release",
