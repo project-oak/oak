@@ -62,7 +62,8 @@ The resulting `oak_stage0.bin` should be exactly `BIOS_SIZE` (defined in
 To use the binary, pass it to `qemu -bios`; for example:
 
 ```shell
-qemu-system-x86_64 -nodefaults -nographic -no-reboot -machine microvm -bios stage0.bin
+qemu-system-x86_64 -nodefaults -nographic -no-reboot -machine microvm \
+    -bios target/x86_64-unknown-none/release/oak_stage0.bin
 ```
 
 ## Loading a kernel
