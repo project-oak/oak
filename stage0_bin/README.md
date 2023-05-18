@@ -45,18 +45,18 @@ To create the BIOS blob, you need to turn it into a headerless file with
 
 ```shell
 cargo build --release
-objcopy --output-target binary target/x86_64-unknown-none/release/oak_stage0 \
-    target/x86_64-unknown-none/release/stage0.bin
+objcopy --output-target binary target/x86_64-unknown-none/release/oak_stage0_bin \
+    target/x86_64-unknown-none/release/oak_stage0.bin
 ```
 
 This can also be done in one step using cargo-binutils:
 
 ```shell
 cargo objcopy --release -- --output-target binary \
-    target/x86_64-unknown-none/release/stage0.bin
+    target/x86_64-unknown-none/release/oak_stage0.bin
 ```
 
-The resulting `stage0.bin` should be exactly `BIOS_SIZE` (defined in
+The resulting `oak_stage0.bin` should be exactly `BIOS_SIZE` (defined in
 `layout.ld`) in size. The size of the BIOS image should not exceed 1 MB.
 
 To use the binary, pass it to `qemu -bios`; for example:

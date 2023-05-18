@@ -20,7 +20,7 @@ TEE through [Remote Attestation](./docs/remote-attestation.md). Together with
 binds the open-source source code to the remotely attested binary running inside
 the TEE. In order to feasibly review all the source code running inside the TEE,
 and minimize our trusted computing base, Oak provides the following
-infrastructure: [stage 0](/stage0/),
+infrastructure: [stage 0](/stage0_bin/),
 [Oak Restricted Kernel](/oak_restricted_kernel/) and controlled communications
 interfaces, i.e., the [Oak Comms Channel](/oak_channel/) and
 [microRPC](/micro_rpc/).
