@@ -83,6 +83,17 @@ criteria = "does-not-implement-crypto"
 version = "0.2.4"
 notes = "This crate does not implement any cryptographic algorithms."
 
+[[audits.x86_64]]
+who = "Andri Saar <andrisaar@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.14.10"
+notes = """
+This crate contains a lot of unsafe code as it deals with low-level machine state, which is obviously unsafe to call with untrusted input.
+All potentially dangerous operations look like they have been marked as `unsafe` appropriately, so the onus is on the caller to ensure
+safety. The unsafe blocks in the code are tiny and usually cover one or two lines of assembly (for example, to load a data structure).
+The crate does not implement any cryptograhic algorithms.
+"""
+
 [[audits.zerocopy-derive]]
 who = "Andri Saar <andrisaar@google.com>"
 criteria = ["safe-to-deploy", "does-not-implement-crypto"]
