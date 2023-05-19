@@ -19,7 +19,7 @@
 use oak_functions_abi::{proto::OakStatus, StorageGetItemResponse};
 use std::convert::AsRef;
 
-/// See [`read_request`](/oak_functions_abi.md#read_request).
+/// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#oak_functions_abi.md#read_request).
 pub fn read_request() -> Result<Vec<u8>, OakStatus> {
     let mut buf_ptr: *mut u8 = std::ptr::null_mut();
     let mut buf_len: usize = 0;
@@ -34,11 +34,6 @@ pub fn read_request() -> Result<Vec<u8>, OakStatus> {
     }
 }
 
-/// Write the response.
-///
-/// Multiple calls to this function will replace the earlier responses. Only the last response that
-/// is written will be kept and returned to the user.
-///
 /// See [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
 pub fn write_response(buf: &[u8]) -> Result<(), OakStatus> {
     let status = unsafe { oak_functions_abi::write_response(buf.as_ptr(), buf.len()) };
@@ -71,8 +66,8 @@ pub fn testing(request: &[u8]) -> Result<Vec<u8>, OakStatus> {
     invoke(oak_functions_abi::ExtensionHandle::TestingHandle, request)
 }
 
-// Passes the given request to the extension behind the extension handle and returns the extension's
-// response.
+/// See [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#omvple).
+
 fn invoke(
     handle: oak_functions_abi::ExtensionHandle,
     request: &[u8],
