@@ -32,6 +32,16 @@ criteria = "does-not-implement-crypto"
 version = "1.1.0"
 notes = "This crate does not implement any cryptographic algorithms."
 
+[[audits.byteorder]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "1.4.3"
+notes = """
+The crate contains lots of unsafe code without comments explaining why it is safe, but the usage looks reasonable and each unsafe section is short and easy to reason about.
+
+Also this crate does not implement any cryptographic primitives.
+"""
+
 [[audits.cfg-if]]
 who = "Andri Saar <andrisaar@google.com>"
 criteria = ["safe-to-deploy", "does-not-implement-crypto"]
