@@ -36,7 +36,7 @@ notes = "This crate does not implement any cryptographic algorithms."
 who = "Juliette Pretot <julsh@google.com>"
 criteria = ["safe-to-deploy", "does-not-implement-crypto"]
 version = "1.3.2"
-notes = "Only one use of unsafe code that is well commented, and unproblematic. Does not implement crypto algorithms."
+notes = "Limited use of unsafe code that is well commented and unproblematic. Does not implement crypto algorithms."
 
 [[audits.cfg-if]]
 who = "Andri Saar <andrisaar@google.com>"
