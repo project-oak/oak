@@ -93,6 +93,12 @@ criteria = "does-not-implement-crypto"
 version = "0.2.4"
 notes = "This crate does not implement any cryptographic algorithms."
 
+[[audits.volatile]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.4.5"
+notes = "Unsafe code is generally commented to explain safety and easily comprehensible. No crypto is implemented, no powerful dependencies imported."
+
 [[audits.x86_64]]
 who = "Andri Saar <andrisaar@google.com>"
 criteria = ["safe-to-deploy", "does-not-implement-crypto"]
