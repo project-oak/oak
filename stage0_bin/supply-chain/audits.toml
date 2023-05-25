@@ -54,6 +54,22 @@ criteria = "does-not-implement-crypto"
 version = "0.3.3"
 notes = "This crate does not implement any cryptographic algorithms."
 
+[[audits.getrandom]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.2.9"
+notes = """
+Code is well commented and unsafe blocks generally have comments regarding safety.
+No obvious security issues uncovered.
+
+I reviewed the RDRAND implementation most closely, as this is what is used in oak_core & stage0.
+Implementations for other targets appear to be safe to deploy.
+I would not consider this crate to be implementing crypto algorithms itself.
+However, outside of RDRAND and js I'm not equipped to evaluate the trustworthiness of the random number generation itself.
+
+Therefore, I would not necessarily endorse this crate as a safe primitive for implementing crypo algorithms using its random number generation.
+"""
+
 [[audits.heck]]
 who = "Conrad Grobler <grobler@google.com>"
 criteria = "safe-to-deploy"
