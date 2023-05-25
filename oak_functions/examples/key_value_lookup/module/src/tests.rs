@@ -62,6 +62,11 @@ async fn test_server() {
 
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
+    if xtask::testing::skip_test() {
+        log::info!("skipping test, as it requires KVM support");
+        return;
+    }
+
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_io()
         .enable_time()

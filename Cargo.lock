@@ -1427,6 +1427,7 @@ version = "0.1.0"
 dependencies = [
  "hashbrown 0.13.2",
  "http",
+ "log",
  "maplit",
  "oak_functions_abi",
  "oak_functions_sdk",
@@ -3989,6 +3990,7 @@ name = "weather_lookup"
 version = "0.1.0"
 dependencies = [
  "location_utils",
+ "log",
  "lookup_data_generator",
  "maplit",
  "oak_functions_abi",

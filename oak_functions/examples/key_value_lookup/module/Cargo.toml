@@ -24,3 +24,4 @@ tokio = { version = "*", features = [
   "rt-multi-thread"
 ] }
 xtask = { workspace = true }
+log = "*"

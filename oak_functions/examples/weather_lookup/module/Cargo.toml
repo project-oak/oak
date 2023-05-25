@@ -28,3 +28,4 @@ tokio = { version = "*", features = [
 ] }
 tonic = "*"
 xtask = { workspace = true }
+log = "*"
