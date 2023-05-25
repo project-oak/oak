@@ -62,8 +62,9 @@ async fn test_server() {
 
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
         .build()
         .unwrap();
 
@@ -86,12 +87,6 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
 
     // Wait for the server to start up.
     std::thread::sleep(Duration::from_secs(20));
-
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build()
-        .unwrap();
 
     let summary = bencher.bench(|bencher| {
         bencher.iter(|| {
