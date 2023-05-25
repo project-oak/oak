@@ -22,6 +22,11 @@ use test::Bencher;
 
 #[tokio::test]
 async fn test_server() {
+    if xtask::testing::skip_test() {
+        log::info!("skipping test");
+        return;
+    }
+
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
 
     let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
