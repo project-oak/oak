@@ -15,7 +15,6 @@
 //
 
 #![no_std]
-#![no_main]
 #![feature(int_roundings)]
 
 extern crate alloc;
@@ -35,13 +34,12 @@ use x86_64::{
 };
 
 mod acpi;
-mod asm;
 mod cmos;
 mod fw_cfg;
 mod initramfs;
 mod kernel;
 mod logging;
-mod paging;
+pub mod paging;
 mod sev;
 mod zero_page;
 
@@ -96,8 +94,7 @@ pub unsafe fn jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -> ! {
 /// # Arguments
 ///
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page tables.
-#[no_mangle]
-pub extern "C" fn rust64_start(encrypted: u64) -> ! {
+pub fn rust64_start(encrypted: u64) -> ! {
     let (es, snp) = if encrypted > 0 {
         // We're under some form of memory encryption, thus it's safe to access the SEV_STATUS MSR.
         let status =
@@ -115,7 +112,7 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
 
     paging::init_page_table_refs(encrypted);
 
-    // If we're under SEV-ES or SNP, we need a GHCB block for communication.
+    // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP implies SEV-ES).
     let ghcb_protocol = if es {
         // No point in calling expect() here, the logging isn't set up yet.
         // In any case, this allocation should not fail. This is the first thing we allocate, the
@@ -274,8 +271,9 @@ pub extern "C" fn rust64_start(encrypted: u64) -> ! {
     }
 }
 
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
+/// Common panic routine for the Stage0 binaries. This needs to be wrapped in a panic_handler
+/// function in individual binary crates.
+pub fn panic(info: &PanicInfo) -> ! {
     log::error!("{}", info);
 
     // Trigger a breakpoint exception. As we don't have a #BP handler, this will triple fault and

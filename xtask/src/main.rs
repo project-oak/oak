@@ -323,14 +323,18 @@ fn run_buildifier(mode: FormatMode) -> Step {
 fn run_prettier(mode: FormatMode) -> Step {
     // We run prettier as a single command on all the files at once instead of once per file,
     // because it takes a considerable time to start up for each invocation. See #1680.
+    // We also filter out `supply-chain/{config,audits}.toml` as `cargo vet` insists on its own
+    // formatting of the files that is incompatible with Prettier's opinions.
     let files = source_files()
         .filter(|path| {
-            is_markdown_file(path)
+            (is_markdown_file(path)
                 || is_yaml_file(path)
                 || is_toml_file(path)
                 || is_html_file(path)
                 || is_javascript_file(path)
-                || is_typescript_file(path)
+                || is_typescript_file(path))
+                && !path.ends_with("supply-chain/config.toml")
+                && !path.ends_with("supply-chain/audits.toml")
         })
         .map(to_string)
         .collect::<Vec<_>>();

@@ -59,7 +59,7 @@ impl TryFrom<u8> for MemoryType {
 }
 
 /// IA32_MTRR_DefType base model specific register.
-/// See https://wiki.osdev.org/MTRR for documentation.
+/// See <https://wiki.osdev.org/MTRR> for documentation.
 #[derive(Debug)]
 pub struct MTRRDefType;
 
@@ -114,7 +114,7 @@ impl MTRRDefType {
     ///
     /// When called with MTRRDefType::MTRR_ENABLE and MemoryType::WP, this operation is safe because
     /// this specific MSR and mode has been supported since the P6 family of Pentium processors
-    /// (see https://en.wikipedia.org/wiki/Memory_type_range_register).
+    /// (see <https://en.wikipedia.org/wiki/Memory_type_range_register>).
     pub unsafe fn write(flags: MTRRDefTypeFlags, default_type: MemoryType) {
         // Preserve values of reserved bits.
         let (old_flags, _old_memory_type) = Self::read();

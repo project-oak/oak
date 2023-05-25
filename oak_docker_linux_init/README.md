@@ -74,9 +74,25 @@ sh oak_docker_linux_init/prepare_docker_launcher_initramfs.sh \
   -o bin/initramfs
 ```
 
-To prepare an initramfs that launches a specific Docker image (e.g.,
-[`tensorflow/tensorflow`](https://hub.docker.com/r/tensorflow/tensorflow/)), you
-can use the `-d` option to specify the docker image as follows:
+To prepare an initramfs that launches a specific Docker image, you can use the
+[prepare_docker_launcher_initramfs.sh](../oak_docker_linux_init/prepare_docker_launcher_initramfs.sh)
+script. For example, here is the command to extract the
+[`tensorflow/tensorflow`](https://hub.docker.com/r/tensorflow/tensorflow/)
+docker image as a
+[qcow2](https://qemu-project.gitlab.io/qemu/system/images.html#cmdoption-image-formats-arg-qcow2)
+at `bin/docker.qcow2` and prepare an initramfs image that launches the entry
+point of the Docker image:
+
+```bash
+sh oak_docker_linux_init/prepare_docker_launcher_initramfs.sh \
+  -k bin/vmlinux \
+  -o bin/initramfs \
+  -q bin/docker.qcow2 \
+  -d tensorflow/tensorflow
+```
+
+If you want to package the Docker image as part the initramfs image itself, you
+can omit the `-q` option:
 
 ```bash
 sh oak_docker_linux_init/prepare_docker_launcher_initramfs.sh \
@@ -88,8 +104,8 @@ sh oak_docker_linux_init/prepare_docker_launcher_initramfs.sh \
 ## Build the Stage 0 Firmware image
 
 ```bash
-( cd stage0; cargo build --release; )
-objcopy --output-format binary stage0/target/x86_64-unknown-none/release/oak_stage0 \
+( cd stage0_bin; cargo build --release; )
+objcopy --output-format binary stage0_bin/target/x86_64-unknown-none/release/oak_stage0_bin \
     bin/stage0.bin
 ```
 
@@ -106,8 +122,18 @@ qemu-system-x86_64 -cpu host -enable-kvm -machine "microvm" -m 8G \
     -fw_cfg "name=opt/stage0/elf_kernel,file=${NETBOOT_VMLINUX}" \
     -fw_cfg "name=opt/stage0/initramfs,file=bin/initramfs" \
     -fw_cfg "name=opt/stage0/cmdline,string=console=ttyS0 quiet" \
-    -netdev user,ipv6=off,id=user \
-    -device virtio-net-device,netdev=user
+    -netdev user,id=user \
+    -device virtio-net-device,netdev=user \
+    -device virtio-blk-device,drive=docker_root
+    -drive id=docker_root,if=none,format=qcow2,file=bin/docker.qcow2
+```
+
+If the Docker image was packaged as part of the initramfs image, you can skip
+the following options from the command line:
+
+```text
+  -device virtio-blk-device,drive=docker_root
+  -drive id=docker_root,if=none,format=qcow2,file=bin/docker.qcow2
 ```
 
 Note that you can forward ports from host device to the guest device by using

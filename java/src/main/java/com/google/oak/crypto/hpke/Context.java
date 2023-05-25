@@ -19,7 +19,7 @@ package com.google.oak.crypto.hpke;
 import com.google.oak.util.Result;
 
 // TODO(#3642): Implement Java Hybrid Encryption.
-public class Context {
+public final class Context {
   public static final class SenderRequestContext {
     /**
      * Encrypts message with associated data using AEAD.
@@ -37,7 +37,7 @@ public class Context {
      * communication. <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
      */
     public final Result<byte[], Exception> open(
-        final byte[] ciphertext, final byte[] associated_data) {
+        final byte[] ciphertext, final byte[] associatedData) {
       return Result.success(ciphertext);
     }
   };
@@ -48,7 +48,7 @@ public class Context {
      * <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
      */
     public final Result<byte[], Exception> open(
-        final byte[] ciphertext, final byte[] associated_data) {
+        final byte[] ciphertext, final byte[] associatedData) {
       return Result.success(ciphertext);
     }
   };
@@ -59,8 +59,10 @@ public class Context {
      * communication. <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
      */
     public final Result<byte[], Exception> seal(
-        final byte[] plaintext, final byte[] associated_data) {
+        final byte[] plaintext, final byte[] associatedData) {
       return Result.success(plaintext);
     }
   };
+
+  private Context() {}
 }

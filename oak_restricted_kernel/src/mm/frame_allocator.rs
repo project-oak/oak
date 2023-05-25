@@ -80,6 +80,26 @@ impl<const N: usize> PhysicalMemoryAllocator<N> {
     pub fn allocate_contiguous(&mut self, num: usize) -> Option<PhysFrameRange<Size2MiB>> {
         self.large_frames.allocate_contiguous(num)
     }
+
+    /// Returns the number of valid 2 MiB and 4 KiB frames.
+    pub fn num_valid_frames(&self) -> (usize, usize) {
+        (
+            self.large_frames.num_valid(),
+            self.small_frames
+                .as_ref()
+                .map_or(0, |frames| frames.num_valid()),
+        )
+    }
+
+    /// Returns the number of allocated 2 MiB and 4 KiB frames.
+    pub fn num_allocated_frames(&self) -> (usize, usize) {
+        (
+            self.large_frames.num_allocated(),
+            self.small_frames
+                .as_ref()
+                .map_or(0, |frames| frames.num_allocated()),
+        )
+    }
 }
 
 unsafe impl<const N: usize> FrameAllocator<Size2MiB> for PhysicalMemoryAllocator<N> {

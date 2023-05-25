@@ -87,17 +87,11 @@ public class MainActivity extends Activity {
       GrpcStreamingTransport transport = new GrpcStreamingTransport(client::stream);
       Result<OakClient<GrpcStreamingTransport>, Exception> oakClientCreateResult =
           OakClient.create(transport, new InsecureAttestationVerifier());
-      if (oakClientCreateResult.isError()) {
-        throw oakClientCreateResult.error().get();
-      }
-      OakClient<GrpcStreamingTransport> oakClient = oakClientCreateResult.success().get();
+      OakClient<GrpcStreamingTransport> oakClient = oakClientCreateResult.unwrap("creating client");
 
       // Send request.
       Result<byte[], Exception> oakClientInvokeResult = oakClient.invoke(request);
-      if (oakClientInvokeResult.isError()) {
-        throw oakClientInvokeResult.error().get();
-      }
-      byte[] response = oakClientInvokeResult.success().get();
+      byte[] response = oakClientInvokeResult.unwrap("invoking client");
       String decodedResponse = new String(response, StandardCharsets.UTF_8);
 
       Log.v("Oak", "Received response: " + decodedResponse);

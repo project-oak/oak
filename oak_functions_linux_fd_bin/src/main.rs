@@ -15,6 +15,7 @@
 //
 
 use clap::Parser;
+use oak_core::samplestore::StaticSampleStore;
 use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use std::{os::unix::io::FromRawFd, sync::Arc};
 
@@ -60,9 +61,11 @@ fn main() -> ! {
     let service = oak_functions_service::OakFunctionsService::new(Arc::new(
         PlaceholderAmdAttestationGenerator,
     ));
+    let mut stats = StaticSampleStore::<1000>::new().unwrap();
     oak_channel::server::start_blocking_server(
         channel,
         oak_functions_service::proto::oak::functions::OakFunctionsServer::new(service),
+        &mut stats,
     )
     .expect("server encountered an unrecoverable error");
 }

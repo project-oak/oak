@@ -122,6 +122,19 @@ pub fn mmap(
                         log::warn!(
                             "mmap: could not get physical frame for request (memory exhausted?)"
                         );
+                        let valid = FRAME_ALLOCATOR.lock().num_valid_frames();
+                        log::debug!(
+                            "total number of physical memory frames: {} * 2 MiB, {} * 4 KiB",
+                            valid.0,
+                            valid.1
+                        );
+                        let allocated = FRAME_ALLOCATOR.lock().num_allocated_frames();
+                        log::debug!(
+                            "number of allocated physical memory frames: {} * 2 MiB, {} * 4 KiB",
+                            allocated.0,
+                            allocated.1
+                        );
+
                         Errno::ENOMEM
                     })?,
                     pt_flags,

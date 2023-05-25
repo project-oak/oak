@@ -29,7 +29,6 @@ import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
-import io.grpc.ManagedChannel;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -92,6 +91,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
    *
    * @return {@code AttestationBundle} wrapped in a {@code Result}
    */
+  @Override
   public Result<AttestationBundle, String> getEvidence() {
     RequestWrapper requestWrapper = RequestWrapper.newBuilder()
                                         .setGetPublicKeyRequest(GetPublicKeyRequest.newBuilder())
@@ -124,6 +124,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
    *     Result}
    * @return a serialized {@code oak.crypto.EncryptedResponse} wrapped in a {@code Result}
    */
+  @Override
   public Result<byte[], String> invoke(byte[] requestBytes) {
     RequestWrapper requestWrapper =
         RequestWrapper.newBuilder()

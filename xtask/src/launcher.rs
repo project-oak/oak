@@ -18,13 +18,25 @@
 
 pub static MOCK_LOOKUP_DATA_PATH: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_functions_launcher", "mock_lookup_data"]));
-static STAGE_0_DIR: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["stage0"]));
+static STAGE_0_DIR: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["stage0_bin"]));
 pub static OAK_RESTRICTED_KERNEL_BIN_DIR: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_restricted_kernel_bin"]));
-static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> =
-    Lazy::new(|| workspace_path(&["target", "debug", "oak_functions_launcher"]));
-pub static QUIRK_ECHO_LAUNCHER_BIN: Lazy<PathBuf> =
-    Lazy::new(|| workspace_path(&["target", "debug", "quirk_echo_launcher"]));
+static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
+    workspace_path(&[
+        "target",
+        "x86_64-unknown-linux-gnu",
+        "debug",
+        "oak_functions_launcher",
+    ])
+});
+pub static QUIRK_ECHO_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
+    workspace_path(&[
+        "target",
+        "x86_64-unknown-linux-gnu",
+        "debug",
+        "quirk_echo_launcher",
+    ])
+});
 
 use crate::{internal::*, workspace_path};
 use once_cell::sync::Lazy;
@@ -97,7 +109,7 @@ impl LauncherMode {
                 format!(
                     "--bios-binary={}",
                     workspace_path(&[
-                        "stage0",
+                        "stage0_bin",
                         "target",
                         "x86_64-unknown-none",
                         "release",

@@ -41,23 +41,18 @@ pub struct PublicKeyInfo {
     pub attestation: Vec<u8>,
 }
 
-pub trait Handler {
-    fn handle(&mut self, request: &[u8]) -> anyhow::Result<Vec<u8>>;
-}
-
-pub trait AttestationHandler {
-    fn message(&mut self, body: &[u8]) -> anyhow::Result<Vec<u8>>;
+pub trait AttestationHandler: micro_rpc::Transport<Error = anyhow::Error> {
     fn get_public_key_info(&self) -> PublicKeyInfo;
 }
 
-pub struct AttestationSessionHandler<H: Handler> {
+pub struct AttestationSessionHandler<H: micro_rpc::Transport<Error = anyhow::Error>> {
     // TODO(#3442): Use attestation generator to attest to the public key.
     _attestation_generator: Arc<dyn AttestationGenerator>,
     encryption_key_provider: Arc<EncryptionKeyProvider>,
     request_handler: H,
 }
 
-impl<H: Handler> AttestationSessionHandler<H> {
+impl<H: micro_rpc::Transport<Error = anyhow::Error>> AttestationSessionHandler<H> {
     pub fn create(
         attestation_generator: Arc<dyn AttestationGenerator>,
         request_handler: H,
@@ -70,8 +65,11 @@ impl<H: Handler> AttestationSessionHandler<H> {
     }
 }
 
-impl<H: Handler> AttestationHandler for AttestationSessionHandler<H> {
-    fn message(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
+impl<H: micro_rpc::Transport<Error = anyhow::Error>> micro_rpc::Transport
+    for AttestationSessionHandler<H>
+{
+    type Error = anyhow::Error;
+    fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
         let mut server_encryptor = ServerEncryptor::new(self.encryption_key_provider.clone());
 
         // Deserialize and decrypt request.
@@ -84,7 +82,7 @@ impl<H: Handler> AttestationHandler for AttestationSessionHandler<H> {
         // Handle request.
         let response = self
             .request_handler
-            .handle(&request)
+            .invoke(&request)
             .context("couldn't handle request")?;
 
         // Encrypt and serialize response.
@@ -100,7 +98,11 @@ impl<H: Handler> AttestationHandler for AttestationSessionHandler<H> {
 
         Ok(serialized_response)
     }
+}
 
+impl<H: micro_rpc::Transport<Error = anyhow::Error>> AttestationHandler
+    for AttestationSessionHandler<H>
+{
     fn get_public_key_info(&self) -> PublicKeyInfo {
         // TODO(#3442): Generate and return public key.
         PublicKeyInfo {

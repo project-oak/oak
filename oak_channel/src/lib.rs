@@ -34,6 +34,7 @@ extern crate alloc;
 use alloc::{boxed::Box, vec::Vec};
 use anyhow::Context;
 use bytes::BytesMut;
+use oak_core::timer::Timer;
 
 pub trait Read {
     fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
@@ -77,13 +78,13 @@ impl InvocationChannel {
         }
     }
 
-    pub fn read_message<M: message::Message>(&mut self) -> anyhow::Result<M> {
+    pub fn read_message<M: message::Message>(&mut self) -> anyhow::Result<(M, Timer)> {
         // `message_buffer` will contain the full message we are going to read. Instead of
         // allocating separate buffers and copying data into `message_buffer`, we will ensure that
         // `message_buffer` has enough capacity. There will be at least one frame, so we start with
         // the maximum size of a single frame body as initial capacity.
         let mut message_buffer = BytesMut::with_capacity(frame::MAX_BODY_SIZE);
-        let first_frame = self
+        let (first_frame, timer) = self
             .inner
             .read_frame(&mut message_buffer)
             .context("couldn't read frame")?;
@@ -93,7 +94,7 @@ impl InvocationChannel {
         }
 
         if first_frame.flags.contains(frame::Flags::END) {
-            return Ok(M::decode(&message_buffer[..]));
+            return Ok((M::decode(&message_buffer[..]), timer));
         }
 
         // The length of the entire message is encoded in the body of the first frame. The
@@ -113,7 +114,7 @@ impl InvocationChannel {
         message_buffer.reserve(message_length - frame::MAX_BODY_SIZE);
 
         loop {
-            let frame = self
+            let (frame, _) = self
                 .inner
                 .read_frame(&mut message_buffer)
                 .context("couldn't read frame")?;
@@ -127,7 +128,7 @@ impl InvocationChannel {
             }
         }
 
-        Ok(M::decode(&message_buffer[..]))
+        Ok((M::decode(&message_buffer[..]), timer))
     }
 
     pub fn write_message<M: message::Message>(&mut self, message: M) -> anyhow::Result<()> {

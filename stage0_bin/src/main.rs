@@ -13,11 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 #![no_std]
+#![no_main]
 
-#[cfg(feature = "alloc")]
-extern crate alloc;
+use core::panic::PanicInfo;
+pub use oak_stage0::paging;
 
-pub mod samplestore;
-pub mod sync;
-pub mod timer;
+mod asm;
+
+/// Entry point for the Rust code in the stage0 BIOS.
+///
+/// # Arguments
+///
+/// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page tables.
+#[no_mangle]
+pub extern "C" fn rust64_start(encrypted: u64) -> ! {
+    oak_stage0::rust64_start(encrypted)
+}
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    oak_stage0::panic(info)
+}

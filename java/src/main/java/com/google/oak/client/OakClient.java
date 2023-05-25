@@ -29,12 +29,11 @@ import com.google.oak.util.Result;
 /**
  * Oak Client class for exchanging encrypted messages with an Oak Enclave which is being run by the
  * Oak Launcher.
- *
- * @param T type of the transport used to communicate with an Oak Launcher.
  */
 public class OakClient<T extends Transport> {
   private static final byte[] EMPTY_ASSOCIATED_DATA = new byte[0];
 
+  // Transport used to communicate with an Oak Launcher.
   private final T transport;
   private final byte[] serverEncryptionPublicKey;
 

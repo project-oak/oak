@@ -28,7 +28,6 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -53,18 +52,12 @@ public class Main {
     GrpcStreamingTransport transport = new GrpcStreamingTransport(client::stream);
     Result<OakClient<GrpcStreamingTransport>, Exception> oakClientCreateResult =
         OakClient.create(transport, new InsecureAttestationVerifier());
-    if (oakClientCreateResult.isError()) {
-      throw oakClientCreateResult.error().get();
-    }
-    OakClient<GrpcStreamingTransport> oakClient = oakClientCreateResult.success().get();
+    OakClient<GrpcStreamingTransport> oakClient = oakClientCreateResult.unwrap("creating client");
 
     // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.
     byte[] requestBody = "{\"lat\":0,\"lng\":0}".getBytes(UTF_8);
     Result<byte[], Exception> oakClientInvokeResult = oakClient.invoke(requestBody);
-    if (oakClientInvokeResult.isError()) {
-      throw oakClientInvokeResult.error().get();
-    }
-    byte[] response = oakClientInvokeResult.success().get();
+    byte[] response = oakClientInvokeResult.unwrap("invoking client");
     String decodedResponse = new String(response, StandardCharsets.UTF_8);
 
     if (decodedResponse.matches(EXPECTED_RESPONSE_PATTERN)) {

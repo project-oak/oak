@@ -36,3 +36,7 @@ WORKSPACE_ROOT = { value = "", relative = true }
 # TODO(#3702): Remove exception when deps are updated.
 [future-incompat-report]
 frequency = "never"
+
+[build]
+# Specify a default target so that cache is not invalidated between builds.
+target = "x86_64-unknown-linux-gnu"

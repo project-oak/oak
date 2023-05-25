@@ -31,7 +31,7 @@ jobs:
           - buildconfigs/oak_functions_enclave_app.toml
           - buildconfigs/oak_tensorflow_enclave_app.toml
           - buildconfigs/quirk_echo_enclave_app.toml
-          - buildconfigs/stage0.toml
+          - buildconfigs/stage0_bin.toml
 
     permissions:
       actions: read

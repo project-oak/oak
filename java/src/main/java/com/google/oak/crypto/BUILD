@@ -28,8 +28,6 @@ java_library(
     ],
     deps = [
         "//java/src/main/java/com/google/oak/util",
-        "//oak_crypto/proto/v1:crypto_java_proto",
-        "@com_google_protobuf//:protobuf_javalite",
     ],
 )
 
@@ -44,6 +42,7 @@ java_library(
         "//java/src/main/java/com/google/oak/util",
         "//oak_crypto/proto/v1:crypto_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
+        "@com_google_protobuf//java/core",
     ],
 )
 
@@ -58,5 +57,6 @@ java_library(
         "//java/src/main/java/com/google/oak/util",
         "//oak_crypto/proto/v1:crypto_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
+        "@com_google_protobuf//java/core",
     ],
 )

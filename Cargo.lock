@@ -116,6 +116,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "250f629c0161ad8107cf89319e990051fae62832fd343083bea452d93e2205fd"
 
 [[package]]
+name = "alloc-traits"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b2d54853319fd101b8dd81de382bcbf3e03410a64d8928bbee85a3e7dcde483"
+
+[[package]]
 name = "aml"
 version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -842,6 +848,12 @@ name = "either"
 version = "1.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fcaabb2fef8c910e7f4c7ce9f67a1283a1715879a7c230ca9d6d1ae31f16d91"
+
+[[package]]
+name = "elf"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e2b183d6ce6ca4cf30e3db37abf5b52568b5f9015c97d9fbdd7026aa5dcdd758"
 
 [[package]]
 name = "elliptic-curve"
@@ -1733,6 +1745,7 @@ dependencies = [
  "bitflags",
  "bytes",
  "micro_rpc",
+ "oak_core",
  "static_assertions",
 ]
 
@@ -1755,6 +1768,7 @@ dependencies = [
 name = "oak_core"
 version = "0.1.0"
 dependencies = [
+ "getrandom",
  "lock_api",
  "spinning_top",
 ]
@@ -1909,6 +1923,7 @@ dependencies = [
  "clap",
  "log",
  "oak_channel",
+ "oak_core",
  "oak_functions_service",
  "oak_remote_attestation_amd",
  "oak_remote_attestation_interactive",
@@ -2043,6 +2058,7 @@ dependencies = [
  "byteorder",
  "hashbrown 0.13.2",
  "log",
+ "micro_rpc",
  "oak_functions_abi",
  "oak_functions_extension",
  "oak_functions_test_utils",
@@ -2275,10 +2291,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_stage0"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "elf",
+ "log",
+ "oak_core",
+ "oak_linux_boot_params",
+ "oak_sev_guest",
+ "sev_serial",
+ "spinning_top",
+ "static-alloc",
+ "static_assertions",
+ "strum",
+ "x86_64",
+ "zerocopy",
+]
+
+[[package]]
 name = "oak_tdx_guest"
 version = "0.1.0"
 dependencies = [
  "bitflags",
+ "strum",
  "x86_64",
 ]
 
@@ -3274,6 +3310,15 @@ checksum = "44d01ac02a6ccf3e07db148d2be087da624fea0221a16152ed01f0496a6b0a27"
 dependencies = [
  "base64ct",
  "der",
+]
+
+[[package]]
+name = "static-alloc"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "570b7e840addf99f80c5b26abba410e21537002316fc82f2747fd87c171e9d7e"
+dependencies = [
+ "alloc-traits",
 ]
 
 [[package]]
