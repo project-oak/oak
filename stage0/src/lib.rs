@@ -112,7 +112,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     paging::init_page_table_refs(encrypted);
 
-    // If we're under SEV-ES or SNP, we need a GHCB block for communication.
+    // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP implies SEV-ES).
     let ghcb_protocol = if es {
         // No point in calling expect() here, the logging isn't set up yet.
         // In any case, this allocation should not fail. This is the first thing we allocate, the
