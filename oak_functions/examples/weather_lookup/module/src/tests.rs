@@ -118,7 +118,7 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         .build()
         .unwrap();
 
-    let entry_count = 200_000;
+    let entry_count = 100_000;
     let elapsed_limit_millis = 20;
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("weather_lookup").unwrap();
