@@ -28,6 +28,11 @@ use test::Bencher;
 
 #[tokio::test]
 async fn test_server() {
+    if xtask::testing::skip_test() {
+        log::info!("skipping test");
+        return;
+    }
+
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("weather_lookup").unwrap();
 
     let location_0 = location_from_degrees(52., -0.01);
