@@ -63,7 +63,7 @@ async fn test_server() {
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
     if xtask::testing::skip_test() {
-        log::info!("skipping test, as it requires KVM support");
+        log::info!("skipping test");
         return;
     }
 
