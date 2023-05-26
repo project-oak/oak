@@ -16,12 +16,10 @@
 
 #![no_std]
 #![feature(int_roundings)]
-
-extern crate alloc;
+#![feature(nonnull_slice_from_raw_parts)]
 
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use oak_sev_guest::io::PortFactoryWrapper;
-use static_alloc::bump::Bump;
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
     registers::segmentation::*,
@@ -34,6 +32,7 @@ use x86_64::{
 };
 
 mod acpi;
+mod alloc;
 mod cmos;
 mod fw_cfg;
 mod initramfs;
@@ -43,8 +42,8 @@ pub mod paging;
 mod sev;
 mod zero_page;
 
-#[global_allocator]
-static BOOT_ALLOC: Bump<[u8; 128 * 1024]> = Bump::uninit();
+// Reserve 128K for boot data structures.
+static BOOT_ALLOC: alloc::Allocator<0x20000> = alloc::Allocator::uninit();
 
 #[link_section = ".boot"]
 #[no_mangle]

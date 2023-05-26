@@ -20,12 +20,6 @@ so they'll at least be forthcoming if they try to implement something
 cryptographic. When in doubt, please ask an expert."""
 implies = "crypto-safe"
 
-[[audits.alloc-traits]]
-who = "Andri Saar <andrisaar@google.com>"
-criteria = ["safe-to-deploy", "does-not-implement-crypto"]
-version = "0.1.1"
-notes = "Crate has no dependecies, includes a safe wrapper for `Layout` that makes unsafe code safer, and has no crypto code."
-
 [[audits.autocfg]]
 who = "Conrad Grobler <grobler@google.com>"
 criteria = "does-not-implement-crypto"
