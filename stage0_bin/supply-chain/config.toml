@@ -38,9 +38,6 @@ criteria = ["safe-to-deploy", "crypto-safe"]
 [policy.spinning_top]
 criteria = ["safe-to-deploy", "crypto-safe"]
 
-[policy.static-alloc]
-criteria = ["safe-to-deploy", "crypto-safe"]
-
 [policy.static_assertions]
 criteria = ["safe-to-deploy", "crypto-safe"]
 

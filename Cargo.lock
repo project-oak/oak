@@ -116,12 +116,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "250f629c0161ad8107cf89319e990051fae62832fd343083bea452d93e2205fd"
 
 [[package]]
-name = "alloc-traits"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b2d54853319fd101b8dd81de382bcbf3e03410a64d8928bbee85a3e7dcde483"
-
-[[package]]
 name = "aml"
 version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2301,7 +2295,6 @@ dependencies = [
  "oak_sev_guest",
  "sev_serial",
  "spinning_top",
- "static-alloc",
  "static_assertions",
  "strum",
  "x86_64",
@@ -3309,15 +3302,6 @@ checksum = "44d01ac02a6ccf3e07db148d2be087da624fea0221a16152ed01f0496a6b0a27"
 dependencies = [
  "base64ct",
  "der",
-]
-
-[[package]]
-name = "static-alloc"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "570b7e840addf99f80c5b26abba410e21537002316fc82f2747fd87c171e9d7e"
-dependencies = [
- "alloc-traits",
 ]
 
 [[package]]
