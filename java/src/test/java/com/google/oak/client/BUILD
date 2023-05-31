@@ -21,11 +21,11 @@ package(
 )
 
 java_test(
-    name = "oak_client_test",
+    name = "client_test",
     srcs = glob(["*.java"]),
     test_class = "com.google.oak.client.OakClientTest",
     deps = [
-        "//java/src/main/java/com/google/oak/client:oak_client",
+        "//java/src/main/java/com/google/oak/client",
         "//java/src/main/java/com/google/oak/remote_attestation:insecure_attestation_verifier",
         "//java/src/main/java/com/google/oak/transport",
         "//java/src/main/java/com/google/oak/util",

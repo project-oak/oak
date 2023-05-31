@@ -22,7 +22,7 @@ package(
 )
 
 java_library(
-    name = "oak_client",
+    name = "client",
     srcs = [
         "OakClient.java",
     ],

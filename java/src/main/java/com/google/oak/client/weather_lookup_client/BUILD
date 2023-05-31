@@ -25,7 +25,7 @@ java_binary(
     srcs = ["Main.java"],
     main_class = "com.google.oak.client.weather_lookup_client.Main",
     deps = [
-        "//java/src/main/java/com/google/oak/client:oak_client",
+        "//java/src/main/java/com/google/oak/client",
         "//java/src/main/java/com/google/oak/remote_attestation:insecure_attestation_verifier",
         "//java/src/main/java/com/google/oak/transport:api_key_interceptor",
         "//java/src/main/java/com/google/oak/transport:grpc_streaming_transport",
