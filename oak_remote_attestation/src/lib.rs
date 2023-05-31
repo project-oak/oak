@@ -14,9 +14,21 @@
 // limitations under the License.
 //
 
+#![no_std]
+
+extern crate alloc;
+
 pub mod proto {
-    #![allow(clippy::return_self_not_must_use)]
-    tonic::include_proto!("oak.session.v1");
+    pub mod oak {
+        pub mod session {
+            pub mod v1 {
+                #![allow(dead_code)]
+                include!(concat!(env!("OUT_DIR"), "/oak.session.v1.rs"));
+            }
+        }
+    }
 }
 
-pub mod client;
+pub mod attester;
+pub mod handler;
+pub mod verifier;

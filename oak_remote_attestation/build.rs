@@ -14,21 +14,14 @@
 // limitations under the License.
 //
 
-use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    generate_grpc_code(
-        "../",
-        &[
-            "oak_remote_attestation/proto/v1/messages.proto",
-            "oak_remote_attestation/proto/v1/service_streaming.proto",
-        ],
-        CodegenOptions {
-            build_server: true,
-            build_client: true,
-            ..Default::default()
-        },
-    )?;
+    micro_rpc_build::compile(
+        &[format!(
+            "{}oak_remote_attestation/proto/v1/messages.proto",
+            env!("WORKSPACE_ROOT")
+        )],
+        &[format!("{}oak_remote_attestation/proto/v1", env!("WORKSPACE_ROOT"))],
+    );
 
     Ok(())
 }

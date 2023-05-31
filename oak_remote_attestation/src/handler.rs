@@ -14,19 +14,13 @@
 // limitations under the License.
 //
 
-//! Server-side implementation the remote attestation handshake protocol.
-//!
-//! A simplified version of the implementation from the `oak_grpc_unary_attestation`
-//! crate.
-extern crate alloc;
-
+use crate::attester::Attester;
 use alloc::{sync::Arc, vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use oak_crypto::{
     encryptor::{EncryptionKeyProvider, ServerEncryptor},
     proto::oak::crypto::v1::EncryptedRequest,
 };
-use oak_remote_attestation_interactive::handshaker::AttestationGenerator;
 use prost::Message;
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
@@ -46,19 +40,19 @@ pub trait AttestationHandler: micro_rpc::Transport<Error = anyhow::Error> {
 }
 
 pub struct AttestationSessionHandler<H: micro_rpc::Transport<Error = anyhow::Error>> {
-    // TODO(#3442): Use attestation generator to attest to the public key.
-    _attestation_generator: Arc<dyn AttestationGenerator>,
+    // TODO(#3442): Use attester to attest to the public key.
+    _attester: Arc<dyn Attester>,
     encryption_key_provider: Arc<EncryptionKeyProvider>,
     request_handler: H,
 }
 
 impl<H: micro_rpc::Transport<Error = anyhow::Error>> AttestationSessionHandler<H> {
     pub fn create(
-        attestation_generator: Arc<dyn AttestationGenerator>,
+        attester: Arc<dyn Attester>,
         request_handler: H,
     ) -> anyhow::Result<Self> {
         Ok(Self {
-            _attestation_generator: attestation_generator,
+            _attester: attester,
             encryption_key_provider: Arc::new(EncryptionKeyProvider::new()),
             request_handler,
         })

@@ -2146,13 +2146,11 @@ name = "oak_remote_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
- "futures",
  "futures-util",
- "oak_grpc_utils",
+ "micro_rpc",
+ "micro_rpc_build",
+ "oak_crypto",
  "prost",
- "tokio",
- "tonic",
 ]
 
 [[package]]
