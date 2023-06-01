@@ -66,8 +66,7 @@ pub fn testing(request: &[u8]) -> Result<Vec<u8>, OakStatus> {
     invoke(oak_functions_abi::ExtensionHandle::TestingHandle, request)
 }
 
-/// See [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#omvple).
-
+/// See [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#invoke).
 fn invoke(
     handle: oak_functions_abi::ExtensionHandle,
     request: &[u8],

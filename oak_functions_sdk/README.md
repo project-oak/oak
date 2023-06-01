@@ -6,5 +6,5 @@
 
 # Oak Functions SDK
 
-A Rust SDK wrapping around the [ABI](/oak_functions_abi/) for implementing Oak
+A Rust SDK, which wraps the [ABI](/oak_functions_abi/), for implementing Oak
 Functions WebAssembly modules.
