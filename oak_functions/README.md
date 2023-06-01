@@ -1,4 +1,8 @@
-# Oak Functions
+<!-- Oak Logo Start -->
+<!-- An HTML element is intentionally used since GitHub recommends this approach to handle different images in dark/light modes. Ref: https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#specifying-the-theme-an-image-is-shown-to -->
+<!-- markdownlint-disable-next-line MD033 -->
+<h1><picture><source media="(prefers-color-scheme: dark)" srcset="docs/oak-logo/svgs/oak-functions-logo-negative.svg?sanitize=true"><source media="(prefers-color-scheme: light)" srcset="docs/oak-logo/svgs/oak-functions-logo.svg?sanitize=true"><img alt="Project Oak Logo" src="docs/oak-logo/svgs/oak-functions-logo.svg?sanitize=true"></picture></h1>
+<!-- Oak Logo End -->
 
 The objective of Oak Functions is to design and implement a general-purpose
 computing platform that allows developing stateless applications in a privacy
@@ -57,9 +61,9 @@ from the conventional computing model.
 The [Oak Functions Launcher](/oak_functions_launcher/) starts the Oak Functions
 trusted runtime and loads a Wasm module as workload. The Oak Functions trusted
 runtime and the Wasm module communicate through
-[ABI Functions](/oak_functions_abi/) and [a Rust SDK](oak_functions_sdk).The Oak
-Functions trusted runtime allows to specify policies such as a fixed size and
-processing time for responses returned by the trusted runtime, and a fixed
+[ABI Functions](/oak_functions_abi/) and [a Rust SDK](/oak_functions_sdk/).The
+Oak Functions trusted runtime allows to specify policies such as a fixed size
+and processing time for responses returned by the trusted runtime, and a fixed
 processing time.
 
 ### Remote Attestation
