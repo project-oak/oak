@@ -37,8 +37,11 @@ async fn test_launcher_key_value_lookup_virtual() {
         return;
     }
 
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
+        .expect("Failed to build Wasm module");
+
     let (mut _background, port) = xtask::launcher::run_oak_functions_example_in_background(
-        "key_value_lookup",
+        &wasm_path,
         MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
     )
     .await;
@@ -62,8 +65,11 @@ async fn test_launcher_echo_virtual() {
         return;
     }
 
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo")
+        .expect("Failed to build Wasm module");
+
     let (_background, port) = xtask::launcher::run_oak_functions_example_in_background(
-        "echo",
+        &wasm_path,
         MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
     )
     .await;
@@ -87,8 +93,11 @@ async fn test_launcher_weather_lookup_virtual() {
         return;
     }
 
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("weather_lookup")
+        .expect("Failed to build Wasm module");
+
     let (_background, port) = xtask::launcher::run_oak_functions_example_in_background(
-        "weather_lookup",
+        &wasm_path,
         workspace_path(&[
             "oak_functions",
             "examples",

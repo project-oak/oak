@@ -218,7 +218,7 @@ pub fn run_launcher(launcher_bin: &str, variant: &LauncherMode) -> Box<dyn Runna
 /// Runs the specified example as a background task. Returns a reference to the running server and
 /// the port on which the server is listening.
 pub async fn run_oak_functions_example_in_background(
-    wasm_module_crate_name: &str,
+    wasm_path: &str,
     lookup_data_path: &str,
 ) -> (crate::testing::BackgroundStep, u16) {
     crate::testing::run_step(crate::launcher::build_stage0()).await;
@@ -236,8 +236,6 @@ pub async fn run_oak_functions_example_in_background(
     ))
     .await;
 
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm(wasm_module_crate_name)
-        .expect("Failed to build Wasm module");
     eprintln!("using wasm module {}", wasm_path);
 
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
@@ -246,7 +244,7 @@ pub async fn run_oak_functions_example_in_background(
     let background = crate::testing::run_background(
         crate::launcher::run_oak_functions_launcher_example_with_lookup_data(
             &variant,
-            &wasm_path,
+            wasm_path,
             port,
             lookup_data_path,
         ),
