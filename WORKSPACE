@@ -40,6 +40,18 @@ http_archive(
     ],
 )
 
+# BoringSSL.
+# https://github.com/google/boringssl
+http_archive(
+    name = "com_google_boringssl",
+    #sha256 = "37d6a208168f5e4095129593071128d3a4584051e3e2dcc03e39672bf38e61b5",
+    #strip_prefix = "boringssl-refs_heads_master-with-bazel",
+    urls = [
+        # Head commit on 2023-06-05.
+        "https://boringssl.googlesource.com/boringssl/+archive/1d9679fc012ef5043489246053d2eafb997b95ba.tar.gz"
+    ],
+)
+
 http_archive(
     name = "tink_base",
     sha256 = "536a4ceb3e9e7e35bf52f7cc99838679de8463ab2a1a12b90121c00ee25fe252",

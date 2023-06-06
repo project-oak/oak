@@ -23,6 +23,7 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "openssl/hpke.h"
 
 namespace oak::crypto {
 
@@ -30,7 +31,11 @@ class SenderRequestContext {
  public:
   // Encrypts message with associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
-  absl::StatusOr<std::string> seal(absl::string_view plaintext, absl::string_view associated_data);
+  absl::StatusOr<std::string> Seal(absl::string_view plaintext, absl::string_view associated_data);
+  ~SenderRequestContext();
+
+ private:
+  std::unique_ptr<EVP_HPKE_CTX> hpke_context;
 };
 
 class SenderResponseContext {
@@ -38,7 +43,13 @@ class SenderResponseContext {
   // Decrypts response message and validates associated data using AEAD as part of bidirectional
   // communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
-  absl::StatusOr<std::string> open(absl::string_view ciphertext, absl::string_view associated_data);
+  absl::StatusOr<std::string> Open(absl::string_view ciphertext, absl::string_view associated_data);
+};
+
+struct ClientHPKEConfig {
+  std::string encapuslated_public_key;
+  std::unique_ptr<SenderRequestContext> sender_request_context;
+  std::unique_ptr<SenderResponseContext> sender_response_context;
 };
 
 // Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
@@ -48,9 +59,8 @@ class SenderResponseContext {
 //
 // Encapsulated public key is represented as a NIST P-256 SEC1 encoded point public key.
 // <https://secg.org/sec1-v2.pdf>
-std::tuple<std::string, std::unique_ptr<SenderRequestContext>,
-           std::unique_ptr<SenderResponseContext>>
-setup_base_sender(absl::string_view serialized_recipient_public_key, absl::string_view info);
+absl::StatusOr<ClientHPKEConfig> SetUpBaseSender(absl::string_view serialized_recipient_public_key,
+                                                 absl::string_view info);
 
 }  // namespace oak::crypto
 
