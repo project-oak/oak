@@ -119,21 +119,21 @@ has been copied to `bin/vmlinux`.
 qemu-system-x86_64 -cpu host -enable-kvm -machine "microvm" -m 8G \
     -nographic -nodefaults -no-reboot -serial stdio \
     -bios "bin/stage0.bin" \
-    -fw_cfg "name=opt/stage0/elf_kernel,file=${NETBOOT_VMLINUX}" \
+    -fw_cfg "name=opt/stage0/elf_kernel,file=bin/vmlinux" \
     -fw_cfg "name=opt/stage0/initramfs,file=bin/initramfs" \
     -fw_cfg "name=opt/stage0/cmdline,string=console=ttyS0 quiet" \
     -netdev user,id=user \
     -device virtio-net-device,netdev=user \
+    -drive id=docker_root,if=none,format=qcow2,file=bin/docker.qcow2 \
     -device virtio-blk-device,drive=docker_root
-    -drive id=docker_root,if=none,format=qcow2,file=bin/docker.qcow2
 ```
 
 If the Docker image was packaged as part of the initramfs image, you can skip
 the following options from the command line:
 
 ```text
-  -device virtio-blk-device,drive=docker_root
   -drive id=docker_root,if=none,format=qcow2,file=bin/docker.qcow2
+  -device virtio-blk-device,drive=docker_root
 ```
 
 Note that you can forward ports from host device to the guest device by using
@@ -175,7 +175,7 @@ Launch QEMU with network, where tcp port `8888` is forwarded from host to guest:
 qemu-system-x86_64 -cpu host -enable-kvm -machine "microvm" -m 8G \
     -nographic -nodefaults -no-reboot -serial stdio \
     -bios "bin/stage0.bin" \
-    -fw_cfg "name=opt/stage0/elf_kernel,file=${NETBOOT_VMLINUX}" \
+    -fw_cfg "name=opt/stage0/elf_kernel,file=bin/vmlinux" \
     -fw_cfg "name=opt/stage0/initramfs,file=bin/initramfs" \
     -fw_cfg "name=opt/stage0/cmdline,string=console=ttyS0 quiet" \
     -netdev user,ipv6=off,id=user,hostfwd=tcp::8888-:8888 \

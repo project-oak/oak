@@ -73,6 +73,7 @@ docker run -v "${RAMDIR}:/output" -it mkinitramfs \
   sh -c "/app/mk_base_initramfs.sh -k /output/vmlinux -r /output"
 
 echo "[INFO] Updating Linux kernel at ${LINUX_KERNEL}"
+mkdir -p $(dirname "${LINUX_KERNEL}")
 mv "${RAMDIR}/vmlinux" "${LINUX_KERNEL}"
 
 if [ -z "${DOCKER_IMAGE}" ]; then
