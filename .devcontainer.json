@@ -4,7 +4,7 @@
 // - https://code.visualstudio.com/docs/remote/devcontainerjson-reference
 {
   // Do not modify manually. This value is automatically updated by ./scripts/docker_build .
-  "image": "sha256:7993e00b67efef8728d13e40731b664e7da1154258966f9d64ceab1fa9b30582",
+  "image": "sha256:f48ec237afe33447dadb24071ef38a5bd472a2fcae2c1ef61bab0244ee9c0e03",
   "extensions": [
     "13xforever.language-x86-64-assembly",
     "bazelbuild.vscode-bazel",
@@ -22,8 +22,16 @@
   "mounts": [
     // Crosvm wants access to syslog.
     "source=/dev/log,target=/dev/log,type=bind",
+    # Enable Docker-in-Docker by giving the container access to the host docker
+    # daemon.
     "source=${localEnv:XDG_RUNTIME_DIR}/docker.sock,target=/var/run/docker.sock,type=bind",
+    # The container uses the host docker daemon, so docker commands running in
+    # the container actually access the host filesystem. Thus mount the /tmp
+    # directory as a volume in the container so that it can access the outputs of
+    # docker commands that write to /tmp.
     "source=/tmp,target=/tmp,type=bind",
+    # Provide readonly access to the kernel image and kernel volumes of the host
+    # to enable virt-make-fs which requires access to a kernel.
     "source=/boot,target=/boot,type=bind,readonly",
     "source=/lib/modules,target=/lib/modules,type=bind,readonly"
   ],
