@@ -25,12 +25,10 @@ use oak_crypto::encryptor::EncryptionKeyProvider;
 pub trait AttestationReportGenerator: Send + Sync {
     /// Generate a remote attestation report, ensuring that `attested_data` is cryptographically
     /// bound to the result (e.g. via a signature).
-    ///
-    /// That is usually verified by [`AttestationVerifier::verify_attestation`].
     fn generate_attestation_report(&self, attested_data: &[u8]) -> anyhow::Result<Vec<u8>>;
 }
 
-/// An instance of [`AttestationGenerator`] that always returns an empty attestation.
+/// An instance of [`AttestationReportGenerator`] that always returns an empty attestation.
 ///
 /// Useful when no attestation is expected to be genereated by the current side of a remotely
 /// attested connection.
