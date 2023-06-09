@@ -92,6 +92,10 @@ absl::StatusOr<std::string> SenderResponseContext::Open(absl::string_view cipher
   return plaintext;
 }
 
+SenderResponseContext::~SenderResponseContext() {
+  EVP_AEAD_CTX_cleanup(aead_response_context_.release());
+}
+
 absl::StatusOr<ClientHPKEConfig> SetUpBaseSender(absl::string_view serialized_recipient_public_key,
                                                  absl::string_view info) {
   ClientHPKEConfig client_hpke_config;

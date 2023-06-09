@@ -32,4 +32,13 @@ absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
   return client_encryptor;
 }
 
+absl::StatusOr<std::string> ClientEncryptor::Encrypt(absl::string_view plaintext,
+                                                     absl::string_view associated_data) {
+  return sender_request_context_->Seal(plaintext, associated_data);
+}
+
+absl::StatusOr<std::string> ClientEncryptor::Decrypt(absl::string_view encrypted_response) {
+  return sender_response_context_->Open(encrypted_response, "");
+}
+
 }  // namespace oak::crypto

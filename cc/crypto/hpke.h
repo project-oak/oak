@@ -57,6 +57,7 @@ class SenderResponseContext {
   // bidirectional communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
   absl::StatusOr<std::string> Open(absl::string_view ciphertext, absl::string_view associated_data);
+  ~SenderResponseContext();
 
  private:
   std::unique_ptr<EVP_AEAD_CTX> aead_response_context_;
