@@ -1920,8 +1920,7 @@ dependencies = [
  "oak_channel",
  "oak_core",
  "oak_functions_service",
- "oak_remote_attestation_amd",
- "oak_remote_attestation_interactive",
+ "oak_remote_attestation",
 ]
 
 [[package]]
@@ -2145,7 +2144,6 @@ name = "oak_remote_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "futures-util",
  "micro_rpc",
  "micro_rpc_build",
  "oak_crypto",

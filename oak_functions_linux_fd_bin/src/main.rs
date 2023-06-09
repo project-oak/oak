@@ -16,7 +16,7 @@
 
 use clap::Parser;
 use oak_core::samplestore::StaticSampleStore;
-use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
+use oak_remote_attestation::attester::EmptyAttestationReportGenerator;
 use std::{os::unix::io::FromRawFd, sync::Arc};
 
 #[derive(Parser, Clone, Debug)]
@@ -59,7 +59,7 @@ fn main() -> ! {
     let socket = unsafe { std::os::unix::net::UnixStream::from_raw_fd(opt.comms_fd) };
     let channel = Box::new(socket);
     let service = oak_functions_service::OakFunctionsService::new(Arc::new(
-        PlaceholderAmdAttestationGenerator,
+        EmptyAttestationReportGenerator,
     ));
     let mut stats = StaticSampleStore::<1000>::new().unwrap();
     oak_channel::server::start_blocking_server(

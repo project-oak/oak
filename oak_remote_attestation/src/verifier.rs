@@ -29,7 +29,6 @@ pub struct ReferenceValue {
 pub trait AttestationVerifier: Clone + Send + Sync {
     /// Verify that the provided evidence was endorsed and contains specified reference values.
     fn verify(
-        &self,
         evidence: &AttestationEvidence,
         endorsement: &AttestationEndorsement,
         reference_value: &ReferenceValue,
@@ -45,7 +44,6 @@ pub struct InsecureAttestationVerifier;
 
 impl AttestationVerifier for InsecureAttestationVerifier {
     fn verify(
-        &self,
         evidence: &AttestationEvidence,
         _endorsement: &AttestationEndorsement,
         _reference_value: &ReferenceValue,
