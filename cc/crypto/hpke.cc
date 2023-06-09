@@ -16,6 +16,7 @@
 
 #include "hpke.h"
 
+#include <memory>
 #include <vector>
 
 #include "absl/status/statusor.h"
@@ -24,6 +25,9 @@
 #include "util.h"
 
 namespace oak::crypto {
+
+constexpr size_t kAeadAlgorithmKeySizeBytes = 32;
+constexpr size_t kAeadNonceSizeBytes = 12;
 
 absl::StatusOr<std::string> SenderRequestContext::Seal(absl::string_view plaintext,
                                                        absl::string_view associated_data) {
@@ -37,8 +41,10 @@ absl::StatusOr<std::string> SenderResponseContext::Open(absl::string_view cipher
 
 absl::StatusOr<ClientHPKEConfig> SetUpBaseSender(absl::string_view serialized_recipient_public_key,
                                                  absl::string_view info) {
-  std::unique_ptr<EVP_HPKE_CTX> hpke_request_context(EVP_HPKE_CTX_new());
+  ClientHPKEConfig client_hpke_context;
 
+  // First collect encapsulated public key information and sender request context.
+  std::unique_ptr<EVP_HPKE_CTX> hpke_sender_context(EVP_HPKE_CTX_new());
   std::vector<uint8_t> encap_shared_secret(EVP_HPKE_MAX_ENC_LENGTH);
   size_t encap_shared_secret_len;
 
@@ -48,7 +54,7 @@ absl::StatusOr<ClientHPKEConfig> SetUpBaseSender(absl::string_view serialized_re
 
   // Create sender context.
   if (!EVP_HPKE_CTX_setup_sender(
-          /* ctx= */ hpke_request_context.get(),
+          /* ctx= */ hpke_sender_context.get(),
           /* out_enc= */ encap_shared_secret.data(),
           /* out_enc_len= */ &encap_shared_secret_len,
           /* max_enc= */ EVP_HPKE_MAX_ENC_LENGTH,
@@ -61,30 +67,51 @@ absl::StatusOr<ClientHPKEConfig> SetUpBaseSender(absl::string_view serialized_re
           /* info_len= */ info_bytes.size())) {
     return absl::AbortedError("Unable to setup sender context.");
   }
+  // Generate sender response context from hpke context.
+  std::unique_ptr<SenderRequestContext>& sender_request_context =
+      client_hpke_context.sender_request_context;
+  sender_request_context = std::unique_ptr<SenderRequestContext>(
+      new SenderRequestContext(std::move(hpke_sender_context)));
 
-  // Generate a response key from the receiver context.
-  std::vector<uint8_t> response_key(EVP_HPKE_MAX_PRIVATE_KEY_LENGTH);
+  // Record encapsulated public key information.
+  std::unique_ptr<KeyInfo>& encap_public_key_info = client_hpke_context.encap_public_key_info;
+  encap_public_key_info = std::unique_ptr<KeyInfo>(new KeyInfo());
+  encap_public_key_info->key_size = encap_shared_secret_len;
+  encap_public_key_info->key_bytes = encap_shared_secret;
 
-  std::string context_string = "response_key";
-  std::vector<uint8_t> context_bytes(context_string.begin(), context_string.end());
+  // Now generate response key and response nonce for sender response context.
+  std::vector<uint8_t> response_key(kAeadAlgorithmKeySizeBytes);
+  std::string key_context_string = "response_key";
+  std::vector<uint8_t> key_context_bytes(key_context_string.begin(), key_context_string.end());
   if (!EVP_HPKE_CTX_export(
-          /* ctx= */ hpke_request_context.get(),
+          /* ctx= */ hpke_sender_context.get(),
           /* out= */ response_key.data(),
-          /* secret_len= */ EVP_HPKE_MAX_PRIVATE_KEY_LENGTH,
-          /* context= */ context_bytes.data(),
-          /* context_len= */ context_bytes.size())) {
-    return absl::AbortedError("Unable to export client private key.");
+          /* secret_len= */ kAeadAlgorithmKeySizeBytes,
+          /* context= */ key_context_bytes.data(),
+          /* context_len= */ key_context_bytes.size())) {
+    return absl::AbortedError("Unable to export client response key.");
   }
 
-  // EVP_HPKE_CTX* sender_context = EVP_HPKE_CTX_new();
-  //    This will require generating a response key and tagging that to the context.
-  // Export response key
-  // Export response nonce
-  // EVP_HPKE_CTX_setup_sender()
-  // setup_sender
-  std::string encap_key(encap_shared_secret->begin(), encap_shared_secret->end());
+  // Generate a nonce for the response.
+  std::vector<uint8_t> response_nonce(kAeadNonceSizeBytes);
+  std::string nonce_context_string = "response_nonce";
+  std::vector<uint8_t> nonce_context_bytes(nonce_context_string.begin(),
+                                           nonce_context_string.end());
+  if (!EVP_HPKE_CTX_export(
+          /* ctx= */ hpke_sender_context.get(),
+          /* out= */ response_nonce.data(),
+          /* secret_len= */ kAeadNonceSizeBytes,
+          /* context= */ nonce_context_bytes.data(),
+          /* context_len= */ nonce_context_bytes.size())) {
+    return absl::AbortedError("Unable to export client response nonce.");
+  }
 
-  ClientHPKEConfig client_hpke_config;
-  return client_hpke_config;
+  // Generate and return the client HPKE contexts.
+
+  std::unique_ptr<SenderResponseContext>& sender_response_context =
+      client_hpke_context.sender_response_context;
+  sender_response_context = new SenderResponseContext(std::move());
+
+  return client_hpke_context;
 }
 }  // namespace oak::crypto

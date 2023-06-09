@@ -27,27 +27,42 @@
 
 namespace oak::crypto {
 
+struct KeyInfo {
+  size_t key_size;
+  std::vector<uint8_t> key_bytes;
+};
+
 class SenderRequestContext {
  public:
+  SenderRequestContext(std::unique_ptr<EVP_HPKE_CTX> hpke_context)
+      : hpke_context_(std::move(hpke_context)){};
+
   // Encrypts message with associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
   absl::StatusOr<std::string> Seal(absl::string_view plaintext, absl::string_view associated_data);
   ~SenderRequestContext();
 
  private:
-  std::unique_ptr<EVP_HPKE_CTX> hpke_context;
+  std::unique_ptr<EVP_HPKE_CTX> hpke_context_;
 };
 
 class SenderResponseContext {
  public:
-  // Decrypts response message and validates associated data using AEAD as part of bidirectional
-  // communication.
+  SenderResponseContext(std::unique_ptr<KeyInfo> response_key,
+                        std::unique_ptr<KeyInfo> response_nonce)
+      : response_key_(std::move(response_key)), response_nonce_(std::move(response_nonce_)){};
+  // Decrypts response message and validates associated data using AEAD as part of
+  // bidirectional communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
   absl::StatusOr<std::string> Open(absl::string_view ciphertext, absl::string_view associated_data);
+
+ private:
+  std::unique_ptr<KeyInfo> response_key_;
+  std::unique_ptr<KeyInfo> response_nonce_;
 };
 
 struct ClientHPKEConfig {
-  std::string encapuslated_public_key;
+  std::unique_ptr<KeyInfo> encap_public_key_info;
   std::unique_ptr<SenderRequestContext> sender_request_context;
   std::unique_ptr<SenderResponseContext> sender_response_context;
 };

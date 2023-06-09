@@ -48,7 +48,7 @@ class ClientEncryptor {
   //
   // Returns a serialized [`oak.crypto.EncryptedRequest`] message.
   // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
-  absl::StatusOr<std::string> encrypt(absl::string_view plaintext,
+  absl::StatusOr<std::string> Encrypt(absl::string_view plaintext,
                                       absl::string_view associated_data);
 
   // Decrypts a [`EncryptedResponse`] proto message using AEAD.
@@ -57,14 +57,14 @@ class ClientEncryptor {
   // `encrypted_response` must be a serialized [`oak.crypto.EncryptedResponse`] message.
   // Returns a response message plaintext and associated data.
   // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
-  std::tuple<std::string, std::string> decrypt(absl::string_view encrypted_response);
+  std::tuple<std::string, std::string> Decrypt(absl::string_view encrypted_response);
 
  private:
   // Encapsulated public key needed to establish a symmetric session key.
   // Only sent in the initial request message of the session.
-  std::string serialized_encapsulated_public_key;
-  std::unique_ptr<SenderRequestContext> sender_request_context;
-  std::unique_ptr<SenderResponseContext> sender_response_context;
+  std::string serialized_encapsulated_public_key_;
+  std::unique_ptr<SenderRequestContext> sender_request_context_;
+  std::unique_ptr<SenderResponseContext> sender_response_context_;
 };
 
 }  // namespace oak::crypto
