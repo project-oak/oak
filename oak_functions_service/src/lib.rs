@@ -105,14 +105,15 @@ impl OakFunctions for OakFunctionsService {
                         )
                     })?,
                 );
-                let attestation_evidence = attestation_handler
-                    .get_attestation_evidence()
-                    .map_err(|err| {
-                        micro_rpc::Status::new_with_message(
-                            micro_rpc::StatusCode::Internal,
-                            format!("couldn't get attestation evidence: {:?}", err),
-                        )
-                    })?;
+                let attestation_evidence =
+                    attestation_handler
+                        .get_attestation_evidence()
+                        .map_err(|err| {
+                            micro_rpc::Status::new_with_message(
+                                micro_rpc::StatusCode::Internal,
+                                format!("couldn't get attestation evidence: {:?}", err),
+                            )
+                        })?;
                 self.initialization_state = InitializationState::Initialized(attestation_handler);
                 Ok(InitializeResponse {
                     public_key_info: Some(PublicKeyInfo {

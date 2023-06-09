@@ -15,7 +15,7 @@
 //
 
 use crate::{
-    attester::{Attester, AttestationReportGenerator},
+    attester::{AttestationReportGenerator, Attester},
     proto::oak::session::v1::AttestationEvidence,
 };
 use alloc::{sync::Arc, vec, vec::Vec};
@@ -50,17 +50,25 @@ pub struct AttestationSessionHandler<H: micro_rpc::Transport<Error = anyhow::Err
 }
 
 impl<H: micro_rpc::Transport<Error = anyhow::Error>> AttestationSessionHandler<H> {
-    pub fn create(attestation_report_generator: Arc<dyn AttestationReportGenerator>, request_handler: H) -> anyhow::Result<Self> {
+    pub fn create(
+        attestation_report_generator: Arc<dyn AttestationReportGenerator>,
+        request_handler: H,
+    ) -> anyhow::Result<Self> {
         let encryption_key_provider = Arc::new(EncryptionKeyProvider::new());
         Ok(Self {
-            attester: Arc::new(Attester::new(attestation_report_generator, encryption_key_provider.clone())),
+            attester: Arc::new(Attester::new(
+                attestation_report_generator,
+                encryption_key_provider.clone(),
+            )),
             encryption_key_provider,
             request_handler,
         })
     }
 }
 
-impl<H: micro_rpc::Transport<Error = anyhow::Error>> micro_rpc::Transport for AttestationSessionHandler<H> {
+impl<H: micro_rpc::Transport<Error = anyhow::Error>> micro_rpc::Transport
+    for AttestationSessionHandler<H>
+{
     type Error = anyhow::Error;
     fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
         let mut server_encryptor = ServerEncryptor::new(self.encryption_key_provider.clone());
@@ -93,7 +101,9 @@ impl<H: micro_rpc::Transport<Error = anyhow::Error>> micro_rpc::Transport for At
     }
 }
 
-impl<H: micro_rpc::Transport<Error = anyhow::Error>> AttestationHandler for AttestationSessionHandler<H> {
+impl<H: micro_rpc::Transport<Error = anyhow::Error>> AttestationHandler
+    for AttestationSessionHandler<H>
+{
     fn get_attestation_evidence(&self) -> anyhow::Result<AttestationEvidence> {
         self.attester
             .generate_attestation_evidence()
