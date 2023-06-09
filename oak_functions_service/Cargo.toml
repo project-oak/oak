@@ -24,6 +24,6 @@ micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
 oak_functions_test_utils = { workspace = true }
-oak_remote_attestation_amd = { workspace = true }
+oak_remote_attestation = { workspace = true }
 async-trait = "*"
 tokio = { workspace = true, features = ["rt", "macros"] }

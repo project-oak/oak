@@ -28,7 +28,7 @@ use oak_functions_service::{
     },
     OakFunctionsService,
 };
-use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
+use oak_remote_attestation::attester::EmptyAttestationReportGenerator;
 use prost::Message;
 use std::sync::Arc;
 
@@ -39,7 +39,7 @@ const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 #[test]
 fn it_should_not_handle_user_requests_before_initialization() {
-    let service = OakFunctionsService::new(Arc::new(PlaceholderAmdAttestationGenerator));
+    let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let request = InvokeRequest {
@@ -58,7 +58,7 @@ fn it_should_not_handle_user_requests_before_initialization() {
 
 #[test]
 fn it_should_handle_user_requests_after_initialization() {
-    let service = OakFunctionsService::new(Arc::new(PlaceholderAmdAttestationGenerator));
+    let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
@@ -97,7 +97,7 @@ fn it_should_handle_user_requests_after_initialization() {
 
 #[test]
 fn it_should_only_initialize_once() {
-    let service = OakFunctionsService::new(Arc::new(PlaceholderAmdAttestationGenerator));
+    let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
@@ -121,7 +121,7 @@ fn it_should_only_initialize_once() {
 
 #[tokio::test]
 async fn it_should_support_lookup_data() {
-    let service = OakFunctionsService::new(Arc::new(PlaceholderAmdAttestationGenerator));
+    let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
