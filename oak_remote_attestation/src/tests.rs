@@ -16,27 +16,32 @@
 
 use crate::{
     attester::{Attester, EmptyAttestationReportGenerator},
-    verifier::{AttestationVerifier, InsecureAttestationVerifier, ReferenceValue},
     proto::oak::session::v1::AttestationEndorsement,
+    verifier::{AttestationVerifier, InsecureAttestationVerifier, ReferenceValue},
 };
-use oak_crypto::{
-    encryptor::EncryptionKeyProvider,
-};
-use alloc::{vec, sync::Arc};
+use alloc::{sync::Arc, vec};
+use oak_crypto::encryptor::EncryptionKeyProvider;
 
 const TEST_ATTESTATION_ENDORSEMENT: AttestationEndorsement = AttestationEndorsement {
     tee_certificates: vec![],
     binary_attestation: None,
     application_data: None,
 };
-const TEST_REFERENCE_VALUE: ReferenceValue = ReferenceValue { binary_hash: vec![] };
+const TEST_REFERENCE_VALUE: ReferenceValue = ReferenceValue {
+    binary_hash: vec![],
+};
 
 #[test]
 fn test_empty_attestation() {
     let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
     let encryption_key_provider = Arc::new(EncryptionKeyProvider::new());
-    let attester = Arc::new(Attester::new(attestation_report_generator, encryption_key_provider));
-    let attestation_evidence = attester.generate_attestation_evidence().expect("couldn't generate attestation evidence");
+    let attester = Arc::new(Attester::new(
+        attestation_report_generator,
+        encryption_key_provider,
+    ));
+    let attestation_evidence = attester
+        .generate_attestation_evidence()
+        .expect("couldn't generate attestation evidence");
 
     let verify_result = InsecureAttestationVerifier::verify(
         &attestation_evidence,

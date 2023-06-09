@@ -5,7 +5,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "*"
+anyhow = { version = "*", default-features = false }
 oak_crypto = { workspace = true }
 micro_rpc = { workspace = true }
 prost = { workspace = true }
