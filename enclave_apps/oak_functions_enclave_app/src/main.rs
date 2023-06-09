@@ -24,7 +24,6 @@ use alloc::{boxed::Box, sync::Arc};
 use core::panic::PanicInfo;
 use log::info;
 use oak_core::samplestore::StaticSampleStore;
-use oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
 use oak_restricted_kernel_api::{FileDescriptorChannel, StderrLogger};
 
 static LOGGER: StderrLogger = StderrLogger {};

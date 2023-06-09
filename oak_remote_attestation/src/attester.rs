@@ -15,33 +15,67 @@
 //
 
 use crate::proto::oak::session::v1::AttestationEvidence;
-use alloc::vec::Vec;
+use alloc::{sync::Arc, vec::Vec};
+use anyhow::Context;
+use oak_crypto::encryptor::EncryptionKeyProvider;
 
-/// Reference values used by the verifier to appraise the attestation evidence.
-/// <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
-pub struct ReferenceValue {
-    pub binary_hash: Vec<u8>,
-}
-
-/// A trait implementing the functionality of an attester that generates an attestation evidence.
-/// <https://www.rfc-editor.org/rfc/rfc9334.html#name-attester>
-pub trait Attester: Send + Sync {
-    /// Generate an attestation evidence containing a remote attestation report and ensuring that
-    /// `attested_data` is cryptographically bound to the result (e.g. via a signature).
-    fn generate_attestation_evidence(&self, attested_data: &[u8]) -> anyhow::Result<AttestationEvidence>;
-}
-
-/// An instance of [`Attester`] that always returns an empty attestation.
+/// A trait implementing the functionality of generating a remote attestation report.
 ///
-/// Useful when no attestation report is expected to be genereated by the current side of a remotely
+/// An implementation of this trait is expected to run in a TEE (i.e. it is usually in the server).
+pub trait AttestationReportGenerator: Send + Sync {
+    /// Generate a remote attestation report, ensuring that `attested_data` is cryptographically
+    /// bound to the result (e.g. via a signature).
+    ///
+    /// That is usually verified by [`AttestationVerifier::verify_attestation`].
+    fn generate_attestation_report(&self, attested_data: &[u8]) -> anyhow::Result<Vec<u8>>;
+}
+
+/// An instance of [`AttestationGenerator`] that always returns an empty attestation.
+///
+/// Useful when no attestation is expected to be genereated by the current side of a remotely
 /// attested connection.
 #[derive(Clone)]
-pub struct EmptyAttester;
+pub struct EmptyAttestationReportGenerator;
 
-impl Attester for EmptyAttester {
-    fn generate_attestation_evidence(&self, _attested_data: &[u8]) -> anyhow::Result<AttestationEvidence> {
+impl AttestationReportGenerator for EmptyAttestationReportGenerator {
+    fn generate_attestation_report(&self, _attested_data: &[u8]) -> anyhow::Result<Vec<u8>> {
+        Ok(Vec::new())
+    }
+}
+
+/// A struct implementing the functionality of an attester that generates an attestation evidence.
+/// <https://www.rfc-editor.org/rfc/rfc9334.html#name-attester>
+pub struct Attester {
+    attestation_report_generator: Arc<dyn AttestationReportGenerator>,
+    encryption_key_provider: Arc<EncryptionKeyProvider>,
+}
+
+impl Attester {
+    pub fn new(
+        attestation_report_generator: Arc<dyn AttestationReportGenerator>,
+        encryption_key_provider: Arc<EncryptionKeyProvider>,
+    ) -> Self {
+        Self {
+            attestation_report_generator,
+            encryption_key_provider,
+        }
+    }
+
+    /// Generate an attestation evidence containing a remote attestation report and ensuring that
+    /// `attested_data` is cryptographically bound to the result (e.g. via a signature).
+    pub fn generate_attestation_evidence(&self) -> anyhow::Result<AttestationEvidence> {
+        let encryption_public_key = self.encryption_key_provider.get_serialized_public_key();
+        let attestation_report = self
+            .attestation_report_generator
+            .generate_attestation_report(&encryption_public_key)
+            .context("couldn't generate attestation report")?;
         Ok(AttestationEvidence {
-            attestation_report: Vec::new(),
+            attestation: attestation_report,
+            encryption_public_key,
+            // TODO(#3836): Implement signature generation and add the signing key.
+            signing_public_key: Vec::new(),
+            // TODO(#3640): Sign application data.
+            signed_application_data: Vec::new(),
         })
     }
 }

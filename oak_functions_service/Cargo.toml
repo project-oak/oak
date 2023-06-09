@@ -5,12 +5,6 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
-[features]
-default = ["ring-crypto", "wasm"]
-ring-crypto = ["oak_remote_attestation_interactive/ring-crypto"]
-rust-crypto = ["oak_remote_attestation_interactive/rust-crypto"]
-wasm = []
-
 [dependencies]
 anyhow = { version = "*", default-features = false }
 hashbrown = "*"
@@ -21,7 +15,7 @@ oak_functions_wasm = { workspace = true }
 oak_functions_abi = { workspace = true }
 oak_functions_lookup = { workspace = true }
 oak_functions_workload_logging = { workspace = true }
-oak_remote_attestation_interactive = { workspace = true }
+oak_remote_attestation = { workspace = true }
 oak_logger = { workspace = true }
 prost = { workspace = true }
 

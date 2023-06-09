@@ -2006,8 +2006,8 @@ dependencies = [
  "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_logger",
+ "oak_remote_attestation",
  "oak_remote_attestation_amd",
- "oak_remote_attestation_interactive",
  "prost",
  "tokio",
 ]

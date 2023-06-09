@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
-use crate::attester::Attester;
+use crate::{
+    attester::{Attester, AttestationReportGenerator},
+    proto::oak::session::v1::AttestationEvidence,
+};
 use alloc::{sync::Arc, vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use oak_crypto::{
@@ -36,32 +39,28 @@ pub struct PublicKeyInfo {
 }
 
 pub trait AttestationHandler: micro_rpc::Transport<Error = anyhow::Error> {
-    fn get_public_key_info(&self) -> PublicKeyInfo;
+    fn get_attestation_evidence(&self) -> anyhow::Result<AttestationEvidence>;
 }
 
 pub struct AttestationSessionHandler<H: micro_rpc::Transport<Error = anyhow::Error>> {
     // TODO(#3442): Use attester to attest to the public key.
-    _attester: Arc<dyn Attester>,
+    attester: Arc<Attester>,
     encryption_key_provider: Arc<EncryptionKeyProvider>,
     request_handler: H,
 }
 
 impl<H: micro_rpc::Transport<Error = anyhow::Error>> AttestationSessionHandler<H> {
-    pub fn create(
-        attester: Arc<dyn Attester>,
-        request_handler: H,
-    ) -> anyhow::Result<Self> {
+    pub fn create(attestation_report_generator: Arc<dyn AttestationReportGenerator>, request_handler: H) -> anyhow::Result<Self> {
+        let encryption_key_provider = Arc::new(EncryptionKeyProvider::new());
         Ok(Self {
-            _attester: attester,
-            encryption_key_provider: Arc::new(EncryptionKeyProvider::new()),
+            attester: Arc::new(Attester::new(attestation_report_generator, encryption_key_provider.clone())),
+            encryption_key_provider,
             request_handler,
         })
     }
 }
 
-impl<H: micro_rpc::Transport<Error = anyhow::Error>> micro_rpc::Transport
-    for AttestationSessionHandler<H>
-{
+impl<H: micro_rpc::Transport<Error = anyhow::Error>> micro_rpc::Transport for AttestationSessionHandler<H> {
     type Error = anyhow::Error;
     fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
         let mut server_encryptor = ServerEncryptor::new(self.encryption_key_provider.clone());
@@ -94,14 +93,10 @@ impl<H: micro_rpc::Transport<Error = anyhow::Error>> micro_rpc::Transport
     }
 }
 
-impl<H: micro_rpc::Transport<Error = anyhow::Error>> AttestationHandler
-    for AttestationSessionHandler<H>
-{
-    fn get_public_key_info(&self) -> PublicKeyInfo {
-        // TODO(#3442): Generate and return public key.
-        PublicKeyInfo {
-            public_key: self.encryption_key_provider.get_serialized_public_key(),
-            attestation: Vec::new(),
-        }
+impl<H: micro_rpc::Transport<Error = anyhow::Error>> AttestationHandler for AttestationSessionHandler<H> {
+    fn get_attestation_evidence(&self) -> anyhow::Result<AttestationEvidence> {
+        self.attester
+            .generate_attestation_evidence()
+            .context("couldn't generate attestation evidence")
     }
 }

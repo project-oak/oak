@@ -29,13 +29,14 @@ pub mod proto {
     }
 }
 mod logger;
-mod remote_attestation;
 mod wasm;
 
-use crate::remote_attestation::{AttestationHandler, AttestationSessionHandler};
 use alloc::{boxed::Box, format, sync::Arc};
 use oak_functions_lookup::LookupDataManager;
-use oak_remote_attestation_interactive::handshaker::AttestationGenerator;
+use oak_remote_attestation::{
+    attester::AttestationReportGenerator,
+    handler::{AttestationHandler, AttestationSessionHandler},
+};
 use proto::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
     FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
@@ -51,15 +52,15 @@ enum InitializationState {
 }
 
 pub struct OakFunctionsService {
-    attestation_generator: Arc<dyn AttestationGenerator>,
+    attestation_report_generator: Arc<dyn AttestationReportGenerator>,
     initialization_state: InitializationState,
     lookup_data_manager: Arc<LookupDataManager<logger::StandaloneLogger>>,
 }
 
 impl OakFunctionsService {
-    pub fn new(attestation_generator: Arc<dyn AttestationGenerator>) -> Self {
+    pub fn new(attestation_report_generator: Arc<dyn AttestationReportGenerator>) -> Self {
         Self {
-            attestation_generator,
+            attestation_report_generator,
             initialization_state: InitializationState::Uninitialized,
             lookup_data_manager: Arc::new(
                 LookupDataManager::new_empty(StandaloneLogger::default()),
@@ -94,7 +95,7 @@ impl OakFunctions for OakFunctionsService {
                 })?;
                 let attestation_handler = Box::new(
                     AttestationSessionHandler::create(
-                        self.attestation_generator.clone(),
+                        self.attestation_report_generator.clone(),
                         wasm_handler,
                     )
                     .map_err(|err| {
@@ -104,12 +105,19 @@ impl OakFunctions for OakFunctionsService {
                         )
                     })?,
                 );
-                let public_key_info = attestation_handler.get_public_key_info();
+                let attestation_evidence = attestation_handler
+                    .get_attestation_evidence()
+                    .map_err(|err| {
+                        micro_rpc::Status::new_with_message(
+                            micro_rpc::StatusCode::Internal,
+                            format!("couldn't get attestation evidence: {:?}", err),
+                        )
+                    })?;
                 self.initialization_state = InitializationState::Initialized(attestation_handler);
                 Ok(InitializeResponse {
                     public_key_info: Some(PublicKeyInfo {
-                        public_key: public_key_info.public_key,
-                        attestation: public_key_info.attestation,
+                        public_key: attestation_evidence.encryption_public_key,
+                        attestation: attestation_evidence.attestation,
                     }),
                 })
             }

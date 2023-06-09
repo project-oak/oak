@@ -20,7 +20,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "{}oak_remote_attestation/proto/v1/messages.proto",
             env!("WORKSPACE_ROOT")
         )],
-        &[format!("{}oak_remote_attestation/proto/v1", env!("WORKSPACE_ROOT"))],
+        &[format!(
+            "{}oak_remote_attestation/proto/v1",
+            env!("WORKSPACE_ROOT")
+        )],
     );
 
     Ok(())

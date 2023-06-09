@@ -14,10 +14,14 @@
 // limitations under the License.
 //
 
-use crate::{
-    attester::ReferenceValue,
-    proto::oak::session::v1::{AttestationEvidence, AttestationEndorsement},
-};
+use crate::proto::oak::session::v1::{AttestationEndorsement, AttestationEvidence};
+use alloc::vec::Vec;
+
+/// Reference values used by the verifier to appraise the attestation evidence.
+/// <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
+pub struct ReferenceValue {
+    pub binary_hash: Vec<u8>,
+}
 
 /// A trait implementing the functionality of a verifier that appraises the attestation evidence and
 /// produces an attestation result.
@@ -43,17 +47,19 @@ impl AttestationVerifier for InsecureAttestationVerifier {
     fn verify(
         &self,
         evidence: &AttestationEvidence,
+        _endorsement: &AttestationEndorsement,
         _reference_value: &ReferenceValue,
     ) -> anyhow::Result<()> {
-        // We check that the attestation report is empty in order to avoid accidentally ignoring a real
-        // attestation from the other side, although in principle a more lenient implementation of
-        // this struct could be used that always ignores also non-empty attestations.
-        if evidence.attestation_report.is_empty() {
+        // We check that the attestation report is empty in order to avoid accidentally ignoring a
+        // real attestation from the other side, although in principle a more lenient
+        // implementation of this struct could be used that always ignores also non-empty
+        // attestations.
+        if evidence.attestation.is_empty() {
             Ok(())
         } else {
             Err(anyhow::anyhow!(
                 "expected empty attestation report, got {:?}",
-                evidence.attestation_report
+                evidence.attestation
             ))
         }
     }
