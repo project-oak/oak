@@ -24,8 +24,8 @@ use alloc::{boxed::Box, sync::Arc};
 use core::panic::PanicInfo;
 use log::info;
 use oak_core::samplestore::StaticSampleStore;
-use oak_restricted_kernel_api::{FileDescriptorChannel, StderrLogger};
 use oak_remote_attestation::attester::EmptyAttestationReportGenerator;
+use oak_restricted_kernel_api::{FileDescriptorChannel, StderrLogger};
 
 static LOGGER: StderrLogger = StderrLogger {};
 
@@ -40,9 +40,8 @@ fn _start() -> ! {
 fn main() -> ! {
     info!("In main!");
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
-    let service = oak_functions_service::OakFunctionsService::new(Arc::new(
-        EmptyAttestationReportGenerator,
-    ));
+    let service =
+        oak_functions_service::OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
     let server = oak_functions_service::proto::oak::functions::OakFunctionsServer::new(service);
     oak_channel::server::start_blocking_server(
         Box::<FileDescriptorChannel>::default(),
