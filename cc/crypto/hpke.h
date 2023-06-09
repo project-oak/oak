@@ -27,6 +27,7 @@
 
 namespace oak::crypto {
 
+// Helpful struct for keeping track of key information returned from the BoringSSL HPKE library.
 struct KeyInfo {
   size_t key_size;
   std::vector<uint8_t> key_bytes;
@@ -48,21 +49,22 @@ class SenderRequestContext {
 
 class SenderResponseContext {
  public:
-  SenderResponseContext(std::unique_ptr<KeyInfo> response_key,
+  SenderResponseContext(std::unique_ptr<EVP_AEAD_CTX> aead_response_context,
                         std::unique_ptr<KeyInfo> response_nonce)
-      : response_key_(std::move(response_key)), response_nonce_(std::move(response_nonce_)){};
+      : aead_response_context_(std::move(aead_response_context)),
+        response_nonce_(std::move(response_nonce_)){};
   // Decrypts response message and validates associated data using AEAD as part of
   // bidirectional communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
   absl::StatusOr<std::string> Open(absl::string_view ciphertext, absl::string_view associated_data);
 
  private:
-  std::unique_ptr<KeyInfo> response_key_;
+  std::unique_ptr<EVP_AEAD_CTX> aead_response_context_;
   std::unique_ptr<KeyInfo> response_nonce_;
 };
 
 struct ClientHPKEConfig {
-  std::unique_ptr<KeyInfo> encap_public_key_info;
+  std::unique_ptr<KeyInfo> encap_public_key;
   std::unique_ptr<SenderRequestContext> sender_request_context;
   std::unique_ptr<SenderResponseContext> sender_response_context;
 };

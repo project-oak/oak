@@ -35,18 +35,12 @@ cc_library(
     srcs = ["hpke.cc"],
     hdrs = ["hpke.h"],
     deps = [
-        ":util",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_boringssl//:crypto"
     ],
 )
 
-cc_library(
-    name = "util",
-    srcs = ["util.cc"],
-    hdrs = ["util.h"],
-    deps = [
-        "@com_google_absl//absl/strings",
-    ]
-)
+# cc_test(
+#    name = "encryptor_test"
+# )

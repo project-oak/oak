@@ -60,9 +60,15 @@ class ClientEncryptor {
   std::tuple<std::string, std::string> Decrypt(absl::string_view encrypted_response);
 
  private:
+  // Private constructor for initializing all private variables of the class.
+  ClientEncryptor(ClientHPKEConfig& client_hpke_config)
+      : serialized_encapsulated_public_key_(std::move(client_hpke_config.encap_public_key)),
+        sender_request_context_(std::move(client_hpke_config.sender_request_context)),
+        sender_response_context_(std::move(client_hpke_config.sender_response_context)){};
+
   // Encapsulated public key needed to establish a symmetric session key.
   // Only sent in the initial request message of the session.
-  std::string serialized_encapsulated_public_key_;
+  std::unique_ptr<KeyInfo> serialized_encapsulated_public_key_;
   std::unique_ptr<SenderRequestContext> sender_request_context_;
   std::unique_ptr<SenderResponseContext> sender_response_context_;
 };

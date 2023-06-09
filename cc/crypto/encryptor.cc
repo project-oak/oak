@@ -16,4 +16,20 @@
 
 #include "encryptor.h"
 
-namespace oak::crypto {}  // namespace oak::crypto
+#include "absl/status/statusor.h"
+#include "hpke.h"
+
+namespace oak::crypto {
+
+absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
+    absl::string_view serialized_server_public_key) {
+  absl::StatusOr<ClientHPKEConfig> client_setup =
+      SetUpBaseSender(serialized_server_public_key, OAK_HPKE_INFO);
+  if (!client_setup.ok()) {
+    return client_setup.status();
+  }
+  auto client_encryptor = std::unique_ptr<ClientEncryptor>(new ClientEncryptor(*client_setup));
+  return client_encryptor;
+}
+
+}  // namespace oak::crypto
