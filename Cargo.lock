@@ -1920,8 +1920,7 @@ dependencies = [
  "oak_channel",
  "oak_core",
  "oak_functions_service",
- "oak_remote_attestation_amd",
- "oak_remote_attestation_interactive",
+ "oak_remote_attestation",
 ]
 
 [[package]]
@@ -2006,8 +2005,7 @@ dependencies = [
  "oak_functions_wasm",
  "oak_functions_workload_logging",
  "oak_logger",
- "oak_remote_attestation_amd",
- "oak_remote_attestation_interactive",
+ "oak_remote_attestation",
  "prost",
  "tokio",
 ]
@@ -2146,13 +2144,10 @@ name = "oak_remote_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
- "futures",
- "futures-util",
- "oak_grpc_utils",
+ "micro_rpc",
+ "micro_rpc_build",
+ "oak_crypto",
  "prost",
- "tokio",
- "tonic",
 ]
 
 [[package]]
