@@ -43,6 +43,12 @@ class ClientEncryptor {
   static absl::StatusOr<std::unique_ptr<ClientEncryptor>> Create(
       absl::string_view serialized_server_public_key);
 
+  // Constructor for initializing all private variables of the class.
+  ClientEncryptor(ClientHPKEConfig& client_hpke_config)
+      : serialized_encapsulated_public_key_(std::move(client_hpke_config.encap_public_key)),
+        sender_request_context_(std::move(client_hpke_config.sender_request_context)),
+        sender_response_context_(std::move(client_hpke_config.sender_response_context)){};
+
   // Encrypts `plaintext` and authenticates `associated_data` using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
@@ -55,17 +61,12 @@ class ClientEncryptor {
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
   // `encrypted_response` must be a serialized [`oak.crypto.EncryptedResponse`] message.
-  // Returns a response message plaintext and associated data.
+  // Returns a response message plaintext.
   // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
-  std::tuple<std::string, std::string> Decrypt(absl::string_view encrypted_response);
+  // std::tuple<std::string, std::string> Decrypt(absl::string_view encrypted_response);
+  absl::StatusOr<std::string> Decrypt(std::string encrypted_response);
 
  private:
-  // Private constructor for initializing all private variables of the class.
-  ClientEncryptor(ClientHPKEConfig& client_hpke_config)
-      : serialized_encapsulated_public_key_(std::move(client_hpke_config.encap_public_key)),
-        sender_request_context_(std::move(client_hpke_config.sender_request_context)),
-        sender_response_context_(std::move(client_hpke_config.sender_response_context)){};
-
   // Encapsulated public key needed to establish a symmetric session key.
   // Only sent in the initial request message of the session.
   std::unique_ptr<KeyInfo> serialized_encapsulated_public_key_;

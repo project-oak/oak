@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "hpke.h"
+#include "cc/crypto/hpke.h"
 
 #include <memory>
 #include <vector>
@@ -102,7 +102,7 @@ absl::StatusOr<ClientHPKEConfig> SetUpBaseSender(absl::string_view serialized_re
 
   // First collect encapsulated public key information and sender request context.
   std::unique_ptr<KeyInfo>& encap_public_key = client_hpke_config.encap_public_key;
-  encap_public_key = std::unique_ptr<KeyInfo>(new KeyInfo());
+  encap_public_key = std::make_unique<KeyInfo>();
   encap_public_key->key_bytes.reserve(EVP_HPKE_MAX_ENC_LENGTH);
 
   std::vector<uint8_t> recipient_public_key_bytes =
@@ -131,8 +131,7 @@ absl::StatusOr<ClientHPKEConfig> SetUpBaseSender(absl::string_view serialized_re
   // Generate sender response context from hpke context.
   std::unique_ptr<SenderRequestContext>& sender_request_context =
       client_hpke_config.sender_request_context;
-  sender_request_context = std::unique_ptr<SenderRequestContext>(
-      new SenderRequestContext(std::move(hpke_sender_context)));
+  sender_request_context = std::make_unique<SenderRequestContext>(std::move(hpke_sender_context));
 
   // Now configure sender response context.
   // Generate response key for the response context.
@@ -161,7 +160,7 @@ absl::StatusOr<ClientHPKEConfig> SetUpBaseSender(absl::string_view serialized_re
   }
 
   // Generate a nonce for the response context.
-  std::unique_ptr<KeyInfo> response_nonce = std::unique_ptr<KeyInfo>(new KeyInfo());
+  std::unique_ptr<KeyInfo> response_nonce = std::make_unique<KeyInfo>();
   response_nonce->key_bytes.reserve(kAeadNonceSizeBytes);
   response_nonce->key_size = kAeadNonceSizeBytes;
   std::string nonce_context_string = "response_nonce";
@@ -177,8 +176,8 @@ absl::StatusOr<ClientHPKEConfig> SetUpBaseSender(absl::string_view serialized_re
   }
   std::unique_ptr<SenderResponseContext>& sender_response_context =
       client_hpke_config.sender_response_context;
-  sender_response_context = std::unique_ptr<SenderResponseContext>(
-      new SenderResponseContext(std::move(aead_response_context), std::move(response_nonce)));
+  sender_response_context = std::make_unique<SenderResponseContext>(
+      std::move(aead_response_context), std::move(response_nonce));
 
   return client_hpke_config;
 }

@@ -52,6 +52,17 @@ http_archive(
     ],
 )
 
+# GoogleTest
+# https://github.com/google/googletest
+http_archive(
+    name = "com_google_googletest",
+    strip_prefix = "googletest-b796f7d44681514f58a683a3a71ff17c94edb0c1",
+    urls = [
+        # Latest commit for version 1.13.0.
+        "https://github.com/google/googletest/archive/b796f7d44681514f58a683a3a71ff17c94edb0c1.zip"
+    ],
+)
+
 http_archive(
     name = "tink_base",
     sha256 = "536a4ceb3e9e7e35bf52f7cc99838679de8463ab2a1a12b90121c00ee25fe252",

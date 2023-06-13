@@ -17,9 +17,20 @@
 #include "encryptor.h"
 
 #include "absl/status/statusor.h"
-#include "hpke.h"
+#include "cc/crypto/hpke.h"
+#include "oak_crypto/proto/crypto.pb.h"
 
 namespace oak::crypto {
+namespace {
+
+// Generates a string form of a KeyInfo struct with length key_size.
+std::string KeyInfoToString(KeyInfo key_info) {
+  size_t key_size = key_info.key_size;
+  key_info.key_bytes.resize(key_size);
+  std::string key(key_info.key_bytes.begin(), key_info.key_bytes.end());
+  return key;
+}
+}  // namespace
 
 absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
     absl::string_view serialized_server_public_key) {
@@ -28,17 +39,40 @@ absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
   if (!client_setup.ok()) {
     return client_setup.status();
   }
-  auto client_encryptor = std::unique_ptr<ClientEncryptor>(new ClientEncryptor(*client_setup));
-  return client_encryptor;
+  std::unique_ptr<ClientEncryptor> client_encryptor =
+      std::make_unique<ClientEncryptor>(*client_setup);
+  // Pass ownership of the pointer to the caller.
+  return std::move(client_encryptor);
 }
 
 absl::StatusOr<std::string> ClientEncryptor::Encrypt(absl::string_view plaintext,
                                                      absl::string_view associated_data) {
-  return sender_request_context_->Seal(plaintext, associated_data);
+  EncryptedRequest encrypted_request_proto;
+  auto serialized_encrypted_message = sender_request_context_->Seal(plaintext, associated_data);
+  if (!serialized_encrypted_message.ok()) {
+    return serialized_encrypted_message.status();
+  }
+  *encrypted_request_proto.mutable_encrypted_message()->mutable_ciphertext() =
+      *serialized_encrypted_message;
+  KeyInfo serialized_encapsulated_public_key = *serialized_encapsulated_public_key_.get();
+
+  *encrypted_request_proto.mutable_serialized_encapsulated_public_key() =
+      KeyInfoToString(serialized_encapsulated_public_key);
+
+  std::string serialized_output;
+  if (encrypted_request_proto.SerializeToString(&serialized_output)) {
+    return absl::AbortedError("Failed to serialize EncrytpedRequest proto.");
+  }
+  return serialized_output;
 }
 
-absl::StatusOr<std::string> ClientEncryptor::Decrypt(absl::string_view encrypted_response) {
-  return sender_response_context_->Open(encrypted_response, "");
+absl::StatusOr<std::string> ClientEncryptor::Decrypt(std::string encrypted_response) {
+  EncryptedResponse encrypted_response_proto;
+  if (!encrypted_response_proto.ParseFromString(encrypted_response)) {
+    return absl::AbortedError("Unable to parse encrypted response to proto format.");
+  }
+  std::string ciphertext = encrypted_response_proto.encrypted_message().ciphertext();
+  std::string associated_data = encrypted_response_proto.encrypted_message().associated_data();
+  return sender_response_context_->Open(ciphertext, associated_data);
 }
-
 }  // namespace oak::crypto
