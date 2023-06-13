@@ -8,6 +8,7 @@ members = [
   "oak_channel",
   "oak_client",
   "oak_core",
+  "oak_containers_orchestrator",
   "oak_crypto",
   "oak_docker_linux_init",
   "oak_echo_linux_init",
