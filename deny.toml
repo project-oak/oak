@@ -14,6 +14,8 @@ notice = "deny"
 ignore = [
   # TODO(#3845): Stop ignoring when the colored crate no longer relies on atty.
   "RUSTSEC-2021-0145",
+  # TODO(#4016): Fix "Ouroboros is Unsound" failure.
+  "RUSTSEC-2023-0042",
 ]
 
 [bans]
