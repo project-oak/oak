@@ -14,9 +14,11 @@
 // limitations under the License.
 //
 
-use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset};
+use self::{
+    encrypted_mapper::{EncryptedPageTable, MemoryEncryption},
+    page_tables::RootPageTable,
+};
 use crate::{FRAME_ALLOCATOR, PAGE_TABLES, VMA_ALLOCATOR};
-use core::ops::DerefMut;
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
@@ -29,8 +31,8 @@ use x86_64::{
     },
     structures::paging::{
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
-        FrameAllocator, MappedPageTable, Page, PageSize, PageTable,
-        PageTableFlags as BasePageTableFlags, PhysFrame, Size2MiB, Size4KiB,
+        FrameAllocator, Page, PageSize, PageTable, PageTableFlags as BasePageTableFlags, PhysFrame,
+        Size2MiB,
     },
     PhysAddr, VirtAddr,
 };
@@ -134,24 +136,20 @@ impl From<PageTableFlags> for BasePageTableFlags {
 /// This is equivalent to <x86_64::structures::paging::mapper::Mapper>, but knows about memory
 /// encryption.
 pub trait Mapper<S: PageSize> {
-    unsafe fn map_to_with_table_flags<A>(
-        &mut self,
+    unsafe fn map_to_with_table_flags(
+        &self,
         page: Page<S>,
         frame: PhysFrame<S>,
         flags: PageTableFlags,
         parent_table_flags: PageTableFlags,
-        frame_allocator: &mut A,
-    ) -> Result<MapperFlush<S>, MapToError<S>>
-    where
-        A: FrameAllocator<Size4KiB>;
+    ) -> Result<MapperFlush<S>, MapToError<S>>;
 
     /// Unmaps a page.
     ///
     /// # Safety
     ///
     /// No checks are done whether the page is actually in use or not.
-    unsafe fn unmap(&mut self, page: Page<S>)
-        -> Result<(PhysFrame<S>, MapperFlush<S>), UnmapError>;
+    unsafe fn unmap(&self, page: Page<S>) -> Result<(PhysFrame<S>, MapperFlush<S>), UnmapError>;
 
     /// Changes the flags on a page table entry by unmapping and remapping it.
     ///
@@ -161,22 +159,14 @@ pub trait Mapper<S: PageSize> {
     /// failures, e.g. by setting the `NO_EXECUTE` bit on pages that contain your code or removing
     /// `WRITABLE` from the page that contains your stack.
     unsafe fn update_flags(
-        &mut self,
+        &self,
         page: Page<S>,
         flags: PageTableFlags,
     ) -> Result<MapperFlush<S>, FlagUpdateError>;
 }
 
-pub fn init<const N: usize>(
-    memory_map: &[BootE820Entry],
-    program_headers: &[ProgramHeader],
-) -> frame_allocator::PhysicalMemoryAllocator<N> {
-    // This assumes all memory is in the lower end of the address space.
-    let mut alloc = frame_allocator::PhysicalMemoryAllocator::new(PhysFrame::range(
-        PhysFrame::from_start_address(PhysAddr::new(0x0)).unwrap(),
-        // N u64-s * 64 frames per u64 * 2 MiB per frame
-        PhysFrame::from_start_address(PhysAddr::new(N as u64 * 64 * Size2MiB::SIZE)).unwrap(),
-    ));
+pub fn init(memory_map: &[BootE820Entry], program_headers: &[ProgramHeader]) {
+    let mut alloc = FRAME_ALLOCATOR.lock();
 
     /* Step 1: mark all RAM as available (event though it may contain data!) */
     memory_map
@@ -247,8 +237,6 @@ pub fn init<const N: usize>(
             );
             alloc.mark_valid(range, false)
         });
-
-    alloc
 }
 
 /// Initializes the page tables used by the kernel.
@@ -266,14 +254,12 @@ pub fn init<const N: usize>(
 /// |                     |          |                     |         | physical memory             |
 /// | FFFF_8820_0000_0000 | ~-120 TB | FFFF_FFFF_7FFF_FFFF | ~120 TB | ... unused hole             |
 /// | FFFF_FFFF_8000_0000 |    -2 GB | FFFF_FFFF_FFFF_FFFF |    2 GB | Kernel code                 |
-pub fn init_paging<A: FrameAllocator<Size4KiB>>(
-    frame_allocator: &mut A,
-    program_headers: &[ProgramHeader],
-) -> Result<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>, &'static str> {
+pub fn init_paging(program_headers: &[ProgramHeader]) -> Result<RootPageTable, &'static str> {
     // Safety: this expects the frame allocator to be initialized and the memory region it's handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     // This reference will no longer be valid after we reload the page tables!
-    let pml4_frame = frame_allocator
+    let pml4_frame = FRAME_ALLOCATOR
+        .lock()
         .allocate_frame()
         .ok_or("couldn't allocate a frame for PML4")?;
     let pml4 = unsafe { &mut *(pml4_frame.start_address().as_u64() as *mut PageTable) };
@@ -307,13 +293,12 @@ pub fn init_paging<A: FrameAllocator<Size4KiB>>(
                 | PageTableFlags::NO_EXECUTE
                 | PageTableFlags::ENCRYPTED,
             &mut page_table,
-            frame_allocator,
         )
         .map_err(|_| "couldn't set up paging for physical memory")?;
 
         // Mapping for the kernel itself in the upper -2G of memory, based on the mappings (and
         // permissions) in the program header.
-        page_tables::create_kernel_map(program_headers, &mut page_table, frame_allocator)
+        page_tables::create_kernel_map(program_headers, &mut page_table)
             .map_err(|_| "couldn't set up paging for the kernel")?;
     }
 
@@ -332,11 +317,7 @@ pub fn init_paging<A: FrameAllocator<Size4KiB>>(
     let pml4 =
         unsafe { &mut *(DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr() };
 
-    Ok(EncryptedPageTable::new(
-        pml4,
-        DIRECT_MAPPING_OFFSET,
-        encrypted,
-    ))
+    Ok(RootPageTable::new(pml4, DIRECT_MAPPING_OFFSET, encrypted))
 }
 
 /// Allocates memory usable as a stack.
@@ -355,8 +336,6 @@ pub fn allocate_stack() -> VirtAddr {
         .allocate(2)
         .expect("unable to allocate virtual memory for syscall stack");
     let frame = FRAME_ALLOCATOR
-        .get()
-        .unwrap()
         .lock()
         .allocate_frame()
         .expect("unable to allocate physical memory for syscall stack");
@@ -365,7 +344,6 @@ pub fn allocate_stack() -> VirtAddr {
         PAGE_TABLES
             .get()
             .unwrap()
-            .lock()
             .map_to_with_table_flags(
                 stack_page,
                 frame,
@@ -375,7 +353,6 @@ pub fn allocate_stack() -> VirtAddr {
                     | PageTableFlags::NO_EXECUTE
                     | PageTableFlags::WRITABLE,
                 PageTableFlags::ENCRYPTED | PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-                FRAME_ALLOCATOR.get().unwrap().lock().deref_mut(),
             )
             .expect("failed to update page tables for syscall stack")
             .flush();

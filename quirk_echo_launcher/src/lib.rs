@@ -15,8 +15,12 @@
 
 #![feature(never_type)]
 
-pub mod schema {
-    #![allow(dead_code)]
-    use prost::Message;
-    include!(concat!(env!("OUT_DIR"), "/quirk.echo.rs"));
+pub mod proto {
+    pub mod quirk {
+        pub mod echo {
+            #![allow(dead_code)]
+            use prost::Message;
+            include!(concat!(env!("OUT_DIR"), "/quirk.echo.rs"));
+        }
+    }
 }

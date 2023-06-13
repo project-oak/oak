@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-#include "encryptor.h"
+#include "cc/crypto/encryptor.h"
 
 #include "absl/status/statusor.h"
-#include "cc/crypto/hpke.h"
-#include "oak_crypto/proto/crypto.pb.h"
+#include "cc/crypto/hpke/hpke.h"
+#include "oak_crypto/proto/v1/crypto.pb.h"
 
 namespace oak::crypto {
 namespace {
+
+using ::oak::crypto::v1::EncryptedRequest;
+using ::oak::crypto::v1::EncryptedResponse;
 
 // Generates a string form of a KeyInfo struct with length key_size.
 std::string KeyInfoToString(KeyInfo key_info) {

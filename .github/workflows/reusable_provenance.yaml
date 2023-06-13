@@ -53,8 +53,7 @@ jobs:
       actions: read
       id-token: write
       contents: write
-    # TODO(#3860): Use a release tag.
-    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_docker-based_slsa3.yml@v1.6.0-rc.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/builder_docker-based_slsa3.yml@v1.6.0
     with:
       builder-image: 'europe-west2-docker.pkg.dev/oak-ci/oak-development/oak-development'
       builder-digest: ${{ needs.get_inputs.outputs.builder-digest }}
@@ -124,16 +123,13 @@ jobs:
         run: |
           echo "provenance_digest=$(ent put ${{ needs.get_inputs.outputs.provenance-name }}.sigstore)" >> $GITHUB_OUTPUT
 
-      # Add the provenance digest to the ./comment file.
+      # Add the provenance digest to the ./comment file as a TOML formatted doc.
       - name: Format artifact and provenance digest (post-merge only)
         run: |
-          echo -e "Artifact name: $(basename ${{ needs.get_inputs.outputs.artifact-path }})" >> ./comment
-          echo -e "Artifact digest:\n\n\`\`\`" >> ./comment
-          echo ${{ steps.ent_upload_binary.outputs.binary_digest }} | tee -a ./comment
-          echo -e "\`\`\`" >> ./comment
-          echo -e "\n\nProvenance digest:\n\n\`\`\`" >> ./comment
-          echo ${{ steps.ent_upload_provenance.outputs.provenance_digest }} | tee -a ./comment
-          echo -e "\`\`\`" >> ./comment
+          echo -e "\n" >> ./comment
+          echo -e "artifact_name = \"$(basename ${{ needs.get_inputs.outputs.artifact-path }})\"" >> ./comment
+          echo -e "artifact_digest = \"$(cut -d' ' -f1 <<<'${{ steps.ent_upload_binary.outputs.binary_digest }}')\"" >> ./comment
+          echo -e "provenance_digest = \"$(cut -d' ' -f1 <<<'${{ steps.ent_upload_provenance.outputs.provenance_digest }}')\"" >> ./comment
 
       # Post a comment on the PR containing the sha256 digests of the binary and its provenance.
       - name: Post the comment (post-merge only)
@@ -203,13 +199,10 @@ jobs:
       - name: Format artifact and provenance digest (debug-step)
         working-directory: downloads
         run: |
-          echo -e "Artifact name: $(basename ${{ needs.get_inputs.outputs.artifact-path }})" >> ./comment
-          echo -e "Artifact digest:\n\n\`\`\`" >> ./comment
-          echo "$(sha256sum ${{ needs.get_inputs.outputs.artifact-path }})" | tee -a ./comment
-          echo -e "\`\`\`" >> ./comment
-          echo -e "\n\nProvenance digest:\n\n\`\`\`" >> ./comment
-          echo "$(sha256sum ${{ needs.get_inputs.outputs.provenance-name }})" | tee -a ./comment
-          echo -e "\`\`\`" >> ./comment
+          echo -e "\n" >> ./comment
+          echo -e "artifact_name = \"$(basename ${{ needs.get_inputs.outputs.artifact-path }})\"" >> ./comment
+          echo -e "artifact_digest = \"$(cut -d' ' -f1 <<<$(sha256sum ${{ needs.get_inputs.outputs.artifact-path }}))\"" >> ./comment
+          echo -e "provenance_digest = \"$(cut -d' ' -f1 <<<$(sha256sum ${{ needs.get_inputs.outputs.provenance-name }}))\"" >> ./comment
 
       # Debug step: Print the content of the ./comment file & inputs to the workflow.
       - name: Print ./comment & inputs

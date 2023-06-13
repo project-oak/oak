@@ -65,6 +65,28 @@ pub struct UserState<L: OakLogger> {
     logger: L,
 }
 
+/// Stubs a Wasm imported function in the provided linker.
+///
+/// The stubbed function logs an error and returns an error in the form of a Wasm trap (similar to
+/// an exception).
+macro_rules! stub_wasm_function {
+    ($linker:ident, $function_mod:ident . $function_name:ident, ($($t:ty),*) -> $r:ty) => {
+        $linker.func_wrap(
+            stringify!($function_mod),
+            stringify!($function_name),
+            |caller: wasmi::Caller<'_, UserState<L>>, $(_: $t),*| {
+                caller
+                    .data()
+                    .log_error(concat!("called stubbed ", stringify!($function_mod), ".", stringify!($function_name)));
+                Err::<$r, wasmi::core::Trap>(
+                    wasmi::core::Trap::new(
+                        concat!("called stubbed ", stringify!($function_mod), ".", stringify!($function_name))))
+            },
+        )
+        .expect(concat!("failed to define ", stringify!($function_mod), ".", stringify!($function_name), " in linker"));
+    };
+}
+
 impl<L> UserState<L>
 where
     L: OakLogger,
@@ -236,6 +258,51 @@ where
                 },
             )
             .expect("failed to define invoke in linker");
+
+        // TODO(#3929): One of our dependency requires various WASI functions to be linked, but, to
+        // the best of our knowledge, does not use them at run time. As a workaround, we stub
+        // them for now but we should remove them, if possible.
+        stub_wasm_function!(
+            linker,
+            wasi_snapshot_preview1.clock_time_get,
+            (i32, i64, i32) -> i32
+        );
+        stub_wasm_function!(
+            linker,
+            wasi_snapshot_preview1.proc_exit,
+            (i32) -> ()
+        );
+        stub_wasm_function!(
+            linker,
+            wasi_snapshot_preview1.environ_sizes_get,
+            (i32, i32) -> i32
+        );
+        stub_wasm_function!(
+            linker,
+            wasi_snapshot_preview1.environ_get,
+            (i32, i32) -> i32
+        );
+        stub_wasm_function!(
+            linker,
+            wasi_snapshot_preview1.fd_close,
+            (i32) -> i32
+        );
+        stub_wasm_function!(
+            linker,
+            wasi_snapshot_preview1.fd_write,
+            (i32, i32, i32, i32) -> i32
+        );
+        stub_wasm_function!(
+            linker,
+            wasi_snapshot_preview1.fd_read,
+            (i32, i32, i32, i32) -> i32
+        );
+        stub_wasm_function!(
+            linker,
+            wasi_snapshot_preview1.fd_seek,
+            (i32, i64, i32, i32) -> i32
+        );
+
         OakLinker { linker }
     }
 
@@ -506,6 +573,17 @@ where
         let invoke_response =
             Response::create(StatusCode::Success, store.data().response_bytes.clone());
         Ok(invoke_response)
+    }
+}
+
+impl<L: oak_logger::OakLogger> micro_rpc::Transport for WasmHandler<L> {
+    type Error = anyhow::Error;
+    fn invoke(&mut self, request: &[u8]) -> anyhow::Result<Vec<u8>> {
+        let request = Request {
+            body: request.to_vec(),
+        };
+        let response = self.handle_invoke(request)?;
+        Ok(response.body)
     }
 }
 

@@ -24,7 +24,19 @@ docker_run_flags=(
   "--volume=$PWD/cargo-cache:/home/docker/.cargo"
   "--volume=$PWD/sccache-cache:/home/docker/.cache/sccache"
   "--volume=$PWD:/workspace"
+  # Enable Docker-in-Docker by giving the container access to the host docker
+  # daemon.
+  "--volume=$XDG_RUNTIME_DIR/docker.sock:/var/run/docker.sock"
+  # The container uses the host docker daemon, so docker commands running in
+  # the container actually access the host filesystem. Thus mount the /tmp
+  # directory as a volume in the container so that it can access the outputs of
+  # docker commands that write to /tmp.
+  '--volume=/tmp:/tmp'
   '--volume=/dev/log:/dev/log'
+  # Provide readonly access to the kernel image and kernel volumes of the host
+  # to enable virt-make-fs which requires access to a kernel.
+  '--volume=/boot:/boot:ro'
+  '--volume=/lib/modules:/lib/modules:ro'
   '--workdir=/workspace'
   '--network=host'
 )

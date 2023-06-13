@@ -14,9 +14,11 @@
 // limitations under the License.
 //
 
-use crate::fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg};
-use alloc::vec;
-use core::{ffi::CStr, slice};
+use crate::{
+    fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg},
+    BOOT_ALLOC,
+};
+use core::{alloc::Layout, ffi::CStr, ptr::NonNull, slice};
 use elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
 use oak_linux_boot_params::BootE820Entry;
 use x86_64::{PhysAddr, VirtAddr};
@@ -58,7 +60,16 @@ pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<&'static CStr> {
     let cmdline_file = fw_cfg.find(cmdline_path)?;
     let cmdline_size = cmdline_file.size();
     // Make the buffer one byte longer so that the kernel command-line is null-terminated.
-    let buf = vec![0u8; cmdline_size + 1].leak();
+    // Safety: len will always be at least 1 byte, and we don't care about alignment. If the
+    // allocation fails, we won't try coercing it into a slice.
+    let buf = unsafe {
+        let len = cmdline_size + 1;
+        NonNull::slice_from_raw_parts(
+            BOOT_ALLOC.allocate(Layout::from_size_align(len, 1).unwrap())?,
+            len,
+        )
+        .as_mut()
+    };
     let actual_size = fw_cfg
         .read_file(&cmdline_file, buf)
         .expect("could not read cmdline");
@@ -67,7 +78,7 @@ pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<&'static CStr> {
         "cmdline size did not match expected size"
     );
 
-    let cmdline = &CStr::from_bytes_with_nul(buf).expect("invalid kernel command-line");
+    let cmdline = CStr::from_bytes_with_nul(buf).expect("invalid kernel command-line");
     log::debug!(
         "Kernel cmdline: {}",
         cmdline.to_str().expect("invalid kernel commande-line")
@@ -98,7 +109,7 @@ pub fn try_load_kernel_image(
         "Kernel image start address {:#018x}",
         start_address.as_u64()
     );
-    // Safety: We checked that the MDA address is suitable and big enough.
+    // Safety: We checked that the DMA address is suitable and big enough.
     let buf = unsafe { slice::from_raw_parts_mut::<u8>(start_address.as_mut_ptr(), size) };
 
     let actual_size = fw_cfg

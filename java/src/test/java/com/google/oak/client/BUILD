@@ -26,7 +26,11 @@ java_test(
     test_class = "com.google.oak.client.OakClientTest",
     deps = [
         "//java/src/main/java/com/google/oak/client",
-        "//java/src/main/java/com/google/oak/evidence",
+        "//java/src/main/java/com/google/oak/remote_attestation:insecure_attestation_verifier",
+        "//java/src/main/java/com/google/oak/transport",
         "//java/src/main/java/com/google/oak/util",
+        "//oak_crypto/proto/v1:crypto_java_proto",
+        "//oak_remote_attestation/proto/v1:messages_java_proto",
+        "@com_google_protobuf//:protobuf_javalite",
     ],
 )

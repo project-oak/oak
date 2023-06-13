@@ -51,14 +51,14 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
     /// Creates a new bitmap allocator for a physical frame range.
     /// Panics if N does not match the number of u64-s required to track all frames in that range.
     /// Initially, the allocator will mark the whole range as invalid.
-    pub fn new(range: PhysFrameRange<S>) -> Self {
+    pub const fn new(range: PhysFrameRange<S>) -> Self {
         // Unfortunately there doesn't seem to be a way to hoist this to the type system.
-        let expected = bitvec::mem::elts::<u64>(range.count());
+        // We also have to crudely reimplement `range.count()` here as `count()` is not a const fn.
+        let num_frames =
+            (range.end.start_address().as_u64() - range.start.start_address().as_u64()) / S::SIZE;
+        let expected = bitvec::mem::elts::<u64>(num_frames as usize);
         if expected != N {
-            panic!(
-                "BitmapAllocator bitmap size does not match FrameRange size; expected {}, got {}",
-                expected, N
-            );
+            panic!("BitmapAllocator bitmap size does not match FrameRange size",);
         }
 
         Self {
@@ -175,6 +175,14 @@ impl<S: PageSize, const N: usize> BitmapAllocator<S, N> {
             )
         }
     }
+
+    pub fn num_valid(&self) -> usize {
+        self.valid.count_ones()
+    }
+
+    pub fn num_allocated(&self) -> usize {
+        self.allocated.count_ones()
+    }
 }
 
 unsafe impl<S: PageSize, const N: usize> FrameAllocator<S> for BitmapAllocator<S, N> {
@@ -237,7 +245,11 @@ mod tests {
     fn silly_allocator_valid() {
         let mut alloc = create_allocator::<1>(0x0000, 0x1000);
         alloc.mark_valid(create_frame_range(0x0000, 0x1000), true);
+        assert_eq!(1, alloc.num_valid());
+        assert_eq!(0, alloc.num_allocated());
         assert_eq!(Some(create_frame(0x0000)), alloc.allocate_frame());
+        assert_eq!(1, alloc.num_valid());
+        assert_eq!(1, alloc.num_allocated());
     }
 
     #[should_panic]
@@ -252,6 +264,7 @@ mod tests {
         alloc.mark_valid(create_frame_range(0x0000, 0x1000), true);
         assert_eq!(Some(create_frame(0x0000)), alloc.allocate_frame());
         assert_eq!(None, alloc.allocate_frame());
+        assert_eq!(1, alloc.num_allocated());
     }
 
     #[test]
@@ -264,6 +277,8 @@ mod tests {
             create_frame_range(0x0000, expected_frames.len() as u64 * 0x1000),
             true,
         );
+        assert_eq!(9, alloc.num_valid());
+        assert_eq!(0, alloc.num_allocated());
 
         let got_frames: Vec<PhysFrame<Size4KiB>> = (0..expected_frames.len())
             .map(|_| alloc.allocate_frame().unwrap())
@@ -271,19 +286,25 @@ mod tests {
 
         assert_set_eq_other!(expected_frames, got_frames);
         assert_eq!(None, alloc.allocate_frame());
+        assert_eq!(9, alloc.num_allocated());
     }
 
     #[test]
     fn realloc() {
         let mut alloc = create_allocator::<1>(0x0000, 0x1000);
         alloc.mark_valid(create_frame_range(0x0000, 0x1000), true);
+        assert_eq!(1, alloc.num_valid());
+        assert_eq!(0, alloc.num_allocated());
         assert_eq!(Some(create_frame(0x0000)), alloc.allocate_frame());
         assert_eq!(None, alloc.allocate_frame());
+        assert_eq!(1, alloc.num_allocated());
         unsafe {
             alloc.deallocate_frame(create_frame(0x0000));
         }
+        assert_eq!(0, alloc.num_allocated());
         assert_eq!(Some(create_frame(0x0000)), alloc.allocate_frame());
         assert_eq!(None, alloc.allocate_frame());
+        assert_eq!(1, alloc.num_allocated());
     }
 
     #[should_panic]

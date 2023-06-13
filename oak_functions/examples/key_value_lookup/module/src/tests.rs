@@ -22,6 +22,11 @@ use test::Bencher;
 
 #[tokio::test]
 async fn test_server() {
+    if xtask::testing::skip_test() {
+        log::info!("skipping test");
+        return;
+    }
+
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
 
     let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
@@ -33,16 +38,15 @@ async fn test_server() {
         }),
     );
 
-    let server_port = oak_functions_test_utils::free_port();
-    let server_background = oak_functions_test_utils::create_and_start_oak_functions_server(
-        server_port,
-        &wasm_path,
-        lookup_data_file.path().to_str().unwrap(),
-    )
-    .unwrap();
+    let (_server_background, server_port) =
+        xtask::launcher::run_oak_functions_example_in_background(
+            &wasm_path,
+            lookup_data_file.path().to_str().unwrap(),
+        )
+        .await;
 
     // Wait for the server to start up.
-    std::thread::sleep(Duration::from_secs(2));
+    std::thread::sleep(Duration::from_secs(20));
 
     {
         // Lookup match.
@@ -59,12 +63,21 @@ async fn test_server() {
         let response = make_request(server_port, b"empty").await;
         assert_eq!(Vec::<u8>::new(), response);
     }
-
-    oak_functions_test_utils::kill_process(server_background);
 }
 
 #[bench]
 fn bench_wasm_handler(bencher: &mut Bencher) {
+    if xtask::testing::skip_test() {
+        log::info!("skipping test");
+        return;
+    }
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
+        .build()
+        .unwrap();
+
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
 
     let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
@@ -76,22 +89,14 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
         }),
     );
 
-    let server_port = oak_functions_test_utils::free_port();
-    let server_background = oak_functions_test_utils::create_and_start_oak_functions_server(
-        server_port,
-        &wasm_path,
-        lookup_data_file.path().to_str().unwrap(),
-    )
-    .unwrap();
+    let (_server_background, server_port) =
+        runtime.block_on(xtask::launcher::run_oak_functions_example_in_background(
+            &wasm_path,
+            lookup_data_file.path().to_str().unwrap(),
+        ));
 
     // Wait for the server to start up.
-    std::thread::sleep(Duration::from_secs(2));
-
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build()
-        .unwrap();
+    std::thread::sleep(Duration::from_secs(20));
 
     let summary = bencher.bench(|bencher| {
         bencher.iter(|| {
@@ -115,6 +120,4 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
             elapsed
         );
     }
-
-    oak_functions_test_utils::kill_process(server_background);
 }

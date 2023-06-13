@@ -1,0 +1,21 @@
+[package]
+name = "quirk_echo_enclave_app"
+version = "0.1.0"
+authors = ["Dzmitry Huba <huba@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+quirk_echo_service = { path = "../../quirk_echo_service" }
+log = "*"
+micro_rpc = { workspace = true }
+oak_enclave_runtime_support = { workspace = true }
+oak_channel = { workspace = true }
+oak_core = { workspace = true }
+oak_restricted_kernel_api = { workspace = true }
+static_assertions = "*"
+
+[[bin]]
+name = "quirk_echo_enclave_app"
+test = false
+bench = false

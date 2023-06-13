@@ -58,6 +58,8 @@ RUN apt-get --yes update \
   libc++-${llvm_version}-dev \
   libfl2 \
   libgmp-dev \
+  # `virt-make-fs` from `libguestfs-tools` is needed for creating qcow2 images.
+  libguestfs-tools \
   libmpc-dev \
   libncurses5 \
   libssl-dev \

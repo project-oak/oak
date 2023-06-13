@@ -16,19 +16,23 @@
 
 package com.google.oak.crypto;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+import com.google.oak.crypto.hpke.Context;
+import com.google.oak.crypto.hpke.Hpke;
+import com.google.oak.crypto.v1.AeadEncryptedMessage;
+import com.google.oak.crypto.v1.EncryptedRequest;
+import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.InvalidProtocolBufferException;
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import oak.crypto.AeadEncryptedMessage;
-import oak.crypto.EncryptedRequest;
-import oak.crypto.EncryptedResponse;
+import java.util.Optional;
 
 /**
  * Encryptor class for encrypting client requests that will be sent to the server and decrypting
- * server responses that are received by the client. Each Encryptor object corresponds to a
- * single crypto session between the client and the server.
+ * server responses that are received by the client. Each Encryptor corresponds to a single crypto
+ * session between the client and the server.
  *
  * Sequence numbers for requests and responses are incremented separately, meaning that there could
  * be multiple responses per request and multiple requests per response.
@@ -45,12 +49,16 @@ public class ClientEncryptor implements Encryptor {
       117, (byte) 254, (byte) 171, (byte) 248, 77, 4, (byte) 242, 118};
 
   // Info string used by Hybrid Public Key Encryption.
-  private static final String OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1";
+  private static final byte[] OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1".getBytes(UTF_8);
 
-  private final byte[] serializedServerPublicKey;
+  // Encapsulated public key needed to establish a symmetric session key.
+  // Only sent in the initial request message of the session.
+  private Optional<byte[]> serializedEncapsulatedPublicKey;
+  private final Context.SenderRequestContext senderRequestContext;
+  private final Context.SenderResponseContext senderResponseContext;
 
   /**
-   * Creates a new instance of [`ClientEncryptor`].
+   * Creates a new instance of {@code ClientEncryptor}.
    * The corresponding encryption and decryption keys are generated using the server public key with
    * Hybrid Public Key Encryption (HPKE).
    * <https://www.rfc-editor.org/rfc/rfc9180.html>.
@@ -59,8 +67,16 @@ public class ClientEncryptor implements Encryptor {
    * <https://secg.org/sec1-v2.pdf>
    */
   // TODO(#3642): Implement Java Hybrid Encryption.
-  public ClientEncryptor(final byte[] serializedServerPublicKey) {
-    this.serializedServerPublicKey = serializedServerPublicKey;
+  public static final Result<ClientEncryptor, Exception> create(
+      final byte[] serializedServerPublicKey) {
+    return Hpke.setupBaseSender(serializedServerPublicKey, OAK_HPKE_INFO).map(ClientEncryptor::new);
+  }
+
+  private ClientEncryptor(Hpke.SenderContext senderContext) {
+    // TODO(#3642): Use real serialized encapsulated public key.
+    this.serializedEncapsulatedPublicKey = Optional.of(TEST_ENCAPSULATED_PUBLIC_KEY);
+    this.senderRequestContext = senderContext.senderRequestContext;
+    this.senderResponseContext = senderContext.senderResponseContext;
   }
 
   /**
@@ -74,39 +90,59 @@ public class ClientEncryptor implements Encryptor {
   @Override
   public final Result<byte[], Exception> encrypt(
       final byte[] plaintext, final byte[] associatedData) {
-    // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
-    // TODO(#3642): Implement Java Hybrid Encryption.
-    EncryptedRequest encryptedRequest =
-        EncryptedRequest.newBuilder()
-            .setEncryptedMessage(AeadEncryptedMessage.newBuilder()
-                                     .setCiphertext(ByteString.copyFrom(plaintext))
-                                     .setAssociatedData(ByteString.copyFrom(associatedData))
-                                     .build())
-            .setSerializedEncapsulatedPublicKey(ByteString.copyFrom(TEST_ENCAPSULATED_PUBLIC_KEY))
-            .build();
-    return Result.success(encryptedRequest.toByteArray());
+    // Encrypt request.
+    Result<byte[], Exception> sealResult =
+        this.senderRequestContext.seal(plaintext, associatedData);
+
+    return sealResult.map(ciphertext -> {
+      // Create request message.
+      EncryptedRequest.Builder encryptedRequestBuilder =
+          EncryptedRequest.newBuilder().setEncryptedMessage(
+              AeadEncryptedMessage.newBuilder()
+                  .setCiphertext(ByteString.copyFrom(ciphertext))
+                  .setAssociatedData(ByteString.copyFrom(associatedData))
+                  .build());
+
+      // Encapsulated public key is only sent in the initial request message of the session.
+      if (this.serializedEncapsulatedPublicKey.isPresent()) {
+        byte[] serializedEncapsulatedPublicKey = this.serializedEncapsulatedPublicKey.get();
+        encryptedRequestBuilder.setSerializedEncapsulatedPublicKey(
+            ByteString.copyFrom(serializedEncapsulatedPublicKey));
+        this.serializedEncapsulatedPublicKey = Optional.empty();
+      }
+      // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
+      return encryptedRequestBuilder.build().toByteArray();
+    });
   }
 
   /**
-   * Decrypts a [`EncryptedResponse`] proto message using AEAD.
+   * Decrypts a {@code EncryptedResponse} proto message using AEAD.
    * <https://datatracker.ietf.org/doc/html/rfc5116>
    *
-   * @param encryptedResponse a serialized {@code EncryptedResponse} message
+   * @param serializedEncryptedResponse a serialized {@code EncryptedResponse} message
    * @return a response message plaintext and associated data wrapped in a {@code Result}
    */
   @Override
   public final Result<Encryptor.DecryptionResult, Exception> decrypt(
-      final byte[] encryptedResponse) {
-    // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
-    // TODO(#3642): Implement Java Hybrid Encryption.
+      final byte[] serializedEncryptedResponse) {
+    // Deserialize response message.
+    EncryptedResponse encryptedResponse;
     try {
-      AeadEncryptedMessage aeadEncryptedMessage =
-          EncryptedResponse.parseFrom(encryptedResponse).getEncryptedMessage();
-      byte[] plaintext = aeadEncryptedMessage.getCiphertext().toByteArray();
-      byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
-      return Result.success(new ClientEncryptor.DecryptionResult(plaintext, associatedData));
+      encryptedResponse = EncryptedResponse.parseFrom(
+          serializedEncryptedResponse, ExtensionRegistry.getEmptyRegistry());
     } catch (InvalidProtocolBufferException e) {
       return Result.error(e);
     }
+    AeadEncryptedMessage aeadEncryptedMessage = encryptedResponse.getEncryptedMessage();
+    byte[] ciphertext = aeadEncryptedMessage.getCiphertext().toByteArray();
+    byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
+
+    // Decrypt response.
+    return this.senderResponseContext.open(ciphertext, associatedData)
+        .map(plaintext
+            ->
+            // TODO(#3843): Accept unserialized proto messages once we have Java encryption without
+            // JNI.
+            new DecryptionResult(plaintext, associatedData));
   }
 }

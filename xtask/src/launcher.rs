@@ -18,13 +18,25 @@
 
 pub static MOCK_LOOKUP_DATA_PATH: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_functions_launcher", "mock_lookup_data"]));
-static STAGE_0_DIR: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["stage0"]));
+static STAGE_0_DIR: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["stage0_bin"]));
 pub static OAK_RESTRICTED_KERNEL_BIN_DIR: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_restricted_kernel_bin"]));
-static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> =
-    Lazy::new(|| workspace_path(&["target", "debug", "oak_functions_launcher"]));
-pub static QUIRK_ECHO_LAUNCHER_BIN: Lazy<PathBuf> =
-    Lazy::new(|| workspace_path(&["target", "debug", "quirk_echo_launcher"]));
+static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
+    workspace_path(&[
+        "target",
+        "x86_64-unknown-linux-gnu",
+        "debug",
+        "oak_functions_launcher",
+    ])
+});
+pub static QUIRK_ECHO_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
+    workspace_path(&[
+        "target",
+        "x86_64-unknown-linux-gnu",
+        "debug",
+        "quirk_echo_launcher",
+    ])
+});
 
 use crate::{internal::*, workspace_path};
 use once_cell::sync::Lazy;
@@ -51,7 +63,7 @@ impl LauncherMode {
 
     /// Get the path to the respective enclave binary variant that should be launched
     pub fn enclave_crate_path(&self) -> String {
-        workspace_path(&[&self.enclave_crate_name()])
+        workspace_path(&["enclave_apps", &self.enclave_crate_name()])
             .to_str()
             .unwrap()
             .to_string()
@@ -61,7 +73,7 @@ impl LauncherMode {
     pub fn enclave_binary_path(&self) -> String {
         match self {
             LauncherMode::Virtual(_) => workspace_path(&[
-                &self.enclave_crate_name(),
+                "enclave_apps",
                 "target",
                 "x86_64-unknown-none",
                 "debug",
@@ -97,7 +109,7 @@ impl LauncherMode {
                 format!(
                     "--bios-binary={}",
                     workspace_path(&[
-                        "stage0",
+                        "stage0_bin",
                         "target",
                         "x86_64-unknown-none",
                         "release",
@@ -201,4 +213,43 @@ pub fn run_launcher(launcher_bin: &str, variant: &LauncherMode) -> Box<dyn Runna
     let mut args = vec![];
     args.append(&mut variant.variant_subcommand());
     Cmd::new(launcher_bin, args)
+}
+
+/// Runs the specified example as a background task. Returns a reference to the running server and
+/// the port on which the server is listening.
+pub async fn run_oak_functions_example_in_background(
+    wasm_path: &str,
+    lookup_data_path: &str,
+) -> (crate::testing::BackgroundStep, u16) {
+    crate::testing::run_step(crate::launcher::build_stage0()).await;
+    crate::testing::run_step(crate::launcher::build_binary(
+        "build Oak Restricted Kernel binary",
+        crate::launcher::OAK_RESTRICTED_KERNEL_BIN_DIR
+            .to_str()
+            .unwrap(),
+    ))
+    .await;
+    let variant = crate::launcher::LauncherMode::Virtual("oak_functions_enclave_app".to_string());
+    crate::testing::run_step(crate::launcher::build_binary(
+        "build Oak Functions enclave app",
+        &variant.enclave_crate_path(),
+    ))
+    .await;
+
+    eprintln!("using wasm module {}", wasm_path);
+
+    let port = portpicker::pick_unused_port().expect("failed to pick a port");
+    eprintln!("using port {}", port);
+
+    let background = crate::testing::run_background(
+        crate::launcher::run_oak_functions_launcher_example_with_lookup_data(
+            &variant,
+            wasm_path,
+            port,
+            lookup_data_path,
+        ),
+    )
+    .await;
+
+    (background, port)
 }

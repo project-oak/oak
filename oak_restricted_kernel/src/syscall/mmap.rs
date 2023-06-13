@@ -22,7 +22,6 @@ use core::{
     cmp::max,
     ffi::{c_int, c_size_t, c_void},
     iter::repeat_with,
-    ops::DerefMut,
     slice,
 };
 use oak_restricted_kernel_interface::{
@@ -75,7 +74,7 @@ pub fn mmap(
 
     // Allocate enough physical frames to cover the request.
     // Iterator that keeps allocating physical frames.
-    let frames = repeat_with(|| FRAME_ALLOCATOR.get().unwrap().lock().allocate_frame());
+    let frames = repeat_with(|| FRAME_ALLOCATOR.lock().allocate_frame());
 
     let pt_flags = PageTableFlags::PRESENT
         | PageTableFlags::USER_ACCESSIBLE
@@ -93,7 +92,7 @@ pub fn mmap(
 
     let pages = {
         // This critical section is rather long...
-        let mut pt = PAGE_TABLES.get().unwrap().lock();
+        let pt = PAGE_TABLES.get().unwrap();
 
         // Now, find a gap in the page tables that satisifies the following:
         //  - in the lower half of virtual memory (user space)
@@ -123,6 +122,19 @@ pub fn mmap(
                         log::warn!(
                             "mmap: could not get physical frame for request (memory exhausted?)"
                         );
+                        let valid = FRAME_ALLOCATOR.lock().num_valid_frames();
+                        log::debug!(
+                            "total number of physical memory frames: {} * 2 MiB, {} * 4 KiB",
+                            valid.0,
+                            valid.1
+                        );
+                        let allocated = FRAME_ALLOCATOR.lock().num_allocated_frames();
+                        log::debug!(
+                            "number of allocated physical memory frames: {} * 2 MiB, {} * 4 KiB",
+                            allocated.0,
+                            allocated.1
+                        );
+
                         Errno::ENOMEM
                     })?,
                     pt_flags,
@@ -130,7 +142,6 @@ pub fn mmap(
                         | PageTableFlags::WRITABLE
                         | PageTableFlags::ENCRYPTED
                         | PageTableFlags::USER_ACCESSIBLE,
-                    FRAME_ALLOCATOR.get().unwrap().lock().deref_mut(),
                 )
                 .map_err(|err| {
                     log::error!(

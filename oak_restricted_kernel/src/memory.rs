@@ -20,7 +20,7 @@ use crate::{
 };
 use core::{
     alloc::{GlobalAlloc, Layout},
-    ops::{Deref, DerefMut},
+    ops::Deref,
     ptr::NonNull,
     result::Result,
 };
@@ -71,12 +71,12 @@ impl GrowableHeap {
     fn extend(&mut self) -> Result<(), &'static str> {
         // We might want to do something more clever here, such as exponentially increasing the
         // number of frames we allocate. For now, let's just keep extending by one frame.
-        let mut frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
-        let frame: PhysFrame<Size2MiB> = frame_allocator
+        let frame: PhysFrame<Size2MiB> = FRAME_ALLOCATOR
+            .lock()
             .allocate_frame()
             .ok_or("failed to allocate memory for kernel heap")?;
 
-        let mut mapper = PAGE_TABLES.get().unwrap().lock();
+        let mapper = PAGE_TABLES.get().unwrap();
 
         // Safety: if the page is already mapped, then we'll get an error and thus we won't
         // overwrite any existing mappings, Otherwise, creating a new mapping is safe as
@@ -96,7 +96,6 @@ impl GrowableHeap {
                         | PageTableFlags::WRITABLE
                         | PageTableFlags::NO_EXECUTE
                         | PageTableFlags::ENCRYPTED,
-                    frame_allocator.deref_mut(),
                 )
                 .map_err(|_| "unable to create page mapping for kernel heap")?
                 .flush();
@@ -196,7 +195,7 @@ pub fn init_kernel_heap(range: PageRange<Size2MiB>) -> Result<(), &'static str> 
 /// table flags for pages in that range.
 pub unsafe fn init_guest_host_heap<S: PageSize, M: Mapper<S>>(
     pages: PageRange<S>,
-    mapper: &mut M,
+    mapper: &M,
 ) -> Result<LockedHeap, FlagUpdateError> {
     for page in pages {
         mapper

@@ -30,7 +30,7 @@ use spinning_top::Spinlock;
 use strum::FromRepr;
 use x86_64::{
     instructions::tlb,
-    registers::{control::Cr3, model_specific::Msr},
+    registers::model_specific::Msr,
     structures::paging::{
         frame::PhysFrameRange, page::AddressNotAligned, Page, PageSize, PageTable, PageTableFlags,
         PhysFrame, Size1GiB, Size2MiB, Size4KiB,
@@ -59,7 +59,7 @@ impl TryFrom<u8> for MemoryType {
 }
 
 /// IA32_MTRR_DefType base model specific register.
-/// See https://wiki.osdev.org/MTRR for documentation.
+/// See <https://wiki.osdev.org/MTRR> for documentation.
 #[derive(Debug)]
 pub struct MTRRDefType;
 
@@ -114,7 +114,7 @@ impl MTRRDefType {
     ///
     /// When called with MTRRDefType::MTRR_ENABLE and MemoryType::WP, this operation is safe because
     /// this specific MSR and mode has been supported since the P6 family of Pentium processors
-    /// (see https://en.wikipedia.org/wiki/Memory_type_range_register).
+    /// (see <https://en.wikipedia.org/wiki/Memory_type_range_register>).
     pub unsafe fn write(flags: MTRRDefTypeFlags, default_type: MemoryType) {
         // Preserve values of reserved bits.
         let (old_flags, _old_memory_type) = Self::read();
@@ -135,29 +135,13 @@ impl MTRRDefType {
 
 static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
-struct PageTables {
-    pub pdpt: &'static mut PageTable,
-    pub pd: &'static mut PageTable,
-}
-
-/// Returns references to the currently active PDPT and PD.
-fn get_page_tables(encrypted: u64) -> PageTables {
-    let (pml4_frame, _) = Cr3::read();
-    let pml4 =
-        unsafe { &*((pml4_frame.start_address().as_u64() & !encrypted) as *const PageTable) };
-    let pdpt = unsafe { &mut *((pml4[0].addr().as_u64() & !encrypted) as *mut PageTable) };
-    let pd = unsafe { &mut *((pdpt[0].addr().as_u64() & !encrypted) as *mut PageTable) };
-    PageTables { pdpt, pd }
-}
-
 pub fn init_ghcb(
     ghcb: &'static mut Ghcb,
     snp: bool,
-    encrypted: u64,
 ) -> &'static Spinlock<GhcbProtocol<'static, Ghcb>> {
     let ghcb_addr = VirtAddr::from_ptr(ghcb as *const _);
 
-    share_page(Page::containing_address(ghcb_addr), snp, encrypted);
+    share_page(Page::containing_address(ghcb_addr), snp);
 
     // SNP requires that the GHCB is registered with the hypervisor.
     if snp {
@@ -188,16 +172,20 @@ pub fn deinit_ghcb() {
 }
 
 /// Shares a single 4KiB page with the hypervisor.
-pub fn share_page(page: Page<Size4KiB>, snp: bool, encrypted: u64) {
+pub fn share_page(page: Page<Size4KiB>, snp: bool) {
     let page_start = page.start_address().as_u64();
+    // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that range.
+    assert!(page_start < Size2MiB::SIZE);
     // Remove the ENCRYPTED bit from the entry that maps the page.
-    let PageTables { pdpt: _, pd } = get_page_tables(encrypted);
-    let pt = unsafe { &mut *((pd[0].addr().as_u64() & !encrypted) as *mut PageTable) };
-    let idx = (page_start / Size4KiB::SIZE) as usize;
-    pt[idx].set_addr(
-        PhysAddr::new(page_start),
-        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-    );
+    {
+        let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
+        let pt = &mut page_tables.pt_0;
+        let idx = (page_start / Size4KiB::SIZE) as usize;
+        pt[idx].set_addr(
+            PhysAddr::new(page_start),
+            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+        );
+    }
     tlb::flush_all();
 
     // SNP requires extra handling beyond just removing the encrypted bit.
@@ -415,16 +403,19 @@ impl Validatable2MiB for PhysFrameRange<Size2MiB> {
 pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
     log::info!("starting SEV-SNP memory validation");
 
-    let PageTables { pdpt, pd } = get_page_tables(encrypted);
+    let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
 
     // Page directory, for validation with 2 MiB pages.
     let mut validation_pd = MappedPage::new(VirtAddr::new(Size1GiB::SIZE)).unwrap();
     // For virtual address space, we currently shouldn't have anything at the second gigabyte, so we
     // can map the page to virtual address [1 GiB..2 GiB).
-    if pdpt[1].flags().contains(PageTableFlags::PRESENT) {
+    if page_tables.pdpt[1]
+        .flags()
+        .contains(PageTableFlags::PRESENT)
+    {
         panic!("PDPT[1] is in use");
     }
-    pdpt[1].set_addr(
+    page_tables.pdpt[1].set_addr(
         PhysAddr::new(&validation_pd.page_table as *const _ as u64 | encrypted),
         PageTableFlags::PRESENT,
     );
@@ -433,10 +424,13 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
     let mut validation_pt = MappedPage::new(VirtAddr::new(Size2MiB::SIZE)).unwrap();
     // Find a location for our (temporary) page table. The initial page tables map [0..2MiB), so it
     // should be safe to put our temporary mappings at [2..4MiB).
-    if pd[1].flags().contains(PageTableFlags::PRESENT) {
-        panic!("PD[1] is in use");
+    if page_tables.pd_0[1]
+        .flags()
+        .contains(PageTableFlags::PRESENT)
+    {
+        panic!("PD_0[1] is in use");
     }
-    pd[1].set_addr(
+    page_tables.pd_0[1].set_addr(
         PhysAddr::new(&validation_pt.page_table as *const _ as u64 | encrypted),
         PageTableFlags::PRESENT,
     );
@@ -468,8 +462,8 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
         }
         .expect("failed to validate memory");
     }
-    pd[1].set_unused();
-    pdpt[1].set_unused();
+    page_tables.pd_0[1].set_unused();
+    page_tables.pdpt[1].set_unused();
     tlb::flush_all();
     log::info!("SEV-SNP memory validation complete.");
 }

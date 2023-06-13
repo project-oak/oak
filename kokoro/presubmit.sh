@@ -9,9 +9,11 @@ export CI=kokoro
 
 export RUST_BACKTRACE=1
 export RUST_LOG=debug
+export XDG_RUNTIME_DIR=/var/run
 
 ./scripts/docker_pull
-./scripts/docker_run cargo nextest run --hide-progress-bar
+# --all-targets is needed to also run tests for examples and benches.
+./scripts/docker_run cargo nextest run --all-targets --hide-progress-bar
 
 mkdir "$KOKORO_ARTIFACTS_DIR/test_logs/"
 cp ./target/nextest/default/*.xml "$KOKORO_ARTIFACTS_DIR/test_logs/"

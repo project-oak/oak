@@ -30,7 +30,6 @@ members = [
   "oak_functions_client",
   "oak_functions_launcher",
   "oak_functions_linux_fd_bin",
-  "oak_functions_linux_vsock_bin",
   "oak_functions_sdk",
   "oak_functions_sdk/tests/lookup_module",
   "oak_functions_sdk/tests/testing_module",
@@ -39,9 +38,9 @@ members = [
   "oak_hello_world_linux_init",
   "oak_iree_service",
   "oak_launcher_utils",
+  "oak_remote_attestation",
   "oak_remote_attestation_amd",
   "oak_remote_attestation_interactive",
-  "oak_remote_attestation_noninteractive",
   "oak_remote_attestation_sessions",
   "oak_remote_attestation_sessions_client",
   "oak_restricted_kernel",
@@ -49,10 +48,12 @@ members = [
   "oak_restricted_kernel_interface",
   "oak_sev_guest",
   "oak_simple_io",
+  "oak_tdx_guest",
   "oak_tensorflow_service",
   "oak_virtio",
   "sev_serial",
   "snp_measurement",
+  "stage0",
   "testing/oak_echo_service",
   "quirk_echo_launcher",
   "quirk_echo_service",
@@ -64,7 +65,7 @@ exclude = [
   "oak_functions/loader/fuzz",
   "oak_functions_app",
   "oak_tensorflow_app",
-  "stage0",
+  "stage0_bin",
   "testing/oak_echo_app",
   "testing/oak_echo_raw_app",
   "testing/sev_snp_hello_world_kernel",
@@ -98,13 +99,13 @@ oak_grpc_utils = { path = "./oak_grpc_utils" }
 oak_launcher_utils = { path = "./oak_launcher_utils" }
 oak_linux_boot_params = { path = "./linux_boot_params" }
 oak_logger = { path = "./oak_functions/logger" }
+oak_remote_attestation = { path = "./oak_remote_attestation" }
 oak_remote_attestation_amd = { path = "./oak_remote_attestation_amd", default-features = false, features = [
   "rust-crypto"
 ] }
 oak_remote_attestation_interactive = { path = "./oak_remote_attestation_interactive", default-features = false, features = [
   "rust-crypto"
 ] }
-oak_remote_attestation_noninteractive = { path = "./oak_remote_attestation_noninteractive" }
 oak_remote_attestation_sessions = { path = "./oak_remote_attestation_sessions", default-features = false, features = [
   "rust-crypto"
 ] }
@@ -112,6 +113,7 @@ oak_restricted_kernel_api = { path = "./oak_restricted_kernel_api" }
 oak_restricted_kernel_interface = { path = "./oak_restricted_kernel_interface" }
 oak_sev_guest = { path = "./oak_sev_guest", default-features = false }
 oak_simple_io = { path = "./oak_simple_io" }
+oak_tdx_guest = { path = "./oak_tdx_guest" }
 oak_virtio = { path = "./oak_virtio" }
 sev_serial = { path = "./sev_serial" }
 xtask = { path = "./xtask" }

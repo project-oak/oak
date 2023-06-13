@@ -56,9 +56,7 @@ pub struct Opt {
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
     BuildEnclaveBinaryVariants(BuildEnclaveBinaryVariantsOpt),
-    RunOakFunctionsExamples(RunOakExamplesOpt),
-    BuildOakFunctionsExample(RunOakExamplesOpt),
-    BuildOakFunctionsServerVariants(BuildServerOpt),
+    RunOakFunctionsExample(RunOakExampleOpt),
     Format,
     CheckFormat,
     RunTests,
@@ -86,35 +84,17 @@ pub struct Completion {
 
 /// Holds the options for running the example.
 #[derive(Parser, Clone, Debug)]
-pub struct RunOakExamplesOpt {
+pub struct RunOakExampleOpt {
     #[arg(
         long,
-        help = "application variant: [rust, cpp]",
-        default_value = "rust"
+        help = "name of a single example to run (i.e. the Rust crate name of the Wasm module)"
     )]
-    pub application_variant: String,
-    // TODO(#396): Clarify the name and type of this, currently it is not very intuitive.
-    #[arg(
-        long,
-        help = "name of a single example to run; if unset, run all the examples"
-    )]
-    pub example_name: Option<String>,
-    #[command(flatten)]
-    pub build_client: BuildClient,
-    #[command(flatten)]
-    pub build_server: BuildServerOpt,
-    #[arg(long, help = "run server [default: true]")]
-    pub run_server: Option<bool>,
-    #[arg(long, help = "additional arguments to pass to clients")]
-    pub client_additional_args: Vec<String>,
-    #[arg(long, help = "additional arguments to pass to server")]
-    pub server_additional_args: Vec<String>,
-    #[arg(long, help = "build a Docker image for the examples")]
-    pub build_docker: bool,
+    pub example_name: String,
+    #[arg(long, help = "path to the lookup data file")]
+    pub lookup_data_path: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Default)]
-
 pub enum Scope {
     // The entire code base.
     #[default]
@@ -206,22 +186,6 @@ impl ServerVariant {
             }
         }
     }
-}
-
-#[derive(Parser, Clone, Debug)]
-pub struct BuildServerOpt {
-    #[arg(long, help = "server variant: [base, unsafe]", default_value = "base")]
-    pub server_variant: ServerVariant,
-    #[arg(
-        long,
-        help = "rust toolchain override to use for the server compilation [e.g. stable, nightly, stage2]"
-    )]
-    pub server_rust_toolchain: Option<String>,
-    #[arg(
-        long,
-        help = "rust target to use for the server compilation [e.g. x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl, x86_64-apple-darwin]"
-    )]
-    pub server_rust_target: Option<String>,
 }
 
 #[derive(Parser, Clone, Debug)]
@@ -477,11 +441,6 @@ pub enum Step {
         name: String,
         steps: Vec<Step>,
     },
-    WithBackground {
-        name: String,
-        background: Box<dyn Runnable>,
-        foreground: Box<Step>,
-    },
 }
 
 impl Step {
@@ -494,11 +453,6 @@ impl Step {
                 command: _,
             } => 1,
             Step::Multiple { name: _, steps: s } => s.len(),
-            Step::WithBackground {
-                name: _,
-                background: _,
-                foreground: f,
-            } => f.len(),
         }
     }
 
@@ -635,87 +589,6 @@ pub async fn run_step(context: &Context, step: Step, mut run_status: Status) -> 
                 context.footer_long(),
                 values_to_string(&step_result.values),
                 elapsed
-            );
-        }
-        Step::WithBackground {
-            name,
-            background,
-            foreground,
-        } => {
-            let context = context.child(&name);
-            eprintln!("{}{}", prefix(&run_status), context.header());
-
-            eprintln!(
-                "{}{} {}",
-                prefix(&run_status),
-                context.margin(),
-                background.description().blue()
-            );
-
-            let mut running_background = background.run(&context.opt);
-
-            // Small delay to make it more likely that the background process started.
-            std::thread::sleep(std::time::Duration::from_millis(6_000));
-
-            let background_stdout_future = tokio::spawn(read_to_end(running_background.stdout()));
-            let background_stderr_future = tokio::spawn(read_to_end(running_background.stderr()));
-
-            let mut foreground_result = run_step(&context, *foreground, run_status.clone()).await;
-
-            // TODO(#396): If the background task was already spontaneously terminated by now, it is
-            // probably a sign that something went wrong, so we should return an error.
-            running_background.kill();
-
-            let stdout = background_stdout_future
-                .await
-                .expect("couldn't read stdout");
-            let stderr = background_stderr_future
-                .await
-                .expect("couldn't read stderr");
-
-            let logs = format_logs(&stdout, &stderr);
-
-            eprintln!(
-                "{}{} (waiting for completion)",
-                prefix(&run_status),
-                context.margin(),
-            );
-            let background_status = running_background.result().await;
-            eprintln!(
-                "{}{}{}",
-                prefix(&run_status),
-                context.footer_long(),
-                background_status.value,
-            );
-
-            if (background_status.value == StatusResultValue::Error
-                || foreground_result.values.contains(&StatusResultValue::Error)
-                || context.opt.logs)
-                && !logs.is_empty()
-            {
-                eprintln!("{} {}", context, "╔════════════════════════".blue());
-                for line in logs.lines() {
-                    eprintln!("{} {} {}", context, "║".blue(), line);
-                }
-                eprintln!("{} {}", context, "╚════════════════════════".blue());
-            }
-
-            step_result.values = foreground_result.values;
-            step_result
-                .failed_steps_prefixes
-                .append(&mut foreground_result.failed_steps_prefixes);
-
-            // Also propagate the status of the background process.
-            if background_status.value == StatusResultValue::Error {
-                step_result
-                    .failed_steps_prefixes
-                    .push(format!("{}", context));
-            }
-            step_result.values.insert(background_status.value);
-
-            run_status.update(
-                &context,
-                step_result.values.contains(&StatusResultValue::Error),
             );
         }
     }

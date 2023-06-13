@@ -108,7 +108,8 @@ fn test_invocation_channel() {
 
     invocation_channel.write_message(message.clone()).unwrap();
 
-    let reconstructed_message: RequestMessage = invocation_channel.read_message().unwrap();
+    let (reconstructed_message, _): (RequestMessage, _) =
+        invocation_channel.read_message().unwrap();
     assert_eq!(message, reconstructed_message);
 }
 

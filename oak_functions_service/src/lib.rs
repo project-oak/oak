@@ -19,23 +19,30 @@
 
 extern crate alloc;
 
-pub mod schema {
-    #![allow(dead_code)]
-    use prost::Message;
-    include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
+pub mod proto {
+    pub mod oak {
+        pub mod functions {
+            #![allow(dead_code)]
+            use prost::Message;
+            include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
+        }
+    }
 }
 mod logger;
-mod remote_attestation;
 mod wasm;
 
-use crate::remote_attestation::{AttestationHandler, AttestationSessionHandler};
 use alloc::{boxed::Box, format, sync::Arc};
-use oak_functions_abi::Request;
 use oak_functions_lookup::LookupDataManager;
-use oak_functions_wasm::WasmHandler;
-use oak_remote_attestation_interactive::handshaker::AttestationGenerator;
-use remote_attestation::Handler;
-use schema::LookupDataChunk;
+use oak_remote_attestation::{
+    attester::AttestationReportGenerator,
+    handler::{AttestationHandler, AttestationSessionHandler},
+};
+use proto::oak::functions::{
+    AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
+    FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
+    InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk, OakFunctions,
+    PublicKeyInfo,
+};
 
 pub use crate::logger::StandaloneLogger;
 
@@ -45,15 +52,15 @@ enum InitializationState {
 }
 
 pub struct OakFunctionsService {
-    attestation_generator: Arc<dyn AttestationGenerator>,
+    attestation_report_generator: Arc<dyn AttestationReportGenerator>,
     initialization_state: InitializationState,
     lookup_data_manager: Arc<LookupDataManager<logger::StandaloneLogger>>,
 }
 
 impl OakFunctionsService {
-    pub fn new(attestation_generator: Arc<dyn AttestationGenerator>) -> Self {
+    pub fn new(attestation_report_generator: Arc<dyn AttestationReportGenerator>) -> Self {
         Self {
-            attestation_generator,
+            attestation_report_generator,
             initialization_state: InitializationState::Uninitialized,
             lookup_data_manager: Arc::new(
                 LookupDataManager::new_empty(StandaloneLogger::default()),
@@ -62,21 +69,11 @@ impl OakFunctionsService {
     }
 }
 
-impl<L: oak_logger::OakLogger> Handler for WasmHandler<L> {
-    fn handle(&mut self, request: &[u8]) -> anyhow::Result<micro_rpc::Vec<u8>> {
-        let request = Request {
-            body: request.to_vec(),
-        };
-        let response = self.handle_invoke(request)?;
-        Ok(response.body)
-    }
-}
-
-impl schema::OakFunctions for OakFunctionsService {
+impl OakFunctions for OakFunctionsService {
     fn initialize(
         &mut self,
-        initialization: &schema::InitializeRequest,
-    ) -> Result<schema::InitializeResponse, micro_rpc::Status> {
+        initialization: &InitializeRequest,
+    ) -> Result<InitializeResponse, micro_rpc::Status> {
         match &mut self.initialization_state {
             InitializationState::Initialized(_attestation_handler) => {
                 Err(micro_rpc::Status::new_with_message(
@@ -98,7 +95,7 @@ impl schema::OakFunctions for OakFunctionsService {
                 })?;
                 let attestation_handler = Box::new(
                     AttestationSessionHandler::create(
-                        self.attestation_generator.clone(),
+                        self.attestation_report_generator.clone(),
                         wasm_handler,
                     )
                     .map_err(|err| {
@@ -108,12 +105,20 @@ impl schema::OakFunctions for OakFunctionsService {
                         )
                     })?,
                 );
-                let public_key_info = attestation_handler.get_public_key_info();
+                let attestation_evidence =
+                    attestation_handler
+                        .get_attestation_evidence()
+                        .map_err(|err| {
+                            micro_rpc::Status::new_with_message(
+                                micro_rpc::StatusCode::Internal,
+                                format!("couldn't get attestation evidence: {:?}", err),
+                            )
+                        })?;
                 self.initialization_state = InitializationState::Initialized(attestation_handler);
-                Ok(schema::InitializeResponse {
-                    public_key_info: Some(schema::PublicKeyInfo {
-                        public_key: public_key_info.public_key,
-                        attestation: public_key_info.attestation,
+                Ok(InitializeResponse {
+                    public_key_info: Some(PublicKeyInfo {
+                        public_key: attestation_evidence.encryption_public_key,
+                        attestation: attestation_evidence.attestation,
                     }),
                 })
             }
@@ -122,8 +127,8 @@ impl schema::OakFunctions for OakFunctionsService {
 
     fn invoke(
         &mut self,
-        request_message: &schema::InvokeRequest,
-    ) -> Result<schema::InvokeResponse, micro_rpc::Status> {
+        request_message: &InvokeRequest,
+    ) -> Result<InvokeResponse, micro_rpc::Status> {
         match &mut self.initialization_state {
             InitializationState::Uninitialized => Err(micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::FailedPrecondition,
@@ -132,41 +137,41 @@ impl schema::OakFunctions for OakFunctionsService {
             InitializationState::Initialized(attestation_handler) => {
                 let response =
                     attestation_handler
-                        .message(&request_message.body)
+                        .invoke(&request_message.body)
                         .map_err(|err| {
                             micro_rpc::Status::new_with_message(
                                 micro_rpc::StatusCode::Internal,
                                 format!("{:?}", err),
                             )
                         })?;
-                Ok(schema::InvokeResponse { body: response })
+                Ok(InvokeResponse { body: response })
             }
         }
     }
 
     fn extend_next_lookup_data(
         &mut self,
-        request: &schema::ExtendNextLookupDataRequest,
-    ) -> Result<schema::ExtendNextLookupDataResponse, micro_rpc::Status> {
+        request: &ExtendNextLookupDataRequest,
+    ) -> Result<ExtendNextLookupDataResponse, micro_rpc::Status> {
         self.lookup_data_manager
             .extend_next_lookup_data(to_data(&request.chunk));
-        Ok(schema::ExtendNextLookupDataResponse {})
+        Ok(ExtendNextLookupDataResponse {})
     }
 
     fn finish_next_lookup_data(
         &mut self,
-        _request: &schema::FinishNextLookupDataRequest,
-    ) -> Result<schema::FinishNextLookupDataResponse, micro_rpc::Status> {
+        _request: &FinishNextLookupDataRequest,
+    ) -> Result<FinishNextLookupDataResponse, micro_rpc::Status> {
         self.lookup_data_manager.finish_next_lookup_data();
-        Ok(schema::FinishNextLookupDataResponse {})
+        Ok(FinishNextLookupDataResponse {})
     }
 
     fn abort_next_lookup_data(
         &mut self,
-        _request: &schema::Empty,
-    ) -> Result<schema::AbortNextLookupDataResponse, micro_rpc::Status> {
+        _request: &Empty,
+    ) -> Result<AbortNextLookupDataResponse, micro_rpc::Status> {
         self.lookup_data_manager.abort_next_lookup_data();
-        Ok(schema::AbortNextLookupDataResponse {})
+        Ok(AbortNextLookupDataResponse {})
     }
 }
 

@@ -55,7 +55,6 @@ unsafe impl Hal for OakHal {
         let phys_addr = PAGE_TABLES
             .get()
             .unwrap()
-            .lock()
             .translate_virtual(VirtAddr::from_ptr(vaddr.as_ptr()))
             .unwrap()
             .as_u64() as usize;
@@ -85,7 +84,6 @@ unsafe impl Hal for OakHal {
             PAGE_TABLES
                 .get()
                 .unwrap()
-                .lock()
                 .translate_physical(PhysAddr::new(paddr as u64))
                 .unwrap()
                 .as_mut_ptr(),
@@ -102,7 +100,6 @@ unsafe impl Hal for OakHal {
         PAGE_TABLES
             .get()
             .unwrap()
-            .lock()
             .translate_virtual(VirtAddr::from_ptr(buffer.cast::<u8>().as_ptr()))
             .unwrap()
             .as_u64() as usize
@@ -199,7 +196,6 @@ pub fn get_console_channel<'a>(acpi: &mut Acpi) -> MmioConsoleChannel<'a> {
         let header = PAGE_TABLES
             .get()
             .unwrap()
-            .lock()
             .translate_physical(
                 find_memory_range(device, &mut acpi.aml)
                     .expect("unable to determine physical memory range for virtio MMIO device")

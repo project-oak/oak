@@ -106,7 +106,10 @@ impl Allocate {
         let name = self.file().to_str().map_err(|_| "invalid file name")?;
 
         if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
-            if file.size() != RSDP_SIZE {
+            // ACPI 1.0 RSDP is 20 bytes, ACPI 2.0 RSDP is 36 bytes.
+            // We don't really care which version we're dealing with, as long as the data structure
+            // is one of the two.
+            if file.size() > RSDP_SIZE || (file.size() != 20 && file.size() != 36) {
                 return Err("RSDP doesn't match expected size");
             }
 
@@ -378,6 +381,15 @@ impl RomfileCommand {
             log::warn!(
                 "ignoring proprietary ACPI linker command with tag {:#x}",
                 self.tag
+            );
+            return Ok(());
+        }
+        if self.tag == 0 {
+            // Safety: interpreting the union as a byte array is safe, as it makes no assumptions
+            // about the meaning of any of the bytes.
+            log::debug!(
+                "ignoring empty ACPI linker command with body {:?}",
+                unsafe { &self.body.padding }
             );
             return Ok(());
         }

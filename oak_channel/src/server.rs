@@ -17,16 +17,18 @@
 use crate::{message, Channel, InvocationChannel};
 use alloc::boxed::Box;
 use anyhow::Context;
+use oak_core::{samplestore::SampleStore, timer::Timer};
 
 /// Starts a blocking server that listens for requests on the provided channel
 /// and responds to them using the provided [`micro_rpc::Transport`].
 pub fn start_blocking_server<T: micro_rpc::Transport<Error = !>>(
     channel: Box<dyn Channel>,
     mut server: T,
+    stats: &mut dyn SampleStore,
 ) -> anyhow::Result<!> {
     let channel_handle = &mut ServerChannelHandle::new(channel);
     loop {
-        let request_message = channel_handle
+        let (request_message, timer) = channel_handle
             .read_request()
             .context("couldn't receive message")?;
         let request_message_invocation_id = request_message.invocation_id;
@@ -35,7 +37,8 @@ pub fn start_blocking_server<T: micro_rpc::Transport<Error = !>>(
             invocation_id: request_message_invocation_id,
             body: response,
         };
-        channel_handle.write_response(response_message)?
+        channel_handle.write_response(response_message)?;
+        stats.record(timer.elapsed());
     }
 }
 
@@ -49,10 +52,10 @@ impl ServerChannelHandle {
             inner: InvocationChannel::new(socket),
         }
     }
-    pub fn read_request(&mut self) -> anyhow::Result<message::RequestMessage> {
-        let message = self.inner.read_message()?;
-        Ok(message)
+    pub fn read_request(&mut self) -> anyhow::Result<(message::RequestMessage, Timer)> {
+        self.inner.read_message()
     }
+
     pub fn write_response(&mut self, response: message::ResponseMessage) -> anyhow::Result<()> {
         self.inner.write_message(response)
     }

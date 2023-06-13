@@ -26,7 +26,7 @@ java_library(
     srcs = ["AttestationVerifier.java"],
     deps = [
         "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
+        "//oak_remote_attestation/proto/v1:messages_java_proto",
     ],
 )
 
@@ -36,7 +36,7 @@ java_library(
     deps = [
         ":attestation_verifier",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
+        "//oak_remote_attestation/proto/v1:messages_java_proto",
     ],
 )
 
@@ -46,47 +46,6 @@ java_library(
     deps = [
         ":attestation_verifier",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation_noninteractive/proto/v1:messages_java_proto",
-    ],
-)
-
-java_library(
-    name = "remote_attestation",
-    srcs = [
-        "AeadEncryptor.java",
-        "ClientHandshaker.java",
-        "KeyNegotiator.java",
-        "Message.java",
-        "SignatureVerifier.java",
-    ],
-    deps = [
-        "@com_google_guava_guava",
-        "@tink_java//src/main/java/com/google/crypto/tink/subtle:aes_gcm_jce",
-        "@tink_java//src/main/java/com/google/crypto/tink/subtle:ecdsa_verify_jce",
-        "@tink_java//src/main/java/com/google/crypto/tink/subtle:elliptic_curves",
-        "@tink_java//src/main/java/com/google/crypto/tink/subtle:enums",
-        "@tink_java//src/main/java/com/google/crypto/tink/subtle:hkdf",
-        "@tink_java//src/main/java/com/google/crypto/tink/subtle:x25519",
-    ],
-)
-
-# Dedicated Android target is necessary for using Tink internally.
-android_library(
-    name = "remote_attestation_android",
-    srcs = [
-        "AeadEncryptor.java",
-        "ClientHandshaker.java",
-        "KeyNegotiator.java",
-        "Message.java",
-        "SignatureVerifier.java",
-    ],
-    deps = [
-        "@com_google_guava_guava",
-        "@tink_java//src/main/java/com/google/crypto/tink/subtle:aes_gcm_jce",
-        "@tink_java//src/main/java/com/google/crypto/tink/subtle:ecdsa_verify_jce",
-        "@tink_java//src/main/java/com/google/crypto/tink/subtle:elliptic_curves",
-        "@tink_java//src/main/java/com/google/crypto/tink/subtle:enums",
-        "@tink_java//src/main/java/com/google/crypto/tink/subtle:hkdf",
-        "@tink_java//src/main/java/com/google/crypto/tink/subtle:x25519",
+        "//oak_remote_attestation/proto/v1:messages_java_proto",
     ],
 )

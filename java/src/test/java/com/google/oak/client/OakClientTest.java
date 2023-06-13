@@ -16,114 +16,76 @@
 
 package com.google.oak.client;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.google.oak.evidence.Evidence;
+import com.google.oak.crypto.v1.AeadEncryptedMessage;
+import com.google.oak.crypto.v1.EncryptedResponse;
+import com.google.oak.remote_attestation.InsecureAttestationVerifier;
+import com.google.oak.session.v1.AttestationBundle;
+import com.google.oak.session.v1.AttestationEndorsement;
+import com.google.oak.session.v1.AttestationEvidence;
+import com.google.oak.transport.EvidenceProvider;
+import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
+import com.google.protobuf.ByteString;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import org.junit.Test;
 
 public class OakClientTest {
-  /**
-   * This test demonstrates the use of the API provided by the classes and interfaces in {@code
-   * com.google.oak.client}.
-   */
+  private static final byte[] TEST_SERVER_ENCRYPTION_PUBLIC_KEY = new byte[0];
+  private static final byte[] TEST_REQUEST = new byte[] {'R', 'e', 'q', 'u', 'e', 's', 't'};
+  private static final byte[] TEST_RESPONSE = new byte[] {'R', 'e', 's', 'p', 'o', 'n', 's', 'e'};
+  private static final byte[] TEST_ASSOCIATED_DATA = new byte[0];
+
+  private static class TestTransport implements EvidenceProvider, Transport {
+    @Override
+    public Result<AttestationBundle, String> getEvidence() {
+      // TODO(#3642): Use hybrid encryption and return server encryption public key.
+      AttestationEvidence attestationEvidence =
+          AttestationEvidence.newBuilder()
+              .setEncryptionPublicKey(ByteString.copyFrom(TEST_SERVER_ENCRYPTION_PUBLIC_KEY))
+              .build();
+      AttestationEndorsement attestationEndorsement = AttestationEndorsement.getDefaultInstance();
+      AttestationBundle attestationBundle = AttestationBundle.newBuilder()
+                                                .setAttestationEvidence(attestationEvidence)
+                                                .setAttestationEndorsement(attestationEndorsement)
+                                                .build();
+
+      return Result.success(attestationBundle);
+    }
+
+    @Override
+    public Result<byte[], String> invoke(byte[] requestBytes) {
+      // TODO(#3642): Use hybrid encryption for requests and responses.
+      EncryptedResponse encryptedResponse =
+          EncryptedResponse.newBuilder()
+              .setEncryptedMessage(AeadEncryptedMessage.newBuilder()
+                                       .setCiphertext(ByteString.copyFrom(TEST_RESPONSE))
+                                       .setAssociatedData(ByteString.copyFrom(TEST_ASSOCIATED_DATA))
+                                       .build())
+              .build();
+      return Result.success(encryptedResponse.toByteArray());
+    }
+
+    @Override
+    public void close() throws Exception {
+      // No resources to close.
+    }
+  }
+
+  /** This test demonstrates the use of the {@code com.google.oak.client.OakClient} API. */
   @Test
-  public void testSend() {
-    PilotAttestationClient attestationClient = new PilotAttestationClient();
-    PilotOakClient oakClient = new PilotOakClient.Builder(attestationClient).build();
-    Result<String, Exception> response = oakClient.send("Hello!");
-    assertTrue(response.isSuccess());
-    assertEquals("Hello!", response.success().get());
-  }
+  public void testOakClient() {
+    Result<OakClient<TestTransport>, Exception> oakClientCreateResult =
+        OakClient.create(new TestTransport(), new InsecureAttestationVerifier());
+    assertTrue(oakClientCreateResult.isSuccess());
+    OakClient<TestTransport> oakClient = oakClientCreateResult.success().get();
 
-  private static class PilotOakClient implements OakClient<String, String> {
-    final PilotRpcClient rpcClient;
-    final Encryptor encryptor;
-
-    PilotOakClient(final Builder builder) {
-      byte[] signingPublicKey = builder.attestationClient.verifyEvidence(new Evidence() {});
-      // In reality implementations of OakClient must handle empty Optionals and unexpected types.
-      rpcClient = builder.attestationClient.getRpcClient().success().get();
-      encryptor = builder.attestationClient.getEncryptor(signingPublicKey).success().get();
-    }
-
-    @Override
-    public void close() throws Exception {
-      rpcClient.close();
-    }
-
-    @Override
-    public Result<String, Exception> send(final String request) {
-      return encryptor.encrypt(request.getBytes())
-          .andThen(rpcClient::send)
-          .andThen(encryptor::decrypt)
-          .map(b -> new String(b, StandardCharsets.UTF_8));
-    }
-
-    static class Builder {
-      final PilotAttestationClient attestationClient;
-
-      Builder(final PilotAttestationClient attestationClient) {
-        this.attestationClient = attestationClient;
-      }
-
-      PilotOakClient build() {
-        return new PilotOakClient(this);
-      }
-    }
-  }
-
-  private static class PilotAttestationClient
-      implements OakClient.EncryptorProvider<Encryptor>,
-                 OakClient.RpcClientProvider<PilotRpcClient> {
-    final PilotRpcClient rpcClient;
-    final Encryptor encryptor = new Encryptor() {
-      @Override
-      public Result<byte[], Exception> encrypt(final byte[] data) {
-        return Result.success(data);
-      }
-
-      @Override
-      public Result<byte[], Exception> decrypt(final byte[] data) {
-        return Result.success(data);
-      }
-    };
-
-    PilotAttestationClient() {
-      this.rpcClient = new PilotRpcClient();
-    }
-
-    // This function will eventually be provided by an EvidenceProvider.
-    byte[] verifyEvidence(Evidence evidence) {
-      return "TestSigningPublicKey".getBytes(StandardCharsets.UTF_8);
-    }
-
-    @Override
-    public Result<PilotRpcClient, Exception> getRpcClient() {
-      return Result.success(rpcClient);
-    }
-
-    @Override
-    public Result<Encryptor, Exception> getEncryptor(byte[] unusedSigningPublicKey) {
-      if (unusedSigningPublicKey.length > 0) {
-        return Result.success(encryptor);
-      }
-      return Result.error(new IllegalArgumentException("public key cannot be empty"));
-    }
-  }
-
-  private static class PilotRpcClient implements RpcClient {
-    @Override
-    public void close() throws Exception {
-      // No resources to close
-    }
-
-    @Override
-    public Result<byte[], Exception> send(final byte[] request) {
-      return Result.success(request);
-    }
+    Result<byte[], Exception> oakClientInvokeResult = oakClient.invoke(TEST_REQUEST);
+    assertTrue(oakClientInvokeResult.isSuccess());
+    assertArrayEquals(oakClientInvokeResult.success().get(), TEST_RESPONSE);
   }
 }

@@ -29,32 +29,10 @@ cc_library(
     hdrs = ["encryptor.h"],
     copts = oak_copts(),
     deps = [
-        ":hpke",
-        "//oak_crypto/proto:crypto_cc_proto",
+        "//cc/crypto/hpke:hpke",
+        "//oak_crypto/proto/v1:crypto_cc_proto",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
 )
 
-cc_library(
-    name = "hpke",
-    srcs = ["hpke.cc"],
-    hdrs = ["hpke.h"],
-    copts = oak_copts(),
-    deps = [
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings",
-        "@com_google_boringssl//:crypto"
-    ],
-)
-
-cc_test(
-    name = "hpke_test",
-    srcs = ["hpke_test.cc"],
-    size = "small",
-    copts = oak_copts(),
-    deps = [
-        ":hpke",
-        "@com_google_googletest//:gtest_main",
-    ],
-)

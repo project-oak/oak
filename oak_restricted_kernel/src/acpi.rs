@@ -64,7 +64,6 @@ impl AcpiHandler for Handler {
                 PAGE_TABLES
                     .get()
                     .unwrap()
-                    .lock()
                     .translate_physical(PhysAddr::new(physical_address as u64))
                     .unwrap()
                     .as_mut_ptr(),
@@ -211,7 +210,6 @@ impl<'a> TableContents<'a> for AmlTable {
         let virt_addr = PAGE_TABLES
             .get()
             .unwrap()
-            .lock()
             .translate_physical(PhysAddr::new(self.address as u64))
             .unwrap();
         // Safety: this address was specified in the ACPI tables by the firmware, so if the tables

@@ -70,17 +70,11 @@ use crate::{
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 use alloc::{alloc::Allocator, boxed::Box};
-use core::{
-    marker::Sync,
-    ops::{Deref, DerefMut},
-    panic::PanicInfo,
-    str::FromStr,
-};
+use core::{marker::Sync, panic::PanicInfo, str::FromStr};
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
-    encrypted_mapper::{EncryptedPageTable, PhysOffset},
-    frame_allocator::PhysicalMemoryAllocator,
+    frame_allocator::PhysicalMemoryAllocator, page_tables::RootPageTable,
     virtual_address_allocator::VirtualAddressAllocator,
 };
 use oak_channel::Channel;
@@ -90,21 +84,20 @@ use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignm
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
-    structures::paging::{MappedPageTable, Page, Size2MiB},
+    structures::paging::{Page, Size2MiB},
     PhysAddr, VirtAddr,
 };
 
 /// Allocator for physical memory frames in the system.
-/// We reserve enough room to handle up to 128 GiB of memory, for now.
-pub static FRAME_ALLOCATOR: OnceCell<Spinlock<PhysicalMemoryAllocator<1024>>> = OnceCell::new();
+/// We reserve enough room to handle up to 512 GiB of memory, for now.
+pub static FRAME_ALLOCATOR: Spinlock<PhysicalMemoryAllocator<4096>> =
+    Spinlock::new(PhysicalMemoryAllocator::new());
 
 /// The allocator for allocating space in the memory area that is shared with the hypervisor.
 pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
 
 /// Active page tables.
-pub static PAGE_TABLES: OnceCell<
-    Spinlock<EncryptedPageTable<MappedPageTable<'static, PhysOffset>>>,
-> = OnceCell::new();
+pub static PAGE_TABLES: OnceCell<RootPageTable> = OnceCell::new();
 
 /// Allocator for long-lived pages in the kernel.
 pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
@@ -161,17 +154,11 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
 
     // Physical frame allocator
-    FRAME_ALLOCATOR
-        .set(Spinlock::new(mm::init(info.e820_table(), program_headers)))
-        .map_err(|_| ())
-        .expect("did not expect frame allocator to be already set!");
+    mm::init(info.e820_table(), program_headers);
 
     // Note: `info` will not be valid after calling this!
     if PAGE_TABLES
-        .set(Spinlock::new({
-            let mut frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
-            mm::init_paging(frame_allocator.deref_mut(), program_headers).unwrap()
-        }))
+        .set(mm::init_paging(program_headers).unwrap())
         .is_err()
     {
         panic!("couldn't initialize page tables");
@@ -184,7 +171,6 @@ pub fn start_kernel(info: &BootParams) -> ! {
         (PAGE_TABLES
             .get()
             .unwrap()
-            .lock()
             .translate_physical(PhysAddr::new(info as *const _ as u64))
             .unwrap()
             .as_ptr() as *const BootParams)
@@ -193,17 +179,17 @@ pub fn start_kernel(info: &BootParams) -> ! {
     };
 
     if sev_es_enabled {
-        let mut mapper = PAGE_TABLES.get().unwrap().lock();
+        let mapper = PAGE_TABLES.get().unwrap();
         // Now that the page tables have been updated, we have to re-share the GHCB with the
         // hypervisor.
-        ghcb::reshare_ghcb(mapper.deref_mut());
+        ghcb::reshare_ghcb(mapper);
         if sev_snp_enabled {
             // We must also initialise the CPUID and secrets pages and the guest message encryptor
             // when SEV-SNP is active. Panicking is OK at this point, because these pages are
             // required to support the full features and we don't want to run without them.
             init_snp_pages(
                 snp_pages.expect("missing SNP CPUID and secrets pages"),
-                mapper.deref(),
+                mapper,
             );
             snp::init_guest_message_encryptor();
         }
@@ -211,13 +197,10 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     // Allocate a section for guest-host communication (without the `ENCRYPTED` bit set)
     // We'll allocate 2*2MiB, as virtio needs more than 2 MiB for its data structures.
-    let guest_host_frames = {
-        let mut frame_allocator = FRAME_ALLOCATOR.get().unwrap().lock();
-        frame_allocator.allocate_contiguous(2).unwrap()
-    };
+    let guest_host_frames = FRAME_ALLOCATOR.lock().allocate_contiguous(2).unwrap();
 
     let guest_host_pages = {
-        let pt = PAGE_TABLES.get().unwrap().lock();
+        let pt = PAGE_TABLES.get().unwrap();
         Page::range(
             pt.translate_physical_frame(guest_host_frames.start)
                 .unwrap(),
@@ -240,13 +223,8 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // initialization code and thus there can be no concurrent access.
     if GUEST_HOST_HEAP
         .set(
-            unsafe {
-                memory::init_guest_host_heap(
-                    guest_host_pages,
-                    PAGE_TABLES.get().unwrap().lock().deref_mut(),
-                )
-            }
-            .unwrap(),
+            unsafe { memory::init_guest_host_heap(guest_host_pages, PAGE_TABLES.get().unwrap()) }
+                .unwrap(),
         )
         .is_err()
     {
