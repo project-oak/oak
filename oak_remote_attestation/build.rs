@@ -15,16 +15,7 @@
 //
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    micro_rpc_build::compile(
-        &[format!(
-            "{}oak_remote_attestation/proto/v1/messages.proto",
-            env!("WORKSPACE_ROOT")
-        )],
-        &[format!(
-            "{}oak_remote_attestation/proto/v1",
-            env!("WORKSPACE_ROOT")
-        )],
-    );
+    micro_rpc_build::compile(&["proto/v1/messages.proto"], &["proto/v1"]);
 
     Ok(())
 }
