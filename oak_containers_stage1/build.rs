@@ -20,9 +20,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate gRPC code for exchanging messages with clients.
     generate_grpc_code(
         "../",
-        &["oak_containers_stage1/proto/stage1.proto"],
+        &["oak_containers/proto/launcher.proto"],
         CodegenOptions {
-            build_server: true,
+            build_client: true,
             ..Default::default()
         },
     )?;
