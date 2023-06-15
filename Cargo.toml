@@ -10,6 +10,7 @@ members = [
   "oak_containers_stage1",
   "oak_core",
   "oak_containers_orchestrator",
+  "oak_containers_launcher",
   "oak_crypto",
   "oak_docker_linux_init",
   "oak_echo_linux_init",
