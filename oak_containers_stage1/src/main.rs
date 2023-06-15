@@ -17,15 +17,25 @@
 #![feature(never_type)]
 
 mod image;
-mod server;
 
+use crate::proto::oak::containers::launcher_client::LauncherClient;
 use clap::Parser;
-use std::{error::Error, net::SocketAddr};
+use image::Image;
+use std::error::Error;
+use tonic::transport::{Channel, Uri};
+
+mod proto {
+    pub mod oak {
+        pub mod containers {
+            tonic::include_proto!("oak.containers");
+        }
+    }
+}
 
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(required = true)]
-    addr: SocketAddr,
+    addr: Uri,
 
     #[arg(default_value = "/sbin/init")]
     init: String,
@@ -35,23 +45,22 @@ struct Args {
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    // We want to send back a meaningful answer to the caller that the RPC has been handled
-    // successfully. Thus, we need two channels: one to notify us that the image has been loaded,
-    // and another so that we could shut down the gRPC server.
-    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
-    let (loaded_tx, mut loaded_rx) = tokio::sync::mpsc::channel(1);
+    let channel = Channel::builder(args.addr).connect().await?;
+    let mut client = LauncherClient::new(channel);
+    let image = Image::new(String::from(image::RAMFS_TMP_DIR))?;
 
-    let join = tokio::spawn(server::ImageLoaderServer::serve(
-        args.addr,
-        shutdown_rx,
-        loaded_tx,
-    ));
-    let image = loaded_rx.recv().await.unwrap();
-    shutdown_tx.send(()).unwrap();
-    join.await??;
+    // We should see if this could be streamed, somehow, instead of buffering the whole file in
+    // memory before unpacking it.
+    let mut buf = Vec::new();
+    {
+        let request = client.get_oak_system_image(tonic::Request::new(())).await?;
+        let mut stream = request.into_inner();
 
-    // At this point we've shut down the server, so we expect that the response has been sent back
-    // and the image has been unpacked into the correct directory. Switch roots and execute the
-    // correct init.
-    image.switch(&args.init)?;
+        while let Some(mut msg) = stream.message().await? {
+            buf.append(&mut msg.image_chunk);
+        }
+    }
+
+    image.unpack(&buf)?;
+    image.switch(&args.init)?
 }
