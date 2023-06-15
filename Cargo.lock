@@ -2093,6 +2093,7 @@ dependencies = [
  "log",
  "micro_rpc",
  "micro_rpc_build",
+ "oak_remote_attestation",
  "prost",
 ]
 
