@@ -1776,6 +1776,7 @@ name = "oak_containers_orchestrator"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "clap",
  "oak_grpc_utils",
  "prost",
  "tokio",

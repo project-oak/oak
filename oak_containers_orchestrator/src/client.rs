@@ -38,12 +38,15 @@ pub struct LauncherClient {
 }
 
 impl LauncherClient {
-    pub async fn create(address: vsock::VsockAddr) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn create(
+        launcher_vsock_cid: u32,
+        launcher_vsock_port: u32,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let inner: GrpcLauncherClient<tonic::transport::channel::Channel> = {
             let channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
                 .context("couldn't form endpoint")?
                 .connect_with_connector(service_fn(move |_: Uri| {
-                    VsockStream::connect(address.cid(), address.port())
+                    VsockStream::connect(launcher_vsock_cid, launcher_vsock_port)
                 }))
                 .await
                 .context("couldn't connect to VSOCK socket")?;

@@ -16,3 +16,4 @@ tonic = "*"
 tower = "*"
 tokio-vsock = { version = "*", features = ["tonic-conn"] }
 vsock = "*"
+clap = { version = "*", features = ["derive"] }
