@@ -64,7 +64,7 @@ impl Launcher for LauncherServerImplementation {
 
                 if bytes_read > 0 {
                     yield GetImageResponse {
-                        image_chunk: buffer.to_vec()
+                        image_chunk: buffer[..bytes_read].to_vec()
                     }
                 } else {
                     // the file has been fully read, there's nothing left to
@@ -94,7 +94,7 @@ impl Launcher for LauncherServerImplementation {
 
                 if bytes_read > 0 {
                     yield GetImageResponse {
-                        image_chunk: buffer.to_vec()
+                        image_chunk: buffer[..bytes_read].to_vec()
                     }
                 } else {
                     // the file has been fully read, there's nothing left to
