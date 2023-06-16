@@ -16,26 +16,21 @@
 
 #![feature(never_type)]
 
+mod client;
 mod image;
 
-use crate::proto::oak::containers::launcher_client::LauncherClient;
 use clap::Parser;
+use client::LauncherClient;
 use image::Image;
 use std::error::Error;
-use tonic::transport::{Channel, Uri};
-
-mod proto {
-    pub mod oak {
-        pub mod containers {
-            tonic::include_proto!("oak.containers");
-        }
-    }
-}
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(required = true)]
-    addr: Uri,
+    #[arg(long, required = true)]
+    launcher_vsock_cid: u32,
+
+    #[arg(long, required = true)]
+    launcher_vsock_port: u32,
 
     #[arg(default_value = "/sbin/init")]
     init: String,
@@ -45,22 +40,10 @@ struct Args {
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    let channel = Channel::builder(args.addr).connect().await?;
-    let mut client = LauncherClient::new(channel);
     let image = Image::new(String::from(image::RAMFS_TMP_DIR))?;
-
-    // We should see if this could be streamed, somehow, instead of buffering the whole file in
-    // memory before unpacking it.
-    let mut buf = Vec::new();
-    {
-        let request = client.get_oak_system_image(tonic::Request::new(())).await?;
-        let mut stream = request.into_inner();
-
-        while let Some(mut msg) = stream.message().await? {
-            buf.append(&mut msg.image_chunk);
-        }
-    }
-
+    let mut client = LauncherClient::new(args.launcher_vsock_cid, args.launcher_vsock_port).await?;
+    let buf = client.get_oak_system_image().await?;
     image.unpack(&buf)?;
+
     image.switch(&args.init)?
 }

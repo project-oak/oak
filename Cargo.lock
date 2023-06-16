@@ -1806,6 +1806,7 @@ dependencies = [
 name = "oak_containers_stage1"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "clap",
  "futures-util",
  "nix 0.26.2",
@@ -1813,7 +1814,9 @@ dependencies = [
  "prost",
  "tar",
  "tokio",
+ "tokio-vsock",
  "tonic",
+ "tower",
 ]
 
 [[package]]

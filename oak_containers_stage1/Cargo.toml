@@ -9,10 +9,13 @@ license = "Apache-2.0"
 oak_grpc_utils = { workspace = true }
 
 [dependencies]
+anyhow = "*"
 clap = { version = "*", features = ["derive"] }
 futures-util = "*"
 nix = "*"
 prost = { workspace = true }
 tar = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
+tokio-vsock = { version = "*", features = ["tonic-conn"] }
 tonic = { workspace = true }
+tower = "*"
