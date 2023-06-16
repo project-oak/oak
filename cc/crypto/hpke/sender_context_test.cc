@@ -51,34 +51,34 @@ class SenderContextTest : public testing::Test {
 };
 
 TEST_F(SenderContextTest, SetupBaseSenderReturnsUniqueEncapsulatedKey) {
-  absl::StatusOr<SenderHPKEInfo> sender_hpke_info =
+  absl::StatusOr<SenderContext> sender_context =
       SetUpBaseSender(serialized_public_key_, info_string_);
-  ASSERT_TRUE(sender_hpke_info.ok());
-  std::string encapsulated_public_key1(sender_hpke_info->encap_public_key.begin(),
-                                       sender_hpke_info->encap_public_key.end());
-  auto setup_result2 = SetUpBaseSender(serialized_public_key_, info_string_);
-  ASSERT_TRUE(setup_result2.ok());
-  std::string encapsulated_public_key2(setup_result2->encap_public_key.begin(),
-                                       setup_result2->encap_public_key.end());
+  ASSERT_TRUE(sender_context.ok());
+  std::string encapsulated_public_key1(sender_context->encap_public_key.begin(),
+                                       sender_context->encap_public_key.end());
+  auto sender_context2 = SetUpBaseSender(serialized_public_key_, info_string_);
+  ASSERT_TRUE(sender_context2.ok());
+  std::string encapsulated_public_key2(sender_context2->encap_public_key.begin(),
+                                       sender_context2->encap_public_key.end());
   EXPECT_THAT(encapsulated_public_key1, StrNe(encapsulated_public_key2));
 }
 
 TEST_F(SenderContextTest, SetupBaseSenderReturnsInvalidArgumentErrorForEmptyKey) {
   std::string empty_public_key = "";
-  absl::StatusOr<SenderHPKEInfo> sender_hpke_info = SetUpBaseSender(empty_public_key, info_string_);
-  EXPECT_FALSE(sender_hpke_info.ok());
-  EXPECT_EQ(sender_hpke_info.status().code(), absl::StatusCode::kInvalidArgument);
+  absl::StatusOr<SenderContext> sender_context = SetUpBaseSender(empty_public_key, info_string_);
+  EXPECT_FALSE(sender_context.ok());
+  EXPECT_EQ(sender_context.status().code(), absl::StatusCode::kInvalidArgument);
 }
 
 TEST_F(SenderContextTest, SenderRequestSealsMessageSuccess) {
-  absl::StatusOr<SenderHPKEInfo> sender_hpke_info =
+  absl::StatusOr<SenderContext> sender_context =
       SetUpBaseSender(serialized_public_key_, info_string_);
-  ASSERT_TRUE(sender_hpke_info.ok());
+  ASSERT_TRUE(sender_context.ok());
 
   std::string plaintext = "Hello World";
 
   absl::StatusOr<std::string> encrypted_request =
-      sender_hpke_info->sender_request_context->Seal(plaintext, associated_data_request_);
+      sender_context->sender_request_context->Seal(plaintext, associated_data_request_);
   EXPECT_TRUE(encrypted_request.ok());
   EXPECT_THAT(*encrypted_request, StrNe(plaintext));
 }

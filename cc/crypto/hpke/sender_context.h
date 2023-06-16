@@ -68,7 +68,7 @@ class SenderResponseContext {
 };
 
 // Holds all necessary sender contexts and the encapsulated public key.
-struct SenderHPKEInfo {
+struct SenderContext {
   std::vector<uint8_t> encap_public_key;
   std::unique_ptr<SenderRequestContext> sender_request_context;
   std::unique_ptr<SenderResponseContext> sender_response_context;
@@ -81,8 +81,8 @@ struct SenderHPKEInfo {
 //
 // Encapsulated public key is represented as a NIST P-256 SEC1 encoded point public key.
 // <https://secg.org/sec1-v2.pdf>
-absl::StatusOr<SenderHPKEInfo> SetUpBaseSender(absl::string_view serialized_recipient_public_key,
-                                               absl::string_view info);
+absl::StatusOr<SenderContext> SetUpBaseSender(absl::string_view serialized_recipient_public_key,
+                                              absl::string_view info);
 
 }  // namespace oak::crypto
 

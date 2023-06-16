@@ -39,8 +39,6 @@ struct DecryptionResult {
 // Encryptor class for encrypting client requests that will be sent to the server and decrypting
 // server responses that are received by the client. Each Encryptor corresponds to a single crypto
 // session between the client and the server.
-// server responses that are received by the client. Each Encryptor corresponds to a single crypto
-// session between the client and the server.
 //
 // Sequence numbers for requests and responses are incremented separately, meaning that there could
 // be multiple responses per request and multiple requests per response.
@@ -57,7 +55,7 @@ class ClientEncryptor {
       absl::string_view serialized_server_public_key);
 
   // Constructor for initializing all private variables of the class.
-  ClientEncryptor(SenderHPKEInfo& sender_hpke_info)
+  ClientEncryptor(SenderContext& sender_hpke_info)
       : serialized_encapsulated_public_key_(sender_hpke_info.encap_public_key.begin(),
                                             sender_hpke_info.encap_public_key.end()),
         sender_request_context_(std::move(sender_hpke_info.sender_request_context)),
@@ -77,7 +75,7 @@ class ClientEncryptor {
   // `encrypted_response` must be a serialized [`oak.crypto.EncryptedResponse`] message.
   // Returns a response message plaintext.
   // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
-  absl::StatusOr<std::string> Decrypt(std::string encrypted_response);
+  absl::StatusOr<DecryptionResult> Decrypt(absl::string_view encrypted_response);
 
  private:
   // Encapsulated public key needed to establish a symmetric session key.

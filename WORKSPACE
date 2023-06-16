@@ -44,11 +44,11 @@ http_archive(
 # https://github.com/google/boringssl
 http_archive(
     name = "com_google_boringssl",
-    #sha256 = "37d6a208168f5e4095129593071128d3a4584051e3e2dcc03e39672bf38e61b5",
-    #strip_prefix = "boringssl-refs_heads_master-with-bazel",
+    sha256 = "b6dd308895eea9e1f0d3f503b7210141f75ba6817c78b4057406ee8f0a042504",
+    strip_prefix = "boringssl-44cc20b4a0227b8913dc5f9e063443cb05e4134d",
     urls = [
-        # Head commit on 2023-06-05.
-        "https://boringssl.googlesource.com/boringssl/+archive/1d9679fc012ef5043489246053d2eafb997b95ba.tar.gz",
+        # Head commit on 2023-06-14.
+        "https://github.com/google/boringssl/archive/44cc20b4a0227b8913dc5f9e063443cb05e4134d.zip",
     ],
 )
 
@@ -56,6 +56,7 @@ http_archive(
 # https://github.com/google/googletest
 http_archive(
     name = "com_google_googletest",
+    sha256 = "983a7f2f4cc2a4d75d94ee06300c46a657291fba965e355d11ab3b6965a7b0e5",
     strip_prefix = "googletest-b796f7d44681514f58a683a3a71ff17c94edb0c1",
     urls = [
         # Latest commit for version 1.13.0. This requires at least C++14.
