@@ -26,6 +26,8 @@ struct Args {
     system_image: std::path::PathBuf,
     #[arg(long, required = true, value_parser = path_exists,)]
     container_bundle: std::path::PathBuf,
+    #[arg(long, value_parser = path_exists,)]
+    container_config: Option<std::path::PathBuf>,
 }
 
 fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
@@ -49,6 +51,7 @@ async fn main() -> Result<(), anyhow::Error> {
         args.vsock_port,
         args.system_image,
         args.container_bundle,
+        args.container_config,
     )
     .await
 }

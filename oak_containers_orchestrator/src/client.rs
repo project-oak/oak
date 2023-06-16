@@ -75,4 +75,16 @@ impl LauncherClient {
 
         Ok(container_buf)
     }
+
+    pub async fn get_container_config(&mut self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let container_config = self
+            .inner
+            .get_container_config(())
+            .await
+            .context("couldn't form streaming connection")?
+            .into_inner()
+            .config;
+
+        Ok(container_config)
+    }
 }

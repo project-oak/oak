@@ -27,6 +27,12 @@ message GetImageResponse {
   bytes image_chunk = 1;
 }
 
+message GetContainerConfigResponse {
+  // Arbitrary config that the container can retrieve from the orchestrator.
+  // Included in the attestation measurements conducted by the orchestrator.
+  bytes config = 1;
+}
+
 service Launcher {
   // Provides stage1 with the Oak system image (which contains the Linux distribution and the
   // orchestrator binary).
@@ -34,4 +40,7 @@ service Launcher {
 
   // Provides orchestrator with the trusted container image.
   rpc GetContainerBundle(google.protobuf.Empty) returns (stream GetImageResponse) {}
+
+  // Provides orchestrator with the trusted container config.
+  rpc GetContainerConfig(google.protobuf.Empty) returns (GetContainerConfigResponse) {}
 }
