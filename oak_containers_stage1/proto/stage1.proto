@@ -15,7 +15,6 @@
 //
 
 syntax = "proto3";
-
 package oak.containers;
 
 import "google/protobuf/empty.proto";

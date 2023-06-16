@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 
-#include "encryptor.h"
+#include "cc/crypto/encryptor.h"
 
 namespace oak::crypto {}  // namespace oak::crypto
