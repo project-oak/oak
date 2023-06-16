@@ -10,6 +10,7 @@ oak_grpc_utils = { workspace = true }
 
 [dependencies]
 anyhow = "*"
+command-fds = { version = "*", features = ["tokio"] }
 prost = "*"
 tokio = { version = "*", features = [
   "rt-multi-thread",

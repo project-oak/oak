@@ -12,6 +12,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+mod qemu;
 mod server;
 
 use clap::Parser;
@@ -26,9 +28,12 @@ struct Args {
     system_image: std::path::PathBuf,
     #[arg(long, required = true, value_parser = path_exists,)]
     container_bundle: std::path::PathBuf,
+    #[command(flatten)]
+    qemu_params: qemu::Params,
+
 }
 
-fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
+pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
     let path = std::path::PathBuf::from(s);
     if !std::fs::metadata(s)
         .map_err(|err| err.to_string())?
@@ -44,11 +49,19 @@ fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
 async fn main() -> Result<(), anyhow::Error> {
     let args = Args::parse();
 
-    server::new(
+    let server = server::new(
         args.vsock_cid,
         args.vsock_port,
         args.system_image,
         args.container_bundle,
     )
-    .await
+
+    let mut vmm = qemu::Qemu::start(args.qemu_params, args.vsock_cid)?;
+
+    tokio::select! {
+        _ = server => {}
+        _ = vmm.wait() => {}
+    }
+
+    Ok(())
 }
