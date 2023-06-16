@@ -1772,6 +1772,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_containers_launcher"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "clap",
+ "futures",
+ "oak_grpc_utils",
+ "prost",
+ "tokio",
+ "tokio-vsock",
+ "tonic",
+ "vsock",
+]
+
+[[package]]
 name = "oak_containers_orchestrator"
 version = "0.1.0"
 dependencies = [
