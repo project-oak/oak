@@ -13,19 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-<<<<<<<< HEAD:java/src/main/java/com/google/oak/crypto/hpke/KeyPair.java
-package com.google.oak.crypto.hpke;
-
-public class KeyPair {
-  public final byte[] privateKey;
-  public final byte[] publicKey;
-
-  public KeyPair(byte[] privateKey, byte[] publicKey) {
-    this.privateKey = privateKey;
-    this.publicKey = publicKey;
-  }
-========
 fn main() {
     println!("Itse me, orchestrator!");
->>>>>>>> 2fb4fa7785c93ccaf9a972be96d4ad5faa15de4c:oak_containers_orchestrator/src/main.rs
 }

@@ -33,11 +33,6 @@ mod iree;
 use crate::proto::oak::iree::{
     InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, Iree,
 };
-<<<<<<< HEAD
-
-#[derive(Default)]
-pub struct IreeService {
-=======
 use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 use anyhow::Context;
 use oak_remote_attestation::{
@@ -46,7 +41,6 @@ use oak_remote_attestation::{
 };
 
 struct IreeHandler {
->>>>>>> 2fb4fa7785c93ccaf9a972be96d4ad5faa15de4c
     iree_model: iree::IreeModel,
 }
 
@@ -83,12 +77,6 @@ impl Iree for IreeService {
         &mut self,
         _initialization: &InitializeRequest,
     ) -> Result<InitializeResponse, micro_rpc::Status> {
-<<<<<<< HEAD
-        self.iree_model
-            .initialize()
-            .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
-        Ok(InitializeResponse {})
-=======
         match &mut self.initialization_state {
             InitializationState::Initialized(_attestation_handler) => {
                 Err(micro_rpc::Status::new_with_message(
@@ -119,20 +107,12 @@ impl Iree for IreeService {
                 Ok(InitializeResponse {})
             }
         }
->>>>>>> 2fb4fa7785c93ccaf9a972be96d4ad5faa15de4c
     }
 
     fn invoke(
         &mut self,
         request_message: &InvokeRequest,
     ) -> Result<InvokeResponse, micro_rpc::Status> {
-<<<<<<< HEAD
-        let response = self
-            .iree_model
-            .run(&request_message.body)
-            .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
-        Ok(InvokeResponse { body: response })
-=======
         match &mut self.initialization_state {
             InitializationState::Uninitialized => Err(micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::FailedPrecondition,
@@ -151,6 +131,5 @@ impl Iree for IreeService {
                 Ok(InvokeResponse { body: response })
             }
         }
->>>>>>> 2fb4fa7785c93ccaf9a972be96d4ad5faa15de4c
     }
 }

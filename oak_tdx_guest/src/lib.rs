@@ -17,23 +17,9 @@
 //! Rust implementation of features needed to implement guest enlightenment for operating systems
 //! running under Intel TDX.
 
-<<<<<<<< HEAD:oak_tdx_guest/src/lib.rs
 #![no_std]
 #![feature(split_array)]
 #![deny(unsafe_op_in_unsafe_fn)]
 
 pub mod tdcall;
 pub mod vmcall;
-========
-package oak.containers;
-
-import "google/protobuf/empty.proto";
-
-message LoadRequest {
-  bytes image_chunk = 1;
-}
-
-service ImageLoader {
-  rpc Load(stream LoadRequest) returns (google.protobuf.Empty) {}
-}
->>>>>>>> 2fb4fa7785c93ccaf9a972be96d4ad5faa15de4c:oak_containers_stage1/proto/stage1.proto
