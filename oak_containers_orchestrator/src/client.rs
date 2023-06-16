@@ -81,7 +81,7 @@ impl LauncherClient {
             .inner
             .get_container_config(())
             .await
-            .context("couldn't form streaming connection")?
+            .context("couldn't form get response")?
             .into_inner()
             .config;
 
