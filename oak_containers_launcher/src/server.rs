@@ -67,6 +67,8 @@ impl Launcher for LauncherServerImplementation {
                         image_chunk: buffer.to_vec()
                     }
                 } else {
+                    // the file has been fully read, there's nothing left to
+                    // send
                     break;
                 }
             }
@@ -95,6 +97,8 @@ impl Launcher for LauncherServerImplementation {
                         image_chunk: buffer.to_vec()
                     }
                 } else {
+                    // the file has been fully read, there's nothing left to
+                    // send
                     break;
                 }
             }
