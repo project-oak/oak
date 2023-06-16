@@ -43,5 +43,11 @@ jobs:
     uses: ./.github/workflows/reusable_provenance.yaml
     with:
       build-config-path: ${{ matrix.buildconfig }}
+      # Key pair generated with `ent keygen`, under which Ent tags are published.
+      # The secret key is stored in the repo secrets page: https://github.com/project-oak/oak/settings/secrets/actions
+      # The public key is stored in the repo variables page: https://github.com/project-oak/oak/settings/variables/actions
+      ent-public-key: ${{ vars.ENT_PUBLIC_KEY }}
     secrets:
       ENT_API_KEY: ${{ secrets.ENT_API_KEY }}
+      # Secret key corresponding to `ent-public-key` above, used to sign Ent tags.
+      ENT_SECRET_KEY: ${{ secrets.ENT_SECRET_KEY }}

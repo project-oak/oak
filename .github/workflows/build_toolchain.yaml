@@ -55,11 +55,14 @@ jobs:
         if: steps.cache-ent.outputs.cache-hit != 'true'
         env:
           ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
-          ENT_DIGEST: 56c331e5f329e9496795bdfbecfe25a1e9a3e7b57d3452be4bf3aa749c0cb6d2
+          ENT_DIGEST_SHA_2_256: ca76e76e32e0b984a8d55d1a27d587865774b29a2ae2fffd756ffc2dbd4880bd
         run: |
-          set -e
-          curl --fail ${ENT_URL}/raw/sha2-256:${ENT_DIGEST} > /usr/local/bin/ent
-          echo "${ENT_DIGEST} /usr/local/bin/ent" | sha256sum -c
+          set -o errexit
+          set -o nounset
+          set -o xtrace
+          set -o pipefail
+          curl --fail ${ENT_URL}/raw/sha2-256:${ENT_DIGEST_SHA_2_256} > /usr/local/bin/ent
+          echo "${ENT_DIGEST_SHA_2_256} /usr/local/bin/ent" | sha256sum --check
           chmod +x /usr/local/bin/ent
           ent
           cat <<EOF > ~/.config/ent.toml
