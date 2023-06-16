@@ -12,7 +12,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-mod server;
 
 use clap::Parser;
 
@@ -44,7 +43,7 @@ fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
 async fn main() -> Result<(), anyhow::Error> {
     let args = Args::parse();
 
-    server::new(
+    oak_containers_launcher_server::new(
         args.vsock_cid,
         args.vsock_port,
         args.system_image,
