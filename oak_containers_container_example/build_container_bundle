@@ -7,7 +7,7 @@
 rm -rf ./temp_out
 mkdir -p ./temp_out
 docker build --tag="oak_container_example" .
-docker export --output="./temp_out/oak_container_example_rootfs.tar" $(docker create oak_container_example)
+docker export --output="./temp_out/oak_container_example_rootfs.tar" "$(docker create oak_container_example)"
 mkdir -p ./temp_out/rootfs
 tar -xf ./temp_out/oak_container_example_rootfs.tar -C ./temp_out/rootfs
 rm ./temp_out/oak_container_example_rootfs.tar
