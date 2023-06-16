@@ -14,18 +14,18 @@
 // limitations under the License.
 //
 
+use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-<<<<<<< HEAD
-    micro_rpc_build::compile(
-        &[format!(
-            "{}oak_crypto/proto/v1/crypto.proto",
-            env!("WORKSPACE_ROOT")
-        )],
-        &[format!("{}oak_crypto/proto", env!("WORKSPACE_ROOT"))],
-    );
-=======
-    micro_rpc_build::compile(&["proto/v1/crypto.proto"], &["proto"]);
->>>>>>> 2fb4fa7785c93ccaf9a972be96d4ad5faa15de4c
+    // Generate gRPC code for exchanging messages with clients.
+    generate_grpc_code(
+        "../",
+        &["oak_containers_stage1/proto/stage1.proto"],
+        CodegenOptions {
+            build_server: true,
+            ..Default::default()
+        },
+    )?;
 
     Ok(())
 }

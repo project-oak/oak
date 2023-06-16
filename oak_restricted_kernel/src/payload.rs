@@ -24,7 +24,7 @@ use goblin::{
 };
 use oak_channel::Channel;
 use oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
-use ouroboros::self_referencing;
+use self_cell::self_cell;
 use sha2::{Digest, Sha256};
 use x86_64::{
     structures::paging::{PageSize, Size2MiB, Size4KiB},
@@ -42,15 +42,15 @@ fn read_chunk<C: Channel + ?Sized>(channel: &mut C, chunk: &mut [u8]) -> Result<
     channel.write(&len.to_le_bytes())
 }
 
-/// Self-referential struct so that we don't have to parse the ELF file multiple times.
-#[self_referencing]
-struct Binary {
-    binary: Box<[u8]>,
+self_cell!(
+    /// Self-referential struct so that we don't have to parse the ELF file multiple times.
+    struct Binary {
+        owner: Box<[u8]>,
 
-    #[borrows(binary)]
-    #[covariant]
-    elf: Elf<'this>,
-}
+        #[covariant]
+        dependent: Elf,
+    }
+);
 
 /// Representation of an Restricted Application that the Restricted Kernel can run.
 pub struct Application {
@@ -93,28 +93,24 @@ impl Application {
         let digest = Sha256::digest(&blob[..]).into();
 
         Ok(Application {
-            binary: BinaryTryBuilder {
-                binary: blob,
-                elf_builder: |boxed| {
-                    goblin::elf::Elf::parse(boxed)
-                        .map_err(|err| anyhow!("failed to parse ELF file: {}", err))
-                },
-            }
-            .try_build()?,
+            binary: Binary::try_new(blob, |boxed| {
+                goblin::elf::Elf::parse(boxed)
+                    .map_err(|err| anyhow!("failed to parse ELF file: {}", err))
+            })?,
             digest,
         })
     }
 
     fn program_headers(&self) -> &ProgramHeaders {
-        &self.binary.borrow_elf().program_headers
+        &self.binary.borrow_dependent().program_headers
     }
 
     fn entry(&self) -> VirtAddr {
-        VirtAddr::new(self.binary.borrow_elf().entry)
+        VirtAddr::new(self.binary.borrow_dependent().entry)
     }
 
     fn slice(&self, start: u64, limit: u64) -> &[u8] {
-        &self.binary.borrow_binary()[start as usize..(start + limit) as usize]
+        &self.binary.borrow_owner()[start as usize..(start + limit) as usize]
     }
 
     fn load_segment(&self, phdr: &ProgramHeader) -> Result<()> {

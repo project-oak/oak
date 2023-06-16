@@ -17,7 +17,7 @@
 #include "cc/crypto/encryptor.h"
 
 #include "absl/status/statusor.h"
-#include "cc/crypto/hpke/hpke.h"
+#include "cc/crypto/hpke/sender_context.h"
 #include "oak_crypto/proto/v1/crypto.pb.h"
 
 namespace oak::crypto {
@@ -26,24 +26,17 @@ namespace {
 using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
 
-// Generates a string form of a KeyInfo struct with length key_size.
-std::string KeyInfoToString(KeyInfo key_info) {
-  size_t key_size = key_info.key_size;
-  key_info.key_bytes.resize(key_size);
-  std::string key(key_info.key_bytes.begin(), key_info.key_bytes.end());
-  return key;
-}
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
     absl::string_view serialized_server_public_key) {
-  absl::StatusOr<ClientHPKEConfig> client_setup =
+  absl::StatusOr<SenderHPKEInfo> sender_setup =
       SetUpBaseSender(serialized_server_public_key, OAK_HPKE_INFO);
-  if (!client_setup.ok()) {
-    return client_setup.status();
+  if (!sender_setup.ok()) {
+    return sender_setup.status();
   }
   std::unique_ptr<ClientEncryptor> client_encryptor =
-      std::make_unique<ClientEncryptor>(*client_setup);
+      std::make_unique<ClientEncryptor>(*sender_setup);
   // Pass ownership of the pointer to the caller.
   return std::move(client_encryptor);
 }
@@ -57,10 +50,9 @@ absl::StatusOr<std::string> ClientEncryptor::Encrypt(absl::string_view plaintext
   }
   *encrypted_request_proto.mutable_encrypted_message()->mutable_ciphertext() =
       *serialized_encrypted_message;
-  KeyInfo serialized_encapsulated_public_key = *serialized_encapsulated_public_key_.get();
 
   *encrypted_request_proto.mutable_serialized_encapsulated_public_key() =
-      KeyInfoToString(serialized_encapsulated_public_key);
+      serialized_encapsulated_public_key_;
 
   std::string serialized_output;
   if (encrypted_request_proto.SerializeToString(&serialized_output)) {

@@ -39,6 +39,8 @@ struct DecryptionResult {
 // Encryptor class for encrypting client requests that will be sent to the server and decrypting
 // server responses that are received by the client. Each Encryptor corresponds to a single crypto
 // session between the client and the server.
+// server responses that are received by the client. Each Encryptor corresponds to a single crypto
+// session between the client and the server.
 //
 // Sequence numbers for requests and responses are incremented separately, meaning that there could
 // be multiple responses per request and multiple requests per response.
@@ -56,7 +58,8 @@ class ClientEncryptor {
 
   // Constructor for initializing all private variables of the class.
   ClientEncryptor(SenderHPKEInfo& sender_hpke_info)
-      : serialized_encapsulated_public_key_(std::move(sender_hpke_info.encap_public_key)),
+      : serialized_encapsulated_public_key_(sender_hpke_info.encap_public_key.begin(),
+                                            sender_hpke_info.encap_public_key.end()),
         sender_request_context_(std::move(sender_hpke_info.sender_request_context)),
         sender_response_context_(std::move(sender_hpke_info.sender_response_context)){};
 
@@ -79,7 +82,7 @@ class ClientEncryptor {
  private:
   // Encapsulated public key needed to establish a symmetric session key.
   // Only sent in the initial request message of the session.
-  std::unique_ptr<KeyInfo> serialized_encapsulated_public_key_;
+  std::string serialized_encapsulated_public_key_;
   std::unique_ptr<SenderRequestContext> sender_request_context_;
   std::unique_ptr<SenderResponseContext> sender_response_context_;
 };

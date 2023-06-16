@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+<<<<<<<< HEAD:oak_remote_attestation/src/lib.rs
 #![no_std]
 
 extern crate alloc;
@@ -34,3 +35,10 @@ pub mod handler;
 #[cfg(test)]
 mod tests;
 pub mod verifier;
+========
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    micro_rpc_build::compile(&["proto/v1/messages.proto"], &["proto/v1"]);
+
+    Ok(())
+}
+>>>>>>>> 2fb4fa7785c93ccaf9a972be96d4ad5faa15de4c:oak_remote_attestation/build.rs

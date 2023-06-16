@@ -33,16 +33,47 @@ mod iree;
 use crate::proto::oak::iree::{
     InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, Iree,
 };
+<<<<<<< HEAD
 
 #[derive(Default)]
 pub struct IreeService {
+=======
+use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
+use anyhow::Context;
+use oak_remote_attestation::{
+    attester::AttestationReportGenerator,
+    handler::{AttestationHandler, AttestationSessionHandler},
+};
+
+struct IreeHandler {
+>>>>>>> 2fb4fa7785c93ccaf9a972be96d4ad5faa15de4c
     iree_model: iree::IreeModel,
 }
 
+impl micro_rpc::Transport for IreeHandler {
+    type Error = anyhow::Error;
+    fn invoke(&mut self, request: &[u8]) -> anyhow::Result<Vec<u8>> {
+        self.iree_model
+            .run(request)
+            .context("couldn't run IREE inference")
+    }
+}
+
+enum InitializationState {
+    Uninitialized,
+    Initialized(Box<dyn AttestationHandler>),
+}
+
+pub struct IreeService {
+    attestation_report_generator: Arc<dyn AttestationReportGenerator>,
+    initialization_state: InitializationState,
+}
+
 impl IreeService {
-    pub fn new() -> Self {
+    pub fn new(attestation_report_generator: Arc<dyn AttestationReportGenerator>) -> Self {
         Self {
-            iree_model: iree::IreeModel::new(),
+            attestation_report_generator,
+            initialization_state: InitializationState::Uninitialized,
         }
     }
 }
@@ -52,20 +83,74 @@ impl Iree for IreeService {
         &mut self,
         _initialization: &InitializeRequest,
     ) -> Result<InitializeResponse, micro_rpc::Status> {
+<<<<<<< HEAD
         self.iree_model
             .initialize()
             .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
         Ok(InitializeResponse {})
+=======
+        match &mut self.initialization_state {
+            InitializationState::Initialized(_attestation_handler) => {
+                Err(micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::FailedPrecondition,
+                    "already initialized",
+                ))
+            }
+            InitializationState::Uninitialized => {
+                let mut iree_model = iree::IreeModel::new();
+                iree_model
+                    .initialize()
+                    .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
+
+                let attestation_handler = Box::new(
+                    AttestationSessionHandler::create(
+                        self.attestation_report_generator.clone(),
+                        IreeHandler { iree_model },
+                    )
+                    .map_err(|err| {
+                        micro_rpc::Status::new_with_message(
+                            micro_rpc::StatusCode::Internal,
+                            format!("couldn't create attestation handler: {:?}", err),
+                        )
+                    })?,
+                );
+                self.initialization_state = InitializationState::Initialized(attestation_handler);
+
+                Ok(InitializeResponse {})
+            }
+        }
+>>>>>>> 2fb4fa7785c93ccaf9a972be96d4ad5faa15de4c
     }
 
     fn invoke(
         &mut self,
         request_message: &InvokeRequest,
     ) -> Result<InvokeResponse, micro_rpc::Status> {
+<<<<<<< HEAD
         let response = self
             .iree_model
             .run(&request_message.body)
             .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
         Ok(InvokeResponse { body: response })
+=======
+        match &mut self.initialization_state {
+            InitializationState::Uninitialized => Err(micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::FailedPrecondition,
+                "not initialized",
+            )),
+            InitializationState::Initialized(attestation_handler) => {
+                let response =
+                    attestation_handler
+                        .invoke(&request_message.body)
+                        .map_err(|err| {
+                            micro_rpc::Status::new_with_message(
+                                micro_rpc::StatusCode::Internal,
+                                format!("{:?}", err),
+                            )
+                        })?;
+                Ok(InvokeResponse { body: response })
+            }
+        }
+>>>>>>> 2fb4fa7785c93ccaf9a972be96d4ad5faa15de4c
     }
 }

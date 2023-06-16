@@ -12,6 +12,10 @@ micro_rpc = { workspace = true }
 oak_enclave_runtime_support = { workspace = true }
 oak_channel = { workspace = true }
 oak_core = { workspace = true }
+<<<<<<< HEAD
+=======
+oak_remote_attestation = { workspace = true }
+>>>>>>> 2fb4fa7785c93ccaf9a972be96d4ad5faa15de4c
 oak_restricted_kernel_api = { workspace = true }
 static_assertions = "*"
 
