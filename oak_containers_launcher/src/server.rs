@@ -28,13 +28,21 @@ use self::proto::oak::containers::{
 use anyhow::anyhow;
 use futures::Stream;
 use std::pin::Pin;
+use tokio::io::{AsyncReadExt, BufReader};
 use tokio_vsock::VsockListener;
 use tonic::{transport::Server, Request, Response, Status};
+
+// Most gRPC implementations limit message sizes to 4MiB. Let's stay
+// comfortably below that by limiting responses to 3MiB.
+const MAX_RESPONSE_SIZE: usize = 3 * 1024 * 1024;
 
 type GetImageResponseStream = Pin<Box<dyn Stream<Item = Result<GetImageResponse, Status>> + Send>>;
 
 #[derive(Default)]
-struct LauncherServerImplementation {}
+struct LauncherServerImplementation {
+    system_image: std::path::PathBuf,
+    container_bundle: std::path::PathBuf,
+}
 
 #[tonic::async_trait]
 impl Launcher for LauncherServerImplementation {
@@ -45,9 +53,25 @@ impl Launcher for LauncherServerImplementation {
         &self,
         _request: Request<()>,
     ) -> Result<Response<Self::GetOakSystemImageStream>, tonic::Status> {
+        let system_image_file = tokio::fs::File::open(&self.system_image).await?;
+
+        let mut buffer = vec![0_u8; MAX_RESPONSE_SIZE];
+        let mut reader = BufReader::new(system_image_file);
+
         let response_stream = async_stream::try_stream! {
-          // TODO(#4023): Send a system image
-          yield GetImageResponse::default();
+            loop {
+                let bytes_read = reader.read(&mut buffer).await?;
+
+                if bytes_read > 0 {
+                    yield GetImageResponse {
+                        image_chunk: buffer[..bytes_read].to_vec()
+                    }
+                } else {
+                    // the file has been fully read, there's nothing left to
+                    // send
+                    break;
+                }
+            }
         };
 
         Ok(Response::new(
@@ -59,9 +83,25 @@ impl Launcher for LauncherServerImplementation {
         &self,
         _request: Request<()>,
     ) -> Result<Response<Self::GetContainerBundleStream>, tonic::Status> {
+        let container_bundle_file = tokio::fs::File::open(&self.container_bundle).await?;
+
+        let mut buffer = vec![0_u8; MAX_RESPONSE_SIZE];
+        let mut reader = BufReader::new(container_bundle_file);
+
         let response_stream = async_stream::try_stream! {
-          // TODO(#4023): Send an actual container
-          yield GetImageResponse::default();
+            loop {
+                let bytes_read = reader.read(&mut buffer).await?;
+
+                if bytes_read > 0 {
+                    yield GetImageResponse {
+                        image_chunk: buffer[..bytes_read].to_vec()
+                    }
+                } else {
+                    // the file has been fully read, there's nothing left to
+                    // send
+                    break;
+                }
+            }
         };
 
         Ok(Response::new(
@@ -70,8 +110,16 @@ impl Launcher for LauncherServerImplementation {
     }
 }
 
-pub async fn new(vsock_cid: u32, vsock_port: u32) -> Result<(), anyhow::Error> {
-    let server_impl = LauncherServerImplementation {};
+pub async fn new(
+    vsock_cid: u32,
+    vsock_port: u32,
+    system_image: std::path::PathBuf,
+    container_bundle: std::path::PathBuf,
+) -> Result<(), anyhow::Error> {
+    let server_impl = LauncherServerImplementation {
+        system_image,
+        container_bundle,
+    };
     let vsock_listener = VsockListener::bind(vsock_cid, vsock_port)?.incoming();
 
     Server::builder()

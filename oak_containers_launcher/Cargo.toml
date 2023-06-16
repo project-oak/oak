@@ -11,10 +11,16 @@ oak_grpc_utils = { workspace = true }
 [dependencies]
 anyhow = "*"
 prost = "*"
-tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
+tokio = { version = "*", features = [
+  "rt-multi-thread",
+  "macros",
+  "sync",
+  "fs"
+] }
 tonic = { workspace = true }
 tokio-vsock = { version = "*", features = ["tonic-conn"] }
 vsock = "*"
 clap = { version = "*", features = ["derive"] }
 futures = "*"
 async-stream = "*"
+bytes = "*"
