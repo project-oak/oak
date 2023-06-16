@@ -55,7 +55,7 @@ impl Launcher for LauncherServerImplementation {
     ) -> Result<Response<Self::GetOakSystemImageStream>, tonic::Status> {
         let system_image_file = tokio::fs::File::open(&self.system_image).await?;
 
-        let mut buffer = [0; MAX_RESPONSE_SIZE];
+        let mut buffer = vec![0_u8; MAX_RESPONSE_SIZE];
         let mut reader = BufReader::new(system_image_file);
 
         let response_stream = async_stream::try_stream! {
@@ -85,7 +85,7 @@ impl Launcher for LauncherServerImplementation {
     ) -> Result<Response<Self::GetContainerBundleStream>, tonic::Status> {
         let container_bundle_file = tokio::fs::File::open(&self.container_bundle).await?;
 
-        let mut buffer = [0; MAX_RESPONSE_SIZE];
+        let mut buffer = vec![0_u8; MAX_RESPONSE_SIZE];
         let mut reader = BufReader::new(container_bundle_file);
 
         let response_stream = async_stream::try_stream! {
