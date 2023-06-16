@@ -14,11 +14,11 @@
 // limitations under the License.
 //
 
+use crate::path_exists;
 use anyhow::Result;
 use clap::Parser;
 use command_fds::tokio::CommandFdAsyncExt;
 use std::{
-    fs,
     io::{BufRead, BufReader},
     os::{fd::AsRawFd, unix::net::UnixStream},
     path::PathBuf,
@@ -48,16 +48,6 @@ pub struct Params {
     /// Gigabyte).
     #[arg(long)]
     pub memory_size: Option<String>,
-}
-
-/// Checks if file with a given path exists.
-fn path_exists(s: &str) -> Result<PathBuf, String> {
-    let path = PathBuf::from(s);
-    if !fs::metadata(s).map_err(|err| err.to_string())?.is_file() {
-        Err(String::from("path does not represent a file"))
-    } else {
-        Ok(path)
-    }
 }
 
 pub struct Qemu {
