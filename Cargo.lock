@@ -1779,6 +1779,7 @@ dependencies = [
  "async-stream",
  "bytes",
  "clap",
+ "command-fds",
  "futures",
  "oak_grpc_utils",
  "prost",
