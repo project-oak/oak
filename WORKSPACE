@@ -48,7 +48,7 @@ http_archive(
     #strip_prefix = "boringssl-refs_heads_master-with-bazel",
     urls = [
         # Head commit on 2023-06-05.
-        "https://boringssl.googlesource.com/boringssl/+archive/1d9679fc012ef5043489246053d2eafb997b95ba.tar.gz"
+        "https://boringssl.googlesource.com/boringssl/+archive/1d9679fc012ef5043489246053d2eafb997b95ba.tar.gz",
     ],
 )
 
@@ -58,8 +58,8 @@ http_archive(
     name = "com_google_googletest",
     strip_prefix = "googletest-b796f7d44681514f58a683a3a71ff17c94edb0c1",
     urls = [
-        # Latest commit for version 1.13.0.
-        "https://github.com/google/googletest/archive/b796f7d44681514f58a683a3a71ff17c94edb0c1.zip"
+        # Latest commit for version 1.13.0. This requires at least C++14.
+        "https://github.com/google/googletest/archive/b796f7d44681514f58a683a3a71ff17c94edb0c1.zip",
     ],
 )
 

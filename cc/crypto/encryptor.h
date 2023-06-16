@@ -23,7 +23,8 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "cc/crypto/hpke/hpke.h"
+#include "cc/crypto/hpke/recipient_context.h"
+#include "cc/crypto/hpke/sender_context.h"
 
 namespace oak::crypto {
 
@@ -54,10 +55,10 @@ class ClientEncryptor {
       absl::string_view serialized_server_public_key);
 
   // Constructor for initializing all private variables of the class.
-  ClientEncryptor(ClientHPKEConfig& client_hpke_config)
-      : serialized_encapsulated_public_key_(std::move(client_hpke_config.encap_public_key)),
-        sender_request_context_(std::move(client_hpke_config.sender_request_context)),
-        sender_response_context_(std::move(client_hpke_config.sender_response_context)){};
+  ClientEncryptor(SenderHPKEInfo& sender_hpke_info)
+      : serialized_encapsulated_public_key_(std::move(sender_hpke_info.encap_public_key)),
+        sender_request_context_(std::move(sender_hpke_info.sender_request_context)),
+        sender_response_context_(std::move(sender_hpke_info.sender_response_context)){};
 
   // Encrypts `plaintext` and authenticates `associated_data` using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>

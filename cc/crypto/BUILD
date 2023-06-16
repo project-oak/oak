@@ -14,10 +14,6 @@
 # limitations under the License.
 #
 
-load(
-    "//cc/crypto:build_defs.bzl", "oak_copts"
-)
-
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
@@ -27,12 +23,11 @@ cc_library(
     name = "encryptor",
     srcs = ["encryptor.cc"],
     hdrs = ["encryptor.h"],
-    copts = oak_copts(),
     deps = [
-        "//cc/crypto/hpke:hpke",
+        "//cc/crypto/hpke:recipient_context",
+        "//cc/crypto/hpke:sender_context",
         "//oak_crypto/proto/v1:crypto_cc_proto",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
 )
-
