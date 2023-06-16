@@ -19,6 +19,7 @@
 mod client;
 mod image;
 
+use anyhow::Context;
 use clap::Parser;
 use client::LauncherClient;
 use image::Image;
@@ -26,10 +27,10 @@ use std::error::Error;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(long, required = true)]
+    #[arg(long, default_value_t = 2)]
     launcher_vsock_cid: u32,
 
-    #[arg(long, required = true)]
+    #[arg(long, default_value_t = 8080)]
     launcher_vsock_port: u32,
 
     #[arg(default_value = "/sbin/init")]
@@ -40,10 +41,18 @@ struct Args {
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    let image = Image::new(String::from(image::RAMFS_TMP_DIR))?;
-    let mut client = LauncherClient::new(args.launcher_vsock_cid, args.launcher_vsock_port).await?;
-    let buf = client.get_oak_system_image().await?;
-    image.unpack(&buf)?;
+    let image = Image::new(String::from(image::RAMFS_TMP_DIR))
+        .context("preparing the ramfs temporary directory")?;
+    let mut client = LauncherClient::new(args.launcher_vsock_cid, args.launcher_vsock_port)
+        .await
+        .context("creating the launcher client")?;
+    let buf = client
+        .get_oak_system_image()
+        .await
+        .context("fetching system image")?;
+    image.unpack(&buf).context("unpacking system image")?;
 
-    image.switch(&args.init)?
+    image
+        .switch(&args.init)
+        .context("switching to the system image")?
 }
