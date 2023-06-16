@@ -24,14 +24,15 @@ jobs:
       fail-fast: false
       matrix:
         buildconfig:
-          - buildconfigs/oak_echo_enclave_app.toml
-          - buildconfigs/oak_echo_raw_enclave_app.toml
-          - buildconfigs/oak_restricted_kernel_bin.toml
-          - buildconfigs/oak_restricted_kernel_simple_io_bin.toml
-          - buildconfigs/oak_functions_enclave_app.toml
-          - buildconfigs/oak_tensorflow_enclave_app.toml
-          - buildconfigs/quirk_echo_enclave_app.toml
-          - buildconfigs/stage0_bin.toml
+          - buildconfigs/test.toml
+          # - buildconfigs/oak_echo_enclave_app.toml
+          # - buildconfigs/oak_echo_raw_enclave_app.toml
+          # - buildconfigs/oak_restricted_kernel_bin.toml
+          # - buildconfigs/oak_restricted_kernel_simple_io_bin.toml
+          # - buildconfigs/oak_functions_enclave_app.toml
+          # - buildconfigs/oak_tensorflow_enclave_app.toml
+          # - buildconfigs/quirk_echo_enclave_app.toml
+          # - buildconfigs/stage0_bin.toml
 
     permissions:
       actions: read
@@ -43,5 +44,9 @@ jobs:
     uses: ./.github/workflows/reusable_provenance.yaml
     with:
       build-config-path: ${{ matrix.buildconfig }}
+      # key pair generated with `ent keygen`.
+      # The secret key is stored in the repo secrets page: https://github.com/project-oak/oak/settings/secrets/actions
+      ent-public-key: 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE_nkQBX5j9jA-dt6vhzmexyx2zBCz3TLsgcftdJNelrmKZJ3kiZaUpYIJBWfnd-fRgq2JSw5gbRKQxKLuOBa-tQ=='
     secrets:
       ENT_API_KEY: ${{ secrets.ENT_API_KEY }}
+      ENT_SECRET_KEY: ${{ secrets.ENT_SECRET_KEY }}

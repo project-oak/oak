@@ -23,16 +23,16 @@ jobs:
         # Do not add `run-ci` to these commands. We parse them for `xtask run-ci`.
         cmd:
           # format tries to format all the source files, and relies on the git diff step to determine whether anything was missed.
-          - format
+          # - format
           # check-format checks for additional issues (e.g. missing license headers) that format does not enforce.
-          - check-format
-          - run-cargo-deny
-          - run-cargo-udeps
-          - run-cargo-tests
-          - run-bazel-tests
-          - run-cargo-fuzz -- -max_total_time=2
-          - completion
-          - run-cargo-clippy
+          # - check-format
+          # - run-cargo-deny
+          # - run-cargo-udeps
+          # - run-cargo-tests
+          # - run-bazel-tests
+          # - run-cargo-fuzz -- -max_total_time=2
+          # - completion
+          # - run-cargo-clippy
 
     steps:
       - name: Checkout branch

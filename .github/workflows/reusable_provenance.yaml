@@ -8,8 +8,13 @@ on:
       build-config-path:
         required: true
         type: string
+      ent-public-key:
+        required: true
+        type: string
     secrets:
       ENT_API_KEY:
+        required: true
+      ENT_SECRET_KEY:
         required: true
 
 jobs:
@@ -64,7 +69,8 @@ jobs:
   # This job uploads the signed provenance from the previous step to Ent, and
   # publishes a comment for each binary on the PR.
   upload_provenance:
-    if: github.event_name != 'pull_request'
+    if: |
+      github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'provenance:force-run')
     needs: [get_inputs, generate_provenance]
     runs-on: ubuntu-20.04
     permissions:
@@ -79,12 +85,14 @@ jobs:
         if: steps.cache-ent.outputs.cache-hit != 'true'
         env:
           ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
-          ENT_DIGEST: sha256:944a34854a2bf9c5d32f3bffa93885ee1c7ef8ab0f4fcc30898a981050ae4233
+          ENT_DIGEST: QmXN5dp8vEcgP8anBDpdMH5CmJYb27Kmtr1WygQ47yKtrM
         run: |
+          set -e
           curl --fail ${ENT_URL}/raw/${ENT_DIGEST} > /usr/local/bin/ent
           chmod +x /usr/local/bin/ent
           ent
           cat <<EOF > ~/.config/ent.toml
+          secret_key = '${{ secrets.ENT_SECRET_KEY }}'
           [[remotes]]
           name = 'ent-store'
           url = '${ENT_URL}'
@@ -113,7 +121,8 @@ jobs:
         id: ent_upload_binary
         working-directory: downloads
         run: |
-          echo "binary_digest=$(ent put ${{ needs.get_inputs.outputs.artifact-path }})" >> $GITHUB_OUTPUT
+          set -e
+          echo "binary_digest=$(ent put --porcelain ${{ needs.get_inputs.outputs.artifact-path }})" >> $GITHUB_OUTPUT
 
       - name: Upload provenance to Ent
         id: ent_upload_provenance
@@ -121,15 +130,29 @@ jobs:
         # The output on any trigger other than "pull_request" has an addition ".sigstore" suffix.
         # See https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/docker#workflow-outputs
         run: |
-          echo "provenance_digest=$(ent put ${{ needs.get_inputs.outputs.provenance-name }}.sigstore)" >> $GITHUB_OUTPUT
+          set -e
+          echo "provenance_digest=$(ent put --porcelain ${{ needs.get_inputs.outputs.provenance-name }}.sigstore)" >> $GITHUB_OUTPUT
 
       # Add the provenance digest to the ./comment file as a TOML formatted doc.
-      - name: Format artifact and provenance digest (post-merge only)
+      # Print the contents of the ./comment file to the log to help debugging.
+      - name: Format artifact and provenance digest
         run: |
+          set -e
           echo -e "\n" >> ./comment
           echo -e "artifact_name = \"$(basename ${{ needs.get_inputs.outputs.artifact-path }})\"" >> ./comment
-          echo -e "artifact_digest = \"$(cut -d' ' -f1 <<<'${{ steps.ent_upload_binary.outputs.binary_digest }}')\"" >> ./comment
-          echo -e "provenance_digest = \"$(cut -d' ' -f1 <<<'${{ steps.ent_upload_provenance.outputs.provenance_digest }}')\"" >> ./comment
+          echo -e "artifact_digest = \"${{ steps.ent_upload_binary.outputs.binary_digest }}\"" >> ./comment
+          echo -e "provenance_digest = \"${{ steps.ent_upload_provenance.outputs.provenance_digest }}\"" >> ./comment
+          cat ./comment
+
+      - name: Upload mapping to Ent
+        run: |
+          set -e
+          ent map set --public-key=${{ inputs.ent-public-key }} \
+            --label=artifact_xxx_yyy \
+            --target=${{ steps.ent_upload_provenance.outputs.binary_digest }}
+          ent map set --public-key=${{ inputs.ent-public-key }} \
+            --label=provenance_xxx_yyy \
+            --target=${{ steps.ent_upload_provenance.outputs.provenance_digest }}
 
       # Post a comment on the PR containing the sha256 digests of the binary and its provenance.
       - name: Post the comment (post-merge only)

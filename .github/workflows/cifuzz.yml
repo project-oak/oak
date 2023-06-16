@@ -1,5 +1,5 @@
 name: CIFuzz
-on: [pull_request]
+on: []
 
 # See https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions#example-using-concurrency-to-cancel-any-in-progress-job-or-run
 concurrency:

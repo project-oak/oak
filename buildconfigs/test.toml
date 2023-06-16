@@ -1,0 +1,6 @@
+command = [
+  "python3",
+  "-c",
+  "with open('out.txt', 'w') as f: f.write('Hello, world!')",
+]
+artifact_path = "./out.txt"
