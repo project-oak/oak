@@ -31,7 +31,6 @@ struct Args {
     container_bundle: std::path::PathBuf,
     #[command(flatten)]
     qemu_params: qemu::Params,
-
 }
 
 pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
@@ -55,7 +54,7 @@ async fn main() -> Result<(), anyhow::Error> {
         args.vsock_port,
         args.system_image,
         args.container_bundle,
-    )
+    );
 
     // Use our PID for the CID of the guest.
     let mut vmm = qemu::Qemu::start(args.qemu_params, process::id())?;
