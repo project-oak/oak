@@ -17,6 +17,7 @@ mod qemu;
 mod server;
 
 use clap::Parser;
+use std::process;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -56,7 +57,8 @@ async fn main() -> Result<(), anyhow::Error> {
         args.container_bundle,
     )
 
-    let mut vmm = qemu::Qemu::start(args.qemu_params, args.vsock_cid)?;
+    // Use our PID for the CID of the guest.
+    let mut vmm = qemu::Qemu::start(args.qemu_params, process::id())?;
 
     tokio::select! {
         _ = server => {}
