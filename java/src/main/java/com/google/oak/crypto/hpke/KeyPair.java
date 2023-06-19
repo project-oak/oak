@@ -15,11 +15,18 @@
 
 package com.google.oak.crypto.hpke;
 
+import com.google.oak.util.Result;
+
 public class KeyPair {
   public final byte[] privateKey;
   public final byte[] publicKey;
 
-  public KeyPair(byte[] privateKey, byte[] publicKey) {
+  public static final Result<KeyPair, Exception> Generate() {
+    // TODO(#3642): Generate a real key pair in BoringSSL via JNI.
+    return Result.success(new KeyPair(new byte[0], new byte[0]));
+  }
+
+  private KeyPair(byte[] privateKey, byte[] publicKey) {
     this.privateKey = privateKey;
     this.publicKey = publicKey;
   }
