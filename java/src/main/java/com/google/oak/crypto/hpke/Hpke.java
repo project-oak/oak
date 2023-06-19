@@ -38,7 +38,8 @@ public final class Hpke {
     }
   }
 
-  private static native SenderContext nativeSetupBaseSender(final byte[] serializedRecipientPublicKey, final byte[] info);
+  private static native SenderContext nativeSetupBaseSender(
+      final byte[] serializedRecipientPublicKey, final byte[] info);
 
   /**
    * Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
@@ -66,7 +67,8 @@ public final class Hpke {
     }
   }
 
-  private static native RecipientContext nativeSetupBaseRecipient(final byte[] serializedEncapsulatedPublicKey, KeyPair recipientKeyPair, final byte[] info);
+  private static native RecipientContext nativeSetupBaseRecipient(
+      final byte[] serializedEncapsulatedPublicKey, KeyPair recipientKeyPair, final byte[] info);
 
   /**
    * Sets up an HPKE recipient by creating a recipient context.
@@ -78,7 +80,8 @@ public final class Hpke {
    */
   public static final Result<RecipientContext, Exception> setupBaseRecipient(
       final byte[] serializedEncapsulatedPublicKey, KeyPair recipientKeyPair, final byte[] info) {
-    RecipientContext ctx = nativeSetupBaseRecipient(serializedEncapsulatedPublicKey, recipientKeyPair, info);
+    RecipientContext ctx =
+        nativeSetupBaseRecipient(serializedEncapsulatedPublicKey, recipientKeyPair, info);
     return Result.success(ctx);
   }
 

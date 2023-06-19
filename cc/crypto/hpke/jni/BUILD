@@ -34,7 +34,8 @@ cc_library(
     ],
     deps = [
         ":jni",
-        "//cc/crypto/hpke",
+        "//cc/crypto/hpke:recipient_context",
+        "//cc/crypto/hpke:sender_context",
     ],
     alwayslink = 1,
 )
