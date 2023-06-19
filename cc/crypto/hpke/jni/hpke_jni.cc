@@ -1,5 +1,5 @@
 #include "com_google_oak_crypto_hpke_Hpke.h"
-#include "hpke.h"
+#include "../hpke.h"
 
 JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseSender
   (JNIEnv* env, jclass obj, jbyteArray serialized_recipient_public_key, jbyteArray info) {
@@ -24,7 +24,7 @@ JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseSe
 
 JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseRecipient
   (JNIEnv* env, jclass obj, jbyteArray serialized_encapsulated_public_key, jobject recipient_key_pair, jbyteArray info) {
-  // // TODO(#3642): Use the result of setup_base_recipient instead of manually making the context.
+  // TODO(#3642): Use the result of setup_base_recipient instead of manually making the context.
   oak::crypto::RecipientRequestContext* native_recipient_request_context = new oak::crypto::RecipientRequestContext();
   jclass recipient_request_context_class = env->FindClass("com/google/oak/crypto/hpke/Context$RecipientRequestContext");
   jmethodID recipient_request_context_constructor = env->GetMethodID(recipient_request_context_class, "<init>", "(J)V");

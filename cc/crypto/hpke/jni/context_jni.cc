@@ -18,7 +18,7 @@
 #include "com_google_oak_crypto_hpke_Context_SenderResponseContext.h"
 #include "com_google_oak_crypto_hpke_Context_RecipientRequestContext.h"
 #include "com_google_oak_crypto_hpke_Context_RecipientResponseContext.h"
-#include "hpke.h"
+#include "../hpke.h"
 
 JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_Context_00024SenderRequestContext_nativeSeal
   (JNIEnv* env, jobject obj, jbyteArray plaintext, jbyteArray associated_data) {

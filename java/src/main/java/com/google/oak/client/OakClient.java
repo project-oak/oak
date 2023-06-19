@@ -86,7 +86,7 @@ public class OakClient<T extends Transport> {
                    .andThen(r -> encryptor.decrypt(r)))
         .map(d -> d.plaintext);
     if (encryptorCreateResult.isSuccess()) {
-      encryptorCreateResult.success().get().destroy();
+      encryptorCreateResult.success().get().close();
     }
     return result;
   }

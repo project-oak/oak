@@ -29,7 +29,7 @@ java_library(
         "KeyPair.java",
     ],
     data = [
-        "//cc/crypto/hpke:libhpke-jni.so",
+        "//cc/crypto/hpke/jni:libhpke-jni.so",
     ],
     deps = [
         "//java/src/main/java/com/google/oak/util",

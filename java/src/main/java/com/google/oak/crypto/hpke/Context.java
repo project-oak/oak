@@ -20,7 +20,7 @@ import com.google.oak.util.Result;
 
 // TODO(#3642): Implement Java Hybrid Encryption.
 public final class Context {
-  public static final class SenderRequestContext {
+  public static final class SenderRequestContext implements AutoCloseable {
     private final long nativePtr;
     public SenderRequestContext(long nativePtr) {
       this.nativePtr = nativePtr;
@@ -49,12 +49,13 @@ public final class Context {
     /**
      * Destroys any allocated native resources for this object.
      */
-    public void destroy() {
+    @Override
+    public void close() {
       nativeDestroy();
     }
   }
 
-  public static final class SenderResponseContext {
+  public static final class SenderResponseContext implements AutoCloseable {
     private final long nativePtr;
     public SenderResponseContext(long nativePtr) {
       this.nativePtr = nativePtr;
@@ -83,12 +84,13 @@ public final class Context {
     /**
      * Destroys any allocated native resources for this object.
      */
-    public void destroy() {
+    @Override
+    public void close() {
       nativeDestroy();
     }
   };
 
-  public static final class RecipientRequestContext {
+  public static final class RecipientRequestContext implements AutoCloseable {
     private final long nativePtr;
     public RecipientRequestContext(long nativePtr) {
       this.nativePtr = nativePtr;
@@ -117,12 +119,13 @@ public final class Context {
     /**
      * Destroys any allocated native resources for this object.
      */
-    public void destroy() {
+    @Override
+    public void close() {
       nativeDestroy();
     }
   };
 
-  public static final class RecipientResponseContext {
+  public static final class RecipientResponseContext implements AutoCloseable {
     private final long nativePtr;
     public RecipientResponseContext(long nativePtr) {
       this.nativePtr = nativePtr;
@@ -151,7 +154,8 @@ public final class Context {
     /**
      * Destroys any allocated native resources for this object.
      */
-    public void destroy() {
+    @Override
+    public void close() {
       nativeDestroy();
     }
   };
