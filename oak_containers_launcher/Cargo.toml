@@ -1,0 +1,27 @@
+[package]
+name = "oak_containers_launcher"
+version = "0.1.0"
+authors = ["Juliette Pretot <julsh@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[build-dependencies]
+oak_grpc_utils = { workspace = true }
+
+[dependencies]
+anyhow = "*"
+command-fds = { version = "*", features = ["tokio"] }
+prost = "*"
+tokio = { version = "*", features = [
+  "rt-multi-thread",
+  "macros",
+  "sync",
+  "fs"
+] }
+tonic = { workspace = true }
+tokio-vsock = { version = "*", features = ["tonic-conn"] }
+vsock = "*"
+clap = { version = "*", features = ["derive"] }
+futures = "*"
+async-stream = "*"
+bytes = "*"

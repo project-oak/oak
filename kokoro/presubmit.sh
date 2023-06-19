@@ -9,6 +9,7 @@ export CI=kokoro
 
 export RUST_BACKTRACE=1
 export RUST_LOG=debug
+export XDG_RUNTIME_DIR=/var/run
 
 ./scripts/docker_pull
 # --all-targets is needed to also run tests for examples and benches.

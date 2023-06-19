@@ -20,10 +20,11 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
+use alloc::{boxed::Box, sync::Arc};
 use core::panic::PanicInfo;
 use log::info;
 use oak_core::samplestore::StaticSampleStore;
+use oak_remote_attestation::attester::EmptyAttestationReportGenerator;
 use oak_restricted_kernel_api::{FileDescriptorChannel, StderrLogger};
 
 static LOGGER: StderrLogger = StderrLogger {};
@@ -42,7 +43,7 @@ fn main() -> ! {
 }
 
 fn start_server() -> ! {
-    let service = oak_iree_service::IreeService::new();
+    let service = oak_iree_service::IreeService::new(Arc::new(EmptyAttestationReportGenerator));
     let server = oak_iree_service::proto::oak::iree::IreeServer::new(service);
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
     oak_channel::server::start_blocking_server(

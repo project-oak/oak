@@ -16,12 +16,10 @@
 
 #![no_std]
 #![feature(int_roundings)]
-
-extern crate alloc;
+#![feature(nonnull_slice_from_raw_parts)]
 
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use oak_sev_guest::io::PortFactoryWrapper;
-use static_alloc::bump::Bump;
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
     registers::segmentation::*,
@@ -34,6 +32,7 @@ use x86_64::{
 };
 
 mod acpi;
+mod alloc;
 mod cmos;
 mod fw_cfg;
 mod initramfs;
@@ -43,8 +42,8 @@ pub mod paging;
 mod sev;
 mod zero_page;
 
-#[global_allocator]
-static BOOT_ALLOC: Bump<[u8; 128 * 1024]> = Bump::uninit();
+// Reserve 128K for boot data structures.
+static BOOT_ALLOC: alloc::Allocator<0x20000> = alloc::Allocator::uninit();
 
 #[link_section = ".boot"]
 #[no_mangle]
@@ -112,7 +111,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     paging::init_page_table_refs(encrypted);
 
-    // If we're under SEV-ES or SNP, we need a GHCB block for communication.
+    // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP implies SEV-ES).
     let ghcb_protocol = if es {
         // No point in calling expect() here, the logging isn't set up yet.
         // In any case, this allocation should not fail. This is the first thing we allocate, the
@@ -137,9 +136,11 @@ pub fn rust64_start(encrypted: u64) -> ! {
     let dma_access = BOOT_ALLOC.leak(fw_cfg::FwCfgDmaAccess::default()).unwrap();
     let dma_access_address = VirtAddr::from_ptr(dma_access as *const _);
     if encrypted > 0 {
-        // Safety: This is safe because we're using an originally supported mode of the Pentium 6:
-        // Write-protect, with MTRR enabled.  If we get CPUID reads working, we may want to check
-        // that MTRR is supported, but only if we want to support very old processors.
+        // Safety: This is safe for SEV-ES and SNP because we're using an originally supported mode
+        // of the Pentium 6: Write-protect, with MTRR enabled.  If we get CPUID reads
+        // working, we may want to check that MTRR is supported, but only if we want to
+        // support very old processors. However, note that, this branch is only executed if
+        // we have encryption, and this wouldn't be true for very old processors.
         unsafe {
             sev::MTRRDefType::write(sev::MTRRDefTypeFlags::MTRR_ENABLE, sev::MemoryType::WP);
         }

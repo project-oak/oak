@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 
-#include "hpke.h"
+#include "cc/crypto/hpke/recipient_context.h"
 
 namespace oak::crypto {}  // namespace oak::crypto

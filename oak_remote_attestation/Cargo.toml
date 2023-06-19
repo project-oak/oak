@@ -5,16 +5,10 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-anyhow = "*"
-futures-util = "*"
+anyhow = { version = "*", default-features = false }
+oak_crypto = { workspace = true }
+micro_rpc = { workspace = true }
 prost = { workspace = true }
-tonic = { workspace = true }
-
-[dev-dependencies]
-async-trait = "*"
-futures = "*"
-tokio = { workspace = true, features = ["rt-multi-thread", "net"] }
-tonic = { workspace = true }
 
 [build-dependencies]
-oak_grpc_utils = { workspace = true }
+micro_rpc_build = { workspace = true }

@@ -15,11 +15,5 @@
 //
 
 fn main() {
-    micro_rpc_build::compile(
-        &[format!(
-            "{}micro_rpc/proto/messages.proto",
-            env!("WORKSPACE_ROOT")
-        )],
-        &[format!("{}micro_rpc/proto", env!("WORKSPACE_ROOT"))],
-    );
+    micro_rpc_build::compile(&["proto/messages.proto"], &["proto"]);
 }

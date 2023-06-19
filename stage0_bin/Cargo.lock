@@ -3,12 +3,6 @@
 version = 3
 
 [[package]]
-name = "alloc-traits"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b2d54853319fd101b8dd81de382bcbf3e03410a64d8928bbee85a3e7dcde483"
-
-[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -136,7 +130,6 @@ dependencies = [
  "oak_sev_guest",
  "sev_serial",
  "spinning_top",
- "static-alloc",
  "static_assertions",
  "strum",
  "x86_64",
@@ -217,15 +210,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75adad84ee84b521fb2cca2d4fd0f1dab1d8d026bda3c5bea4ca63b5f9f9293c"
 dependencies = [
  "lock_api",
-]
-
-[[package]]
-name = "static-alloc"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "570b7e840addf99f80c5b26abba410e21537002316fc82f2747fd87c171e9d7e"
-dependencies = [
- "alloc-traits",
 ]
 
 [[package]]

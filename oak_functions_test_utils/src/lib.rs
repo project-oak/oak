@@ -221,33 +221,6 @@ pub fn rust_crate_wasm_out_path(crate_name: &str) -> String {
     )
 }
 
-/// Starts an instance of the Oak Functions server running in the background, listening on the
-/// provided port, and running the provided Wasm module, with the provided data available for
-/// lookup.
-///
-/// Returns a handle to the background process.
-pub fn create_and_start_oak_functions_server(
-    server_port: u16,
-    wasm_module_path: &str,
-    lookup_data_path: &str,
-) -> anyhow::Result<duct::ReaderHandle> {
-    let oak_functions_launcher_path = build_rust_crate_linux("oak_functions_launcher")?;
-    let oak_functions_linux_fd_bin_path = build_rust_crate_linux("oak_functions_linux_fd_bin")?;
-
-    let handle = duct::cmd!(
-        oak_functions_launcher_path,
-        format!("--wasm={wasm_module_path}"),
-        format!("--port={server_port}"),
-        format!("--lookup-data={lookup_data_path}"),
-        "native",
-        format!("--enclave-binary={oak_functions_linux_fd_bin_path}"),
-    )
-    .dir(env!("WORKSPACE_ROOT"))
-    .reader()
-    .context("couldn't run oak_functions_launcher")?;
-    Ok(handle)
-}
-
 /// Kills all the processes identified by the provided handle.
 ///
 /// First tries to send them a `SIGINT` signal, then, if they are still running, it sends them a

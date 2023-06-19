@@ -6,14 +6,13 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-oak_functions_service = { path = "../../oak_functions_service", default-features = false }
+oak_functions_service = { path = "../../oak_functions_service" }
 log = "*"
 micro_rpc = { workspace = true }
 oak_enclave_runtime_support = { workspace = true }
 oak_core = { workspace = true }
 oak_channel = { workspace = true }
-oak_remote_attestation_interactive = { workspace = true }
-oak_remote_attestation_amd = { workspace = true }
+oak_remote_attestation = { workspace = true }
 oak_restricted_kernel_api = { workspace = true }
 static_assertions = "*"
 
