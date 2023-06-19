@@ -22,8 +22,8 @@ mod image;
 use anyhow::Context;
 use clap::Parser;
 use client::LauncherClient;
-use image::Image;
-use std::error::Error;
+use nix::mount::{mount, MsFlags};
+use std::{error::Error, fs::create_dir, path::Path};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -41,18 +41,30 @@ struct Args {
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    let image = Image::new(String::from(image::RAMFS_TMP_DIR))
-        .context("preparing the ramfs temporary directory")?;
+    // Overmount an empty ramfs to be used as the new root.
+    mount(
+        None::<&str>,
+        "/",
+        Some("ramfs"),
+        MsFlags::empty(),
+        None::<&str>,
+    )
+    .context("overmounting root")?;
+
+    // musl expects /proc to be mounted, otherwise libc calls such as realpath(2) will fail.
+    create_dir("/proc")?;
+    mount(
+        None::<&str>,
+        "/proc",
+        Some("proc"),
+        MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV,
+        None::<&str>,
+    )?;
+
     let mut client = LauncherClient::new(args.launcher_vsock_cid, args.launcher_vsock_port)
         .await
         .context("creating the launcher client")?;
-    let buf = client
-        .get_oak_system_image()
-        .await
-        .context("fetching system image")?;
-    image.unpack(&buf).context("unpacking system image")?;
 
-    image
-        .switch(&args.init)
-        .context("switching to the system image")?
+    image::load(&mut client, Path::new("/")).await?;
+    image::switch(&args.init).context("switching to the system image")?
 }
