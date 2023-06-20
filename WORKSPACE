@@ -22,10 +22,11 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 # https://github.com/protocolbuffers/protobuf
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "ce2fbea3c78147a41b2a922485d283137845303e5e1b6cbd7ece94b96ade7031",
-    strip_prefix = "protobuf-3.21.7",
+    sha256 = "3a5f47ad3aa10192c5577ff086b24b9739a36937c34ceab6db912a16a3ef7f8e",
+    strip_prefix = "protobuf-23.3",
     urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v3.21.7.tar.gz",
+        # Protocol Buffers v23.3 (2023-06-14).
+        "https://github.com/protocolbuffers/protobuf/releases/download/v23.3/protobuf-23.3.tar.gz",
     ],
 )
 
