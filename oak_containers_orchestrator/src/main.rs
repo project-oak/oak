@@ -43,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _application_config = launcher_client
         .get_application_config()
         .await
-        .map_err(|error| anyhow!("couldn't get container config: {:?}", error))?;
+        .map_err(|error| anyhow!("couldn't get application config: {:?}", error))?;
 
     Ok(())
 }

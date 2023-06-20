@@ -116,9 +116,9 @@ impl Launcher for LauncherServerImplementation {
     ) -> Result<Response<GetApplicationConfigResponse>, tonic::Status> {
         match &self.container_config {
             Some(config_path) => {
-                let container_config_file = tokio::fs::File::open(&config_path).await?;
+                let application_config_file = tokio::fs::File::open(&config_path).await?;
                 let mut buffer = Vec::new();
-                let mut reader = BufReader::new(container_config_file);
+                let mut reader = BufReader::new(application_config_file);
                 reader.read_to_end(&mut buffer).await?;
                 Ok(tonic::Response::new(GetApplicationConfigResponse {
                     config: buffer,
