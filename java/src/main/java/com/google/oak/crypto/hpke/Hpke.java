@@ -21,7 +21,11 @@ import com.google.oak.util.Result;
 // TODO(#3642): Implement Java Hybrid Encryption.
 public final class Hpke {
   static {
-    System.loadLibrary("hpke-jni");
+    try {
+      System.loadLibrary("hpke-jni");
+    } catch (UnsatisfiedLinkError e) {
+      System.exit(1);
+    }
   }
 
   public static final class SenderContext {

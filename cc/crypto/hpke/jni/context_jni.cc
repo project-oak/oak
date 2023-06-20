@@ -30,10 +30,12 @@ Java_com_google_oak_crypto_hpke_Context_00024SenderRequestContext_nativeSeal(
 
   int plaintext_len = env->GetArrayLength(plaintext);
   char* plaintext_buf = new char[plaintext_len];
+  std::unique_ptr<char[]> plaintext_buf_uptr(plaintext_buf);
   env->GetByteArrayRegion(plaintext, 0, plaintext_len, reinterpret_cast<jbyte*>(plaintext_buf));
 
   int associated_data_len = env->GetArrayLength(associated_data);
   char* associated_data_buf = new char[associated_data_len];
+  std::unique_ptr<char[]> associated_data_buf_uptr(associated_data_buf);
   env->GetByteArrayRegion(associated_data, 0, associated_data_len,
                           reinterpret_cast<jbyte*>(associated_data_buf));
 
@@ -46,11 +48,8 @@ Java_com_google_oak_crypto_hpke_Context_00024SenderRequestContext_nativeSeal(
     return {};
   }
 
-  int len = plaintext_len;
-  jbyteArray ret = env->NewByteArray(len);
-  env->SetByteArrayRegion(ret, 0, len, reinterpret_cast<const jbyte*>(plaintext_buf));
-  delete[] plaintext_buf;
-  delete[] associated_data_buf;
+  jbyteArray ret = env->NewByteArray(plaintext_len);
+  env->SetByteArrayRegion(ret, 0, plaintext_len, reinterpret_cast<const jbyte*>(plaintext_buf));
   return ret;
 }
 
@@ -63,10 +62,12 @@ Java_com_google_oak_crypto_hpke_Context_00024SenderResponseContext_nativeOpen(
 
   int ciphertext_len = env->GetArrayLength(ciphertext);
   char* ciphertext_buf = new char[ciphertext_len];
+  std::unique_ptr<char[]> ciphertext_buf_uptr(ciphertext_buf);
   env->GetByteArrayRegion(ciphertext, 0, ciphertext_len, reinterpret_cast<jbyte*>(ciphertext_buf));
 
   int associated_data_len = env->GetArrayLength(associated_data);
   char* associated_data_buf = new char[associated_data_len];
+  std::unique_ptr<char[]> associated_data_buf_uptr(associated_data_buf);
   env->GetByteArrayRegion(associated_data, 0, associated_data_len,
                           reinterpret_cast<jbyte*>(associated_data_buf));
 
@@ -79,11 +80,8 @@ Java_com_google_oak_crypto_hpke_Context_00024SenderResponseContext_nativeOpen(
     return {};
   }
 
-  int len = ciphertext_len;
-  jbyteArray ret = env->NewByteArray(len);
-  env->SetByteArrayRegion(ret, 0, len, reinterpret_cast<const jbyte*>(ciphertext_buf));
-  delete[] ciphertext_buf;
-  delete[] associated_data_buf;
+  jbyteArray ret = env->NewByteArray(ciphertext_len);
+  env->SetByteArrayRegion(ret, 0, ciphertext_len, reinterpret_cast<const jbyte*>(ciphertext_buf));
   return ret;
 }
 
@@ -96,10 +94,12 @@ Java_com_google_oak_crypto_hpke_Context_00024RecipientRequestContext_nativeOpen(
 
   int ciphertext_len = env->GetArrayLength(ciphertext);
   char* ciphertext_buf = new char[ciphertext_len];
+  std::unique_ptr<char[]> ciphertext_buf_uptr(ciphertext_buf);
   env->GetByteArrayRegion(ciphertext, 0, ciphertext_len, reinterpret_cast<jbyte*>(ciphertext_buf));
 
   int associated_data_len = env->GetArrayLength(associated_data);
   char* associated_data_buf = new char[associated_data_len];
+  std::unique_ptr<char[]> associated_data_buf_uptr(associated_data_buf);
   env->GetByteArrayRegion(associated_data, 0, associated_data_len,
                           reinterpret_cast<jbyte*>(associated_data_buf));
 
@@ -112,11 +112,8 @@ Java_com_google_oak_crypto_hpke_Context_00024RecipientRequestContext_nativeOpen(
     return {};
   }
 
-  int len = ciphertext_len;
-  jbyteArray ret = env->NewByteArray(len);
-  env->SetByteArrayRegion(ret, 0, len, reinterpret_cast<const jbyte*>(ciphertext_buf));
-  delete[] ciphertext_buf;
-  delete[] associated_data_buf;
+  jbyteArray ret = env->NewByteArray(ciphertext_len);
+  env->SetByteArrayRegion(ret, 0, ciphertext_len, reinterpret_cast<const jbyte*>(ciphertext_buf));
   return ret;
 }
 
@@ -129,10 +126,12 @@ Java_com_google_oak_crypto_hpke_Context_00024RecipientResponseContext_nativeSeal
 
   int plaintext_len = env->GetArrayLength(plaintext);
   char* plaintext_buf = new char[plaintext_len];
+  std::unique_ptr<char[]> plaintext_buf_uptr(plaintext_buf);
   env->GetByteArrayRegion(plaintext, 0, plaintext_len, reinterpret_cast<jbyte*>(plaintext_buf));
 
   int associated_data_len = env->GetArrayLength(associated_data);
   char* associated_data_buf = new char[associated_data_len];
+  std::unique_ptr<char[]> associated_data_buf_uptr(associated_data_buf);
   env->GetByteArrayRegion(associated_data, 0, associated_data_len,
                           reinterpret_cast<jbyte*>(associated_data_buf));
 
@@ -145,11 +144,8 @@ Java_com_google_oak_crypto_hpke_Context_00024RecipientResponseContext_nativeSeal
     return {};
   }
 
-  int len = plaintext_len;
-  jbyteArray ret = env->NewByteArray(len);
-  env->SetByteArrayRegion(ret, 0, len, reinterpret_cast<const jbyte*>(plaintext_buf));
-  delete[] plaintext_buf;
-  delete[] associated_data_buf;
+  jbyteArray ret = env->NewByteArray(plaintext_len);
+  env->SetByteArrayRegion(ret, 0, plaintext_len, reinterpret_cast<const jbyte*>(plaintext_buf));
   return ret;
 }
 

@@ -21,14 +21,18 @@ import com.google.oak.util.Result;
 // TODO(#3642): Implement Java Hybrid Encryption.
 public final class Context {
   public static final class SenderRequestContext implements AutoCloseable {
+    static {
+      try {
+        System.loadLibrary("hpke-jni");
+      } catch (UnsatisfiedLinkError e) {
+        System.exit(1);
+      }
+    }
     private final long nativePtr;
     public SenderRequestContext(long nativePtr) {
       this.nativePtr = nativePtr;
     }
 
-    static {
-      System.loadLibrary("hpke-jni");
-    }
     private native byte[] nativeSeal(final byte[] plaintext, final byte[] associatedData);
 
     private native void nativeDestroy();
@@ -56,14 +60,18 @@ public final class Context {
   }
 
   public static final class SenderResponseContext implements AutoCloseable {
+    static {
+      try {
+        System.loadLibrary("hpke-jni");
+      } catch (UnsatisfiedLinkError e) {
+        System.exit(1);
+      }
+    }
     private final long nativePtr;
     public SenderResponseContext(long nativePtr) {
       this.nativePtr = nativePtr;
     }
 
-    static {
-      System.loadLibrary("hpke-jni");
-    }
     private native byte[] nativeOpen(final byte[] ciphertext, final byte[] associatedData);
 
     private native void nativeDestroy();
@@ -91,14 +99,18 @@ public final class Context {
   };
 
   public static final class RecipientRequestContext implements AutoCloseable {
+    static {
+      try {
+        System.loadLibrary("hpke-jni");
+      } catch (UnsatisfiedLinkError e) {
+        System.exit(1);
+      }
+    }
     private final long nativePtr;
     public RecipientRequestContext(long nativePtr) {
       this.nativePtr = nativePtr;
     }
 
-    static {
-      System.loadLibrary("hpke-jni");
-    }
     private native byte[] nativeOpen(final byte[] ciphertext, final byte[] associatedData);
 
     private native void nativeDestroy();
@@ -126,14 +138,18 @@ public final class Context {
   };
 
   public static final class RecipientResponseContext implements AutoCloseable {
+    static {
+      try {
+        System.loadLibrary("hpke-jni");
+      } catch (UnsatisfiedLinkError e) {
+        System.exit(1);
+      }
+    }
     private final long nativePtr;
     public RecipientResponseContext(long nativePtr) {
       this.nativePtr = nativePtr;
     }
 
-    static {
-      System.loadLibrary("hpke-jni");
-    }
     private native byte[] nativeSeal(final byte[] plaintext, final byte[] associatedData);
 
     private native void nativeDestroy();
