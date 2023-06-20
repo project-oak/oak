@@ -42,7 +42,7 @@ type GetImageResponseStream = Pin<Box<dyn Stream<Item = Result<GetImageResponse,
 struct LauncherServerImplementation {
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
-    container_config: Option<std::path::PathBuf>,
+    application_config: Option<std::path::PathBuf>,
 }
 
 #[tonic::async_trait]
@@ -114,7 +114,7 @@ impl Launcher for LauncherServerImplementation {
         &self,
         _request: Request<()>,
     ) -> Result<Response<GetApplicationConfigResponse>, tonic::Status> {
-        match &self.container_config {
+        match &self.application_config {
             Some(config_path) => {
                 let application_config_file = tokio::fs::File::open(&config_path).await?;
                 let mut buffer = Vec::new();
@@ -134,12 +134,12 @@ pub async fn new(
     vsock_port: u32,
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
-    container_config: Option<std::path::PathBuf>,
+    application_config: Option<std::path::PathBuf>,
 ) -> Result<(), anyhow::Error> {
     let server_impl = LauncherServerImplementation {
         system_image,
         container_bundle,
-        container_config,
+        application_config,
     };
     let vsock_listener = VsockListener::bind(vsock_cid, vsock_port)?.incoming();
 

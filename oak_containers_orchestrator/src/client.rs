@@ -77,7 +77,7 @@ impl LauncherClient {
     }
 
     pub async fn get_application_config(&mut self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-        let container_config = self
+        let application_config = self
             .inner
             .get_application_config(())
             .await
@@ -85,6 +85,6 @@ impl LauncherClient {
             .into_inner()
             .config;
 
-        Ok(container_config)
+        Ok(application_config)
     }
 }
