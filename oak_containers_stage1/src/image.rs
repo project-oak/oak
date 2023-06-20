@@ -14,52 +14,30 @@
 // limitations under the License.
 //
 
-use nix::{
-    errno::Errno,
-    mount::{mount, umount, MsFlags},
-    unistd::{execve, pivot_root},
-};
-use std::{ffi::CString, fs::create_dir};
+use anyhow::{anyhow, Context, Result};
+use nix::unistd::execv;
+use std::{ffi::CString, os::unix::prelude::OsStrExt, path::Path};
 use tar::{self, Archive};
 
-pub static RAMFS_TMP_DIR: &str = "/ramfs";
-static PIVOT_TMP_DIR: &str = "/initrd";
+use crate::client::LauncherClient;
 
-#[derive(Clone)]
-pub struct Image {
-    ramfs_tmp_dir: String,
+pub async fn load(client: &mut LauncherClient, dst: &Path) -> Result<()> {
+    let buf = client
+        .get_oak_system_image()
+        .await
+        .context("fetching system image")?;
+    let mut archive = Archive::new(&buf[..]);
+    archive.unpack(dst).map_err(|e| anyhow!(e))
 }
 
-impl Image {
-    /// Prepares a new ramdrive.
-    pub fn new(ramfs_tmp_dir: String) -> Result<Self, std::io::Error> {
-        create_dir(ramfs_tmp_dir.as_str())?;
-        mount::<str, str, str, str>(
-            None,
-            ramfs_tmp_dir.as_str(),
-            Some("ramfs"),
-            MsFlags::empty(),
-            None,
-        )?;
-        Ok(Self { ramfs_tmp_dir })
-    }
-
-    /// Unpacks the buffer containing a TAR archive into the ramdrive.
-    pub fn unpack(&self, data: &[u8]) -> Result<(), std::io::Error> {
-        let mut archive = Archive::new(data);
-        archive.unpack(self.ramfs_tmp_dir.as_str())
-    }
-
-    /// Switches the root filesystem to the ramdrive and runs `/sbin/init` from there.
-    pub fn switch(self, init: &str) -> Result<!, Errno> {
-        pivot_root(self.ramfs_tmp_dir.as_str(), PIVOT_TMP_DIR)?;
-        umount(PIVOT_TMP_DIR)?;
-
-        // On one hand, I feel like this function should be marked `unsafe` as this will
-        // unconditionally switch over to the new executable (if it succeeds) without any
-        // more Rust code executing. On the other hand, the return type is `!`, so you
-        // shouldn't expect the control to return.
-        execve::<CString, CString>(CString::new(init).unwrap().as_c_str(), &[], &[])?;
-        unreachable!()
-    }
+pub fn switch(init: &str) -> Result<!> {
+    // On one hand, I feel like this function should be marked `unsafe` as this will
+    // unconditionally switch over to the new executable (if it succeeds) without any
+    // more Rust code executing. On the other hand, the return type is `!`, so you
+    // shouldn't expect the control to return.
+    let args: Vec<CString> = std::env::args_os()
+        .map(|arg| CString::new(arg.as_bytes()).unwrap())
+        .collect();
+    execv(CString::new(init).unwrap().as_c_str(), &args[..])?;
+    unreachable!()
 }

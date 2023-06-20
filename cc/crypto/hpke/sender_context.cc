@@ -94,7 +94,7 @@ SenderResponseContext::~SenderResponseContext() {
   EVP_AEAD_CTX_free(aead_response_context_.release());
 }
 
-absl::StatusOr<SenderContext> SetUpBaseSender(absl::string_view serialized_recipient_public_key,
+absl::StatusOr<SenderContext> SetupBaseSender(absl::string_view serialized_recipient_public_key,
                                               absl::string_view info) {
   SenderContext sender_hpke_info;
 

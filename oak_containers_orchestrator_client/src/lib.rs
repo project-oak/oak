@@ -75,4 +75,16 @@ impl LauncherClient {
 
         Ok(container_buf)
     }
+
+    pub async fn get_application_config(&mut self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let application_config = self
+            .inner
+            .get_application_config(())
+            .await
+            .context("couldn't form get response")?
+            .into_inner()
+            .config;
+
+        Ok(application_config)
+    }
 }

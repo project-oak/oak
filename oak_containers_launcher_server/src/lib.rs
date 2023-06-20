@@ -23,7 +23,7 @@ mod proto {
 
 use self::proto::oak::containers::{
     launcher_server::{Launcher, LauncherServer},
-    GetImageResponse,
+    GetApplicationConfigResponse, GetImageResponse,
 };
 use anyhow::anyhow;
 use futures::Stream;
@@ -42,6 +42,7 @@ type GetImageResponseStream = Pin<Box<dyn Stream<Item = Result<GetImageResponse,
 struct LauncherServerImplementation {
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
+    application_config: Option<std::path::PathBuf>,
 }
 
 #[tonic::async_trait]
@@ -108,6 +109,24 @@ impl Launcher for LauncherServerImplementation {
             Box::pin(response_stream) as Self::GetContainerBundleStream
         ))
     }
+
+    async fn get_application_config(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<GetApplicationConfigResponse>, tonic::Status> {
+        match &self.application_config {
+            Some(config_path) => {
+                let application_config_file = tokio::fs::File::open(&config_path).await?;
+                let mut buffer = Vec::new();
+                let mut reader = BufReader::new(application_config_file);
+                reader.read_to_end(&mut buffer).await?;
+                Ok(tonic::Response::new(GetApplicationConfigResponse {
+                    config: buffer,
+                }))
+            }
+            None => Ok(tonic::Response::new(GetApplicationConfigResponse::default())),
+        }
+    }
 }
 
 pub async fn new(
@@ -115,10 +134,12 @@ pub async fn new(
     vsock_port: u32,
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
+    application_config: Option<std::path::PathBuf>,
 ) -> Result<(), anyhow::Error> {
     let server_impl = LauncherServerImplementation {
         system_image,
         container_bundle,
+        application_config,
     };
     let vsock_listener = VsockListener::bind(vsock_cid, vsock_port)?.incoming();
 
