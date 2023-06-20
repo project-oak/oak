@@ -4,4 +4,7 @@
 # cxxopt='-std=c++17': 
 #   Build C++ targets using C++17.
 #   <https://stackoverflow.com/questions/40260242/how-to-set-c-standard-version-when-build-with-bazel>
-build --incompatible_enable_cc_toolchain_resolution --cxxopt='-std=c++17'
+# --host_cxxopt='-std=c++17'
+#   Fix Abseil "C++ versions less than C++14 are not supported".
+#   <https://github.com/protocolbuffers/protobuf/issues/12393#issuecomment-1504349780>
+build --incompatible_enable_cc_toolchain_resolution --cxxopt='-std=c++17' --host_cxxopt='-std=c++17'
