@@ -1776,10 +1776,20 @@ name = "oak_containers_launcher"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-stream",
- "bytes",
  "clap",
  "command-fds",
+ "oak_containers_launcher_server",
+ "prost",
+ "tokio",
+]
+
+[[package]]
+name = "oak_containers_launcher_server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "bytes",
  "futures",
  "oak_grpc_utils",
  "prost",
@@ -1795,6 +1805,15 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "oak_containers_orchestrator_client",
+ "tokio",
+]
+
+[[package]]
+name = "oak_containers_orchestrator_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
  "oak_grpc_utils",
  "prost",
  "tokio",
