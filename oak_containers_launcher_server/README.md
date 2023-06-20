@@ -1,4 +1,4 @@
 # Launcher Server
 
-Library implementation of the code responsible for connecting with the
-orchestrator from the launcher.
+Library implementation of the code exposing a service to the orchestrator from
+the launcher.
