@@ -38,7 +38,7 @@ import java.util.Optional;
  * Sequence numbers for requests and responses are incremented separately, meaning that there could
  * be multiple responses per request and multiple requests per response.
  */
-public class ServerEncryptor implements Encryptor {
+public class ServerEncryptor implements AutoCloseable, Encryptor {
   // Info string used by Hybrid Public Key Encryption.
   private static final byte[] OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1".getBytes(UTF_8);
 
@@ -59,6 +59,21 @@ public class ServerEncryptor implements Encryptor {
     this.serverKeyPair = serverKeyPair;
     this.recipientRequestContext = Optional.empty();
     this.recipientResponseContext = Optional.empty();
+  }
+
+  /**
+   * Cleans up resources allocated by recipient contexts.
+   */
+  @Override
+  public void close() {
+    if (this.recipientRequestContext.isPresent()) {
+      this.recipientRequestContext.get().close();
+      this.recipientRequestContext = Optional.empty();
+    }
+    if (this.recipientResponseContext.isPresent()) {
+      this.recipientResponseContext.get().close();
+      this.recipientResponseContext = Optional.empty();
+    }
   }
 
   /**

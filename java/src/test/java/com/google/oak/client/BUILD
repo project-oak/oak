@@ -23,6 +23,7 @@ package(
 java_test(
     name = "client_test",
     srcs = glob(["*.java"]),
+    jvm_flags = ["-Djava.library.path=cc/crypto/hpke/jni"],
     test_class = "com.google.oak.client.OakClientTest",
     deps = [
         "//java/src/main/java/com/google/oak/client",
