@@ -14,7 +14,6 @@
 // limitations under the License.
 
 mod qemu;
-mod server;
 
 use clap::Parser;
 use std::process;
@@ -51,7 +50,7 @@ pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
 async fn main() -> Result<(), anyhow::Error> {
     let args = Args::parse();
 
-    let server = server::new(
+    let server = oak_containers_launcher_server::new(
         args.vsock_cid,
         args.vsock_port,
         args.system_image,
