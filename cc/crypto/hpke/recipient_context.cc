@@ -16,4 +16,13 @@
 
 #include "cc/crypto/hpke/recipient_context.h"
 
-namespace oak::crypto {}  // namespace oak::crypto
+namespace oak::crypto {
+
+absl::StatusOr<KeyPair> KeyPair::Generate() {
+  // TODO(#4026): Generate a key pair using BoringSSL.
+  std::string private_key = "";
+  std::string public_key = "";
+  return KeyPair{private_key, public_key};
+}
+
+}  // namespace oak::crypto
