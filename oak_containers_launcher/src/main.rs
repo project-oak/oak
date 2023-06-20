@@ -28,6 +28,8 @@ struct Args {
     system_image: std::path::PathBuf,
     #[arg(long, required = true, value_parser = path_exists,)]
     container_bundle: std::path::PathBuf,
+    #[arg(long, value_parser = path_exists,)]
+    application_config: Option<std::path::PathBuf>,
     #[command(flatten)]
     qemu_params: qemu::Params,
 }
@@ -53,6 +55,7 @@ async fn main() -> Result<(), anyhow::Error> {
         args.vsock_port,
         args.system_image,
         args.container_bundle,
+        args.application_config,
     );
 
     // Use our PID for the CID of the guest.
