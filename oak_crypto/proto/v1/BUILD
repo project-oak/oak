@@ -27,6 +27,11 @@ proto_library(
     srcs = ["crypto.proto"],
 )
 
+cc_proto_library(
+    name = "crypto_cc_proto",
+    deps = [":crypto_proto"],
+)
+
 java_proto_library(
     name = "crypto_java_proto",
     deps = [":crypto_proto"],

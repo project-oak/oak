@@ -20,11 +20,34 @@ package(
 )
 
 cc_library(
-    name = "hpke",
-    srcs = ["hpke.cc"],
-    hdrs = ["hpke.h"],
+    name = "recipient_context",
+    srcs = ["recipient_context.cc"],
+    hdrs = ["recipient_context.h"],
     deps = [
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "@com_google_boringssl//:crypto",
+    ],
+)
+
+cc_library(
+    name = "sender_context",
+    srcs = ["sender_context.cc"],
+    hdrs = ["sender_context.h"],
+    deps = [
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_boringssl//:crypto",
+    ],
+)
+
+cc_test(
+    name = "sender_context_test",
+    size = "small",
+    srcs = ["sender_context_test.cc"],
+    deps = [
+        ":sender_context",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
     ],
 )

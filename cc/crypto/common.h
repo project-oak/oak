@@ -14,6 +14,21 @@
  * limitations under the License.
  */
 
-#include "hpke.h"
+#ifndef CC_CRYPTO_COMMON_H_
+#define CC_CRYPTO_COMMON_H_
 
-namespace oak::crypto {}  // namespace oak::crypto
+#include "absl/strings/string_view.h"
+
+namespace oak::crypto {
+
+// Info string used by Hybrid Public Key Encryption.
+constexpr absl::string_view OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1";
+
+struct DecryptionResult {
+  std::string plaintext;
+  std::string associated_data;
+};
+
+}  // namespace oak::crypto
+
+#endif  // CC_CRYPTO_COMMON_H_

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef CC_CRYPTO_ENCRYPTOR_H_
-#define CC_CRYPTO_ENCRYPTOR_H_
+#ifndef CC_CRYPTO_CLIENT_ENCRYPTOR_H_
+#define CC_CRYPTO_CLIENT_ENCRYPTOR_H_
 
 #include <memory>
 #include <string>
@@ -23,17 +23,10 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "cc/crypto/hpke/hpke.h"
+#include "cc/crypto/common.h"
+#include "cc/crypto/hpke/sender_context.h"
 
 namespace oak::crypto {
-
-// Info string used by Hybrid Public Key Encryption.
-constexpr absl::string_view OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1";
-
-struct DecryptionResult {
-  std::string plaintext;
-  std::string associated_data;
-};
 
 // Encryptor class for encrypting client requests that will be sent to the server and decrypting
 // server responses that are received by the client. Each Encryptor corresponds to a single crypto
@@ -52,6 +45,13 @@ class ClientEncryptor {
   // <https://secg.org/sec1-v2.pdf>
   static absl::StatusOr<std::unique_ptr<ClientEncryptor>> Create(
       absl::string_view serialized_server_public_key);
+
+  // Constructor for initializing all private variables of the class.
+  ClientEncryptor(SenderContext& sender_hpke_info)
+      : serialized_encapsulated_public_key_(sender_hpke_info.encap_public_key.begin(),
+                                            sender_hpke_info.encap_public_key.end()),
+        sender_request_context_(std::move(sender_hpke_info.sender_request_context)),
+        sender_response_context_(std::move(sender_hpke_info.sender_response_context)){};
 
   // Encrypts `plaintext` and authenticates `associated_data` using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
@@ -72,43 +72,11 @@ class ClientEncryptor {
  private:
   // Encapsulated public key needed to establish a symmetric session key.
   // Only sent in the initial request message of the session.
-  std::string serialized_encapsulated_public_key;
-  std::unique_ptr<SenderRequestContext> sender_request_context;
-  std::unique_ptr<SenderResponseContext> sender_response_context;
-};
-
-// Encryptor class for decrypting client requests that are received by the server and encrypting
-// server responses that will be sent back to the client. Each Encryptor corresponds to a single
-// crypto session between the client and the server.
-//
-// Sequence numbers for requests and responses are incremented separately, meaning that there could
-// be multiple responses per request and multiple requests per response.
-class ServerEncryptor {
- public:
-  ServerEncryptor(KeyPair server_key_pair);
-
-  // Decrypts a [`EncryptedRequest`] proto message using AEAD.
-  // <https://datatracker.ietf.org/doc/html/rfc5116>
-  //
-  // `encrypted_request` must be a serialized [`oak.crypto.EncryptedRequest`] message.
-  // Returns a response message plaintext and associated data.
-  // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
-  absl::StatusOr<DecryptionResult> Decrypt(absl::string_view encrypted_request);
-
-  // Encrypts `plaintext` and authenticates `associated_data` using AEAD.
-  // <https://datatracker.ietf.org/doc/html/rfc5116>
-  //
-  // Returns a serialized [`oak.crypto.EncryptedResponse`] message.
-  // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
-  absl::StatusOr<std::string> Encrypt(absl::string_view plaintext,
-                                      absl::string_view associated_data);
-
- private:
-  KeyPair server_key_pair;
-  std::unique_ptr<RecipientRequestContext> recipient_request_context;
-  std::unique_ptr<RecipientResponseContext> recipient_response_context;
+  std::string serialized_encapsulated_public_key_;
+  std::unique_ptr<SenderRequestContext> sender_request_context_;
+  std::unique_ptr<SenderResponseContext> sender_response_context_;
 };
 
 }  // namespace oak::crypto
 
-#endif  // CC_CRYPTO_ENCRYPTOR_H_
+#endif  // CC_CRYPTO_CLIENT_ENCRYPTOR_H_
