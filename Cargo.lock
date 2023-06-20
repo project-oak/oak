@@ -1777,6 +1777,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "command-fds",
  "oak_containers_launcher_server",
  "prost",
  "tokio",

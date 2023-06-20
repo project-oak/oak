@@ -19,17 +19,18 @@
 mod client;
 mod image;
 
+use anyhow::Context;
 use clap::Parser;
 use client::LauncherClient;
-use image::Image;
-use std::error::Error;
+use nix::mount::{mount, MsFlags};
+use std::{error::Error, fs::create_dir, path::Path};
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(long, required = true)]
+    #[arg(long, default_value_t = 2)]
     launcher_vsock_cid: u32,
 
-    #[arg(long, required = true)]
+    #[arg(long, default_value_t = 8080)]
     launcher_vsock_port: u32,
 
     #[arg(default_value = "/sbin/init")]
@@ -40,10 +41,30 @@ struct Args {
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    let image = Image::new(String::from(image::RAMFS_TMP_DIR))?;
-    let mut client = LauncherClient::new(args.launcher_vsock_cid, args.launcher_vsock_port).await?;
-    let buf = client.get_oak_system_image().await?;
-    image.unpack(&buf)?;
+    // Overmount an empty ramfs to be used as the new root.
+    mount(
+        None::<&str>,
+        "/",
+        Some("ramfs"),
+        MsFlags::empty(),
+        None::<&str>,
+    )
+    .context("overmounting root")?;
 
-    image.switch(&args.init)?
+    // musl expects /proc to be mounted, otherwise libc calls such as realpath(2) will fail.
+    create_dir("/proc")?;
+    mount(
+        None::<&str>,
+        "/proc",
+        Some("proc"),
+        MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV,
+        None::<&str>,
+    )?;
+
+    let mut client = LauncherClient::new(args.launcher_vsock_cid, args.launcher_vsock_port)
+        .await
+        .context("creating the launcher client")?;
+
+    image::load(&mut client, Path::new("/")).await?;
+    image::switch(&args.init).context("switching to the system image")?
 }

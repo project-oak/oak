@@ -81,7 +81,7 @@ struct SenderContext {
 //
 // Encapsulated public key is represented as a NIST P-256 SEC1 encoded point public key.
 // <https://secg.org/sec1-v2.pdf>
-absl::StatusOr<SenderContext> SetUpBaseSender(absl::string_view serialized_recipient_public_key,
+absl::StatusOr<SenderContext> SetupBaseSender(absl::string_view serialized_recipient_public_key,
                                               absl::string_view info);
 
 }  // namespace oak::crypto
