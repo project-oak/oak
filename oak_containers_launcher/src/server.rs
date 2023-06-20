@@ -23,7 +23,7 @@ mod proto {
 
 use self::proto::oak::containers::{
     launcher_server::{Launcher, LauncherServer},
-    GetContainerConfigResponse, GetImageResponse,
+    GetApplicationConfigResponse, GetImageResponse,
 };
 use anyhow::anyhow;
 use futures::Stream;
@@ -110,21 +110,21 @@ impl Launcher for LauncherServerImplementation {
         ))
     }
 
-    async fn get_container_config(
+    async fn get_application_config(
         &self,
         _request: Request<()>,
-    ) -> Result<Response<GetContainerConfigResponse>, tonic::Status> {
+    ) -> Result<Response<GetApplicationConfigResponse>, tonic::Status> {
         match &self.container_config {
             Some(config_path) => {
                 let container_config_file = tokio::fs::File::open(&config_path).await?;
                 let mut buffer = Vec::new();
                 let mut reader = BufReader::new(container_config_file);
                 reader.read_to_end(&mut buffer).await?;
-                Ok(tonic::Response::new(GetContainerConfigResponse {
+                Ok(tonic::Response::new(GetApplicationConfigResponse {
                     config: buffer,
                 }))
             }
-            None => Ok(tonic::Response::new(GetContainerConfigResponse::default())),
+            None => Ok(tonic::Response::new(GetApplicationConfigResponse::default())),
         }
     }
 }
