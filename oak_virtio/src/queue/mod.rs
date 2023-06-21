@@ -71,7 +71,7 @@ impl<'a, const QUEUE_SIZE: usize, const BUFFER_SIZE: usize, A: Allocator>
             .copy_from_slice(&data[..len]);
 
         // Update the length of the descriptor.
-        let mut desc = &mut self.inner.virt_queue.desc[id as usize];
+        let desc = &mut self.inner.virt_queue.desc[id as usize];
         desc.length = len as u32;
 
         self.inner.add_available_descriptor(id);

@@ -103,7 +103,13 @@ impl LauncherMode {
                     .to_str()
                     .unwrap()
                 ),
-                format!("--vmm-binary={}", "/usr/bin/qemu-system-x86_64"),
+                format!(
+                    "--vmm-binary={}",
+                    which::which("qemu-system-x86_64")
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                ),
                 "--memory-size=256M".to_string(),
                 format!("--app-binary={}", &self.enclave_binary_path()),
                 format!(

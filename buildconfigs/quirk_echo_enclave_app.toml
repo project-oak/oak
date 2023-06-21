@@ -1,4 +1,8 @@
 command = [
+  "nix",
+  "develop",
+  ".#rust",
+  "--command",
   "env",
   "--chdir=enclave_apps/quirk_echo_enclave_app",
   "cargo",

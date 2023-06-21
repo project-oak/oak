@@ -74,35 +74,6 @@ jobs:
           ./scripts/docker_pull
           df --human-readable
 
-      # Store various common Rust folders to speed up future runs.
-      #
-      # The main cache key includes the combined hash of all Cargo.lock files in the repository, but
-      # falls back on a more generic prefix if an exact match is not found, so that there is at
-      # least some chance that some of the artifacts will be found there.
-      #
-      # We specify the `./cargo-cache` folder (as per `/scripts/docker_run`), as well as various
-      # `target` folders. This can probably be improved in a variety of ways over time.
-      #
-      # See https://doc.rust-lang.org/nightly/cargo/guide/cargo-home.html#caching-the-cargo-home-in-ci
-      - name: Cache Rust artifacts
-        uses: actions/cache@v3
-        env:
-          # Increment this value to invalidate previous cache entries.
-          CACHE_VERSION: 15
-        with:
-          path: |
-            ./cargo-cache/bin
-            ./cargo-cache/registry/index
-            ./cargo-cache/registry/cache
-            ./cargo-cache/git/db
-            ./sccache-cache
-            ./target
-          key: |
-            cargo-cache-${{ env.CACHE_VERSION }}-${{ matrix.cmd }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            cargo-cache-${{ env.CACHE_VERSION }}-${{ matrix.cmd }}-
-            cargo-cache-${{ env.CACHE_VERSION }}-
-
       - name: Run command
         env:
           RUST_BACKTRACE: 1
@@ -110,7 +81,7 @@ jobs:
           # Do not run tests that require KVM on GitHub Actions, since nested virtualization is not supported.
           OAK_KVM_TESTS: skip
         run: |
-          ./scripts/docker_run ./scripts/xtask --scope=all ${{ matrix.cmd }}
+          ./scripts/docker_run nix develop --command ./scripts/xtask --scope=all ${{ matrix.cmd }}
           df --human-readable
 
         # Ensure that the previous steps did not modify our source-code and that

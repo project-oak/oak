@@ -219,7 +219,6 @@ fn format(scope: &Scope) -> Step {
             run_buildifier(FormatMode::Fix),
             run_prettier(FormatMode::Fix),
             run_markdownlint(FormatMode::Fix),
-            run_embedmd(FormatMode::Fix),
             run_cargo_fmt(FormatMode::Fix, &modified_crates),
         ],
     }
@@ -238,7 +237,6 @@ fn check_format(scope: &Scope) -> Step {
             run_buildifier(FormatMode::Check),
             run_prettier(FormatMode::Check),
             run_markdownlint(FormatMode::Check),
-            run_embedmd(FormatMode::Check),
             // TODO(#1304): Uncomment, when re-run from GitHub is fixed.
             // run_liche(),
             run_cargo_fmt(FormatMode::Check, &modified_crates),
@@ -343,6 +341,7 @@ fn run_prettier(mode: FormatMode) -> Step {
         command: Cmd::new(
             "prettier",
             spread![
+                "--plugin=prettier-plugin-toml".to_string(),
                 match mode {
                     FormatMode::Check => "--check".to_string(),
                     FormatMode::Fix => "--write".to_string(),
@@ -369,29 +368,6 @@ fn run_markdownlint(mode: FormatMode) -> Step {
                             FormatMode::Fix => vec!["--fix".to_string()],
                         },
                         entry,
-                    ],
-                ),
-            })
-            .collect(),
-    }
-}
-
-fn run_embedmd(mode: FormatMode) -> Step {
-    Step::Multiple {
-        name: "embedmd".to_string(),
-        steps: source_files()
-            .filter(|p| is_markdown_file(p))
-            .map(to_string)
-            .map(|entry| Step::Single {
-                name: entry.clone(),
-                command: Cmd::new(
-                    "embedmd",
-                    [
-                        match mode {
-                            FormatMode::Check => "-d",
-                            FormatMode::Fix => "-w",
-                        },
-                        &entry,
                     ],
                 ),
             })
@@ -445,7 +421,10 @@ fn run_shellcheck() -> Step {
             .map(to_string)
             .map(|entry| Step::Single {
                 name: entry.clone(),
-                command: Cmd::new("shellcheck", ["--external-sources", &entry]),
+                command: Cmd::new(
+                    "shellcheck",
+                    ["--exclude=SC2155", "--external-sources", &entry],
+                ),
             })
             .collect(),
     }

@@ -239,6 +239,7 @@ fn is_ignored_path(path: &Path) -> bool {
         || components.contains(&std::path::Component::Normal("bazel-wasm-bin".as_ref()))
         || components.contains(&std::path::Component::Normal("bazel-wasm-out".as_ref()))
         || components.contains(&std::path::Component::Normal("bazel-wasm-oak".as_ref()))
+        || components.contains(&std::path::Component::Normal("bazel-vscode-target".as_ref()))
         || components.contains(&std::path::Component::Normal("cache".as_ref()))
         || components.contains(&std::path::Component::Normal("cargo-cache".as_ref()))
         || components.contains(&std::path::Component::Normal("node_modules".as_ref()))

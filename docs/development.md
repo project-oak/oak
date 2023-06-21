@@ -234,8 +234,14 @@ nix develop
 ```
 
 This will drop you into a subshell in which a completely deterministic
-environment (e.g. compilers, dev tools) is available, based on the configuration
-described in [`flake.nix`](/flake.nix).
+environment (e.g. compilers, dev tools) is available, based on the default shell
+defined in [`flake.nix`](/flake.nix).
+
+To use a non-default shell (e.g. the `containers` one), run
+
+```console
+nix develop .#containers
+```
 
 Note that this may take a while (up to 10 minutes) on the first run, since Nix
 has to download all the dependencies from scratch. It will be almost instant in

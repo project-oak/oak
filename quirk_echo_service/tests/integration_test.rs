@@ -29,7 +29,7 @@ const TEST_DATA: &[u8] = b"test_data";
 
 #[test]
 fn it_should_handle_echo_requests() {
-    let service = EchoService::default();
+    let service = EchoService;
     let mut client = EchoClient::new(EchoServer::new(service));
 
     let request = EchoRequest {

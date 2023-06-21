@@ -2,6 +2,10 @@
 # building the `stage0` binary, and its provenance.
 # See https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/docker.
 command = [
+  "nix",
+  "develop",
+  ".#rust",
+  "--command",
   "env",
   "--chdir=stage0_bin",
   "cargo",

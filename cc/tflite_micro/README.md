@@ -117,10 +117,12 @@ example:
    of validating execution on TEE.
 
 1. Binaries that runs on Oak server
+
    ```bash
    cd oak_tensorflow_enclave
    cargo build
    ```
+
    The binary is built with Oak Restricted Kernel and Oak TensorFlow Service,
    which can be loaded into virtual machine for execution under TEE.
 
