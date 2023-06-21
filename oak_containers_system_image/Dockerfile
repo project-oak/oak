@@ -6,6 +6,7 @@ RUN rm /.dockerenv
 # Install Clear Linux's containers-basic bundle. This gives an installation of
 # docker to run containers. This is a starting point only, we should switch to
 # a more lightweight runtime later.
+# Ref: https://clearlinux.github.io/clear-linux-documentation/tutorials/docker.html#install-the-containers-basic-bundle
 RUN swupd bundle-add containers-basic
 
 # Configure systemd to run docker at startup
