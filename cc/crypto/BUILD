@@ -40,6 +40,7 @@ cc_library(
         ":common",
         "//cc/crypto/hpke:recipient_context",
         "//oak_crypto/proto/v1:crypto_cc_proto",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],

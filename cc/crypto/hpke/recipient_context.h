@@ -69,6 +69,12 @@ struct RecipientContext {
   std::unique_ptr<RecipientResponseContext> recipient_response_context;
 };
 
+// Holds all necessary recipient contexts.
+struct RecipientContext {
+  std::unique_ptr<RecipientRequestContext> recipient_request_context;
+  std::unique_ptr<RecipientResponseContext> recipient_response_context;
+};
+
 // Sets up an HPKE recipient by creating a recipient context.
 // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
 // Returns a tuple with a recipient request and recipient response contexts.
