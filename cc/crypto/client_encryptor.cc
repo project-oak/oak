@@ -72,7 +72,7 @@ absl::StatusOr<DecryptionResult> ClientEncryptor::Decrypt(absl::string_view encr
   // Deserialize response.
   EncryptedResponse response;
   if (!response.ParseFromString(encrypted_response)) {
-    return absl::InternalError("couldn't deserialize response");
+    return absl::InvalidArgumentError("couldn't deserialize response");
   }
 
   // Decrypt response.
