@@ -23,7 +23,10 @@ use anyhow::Context;
 use clap::Parser;
 use client::LauncherClient;
 use nix::mount::{mount, MsFlags};
-use std::{error::Error, fs::create_dir, path::Path};
+use std::{
+    error::Error,
+    process::{Command, Stdio},
+};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -41,6 +44,13 @@ struct Args {
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
+    // spawn a tar as we're going to overmount the root and thus it'll disappear into the aether.
+    let tar = Command::new("/tar")
+        .args(["-C", "/", "-x"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::inherit())
+        .spawn()?;
+
     // Overmount an empty ramfs to be used as the new root.
     mount(
         None::<&str>,
@@ -49,22 +59,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
         MsFlags::empty(),
         None::<&str>,
     )
-    .context("overmounting root")?;
-
-    // musl expects /proc to be mounted, otherwise libc calls such as realpath(2) will fail.
-    create_dir("/proc")?;
-    mount(
-        None::<&str>,
-        "/proc",
-        Some("proc"),
-        MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV,
-        None::<&str>,
-    )?;
+    .context("Error overmounting a ramfs on root")?;
 
     let mut client = LauncherClient::new(args.launcher_vsock_cid, args.launcher_vsock_port)
         .await
-        .context("creating the launcher client")?;
+        .context("Error creating a launcher")?;
 
-    image::load(&mut client, Path::new("/")).await?;
-    image::switch(&args.init).context("switching to the system image")?
+    image::load(&mut client, tar).await?;
+    image::switch(&args.init).context(format!(
+        "Error launching {} from the new system image",
+        args.init
+    ))?
 }

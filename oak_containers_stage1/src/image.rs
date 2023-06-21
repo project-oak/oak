@@ -14,20 +14,34 @@
 // limitations under the License.
 //
 
+use crate::client::LauncherClient;
 use anyhow::{anyhow, Context, Result};
 use nix::unistd::execv;
-use std::{ffi::CString, os::unix::prelude::OsStrExt, path::Path};
-use tar::{self, Archive};
+use std::{ffi::CString, io::Write, os::unix::prelude::OsStrExt, process::Child};
 
-use crate::client::LauncherClient;
-
-pub async fn load(client: &mut LauncherClient, dst: &Path) -> Result<()> {
+pub async fn load(client: &mut LauncherClient, mut tar: Child) -> Result<()> {
     let buf = client
         .get_oak_system_image()
         .await
-        .context("fetching system image")?;
-    let mut archive = Archive::new(&buf[..]);
-    archive.unpack(dst).map_err(|e| anyhow!(e))
+        .context("Error fetching system image")?;
+
+    // We want stdin to be closed (go out of scope) before calling `wait()`, so scope everything
+    // into a separate block.
+    {
+        let mut stdin = tar
+            .stdin
+            .take()
+            .ok_or_else(|| anyhow!("tar stdin was not captured"))?;
+
+        stdin
+            .write_all(&buf[..])
+            .context("Error writing data to `tar`")?;
+        stdin.flush().context("Error flushing input for `tar`")?;
+    }
+
+    tar.wait()
+        .map(drop)
+        .context("Error waiting for `tar` to terminate")
 }
 
 pub fn switch(init: &str) -> Result<!> {
