@@ -30,34 +30,32 @@ using oak::crypto::v1::EncryptedResponse;
 
 absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
     absl::string_view serialized_server_public_key) {
-  absl::StatusOr<SenderContext> setup_base_sender_result =
+  absl::StatusOr<SenderContext> sender_context =
       SetupBaseSender(serialized_server_public_key, OAK_HPKE_INFO);
-  if (!setup_base_sender_result.ok()) {
-    return setup_base_sender_result.status();
+  if (!sender_context.ok()) {
+    return sender_context.status();
   }
-  SenderContext sender_context = std::move(*setup_base_sender_result);
-  return std::make_unique<ClientEncryptor>(ClientEncryptor(sender_context));
+  return std::make_unique<ClientEncryptor>(ClientEncryptor(*sender_context));
 }
 
 absl::StatusOr<std::string> ClientEncryptor::Encrypt(absl::string_view plaintext,
                                                      absl::string_view associated_data) {
   // Encrypt request.
-  absl::StatusOr<std::string> seal_result =
+  absl::StatusOr<std::string> ciphertext =
       sender_request_context_->Seal(plaintext, associated_data);
-  if (!seal_result.ok()) {
-    return seal_result.status();
+  if (!ciphertext.ok()) {
+    return ciphertext.status();
   }
-  std::string ciphertext = std::move(*seal_result);
 
   // Create request message.
   EncryptedRequest request;
-  *request.mutable_encrypted_message()->mutable_ciphertext() = ciphertext;
+  *request.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
   *request.mutable_encrypted_message()->mutable_associated_data() = associated_data;
 
   // Encapsulated public key is only sent in the initial request message of the session.
-  if (!serialized_encapsulated_public_key_.empty()) {
+  if (!serialized_encapsulated_public_key_has_been_sent_) {
     *request.mutable_serialized_encapsulated_public_key() = serialized_encapsulated_public_key_;
-    serialized_encapsulated_public_key_ = "";
+    serialized_encapsulated_public_key_has_been_sent_ = true;
   }
 
   // Serialize request.
@@ -76,14 +74,13 @@ absl::StatusOr<DecryptionResult> ClientEncryptor::Decrypt(absl::string_view encr
   }
 
   // Decrypt response.
-  absl::StatusOr<std::string> open_result = sender_response_context_->Open(
+  absl::StatusOr<std::string> plaintext = sender_response_context_->Open(
       response.encrypted_message().ciphertext(), response.encrypted_message().associated_data());
-  if (!open_result.ok()) {
-    return open_result.status();
+  if (!plaintext.ok()) {
+    return plaintext.status();
   }
-  std::string plaintext = std::move(*open_result);
 
-  return DecryptionResult{plaintext, response.encrypted_message().associated_data()};
+  return DecryptionResult{*plaintext, response.encrypted_message().associated_data()};
 }
 
 }  // namespace oak::crypto

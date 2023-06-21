@@ -50,6 +50,7 @@ class ClientEncryptor {
   ClientEncryptor(SenderContext& sender_hpke_info)
       : serialized_encapsulated_public_key_(sender_hpke_info.encap_public_key.begin(),
                                             sender_hpke_info.encap_public_key.end()),
+        serialized_encapsulated_public_key_has_been_sent_(false),
         sender_request_context_(std::move(sender_hpke_info.sender_request_context)),
         sender_response_context_(std::move(sender_hpke_info.sender_response_context)){};
 
@@ -73,6 +74,7 @@ class ClientEncryptor {
   // Encapsulated public key needed to establish a symmetric session key.
   // Only sent in the initial request message of the session.
   std::string serialized_encapsulated_public_key_;
+  bool serialized_encapsulated_public_key_has_been_sent_;
   std::unique_ptr<SenderRequestContext> sender_request_context_;
   std::unique_ptr<SenderResponseContext> sender_response_context_;
 };
