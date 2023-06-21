@@ -129,8 +129,8 @@ RUN curl --location ${ent_server_url}/raw/${ent_digest} > /usr/local/bin/ent \
 
 # Use a fixed version of Bazel.
 # https://github.com/bazelbuild/bazel
-ARG bazel_version=5.3.1
-ARG bazel_digest=sha256:1e939b50d90f68d30fa4f3c12dfdf31429b83ddd8076c622429854f64253c23d
+ARG bazel_version=6.2.1
+ARG bazel_digest=sha256:d33f5947d7de29c5aec1936d14469dbc966336379c0475d3a000baa32d22cc03
 ARG bazel_url=https://storage.googleapis.com/bazel-apt/pool/jdk1.8/b/bazel/bazel_${bazel_version}_amd64.deb
 RUN ent get ${bazel_digest} --url=${bazel_url} > bazel.deb \
   && apt-get install --no-install-recommends --yes ./bazel.deb \
