@@ -104,10 +104,11 @@ http_archive(
 # https://github.com/grpc/grpc-java
 http_archive(
     name = "io_grpc_grpc_java",
-    sha256 = "3658e6a51e6f0fb28adff98a73c8063559641100f5ed79682bc2abfaaf23bfb7",
-    strip_prefix = "grpc-java-1.50.0",
+    sha256 = "4af5ecbaed16455fcda9fdab36e131696f5092858dd130f026069fcf11817a21",
+    strip_prefix = "grpc-java-1.56.0",
     urls = [
-        "https://github.com/grpc/grpc-java/archive/v1.50.0.zip",
+        # Java gRPC v1.56.0 (2023-06-21).
+        "https://github.com/grpc/grpc-java/archive/refs/tags/v1.56.0.tar.gz",
     ],
 )
 
@@ -119,10 +120,21 @@ grpc_java_repositories()
 # https://github.com/bazelbuild/rules_jvm_external
 http_archive(
     name = "rules_jvm_external",
-    sha256 = "735602f50813eb2ea93ca3f5e43b1959bd80b213b836a07a62a29d757670b77b",
-    strip_prefix = "rules_jvm_external-4.4.2",
-    url = "https://github.com/bazelbuild/rules_jvm_external/archive/4.4.2.zip",
+    sha256 = "f86fd42a809e1871ca0aabe89db0d440451219c3ce46c58da240c7dcdc00125f",
+    strip_prefix = "rules_jvm_external-5.2",
+    urls = [
+        # Rules Java v5.2 (2023-04-13).
+        "https://github.com/bazelbuild/rules_jvm_external/releases/download/5.2/rules_jvm_external-5.2.tar.gz",
+    ],
 )
+
+load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
+
+rules_jvm_external_deps()
+
+load("@rules_jvm_external//:setup.bzl", "rules_jvm_external_setup")
+
+rules_jvm_external_setup()
 
 # Maven rules.
 load("@rules_jvm_external//:defs.bzl", "maven_install")
