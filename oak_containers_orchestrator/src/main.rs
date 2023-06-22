@@ -19,9 +19,10 @@ use oak_containers_orchestrator_client::LauncherClient;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(long, required = true)]
+    #[arg(long, default_value_t = 2)]
     launcher_vsock_cid: u32,
-    #[arg(long, required = true)]
+
+    #[arg(long, default_value_t = 8080)]
     launcher_vsock_port: u32,
 }
 
