@@ -17,7 +17,8 @@ on:
 jobs:
   build_binary:
     if: |
-      github.event_name == 'push' 
+      (github.event_name == 'pull-request' && contains( github.event.pull_request.labels.*.name, 'provenance:force-run') ) ||
+      github.event_name == 'push'
     # We use the same job template to generate provenances for multiple binaries.
     strategy:
       fail-fast: false
