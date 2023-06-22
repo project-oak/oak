@@ -81,6 +81,8 @@ RUN apt-get --yes update \
   # `unzip` and `zlib1g-dev` are needed for Bazel.
   unzip \
   zlib1g-dev \
+  # Needed for ./oak_containers_kernel/make
+  flex bison libelf-dev bc \
   # Cleanup
   && apt-get clean \
   && rm --recursive --force /var/lib/apt/lists/* \
