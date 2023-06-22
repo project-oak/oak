@@ -58,7 +58,7 @@ JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseRe
     jobject recipient_key_pair, jbyteArray info) {
   // TODO(#3642): Use the result of setup_base_recipient instead of manually making the context.
   oak::crypto::RecipientRequestContext* native_recipient_request_context =
-      new oak::crypto::RecipientRequestContext();
+      new oak::crypto::RecipientRequestContext(NULL);
   jclass recipient_request_context_class =
       env->FindClass("com/google/oak/crypto/hpke/Context$RecipientRequestContext");
   jmethodID recipient_request_context_constructor =
@@ -68,7 +68,7 @@ JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseRe
                      (long)native_recipient_request_context);
 
   oak::crypto::RecipientResponseContext* native_recipient_response_context =
-      new oak::crypto::RecipientResponseContext();
+      new oak::crypto::RecipientResponseContext(NULL, std::vector<unsigned char>{});
   jclass recipient_response_context_class =
       env->FindClass("com/google/oak/crypto/hpke/Context$RecipientResponseContext");
   jmethodID recipient_response_context_constructor =
