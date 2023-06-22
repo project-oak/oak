@@ -1,0 +1,11 @@
+[Unit]
+Description=Oak Containers Orchestrator
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/bin/oak_containers_orchestrator
+
+[Install]
+WantedBy=multi-user.target
