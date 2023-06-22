@@ -12,6 +12,14 @@ RUN swupd bundle-add containers-basic
 # Configure systemd to run docker at startup
 RUN systemctl enable docker
 
+# Copy the orchestartor binary & service
+COPY ./target/oak_containers_orchestrator /usr/bin/
+COPY oak-orchestrator.service /lib/systemd/system/
+RUN chmod 644 /lib/systemd/system/oak-orchestrator.service
+
+# Start the orchestartor at boot
+RUN systemctl enable oak-orchestrator
+
 # Don't bother starting the graphical interface, let's stick with the basic multi-user target.
 RUN rm /usr/lib/systemd/system/default.target
 RUN ln -s /usr/lib/systemd/system/multi-user.target /usr/lib/systemd/system/default.target
