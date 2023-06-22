@@ -16,6 +16,4 @@
 
 #include "cc/transport/transport.h"
 
-namespace oak::transport {
-
-}  // namespace oak::transport
+namespace oak::transport {}  // namespace oak::transport

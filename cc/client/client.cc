@@ -16,6 +16,4 @@
 
 #include "cc/client/client.h"
 
-namespace oak::client {
-
-}  // namespace oak::client
+namespace oak::client {}  // namespace oak::client

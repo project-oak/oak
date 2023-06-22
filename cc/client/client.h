@@ -17,8 +17,6 @@
 #ifndef CC_CLIENT_CLIENT_H_
 #define CC_CLIENT_CLIENT_H_
 
-namespace oak::client {
-
-}  // namespace oak::client
+namespace oak::client {}  // namespace oak::client
 
 #endif  // CC_CLIENT_CLIENT_H_

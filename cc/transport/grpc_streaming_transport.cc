@@ -16,6 +16,4 @@
 
 #include "cc/transport/grpc_streaming_transport.h"
 
-namespace oak::transport {
-
-}  // namespace oak::transport
+namespace oak::transport {}  // namespace oak::transport

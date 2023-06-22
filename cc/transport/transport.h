@@ -17,8 +17,6 @@
 #ifndef CC_TRANSPORT_TRANSPORT_H_
 #define CC_TRANSPORT_TRANSPORT_H_
 
-namespace oak::transport {
-
-}  // namespace oak::transport
+namespace oak::transport {}  // namespace oak::transport
 
 #endif  // CC_TRANSPORT_TRANSPORT_H_
