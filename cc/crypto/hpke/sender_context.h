@@ -27,17 +27,11 @@
 
 namespace oak::crypto {
 
-// Helpful struct for keeping track of key information returned from the BoringSSL HPKE library.
-struct KeyInfo {
-  size_t key_size;
-  std::vector<uint8_t> key_bytes;
-};
-
 // Context for generating encrypted requests to the recipient.
 class SenderRequestContext {
  public:
   SenderRequestContext(std::unique_ptr<EVP_HPKE_CTX> hpke_context)
-      : hpke_context_(std::move(hpke_context)){};
+      : hpke_context_(std::move(hpke_context)) {}
 
   // Encrypts message with associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
@@ -55,7 +49,7 @@ class SenderResponseContext {
  public:
   SenderResponseContext(std::unique_ptr<EVP_AEAD_CTX> aead_response_context,
                         std::vector<uint8_t> response_nonce)
-      : aead_response_context_(std::move(aead_response_context)), response_nonce_(response_nonce){};
+      : aead_response_context_(std::move(aead_response_context)), response_nonce_(response_nonce) {}
   // Decrypts response message and validates associated data using AEAD as part of
   // bidirectional communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>

@@ -21,17 +21,11 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "cc/crypto/hpke/utils.h"
+#include "openssl/aead.h"
 #include "openssl/hpke.h"
 
 namespace oak::crypto {
-
-namespace {
-// Oak uses AES-256-GCM AEAD encryption. The bytes here come from
-// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authenticated-encryption-wi>
-constexpr size_t kAeadAlgorithmKeySizeBytes = 32;
-constexpr size_t kAeadNonceSizeBytes = 12;
-
-}  // namespace
 
 absl::StatusOr<std::string> SenderRequestContext::Seal(absl::string_view plaintext,
                                                        absl::string_view associated_data) {
@@ -96,8 +90,6 @@ SenderResponseContext::~SenderResponseContext() {
 
 absl::StatusOr<SenderContext> SetUpBaseSender(absl::string_view serialized_recipient_public_key,
                                               absl::string_view info) {
-  SenderContext sender_hpke_info;
-
   // First collect encapsulated public key information and sender request context.
   KeyInfo encap_public_key_info;
   encap_public_key_info.key_bytes = std::vector<uint8_t>(EVP_HPKE_MAX_ENC_LENGTH);
@@ -131,61 +123,32 @@ absl::StatusOr<SenderContext> SetUpBaseSender(absl::string_view serialized_recip
     return absl::AbortedError("Unable to setup sender context.");
   }
 
+  SenderContext sender_context;
+
   encap_public_key_info.key_bytes.resize(encap_public_key_info.key_size);
-  sender_hpke_info.encap_public_key = encap_public_key_info.key_bytes;
+  sender_context.encap_public_key = encap_public_key_info.key_bytes;
 
-  // Now configure sender response context.
-  // Generate response key for the response context.
-  KeyInfo response_key;
-  response_key.key_bytes.resize(kAeadAlgorithmKeySizeBytes);
-  response_key.key_size = kAeadAlgorithmKeySizeBytes;
-  std::string key_context_string = "response_key";
-  std::vector<uint8_t> key_context_bytes(key_context_string.begin(), key_context_string.end());
-
-  if (!EVP_HPKE_CTX_export(
-          /* ctx= */ hpke_sender_context.get(),
-          /* out= */ response_key.key_bytes.data(),
-          /* secret_len= */ kAeadAlgorithmKeySizeBytes,
-          /* context= */ key_context_bytes.data(),
-          /* context_len= */ key_context_bytes.size())) {
-    return absl::AbortedError("Unable to export client response key.");
+  // Now configure sender response context and nonce.
+  auto aead_response_context = GetResponseContext(hpke_sender_context.get());
+  if (!aead_response_context.ok()) {
+    return aead_response_context.status();
   }
 
-  std::unique_ptr<EVP_AEAD_CTX> aead_response_context(EVP_AEAD_CTX_new(
-      /* aead= */ EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()),
-      /* key= */ response_key.key_bytes.data(),
-      /* key_len= */ response_key.key_size,
-      /* tag_len= */ 0));
-
-  if (aead_response_context == nullptr) {
-    return absl::AbortedError("Unable to generate AEAD response context.");
-  }
-
-  // Generate a nonce for the response context.
-  std::vector<uint8_t> response_nonce(kAeadNonceSizeBytes);
-  std::string nonce_context_string = "response_nonce";
-  std::vector<uint8_t> nonce_context_bytes(nonce_context_string.begin(),
-                                           nonce_context_string.end());
-
-  if (!EVP_HPKE_CTX_export(
-          /* ctx= */ hpke_sender_context.get(),
-          /* out= */ response_nonce.data(),
-          /* secret_len= */ response_nonce.size(),
-          /* context= */ nonce_context_bytes.data(),
-          /* context_len= */ nonce_context_bytes.size())) {
-    return absl::AbortedError("Unable to export client response nonce.");
+  auto response_nonce = GetResponseNonce(hpke_sender_context.get());
+  if (!response_nonce.ok()) {
+    return response_nonce.status();
   }
 
   // Create sender request and response contexts.
   std::unique_ptr<SenderRequestContext>& sender_request_context =
-      sender_hpke_info.sender_request_context;
+      sender_context.sender_request_context;
   sender_request_context = std::make_unique<SenderRequestContext>(std::move(hpke_sender_context));
 
   std::unique_ptr<SenderResponseContext>& sender_response_context =
-      sender_hpke_info.sender_response_context;
+      sender_context.sender_response_context;
   sender_response_context =
-      std::make_unique<SenderResponseContext>(std::move(aead_response_context), response_nonce);
+      std::make_unique<SenderResponseContext>(*std::move(aead_response_context), *response_nonce);
 
-  return sender_hpke_info;
+  return sender_context;
 }
 }  // namespace oak::crypto
