@@ -33,7 +33,8 @@ message GetApplicationConfigResponse {
   bytes config = 1;
 }
 
-// Defines the service exposed by the launcher, that can be invoked by the orchestrator.
+// Defines the service exposed by the launcher, that can be invoked by the stage1 and the
+// orchestrator.
 service Launcher {
   // Provides stage1 with the Oak system image (which contains the Linux distribution and the
   // orchestrator binary).
@@ -42,7 +43,7 @@ service Launcher {
   // Provides orchestrator with the trusted container image.
   rpc GetContainerBundle(google.protobuf.Empty) returns (stream GetImageResponse) {}
 
-  // This method is used by the orchestartor to load and measure the
+  // This method is used by the orchestrator to load and measure the trusted
   // application config. The orchestrator will later, separately expose this
   // config to the application.
   rpc GetApplicationConfig(google.protobuf.Empty) returns (GetApplicationConfigResponse) {}
@@ -50,7 +51,7 @@ service Launcher {
 
 // Defines the service exposed by the orchestrator, that can be invoked by the application.
 service Orchestrator {
-  // Exposes the previously loaded application config to the application,
+  // Exposes the previously loaded trusted application config to the application,
   // which may choose to retrieve it.
   rpc GetApplicationConfig(google.protobuf.Empty) returns (GetApplicationConfigResponse) {}
 }
