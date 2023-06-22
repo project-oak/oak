@@ -163,13 +163,11 @@ absl::StatusOr<RecipientContext> SetupBaseRecipient(
   }
 
   // Set up response encryption.
-  std::cout << "GETTING RESPONSE CONTEXT" << std::endl;
   auto aead_response_context = GetResponseContext(hpke_recipient_context.get());
   if (!aead_response_context.ok()) {
     return aead_response_context.status();
   }
 
-  std::cout << "GETTING RESPONSE NONCE" << std::endl;
   auto response_nonce = GetResponseNonce(hpke_recipient_context.get());
   if (!response_nonce.ok()) {
     return response_nonce.status();

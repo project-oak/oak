@@ -66,7 +66,7 @@ class ClientEncryptor {
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
   // `encrypted_response` must be a serialized [`oak.crypto.EncryptedResponse`] message.
-  // Returns a response message plaintext.
+  // Returns a response message plaintext and associated data.
   // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
   absl::StatusOr<DecryptionResult> Decrypt(absl::string_view encrypted_response);
 
