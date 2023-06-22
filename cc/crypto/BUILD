@@ -20,13 +20,35 @@ package(
 )
 
 cc_library(
-    name = "encryptor",
-    srcs = ["encryptor.cc"],
-    hdrs = ["encryptor.h"],
+    name = "client_encryptor",
+    srcs = ["client_encryptor.cc"],
+    hdrs = ["client_encryptor.h"],
     deps = [
-        "//cc/crypto/hpke:recipient_context",
         "//cc/crypto/hpke:sender_context",
         "//oak_crypto/proto/v1:crypto_cc_proto",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "server_encryptor",
+    srcs = ["server_encryptor.cc"],
+    hdrs = ["server_encryptor.h"],
+    deps = [
+        "//cc/crypto/hpke:recipient_context",
+        "//oak_crypto/proto/v1:crypto_cc_proto",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "encryptors_test",
+    srcs = ["encryptors_test.cc"],
+    deps = [
+        ":client_encryptor",
+        ":recipient_encryptor",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],

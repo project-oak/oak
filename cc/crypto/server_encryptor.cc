@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-#include "cc/crypto/encryptor.h"
-
-#include "absl/status/statusor.h"
-#include "cc/crypto/hpke/sender_context.h"
-#include "oak_crypto/proto/v1/crypto.pb.h"
+#include "cc/crypto/server_encryptor.h"
 
 namespace oak::crypto {}  // namespace oak::crypto
