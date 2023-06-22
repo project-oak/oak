@@ -14,25 +14,9 @@
  * limitations under the License.
  */
 
-#ifndef CC_OAK_CLIENT_TRANSPORT_H_
-#define CC_OAK_CLIENT_TRANSPORT_H_
+#ifndef CC_GRPC_STREAMING_TRANSPORT_TRANSPORT_H_
+#define CC_GRPC_STREAMING_TRANSPORT_TRANSPORT_H_
 
-#include <string>
+namespace oak::transport {}  // namespace oak::transport
 
-#include "absl/status/statusor.h"
-
-namespace oak::oak_client {
-
-// Abstract class for client to enclave data exchange.
-class Transport {
- public:
-  virtual ~Transport() = default;
-
-  // Sends encrypted message requests to the enclave and returns the enclave's
-  // encrypted response.
-  virtual absl::StatusOr<std::string> Invoke(std::string encrypted_request_bytes) = 0;
-};
-
-}  // namespace oak::oak_client
-
-#endif  // CC_OAK_CLIENT_TRANSPORT_H_
+#endif  // CC_GRPC_STREAMING_TRANSPORT_TRANSPORT_H_

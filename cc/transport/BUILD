@@ -26,3 +26,13 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
     ],
 )
+
+cc_library(
+    name = "grpc_streaming_transport",
+    srcs = ["grpc_streaming_transport.cc"],
+    hdrs = ["grpc_streaming_transport.h"],
+    deps = [
+        "//oak_remote_attestation/proto/v1:messages_cc_proto",
+        "//oak_remote_attestation/proto/v1:service_streaming_cc_proto",
+    ],
+)
