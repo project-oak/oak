@@ -237,27 +237,17 @@ impl FwCfg {
 
     /// Reads contents of a file; returns the number of bytes actually read.
     ///
+    /// If reading files via DMA is supported, it will use DMA. If not it will fall back to reading
+    /// byte by byte.
+    ///
     /// The buffer `buf` will be filled to capacity if the file is larger;
     /// if it is shorter, the trailing bytes will not be touched.
     pub fn read_file(&mut self, file: &DirEntry, buf: &mut [u8]) -> Result<usize, &'static str> {
         self.write_selector(file.selector())?;
         let len = min(buf.len(), file.size());
-        self.read_buf(&mut buf[..len])?;
-        Ok(len)
-    }
-
-    /// Reads contents of a file using DMA; returns the number of bytes actually read.
-    ///
-    /// The buffer `buf` will be filled to capacity if the file is larger;
-    /// if it is shorter, the trailing bytes will not be touched.
-    pub fn read_file_dma(
-        &mut self,
-        file: &DirEntry,
-        buf: &mut [u8],
-    ) -> Result<usize, &'static str> {
-        self.write_selector(file.selector())?;
-        let len = min(buf.len(), file.size());
-        self.read_buf_dma(&mut buf[..len])?;
+        if self.read_buf_dma(&mut buf[..len]).is_err() {
+            self.read_buf(&mut buf[..len])?;
+        }
         Ok(len)
     }
 

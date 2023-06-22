@@ -16,9 +16,3 @@ oak_channel = { path = "../oak_channel" }
 oak_core = { path = "../oak_core" }
 oak_restricted_kernel_api = { path = "../oak_restricted_kernel_api" }
 oak_remote_attestation = { path = "../oak_remote_attestation" }
-oak_remote_attestation_interactive = { path = "../oak_remote_attestation_interactive", default-features = false, features = [
-  "rust-crypto"
-] }
-oak_remote_attestation_amd = { path = "../oak_remote_attestation_amd", default-features = false, features = [
-  "rust-crypto"
-] }

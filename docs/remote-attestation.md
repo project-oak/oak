@@ -106,10 +106,9 @@ across invocations, or it may be generated for each invocation).
 For each invocation (consisting of a request followed by a response) the client
 generates a fresh symmetric key for the response, then it concatenates this key
 with the request body, and encrypts the resulting blob with the enclave public
-key using [Hybrid Encryption](https://developers.google.com/tink/hybrid). The
+key using [Hybrid Encryption](https://www.rfc-editor.org/rfc/rfc9180.html). The
 client may also authenticate additional data, which is not encrypted, but is
-bound to the ciphertext via
-[context info](https://developers.google.com/tink/hybrid#context_info_parameter).
+bound to the ciphertext.
 
 It then sends the encrypted message to the server, which forwards it to the
 appropriate trusted enclave which generated the enclave public key. Only this

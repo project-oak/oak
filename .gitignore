@@ -9,6 +9,10 @@
 # Index file used to compare artifacts for reproducibility.
 /reproducibility_index
 
+# Compiled libraries.
+**/*.a
+**/*.so
+
 # Cargo cache.
 /cargo-cache/
 /sccache-cache/

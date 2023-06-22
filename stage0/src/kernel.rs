@@ -113,7 +113,7 @@ pub fn try_load_kernel_image(
     let buf = unsafe { slice::from_raw_parts_mut::<u8>(start_address.as_mut_ptr(), size) };
 
     let actual_size = fw_cfg
-        .read_file_dma(&file, buf)
+        .read_file(&file, buf)
         .expect("could not read kernel file");
     assert_eq!(actual_size, size, "kernel size did not match expected size");
 

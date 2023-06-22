@@ -30,6 +30,10 @@ http_archive(
     ],
 )
 
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()
+
 # Google Abseil.
 # https://github.com/abseil/abseil-cpp
 http_archive(
@@ -66,48 +70,35 @@ http_archive(
     ],
 )
 
+# C++ gRPC support.
+# https://github.com/grpc/grpc
 http_archive(
-    name = "tink_base",
-    sha256 = "536a4ceb3e9e7e35bf52f7cc99838679de8463ab2a1a12b90121c00ee25fe252",
-    strip_prefix = "tink-33accb5bcdff71f34d7551a669831ec9a52674aa/",
+    name = "com_github_grpc_grpc",
+    sha256 = "e034992a0b464042021f6d440f2090acc2422c103a322b0844e3921ccea981dc",
+    strip_prefix = "grpc-1.56.0",
     urls = [
-        # Head commit on 2021-03-02.
-        "https://github.com/google/tink/archive/33accb5bcdff71f34d7551a669831ec9a52674aa.zip",
+        # gRPC v1.56.0 (2023-06-14).
+        "https://github.com/grpc/grpc/archive/refs/tags/v1.56.0.tar.gz",
     ],
 )
 
-load("@tink_base//:tink_base_deps.bzl", "tink_base_deps")
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
 
-tink_base_deps()
+grpc_deps()
 
-load("@tink_base//:tink_base_deps_init.bzl", "tink_base_deps_init")
+load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 
-tink_base_deps_init()
+grpc_extra_deps()
 
-# Tink crypto library for Java.
-http_archive(
-    name = "tink_java",
-    patches = [
-        # This patch removes Android dependencies from Tink Java libraries.
-        # https://github.com/google/tink/issues/507
-        "//third_party/google/tink:Remove-android-from-java.patch",
-    ],
-    sha256 = "5856b0207ffb2cf28dd5c421789ffca3cfeea0680055f455e14bec2f335b1765",
-    strip_prefix = "tink-58be99b3c4d09154d12643327f293cc45b2a6a7b/java_src",
-    # Commit from 2021-05-19
-    urls = [
-        "https://github.com/google/tink/archive/58be99b3c4d09154d12643327f293cc45b2a6a7b.tar.gz",
-    ],
-)
-
-# Java gRPC support for Android examples.
+# Java gRPC support.
 # https://github.com/grpc/grpc-java
 http_archive(
     name = "io_grpc_grpc_java",
-    sha256 = "3658e6a51e6f0fb28adff98a73c8063559641100f5ed79682bc2abfaaf23bfb7",
-    strip_prefix = "grpc-java-1.50.0",
+    sha256 = "4af5ecbaed16455fcda9fdab36e131696f5092858dd130f026069fcf11817a21",
+    strip_prefix = "grpc-java-1.56.0",
     urls = [
-        "https://github.com/grpc/grpc-java/archive/v1.50.0.zip",
+        # Java gRPC v1.56.0 (2023-06-21).
+        "https://github.com/grpc/grpc-java/archive/refs/tags/v1.56.0.tar.gz",
     ],
 )
 
@@ -119,10 +110,21 @@ grpc_java_repositories()
 # https://github.com/bazelbuild/rules_jvm_external
 http_archive(
     name = "rules_jvm_external",
-    sha256 = "735602f50813eb2ea93ca3f5e43b1959bd80b213b836a07a62a29d757670b77b",
-    strip_prefix = "rules_jvm_external-4.4.2",
-    url = "https://github.com/bazelbuild/rules_jvm_external/archive/4.4.2.zip",
+    sha256 = "f86fd42a809e1871ca0aabe89db0d440451219c3ce46c58da240c7dcdc00125f",
+    strip_prefix = "rules_jvm_external-5.2",
+    urls = [
+        # Rules Java v5.2 (2023-04-13).
+        "https://github.com/bazelbuild/rules_jvm_external/releases/download/5.2/rules_jvm_external-5.2.tar.gz",
+    ],
 )
+
+load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
+
+rules_jvm_external_deps()
+
+load("@rules_jvm_external//:setup.bzl", "rules_jvm_external_setup")
+
+rules_jvm_external_setup()
 
 # Maven rules.
 load("@rules_jvm_external//:defs.bzl", "maven_install")
