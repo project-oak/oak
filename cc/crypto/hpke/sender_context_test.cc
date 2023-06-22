@@ -52,11 +52,11 @@ class SenderContextTest : public testing::Test {
 
 TEST_F(SenderContextTest, SetupBaseSenderReturnsUniqueEncapsulatedKey) {
   absl::StatusOr<SenderContext> sender_context =
-      SetUpBaseSender(serialized_public_key_, info_string_);
+      SetupBaseSender(serialized_public_key_, info_string_);
   ASSERT_TRUE(sender_context.ok());
   std::string encapsulated_public_key1(sender_context->encap_public_key.begin(),
                                        sender_context->encap_public_key.end());
-  auto sender_context2 = SetUpBaseSender(serialized_public_key_, info_string_);
+  auto sender_context2 = SetupBaseSender(serialized_public_key_, info_string_);
   ASSERT_TRUE(sender_context2.ok());
   std::string encapsulated_public_key2(sender_context2->encap_public_key.begin(),
                                        sender_context2->encap_public_key.end());
@@ -65,14 +65,14 @@ TEST_F(SenderContextTest, SetupBaseSenderReturnsUniqueEncapsulatedKey) {
 
 TEST_F(SenderContextTest, SetupBaseSenderReturnsInvalidArgumentErrorForEmptyKey) {
   std::string empty_public_key = "";
-  absl::StatusOr<SenderContext> sender_context = SetUpBaseSender(empty_public_key, info_string_);
+  absl::StatusOr<SenderContext> sender_context = SetupBaseSender(empty_public_key, info_string_);
   EXPECT_FALSE(sender_context.ok());
   EXPECT_EQ(sender_context.status().code(), absl::StatusCode::kInvalidArgument);
 }
 
 TEST_F(SenderContextTest, SenderRequestSealsMessageSuccess) {
   absl::StatusOr<SenderContext> sender_context =
-      SetUpBaseSender(serialized_public_key_, info_string_);
+      SetupBaseSender(serialized_public_key_, info_string_);
   ASSERT_TRUE(sender_context.ok());
 
   std::string plaintext = "Hello World";

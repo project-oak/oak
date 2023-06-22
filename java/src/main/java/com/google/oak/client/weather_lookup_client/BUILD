@@ -23,6 +23,7 @@ package(
 java_binary(
     name = "weather_lookup_client",
     srcs = ["Main.java"],
+    jvm_flags = ["-Djava.library.path=cc/crypto/hpke/jni"],
     main_class = "com.google.oak.client.weather_lookup_client.Main",
     deps = [
         "//java/src/main/java/com/google/oak/client",

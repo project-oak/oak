@@ -31,6 +31,8 @@ namespace oak::crypto {
 struct KeyPair {
   std::string private_key;
   std::string public_key;
+
+  static absl::StatusOr<KeyPair> Generate();
 };
 
 class RecipientRequestContext {

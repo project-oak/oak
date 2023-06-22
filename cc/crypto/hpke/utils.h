@@ -27,18 +27,6 @@
 #include "openssl/hpke.h"
 
 namespace oak::crypto {
-// Oak uses AES-256-GCM AEAD encryption. The bytes come from
-// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authenticated-encryption-wi>
-ABSL_CONST_INIT extern const size_t kAeadAlgorithmKeySizeBytes;
-ABSL_CONST_INIT extern const size_t kAeadNonceSizeBytes;
-
-// Info string used by Hybrid Public Key Encryption.
-ABSL_CONST_INIT extern const absl::string_view OAK_HPKE_INFO;
-
-struct DecryptionResult {
-  std::string plaintext;
-  std::string associated_data;
-};
 
 // Helpful struct for keeping track of key information returned from the BoringSSL HPKE library.
 struct KeyInfo {

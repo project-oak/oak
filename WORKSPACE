@@ -22,10 +22,11 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 # https://github.com/protocolbuffers/protobuf
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "ce2fbea3c78147a41b2a922485d283137845303e5e1b6cbd7ece94b96ade7031",
-    strip_prefix = "protobuf-3.21.7",
+    sha256 = "3a5f47ad3aa10192c5577ff086b24b9739a36937c34ceab6db912a16a3ef7f8e",
+    strip_prefix = "protobuf-23.3",
     urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/v3.21.7.tar.gz",
+        # Protocol Buffers v23.3 (2023-06-14).
+        "https://github.com/protocolbuffers/protobuf/releases/download/v23.3/protobuf-23.3.tar.gz",
     ],
 )
 
@@ -33,10 +34,35 @@ http_archive(
 # https://github.com/abseil/abseil-cpp
 http_archive(
     name = "com_google_absl",
-    sha256 = "91ac87d30cc6d79f9ab974c51874a704de9c2647c40f6932597329a282217ba8",
-    strip_prefix = "abseil-cpp-20220623.1",
+    sha256 = "5366d7e7fa7ba0d915014d387b66d0d002c03236448e1ba9ef98122c13b35c36",
+    strip_prefix = "abseil-cpp-20230125.3",
     urls = [
-        "https://github.com/abseil/abseil-cpp/archive/20220623.1.tar.gz",
+        # Abseil LTS 20230125.3.
+        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230125.3.tar.gz",
+    ],
+)
+
+# BoringSSL.
+# https://github.com/google/boringssl
+http_archive(
+    name = "com_google_boringssl",
+    sha256 = "b6dd308895eea9e1f0d3f503b7210141f75ba6817c78b4057406ee8f0a042504",
+    strip_prefix = "boringssl-44cc20b4a0227b8913dc5f9e063443cb05e4134d",
+    urls = [
+        # Head commit on 2023-06-14.
+        "https://github.com/google/boringssl/archive/44cc20b4a0227b8913dc5f9e063443cb05e4134d.zip",
+    ],
+)
+
+# GoogleTest
+# https://github.com/google/googletest
+http_archive(
+    name = "com_google_googletest",
+    sha256 = "983a7f2f4cc2a4d75d94ee06300c46a657291fba965e355d11ab3b6965a7b0e5",
+    strip_prefix = "googletest-b796f7d44681514f58a683a3a71ff17c94edb0c1",
+    urls = [
+        # Latest commit for version 1.13.0. This requires at least C++14.
+        "https://github.com/google/googletest/archive/b796f7d44681514f58a683a3a71ff17c94edb0c1.zip",
     ],
 )
 

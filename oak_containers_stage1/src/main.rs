@@ -16,16 +16,22 @@
 
 #![feature(never_type)]
 
+mod client;
 mod image;
-mod server;
 
+use anyhow::Context;
 use clap::Parser;
-use std::{error::Error, net::SocketAddr};
+use client::LauncherClient;
+use nix::mount::{mount, MsFlags};
+use std::{error::Error, fs::create_dir, path::Path};
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(required = true)]
-    addr: SocketAddr,
+    #[arg(long, default_value_t = 2)]
+    launcher_vsock_cid: u32,
+
+    #[arg(long, default_value_t = 8080)]
+    launcher_vsock_port: u32,
 
     #[arg(default_value = "/sbin/init")]
     init: String,
@@ -35,23 +41,30 @@ struct Args {
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    // We want to send back a meaningful answer to the caller that the RPC has been handled
-    // successfully. Thus, we need two channels: one to notify us that the image has been loaded,
-    // and another so that we could shut down the gRPC server.
-    let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
-    let (loaded_tx, mut loaded_rx) = tokio::sync::mpsc::channel(1);
+    // Overmount an empty ramfs to be used as the new root.
+    mount(
+        None::<&str>,
+        "/",
+        Some("ramfs"),
+        MsFlags::empty(),
+        None::<&str>,
+    )
+    .context("overmounting root")?;
 
-    let join = tokio::spawn(server::ImageLoaderServer::serve(
-        args.addr,
-        shutdown_rx,
-        loaded_tx,
-    ));
-    let image = loaded_rx.recv().await.unwrap();
-    shutdown_tx.send(()).unwrap();
-    join.await??;
+    // musl expects /proc to be mounted, otherwise libc calls such as realpath(2) will fail.
+    create_dir("/proc")?;
+    mount(
+        None::<&str>,
+        "/proc",
+        Some("proc"),
+        MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV,
+        None::<&str>,
+    )?;
 
-    // At this point we've shut down the server, so we expect that the response has been sent back
-    // and the image has been unpacked into the correct directory. Switch roots and execute the
-    // correct init.
-    image.switch(&args.init)?;
+    let mut client = LauncherClient::new(args.launcher_vsock_cid, args.launcher_vsock_port)
+        .await
+        .context("creating the launcher client")?;
+
+    image::load(&mut client, Path::new("/")).await?;
+    image::switch(&args.init).context("switching to the system image")?
 }

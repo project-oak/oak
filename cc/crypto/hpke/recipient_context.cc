@@ -149,17 +149,7 @@ absl::StatusOr<RecipientContext> SetupBaseRecipient(
   if (hpke_recipient_context == nullptr) {
     return absl::AbortedError("Unable to generate HPKE sender context");
   }
-  /*
-  std::cout << "SETTING UP RECIPIENT CONTEXT" << std::endl;
-  std::cout << "ctx = " << hpke_recipient_context.get() << std::endl;
-  std::cout << "key = " << recipient_keys.get() << std::endl;
-  std::cout << "kdf = " << EVP_hpke_hkdf_sha256() << std::endl;
-  std::cout << "aead = " << EVP_hpke_aes_256_gcm() << std::endl;
-  std::cout << "enc = " << encap_public_key_bytes.data() << std::endl;
-  std::cout << "enc_len = " << encap_public_key_bytes.size() << std::endl;
-  std::cout << "info = " << info_bytes.data() << std::endl;
-  std::cout << "info_len = " << info_bytes.size() << std::endl;
-  */
+
   if (!EVP_HPKE_CTX_setup_recipient(
           /* ctx= */ hpke_recipient_context.get(),
           /* key= */ recipient_keys.get(),
@@ -199,6 +189,13 @@ absl::StatusOr<RecipientContext> SetupBaseRecipient(
       *std::move(aead_response_context), *response_nonce);
 
   return recipient_context;
+}
+
+absl::StatusOr<KeyPair> KeyPair::Generate() {
+  // TODO(#4026): Generate a key pair using BoringSSL.
+  std::string private_key = "";
+  std::string public_key = "";
+  return KeyPair{private_key, public_key};
 }
 
 }  // namespace oak::crypto

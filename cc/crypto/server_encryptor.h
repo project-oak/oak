@@ -23,8 +23,8 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "cc/crypto/common.h"
 #include "cc/crypto/hpke/recipient_context.h"
-#include "cc/crypto/hpke/utils.h"
 
 namespace oak::crypto {
 

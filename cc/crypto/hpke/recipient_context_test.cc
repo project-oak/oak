@@ -100,7 +100,7 @@ TEST_F(RecipientContextTest, SetupBaseRecipientReturnsValidPointersOnSuccess) {
 
 TEST_F(RecipientContextTest, RecipeintRequestContextOpenSuccess) {
   // Initialize an HPKE sender.
-  auto sender_context = SetUpBaseSender(recipient_key_pair_.public_key, info_string_);
+  auto sender_context = SetupBaseSender(recipient_key_pair_.public_key, info_string_);
   ASSERT_TRUE(sender_context.ok());
 
   std::string plaintext = "Hello World";
@@ -122,7 +122,7 @@ TEST_F(RecipientContextTest, RecipeintRequestContextOpenSuccess) {
 
 TEST_F(RecipientContextTest, RecipeintRequestContextOpenFailure) {
   // Initialize an HPKE sender.
-  auto sender_context = SetUpBaseSender(recipient_key_pair_.public_key, info_string_);
+  auto sender_context = SetupBaseSender(recipient_key_pair_.public_key, info_string_);
   ASSERT_TRUE(sender_context.ok());
 
   std::string plaintext = "Hello World";

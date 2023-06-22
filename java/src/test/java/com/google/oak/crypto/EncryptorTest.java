@@ -31,8 +31,6 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class EncryptorTest {
-  private static final KeyPair TEST_KEY_PAIR = new KeyPair(new byte[0], new byte[0]);
-
   private static final byte[] TEST_REQUEST_PLAINTEXT =
       new byte[] {'R', 'e', 'q', 'u', 'e', 's', 't'};
   private static final byte[] TEST_REQUEST_ASSOCIATED_DATA = new byte[] {'d', 'a', 't', 'a', '1'};
@@ -45,10 +43,14 @@ public class EncryptorTest {
 
   @Test
   public void testEncryptor() throws Exception {
+    // Generate key pair.
+    Result<KeyPair, Exception> keyPairGenerateResult = KeyPair.Generate();
+    KeyPair keyPair = keyPairGenerateResult.unwrap("couldn't create key pair");
+
     // TODO(#3644): Implement and test Java hybrid encryption.
-    ServerEncryptor serverEncryptor = new ServerEncryptor(TEST_KEY_PAIR);
+    ServerEncryptor serverEncryptor = new ServerEncryptor(keyPair);
     Result<ClientEncryptor, Exception> clientEncryptorCreateResult =
-        ClientEncryptor.create(TEST_KEY_PAIR.publicKey);
+        ClientEncryptor.create(keyPair.publicKey);
     Assert.assertTrue(clientEncryptorCreateResult.isSuccess());
     ClientEncryptor clientEncryptor = clientEncryptorCreateResult.success().get();
 
@@ -102,5 +104,7 @@ public class EncryptorTest {
       Assert.assertArrayEquals(
           decryptResponseResult.success().get().associatedData, TEST_RESPONSE_ASSOCIATED_DATA);
     }
+    serverEncryptor.close();
+    clientEncryptor.close();
   }
 }

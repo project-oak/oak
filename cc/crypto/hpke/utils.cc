@@ -23,9 +23,10 @@
 
 namespace oak::crypto {
 
-const size_t kAeadAlgorithmKeySizeBytes = 32;
-const size_t kAeadNonceSizeBytes = 12;
-const absl::string_view OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1";
+// Oak uses AES-256-GCM AEAD encryption. The bytes come from
+// <https://www.rfc-editor.org/rfc/rfc9180.html#name-authenticated-encryption-wi>
+constexpr size_t kAeadAlgorithmKeySizeBytes = 32;
+constexpr size_t kAeadNonceSizeBytes = 12;
 
 absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetResponseContext(EVP_HPKE_CTX* hpke_ctx) {
   std::vector<uint8_t> response_key(kAeadAlgorithmKeySizeBytes);

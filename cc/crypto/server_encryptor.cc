@@ -16,4 +16,8 @@
 
 #include "cc/crypto/server_encryptor.h"
 
+#include "absl/status/statusor.h"
+#include "cc/crypto/hpke/recipient_context.h"
+#include "oak_crypto/proto/v1/crypto.pb.h"
+
 namespace oak::crypto {}  // namespace oak::crypto

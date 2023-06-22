@@ -24,6 +24,7 @@ cc_library(
     srcs = ["client_encryptor.cc"],
     hdrs = ["client_encryptor.h"],
     deps = [
+        ":common",
         "//cc/crypto/hpke:sender_context",
         "//oak_crypto/proto/v1:crypto_cc_proto",
         "@com_google_absl//absl/status:statusor",
@@ -36,6 +37,7 @@ cc_library(
     srcs = ["server_encryptor.cc"],
     hdrs = ["server_encryptor.h"],
     deps = [
+        ":common",
         "//cc/crypto/hpke:recipient_context",
         "//oak_crypto/proto/v1:crypto_cc_proto",
         "@com_google_absl//absl/status:statusor",
@@ -43,13 +45,21 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "common",
+    hdrs = ["common.h"],
+    deps = [
+        "@com_google_absl//absl/strings",
+    ],
+)
+
 cc_test(
-    name = "encryptors_test",
-    srcs = ["encryptors_test.cc"],
+    name = "encryptor_test",
+    size = "small",
+    srcs = ["encryptor_test.cc"],
     deps = [
         ":client_encryptor",
-        ":recipient_encryptor",
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings",
+        ":server_encryptor",
+        "@com_google_googletest//:gtest_main",
     ],
 )
