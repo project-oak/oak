@@ -51,7 +51,7 @@ pub fn try_load_initial_ram_disk(
     // layout or alignment.
     let buf = unsafe { slice::from_raw_parts_mut::<u8>(address.as_mut_ptr(), size) };
     let actual_size = fw_cfg
-        .read_file_dma(&file, buf)
+        .read_file(&file, buf)
         .expect("could not read initial RAM disk");
     assert_eq!(
         actual_size, size,
