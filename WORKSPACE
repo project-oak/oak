@@ -30,6 +30,10 @@ http_archive(
     ],
 )
 
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()
+
 # Google Abseil.
 # https://github.com/abseil/abseil-cpp
 http_archive(
