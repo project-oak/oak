@@ -24,8 +24,8 @@
 namespace oak::crypto {
 
 namespace {
-using oak::crypto::v1::EncryptedRequest;
-using oak::crypto::v1::EncryptedResponse;
+using ::oak::crypto::v1::EncryptedRequest;
+using ::oak::crypto::v1::EncryptedResponse;
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
