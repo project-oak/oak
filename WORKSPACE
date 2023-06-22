@@ -66,40 +66,6 @@ http_archive(
     ],
 )
 
-http_archive(
-    name = "tink_base",
-    sha256 = "536a4ceb3e9e7e35bf52f7cc99838679de8463ab2a1a12b90121c00ee25fe252",
-    strip_prefix = "tink-33accb5bcdff71f34d7551a669831ec9a52674aa/",
-    urls = [
-        # Head commit on 2021-03-02.
-        "https://github.com/google/tink/archive/33accb5bcdff71f34d7551a669831ec9a52674aa.zip",
-    ],
-)
-
-load("@tink_base//:tink_base_deps.bzl", "tink_base_deps")
-
-tink_base_deps()
-
-load("@tink_base//:tink_base_deps_init.bzl", "tink_base_deps_init")
-
-tink_base_deps_init()
-
-# Tink crypto library for Java.
-http_archive(
-    name = "tink_java",
-    patches = [
-        # This patch removes Android dependencies from Tink Java libraries.
-        # https://github.com/google/tink/issues/507
-        "//third_party/google/tink:Remove-android-from-java.patch",
-    ],
-    sha256 = "5856b0207ffb2cf28dd5c421789ffca3cfeea0680055f455e14bec2f335b1765",
-    strip_prefix = "tink-58be99b3c4d09154d12643327f293cc45b2a6a7b/java_src",
-    # Commit from 2021-05-19
-    urls = [
-        "https://github.com/google/tink/archive/58be99b3c4d09154d12643327f293cc45b2a6a7b.tar.gz",
-    ],
-)
-
 # Java gRPC support for Android examples.
 # https://github.com/grpc/grpc-java
 http_archive(
