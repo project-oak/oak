@@ -70,7 +70,27 @@ http_archive(
     ],
 )
 
-# Java gRPC support for Android examples.
+# C++ gRPC support.
+# https://github.com/grpc/grpc
+http_archive(
+    name = "com_github_grpc_grpc",
+    sha256 = "e034992a0b464042021f6d440f2090acc2422c103a322b0844e3921ccea981dc",
+    strip_prefix = "grpc-1.56.0",
+    urls = [
+        # gRPC v1.56.0 (2023-06-14).
+        "https://github.com/grpc/grpc/archive/refs/tags/v1.56.0.tar.gz",
+    ],
+)
+
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps", "grpc_test_only_deps")
+
+grpc_deps()
+
+load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
+
+grpc_extra_deps()
+
+# Java gRPC support.
 # https://github.com/grpc/grpc-java
 http_archive(
     name = "io_grpc_grpc_java",
