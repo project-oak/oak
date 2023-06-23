@@ -9,8 +9,8 @@ on:
   push:
     branches: [main]
   # This workflow builds several binaries and is very time and resource consuming. As a result it
-  # disabled disabled by default on pull-request events. If you need to test this workflow on your
-  # PR before merge, label it with `provenance:force-run` to trigger the workflow.
+  # is disabled by default on pull-request events. If you need to test this workflow on your PR
+  # before merge, label it with `provenance:force-run` to trigger the workflow.
   pull_request:
     branches: [main]
 
