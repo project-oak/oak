@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef CC_OAK_CLIENT_VERIFIER_H_
-#define CC_OAK_CLIENT_VERIFIER_H_
+#ifndef CC_CLIENT_VERIFIER_H_
+#define CC_CLIENT_VERIFIER_H_
 
 #include <string>
 
@@ -54,4 +54,4 @@ class Verifier {
 
 }  // namespace oak::oak_client
 
-#endif  // CC_OAK_CLIENT_VERIFIER_H_
+#endif  // CC_CLIENT_VERIFIER_H_

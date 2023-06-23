@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef CC_OAK_CLIENT_CRYPTO_PROVIDER_H_
-#define CC_OAK_CLIENT_CRYPTO_PROVIDER_H_
+#ifndef CC_CLIENT_CRYPTO_PROVIDER_H_
+#define CC_CLIENT_CRYPTO_PROVIDER_H_
 
 #include <string>
 
@@ -54,4 +54,4 @@ class CryptoProvider {
 
 }  // namespace oak::oak_client
 
-#endif  // CC_OAK_CLIENT_CRYPTO_PROVIDER_H_
+#endif  // CC_CLIENT_CRYPTO_PROVIDER_H_

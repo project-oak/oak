@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef CC_OAK_CLIENT_OAK_CLIENT_H_
-#define CC_OAK_CLIENT_OAK_CLIENT_H_
+#ifndef CC_CLIENT_CLIENT_H_
+#define CC_CLIENT_CLIENT_H_
 
 #include <memory>
 #include <string>
@@ -72,4 +72,4 @@ class OakClientBuilder {
 
 }  // namespace oak::oak_client
 
-#endif  // CC_OAK_CLIENT_OAK_CLIENT_H_
+#endif  // CC_CLIENT_CLIENT_H_

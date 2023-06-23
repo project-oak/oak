@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef CC_OAK_CLIENT_EVIDENCE_PROVIDER_H_
-#define CC_OAK_CLIENT_EVIDENCE_PROVIDER_H_
+#ifndef CC_CLIENT_EVIDENCE_PROVIDER_H_
+#define CC_CLIENT_EVIDENCE_PROVIDER_H_
 
 #include "oak_remote_attestation/proto/v1/messages.pb.h"
 
@@ -35,4 +35,4 @@ class EvidenceProvider {
 
 }  // namespace oak::oak_client
 
-#endif  // CC_OAK_CLIENT_EVIDENCE_PROVIDER_H_
+#endif  // CC_CLIENT_EVIDENCE_PROVIDER_H_
