@@ -24,6 +24,7 @@ cc_library(
     srcs = [
         "context_jni.cc",
         "hpke_jni.cc",
+        "keypair_jni.cc",
     ],
     hdrs = [
         "com_google_oak_crypto_hpke_Context_RecipientRequestContext.h",
@@ -31,6 +32,7 @@ cc_library(
         "com_google_oak_crypto_hpke_Context_SenderRequestContext.h",
         "com_google_oak_crypto_hpke_Context_SenderResponseContext.h",
         "com_google_oak_crypto_hpke_Hpke.h",
+        "com_google_oak_crypto_hpke_KeyPair.h",
     ],
     deps = [
         ":jni",
