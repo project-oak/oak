@@ -9,8 +9,8 @@ on:
   push:
     branches: [main]
   # This workflow builds several binaries and is very time and resource consuming. As a result it
-  # disabled disabled by default on pull-request events. If you need to test this workflow on your
-  # PR before merge, label it with `provenance:force-run` to trigger the workflow.
+  # is disabled by default on pull-request events. If you need to test this workflow on your PR
+  # before merge, label it with `provenance:force-run` to trigger the workflow.
   pull_request:
     branches: [main]
 
@@ -18,7 +18,7 @@ jobs:
   build_binary:
     if: |
       github.event_name == 'push' ||
-      github.event_name == 'pull-request' && ${{ contains(github.event.pull_request.labels.*.name, 'provenance:force-run') }}
+      contains(github.event.pull_request.labels.*.name, 'provenance:force-run')
     # We use the same job template to generate provenances for multiple binaries.
     strategy:
       fail-fast: false
