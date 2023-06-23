@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_flatten")
+load("@io_bazel_rules_docker//container:container.bzl", "container_flatten", "container_image")
 load("@io_bazel_rules_docker//docker/util:run.bzl", "container_run_and_commit")
 
 package(
@@ -26,7 +26,8 @@ container_image(
     name = "oak_containers_system_image_base",
     base = "@clear_linux_amd64//image",
     files = [
-        "//oak_containers_system_image/image_data:oak-orchestrator.service"
+        "//oak_containers_system_image/image_data:oak-orchestrator.service",
+        ":oak_containers_orchestrator"
     ],
 )
 
@@ -42,12 +43,13 @@ container_run_and_commit(
         "swupd bundle-add containers-basic",
         "systemctl enable docker",
         # Start the orchestartor a boot
+        "mv /oak_containers_orchestrator /usr/bin/",
         "mv /oak-orchestrator.service /lib/systemd/system/",
         "chmod 644 /lib/systemd/system/oak-orchestrator.service",
         "systemctl enable oak-orchestrator",
         # Don't bother starting the graphical interface, let's stick with the basic multi-user target.
         "rm /usr/lib/systemd/system/default.target",
-        "ln -s /usr/lib/systemd/system/multi-user.target /usr/lib/systemd/system/default.target"
+        "ln -s /usr/lib/systemd/system/multi-user.target /usr/lib/systemd/system/default.target",
     ],
     image = ":oak_containers_system_image_base.tar",
 )
