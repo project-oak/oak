@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#ifndef CC_GRPC_STREAMING_TRANSPORT_TRANSPORT_H_
-#define CC_GRPC_STREAMING_TRANSPORT_TRANSPORT_H_
+#ifndef CC_TRANSPORT_GRPC_STREAMING_TRANSPORT_H_
+#define CC_TRANSPORT_GRPC_STREAMING_TRANSPORT_H_
 
 namespace oak::transport {}  // namespace oak::transport
 
-#endif  // CC_GRPC_STREAMING_TRANSPORT_TRANSPORT_H_
+#endif  // CC_TRANSPORT_GRPC_STREAMING_TRANSPORT_H_

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef CC_OAK_CLIENT_TRANSPORT_H_
-#define CC_OAK_CLIENT_TRANSPORT_H_
+#ifndef CC_TRANSPORT_TRANSPORT_H_
+#define CC_TRANSPORT_TRANSPORT_H_
 
 #include <string>
 
@@ -35,4 +35,4 @@ class Transport {
 
 }  // namespace oak::oak_client
 
-#endif  // CC_OAK_CLIENT_TRANSPORT_H_
+#endif  // CC_TRANSPORT_TRANSPORT_H_
