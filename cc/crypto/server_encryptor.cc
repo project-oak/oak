@@ -16,8 +16,89 @@
 
 #include "cc/crypto/server_encryptor.h"
 
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "cc/crypto/common.h"
 #include "cc/crypto/hpke/recipient_context.h"
 #include "oak_crypto/proto/v1/crypto.pb.h"
 
-namespace oak::crypto {}  // namespace oak::crypto
+namespace oak::crypto {
+
+namespace {
+using ::oak::crypto::v1::EncryptedRequest;
+using ::oak::crypto::v1::EncryptedResponse;
+}  // namespace
+
+absl::StatusOr<DecryptionResult> ServerEncryptor::Decrypt(absl::string_view encrypted_request) {
+  // Deserialize request.
+  EncryptedRequest request;
+  if (!request.ParseFromString(encrypted_request)) {
+    return absl::InvalidArgumentError("couldn't deserialize request");
+  }
+
+  // Get recipient context.
+  if (!recipient_request_context_) {
+    absl::Status status = InitializeRecipientContexts(request);
+    if (!status.ok()) {
+      return status;
+    }
+  }
+
+  // Decrypt request.
+  absl::StatusOr<std::string> plaintext = recipient_request_context_->Open(
+      request.encrypted_message().ciphertext(), request.encrypted_message().associated_data());
+  if (!plaintext.ok()) {
+    return plaintext.status();
+  }
+
+  return DecryptionResult{*plaintext, request.encrypted_message().associated_data()};
+}
+
+absl::StatusOr<std::string> ServerEncryptor::Encrypt(absl::string_view plaintext,
+                                                     absl::string_view associated_data) {
+  // Get recipient context.
+  if (!recipient_response_context_) {
+    return absl::InternalError("server encryptor is not initialized");
+  }
+
+  // Encrypt response.
+  absl::StatusOr<std::string> ciphertext =
+      recipient_response_context_->Seal(plaintext, associated_data);
+  if (!ciphertext.ok()) {
+    return ciphertext.status();
+  }
+
+  // Create response message.
+  EncryptedResponse response;
+  *response.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
+  *response.mutable_encrypted_message()->mutable_associated_data() = associated_data;
+
+  // Serialize response.
+  std::string serialized_response;
+  if (!response.SerializeToString(&serialized_response)) {
+    return absl::InternalError("couldn't serialize response");
+  }
+  return serialized_response;
+}
+
+absl::Status ServerEncryptor::InitializeRecipientContexts(const EncryptedRequest& request) {
+  // Get serialized encapsulated public key.
+  if (!request.has_serialized_encapsulated_public_key()) {
+    return absl::InvalidArgumentError(
+        "serialized encapsulated public key is not present in the initial request message");
+  }
+  std::string serialized_encapsulated_public_key = request.serialized_encapsulated_public_key();
+
+  // Create recipient contexts.
+  absl::StatusOr<RecipientContext> recipient_context =
+      SetupBaseRecipient(serialized_encapsulated_public_key, server_key_pair_, OAK_HPKE_INFO);
+  if (!recipient_context.ok()) {
+    return recipient_context.status();
+  }
+  recipient_request_context_ = std::move(recipient_context->recipient_request_context);
+  recipient_response_context_ = std::move(recipient_context->recipient_response_context);
+
+  return absl::OkStatus();
+}
+
+}  // namespace oak::crypto

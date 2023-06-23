@@ -98,7 +98,7 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
     byte[] ciphertext = aeadEncryptedMessage.getCiphertext().toByteArray();
     byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
 
-    // Get recipient context;
+    // Get recipient context.
     if (this.recipientRequestContext.isEmpty()) {
       // Get serialized encapsulated public key.
       if (encryptedRequest.getSerializedEncapsulatedPublicKey().equals(ByteString.EMPTY)) {
@@ -140,7 +140,7 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
   @Override
   public final Result<byte[], Exception> encrypt(
       final byte[] plaintext, final byte[] associatedData) {
-    // Get recipient context;
+    // Get recipient context.
     if (this.recipientResponseContext.isEmpty()) {
       return Result.error(new Exception("server encryptor is not initialized"));
     }
