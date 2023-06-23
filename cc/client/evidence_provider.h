@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
-#ifndef CC_OAK_CLIENT_TRANSPORT_H_
-#define CC_OAK_CLIENT_TRANSPORT_H_
+#ifndef CC_OAK_CLIENT_EVIDENCE_PROVIDER_H_
+#define CC_OAK_CLIENT_EVIDENCE_PROVIDER_H_
 
-#include <string>
-
-#include "absl/status/statusor.h"
+#include "oak_remote_attestation/proto/v1/messages.pb.h"
 
 namespace oak::oak_client {
 
-// Abstract class for client to enclave data exchange.
-class Transport {
- public:
-  virtual ~Transport() = default;
+using ::oak::session::v1::AttestationBundle;
 
-  // Sends encrypted message requests to the enclave and returns the enclave's
-  // encrypted response.
-  virtual absl::StatusOr<std::string> Invoke(std::string encrypted_request_bytes) = 0;
+// Abstract class for fetching the enclave's public key, attestation report, and
+// other metadata needed to for the Verifier class.
+class EvidenceProvider {
+ public:
+  virtual ~EvidenceProvider() = default;
+
+  // Collects evidence that may be present on the device or on the server.
+  virtual absl::StatusOr<AttestationBundle> GetEvidence() = 0;
 };
 
 }  // namespace oak::oak_client
 
-#endif  // CC_OAK_CLIENT_TRANSPORT_H_
+#endif  // CC_OAK_CLIENT_EVIDENCE_PROVIDER_H_
