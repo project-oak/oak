@@ -19,12 +19,44 @@ package(
     licenses = ["notice"],
 )
 
+# Libraries
+
+cc_library(
+    name = "crypto_provider",
+    hdrs = ["crypto_provider.h"],
+    deps = [
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_library(
+    name = "evidence_provider",
+    hdrs = ["evidence_provider.h"],
+    deps = [
+        "//oak_remote_attestation/proto/v1:messages_cc_proto",
+    ],
+)
+
 cc_library(
     name = "client",
     srcs = ["client.cc"],
     hdrs = ["client.h"],
     deps = [
+        ":crypto_provider",
+        ":evidence_provider",
+        ":verifier",
+        "//cc/transport",
         "//oak_remote_attestation/proto/v1:messages_cc_proto",
         "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_library(
+    name = "verifier",
+    hdrs = ["verifier.h"],
+    deps = [
+        ":evidence_provider",
+        "//oak_remote_attestation/proto/v1:messages_cc_proto",
+        "@com_google_absl//absl/status",
     ],
 )

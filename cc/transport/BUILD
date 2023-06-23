@@ -21,10 +21,9 @@ package(
 
 cc_library(
     name = "transport",
-    srcs = ["transport.cc"],
     hdrs = ["transport.h"],
     deps = [
-        "//oak_remote_attestation/proto/v1:messages_cc_proto",
+        "@com_google_absl//absl/status:statusor",
     ],
 )
 

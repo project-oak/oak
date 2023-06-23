@@ -14,9 +14,62 @@
  * limitations under the License.
  */
 
-#ifndef CC_CLIENT_CLIENT_H_
-#define CC_CLIENT_CLIENT_H_
+#ifndef CC_OAK_CLIENT_OAK_CLIENT_H_
+#define CC_OAK_CLIENT_OAK_CLIENT_H_
 
-namespace oak::client {}  // namespace oak::client
+#include <memory>
+#include <string>
+#include <utility>
 
-#endif  // CC_CLIENT_CLIENT_H_
+#include "absl/status/statusor.h"
+#include "cc/client/crypto_provider.h"
+#include "cc/client/evidence_provider.h"
+#include "cc/client/verifier.h"
+#include "cc/transport/transport.h"
+
+namespace oak::oak_client {
+
+// Oak client class for communicating with a Trusted Execution Environment.
+class OakClient {
+ public:
+  // This constructor should only ever be called by the OakClientBuilder.
+  OakClient(std::unique_ptr<Transport> transport, std::unique_ptr<CryptoProvider> crypto_provider);
+
+  // Encrypts the request bytes and sends it to the Trusted Execution
+  // Environment. The encrypted response from the Trusted Execution Environment
+  // is decrypted and the returned. A failed status is returned if there is an
+  // error issuing the encrypted request.
+  absl::StatusOr<std::string> Invoke(std::string request_bytes);
+
+ private:
+  std::unique_ptr<Transport> transport_;
+  std::unique_ptr<CryptoProvider> crypto_provider_;
+};
+
+// IMPORTANT: transport and crypto_provider parameters are ultimatley passed to
+// the generated OakClient so each must be a unique pointer.
+class OakClientBuilder {
+ public:
+  // Constructs an OakClientBuilder from all necessary components.
+  OakClientBuilder(EvidenceProvider* evidence_provider, Verifier* verifier,
+                   ReferenceValue& reference, std::unique_ptr<Transport> transport,
+                   std::unique_ptr<CryptoProvider> crypto_provider)
+      : evidence_provider_(evidence_provider),
+        verifier_(verifier),
+        reference_(reference),
+        transport_(std::move(transport)),
+        crypto_provider_(std::move(crypto_provider)) {}
+
+  absl::StatusOr<OakClient> Build();
+
+ private:
+  EvidenceProvider* evidence_provider_;
+  Verifier* verifier_;
+  ReferenceValue& reference_;
+  std::unique_ptr<Transport> transport_;
+  std::unique_ptr<CryptoProvider> crypto_provider_;
+};
+
+}  // namespace oak::oak_client
+
+#endif  // CC_OAK_CLIENT_OAK_CLIENT_H_
