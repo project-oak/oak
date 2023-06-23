@@ -14,4 +14,9 @@
 # limitations under the License.
 #
 
+package(
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
+)
+
 exports_files(glob(["*"]))

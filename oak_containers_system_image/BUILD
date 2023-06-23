@@ -17,6 +17,10 @@
 load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_flatten")
 load("@io_bazel_rules_docker//docker/util:run.bzl", "container_run_and_commit")
 
+package(
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
+)
 
 container_image(
     name = "oak_containers_system_image_base",
