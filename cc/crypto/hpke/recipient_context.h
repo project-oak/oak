@@ -64,11 +64,6 @@ class RecipientResponseContext {
   std::vector<uint8_t> response_nonce_;
 };
 
-struct RecipientContext {
-  std::unique_ptr<RecipientRequestContext> recipient_request_context;
-  std::unique_ptr<RecipientResponseContext> recipient_response_context;
-};
-
 // Holds all necessary recipient contexts.
 struct RecipientContext {
   std::unique_ptr<RecipientRequestContext> recipient_request_context;
