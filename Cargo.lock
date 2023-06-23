@@ -1468,6 +1468,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
+name = "memmap"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6585fd95e7bb50d6cc31e20d4cf9afb4e2ba16c5846fc76793f11218da9c475b"
+dependencies = [
+ "libc",
+ "winapi",
+]
+
+[[package]]
 name = "memoffset"
 version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1785,6 +1795,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "log",
+ "memmap",
  "nix 0.26.2",
  "simple_logger",
 ]
@@ -2282,6 +2293,16 @@ name = "opaque-debug"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
+
+[[package]]
+name = "open_dice_fdt_generator"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "simple_logger",
+ "vm-fdt",
+]
 
 [[package]]
 name = "openssl-probe"
@@ -3730,6 +3751,12 @@ dependencies = [
  "log",
  "zerocopy",
 ]
+
+[[package]]
+name = "vm-fdt"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f43fb5a6bd1a7d423ad72802801036719b7546cf847a103f8fe4575f5b0d45a6"
 
 [[package]]
 name = "volatile"

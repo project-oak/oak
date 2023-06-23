@@ -36,6 +36,26 @@ fn main() -> ! {
 
     info!("Echo app started");
 
+    let mut dice_reader = OpenOptions::new()
+        .read(true)
+        .open("/dev/open-dice0")
+        .expect("couldn't open DICE device for reading");
+
+    let mut dice_size = [0u8; 8];
+    dice_reader
+        .read(&mut dice_size)
+        .expect("couldn't read DICE size");
+    let size = u64::from_le_bytes(dice_size);
+    info!("DICE size: {}", size);
+
+    let dice = unsafe {
+        memmap::MmapOptions::new()
+            .len(1024)
+            .map(&dice_reader)
+            .expect("couldn't map DICE region")
+    };
+    info!("DICE data: {:?}", &dice[..]);
+
     let mut buf = [0u8; 1024];
     // We use the first Virtio Console port for communications with the host.
     let mut reader = OpenOptions::new()

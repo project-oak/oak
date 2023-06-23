@@ -111,7 +111,21 @@ impl ZeroPage {
     /// `setup_data` needs to be mutable because underneath the covers it's a C-style linked list,
     /// and we need to assign the pointer to the next value in the list to the `next` field in its
     /// header.
-    pub fn add_setup_data(&mut self, setup_data: &mut oak_linux_boot_params::CCSetupData) {
+    pub fn add_cc_setup_data(&mut self, setup_data: &mut oak_linux_boot_params::CCSetupData) {
+        // Put our header as the first element in the linked list.
+        setup_data.header.next = self.inner.hdr.setup_data;
+        self.inner.hdr.setup_data = &setup_data.header as *const oak_linux_boot_params::SetupData;
+    }
+
+    /// Adds a header to the list of setup headers.
+    ///
+    /// `setup_data` needs to be mutable because underneath the covers it's a C-style linked list,
+    /// and we need to assign the pointer to the next value in the list to the `next` field in its
+    /// header.
+    pub fn add_dtb_setup_data<const N: usize>(
+        &mut self,
+        setup_data: &mut oak_linux_boot_params::DtbSetupData<N>,
+    ) {
         // Put our header as the first element in the linked list.
         setup_data.header.next = self.inner.hdr.setup_data;
         self.inner.hdr.setup_data = &setup_data.header as *const oak_linux_boot_params::SetupData;

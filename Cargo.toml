@@ -52,6 +52,7 @@ members = [
   "oak_tdx_guest",
   "oak_tensorflow_service",
   "oak_virtio",
+  "open_dice_fdt_generator",
   "sev_serial",
   "snp_measurement",
   "stage0",

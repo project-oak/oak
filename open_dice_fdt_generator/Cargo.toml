@@ -1,5 +1,5 @@
 [package]
-name = "oak_echo_linux_init"
+name = "open_dice_fdt_generator"
 version = "0.1.0"
 authors = ["Conrad Grobler <grobler@google.com>"]
 edition = "2021"
@@ -7,7 +7,6 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
-simple_logger = "*"
 log = "*"
-memmap = "*"
-nix = "*"
+simple_logger = "*"
+vm-fdt = "*"

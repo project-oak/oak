@@ -128,6 +128,26 @@ impl CCSetupData {
     }
 }
 
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug)]
+pub struct DtbSetupData<const N: usize> {
+    pub header: SetupData,
+    pub data: [u8; N],
+}
+
+impl<const N: usize> DtbSetupData<N> {
+    pub fn new(data: [u8; N]) -> Self {
+        Self {
+            header: SetupData {
+                next: core::ptr::null(),
+                type_: SetupDataType::DTB,
+                len: N as u32,
+            },
+            data,
+        }
+    }
+}
+
 /// Real-mode Kernel Header.
 ///
 /// For each field, some are information from the kernel to the bootloader ("read"), some are

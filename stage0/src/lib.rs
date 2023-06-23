@@ -17,6 +17,8 @@
 #![no_std]
 #![feature(int_roundings)]
 #![feature(nonnull_slice_from_raw_parts)]
+#![feature(maybe_uninit_uninit_array_transpose)]
+#![feature(maybe_uninit_write_slice)]
 
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use oak_sev_guest::io::PortFactoryWrapper;
@@ -45,6 +47,8 @@ mod zero_page;
 // Reserve 128K for boot data structures.
 static BOOT_ALLOC: alloc::Allocator<0x20000> = alloc::Allocator::uninit();
 
+#[link_section = ".boot"]
+static mut DICE: [MaybeUninit<u8>; 1024] = MaybeUninit::uninit().transpose();
 #[link_section = ".boot"]
 #[no_mangle]
 static SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
@@ -217,7 +221,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
             .leak(oak_linux_boot_params::CCSetupData::new(cc_blob))
             .expect("Failed to allocate memory for CCSetupData");
 
-        zero_page.add_setup_data(setup_data);
+        zero_page.add_cc_setup_data(setup_data);
     }
 
     if let Some(cmdline) = kernel::try_load_cmdline(&mut fwcfg) {
@@ -247,6 +251,42 @@ pub fn rust64_start(encrypted: u64) -> ! {
     }
 
     zero_page.set_acpi_rsdp_addr(acpi::build_acpi_tables(&mut fwcfg).unwrap());
+
+    let data = [254u8; 1024];
+    let dice = unsafe { MaybeUninit::write_slice(&mut DICE, &data) };
+
+    log::info!("DICE address: {}", dice.as_ptr() as usize);
+
+    let mut dtb_setup_data = BOOT_ALLOC
+        .leak(oak_linux_boot_params::DtbSetupData::new([
+            208u8, 13, 254, 237, 0, 0, 2, 38, 0, 0, 0, 56, 0, 0, 1, 176, 0, 0, 0, 40, 0, 0, 0, 17,
+            0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 118, 0, 0, 1, 120, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 2,
+            0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 15, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 6, 0, 0, 0, 27,
+            108, 105, 110, 117, 120, 0, 0, 0, 0, 0, 0, 1, 105, 110, 116, 101, 114, 114, 117, 112,
+            116, 45, 99, 111, 110, 116, 114, 111, 108, 108, 101, 114, 64, 102, 101, 101, 48, 48,
+            48, 48, 48, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 19, 0, 0, 0, 27, 105, 110, 116, 101, 108, 44,
+            99, 101, 52, 49, 48, 48, 45, 108, 97, 112, 105, 99, 0, 0, 0, 0, 0, 3, 0, 0, 0, 16, 0,
+            0, 0, 38, 0, 0, 0, 0, 254, 224, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 0, 0, 0, 3, 0, 0, 0, 0,
+            0, 0, 0, 42, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 63, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0,
+            0, 0, 0, 80, 0, 0, 0, 2, 0, 0, 0, 1, 114, 101, 115, 101, 114, 118, 101, 100, 45, 109,
+            101, 109, 111, 114, 121, 0, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 3,
+            0, 0, 0, 4, 0, 0, 0, 15, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 104, 0, 0, 0, 1,
+            111, 112, 101, 110, 45, 100, 105, 99, 101, 64, 48, 120, 49, 48, 48, 48, 0, 0, 0, 0, 0,
+            0, 0, 3, 0, 0, 0, 17, 0, 0, 0, 27, 103, 111, 111, 103, 108, 101, 44, 111, 112, 101,
+            110, 45, 100, 105, 99, 101, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 16, 0, 0, 0, 38, 0, 0, 0,
+            0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 16, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 111, 0, 0, 0,
+            2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 9, 35, 97, 100, 100, 114, 101, 115, 115, 45, 99,
+            101, 108, 108, 115, 0, 35, 115, 105, 122, 101, 45, 99, 101, 108, 108, 115, 0, 99, 111,
+            109, 112, 97, 116, 105, 98, 108, 101, 0, 114, 101, 103, 0, 105, 110, 116, 101, 114,
+            114, 117, 112, 116, 45, 99, 111, 110, 116, 114, 111, 108, 108, 101, 114, 0, 35, 105,
+            110, 116, 101, 114, 114, 117, 112, 116, 45, 99, 101, 108, 108, 115, 0, 105, 110, 116,
+            101, 108, 44, 118, 105, 114, 116, 117, 97, 108, 45, 119, 105, 114, 101, 45, 109, 111,
+            100, 101, 0, 114, 97, 110, 103, 101, 115, 0, 110, 111, 45, 109, 97, 112, 0,
+        ]))
+        .expect("Failed to allocate memory for DtbSetupData");
+
+    zero_page.add_dtb_setup_data(&mut dtb_setup_data);
 
     if let Some(ram_disk) =
         initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel_info)
