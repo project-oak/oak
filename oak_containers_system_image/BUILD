@@ -50,6 +50,6 @@ container_run_and_commit(
 
 # Merge the layers and export the container's rootfs
 container_flatten(
-    name = "oak_containers_system_image_flat",
+    name = "oak_containers_system_image_rootfs",
     image = ":oak_containers_system_image_commit.tar",
 )
