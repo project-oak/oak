@@ -15,7 +15,12 @@ futures-util = "*"
 nix = "*"
 prost = { workspace = true }
 tar = "*"
-tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
+tokio = { version = "*", features = [
+  "rt-multi-thread",
+  "macros",
+  "process",
+  "sync"
+] }
 tokio-vsock = { version = "*", features = ["tonic-conn"] }
 tonic = { workspace = true }
 tower = "*"

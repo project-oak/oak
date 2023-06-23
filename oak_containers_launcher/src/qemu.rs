@@ -48,6 +48,10 @@ pub struct Params {
     /// Gigabyte).
     #[arg(long)]
     pub memory_size: Option<String>,
+
+    /// Size (in kilobytes) of the ramdrive used for the system root.
+    #[arg(long)]
+    pub ramdrive_size: u32,
 }
 
 pub struct Qemu {
@@ -68,7 +72,7 @@ impl Qemu {
         cmd.arg("-enable-kvm");
         // Needed to expose advanced CPU features. Specifically RDRAND which is required for remote
         // attestation.
-        cmd.args(["-cpu", "IvyBridge-IBRS,enforce"]);
+        cmd.args(["-cpu", "host"]);
         // Set memory size if given.
         if let Some(memory_size) = params.memory_size {
             cmd.args(["-m", &memory_size]);
@@ -135,7 +139,8 @@ impl Qemu {
         ]);
         cmd.args([
             "-fw_cfg",
-            "name=opt/stage0/cmdline,string=console=ttyS0 panic=-1",
+            format!(
+            "name=opt/stage0/cmdline,string=console=ttyS0 panic=-1 brd.rd_nr=1 brd.rd_size={} brd.max_part=1", params.ramdrive_size).as_str()
         ]);
 
         println!("QEMU command line: {:?}", cmd);
