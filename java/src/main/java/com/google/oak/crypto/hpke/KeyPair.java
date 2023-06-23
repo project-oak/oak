@@ -37,7 +37,6 @@ public class KeyPair {
       return Result.error(new Exception("Failed to generate KeyPair."));
     }
     return Result.success(kp);
-    // return Result.success(new KeyPair(new byte[0], new byte[0]));
   }
 
   private KeyPair(byte[] privateKey, byte[] publicKey) {
