@@ -26,7 +26,11 @@ use nix::{
     mount::{mount, umount2, MntFlags, MsFlags},
     unistd::chroot,
 };
-use std::{error::Error, fs::create_dir, path::Path};
+use std::{
+    error::Error,
+    fs::{self, create_dir},
+    path::Path,
+};
 use tokio::process::Command;
 
 #[derive(Parser, Debug)]
@@ -93,5 +97,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     image::load(&mut client, Path::new("/"))
         .await
         .context("error loading the system image")?;
+
+    // If the image didn't contain a `/etc/machine-id` file, create a placeholder one that systemd
+    // will replace during startup. If you don't have that file at all, `systemd-machine-id-setup`
+    // unit will fail.
+    if !Path::new("/etc/machine-id").exists() {
+        fs::write("/etc/machine-id", []).context("error writing placeholder /etc/machine-id")?;
+    }
     image::switch(&args.init).context("error switching to the system image")?
 }
