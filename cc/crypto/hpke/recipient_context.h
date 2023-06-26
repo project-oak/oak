@@ -32,7 +32,7 @@ struct KeyPair {
   std::string private_key;
   std::string public_key;
 
-  // Generates a KeyPair that the recipient and sender can use for HPKE.
+  // Generates a KeyPair that the recipient can use for HPKE.
   static absl::StatusOr<KeyPair> Generate();
 };
 
