@@ -1830,6 +1830,7 @@ dependencies = [
  "prost",
  "rand_core 0.6.4",
  "sha2 0.10.6",
+ "x25519-dalek",
 ]
 
 [[package]]
