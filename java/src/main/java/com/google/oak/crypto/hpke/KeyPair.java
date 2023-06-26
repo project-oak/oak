@@ -18,12 +18,25 @@ package com.google.oak.crypto.hpke;
 import com.google.oak.util.Result;
 
 public class KeyPair {
+  static {
+    try {
+      System.loadLibrary("hpke-jni");
+    } catch (UnsatisfiedLinkError e) {
+      System.exit(1);
+    }
+  }
+
   public final byte[] privateKey;
   public final byte[] publicKey;
 
+  private static native KeyPair nativeGenerate();
+
   public static final Result<KeyPair, Exception> Generate() {
-    // TODO(#3642): Generate a real key pair in BoringSSL via JNI.
-    return Result.success(new KeyPair(new byte[0], new byte[0]));
+    KeyPair kp = nativeGenerate();
+    if (kp == null) {
+      return Result.error(new Exception("Failed to generate KeyPair."));
+    }
+    return Result.success(kp);
   }
 
   private KeyPair(byte[] privateKey, byte[] publicKey) {
