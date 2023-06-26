@@ -157,15 +157,29 @@ TEST_F(RecipientContextTest, RecipeintResponseContextSealSuccess) {
 }
 
 TEST_F(RecipientContextTest, RecipeintResponseContextSealFailure) {
-  auto sender_context = SetupBaseRecipient(encap_public_key_, recipient_key_pair_, info_string_);
-  ASSERT_TRUE(sender_context.ok());
+  auto recipient_context = SetupBaseRecipient(encap_public_key_, recipient_key_pair_, info_string_);
+  ASSERT_TRUE(recipient_context.ok());
 
   std::string empty_plaintext = "";
 
-  auto ciphertext =
-      sender_context->recipient_response_context->Seal(empty_plaintext, associated_data_response_);
+  auto ciphertext = recipient_context->recipient_response_context->Seal(empty_plaintext,
+                                                                        associated_data_response_);
   EXPECT_FALSE(ciphertext.ok());
   EXPECT_EQ(ciphertext.status().code(), absl::StatusCode::kInvalidArgument);
+}
+
+TEST_F(RecipientContextTest, GenerateKeysAndSetupBaseRecipientSuccess) {
+  auto key_pair = KeyPair::Generate();
+  ASSERT_TRUE(key_pair.ok());
+
+  auto sender_context = SetupBaseSender(key_pair->public_key, info_string_);
+  ASSERT_TRUE(sender_context.ok());
+
+  std::string encap_public_key(sender_context->encap_public_key.begin(),
+                               sender_context->encap_public_key.end());
+
+  auto recipient_context = SetupBaseRecipient(encap_public_key, *key_pair, info_string_);
+  EXPECT_TRUE(recipient_context.ok());
 }
 
 }  // namespace

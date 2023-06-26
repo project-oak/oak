@@ -43,7 +43,7 @@ absl::Status ValidateKeys(std::vector<uint8_t>& public_key_bytes,
           /* kem= */ EVP_hpke_x25519_hkdf_sha256(),
           /* priv_key= */ private_key_bytes.data(),
           /* priv_key_len= */ private_key_bytes.size())) {
-    return absl::AbortedError("Failed to generate HPKE keys.");
+    return absl::AbortedError("Failed to generate HPKE keys for validation.");
   }
 
   std::vector<uint8_t> verified_public_key_bytes(public_key_bytes.size());
@@ -190,9 +190,39 @@ absl::StatusOr<RecipientContext> SetupBaseRecipient(
 }
 
 absl::StatusOr<KeyPair> KeyPair::Generate() {
-  // TODO(#4026): Generate a key pair using BoringSSL.
-  std::string private_key = "";
-  std::string public_key = "";
+  bssl::ScopedEVP_HPKE_KEY recipient_keys;
+
+  if (!EVP_HPKE_KEY_generate(
+          /* key= */ recipient_keys.get(),
+          /* kem= */ EVP_hpke_x25519_hkdf_sha256())) {
+    return absl::AbortedError("Failed to generate HPKE keys");
+  }
+
+  std::vector<uint8_t> public_key_bytes(EVP_HPKE_MAX_PUBLIC_KEY_LENGTH);
+  size_t public_key_bytes_len;
+  if (!EVP_HPKE_KEY_public_key(
+          /* key= */ recipient_keys.get(),
+          /* out= */ public_key_bytes.data(),
+          /* out_len= */ &public_key_bytes_len,
+          /* max_out= */ public_key_bytes.size())) {
+    return absl::AbortedError("Failed to retrieve public key");
+  }
+  public_key_bytes.resize(public_key_bytes_len);
+
+  std::vector<uint8_t> private_key_bytes(EVP_HPKE_MAX_PRIVATE_KEY_LENGTH);
+  size_t private_key_bytes_len;
+  if (!EVP_HPKE_KEY_private_key(
+          /* key= */ recipient_keys.get(),
+          /* out= */ private_key_bytes.data(),
+          /* out_len= */ &private_key_bytes_len,
+          /* max_out= */ private_key_bytes.size())) {
+    return absl::AbortedError("Failed to retrieve private key");
+  }
+  private_key_bytes.resize(private_key_bytes_len);
+
+  std::string public_key(public_key_bytes.begin(), public_key_bytes.end());
+  std::string private_key(private_key_bytes.begin(), private_key_bytes.end());
+
   return KeyPair{private_key, public_key};
 }
 
