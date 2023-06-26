@@ -136,18 +136,18 @@ public class Result<R, E> {
 
   /**
    * Unwraps and returns the success value in this Result, if one is present.
-   * Otherwise throws a RuntimeException containing the given error message.
+   * Otherwise throws an UnwrapException containing the given error message.
    *
    * @param message the error message to include in the exception
    * @return the success value, if present
-   * @throws RuntimeException containing the given error message, if the success value in not
+   * @throws UnwrapException containing the given error message, if the success value in not
    *     present in the Result
    */
-  public R unwrap(String message) throws RuntimeException {
+  public R unwrap(String message) throws UnwrapException {
     if (isSuccess()) {
       return success().get();
     }
-    throw new RuntimeException(String.format("%s: %s", message, error().get()));
+    throw new UnwrapException(String.format("%s: %s", message, error().get()));
   }
 
   /**

@@ -28,13 +28,13 @@ absl::Status ValidateKeys(std::vector<uint8_t>& public_key_bytes,
                           std::vector<uint8_t>& private_key_bytes,
                           std::vector<uint8_t> encap_public_key_bytes,
                           EVP_HPKE_KEY* recipient_keys) {
-  if (private_key_bytes.size() == 0) {
+  if (private_key_bytes.empty()) {
     return absl::InvalidArgumentError("A private key must be provided.");
   }
-  if (public_key_bytes.size() == 0) {
+  if (public_key_bytes.empty()) {
     return absl::InvalidArgumentError("A public key must be provided.");
   }
-  if (encap_public_key_bytes.size() == 0) {
+  if (encap_public_key_bytes.empty()) {
     return absl::InvalidArgumentError("An encapsulated public key must be provided.");
   }
 
@@ -93,7 +93,7 @@ RecipientRequestContext::~RecipientRequestContext() { EVP_HPKE_CTX_free(hpke_con
 absl::StatusOr<std::string> RecipientResponseContext::Seal(absl::string_view plaintext,
                                                            absl::string_view associated_data) {
   std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
-  if (plaintext_bytes.size() == 0) {
+  if (plaintext_bytes.empty()) {
     return absl::InvalidArgumentError("No plaintext was provided");
   }
   std::vector<uint8_t> associated_data_bytes(associated_data.begin(), associated_data.end());

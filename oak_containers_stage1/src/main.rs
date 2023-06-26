@@ -22,8 +22,12 @@ mod image;
 use anyhow::Context;
 use clap::Parser;
 use client::LauncherClient;
-use nix::mount::{mount, MsFlags};
+use nix::{
+    mount::{mount, umount2, MntFlags, MsFlags},
+    unistd::chroot,
+};
 use std::{error::Error, fs::create_dir, path::Path};
+use tokio::process::Command;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -40,31 +44,54 @@ struct Args {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
-
-    // Overmount an empty ramfs to be used as the new root.
+    if !Path::new("/dev").try_exists()? {
+        create_dir("/dev").context("error creating /dev")?;
+    }
     mount(
         None::<&str>,
-        "/",
-        Some("ramfs"),
+        "/dev",
+        Some("devtmpfs"),
         MsFlags::empty(),
         None::<&str>,
     )
-    .context("overmounting root")?;
+    .context("error mounting /dev")?;
 
+    Command::new("/mke2fs")
+        .args(["/dev/ram0"])
+        .spawn()?
+        .wait()
+        .await?;
+    if !Path::new("/rootfs").try_exists()? {
+        create_dir("/rootfs").context("error creating /rootfs")?;
+    }
+    mount(
+        Some("/dev/ram0"),
+        "/rootfs",
+        Some("ext4"),
+        MsFlags::empty(),
+        None::<&str>,
+    )
+    .context("error mounting ramdrive to /rootfs")?;
+    umount2("/dev", MntFlags::empty()).context("error unmounting /dev")?;
+
+    chroot("/rootfs").context("error chrooting to /rootfs")?;
     // musl expects /proc to be mounted, otherwise libc calls such as realpath(2) will fail.
-    create_dir("/proc")?;
+    create_dir("/proc").context("error creating /proc")?;
     mount(
         None::<&str>,
         "/proc",
         Some("proc"),
         MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV,
         None::<&str>,
-    )?;
+    )
+    .context("error mounting /proc")?;
 
     let mut client = LauncherClient::new(args.launcher_vsock_cid, args.launcher_vsock_port)
         .await
-        .context("creating the launcher client")?;
+        .context("error creating the launcher client")?;
 
-    image::load(&mut client, Path::new("/")).await?;
-    image::switch(&args.init).context("switching to the system image")?
+    image::load(&mut client, Path::new("/"))
+        .await
+        .context("error loading the system image")?;
+    image::switch(&args.init).context("error switching to the system image")?
 }

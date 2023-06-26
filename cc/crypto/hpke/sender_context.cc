@@ -57,7 +57,7 @@ SenderRequestContext::~SenderRequestContext() { EVP_HPKE_CTX_free(hpke_context_.
 absl::StatusOr<std::string> SenderResponseContext::Open(absl::string_view ciphertext,
                                                         absl::string_view associated_data) {
   std::vector<uint8_t> ciphertext_bytes(ciphertext.begin(), ciphertext.end());
-  if (ciphertext_bytes.size() == 0) {
+  if (ciphertext_bytes.empty()) {
     return absl::InvalidArgumentError("No ciphertext was provided.");
   }
   std::vector<uint8_t> associated_data_bytes(associated_data.begin(), associated_data.end());
@@ -99,7 +99,7 @@ absl::StatusOr<SenderContext> SetupBaseSender(absl::string_view serialized_recip
   std::vector<uint8_t> recipient_public_key_bytes(serialized_recipient_public_key.begin(),
                                                   serialized_recipient_public_key.end());
 
-  if (recipient_public_key_bytes.size() == 0) {
+  if (recipient_public_key_bytes.empty()) {
     return absl::InvalidArgumentError("No key was provided.");
   }
 
