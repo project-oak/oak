@@ -23,6 +23,7 @@ import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Optional;
 import org.junit.Assert;
 import org.junit.Test;
@@ -62,11 +63,10 @@ public class EncryptorTest {
       byte[] serializedEncryptedRequest = encryptRequestResult.success().get();
 
       EncryptedRequest encryptedRequest = EncryptedRequest.parseFrom(serializedEncryptedRequest);
-      // TODO(#3644): Once we implement Java hybrid encryption, we need to add a test for checking
-      // that the message was actually encrypted.
-      // Assert.assertFalse(
-      //     assertArrayEquals(encryptedRequest.getEncryptedMessage().getCiphertext().toByteArray(),
-      //         TEST_REQUEST_PLAINTEXT));
+      // Check that the message was actually encrypted.
+      Assert.assertFalse(
+          Arrays.equals(encryptedRequest.getEncryptedMessage().getCiphertext().toByteArray(),
+              TEST_REQUEST_PLAINTEXT));
       Assert.assertArrayEquals(
           encryptedRequest.getEncryptedMessage().getAssociatedData().toByteArray(),
           TEST_REQUEST_ASSOCIATED_DATA);
@@ -87,11 +87,10 @@ public class EncryptorTest {
 
       EncryptedResponse encryptedResponse =
           EncryptedResponse.parseFrom(serializedEncryptedResponse);
-      // TODO(#3644): Once we implement Java hybrid encryption, we need to add a test for checking
-      // that the message was actually encrypted.
-      // Assert.assertFalse(
-      //     assertArrayEquals(encryptedResponse.getEncryptedMessage().getCiphertext().toByteArray(),
-      //         TEST_RESPONSE_PLAINTEXT));
+      // Check that the message was actually encrypted.
+      Assert.assertFalse(
+          Arrays.equals(encryptedResponse.getEncryptedMessage().getCiphertext().toByteArray(),
+              TEST_RESPONSE_PLAINTEXT));
       Assert.assertArrayEquals(
           encryptedResponse.getEncryptedMessage().getAssociatedData().toByteArray(),
           TEST_RESPONSE_ASSOCIATED_DATA);
