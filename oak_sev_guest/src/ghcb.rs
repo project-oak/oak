@@ -401,7 +401,7 @@ where
 
     /// Calls a CPUID function for the given input using the GHCB protocol.
     pub fn get_cpuid(&mut self, request: CpuidInput) -> Result<CpuidOutput, &'static str> {
-        let mut ghcb = self.ghcb.as_mut();
+        let ghcb = self.ghcb.as_mut();
         ghcb.sw_exit_code = SW_EXIT_CODE_CPUID;
         ghcb.sw_exit_info_1 = 0;
         ghcb.sw_exit_info_2 = 0;
@@ -469,7 +469,7 @@ where
         request_address: PhysAddr,
         response_address: PhysAddr,
     ) -> Result<(), &'static str> {
-        let mut ghcb = self.ghcb.as_mut();
+        let ghcb = self.ghcb.as_mut();
         ghcb.sw_exit_code = SW_EXIT_CODE_GUEST_REQUEST;
         ghcb.sw_exit_info_1 = request_address.as_u64();
         ghcb.sw_exit_info_2 = response_address.as_u64();

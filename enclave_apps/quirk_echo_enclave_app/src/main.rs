@@ -47,7 +47,7 @@ fn main() -> ! {
 // https://github.com/project-oak/oak/blob/main/oak_channel/SPEC.md
 fn start_echo_server() -> ! {
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
-    let service = quirk_echo_service::EchoService::default();
+    let service = quirk_echo_service::EchoService;
     let server = quirk_echo_service::proto::quirk::echo::EchoServer::new(service);
     oak_channel::server::start_blocking_server(
         Box::<FileDescriptorChannel>::default(),

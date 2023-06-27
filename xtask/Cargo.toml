@@ -37,3 +37,4 @@ tokio = { version = "*", features = [
 ] }
 toml = "*"
 walkdir = "*"
+which = "*"

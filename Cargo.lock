@@ -1891,6 +1891,7 @@ dependencies = [
  "tonic",
  "tonic-web",
  "ubyte",
+ "which",
  "xtask",
 ]
 
@@ -4160,6 +4161,7 @@ dependencies = [
  "tokio",
  "toml",
  "walkdir",
+ "which",
 ]
 
 [[package]]

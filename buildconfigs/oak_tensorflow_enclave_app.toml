@@ -1,4 +1,10 @@
 command = [
+  "nix",
+  "develop",
+  # Unlike other build configs, this one needs to run in the "default" shell instead of just the
+  # "rust" one, because bazel is also used by the build.rs script.
+  ".#default",
+  "--command",
   "env",
   "--chdir=enclave_apps/oak_tensorflow_enclave_app",
   "cargo",

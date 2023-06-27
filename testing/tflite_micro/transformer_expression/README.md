@@ -5,6 +5,7 @@
 - Copy the latest or a specific version of `tranformer_expression.tflite` to
   this folder
 - Build with debugging information without stripping symbols
+
   ```bash
   bazel build --copt=-g --strip=never //testing/tflite_micro/transformer_expression
   ```
