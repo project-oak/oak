@@ -22,11 +22,7 @@ import com.google.oak.util.Result;
 public final class Context {
   public static final class SenderRequestContext implements AutoCloseable {
     static {
-      try {
-        System.loadLibrary("hpke-jni");
-      } catch (UnsatisfiedLinkError e) {
-        System.exit(1);
-      }
+      System.loadLibrary("hpke-jni");
     }
     private final long nativePtr;
     public SenderRequestContext(long nativePtr) {
@@ -61,11 +57,7 @@ public final class Context {
 
   public static final class SenderResponseContext implements AutoCloseable {
     static {
-      try {
-        System.loadLibrary("hpke-jni");
-      } catch (UnsatisfiedLinkError e) {
-        System.exit(1);
-      }
+      System.loadLibrary("hpke-jni");
     }
     private final long nativePtr;
     public SenderResponseContext(long nativePtr) {
@@ -100,11 +92,7 @@ public final class Context {
 
   public static final class RecipientRequestContext implements AutoCloseable {
     static {
-      try {
-        System.loadLibrary("hpke-jni");
-      } catch (UnsatisfiedLinkError e) {
-        System.exit(1);
-      }
+      System.loadLibrary("hpke-jni");
     }
     private final long nativePtr;
     public RecipientRequestContext(long nativePtr) {
@@ -139,11 +127,7 @@ public final class Context {
 
   public static final class RecipientResponseContext implements AutoCloseable {
     static {
-      try {
-        System.loadLibrary("hpke-jni");
-      } catch (UnsatisfiedLinkError e) {
-        System.exit(1);
-      }
+      System.loadLibrary("hpke-jni");
     }
     private final long nativePtr;
     public RecipientResponseContext(long nativePtr) {

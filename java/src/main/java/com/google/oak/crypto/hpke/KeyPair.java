@@ -19,11 +19,7 @@ import com.google.oak.util.Result;
 
 public class KeyPair {
   static {
-    try {
-      System.loadLibrary("hpke-jni");
-    } catch (UnsatisfiedLinkError e) {
-      System.exit(1);
-    }
+    System.loadLibrary("hpke-jni");
   }
 
   public final byte[] privateKey;
