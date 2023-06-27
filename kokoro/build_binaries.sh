@@ -19,11 +19,11 @@ readonly ROOT_DIR="$(dirname "$0" | cut -d/ -f1)"
 source "$ROOT_DIR/scripts/common"
 
 # Download the builder tool
-curl --location https://github.com/slsa-framework/slsa-github-generator/releases/download/v1.7.0/slsa-builder-docker-linux-amd64
-chmod +x slsa-builder-docker-linux-amd64
+curl --location https://github.com/slsa-framework/slsa-github-generator/releases/download/v1.7.0/slsa-builder-docker-linux-amd64 --output builder
+chmod +x builder
 
 # Build the binary. Should be made parametric.
-./slsa-builder-docker-linux-amd64 build \
+./builder build \
  --build-config-path buildconfigs/oak_restricted_kernel_simple_io_bin.toml \
  --builder-image "$DOCKER_IMAGE_REPO_DIGEST" \
  --git-commit-digest sha1:"$KOKORO_GITHUB_COMMIT" \
