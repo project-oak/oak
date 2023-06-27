@@ -31,7 +31,7 @@ using ::oak::crypto::v1::EncryptedResponse;
 absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
     absl::string_view serialized_server_public_key) {
   absl::StatusOr<SenderContext> sender_context =
-      SetupBaseSender(serialized_server_public_key, OAK_HPKE_INFO);
+      SetupBaseSender(serialized_server_public_key, kOakHPKEInfo);
   if (!sender_context.ok()) {
     return sender_context.status();
   }

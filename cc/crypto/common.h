@@ -22,7 +22,7 @@
 namespace oak::crypto {
 
 // Info string used by Hybrid Public Key Encryption.
-constexpr absl::string_view OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1";
+inline constexpr absl::string_view kOakHPKEInfo = "Oak Hybrid Public Key Encryption v1";
 
 struct DecryptionResult {
   std::string plaintext;
