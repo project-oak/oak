@@ -25,14 +25,14 @@ use anyhow::{anyhow, Context};
 use hpke::{
     aead::{AeadCtxR, AeadCtxS, AesGcm256},
     kdf::HkdfSha256,
-    kem::DhP256HkdfSha256,
+    kem::X25519HkdfSha256,
     Deserializable, Kem as KemTrait, OpModeR, OpModeS, Serializable,
 };
 use rand_core::OsRng;
 
 type Aead = AesGcm256;
 type Kdf = HkdfSha256;
-type Kem = DhP256HkdfSha256;
+type Kem = X25519HkdfSha256;
 pub(crate) type PrivateKey = <Kem as KemTrait>::PrivateKey;
 pub(crate) type PublicKey = <Kem as KemTrait>::PublicKey;
 pub(crate) type EncappedKey = <Kem as KemTrait>::EncappedKey;
