@@ -17,11 +17,8 @@
 package com.google.oak.client;
 
 import com.google.oak.crypto.ClientEncryptor;
-import com.google.oak.crypto.Encryptor;
 import com.google.oak.remote_attestation.AttestationVerifier;
 import com.google.oak.session.v1.AttestationBundle;
-import com.google.oak.session.v1.AttestationEndorsement;
-import com.google.oak.session.v1.AttestationEvidence;
 import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
@@ -75,16 +72,17 @@ public class OakClient<T extends Transport> {
     Result<ClientEncryptor, Exception> encryptorCreateResult =
         ClientEncryptor.create(this.serverEncryptionPublicKey);
 
-    Result result = encryptorCreateResult
-                        .andThen(encryptor
-                            // Encrypt request.
-                            -> encryptor
-                                   .encrypt(requestBody, EMPTY_ASSOCIATED_DATA)
-                                   // Send request.
-                                   .andThen(r -> this.transport.invoke(r).mapError(Exception::new))
-                                   // Decrypt response.
-                                   .andThen(r -> encryptor.decrypt(r)))
-                        .map(d -> d.plaintext);
+    Result<byte[], Exception> result =
+        encryptorCreateResult
+            .andThen(encryptor
+                // Encrypt request.
+                -> encryptor
+                       .encrypt(requestBody, EMPTY_ASSOCIATED_DATA)
+                       // Send request.
+                       .andThen(r -> this.transport.invoke(r).mapError(Exception::new))
+                       // Decrypt response.
+                       .andThen(encryptor::decrypt))
+            .map(d -> d.plaintext);
     if (encryptorCreateResult.isSuccess()) {
       encryptorCreateResult.success().get().close();
     }

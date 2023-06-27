@@ -80,7 +80,8 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
    * Decrypts a {@code com.google.oak.crypto.v1.EncryptedRequest} proto message using AEAD.
    * <https://datatracker.ietf.org/doc/html/rfc5116>
    *
-   * @param encryptedRequest a serialized {@code com.google.oak.crypto.v1.EncryptedRequest} message
+   * @param serializedEncryptedRequest a serialized {@code
+   *     com.google.oak.crypto.v1.EncryptedRequest} message
    * @return a response message plaintext and associated data wrapped in a {@code Result}
    */
   @Override
