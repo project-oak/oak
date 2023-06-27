@@ -31,7 +31,7 @@ public class KeyPair {
 
   private static native KeyPair nativeGenerate();
 
-  public static final Result<KeyPair, Exception> Generate() {
+  public static final Result<KeyPair, Exception> generate() {
     KeyPair kp = nativeGenerate();
     if (kp == null) {
       return Result.error(new Exception("Failed to generate KeyPair."));

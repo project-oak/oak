@@ -44,7 +44,7 @@ public class EncryptorTest {
   @Test
   public void testEncryptor() throws Exception {
     // Generate key pair.
-    Result<KeyPair, Exception> keyPairGenerateResult = KeyPair.Generate();
+    Result<KeyPair, Exception> keyPairGenerateResult = KeyPair.generate();
     KeyPair keyPair = keyPairGenerateResult.unwrap("couldn't create key pair");
 
     // TODO(#3644): Implement and test Java hybrid encryption.
