@@ -1763,7 +1763,6 @@ dependencies = [
  "hkdf",
  "hpke",
  "micro_rpc_build",
- "p256",
  "prost",
  "rand_core 0.6.4",
  "sha2 0.10.6",
