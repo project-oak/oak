@@ -14,9 +14,9 @@ export RUST_BACKTRACE=1
 export RUST_LOG=debug
 export XDG_RUNTIME_DIR=/var/run
 
-readonly SCRIPTS_DIR="$(dirname "$0")"
+readonly ROOT_DIR="$(dirname "$0" | cut -d/ -f1)"
 # shellcheck source=scripts/common
-source "$SCRIPTS_DIR/common"
+source "$ROOT_DIR/scripts/common"
 
 # Download the builder tool
 curl --location https://github.com/slsa-framework/slsa-github-generator/releases/download/v1.7.0/slsa-builder-docker-linux-amd64
