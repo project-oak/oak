@@ -72,16 +72,17 @@ public class OakClient<T extends Transport> {
     Result<ClientEncryptor, Exception> encryptorCreateResult =
         ClientEncryptor.create(this.serverEncryptionPublicKey);
 
-    Result result = encryptorCreateResult
-                        .andThen(encryptor
-                            // Encrypt request.
-                            -> encryptor
-                                   .encrypt(requestBody, EMPTY_ASSOCIATED_DATA)
-                                   // Send request.
-                                   .andThen(r -> this.transport.invoke(r).mapError(Exception::new))
-                                   // Decrypt response.
-                                   .andThen(r -> encryptor.decrypt(r)))
-                        .map(d -> d.plaintext);
+    Result<byte[], Exception> result =
+        encryptorCreateResult
+            .andThen(encryptor
+                // Encrypt request.
+                -> encryptor
+                       .encrypt(requestBody, EMPTY_ASSOCIATED_DATA)
+                       // Send request.
+                       .andThen(r -> this.transport.invoke(r).mapError(Exception::new))
+                       // Decrypt response.
+                       .andThen(encryptor::decrypt))
+            .map(d -> d.plaintext);
     if (encryptorCreateResult.isSuccess()) {
       encryptorCreateResult.success().get().close();
     }
