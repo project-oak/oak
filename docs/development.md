@@ -227,38 +227,37 @@ experimental-features = nix-command flakes
 
 ## Quick Usage Guide
 
-Get a Nix development shell:
+Using [`flake.nix`](/flake.nix) from within the Oak repo to get a Nix
+development subshell in which a completely deterministic environment (e.g.
+compilers, dev tools) is available:
 
 ```console
 nix develop
 ```
 
-This will drop you into a subshell in which a completely deterministic
-environment (e.g. compilers, dev tools) is available, based on the default shell
-defined in [`flake.nix`](/flake.nix).
-
-To use a non-default shell (e.g. the `containers` one), run
-
-```console
-nix develop .#containers
-```
-
 Note that this may take a while (up to 10 minutes) on the first run, since Nix
 has to download all the dependencies from scratch. It will be almost instant in
-future invocations, unless dependencies are changed again.
+future invocations, unless [`flake.nix`](/flake.nix) changes.
+
+This will finish with
+
+```
+I have no name!@<your-user-name>:~/oak$
+```
 
 Some things to try:
 
-- See where tools are installed from within the dev shell:
+- See where tools are installed from within the dev shell (this output might be
+  out of date when [`flake.nix`](/flake.nix) changes):
 
   ```console
   $ which rustc
   /nix/store/mrf09022h38ykgsfb50xcv3q1izf5gac-rust-default-1.69.0-nightly-2023-02-15/bin/rustc
   ```
 
-- Add a new tool to the list, and see it reflected in the dev shell:
+- Add a new dependency to the list, and see it reflected in the dev shell:
 
-  - enter the default dev shell:
+  - (if you are not already in the dev shell) enter the default dev shell:
 
     ```console
     nix develop
@@ -268,11 +267,11 @@ Some things to try:
 
     ```console
     $ ponysay hello
-    zsh: command not found: ponysay
+    bash: command not found: ponysay
     ```
 
-  - add `ponysay` to the list of packages in [`flake.nix`](/flake.nix), e.g.
-    next to `protobuf`
+  - add `ponysay` to the list of `packages` in [`flake.nix`](/flake.nix), e.g.
+    just below `protobuf`
   - exit the previous dev shell (e.g. via `Ctrl-D`)
   - re-create a new dev shell:
 
