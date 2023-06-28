@@ -53,6 +53,10 @@ public class AmdAttestationVerifier implements AttestationVerifier {
   public final Result<Boolean, Exception> verify(
       final AttestationEvidence evidence, final AttestationEndorsement endorsement) {
     // TODO(#3641): Implement AMD SEV-SNP attestation verification.
-    return Result.success(true);
+    if (referenceValue.length == 0) {
+      return Result.success(true);
+    } else {
+      return Result.error(new Exception("unsupported reference value"));
+    }
   }
 }
