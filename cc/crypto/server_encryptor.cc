@@ -91,7 +91,7 @@ absl::Status ServerEncryptor::InitializeRecipientContexts(const EncryptedRequest
 
   // Create recipient contexts.
   absl::StatusOr<RecipientContext> recipient_context =
-      SetupBaseRecipient(serialized_encapsulated_public_key, server_key_pair_, OAK_HPKE_INFO);
+      SetupBaseRecipient(serialized_encapsulated_public_key, server_key_pair_, kOakHPKEInfo);
   if (!recipient_context.ok()) {
     return recipient_context.status();
   }

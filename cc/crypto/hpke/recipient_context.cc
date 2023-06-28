@@ -81,7 +81,7 @@ absl::StatusOr<std::string> RecipientRequestContext::Open(absl::string_view ciph
           /* in_len= */ ciphertext_bytes.size(),
           /* ad= */ associated_data_bytes.data(),
           /* ad_len= */ associated_data_bytes.size())) {
-    return absl::AbortedError("Fail to open encrypted message.");
+    return absl::AbortedError("Failed to open encrypted message.");
   }
   plaintext_bytes.resize(plaintext_bytes_len);
   std::string plaintext(plaintext_bytes.begin(), plaintext_bytes.end());
@@ -126,7 +126,7 @@ RecipientResponseContext::~RecipientResponseContext() {
 }
 
 absl::StatusOr<RecipientContext> SetupBaseRecipient(
-    absl::string_view serialized_encapsulated_public_key, KeyPair recipient_key_pair,
+    absl::string_view serialized_encapsulated_public_key, const KeyPair& recipient_key_pair,
     absl::string_view info) {
   // First verify that the supplied key pairing is valid using the BoringSSL library.
   std::vector<uint8_t> private_key_bytes(recipient_key_pair.private_key.begin(),
