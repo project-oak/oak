@@ -241,7 +241,7 @@ future invocations, unless [`flake.nix`](/flake.nix) changes.
 
 This will finish with
 
-```
+```console
 I have no name!@<your-user-name>:~/oak$
 ```
 
