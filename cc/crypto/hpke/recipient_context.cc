@@ -103,13 +103,20 @@ absl::StatusOr<std::string> RecipientResponseContext::Seal(absl::string_view pla
   std::vector<uint8_t> ciphertext_bytes(max_out_len);
   size_t ciphertext_bytes_len;
 
+  std::vector<uint8_t> nonce = CalculateNonce(response_base_nonce_, sequence_number_);
+  auto new_sequence_number = IncrementSequenceNumber(sequence_number_);
+  if (!new_sequence_number.ok()) {
+    return new_sequence_number.status();
+  }
+  sequence_number_ = *new_sequence_number;
+
   if (!EVP_AEAD_CTX_seal(
           /* ctx= */ aead_response_context_.get(),
           /* out= */ ciphertext_bytes.data(),
           /* out_len= */ &ciphertext_bytes_len,
           /* max_out_len= */ ciphertext_bytes.size(),
-          /* nonce= */ response_nonce_.data(),
-          /* nonce_len= */ response_nonce_.size(),
+          /* nonce= */ nonce.data(),
+          /* nonce_len= */ nonce.size(),
           /* in= */ plaintext_bytes.data(),
           /* in_len= */ plaintext_bytes.size(),
           /* ad= */ associated_data_bytes.data(),
@@ -168,7 +175,7 @@ absl::StatusOr<RecipientContext> SetupBaseRecipient(
     return aead_response_context.status();
   }
 
-  auto response_nonce = GetResponseNonce(hpke_recipient_context.get());
+  auto response_nonce = GetResponseBaseNonce(hpke_recipient_context.get());
   if (!response_nonce.ok()) {
     return response_nonce.status();
   }
