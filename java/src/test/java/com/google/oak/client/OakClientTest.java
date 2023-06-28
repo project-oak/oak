@@ -35,7 +35,10 @@ import java.util.Optional;
 import org.junit.Test;
 
 public class OakClientTest {
-  private static final byte[] TEST_SERVER_ENCRYPTION_PUBLIC_KEY = new byte[0];
+  private static final byte[] TEST_SERVER_ENCRYPTION_PUBLIC_KEY = {11, (byte) 107, 5, (byte) 176, 4,
+      (byte) 145, (byte) 171, (byte) 193, (byte) 163, 81, 105, (byte) 238, (byte) 171, 115, 56,
+      (byte) 160, (byte) 130, 85, 22, (byte) 227, 118, 76, 77, 89, (byte) 144, (byte) 223, 10, 112,
+      11, (byte) 149, (byte) 205, (byte) 199};
   private static final byte[] TEST_REQUEST = new byte[] {'R', 'e', 'q', 'u', 'e', 's', 't'};
   private static final byte[] TEST_RESPONSE = new byte[] {'R', 'e', 's', 'p', 'o', 'n', 's', 'e'};
   private static final byte[] TEST_ASSOCIATED_DATA = new byte[0];

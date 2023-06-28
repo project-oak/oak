@@ -20,6 +20,7 @@
 #include "com_google_oak_crypto_hpke_Context_RecipientResponseContext.h"
 #include "com_google_oak_crypto_hpke_Context_SenderRequestContext.h"
 #include "com_google_oak_crypto_hpke_Context_SenderResponseContext.h"
+#include "jni_helper.h"
 
 JNIEXPORT jbyteArray JNICALL
 Java_com_google_oak_crypto_hpke_Context_00024SenderRequestContext_nativeSeal(
@@ -28,18 +29,9 @@ Java_com_google_oak_crypto_hpke_Context_00024SenderRequestContext_nativeSeal(
     return {};
   }
 
-  int plaintext_len = env->GetArrayLength(plaintext);
-  char* plaintext_buf = new char[plaintext_len];
-  std::unique_ptr<char[]> plaintext_buf_uptr(plaintext_buf);
-  env->GetByteArrayRegion(plaintext, 0, plaintext_len, reinterpret_cast<jbyte*>(plaintext_buf));
+  std::string plaintext_str = convert_jbytearray_to_string(env, plaintext);
+  std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
-  int associated_data_len = env->GetArrayLength(associated_data);
-  char* associated_data_buf = new char[associated_data_len];
-  std::unique_ptr<char[]> associated_data_buf_uptr(associated_data_buf);
-  env->GetByteArrayRegion(associated_data, 0, associated_data_len,
-                          reinterpret_cast<jbyte*>(associated_data_buf));
-
-  // TODO(#3642): Call the c++ hpke implementation to perform the seal and get the return value.
   jclass sender_request_context_class = env->GetObjectClass(obj);
   jfieldID fid = env->GetFieldID(sender_request_context_class, "nativePtr", "J");
   oak::crypto::SenderRequestContext* sender_request_context =
@@ -48,8 +40,15 @@ Java_com_google_oak_crypto_hpke_Context_00024SenderRequestContext_nativeSeal(
     return {};
   }
 
-  jbyteArray ret = env->NewByteArray(plaintext_len);
-  env->SetByteArrayRegion(ret, 0, plaintext_len, reinterpret_cast<const jbyte*>(plaintext_buf));
+  absl::StatusOr<std::string> result =
+      sender_request_context->Seal(plaintext_str, associated_data_str);
+  if (!result.ok()) {
+    return {};
+  }
+
+  jbyteArray ret = env->NewByteArray(result->length());
+  env->SetByteArrayRegion(ret, 0, result->length(),
+                          reinterpret_cast<const jbyte*>(result->c_str()));
   return ret;
 }
 
@@ -60,18 +59,9 @@ Java_com_google_oak_crypto_hpke_Context_00024SenderResponseContext_nativeOpen(
     return {};
   }
 
-  int ciphertext_len = env->GetArrayLength(ciphertext);
-  char* ciphertext_buf = new char[ciphertext_len];
-  std::unique_ptr<char[]> ciphertext_buf_uptr(ciphertext_buf);
-  env->GetByteArrayRegion(ciphertext, 0, ciphertext_len, reinterpret_cast<jbyte*>(ciphertext_buf));
+  std::string ciphertext_str = convert_jbytearray_to_string(env, ciphertext);
+  std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
-  int associated_data_len = env->GetArrayLength(associated_data);
-  char* associated_data_buf = new char[associated_data_len];
-  std::unique_ptr<char[]> associated_data_buf_uptr(associated_data_buf);
-  env->GetByteArrayRegion(associated_data, 0, associated_data_len,
-                          reinterpret_cast<jbyte*>(associated_data_buf));
-
-  // TODO(#3642): Call the c++ hpke implementation to perform the open and get the return value.
   jclass sender_response_context_class = env->GetObjectClass(obj);
   jfieldID fid = env->GetFieldID(sender_response_context_class, "nativePtr", "J");
   oak::crypto::SenderResponseContext* sender_response_context =
@@ -80,8 +70,15 @@ Java_com_google_oak_crypto_hpke_Context_00024SenderResponseContext_nativeOpen(
     return {};
   }
 
-  jbyteArray ret = env->NewByteArray(ciphertext_len);
-  env->SetByteArrayRegion(ret, 0, ciphertext_len, reinterpret_cast<const jbyte*>(ciphertext_buf));
+  absl::StatusOr<std::string> result =
+      sender_response_context->Open(ciphertext_str, associated_data_str);
+  if (!result.ok()) {
+    return {};
+  }
+
+  jbyteArray ret = env->NewByteArray(result->length());
+  env->SetByteArrayRegion(ret, 0, result->length(),
+                          reinterpret_cast<const jbyte*>(result->c_str()));
   return ret;
 }
 
@@ -92,18 +89,9 @@ Java_com_google_oak_crypto_hpke_Context_00024RecipientRequestContext_nativeOpen(
     return {};
   }
 
-  int ciphertext_len = env->GetArrayLength(ciphertext);
-  char* ciphertext_buf = new char[ciphertext_len];
-  std::unique_ptr<char[]> ciphertext_buf_uptr(ciphertext_buf);
-  env->GetByteArrayRegion(ciphertext, 0, ciphertext_len, reinterpret_cast<jbyte*>(ciphertext_buf));
+  std::string ciphertext_str = convert_jbytearray_to_string(env, ciphertext);
+  std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
-  int associated_data_len = env->GetArrayLength(associated_data);
-  char* associated_data_buf = new char[associated_data_len];
-  std::unique_ptr<char[]> associated_data_buf_uptr(associated_data_buf);
-  env->GetByteArrayRegion(associated_data, 0, associated_data_len,
-                          reinterpret_cast<jbyte*>(associated_data_buf));
-
-  // TODO(#3642): Call the c++ hpke implementation to perform the open and get the return value.
   jclass recipient_request_context_class = env->GetObjectClass(obj);
   jfieldID fid = env->GetFieldID(recipient_request_context_class, "nativePtr", "J");
   oak::crypto::RecipientRequestContext* recipient_request_context =
@@ -112,8 +100,15 @@ Java_com_google_oak_crypto_hpke_Context_00024RecipientRequestContext_nativeOpen(
     return {};
   }
 
-  jbyteArray ret = env->NewByteArray(ciphertext_len);
-  env->SetByteArrayRegion(ret, 0, ciphertext_len, reinterpret_cast<const jbyte*>(ciphertext_buf));
+  absl::StatusOr<std::string> result =
+      recipient_request_context->Open(ciphertext_str, associated_data_str);
+  if (!result.ok()) {
+    return {};
+  }
+
+  jbyteArray ret = env->NewByteArray(result->length());
+  env->SetByteArrayRegion(ret, 0, result->length(),
+                          reinterpret_cast<const jbyte*>(result->c_str()));
   return ret;
 }
 
@@ -124,18 +119,9 @@ Java_com_google_oak_crypto_hpke_Context_00024RecipientResponseContext_nativeSeal
     return {};
   }
 
-  int plaintext_len = env->GetArrayLength(plaintext);
-  char* plaintext_buf = new char[plaintext_len];
-  std::unique_ptr<char[]> plaintext_buf_uptr(plaintext_buf);
-  env->GetByteArrayRegion(plaintext, 0, plaintext_len, reinterpret_cast<jbyte*>(plaintext_buf));
+  std::string plaintext_str = convert_jbytearray_to_string(env, plaintext);
+  std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
-  int associated_data_len = env->GetArrayLength(associated_data);
-  char* associated_data_buf = new char[associated_data_len];
-  std::unique_ptr<char[]> associated_data_buf_uptr(associated_data_buf);
-  env->GetByteArrayRegion(associated_data, 0, associated_data_len,
-                          reinterpret_cast<jbyte*>(associated_data_buf));
-
-  // TODO(#3642): Call the c++ hpke implementation to perform the seal and get the return value.
   jclass recipient_response_context_class = env->GetObjectClass(obj);
   jfieldID fid = env->GetFieldID(recipient_response_context_class, "nativePtr", "J");
   oak::crypto::RecipientResponseContext* recipient_response_context =
@@ -144,8 +130,15 @@ Java_com_google_oak_crypto_hpke_Context_00024RecipientResponseContext_nativeSeal
     return {};
   }
 
-  jbyteArray ret = env->NewByteArray(plaintext_len);
-  env->SetByteArrayRegion(ret, 0, plaintext_len, reinterpret_cast<const jbyte*>(plaintext_buf));
+  absl::StatusOr<std::string> result =
+      recipient_response_context->Seal(plaintext_str, associated_data_str);
+  if (!result.ok()) {
+    return {};
+  }
+
+  jbyteArray ret = env->NewByteArray(result->length());
+  env->SetByteArrayRegion(ret, 0, result->length(),
+                          reinterpret_cast<const jbyte*>(result->c_str()));
   return ret;
 }
 
