@@ -76,9 +76,11 @@ std::vector<uint8_t> CalculateNonce(const std::vector<uint8_t>& base_nonce,
   std::vector<uint8_t> nonce(kAeadNonceSizeBytes);
   // We use 8 here since sequence number is 64 bits.
   for (size_t i = 0; i < 8; ++i) {
+    // Get the first 8 bits and push bits right since the encoded nonce is big-endian.
     nonce[kAeadNonceSizeBytes - i - 1] = sequence_number & 0xff;
     sequence_number >>= 8;
   }
+  // XOR each of the nonce bits with the base nonce.
   for (size_t i = 0; i < kAeadNonceSizeBytes; ++i) {
     nonce[i] ^= base_nonce.at(i);
   }
