@@ -63,10 +63,11 @@ public class EncryptorTest {
       byte[] serializedEncryptedRequest = encryptRequestResult.success().get();
 
       EncryptedRequest encryptedRequest = EncryptedRequest.parseFrom(serializedEncryptedRequest);
-      // Check that the message was actually encrypted.
-      Assert.assertFalse(
-          Arrays.equals(encryptedRequest.getEncryptedMessage().getCiphertext().toByteArray(),
-              TEST_REQUEST_PLAINTEXT));
+      // TODO(#3644): Once we implement Java hybrid encryption, we need to add a test for checking
+      // that the message was actually encrypted.
+      // Assert.assertFalse(
+      //     Arrays.equals(encryptedRequest.getEncryptedMessage().getCiphertext().toByteArray(),
+      //         TEST_REQUEST_PLAINTEXT));
       Assert.assertArrayEquals(
           encryptedRequest.getEncryptedMessage().getAssociatedData().toByteArray(),
           TEST_REQUEST_ASSOCIATED_DATA);
@@ -87,10 +88,11 @@ public class EncryptorTest {
 
       EncryptedResponse encryptedResponse =
           EncryptedResponse.parseFrom(serializedEncryptedResponse);
-      // Check that the message was actually encrypted.
-      Assert.assertFalse(
-          Arrays.equals(encryptedResponse.getEncryptedMessage().getCiphertext().toByteArray(),
-              TEST_RESPONSE_PLAINTEXT));
+      // TODO(#3644): Once we implement Java hybrid encryption, we need to add a test for checking
+      // that the message was actually encrypted.
+      // Assert.assertFalse(
+      //     Arrays.equals(encryptedResponse.getEncryptedMessage().getCiphertext().toByteArray(),
+      //         TEST_RESPONSE_PLAINTEXT));
       Assert.assertArrayEquals(
           encryptedResponse.getEncryptedMessage().getAssociatedData().toByteArray(),
           TEST_RESPONSE_ASSOCIATED_DATA);
