@@ -38,7 +38,7 @@ namespace oak::crypto {
 // be multiple responses per request and multiple requests per response.
 class ServerEncryptor {
  public:
-  ServerEncryptor(KeyPair server_key_pair)
+  ServerEncryptor(const KeyPair& server_key_pair)
       : server_key_pair_(server_key_pair),
         recipient_request_context_(nullptr),
         recipient_response_context_(nullptr){};
