@@ -9,4 +9,7 @@ license = "Apache-2.0"
 anyhow = "*"
 clap = { version = "*", features = ["derive"] }
 oak_containers_orchestrator_client = { workspace = true }
-tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
+tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync", "fs", "process"] }
+log = "*"
+syslog = "*"
+
