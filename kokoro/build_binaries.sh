@@ -14,6 +14,7 @@ export RUST_BACKTRACE=1
 export RUST_LOG=debug
 export XDG_RUNTIME_DIR=/var/run
 
+./scripts/docker_pull
 ./scripts/docker_run  nix develop .#rust --command env --chdir=oak_restricted_kernel_bin cargo build --release
 
 # Copy the generated binary to placer
