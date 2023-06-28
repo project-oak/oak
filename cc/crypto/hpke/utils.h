@@ -37,8 +37,17 @@ struct KeyInfo {
 // Generate response key for the response context.
 absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetResponseContext(EVP_HPKE_CTX* hpke_ctx);
 
-// Generate a nonce for the AEAD response context.
-absl::StatusOr<std::vector<uint8_t>> GetResponseNonce(EVP_HPKE_CTX* ctx);
+// Generate a base nonce for the AEAD response context.
+absl::StatusOr<std::vector<uint8_t>> GetResponseBaseNonce(EVP_HPKE_CTX* ctx);
+
+// Determines current nonce from the sequence number and the base nonce. This is needed for AEAD
+// response encryption. This is the same nonce computation as for HPKE to ensure nonce uniqueness.
+// It is up to the caller to increment the sequence number after calling the function.
+// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
+std::vector<uint8_t> CalculateNonce(const std::vector<uint8_t>& base_nonce,
+                                    uint64_t sequence_number);
+
+absl::StatusOr<uint64_t> IncrementSequenceNumber(uint64_t sequence_number);
 
 }  // namespace oak::crypto
 #endif  // CC_CRYPTO_HPKE_CONSTANTS_H_

@@ -55,7 +55,7 @@ absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetResponseContext(EVP_HPKE_CTX* h
   return std::move(aead_response_context);
 }
 
-absl::StatusOr<std::vector<uint8_t>> GetResponseNonce(EVP_HPKE_CTX* hpke_ctx) {
+absl::StatusOr<std::vector<uint8_t>> GetResponseBaseNonce(EVP_HPKE_CTX* hpke_ctx) {
   std::vector<uint8_t> response_nonce(kAeadNonceSizeBytes);
   std::string nonce_context_string = "response_nonce";
   std::vector<uint8_t> nonce_context_bytes(nonce_context_string.begin(),
@@ -70,4 +70,32 @@ absl::StatusOr<std::vector<uint8_t>> GetResponseNonce(EVP_HPKE_CTX* hpke_ctx) {
   }
   return response_nonce;
 }
+
+std::vector<uint8_t> CalculateNonce(const std::vector<uint8_t>& base_nonce,
+                                    uint64_t sequence_number) {
+  std::vector<uint8_t> nonce(kAeadNonceSizeBytes);
+  // We use 8 here since sequence number is 64 bits.
+  for (size_t i = 0; i < 8; ++i) {
+    // Get the first 8 bits and push bits right since the encoded nonce is big-endian.
+    nonce[kAeadNonceSizeBytes - i - 1] = sequence_number & 0xff;
+    sequence_number >>= 8;
+  }
+  // XOR each of the nonce bits with the base nonce.
+  for (size_t i = 0; i < kAeadNonceSizeBytes; ++i) {
+    nonce[i] ^= base_nonce.at(i);
+  }
+  return nonce;
+}
+
+absl::StatusOr<uint64_t> IncrementSequenceNumber(uint64_t sequence_number) {
+  /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
+  /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
+  const uint64_t max_sequence_number = (1 << (8 * kAeadNonceSizeBytes)) - 1;
+
+  if (sequence_number >= max_sequence_number) {
+    return absl::OutOfRangeError("Sequence number reached.");
+  }
+  return sequence_number += 1;
+}
+
 }  // namespace oak::crypto
