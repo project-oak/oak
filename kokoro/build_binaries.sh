@@ -26,10 +26,10 @@ chmod +x builder
 ./builder build \
  --build-config-path buildconfigs/oak_restricted_kernel_simple_io_bin.toml \
  --builder-image "$DOCKER_IMAGE_REPO_DIGEST" \
- --git-commit-digest sha1:"$KOKORO_GITHUB_COMMIT" \
+ --git-commit-digest "sha1:$KOKORO_GITHUB_COMMIT" \
  --source-repo git+https://github.com/project-oak/oak@refs/heads/main \
  --subjects-path subjects.json \
- --output-folder /tmp/build-outputs \
+ --output-folder "/tmp/build-outputs-$KOKORO_GITHUB_COMMIT" \
  --verbose
 
 # Copy the generated binary to placer
