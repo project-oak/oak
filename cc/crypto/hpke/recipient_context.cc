@@ -121,7 +121,7 @@ absl::StatusOr<std::string> RecipientResponseContext::Seal(absl::string_view pla
           /* in_len= */ plaintext_bytes.size(),
           /* ad= */ associated_data_bytes.data(),
           /* ad_len= */ associated_data_bytes.size())) {
-    return absl::AbortedError("Unable to seal response messge");
+    return absl::AbortedError("Unable to seal response message");
   }
   ciphertext_bytes.resize(ciphertext_bytes_len);
   std::string ciphertext(ciphertext_bytes.begin(), ciphertext_bytes.end());
