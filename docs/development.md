@@ -229,7 +229,38 @@ experimental-features = nix-command flakes
 
 Using [`flake.nix`](/flake.nix) from within the Oak repo to get a Nix
 development subshell in which a completely deterministic environment (e.g.
-compilers, dev tools) is available:
+compilers, dev tools) is available.
+
+### With `direnv`
+
+[`direnv`](https://direnv.net) is a shell utility that automatically loads a
+development environment (in this case Nix) when `cd`ing into a specific folder.
+
+To install `direnv`, follow the
+[official instructions](https://direnv.net/#basic-installation). Make sure to
+install the appropriate [shell hook](https://direnv.net/docs/hook.html) too.
+
+Once installed, `cd` to this repository root, and run `direnv allow` in the
+terminal; this only needs to be done the first time, or when the
+[`.envrc`](/.envrc) file changes.
+
+From then on, every time you `cd` in that same folder (or any subfolder), the
+appropriate Nix configuration will be automatically loaded in your existing
+shell, and unloaded again when you `cd` out of the folder.
+
+Note that it may take some time (up to 5 minutes) for `direnv` to apply the Nix
+shell configuration, especially the first time or whenever a large number of
+dependencies changed since the previous execution.
+
+It is also recommended to install a `direnv` extension for VSCode. The following
+seem to work fine:
+
+- https://marketplace.visualstudio.com/items?itemName=Rubymaniac.vscode-direnv
+- https://marketplace.visualstudio.com/items?itemName=mkhl.direnv
+
+### Without `direnv`
+
+To get a Nix development shell:
 
 ```console
 nix develop
@@ -245,7 +276,10 @@ This will finish with
 I have no name!@<your-user-name>:~/oak$
 ```
 
-Some things to try:
+### Things to try
+
+Some things to try once you are in a nix shell (in whichever way described
+above):
 
 - See where tools are installed from within the dev shell (this output might be
   out of date when [`flake.nix`](/flake.nix) changes):
@@ -273,7 +307,7 @@ Some things to try:
   - add `ponysay` to the list of `packages` in [`flake.nix`](/flake.nix), e.g.
     just below `protobuf`
   - exit the previous dev shell (e.g. via `Ctrl-D`)
-  - re-create a new dev shell:
+  - re-create a new dev shell (only needed if not using `direnv`):
 
     ```console
     nix develop
