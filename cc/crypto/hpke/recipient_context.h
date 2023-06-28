@@ -53,7 +53,9 @@ class RecipientResponseContext {
  public:
   RecipientResponseContext(std::unique_ptr<EVP_AEAD_CTX> aead_response_context,
                            std::vector<uint8_t> response_nonce)
-      : aead_response_context_(std::move(aead_response_context)), response_nonce_(response_nonce){};
+      : aead_response_context_(std::move(aead_response_context)),
+        response_base_nonce_(response_nonce),
+        sequence_number_(0) {}
   // Encrypts response message with associated data using AEAD as part of bidirectional
   // communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
@@ -62,7 +64,8 @@ class RecipientResponseContext {
 
  private:
   std::unique_ptr<EVP_AEAD_CTX> aead_response_context_;
-  std::vector<uint8_t> response_nonce_;
+  std::vector<uint8_t> response_base_nonce_;
+  uint64_t sequence_number_;
 };
 
 // Holds all necessary recipient contexts.
