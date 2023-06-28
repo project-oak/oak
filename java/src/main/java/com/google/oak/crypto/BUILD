@@ -38,6 +38,7 @@ java_library(
     ],
     deps = [
         ":encryptor",
+        "//cc/crypto/hpke/jni:libhpke-jni.so",
         "//java/src/main/java/com/google/oak/crypto/hpke",
         "//java/src/main/java/com/google/oak/util",
         "//oak_crypto/proto/v1:crypto_java_proto",
@@ -53,6 +54,7 @@ java_library(
     ],
     deps = [
         ":encryptor",
+        "//cc/crypto/hpke/jni:libhpke-jni.so",
         "//java/src/main/java/com/google/oak/crypto/hpke",
         "//java/src/main/java/com/google/oak/util",
         "//oak_crypto/proto/v1:crypto_java_proto",
