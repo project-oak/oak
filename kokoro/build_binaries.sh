@@ -28,12 +28,12 @@ chmod +x builder
 ./builder build \
  --build-config-path buildconfigs/oak_restricted_kernel_simple_io_bin.toml \
  --builder-image "$DOCKER_IMAGE_REPO_DIGEST" \
- --git-commit-digest "sha1:$KOKORO_GITHUB_PULL_REQUEST_COMMIT" \
+ --git-commit-digest "sha1:$KOKORO_GIT_COMMIT_oak" \
  --source-repo git+https://github.com/project-oak/oak@refs/heads/main \
  --subjects-path subjects.json \
- --output-folder "/tmp/build-outputs-$KOKORO_GITHUB_PULL_REQUEST_COMMIT" \
+ --output-folder "/tmp/build-outputs-$KOKORO_GIT_COMMIT_oak" \
  --verbose
 
 # Copy the generated binary to placer
-cp /tmp/build-outputs/oak_restricted_kernel_simple_io_bin "$KOKORO_ARTIFACTS_DIR/latest/oak_restricted_kernel_simple_io_bin/$KOKORO_GITHUB_PULL_REQUEST_COMMIT"
+cp /tmp/build-outputs/oak_restricted_kernel_simple_io_bin "$KOKORO_ARTIFACTS_DIR/latest/oak_restricted_kernel_simple_io_bin/$KOKORO_GIT_COMMIT_oak"
 ls -als "$KOKORO_ARTIFACTS_DIR"
