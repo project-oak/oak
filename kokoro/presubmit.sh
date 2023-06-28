@@ -12,9 +12,26 @@ export RUST_LOG=debug
 export XDG_RUNTIME_DIR=/var/run
 
 ./scripts/docker_pull
-# --all-targets is needed to also run tests for examples and benches.
-./scripts/docker_run nix develop .#ci --command cargo nextest run --all-targets --hide-progress-bar
+./scripts/docker_run nix develop .#ci --command just kokoro
 
-mkdir "$KOKORO_ARTIFACTS_DIR/test_logs/"
+mkdir -p "$KOKORO_ARTIFACTS_DIR/test_logs/"
 cp ./target/nextest/default/*.xml "$KOKORO_ARTIFACTS_DIR/test_logs/"
-ls -als "$KOKORO_ARTIFACTS_DIR"
+
+mkdir -p "$KOKORO_ARTIFACTS_DIR/binaries/"
+
+# Store the git commit hash in a file.
+echo "${KOKORO_GIT_COMMIT_oak:?}" > "$KOKORO_ARTIFACTS_DIR/binaries/git_commit"
+
+# Copy the generated binaries to Placer.
+export GENERATED_BINARIES=(
+    ./oak_restricted_kernel_bin/target/x86_64-unknown-none/release/oak_restricted_kernel_bin
+    ./stage0_bin/target/x86_64-unknown-none/release/stage0_bin
+    ./enclave_apps/target/x86_64-unknown-none/release/oak_echo_enclave_app
+    ./enclave_apps/target/x86_64-unknown-none/release/oak_echo_raw_enclave_app
+    ./enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app
+    ./enclave_apps/target/x86_64-unknown-none/release/oak_tensorflow_enclave_app
+    ./enclave_apps/target/x86_64-unknown-none/release/quirk_echo_enclave_app
+)
+cp "${GENERATED_BINARIES[@]}" "$KOKORO_ARTIFACTS_DIR/binaries/"
+
+ls -alsR "$KOKORO_ARTIFACTS_DIR/binaries"

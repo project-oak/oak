@@ -37,25 +37,47 @@ TEST(EncryptorTest, ClientEncryptorAndServerEncryptorCommunicateSuccess) {
   ASSERT_TRUE(client_encryptor.ok());
   ServerEncryptor server_encryptor = ServerEncryptor(*key_pair);
 
-  std::string client_plaintext_message = "Hello server";
+  // Here we have the client send 2 encrypted messages to the server to ensure that nonce's align
+  // for multi-message communication.
+  std::string client_plaintext_message1 = "Hello server";
 
   // Encrypt plaintext message and have server encryptor decrypt message.
-  auto client_ciphertext = (*client_encryptor)->Encrypt(client_plaintext_message, kOakHPKEInfoTest);
-  ASSERT_TRUE(client_ciphertext.ok());
-  auto server_decryption_result = server_encryptor.Decrypt(*client_ciphertext);
-  ASSERT_TRUE(server_decryption_result.ok());
-  EXPECT_THAT(client_plaintext_message, StrEq(server_decryption_result->plaintext));
-  EXPECT_THAT(kOakHPKEInfoTest, StrEq(server_decryption_result->associated_data));
+  auto client_ciphertext1 =
+      (*client_encryptor)->Encrypt(client_plaintext_message1, kOakHPKEInfoTest);
+  ASSERT_TRUE(client_ciphertext1.ok());
+  auto server_decryption_result1 = server_encryptor.Decrypt(*client_ciphertext1);
+  ASSERT_TRUE(server_decryption_result1.ok());
+  EXPECT_THAT(client_plaintext_message1, StrEq(server_decryption_result1->plaintext));
+  EXPECT_THAT(kOakHPKEInfoTest, StrEq(server_decryption_result1->associated_data));
 
-  std::string server_plaintext_message = "Hello client";
+  std::string client_plaintext_message2 = "Hello again, server!";
+  auto client_ciphertext2 =
+      (*client_encryptor)->Encrypt(client_plaintext_message2, kOakHPKEInfoTest);
+  ASSERT_TRUE(client_ciphertext2.ok());
+  auto server_decryption_result2 = server_encryptor.Decrypt(*client_ciphertext2);
+  ASSERT_TRUE(server_decryption_result2.ok());
+  EXPECT_THAT(client_plaintext_message2, StrEq(server_decryption_result2->plaintext));
+  EXPECT_THAT(kOakHPKEInfoTest, StrEq(server_decryption_result2->associated_data));
+
+  // We have the server send 2 encrypted messages back to the client. Again this is to ensure the
+  // nonce's align for the multiple messages.
+  std::string server_plaintext_message1 = "Hello client";
 
   // Server responds with an encrypted message that the client successfully decrypts.
-  auto server_ciphertext = server_encryptor.Encrypt(server_plaintext_message, kOakHPKEInfoTest);
-  ASSERT_TRUE(server_ciphertext.ok());
-  auto client_decryption_result = (*client_encryptor)->Decrypt(*server_ciphertext);
-  ASSERT_TRUE(client_decryption_result.ok());
-  EXPECT_THAT(server_plaintext_message, StrEq(client_decryption_result->plaintext));
-  EXPECT_THAT(kOakHPKEInfoTest, StrEq(client_decryption_result->associated_data));
+  auto server_ciphertext1 = server_encryptor.Encrypt(server_plaintext_message1, kOakHPKEInfoTest);
+  ASSERT_TRUE(server_ciphertext1.ok());
+  auto client_decryption_result1 = (*client_encryptor)->Decrypt(*server_ciphertext1);
+  ASSERT_TRUE(client_decryption_result1.ok());
+  EXPECT_THAT(server_plaintext_message1, StrEq(client_decryption_result1->plaintext));
+  EXPECT_THAT(kOakHPKEInfoTest, StrEq(client_decryption_result1->associated_data));
+
+  std::string server_plaintext_message2 = "Hello again, client!";
+  auto server_ciphertext2 = server_encryptor.Encrypt(server_plaintext_message2, kOakHPKEInfoTest);
+  ASSERT_TRUE(server_ciphertext2.ok());
+  auto client_decryption_result2 = (*client_encryptor)->Decrypt(*server_ciphertext2);
+  ASSERT_TRUE(client_decryption_result2.ok());
+  EXPECT_THAT(server_plaintext_message2, StrEq(client_decryption_result2->plaintext));
+  EXPECT_THAT(kOakHPKEInfoTest, StrEq(client_decryption_result2->associated_data));
 }
 
 TEST(EncryptorTest, ClientEncryptorAndServerEncryptorCommunicateMismatchPublicKeysFailure) {
