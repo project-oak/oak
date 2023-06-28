@@ -23,7 +23,6 @@ package(
 java_test(
     name = "encryptor_test",
     srcs = ["EncryptorTest.java"],
-    jvm_flags = ["-Djava.library.path=cc/crypto/hpke/jni"],
     test_class = "com.google.oak.crypto.EncryptorTest",
     deps = [
         "//java/src/main/java/com/google/oak/crypto:client_encryptor",
