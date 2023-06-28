@@ -9,7 +9,6 @@ source "$SCRIPTS_DIR/common"
 
 mkdir -p './bazel-cache'
 mkdir -p './cargo-cache'
-mkdir -p './sccache-cache'
 
 docker_run_flags=(
   '--rm'
@@ -22,7 +21,6 @@ docker_run_flags=(
   '--env=RUST_LOGS'
   "--volume=$PWD/bazel-cache:/home/docker/.cache/bazel"
   "--volume=$PWD/cargo-cache:/home/docker/.cargo"
-  "--volume=$PWD/sccache-cache:/home/docker/.cache/sccache"
   "--volume=$PWD:/workspace"
   # Enable Docker-in-Docker by giving the container access to the host docker
   # daemon.
