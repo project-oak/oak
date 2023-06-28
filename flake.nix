@@ -158,10 +158,19 @@
                 perl
               ];
             };
-            # By default create a shell with the rust and bazel inputs.
+            # Shell for most CI steps (i.e. without contaniners support).
+            ci = pkgs.mkShell {
+              inputsFrom = [
+                rust
+                bazelShell
+                lint
+              ];
+            };
+            # By default create a shell with all the inputs.
             default = pkgs.mkShell {
               packages = [ ];
               inputsFrom = [
+                containers
                 rust
                 bazelShell
                 lint
