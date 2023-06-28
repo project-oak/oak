@@ -78,6 +78,20 @@ impl ZeroPage {
             }
         };
 
+        let entry = self.inner.e820_table[0];
+        if entry.addr() == 0 && entry.size() > 0x2000 {
+            let size = entry.size();
+            self.inner.e820_table[0] = BootE820Entry::new(0, 0x1000, E820EntryType::RAM);
+            self.inner.e820_table[self.inner.e820_entries as usize] =
+                BootE820Entry::new(0x1000, 0x1000, E820EntryType::RESERVED);
+            self.inner.e820_entries += 1;
+            self.inner.e820_table[self.inner.e820_entries as usize] =
+                BootE820Entry::new(0x2000, size - 0x2000, E820EntryType::RAM);
+            self.inner.e820_entries += 1;
+            self.inner.e820_table[..(self.inner.e820_entries as usize)]
+                .sort_unstable_by_key(|x| x.addr());
+        }
+
         for entry in self.inner.e820_table() {
             log::debug!(
                 "early E820 entry: [{:#018x}-{:#018x}), len {}, type {}",

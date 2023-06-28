@@ -20,7 +20,7 @@ use log::{debug, info};
 use nix::sys::termios::{cfmakeraw, tcgetattr, tcsetattr, SetArg};
 use std::{
     fs::OpenOptions,
-    io::{Read, Write},
+    io::{Read, Seek, Write},
     os::fd::{AsRawFd, RawFd},
 };
 
@@ -29,12 +29,32 @@ mod init;
 // The path that identifies the first Virtio Console port.
 const DEVICE_PATH: &str = "/dev/hvc0";
 
+// The path to the physical memory device we will use to read the DICE data.
+const DICE_PATH: &str = "/dev/mem";
+// The physical address of the start of the DICE data in memory.
+const DICE_OFFSET: u64 = 0x1000;
+// The number of bytes we will read from the DICE data.
+const DICE_SIZE: usize = 64;
+
 fn main() -> ! {
     simple_logger::SimpleLogger::new().init().unwrap();
     // Set up the Linux environment, since we expect to be the initial process.
     init::init().unwrap();
 
     info!("Echo app started");
+
+    let mut dice_reader = OpenOptions::new()
+        .read(true)
+        .open(DICE_PATH)
+        .expect("couldn't open DICE memory device for reading");
+    let mut dice_data = [0u8; DICE_SIZE];
+    dice_reader
+        .seek(std::io::SeekFrom::Start(DICE_OFFSET))
+        .expect("couldn't seek to DICE offset");
+    dice_reader
+        .read(&mut dice_data[..])
+        .expect("couldn't read dice data");
+    info!("DICE data: {:?}", dice_data);
 
     let mut buf = [0u8; 1024];
     // We use the first Virtio Console port for communications with the host.

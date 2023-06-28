@@ -17,6 +17,8 @@
 #![no_std]
 #![feature(int_roundings)]
 #![feature(nonnull_slice_from_raw_parts)]
+#![feature(maybe_uninit_uninit_array_transpose)]
+#![feature(maybe_uninit_write_slice)]
 
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use oak_sev_guest::io::PortFactoryWrapper;
@@ -45,6 +47,8 @@ mod zero_page;
 // Reserve 128K for boot data structures.
 static BOOT_ALLOC: alloc::Allocator<0x20000> = alloc::Allocator::uninit();
 
+#[link_section = ".boot"]
+static mut DICE: [MaybeUninit<u8>; 64] = MaybeUninit::uninit().transpose();
 #[link_section = ".boot"]
 #[no_mangle]
 static SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
@@ -253,6 +257,10 @@ pub fn rust64_start(encrypted: u64) -> ! {
     {
         zero_page.set_initial_ram_disk(ram_disk);
     }
+    let data = [254u8; 64];
+    let dice = unsafe { MaybeUninit::write_slice(&mut DICE, &data) };
+
+    log::info!("DICE address: {}", dice.as_ptr() as usize);
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 
