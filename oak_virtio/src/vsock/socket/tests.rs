@@ -91,11 +91,11 @@ fn test_socket_connect_invalid() {
 
 #[test]
 fn test_read_exact() {
-    let data = vec![3; 17];
+    let data = [3; 17];
     let mut packet = Packet::new_data(&data[..], HOST_PORT, GUEST_PORT).unwrap();
     set_packet_cids_host_to_guest(&mut packet);
-    let mut first = vec![0; 11];
-    let mut second = vec![0; 2];
+    let mut first = [0; 11];
+    let mut second = [0; 2];
     let (mut socket, transport) = new_socket_and_transport();
     transport.device_write_to_queue::<QUEUE_SIZE>(0, packet.as_slice());
     assert!(socket.read(&mut first).is_ok());
@@ -109,7 +109,7 @@ fn test_read_exact() {
 #[test]
 fn test_write_all() {
     // Send data larger than the max payload size, so we expect 2 packets.
-    let data = vec![31; 5000];
+    let data = [31; 5000];
     let (mut socket, transport) = new_socket_and_transport();
     assert!(socket.write(&data[..]).is_ok());
     let first = Packet::new(

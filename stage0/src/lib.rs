@@ -16,7 +16,6 @@
 
 #![no_std]
 #![feature(int_roundings)]
-#![feature(nonnull_slice_from_raw_parts)]
 
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use oak_sev_guest::io::PortFactoryWrapper;

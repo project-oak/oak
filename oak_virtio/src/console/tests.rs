@@ -95,9 +95,9 @@ fn test_write_bytes() {
 
 #[test]
 fn test_read_exact() {
-    let data = vec![4; 10];
-    let mut first = vec![0; 5];
-    let mut second = vec![0; 3];
+    let data = [4; 10];
+    let mut first = [0; 5];
+    let mut second = [0; 3];
     let transport = new_valid_transport();
     let device = VirtioBaseDevice::new(transport.clone());
     let mut console = Console::new(device, identity_map, &Global);
