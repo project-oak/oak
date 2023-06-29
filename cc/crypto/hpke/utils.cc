@@ -87,13 +87,4 @@ std::vector<uint8_t> CalculateNonce(const std::vector<uint8_t>& base_nonce,
   return nonce;
 }
 
-absl::StatusOr<uint64_t> IncrementSequenceNumber(uint64_t sequence_number) {
-  /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
-  /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
-  if (sequence_number >= UINT64_MAX) {
-    return absl::OutOfRangeError("Sequence number reached.");
-  }
-  return sequence_number += 1;
-}
-
 }  // namespace oak::crypto

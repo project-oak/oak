@@ -66,12 +66,13 @@ absl::StatusOr<std::string> SenderResponseContext::Open(absl::string_view cipher
   std::vector<uint8_t> plaintext_bytes(ciphertext_bytes.size());
   size_t plaintext_bytes_size;
 
-  std::vector<uint8_t> nonce = CalculateNonce(response_base_nonce_, sequence_number_);
-  auto new_sequence_number = IncrementSequenceNumber(sequence_number_);
-  if (!new_sequence_number.ok()) {
-    return new_sequence_number.status();
+  /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
+  /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
+  if (sequence_number_ == UINT64_MAX) {
+    return absl::OutOfRangeError("Sequence number reached.");
   }
-  sequence_number_ = *new_sequence_number;
+  std::vector<uint8_t> nonce = CalculateNonce(response_base_nonce_, sequence_number_);
+  sequence_number_ += 1;
 
   if (!EVP_AEAD_CTX_open(
           /* ctx= */ aead_response_context_.get(),
