@@ -77,6 +77,7 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
         run_command_and_log_output(
             tokio::process::Command::new("mkdir")
                 .current_dir(CONTAINER_DIR)
+                .arg("-p")
                 .arg("dev/vsock"),
         )
         .await?;
