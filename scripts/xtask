@@ -5,7 +5,3 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "$SCRIPTS_DIR/common"
 
 cargo run --target=x86_64-unknown-linux-musl --manifest-path="${SCRIPTS_DIR}/../xtask/Cargo.toml" -- "$@"
-
-if [[ -n "${CI:-}" ]]; then
-  sccache --show-stats
-fi

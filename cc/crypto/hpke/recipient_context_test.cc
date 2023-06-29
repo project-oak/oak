@@ -43,7 +43,7 @@ class RecipientContextTest : public testing::Test {
     recipient_key_pair_.public_key = serialized_public_key;
     recipient_key_pair_.private_key = serialized_private_key;
 
-    // Random encpasulated public key from the SetupBaseSender function.
+    // Random encapsulated public key from the SetupBaseSender function.
     const std::vector<uint8_t> encap_public_key_bytes = {
         85,  255, 224, 169, 132, 101, 176, 248, 95,  67, 86,  31, 44, 31, 230, 224,
         226, 174, 242, 10,  200, 162, 222, 196, 255, 25, 114, 64, 4,  15, 193, 89};
@@ -98,7 +98,7 @@ TEST_F(RecipientContextTest, SetupBaseRecipientReturnsValidPointersOnSuccess) {
   EXPECT_TRUE(recipient_context->recipient_response_context);
 }
 
-TEST_F(RecipientContextTest, RecipeintRequestContextOpenSuccess) {
+TEST_F(RecipientContextTest, RecipientRequestContextOpenSuccess) {
   // Initialize an HPKE sender.
   auto sender_context = SetupBaseSender(recipient_key_pair_.public_key, info_string_);
   ASSERT_TRUE(sender_context.ok());
@@ -120,7 +120,7 @@ TEST_F(RecipientContextTest, RecipeintRequestContextOpenSuccess) {
   EXPECT_THAT(*received_plaintext, StrEq(plaintext));
 }
 
-TEST_F(RecipientContextTest, RecipeintRequestContextOpenFailure) {
+TEST_F(RecipientContextTest, RecipientRequestContextOpenFailure) {
   // Initialize an HPKE sender.
   auto sender_context = SetupBaseSender(recipient_key_pair_.public_key, info_string_);
   ASSERT_TRUE(sender_context.ok());
@@ -144,7 +144,7 @@ TEST_F(RecipientContextTest, RecipeintRequestContextOpenFailure) {
   EXPECT_EQ(received_plaintext.status().code(), absl::StatusCode::kAborted);
 }
 
-TEST_F(RecipientContextTest, RecipeintResponseContextSealSuccess) {
+TEST_F(RecipientContextTest, RecipientResponseContextSealSuccess) {
   auto recipient_context = SetupBaseRecipient(encap_public_key_, recipient_key_pair_, info_string_);
   ASSERT_TRUE(recipient_context.ok());
 
@@ -156,7 +156,7 @@ TEST_F(RecipientContextTest, RecipeintResponseContextSealSuccess) {
   EXPECT_THAT(plaintext, StrNe(*ciphertext));
 }
 
-TEST_F(RecipientContextTest, RecipeintResponseContextSealFailure) {
+TEST_F(RecipientContextTest, RecipientResponseContextSealFailure) {
   auto recipient_context = SetupBaseRecipient(encap_public_key_, recipient_key_pair_, info_string_);
   ASSERT_TRUE(recipient_context.ok());
 

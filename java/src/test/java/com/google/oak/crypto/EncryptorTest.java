@@ -23,6 +23,7 @@ import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Optional;
 import org.junit.Assert;
 import org.junit.Test;
@@ -65,7 +66,7 @@ public class EncryptorTest {
       // TODO(#3644): Once we implement Java hybrid encryption, we need to add a test for checking
       // that the message was actually encrypted.
       // Assert.assertFalse(
-      //     assertArrayEquals(encryptedRequest.getEncryptedMessage().getCiphertext().toByteArray(),
+      //     Arrays.equals(encryptedRequest.getEncryptedMessage().getCiphertext().toByteArray(),
       //         TEST_REQUEST_PLAINTEXT));
       Assert.assertArrayEquals(
           encryptedRequest.getEncryptedMessage().getAssociatedData().toByteArray(),
@@ -90,7 +91,7 @@ public class EncryptorTest {
       // TODO(#3644): Once we implement Java hybrid encryption, we need to add a test for checking
       // that the message was actually encrypted.
       // Assert.assertFalse(
-      //     assertArrayEquals(encryptedResponse.getEncryptedMessage().getCiphertext().toByteArray(),
+      //     Arrays.equals(encryptedResponse.getEncryptedMessage().getCiphertext().toByteArray(),
       //         TEST_RESPONSE_PLAINTEXT));
       Assert.assertArrayEquals(
           encryptedResponse.getEncryptedMessage().getAssociatedData().toByteArray(),
