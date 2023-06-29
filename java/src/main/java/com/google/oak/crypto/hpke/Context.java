@@ -39,11 +39,13 @@ public final class Context {
      */
     public final Result<byte[], Exception> seal(
         final byte[] plaintext, final byte[] associatedData) {
-      byte[] nativeResult = nativeSeal(plaintext, associatedData);
-      if (nativeResult == null) {
-        return Result.error(new Exception("SenderRequestContext seal failed."));
-      }
-      return Result.success(nativeResult);
+      // TODO(#3642): Once server and client side are ready, uncomment C++ crypto logic.
+      // byte[] nativeResult = nativeSeal(plaintext, associatedData);
+      // if (nativeResult == null) {
+      //   return Result.error(new Exception("SenderRequestContext seal failed."));
+      // }
+      // return Result.success(nativeResult);
+      return Result.success(plaintext);
     }
 
     /**
@@ -74,11 +76,13 @@ public final class Context {
      */
     public final Result<byte[], Exception> open(
         final byte[] ciphertext, final byte[] associatedData) {
-      byte[] nativeResult = nativeOpen(ciphertext, associatedData);
-      if (nativeResult == null) {
-        return Result.error(new Exception("SenderResponseContext open failed."));
-      }
-      return Result.success(nativeResult);
+      // TODO(#3642): Once server and client side are ready, uncomment C++ crypto logic.
+      // byte[] nativeResult = nativeOpen(ciphertext, associatedData);
+      // if (nativeResult == null) {
+      //   return Result.error(new Exception("SenderResponseContext open failed."));
+      // }
+      // return Result.success(nativeResult);
+      return Result.success(ciphertext);
     }
 
     /**
@@ -109,11 +113,13 @@ public final class Context {
      */
     public final Result<byte[], Exception> open(
         final byte[] ciphertext, final byte[] associatedData) {
-      byte[] nativeResult = nativeOpen(ciphertext, associatedData);
-      if (nativeResult == null) {
-        return Result.error(new Exception("RecipientRequestContext open failed."));
-      }
-      return Result.success(nativeResult);
+      // TODO(#3642): Once server and client side are ready, uncomment C++ crypto logic.
+      // byte[] nativeResult = nativeOpen(ciphertext, associatedData);
+      // if (nativeResult == null) {
+      //   return Result.error(new Exception("RecipientRequestContext open failed."));
+      // }
+      // return Result.success(nativeResult);
+      return Result.success(ciphertext);
     }
 
     /**
@@ -144,11 +150,13 @@ public final class Context {
      */
     public final Result<byte[], Exception> seal(
         final byte[] plaintext, final byte[] associatedData) {
-      byte[] nativeResult = nativeSeal(plaintext, associatedData);
-      if (nativeResult == null) {
-        return Result.error(new Exception("RecipientResponseContext seal failed."));
-      }
-      return Result.success(nativeResult);
+      // TODO(#3642): Once server and client side are ready, uncomment C++ crypto logic.
+      // byte[] nativeResult = nativeSeal(plaintext, associatedData);
+      // if (nativeResult == null) {
+      //   return Result.error(new Exception("RecipientResponseContext seal failed."));
+      // }
+      // return Result.success(nativeResult);
+      return Result.success(plaintext);
     }
 
     /**
