@@ -26,8 +26,11 @@ oak_restricted_kernel_simple_io_bin:
 stage0_bin:
     env --chdir=stage0_bin cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/stage0_bin
 
+stage1_cpio:
+    env --chdir=oak_containers_stage1 make
+
 # Top level target to build all enclave apps and the kernel, and run tests.
 #
 # This is the entry point for Kokoro CI.
-kokoro: all_enclave_apps oak_restricted_kernel_bin stage0_bin
+kokoro: all_enclave_apps oak_restricted_kernel_bin stage0_bin stage1_cpio
     cargo nextest run --all-targets --hide-progress-bar

@@ -1,0 +1,10 @@
+command = [
+  "nix",
+  "develop",
+  ".#rust",
+  "--command",
+  "env",
+  "--chdir=oak_containers_stage1",
+  "make",
+]
+artifact_path = "./target/stage1.cpio"

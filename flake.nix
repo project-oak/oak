@@ -106,6 +106,7 @@
                 cargo-udeps
                 protobuf
                 qemu_kvm
+                curl
               ];
             };
             # Minimal shell with only the dependencies needed to run the format and check-format
@@ -156,6 +157,7 @@
                 flex
                 libelf
                 perl
+                glibc.static
               ];
             };
             # Shell for most CI steps (i.e. without contaniners support).
