@@ -1,0 +1,20 @@
+[package]
+name = "oak_containers_example_untrusted_application"
+version = "0.1.0"
+authors = ["Juliette Pretot <julsh@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[build-dependencies]
+oak_grpc_utils = { workspace = true }
+
+[dependencies]
+anyhow = "*"
+prost = "*"
+tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
+tonic = "*"
+tower = "*"
+tokio-vsock = { version = "*", features = ["tonic-conn"] }
+vsock = "*"
+oak_containers_launcher = { workspace = true }
+clap = { version = "*", features = ["derive"] }

@@ -1,0 +1,21 @@
+[package]
+name = "oak_containers_example_trusted_application"
+version = "0.1.0"
+authors = ["Juliette Pretot <julsh@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[build-dependencies]
+oak_grpc_utils = { workspace = true }
+
+[dependencies]
+anyhow = "*"
+prost = "*"
+tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
+tonic = { workspace = true }
+tokio-vsock = { version = "*", features = ["tonic-conn"] }
+vsock = "*"
+futures = "*"
+async-stream = "*"
+bytes = "*"
+tower = "*"

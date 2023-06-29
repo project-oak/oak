@@ -9,6 +9,8 @@ members = [
   "oak_client",
   "oak_containers_stage1",
   "oak_core",
+  "oak_containers_example_trusted_application",
+  "oak_containers_example_untrusted_application",
   "oak_containers_orchestrator",
   "oak_containers_orchestrator_client",
   "oak_containers_launcher",
@@ -86,6 +88,7 @@ oak_client = { path = "./oak_client" }
 oak_core = { path = "./oak_core" }
 oak_crypto = { path = "./oak_crypto" }
 oak_containers_orchestrator_client = { path = "./oak_containers_orchestrator_client" }
+oak_containers_launcher = { path = "./oak_containers_launcher" }
 oak_containers_launcher_server = { path = "./oak_containers_launcher_server" }
 oak_enclave_runtime_support = { path = "./oak_enclave_runtime_support" }
 oak_functions_abi = { path = "./oak_functions_abi" }

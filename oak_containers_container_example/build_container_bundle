@@ -4,13 +4,14 @@
 # that can be executed on Oak Containers. Used for manual testing during
 # development. Down the line we probably want to replace this.
 
-rm -rf ./temp_out
-mkdir -p ./temp_out
+rm -rf ./target
+mkdir -p ./target
+cargo build --package="oak_containers_example_trusted_application" -Z unstable-options --out-dir="./target/"
 docker build --tag="oak_container_example" .
-docker export --output="./temp_out/oak_container_example_rootfs.tar" "$(docker create oak_container_example)"
-mkdir -p ./temp_out/rootfs
-tar -xf ./temp_out/oak_container_example_rootfs.tar -C ./temp_out/rootfs
-rm ./temp_out/oak_container_example_rootfs.tar
-cp config.json ./temp_out/config.json
-tar -cvf oak_container_example_bundle.tar -C ./temp_out .
-rm -rf ./temp_out
+mkdir -p ./target/oci_filesystem_bundle
+docker export --output="./target/oak_container_example_rootfs.tar" "$(docker create oak_container_example)"
+mkdir -p ./target/oci_filesystem_bundle/rootfs
+tar -xf ./target/oak_container_example_rootfs.tar -C ./target/oci_filesystem_bundle/rootfs
+cp ./config.json ./target/oci_filesystem_bundle
+tar -cvf ./target/oak_container_example_oci_filesystem_bundle.tar -C ./target/oci_filesystem_bundle .
+

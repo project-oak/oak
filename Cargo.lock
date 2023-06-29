@@ -827,6 +827,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "error-chain"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d2f06b9cac1506ece98fe3231e3cc9c4410ec3d5b1f24ae1c8946f0742cdefc"
+dependencies = [
+ "version_check",
+]
+
+[[package]]
 name = "fastrand"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1119,6 +1128,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
 dependencies = [
  "digest 0.10.6",
+]
+
+[[package]]
+name = "hostname"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c731c3e10504cc8ed35cfe2f1db4c9274c3d35fa486e3b31df46f068ef3e867"
+dependencies = [
+ "libc",
+ "match_cfg",
+ "winapi",
 ]
 
 [[package]]
@@ -1456,6 +1476,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
+name = "match_cfg"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffbee8634e0d45d258acb448e7eaab3fce7a0a467395d4d9f228e3c1f01fb2e4"
+
+[[package]]
 name = "matchit"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1676,6 +1702,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_containers_example_trusted_application"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "bytes",
+ "futures",
+ "oak_grpc_utils",
+ "prost",
+ "tokio",
+ "tokio-vsock",
+ "tonic",
+ "tower",
+ "vsock",
+]
+
+[[package]]
+name = "oak_containers_example_untrusted_application"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "oak_containers_launcher",
+ "oak_grpc_utils",
+ "prost",
+ "tokio",
+ "tokio-vsock",
+ "tonic",
+ "tower",
+ "vsock",
+]
+
+[[package]]
 name = "oak_containers_launcher"
 version = "0.1.0"
 dependencies = [
@@ -1709,7 +1768,12 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "log",
  "oak_containers_orchestrator_client",
+ "serde",
+ "serde_json",
+ "syslog",
+ "tar",
  "tokio",
 ]
 
@@ -3270,6 +3334,19 @@ dependencies = [
  "quote",
  "syn",
  "unicode-xid",
+]
+
+[[package]]
+name = "syslog"
+version = "6.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7434e95bcccce1215d30f4bf84fe8c00e8de1b9be4fb736d747ca53d36e7f96f"
+dependencies = [
+ "error-chain",
+ "hostname",
+ "libc",
+ "log",
+ "time",
 ]
 
 [[package]]

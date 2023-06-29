@@ -1,16 +1,13 @@
 {
-	"ociVersion": "1.0.1",
+	"ociVersion": "0.2.0",
 	"process": {
 		"user": {
 			"uid": 0,
 			"gid": 0
 		},
 		"args": [
-			"/bin/sh",
-			"-c",
-			"echo 'It works!'"
-		],
-		"cwd": "/"
+			"/bin/oak_containers_example_trusted_application"
+		]
 	},
 	"root": {
 		"path": "rootfs"
