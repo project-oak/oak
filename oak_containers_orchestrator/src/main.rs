@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod container_runtime;
 mod logging;
 
 use anyhow::anyhow;
@@ -48,6 +49,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_application_config()
         .await
         .map_err(|error| anyhow!("couldn't get application config: {:?}", error))?;
+
+    container_runtime::run(&container_bundle).await?;
 
     Ok(())
 }
