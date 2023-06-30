@@ -1,5 +1,5 @@
 [package]
-name = "oak_containers_example_trusted_application"
+name = "oak_containers_hello_world_trusted_app"
 version = "0.1.0"
 authors = ["Juliette Pretot <julsh@google.com>"]
 edition = "2021"

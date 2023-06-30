@@ -18,7 +18,7 @@ use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
         "../",
-        &["oak_containers_example_trusted_application/proto/interface.proto"],
+        &["oak_containers_hello_world_trusted_app/proto/interface.proto"],
         CodegenOptions {
             build_server: true,
             ..Default::default()
