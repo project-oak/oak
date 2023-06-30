@@ -52,14 +52,9 @@ async fn run_command_and_log_output(
 const CONTAINER_DIR: &str = "/oak_container";
 
 async fn rmount_dir(source: PathBuf, target: PathBuf) -> Result<(), anyhow::Error> {
-    run_command_and_log_output(tokio::process::Command::new("rm").arg("-rf").arg(&target)).await?;
-    run_command_and_log_output(
-        tokio::process::Command::new("mkdir")
-            .current_dir(CONTAINER_DIR)
-            .arg("-p")
-            .arg(&target),
-    )
-    .await?;
+    tokio::fs::remove_dir_all(&target).await?;
+    tokio::fs::create_dir_all(&target).await?;
+
     run_command_and_log_output(
         tokio::process::Command::new("mount")
             .current_dir(CONTAINER_DIR)
