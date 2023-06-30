@@ -25,5 +25,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     )?;
 
+    generate_grpc_code(
+        "../",
+        &["oak_containers/proto/interfaces.proto"],
+        CodegenOptions {
+            build_client: true,
+            ..Default::default()
+        },
+    )?;
+
     Ok(())
 }
