@@ -1676,6 +1676,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_containers_hello_world_trusted_app"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "bytes",
+ "futures",
+ "oak_grpc_utils",
+ "prost",
+ "tokio",
+ "tokio-vsock",
+ "tonic",
+ "tower",
+ "vsock",
+]
+
+[[package]]
+name = "oak_containers_hello_world_untrusted_app"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "oak_containers_launcher",
+ "oak_grpc_utils",
+ "prost",
+ "tokio",
+ "tokio-vsock",
+ "tonic",
+ "tower",
+ "vsock",
+]
+
+[[package]]
 name = "oak_containers_launcher"
 version = "0.1.0"
 dependencies = [

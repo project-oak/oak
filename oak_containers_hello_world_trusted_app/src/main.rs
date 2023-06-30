@@ -13,10 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use clap::Parser;
+mod client;
 
 #[tokio::main]
-async fn main() -> Result<(), anyhow::Error> {
-    let args = oak_containers_launcher::Args::parse();
-    oak_containers_launcher::create(args).await
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut client = client::UntrustedApplicationClient::create(2, 6969).await?;
+    let _greeting = client.hello("Trusted Application").await?;
+    Ok(())
 }

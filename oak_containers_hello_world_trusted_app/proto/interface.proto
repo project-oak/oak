@@ -1,0 +1,42 @@
+//
+// Copyright 2023 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.containers.example;
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloResponse {
+  string greeting = 1;
+}
+
+// Simple service that permits the trusted application to send a request to the
+// untrusted application. In this example the trusted application will send a
+// name and the untrusted application will return a greeting.
+// In real world application communication would more likely take the form
+// of a stream, in which the untrusted application sends new request, and the
+// trusted application responds.
+// The current architecture of the untrusted applicatin being the service was
+// chosen purely because it conceptually follows the pattern of all other
+// vsock communication between the trusted and untrusted parts. The untrusted
+// part exposes a listener/service, the trusted part connects to it once it has
+// booted up.
+service UntrustedApplication {
+  rpc Hello(HelloRequest) returns (HelloResponse) {}
+}

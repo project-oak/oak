@@ -13,10 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod service;
 use clap::Parser;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let args = oak_containers_launcher::Args::parse();
-    oak_containers_launcher::create(args).await
+
+    tokio::select! {
+        _ = service::create(2, 6969) => {}
+        _ = oak_containers_launcher::create(args) => {}
+    };
+
+    Ok(())
 }
