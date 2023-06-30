@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// Representation of a minimal OCI filesystem bundle config, including just the required fields
+/// Representation of a minimal OCI filesystem bundle config, including just the required fields.
 /// Ref: <https://github.com/opencontainers/runtime-spec/blob/467fd17d4f2a987fa00051ce44b69bf9620e2ee6/config.md>
 #[derive(serde::Deserialize)]
 struct OciFilesystemBundleConfig {
@@ -46,7 +46,7 @@ async fn run_command_and_log_output(
     Ok(())
 }
 
-// Directory at which the container OCI filesystem bundle will be unpacked
+// Directory at which the container OCI filesystem bundle will be unpacked.
 const CONTAINER_DIR: &str = "/oak_container";
 
 pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
@@ -64,8 +64,8 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
         serde_json::from_str(&oci_filesystem_bundle_config_file)?
     };
 
-    // mount host vsock device inside the container directory to allow the
-    // trusted application to communicate with the outside
+    // Mount host vsock device inside the container directory to allow the
+    // trusted application to communicate with the outside.
     {
         run_command_and_log_output(
             tokio::process::Command::new("rm")
@@ -97,7 +97,7 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
         base
     };
 
-    // start the trusted application in a chroot jail of the container
+    // Start the trusted application in a chroot jail of the container.
     run_command_and_log_output(
         tokio::process::Command::new("chroot")
             .arg(format!(

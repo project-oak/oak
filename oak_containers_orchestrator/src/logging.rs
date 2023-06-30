@@ -18,10 +18,11 @@ extern crate log;
 use log::LevelFilter;
 use syslog::{BasicLogger, Facility, Formatter3164};
 
-/// Setup logging to syslog
-// Based on syslog's example of integrating with the log crate.
-// Ref: https://docs.rs/syslog/6.1.0/syslog/
+/// Setup logging to syslog.
 pub fn setup() -> Result<(), Box<dyn std::error::Error>> {
+    // Based on syslog's example of integrating with the log crate.
+    // Ref: https://docs.rs/syslog/6.1.0/syslog/
+
     let formatter = Formatter3164 {
         facility: Facility::LOG_DAEMON,
         hostname: None,
