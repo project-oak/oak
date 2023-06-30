@@ -32,5 +32,6 @@ java_binary(
         "//java/src/main/java/com/google/oak/util",
         "//oak_remote_attestation/proto/v1:service_streaming_java_grpc",
         "@io_grpc_grpc_java//api",
+        "@io_grpc_grpc_java//netty",
     ],
 )
