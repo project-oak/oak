@@ -47,7 +47,5 @@ absl::StatusOr<std::vector<uint8_t>> GetResponseBaseNonce(EVP_HPKE_CTX* ctx);
 std::vector<uint8_t> CalculateNonce(const std::vector<uint8_t>& base_nonce,
                                     uint64_t sequence_number);
 
-absl::StatusOr<uint64_t> IncrementSequenceNumber(uint64_t sequence_number);
-
 }  // namespace oak::crypto
 #endif  // CC_CRYPTO_HPKE_CONSTANTS_H_
