@@ -44,20 +44,23 @@ jobs:
           docker rmi $(docker image ls --all --quiet)
           df --human-readable
 
-      - name: Docker pull
-        timeout-minutes: 10
-        run: |
-          ./scripts/docker_pull
-          df --human-readable
+      - uses: DeterminateSystems/nix-installer-action@677cbc8aa1fe7e80b1fd15243ec41d5e0c7e3669
+      - uses: DeterminateSystems/magic-nix-cache-action@5cc3a5e24b688cf7e0ea986ab07a9d3d32c34a95
 
       # Remove all files from the "out" folder.
       - name: Clear "out" folder
         run: rm --recursive --force ./out/*
 
-      # Generate docs from within the Docker image.
+      # Build the Nix shell in a separate step first, so we can keep track of its build time.
+      # We use the `rust` shell here and below, since it avoids building unnecessary dependencies.
+      - name: Build nix shell
+        run: |
+          nix develop .#rust --command echo done
+
+      # Generate docs from within the Nix shell.
       - name: Generate docs
         run: |
-          ./scripts/docker_run nix develop .#ci --command ./scripts/build_gh_pages ./out
+          nix develop .#rust --command ./scripts/build_gh_pages ./out
 
       # From the "out" folder, commit the results and push to the `gh-pages` branch.
       # This step only applies to `push` events (not `pull_request`), and only if there are actual

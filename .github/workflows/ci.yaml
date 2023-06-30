@@ -71,7 +71,7 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@677cbc8aa1fe7e80b1fd15243ec41d5e0c7e3669
       - uses: DeterminateSystems/magic-nix-cache-action@5cc3a5e24b688cf7e0ea986ab07a9d3d32c34a95
 
-      # Build the shell in a separate step first, so we can keep track of its build time.
+      # Build the Nix shell in a separate step first, so we can keep track of its build time.
       - name: Build nix shell
         run: |
           nix develop .#ci --command echo done
