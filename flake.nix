@@ -156,6 +156,8 @@
                 flex
                 libelf
                 perl
+                glibc
+                glibc.static
               ];
             };
             # Shell for most CI steps (i.e. without contaniners support).
