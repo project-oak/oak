@@ -60,7 +60,7 @@ async fn rmount_dir(source: PathBuf, target: PathBuf) -> Result<(), anyhow::Erro
     }
     tokio::fs::create_dir_all(&target)
         .await
-        .context("create a directory at the target")?;
+        .context("failed to create a directory at the target")?;
 
     run_command_and_log_output(
         tokio::process::Command::new("mount")
