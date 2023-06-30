@@ -12,6 +12,7 @@ members = [
   "oak_containers_hello_world_trusted_app",
   "oak_containers_hello_world_untrusted_app",
   "oak_containers_orchestrator",
+  "oak_containers_orchestrator_ipc_server",
   "oak_containers_orchestrator_client",
   "oak_containers_launcher",
   "oak_containers_launcher_server",
@@ -87,6 +88,7 @@ oak_channel = { path = "./oak_channel" }
 oak_client = { path = "./oak_client" }
 oak_core = { path = "./oak_core" }
 oak_crypto = { path = "./oak_crypto" }
+oak_containers_orchestrator_ipc_server = { path = "./oak_containers_orchestrator_ipc_server" }
 oak_containers_orchestrator_client = { path = "./oak_containers_orchestrator_client" }
 oak_containers_launcher = { path = "./oak_containers_launcher" }
 oak_containers_launcher_server = { path = "./oak_containers_launcher_server" }

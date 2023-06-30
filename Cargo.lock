@@ -1770,6 +1770,7 @@ dependencies = [
  "clap",
  "log",
  "oak_containers_orchestrator_client",
+ "oak_containers_orchestrator_ipc_server",
  "serde",
  "serde_json",
  "syslog",
@@ -1789,6 +1790,18 @@ dependencies = [
  "tonic",
  "tower",
  "vsock",
+]
+
+[[package]]
+name = "oak_containers_orchestrator_ipc_server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_grpc_utils",
+ "prost",
+ "tokio",
+ "tokio-stream",
+ "tonic",
 ]
 
 [[package]]

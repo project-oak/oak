@@ -9,12 +9,14 @@ license = "Apache-2.0"
 anyhow = "*"
 clap = { version = "*", features = ["derive"] }
 oak_containers_orchestrator_client = { workspace = true }
+oak_containers_orchestrator_ipc_server = { workspace = true }
 tokio = { version = "*", features = [
   "rt-multi-thread",
   "macros",
   "sync",
   "fs",
-  "process"
+  "process",
+  "net"
 ] }
 log = "*"
 syslog = "*"

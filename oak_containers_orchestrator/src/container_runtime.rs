@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use anyhow::Context;
 use std::path::PathBuf;
 
 /// Representation of a minimal OCI filesystem bundle config, including just the required fields.
@@ -52,8 +53,14 @@ async fn run_command_and_log_output(
 const CONTAINER_DIR: &str = "/oak_container";
 
 async fn rmount_dir(source: PathBuf, target: PathBuf) -> Result<(), anyhow::Error> {
-    tokio::fs::remove_dir_all(&target).await?;
-    tokio::fs::create_dir_all(&target).await?;
+    if target.exists() {
+        tokio::fs::remove_dir_all(&target)
+            .await
+            .context("failed to removing existing directories at the target")?
+    }
+    tokio::fs::create_dir_all(&target)
+        .await
+        .context("create a directory at the target")?;
 
     run_command_and_log_output(
         tokio::process::Command::new("mount")
@@ -87,6 +94,18 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
         base.push(oci_filesystem_bundle_config.root.path);
         base
     };
+
+    // mount the utility dir (includes the ipc socket) into the container
+    let container_dev_path = {
+        let mut base = container_rootfs_path.clone();
+        base.push(crate::UTIL_DIR);
+        base
+    };
+    rmount_dir(
+        std::path::Path::new("/").join(crate::UTIL_DIR),
+        container_dev_path,
+    )
+    .await?;
 
     // mount host /dev into the container
     let container_dev_path = {
