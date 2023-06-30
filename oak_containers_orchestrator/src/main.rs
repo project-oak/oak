@@ -13,6 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod container_runtime;
+mod logging;
+
 use anyhow::anyhow;
 use clap::Parser;
 use oak_containers_orchestrator_client::LauncherClient;
@@ -28,6 +31,8 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    logging::setup()?;
+
     let args = Args::parse();
 
     let mut launcher_client =
@@ -35,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await
             .map_err(|error| anyhow!("couldn't create client: {:?}", error))?;
 
-    let _container_bundle = launcher_client
+    let container_bundle = launcher_client
         .get_container_bundle()
         .await
         .map_err(|error| anyhow!("couldn't get container bundle: {:?}", error))?;
@@ -44,6 +49,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_application_config()
         .await
         .map_err(|error| anyhow!("couldn't get application config: {:?}", error))?;
+
+    container_runtime::run(&container_bundle).await?;
 
     Ok(())
 }
