@@ -32,5 +32,7 @@ stage1_cpio:
 # Top level target to build all enclave apps and the kernel, and run tests.
 #
 # This is the entry point for Kokoro CI.
-kokoro: all_enclave_apps oak_restricted_kernel_bin stage0_bin stage1_cpio
+kokoro: all_enclave_apps oak_restricted_kernel_bin stage0_bin
     cargo nextest run --all-targets --hide-progress-bar
+
+kokoro_oak_containers: stage1_cpio
