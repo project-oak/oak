@@ -14,7 +14,7 @@
 // limitations under the License.
 
 /// Representation of a minimal OCI filesystem bundle config, including just the required fields
-/// Ref: https://github.com/opencontainers/runtime-spec/blob/467fd17d4f2a987fa00051ce44b69bf9620e2ee6/config.md
+/// Ref: <https://github.com/opencontainers/runtime-spec/blob/467fd17d4f2a987fa00051ce44b69bf9620e2ee6/config.md>
 #[derive(serde::Deserialize)]
 struct OciFilesystemBundleConfig {
     process: OciFilesystemBundleConfigProcess,
@@ -51,7 +51,7 @@ const CONTAINER_DIR: &str = "/oak_container";
 
 pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
     tokio::fs::create_dir(CONTAINER_DIR).await?;
-    tar::Archive::new(&container_bundle[..]).unpack(CONTAINER_DIR)?;
+    tar::Archive::new(container_bundle).unpack(CONTAINER_DIR)?;
 
     let oci_filesystem_bundle_config: OciFilesystemBundleConfig = {
         let file_path = {

@@ -31,7 +31,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let _ = logging::setup()?;
+    logging::setup()?;
 
     let args = Args::parse();
 
