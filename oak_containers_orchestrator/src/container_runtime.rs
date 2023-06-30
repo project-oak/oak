@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::path::PathBuf;
+
 /// Representation of a minimal OCI filesystem bundle config, including just the required fields.
 /// Ref: <https://github.com/opencontainers/runtime-spec/blob/467fd17d4f2a987fa00051ce44b69bf9620e2ee6/config.md>
 #[derive(serde::Deserialize)]
@@ -49,6 +51,27 @@ async fn run_command_and_log_output(
 // Directory at which the container OCI filesystem bundle will be unpacked.
 const CONTAINER_DIR: &str = "/oak_container";
 
+async fn rmount_dir(source: PathBuf, target: PathBuf) -> Result<(), anyhow::Error> {
+    run_command_and_log_output(tokio::process::Command::new("rm").arg("-rf").arg(&target)).await?;
+    run_command_and_log_output(
+        tokio::process::Command::new("mkdir")
+            .current_dir(CONTAINER_DIR)
+            .arg("-p")
+            .arg(&target),
+    )
+    .await?;
+    run_command_and_log_output(
+        tokio::process::Command::new("mount")
+            .current_dir(CONTAINER_DIR)
+            .arg("--rbind")
+            .arg(&source)
+            .arg(&target),
+    )
+    .await?;
+
+    Ok(())
+}
+
 pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
     tokio::fs::create_dir(CONTAINER_DIR).await?;
     tar::Archive::new(container_bundle).unpack(CONTAINER_DIR)?;
@@ -64,38 +87,35 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
         serde_json::from_str(&oci_filesystem_bundle_config_file)?
     };
 
-    // Mount host vsock device inside the container directory to allow the
-    // trusted application to communicate with the outside.
-    {
-        run_command_and_log_output(
-            tokio::process::Command::new("rm")
-                .current_dir(CONTAINER_DIR)
-                .arg("-rf")
-                .arg("dev"),
-        )
-        .await?;
-        run_command_and_log_output(
-            tokio::process::Command::new("mkdir")
-                .current_dir(CONTAINER_DIR)
-                .arg("-p")
-                .arg("dev/vsock"),
-        )
-        .await?;
-        run_command_and_log_output(
-            tokio::process::Command::new("mount")
-                .current_dir(CONTAINER_DIR)
-                .arg("--rbind")
-                .arg("/dev/vsock")
-                .arg("dev/vsock/"),
-        )
-        .await?;
-    }
-
     let container_rootfs_path = {
         let mut base = std::path::PathBuf::from(CONTAINER_DIR);
         base.push(oci_filesystem_bundle_config.root.path);
         base
     };
+
+    // mount host /dev into the container
+    let container_dev_path = {
+        let mut base = container_rootfs_path.clone();
+        base.push("dev");
+        base
+    };
+    rmount_dir(std::path::PathBuf::from("/dev"), container_dev_path).await?;
+
+    // mount host /sys into the container
+    let container_sys_path = {
+        let mut base = container_rootfs_path.clone();
+        base.push("sys");
+        base
+    };
+    rmount_dir(std::path::PathBuf::from("/sys"), container_sys_path).await?;
+
+    // mount host /proc into the container
+    let container_proc_path = {
+        let mut base = container_rootfs_path.clone();
+        base.push("proc");
+        base
+    };
+    rmount_dir(std::path::PathBuf::from("/proc"), container_proc_path).await?;
 
     // Start the trusted application in a chroot jail of the container.
     run_command_and_log_output(
