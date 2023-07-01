@@ -17,7 +17,5 @@ tokio = { version = "*", features = [
   "sync",
   "net"
 ] }
-tokio-stream = { version = "*", features = [
-  "net"
-] }
+tokio-stream = { version = "*", features = ["net"] }
 tonic = { workspace = true }
