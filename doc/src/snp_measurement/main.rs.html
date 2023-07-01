@@ -132,11 +132,11 @@
 <span class="kw">use </span>std::path::PathBuf;
 
 <span class="doccomment">/// The default workspace-relative path to the Stage 0 firmware ROM image.
-</span><span class="kw">const </span>DEFAULT_STAGE0_ROM: <span class="kw-2">&amp;</span>str = <span class="string">&quot;stage0/target/x86_64-unknown-none/release/stage0.bin&quot;</span>;
+</span><span class="kw">const </span>DEFAULT_STAGE0_ROM: <span class="kw-2">&amp;</span>str = <span class="string">&quot;stage0_bin/target/x86_64-unknown-none/release/oak_stage0.bin&quot;</span>;
 
-<span class="doccomment">/// The default workspace-relative path to the release Oak Functions enclave binary.
+<span class="doccomment">/// The default workspace-relative path to the Oak Restricted Kernel.
 </span><span class="kw">const </span>DEFAULT_ENCLAVE_BINARY: <span class="kw-2">&amp;</span>str =
-    <span class="string">&quot;oak_functions_enclave/target/x86_64-unknown-none/release/oak_functions_enclave&quot;</span>;
+    <span class="string">&quot;oak_restricted_kernel_bin/target/x86_64-unknown-none/release/oak_restricted_kernel_bin&quot;</span>;
 
 <span class="attr">#[derive(Parser, Clone)]
 #[command(about = <span class="string">&quot;Oak SEV-SNP Measurement Calculator&quot;</span>)]

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["get_td_info","get_ve_info"],"struct":["Attributes","TdInfo","VeInfo"]};
+window.SIDEBAR_ITEMS = {"enum":["AcceptMemoryError","TdxPageSize"],"fn":["accept_memory","get_td_info","get_ve_info"],"struct":["Attributes","TdInfo","VeInfo"],"trait":["TdxSize"]};

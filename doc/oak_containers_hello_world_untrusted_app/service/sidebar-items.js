@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["create"],"mod":["proto"],"opaque":[""],"struct":["UntrustedApplicationImplementation"]};

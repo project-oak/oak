@@ -57,6 +57,9 @@
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -76,16 +79,18 @@
 </span><span class="kw">use crate</span>::{message, Channel, InvocationChannel};
 <span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>oak_core::{samplestore::SampleStore, timer::Timer};
 
 <span class="doccomment">/// Starts a blocking server that listens for requests on the provided channel
 /// and responds to them using the provided [`micro_rpc::Transport`].
 </span><span class="kw">pub fn </span>start_blocking_server&lt;T: micro_rpc::Transport&lt;Error = !&gt;&gt;(
     channel: Box&lt;<span class="kw">dyn </span>Channel&gt;,
     <span class="kw-2">mut </span>server: T,
+    stats: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>SampleStore,
 ) -&gt; anyhow::Result&lt;!&gt; {
     <span class="kw">let </span>channel_handle = <span class="kw-2">&amp;mut </span>ServerChannelHandle::new(channel);
     <span class="kw">loop </span>{
-        <span class="kw">let </span>request_message = channel_handle
+        <span class="kw">let </span>(request_message, timer) = channel_handle
             .read_request()
             .context(<span class="string">&quot;couldn&#39;t receive message&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>request_message_invocation_id = request_message.invocation_id;
@@ -94,8 +99,9 @@
             invocation_id: request_message_invocation_id,
             body: response,
         };
-        channel_handle.write_response(response_message)<span class="question-mark">?
-    </span>}
+        channel_handle.write_response(response_message)<span class="question-mark">?</span>;
+        stats.record(timer.elapsed());
+    }
 }
 
 <span class="kw">struct </span>ServerChannelHandle {
@@ -108,10 +114,10 @@
             inner: InvocationChannel::new(socket),
         }
     }
-    <span class="kw">pub fn </span>read_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;message::RequestMessage&gt; {
-        <span class="kw">let </span>message = <span class="self">self</span>.inner.read_message()<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(message)
+    <span class="kw">pub fn </span>read_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;(message::RequestMessage, Timer)&gt; {
+        <span class="self">self</span>.inner.read_message()
     }
+
     <span class="kw">pub fn </span>write_response(<span class="kw-2">&amp;mut </span><span class="self">self</span>, response: message::ResponseMessage) -&gt; anyhow::Result&lt;()&gt; {
         <span class="self">self</span>.inner.write_message(response)
     }

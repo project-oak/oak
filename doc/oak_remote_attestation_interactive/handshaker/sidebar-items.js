@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["attestation_data","hash_concat_hash"],"struct":["AttestationBehavior","ClientHandshaker","EmptyAttestationGenerator","EmptyAttestationVerifier","Encryptor","ServerHandshaker"],"trait":["AttestationGenerator","AttestationVerifier"]};

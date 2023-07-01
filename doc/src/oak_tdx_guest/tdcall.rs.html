@@ -214,6 +214,94 @@
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -234,6 +322,8 @@
 
 </span><span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>core::{arch::asm, mem::size_of};
+<span class="kw">use </span>strum::{Display, FromRepr};
+<span class="kw">use </span>x86_64::structures::paging::{PageSize, PhysFrame, Size1GiB, Size2MiB, Size4KiB};
 
 <span class="doccomment">/// The result from an instruction that indicates success.
 </span><span class="kw">const </span>SUCCESS: u64 = <span class="number">0</span>;
@@ -416,6 +506,92 @@
         instruction_length,
         instruction_info,
     })
+}
+
+<span class="doccomment">/// Error when accepting guest-physical memory.
+</span><span class="attr">#[derive(Debug, Display, FromRepr)]
+#[repr(u64)]
+</span><span class="kw">pub enum </span>AcceptMemoryError {
+    <span class="doccomment">/// The supplied address is not valid.
+    </span>InvalidOperand = <span class="number">0x8000_0000_0000_0000</span>,
+    <span class="doccomment">/// The page is not pending and has already been accepted.
+    </span>AlreadyAccepted = <span class="number">0x8000_0000_0000_0001</span>,
+    <span class="doccomment">/// The specified page size is invalid.
+    </span>InvalidSize = <span class="number">0x8000_0000_0000_0002</span>,
+}
+
+<span class="attr">#[derive(Debug)]
+#[repr(u64)]
+</span><span class="kw">pub enum </span>TdxPageSize {
+    Size4KiB = <span class="number">0</span>,
+    Size2MiB = <span class="number">1</span>,
+    Size1GiB = <span class="number">2</span>,
+}
+
+<span class="doccomment">/// Trait for getting the associated `TdxPageSize` enum for a memory page of the given size.
+</span><span class="kw">pub trait </span>TdxSize {
+    <span class="kw">fn </span>tdx_size() -&gt; TdxPageSize;
+}
+
+<span class="kw">impl </span>TdxSize <span class="kw">for </span>Size4KiB {
+    <span class="kw">fn </span>tdx_size() -&gt; TdxPageSize {
+        TdxPageSize::Size4KiB
+    }
+}
+
+<span class="kw">impl </span>TdxSize <span class="kw">for </span>Size2MiB {
+    <span class="kw">fn </span>tdx_size() -&gt; TdxPageSize {
+        TdxPageSize::Size2MiB
+    }
+}
+
+<span class="kw">impl </span>TdxSize <span class="kw">for </span>Size1GiB {
+    <span class="kw">fn </span>tdx_size() -&gt; TdxPageSize {
+        TdxPageSize::Size1GiB
+    }
+}
+
+<span class="doccomment">/// Accepts a pending private memory page to make it usable in the guest, by calling the TDCALL
+/// [TDG.MEM.PAGE.ACCEPT] leaf.
+///
+/// This call also zeros the memory in the page.
+///
+/// See section 2.4.7 of [Guest-Host-Communication Interface (GHCI) for Intel® Trust Domain
+/// Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
+/// for more information.
+</span><span class="kw">pub fn </span>accept_memory&lt;S: PageSize + TdxSize&gt;(frame: PhysFrame&lt;S&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), AcceptMemoryError&gt; {
+    <span class="comment">// The TDCALL leaf for TDG.MEM.PAGE.ACCEPT.
+    </span><span class="kw">const </span>LEAF: u64 = <span class="number">6</span>;
+
+    <span class="kw">let </span><span class="kw-2">mut </span>result: u64;
+    <span class="kw">let </span>gpa = frame.start_address().as_u64();
+    <span class="kw">let </span>page_size = S::tdx_size() <span class="kw">as </span>u64;
+
+    <span class="comment">// The TDCALL leaf goes into RAX. RAX returns the result (0 is success). The guest-physical
+    // address of the start of the memory page goes into RCX. The size of the page goes into RDX.
+    //
+    // Safety: calling TDCALL here is safe since it does not alter memory and all the affected
+    // registers are specified, so no unspecified registers will be clobbered. The newly added page
+    // cannot be a previously accepted page, so it will not affect memory that is already in use.
+    </span><span class="kw">unsafe </span>{
+        <span class="macro">asm!</span>(
+            <span class="string">&quot;tdcall&quot;</span>,
+            inout(<span class="string">&quot;rax&quot;</span>) LEAF =&gt; result,
+            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) gpa,
+            <span class="kw">in</span>(<span class="string">&quot;rdx&quot;</span>) page_size,
+
+            options(nomem, nostack),
+        );
+    }
+
+    <span class="kw">if </span>result &gt; <span class="number">0 </span>{
+        <span class="comment">// According to the spec the result will either be 0 (Success) or one of the defined error
+        // values.
+        </span><span class="kw">return </span><span class="prelude-val">Err</span>(AcceptMemoryError::from_repr(result)
+            .expect(<span class="string">&quot;TDCALL[TDG.MEM.PAGE.ACCEPT] returned an invalid result&quot;</span>));
+    }
+
+    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Splits a 64-bit little-endian unsigned integer into two 32-bit little-endian unsigned integers.

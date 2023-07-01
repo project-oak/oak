@@ -163,6 +163,12 @@
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -188,6 +194,7 @@
 <span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>bytes::{BufMut, BytesMut};
 <span class="kw">use </span>core::borrow::BorrowMut;
+<span class="kw">use </span>oak_core::timer::Timer;
 
 <span class="kw">pub const </span>PADDING_SIZE: usize = <span class="number">4</span>;
 
@@ -257,11 +264,16 @@
     <span class="kw">pub fn </span>read_frame&lt;<span class="lifetime">&#39;a</span>&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         message_buffer: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>BytesMut,
-    ) -&gt; anyhow::Result&lt;Frame&lt;<span class="lifetime">&#39;a</span>&gt;&gt; {
+    ) -&gt; anyhow::Result&lt;(Frame&lt;<span class="lifetime">&#39;a</span>&gt;, Timer)&gt; {
         {
             <span class="kw">let </span><span class="kw-2">mut </span>padding_bytes = [<span class="number">0</span>; PADDING_SIZE];
             <span class="self">self</span>.inner.read(<span class="kw-2">&amp;mut </span>padding_bytes)<span class="question-mark">?</span>;
         };
+        <span class="comment">// As the read() above can block indefinitely we&#39;ll start measuring the time it took to read
+        // the data _after_ we&#39;ve read the padding bytes. Strictly speaking we should start
+        // measuring the time as we&#39;re reading the first padding byte, but this should be close
+        // enough to get a rough idea.
+        </span><span class="kw">let </span>timer = Timer::new_rdtsc();
         <span class="kw">let </span>length: usize = {
             <span class="kw">let </span><span class="kw-2">mut </span>length_bytes = [<span class="number">0</span>; LENGTH_SIZE];
             <span class="self">self</span>.inner.read(<span class="kw-2">&amp;mut </span>length_bytes)<span class="question-mark">?</span>;
@@ -291,7 +303,7 @@
             <span class="kw-2">&amp;</span>message_buffer[tail..]
         };
 
-        <span class="prelude-val">Ok</span>(Frame { flags, body })
+        <span class="prelude-val">Ok</span>((Frame { flags, body }, timer))
     }
 
     <span class="kw">pub fn </span>write_frame(<span class="kw-2">&amp;mut </span><span class="self">self</span>, frame: Frame) -&gt; anyhow::Result&lt;()&gt; {

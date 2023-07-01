@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["MAXIMUM_MESSAGE_SIZE","MESSAGE_HEADER_LENGTH","PROTOCOL_VERSION","PROTOCOL_VERSION_LENGTH","REPLAY_PROTECTION_ARRAY_LENGTH","VEC_SIZE_PREFIX_LENGTH"],"enum":["MessageWrapper"],"fn":["deserialize_message"],"struct":["ClientHello","ClientIdentity","EncryptedData","ServerIdentity"],"trait":["Deserializable","Serializable"]};

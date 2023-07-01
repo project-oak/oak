@@ -290,14 +290,14 @@
 <span class="kw">use </span>hpke::{
     aead::{AeadCtxR, AeadCtxS, AesGcm256},
     kdf::HkdfSha256,
-    kem::DhP256HkdfSha256,
+    kem::X25519HkdfSha256,
     Deserializable, Kem <span class="kw">as </span>KemTrait, OpModeR, OpModeS, Serializable,
 };
 <span class="kw">use </span>rand_core::OsRng;
 
 <span class="kw">type </span>Aead = AesGcm256;
 <span class="kw">type </span>Kdf = HkdfSha256;
-<span class="kw">type </span>Kem = DhP256HkdfSha256;
+<span class="kw">type </span>Kem = X25519HkdfSha256;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>PrivateKey = &lt;Kem <span class="kw">as </span>KemTrait&gt;::PrivateKey;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>PublicKey = &lt;Kem <span class="kw">as </span>KemTrait&gt;::PublicKey;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>EncappedKey = &lt;Kem <span class="kw">as </span>KemTrait&gt;::EncappedKey;

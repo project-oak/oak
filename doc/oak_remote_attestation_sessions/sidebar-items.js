@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"constant":["SESSION_ID_LENGTH"],"enum":["SessionState"],"struct":["SessionTracker"],"type":["SessionId"]};

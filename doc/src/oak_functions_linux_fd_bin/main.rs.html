@@ -66,6 +66,8 @@
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -83,7 +85,8 @@
 //
 
 </span><span class="kw">use </span>clap::Parser;
-<span class="kw">use </span>oak_remote_attestation_amd::PlaceholderAmdAttestationGenerator;
+<span class="kw">use </span>oak_core::samplestore::StaticSampleStore;
+<span class="kw">use </span>oak_remote_attestation::attester::EmptyAttestationReportGenerator;
 <span class="kw">use </span>std::{os::unix::io::FromRawFd, sync::Arc};
 
 <span class="attr">#[derive(Parser, Clone, Debug)]
@@ -125,12 +128,13 @@
     // enforce this. This should be safe however, since we only call this once.
     </span><span class="kw">let </span>socket = <span class="kw">unsafe </span>{ std::os::unix::net::UnixStream::from_raw_fd(opt.comms_fd) };
     <span class="kw">let </span>channel = Box::new(socket);
-    <span class="kw">let </span>service = oak_functions_service::OakFunctionsService::new(Arc::new(
-        PlaceholderAmdAttestationGenerator,
-    ));
+    <span class="kw">let </span>service =
+        oak_functions_service::OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
+    <span class="kw">let </span><span class="kw-2">mut </span>stats = StaticSampleStore::&lt;<span class="number">1000</span>&gt;::new().unwrap();
     oak_channel::server::start_blocking_server(
         channel,
         oak_functions_service::proto::oak::functions::OakFunctionsServer::new(service),
+        <span class="kw-2">&amp;mut </span>stats,
     )
     .expect(<span class="string">&quot;server encountered an unrecoverable error&quot;</span>);
 }

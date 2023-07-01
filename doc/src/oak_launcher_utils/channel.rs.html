@@ -159,7 +159,7 @@
             .write_request(request_message)
             .map_err(|<span class="kw">_</span>| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>response_message = <span class="self">self
+        <span class="kw">let </span>(response_message, <span class="kw">_</span>) = <span class="self">self
             </span>.inner
             .read_response()
             .map_err(|<span class="kw">_</span>| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))<span class="question-mark">?</span>;

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["sync"]};
+window.SIDEBAR_ITEMS = {"mod":["samplestore","sync","timer"]};

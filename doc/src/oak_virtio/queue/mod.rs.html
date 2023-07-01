@@ -313,7 +313,7 @@
             .copy_from_slice(<span class="kw-2">&amp;</span>data[..len]);
 
         <span class="comment">// Update the length of the descriptor.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>desc = <span class="kw-2">&amp;mut </span><span class="self">self</span>.inner.virt_queue.desc[id <span class="kw">as </span>usize];
+        </span><span class="kw">let </span>desc = <span class="kw-2">&amp;mut </span><span class="self">self</span>.inner.virt_queue.desc[id <span class="kw">as </span>usize];
         desc.length = len <span class="kw">as </span>u32;
 
         <span class="self">self</span>.inner.add_available_descriptor(id);

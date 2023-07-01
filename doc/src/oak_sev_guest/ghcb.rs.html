@@ -915,7 +915,7 @@
 
     <span class="doccomment">/// Calls a CPUID function for the given input using the GHCB protocol.
     </span><span class="kw">pub fn </span>get_cpuid(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: CpuidInput) -&gt; <span class="prelude-ty">Result</span>&lt;CpuidOutput, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
+        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
         ghcb.sw_exit_code = SW_EXIT_CODE_CPUID;
         ghcb.sw_exit_info_1 = <span class="number">0</span>;
         ghcb.sw_exit_info_2 = <span class="number">0</span>;
@@ -983,7 +983,7 @@
         request_address: PhysAddr,
         response_address: PhysAddr,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
+        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
         ghcb.sw_exit_code = SW_EXIT_CODE_GUEST_REQUEST;
         ghcb.sw_exit_info_1 = request_address.as_u64();
         ghcb.sw_exit_info_2 = response_address.as_u64();

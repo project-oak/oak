@@ -137,17 +137,6 @@
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -164,17 +153,12 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! SDK functionality that provides idiomatic Rust wrappers around the underlying Oak Functions
-//! platform functionality.
+</span><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
 
 </span><span class="kw">use </span>oak_functions_abi::{proto::OakStatus, StorageGetItemResponse};
 <span class="kw">use </span>std::convert::AsRef;
 
-<span class="doccomment">/// Reads and returns the user request.
-///
-/// This function is idempotent. Multiple calls to this function all return the same value.
-///
-/// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
+<span class="doccomment">/// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#oak_functions_abi.md#read_request).
 </span><span class="kw">pub fn </span>read_request() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, OakStatus&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>buf_ptr: <span class="kw-2">*mut </span>u8 = std::ptr::null_mut();
     <span class="kw">let </span><span class="kw-2">mut </span>buf_len: usize = <span class="number">0</span>;
@@ -189,12 +173,7 @@
     }
 }
 
-<span class="doccomment">/// Write the response.
-///
-/// Multiple calls to this function will replace the earlier responses. Only the last response that
-/// is written will be kept and returned to the user.
-///
-/// See [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
+<span class="doccomment">/// See [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
 </span><span class="kw">pub fn </span>write_response(buf: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
     <span class="kw">let </span>status = <span class="kw">unsafe </span>{ oak_functions_abi::write_response(buf.as_ptr(), buf.len()) };
     result_from_status(status <span class="kw">as </span>i32, ())
@@ -226,8 +205,7 @@
     invoke(oak_functions_abi::ExtensionHandle::TestingHandle, request)
 }
 
-<span class="comment">// Passes the given request to the extension behind the extension handle and returns the extension&#39;s
-// response.
+<span class="doccomment">/// See [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#invoke).
 </span><span class="kw">fn </span>invoke(
     handle: oak_functions_abi::ExtensionHandle,
     request: <span class="kw-2">&amp;</span>[u8],

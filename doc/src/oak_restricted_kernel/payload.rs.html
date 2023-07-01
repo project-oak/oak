@@ -204,10 +204,6 @@
 <a href="#204" id="204">204</a>
 <a href="#205" id="205">205</a>
 <a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -234,7 +230,7 @@
 };
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
-<span class="kw">use </span>ouroboros::self_referencing;
+<span class="kw">use </span>self_cell::self_cell;
 <span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>x86_64::{
     structures::paging::{PageSize, Size2MiB, Size4KiB},
@@ -252,15 +248,15 @@
     channel.write(<span class="kw-2">&amp;</span>len.to_le_bytes())
 }
 
-<span class="doccomment">/// Self-referential struct so that we don&#39;t have to parse the ELF file multiple times.
-</span><span class="attr">#[self_referencing]
-</span><span class="kw">struct </span>Binary {
-    binary: Box&lt;[u8]&gt;,
+<span class="macro">self_cell!</span>(
+    <span class="doccomment">/// Self-referential struct so that we don&#39;t have to parse the ELF file multiple times.
+    </span><span class="kw">struct </span>Binary {
+        owner: Box&lt;[u8]&gt;,
 
-    <span class="attr">#[borrows(binary)]
-    #[covariant]
-    </span>elf: Elf&lt;<span class="lifetime">&#39;this</span>&gt;,
-}
+        <span class="attr">#[covariant]
+        </span>dependent: Elf,
+    }
+);
 
 <span class="doccomment">/// Representation of an Restricted Application that the Restricted Kernel can run.
 </span><span class="kw">pub struct </span>Application {
@@ -303,28 +299,24 @@
         <span class="kw">let </span>digest = Sha256::digest(<span class="kw-2">&amp;</span>blob[..]).into();
 
         <span class="prelude-val">Ok</span>(Application {
-            binary: BinaryTryBuilder {
-                binary: blob,
-                elf_builder: |boxed| {
-                    goblin::elf::Elf::parse(boxed)
-                        .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;failed to parse ELF file: {}&quot;</span>, err))
-                },
-            }
-            .try_build()<span class="question-mark">?</span>,
+            binary: Binary::try_new(blob, |boxed| {
+                goblin::elf::Elf::parse(boxed)
+                    .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;failed to parse ELF file: {}&quot;</span>, err))
+            })<span class="question-mark">?</span>,
             digest,
         })
     }
 
     <span class="kw">fn </span>program_headers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>ProgramHeaders {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.binary.borrow_elf().program_headers
+        <span class="kw-2">&amp;</span><span class="self">self</span>.binary.borrow_dependent().program_headers
     }
 
     <span class="kw">fn </span>entry(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VirtAddr {
-        VirtAddr::new(<span class="self">self</span>.binary.borrow_elf().entry)
+        VirtAddr::new(<span class="self">self</span>.binary.borrow_dependent().entry)
     }
 
     <span class="kw">fn </span>slice(<span class="kw-2">&amp;</span><span class="self">self</span>, start: u64, limit: u64) -&gt; <span class="kw-2">&amp;</span>[u8] {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.binary.borrow_binary()[start <span class="kw">as </span>usize..(start + limit) <span class="kw">as </span>usize]
+        <span class="kw-2">&amp;</span><span class="self">self</span>.binary.borrow_owner()[start <span class="kw">as </span>usize..(start + limit) <span class="kw">as </span>usize]
     }
 
     <span class="kw">fn </span>load_segment(<span class="kw-2">&amp;</span><span class="self">self</span>, phdr: <span class="kw-2">&amp;</span>ProgramHeader) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {

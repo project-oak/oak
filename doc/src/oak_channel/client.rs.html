@@ -68,6 +68,7 @@
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -91,6 +92,7 @@
     Channel, InvocationChannel,
 };
 <span class="kw">use </span>alloc::boxed::Box;
+<span class="kw">use </span>oak_core::timer::Timer;
 
 <span class="kw">pub struct </span>ClientChannelHandle {
     inner: InvocationChannel,
@@ -105,9 +107,9 @@
     <span class="kw">pub fn </span>write_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: RequestMessage) -&gt; anyhow::Result&lt;()&gt; {
         <span class="self">self</span>.inner.write_message(request)
     }
-    <span class="kw">pub fn </span>read_response(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;ResponseMessage&gt; {
-        <span class="kw">let </span>message = <span class="self">self</span>.inner.read_message()<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(message)
+
+    <span class="kw">pub fn </span>read_response(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;(ResponseMessage, Timer)&gt; {
+        <span class="self">self</span>.inner.read_message()
     }
 }
 
