@@ -1,4 +1,4 @@
-FROM clearlinux:base
+FROM clearlinux@sha256:88652d2682bd63208e55f069c0ca4d3c30fe3acf2c5b730d16f8099a6d437162
 
 # Remove .dockerenv as we will not run this image in an actual Docker container.
 RUN rm /.dockerenv
