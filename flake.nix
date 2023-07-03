@@ -40,6 +40,7 @@
               extensions = [
                 "clippy"
                 "llvm-tools-preview"
+                "rust-analyzer"
                 "rust-src"
                 "rustfmt"
               ];
