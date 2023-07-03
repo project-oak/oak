@@ -34,8 +34,15 @@ const FWCFG_PORT_DMA: u16 = 0x514;
 
 const SIGNATURE: &[u8] = b"QEMU";
 
-// Bit 1 indicates that DMA access is enabled on the fw_cfg device.
-const DMA_ENABLED: u8 = 1 << 1;
+bitflags! {
+    /// The interface features supported by the device.
+    struct Features: u8 {
+        /// Indicates that the device supports the traditional byte-by-byte interface.
+        const TRADITIONAL = 1 << 0;
+        /// Indicates that the device supports the DMA interface.
+        const DMA = 1 << 1;
+    }
+}
 
 /// A single 4KiB buffer that is 4KiB page-aligned.
 #[repr(C, align(4096))]
@@ -175,7 +182,9 @@ impl FwCfg {
         fwcfg.write_selector(FwCfgItems::Features as u16)?;
         fwcfg.read(&mut features)?;
 
-        if features & DMA_ENABLED == DMA_ENABLED {
+        let features =
+            Features::from_bits(features).ok_or("invalid fw_cfg device features received")?;
+        if features.contains(Features::DMA) {
             fwcfg.dma_enabled = true;
         }
 
