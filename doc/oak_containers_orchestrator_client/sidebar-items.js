@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["LauncherClient"]};
+window.SIDEBAR_ITEMS = {"mod":["proto"],"struct":["LauncherClient"]};

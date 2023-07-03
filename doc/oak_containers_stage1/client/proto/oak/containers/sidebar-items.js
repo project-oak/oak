@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["STRUCT_NAME"],"fn":["ScalarWrapper"],"mod":["launcher_client","orchestrator_client"],"struct":["GetApplicationConfigResponse","GetImageResponse"]};
+window.SIDEBAR_ITEMS = {"constant":["STRUCT_NAME"],"fn":["ScalarWrapper"],"mod":["launcher_client","orchestrator_client"],"struct":["GetApplicationConfigResponse","GetImageResponse","SendAttestationEvidenceRequest"]};

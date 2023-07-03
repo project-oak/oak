@@ -149,6 +149,38 @@
 <a href="#149" id="149">149</a>
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -167,18 +199,28 @@
 </span><span class="kw">mod </span>proto {
     <span class="kw">pub mod </span>oak {
         <span class="kw">pub mod </span>containers {
-            <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.containers&quot;</span>);
+            <span class="attr">#![allow(clippy::return_self_not_must_use)]
+            </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.containers&quot;</span>);
+        }
+        <span class="kw">pub mod </span>session {
+            <span class="kw">pub mod </span>v1 {
+                <span class="attr">#![allow(clippy::return_self_not_must_use)]
+                </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.session.v1&quot;</span>);
+            }
         }
     }
 }
 
-<span class="kw">use </span><span class="self">self</span>::proto::oak::containers::{
-    launcher_server::{Launcher, LauncherServer},
-    GetApplicationConfigResponse, GetImageResponse,
+<span class="kw">use </span><span class="self">self</span>::proto::oak::{
+    containers::{
+        launcher_server::{Launcher, LauncherServer},
+        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+    },
+    session::v1::AttestationEvidence,
 };
 <span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>futures::Stream;
-<span class="kw">use </span>std::pin::Pin;
+<span class="kw">use </span>std::{pin::Pin, sync::Mutex};
 <span class="kw">use </span>tokio::io::{AsyncReadExt, BufReader};
 <span class="kw">use </span>tokio_vsock::VsockListener;
 <span class="kw">use </span>tonic::{transport::Server, Request, Response, Status};
@@ -194,6 +236,8 @@
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
+    <span class="comment">// Attestation Evidence is initialized by the Orchestrator.
+    </span>attestation_evidence: Mutex&lt;<span class="prelude-ty">Option</span>&lt;AttestationEvidence&gt;&gt;,
 }
 
 <span class="attr">#[tonic::async_trait]
@@ -278,6 +322,24 @@
             <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(tonic::Response::new(GetApplicationConfigResponse::default())),
         }
     }
+
+    <span class="kw">async fn </span>send_attestation_evidence(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        request: Request&lt;SendAttestationEvidenceRequest&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;()&gt;, tonic::Status&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>attestation_evidence = <span class="self">self</span>.attestation_evidence.lock().map_err(|err| {
+            tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t access attestation evidence: {err}&quot;</span>))
+        })<span class="question-mark">?</span>;
+        <span class="kw">match </span><span class="kw-2">*</span>attestation_evidence {
+            <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(tonic::Status::invalid_argument(
+                <span class="string">&quot;attestation evidence has already been sent to the Launcher&quot;</span>,
+            )),
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="kw-2">*</span>attestation_evidence = request.into_inner().evidence;
+                <span class="prelude-val">Ok</span>(tonic::Response::new(()))
+            }
+        }
+    }
 }
 
 <span class="kw">pub async fn </span>new(
@@ -291,6 +353,8 @@
         system_image,
         container_bundle,
         application_config,
+        <span class="comment">// Attestation Evidence will be sent by the Orchestrator once generated.
+        </span>attestation_evidence: Mutex::new(<span class="prelude-val">None</span>),
     };
     <span class="kw">let </span>vsock_listener = VsockListener::bind(vsock_cid, vsock_port)<span class="question-mark">?</span>.incoming();
 

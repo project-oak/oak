@@ -256,6 +256,35 @@
 <a href="#256" id="256">256</a>
 <a href="#257" id="257">257</a>
 <a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
 </pre><pre class="rust"><code><span class="doccomment">/// As images can be large (hundreds of megabytes), the launcher chunks up the response into smaller
 /// pieces to respect proto/gRPC limits. The image needs to be reassembled in the stage1 or the
 /// orchestrator.
@@ -272,6 +301,12 @@
     /// Included in the attestation measurements conducted by the orchestrator.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>config: ::prost::alloc::vec::Vec&lt;u8&gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>SendAttestationEvidenceRequest {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>evidence: ::core::option::Option&lt;<span class="kw">super</span>::session::v1::AttestationEvidence&gt;,
 }
 <span class="doccomment">/// Generated client implementations.
 </span><span class="kw">pub mod </span>launcher_client {
@@ -413,6 +448,29 @@
             <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
             <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
                 <span class="string">&quot;/oak.containers.Launcher/GetApplicationConfig&quot;</span>,
+            );
+            <span class="self">self</span>.inner.unary(request.into_request(), path, codec).<span class="kw">await
+        </span>}
+        <span class="doccomment">/// Sends Attestation Evidence containing the Attestation Report with corresponding measurements
+        /// and public keys to the Launcher.
+        /// This API is called exactly once after the Attestation Evidence is generated. Calling this API
+        /// a second time will result in an error.
+        </span><span class="kw">pub async fn </span>send_attestation_evidence(
+            <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+            request: <span class="kw">impl </span>tonic::IntoRequest&lt;<span class="kw">super</span>::SendAttestationEvidenceRequest&gt;,
+        ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;()&gt;, tonic::Status&gt; {
+            <span class="self">self</span>.inner
+                .ready()
+                .<span class="kw">await
+                </span>.map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        <span class="macro">format!</span>(<span class="string">&quot;Service was not ready: {}&quot;</span>, e.into()),
+                    )
+                })<span class="question-mark">?</span>;
+            <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
+            <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
+                <span class="string">&quot;/oak.containers.Launcher/SendAttestationEvidence&quot;</span>,
             );
             <span class="self">self</span>.inner.unary(request.into_request(), path, codec).<span class="kw">await
         </span>}
