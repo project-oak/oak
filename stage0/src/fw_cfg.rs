@@ -34,6 +34,16 @@ const FWCFG_PORT_DMA: u16 = 0x514;
 
 const SIGNATURE: &[u8] = b"QEMU";
 
+bitflags! {
+    /// The interface features supported by the device.
+    struct Features: u8 {
+        /// Indicates that the device supports the traditional byte-by-byte interface.
+        const TRADITIONAL = 1 << 0;
+        /// Indicates that the device supports the DMA interface.
+        const DMA = 1 << 1;
+    }
+}
+
 /// A single 4KiB buffer that is 4KiB page-aligned.
 #[repr(C, align(4096))]
 #[derive(Debug)]
@@ -58,6 +68,7 @@ impl Default for DmaBuffer {
 #[repr(u16)]
 enum FwCfgItems {
     Signature = 0x0000,
+    Features = 0x0001,
     KernelAddr = 0x0007,
     KernelSize = 0x0008,
     InitrdAddr = 0x000a,
@@ -131,6 +142,7 @@ pub struct FwCfg {
     dma_low: PortWrapper<u32>,
     dma_buf: &'static mut DmaBuffer,
     dma_access: &'static mut FwCfgDmaAccess,
+    dma_enabled: bool,
 }
 
 impl FwCfg {
@@ -156,6 +168,7 @@ impl FwCfg {
             dma_low: port_factory.new_writer(FWCFG_PORT_DMA + 4),
             dma_buf,
             dma_access,
+            dma_enabled: false,
         };
 
         // Make sure the fw_cfg device is available. If the device is not available, writing and
@@ -163,6 +176,17 @@ impl FwCfg {
         fwcfg.write_selector(FwCfgItems::Signature as u16)?;
         let mut signature = [0u8; SIGNATURE.len()];
         fwcfg.read(&mut signature)?;
+
+        // Check whether DMA is enabled.
+        let mut features = 0u8;
+        fwcfg.write_selector(FwCfgItems::Features as u16)?;
+        fwcfg.read(&mut features)?;
+
+        let features =
+            Features::from_bits(features).ok_or("invalid fw_cfg device features received")?;
+        if features.contains(Features::DMA) {
+            fwcfg.dma_enabled = true;
+        }
 
         if signature == SIGNATURE {
             Ok(fwcfg)
@@ -245,7 +269,9 @@ impl FwCfg {
     pub fn read_file(&mut self, file: &DirEntry, buf: &mut [u8]) -> Result<usize, &'static str> {
         self.write_selector(file.selector())?;
         let len = min(buf.len(), file.size());
-        if self.read_buf_dma(&mut buf[..len]).is_err() {
+        if self.dma_enabled {
+            self.read_buf_dma(&mut buf[..len])?;
+        } else {
             self.read_buf(&mut buf[..len])?;
         }
         Ok(len)
