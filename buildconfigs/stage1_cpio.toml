@@ -1,0 +1,5 @@
+# This is the static build configuration that we use with the docker-based SLSA3 generator for
+# building the `stage1_cpio` binary, and its provenance.
+# See https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/docker.
+command = ["nix", "develop", ".#containers", "--command", "just", "stage1_cpio"]
+artifact_path = "./target/stage1.cpio"

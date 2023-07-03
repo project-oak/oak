@@ -31,6 +31,9 @@ jobs:
           - buildconfigs/oak_functions_enclave_app.toml
           - buildconfigs/quirk_echo_enclave_app.toml
           - buildconfigs/stage0_bin.toml
+          - buildconfigs/stage1_cpio.toml
+          - buildconfigs/vmlinux.toml
+          - buildconfigs/image_tar.toml
 
     permissions:
       actions: read
