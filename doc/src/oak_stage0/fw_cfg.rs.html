@@ -427,6 +427,32 @@
 <a href="#427" id="427">427</a>
 <a href="#428" id="428">428</a>
 <a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
 </pre><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -463,6 +489,16 @@
 
 <span class="kw">const </span>SIGNATURE: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;QEMU&quot;</span>;
 
+<span class="macro">bitflags! </span>{
+    <span class="doccomment">/// The interface features supported by the device.
+    </span><span class="kw">struct </span>Features: u8 {
+        <span class="doccomment">/// Indicates that the device supports the traditional byte-by-byte interface.
+        </span><span class="kw">const </span>TRADITIONAL = <span class="number">1 </span>&lt;&lt; <span class="number">0</span>;
+        <span class="doccomment">/// Indicates that the device supports the DMA interface.
+        </span><span class="kw">const </span>DMA = <span class="number">1 </span>&lt;&lt; <span class="number">1</span>;
+    }
+}
+
 <span class="doccomment">/// A single 4KiB buffer that is 4KiB page-aligned.
 </span><span class="attr">#[repr(C, align(<span class="number">4096</span>))]
 #[derive(Debug)]
@@ -487,6 +523,7 @@
 #[repr(u16)]
 </span><span class="kw">enum </span>FwCfgItems {
     Signature = <span class="number">0x0000</span>,
+    Features = <span class="number">0x0001</span>,
     KernelAddr = <span class="number">0x0007</span>,
     KernelSize = <span class="number">0x0008</span>,
     InitrdAddr = <span class="number">0x000a</span>,
@@ -560,6 +597,7 @@
     dma_low: PortWrapper&lt;u32&gt;,
     dma_buf: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>DmaBuffer,
     dma_access: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>FwCfgDmaAccess,
+    dma_enabled: bool,
 }
 
 <span class="kw">impl </span>FwCfg {
@@ -585,6 +623,7 @@
             </span>dma_low: port_factory.new_writer(FWCFG_PORT_DMA + <span class="number">4</span>),
             dma_buf,
             dma_access,
+            dma_enabled: <span class="bool-val">false</span>,
         };
 
         <span class="comment">// Make sure the fw_cfg device is available. If the device is not available, writing and
@@ -592,6 +631,17 @@
         </span>fwcfg.write_selector(FwCfgItems::Signature <span class="kw">as </span>u16)<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>signature = [<span class="number">0u8</span>; SIGNATURE.len()];
         fwcfg.read(<span class="kw-2">&amp;mut </span>signature)<span class="question-mark">?</span>;
+
+        <span class="comment">// Check whether DMA is enabled.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>features = <span class="number">0u8</span>;
+        fwcfg.write_selector(FwCfgItems::Features <span class="kw">as </span>u16)<span class="question-mark">?</span>;
+        fwcfg.read(<span class="kw-2">&amp;mut </span>features)<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>features =
+            Features::from_bits(features).ok_or(<span class="string">&quot;invalid fw_cfg device features received&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">if </span>features.contains(Features::DMA) {
+            fwcfg.dma_enabled = <span class="bool-val">true</span>;
+        }
 
         <span class="kw">if </span>signature == SIGNATURE {
             <span class="prelude-val">Ok</span>(fwcfg)
@@ -674,7 +724,9 @@
     </span><span class="kw">pub fn </span>read_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>, file: <span class="kw-2">&amp;</span>DirEntry, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;usize, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="self">self</span>.write_selector(file.selector())<span class="question-mark">?</span>;
         <span class="kw">let </span>len = min(buf.len(), file.size());
-        <span class="kw">if </span><span class="self">self</span>.read_buf_dma(<span class="kw-2">&amp;mut </span>buf[..len]).is_err() {
+        <span class="kw">if </span><span class="self">self</span>.dma_enabled {
+            <span class="self">self</span>.read_buf_dma(<span class="kw-2">&amp;mut </span>buf[..len])<span class="question-mark">?</span>;
+        } <span class="kw">else </span>{
             <span class="self">self</span>.read_buf(<span class="kw-2">&amp;mut </span>buf[..len])<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(len)
