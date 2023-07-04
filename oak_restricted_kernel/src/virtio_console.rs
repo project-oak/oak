@@ -116,16 +116,16 @@ unsafe impl Hal for OakHal {
 }
 
 #[repr(transparent)]
-pub struct MmioConsoleChannel<'a> {
-    inner: Spinlock<VirtIOConsole<'a, OakHal, MmioTransport>>,
+pub struct MmioConsoleChannel {
+    inner: Spinlock<VirtIOConsole<OakHal, MmioTransport>>,
 }
 
 // Safety: for now, this is safe as we don't have threads in our kernel.
 // TODO(#3531): this will most likely break once we do add threads, though.
-unsafe impl Sync for MmioConsoleChannel<'_> {}
-unsafe impl Send for MmioConsoleChannel<'_> {}
+unsafe impl Sync for MmioConsoleChannel {}
+unsafe impl Send for MmioConsoleChannel {}
 
-impl Read for MmioConsoleChannel<'_> {
+impl Read for MmioConsoleChannel {
     fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let mut console = self.inner.lock();
 
@@ -145,7 +145,7 @@ impl Read for MmioConsoleChannel<'_> {
     }
 }
 
-impl Write for MmioConsoleChannel<'_> {
+impl Write for MmioConsoleChannel {
     fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut console = self.inner.lock();
 
@@ -182,7 +182,7 @@ fn find_memory_range(device: &AcpiDevice, ctx: &mut AmlContext) -> Option<(PhysA
     None
 }
 
-pub fn get_console_channel<'a>(acpi: &mut Acpi) -> MmioConsoleChannel<'a> {
+pub fn get_console_channel(acpi: &mut Acpi) -> MmioConsoleChannel {
     let devices = acpi.devices().unwrap();
 
     let virtio_devices: Vec<&AcpiDevice> = devices
