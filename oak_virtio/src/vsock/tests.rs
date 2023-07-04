@@ -19,7 +19,7 @@ use crate::test::{
     identity_map, inverse_identity_map, new_legacy_transport, new_transport_small_queue,
     new_valid_transport, DeviceStatus, TestingTransport, VIRTIO_F_VERSION_1,
 };
-use alloc::{alloc::Global, vec};
+use alloc::alloc::Global;
 
 const GUEST_CID: u64 = 3;
 
@@ -70,7 +70,7 @@ fn test_device_init() {
 
 #[test]
 fn test_read_packet() {
-    let data = vec![2, 4, 6];
+    let data = [2, 4, 6];
     let mut packet = Packet::new_data(&data[..], 1, 2).unwrap();
     packet.set_dst_cid(GUEST_CID);
     packet.set_src_cid(HOST_CID);
@@ -85,7 +85,7 @@ fn test_read_packet() {
 
 #[test]
 fn test_write_packet() {
-    let data = vec![7; 5];
+    let data = [7; 5];
     let mut packet = Packet::new_data(&data[..], 1, 2).unwrap();
     let transport = new_configured_transport();
     let device = VirtioBaseDevice::new(transport.clone());

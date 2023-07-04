@@ -37,7 +37,7 @@ pub trait OakApiNativeExtension: Send + Sync {
 
 impl alloc::fmt::Debug for dyn OakApiNativeExtension {
     fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        formatter.write_fmt(format_args!("OakApiNativeExtenxion {:?}", self))
+        formatter.write_fmt(format_args!("OakApiNativeExtenxion"))
     }
 }
 

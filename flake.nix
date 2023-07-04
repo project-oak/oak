@@ -36,7 +36,7 @@
               includeSystemImages = false;
             }).androidsdk;
           rustToolchain =
-            pkgs.rust-bin.nightly."2023-02-13".default.override {
+            pkgs.rust-bin.nightly.latest.default.override {
               extensions = [
                 "clippy"
                 "llvm-tools-preview"
@@ -135,7 +135,7 @@
               '';
               packages = [
                 jdk11_headless
-                bazel_6
+                bazel
                 androidSdk
                 bazel-buildtools
               ];

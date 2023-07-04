@@ -22,5 +22,5 @@ unknown-git = "allow"
 # List of allowed licenses.
 # For more detailed information see http://go/thirdpartylicenses.
 [licenses]
-allow = ["Apache-2.0", "MIT"]
+allow = ["Apache-2.0", "MIT", "Unicode-DFS-2016"]
 copyleft = "deny"
