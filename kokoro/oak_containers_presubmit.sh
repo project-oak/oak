@@ -25,7 +25,7 @@ echo "${KOKORO_GIT_COMMIT_oak:?}" > "$KOKORO_ARTIFACTS_DIR/binaries/git_commit"
 # Copy the generated binaries to Placer.
 export GENERATED_BINARIES=(
     ./target/stage1.cpio
-    ./oak_containers_kernel/target/vmlinux-6.1.33
+    ./oak_containers_kernel/target/vmlinux
     ./oak_containers_system_image/target/image.tar
 )
 cp "${GENERATED_BINARIES[@]}" "$KOKORO_ARTIFACTS_DIR/binaries/"
