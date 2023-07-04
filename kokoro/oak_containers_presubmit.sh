@@ -26,7 +26,7 @@ echo "${KOKORO_GIT_COMMIT_oak:?}" > "$KOKORO_ARTIFACTS_DIR/binaries/git_commit"
 export GENERATED_BINARIES=(
     ./target/stage1.cpio
     ./oak_containers_kernel/target/vmlinux
-    ./oak_containers_system_image/target/image.tar
+    ./oak_containers_system_image/target/image.tar.xz
 )
 cp "${GENERATED_BINARIES[@]}" "$KOKORO_ARTIFACTS_DIR/binaries/"
 

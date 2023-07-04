@@ -17,7 +17,8 @@
 use anyhow::{anyhow, Context, Result};
 use nix::unistd::execv;
 use std::{ffi::CString, os::unix::prelude::OsStrExt, path::Path};
-use tar::{self, Archive};
+use tar::Archive;
+use xz2::read::XzDecoder;
 
 use crate::client::LauncherClient;
 
@@ -26,7 +27,8 @@ pub async fn load(client: &mut LauncherClient, dst: &Path) -> Result<()> {
         .get_oak_system_image()
         .await
         .context("fetching system image")?;
-    let mut archive = Archive::new(&buf[..]);
+    let decoder = XzDecoder::new(&buf[..]);
+    let mut archive = Archive::new(decoder);
     archive.unpack(dst).map_err(|e| anyhow!(e))
 }
 
