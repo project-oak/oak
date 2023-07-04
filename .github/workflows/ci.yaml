@@ -74,6 +74,7 @@ jobs:
       # Build the Nix shell in a separate step first, so we can keep track of its build time.
       - name: Build nix shell
         run: |
+          nix -vv --version
           nix develop .#ci --command echo done
 
       - name: Run command
