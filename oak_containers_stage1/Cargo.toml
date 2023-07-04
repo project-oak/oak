@@ -24,3 +24,4 @@ tokio = { version = "*", features = [
 tokio-vsock = { version = "*", features = ["tonic-conn"] }
 tonic = { workspace = true }
 tower = "*"
+xz2 = "*"
