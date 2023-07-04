@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["HelloSvc","UntrustedApplicationServer","_Inner"],"trait":["UntrustedApplication"]};
+window.SIDEBAR_ITEMS = {"struct":["UntrustedApplicationServer","_Inner"],"trait":["UntrustedApplication"]};

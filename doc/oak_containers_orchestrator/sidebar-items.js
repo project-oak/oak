@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["main"],"mod":["container_runtime","logging"],"static":["DEFAULT_VALUE"],"struct":["Args"]};
+window.SIDEBAR_ITEMS = {"fn":["main"],"mod":["container_runtime","logging"],"struct":["Args"]};

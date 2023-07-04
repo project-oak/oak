@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"opaque":[""],"struct":["LauncherClient"]};
+window.SIDEBAR_ITEMS = {"struct":["LauncherClient"]};

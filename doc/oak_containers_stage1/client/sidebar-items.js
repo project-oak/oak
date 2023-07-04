@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["proto"],"opaque":[""],"static":["IGNORED_ENDPOINT_URI"],"struct":["LauncherClient"]};
+window.SIDEBAR_ITEMS = {"mod":["proto"],"static":["IGNORED_ENDPOINT_URI"],"struct":["LauncherClient"]};

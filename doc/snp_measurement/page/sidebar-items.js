@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["COMPOSITE_TYPE_SIZE","CPUID_DISCRIMINANT","HAS_PADDING","INVALID_DISCRIMINANT","NORMAL_DISCRIMINANT","NO_DISCRIMINANT","PAGE_INFO_SIZE","SECRETS_DISCRIMINANT","SUM_FIELD_SIZES","UNMEASURED_DISCRIMINANT","VMSA_DISCRIMINANT","ZERO_DISCRIMINANT"],"enum":["ImiPage","PageType"],"fn":["assert_no_padding"],"struct":["ImplementsAsBytes","PageInfo"],"trait":["HasPadding"]};
+window.SIDEBAR_ITEMS = {"constant":["PAGE_INFO_SIZE"],"enum":["ImiPage","PageType"],"struct":["PageInfo"]};

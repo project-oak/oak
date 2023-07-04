@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["STRUCT_NAME"],"fn":["ScalarWrapper"],"mod":["untrusted_application_client"],"struct":["HelloRequest","HelloResponse"]};
+window.SIDEBAR_ITEMS = {"mod":["untrusted_application_client"],"struct":["HelloRequest","HelloResponse"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["STRUCT_NAME"],"fn":["ScalarWrapper"],"struct":["ApplicationData","AttestationBundle","AttestationEndorsement","AttestationEvidence","BinaryAttestation","GetPublicKeyRequest","GetPublicKeyResponse","InvokeRequest","InvokeResponse"]};
+window.SIDEBAR_ITEMS = {"struct":["ApplicationData","AttestationBundle","AttestationEndorsement","AttestationEvidence","BinaryAttestation","GetPublicKeyRequest","GetPublicKeyResponse","InvokeRequest","InvokeResponse"]};

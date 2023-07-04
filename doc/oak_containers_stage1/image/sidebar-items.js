@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load","switch"],"opaque":[""]};
+window.SIDEBAR_ITEMS = {"fn":["load","switch"]};
