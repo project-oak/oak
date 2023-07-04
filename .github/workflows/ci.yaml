@@ -73,7 +73,7 @@ jobs:
         run: |
           ./scripts/docker_pull
           df --human-readable
-          
+
       - name: Run command
         env:
           RUST_BACKTRACE: 1
