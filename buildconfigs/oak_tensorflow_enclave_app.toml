@@ -3,7 +3,7 @@
 command = [
   "nix",
   "develop",
-  ".#default",
+  ".#rust",
   "--command",
   "env",
   "--chdir=enclave_apps/oak_tensorflow_enclave_app",
