@@ -12,6 +12,6 @@ readonly NEW_DOCKER_CONTAINER_ID="$(docker create oak-containers-system-image:la
 
 docker export "$NEW_DOCKER_CONTAINER_ID" > target/image.tar
 ls -lah target/image.tar
-xz target/image.tar
+xz --force target/image.tar
 
 docker rm "$NEW_DOCKER_CONTAINER_ID"
