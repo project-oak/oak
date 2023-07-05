@@ -5,8 +5,6 @@ command = [
   "develop",
   ".#default",
   "--command",
-  "env",
-  "--chdir=oak_restricted_kernel_bin",
   "cargo",
   "build",
   "--release"
