@@ -17,7 +17,7 @@ use anyhow::Context;
 use std::path::PathBuf;
 
 /// Representation of a minimal OCI filesystem bundle config, including just the required fields.
-/// Ref: <https://github.com/opencontainers/runtime-spec/blob/467fd17d4f2a987fa00051ce44b69bf9620e2ee6/config.md>
+/// Ref: <https://github.com/opencontainers/runtime-spec/blob/c4ee7d12c742ffe806cd9350b6af3b4b19faed6f/config.md>
 #[derive(serde::Deserialize)]
 struct OciFilesystemBundleConfig {
     process: OciFilesystemBundleConfigProcess,
@@ -28,6 +28,7 @@ struct OciFilesystemBundleConfig {
 struct OciFilesystemBundleConfigProcess {
     user: OciFilesystemBundleConfigProcessUser,
     args: Vec<String>,
+    cwd: std::path::PathBuf,
 }
 
 #[derive(serde::Deserialize)]
@@ -131,16 +132,23 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
     };
     rmount_dir(std::path::PathBuf::from("/proc"), container_proc_path).await?;
 
-    // Start the trusted application in a chroot jail of the container.
+    // Change the orchestrator's root to the newly created container rootfs.
+    // This will ensure that the newly launched process will also exist in
+    // this chroot jail.
+    // Note though that following this command, the orchestrator will no longer
+    // be able to access files outside of the chroot jail. This is not a problem
+    // given the orchestrators current feature set, but may become one later.
+    std::os::unix::fs::chroot(container_rootfs_path)?;
+
+    // Change to specifed working directory
+    std::env::set_current_dir(oci_filesystem_bundle_config.process.cwd)?;
+
+    // Start the trusted application.
     run_command_and_log_output(
-        tokio::process::Command::new("chroot")
-            .arg(format!(
-                "--userspec={}:{}",
-                oci_filesystem_bundle_config.process.user.uid,
-                oci_filesystem_bundle_config.process.user.gid,
-            ))
-            .arg(container_rootfs_path)
-            .args(oci_filesystem_bundle_config.process.args),
+        tokio::process::Command::new(oci_filesystem_bundle_config.process.args[0].clone())
+            .args(oci_filesystem_bundle_config.process.args.as_slice()[1..].to_vec())
+            .uid(oci_filesystem_bundle_config.process.user.uid)
+            .gid(oci_filesystem_bundle_config.process.user.gid),
     )
     .await?;
 
