@@ -9,7 +9,6 @@ license = "Apache-2.0"
 anyhow = "*"
 clap = { version = "*", features = ["derive"] }
 oak_containers_orchestrator_client = { workspace = true }
-oak_containers_orchestrator_ipc_server = { workspace = true }
 tokio = { version = "*", features = [
   "rt-multi-thread",
   "macros",
@@ -23,3 +22,9 @@ syslog = "*"
 tar = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
+prost = "*"
+tokio-stream = { version = "*", features = ["net"] }
+tonic = { workspace = true }
+
+[build-dependencies]
+oak_grpc_utils = { workspace = true }

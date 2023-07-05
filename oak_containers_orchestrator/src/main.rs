@@ -14,6 +14,7 @@
 // limitations under the License.
 
 mod container_runtime;
+mod ipc_server;
 mod logging;
 
 use anyhow::anyhow;
@@ -76,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     tokio::try_join!(
-        oak_containers_orchestrator_ipc_server::create(ipc_path, application_config),
+        crate::ipc_server::create(ipc_path, application_config),
         container_runtime::run(&container_bundle)
     )?;
 
