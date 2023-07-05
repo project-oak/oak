@@ -173,7 +173,6 @@
             default = pkgs.mkShell {
               packages = [ ];
               inputsFrom = [
-                containers
                 rust
                 bazelShell
                 lint
