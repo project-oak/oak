@@ -41,6 +41,8 @@
 <a href="#41" id="41">41</a>
 <a href="#42" id="42">42</a>
 <a href="#43" id="43">43</a>
+<a href="#44" id="44">44</a>
+<a href="#45" id="45">45</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -60,7 +62,8 @@
 </span><span class="kw">use </span>anyhow::{anyhow, Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>nix::unistd::execv;
 <span class="kw">use </span>std::{ffi::CString, os::unix::prelude::OsStrExt, path::Path};
-<span class="kw">use </span>tar::{<span class="self">self</span>, Archive};
+<span class="kw">use </span>tar::Archive;
+<span class="kw">use </span>xz2::read::XzDecoder;
 
 <span class="kw">use </span><span class="kw">crate</span>::client::LauncherClient;
 
@@ -69,7 +72,8 @@
         .get_oak_system_image()
         .<span class="kw">await
         </span>.context(<span class="string">&quot;fetching system image&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span><span class="kw-2">mut </span>archive = Archive::new(<span class="kw-2">&amp;</span>buf[..]);
+    <span class="kw">let </span>decoder = XzDecoder::new(<span class="kw-2">&amp;</span>buf[..]);
+    <span class="kw">let </span><span class="kw-2">mut </span>archive = Archive::new(decoder);
     archive.unpack(dst).map_err(|e| <span class="macro">anyhow!</span>(e))
 }
 
