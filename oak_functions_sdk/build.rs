@@ -14,22 +14,12 @@
 // limitations under the License.
 //
 
-use log::log;
-use oak_logger::{Level, OakLogger};
-
-/// Temporary OakLogger implementation using the `log` crate.
-///
-/// TODO(#2783): Replace with redesigned logger implementation.
-#[derive(Clone, Default)]
-pub struct StandaloneLogger {}
-
-// TODO(#2783): Implement a logger that differentiates between public and sensitive loges.
-impl OakLogger for StandaloneLogger {
-    fn log_sensitive(&self, level: Level, message: &str) {
-        log!(level, "{}", message,);
-    }
-
-    fn log_public(&self, level: Level, message: &str) {
-        log!(level, "{}", message,);
-    }
+fn main() {
+    micro_rpc_build::compile(
+        &[format!(
+            "{}oak_functions_sdk/proto/oak_functions_wasm.proto",
+            env!("WORKSPACE_ROOT")
+        )],
+        &[format!("{}oak_functions_sdk/proto", env!("WORKSPACE_ROOT"))],
+    );
 }

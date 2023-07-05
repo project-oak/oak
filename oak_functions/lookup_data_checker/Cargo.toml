@@ -14,4 +14,3 @@ location_utils = { workspace = true }
 log = "*"
 oak_functions_abi = { workspace = true }
 prost = { workspace = true }
-serde = { version = "*", features = ["derive"] }

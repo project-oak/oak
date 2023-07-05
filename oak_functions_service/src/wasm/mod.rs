@@ -14,11 +14,10 @@
 // limitations under the License.
 //
 
-use crate::logger::StandaloneLogger;
-use alloc::{sync::Arc, vec};
-use oak_functions_lookup::{LookupDataManager, LookupFactory};
-use oak_functions_wasm::WasmHandler;
-use oak_functions_workload_logging::WorkloadLoggingFactory;
+use alloc::sync::Arc;
+use oak_functions_lookup::LookupDataManager;
+use oak_functions_wasm::{api::StdWasmApiFactory, WasmHandler};
+use oak_logger::StandaloneLogger;
 
 /// Creates a new `WasmHandler` instance.
 pub fn new_wasm_handler(
@@ -26,11 +25,8 @@ pub fn new_wasm_handler(
     lookup_data_manager: Arc<LookupDataManager<StandaloneLogger>>,
 ) -> anyhow::Result<WasmHandler<StandaloneLogger>> {
     let logger = StandaloneLogger::default();
-    let logging_factory = WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())?;
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)?;
-    WasmHandler::create(
-        wasm_module_bytes,
-        vec![logging_factory, lookup_factory],
-        logger,
-    )
+    let wasm_api_factory = StdWasmApiFactory {
+        lookup_data_manager,
+    };
+    WasmHandler::create(wasm_module_bytes, Arc::new(wasm_api_factory), logger)
 }

@@ -15,34 +15,15 @@
 //
 
 use crate::{
-    AbiPointer, AbiPointerOffset, OakLinker, UserState, WasmHandler, ALLOC_FUNCTION_NAME,
-    MEMORY_NAME,
+    api::StdWasmApiFactory, AbiPointer, AbiPointerOffset, OakLinker, UserState, WasmApiFactory,
+    WasmHandler, ALLOC_FUNCTION_NAME, MEMORY_NAME,
 };
-use alloc::{string::ToString, vec::Vec};
+use alloc::{sync::Arc, vec::Vec};
 use byteorder::{ByteOrder, LittleEndian};
-use oak_functions_abi::{proto::OakStatus, ExtensionHandle, TestingRequest, TestingResponse};
-use oak_functions_testing_extension::{TestingFactory, TestingLogger};
-
-#[test]
-fn test_invoke_extension_with_invalid_handle() {
-    let mut test_state = create_test_state();
-    // Assumes there is no negative ExtensionHandle. The remaining arguments don't matter, hence
-    // they are 0.
-    let extension = test_state.store.data_mut().get_extension(-1);
-    assert_eq!(OakStatus::ErrInvalidHandle, extension.unwrap_err())
-}
-
-#[test]
-fn test_invoke_extension_not_available() {
-    let mut test_state = create_test_state();
-    // Assumes we have no Lookup extension in our test caller. The remaining arguments don't
-    // matter, hence they are 0.
-    let extension = test_state
-        .store
-        .data_mut()
-        .get_extension(ExtensionHandle::LookupHandle as i32);
-    assert_eq!(OakStatus::ErrInvalidHandle, extension.unwrap_err())
-}
+use hashbrown::HashMap;
+use oak_functions_lookup::LookupDataManager;
+use oak_logger::StandaloneLogger;
+use spinning_top::Spinlock;
 
 #[test]
 fn test_read_write_u32_in_wasm_memory() {
@@ -125,7 +106,7 @@ fn test_read_request() {
     let mut test_state = create_test_state();
     // Instead of calling read_request, we mimick the functionality here. This is not pretty,
     // but the best I can do for now.
-    let request_bytes = test_state.store.data().request_bytes.clone();
+    let request_bytes = test_state.request.clone();
     // Guess some memory addresses in linear Wasm memory to write to.
     let dest_ptr_ptr: AbiPointer = 100;
     let dest_len_ptr: AbiPointer = 150;
@@ -136,90 +117,33 @@ fn test_read_request() {
     let req_len = read_u32(&mut test_state, dest_len_ptr);
     let request_bytes = read_buffer(&mut test_state, req_ptr, req_len);
 
-    assert_eq!(request_bytes, test_state.store.data().request_bytes)
-}
-
-#[test]
-fn test_invoke_extension() {
-    let mut test_state = create_test_state();
-
-    // Assumes we have a Testing extension in our test caller.
-    let message = "Hello!".to_string();
-    let request = bincode::serialize(&TestingRequest::Echo(message.clone()))
-        .expect("couldn't serialize request");
-
-    // Guess some memory addresses in linear Wasm memory to write the request to.
-    let request_ptr: AbiPointer = 100;
-    write_buffer(&mut test_state, &request, request_ptr);
-
-    // Guess some memory addresses in linear Wasm memory to write the response to.
-    let response_ptr_ptr: AbiPointer = 200;
-    let response_len_ptr: AbiPointer = 250;
-
-    // Instead of calling invoke extension, we mimick the functionality here. This is not pretty,
-    // but the best I can do for now.
-    let request = read_buffer(
-        &mut test_state,
-        request_ptr,
-        request.len() as AbiPointerOffset,
-    );
-
-    let extension = test_state
-        .store
-        .data_mut()
-        .get_extension(ExtensionHandle::TestingHandle as i32)
-        .unwrap();
-
-    let response = extension.invoke(request).unwrap();
-
-    alloc_and_write(
-        &mut test_state,
-        response_ptr_ptr,
-        response_len_ptr,
-        response,
-    );
-
-    let expected_response =
-        bincode::serialize(&TestingResponse::Echo(message)).expect("couldn't serialize response");
-
-    // Get response_len from response_len_ptr.
-    let response_len: AbiPointerOffset = read_u32(&mut test_state, response_len_ptr);
-    // Assert that response_len holds length of expected response.
-    assert_eq!(response_len as usize, expected_response.len());
-    // Get response_ptr from response_ptr_ptr.
-    let response_ptr: AbiPointer = read_u32(&mut test_state, response_ptr_ptr);
-    // Assert that reponse_ptr holds expected response.
-    assert_eq!(
-        read_buffer(&mut test_state, response_ptr, response_len),
-        expected_response
-    );
+    assert_eq!(request_bytes, test_state.request.clone());
 }
 
 struct TestState {
     instance: wasmi::Instance,
-    store: wasmi::Store<UserState<TestingLogger>>,
+    store: wasmi::Store<UserState<StandaloneLogger>>,
+    request: Vec<u8>,
 }
 
 fn create_test_state() -> TestState {
-    let logger = TestingLogger::for_test();
-
-    let testing_factory = TestingFactory::new_boxed_extension_factory(logger.clone())
-        .expect("couldn't create TestingFactory");
+    let logger = StandaloneLogger {};
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
+    let api_factory = Arc::new(StdWasmApiFactory {
+        lookup_data_manager,
+    });
 
     let wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
     let wasm_module_bytes = std::fs::read(wasm_module_path).unwrap();
 
-    let wasm_handler =
-        WasmHandler::create(&wasm_module_bytes[..], alloc::vec![testing_factory], logger)
-            .expect("couldn't create WasmHandler");
+    let wasm_handler = WasmHandler::create(&wasm_module_bytes, api_factory.clone(), logger.clone())
+        .expect("couldn't create WasmHandler");
 
-    let user_state = UserState::new(
-        b"2".to_vec(),
-        wasm_handler
-            .create_extensions()
-            .expect("couldn't create extensions"),
-        wasm_handler.logger.clone(),
-    );
+    let request = Vec::new();
+    let response = Arc::new(Spinlock::new(Vec::new()));
+    let mut wasm_api = api_factory.create_wasm_api(request.clone(), response.clone());
+
+    let user_state = UserState::new(wasm_api.transport(), logger.clone());
 
     let module = wasm_handler.wasm_module;
     let mut store = wasmi::Store::new(module.engine(), user_state);
@@ -228,7 +152,11 @@ fn create_test_state() -> TestState {
         .instantiate(store, module)
         .expect("couldn't instantiate Wasm module");
 
-    TestState { store, instance }
+    TestState {
+        store,
+        instance,
+        request: request.clone(),
+    }
 }
 
 // Read the u32 value at the `address` from the Wasm memory.

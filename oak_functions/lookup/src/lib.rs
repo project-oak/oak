@@ -18,7 +18,6 @@
 extern crate alloc;
 
 use alloc::{
-    boxed::Box,
     format,
     string::{String, ToString},
     sync::Arc,
@@ -26,74 +25,8 @@ use alloc::{
 };
 use hashbrown::HashMap;
 use log::{info, Level};
-use oak_functions_abi::{proto::OakStatus, ExtensionHandle, StorageGetItemResponse};
-use oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 use oak_logger::OakLogger;
 use spinning_top::Spinlock;
-
-pub struct LookupFactory<L: OakLogger> {
-    manager: Arc<LookupDataManager<L>>,
-}
-
-impl<L> LookupFactory<L>
-where
-    L: OakLogger + 'static,
-{
-    pub fn new_boxed_extension_factory(
-        manager: Arc<LookupDataManager<L>>,
-    ) -> anyhow::Result<Box<dyn ExtensionFactory<L>>> {
-        let lookup_factory = Self { manager };
-        Ok(Box::new(lookup_factory))
-    }
-}
-
-impl<L> ExtensionFactory<L> for LookupFactory<L>
-where
-    L: OakLogger + 'static,
-{
-    fn create(&self) -> anyhow::Result<Box<dyn OakApiNativeExtension>> {
-        let extension = self.manager.create_lookup_data();
-        Ok(Box::new(extension))
-    }
-}
-
-impl<L: OakLogger> OakApiNativeExtension for LookupData<L> {
-    fn invoke(&mut self, request: Vec<u8>) -> Result<Vec<u8>, OakStatus> {
-        // The request is the key to lookup.
-        let key = request;
-        let key_to_log = key.clone().into_iter().take(512).collect::<Vec<_>>();
-        self.log_debug(&format!(
-            "storage_get_item(): key: {}",
-            format_bytes(&key_to_log)
-        ));
-        let value = self.get(&key);
-
-        // Log found value.
-        value.clone().map_or_else(
-            || {
-                self.log_debug("storage_get_item(): value not found");
-            },
-            |value| {
-                // Truncate value for logging.
-                let value_to_log = value.into_iter().take(512).collect::<Vec<_>>();
-                self.log_debug(&format!(
-                    "storage_get_item(): value: {}",
-                    format_bytes(&value_to_log)
-                ));
-            },
-        );
-
-        Ok(StorageGetItemResponse { value }.into())
-    }
-
-    fn terminate(&mut self) -> anyhow::Result<()> {
-        Ok(())
-    }
-
-    fn get_handle(&self) -> ExtensionHandle {
-        ExtensionHandle::LookupHandle
-    }
-}
 
 // Data maintains the invariant on lookup data to have [at most one
 // value](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-at-most-one-value)
@@ -226,6 +159,7 @@ where
 }
 
 /// Provides access to shared lookup data.
+#[derive(Clone)]
 pub struct LookupData<L: OakLogger + Clone> {
     data: Arc<Data>,
     logger: L,

@@ -20,7 +20,7 @@ oak_functions_abi = { workspace = true }
 p256 = { version = "*", features = ["ecdsa-core", "ecdsa", "pem"] }
 prost = { workspace = true }
 regex = "*"
-serde = "*"
+serde = { version = "*", features = ["derive"] }
 serde_jcs = "*"
 serde_json = "*"
 sha2 = { version = "*", default-features = false }

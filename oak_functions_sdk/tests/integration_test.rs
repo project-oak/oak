@@ -17,9 +17,9 @@
 use hashbrown::HashMap;
 use lazy_static::lazy_static;
 use oak_functions_abi::{Request, Response};
-use oak_functions_lookup::{LookupDataManager, LookupFactory};
-use oak_functions_wasm::WasmHandler;
-use oak_functions_workload_logging::WorkloadLoggingFactory;
+use oak_functions_lookup::{Data, LookupDataManager};
+use oak_functions_wasm::{api::StdWasmApiFactory, WasmHandler};
+use oak_logger::StandaloneLogger;
 use std::{path::PathBuf, sync::Arc};
 
 lazy_static! {
@@ -47,13 +47,15 @@ lazy_static! {
 
 #[tokio::test]
 async fn test_read_write() {
-    let logger = oak_functions_service::StandaloneLogger {};
+    let logger = StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("couldn't create LookupFactory");
+    let api_factory = StdWasmApiFactory {
+        lookup_data_manager,
+    };
 
-    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("couldn't instantiate WasmHandler");
+    let wasm_handler =
+        WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
+            .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"ReadWrite".to_vec(),
@@ -64,13 +66,15 @@ async fn test_read_write() {
 
 #[tokio::test]
 async fn test_double_read() {
-    let logger = oak_functions_service::StandaloneLogger {};
+    let logger = StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("couldn't create LookupFactory");
+    let api_factory = StdWasmApiFactory {
+        lookup_data_manager,
+    };
 
-    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("couldn't instantiate WasmHandler");
+    let wasm_handler =
+        WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
+            .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"DoubleRead".to_vec(),
@@ -81,13 +85,15 @@ async fn test_double_read() {
 
 #[tokio::test]
 async fn test_double_write() {
-    let logger = oak_functions_service::StandaloneLogger {};
+    let logger = StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("couldn't create LookupFactory");
+    let api_factory = StdWasmApiFactory {
+        lookup_data_manager,
+    };
 
-    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("couldn't instantiate WasmHandler");
+    let wasm_handler =
+        WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
+            .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"DoubleWrite".to_vec(),
@@ -98,20 +104,15 @@ async fn test_double_write() {
 
 #[tokio::test]
 async fn test_write_log() {
-    let logger = oak_functions_service::StandaloneLogger {};
+    let logger = StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("couldn't create LookupFactory");
-    let workload_logging_factory =
-        WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())
-            .expect("couldn't create WorkloadLoggingFactory");
+    let api_factory = StdWasmApiFactory {
+        lookup_data_manager,
+    };
 
-    let wasm_handler = WasmHandler::create(
-        &LOOKUP_WASM_MODULE_BYTES,
-        vec![lookup_factory, workload_logging_factory],
-        logger,
-    )
-    .expect("couldn't instantiate WasmHandler");
+    let wasm_handler =
+        WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
+            .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"WriteLog".to_vec(),
@@ -124,13 +125,15 @@ async fn test_write_log() {
 async fn test_storage_get_item() {
     let entries = HashMap::from_iter([(b"StorageGet".to_vec(), b"StorageGetResponse".to_vec())]);
 
-    let logger = oak_functions_service::StandaloneLogger {};
+    let logger = StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("couldn't create LookupFactory");
+    let api_factory = StdWasmApiFactory {
+        lookup_data_manager,
+    };
 
-    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("couldn't instantiate WasmHandler");
+    let wasm_handler =
+        WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
+            .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"StorageGet".to_vec(),
@@ -144,13 +147,15 @@ async fn test_storage_get_item_not_found() {
     // empty lookup data, no key will be found
     let entries = HashMap::new();
 
-    let logger = oak_functions_service::StandaloneLogger {};
+    let logger = StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("couldn't create LookupFactory");
+    let api_factory = StdWasmApiFactory {
+        lookup_data_manager,
+    };
 
-    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("couldn't instantiate WasmHandler");
+    let wasm_handler =
+        WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
+            .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"StorageGetItemNotFound".to_vec(),
@@ -165,13 +170,15 @@ async fn test_storage_get_item_huge_key() {
     let bytes: Vec<u8> = vec![42u8; 1 << 20];
     let entries = HashMap::from_iter([(bytes.clone(), bytes.clone())]);
 
-    let logger = oak_functions_service::StandaloneLogger {};
+    let logger = StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
-    let lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)
-        .expect("couldn't create LookupFactory");
+    let api_factory = StdWasmApiFactory {
+        lookup_data_manager,
+    };
 
-    let wasm_handler = WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, vec![lookup_factory], logger)
-        .expect("couldn't instantiate WasmHandler");
+    let wasm_handler =
+        WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
+            .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"LargeKey".to_vec(),
@@ -183,17 +190,17 @@ async fn test_storage_get_item_huge_key() {
 
 #[tokio::test]
 async fn test_echo() {
-    let logger = oak_functions_service::StandaloneLogger {};
+    let logger = StandaloneLogger {};
     let message_to_echo = "ECHO";
 
-    let testing_factory =
-        oak_functions_testing_extension::TestingFactory::new_boxed_extension_factory(
-            logger.clone(),
-        )
-        .expect("couldn't create testing extension factory");
+    let lookup_data_manager =
+        Arc::new(LookupDataManager::for_test(Data::default(), logger.clone()));
+    let api_factory = StdWasmApiFactory {
+        lookup_data_manager,
+    };
 
     let wasm_handler =
-        WasmHandler::create(&TESTING_WASM_MODULE_BYTES, vec![testing_factory], logger)
+        WasmHandler::create(&TESTING_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
             .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
@@ -209,17 +216,17 @@ async fn test_blackhole() {
     // Keep in sync with
     // `workspace/oak_functions/sdk/oak_functions/tests/testing_module/src/lib.rs`.
 
-    let logger = oak_functions_service::StandaloneLogger {};
+    let logger = StandaloneLogger {};
     let message_to_blackhole = "BLACKHOLE";
 
-    let testing_factory =
-        oak_functions_testing_extension::TestingFactory::new_boxed_extension_factory(
-            logger.clone(),
-        )
-        .expect("couldn't create testing extension factory");
+    let lookup_data_manager =
+        Arc::new(LookupDataManager::for_test(Data::default(), logger.clone()));
+    let api_factory = StdWasmApiFactory {
+        lookup_data_manager,
+    };
 
     let wasm_handler =
-        WasmHandler::create(&TESTING_WASM_MODULE_BYTES, vec![testing_factory], logger)
+        WasmHandler::create(&TESTING_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
             .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
@@ -236,16 +243,16 @@ async fn test_huge_response() {
     // Keep in sync with
     // `workspace/oak_functions/sdk/oak_functions/tests/testing_module/src/lib.rs`.
 
-    let logger = oak_functions_service::StandaloneLogger {};
+    let logger = StandaloneLogger {};
 
-    let testing_factory =
-        oak_functions_testing_extension::TestingFactory::new_boxed_extension_factory(
-            logger.clone(),
-        )
-        .expect("couldn't create testing extension factory");
+    let lookup_data_manager =
+        Arc::new(LookupDataManager::for_test(Data::default(), logger.clone()));
+    let api_factory = StdWasmApiFactory {
+        lookup_data_manager,
+    };
 
     let wasm_handler =
-        WasmHandler::create(&TESTING_WASM_MODULE_BYTES, vec![testing_factory], logger)
+        WasmHandler::create(&TESTING_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
             .expect("couldn't instantiate WasmHandler");
 
     let request = Request {

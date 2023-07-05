@@ -28,11 +28,12 @@ pub mod proto {
         }
     }
 }
-mod logger;
+
 mod wasm;
 
 use alloc::{boxed::Box, format, sync::Arc};
 use oak_functions_lookup::LookupDataManager;
+use oak_logger::StandaloneLogger;
 use oak_remote_attestation::{
     attester::AttestationReportGenerator,
     handler::{AttestationHandler, AttestationSessionHandler},
@@ -44,8 +45,6 @@ use proto::oak::functions::{
     PublicKeyInfo,
 };
 
-pub use crate::logger::StandaloneLogger;
-
 enum InitializationState {
     Uninitialized,
     Initialized(Box<dyn AttestationHandler>),
@@ -54,7 +53,7 @@ enum InitializationState {
 pub struct OakFunctionsService {
     attestation_report_generator: Arc<dyn AttestationReportGenerator>,
     initialization_state: InitializationState,
-    lookup_data_manager: Arc<LookupDataManager<logger::StandaloneLogger>>,
+    lookup_data_manager: Arc<LookupDataManager<StandaloneLogger>>,
 }
 
 impl OakFunctionsService {

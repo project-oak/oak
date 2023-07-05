@@ -284,15 +284,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bincode"
-version = "1.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
-dependencies = [
- "serde",
-]
-
-[[package]]
 name = "bit_field"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1456,7 +1447,6 @@ dependencies = [
  "log",
  "oak_functions_abi",
  "prost",
- "serde",
 ]
 
 [[package]]
@@ -1906,7 +1896,6 @@ dependencies = [
  "anyhow",
  "prost",
  "prost-build",
- "serde",
  "static_assertions",
  "strum",
 ]
@@ -1936,15 +1925,6 @@ dependencies = [
  "sha2 0.10.6",
  "tokio",
  "tonic",
-]
-
-[[package]]
-name = "oak_functions_extension"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "oak_functions_abi",
- "oak_logger",
 ]
 
 [[package]]
@@ -2009,11 +1989,8 @@ dependencies = [
 name = "oak_functions_lookup"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "hashbrown 0.13.2",
  "log",
- "oak_functions_abi",
- "oak_functions_extension",
  "oak_logger",
  "spinning_top",
 ]
@@ -2022,18 +1999,16 @@ dependencies = [
 name = "oak_functions_sdk"
 version = "0.1.0"
 dependencies = [
- "bincode",
  "hashbrown 0.13.2",
  "lazy_static",
+ "micro_rpc",
+ "micro_rpc_build",
  "oak_functions_abi",
  "oak_functions_lookup",
- "oak_functions_service",
  "oak_functions_test_utils",
- "oak_functions_testing_extension",
  "oak_functions_wasm",
- "oak_functions_workload_logging",
- "serde",
- "serde_derive",
+ "oak_logger",
+ "prost",
  "tokio",
 ]
 
@@ -2052,11 +2027,8 @@ dependencies = [
 name = "oak_functions_sdk_abi_test_invoke_testing"
 version = "0.1.0"
 dependencies = [
- "bincode",
  "oak_functions_abi",
  "oak_functions_sdk",
- "serde",
- "serde_derive",
 ]
 
 [[package]]
@@ -2072,12 +2044,13 @@ dependencies = [
  "oak_crypto",
  "oak_functions_abi",
  "oak_functions_lookup",
+ "oak_functions_sdk",
  "oak_functions_test_utils",
  "oak_functions_wasm",
- "oak_functions_workload_logging",
  "oak_logger",
  "oak_remote_attestation",
  "prost",
+ "spinning_top",
  "tokio",
 ]
 
@@ -2102,44 +2075,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_testing_extension"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bincode",
- "chrono",
- "oak_functions_abi",
- "oak_functions_extension",
- "oak_logger",
-]
-
-[[package]]
 name = "oak_functions_wasm"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bincode",
  "byteorder",
  "hashbrown 0.13.2",
  "log",
  "micro_rpc",
  "oak_functions_abi",
- "oak_functions_extension",
+ "oak_functions_lookup",
+ "oak_functions_sdk",
  "oak_functions_test_utils",
- "oak_functions_testing_extension",
  "oak_logger",
+ "spinning_top",
  "wasmi",
-]
-
-[[package]]
-name = "oak_functions_workload_logging"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "log",
- "oak_functions_abi",
- "oak_functions_extension",
- "oak_logger",
 ]
 
 [[package]]

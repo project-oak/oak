@@ -11,6 +11,3 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 oak_functions_abi = { path = "../../../oak_functions_abi" }
 oak_functions_sdk = { path = "../../../oak_functions_sdk" }
-serde = "*"
-serde_derive = "*"
-bincode = "*"
