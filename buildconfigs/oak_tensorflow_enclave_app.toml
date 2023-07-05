@@ -3,12 +3,6 @@
 command = [
   "nix",
   "develop",
-  ".#rust",
-  "--command",
-  "env",
-  "--chdir=enclave_apps/oak_tensorflow_enclave_app",
-  "cargo",
-  "build",
-  "--release"
+  ".#default"
 ]
 artifact_path = "./enclave_apps/target/x86_64-unknown-none/release/oak_tensorflow_enclave_app"
