@@ -21,6 +21,16 @@
 <a href="#21" id="21">21</a>
 <a href="#22" id="22">22</a>
 <a href="#23" id="23">23</a>
+<a href="#24" id="24">24</a>
+<a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -36,12 +46,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">mod </span>client;
+</span><span class="kw">mod </span>orchestrator_client;
+<span class="kw">mod </span>untrusted_app_client;
 
 <span class="attr">#[tokio::main]
 </span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>client = client::UntrustedApplicationClient::create(<span class="number">2</span>, <span class="number">6969</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-    <span class="kw">let </span>_greeting = client.hello(<span class="string">&quot;Trusted Application&quot;</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>application_config = orchestrator_client::OrchestratorClient::create()
+        .<span class="kw">await</span><span class="question-mark">?
+        </span>.get_application_config()
+        .<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>name = <span class="macro">format!</span>(
+        <span class="string">&quot;Trusted Application with a {} byte long config&quot;</span>,
+        application_config.len()
+    );
+    <span class="kw">let </span><span class="kw-2">mut </span>untrusted_app_client =
+        untrusted_app_client::UntrustedApplicationClient::create(<span class="number">2</span>, <span class="number">6969</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>_greeting = untrusted_app_client.hello(<span class="kw-2">&amp;</span>name).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div></section></main></body></html>

@@ -127,6 +127,25 @@
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -142,7 +161,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span>std::path::PathBuf;
+</span><span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>std::path::PathBuf;
 
 <span class="doccomment">/// Representation of a minimal OCI filesystem bundle config, including just the required fields.
 /// Ref: &lt;https://github.com/opencontainers/runtime-spec/blob/467fd17d4f2a987fa00051ce44b69bf9620e2ee6/config.md&gt;
@@ -181,8 +201,14 @@
 </span><span class="kw">const </span>CONTAINER_DIR: <span class="kw-2">&amp;</span>str = <span class="string">&quot;/oak_container&quot;</span>;
 
 <span class="kw">async fn </span>rmount_dir(source: PathBuf, target: PathBuf) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
-    tokio::fs::remove_dir_all(<span class="kw-2">&amp;</span>target).<span class="kw">await</span><span class="question-mark">?</span>;
-    tokio::fs::create_dir_all(<span class="kw-2">&amp;</span>target).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">if </span>target.exists() {
+        tokio::fs::remove_dir_all(<span class="kw-2">&amp;</span>target)
+            .<span class="kw">await
+            </span>.context(<span class="string">&quot;failed to removing existing directories at the target&quot;</span>)<span class="question-mark">?
+    </span>}
+    tokio::fs::create_dir_all(<span class="kw-2">&amp;</span>target)
+        .<span class="kw">await
+        </span>.context(<span class="string">&quot;failed to create a directory at the target&quot;</span>)<span class="question-mark">?</span>;
 
     run_command_and_log_output(
         tokio::process::Command::new(<span class="string">&quot;mount&quot;</span>)
@@ -216,6 +242,18 @@
         base.push(oci_filesystem_bundle_config.root.path);
         base
     };
+
+    <span class="comment">// mount the utility dir (includes the ipc socket) into the container
+    </span><span class="kw">let </span>container_dev_path = {
+        <span class="kw">let </span><span class="kw-2">mut </span>base = container_rootfs_path.clone();
+        base.push(<span class="kw">crate</span>::UTIL_DIR);
+        base
+    };
+    rmount_dir(
+        std::path::Path::new(<span class="string">&quot;/&quot;</span>).join(<span class="kw">crate</span>::UTIL_DIR),
+        container_dev_path,
+    )
+    .<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="comment">// mount host /dev into the container
     </span><span class="kw">let </span>container_dev_path = {

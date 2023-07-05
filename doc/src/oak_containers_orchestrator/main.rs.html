@@ -67,6 +67,22 @@
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -83,6 +99,7 @@
 // limitations under the License.
 
 </span><span class="kw">mod </span>container_runtime;
+<span class="kw">mod </span>ipc_server;
 <span class="kw">mod </span>logging;
 
 <span class="kw">use </span>anyhow::anyhow;
@@ -90,6 +107,10 @@
 <span class="kw">use </span>oak_containers_orchestrator_client::{
     proto::oak::session::v1::AttestationEvidence, LauncherClient,
 };
+
+<span class="comment">// Utility directory that is shared between the orchestrator &amp; container
+</span><span class="kw">const </span>UTIL_DIR: <span class="kw-2">&amp;</span>str = <span class="string">&quot;oak_utils&quot;</span>;
+<span class="kw">const </span>IPC_SOCKET_FILE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;orchestrator_ipc&quot;</span>;
 
 <span class="attr">#[derive(Parser, Debug)]
 </span><span class="kw">struct </span>Args {
@@ -116,7 +137,7 @@
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t get container bundle: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>_application_config = launcher_client
+    <span class="kw">let </span>application_config = launcher_client
         .get_application_config()
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t get application config: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
@@ -132,7 +153,18 @@
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t send attestation evidence: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
-    container_runtime::run(<span class="kw-2">&amp;</span>container_bundle).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>util_dir_absolute_path = std::path::Path::new(<span class="string">&quot;/&quot;</span>).join(<span class="kw">crate</span>::UTIL_DIR);
+    tokio::fs::create_dir_all(<span class="kw-2">&amp;</span>util_dir_absolute_path).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>ipc_path = {
+        <span class="kw">let </span><span class="kw-2">mut </span>path = util_dir_absolute_path;
+        path.push(IPC_SOCKET_FILE_NAME);
+        path
+    };
+
+    <span class="macro">tokio::try_join!</span>(
+        <span class="kw">crate</span>::ipc_server::create(ipc_path, application_config),
+        container_runtime::run(<span class="kw-2">&amp;</span>container_bundle)
+    )<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())
 }

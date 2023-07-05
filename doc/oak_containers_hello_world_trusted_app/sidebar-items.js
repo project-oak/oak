@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["main"],"mod":["client"]};
+window.SIDEBAR_ITEMS = {"fn":["main"],"mod":["orchestrator_client","untrusted_app_client"]};
