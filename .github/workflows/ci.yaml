@@ -68,13 +68,11 @@ jobs:
           sudo rm --force /swapfile
           df --human-readable
 
-      - uses: DeterminateSystems/nix-installer-action@677cbc8aa1fe7e80b1fd15243ec41d5e0c7e3669
-      - uses: DeterminateSystems/magic-nix-cache-action@5cc3a5e24b688cf7e0ea986ab07a9d3d32c34a95
-
-      # Build the shell in a separate step first, so we can keep track of its build time.
-      - name: Build nix shell
+      - name: Docker pull
+        timeout-minutes: 10
         run: |
-          nix develop .#ci --command echo done
+          ./scripts/docker_pull
+          df --human-readable
 
       - name: Run command
         env:
@@ -83,9 +81,10 @@ jobs:
           # Do not run tests that require KVM on GitHub Actions, since nested virtualization is not supported.
           OAK_KVM_TESTS: skip
         run: |
-          nix develop .#ci --command ./scripts/xtask --scope=all ${{ matrix.cmd }}
+          ./scripts/docker_run nix develop .#ci --command ./scripts/xtask --scope=all ${{ matrix.cmd }}
+          df --human-readable
 
         # Ensure that the previous steps did not modify our source-code and that
         # relevant build artifacts are ignored by git.
       - name: Git check diff
-        run: ./scripts/git_check_diff
+        run: ./scripts/docker_run ./scripts/git_check_diff

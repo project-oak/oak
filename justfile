@@ -29,10 +29,16 @@ stage0_bin:
 stage1_cpio:
     env --chdir=oak_containers_stage1 make
 
+vmlinux:
+    env --chdir=oak_containers_kernel make
+
+image_tar:
+    env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 bash build.sh
+
 # Top level target to build all enclave apps and the kernel, and run tests.
 #
 # This is the entry point for Kokoro CI.
 kokoro: all_enclave_apps oak_restricted_kernel_bin stage0_bin
     cargo nextest run --all-targets --hide-progress-bar
 
-kokoro_oak_containers: stage1_cpio
+kokoro_oak_containers: stage1_cpio vmlinux image_tar

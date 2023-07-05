@@ -59,6 +59,17 @@ cc_grpc_library(
     deps = [":service_streaming_cc_proto"],
 )
 
+cc_proto_library(
+    name = "service_unary_cc_proto",
+    deps = [":service_unary_proto"],
+)
+
+cc_grpc_library(
+    name = "service_unary_cc_grpc",
+    srcs = [":service_unary_proto"],
+    deps = [":service_unary_cc_proto"],
+)
+
 java_proto_library(
     name = "messages_java_proto",
     deps = [":messages_proto"],
@@ -73,4 +84,15 @@ java_grpc_library(
     name = "service_streaming_java_grpc",
     srcs = [":service_streaming_proto"],
     deps = [":service_streaming_java_proto"],
+)
+
+java_proto_library(
+    name = "service_unary_java_proto",
+    deps = [":service_unary_proto"],
+)
+
+java_grpc_library(
+    name = "service_unary_java_grpc",
+    srcs = [":service_unary_proto"],
+    deps = [":service_unary_java_proto"],
 )

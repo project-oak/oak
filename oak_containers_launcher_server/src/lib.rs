@@ -16,18 +16,28 @@
 mod proto {
     pub mod oak {
         pub mod containers {
+            #![allow(clippy::return_self_not_must_use)]
             tonic::include_proto!("oak.containers");
+        }
+        pub mod session {
+            pub mod v1 {
+                #![allow(clippy::return_self_not_must_use)]
+                tonic::include_proto!("oak.session.v1");
+            }
         }
     }
 }
 
-use self::proto::oak::containers::{
-    launcher_server::{Launcher, LauncherServer},
-    GetApplicationConfigResponse, GetImageResponse,
+use self::proto::oak::{
+    containers::{
+        launcher_server::{Launcher, LauncherServer},
+        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+    },
+    session::v1::AttestationEvidence,
 };
 use anyhow::anyhow;
 use futures::Stream;
-use std::pin::Pin;
+use std::{pin::Pin, sync::Mutex};
 use tokio::io::{AsyncReadExt, BufReader};
 use tokio_vsock::VsockListener;
 use tonic::{transport::Server, Request, Response, Status};
@@ -43,6 +53,8 @@ struct LauncherServerImplementation {
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: Option<std::path::PathBuf>,
+    // Attestation Evidence is initialized by the Orchestrator.
+    attestation_evidence: Mutex<Option<AttestationEvidence>>,
 }
 
 #[tonic::async_trait]
@@ -127,6 +139,24 @@ impl Launcher for LauncherServerImplementation {
             None => Ok(tonic::Response::new(GetApplicationConfigResponse::default())),
         }
     }
+
+    async fn send_attestation_evidence(
+        &self,
+        request: Request<SendAttestationEvidenceRequest>,
+    ) -> Result<Response<()>, tonic::Status> {
+        let mut attestation_evidence = self.attestation_evidence.lock().map_err(|err| {
+            tonic::Status::internal(format!("couldn't access attestation evidence: {err}"))
+        })?;
+        match *attestation_evidence {
+            Some(_) => Err(tonic::Status::invalid_argument(
+                "attestation evidence has already been sent to the Launcher",
+            )),
+            None => {
+                *attestation_evidence = request.into_inner().evidence;
+                Ok(tonic::Response::new(()))
+            }
+        }
+    }
 }
 
 pub async fn new(
@@ -140,6 +170,8 @@ pub async fn new(
         system_image,
         container_bundle,
         application_config,
+        // Attestation Evidence will be sent by the Orchestrator once generated.
+        attestation_evidence: Mutex::new(None),
     };
     let vsock_listener = VsockListener::bind(vsock_cid, vsock_port)?.incoming();
 

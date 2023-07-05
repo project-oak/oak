@@ -13,14 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod proto {
+pub mod proto {
     pub mod oak {
         pub mod containers {
             tonic::include_proto!("oak.containers");
         }
+        pub mod session {
+            pub mod v1 {
+                #![allow(clippy::return_self_not_must_use)]
+                tonic::include_proto!("oak.session.v1");
+            }
+        }
     }
 }
 
+use self::proto::oak::{
+    containers::SendAttestationEvidenceRequest, session::v1::AttestationEvidence,
+};
 use anyhow::Context;
 use proto::oak::containers::launcher_client::LauncherClient as GrpcLauncherClient;
 use tokio_vsock::VsockStream;
@@ -86,5 +95,20 @@ impl LauncherClient {
             .config;
 
         Ok(application_config)
+    }
+
+    pub async fn send_attestation_evidence(
+        &mut self,
+        evidence: AttestationEvidence,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(SendAttestationEvidenceRequest {
+            evidence: Some(evidence),
+        });
+        self.inner
+            .send_attestation_evidence(request)
+            .await
+            .context("couldn't form get response")?;
+
+        Ok(())
     }
 }

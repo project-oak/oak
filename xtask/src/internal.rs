@@ -828,7 +828,7 @@ impl Running for SingleStatusResult {
 macro_rules! spread [
     // Empty case.
     () => (
-        vec![].iter()
+        [].iter()
     );
     // Spread value base case.
     (...$vv:expr) => (
@@ -840,11 +840,11 @@ macro_rules! spread [
     );
     // Single value base case.
     ($v:expr) => (
-        vec![$v].iter()
+        [$v].iter()
     );
     // Single value recursive case.
     ($v:expr, $($rest:tt)*) => (
-        vec![$v].iter().chain( spread![$($rest)*] )
+        [$v].iter().chain( spread![$($rest)*] )
     );
 ];
 
@@ -858,25 +858,23 @@ fn test_spread() {
     );
     assert_eq!(
         vec![1, 2, 3, 4],
-        spread![...vec![1, 2], 3, 4].cloned().collect::<Vec<i32>>()
+        spread![...[1, 2], 3, 4].cloned().collect::<Vec<i32>>()
     );
     assert_eq!(
         vec![1, 2, 3, 4],
-        spread![1, ...vec![2, 3], 4].cloned().collect::<Vec<i32>>()
+        spread![1, ...[2, 3], 4].cloned().collect::<Vec<i32>>()
     );
     assert_eq!(
         vec![1, 2, 3, 4],
-        spread![1, 2, ...vec![3, 4]].cloned().collect::<Vec<i32>>()
+        spread![1, 2, ...[3, 4]].cloned().collect::<Vec<i32>>()
     );
     assert_eq!(
         vec![1, 2, 3, 4],
-        spread![...vec![1, 2], ...vec![3, 4]]
-            .cloned()
-            .collect::<Vec<i32>>()
+        spread![...[1, 2], ...[3, 4]].cloned().collect::<Vec<i32>>()
     );
     assert_eq!(
         vec![1, 2, 3, 4],
-        spread![...vec![1, 2, 3, 4]].cloned().collect::<Vec<i32>>()
+        spread![...[1, 2, 3, 4]].cloned().collect::<Vec<i32>>()
     );
 
     assert_eq!(

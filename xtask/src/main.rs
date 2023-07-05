@@ -655,6 +655,8 @@ fn run_cargo_udeps(scope: &Scope) -> Step {
         name: "cargo udeps".to_string(),
         steps: workspace_manifest_files()
             .filter(|path| all_affected_crates.contains_path(path))
+            // TODO(#4129): Remove when cargo-udeps supports build-std.
+            .filter(|path| path != Path::new("./stage0_bin/Cargo.toml"))
             .map(|entry| Step::Single {
                 name: entry.to_str().unwrap().to_string(),
                 command: Cmd::new_in_dir(

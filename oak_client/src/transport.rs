@@ -54,8 +54,12 @@ impl micro_rpc::AsyncTransport for GrpcStreamingTransport {
             .context("gRPC server error when invoking method")?
             .context("received empty response stream")?;
 
-        let Some(response_wrapper::Response::InvokeResponse(invoke_response)) = response_wrapper.response else {
-            return Err(anyhow::anyhow!("response_wrapper does not have a valid invoke_response message"))
+        let Some(response_wrapper::Response::InvokeResponse(invoke_response)) =
+            response_wrapper.response
+        else {
+            return Err(anyhow::anyhow!(
+                "response_wrapper does not have a valid invoke_response message"
+            ));
         };
 
         Ok(invoke_response.encrypted_body)
@@ -89,8 +93,12 @@ impl AsyncEvidenceProvider for GrpcStreamingTransport {
             .context("gRPC server error when requesting attestation evidence")?
             .context("received empty response stream")?;
 
-        let Some(response_wrapper::Response::GetPublicKeyResponse(get_evidence_response)) = response_wrapper.response else {
-            return Err(anyhow::anyhow!("response_wrapper doesn't contain a valid get_evidence_response message"))
+        let Some(response_wrapper::Response::GetPublicKeyResponse(get_evidence_response)) =
+            response_wrapper.response
+        else {
+            return Err(anyhow::anyhow!(
+                "response_wrapper doesn't contain a valid get_evidence_response message"
+            ));
         };
 
         get_evidence_response

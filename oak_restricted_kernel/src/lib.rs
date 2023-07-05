@@ -32,8 +32,8 @@
 #![feature(abi_x86_interrupt)]
 #![feature(allocator_api)]
 #![feature(array_chunks)]
+#![feature(lazy_cell)]
 #![feature(naked_functions)]
-#![feature(once_cell)]
 #![feature(c_size_t)]
 
 mod acpi;
@@ -168,6 +168,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // Safety: we know we're addressing valid memory that contains the correct data structure, as
     // we're just translating addresses differently due to the new page tables.
     let info = unsafe {
+        #[allow(clippy::unnecessary_cast)]
         (PAGE_TABLES
             .get()
             .unwrap()
