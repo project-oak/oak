@@ -152,6 +152,7 @@
                 bison
                 cpio
                 curl
+                docker
                 elfutils
                 flex
                 libelf
