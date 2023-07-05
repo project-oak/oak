@@ -140,7 +140,7 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
     // given the orchestrators current feature set, but may become one later.
     std::os::unix::fs::chroot(container_rootfs_path)?;
 
-    // Change to specifed working directory
+    // Change to the specifed working directory.
     std::env::set_current_dir(oci_filesystem_bundle_config.process.cwd)?;
 
     // Start the trusted application.
