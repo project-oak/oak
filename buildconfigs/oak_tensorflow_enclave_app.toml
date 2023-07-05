@@ -1,4 +1,14 @@
 # Unlike other build configs, this one needs to run in the "default" shell instead of just the
 # "rust" one, because bazel is also used by the build.rs script.
-command = ["nix", "develop", ".#containers", "--command", "touch", "./enclave_apps/target/x86_64-unknown-none/release/oak_tensorflow_enclave_app"]
-artifact_path = "./enclave_apps/target/x86_64-unknown-none/release/oak_tensorflow_enclave_app"
+command = [
+  "nix",
+  "develop",
+  ".#default",
+  "--command",
+  "env",
+  "--chdir=oak_restricted_kernel_bin",
+  "cargo",
+  "build",
+  "--release"
+]
+artifact_path = "./oak_restricted_kernel_bin/target/x86_64-unknown-none/release/oak_restricted_kernel_bin"
