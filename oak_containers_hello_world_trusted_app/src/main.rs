@@ -13,11 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod client;
+mod orchestrator_client;
+mod untrusted_app_client;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = client::UntrustedApplicationClient::create(2, 6969).await?;
-    let _greeting = client.hello("Trusted Application").await?;
+    let application_config = orchestrator_client::OrchestratorClient::create()
+        .await?
+        .get_application_config()
+        .await?;
+    let name = format!(
+        "Trusted Application with a {} byte long config",
+        application_config.len()
+    );
+    let mut untrusted_app_client =
+        untrusted_app_client::UntrustedApplicationClient::create(2, 6969).await?;
+    let _greeting = untrusted_app_client.hello(&name).await?;
     Ok(())
 }

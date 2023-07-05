@@ -1787,11 +1787,15 @@ dependencies = [
  "clap",
  "log",
  "oak_containers_orchestrator_client",
+ "oak_grpc_utils",
+ "prost",
  "serde",
  "serde_json",
  "syslog",
  "tar",
  "tokio",
+ "tokio-stream",
+ "tonic",
 ]
 
 [[package]]

@@ -14,10 +14,17 @@ tokio = { version = "*", features = [
   "macros",
   "sync",
   "fs",
-  "process"
+  "process",
+  "net"
 ] }
 log = "*"
 syslog = "*"
 tar = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
+prost = "*"
+tokio-stream = { version = "*", features = ["net"] }
+tonic = { workspace = true }
+
+[build-dependencies]
+oak_grpc_utils = { workspace = true }

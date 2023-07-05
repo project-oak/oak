@@ -14,6 +14,7 @@
 // limitations under the License.
 
 mod container_runtime;
+mod ipc_server;
 mod logging;
 
 use anyhow::anyhow;
@@ -21,6 +22,10 @@ use clap::Parser;
 use oak_containers_orchestrator_client::{
     proto::oak::session::v1::AttestationEvidence, LauncherClient,
 };
+
+// Utility directory that is shared between the orchestrator & container
+const UTIL_DIR: &str = "oak_utils";
+const IPC_SOCKET_FILE_NAME: &str = "orchestrator_ipc";
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -47,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .map_err(|error| anyhow!("couldn't get container bundle: {:?}", error))?;
 
-    let _application_config = launcher_client
+    let application_config = launcher_client
         .get_application_config()
         .await
         .map_err(|error| anyhow!("couldn't get application config: {:?}", error))?;
@@ -63,7 +68,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .map_err(|error| anyhow!("couldn't send attestation evidence: {:?}", error))?;
 
-    container_runtime::run(&container_bundle).await?;
+    let util_dir_absolute_path = std::path::Path::new("/").join(crate::UTIL_DIR);
+    tokio::fs::create_dir_all(&util_dir_absolute_path).await?;
+    let ipc_path = {
+        let mut path = util_dir_absolute_path;
+        path.push(IPC_SOCKET_FILE_NAME);
+        path
+    };
+
+    tokio::try_join!(
+        crate::ipc_server::create(ipc_path, application_config),
+        container_runtime::run(&container_bundle)
+    )?;
 
     Ok(())
 }
