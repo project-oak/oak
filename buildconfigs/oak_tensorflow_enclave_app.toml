@@ -6,7 +6,6 @@ command = [
   ".#default",
   "--command",
   "cargo",
-  "check",
-  "--release"
+  "clean",
 ]
 artifact_path = "./oak_restricted_kernel_bin/target/x86_64-unknown-none/release/oak_restricted_kernel_bin"
