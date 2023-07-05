@@ -28,8 +28,10 @@ java_library(
         "Hpke.java",
         "KeyPair.java",
     ],
-    deps = [
+    runtime_deps = [
         "//cc/crypto/hpke/jni:libhpke-jni.so",
+    ],
+    deps = [
         "//java/src/main/java/com/google/oak/util",
     ],
 )
