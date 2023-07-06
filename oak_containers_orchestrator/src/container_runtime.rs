@@ -13,11 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Minimal implementation of a container runtime using chroot. It accepts an
+//! containers in the form of an OCI filesystem bundle. However the runtime
+//! itself is not OCI spec compliant.
+
 use anyhow::Context;
 use std::path::PathBuf;
 
 /// Representation of a minimal OCI filesystem bundle config, including just the required fields.
-/// Ref: <https://github.com/opencontainers/runtime-spec/blob/467fd17d4f2a987fa00051ce44b69bf9620e2ee6/config.md>
+/// Ref: <https://github.com/opencontainers/runtime-spec/blob/c4ee7d12c742ffe806cd9350b6af3b4b19faed6f/config.md>
 #[derive(serde::Deserialize)]
 struct OciFilesystemBundleConfig {
     process: OciFilesystemBundleConfigProcess,
@@ -28,6 +32,7 @@ struct OciFilesystemBundleConfig {
 struct OciFilesystemBundleConfigProcess {
     user: OciFilesystemBundleConfigProcessUser,
     args: Vec<String>,
+    cwd: std::path::PathBuf,
 }
 
 #[derive(serde::Deserialize)]
@@ -131,18 +136,32 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
     };
     rmount_dir(std::path::PathBuf::from("/proc"), container_proc_path).await?;
 
-    // Start the trusted application in a chroot jail of the container.
-    run_command_and_log_output(
-        tokio::process::Command::new("chroot")
-            .arg(format!(
-                "--userspec={}:{}",
-                oci_filesystem_bundle_config.process.user.uid,
-                oci_filesystem_bundle_config.process.user.gid,
-            ))
-            .arg(container_rootfs_path)
-            .args(oci_filesystem_bundle_config.process.args),
-    )
-    .await?;
+    let mut start_trusted_app_cmd = {
+        let mut cmd =
+            tokio::process::Command::new(oci_filesystem_bundle_config.process.args[0].clone());
+        cmd.args(oci_filesystem_bundle_config.process.args.as_slice()[1..].to_vec())
+            .uid(oci_filesystem_bundle_config.process.user.uid)
+            .gid(oci_filesystem_bundle_config.process.user.gid);
+        cmd
+    };
+
+    let prep_trusted_app_process = move || {
+        // Run the trusted app in a chroot enviroment of the container.
+        std::os::unix::fs::chroot(container_rootfs_path.clone())?;
+        // Set the specified working directory
+        std::env::set_current_dir(oci_filesystem_bundle_config.process.cwd.clone())?;
+        Ok(())
+    };
+
+    // Safety: this unsafe block exists soley we can call the unsafe `pre_exec`
+    // method, allowing us to use a closure to prep the newly forked child
+    // process. That closure runs in a special enviroment so it can behave a bit
+    // unexpectedly. For our case that's fine though, since we just use it to
+    // make chdir & chroot syscalls.
+    // Ref: https://docs.rs/tokio/latest/tokio/process/struct.Command.html#safety
+    unsafe { start_trusted_app_cmd.pre_exec(prep_trusted_app_process) };
+
+    run_command_and_log_output(&mut start_trusted_app_cmd).await?;
 
     Ok(())
 }
