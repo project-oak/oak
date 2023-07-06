@@ -159,12 +159,9 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
     // unexpectedly. For our case that's fine though, since we just use it to
     // make chdir & chroot syscalls.
     // Ref: https://docs.rs/tokio/latest/tokio/process/struct.Command.html#safety
-    unsafe {
-        let _output =
-            tokio::process::Command::pre_exec(&mut start_trusted_app_cmd, prep_trusted_app_process)
-                .output()
-                .await;
-    }
+    unsafe { start_trusted_app_cmd.pre_exec(prep_trusted_app_process) };
+
+    run_command_and_log_output(&mut start_trusted_app_cmd).await?;
 
     Ok(())
 }
