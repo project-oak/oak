@@ -157,7 +157,7 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
     // method, allowing us to use a closure to prep the newly forked child
     // process. That closure runs in a special enviroment so it can behave a bit
     // unexpectedly. For our case that's fine though, since we just use it to
-    // make chdir & chroot syscall.
+    // make chdir & chroot syscalls.
     // Ref: https://docs.rs/tokio/latest/tokio/process/struct.Command.html#safety
     unsafe {
         let _output =
