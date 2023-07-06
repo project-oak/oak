@@ -145,7 +145,6 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
         cmd
     };
 
-    // Prepare the trusted application
     let prep_trusted_app_process = move || {
         // Run the trusted app in a chroot enviroment of the container.
         std::os::unix::fs::chroot(container_rootfs_path.clone())?;
@@ -154,10 +153,12 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
         Ok(())
     };
 
-    // Run the command to execute the trusted application. Just prior to
-    // execution, prepare the child process.
-    // Safety: Closure will be run the process of a child process after a fork.
-    // See https://docs.rs/tokio/latest/tokio/process/struct.Command.html#safety.
+    // Safety: this unsafe block exists soley we can call the unsafe `pre_exec`
+    // method, allowing us to use a closure to prep the newly forked child
+    // process. That closure runs in a special enviroment so it can behave a bit
+    // unexpectedly. For our case that's fine though, since we just use it to
+    // make chdir & chroot syscall.
+    // Ref: https://docs.rs/tokio/latest/tokio/process/struct.Command.html#safety
     unsafe {
         let _output =
             tokio::process::Command::pre_exec(&mut start_trusted_app_cmd, prep_trusted_app_process)
