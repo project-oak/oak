@@ -146,6 +146,25 @@
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
 <a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -161,11 +180,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+</span><span class="doccomment">//! Minimal implementation of a container runtime using chroot. It accepts an
+//! containers in the form of an OCI filesystem bundle. However the runtime
+//! itself is not OCI spec compliant.
+
 </span><span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>std::path::PathBuf;
 
 <span class="doccomment">/// Representation of a minimal OCI filesystem bundle config, including just the required fields.
-/// Ref: &lt;https://github.com/opencontainers/runtime-spec/blob/467fd17d4f2a987fa00051ce44b69bf9620e2ee6/config.md&gt;
+/// Ref: &lt;https://github.com/opencontainers/runtime-spec/blob/c4ee7d12c742ffe806cd9350b6af3b4b19faed6f/config.md&gt;
 </span><span class="attr">#[derive(serde::Deserialize)]
 </span><span class="kw">struct </span>OciFilesystemBundleConfig {
     process: OciFilesystemBundleConfigProcess,
@@ -176,6 +199,7 @@
 </span><span class="kw">struct </span>OciFilesystemBundleConfigProcess {
     user: OciFilesystemBundleConfigProcessUser,
     args: Vec&lt;String&gt;,
+    cwd: std::path::PathBuf,
 }
 
 <span class="attr">#[derive(serde::Deserialize)]
@@ -279,18 +303,32 @@
     };
     rmount_dir(std::path::PathBuf::from(<span class="string">&quot;/proc&quot;</span>), container_proc_path).<span class="kw">await</span><span class="question-mark">?</span>;
 
-    <span class="comment">// Start the trusted application in a chroot jail of the container.
-    </span>run_command_and_log_output(
-        tokio::process::Command::new(<span class="string">&quot;chroot&quot;</span>)
-            .arg(<span class="macro">format!</span>(
-                <span class="string">&quot;--userspec={}:{}&quot;</span>,
-                oci_filesystem_bundle_config.process.user.uid,
-                oci_filesystem_bundle_config.process.user.gid,
-            ))
-            .arg(container_rootfs_path)
-            .args(oci_filesystem_bundle_config.process.args),
-    )
-    .<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>start_trusted_app_cmd = {
+        <span class="kw">let </span><span class="kw-2">mut </span>cmd =
+            tokio::process::Command::new(oci_filesystem_bundle_config.process.args[<span class="number">0</span>].clone());
+        cmd.args(oci_filesystem_bundle_config.process.args.as_slice()[<span class="number">1</span>..].to_vec())
+            .uid(oci_filesystem_bundle_config.process.user.uid)
+            .gid(oci_filesystem_bundle_config.process.user.gid);
+        cmd
+    };
+
+    <span class="kw">let </span>prep_trusted_app_process = <span class="kw">move </span>|| {
+        <span class="comment">// Run the trusted app in a chroot enviroment of the container.
+        </span>std::os::unix::fs::chroot(container_rootfs_path.clone())<span class="question-mark">?</span>;
+        <span class="comment">// Set the specified working directory
+        </span>std::env::set_current_dir(oci_filesystem_bundle_config.process.cwd.clone())<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    };
+
+    <span class="comment">// Safety: this unsafe block exists soley we can call the unsafe `pre_exec`
+    // method, allowing us to use a closure to prep the newly forked child
+    // process. That closure runs in a special enviroment so it can behave a bit
+    // unexpectedly. For our case that&#39;s fine though, since we just use it to
+    // make chdir &amp; chroot syscalls.
+    // Ref: https://docs.rs/tokio/latest/tokio/process/struct.Command.html#safety
+    </span><span class="kw">unsafe </span>{ start_trusted_app_cmd.pre_exec(prep_trusted_app_process) };
+
+    run_command_and_log_output(<span class="kw-2">&amp;mut </span>start_trusted_app_cmd).<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())
 }
