@@ -20,19 +20,19 @@
 #include <string>
 
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 
-namespace oak::oak_client {
+namespace oak::transport {
 
-// Abstract class for client to enclave data exchange.
+// Abstract class for sending messages to the enclave.
 class Transport {
  public:
   virtual ~Transport() = default;
 
-  // Sends encrypted message requests to the enclave and returns the enclave's
-  // encrypted response.
-  virtual absl::StatusOr<std::string> Invoke(std::string encrypted_request_bytes) = 0;
+  // Sends a request to the enclave and returns a response.
+  virtual absl::StatusOr<std::string> Invoke(absl::string_view request_bytes) = 0;
 };
 
-}  // namespace oak::oak_client
+}  // namespace oak::transport
 
 #endif  // CC_TRANSPORT_TRANSPORT_H_

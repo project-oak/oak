@@ -14,6 +14,23 @@
  * limitations under the License.
  */
 
-#include "cc/transport/transport.h"
+#ifndef CC_TRANSPORT_EVIDENCE_PROVIDER_H_
+#define CC_TRANSPORT_EVIDENCE_PROVIDER_H_
 
-namespace oak::transport {}  // namespace oak::transport
+#include "absl/status/statusor.h"
+#include "oak_remote_attestation/proto/v1/messages.pb.h"
+
+namespace oak::transport {
+
+// Abstract class for providing an enclave evidence.
+class EvidenceProvider {
+ public:
+  virtual ~EvidenceProvider() = default;
+
+  // Returns evidence about the trustworthiness of a remote server.
+  virtual absl::StatusOr<::oak::session::v1::AttestationBundle> GetEvidence() = 0;
+};
+
+}  // namespace oak::transport
+
+#endif  // CC_TRANSPORT_EVIDENCE_PROVIDER_H_

@@ -19,57 +19,41 @@
 
 #include <memory>
 #include <string>
-#include <utility>
 
 #include "absl/status/statusor.h"
-#include "cc/client/crypto_provider.h"
-#include "cc/client/evidence_provider.h"
-#include "cc/client/verifier.h"
+#include "absl/strings/string_view.h"
+#include "cc/remote_attestation/attestation_verifier.h"
+#include "cc/transport/evidence_provider.h"
 #include "cc/transport/transport.h"
 
-namespace oak::oak_client {
+namespace oak::client {
 
-// Oak client class for communicating with a Trusted Execution Environment.
+// Oak Client class for exchanging encrypted messages with an Oak Enclave which
+// is being run by the Oak Launcher.
 class OakClient {
  public:
-  // This constructor should only ever be called by the OakClientBuilder.
-  OakClient(std::unique_ptr<Transport> transport, std::unique_ptr<CryptoProvider> crypto_provider);
+  // Create an instance of the Oak Client by remotely attesting an Oak Enclave
+  // and creating an encrypted channel.
+  static absl::StatusOr<std::unique_ptr<OakClient>>
+  // TODO(#4069): Make `transport` a reference to a class that inherits both `EvidenceProvider` and
+  // `Transport`.
+  Create(std::unique_ptr<::oak::transport::EvidenceProvider> transport,
+         ::oak::remote_attestation::AttestationVerifier& verifier);
 
-  // Encrypts the request bytes and sends it to the Trusted Execution
-  // Environment. The encrypted response from the Trusted Execution Environment
-  // is decrypted and the returned. A failed status is returned if there is an
-  // error issuing the encrypted request.
-  absl::StatusOr<std::string> Invoke(std::string request_bytes);
-
- private:
-  std::unique_ptr<Transport> transport_;
-  std::unique_ptr<CryptoProvider> crypto_provider_;
-};
-
-// IMPORTANT: transport and crypto_provider parameters are ultimatley passed to
-// the generated OakClient so each must be a unique pointer.
-class OakClientBuilder {
- public:
-  // Constructs an OakClientBuilder from all necessary components.
-  OakClientBuilder(EvidenceProvider* evidence_provider, Verifier* verifier,
-                   ReferenceValue& reference, std::unique_ptr<Transport> transport,
-                   std::unique_ptr<CryptoProvider> crypto_provider)
-      : evidence_provider_(evidence_provider),
-        verifier_(verifier),
-        reference_(reference),
-        transport_(std::move(transport)),
-        crypto_provider_(std::move(crypto_provider)) {}
-
-  absl::StatusOr<OakClient> Build();
+  // Invoke the provided method by fetching and verifying the attested enclave
+  // public key, and then using it to encrypt the request body.
+  absl::StatusOr<std::string> Invoke(absl::string_view request_body);
 
  private:
-  EvidenceProvider* evidence_provider_;
-  Verifier* verifier_;
-  ReferenceValue& reference_;
-  std::unique_ptr<Transport> transport_;
-  std::unique_ptr<CryptoProvider> crypto_provider_;
+  std::unique_ptr<oak::transport::Transport> transport_;
+  std::string server_encryption_public_key_;
+
+  OakClient(std::unique_ptr<oak::transport::Transport> transport,
+            absl::string_view server_encryption_public_key)
+      : transport_(std::move(transport)),
+        server_encryption_public_key_(server_encryption_public_key) {}
 };
 
-}  // namespace oak::oak_client
+}  // namespace oak::client
 
 #endif  // CC_CLIENT_CLIENT_H_
