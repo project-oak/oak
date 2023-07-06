@@ -5,7 +5,7 @@ command = [
   "develop",
   ".#default",
   "--command",
-  "cargo",
-  "clean",
+  "touch",
+  "hello.txt",
 ]
-artifact_path = "./oak_restricted_kernel_bin/target/x86_64-unknown-none/release/oak_restricted_kernel_bin"
+artifact_path = "./hello.txt"
