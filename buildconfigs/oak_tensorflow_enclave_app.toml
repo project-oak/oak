@@ -1,6 +1,8 @@
 # Unlike other build configs, this one needs to run in the "default" shell instead of just the
 # "rust" one, because bazel is also used by the build.rs script.
 command = [
+  "timeout",
+  "2",
   "nix",
   "develop",
   ".#default",
