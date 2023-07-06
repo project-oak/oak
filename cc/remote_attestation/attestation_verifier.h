@@ -14,33 +14,27 @@
  * limitations under the License.
  */
 
-#ifndef CC_CLIENT_VERIFIER_H_
-#define CC_CLIENT_VERIFIER_H_
+#ifndef CC_REMOTE_ATTESTATION_ATTESTATION_VERIFIER_H_
+#define CC_REMOTE_ATTESTATION_ATTESTATION_VERIFIER_H_
 
 #include <string>
 
 #include "absl/status/status.h"
-#include "cc/client/evidence_provider.h"
 #include "oak_remote_attestation/proto/v1/messages.pb.h"
 
-namespace oak::oak_client {
+namespace oak::remote_attestation {
 
-// Reference values used by the verifier to validate the attestation evidence.
-// This comes from
-// https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values.
-struct ReferenceValue {
-  std::string binary_hash;
-};
-
-// Abstract class for verifying the attestation evidence and producing an
-// attestation result in the form of a status.
-class Verifier {
+// Abstract class implementing the functionality of a verifier that appraises
+// the attestation evidence and produces an attestation result.
+// <https://www.rfc-editor.org/rfc/rfc9334.html#name-verifier>
+class AttestationVerifier {
  public:
-  virtual ~Verifier() = default;
+  virtual ~AttestationVerifier() = default;
 
-  // Verifies the attestation evidence and produces an absl::Status. The
-  // statuses returned include the following:
+  // Verify that the provided evidence was endorsed and contains specified
+  // reference values.
   //
+  // The statuses returned include the following:
   //  Status::kOk = Trusted Execution Environment was successfully verified with
   //  the references.
   //
@@ -48,10 +42,10 @@ class Verifier {
   //  verified with the references. This may be because the Trusted Execution
   //  Environment is not trustworth or the supplied references were not
   //  sufficient.
-  virtual absl::Status Verify(::oak::session::v1::AttestationBundle& evidence,
-                              ReferenceValue& reference) const = 0;
+  virtual absl::Status Verify(::oak::session::v1::AttestationEvidence evidence,
+                              ::oak::session::v1::AttestationEndorsement endorsement) const = 0;
 };
 
-}  // namespace oak::oak_client
+}  // namespace oak::remote_attestation
 
-#endif  // CC_CLIENT_VERIFIER_H_
+#endif  // CC_REMOTE_ATTESTATION_ATTESTATION_VERIFIER_H_

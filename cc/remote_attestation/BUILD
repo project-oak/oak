@@ -19,18 +19,11 @@ package(
     licenses = ["notice"],
 )
 
-# Libraries
-
 cc_library(
-    name = "client",
-    srcs = ["client.cc"],
-    hdrs = ["client.h"],
+    name = "attestation_verifier",
+    hdrs = ["attestation_verifier.h"],
     deps = [
-        "//cc/remote_attestation:attestation_verifier",
-        "//cc/transport",
-        "//cc/transport:evidence_provider",
         "//oak_remote_attestation/proto/v1:messages_cc_proto",
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/status",
     ],
 )

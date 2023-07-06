@@ -20,10 +20,20 @@ package(
 )
 
 cc_library(
+    name = "evidence_provider",
+    hdrs = ["evidence_provider.h"],
+    deps = [
+        "//oak_remote_attestation/proto/v1:messages_cc_proto",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_library(
     name = "transport",
     hdrs = ["transport.h"],
     deps = [
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
     ],
 )
 
@@ -32,7 +42,11 @@ cc_library(
     srcs = ["grpc_streaming_transport.cc"],
     hdrs = ["grpc_streaming_transport.h"],
     deps = [
+        ":evidence_provider",
+        ":transport",
         "//oak_remote_attestation/proto/v1:messages_cc_proto",
         "//oak_remote_attestation/proto/v1:service_streaming_cc_proto",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
     ],
 )

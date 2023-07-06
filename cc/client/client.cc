@@ -16,48 +16,44 @@
 
 #include "cc/client/client.h"
 
+#include <memory>
 #include <string>
-#include <utility>
 
-#include "cc/client/evidence_provider.h"
-#include "cc/client/verifier.h"
+#include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
+#include "cc/remote_attestation/attestation_verifier.h"
+#include "cc/transport/evidence_provider.h"
+#include "cc/transport/transport.h"
 #include "oak_remote_attestation/proto/v1/messages.pb.h"
 
-namespace oak::oak_client {
+namespace oak::client {
 
 namespace {
+using ::oak::remote_attestation::AttestationVerifier;
 using ::oak::session::v1::AttestationBundle;
-}
+using ::oak::transport::EvidenceProvider;
+using ::oak::transport::Transport;
+}  // namespace
 
-absl::StatusOr<OakClient> OakClientBuilder::Build() {
-  absl::StatusOr<AttestationBundle> enclave_evidence = evidence_provider_->GetEvidence();
-  if (!enclave_evidence.ok()) {
-    return enclave_evidence.status();
+absl::StatusOr<std::unique_ptr<OakClient>> Create(std::unique_ptr<EvidenceProvider> transport,
+                                                  AttestationVerifier& verifier) {
+  absl::StatusOr<AttestationBundle> endorsed_evidence = transport->GetEvidence();
+  if (!endorsed_evidence.ok()) {
+    return endorsed_evidence.status();
   }
-  absl::Status verification_status = verifier_->Verify(*enclave_evidence, reference_);
+
+  absl::Status verification_status = verifier.Verify(endorsed_evidence->attestation_evidence(),
+                                                     endorsed_evidence->attestation_endorsement());
   if (!verification_status.ok()) {
     return verification_status;
   }
 
-  crypto_provider_->SetEnclavePublicKey(
-      enclave_evidence->attestation_evidence().encryption_public_key());
-
-  OakClient oak_client(std::move(transport_), std::move(crypto_provider_));
-  return oak_client;
+  // TODO(#4069): Pass `Transport` and enclave encryption public key to the constructor.
+  return absl::OkStatus();
 }
 
-absl::StatusOr<std::string> OakClient::Invoke(std::string request_bytes) {
-  absl::StatusOr<std::string> encrypted_request =
-      crypto_provider_->GetEncryptor()->Encrypt(request_bytes);
-  if (!encrypted_request.ok()) {
-    return encrypted_request.status();
-  }
-  absl::StatusOr<std::string> encrypted_response = transport_->Invoke(*encrypted_request);
-  auto decrypted_response = crypto_provider_->GetDecryptor()->Decrypt(*encrypted_response);
-  if (!decrypted_response.ok()) {
-    return decrypted_response.status();
-  }
-  return *decrypted_response;
+absl::StatusOr<std::string> OakClient::Invoke(absl::string_view request_body) {
+  return absl::OkStatus();
 }
 
-}  // namespace oak::oak_client
+}  // namespace oak::client
