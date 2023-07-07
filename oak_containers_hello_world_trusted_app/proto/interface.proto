@@ -26,17 +26,6 @@ message HelloResponse {
   string greeting = 1;
 }
 
-// Simple service that permits the trusted application to send a request to the
-// untrusted application. In this example the trusted application will send a
-// name and the untrusted application will return a greeting.
-// In real world application communication would more likely take the form
-// of a stream, in which the untrusted application sends new request, and the
-// trusted application responds.
-// The current architecture of the untrusted applicatin being the service was
-// chosen purely because it conceptually follows the pattern of all other
-// vsock communication between the trusted and untrusted parts. The untrusted
-// part exposes a listener/service, the trusted part connects to it once it has
-// booted up.
-service UntrustedApplication {
+service TrustedApplication {
   rpc Hello(HelloRequest) returns (HelloResponse) {}
 }

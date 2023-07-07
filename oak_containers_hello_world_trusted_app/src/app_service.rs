@@ -24,50 +24,47 @@ mod proto {
 }
 
 use self::proto::oak::containers::example::{
-    untrusted_application_server::{UntrustedApplication, UntrustedApplicationServer},
+    trusted_application_server::{TrustedApplication, TrustedApplicationServer},
     HelloRequest, HelloResponse,
 };
 use anyhow::anyhow;
-use tokio_vsock::VsockListener;
+use tokio_stream::{self as stream};
 
 #[derive(Default)]
-struct UntrustedApplicationImplementation {}
+struct TrustedApplicationImplementation {
+    application_config: Vec<u8>,
+}
 
 #[tonic::async_trait]
-impl UntrustedApplication for UntrustedApplicationImplementation {
+impl TrustedApplication for TrustedApplicationImplementation {
     async fn hello(
         &self,
         request: tonic::Request<HelloRequest>,
     ) -> Result<tonic::Response<HelloResponse>, tonic::Status> {
-        println!(
-            "Received a HelloRequest from the trusted application: {:?}",
-            request
-        );
         let name = request.into_inner().name;
-        let greeting: String = format!("Hello from the untrusted launcher, {}!", name);
+        let greeting: String = format!("Hello from the trusted side, {}! Btw, the Trusted App has a config with a length of {} bytes.", name, self.application_config.len());
         let response = tonic::Response::new(HelloResponse { greeting });
-        println!(
-            "Responded to the HelloRequest with the following HelloResponse: {:?}",
-            response
-        );
         Ok(response)
     }
 }
 
-pub async fn create(
-    untrusted_application_vsock_cid: u32,
-    untrusted_application_vsock_port: u32,
-) -> Result<(), anyhow::Error> {
-    let server_impl = UntrustedApplicationImplementation {};
-    let vsock_listener = VsockListener::bind(
-        untrusted_application_vsock_cid,
-        untrusted_application_vsock_port,
-    )?
-    .incoming();
+pub async fn create(cid: u32, port: u32, application_config: Vec<u8>) -> Result<(), anyhow::Error> {
+    // When building a gRPC server, tonic expects an async stream that yields
+    // multiple incoming connections, each representing an individual client.
+    // This case is a bit different: there will only be one client, the
+    // untrusted app.
+    let incoming = {
+        // Connect to the untrusted app.
+        let stream_with_untrusted_app = tokio_vsock::VsockStream::connect(cid, port).await;
+        // Construct a stream that immediately yields just this connection.
+        stream::once(stream_with_untrusted_app)
+    };
 
     tonic::transport::Server::builder()
-        .add_service(UntrustedApplicationServer::new(server_impl))
-        .serve_with_incoming(vsock_listener)
+        .add_service(TrustedApplicationServer::new(
+            TrustedApplicationImplementation { application_config },
+        ))
+        .serve_with_incoming(incoming)
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))
 }

@@ -13,8 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod app_service;
 mod orchestrator_client;
-mod untrusted_app_client;
+
+const UNTRUSTED_APP_VSOCK_CID: u32 = vsock::VMADDR_CID_HOST;
+const UNTRUSTED_APP_VSOCK_PORT: u32 = 8081;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -22,12 +25,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?
         .get_application_config()
         .await?;
-    let name = format!(
-        "Trusted Application with a {} byte long config",
-        application_config.len()
-    );
-    let mut untrusted_app_client =
-        untrusted_app_client::UntrustedApplicationClient::create(2, 6969).await?;
-    let _greeting = untrusted_app_client.hello(&name).await?;
+
+    app_service::create(
+        UNTRUSTED_APP_VSOCK_CID,
+        UNTRUSTED_APP_VSOCK_PORT,
+        application_config,
+    )
+    .await?;
     Ok(())
 }
