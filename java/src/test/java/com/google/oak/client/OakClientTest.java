@@ -45,6 +45,7 @@ public class OakClientTest {
 
   // Number of message exchanges done to test secure session handling.
   private static final int TEST_SESSION_SIZE = 1;
+  // private static final int TEST_SESSION_SIZE = 8;
 
   private static class TestTransport implements EvidenceProvider, Transport {
     private final KeyPair keyPair;
@@ -110,7 +111,7 @@ public class OakClientTest {
 
   /** This test demonstrates the use of the {@code com.google.oak.client.OakClient} API. */
   @Test
-  public void testOakClient() throws Exception {
+  public void testOakClient() {
     Result<OakClient<TestTransport>, Exception> oakClientCreateResult =
         OakClient.create(new TestTransport(), new InsecureAttestationVerifier());
     assertTrue(oakClientCreateResult.isSuccess());
