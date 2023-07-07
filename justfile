@@ -2,7 +2,7 @@
 #
 # See:
 #
-# - https://github.com/casey/just 
+# - https://github.com/casey/just
 # - https://just.systems/man/en/
 
 oak_echo_enclave_app: (build_enclave_app "oak_echo_enclave_app")
@@ -35,10 +35,13 @@ vmlinux:
 image_tar:
     env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 bash build.sh
 
+hello_world_container_bundle_tar:
+    env --chdir=oak_containers_hello_world_container DOCKER_BUILDKIT=0 bash build_container_bundle
+
 # Top level target to build all enclave apps and the kernel, and run tests.
 #
 # This is the entry point for Kokoro CI.
 kokoro: all_enclave_apps oak_restricted_kernel_bin stage0_bin
     cargo nextest run --all-targets --hide-progress-bar
 
-kokoro_oak_containers: stage1_cpio vmlinux image_tar
+kokoro_oak_containers: stage1_cpio vmlinux image_tar hello_world_container_bundle_tar
