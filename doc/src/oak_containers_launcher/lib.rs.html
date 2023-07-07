@@ -63,8 +63,6 @@
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
 <a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -82,15 +80,14 @@
 
 </span><span class="kw">mod </span>qemu;
 
+<span class="kw">use </span>std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 <span class="kw">use </span>clap::Parser;
-<span class="kw">use </span>std::process;
 
 <span class="attr">#[derive(Parser, Debug)]
 </span><span class="kw">pub struct </span>Args {
     <span class="attr">#[arg(long, required = <span class="bool-val">true</span>)]
-    </span>vsock_cid: u32,
-    <span class="attr">#[arg(long, required = <span class="bool-val">true</span>)]
-    </span>vsock_port: u32,
+    </span>port: u16,
     <span class="attr">#[arg(long, required = <span class="bool-val">true</span>, value_parser = path_exists,)]
     </span>system_image: std::path::PathBuf,
     <span class="attr">#[arg(long, required = <span class="bool-val">true</span>, value_parser = path_exists,)]
@@ -114,16 +111,15 @@
 }
 
 <span class="kw">pub async fn </span>create(args: Args) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
+    <span class="kw">let </span>sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), args.port);
     <span class="kw">let </span>server = oak_containers_launcher_server::new(
-        args.vsock_cid,
-        args.vsock_port,
+        sockaddr,
         args.system_image,
         args.container_bundle,
         args.application_config,
     );
 
-    <span class="comment">// Use our PID for the CID of the guest.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>vmm = qemu::Qemu::start(args.qemu_params, process::id())<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>vmm = qemu::Qemu::start(args.qemu_params)<span class="question-mark">?</span>;
 
     <span class="macro">tokio::select! </span>{
         <span class="kw">_ </span>= server =&gt; {}

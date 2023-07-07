@@ -103,9 +103,6 @@
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -143,11 +140,8 @@
 
 <span class="attr">#[derive(Parser, Debug)]
 </span><span class="kw">struct </span>Args {
-    <span class="attr">#[arg(long, default_value_t = <span class="number">2</span>)]
-    </span>launcher_vsock_cid: u32,
-
-    <span class="attr">#[arg(long, default_value_t = <span class="number">8080</span>)]
-    </span>launcher_vsock_port: u32,
+    <span class="attr">#[arg(default_value = <span class="string">&quot;http://10.0.2.2:8080&quot;</span>)]
+    </span>launcher_addr: String,
 
     <span class="attr">#[arg(default_value = <span class="string">&quot;/sbin/init&quot;</span>)]
     </span>init: String,
@@ -198,7 +192,7 @@
     )
     .context(<span class="string">&quot;error mounting /proc&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span><span class="kw-2">mut </span>client = LauncherClient::new(args.launcher_vsock_cid, args.launcher_vsock_port)
+    <span class="kw">let </span><span class="kw-2">mut </span>client = LauncherClient::new(args.launcher_addr.parse()<span class="question-mark">?</span>)
         .<span class="kw">await
         </span>.context(<span class="string">&quot;error creating the launcher client&quot;</span>)<span class="question-mark">?</span>;
 

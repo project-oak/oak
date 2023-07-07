@@ -177,10 +177,6 @@
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -220,9 +216,8 @@
 };
 <span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>futures::Stream;
-<span class="kw">use </span>std::{pin::Pin, sync::Mutex};
+<span class="kw">use </span>std::{net::SocketAddr, pin::Pin, sync::Mutex};
 <span class="kw">use </span>tokio::io::{AsyncReadExt, BufReader};
-<span class="kw">use </span>tokio_vsock::VsockListener;
 <span class="kw">use </span>tonic::{transport::Server, Request, Response, Status};
 
 <span class="comment">// Most gRPC implementations limit message sizes to 4MiB. Let&#39;s stay
@@ -343,8 +338,7 @@
 }
 
 <span class="kw">pub async fn </span>new(
-    vsock_cid: u32,
-    vsock_port: u32,
+    addr: SocketAddr,
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
@@ -356,11 +350,9 @@
         <span class="comment">// Attestation Evidence will be sent by the Orchestrator once generated.
         </span>attestation_evidence: Mutex::new(<span class="prelude-val">None</span>),
     };
-    <span class="kw">let </span>vsock_listener = VsockListener::bind(vsock_cid, vsock_port)<span class="question-mark">?</span>.incoming();
-
     Server::builder()
         .add_service(LauncherServer::new(server_impl))
-        .serve_with_incoming(vsock_listener)
+        .serve(addr)
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;server error: {:?}&quot;</span>, error))
 }
