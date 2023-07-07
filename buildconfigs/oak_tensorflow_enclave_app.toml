@@ -2,7 +2,7 @@
 # "rust" one, because bazel is also used by the build.rs script.
 command = [
   "timeout",
-  "60",
+  "100",
   "nix",
   "develop",
   ".#default",
