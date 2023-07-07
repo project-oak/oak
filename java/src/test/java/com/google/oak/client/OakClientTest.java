@@ -20,6 +20,10 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.oak.crypto.ClientEncryptor;
+import com.google.oak.crypto.Encryptor;
+import com.google.oak.crypto.ServerEncryptor;
+import com.google.oak.crypto.hpke.KeyPair;
 import com.google.oak.crypto.v1.AeadEncryptedMessage;
 import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.remote_attestation.InsecureAttestationVerifier;
@@ -35,21 +39,28 @@ import java.util.Optional;
 import org.junit.Test;
 
 public class OakClientTest {
-  private static final byte[] TEST_SERVER_ENCRYPTION_PUBLIC_KEY = {11, (byte) 107, 5, (byte) 176, 4,
-      (byte) 145, (byte) 171, (byte) 193, (byte) 163, 81, 105, (byte) 238, (byte) 171, 115, 56,
-      (byte) 160, (byte) 130, 85, 22, (byte) 227, 118, 76, 77, 89, (byte) 144, (byte) 223, 10, 112,
-      11, (byte) 149, (byte) 205, (byte) 199};
   private static final byte[] TEST_REQUEST = new byte[] {'R', 'e', 'q', 'u', 'e', 's', 't'};
   private static final byte[] TEST_RESPONSE = new byte[] {'R', 'e', 's', 'p', 'o', 'n', 's', 'e'};
   private static final byte[] TEST_ASSOCIATED_DATA = new byte[0];
 
+  // Number of message exchanges done to test secure session handling.
+  private static final int TEST_SESSION_SIZE = 1;
+
   private static class TestTransport implements EvidenceProvider, Transport {
+    private final KeyPair keyPair;
+    private final ServerEncryptor serverEncryptor;
+
+    public TestTransport() {
+      Result<KeyPair, Exception> keyPairGenerateResult = KeyPair.generate();
+      this.keyPair = keyPairGenerateResult.unwrap("couldn't create key pair");
+      this.serverEncryptor = new ServerEncryptor(keyPair);
+    }
+
     @Override
     public Result<AttestationBundle, String> getEvidence() {
-      // TODO(#3642): Use hybrid encryption and return server encryption public key.
       AttestationEvidence attestationEvidence =
           AttestationEvidence.newBuilder()
-              .setEncryptionPublicKey(ByteString.copyFrom(TEST_SERVER_ENCRYPTION_PUBLIC_KEY))
+              .setEncryptionPublicKey(ByteString.copyFrom(keyPair.publicKey))
               .build();
       AttestationEndorsement attestationEndorsement = AttestationEndorsement.getDefaultInstance();
       AttestationBundle attestationBundle = AttestationBundle.newBuilder()
@@ -62,13 +73,31 @@ public class OakClientTest {
 
     @Override
     public Result<byte[], String> invoke(byte[] requestBytes) {
-      // TODO(#3642): Use hybrid encryption for requests and responses.
+      Result<Encryptor.DecryptionResult, Exception> decryptRequestResult =
+          serverEncryptor.decrypt(requestBytes);
+      if (decryptRequestResult.isError()) {
+        return Result.error("couldn't decrypt request");
+      }
+      Encryptor.DecryptionResult decryptedRequest = decryptRequestResult.success().get();
+      if (decryptedRequest.plaintext != TEST_REQUEST
+          || decryptedRequest.associatedData != TEST_ASSOCIATED_DATA) {
+        return Result.error("incorrect request");
+      }
+
+      Result<byte[], Exception> encryptResponseResult =
+          serverEncryptor.encrypt(TEST_RESPONSE, TEST_ASSOCIATED_DATA);
+      if (encryptResponseResult.isError()) {
+        return Result.error("couldn't encrypt response");
+      }
+      byte[] serializedEncryptedResponse = encryptResponseResult.success().get();
+
       EncryptedResponse encryptedResponse =
           EncryptedResponse.newBuilder()
-              .setEncryptedMessage(AeadEncryptedMessage.newBuilder()
-                                       .setCiphertext(ByteString.copyFrom(TEST_RESPONSE))
-                                       .setAssociatedData(ByteString.copyFrom(TEST_ASSOCIATED_DATA))
-                                       .build())
+              .setEncryptedMessage(
+                  AeadEncryptedMessage.newBuilder()
+                      .setCiphertext(ByteString.copyFrom(serializedEncryptedResponse))
+                      .setAssociatedData(ByteString.copyFrom(TEST_ASSOCIATED_DATA))
+                      .build())
               .build();
       return Result.success(encryptedResponse.toByteArray());
     }
@@ -81,14 +110,17 @@ public class OakClientTest {
 
   /** This test demonstrates the use of the {@code com.google.oak.client.OakClient} API. */
   @Test
-  public void testOakClient() {
+  public void testOakClient() throws Exception {
     Result<OakClient<TestTransport>, Exception> oakClientCreateResult =
         OakClient.create(new TestTransport(), new InsecureAttestationVerifier());
     assertTrue(oakClientCreateResult.isSuccess());
     OakClient<TestTransport> oakClient = oakClientCreateResult.success().get();
 
-    Result<byte[], Exception> oakClientInvokeResult = oakClient.invoke(TEST_REQUEST);
-    assertTrue(oakClientInvokeResult.isSuccess());
-    assertArrayEquals(oakClientInvokeResult.success().get(), TEST_RESPONSE);
+    for (int i = 0; i < TEST_SESSION_SIZE; i++) {
+      Result<byte[], Exception> oakClientInvokeResult = oakClient.invoke(TEST_REQUEST);
+      assertTrue(oakClientInvokeResult.isSuccess());
+      assertArrayEquals(oakClientInvokeResult.success().get(), TEST_RESPONSE);
+    }
+    oakClient.close();
   }
 }

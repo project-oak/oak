@@ -27,7 +27,7 @@ import com.google.oak.util.Result;
  * Oak Client class for exchanging encrypted messages with an Oak Enclave which is being run by the
  * Oak Launcher.
  */
-public class OakClient<T extends Transport> {
+public class OakClient<T extends Transport> implements AutoCloseable {
   private static final byte[] EMPTY_ASSOCIATED_DATA = new byte[0];
 
   // Transport used to communicate with an Oak Launcher.
@@ -72,20 +72,20 @@ public class OakClient<T extends Transport> {
     Result<ClientEncryptor, Exception> encryptorCreateResult =
         ClientEncryptor.create(this.serverEncryptionPublicKey);
 
-    Result<byte[], Exception> result =
-        encryptorCreateResult
-            .andThen(encryptor
-                // Encrypt request.
-                -> encryptor
-                       .encrypt(requestBody, EMPTY_ASSOCIATED_DATA)
-                       // Send request.
-                       .andThen(r -> this.transport.invoke(r).mapError(Exception::new))
-                       // Decrypt response.
-                       .andThen(encryptor::decrypt))
-            .map(d -> d.plaintext);
-    if (encryptorCreateResult.isSuccess()) {
-      encryptorCreateResult.success().get().close();
-    }
-    return result;
+    return encryptorCreateResult
+        .andThen(encryptor
+            // Encrypt request.
+            -> encryptor
+                    .encrypt(requestBody, EMPTY_ASSOCIATED_DATA)
+                    // Send request.
+                    .andThen(r -> this.transport.invoke(r).mapError(Exception::new))
+                    // Decrypt response.
+                    .andThen(encryptor::decrypt))
+        .map(d -> d.plaintext);
+  }
+
+  @Override
+  public void close() throws Exception {
+    transport.close();
   }
 }
