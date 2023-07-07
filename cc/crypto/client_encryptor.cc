@@ -41,17 +41,15 @@ absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
 absl::StatusOr<std::string> ClientEncryptor::Encrypt(absl::string_view plaintext,
                                                      absl::string_view associated_data) {
   // Encrypt request.
-  // TODO(#4146): Enable C++ encryption.
-  // absl::StatusOr<std::string> ciphertext =
-  //     sender_request_context_->Seal(plaintext, associated_data);
-  // if (!ciphertext.ok()) {
-  //   return ciphertext.status();
-  // }
+  absl::StatusOr<std::string> ciphertext =
+      sender_request_context_->Seal(plaintext, associated_data);
+  if (!ciphertext.ok()) {
+    return ciphertext.status();
+  }
 
   // Create request message.
   EncryptedRequest request;
-  // TODO(#4146): Return `*ciphertext` instead of `plaintext`.
-  *request.mutable_encrypted_message()->mutable_ciphertext() = plaintext;
+  *request.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
   *request.mutable_encrypted_message()->mutable_associated_data() = associated_data;
 
   // Encapsulated public key is only sent in the initial request message of the session.
@@ -76,16 +74,13 @@ absl::StatusOr<DecryptionResult> ClientEncryptor::Decrypt(absl::string_view encr
   }
 
   // Decrypt response.
-  // TODO(#4146): Enable C++ encryption.
-  // absl::StatusOr<std::string> plaintext = sender_response_context_->Open(
-  //     response.encrypted_message().ciphertext(), response.encrypted_message().associated_data());
-  // if (!plaintext.ok()) {
-  //   return plaintext.status();
-  // }
+  absl::StatusOr<std::string> plaintext = sender_response_context_->Open(
+      response.encrypted_message().ciphertext(), response.encrypted_message().associated_data());
+  if (!plaintext.ok()) {
+    return plaintext.status();
+  }
 
-  // TODO(#4146): Return `*plaintext` instead of `ciphertext`.
-  return DecryptionResult{response.encrypted_message().ciphertext(),
-                          response.encrypted_message().associated_data()};
+  return DecryptionResult{*plaintext, response.encrypted_message().associated_data()};
 }
 
 }  // namespace oak::crypto

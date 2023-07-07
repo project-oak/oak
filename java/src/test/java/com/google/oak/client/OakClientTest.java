@@ -45,7 +45,8 @@ public class OakClientTest {
   private static final byte[] TEST_ASSOCIATED_DATA = new byte[0];
 
   // Number of message exchanges done to test secure session handling.
-  private static final int TEST_SESSION_SIZE = 8;
+  // TODO(#4157): Support crypto sessions on the server and increase the test session size to 8.
+  private static final int TEST_SESSION_SIZE = 1;
 
   private static class TestTransport implements EvidenceProvider, Transport {
     private final KeyPair keyPair;
@@ -102,7 +103,6 @@ public class OakClientTest {
       for (int i = 0; i < TEST_SESSION_SIZE; i++) {
         Result<byte[], Exception> oakClientInvokeResult = oakClient.invoke(TEST_REQUEST);
         assertTrue(oakClientInvokeResult.isSuccess());
-        System.out.print(oakClientInvokeResult.success().get().length);
         assertArrayEquals(oakClientInvokeResult.success().get(), TEST_RESPONSE);
       }
     }

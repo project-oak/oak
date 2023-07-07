@@ -54,7 +54,6 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
    *
    * @param serverKeyPair key pair used to create the recipient context.
    */
-  // TODO(#3642): Implement Java Hybrid Encryption.
   public ServerEncryptor(KeyPair serverKeyPair) {
     this.serverKeyPair = serverKeyPair;
     this.recipientRequestContext = Optional.empty();
