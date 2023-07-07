@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["main"],"mod":["orchestrator_client","untrusted_app_client"]};
+window.SIDEBAR_ITEMS = {"constant":["UNTRUSTED_APP_VSOCK_CID","UNTRUSTED_APP_VSOCK_PORT"],"fn":["main"],"mod":["app_service","orchestrator_client"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["create"],"mod":["proto"],"struct":["UntrustedApplicationImplementation"]};

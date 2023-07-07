@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["untrusted_application_server"],"struct":["HelloRequest","HelloResponse"]};

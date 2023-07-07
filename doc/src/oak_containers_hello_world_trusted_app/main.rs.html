@@ -31,6 +31,9 @@
 <a href="#31" id="31">31</a>
 <a href="#32" id="32">32</a>
 <a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -46,8 +49,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">mod </span>orchestrator_client;
-<span class="kw">mod </span>untrusted_app_client;
+</span><span class="kw">mod </span>app_service;
+<span class="kw">mod </span>orchestrator_client;
+
+<span class="kw">const </span>UNTRUSTED_APP_VSOCK_CID: u32 = vsock::VMADDR_CID_HOST;
+<span class="kw">const </span>UNTRUSTED_APP_VSOCK_PORT: u32 = <span class="number">8081</span>;
 
 <span class="attr">#[tokio::main]
 </span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
@@ -55,13 +61,13 @@
         .<span class="kw">await</span><span class="question-mark">?
         </span>.get_application_config()
         .<span class="kw">await</span><span class="question-mark">?</span>;
-    <span class="kw">let </span>name = <span class="macro">format!</span>(
-        <span class="string">&quot;Trusted Application with a {} byte long config&quot;</span>,
-        application_config.len()
-    );
-    <span class="kw">let </span><span class="kw-2">mut </span>untrusted_app_client =
-        untrusted_app_client::UntrustedApplicationClient::create(<span class="number">2</span>, <span class="number">6969</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-    <span class="kw">let </span>_greeting = untrusted_app_client.hello(<span class="kw-2">&amp;</span>name).<span class="kw">await</span><span class="question-mark">?</span>;
+
+    app_service::create(
+        UNTRUSTED_APP_VSOCK_CID,
+        UNTRUSTED_APP_VSOCK_PORT,
+        application_config,
+    )
+    .<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div></section></main></body></html>
