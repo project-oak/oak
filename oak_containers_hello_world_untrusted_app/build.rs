@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../",
         &["oak_containers_hello_world_trusted_app/proto/interface.proto"],
         CodegenOptions {
-            build_server: true,
+            build_client: true,
             ..Default::default()
         },
     )?;

@@ -25,41 +25,53 @@ mod proto {
 
 use anyhow::Context;
 use proto::oak::containers::example::{
-    untrusted_application_client::UntrustedApplicationClient as GrpcUntrustedApplicationClient,
+    trusted_application_client::TrustedApplicationClient as GrpcTrustedApplicationClient,
     HelloRequest,
 };
-use tokio_vsock::VsockStream;
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
 
 // Virtio VSOCK does not use URIs, hence this URI will never be used.
-// It is defined purely since in order to create a channel, since a URI has to
+// It is defined purely since in order to create a channel a URI has to
 // be supplied to create an `Endpoint`.
 static IGNORED_ENDPOINT_URI: &str = "file://[::]:0";
 
 /// Utility struct used to interface with the launcher
-pub struct UntrustedApplicationClient {
-    inner: GrpcUntrustedApplicationClient<tonic::transport::channel::Channel>,
+pub struct TrustedApplicationClient {
+    inner: GrpcTrustedApplicationClient<tonic::transport::channel::Channel>,
 }
 
-impl UntrustedApplicationClient {
-    pub async fn create(
-        untrusted_application_vsock_cid: u32,
-        untrusted_application_vsock_port: u32,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let inner: GrpcUntrustedApplicationClient<tonic::transport::channel::Channel> = {
+impl TrustedApplicationClient {
+    async fn get_stream_with_trusted_app(
+        cid: u32,
+        port: u32,
+    ) -> Result<tokio_vsock::VsockStream, anyhow::Error> {
+        let (vsock_stream, _) = tokio_vsock::VsockListener::bind(cid, port)
+            .context("failed to bind vsock listener")?
+            // The trusted app is the only party that will connect to this listener.
+            // Hence the first incoming stream must be the trusted app.
+            //
+            // Effectively this means that while on the gRPC layer the trusted app
+            // listens for invocations from the untrusted app, the inverse is
+            // true on the layer of the VSOCK connection. There the untrusted
+            // app listens for connections, the trusted app connects to the
+            // listener.
+            .accept()
+            .await
+            .context("failed to accept vsock connection")?;
+
+        Ok(vsock_stream)
+    }
+    pub async fn create(cid: u32, port: u32) -> Result<Self, Box<dyn std::error::Error>> {
+        let inner: GrpcTrustedApplicationClient<tonic::transport::channel::Channel> = {
             let channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
                 .context("couldn't form endpoint")?
                 .connect_with_connector(service_fn(move |_: Uri| {
-                    VsockStream::connect(
-                        untrusted_application_vsock_cid,
-                        untrusted_application_vsock_port,
-                    )
+                    TrustedApplicationClient::get_stream_with_trusted_app(cid, port)
                 }))
                 .await
                 .context("couldn't connect to VSOCK socket")?;
-
-            GrpcUntrustedApplicationClient::new(channel)
+            GrpcTrustedApplicationClient::new(channel)
         };
         Ok(Self { inner })
     }

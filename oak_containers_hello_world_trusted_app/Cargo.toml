@@ -12,6 +12,7 @@ oak_grpc_utils = { workspace = true }
 anyhow = "*"
 prost = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
+tokio-stream = "*"
 tonic = { workspace = true }
 tokio-vsock = { version = "*", features = ["tonic-conn"] }
 vsock = "*"
