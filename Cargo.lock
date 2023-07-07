@@ -1831,6 +1831,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_containers_untrusted_echo_app"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "oak_containers_launcher",
+ "oak_grpc_utils",
+ "prost",
+ "tokio",
+ "tokio-vsock",
+ "tonic",
+ "tower",
+ "vsock",
+]
+
+[[package]]
 name = "oak_core"
 version = "0.1.0"
 dependencies = [
