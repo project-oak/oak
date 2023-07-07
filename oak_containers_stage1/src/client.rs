@@ -29,29 +29,15 @@ mod proto {
 
 use anyhow::{Context, Result};
 use proto::oak::containers::launcher_client::LauncherClient as GrpcLauncherClient;
-use tokio_vsock::VsockStream;
-use tonic::transport::{Channel, Endpoint, Uri};
-use tower::service_fn;
-
-static IGNORED_ENDPOINT_URI: &str = "file://[::]:0";
+use tonic::transport::{Channel, Uri};
 
 pub struct LauncherClient {
     inner: GrpcLauncherClient<Channel>,
 }
 
 impl LauncherClient {
-    pub async fn new(launcher_vsock_cid: u32, launcher_vsock_port: u32) -> Result<Self> {
-        let inner: GrpcLauncherClient<Channel> = {
-            let channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
-                .context("couldn't form endpoint")?
-                .connect_with_connector(service_fn(move |_: Uri| {
-                    VsockStream::connect(launcher_vsock_cid, launcher_vsock_port)
-                }))
-                .await
-                .context("couldn't connect to VSOCK socket")?;
-
-            GrpcLauncherClient::new(channel)
-        };
+    pub async fn new(addr: Uri) -> Result<Self> {
+        let inner = GrpcLauncherClient::<Channel>::connect(addr).await?;
         Ok(Self { inner })
     }
 

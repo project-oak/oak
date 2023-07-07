@@ -18,8 +18,6 @@ tokio = { version = "*", features = [
   "fs"
 ] }
 tonic = { workspace = true }
-tokio-vsock = { version = "*", features = ["tonic-conn"] }
-vsock = "*"
 futures = "*"
 async-stream = "*"
 bytes = "*"

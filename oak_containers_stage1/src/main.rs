@@ -35,11 +35,8 @@ use tokio::process::Command;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(long, default_value_t = 2)]
-    launcher_vsock_cid: u32,
-
-    #[arg(long, default_value_t = 8080)]
-    launcher_vsock_port: u32,
+    #[arg(default_value = "http://10.0.2.2:8080")]
+    launcher_addr: String,
 
     #[arg(default_value = "/sbin/init")]
     init: String,
@@ -90,7 +87,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .context("error mounting /proc")?;
 
-    let mut client = LauncherClient::new(args.launcher_vsock_cid, args.launcher_vsock_port)
+    let mut client = LauncherClient::new(args.launcher_addr.parse()?)
         .await
         .context("error creating the launcher client")?;
 

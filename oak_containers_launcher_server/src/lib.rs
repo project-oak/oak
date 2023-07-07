@@ -37,9 +37,8 @@ use self::proto::oak::{
 };
 use anyhow::anyhow;
 use futures::Stream;
-use std::{pin::Pin, sync::Mutex};
+use std::{net::SocketAddr, pin::Pin, sync::Mutex};
 use tokio::io::{AsyncReadExt, BufReader};
-use tokio_vsock::VsockListener;
 use tonic::{transport::Server, Request, Response, Status};
 
 // Most gRPC implementations limit message sizes to 4MiB. Let's stay
@@ -160,8 +159,7 @@ impl Launcher for LauncherServerImplementation {
 }
 
 pub async fn new(
-    vsock_cid: u32,
-    vsock_port: u32,
+    addr: SocketAddr,
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: Option<std::path::PathBuf>,
@@ -173,11 +171,9 @@ pub async fn new(
         // Attestation Evidence will be sent by the Orchestrator once generated.
         attestation_evidence: Mutex::new(None),
     };
-    let vsock_listener = VsockListener::bind(vsock_cid, vsock_port)?.incoming();
-
     Server::builder()
         .add_service(LauncherServer::new(server_impl))
-        .serve_with_incoming(vsock_listener)
+        .serve(addr)
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))
 }

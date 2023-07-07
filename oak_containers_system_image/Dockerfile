@@ -11,11 +11,16 @@ RUN echo "deb [arch=amd64] https://download.docker.com/linux/debian bookworm sta
 
 RUN apt-get --yes update \
   && apt-get install --yes --no-install-recommends \
-  systemd systemd-sysv \
+  systemd systemd-sysv dbus udev\
   docker-ce \
   # Cleanup
   && apt-get clean \
   && rm --recursive --force /var/lib/apt/lists/*
+
+# Prepare network
+RUN systemctl enable systemd-networkd
+COPY 10-eth0.network /etc/systemd/network
+RUN chmod 644 /etc/systemd/network/10-eth0.network
 
 # Configure systemd to run docker at startup
 RUN systemctl enable docker
