@@ -16,6 +16,8 @@
 
 package com.google.oak.client;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -36,9 +38,13 @@ import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.Arrays;
 import org.junit.Test;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class OakClientTest {
+  private static Logger logger = Logger.getLogger(OakClientTest.class.getName());
   private static final byte[] TEST_REQUEST = new byte[] {'R', 'e', 'q', 'u', 'e', 's', 't'};
   private static final byte[] TEST_RESPONSE = new byte[] {'R', 'e', 's', 'p', 'o', 'n', 's', 'e'};
   private static final byte[] TEST_ASSOCIATED_DATA = new byte[0];
@@ -80,9 +86,9 @@ public class OakClientTest {
         return Result.error("couldn't decrypt request");
       }
       Encryptor.DecryptionResult decryptedRequest = decryptRequestResult.success().get();
-      if (decryptedRequest.plaintext != TEST_REQUEST
-          || decryptedRequest.associatedData != TEST_ASSOCIATED_DATA) {
-        return Result.error("incorrect request");
+      if (!Arrays.equals(decryptedRequest.plaintext, TEST_REQUEST)
+          || !Arrays.equals(decryptedRequest.associatedData, TEST_ASSOCIATED_DATA)) {
+        return Result.error("incorrect request, expected ");
       }
 
       Result<byte[], Exception> encryptResponseResult =
@@ -111,7 +117,7 @@ public class OakClientTest {
 
   /** This test demonstrates the use of the {@code com.google.oak.client.OakClient} API. */
   @Test
-  public void testOakClient() {
+  public void testOakClient() throws Exception {
     Result<OakClient<TestTransport>, Exception> oakClientCreateResult =
         OakClient.create(new TestTransport(), new InsecureAttestationVerifier());
     assertTrue(oakClientCreateResult.isSuccess());
@@ -120,6 +126,9 @@ public class OakClientTest {
     for (int i = 0; i < TEST_SESSION_SIZE; i++) {
       Result<byte[], Exception> oakClientInvokeResult = oakClient.invoke(TEST_REQUEST);
       assertTrue(oakClientInvokeResult.isSuccess());
+      logger.log(Level.INFO, "oakClientInvokeResult");
+      logger.log(Level.INFO, new String(oakClientInvokeResult.success().get(), StandardCharsets.UTF_8));
+      logger.log(Level.INFO, "oakClientInvokeResult</>");
       assertArrayEquals(oakClientInvokeResult.success().get(), TEST_RESPONSE);
     }
     oakClient.close();
