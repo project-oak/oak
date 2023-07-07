@@ -59,7 +59,7 @@ pub struct Qemu {
 }
 
 impl Qemu {
-    pub fn start(params: Params, vsock_cid: u32) -> Result<Self> {
+    pub fn start(params: Params) -> Result<Self> {
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
         let (guest_socket, host_socket) = UnixStream::pair()?;
 
@@ -91,15 +91,8 @@ impl Qemu {
             format!("socket,id=consock,fd={}", guest_socket.as_raw_fd()).as_str(),
         ]);
         cmd.args(["-serial", "chardev:consock"]);
-        // Set up the virtio-vsock device.
-        cmd.args([
-            "-device",
-            format!(
-                "vhost-vsock-pci,id=vhost-vsock-pci0,guest-cid={}",
-                vsock_cid
-            )
-            .as_str(),
-        ]);
+        cmd.args(["-netdev", "user,id=netdev"]);
+        cmd.args(["-device", "virtio-net,netdev=netdev"]);
         // And yes, use stage0 as the BIOS.
         cmd.args([
             "-bios",
@@ -140,7 +133,7 @@ impl Qemu {
         cmd.args([
             "-fw_cfg",
             format!(
-            "name=opt/stage0/cmdline,string=console=ttyS0 panic=-1 brd.rd_nr=1 brd.rd_size={} brd.max_part=1", params.ramdrive_size).as_str()
+            "name=opt/stage0/cmdline,string=console=ttyS0 panic=-1 brd.rd_nr=1 brd.rd_size={} brd.max_part=1 ip=10.0.2.10:::255.255.255.0::eth0:off", params.ramdrive_size).as_str()
         ]);
 
         println!("QEMU command line: {:?}", cmd);

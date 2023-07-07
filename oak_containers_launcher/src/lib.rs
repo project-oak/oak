@@ -15,15 +15,14 @@
 
 mod qemu;
 
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use clap::Parser;
-use std::process;
 
 #[derive(Parser, Debug)]
 pub struct Args {
     #[arg(long, required = true)]
-    vsock_cid: u32,
-    #[arg(long, required = true)]
-    vsock_port: u32,
+    port: u16,
     #[arg(long, required = true, value_parser = path_exists,)]
     system_image: std::path::PathBuf,
     #[arg(long, required = true, value_parser = path_exists,)]
@@ -47,16 +46,15 @@ pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
 }
 
 pub async fn create(args: Args) -> Result<(), anyhow::Error> {
+    let sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), args.port);
     let server = oak_containers_launcher_server::new(
-        args.vsock_cid,
-        args.vsock_port,
+        sockaddr,
         args.system_image,
         args.container_bundle,
         args.application_config,
     );
 
-    // Use our PID for the CID of the guest.
-    let mut vmm = qemu::Qemu::start(args.qemu_params, process::id())?;
+    let mut vmm = qemu::Qemu::start(args.qemu_params)?;
 
     tokio::select! {
         _ = server => {}

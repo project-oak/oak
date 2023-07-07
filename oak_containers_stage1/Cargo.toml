@@ -21,7 +21,6 @@ tokio = { version = "*", features = [
   "process",
   "sync"
 ] }
-tokio-vsock = { version = "*", features = ["tonic-conn"] }
 tonic = { workspace = true }
 tower = "*"
 xz2 = "*"
