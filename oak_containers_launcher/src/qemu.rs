@@ -52,6 +52,11 @@ pub struct Params {
     /// Size (in kilobytes) of the ramdrive used for the system root.
     #[arg(long)]
     pub ramdrive_size: u32,
+
+    /// Optional port where QEMU will start a telnet server for the serial console; useful for
+    /// interactive debugging.
+    #[arg(long)]
+    pub telnet_console: Option<u16>,
 }
 
 pub struct Qemu {
@@ -86,11 +91,18 @@ impl Qemu {
         // Use the `microvm` machine as the basis, and ensure ACPI and PCIe are enabled.
         cmd.args(["-machine", "microvm,acpi=on,pcie=on"]);
         // Route first serial port to console.
-        cmd.args([
-            "-chardev",
-            format!("socket,id=consock,fd={}", guest_socket.as_raw_fd()).as_str(),
-        ]);
-        cmd.args(["-serial", "chardev:consock"]);
+        if let Some(port) = params.telnet_console {
+            cmd.args([
+                "-serial",
+                format!("telnet:localhost:{},server", port).as_str(),
+            ]);
+        } else {
+            cmd.args([
+                "-chardev",
+                format!("socket,id=consock,fd={}", guest_socket.as_raw_fd()).as_str(),
+            ]);
+            cmd.args(["-serial", "chardev:consock"]);
+        }
         cmd.args(["-netdev", "user,id=netdev"]);
         cmd.args(["-device", "virtio-net,netdev=netdev"]);
         // And yes, use stage0 as the BIOS.
@@ -133,21 +145,34 @@ impl Qemu {
         cmd.args([
             "-fw_cfg",
             format!(
-            "name=opt/stage0/cmdline,string=console=ttyS0 panic=-1 brd.rd_nr=1 brd.rd_size={} brd.max_part=1 ip=10.0.2.10:::255.255.255.0::eth0:off", params.ramdrive_size).as_str()
+                "name=opt/stage0/cmdline,string={}",
+                [
+                    "console=ttyS0",
+                    "panic=-1",
+                    "brd.rd_nr=1",
+                    format!("brd.rd_size={}", params.ramdrive_size).as_str(),
+                    "brd.max_part=1",
+                    "ip=10.0.2.10:::255.255.255.0::eth0:off"
+                ]
+                .join(" ")
+            )
+            .as_str(),
         ]);
 
         println!("QEMU command line: {:?}", cmd);
 
-        // Spit out everything we read.
-        tokio::spawn(async {
-            let mut reader = BufReader::new(host_socket);
+        // Spit out everything we read, if we were not using telnet console.
+        if params.telnet_console.is_none() {
+            tokio::spawn(async {
+                let mut reader = BufReader::new(host_socket);
 
-            let mut line = String::new();
-            while reader.read_line(&mut line).expect("couldn't read line") > 0 {
-                print!("{}", line);
-                line.clear();
-            }
-        });
+                let mut line = String::new();
+                while reader.read_line(&mut line).expect("couldn't read line") > 0 {
+                    print!("{}", line);
+                    line.clear();
+                }
+            });
+        }
 
         let instance = cmd.spawn()?;
 
