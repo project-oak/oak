@@ -27,7 +27,7 @@ import com.google.oak.util.Result;
  * Oak Client class for exchanging encrypted messages with an Oak Enclave which is being run by the
  * Oak Launcher.
  */
-public class OakClient<T extends Transport> {
+public class OakClient<T extends Transport> implements AutoCloseable {
   private static final byte[] EMPTY_ASSOCIATED_DATA = new byte[0];
 
   // Transport used to communicate with an Oak Launcher.
@@ -45,9 +45,8 @@ public class OakClient<T extends Transport> {
   public static <E extends EvidenceProvider & Transport, V extends AttestationVerifier>
       Result<OakClient<E>, Exception> create(E transport, V verifier) {
     // TODO(#3641): Implement client-side attestation verification.
-    Result<AttestationBundle, String> getEvidenceResult = transport.getEvidence();
-
-    return getEvidenceResult.mapError(Exception::new)
+    return transport.getEvidence()
+        .mapError(Exception::new)
         .andThen(e
             -> verifier.verify(e.getAttestationEvidence(), e.getAttestationEndorsement())
                    .map(b
@@ -69,23 +68,20 @@ public class OakClient<T extends Transport> {
    */
   // TODO(#3466): Actually implement attestation and encryption.
   public Result<byte[], Exception> invoke(byte[] requestBody) {
-    Result<ClientEncryptor, Exception> encryptorCreateResult =
-        ClientEncryptor.create(this.serverEncryptionPublicKey);
+    return ClientEncryptor.create(this.serverEncryptionPublicKey)
+        .andThen(encryptor
+            // Encrypt request.
+            -> encryptor
+                   .encrypt(requestBody, EMPTY_ASSOCIATED_DATA)
+                   // Send request.
+                   .andThen(r -> this.transport.invoke(r).mapError(Exception::new))
+                   // Decrypt response.
+                   .andThen(encryptor::decrypt))
+        .map(d -> d.plaintext);
+  }
 
-    Result<byte[], Exception> result =
-        encryptorCreateResult
-            .andThen(encryptor
-                // Encrypt request.
-                -> encryptor
-                       .encrypt(requestBody, EMPTY_ASSOCIATED_DATA)
-                       // Send request.
-                       .andThen(r -> this.transport.invoke(r).mapError(Exception::new))
-                       // Decrypt response.
-                       .andThen(encryptor::decrypt))
-            .map(d -> d.plaintext);
-    if (encryptorCreateResult.isSuccess()) {
-      encryptorCreateResult.success().get().close();
-    }
-    return result;
+  @Override
+  public void close() throws Exception {
+    transport.close();
   }
 }
