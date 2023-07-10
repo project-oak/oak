@@ -30,6 +30,7 @@ use nix::{
 use std::{
     error::Error,
     fs::{self, create_dir},
+    io::ErrorKind,
     path::Path,
 };
 use tokio::process::Command;
@@ -125,6 +126,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
             println!("warning: eth0 not found");
         }
     }
+
+    // We're not running under Docker, so if the system image has a lingering `/.dockerenv` in it,
+    // remove it.
+    fs::remove_file("/.dockerenv")
+        .or_else(|err| {
+            if err.kind() == ErrorKind::NotFound {
+                Ok(())
+            } else {
+                Err(err)
+            }
+        })
+        .context("error removing `/.dockerenv`")?;
 
     image::switch(&args.init).context("error switching to the system image")?
 }
