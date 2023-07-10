@@ -73,45 +73,18 @@ public class OakClientTest {
 
     @Override
     public Result<byte[], String> invoke(byte[] requestBytes) {
-      // Result<Encryptor.DecryptionResult, Exception> decryptRequestResult =
-      //     serverEncryptor.decrypt(requestBytes);
-      // if (decryptRequestResult.isError()) {
-      //   return Result.error("couldn't decrypt request");
-      // }
-      // Encryptor.DecryptionResult decryptedRequest = decryptRequestResult.success().get();
-      // if (!Arrays.equals(decryptedRequest.plaintext, TEST_REQUEST)
-      //     || !Arrays.equals(decryptedRequest.associatedData, TEST_ASSOCIATED_DATA)) {
-      //   return Result.error("incorrect request");
-      // }
-
-      // Result<byte[], Exception> encryptResponseResult =
-      //     serverEncryptor.encrypt(TEST_RESPONSE, TEST_ASSOCIATED_DATA);
-      // if (encryptResponseResult.isError()) {
-      //   return Result.error("couldn't encrypt response");
-      // }
-      // byte[] serializedEncryptedResponse = encryptResponseResult.success().get();
-
-      // return Result.success(serializedEncryptedResponse);
-
-
-
-
-
-      Result<Encryptor.DecryptionResult, Exception> decryptRequestResult =
-          serverEncryptor.decrypt(requestBytes);
-
-      return decryptRequestResult
-          .mapError(err -> Result.error("couldn't decrypt request: " + err))
-          .map(decryptedRequest -> {
-            if (!Arrays.equals(decryptedRequest.plaintext, TEST_REQUEST)
-                || !Arrays.equals(decryptedRequest.associatedData, TEST_ASSOCIATED_DATA)) {
-              return Result.error("incorrect request");
-            }
-            Result<byte[], Exception> encryptResponseResult = serverEncryptor
-                .encrypt(TEST_RESPONSE, TEST_ASSOCIATED_DATA);
-            return encryptResponseResult
+      return serverEncryptor
+        .decrypt(requestBytes)
+        .mapError(err -> "couldn't decrypt request: " + err)
+        .andThen(decryptedRequest -> {
+          if (!Arrays.equals(decryptedRequest.plaintext, TEST_REQUEST)
+              || !Arrays.equals(decryptedRequest.associatedData, TEST_ASSOCIATED_DATA)) {
+            return Result.error("incorrect request");
+          }
+          return serverEncryptor
+              .encrypt(TEST_RESPONSE, TEST_ASSOCIATED_DATA)
               .mapError(err -> Result.error("couldn't encrypt response: " + err));
-          });
+        });
     }
 
     @Override
