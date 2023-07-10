@@ -16,8 +16,6 @@
 
 package com.google.oak.client;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -40,11 +38,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.Arrays;
 import org.junit.Test;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class OakClientTest {
-  private static Logger logger = Logger.getLogger(OakClientTest.class.getName());
   private static final byte[] TEST_REQUEST = new byte[] {'R', 'e', 'q', 'u', 'e', 's', 't'};
   private static final byte[] TEST_RESPONSE = new byte[] {'R', 'e', 's', 'p', 'o', 'n', 's', 'e'};
   private static final byte[] TEST_ASSOCIATED_DATA = new byte[0];
@@ -98,15 +93,7 @@ public class OakClientTest {
       }
       byte[] serializedEncryptedResponse = encryptResponseResult.success().get();
 
-      EncryptedResponse encryptedResponse =
-          EncryptedResponse.newBuilder()
-              .setEncryptedMessage(
-                  AeadEncryptedMessage.newBuilder()
-                      .setCiphertext(ByteString.copyFrom(serializedEncryptedResponse))
-                      .setAssociatedData(ByteString.copyFrom(TEST_ASSOCIATED_DATA))
-                      .build())
-              .build();
-      return Result.success(encryptedResponse.toByteArray());
+      return Result.success(serializedEncryptedResponse);
     }
 
     @Override
@@ -126,9 +113,7 @@ public class OakClientTest {
     for (int i = 0; i < TEST_SESSION_SIZE; i++) {
       Result<byte[], Exception> oakClientInvokeResult = oakClient.invoke(TEST_REQUEST);
       assertTrue(oakClientInvokeResult.isSuccess());
-      logger.log(Level.INFO, "oakClientInvokeResult");
-      logger.log(Level.INFO, new String(oakClientInvokeResult.success().get(), StandardCharsets.UTF_8));
-      logger.log(Level.INFO, "oakClientInvokeResult</>");
+      System.out.print(oakClientInvokeResult.success().get().length);
       assertArrayEquals(oakClientInvokeResult.success().get(), TEST_RESPONSE);
     }
     oakClient.close();

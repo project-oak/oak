@@ -113,15 +113,6 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
       Result<Hpke.RecipientContext, Exception> setupBaseRecipientResult = Hpke.setupBaseRecipient(
           serializedEncapsulatedPublicKey, this.serverKeyPair, OAK_HPKE_INFO);
 
-
-
-
-
-
-
-          
-      // FIX THIS !!!!!!!!!!!!!!!!!!!!
-      // DON'T FORGET
       this.recipientRequestContext =
           setupBaseRecipientResult.success().map(r -> r.recipientRequestContext);
       this.recipientResponseContext =

@@ -17,6 +17,7 @@
 package com.google.oak.crypto;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import java.nio.charset.StandardCharsets;
 
 import com.google.oak.crypto.hpke.Context;
 import com.google.oak.crypto.hpke.Hpke;
