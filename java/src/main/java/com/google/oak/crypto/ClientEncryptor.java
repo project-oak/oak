@@ -90,10 +90,7 @@ public class ClientEncryptor implements AutoCloseable, Encryptor {
   public final Result<byte[], Exception> encrypt(
       final byte[] plaintext, final byte[] associatedData) {
     // Encrypt request.
-    Result<byte[], Exception> sealResult =
-        this.senderRequestContext.seal(plaintext, associatedData);
-
-    return sealResult.map(ciphertext -> {
+    return this.senderRequestContext.seal(plaintext, associatedData).map(ciphertext -> {
       // Create request message.
       EncryptedRequest.Builder encryptedRequestBuilder =
           EncryptedRequest.newBuilder().setEncryptedMessage(
@@ -109,7 +106,8 @@ public class ClientEncryptor implements AutoCloseable, Encryptor {
             ByteString.copyFrom(serializedEncapsulatedPublicKey));
         this.serializedEncapsulatedPublicKey = Optional.empty();
       }
-      // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
+      // TODO(#3843): Return unserialized proto messages once we have Java encryption without
+      // JNI.
       return encryptedRequestBuilder.build().toByteArray();
     });
   }

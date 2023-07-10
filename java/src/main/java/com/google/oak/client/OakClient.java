@@ -45,9 +45,8 @@ public class OakClient<T extends Transport> implements AutoCloseable {
   public static <E extends EvidenceProvider & Transport, V extends AttestationVerifier>
       Result<OakClient<E>, Exception> create(E transport, V verifier) {
     // TODO(#3641): Implement client-side attestation verification.
-    Result<AttestationBundle, String> getEvidenceResult = transport.getEvidence();
-
-    return getEvidenceResult.mapError(Exception::new)
+    return transport.getEvidence()
+        .mapError(Exception::new)
         .andThen(e
             -> verifier.verify(e.getAttestationEvidence(), e.getAttestationEndorsement())
                    .map(b
@@ -69,10 +68,7 @@ public class OakClient<T extends Transport> implements AutoCloseable {
    */
   // TODO(#3466): Actually implement attestation and encryption.
   public Result<byte[], Exception> invoke(byte[] requestBody) {
-    Result<ClientEncryptor, Exception> encryptorCreateResult =
-        ClientEncryptor.create(this.serverEncryptionPublicKey);
-
-    return encryptorCreateResult
+    return ClientEncryptor.create(this.serverEncryptionPublicKey)
         .andThen(encryptor
             // Encrypt request.
             -> encryptor

@@ -73,18 +73,16 @@ public class OakClientTest {
 
     @Override
     public Result<byte[], String> invoke(byte[] requestBytes) {
-      return serverEncryptor
-        .decrypt(requestBytes)
-        .mapError(err -> "couldn't decrypt request: " + err)
-        .andThen(decryptedRequest -> {
-          if (!Arrays.equals(decryptedRequest.plaintext, TEST_REQUEST)
-              || !Arrays.equals(decryptedRequest.associatedData, TEST_ASSOCIATED_DATA)) {
-            return Result.error("incorrect request");
-          }
-          return serverEncryptor
-              .encrypt(TEST_RESPONSE, TEST_ASSOCIATED_DATA)
-              .mapError(err -> Result.error("couldn't encrypt response: " + err));
-        });
+      return serverEncryptor.decrypt(requestBytes)
+          .mapError(err -> "couldn't decrypt request: " + err)
+          .andThen(decryptedRequest -> {
+            if (!Arrays.equals(decryptedRequest.plaintext, TEST_REQUEST)
+                || !Arrays.equals(decryptedRequest.associatedData, TEST_ASSOCIATED_DATA)) {
+              return Result.error("incorrect request");
+            }
+            return serverEncryptor.encrypt(TEST_RESPONSE, TEST_ASSOCIATED_DATA)
+                .mapError(err -> Result.error("couldn't encrypt response: " + err));
+          });
     }
 
     @Override

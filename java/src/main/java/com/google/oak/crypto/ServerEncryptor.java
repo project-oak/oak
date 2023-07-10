@@ -148,16 +148,16 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
     Context.RecipientResponseContext recipientResponseContext = this.recipientResponseContext.get();
 
     // Encrypt response.
-    Result<byte[], Exception> sealResult = recipientResponseContext.seal(plaintext, associatedData);
-
-    // Create response message.
-    return sealResult.map(ciphertext
-        -> EncryptedResponse.newBuilder()
-               .setEncryptedMessage(AeadEncryptedMessage.newBuilder()
-                                        .setCiphertext(ByteString.copyFrom(ciphertext))
-                                        .setAssociatedData(ByteString.copyFrom(associatedData))
-                                        .build())
-               .build()
-               .toByteArray());
+    return recipientResponseContext
+        .seal(plaintext, associatedData)
+        // Create response message.
+        .map(ciphertext
+            -> EncryptedResponse.newBuilder()
+                   .setEncryptedMessage(AeadEncryptedMessage.newBuilder()
+                                            .setCiphertext(ByteString.copyFrom(ciphertext))
+                                            .setAssociatedData(ByteString.copyFrom(associatedData))
+                                            .build())
+                   .build()
+                   .toByteArray());
   }
 }
