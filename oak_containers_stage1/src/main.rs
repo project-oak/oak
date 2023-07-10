@@ -22,6 +22,7 @@ mod image;
 use anyhow::Context;
 use clap::Parser;
 use client::LauncherClient;
+use futures_util::TryStreamExt;
 use nix::{
     mount::{mount, umount2, MntFlags, MsFlags},
     unistd::chroot,
@@ -101,5 +102,29 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if !Path::new("/etc/machine-id").exists() {
         fs::write("/etc/machine-id", []).context("error writing placeholder /etc/machine-id")?;
     }
+
+    // Configure eth0 down, as systemd will want to manage it itself and gets confused if it already
+    // has an IP address.
+    {
+        let (connection, handle, _) =
+            rtnetlink::new_connection().context("error opening netlink connection")?;
+        tokio::spawn(connection);
+
+        // `ip link show eth0`
+        let mut links = handle.link().get().match_name("eth0".to_string()).execute();
+
+        if let Some(link) = links.try_next().await? {
+            // `ip link set dev $INDEX down`
+            handle
+                .link()
+                .set(link.header.index)
+                .down()
+                .execute()
+                .await?;
+        } else {
+            println!("warning: eth0 not found");
+        }
+    }
+
     image::switch(&args.init).context("error switching to the system image")?
 }
