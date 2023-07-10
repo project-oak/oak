@@ -52,8 +52,7 @@ public class OakClientTest {
     private final ServerEncryptor serverEncryptor;
 
     public TestTransport() {
-      Result<KeyPair, Exception> keyPairGenerateResult = KeyPair.generate();
-      this.keyPair = keyPairGenerateResult.unwrap("couldn't create key pair");
+      this.keyPair = KeyPair.generate().unwrap("couldn't create key pair");
       this.serverEncryptor = new ServerEncryptor(keyPair);
     }
 
@@ -74,25 +73,45 @@ public class OakClientTest {
 
     @Override
     public Result<byte[], String> invoke(byte[] requestBytes) {
+      // Result<Encryptor.DecryptionResult, Exception> decryptRequestResult =
+      //     serverEncryptor.decrypt(requestBytes);
+      // if (decryptRequestResult.isError()) {
+      //   return Result.error("couldn't decrypt request");
+      // }
+      // Encryptor.DecryptionResult decryptedRequest = decryptRequestResult.success().get();
+      // if (!Arrays.equals(decryptedRequest.plaintext, TEST_REQUEST)
+      //     || !Arrays.equals(decryptedRequest.associatedData, TEST_ASSOCIATED_DATA)) {
+      //   return Result.error("incorrect request");
+      // }
+
+      // Result<byte[], Exception> encryptResponseResult =
+      //     serverEncryptor.encrypt(TEST_RESPONSE, TEST_ASSOCIATED_DATA);
+      // if (encryptResponseResult.isError()) {
+      //   return Result.error("couldn't encrypt response");
+      // }
+      // byte[] serializedEncryptedResponse = encryptResponseResult.success().get();
+
+      // return Result.success(serializedEncryptedResponse);
+
+
+
+
+
       Result<Encryptor.DecryptionResult, Exception> decryptRequestResult =
           serverEncryptor.decrypt(requestBytes);
-      if (decryptRequestResult.isError()) {
-        return Result.error("couldn't decrypt request");
-      }
-      Encryptor.DecryptionResult decryptedRequest = decryptRequestResult.success().get();
-      if (!Arrays.equals(decryptedRequest.plaintext, TEST_REQUEST)
-          || !Arrays.equals(decryptedRequest.associatedData, TEST_ASSOCIATED_DATA)) {
-        return Result.error("incorrect request, expected ");
-      }
 
-      Result<byte[], Exception> encryptResponseResult =
-          serverEncryptor.encrypt(TEST_RESPONSE, TEST_ASSOCIATED_DATA);
-      if (encryptResponseResult.isError()) {
-        return Result.error("couldn't encrypt response");
-      }
-      byte[] serializedEncryptedResponse = encryptResponseResult.success().get();
-
-      return Result.success(serializedEncryptedResponse);
+      return decryptRequestResult
+          .mapError(err -> Result.error("couldn't decrypt request: " + err))
+          .map(decryptedRequest -> {
+            if (!Arrays.equals(decryptedRequest.plaintext, TEST_REQUEST)
+                || !Arrays.equals(decryptedRequest.associatedData, TEST_ASSOCIATED_DATA)) {
+              return Result.error("incorrect request");
+            }
+            Result<byte[], Exception> encryptResponseResult = serverEncryptor
+                .encrypt(TEST_RESPONSE, TEST_ASSOCIATED_DATA);
+            return encryptResponseResult
+              .mapError(err -> Result.error("couldn't encrypt response: " + err));
+          });
     }
 
     @Override
@@ -107,14 +126,14 @@ public class OakClientTest {
     Result<OakClient<TestTransport>, Exception> oakClientCreateResult =
         OakClient.create(new TestTransport(), new InsecureAttestationVerifier());
     assertTrue(oakClientCreateResult.isSuccess());
-    OakClient<TestTransport> oakClient = oakClientCreateResult.success().get();
 
-    for (int i = 0; i < TEST_SESSION_SIZE; i++) {
-      Result<byte[], Exception> oakClientInvokeResult = oakClient.invoke(TEST_REQUEST);
-      assertTrue(oakClientInvokeResult.isSuccess());
-      System.out.print(oakClientInvokeResult.success().get().length);
-      assertArrayEquals(oakClientInvokeResult.success().get(), TEST_RESPONSE);
+    try (OakClient<TestTransport> oakClient = oakClientCreateResult.success().get()) {
+      for (int i = 0; i < TEST_SESSION_SIZE; i++) {
+        Result<byte[], Exception> oakClientInvokeResult = oakClient.invoke(TEST_REQUEST);
+        assertTrue(oakClientInvokeResult.isSuccess());
+        System.out.print(oakClientInvokeResult.success().get().length);
+        assertArrayEquals(oakClientInvokeResult.success().get(), TEST_RESPONSE);
+      }
     }
-    oakClient.close();
   }
 }
