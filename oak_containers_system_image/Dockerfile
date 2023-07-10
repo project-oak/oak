@@ -41,3 +41,6 @@ RUN systemctl set-default multi-user
 
 # Clean up some stuff we don't need
 RUN rm -rf /usr/share/doc /usr/share/info /usr/share/man
+
+# Debugging aid: if you get your hands on the console and try logging in as root, force a password change.
+RUN passwd --delete --expire root
