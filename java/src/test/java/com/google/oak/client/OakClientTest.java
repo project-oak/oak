@@ -81,7 +81,7 @@ public class OakClientTest {
               return Result.error("incorrect request");
             }
             return serverEncryptor.encrypt(TEST_RESPONSE, TEST_ASSOCIATED_DATA)
-                .mapError(err -> Result.error("couldn't encrypt response: " + err));
+                .mapError(err -> "couldn't encrypt response: " + err);
           });
     }
 
