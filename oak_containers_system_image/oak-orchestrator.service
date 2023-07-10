@@ -2,7 +2,6 @@
 Description=Oak Containers Orchestrator
 After=network-online.target
 Wants=network-online.target
-Requires=docker.service
 
 [Service]
 Type=simple
