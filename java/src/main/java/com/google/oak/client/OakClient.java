@@ -76,11 +76,11 @@ public class OakClient<T extends Transport> implements AutoCloseable {
         .andThen(encryptor
             // Encrypt request.
             -> encryptor
-                    .encrypt(requestBody, EMPTY_ASSOCIATED_DATA)
-                    // Send request.
-                    .andThen(r -> this.transport.invoke(r).mapError(Exception::new))
-                    // Decrypt response.
-                    .andThen(encryptor::decrypt))
+                   .encrypt(requestBody, EMPTY_ASSOCIATED_DATA)
+                   // Send request.
+                   .andThen(r -> this.transport.invoke(r).mapError(Exception::new))
+                   // Decrypt response.
+                   .andThen(encryptor::decrypt))
         .map(d -> d.plaintext);
   }
 

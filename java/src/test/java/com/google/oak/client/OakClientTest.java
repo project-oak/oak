@@ -35,8 +35,8 @@ import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 import java.util.Arrays;
+import java.util.Optional;
 import org.junit.Test;
 
 public class OakClientTest {
@@ -45,8 +45,7 @@ public class OakClientTest {
   private static final byte[] TEST_ASSOCIATED_DATA = new byte[0];
 
   // Number of message exchanges done to test secure session handling.
-  private static final int TEST_SESSION_SIZE = 1;
-  // private static final int TEST_SESSION_SIZE = 8;
+  private static final int TEST_SESSION_SIZE = 8;
 
   private static class TestTransport implements EvidenceProvider, Transport {
     private final KeyPair keyPair;
