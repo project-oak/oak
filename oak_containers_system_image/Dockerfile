@@ -19,8 +19,8 @@ RUN apt-get --yes update \
 
 # Prepare network
 RUN systemctl enable systemd-networkd
-COPY 10-eth0.network /etc/systemd/network
-RUN chmod 644 /etc/systemd/network/10-eth0.network
+COPY 10-enp0s1.network /etc/systemd/network
+RUN chmod 644 /etc/systemd/network/10-enp0s1.network
 
 # Configure systemd to run docker at startup
 RUN systemctl enable docker
