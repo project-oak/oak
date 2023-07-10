@@ -4,15 +4,9 @@ FROM debian@${debian_snapshot}
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# Install Docker. This is a starting point only, we should switch to a more lightweight runtime later.
-RUN apt-get --yes update && apt-get install --no-install-recommends --yes curl gnupg2 gnupg-agent ca-certificates
-RUN curl --fail --silent --show-error --location https://download.docker.com/linux/debian/gpg | apt-key add -
-RUN echo "deb [arch=amd64] https://download.docker.com/linux/debian bookworm stable"  > /etc/apt/sources.list.d/backports.list
-
 RUN apt-get --yes update \
   && apt-get install --yes --no-install-recommends \
   systemd systemd-sysv dbus udev\
-  docker-ce \
   # Cleanup
   && apt-get clean \
   && rm --recursive --force /var/lib/apt/lists/*
@@ -21,9 +15,6 @@ RUN apt-get --yes update \
 RUN systemctl enable systemd-networkd
 COPY 10-eth0.network /etc/systemd/network
 RUN chmod 644 /etc/systemd/network/10-eth0.network
-
-# Configure systemd to run docker at startup
-RUN systemctl enable docker
 
 # Copy the orchestartor binary & service
 COPY ./target/oak_containers_orchestrator /usr/bin/
