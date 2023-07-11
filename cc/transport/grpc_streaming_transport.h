@@ -19,13 +19,12 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "cc/transport/evidence_provider.h"
 #include "cc/transport/transport.h"
 #include "oak_remote_attestation/proto/v1/messages.pb.h"
 
 namespace oak::transport {
 
-class GrpcStreamingTransport : public EvidenceProvider, public Transport {
+class GrpcStreamingTransport : public ClientTransport {
  public:
   absl::StatusOr<::oak::session::v1::AttestationBundle> GetEvidence() override;
   absl::StatusOr<std::string> Invoke(absl::string_view request_bytes) override;

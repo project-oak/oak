@@ -24,7 +24,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/remote_attestation/attestation_verifier.h"
-#include "cc/transport/evidence_provider.h"
 #include "cc/transport/transport.h"
 
 namespace oak::client {
@@ -35,11 +34,10 @@ class OakClient {
  public:
   // Create an instance of the Oak Client by remotely attesting an Oak Enclave
   // and creating an encrypted channel.
-  // Template class `T` should implement `::oak::transport::Transport` and
-  // `::oak::transport::EvidenceProvider`.
   template <class T>
   static absl::StatusOr<std::unique_ptr<OakClient>> Create(
-      std::unique_ptr<T> transport, ::oak::remote_attestation::AttestationVerifier& verifier) {
+      std::unique_ptr<::oak::transport::ClientTransport> transport,
+      ::oak::remote_attestation::AttestationVerifier& verifier) {
     absl::StatusOr<::oak::session::v1::AttestationBundle> endorsed_evidence =
         transport->GetEvidence();
     if (!endorsed_evidence.ok()) {

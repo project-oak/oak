@@ -21,14 +21,9 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "cc/remote_attestation/attestation_verifier.h"
-#include "cc/transport/evidence_provider.h"
-#include "cc/transport/transport.h"
 #include "oak_remote_attestation/proto/v1/messages.pb.h"
 
 namespace oak::client {
-
-namespace {}  // namespace
 
 absl::StatusOr<std::string> OakClient::Invoke(absl::string_view request_body) {
   // TODO(#4069): Implement sending an encrypted request and decrypting the response.
