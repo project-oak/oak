@@ -14,15 +14,18 @@
 // limitations under the License.
 //
 
+use super::{
+    api::StdWasmApiFactory, OakLinker, UserState, WasmApiFactory, WasmHandler, ALLOC_FUNCTION_NAME,
+    MEMORY_NAME,
+};
 use crate::{
-    api::StdWasmApiFactory, AbiPointer, AbiPointerOffset, OakLinker, UserState, WasmApiFactory,
-    WasmHandler, ALLOC_FUNCTION_NAME, MEMORY_NAME,
+    logger::StandaloneLogger,
+    lookup::LookupDataManager,
+    wasm::{AbiPointer, AbiPointerOffset},
 };
 use alloc::{sync::Arc, vec::Vec};
 use byteorder::{ByteOrder, LittleEndian};
 use hashbrown::HashMap;
-use oak_functions_lookup::LookupDataManager;
-use oak_logger::StandaloneLogger;
 use spinning_top::Spinlock;
 
 #[test]

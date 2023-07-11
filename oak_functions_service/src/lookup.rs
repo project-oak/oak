@@ -13,10 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#![no_std]
 
-extern crate alloc;
-
+use crate::logger::OakLogger;
 use alloc::{
     format,
     string::{String, ToString},
@@ -25,7 +23,6 @@ use alloc::{
 };
 use hashbrown::HashMap;
 use log::{info, Level};
-use oak_logger::OakLogger;
 use spinning_top::Spinlock;
 
 // Data maintains the invariant on lookup data to have [at most one

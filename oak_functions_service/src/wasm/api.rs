@@ -14,16 +14,18 @@
 // limitations under the License.
 //
 
-use crate::{WasmApi, WasmApiFactory};
+use super::{WasmApi, WasmApiFactory};
+use crate::{
+    logger::{OakLogger, StandaloneLogger},
+    lookup::{format_bytes, LookupData, LookupDataManager},
+};
 use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 use log::Level;
-use oak_functions_lookup::{format_bytes, LookupData, LookupDataManager};
 use oak_functions_sdk::proto::oak::functions::wasm::v1::{
     LogRequest, LogResponse, LookupDataRequest, LookupDataResponse, ReadRequestRequest,
     ReadRequestResponse, StdWasmApi, StdWasmApiServer, TestRequest, TestResponse,
     WriteResponseRequest, WriteResponseResponse,
 };
-use oak_logger::{OakLogger, StandaloneLogger};
 use spinning_top::Spinlock;
 
 /// The main purpose of this factory is to allow creating a new instance of the

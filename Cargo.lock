@@ -2048,16 +2048,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_lookup"
-version = "0.1.0"
-dependencies = [
- "hashbrown 0.13.2",
- "log",
- "oak_logger",
- "spinning_top",
-]
-
-[[package]]
 name = "oak_functions_sdk"
 version = "0.1.0"
 dependencies = [
@@ -2066,10 +2056,8 @@ dependencies = [
  "micro_rpc",
  "micro_rpc_build",
  "oak_functions_abi",
- "oak_functions_lookup",
+ "oak_functions_service",
  "oak_functions_test_utils",
- "oak_functions_wasm",
- "oak_logger",
  "prost",
  "tokio",
 ]
@@ -2099,21 +2087,20 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "byteorder",
  "hashbrown 0.13.2",
  "log",
  "micro_rpc",
  "micro_rpc_build",
  "oak_crypto",
  "oak_functions_abi",
- "oak_functions_lookup",
  "oak_functions_sdk",
  "oak_functions_test_utils",
- "oak_functions_wasm",
- "oak_logger",
  "oak_remote_attestation",
  "prost",
  "spinning_top",
  "tokio",
+ "wasmi",
 ]
 
 [[package]]
@@ -2134,24 +2121,6 @@ dependencies = [
  "tempfile",
  "tokio",
  "ubyte",
-]
-
-[[package]]
-name = "oak_functions_wasm"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "byteorder",
- "hashbrown 0.13.2",
- "log",
- "micro_rpc",
- "oak_functions_abi",
- "oak_functions_lookup",
- "oak_functions_sdk",
- "oak_functions_test_utils",
- "oak_logger",
- "spinning_top",
- "wasmi",
 ]
 
 [[package]]
@@ -2214,13 +2183,6 @@ dependencies = [
  "static_assertions",
  "strum",
  "zerocopy",
-]
-
-[[package]]
-name = "oak_logger"
-version = "0.1.0"
-dependencies = [
- "log",
 ]
 
 [[package]]

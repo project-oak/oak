@@ -17,9 +17,11 @@
 use hashbrown::HashMap;
 use lazy_static::lazy_static;
 use oak_functions_abi::{Request, Response};
-use oak_functions_lookup::{Data, LookupDataManager};
-use oak_functions_wasm::{api::StdWasmApiFactory, WasmHandler};
-use oak_logger::StandaloneLogger;
+use oak_functions_service::{
+    logger::StandaloneLogger,
+    lookup::{Data, LookupDataManager},
+    wasm::{api::StdWasmApiFactory, WasmHandler},
+};
 use std::{path::PathBuf, sync::Arc};
 
 lazy_static! {

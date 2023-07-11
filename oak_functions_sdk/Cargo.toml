@@ -16,8 +16,6 @@ micro_rpc_build = { workspace = true }
 [dev-dependencies]
 hashbrown = "*"
 lazy_static = "*"
-oak_logger = { workspace = true }
-oak_functions_wasm = { workspace = true }
-oak_functions_lookup = { workspace = true }
 oak_functions_test_utils = { workspace = true }
+oak_functions_service = { workspace = true }
 tokio = "*"

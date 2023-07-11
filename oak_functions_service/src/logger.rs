@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-#![no_std]
-
 pub use log::Level;
 
 pub trait OakLogger: Send + Sync + Clone {
