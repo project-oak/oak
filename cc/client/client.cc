@@ -21,23 +21,19 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "cc/remote_attestation/attestation_verifier.h"
-#include "cc/transport/evidence_provider.h"
-#include "cc/transport/transport.h"
 #include "oak_remote_attestation/proto/v1/messages.pb.h"
 
 namespace oak::client {
 
 namespace {
 using ::oak::remote_attestation::AttestationVerifier;
-using ::oak::session::v1::AttestationBundle;
-using ::oak::transport::EvidenceProvider;
-using ::oak::transport::Transport;
+using ::oak::transport::TransportWrapper;
 }  // namespace
 
-absl::StatusOr<std::unique_ptr<OakClient>> Create(std::unique_ptr<EvidenceProvider> transport,
-                                                  AttestationVerifier& verifier) {
-  absl::StatusOr<AttestationBundle> endorsed_evidence = transport->GetEvidence();
+absl::StatusOr<std::unique_ptr<OakClient>> OakClient::Create(
+    std::unique_ptr<TransportWrapper> transport, AttestationVerifier& verifier) {
+  absl::StatusOr<::oak::session::v1::AttestationBundle> endorsed_evidence =
+      transport->GetEvidence();
   if (!endorsed_evidence.ok()) {
     return endorsed_evidence.status();
   }
@@ -48,11 +44,12 @@ absl::StatusOr<std::unique_ptr<OakClient>> Create(std::unique_ptr<EvidenceProvid
     return verification_status;
   }
 
-  // TODO(#4069): Pass `Transport` and enclave encryption public key to the constructor.
-  return absl::OkStatus();
+  return absl::WrapUnique(new OakClient(
+      std::move(transport), endorsed_evidence->attestation_evidence().encryption_public_key()));
 }
 
 absl::StatusOr<std::string> OakClient::Invoke(absl::string_view request_body) {
+  // TODO(#4069): Implement sending an encrypted request and decrypting the response.
   return absl::OkStatus();
 }
 

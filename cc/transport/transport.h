@@ -21,8 +21,18 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "oak_remote_attestation/proto/v1/messages.pb.h"
 
 namespace oak::transport {
+
+// Abstract class for providing an enclave evidence.
+class EvidenceProvider {
+ public:
+  virtual ~EvidenceProvider() = default;
+
+  // Returns evidence about the trustworthiness of a remote server.
+  virtual absl::StatusOr<::oak::session::v1::AttestationBundle> GetEvidence() = 0;
+};
 
 // Abstract class for sending messages to the enclave.
 class Transport {
@@ -32,6 +42,9 @@ class Transport {
   // Sends a request to the enclave and returns a response.
   virtual absl::StatusOr<std::string> Invoke(absl::string_view request_bytes) = 0;
 };
+
+// Wrapper for `EvidenceProvider` and `Transport` abstract classes.
+class TransportWrapper : public EvidenceProvider, public Transport {};
 
 }  // namespace oak::transport
 

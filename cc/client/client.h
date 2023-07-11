@@ -20,10 +20,10 @@
 #include <memory>
 #include <string>
 
+#include "absl/memory/memory.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/remote_attestation/attestation_verifier.h"
-#include "cc/transport/evidence_provider.h"
 #include "cc/transport/transport.h"
 
 namespace oak::client {
@@ -34,11 +34,9 @@ class OakClient {
  public:
   // Create an instance of the Oak Client by remotely attesting an Oak Enclave
   // and creating an encrypted channel.
-  static absl::StatusOr<std::unique_ptr<OakClient>>
-  // TODO(#4069): Make `transport` a reference to a class that inherits both `EvidenceProvider` and
-  // `Transport`.
-  Create(std::unique_ptr<::oak::transport::EvidenceProvider> transport,
-         ::oak::remote_attestation::AttestationVerifier& verifier);
+  static absl::StatusOr<std::unique_ptr<OakClient>> Create(
+      std::unique_ptr<::oak::transport::TransportWrapper> transport,
+      ::oak::remote_attestation::AttestationVerifier& verifier);
 
   // Invoke the provided method by fetching and verifying the attested enclave
   // public key, and then using it to encrypt the request body.
@@ -46,6 +44,7 @@ class OakClient {
 
  private:
   std::unique_ptr<oak::transport::Transport> transport_;
+  // TODO(#4157): Store client encryptor once crypto sessions are implemented on the server.
   std::string server_encryption_public_key_;
 
   OakClient(std::unique_ptr<oak::transport::Transport> transport,

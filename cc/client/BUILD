@@ -28,8 +28,8 @@ cc_library(
     deps = [
         "//cc/remote_attestation:attestation_verifier",
         "//cc/transport",
-        "//cc/transport:evidence_provider",
         "//oak_remote_attestation/proto/v1:messages_cc_proto",
+        "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
