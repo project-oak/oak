@@ -35,24 +35,8 @@ using ::oak::transport::EvidenceProvider;
 using ::oak::transport::Transport;
 }  // namespace
 
-absl::StatusOr<std::unique_ptr<OakClient>> Create(std::unique_ptr<EvidenceProvider> transport,
-                                                  AttestationVerifier& verifier) {
-  absl::StatusOr<AttestationBundle> endorsed_evidence = transport->GetEvidence();
-  if (!endorsed_evidence.ok()) {
-    return endorsed_evidence.status();
-  }
-
-  absl::Status verification_status = verifier.Verify(endorsed_evidence->attestation_evidence(),
-                                                     endorsed_evidence->attestation_endorsement());
-  if (!verification_status.ok()) {
-    return verification_status;
-  }
-
-  // TODO(#4069): Pass `Transport` and enclave encryption public key to the constructor.
-  return absl::OkStatus();
-}
-
 absl::StatusOr<std::string> OakClient::Invoke(absl::string_view request_body) {
+  // TODO(#4069): Implement sending an encrypted request and decrypting the response.
   return absl::OkStatus();
 }
 
