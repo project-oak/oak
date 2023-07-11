@@ -28,12 +28,7 @@
 
 namespace oak::client {
 
-namespace {
-using ::oak::remote_attestation::AttestationVerifier;
-using ::oak::session::v1::AttestationBundle;
-using ::oak::transport::EvidenceProvider;
-using ::oak::transport::Transport;
-}  // namespace
+namespace {}  // namespace
 
 absl::StatusOr<std::string> OakClient::Invoke(absl::string_view request_body) {
   // TODO(#4069): Implement sending an encrypted request and decrypting the response.
