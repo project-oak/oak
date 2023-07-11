@@ -34,7 +34,6 @@ class OakClient {
  public:
   // Create an instance of the Oak Client by remotely attesting an Oak Enclave
   // and creating an encrypted channel.
-  template <class T>
   static absl::StatusOr<std::unique_ptr<OakClient>> Create(
       std::unique_ptr<::oak::transport::TransportWrapper> transport,
       ::oak::remote_attestation::AttestationVerifier& verifier) {
