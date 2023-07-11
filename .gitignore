@@ -106,3 +106,6 @@ tensorflow_model_server
 toolchain/build
 toolchain/toolchain
 toolchain/toolchain.tar.bz2
+
+# Python environment
+**/.venv/
