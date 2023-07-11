@@ -14,5 +14,3 @@ prost = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tonic = "*"
 tower = "*"
-tokio-vsock = { version = "*", features = ["tonic-conn"] }
-vsock = "*"

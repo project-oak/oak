@@ -105,6 +105,16 @@ impl Qemu {
         }
         cmd.args(["-netdev", "user,id=netdev"]);
         cmd.args(["-device", "virtio-net,netdev=netdev"]);
+        // Set up the virtio-vsock device, as it is used by the example app.
+        // TODO(#709): Remove this and use networking for there as well.
+        cmd.args([
+            "-device",
+            format!(
+                "vhost-vsock-pci,id=vhost-vsock-pci0,guest-cid={}",
+                std::process::id()
+            )
+            .as_str(),
+        ]);
         // And yes, use stage0 as the BIOS.
         cmd.args([
             "-bios",
