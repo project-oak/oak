@@ -21,7 +21,7 @@ use clap::Parser;
 
 #[derive(Parser, Debug)]
 pub struct Args {
-    #[arg(long, required = true)]
+    #[arg(long, default_value_t = 8080)]
     port: u16,
     #[arg(long, required = true, value_parser = path_exists,)]
     system_image: std::path::PathBuf,

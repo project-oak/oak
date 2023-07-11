@@ -32,14 +32,7 @@ use self::proto::oak::{
 };
 use anyhow::Context;
 use proto::oak::containers::launcher_client::LauncherClient as GrpcLauncherClient;
-use tokio_vsock::VsockStream;
-use tonic::transport::{Endpoint, Uri};
-use tower::service_fn;
-
-// Virtio VSOCK does not use URIs, hence this URI will never be used.
-// It is defined purely since in order to create a channel, since a URI has to
-// be supplied to create an `Endpoint`.
-static IGNORED_ENDPOINT_URI: &str = "file://[::]:0";
+use tonic::transport::Channel;
 
 /// Utility struct used to interface with the launcher
 pub struct LauncherClient {
@@ -47,21 +40,8 @@ pub struct LauncherClient {
 }
 
 impl LauncherClient {
-    pub async fn create(
-        launcher_vsock_cid: u32,
-        launcher_vsock_port: u32,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let inner: GrpcLauncherClient<tonic::transport::channel::Channel> = {
-            let channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
-                .context("couldn't form endpoint")?
-                .connect_with_connector(service_fn(move |_: Uri| {
-                    VsockStream::connect(launcher_vsock_cid, launcher_vsock_port)
-                }))
-                .await
-                .context("couldn't connect to VSOCK socket")?;
-
-            GrpcLauncherClient::new(channel)
-        };
+    pub async fn create(addr: tonic::transport::Uri) -> Result<Self, Box<dyn std::error::Error>> {
+        let inner = GrpcLauncherClient::<Channel>::connect(addr).await?;
         Ok(Self { inner })
     }
 

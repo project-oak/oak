@@ -70,7 +70,7 @@ impl TrustedApplicationClient {
                     TrustedApplicationClient::get_stream_with_trusted_app(cid, port)
                 }))
                 .await
-                .context("couldn't connect to VSOCK socket")?;
+                .context("couldn't connect to untrusted app VSOCK socket")?;
             GrpcTrustedApplicationClient::new(channel)
         };
         Ok(Self { inner })

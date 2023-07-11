@@ -1860,10 +1860,8 @@ dependencies = [
  "oak_grpc_utils",
  "prost",
  "tokio",
- "tokio-vsock",
  "tonic",
  "tower",
- "vsock",
 ]
 
 [[package]]

@@ -29,11 +29,8 @@ const IPC_SOCKET_FILE_NAME: &str = "orchestrator_ipc";
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(long, default_value_t = 2)]
-    launcher_vsock_cid: u32,
-
-    #[arg(long, default_value_t = 8080)]
-    launcher_vsock_port: u32,
+    #[arg(default_value = "http://10.0.2.2:8080")]
+    launcher_addr: String,
 }
 
 #[tokio::main]
@@ -42,10 +39,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
-    let mut launcher_client =
-        LauncherClient::create(args.launcher_vsock_cid, args.launcher_vsock_port)
-            .await
-            .map_err(|error| anyhow!("couldn't create client: {:?}", error))?;
+    let mut launcher_client = LauncherClient::create(args.launcher_addr.parse()?)
+        .await
+        .map_err(|error| anyhow!("couldn't create client: {:?}", error))?;
 
     let container_bundle = launcher_client
         .get_container_bundle()
