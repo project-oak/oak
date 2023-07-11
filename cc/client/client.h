@@ -36,22 +36,7 @@ class OakClient {
   // and creating an encrypted channel.
   static absl::StatusOr<std::unique_ptr<OakClient>> Create(
       std::unique_ptr<::oak::transport::TransportWrapper> transport,
-      ::oak::remote_attestation::AttestationVerifier& verifier) {
-    absl::StatusOr<::oak::session::v1::AttestationBundle> endorsed_evidence =
-        transport->GetEvidence();
-    if (!endorsed_evidence.ok()) {
-      return endorsed_evidence.status();
-    }
-
-    absl::Status verification_status = verifier.Verify(
-        endorsed_evidence->attestation_evidence(), endorsed_evidence->attestation_endorsement());
-    if (!verification_status.ok()) {
-      return verification_status;
-    }
-
-    return absl::WrapUnique(new OakClient(
-        std::move(transport), endorsed_evidence->attestation_evidence().encryption_public_key()));
-  }
+      ::oak::remote_attestation::AttestationVerifier& verifier);
 
   // Invoke the provided method by fetching and verifying the attested enclave
   // public key, and then using it to encrypt the request body.

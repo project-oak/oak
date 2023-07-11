@@ -25,6 +25,29 @@
 
 namespace oak::client {
 
+namespace {
+using ::oak::remote_attestation::AttestationVerifier;
+using ::oak::transport::TransportWrapper;
+}  // namespace
+
+absl::StatusOr<std::unique_ptr<OakClient>> OakClient::Create(
+    std::unique_ptr<TransportWrapper> transport, AttestationVerifier& verifier) {
+  absl::StatusOr<::oak::session::v1::AttestationBundle> endorsed_evidence =
+      transport->GetEvidence();
+  if (!endorsed_evidence.ok()) {
+    return endorsed_evidence.status();
+  }
+
+  absl::Status verification_status = verifier.Verify(endorsed_evidence->attestation_evidence(),
+                                                     endorsed_evidence->attestation_endorsement());
+  if (!verification_status.ok()) {
+    return verification_status;
+  }
+
+  return absl::WrapUnique(new OakClient(
+      std::move(transport), endorsed_evidence->attestation_evidence().encryption_public_key()));
+}
+
 absl::StatusOr<std::string> OakClient::Invoke(absl::string_view request_body) {
   // TODO(#4069): Implement sending an encrypted request and decrypting the response.
   return absl::OkStatus();
