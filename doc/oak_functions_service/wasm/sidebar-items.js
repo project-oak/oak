@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ALLOC_FUNCTION_NAME","MAIN_FUNCTION_NAME","MEMORY_NAME"],"fn":["new_wasm_handler"],"mod":["api"],"struct":["UserState","WasmHandler"],"trait":["WasmApi","WasmApiFactory"],"type":["AbiPointer","AbiPointerOffset"]};

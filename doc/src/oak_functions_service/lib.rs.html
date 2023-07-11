@@ -185,6 +185,12 @@
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -203,8 +209,12 @@
 
 </span><span class="attr">#![no_std]
 #![feature(never_type)]
+#![feature(unwrap_infallible)]
 
 </span><span class="kw">extern crate </span>alloc;
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">extern crate </span>std;
 
 <span class="kw">pub mod </span>proto {
     <span class="kw">pub mod </span>oak {
@@ -216,11 +226,13 @@
     }
 }
 
-<span class="kw">mod </span>wasm;
+<span class="kw">pub mod </span>logger;
+<span class="kw">pub mod </span>lookup;
+<span class="kw">pub mod </span>wasm;
 
 <span class="kw">use </span>alloc::{boxed::Box, format, sync::Arc};
-<span class="kw">use </span>oak_functions_lookup::LookupDataManager;
-<span class="kw">use </span>oak_logger::StandaloneLogger;
+<span class="kw">use </span>logger::StandaloneLogger;
+<span class="kw">use </span>lookup::{Data, LookupDataManager};
 <span class="kw">use </span>oak_remote_attestation::{
     attester::AttestationReportGenerator,
     handler::{AttestationHandler, AttestationSessionHandler},
@@ -363,7 +375,7 @@
 
 <span class="comment">// Helper function to convert LookupDataChunk to Data.
 // TODO(#3791): Check if we really have to copy here.
-</span><span class="kw">fn </span>to_data(chunk: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;LookupDataChunk&gt;) -&gt; oak_functions_lookup::Data {
+</span><span class="kw">fn </span>to_data(chunk: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;LookupDataChunk&gt;) -&gt; Data {
     chunk
         .as_ref()
         .unwrap()
