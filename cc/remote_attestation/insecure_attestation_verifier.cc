@@ -24,7 +24,6 @@
 namespace oak::remote_attestation {
 
 namespace {
-using ::oak::session::v1::AttestationBundle;
 using ::oak::session::v1::AttestationEndorsement;
 using ::oak::session::v1::AttestationEvidence;
 }  // namespace
