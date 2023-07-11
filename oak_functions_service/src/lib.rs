@@ -16,8 +16,12 @@
 
 #![no_std]
 #![feature(never_type)]
+#![feature(unwrap_infallible)]
 
 extern crate alloc;
+
+#[cfg(test)]
+extern crate std;
 
 pub mod proto {
     pub mod oak {
@@ -29,11 +33,13 @@ pub mod proto {
     }
 }
 
-mod wasm;
+pub mod logger;
+pub mod lookup;
+pub mod wasm;
 
 use alloc::{boxed::Box, format, sync::Arc};
-use oak_functions_lookup::LookupDataManager;
-use oak_logger::StandaloneLogger;
+use logger::StandaloneLogger;
+use lookup::{Data, LookupDataManager};
 use oak_remote_attestation::{
     attester::AttestationReportGenerator,
     handler::{AttestationHandler, AttestationSessionHandler},
@@ -176,7 +182,7 @@ impl OakFunctions for OakFunctionsService {
 
 // Helper function to convert LookupDataChunk to Data.
 // TODO(#3791): Check if we really have to copy here.
-fn to_data(chunk: &Option<LookupDataChunk>) -> oak_functions_lookup::Data {
+fn to_data(chunk: &Option<LookupDataChunk>) -> Data {
     chunk
         .as_ref()
         .unwrap()

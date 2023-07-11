@@ -592,16 +592,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_lookup"
-version = "0.1.0"
-dependencies = [
- "hashbrown",
- "log",
- "oak_logger",
- "spinning_top",
-]
-
-[[package]]
 name = "oak_functions_sdk"
 version = "0.1.0"
 dependencies = [
@@ -616,34 +606,16 @@ name = "oak_functions_service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "byteorder",
  "hashbrown",
  "log",
  "micro_rpc",
  "micro_rpc_build",
  "oak_crypto",
  "oak_functions_abi",
- "oak_functions_lookup",
  "oak_functions_sdk",
- "oak_functions_wasm",
- "oak_logger",
  "oak_remote_attestation",
  "prost",
- "spinning_top",
-]
-
-[[package]]
-name = "oak_functions_wasm"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "byteorder",
- "hashbrown",
- "log",
- "micro_rpc",
- "oak_functions_abi",
- "oak_functions_lookup",
- "oak_functions_sdk",
- "oak_logger",
  "spinning_top",
  "wasmi",
 ]
@@ -674,13 +646,6 @@ dependencies = [
  "micro_rpc_build",
  "oak_remote_attestation",
  "prost",
-]
-
-[[package]]
-name = "oak_logger"
-version = "0.1.0"
-dependencies = [
- "log",
 ]
 
 [[package]]
