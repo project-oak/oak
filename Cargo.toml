@@ -23,16 +23,13 @@ members = [
   "oak_functions/examples/echo/module",
   "oak_functions/examples/key_value_lookup/module",
   "oak_functions/examples/weather_lookup/module",
-  "oak_functions/extension",
   "oak_functions/load_test",
   "oak_functions/location_utils",
   "oak_functions/logger",
   "oak_functions/lookup",
   "oak_functions/lookup_data_checker",
   "oak_functions/lookup_data_generator",
-  "oak_functions/testing",
   "oak_functions/wasm",
-  "oak_functions/workload_logging",
   "oak_functions_abi",
   "oak_functions_client",
   "oak_functions_launcher",
@@ -93,14 +90,11 @@ oak_containers_launcher_server = { path = "./oak_containers_launcher_server" }
 oak_enclave_runtime_support = { path = "./oak_enclave_runtime_support" }
 oak_functions_abi = { path = "./oak_functions_abi" }
 oak_functions_client = { path = "./oak_functions_client" }
-oak_functions_extension = { path = "./oak_functions/extension" }
 oak_functions_lookup = { path = "./oak_functions/lookup" }
 oak_functions_sdk = { path = "./oak_functions_sdk" }
 oak_functions_service = { path = "./oak_functions_service", default-features = false }
 oak_functions_test_utils = { path = "./oak_functions_test_utils" }
-oak_functions_testing_extension = { path = "./oak_functions/testing" }
 oak_functions_wasm = { path = "./oak_functions/wasm" }
-oak_functions_workload_logging = { path = "./oak_functions/workload_logging" }
 oak_grpc_utils = { path = "./oak_grpc_utils" }
 oak_launcher_utils = { path = "./oak_launcher_utils" }
 oak_linux_boot_params = { path = "./linux_boot_params" }

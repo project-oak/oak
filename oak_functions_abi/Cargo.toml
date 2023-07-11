@@ -8,10 +8,6 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = { version = "*", default-features = false }
 prost = { workspace = true }
-serde = { version = "*", default-features = false, features = [
-  "alloc",
-  "derive"
-] }
 strum = { version = "*", default-features = false, features = ["derive"] }
 static_assertions = "*"
 

@@ -31,3 +31,20 @@ pub trait OakLogger: Send + Sync + Clone {
     /// contain any information that could have been derived from sensitive or non-public data.
     fn log_public(&self, level: Level, message: &str);
 }
+
+/// Temporary OakLogger implementation using the `log` crate.
+///
+/// TODO(#2783): Replace with redesigned logger implementation.
+#[derive(Clone, Default)]
+pub struct StandaloneLogger {}
+
+// TODO(#2783): Implement a logger that differentiates between public and sensitive loges.
+impl OakLogger for StandaloneLogger {
+    fn log_sensitive(&self, level: Level, message: &str) {
+        log::log!(level, "{}", message,);
+    }
+
+    fn log_public(&self, level: Level, message: &str) {
+        log::log!(level, "{}", message,);
+    }
+}

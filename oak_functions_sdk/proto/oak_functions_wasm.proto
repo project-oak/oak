@@ -1,0 +1,97 @@
+//
+// Copyright 2022 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.functions.wasm.v1;
+
+import "google/protobuf/wrappers.proto";
+
+// The standard API for Oak Functions, which is exposed to Wasm modules via micro RPC, and wrapped
+// by the Oak Functions SDK.
+//
+// Other forks of Oak Functions may customize the API and provide a different set of methods.
+service StdWasmApi {
+  // Read a request from the client.
+  //
+  // This method is idempotent: multiple calls result in the same response.
+  //
+  // method_id: 0
+  rpc ReadRequest(ReadRequestRequest) returns (ReadRequestResponse) {}
+
+  // Write a response for the client.
+  //
+  // Multiple calls overwrite the response, and only the last value is sent to the client.
+  // If the Oak Functions WebAssembly module never invokes this method, the Oak Functions
+  // runtime sends an empty response to the client.
+  //
+  // method_id: 1
+  rpc WriteResponse(WriteResponseRequest) returns (WriteResponseResponse) {}
+
+  // Writes a debug log message.
+  //
+  // These log messages are considered sensitive, so will only be logged by the runtime if running
+  // in debug mode.
+  //
+  // method_id: 2
+  rpc Log(LogRequest) returns (LogResponse) {}
+
+  // Looks up an item from the in-memory key/value lookup store.
+  //
+  // method_id: 3
+  rpc LookupData(LookupDataRequest) returns (LookupDataResponse) {}
+
+  // Test method only.
+  //
+  // method_id: 128
+  rpc Test(TestRequest) returns (TestResponse) {}
+}
+
+message ReadRequestRequest {}
+
+message ReadRequestResponse {
+  bytes body = 1;
+}
+
+message WriteResponseRequest {
+  bytes body = 1;
+}
+
+message WriteResponseResponse {}
+
+message LogRequest {
+  string message = 1;
+}
+
+message LogResponse {}
+
+message LookupDataRequest {
+  bytes key = 1;
+}
+
+message LookupDataResponse {
+  google.protobuf.BytesValue value = 1;
+}
+
+message TestRequest {
+  bytes body = 1;
+  // Whether to echo the message back. If false, the response will be empty.
+  bool echo = 2;
+}
+
+message TestResponse {
+  bytes body = 1;
+}

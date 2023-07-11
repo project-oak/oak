@@ -21,34 +21,6 @@ package oak.functions.abi;
 option java_multiple_files = true;
 option java_package = "oak.functions.abi";
 
-// The `ExtensionHandle` indicates which extension to invoke in the Oak Functions runtime.
-// We assume every extension exposes exactly one method to invoke.
-// `ExtensionHandle`s are exchanged as `i32` values.
-enum ExtensionHandle {
-  INVALID_HANDLE = 0;
-  // Handle for an extension used for testing Wasm modules.
-  TESTING_HANDLE = 1;
-  LOOKUP_HANDLE = 2;
-  LOGGING_HANDLE = 3;
-  // We must not add a handle for updating lookup data to maintain invariant [that there is no such
-  // method](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-request-cannot-trigger-update)
-}
-
-// Status values exchanged as i32 values across the Node Wasm interface.
-enum OakStatus {
-  UNSPECIFIED = 0;
-  // Success.
-  OK = 1;
-  // Arguments invalid, e.g. deserializing the request in the Oak Functions runtime failed.
-  ERR_INVALID_ARGS = 2;
-  // Internal error, e.g. serializing the response in the Oak Functions runtime failed.
-  ERR_INTERNAL = 3;
-  // Error when the given number is not a valid handle.
-  ERR_INVALID_HANDLE = 4;
-  // Error when serializing the request or deserializing the response fails in the Wasm module.
-  ERR_SERIALIZING = 5;
-}
-
 // The client can check the configuration report for the configuration of the Oak Functions runtime.
 message ConfigurationReport {
   // Hash of the loaded Wasm module.

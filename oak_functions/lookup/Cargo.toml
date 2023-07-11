@@ -9,10 +9,7 @@ license = "Apache-2.0"
 default = []
 
 [dependencies]
-anyhow = { version = "*", default-features = false }
 hashbrown = "*"
 log = "*"
 oak_logger = { workspace = true }
-oak_functions_abi = { workspace = true }
-oak_functions_extension = { workspace = true }
 spinning_top = "*"

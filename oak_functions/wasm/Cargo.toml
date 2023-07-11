@@ -13,11 +13,11 @@ log = "*"
 micro_rpc = { workspace = true }
 oak_logger = { workspace = true }
 oak_functions_abi = { workspace = true }
-oak_functions_extension = { workspace = true }
+oak_functions_lookup = { workspace = true }
+oak_functions_sdk = { workspace = true }
+spinning_top = "*"
 # Use wasmi in `no_std` mode.
 wasmi = { version = "*", default-features = false }
 
 [dev-dependencies]
-bincode = "*"
-oak_functions_testing_extension = { workspace = true }
 oak_functions_test_utils = { workspace = true }
