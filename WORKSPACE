@@ -18,22 +18,6 @@ workspace(name = "oak")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-# Google Protocol Buffers.
-# https://github.com/protocolbuffers/protobuf
-http_archive(
-    name = "com_google_protobuf",
-    sha256 = "3a5f47ad3aa10192c5577ff086b24b9739a36937c34ceab6db912a16a3ef7f8e",
-    strip_prefix = "protobuf-23.3",
-    urls = [
-        # Protocol Buffers v23.3 (2023-06-14).
-        "https://github.com/protocolbuffers/protobuf/releases/download/v23.3/protobuf-23.3.tar.gz",
-    ],
-)
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-protobuf_deps()
-
 # Google Abseil.
 # https://github.com/abseil/abseil-cpp
 http_archive(
@@ -105,6 +89,24 @@ http_archive(
 load("@io_grpc_grpc_java//:repositories.bzl", "IO_GRPC_GRPC_JAVA_ARTIFACTS", "IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS", "grpc_java_repositories")
 
 grpc_java_repositories()
+
+# Google Protocol Buffers.
+# https://github.com/protocolbuffers/protobuf
+#
+# Protobuf should be loaded after `grpc_deps` in the WORKSPACE file
+http_archive(
+    name = "com_google_protobuf",
+    sha256 = "3a5f47ad3aa10192c5577ff086b24b9739a36937c34ceab6db912a16a3ef7f8e",
+    strip_prefix = "protobuf-23.3",
+    urls = [
+        # Protocol Buffers v23.3 (2023-06-14).
+        "https://github.com/protocolbuffers/protobuf/releases/download/v23.3/protobuf-23.3.tar.gz",
+    ],
+)
+
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()
 
 # External Java rules.
 # https://github.com/bazelbuild/rules_jvm_external
