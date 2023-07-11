@@ -160,7 +160,7 @@
                     TrustedApplicationClient::get_stream_with_trusted_app(cid, port)
                 }))
                 .<span class="kw">await
-                </span>.context(<span class="string">&quot;couldn&#39;t connect to VSOCK socket&quot;</span>)<span class="question-mark">?</span>;
+                </span>.context(<span class="string">&quot;couldn&#39;t connect to untrusted app VSOCK socket&quot;</span>)<span class="question-mark">?</span>;
             GrpcTrustedApplicationClient::new(channel)
         };
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ inner })

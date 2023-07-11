@@ -86,7 +86,7 @@
 
 <span class="attr">#[derive(Parser, Debug)]
 </span><span class="kw">pub struct </span>Args {
-    <span class="attr">#[arg(long, required = <span class="bool-val">true</span>)]
+    <span class="attr">#[arg(long, default_value_t = <span class="number">8080</span>)]
     </span>port: u16,
     <span class="attr">#[arg(long, required = <span class="bool-val">true</span>, value_parser = path_exists,)]
     </span>system_image: std::path::PathBuf,

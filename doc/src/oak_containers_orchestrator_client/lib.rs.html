@@ -92,26 +92,6 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -146,14 +126,7 @@
 };
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>proto::oak::containers::launcher_client::LauncherClient <span class="kw">as </span>GrpcLauncherClient;
-<span class="kw">use </span>tokio_vsock::VsockStream;
-<span class="kw">use </span>tonic::transport::{Endpoint, Uri};
-<span class="kw">use </span>tower::service_fn;
-
-<span class="comment">// Virtio VSOCK does not use URIs, hence this URI will never be used.
-// It is defined purely since in order to create a channel, since a URI has to
-// be supplied to create an `Endpoint`.
-</span><span class="kw">static </span>IGNORED_ENDPOINT_URI: <span class="kw-2">&amp;</span>str = <span class="string">&quot;file://[::]:0&quot;</span>;
+<span class="kw">use </span>tonic::transport::Channel;
 
 <span class="doccomment">/// Utility struct used to interface with the launcher
 </span><span class="kw">pub struct </span>LauncherClient {
@@ -161,21 +134,8 @@
 }
 
 <span class="kw">impl </span>LauncherClient {
-    <span class="kw">pub async fn </span>create(
-        launcher_vsock_cid: u32,
-        launcher_vsock_port: u32,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
-        <span class="kw">let </span>inner: GrpcLauncherClient&lt;tonic::transport::channel::Channel&gt; = {
-            <span class="kw">let </span>channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
-                .context(<span class="string">&quot;couldn&#39;t form endpoint&quot;</span>)<span class="question-mark">?
-                </span>.connect_with_connector(service_fn(<span class="kw">move </span>|<span class="kw">_</span>: Uri| {
-                    VsockStream::connect(launcher_vsock_cid, launcher_vsock_port)
-                }))
-                .<span class="kw">await
-                </span>.context(<span class="string">&quot;couldn&#39;t connect to VSOCK socket&quot;</span>)<span class="question-mark">?</span>;
-
-            GrpcLauncherClient::new(channel)
-        };
+    <span class="kw">pub async fn </span>create(addr: tonic::transport::Uri) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+        <span class="kw">let </span>inner = GrpcLauncherClient::&lt;Channel&gt;::connect(addr).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ inner })
     }
 

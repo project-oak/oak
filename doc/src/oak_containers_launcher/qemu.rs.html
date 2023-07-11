@@ -183,6 +183,16 @@
 <a href="#183" id="183">183</a>
 <a href="#184" id="184">184</a>
 <a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -290,6 +300,16 @@
         }
         cmd.args([<span class="string">&quot;-netdev&quot;</span>, <span class="string">&quot;user,id=netdev&quot;</span>]);
         cmd.args([<span class="string">&quot;-device&quot;</span>, <span class="string">&quot;virtio-net,netdev=netdev&quot;</span>]);
+        <span class="comment">// Set up the virtio-vsock device, as it is used by the example app.
+        // TODO(#709): Remove this and use networking for there as well.
+        </span>cmd.args([
+            <span class="string">&quot;-device&quot;</span>,
+            <span class="macro">format!</span>(
+                <span class="string">&quot;vhost-vsock-pci,id=vhost-vsock-pci0,guest-cid={}&quot;</span>,
+                std::process::id()
+            )
+            .as_str(),
+        ]);
         <span class="comment">// And yes, use stage0 as the BIOS.
         </span>cmd.args([
             <span class="string">&quot;-bios&quot;</span>,
