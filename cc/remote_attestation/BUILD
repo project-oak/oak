@@ -27,3 +27,14 @@ cc_library(
         "@com_google_absl//absl/status",
     ],
 )
+
+cc_library(
+    name = "insecure_attestation_verifier",
+    srcs = ["insecure_attestation_verifier.cc"],
+    hdrs = ["insecure_attestation_verifier.h"],
+    deps = [
+        ":attestation_verifier",
+        "//oak_remote_attestation/proto/v1:messages_cc_proto",
+        "@com_google_absl//absl/status",
+    ],
+)
