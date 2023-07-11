@@ -103,8 +103,10 @@ impl Qemu {
             ]);
             cmd.args(["-serial", "chardev:consock"]);
         }
+        // Set up the networking. `rombar=0` is so that QEMU wouldn't bother with the
+        // `efi-virtio.rom` file, as we're not using EFI anyway.
         cmd.args(["-netdev", "user,id=netdev"]);
-        cmd.args(["-device", "virtio-net,netdev=netdev"]);
+        cmd.args(["-device", "virtio-net,netdev=netdev,rombar=0"]);
         // Set up the virtio-vsock device, as it is used by the example app.
         // TODO(#709): Remove this and use networking for there as well.
         cmd.args([
