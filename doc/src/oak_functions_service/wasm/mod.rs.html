@@ -30,10 +30,6 @@
 <a href="#30" id="30">30</a>
 <a href="#31" id="31">31</a>
 <a href="#32" id="32">32</a>
-<a href="#33" id="33">33</a>
-<a href="#34" id="34">34</a>
-<a href="#35" id="35">35</a>
-<a href="#36" id="36">36</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -50,11 +46,10 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::logger::StandaloneLogger;
-<span class="kw">use </span>alloc::{sync::Arc, vec};
-<span class="kw">use </span>oak_functions_lookup::{LookupDataManager, LookupFactory};
-<span class="kw">use </span>oak_functions_wasm::WasmHandler;
-<span class="kw">use </span>oak_functions_workload_logging::WorkloadLoggingFactory;
+</span><span class="kw">use </span>alloc::sync::Arc;
+<span class="kw">use </span>oak_functions_lookup::LookupDataManager;
+<span class="kw">use </span>oak_functions_wasm::{api::StdWasmApiFactory, WasmHandler};
+<span class="kw">use </span>oak_logger::StandaloneLogger;
 
 <span class="doccomment">/// Creates a new `WasmHandler` instance.
 </span><span class="kw">pub fn </span>new_wasm_handler(
@@ -62,12 +57,9 @@
     lookup_data_manager: Arc&lt;LookupDataManager&lt;StandaloneLogger&gt;&gt;,
 ) -&gt; anyhow::Result&lt;WasmHandler&lt;StandaloneLogger&gt;&gt; {
     <span class="kw">let </span>logger = StandaloneLogger::default();
-    <span class="kw">let </span>logging_factory = WorkloadLoggingFactory::new_boxed_extension_factory(logger.clone())<span class="question-mark">?</span>;
-    <span class="kw">let </span>lookup_factory = LookupFactory::new_boxed_extension_factory(lookup_data_manager)<span class="question-mark">?</span>;
-    WasmHandler::create(
-        wasm_module_bytes,
-        <span class="macro">vec!</span>[logging_factory, lookup_factory],
-        logger,
-    )
+    <span class="kw">let </span>wasm_api_factory = StdWasmApiFactory {
+        lookup_data_manager,
+    };
+    WasmHandler::create(wasm_module_bytes, Arc::new(wasm_api_factory), logger)
 }
 </code></pre></div></section></main></body></html>

@@ -194,7 +194,7 @@
         <span class="macro">assert_matches!</span>(result, <span class="prelude-val">Ok</span>(<span class="kw">_</span>));
     }
 
-    <span class="doccomment">/// Tests that a second call to [`oak_functions_abi::read_request`] returns the same value.
+    <span class="doccomment">/// Tests that a second call to [`oak_functions_sdk::read_request`] returns the same value.
     </span><span class="kw">fn </span>test_double_read(first_request_body: <span class="kw-2">&amp;</span>str) {
         <span class="kw">let </span>second_read_request =
             oak_functions_sdk::read_request().expect(<span class="string">&quot;couldn&#39;t read second request&quot;</span>);
@@ -203,7 +203,7 @@
         </span>oak_functions_sdk::write_response(<span class="string">b&quot;DoubleReadResponse&quot;</span>).expect(<span class="string">&quot;couldn&#39;t write response&quot;</span>)
     }
 
-    <span class="doccomment">/// Tests that multiple calls to [`oak_functions_abi::write_response`] will replace the earlier
+    <span class="doccomment">/// Tests that multiple calls to [`oak_functions_sdk::write_response`] will replace the earlier
     /// responses. The response body has to be checked in the integration test.
     </span><span class="kw">fn </span>test_double_write(_request: <span class="kw-2">&amp;</span>str) {
         <span class="comment">// First response contains a different value.
@@ -213,7 +213,7 @@
             .expect(<span class="string">&quot;couldn&#39;t write second response&quot;</span>);
     }
 
-    <span class="comment">// TODO(#2417): Test logging of `write_log_message`
+    <span class="comment">// TODO(#2417): Test logging of [`oak_functions_sdk::write_log_message`]
     </span><span class="kw">fn </span>test_write_log(request: <span class="kw-2">&amp;</span>str) {
         <span class="kw">let </span>result = oak_functions_sdk::write_log_message(request);
         <span class="macro">assert_matches!</span>(result, <span class="prelude-val">Ok</span>(<span class="kw">_</span>));
@@ -221,7 +221,7 @@
         <span class="macro">assert_matches!</span>(result, <span class="prelude-val">Ok</span>(<span class="kw">_</span>));
     }
 
-    <span class="doccomment">/// Tests `storage_get_item` when the key is in the lookup data. The lookup
+    <span class="doccomment">/// Tests [`oak_functions_sdk::storage_get_item`] when the key is in the lookup data. The lookup
     /// data is set in the integration test. The value has to be checked in the integration
     /// test.
     </span><span class="kw">fn </span>test_storage_get(key: <span class="kw-2">&amp;</span>str) {
@@ -233,9 +233,9 @@
         oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>value.unwrap()).expect(<span class="string">&quot;couldn&#39;t write response&quot;</span>);
     }
 
-    <span class="doccomment">/// Tests `storage_get_item` when the key is not in the lookup data. The lookup data is set in
-    /// the integration test. When no value is found, `oak_functions_sdk::storage_get_item` returns
-    /// None.
+    <span class="doccomment">/// Tests [`oak_functions_sdk::storage_get_item`] when the key is not in the lookup data. The
+    /// lookup data is set in the integration test. When no value is found,
+    /// [`oak_functions_sdk::storage_get_item`] returns None.
     </span><span class="kw">fn </span>test_storage_get_item_not_found(key: <span class="kw-2">&amp;</span>str) {
         <span class="kw">let </span>value = oak_functions_sdk::storage_get_item(key.as_bytes());
         <span class="kw">let </span>response_msg = <span class="kw">match </span>value {
@@ -250,8 +250,8 @@
         oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>response_msg).expect(<span class="string">&quot;couldn&#39;t write response&quot;</span>)
     }
 
-    <span class="doccomment">/// Tests `storage_get_item` when the key is large. The lookup data is set in
-    /// the integration test.
+    <span class="doccomment">/// Tests [`oak_functions_sdk::storage_get_item`] when the key is large. The lookup data is set
+    /// in the integration test.
     </span><span class="kw">fn </span>test_storage_get_item_huge_key(_key: <span class="kw-2">&amp;</span>str) {
         <span class="comment">// Easier to ignore key from request, just create the same as in the integration test.
         </span><span class="kw">let </span>key: Vec&lt;u8&gt; = <span class="macro">vec!</span>[<span class="number">42u8</span>; <span class="number">1 </span>&lt;&lt; <span class="number">20</span>];

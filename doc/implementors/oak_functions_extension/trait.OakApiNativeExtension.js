@@ -1,4 +1,0 @@
-(function() {var implementors = {
-"oak_functions_lookup":[["impl&lt;L: OakLogger&gt; OakApiNativeExtension for <a class=\"struct\" href=\"oak_functions_lookup/struct.LookupData.html\" title=\"struct oak_functions_lookup::LookupData\">LookupData</a>&lt;L&gt;"]],
-"oak_functions_workload_logging":[["impl&lt;L: OakLogger&gt; OakApiNativeExtension for <a class=\"struct\" href=\"oak_functions_workload_logging/struct.WorkloadLogger.html\" title=\"struct oak_functions_workload_logging::WorkloadLogger\">WorkloadLogger</a>&lt;L&gt;"]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

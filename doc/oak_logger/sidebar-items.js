@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Level"],"trait":["OakLogger"]};
+window.SIDEBAR_ITEMS = {"enum":["Level"],"struct":["StandaloneLogger"],"trait":["OakLogger"]};

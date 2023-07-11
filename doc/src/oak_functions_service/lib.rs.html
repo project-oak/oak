@@ -185,7 +185,6 @@
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -216,11 +215,12 @@
         }
     }
 }
-<span class="kw">mod </span>logger;
+
 <span class="kw">mod </span>wasm;
 
 <span class="kw">use </span>alloc::{boxed::Box, format, sync::Arc};
 <span class="kw">use </span>oak_functions_lookup::LookupDataManager;
+<span class="kw">use </span>oak_logger::StandaloneLogger;
 <span class="kw">use </span>oak_remote_attestation::{
     attester::AttestationReportGenerator,
     handler::{AttestationHandler, AttestationSessionHandler},
@@ -232,8 +232,6 @@
     PublicKeyInfo,
 };
 
-<span class="kw">pub use </span><span class="kw">crate</span>::logger::StandaloneLogger;
-
 <span class="kw">enum </span>InitializationState {
     Uninitialized,
     Initialized(Box&lt;<span class="kw">dyn </span>AttestationHandler&gt;),
@@ -242,7 +240,7 @@
 <span class="kw">pub struct </span>OakFunctionsService {
     attestation_report_generator: Arc&lt;<span class="kw">dyn </span>AttestationReportGenerator&gt;,
     initialization_state: InitializationState,
-    lookup_data_manager: Arc&lt;LookupDataManager&lt;logger::StandaloneLogger&gt;&gt;,
+    lookup_data_manager: Arc&lt;LookupDataManager&lt;StandaloneLogger&gt;&gt;,
 }
 
 <span class="kw">impl </span>OakFunctionsService {

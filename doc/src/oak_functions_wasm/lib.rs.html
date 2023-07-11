@@ -504,95 +504,6 @@
 <a href="#504" id="504">504</a>
 <a href="#505" id="505">505</a>
 <a href="#506" id="506">506</a>
-<a href="#507" id="507">507</a>
-<a href="#508" id="508">508</a>
-<a href="#509" id="509">509</a>
-<a href="#510" id="510">510</a>
-<a href="#511" id="511">511</a>
-<a href="#512" id="512">512</a>
-<a href="#513" id="513">513</a>
-<a href="#514" id="514">514</a>
-<a href="#515" id="515">515</a>
-<a href="#516" id="516">516</a>
-<a href="#517" id="517">517</a>
-<a href="#518" id="518">518</a>
-<a href="#519" id="519">519</a>
-<a href="#520" id="520">520</a>
-<a href="#521" id="521">521</a>
-<a href="#522" id="522">522</a>
-<a href="#523" id="523">523</a>
-<a href="#524" id="524">524</a>
-<a href="#525" id="525">525</a>
-<a href="#526" id="526">526</a>
-<a href="#527" id="527">527</a>
-<a href="#528" id="528">528</a>
-<a href="#529" id="529">529</a>
-<a href="#530" id="530">530</a>
-<a href="#531" id="531">531</a>
-<a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a>
-<a href="#535" id="535">535</a>
-<a href="#536" id="536">536</a>
-<a href="#537" id="537">537</a>
-<a href="#538" id="538">538</a>
-<a href="#539" id="539">539</a>
-<a href="#540" id="540">540</a>
-<a href="#541" id="541">541</a>
-<a href="#542" id="542">542</a>
-<a href="#543" id="543">543</a>
-<a href="#544" id="544">544</a>
-<a href="#545" id="545">545</a>
-<a href="#546" id="546">546</a>
-<a href="#547" id="547">547</a>
-<a href="#548" id="548">548</a>
-<a href="#549" id="549">549</a>
-<a href="#550" id="550">550</a>
-<a href="#551" id="551">551</a>
-<a href="#552" id="552">552</a>
-<a href="#553" id="553">553</a>
-<a href="#554" id="554">554</a>
-<a href="#555" id="555">555</a>
-<a href="#556" id="556">556</a>
-<a href="#557" id="557">557</a>
-<a href="#558" id="558">558</a>
-<a href="#559" id="559">559</a>
-<a href="#560" id="560">560</a>
-<a href="#561" id="561">561</a>
-<a href="#562" id="562">562</a>
-<a href="#563" id="563">563</a>
-<a href="#564" id="564">564</a>
-<a href="#565" id="565">565</a>
-<a href="#566" id="566">566</a>
-<a href="#567" id="567">567</a>
-<a href="#568" id="568">568</a>
-<a href="#569" id="569">569</a>
-<a href="#570" id="570">570</a>
-<a href="#571" id="571">571</a>
-<a href="#572" id="572">572</a>
-<a href="#573" id="573">573</a>
-<a href="#574" id="574">574</a>
-<a href="#575" id="575">575</a>
-<a href="#576" id="576">576</a>
-<a href="#577" id="577">577</a>
-<a href="#578" id="578">578</a>
-<a href="#579" id="579">579</a>
-<a href="#580" id="580">580</a>
-<a href="#581" id="581">581</a>
-<a href="#582" id="582">582</a>
-<a href="#583" id="583">583</a>
-<a href="#584" id="584">584</a>
-<a href="#585" id="585">585</a>
-<a href="#586" id="586">586</a>
-<a href="#587" id="587">587</a>
-<a href="#588" id="588">588</a>
-<a href="#589" id="589">589</a>
-<a href="#590" id="590">590</a>
-<a href="#591" id="591">591</a>
-<a href="#592" id="592">592</a>
-<a href="#593" id="593">593</a>
-<a href="#594" id="594">594</a>
-<a href="#595" id="595">595</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -612,24 +523,24 @@
 </span><span class="doccomment">//! Wasm business logic provider based on [Wasmi](https://github.com/paritytech/wasmi).
 
 </span><span class="attr">#![no_std]
+#![feature(never_type)]
+#![feature(unwrap_infallible)]
 
 </span><span class="kw">extern crate </span>alloc;
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">extern crate </span>std;
 
+<span class="kw">pub mod </span>api;
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests;
 
 <span class="kw">use </span>alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 <span class="kw">use </span>byteorder::{ByteOrder, LittleEndian};
-<span class="kw">use </span>hashbrown::HashMap;
-<span class="kw">use </span>oak_functions_abi::{
-    proto::{ExtensionHandle, OakStatus},
-    Request, Response, StatusCode,
-};
-<span class="kw">use </span>oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
+<span class="kw">use </span>micro_rpc::StatusCode;
+<span class="kw">use </span>oak_functions_abi::{Request, Response};
 <span class="kw">use </span>oak_logger::{Level, OakLogger};
+<span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>wasmi::{MemoryType, Store};
 
 <span class="doccomment">/// Fixed name of the function to start a Wasm. Every Oak Wasm module must provide this function.
@@ -648,15 +559,11 @@
 </span><span class="kw">pub type </span>AbiPointer = u32;
 <span class="doccomment">/// Type aliases for offsets in Wasm linear memory.
 </span><span class="kw">pub type </span>AbiPointerOffset = u32;
-<span class="doccomment">/// Type alias for the ExtensionHandle type, which must be cast into a ExtensionHandle.
-</span><span class="kw">pub type </span>AbiExtensionHandle = i32;
 
 <span class="doccomment">/// `UserState` holds the user request bytes and response bytes for a particular execution of an Oak
 /// Wasm module. The `UserState` also holds a reference to the logger and the enabled extensions.
 </span><span class="kw">pub struct </span>UserState&lt;L: OakLogger&gt; {
-    request_bytes: Vec&lt;u8&gt;,
-    response_bytes: Vec&lt;u8&gt;,
-    extensions: HashMap&lt;ExtensionHandle, Box&lt;<span class="kw">dyn </span>OakApiNativeExtension&gt;&gt;,
+    wasm_api_transport: Box&lt;<span class="kw">dyn </span>micro_rpc::Transport&lt;Error = !&gt;&gt;,
     logger: L,
 }
 
@@ -689,58 +596,16 @@
     <span class="doccomment">/// Stores the user request bytes, extensions, and logger. The response bytes are initialized
     /// with the empty response because every request needs to have a response and we fixed the
     /// empty response as the default response.
-    </span><span class="kw">fn </span>new(
-        request_bytes: Vec&lt;u8&gt;,
-        extensions: HashMap&lt;ExtensionHandle, Box&lt;<span class="kw">dyn </span>OakApiNativeExtension&gt;&gt;,
-        logger: L,
-    ) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">fn </span>new(wasm_api_transport: Box&lt;<span class="kw">dyn </span>micro_rpc::Transport&lt;Error = !&gt;&gt;, logger: L) -&gt; <span class="self">Self </span>{
         UserState {
-            request_bytes,
-            response_bytes: Vec::new(),
-            extensions,
+            wasm_api_transport,
             logger,
         }
-    }
-
-    <span class="comment">// Get the extension for the given handle.
-    </span><span class="kw">fn </span>get_extension(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        handle: AbiExtensionHandle,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;mut </span>Box&lt;<span class="kw">dyn </span>OakApiNativeExtension&gt;, OakStatus&gt; {
-        <span class="kw">let </span>handle: ExtensionHandle = ExtensionHandle::from_i32(handle).ok_or_else(|| {
-            <span class="self">self</span>.log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;failed to convert handle {:?} from i32.&quot;</span>, handle));
-            OakStatus::ErrInvalidHandle
-        })<span class="question-mark">?</span>;
-
-        <span class="kw">let </span>extensions = <span class="kw-2">&amp;mut </span><span class="self">self</span>.extensions;
-        <span class="kw">let </span>logger = <span class="kw-2">&amp;</span><span class="self">self</span>.logger;
-
-        extensions.get_mut(<span class="kw-2">&amp;</span>handle).ok_or_else(|| {
-            logger.log_sensitive(
-                Level::Error,
-                <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;can&#39;t find extension with handle {:?}.&quot;</span>, handle),
-            );
-            OakStatus::ErrInvalidHandle
-        })
     }
 
     <span class="comment">// Use an `OakLogger` to log.
     </span><span class="kw">fn </span>log_error(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>str) {
         <span class="self">self</span>.logger.log_sensitive(Level::Error, message)
-    }
-}
-
-<span class="kw">impl</span>&lt;L&gt; alloc::fmt::Debug <span class="kw">for </span>UserState&lt;L&gt;
-<span class="kw">where
-    </span>L: OakLogger,
-{
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, formatter: <span class="kw-2">&amp;mut </span>::core::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; ::core::fmt::Result {
-        formatter
-            .debug_struct(<span class="string">&quot;UserState&quot;</span>)
-            .field(<span class="string">&quot;request_bytes&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.request_bytes)
-            .field(<span class="string">&quot;response_bytes&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.response_bytes)
-            .field(<span class="string">&quot;extensions&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.extensions)
-            .finish()
     }
 }
 
@@ -774,57 +639,11 @@
         linker
             .func_wrap(
                 OAK_FUNCTIONS,
-                <span class="comment">// Corresponds to the OAK_FUNCTIONS ABI function [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
-                </span><span class="string">&quot;read_request&quot;</span>,
-                <span class="comment">// The types in the signatures correspond to the parameters from
-                // oak_functions_abi/src/lib.rs.
-                </span>|caller: wasmi::Caller&lt;<span class="lifetime">&#39;_</span>, UserState&lt;L&gt;&gt;,
-                 buf_ptr_ptr: AbiPointer,
-                 buf_len_ptr: AbiPointer| {
-                    <span class="kw">let </span><span class="kw-2">mut </span>caller = <span class="kw">match </span>OakCaller::new(caller) {
-                        <span class="prelude-val">Ok</span>(caller) =&gt; caller,
-                        <span class="prelude-val">Err</span>(oak_status) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(oak_status <span class="kw">as </span>i32),
-                    };
-
-                    <span class="kw">let </span>request_bytes = caller.data().request_bytes.clone();
-                    <span class="kw">let </span>status = caller.alloc_and_write(buf_ptr_ptr, buf_len_ptr, request_bytes);
-                    from_oak_status(status)
-                },
-            )
-            .expect(<span class="string">&quot;failed to define read_request in linker&quot;</span>);
-
-        linker
-            .func_wrap(
-                OAK_FUNCTIONS,
-                <span class="comment">// Corresponds to the OAK_FUNCTIONS ABI function [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
-                </span><span class="string">&quot;write_response&quot;</span>,
-                <span class="comment">// The types in the signatures correspond to the parameters from
-                // oak_functions_abi/src/lib.rs.
-                </span>|caller: wasmi::Caller&lt;<span class="lifetime">&#39;_</span>, UserState&lt;L&gt;&gt;,
-                 buf_ptr: AbiPointer,
-                 buf_len: AbiPointerOffset| {
-                    <span class="kw">let </span><span class="kw-2">mut </span>caller = <span class="kw">match </span>OakCaller::new(caller) {
-                        <span class="prelude-val">Ok</span>(caller) =&gt; caller,
-                        <span class="prelude-val">Err</span>(oak_status) =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(oak_status <span class="kw">as </span>i32),
-                    };
-
-                    <span class="kw">let </span>status = caller.read_buffer(buf_ptr, buf_len).map(|buffer| {
-                        caller.data_mut().response_bytes = buffer;
-                    });
-                    from_oak_status(status)
-                },
-            )
-            .expect(<span class="string">&quot;failed to define write_response in linker&quot;</span>);
-
-        linker
-            .func_wrap(
-                OAK_FUNCTIONS,
                 <span class="comment">// Corresponds to the OAK_FUNCTIONS ABI function [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#invoke).
                 </span><span class="string">&quot;invoke&quot;</span>,
                 <span class="comment">// The types in the signatures correspond to the parameters from
                 // oak_functions_abi/src/lib.rs.
                 </span>|caller: wasmi::Caller&lt;<span class="lifetime">&#39;_</span>, UserState&lt;L&gt;&gt;,
-                 handle: AbiExtensionHandle,
                  request_ptr: AbiPointer,
                  request_len: AbiPointerOffset,
                  response_ptr_ptr: AbiPointer,
@@ -838,18 +657,17 @@
                         .read_buffer(request_ptr, request_len)
                         .map_err(|err| {
                             caller.caller.data().log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                                <span class="string">&quot;Handle {:?}: Unable to read input from guest memory: {:?}&quot;</span>,
-                                handle, err
+                                <span class="string">&quot;Unable to read input from guest memory: {:?}&quot;</span>,
+                                err
                             ));
                             err
                         })
                         .and_then(|request| {
                             <span class="kw">let </span>user_state = caller.data_mut();
-                            <span class="kw">let </span>extension = user_state.get_extension(handle)<span class="question-mark">?</span>;
-                            <span class="kw">let </span>response = extension.invoke(request)<span class="question-mark">?</span>;
+                            <span class="kw">let </span>response = user_state.wasm_api_transport.invoke(<span class="kw-2">&amp;</span>request).into_ok();
                             caller.alloc_and_write(response_ptr_ptr, response_len_ptr, response)
                         });
-                    from_oak_status(status)
+                    from_status_code(status)
                 },
             )
             .expect(<span class="string">&quot;failed to define invoke in linker&quot;</span>);
@@ -953,20 +771,20 @@
 <span class="kw">where
     </span>L: OakLogger,
 {
-    <span class="kw">fn </span>new(caller: wasmi::Caller&lt;<span class="lifetime">&#39;a</span>, UserState&lt;L&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, OakStatus&gt; {
+    <span class="kw">fn </span>new(caller: wasmi::Caller&lt;<span class="lifetime">&#39;a</span>, UserState&lt;L&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, StatusCode&gt; {
         <span class="comment">// Get typed `alloc` to store.
         </span><span class="kw">let </span>ext = caller.get_export(ALLOC_FUNCTION_NAME).ok_or_else(|| {
             caller
                 .data()
                 .log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;failed to get exported {}&quot;</span>, ALLOC_FUNCTION_NAME));
-            OakStatus::ErrInternal
+            StatusCode::Internal
         })<span class="question-mark">?</span>;
 
         <span class="kw">let </span>alloc = ext.into_func().ok_or_else(|| {
             caller
                 .data()
                 .log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;exported {} is not a func&quot;</span>, ALLOC_FUNCTION_NAME));
-            OakStatus::ErrInternal
+            StatusCode::Internal
         })<span class="question-mark">?</span>;
 
         <span class="kw">let </span>typed_alloc = alloc.typed(<span class="kw-2">&amp;</span>caller).ok().ok_or_else(|| {
@@ -974,7 +792,7 @@
                 <span class="string">&quot;exported {} could not be typed&quot;</span>,
                 ALLOC_FUNCTION_NAME
             ));
-            OakStatus::ErrInternal
+            StatusCode::Internal
         })<span class="question-mark">?</span>;
 
         <span class="comment">// Get memory to store.
@@ -982,14 +800,14 @@
             caller
                 .data()
                 .log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;failed to get exported {}&quot;</span>, MEMORY_NAME));
-            OakStatus::ErrInternal
+            StatusCode::Internal
         })<span class="question-mark">?</span>;
 
         <span class="kw">let </span>memory = ext.into_memory().ok_or_else(|| {
             caller
                 .data()
                 .log_error(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;exported {} is not a memory&quot;</span>, MEMORY_NAME));
-            OakStatus::ErrInternal
+            StatusCode::Internal
         })<span class="question-mark">?</span>;
 
         <span class="kw">let </span>caller = OakCaller {
@@ -1006,7 +824,7 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         buf_ptr: AbiPointer,
         buf_len: AbiPointerOffset,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, OakStatus&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, StatusCode&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">alloc::vec!</span>[<span class="number">0</span>; buf_len <span class="kw">as </span>usize];
         <span class="kw">let </span>buf_ptr = buf_ptr
             .try_into()
@@ -1018,7 +836,7 @@
                     <span class="string">&quot;Unable to read buffer from guest memory: {:?}&quot;</span>,
                     err
                 ));
-                OakStatus::ErrInvalidArgs
+                StatusCode::InvalidArgument
             })<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(buf)
     }
@@ -1030,7 +848,7 @@
         buf_ptr_ptr: AbiPointer,
         buf_ptr_len: AbiPointer,
         buf: Vec&lt;u8&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), StatusCode&gt; {
         <span class="kw">let </span>len = buf.len() <span class="kw">as </span>i32;
 
         <span class="comment">// Allocate the memory from the Wasm module.
@@ -1049,7 +867,7 @@
 
     <span class="doccomment">/// Helper function to write the buffer `source` at the address `dest` of the Wasm memory, if
     /// `source` fits in the allocated memory.
-    </span><span class="kw">pub fn </span>write_buffer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, source: <span class="kw-2">&amp;</span>[u8], dest: AbiPointer) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
+    </span><span class="kw">pub fn </span>write_buffer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, source: <span class="kw-2">&amp;</span>[u8], dest: AbiPointer) -&gt; <span class="prelude-ty">Result</span>&lt;(), StatusCode&gt; {
         <span class="kw">let </span>dest = dest
             .try_into()
             .expect(<span class="string">&quot;failed to convert AbiPointer to usize as required by wasmi API&quot;</span>);
@@ -1060,12 +878,12 @@
                     <span class="string">&quot;Unable to write buffer into guest memory: {:?}&quot;</span>,
                     err
                 ));
-                OakStatus::ErrInvalidArgs
+                StatusCode::InvalidArgument
             })
     }
 
     <span class="doccomment">/// Helper function to write the u32 `value` at the `address` of the Wasm memory.
-    </span><span class="kw">fn </span>write_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32, address: AbiPointer) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
+    </span><span class="kw">fn </span>write_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u32, address: AbiPointer) -&gt; <span class="prelude-ty">Result</span>&lt;(), StatusCode&gt; {
         <span class="kw">let </span>value_bytes = <span class="kw-2">&amp;mut </span>[<span class="number">0</span>; <span class="number">4</span>];
         LittleEndian::write_u32(value_bytes, value);
         <span class="self">self</span>.write_buffer(value_bytes, address).map_err(|err| {
@@ -1073,7 +891,7 @@
                 <span class="string">&quot;Unable to write u32 value into guest memory: {:?}&quot;</span>,
                 err
             ));
-            OakStatus::ErrInvalidArgs
+            StatusCode::InvalidArgument
         })
     }
 
@@ -1086,12 +904,32 @@
     }
 }
 
-<span class="comment">// An ephemeral request handler with a Wasm module for handling the requests.
+<span class="comment">// A request handler with a Wasm module for handling multiple requests.
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>WasmHandler&lt;L: OakLogger&gt; {
     wasm_module: Arc&lt;wasmi::Module&gt;,
-    extension_factories: Arc&lt;Vec&lt;Box&lt;<span class="kw">dyn </span>ExtensionFactory&lt;L&gt;&gt;&gt;&gt;,
+    wasm_api_factory: Arc&lt;<span class="kw">dyn </span>WasmApiFactory&lt;L&gt;&gt;,
     logger: L,
+}
+
+<span class="doccomment">/// A trait for creating Wasm APIs that can be called from Wasm modules.
+///
+/// An instance of [`WasmApiFactory`] is expected to live for the lifetime of the server, while
+/// each instance of the created [`WasmApi`] is expected to live for the lifetime of a single
+/// request.
+</span><span class="kw">pub trait </span>WasmApiFactory&lt;L: OakLogger&gt; {
+    <span class="kw">fn </span>create_wasm_api(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        request: Vec&lt;u8&gt;,
+        response: Arc&lt;Spinlock&lt;Vec&lt;u8&gt;&gt;&gt;,
+    ) -&gt; Box&lt;<span class="kw">dyn </span>WasmApi&gt;;
+}
+
+<span class="doccomment">/// A trait for Wasm APIs that can be called from Wasm modules.
+///
+/// The API is implemented as exposing an infallible [`micro_rpc::Transport`].
+</span><span class="kw">pub trait </span>WasmApi {
+    <span class="kw">fn </span>transport(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>micro_rpc::Transport&lt;Error = !&gt;&gt;;
 }
 
 <span class="kw">impl</span>&lt;L&gt; WasmHandler&lt;L&gt;
@@ -1100,7 +938,7 @@
 {
     <span class="kw">pub fn </span>create(
         wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
-        extension_factories: Vec&lt;Box&lt;<span class="kw">dyn </span>ExtensionFactory&lt;L&gt;&gt;&gt;,
+        wasm_api_factory: Arc&lt;<span class="kw">dyn </span>WasmApiFactory&lt;L&gt;&gt;,
         logger: L,
     ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>engine = wasmi::Engine::default();
@@ -1109,21 +947,9 @@
 
         <span class="prelude-val">Ok</span>(WasmHandler {
             wasm_module: Arc::new(module),
-            extension_factories: Arc::new(extension_factories),
+            wasm_api_factory,
             logger,
         })
-    }
-
-    <span class="comment">// Create an extension from every factory in the WasmHandler.
-    </span><span class="kw">fn </span>create_extensions(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-    ) -&gt; anyhow::Result&lt;HashMap&lt;ExtensionHandle, Box&lt;<span class="kw">dyn </span>OakApiNativeExtension&gt;&gt;&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>extensions = HashMap::new();
-        <span class="kw">for </span>factory <span class="kw">in </span><span class="self">self</span>.extension_factories.iter() {
-            <span class="kw">let </span>extension = factory.create()<span class="question-mark">?</span>;
-            extensions.insert(extension.get_handle(), extension);
-        }
-        <span class="prelude-val">Ok</span>(extensions)
     }
 
     <span class="doccomment">/// Handles a call to invoke by getting the raw request bytes from the body of the request to
@@ -1131,11 +957,12 @@
     </span><span class="kw">pub fn </span>handle_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, invoke_request: Request) -&gt; anyhow::Result&lt;Response&gt; {
         <span class="kw">let </span>module = <span class="self">self</span>.wasm_module.clone();
 
-        <span class="kw">let </span>user_state = UserState::new(
-            invoke_request.body,
-            <span class="self">self</span>.create_extensions()<span class="question-mark">?</span>,
-            <span class="self">self</span>.logger.clone(),
-        );
+        <span class="kw">let </span>request = invoke_request.body;
+        <span class="kw">let </span>response = Arc::new(Spinlock::new(Vec::new()));
+        <span class="kw">let </span><span class="kw-2">mut </span>wasm_api = <span class="self">self
+            </span>.wasm_api_factory
+            .create_wasm_api(request, response.clone());
+        <span class="kw">let </span>user_state = UserState::new(wasm_api.transport(), <span class="self">self</span>.logger.clone());
         <span class="comment">// For isolated requests we need to create a new store for every request.
         </span><span class="kw">let </span><span class="kw-2">mut </span>store = wasmi::Store::new(module.engine(), user_state);
         <span class="kw">let </span>linker = OakLinker::new(module.engine(), <span class="kw-2">&amp;mut </span>store);
@@ -1158,15 +985,10 @@
             <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;running Wasm module completed with result: {:?}&quot;</span>, result),
         );
 
-        <span class="comment">// Terminate the extensions.
-        </span>store
-            .data_mut()
-            .extensions
-            .values_mut()
-            .try_for_each(|e| e.terminate())<span class="question-mark">?</span>;
+        <span class="kw">let </span>response_bytes = response.lock().clone();
 
         <span class="kw">let </span>invoke_response =
-            Response::create(StatusCode::Success, store.data().response_bytes.clone());
+            Response::create(oak_functions_abi::StatusCode::Success, response_bytes);
         <span class="prelude-val">Ok</span>(invoke_response)
     }
 }
@@ -1182,10 +1004,10 @@
     }
 }
 
-<span class="doccomment">/// A helper function to move between our specific result type `Result&lt;(), OakStatus&gt;` and the
+<span class="doccomment">/// A helper function to move between our specific result type `Result&lt;(), StatusCode&gt;` and the
 /// `wasmi` specific result type `Result&lt;i32, wasmi::Trap&gt;`.
-</span><span class="kw">fn </span>from_oak_status(result: <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;i32, wasmi::core::Trap&gt; {
-    <span class="kw">let </span>oak_status = result.err().unwrap_or(OakStatus::Ok);
-    <span class="prelude-val">Ok</span>(oak_status <span class="kw">as </span>i32)
+</span><span class="kw">fn </span>from_status_code(result: <span class="prelude-ty">Result</span>&lt;(), StatusCode&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;i32, wasmi::core::Trap&gt; {
+    <span class="kw">let </span>status_code = result.err().unwrap_or(StatusCode::Ok);
+    <span class="prelude-val">Ok</span>(status_code <span class="kw">as </span>i32)
 }
 </code></pre></div></section></main></body></html>

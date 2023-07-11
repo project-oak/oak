@@ -1,5 +1,0 @@
-(function() {var implementors = {
-"oak_functions_lookup":[["impl&lt;L&gt; ExtensionFactory&lt;L&gt; for <a class=\"struct\" href=\"oak_functions_lookup/struct.LookupFactory.html\" title=\"struct oak_functions_lookup::LookupFactory\">LookupFactory</a>&lt;L&gt;<span class=\"where fmt-newline\">where\n    L: OakLogger + 'static,</span>"]],
-"oak_functions_testing_extension":[["impl&lt;L&gt; ExtensionFactory&lt;L&gt; for <a class=\"struct\" href=\"oak_functions_testing_extension/struct.TestingFactory.html\" title=\"struct oak_functions_testing_extension::TestingFactory\">TestingFactory</a>&lt;L&gt;<span class=\"where fmt-newline\">where\n    L: OakLogger + 'static,</span>"]],
-"oak_functions_workload_logging":[["impl&lt;L&gt; ExtensionFactory&lt;L&gt; for <a class=\"struct\" href=\"oak_functions_workload_logging/struct.WorkloadLoggingFactory.html\" title=\"struct oak_functions_workload_logging::WorkloadLoggingFactory\">WorkloadLoggingFactory</a>&lt;L&gt;<span class=\"where fmt-newline\">where\n    L: OakLogger + 'static,</span>"]]
-};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

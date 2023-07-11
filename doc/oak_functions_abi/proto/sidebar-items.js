@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["ExtensionHandle","OakStatus"],"struct":["ConfigurationReport","Entry","ServerPolicy"]};
+window.SIDEBAR_ITEMS = {"struct":["ConfigurationReport","Entry","ServerPolicy"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["RESPONSE_BODY_OFFSET"],"enum":["StatusCode","TestingRequest","TestingResponse"],"fn":["invoke","read_request","write_response"],"mod":["proto"],"struct":["Request","Response","StorageGetItemResponse"]};
+window.SIDEBAR_ITEMS = {"constant":["RESPONSE_BODY_OFFSET"],"enum":["StatusCode"],"fn":["invoke"],"mod":["proto"],"struct":["Request","Response"]};

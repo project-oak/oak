@@ -24,7 +24,6 @@ var sourcesIndex = JSON.parse('{\
 "oak_enclave_runtime_support":["",[],["heap.rs","lib.rs","libm.rs"]],\
 "oak_functions_abi":["",[],["lib.rs"]],\
 "oak_functions_client":["",[],["lib.rs","rekor.rs"]],\
-"oak_functions_extension":["",[],["lib.rs"]],\
 "oak_functions_launcher":["",[],["lib.rs","lookup.rs","server.rs"]],\
 "oak_functions_linux_fd_bin":["",[],["main.rs"]],\
 "oak_functions_load_test":["",[],["main.rs"]],\
@@ -32,11 +31,9 @@ var sourcesIndex = JSON.parse('{\
 "oak_functions_sdk":["",[],["lib.rs"]],\
 "oak_functions_sdk_abi_test_get_storage_item":["",[],["lib.rs"]],\
 "oak_functions_sdk_abi_test_invoke_testing":["",[],["lib.rs"]],\
-"oak_functions_service":["",[["wasm",[],["mod.rs"]]],["lib.rs","logger.rs"]],\
+"oak_functions_service":["",[["wasm",[],["mod.rs"]]],["lib.rs"]],\
 "oak_functions_test_utils":["",[],["lib.rs"]],\
-"oak_functions_testing_extension":["",[],["lib.rs"]],\
-"oak_functions_wasm":["",[],["lib.rs"]],\
-"oak_functions_workload_logging":["",[],["lib.rs"]],\
+"oak_functions_wasm":["",[],["api.rs","lib.rs"]],\
 "oak_grpc_utils":["",[],["lib.rs"]],\
 "oak_hello_world_linux_init":["",[],["init.rs","main.rs"]],\
 "oak_iree_service":["",[],["iree.rs","lib.rs"]],\

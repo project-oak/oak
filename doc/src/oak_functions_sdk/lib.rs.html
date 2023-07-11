@@ -137,6 +137,25 @@
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -153,81 +172,99 @@
 // limitations under the License.
 //
 
-</span><span class="attr">#![doc = <span class="macro">include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
+</span><span class="attr">#![no_std]
+#![feature(never_type)]
+#![feature(result_flattening)]
+#![doc = <span class="macro">core::include_str!</span>(<span class="string">&quot;../README.md&quot;</span>)]
 
-</span><span class="kw">use </span>oak_functions_abi::{proto::OakStatus, StorageGetItemResponse};
-<span class="kw">use </span>std::convert::AsRef;
+</span><span class="kw">extern crate </span>alloc;
 
-<span class="doccomment">/// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#oak_functions_abi.md#read_request).
-</span><span class="kw">pub fn </span>read_request() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, OakStatus&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>buf_ptr: <span class="kw-2">*mut </span>u8 = std::ptr::null_mut();
-    <span class="kw">let </span><span class="kw-2">mut </span>buf_len: usize = <span class="number">0</span>;
-    <span class="kw">let </span>status_code = <span class="kw">unsafe </span>{ oak_functions_abi::read_request(<span class="kw-2">&amp;mut </span>buf_ptr, <span class="kw-2">&amp;mut </span>buf_len) };
-    <span class="kw">let </span>status = OakStatus::from_i32(status_code <span class="kw">as </span>i32).ok_or(OakStatus::ErrInternal)<span class="question-mark">?</span>;
-    <span class="kw">match </span>status {
-        OakStatus::Ok =&gt; {
-            <span class="kw">let </span>buf = from_alloc_buffer(buf_ptr, buf_len);
-            <span class="prelude-val">Ok</span>(buf)
+<span class="kw">pub mod </span>proto {
+    <span class="kw">pub mod </span>oak {
+        <span class="kw">pub mod </span>functions {
+            <span class="kw">pub mod </span>wasm {
+                <span class="kw">pub mod </span>v1 {
+
+                    <span class="kw">use </span>prost::Message;
+                    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.wasm.v1.rs&quot;</span>));
+                }
+            }
         }
-        status =&gt; <span class="prelude-val">Err</span>(status),
     }
 }
 
-<span class="doccomment">/// See [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
-</span><span class="kw">pub fn </span>write_response(buf: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
-    <span class="kw">let </span>status = <span class="kw">unsafe </span>{ oak_functions_abi::write_response(buf.as_ptr(), buf.len()) };
-    result_from_status(status <span class="kw">as </span>i32, ())
+<span class="kw">use </span>alloc::{string::ToString, vec::Vec};
+<span class="kw">use </span>micro_rpc::{Status, StatusCode};
+<span class="kw">use </span>proto::oak::functions::wasm::v1::{
+    LogRequest, LogResponse, LookupDataRequest, LookupDataResponse, ReadRequestRequest,
+    ReadRequestResponse, StdWasmApiClient, TestRequest, TestResponse, WriteResponseRequest,
+    WriteResponseResponse,
+};
+
+<span class="doccomment">/// See [`StdWasmApiClient::read_request`].
+</span><span class="kw">pub fn </span>read_request() -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt; {
+    client()
+        .read_request(<span class="kw-2">&amp;</span>ReadRequestRequest {})
+        .flatten()
+        .map(|ReadRequestResponse { body }| body)
 }
 
-<span class="doccomment">/// Looks up an item from the in-memory lookup store.
-</span><span class="kw">pub fn </span>storage_get_item(key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, OakStatus&gt; {
-    <span class="kw">let </span>response = invoke(oak_functions_abi::ExtensionHandle::LookupHandle, key)<span class="question-mark">?</span>;
-    <span class="kw">let </span>result: StorageGetItemResponse = (<span class="kw-2">&amp;</span>response[..]).try_into().map_err(|err| {
-        <span class="macro">log!</span>(<span class="string">&quot;Failed to deserialize response: {}&quot;</span>, err);
-        OakStatus::ErrSerializing
-    })<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(result.value)
+<span class="doccomment">/// See [`StdWasmApiClient::write_response`].
+</span><span class="kw">pub fn </span>write_response(buf: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), Status&gt; {
+    client()
+        .write_response(<span class="kw-2">&amp;</span>WriteResponseRequest { body: buf.to_vec() })
+        .flatten()
+        .map(|WriteResponseResponse {}| ())
 }
 
-<span class="doccomment">/// Writes a debug log message.
-///
-/// These log messages are considered sensitive, so will only be logged by the runtime if the
-/// `oak_unsafe` feature is enabled.
-</span><span class="kw">pub fn </span>write_log_message&lt;T: AsRef&lt;str&gt;&gt;(message: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), OakStatus&gt; {
-    <span class="kw">let </span>buf = message.as_ref().as_bytes();
-    invoke(oak_functions_abi::ExtensionHandle::LoggingHandle, buf)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(())
+<span class="doccomment">/// See [`StdWasmApiClient::lookup_data`].
+</span><span class="kw">pub fn </span>storage_get_item(key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;, Status&gt; {
+    client()
+        .lookup_data(<span class="kw-2">&amp;</span>LookupDataRequest { key: key.to_vec() })
+        .flatten()
+        .map(|LookupDataResponse { value }| value)
 }
 
-<span class="doccomment">/// Calls the testing extension with the given request. The response is directly passed on, as it is
-/// decoded by the caller.
-</span><span class="kw">pub fn </span>testing(request: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, OakStatus&gt; {
-    invoke(oak_functions_abi::ExtensionHandle::TestingHandle, request)
+<span class="doccomment">/// See [`StdWasmApiClient::log`].
+</span><span class="kw">pub fn </span>write_log_message&lt;T: AsRef&lt;str&gt;&gt;(message: T) -&gt; <span class="prelude-ty">Result</span>&lt;(), Status&gt; {
+    client()
+        .log(<span class="kw-2">&amp;</span>LogRequest {
+            message: message.as_ref().to_string(),
+        })
+        .flatten()
+        .map(|LogResponse {}| ())
+}
+
+<span class="doccomment">/// See [`StdWasmApiClient::test`].
+</span><span class="kw">pub fn </span>testing(request: <span class="kw-2">&amp;</span>[u8], echo: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt; {
+    client()
+        .test(<span class="kw-2">&amp;</span>TestRequest {
+            body: request.to_vec(),
+            echo,
+        })
+        .flatten()
+        .map(|TestResponse { body }| body)
 }
 
 <span class="doccomment">/// See [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#invoke).
-</span><span class="kw">fn </span>invoke(
-    handle: oak_functions_abi::ExtensionHandle,
-    request: <span class="kw-2">&amp;</span>[u8],
-) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, OakStatus&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>response_ptr: <span class="kw-2">*mut </span>u8 = std::ptr::null_mut();
+</span><span class="kw">fn </span>invoke(request: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>response_ptr: <span class="kw-2">*mut </span>u8 = core::ptr::null_mut();
     <span class="kw">let </span><span class="kw-2">mut </span>response_len: usize = <span class="number">0</span>;
     <span class="kw">let </span>status_code = <span class="kw">unsafe </span>{
         oak_functions_abi::invoke(
-            handle,
             request.as_ptr(),
             request.len(),
             <span class="kw-2">&amp;mut </span>response_ptr,
             <span class="kw-2">&amp;mut </span>response_len,
         )
     };
-    <span class="kw">let </span>status = OakStatus::from_i32(status_code <span class="kw">as </span>i32).ok_or(OakStatus::ErrInternal)<span class="question-mark">?</span>;
-    <span class="kw">match </span>status {
-        OakStatus::Ok =&gt; {
+    <span class="kw">let </span>status_code: StatusCode = status_code.into();
+    <span class="kw">match </span>status_code {
+        StatusCode::Ok =&gt; {
             <span class="kw">let </span>response = from_alloc_buffer(response_ptr, response_len);
             <span class="prelude-val">Ok</span>(response)
         }
-        status =&gt; <span class="prelude-val">Err</span>(status),
+        status_code =&gt; <span class="prelude-val">Err</span>(Status::new(status_code)),
     }
 }
 
@@ -242,21 +279,22 @@
     }
 }
 
-<span class="doccomment">/// Convert a status returned from a host function call to a `Result`.
+<span class="doccomment">/// A wrapper around the `invoke` function that implements the [`micro_rpc::Transport`] trait.
 ///
-/// The status is interpreted as an int representing an `OakStatus` enum value.
-///
-/// If the status is [`OakStatus::Ok`] then returns the provided value as [`Result::Ok`], otherwise
-/// returns the status as [`Result::Err`].
-///
-/// Note that host function calls usually return an `u32` because of limitations of the Wasm type
-/// system, so these values would usually be converted (via a cast) to `i32` by callers.
-</span><span class="kw">pub fn </span>result_from_status&lt;T&gt;(status: i32, val: T) -&gt; <span class="prelude-ty">Result</span>&lt;T, OakStatus&gt; {
-    <span class="kw">match </span>OakStatus::from_i32(status) {
-        <span class="prelude-val">Some</span>(OakStatus::Ok) =&gt; <span class="prelude-val">Ok</span>(val),
-        <span class="prelude-val">Some</span>(status) =&gt; <span class="prelude-val">Err</span>(status),
-        <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(OakStatus::Unspecified),
+/// This object is stateless, so it can be created and discarded for each invocation.
+</span><span class="kw">struct </span>Transport;
+
+<span class="kw">impl </span>micro_rpc::Transport <span class="kw">for </span>Transport {
+    <span class="kw">type </span>Error = Status;
+
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="self">Self</span>::Error&gt; {
+        invoke(request_bytes)
     }
+}
+
+<span class="doccomment">/// Creates a new client for the Oak Functions ABI.
+</span><span class="kw">fn </span>client() -&gt; StdWasmApiClient&lt;Transport&gt; {
+    StdWasmApiClient::new(Transport)
 }
 
 <span class="attr">#[no_mangle]
@@ -265,7 +303,7 @@
     </span><span class="kw">let </span><span class="kw-2">mut </span>buf = Vec::with_capacity(len <span class="kw">as </span>usize);
     <span class="kw">let </span>ptr = buf.as_mut_ptr();
     <span class="comment">// Take ownership of the buffer and ensure that it is not freed at the end of this function.
-    </span>std::mem::forget(buf);
+    </span>core::mem::forget(buf);
     <span class="comment">// Return the pointer so the runtime can write data at this address.
     </span>ptr
 }

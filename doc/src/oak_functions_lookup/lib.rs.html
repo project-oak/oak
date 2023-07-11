@@ -324,72 +324,6 @@
 <a href="#324" id="324">324</a>
 <a href="#325" id="325">325</a>
 <a href="#326" id="326">326</a>
-<a href="#327" id="327">327</a>
-<a href="#328" id="328">328</a>
-<a href="#329" id="329">329</a>
-<a href="#330" id="330">330</a>
-<a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
-<a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
-<a href="#352" id="352">352</a>
-<a href="#353" id="353">353</a>
-<a href="#354" id="354">354</a>
-<a href="#355" id="355">355</a>
-<a href="#356" id="356">356</a>
-<a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
-<a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
-<a href="#365" id="365">365</a>
-<a href="#366" id="366">366</a>
-<a href="#367" id="367">367</a>
-<a href="#368" id="368">368</a>
-<a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
-<a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -410,7 +344,6 @@
 </span><span class="kw">extern crate </span>alloc;
 
 <span class="kw">use </span>alloc::{
-    boxed::Box,
     format,
     string::{String, ToString},
     sync::Arc,
@@ -418,74 +351,8 @@
 };
 <span class="kw">use </span>hashbrown::HashMap;
 <span class="kw">use </span>log::{info, Level};
-<span class="kw">use </span>oak_functions_abi::{proto::OakStatus, ExtensionHandle, StorageGetItemResponse};
-<span class="kw">use </span>oak_functions_extension::{ExtensionFactory, OakApiNativeExtension};
 <span class="kw">use </span>oak_logger::OakLogger;
 <span class="kw">use </span>spinning_top::Spinlock;
-
-<span class="kw">pub struct </span>LookupFactory&lt;L: OakLogger&gt; {
-    manager: Arc&lt;LookupDataManager&lt;L&gt;&gt;,
-}
-
-<span class="kw">impl</span>&lt;L&gt; LookupFactory&lt;L&gt;
-<span class="kw">where
-    </span>L: OakLogger + <span class="lifetime">&#39;static</span>,
-{
-    <span class="kw">pub fn </span>new_boxed_extension_factory(
-        manager: Arc&lt;LookupDataManager&lt;L&gt;&gt;,
-    ) -&gt; anyhow::Result&lt;Box&lt;<span class="kw">dyn </span>ExtensionFactory&lt;L&gt;&gt;&gt; {
-        <span class="kw">let </span>lookup_factory = <span class="self">Self </span>{ manager };
-        <span class="prelude-val">Ok</span>(Box::new(lookup_factory))
-    }
-}
-
-<span class="kw">impl</span>&lt;L&gt; ExtensionFactory&lt;L&gt; <span class="kw">for </span>LookupFactory&lt;L&gt;
-<span class="kw">where
-    </span>L: OakLogger + <span class="lifetime">&#39;static</span>,
-{
-    <span class="kw">fn </span>create(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;Box&lt;<span class="kw">dyn </span>OakApiNativeExtension&gt;&gt; {
-        <span class="kw">let </span>extension = <span class="self">self</span>.manager.create_lookup_data();
-        <span class="prelude-val">Ok</span>(Box::new(extension))
-    }
-}
-
-<span class="kw">impl</span>&lt;L: OakLogger&gt; OakApiNativeExtension <span class="kw">for </span>LookupData&lt;L&gt; {
-    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, OakStatus&gt; {
-        <span class="comment">// The request is the key to lookup.
-        </span><span class="kw">let </span>key = request;
-        <span class="kw">let </span>key_to_log = key.clone().into_iter().take(<span class="number">512</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-        <span class="self">self</span>.log_debug(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-            <span class="string">&quot;storage_get_item(): key: {}&quot;</span>,
-            format_bytes(<span class="kw-2">&amp;</span>key_to_log)
-        ));
-        <span class="kw">let </span>value = <span class="self">self</span>.get(<span class="kw-2">&amp;</span>key);
-
-        <span class="comment">// Log found value.
-        </span>value.clone().map_or_else(
-            || {
-                <span class="self">self</span>.log_debug(<span class="string">&quot;storage_get_item(): value not found&quot;</span>);
-            },
-            |value| {
-                <span class="comment">// Truncate value for logging.
-                </span><span class="kw">let </span>value_to_log = value.into_iter().take(<span class="number">512</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-                <span class="self">self</span>.log_debug(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-                    <span class="string">&quot;storage_get_item(): value: {}&quot;</span>,
-                    format_bytes(<span class="kw-2">&amp;</span>value_to_log)
-                ));
-            },
-        );
-
-        <span class="prelude-val">Ok</span>(StorageGetItemResponse { value }.into())
-    }
-
-    <span class="kw">fn </span>terminate(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="kw">fn </span>get_handle(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ExtensionHandle {
-        ExtensionHandle::LookupHandle
-    }
-}
 
 <span class="comment">// Data maintains the invariant on lookup data to have [at most one
 // value](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-at-most-one-value)
@@ -618,6 +485,7 @@
 }
 
 <span class="doccomment">/// Provides access to shared lookup data.
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>LookupData&lt;L: OakLogger + Clone&gt; {
     data: Arc&lt;Data&gt;,
     logger: L,

@@ -53,19 +53,6 @@
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
-<a href="#56" id="56">56</a>
-<a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
-<a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
-<a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -84,9 +71,7 @@
 
 </span><span class="doccomment">//! Oak Functions ABI test for Testing Extension.
 
-</span><span class="kw">use </span>oak_functions_abi::{TestingRequest, TestingResponse};
-
-<span class="attr">#[cfg_attr(not(test), no_mangle)]
+</span><span class="attr">#[cfg_attr(not(test), no_mangle)]
 </span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>main() {
     <span class="comment">// Read the message to echo from the request.
     </span><span class="kw">let </span>request = oak_functions_sdk::read_request().expect(<span class="string">&quot;couldn&#39;t read request body&quot;</span>);
@@ -94,29 +79,18 @@
 
     <span class="kw">match </span>request.as_str() {
         <span class="string">&quot;ECHO&quot; </span>=&gt; {
-            <span class="comment">// Serialize a EchoRequest. Note that the message to echo is the request itself.
-            </span><span class="kw">let </span>echo_request = bincode::serialize(<span class="kw-2">&amp;</span>TestingRequest::Echo(request))
-                .expect(<span class="string">&quot;couldn&#39;t serialize testing message&quot;</span>);
             <span class="comment">// We invoke the Testing extension with an EchoRequest.
-            </span><span class="kw">let </span>serialized_echo_response =
-                oak_functions_sdk::testing(<span class="kw-2">&amp;</span>echo_request).expect(<span class="string">&quot;couldn&#39;t invoke testing&quot;</span>);
-
-            <span class="kw">let </span>echo_response = bincode::deserialize(<span class="kw-2">&amp;</span>serialized_echo_response)
-                .expect(<span class="string">&quot;couldn&#39;t deserialize testing message&quot;</span>);
-
-            <span class="kw">let </span>TestingResponse::Echo(response_body) = echo_response;
-
-            oak_functions_sdk::write_response(response_body.as_bytes())
+            // Note that the message to echo is the request itself.
+            </span><span class="kw">let </span>echo_response = oak_functions_sdk::testing(request.as_bytes(), <span class="bool-val">true</span>)
+                .expect(<span class="string">&quot;couldn&#39;t invoke testing&quot;</span>);
+            oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>echo_response)
                 .expect(<span class="string">&quot;couldn&#39;t write response body&quot;</span>);
         }
         <span class="string">&quot;BLACKHOLE&quot; </span>=&gt; {
             <span class="comment">// Keep in sync with test_blackhole in
             // `workspace/oak_functions/sdk/oak_functions/tests/integration_test.rs`.
-            </span><span class="kw">let </span>blackhole_request = bincode::serialize(<span class="kw-2">&amp;</span>TestingRequest::Blackhole(request))
-                .expect(<span class="string">&quot;couldn&#39;t serialize testing message&quot;</span>);
-
-            <span class="kw">let </span>blackhole_response =
-                oak_functions_sdk::testing(<span class="kw-2">&amp;</span>blackhole_request).expect(<span class="string">&quot;couldn&#39;t invoke testing&quot;</span>);
+            </span><span class="kw">let </span>blackhole_response = oak_functions_sdk::testing(request.as_bytes(), <span class="bool-val">false</span>)
+                .expect(<span class="string">&quot;couldn&#39;t invoke testing&quot;</span>);
             <span class="comment">// We expect an empty response, because blackhole does not give back a result.
             </span><span class="macro">assert!</span>(blackhole_response.is_empty());
 

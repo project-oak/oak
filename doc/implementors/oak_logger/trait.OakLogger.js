@@ -1,4 +1,3 @@
 (function() {var implementors = {
-"oak_functions_service":[["impl OakLogger for <a class=\"struct\" href=\"oak_functions_service/struct.StandaloneLogger.html\" title=\"struct oak_functions_service::StandaloneLogger\">StandaloneLogger</a>"]],
-"oak_functions_testing_extension":[["impl OakLogger for <a class=\"struct\" href=\"oak_functions_testing_extension/struct.TestingLogger.html\" title=\"struct oak_functions_testing_extension::TestingLogger\">TestingLogger</a>"]]
+"oak_logger":[]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
