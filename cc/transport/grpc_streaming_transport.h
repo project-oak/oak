@@ -24,7 +24,7 @@
 
 namespace oak::transport {
 
-class GrpcStreamingTransport : public ClientTransport {
+class GrpcStreamingTransport : public TransportWrapper {
  public:
   absl::StatusOr<::oak::session::v1::AttestationBundle> GetEvidence() override;
   absl::StatusOr<std::string> Invoke(absl::string_view request_bytes) override;

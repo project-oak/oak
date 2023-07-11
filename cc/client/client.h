@@ -36,7 +36,7 @@ class OakClient {
   // and creating an encrypted channel.
   template <class T>
   static absl::StatusOr<std::unique_ptr<OakClient>> Create(
-      std::unique_ptr<::oak::transport::ClientTransport> transport,
+      std::unique_ptr<::oak::transport::TransportWrapper> transport,
       ::oak::remote_attestation::AttestationVerifier& verifier) {
     absl::StatusOr<::oak::session::v1::AttestationBundle> endorsed_evidence =
         transport->GetEvidence();

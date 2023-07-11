@@ -44,7 +44,7 @@ class Transport {
 };
 
 // Wrapper for `EvidenceProvider` and `Transport` abstract classes.
-class ClientTransport : public EvidenceProvider, public Transport {};
+class TransportWrapper : public EvidenceProvider, public Transport {};
 
 }  // namespace oak::transport
 
