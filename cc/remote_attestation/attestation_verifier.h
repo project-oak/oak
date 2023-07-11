@@ -35,13 +35,13 @@ class AttestationVerifier {
   // reference values.
   //
   // The statuses returned include the following:
-  //  Status::kOk = Trusted Execution Environment was successfully verified with
-  //  the references.
+  // - Status::kOk = Trusted Execution Environment was successfully verified with
+  //   the references.
   //
-  //  Status::kUnauthenticated = Trusted Execution Environment could not be
-  //  verified with the references. This may be because the Trusted Execution
-  //  Environment is not trustworth or the supplied references were not
-  //  sufficient.
+  // - Status::kUnauthenticated = Trusted Execution Environment could not be
+  //   verified with the references. This may be because the Trusted Execution
+  //   Environment is not trustworth or the supplied references were not
+  //   sufficient.
   virtual absl::Status Verify(::oak::session::v1::AttestationEvidence evidence,
                               ::oak::session::v1::AttestationEndorsement endorsement) const = 0;
 };
