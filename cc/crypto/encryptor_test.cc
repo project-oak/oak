@@ -80,28 +80,28 @@ TEST(EncryptorTest, ClientEncryptorAndServerEncryptorCommunicateSuccess) {
   EXPECT_THAT(kOakHPKEInfoTest, StrEq(client_decryption_result2->associated_data));
 }
 
-TEST(EncryptorTest, ClientEncryptorAndServerEncryptorCommunicateMismatchPublicKeysFailure) {
-  // Set up client and server encryptors.
-  auto key_pair = KeyPair::Generate();
-  std::string wrong_public_key = key_pair->public_key;
-  // Edit the public key that the client uses to make it incorrect.
-  wrong_public_key[0] = (wrong_public_key[0] + 1) % 128;
-  auto client_encryptor = ClientEncryptor::Create(wrong_public_key);
-  ASSERT_TRUE(client_encryptor.ok());
-  ServerEncryptor server_encryptor = ServerEncryptor(*key_pair);
+// TODO(#4146): Uncomment test once C++ encryption is enabled.
+// TEST(EncryptorTest, ClientEncryptorAndServerEncryptorCommunicateMismatchPublicKeysFailure) {
+//   // Set up client and server encryptors.
+//   auto key_pair = KeyPair::Generate();
+//   std::string wrong_public_key = key_pair->public_key;
+//   // Edit the public key that the client uses to make it incorrect.
+//   wrong_public_key[0] = (wrong_public_key[0] + 1) % 128;
+//   auto client_encryptor = ClientEncryptor::Create(wrong_public_key);
+//   ASSERT_TRUE(client_encryptor.ok());
+//   ServerEncryptor server_encryptor = ServerEncryptor(*key_pair);
 
-  std::string client_plaintext_message = "Hello server";
+//   std::string client_plaintext_message = "Hello server";
 
-  // Encrypt plaintext message and have server encryptor decrypt message. This should result in
-  // failure since the public key is incorrect.
-  auto client_ciphertext = (*client_encryptor)->Encrypt(client_plaintext_message, kOakHPKEInfoTest);
-  ASSERT_TRUE(client_ciphertext.ok());
-  auto server_decryption_result = server_encryptor.Decrypt(*client_ciphertext);
-  EXPECT_FALSE(server_decryption_result.ok());
-  EXPECT_EQ(server_decryption_result.status().code(), absl::StatusCode::kAborted);
-  EXPECT_THAT(server_decryption_result.status().message(),
-              StrEq("Failed to open encrypted message."));
-}
+//   // Encrypt plaintext message and have server encryptor decrypt message. This should result in
+//   // failure since the public key is incorrect.
+//   auto client_ciphertext = (*client_encryptor)->Encrypt(client_plaintext_message,
+//   kOakHPKEInfoTest); ASSERT_TRUE(client_ciphertext.ok()); auto server_decryption_result =
+//   server_encryptor.Decrypt(*client_ciphertext); EXPECT_FALSE(server_decryption_result.ok());
+//   EXPECT_EQ(server_decryption_result.status().code(), absl::StatusCode::kAborted);
+//   EXPECT_THAT(server_decryption_result.status().message(),
+//               StrEq("Failed to open encrypted message."));
+// }
 
 }  // namespace
 }  // namespace oak::crypto

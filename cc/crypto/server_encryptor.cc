@@ -45,13 +45,16 @@ absl::StatusOr<DecryptionResult> ServerEncryptor::Decrypt(absl::string_view encr
   }
 
   // Decrypt request.
-  absl::StatusOr<std::string> plaintext = recipient_request_context_->Open(
-      request.encrypted_message().ciphertext(), request.encrypted_message().associated_data());
-  if (!plaintext.ok()) {
-    return plaintext.status();
-  }
+  // TODO(#4146): Enable C++ encryption.
+  // absl::StatusOr<std::string> plaintext = recipient_request_context_->Open(
+  //     request.encrypted_message().ciphertext(), request.encrypted_message().associated_data());
+  // if (!plaintext.ok()) {
+  //   return plaintext.status();
+  // }
 
-  return DecryptionResult{*plaintext, request.encrypted_message().associated_data()};
+  // TODO(#4146): Return `*plaintext` instead of `ciphertext`.
+  return DecryptionResult{request.encrypted_message().ciphertext(),
+                          request.encrypted_message().associated_data()};
 }
 
 absl::StatusOr<std::string> ServerEncryptor::Encrypt(absl::string_view plaintext,
@@ -62,15 +65,17 @@ absl::StatusOr<std::string> ServerEncryptor::Encrypt(absl::string_view plaintext
   }
 
   // Encrypt response.
-  absl::StatusOr<std::string> ciphertext =
-      recipient_response_context_->Seal(plaintext, associated_data);
-  if (!ciphertext.ok()) {
-    return ciphertext.status();
-  }
+  // TODO(#4146): Enable C++ encryption.
+  // absl::StatusOr<std::string> ciphertext =
+  //     recipient_response_context_->Seal(plaintext, associated_data);
+  // if (!ciphertext.ok()) {
+  //   return ciphertext.status();
+  // }
 
   // Create response message.
   EncryptedResponse response;
-  *response.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
+  // TODO(#4146): Return `*ciphertext` instead of `plaintext`.
+  *response.mutable_encrypted_message()->mutable_ciphertext() = plaintext;
   *response.mutable_encrypted_message()->mutable_associated_data() = associated_data;
 
   // Serialize response.
