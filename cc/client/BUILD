@@ -34,3 +34,17 @@ cc_library(
         "@com_google_absl//absl/strings",
     ],
 )
+
+# Binaries
+
+cc_binary(
+    name = "cli",
+    srcs = ["grpc_client_cli.cc"],
+    deps = [
+        ":client",
+        "//cc/remote_attestation:insecure_attestation_verifier",
+        "//cc/transport:grpc_streaming_transport",
+        "//oak_remote_attestation/proto/v1:service_streaming_cc_grpc",
+        "@com_github_grpc_grpc//:grpc++",
+    ],
+)

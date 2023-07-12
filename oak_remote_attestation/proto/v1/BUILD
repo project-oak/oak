@@ -56,6 +56,7 @@ cc_proto_library(
 cc_grpc_library(
     name = "service_streaming_cc_grpc",
     srcs = [":service_streaming_proto"],
+    grpc_only = True,
     deps = [":service_streaming_cc_proto"],
 )
 
@@ -67,6 +68,7 @@ cc_proto_library(
 cc_grpc_library(
     name = "service_unary_cc_grpc",
     srcs = [":service_unary_proto"],
+    grpc_only = True,
     deps = [":service_unary_cc_proto"],
 )
 
