@@ -193,6 +193,8 @@
 <a href="#193" id="193">193</a>
 <a href="#194" id="194">194</a>
 <a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -298,8 +300,10 @@
             ]);
             cmd.args([<span class="string">&quot;-serial&quot;</span>, <span class="string">&quot;chardev:consock&quot;</span>]);
         }
-        cmd.args([<span class="string">&quot;-netdev&quot;</span>, <span class="string">&quot;user,id=netdev&quot;</span>]);
-        cmd.args([<span class="string">&quot;-device&quot;</span>, <span class="string">&quot;virtio-net,netdev=netdev&quot;</span>]);
+        <span class="comment">// Set up the networking. `rombar=0` is so that QEMU wouldn&#39;t bother with the
+        // `efi-virtio.rom` file, as we&#39;re not using EFI anyway.
+        </span>cmd.args([<span class="string">&quot;-netdev&quot;</span>, <span class="string">&quot;user,id=netdev&quot;</span>]);
+        cmd.args([<span class="string">&quot;-device&quot;</span>, <span class="string">&quot;virtio-net,netdev=netdev,rombar=0&quot;</span>]);
         <span class="comment">// Set up the virtio-vsock device, as it is used by the example app.
         // TODO(#709): Remove this and use networking for there as well.
         </span>cmd.args([
