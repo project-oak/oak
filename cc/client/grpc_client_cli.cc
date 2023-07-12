@@ -14,36 +14,51 @@
  * limitations under the License.
  */
 
+#include <grpc/grpc.h>
+#include <grpcpp/channel.h>
+#include <grpcpp/client_context.h>
+#include <grpcpp/create_channel.h>
+#include <grpcpp/grpcpp.h>
+#include <grpcpp/security/credentials.h>
+
 #include <memory>
 
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "cc/client/client.h"
-#include "cc/remote_attestation/InsecureAttestationVerifier.h"
+#include "cc/remote_attestation/insecure_attestation_verifier.h"
 #include "cc/transport/grpc_streaming_transport.h"
 #include "oak_remote_attestation/proto/v1/service_streaming.grpc.pb.h"
 
+using ::grpc::Channel;
+using ::grpc::ClientContext;
+using ::grpc::ClientReaderWriter;
+using ::grpc::CreateChannel;
+using ::grpc::InsecureChannelCredentials;
+using ::oak::client::OakClient;
+using ::oak::remote_attestation::InsecureAttestationVerifier;
+using ::oak::session::v1::RequestWrapper;
+using ::oak::session::v1::ResponseWrapper;
+using ::oak::session::v1::StreamingSession;
+using ::oak::transport::GrpcStreamingTransport;
+
+// TODO(#4069): Finish CLI implementation.
 int main(int argc, char* argv[]) {
-  // // InitGoogle(argv[0], &argc, &argv, /*remove_flags=*/true);
-  // absl::ParseCommandLine(argc, argv);
+  // Create gRPC client stub.
+  std::shared_ptr<Channel> channel = CreateChannel("", InsecureChannelCredentials());
+  std::shared_ptr<oak::session::v1::StreamingSession::Stub> stub =
+      StreamingSession::NewStub(channel);
+  ClientContext context;
+  // auto channel_reader_writer = stub->Stream(&context);
+  std::unique_ptr<ClientReaderWriter<RequestWrapper, ResponseWrapper>> channel_reader_writer =
+      stub->Stream(&context);
 
-  // std::string address = absl::GetFlag(FLAGS_address);
-  // // std::string request = absl::GetFlag(FLAGS_request);
-  // LOG(INFO) << "Connecting to: " << address;
-
-  // // Create gRPC client stub.
-  // std::shared_ptr<grpc::Channel> channel =
-  //     grpc::CreateChannel(address, grpc::InsecureChannelCredentials());
-  // // auto stub = StreamingSession::NewStub(channel);
-
-  // // Create Oak Client.
-  // std::unique_ptr<GrpcStreamingTransport> transport = GrpcStreamingTransport::Create(channel);
-  // std::unique_ptr<OakClient<GrpcStreamingTransport>> oak_client =
-  //     OakClient::Create(transport, InsecureAttestationVerifier());
-
-  // // Send request to the Oak backend.
-  // LOG(INFO) << "Sending request: " << absl::GetFlag(FLAGS_request);
-
-  // std::string response = absl::BytesToHexString(response_body);
-  // LOG(INFO) << "Received response: " << response;
+  // Create Oak Client.
+  std::unique_ptr<GrpcStreamingTransport> transport = std::make_unique<GrpcStreamingTransport>(
+      GrpcStreamingTransport(std::move(channel_reader_writer)));
+  InsecureAttestationVerifier verifier = InsecureAttestationVerifier();
+  absl::StatusOr<std::unique_ptr<OakClient>> oak_client =
+      OakClient::Create(std::move(transport), verifier);
+  if (!oak_client.ok()) {
+    // TODO(#4069): Log errors.
+    return 1;
+  }
 }

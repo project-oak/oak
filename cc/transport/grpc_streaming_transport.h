@@ -17,6 +17,10 @@
 #ifndef CC_TRANSPORT_GRPC_STREAMING_TRANSPORT_H_
 #define CC_TRANSPORT_GRPC_STREAMING_TRANSPORT_H_
 
+#include <grpc/grpc.h>
+#include <grpcpp/channel.h>
+#include <grpcpp/client_context.h>
+#include <grpcpp/create_channel.h>
 #include <grpcpp/grpcpp.h>
 
 #include <memory>
@@ -25,108 +29,86 @@
 #include "absl/strings/string_view.h"
 #include "cc/transport/transport.h"
 #include "oak_remote_attestation/proto/v1/messages.pb.h"
+#include "oak_remote_attestation/proto/v1/service_streaming.grpc.pb.h"
+#include "oak_remote_attestation/proto/v1/service_streaming.pb.h"
 
 namespace oak::transport {
 
-template <class Service>
 class GrpcStreamingTransport : public TransportWrapper {
  public:
-  // explicit GrpcStreamingTransport(std::shared_ptr<grpc::Channel> channel)
-  //     : channel_stub_(Service::NewStub(channel)) {}
-
   explicit GrpcStreamingTransport(
       std::unique_ptr<::grpc::ClientReaderWriter<::oak::session::v1::RequestWrapper,
                                                  ::oak::session::v1::ResponseWrapper>>
-          channel_writer)
-      : channel_writer_(std::move(channel_writer));
+          channel_reader_writer)
+      : channel_reader_writer_(std::move(channel_reader_writer)) {}
 
   absl::StatusOr<::oak::session::v1::AttestationBundle> GetEvidence() override {
-    ::oak::session::v1::RequestWrapper request_wrapper;
+    // Create request.
+    ::oak::session::v1::RequestWrapper request;
     ::oak::session::v1::GetPublicKeyRequest get_public_key_request;
-    *request_wrapper.mutable_get_public_key_request() = get_public_key_request;
+    *request.mutable_get_public_key_request() = get_public_key_request;
 
-    auto response_status = Send(request_wrapper);
-    if (!response_status.ok()) {
-      return response_status;
+    // Send request.
+    auto response = Send(request);
+    if (!response.ok()) {
+      return response.status();
     }
 
-    switch (response_wrapper.response_case()) {
-      case ResponseWrapper::kGetPublicKeyResponseFieldNumber:
-    return response_status.get_public_key_response().attestation_bundle();
-      case ResponseWrapper::kInvokeResponseFieldNumber:
+    // Process response.
+    switch (response->response_case()) {
+      case ::oak::session::v1::ResponseWrapper::kGetPublicKeyResponseFieldNumber:
+        return response->get_public_key_response().attestation_bundle();
+      case ::oak::session::v1::ResponseWrapper::kInvokeResponseFieldNumber:
         return absl::InternalError("received InvokeResponse instead of GetPublicKeyResponse");
-      case ResponseWrapper::RESPONSE_NOT_SET:
+      case ::oak::session::v1::ResponseWrapper::RESPONSE_NOT_SET:
         return absl::InternalError("received empty response");
       default:
         return absl::InternalError("received unsupported response type");
     }
-
-    // ::oak::session::v1::GetPublicKeyRequest request;
-    // ::oak::session::v1::GetPublicKeyResponse response;
-    // grpc::ClientContext context;
-
-    // grpc::Status status = channel_stub_->GetPublicKey(&context, request, &response);
-    // if (!status.ok()) {
-    //   return absl::InternalError("couldn't send GetPublicKeyRequest: " + status.error_message());
-    // }
-
-    // return response.attestation_bundle();
   }
 
   absl::StatusOr<std::string> Invoke(absl::string_view request_bytes) override {
+    // Create request.
     ::oak::session::v1::RequestWrapper request;
-    auto* invoke_request = request_wrapper.mutable_invoke_request();
+    ::oak::session::v1::InvokeRequest* invoke_request = request.mutable_invoke_request();
     invoke_request->set_encrypted_body(request_bytes);
 
-    auto response_status = Send(request_wrapper);
-    if (!response_status.ok()) {
-      return response_status;
+    // Send request.
+    auto response = Send(request);
+    if (!response.ok()) {
+      return response.status();
     }
 
-    switch (response_wrapper.response_case()) {
-      case ResponseWrapper::kGetPublicKeyResponseFieldNumber:
+    // Process response.
+    switch (response->response_case()) {
+      case ::oak::session::v1::ResponseWrapper::kGetPublicKeyResponseFieldNumber:
         return absl::InternalError("received GetPublicKeyResponse instead of InvokeResponse");
-      case ResponseWrapper::kInvokeResponseFieldNumber:
-        return response_wrapper.invoke_response().encrypted_body();
-      case ResponseWrapper::RESPONSE_NOT_SET:
+      case ::oak::session::v1::ResponseWrapper::kInvokeResponseFieldNumber:
+        return response->invoke_response().encrypted_body();
+      case ::oak::session::v1::ResponseWrapper::RESPONSE_NOT_SET:
         return absl::InternalError("received empty response");
       default:
         return absl::InternalError("received unsupported response type");
     }
-
-    // return response_status.invoke_response().encrypted_body();
-
-    // ::oak::session::v1::InvokeRequest request;
-    // request.set_encrypted_body(request_bytes);
-    // ::oak::session::v1::InvokeResponse response;
-    // grpc::ClientContext context;
-
-    // grpc::Status status = channel_stub_->Invoke(&context, request, &response);
-    // if (!status.ok()) {
-    //   return absl::InternalError("couldn't send InvokeRequest: " + status.error_message());
-    // }
-
-    // return response.encrypted_body();
   }
 
  private:
-  // std::unique_ptr<Service> channel_stub_;
-  std::unique_ptr<Service> channel_writer_;
-  
-  absl::StatusOr<::oak::session::v1::ResponseWrapper> Send(const ::oak::session::v1::RequestWrapper& request) {
+  std::unique_ptr<::grpc::ClientReaderWriter<::oak::session::v1::RequestWrapper,
+                                             ::oak::session::v1::ResponseWrapper>>
+      channel_reader_writer_;
+
+  absl::StatusOr<::oak::session::v1::ResponseWrapper> Send(
+      const ::oak::session::v1::RequestWrapper& request) {
     // Send a request.
-    RequestWrapper request_wrapper;
-    auto* request = request_wrapper.mutable_invoke_request();
-    request->set_encrypted_body(request_body);
-    reader_writer->Write(request_wrapper);
-    reader_writer->WritesDone();
+    channel_reader_writer_->Write(request);
+    channel_reader_writer_->WritesDone();
 
     // Receive a response.
-    ResponseWrapper response_wrapper;
-    reader_writer->Read(&response_wrapper);
-    Status status = reader_writer->Finish();
+    ::oak::session::v1::ResponseWrapper response;
+    channel_reader_writer_->Read(&response);
+    ::grpc::Status status = channel_reader_writer_->Finish();
     if (status.ok()) {
-      return response_wrapper;
+      return response;
     } else {
       return absl::InternalError("couldn't send request: " + status.error_message());
     }

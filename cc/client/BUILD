@@ -43,6 +43,7 @@ cc_binary(
     deps = [
         ":client",
         "//cc/remote_attestation:insecure_attestation_verifier",
+        "//cc/transport:grpc_streaming_transport",
         "//oak_remote_attestation/proto/v1:service_streaming_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
     ],
