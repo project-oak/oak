@@ -47,7 +47,6 @@ int main(int argc, char* argv[]) {
   std::shared_ptr<oak::session::v1::StreamingSession::Stub> stub =
       StreamingSession::NewStub(channel);
   ClientContext context;
-  // auto channel_reader_writer = stub->Stream(&context);
   std::unique_ptr<ClientReaderWriter<RequestWrapper, ResponseWrapper>> channel_reader_writer =
       stub->Stream(&context);
 
