@@ -67,7 +67,7 @@ aggregated-from = "https://chromium.googlesource.com/chromiumos/third_party/rust
 [[audits.mozilla.wildcard-audits.unicode-xid]]
 who = "Manish Goregaokar <manishsmail@gmail.com>"
 criteria = "safe-to-deploy"
-user-id = 1139
+user-id = 1139 # Manish Goregaokar (Manishearth)
 start = "2019-07-25"
 end = "2024-05-03"
 notes = "All code written or reviewed by Manish"
