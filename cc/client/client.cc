@@ -21,19 +21,25 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "cc/crypto/client_encryptor.h"
+#include "cc/crypto/common.h"
 #include "oak_remote_attestation/proto/v1/messages.pb.h"
 
 namespace oak::client {
 
 namespace {
+using ::oak::crypto::ClientEncryptor;
+using ::oak::crypto::DecryptionResult;
 using ::oak::remote_attestation::AttestationVerifier;
+using ::oak::session::v1::AttestationBundle;
 using ::oak::transport::TransportWrapper;
 }  // namespace
 
+constexpr absl::string_view kEmptyAssociatedData = "";
+
 absl::StatusOr<std::unique_ptr<OakClient>> OakClient::Create(
     std::unique_ptr<TransportWrapper> transport, AttestationVerifier& verifier) {
-  absl::StatusOr<::oak::session::v1::AttestationBundle> endorsed_evidence =
-      transport->GetEvidence();
+  absl::StatusOr<AttestationBundle> endorsed_evidence = transport->GetEvidence();
   if (!endorsed_evidence.ok()) {
     return endorsed_evidence.status();
   }
@@ -49,8 +55,33 @@ absl::StatusOr<std::unique_ptr<OakClient>> OakClient::Create(
 }
 
 absl::StatusOr<std::string> OakClient::Invoke(absl::string_view request_body) {
-  // TODO(#4069): Implement sending an encrypted request and decrypting the response.
-  return absl::OkStatus();
+  // Create client encryptor.
+  absl::StatusOr<std::unique_ptr<ClientEncryptor>> client_encryptor =
+      ClientEncryptor::Create(server_encryption_public_key_);
+  if (!client_encryptor.ok()) {
+    return client_encryptor.status();
+  }
+
+  // Encrypt request.
+  absl::StatusOr<std::string> encrypted_request =
+      (*client_encryptor)->Encrypt(request_body, kEmptyAssociatedData);
+  if (!encrypted_request.ok()) {
+    return encrypted_request.status();
+  }
+
+  // Send request.
+  absl::StatusOr<std::string> encrypted_response = transport_->Invoke(*encrypted_request);
+  if (!encrypted_response.ok()) {
+    return encrypted_response.status();
+  }
+
+  // Decrypt response.
+  absl::StatusOr<DecryptionResult> response = (*client_encryptor)->Decrypt(*encrypted_response);
+  if (!response.ok()) {
+    return response.status();
+  }
+
+  return response->plaintext;
 }
 
 }  // namespace oak::client

@@ -26,6 +26,8 @@ cc_library(
     srcs = ["client.cc"],
     hdrs = ["client.h"],
     deps = [
+        "//cc/crypto:client_encryptor",
+        "//cc/crypto:common",
         "//cc/remote_attestation:attestation_verifier",
         "//cc/transport",
         "//oak_remote_attestation/proto/v1:messages_cc_proto",
