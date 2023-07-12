@@ -63,6 +63,7 @@ cc_test(
         ":common",
         ":server_encryptor",
         "//cc/crypto/hpke:recipient_context",
+        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
     ],
