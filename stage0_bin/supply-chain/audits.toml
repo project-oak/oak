@@ -126,6 +126,16 @@ safety. The unsafe blocks in the code are tiny and usually cover one or two line
 The crate does not implement any cryptograhic algorithms.
 """
 
+[[audits.zerocopy]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.6.1"
+notes = """
+There is a lot of unsafe code, but it is well documented and the reasoning about soundness in the comments is clear and logical.
+
+This crate does not implement any cryptographic algorithms.
+"""
+
 [[audits.zerocopy-derive]]
 who = "Andri Saar <andrisaar@google.com>"
 criteria = ["safe-to-deploy", "does-not-implement-crypto"]
