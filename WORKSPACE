@@ -92,8 +92,6 @@ grpc_java_repositories()
 
 # Google Protocol Buffers.
 # https://github.com/protocolbuffers/protobuf
-#
-# Protobuf should be loaded after `grpc_deps` in the WORKSPACE file
 http_archive(
     name = "com_google_protobuf",
     sha256 = "3a5f47ad3aa10192c5577ff086b24b9739a36937c34ceab6db912a16a3ef7f8e",
@@ -106,6 +104,7 @@ http_archive(
 
 load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
 
+# `protobuf_deps` should be loaded after `grpc_deps` in the WORKSPACE file.
 protobuf_deps()
 
 # External Java rules.
