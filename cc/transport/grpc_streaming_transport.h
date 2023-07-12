@@ -61,9 +61,8 @@ class GrpcStreamingTransport : public TransportWrapper {
       case ::oak::session::v1::ResponseWrapper::kInvokeResponseFieldNumber:
         return absl::InternalError("received InvokeResponse instead of GetPublicKeyResponse");
       case ::oak::session::v1::ResponseWrapper::RESPONSE_NOT_SET:
-        return absl::InternalError("received empty response");
       default:
-        return absl::InternalError("received unsupported response type");
+        return absl::InternalError("received unsupported response: " + response->DebugString());
     }
   }
 
@@ -86,9 +85,8 @@ class GrpcStreamingTransport : public TransportWrapper {
       case ::oak::session::v1::ResponseWrapper::kInvokeResponseFieldNumber:
         return response->invoke_response().encrypted_body();
       case ::oak::session::v1::ResponseWrapper::RESPONSE_NOT_SET:
-        return absl::InternalError("received empty response");
       default:
-        return absl::InternalError("received unsupported response type");
+        return absl::InternalError("received unsupported response: " + response->DebugString());
     }
   }
 
