@@ -105,6 +105,7 @@
                 cargo-fuzz
                 cargo-nextest
                 cargo-udeps
+                cargo-vet
                 protobuf
                 qemu_kvm
               ];
