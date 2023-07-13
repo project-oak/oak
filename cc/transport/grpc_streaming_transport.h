@@ -88,6 +88,19 @@ class GrpcStreamingTransport : public TransportWrapper {
     }
   }
 
+  // // Disable move.
+  // GrpcStreamingTransport(GrpcStreamingTransport&& other) = delete;
+  // GrpcStreamingTransport& operator=(GrpcStreamingTransport&& other) = delete;
+
+  // // Disable copy.
+  // GrpcStreamingTransport(const GrpcStreamingTransport&) = delete;
+  // GrpcStreamingTransport& operator=(const GrpcStreamingTransport&) = delete;
+
+  // ~GrpcStreamingTransport() override {
+  //   // channel_reader_writer_->WritesDone();
+  //   // ::grpc::Status status = channel_reader_writer_->Finish();
+  // }
+
  private:
   std::unique_ptr<::grpc::ClientReaderWriter<::oak::session::v1::RequestWrapper,
                                              ::oak::session::v1::ResponseWrapper>>
@@ -96,18 +109,25 @@ class GrpcStreamingTransport : public TransportWrapper {
   absl::StatusOr<::oak::session::v1::ResponseWrapper> Send(
       const ::oak::session::v1::RequestWrapper& request) {
     // Send a request.
-    channel_reader_writer_->Write(request);
-    channel_reader_writer_->WritesDone();
+    if (!channel_reader_writer_->Write(request)) {
+      return absl::InternalError("couldn't send request");
+    }
+    // if (!channel_reader_writer_->WritesDone()) {
+    //   return absl::InternalError("couldn't notify the backend that request has been sent");
+    // }
 
     // Receive a response.
     ::oak::session::v1::ResponseWrapper response;
-    channel_reader_writer_->Read(&response);
-    ::grpc::Status status = channel_reader_writer_->Finish();
-    if (status.ok()) {
-      return response;
-    } else {
-      return absl::InternalError("couldn't send request: " + status.error_message());
+    if (!channel_reader_writer_->Read(&response)) {
+      return absl::InternalError("couldn't receive response");
     }
+
+    // ::grpc::Status status = channel_reader_writer_->Finish();
+    // if (status.ok()) {
+    //   return response;
+    // } else {
+    //   return absl::InternalError("couldn't receive response: " + status.error_message());
+    // }
   }
 };
 
