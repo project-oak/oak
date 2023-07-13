@@ -17,17 +17,15 @@
 #ifndef CC_TRANSPORT_GRPC_STREAMING_TRANSPORT_H_
 #define CC_TRANSPORT_GRPC_STREAMING_TRANSPORT_H_
 
-#include <grpc/grpc.h>
-#include <grpcpp/channel.h>
-#include <grpcpp/client_context.h>
-#include <grpcpp/create_channel.h>
-#include <grpcpp/grpcpp.h>
-
 #include <memory>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/transport/transport.h"
+#include "grpcpp/channel.h"
+#include "grpcpp/client_context.h"
+#include "grpcpp/create_channel.h"
+#include "grpcpp/grpcpp.h"
 #include "oak_remote_attestation/proto/v1/messages.pb.h"
 #include "oak_remote_attestation/proto/v1/service_streaming.grpc.pb.h"
 #include "oak_remote_attestation/proto/v1/service_streaming.pb.h"
