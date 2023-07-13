@@ -46,5 +46,8 @@ cc_binary(
         "//cc/transport:grpc_streaming_transport",
         "//oak_remote_attestation/proto/v1:service_streaming_cc_grpc",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/log",
     ],
 )
