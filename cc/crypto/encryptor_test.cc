@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/crypto/client_encryptor.h"
 #include "cc/crypto/hpke/recipient_context.h"
