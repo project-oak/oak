@@ -42,6 +42,9 @@ constexpr absl::string_view kTestRequest = "Request";
 constexpr absl::string_view kTestResponse = "Response";
 constexpr absl::string_view kTestAssociatedData = "";
 
+// Number of message exchanges done to test secure session handling.
+constexpr uint8_t kTestSessionSize = 8;
+
 // TODO(#3641): Send test remote attestation report to the client and add corresponding tests.
 class TestTransport : public TransportWrapper {
  public:
@@ -81,9 +84,11 @@ TEST(EncryptorTest, ClientCreateAndInvokeSuccess) {
   auto oak_client = OakClient::Create(std::move(transport), verifier);
   ASSERT_TRUE(oak_client.ok());
 
-  auto response = (*oak_client)->Invoke(kTestRequest);
-  ASSERT_TRUE(response.ok());
-  EXPECT_THAT(*response, StrEq(kTestResponse));
+  for (int i = 0; i < kTestSessionSize; i++) {
+    auto response = (*oak_client)->Invoke(kTestRequest);
+    ASSERT_TRUE(response.ok());
+    EXPECT_THAT(*response, StrEq(kTestResponse));
+  }
 }
 
 }  // namespace
