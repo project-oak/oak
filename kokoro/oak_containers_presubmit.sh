@@ -19,8 +19,8 @@ cp ./target/nextest/default/*.xml "$KOKORO_ARTIFACTS_DIR/test_logs/" || true
 
 mkdir -p "$KOKORO_ARTIFACTS_DIR/binaries/"
 
-# Store the git commit hash in a file.
-echo "${KOKORO_GIT_COMMIT_oak:?}" > "$KOKORO_ARTIFACTS_DIR/binaries/git_commit"
+# Store the git commit hash in the name of an empty file, so that it can be efficiently found via a glob.
+touch "$KOKORO_ARTIFACTS_DIR/binaries/git_commit_${KOKORO_GIT_COMMIT_oak:?}"
 
 # Copy the generated binaries to Placer.
 export GENERATED_BINARIES=(
