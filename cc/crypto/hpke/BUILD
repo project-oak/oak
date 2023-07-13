@@ -27,9 +27,9 @@ cc_library(
     hdrs = ["recipient_context.h"],
     deps = [
         ":utils",
+        "@boringssl//:crypto",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@com_google_boringssl//:crypto",
     ],
 )
 
@@ -39,9 +39,9 @@ cc_library(
     hdrs = ["sender_context.h"],
     deps = [
         ":utils",
+        "@boringssl//:crypto",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@com_google_boringssl//:crypto",
     ],
 )
 
@@ -50,10 +50,10 @@ cc_library(
     srcs = ["utils.cc"],
     hdrs = ["utils.h"],
     deps = [
+        "@boringssl//:crypto",
         "@com_google_absl//absl/base:core_headers",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
-        "@com_google_boringssl//:crypto",
     ],
 )
 
@@ -66,8 +66,8 @@ cc_test(
     deps = [
         ":recipient_context",
         ":sender_context",
+        "@boringssl//:crypto",
         "@com_google_absl//absl/status:statusor",
-        "@com_google_boringssl//:crypto",
         "@com_google_googletest//:gtest_main",
     ],
 )

@@ -18,6 +18,9 @@ workspace(name = "oak")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+# The `name` argument in all `http_archive` rules should be equal to the
+# WORKSPACE name of the corresponding library.
+
 # Google Abseil.
 # https://github.com/abseil/abseil-cpp
 http_archive(
@@ -33,7 +36,7 @@ http_archive(
 # BoringSSL.
 # https://github.com/google/boringssl
 http_archive(
-    name = "com_google_boringssl",
+    name = "boringssl",
     sha256 = "b6dd308895eea9e1f0d3f503b7210141f75ba6817c78b4057406ee8f0a042504",
     strip_prefix = "boringssl-44cc20b4a0227b8913dc5f9e063443cb05e4134d",
     urls = [

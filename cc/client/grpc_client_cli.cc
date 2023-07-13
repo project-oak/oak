@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 
-#include <grpc/grpc.h>
-#include <grpcpp/channel.h>
-#include <grpcpp/client_context.h>
-#include <grpcpp/create_channel.h>
-#include <grpcpp/grpcpp.h>
-#include <grpcpp/security/credentials.h>
-
 #include <memory>
 
 #include "absl/flags/flag.h"
@@ -29,6 +22,11 @@
 #include "cc/client/client.h"
 #include "cc/remote_attestation/insecure_attestation_verifier.h"
 #include "cc/transport/grpc_streaming_transport.h"
+#include "grpcpp/channel.h"
+#include "grpcpp/client_context.h"
+#include "grpcpp/create_channel.h"
+#include "grpcpp/grpcpp.h"
+#include "grpcpp/security/credentials.h"
 #include "oak_remote_attestation/proto/v1/service_streaming.grpc.pb.h"
 
 using ::grpc::Channel;
