@@ -38,10 +38,11 @@ image_tar:
 hello_world_container_bundle_tar:
     env --chdir=oak_containers_hello_world_container DOCKER_BUILDKIT=0 bash build_container_bundle
 
-# Top level target to build all enclave apps and the kernel, and run tests.
-#
-# This is the entry point for Kokoro CI.
-kokoro: all_enclave_apps oak_restricted_kernel_bin stage0_bin
-    cargo nextest run --all-targets --hide-progress-bar
+# Entry points for Kokoro CI.
 
-kokoro_oak_containers: stage1_cpio vmlinux image_tar hello_world_container_bundle_tar
+kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin stage0_bin
+
+kokoro_build_binaries_oak_containers: stage1_cpio vmlinux image_tar hello_world_container_bundle_tar
+
+kokoro_run_tests:
+    cargo nextest run --all-targets --hide-progress-bar
