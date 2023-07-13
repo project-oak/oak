@@ -8,6 +8,8 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 command-fds = { version = "*", features = ["tokio"] }
+env_logger = "*"
+log = "*"
 prost = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 clap = { version = "*", features = ["derive"] }

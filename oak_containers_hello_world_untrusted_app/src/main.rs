@@ -13,33 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod app_client;
-
 use clap::Parser;
-
-const UNTRUSTED_APP_VSOCK_CID: u32 = vsock::VMADDR_CID_HOST;
-const UNTRUSTED_APP_VSOCK_PORT: u32 = 8081;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let args = oak_containers_launcher::Args::parse();
-    let launcher_handle = tokio::task::spawn(oak_containers_launcher::create(args));
 
-    let mut trusted_app_client = app_client::TrustedApplicationClient::create(
-        UNTRUSTED_APP_VSOCK_CID,
-        UNTRUSTED_APP_VSOCK_PORT,
-    )
-    .await
-    .map_err(|error| anyhow::anyhow!("couldn't create trusted app client: {}", error))?;
+    let mut untrusted_app = oak_containers_hello_world_untrusted_app::UntrustedApp::create(args)
+        .await
+        .map_err(|error| anyhow::anyhow!("couldn't create untrusted app: {}", error))?;
 
-    let greeting = trusted_app_client
+    let greeting = untrusted_app
         .hello("Untrusted App")
         .await
-        .map_err(|error| anyhow::anyhow!("couldn't invoke trusted app: {}", error))?;
+        .map_err(|error| anyhow::anyhow!("couldn't get greeting: {}", error))?;
 
-    println!("Received a greeting from the trusted app: {:?}", greeting);
-
-    launcher_handle.abort();
+    log::info!("Received a greeting from the trusted app: {:?}", greeting);
 
     Ok(())
 }

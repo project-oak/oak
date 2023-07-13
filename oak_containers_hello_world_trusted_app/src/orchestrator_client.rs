@@ -33,7 +33,7 @@ use proto::oak::containers::orchestrator_client::OrchestratorClient as GrpcOrche
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
 
-// Virtio VSOCK does not use URIs, hence this URI will never be used.
+// Unix Domain Sockets do not use URIs, hence this URI will never be used.
 // It is defined purely since in order to create a channel, since a URI has to
 // be supplied to create an `Endpoint`. Even though in this case the endpoint
 // is technically a file, tonic expects us to provide our own connector, and

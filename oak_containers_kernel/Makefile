@@ -1,10 +1,12 @@
 all: target/vmlinux
 
-target/vmlinux: target/linux-6.1.33/arch/x86/boot/bzImage
-	target/linux-6.1.33/scripts/extract-vmlinux  target/linux-6.1.33/arch/x86/boot/bzImage > target/vmlinux
+target/vmlinux: target/bzImage
+	target/linux-6.1.33/scripts/extract-vmlinux  target/bzImage > target/vmlinux
 
-target/linux-6.1.33/arch/x86/boot/bzImage: target/linux-6.1.33 configs/6.1.33/minimal.config
+
+target/bzImage: target/linux-6.1.33 configs/6.1.33/minimal.config
 	KCONFIG_CONFIG=../../configs/6.1.33/minimal.config $(MAKE) -C target/linux-6.1.33 bzImage -j `nproc`
+	cp target/linux-6.1.33/arch/x86/boot/bzImage target/bzImage
 
 target/linux-6.1.33:
 	mkdir -p target

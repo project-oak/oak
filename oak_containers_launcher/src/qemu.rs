@@ -105,18 +105,11 @@ impl Qemu {
         }
         // Set up the networking. `rombar=0` is so that QEMU wouldn't bother with the
         // `efi-virtio.rom` file, as we're not using EFI anyway.
-        cmd.args(["-netdev", "user,id=netdev"]);
-        cmd.args(["-device", "virtio-net,netdev=netdev,rombar=0"]);
-        // Set up the virtio-vsock device, as it is used by the example app.
-        // TODO(#709): Remove this and use networking for there as well.
         cmd.args([
-            "-device",
-            format!(
-                "vhost-vsock-pci,id=vhost-vsock-pci0,guest-cid={}",
-                std::process::id()
-            )
-            .as_str(),
+            "-netdev",
+            "user,id=netdev,hostfwd=tcp:127.0.0.1:8088-10.0.2.15:8080",
         ]);
+        cmd.args(["-device", "virtio-net,netdev=netdev,rombar=0"]);
         // And yes, use stage0 as the BIOS.
         cmd.args([
             "-bios",
@@ -129,49 +122,38 @@ impl Qemu {
         ]);
         // stage0 accoutrements: the kernel, initrd and inital kernel cmdline.
         cmd.args([
-            "-fw_cfg",
-            format!(
-                "name=opt/stage0/elf_kernel,file={}",
-                params
-                    .kernel
-                    .into_os_string()
-                    .into_string()
-                    .unwrap()
-                    .as_str()
-            )
-            .as_str(),
+            "-kernel",
+            params
+                .kernel
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .as_str(),
         ]);
         cmd.args([
-            "-fw_cfg",
-            format!(
-                "name=opt/stage0/initramfs,file={}",
-                params
-                    .initrd
-                    .into_os_string()
-                    .into_string()
-                    .unwrap()
-                    .as_str()
-            )
-            .as_str(),
+            "-initrd",
+            params
+                .initrd
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .as_str(),
         ]);
         cmd.args([
-            "-fw_cfg",
-            format!(
-                "name=opt/stage0/cmdline,string={}",
-                [
-                    "console=ttyS0",
-                    "panic=-1",
-                    "brd.rd_nr=1",
-                    format!("brd.rd_size={}", params.ramdrive_size).as_str(),
-                    "brd.max_part=1",
-                    "ip=10.0.2.10:::255.255.255.0::eth0:off"
-                ]
-                .join(" ")
-            )
+            "-append",
+            [
+                "console=ttyS0",
+                "panic=-1",
+                "brd.rd_nr=1",
+                format!("brd.rd_size={}", params.ramdrive_size).as_str(),
+                "brd.max_part=1",
+                "ip=10.0.2.15:::255.255.255.0::eth0:off",
+            ]
+            .join(" ")
             .as_str(),
         ]);
 
-        println!("QEMU command line: {:?}", cmd);
+        log::debug!("QEMU command line: {:?}", cmd);
 
         // Spit out everything we read, if we were not using telnet console.
         if params.telnet_console.is_none() {
@@ -189,6 +171,11 @@ impl Qemu {
         let instance = cmd.spawn()?;
 
         Ok(Self { instance })
+    }
+
+    pub async fn kill(&mut self) -> Result<std::process::ExitStatus> {
+        self.instance.start_kill()?;
+        self.wait().await
     }
 
     pub async fn wait(&mut self) -> Result<std::process::ExitStatus> {

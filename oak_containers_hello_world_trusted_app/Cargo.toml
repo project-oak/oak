@@ -14,8 +14,6 @@ prost = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tokio-stream = "*"
 tonic = { workspace = true }
-tokio-vsock = { version = "*", features = ["tonic-conn"] }
-vsock = "*"
 futures = "*"
 async-stream = "*"
 bytes = "*"

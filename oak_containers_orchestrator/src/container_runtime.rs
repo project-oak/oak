@@ -152,16 +152,15 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
         std::env::set_current_dir(oci_filesystem_bundle_config.process.cwd.clone())?;
         Ok(())
     };
-
     // Safety: this unsafe block exists soley we can call the unsafe `pre_exec`
     // method, allowing us to use a closure to prep the newly forked child
     // process. That closure runs in a special enviroment so it can behave a bit
     // unexpectedly. For our case that's fine though, since we just use it to
     // make chdir & chroot syscalls.
     // Ref: https://docs.rs/tokio/latest/tokio/process/struct.Command.html#safety
-    unsafe { start_trusted_app_cmd.pre_exec(prep_trusted_app_process) };
-
-    run_command_and_log_output(&mut start_trusted_app_cmd).await?;
-
+    unsafe { start_trusted_app_cmd.pre_exec(prep_trusted_app_process) }
+        .spawn()?
+        .wait()
+        .await?;
     Ok(())
 }

@@ -18,5 +18,8 @@ use clap::Parser;
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let args = oak_containers_launcher::Args::parse();
-    oak_containers_launcher::create(args).await
+    env_logger::init();
+    let mut launcher = oak_containers_launcher::Launcher::create(args).await?;
+    launcher.wait().await?;
+    Ok(())
 }

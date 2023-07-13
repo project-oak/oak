@@ -36,9 +36,12 @@ use self::proto::oak::{
     session::v1::AttestationEvidence,
 };
 use anyhow::anyhow;
-use futures::Stream;
+use futures::{FutureExt, Stream};
 use std::{net::SocketAddr, pin::Pin, sync::Mutex};
-use tokio::io::{AsyncReadExt, BufReader};
+use tokio::{
+    io::{AsyncReadExt, BufReader},
+    sync::oneshot::Receiver,
+};
 use tonic::{transport::Server, Request, Response, Status};
 
 // Most gRPC implementations limit message sizes to 4MiB. Let's stay
@@ -163,6 +166,7 @@ pub async fn new(
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: Option<std::path::PathBuf>,
+    shutdown: Receiver<()>,
 ) -> Result<(), anyhow::Error> {
     let server_impl = LauncherServerImplementation {
         system_image,
@@ -173,7 +177,7 @@ pub async fn new(
     };
     Server::builder()
         .add_service(LauncherServer::new(server_impl))
-        .serve(addr)
+        .serve_with_shutdown(addr, shutdown.map(|_| ()))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))
 }

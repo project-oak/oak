@@ -28,13 +28,8 @@ use proto::oak::containers::example::{
     trusted_application_client::TrustedApplicationClient as GrpcTrustedApplicationClient,
     HelloRequest,
 };
-use tonic::transport::{Endpoint, Uri};
-use tower::service_fn;
-
-// Virtio VSOCK does not use URIs, hence this URI will never be used.
-// It is defined purely since in order to create a channel a URI has to
-// be supplied to create an `Endpoint`.
-static IGNORED_ENDPOINT_URI: &str = "file://[::]:0";
+use tokio::time::Duration;
+use tonic::transport::Endpoint;
 
 /// Utility struct used to interface with the launcher
 pub struct TrustedApplicationClient {
@@ -42,35 +37,14 @@ pub struct TrustedApplicationClient {
 }
 
 impl TrustedApplicationClient {
-    async fn get_stream_with_trusted_app(
-        cid: u32,
-        port: u32,
-    ) -> Result<tokio_vsock::VsockStream, anyhow::Error> {
-        let (vsock_stream, _) = tokio_vsock::VsockListener::bind(cid, port)
-            .context("failed to bind vsock listener")?
-            // The trusted app is the only party that will connect to this listener.
-            // Hence the first incoming stream must be the trusted app.
-            //
-            // Effectively this means that while on the gRPC layer the trusted app
-            // listens for invocations from the untrusted app, the inverse is
-            // true on the layer of the VSOCK connection. There the untrusted
-            // app listens for connections, the trusted app connects to the
-            // listener.
-            .accept()
-            .await
-            .context("failed to accept vsock connection")?;
-
-        Ok(vsock_stream)
-    }
-    pub async fn create(cid: u32, port: u32) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn create(server_addr: &'static str) -> Result<Self, Box<dyn std::error::Error>> {
         let inner: GrpcTrustedApplicationClient<tonic::transport::channel::Channel> = {
-            let channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
-                .context("couldn't form endpoint")?
-                .connect_with_connector(service_fn(move |_: Uri| {
-                    TrustedApplicationClient::get_stream_with_trusted_app(cid, port)
-                }))
+            let channel = Endpoint::from_shared(server_addr)
+                .context("couldn't form channel")?
+                .connect_timeout(Duration::from_secs(120))
+                .connect()
                 .await
-                .context("couldn't connect to untrusted app VSOCK socket")?;
+                .context("couldn't connect to trusted app")?;
             GrpcTrustedApplicationClient::new(channel)
         };
         Ok(Self { inner })
