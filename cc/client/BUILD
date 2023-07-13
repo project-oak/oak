@@ -37,23 +37,6 @@ cc_library(
     ],
 )
 
-# Binaries
-
-cc_binary(
-    name = "cli",
-    srcs = ["grpc_client_cli.cc"],
-    deps = [
-        ":client",
-        "//cc/remote_attestation:insecure_attestation_verifier",
-        "//cc/transport:grpc_streaming_transport",
-        "//oak_remote_attestation/proto/v1:service_streaming_cc_grpc",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/flags:flag",
-        "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/log",
-    ],
-)
-
 # Tests
 
 cc_test(
@@ -70,5 +53,22 @@ cc_test(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+# Binaries
+
+cc_binary(
+    name = "cli",
+    srcs = ["grpc_client_cli.cc"],
+    deps = [
+        ":client",
+        "//cc/remote_attestation:insecure_attestation_verifier",
+        "//cc/transport:grpc_streaming_transport",
+        "//oak_remote_attestation/proto/v1:service_streaming_cc_grpc",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/log",
     ],
 )
