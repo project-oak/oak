@@ -23,6 +23,9 @@
 
 #include <memory>
 
+#include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
+#include "absl/log/log.h"
 #include "cc/client/client.h"
 #include "cc/remote_attestation/insecure_attestation_verifier.h"
 #include "cc/transport/grpc_streaming_transport.h"
@@ -40,10 +43,18 @@ using ::oak::session::v1::ResponseWrapper;
 using ::oak::session::v1::StreamingSession;
 using ::oak::transport::GrpcStreamingTransport;
 
+ABSL_FLAG(std::string, address, "", "Address of the backend to connect to");
+ABSL_FLAG(std::string, request, "", "Request string to be sent to the backend");
+
 // TODO(#4069): Finish CLI implementation.
 int main(int argc, char* argv[]) {
+  absl::ParseCommandLine(argc, argv);
+  std::string address = absl::GetFlag(FLAGS_address);
+  std::string request = absl::GetFlag(FLAGS_request);
+
   // Create gRPC client stub.
-  std::shared_ptr<Channel> channel = CreateChannel("", InsecureChannelCredentials());
+  LOG(INFO) << "connecting to: " << address;
+  std::shared_ptr<Channel> channel = CreateChannel(address, InsecureChannelCredentials());
   std::shared_ptr<oak::session::v1::StreamingSession::Stub> stub =
       StreamingSession::NewStub(channel);
   ClientContext context;
@@ -51,13 +62,22 @@ int main(int argc, char* argv[]) {
       stub->Stream(&context);
 
   // Create Oak Client.
+  LOG(INFO) << "creating Oak Client";
   std::unique_ptr<GrpcStreamingTransport> transport = std::make_unique<GrpcStreamingTransport>(
       GrpcStreamingTransport(std::move(channel_reader_writer)));
   InsecureAttestationVerifier verifier = InsecureAttestationVerifier();
   absl::StatusOr<std::unique_ptr<OakClient>> oak_client =
       OakClient::Create(std::move(transport), verifier);
   if (!oak_client.ok()) {
-    // TODO(#4069): Log errors.
+    LOG(ERROR) << "couldn't create Oak client: " << oak_client.status();
     return 1;
   }
+
+  LOG(INFO) << "sending request: " << request;
+  absl::StatusOr<std::string> response = (*oak_client)->Invoke(request);
+  if (!response.ok()) {
+    LOG(ERROR) << "couldn't send request: " << response.status();
+    return 1;
+  }
+  LOG(INFO) << "received response: " << *response;
 }
