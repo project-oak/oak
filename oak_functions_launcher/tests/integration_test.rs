@@ -140,6 +140,22 @@ async fn test_launcher_weather_lookup_virtual() {
         .expect("failed to wait for bazel");
     eprintln!("bazel status: {:?}", status);
     assert!(status.success());
+
+    // Run C++ client via Bazel.
+    let status = tokio::process::Command::new("bazel")
+        .arg("run")
+        .arg("//cc/client:cli")
+        .arg("--")
+        .arg(format!("--address=http://localhost:{port}"))
+        .arg("--request=\'{\"lat\":0,\"lng\":0}\'")
+        .current_dir(workspace_path(&[]))
+        .spawn()
+        .expect("failed to spawn bazel")
+        .wait()
+        .await
+        .expect("failed to wait for bazel");
+    eprintln!("bazel status: {:?}", status);
+    assert!(status.success());
 }
 
 #[tokio::test]
