@@ -30,6 +30,7 @@ export GENERATED_BINARIES=(
     ./target/stage1.cpio
     ./oak_containers_kernel/target/vmlinux
     ./oak_containers_system_image/target/image.tar.xz
+    ./oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar
 )
 cp "${GENERATED_BINARIES[@]}" "$KOKORO_ARTIFACTS_DIR/binaries/"
 
