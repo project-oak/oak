@@ -44,7 +44,7 @@ using ::oak::session::v1::StreamingSession;
 using ::oak::transport::GrpcStreamingTransport;
 
 ABSL_FLAG(std::string, address, "", "Address of the backend to connect to");
-ABSL_FLAG(std::string, request, "", "Request bytes represented as hex encoded string");
+ABSL_FLAG(std::string, request, "", "Request string to be sent to the backend");
 
 // TODO(#4069): Finish CLI implementation.
 int main(int argc, char* argv[]) {
