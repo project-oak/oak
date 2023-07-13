@@ -53,3 +53,22 @@ cc_binary(
         "@com_google_absl//absl/log",
     ],
 )
+
+# Tests
+
+cc_test(
+    name = "client_test",
+    size = "small",
+    srcs = ["client_test.cc"],
+    deps = [
+        ":client",
+        "//cc/crypto:server_encryptor",
+        "//cc/crypto/hpke:recipient_context",
+        "//cc/remote_attestation:insecure_attestation_verifier",
+        "//cc/transport",
+        "//oak_remote_attestation/proto/v1:messages_cc_proto",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
