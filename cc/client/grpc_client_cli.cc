@@ -61,8 +61,8 @@ int main(int argc, char* argv[]) {
 
   // Create Oak Client.
   LOG(INFO) << "creating Oak Client";
-  std::unique_ptr<GrpcStreamingTransport> transport = std::make_unique<GrpcStreamingTransport>(
-      GrpcStreamingTransport(std::move(channel_reader_writer)));
+  std::unique_ptr<GrpcStreamingTransport> transport =
+      std::make_unique<GrpcStreamingTransport>(std::move(channel_reader_writer));
   InsecureAttestationVerifier verifier = InsecureAttestationVerifier();
   absl::StatusOr<std::unique_ptr<OakClient>> oak_client =
       OakClient::Create(std::move(transport), verifier);
