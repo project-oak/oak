@@ -11,8 +11,11 @@ export RUST_BACKTRACE=1
 export RUST_LOG=debug
 export XDG_RUNTIME_DIR=/var/run
 
+# Make sure we're in the root of the repository.
+cd "$(dirname "$0")/.."
+
 ./scripts/docker_pull
-./scripts/docker_run nix develop .#containers --command just kokoro_oak_containers
+./scripts/docker_run nix develop .#containers --command just kokoro_build_binaries_oak_containers
 
 mkdir -p "$KOKORO_ARTIFACTS_DIR/test_logs/"
 cp ./target/nextest/default/*.xml "$KOKORO_ARTIFACTS_DIR/test_logs/" || true
