@@ -6,7 +6,7 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
+  workflow_dispatch:
     branches: [main]
   pull_request:
     branches: [main]
