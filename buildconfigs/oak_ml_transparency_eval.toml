@@ -1,0 +1,11 @@
+command = [
+  "env",
+  "--chdir=oak_ml_transparency/mnist",
+  "python3",
+  "eval.py",
+  "--model",
+  "/project/mnist_model.tar.gz",
+  "--output",
+  "result.json"
+]
+artifact_path = "./oak_ml_transparency/mnist/result.json"
