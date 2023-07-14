@@ -17,4 +17,4 @@ WORKDIR /project
 COPY . /project
 
 # Download model
-RUN curl --output mnist_model.tar.gz  https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:9e3f569f0a791f4223fbb117020c6c4e3e1638c3b1c4a3500dbb9023009c723b
+RUN curl --output mnist_model.tar.gz  https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:63ea4a9906dbbb3a154f069a0d4bc6a2272b9b8151e69fbd57029c826c2cd779
