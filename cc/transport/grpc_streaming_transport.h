@@ -19,6 +19,7 @@
 
 #include <memory>
 
+#include "absl/log/log.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/transport/transport.h"
@@ -88,6 +89,13 @@ class GrpcStreamingTransport : public TransportWrapper {
     }
   }
 
+  ~GrpcStreamingTransport() {
+    absl::Status status = Close();
+    if (!status.ok()) {
+      LOG(WARNING) << "couldn't stop gRPC stream: " << status.message();
+    }
+  }
+
  private:
   std::unique_ptr<::grpc::ClientReaderWriter<::oak::session::v1::RequestWrapper,
                                              ::oak::session::v1::ResponseWrapper>>
@@ -106,6 +114,17 @@ class GrpcStreamingTransport : public TransportWrapper {
       return absl::InternalError("couldn't receive response");
     }
     return response;
+  }
+
+  absl::Status Close() {
+    if (!channel_reader_writer_->WritesDone()) {
+       return absl::InternalError("couldn't close writing stream");
+    }
+    ::grpc::Status status = channel_reader_writer_->Finish();
+    if (!status.ok()) {
+      return absl::InternalError("couldn't close reading stream: " + status.error_message());
+    }
+    return absl::OkStatus();
   }
 };
 
