@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 mkdir -p target
 
 # build the orchestrator binary
