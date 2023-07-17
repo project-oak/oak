@@ -64,7 +64,12 @@ pub async fn create(cid: u32, port: u32, application_config: Vec<u8>) -> Result<
         .add_service(TrustedApplicationServer::new(
             TrustedApplicationImplementation { application_config },
         ))
-        .serve_with_incoming(incoming)
+        // the server is served explicitly with no shutdown, since otherwise it
+        // shuts down as soon as the incoming stream yields no more new
+        // connections even if existing connections are still active.
+        // TODO(#4166): Replace this connection with an ordinary network
+        // connection.
+        .serve_with_incoming_shutdown(incoming, None)
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))
 }
