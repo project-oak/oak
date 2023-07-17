@@ -16,7 +16,7 @@ embed the evaluation script in the Docker image:
 ```dockerfile
 RUN mkdir /project
 WORKDIR /project
-ADD . /project
+COPY . /project
 ```
 
 Ideally, and as is the case in this example, the Dockerfile and the evaluation
@@ -96,8 +96,7 @@ Inside the Docker image, we can run the following command to run the evaluation
 script on the model:
 
 ```bash
-tar -xzvf /project/mnist_model.tar.gz mnist-model --no-same-owner
-python3 eval.py mnist-model/
+python3 eval.py --model=mnist_model.tar.gz --output=result.json
 ```
 
 The first command is needed because currently the model is downloaded and
@@ -110,14 +109,16 @@ Similarly, you can use the following command to train the model, and save it in
 the given path:
 
 ```bash
-python3 build.py mnist-model/
+python3 build.py --output mnist-model
 ```
 
-You can then compress the model into a tar file, and upload it to a storage, for
-instance [Ent](https://github.com/google/ent), for future use:
+You can then archive and compress the model into a tar.gz file, and upload it to
+a storage, for instance [Ent](https://github.com/google/ent), for future use.
+
+To create the archive file use the following command:
 
 ```bash
-tar -czvf mnist_model.tar.gz mnist-model/
+tar --create --gzip --verbose --file mnist_model.tar.gz mnist-model
 ```
 
 Note that uploading to Ent requires and API key that you need to acquire out of
