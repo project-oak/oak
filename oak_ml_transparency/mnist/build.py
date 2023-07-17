@@ -40,10 +40,11 @@ def create_model():
 
 def main():
     parser = argparse.ArgumentParser(
-                prog='MNIST build',
-                description='Trains an MNIST model and stores it in the given path')
+        allow_abbrev=False,
+        prog='MNIST build',
+        description='Trains an MNIST model and stores it in the given path')
 
-    parser.add_argument('-o', '--output', help="path to store the model, as a SavedModel format") 
+    parser.add_argument('--output', help="path to store the model, as a SavedModel format") 
 
     args = parser.parse_args()
     saved_model_path = args.output

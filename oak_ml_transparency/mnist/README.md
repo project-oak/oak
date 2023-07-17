@@ -96,7 +96,7 @@ Inside the Docker image, we can run the following command to run the evaluation
 script on the model:
 
 ```bash
-python3 eval.py --model mnist_model.tar.gz --output result.json
+python3 eval.py --model=mnist_model.tar.gz --output=result.json
 ```
 
 The first command is needed because currently the model is downloaded and

@@ -86,11 +86,12 @@ def cleanup_archive(file: tarfile.TarFile):
 
 def main():
     parser = argparse.ArgumentParser(
-                prog='MNIST evaluation',
-                description='Evaluates an MNIST model against adversarial examples')
+        allow_abbrev=False,
+        prog='MNIST evaluation',
+        description='Evaluates an MNIST model against adversarial examples')
 
-    parser.add_argument('-m', '--model', help="the model as a compressed tar archive")
-    parser.add_argument('-o', '--output', help="path to store the evaluation result in") 
+    parser.add_argument('--model', help="the model as a compressed tar archive")
+    parser.add_argument('--output', help="path to store the evaluation result in") 
 
     args = parser.parse_args()
     model_path = args.model
