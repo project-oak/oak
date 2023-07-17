@@ -69,7 +69,7 @@ pub async fn create(cid: u32, port: u32, application_config: Vec<u8>) -> Result<
         // connections even if existing connections are still active.
         // TODO(#4166): Replace this connection with an ordinary network
         // connection.
-        .serve_with_incoming_shutdown(incoming, None)
+        .serve_with_incoming_shutdown(incoming, futures::future::pending())
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))
 }
