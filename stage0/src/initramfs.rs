@@ -32,8 +32,10 @@ pub fn try_load_initial_ram_disk(
     e820_table: &[BootE820Entry],
     kernel_info: &KernelInfo,
 ) -> Option<&'static [u8]> {
-    let path = CStr::from_bytes_with_nul(INITIAL_RAM_DISK_FILE_PATH).expect("invalid c-string");
-    let file = fw_cfg.find(path)?;
+    let file = fw_cfg.get_initrd_file().or_else(|| {
+        let path = CStr::from_bytes_with_nul(INITIAL_RAM_DISK_FILE_PATH).expect("invalid c-string");
+        fw_cfg.find(path)
+    })?;
     let size = file.size();
     let initrd_address =
         find_suitable_dma_address(size, e820_table).expect("no suitable DMA address available");

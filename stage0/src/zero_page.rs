@@ -14,11 +14,15 @@
 // limitations under the License.
 //
 
-use crate::{cmos::Cmos, fw_cfg::FwCfg};
-use core::{ffi::CStr, mem::size_of};
+use crate::{
+    cmos::Cmos,
+    fw_cfg::{find_suitable_dma_address, FwCfg},
+};
+use core::{ffi::CStr, mem::size_of, slice};
 use oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
 use oak_sev_guest::io::PortFactoryWrapper;
 use x86_64::PhysAddr;
+use zerocopy::AsBytes;
 
 /// Boot metadata for the Linux kernel.
 ///
@@ -42,6 +46,38 @@ impl ZeroPage {
         zero_page.hdr.kernel_alignment = 0x1000000; // Magic number from crosvm source.
 
         ZeroPage { inner: zero_page }
+    }
+
+    /// Fills the setup header fields with information from the kernel setup data if it is available
+    /// on the fw_cfg device.
+    ///
+    /// The fw_cfg device will only provide this data when booting a compressed bzImage kernel, as
+    /// it is split off from start of the bzImage file.
+    ///
+    /// See <https://www.kernel.org/doc/html/v6.3/x86/boot.html> for more information.
+    pub fn try_fill_hdr_from_setup_data(&mut self, fw_cfg: &mut FwCfg) {
+        if let Some(file) = fw_cfg.get_setup_file() {
+            let size = file.size();
+            // We temporarily copy the setup data to the end of available mapped virtual memory.
+            let start = find_suitable_dma_address(size, self.inner.e820_table())
+                .expect("no suitable DMA address available");
+            let address = crate::phys_to_virt(start);
+
+            let buf = unsafe { slice::from_raw_parts_mut::<u8>(address.as_mut_ptr(), size) };
+            let actual_size = fw_cfg
+                .read_file(&file, buf)
+                .expect("could not read setup data");
+            assert_eq!(actual_size, size, "setup data did not match expected size");
+
+            // The header information starts at offset 0x01F1 from the start of the setup data.
+            let hdr_start = 0x1F1usize;
+            // We can determine the end of the setup header information by adding the value of the
+            // byte as offset 0x201 to the value 0x202.
+            let hdr_end = 0x202usize + (buf[0x201] as usize);
+            let src = &buf[hdr_start..hdr_end];
+            let dest = self.inner.hdr.as_bytes_mut();
+            dest.copy_from_slice(src);
+        }
     }
 
     /// Fills the E820 memory map (layout of the physical memory of the machine) in the zero page.
@@ -113,8 +149,9 @@ impl ZeroPage {
     /// header.
     pub fn add_setup_data(&mut self, setup_data: &mut oak_linux_boot_params::CCSetupData) {
         // Put our header as the first element in the linked list.
-        setup_data.header.next = self.inner.hdr.setup_data;
-        self.inner.hdr.setup_data = &setup_data.header as *const oak_linux_boot_params::SetupData;
+        setup_data.header.next = self.inner.hdr.setup_data();
+        self.inner.hdr.setup_data =
+            &setup_data.header as *const oak_linux_boot_params::SetupData as u64;
     }
 
     /// Sets the address and size of the initial RAM disk.
