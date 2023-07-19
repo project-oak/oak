@@ -103,8 +103,6 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         .expect("Failed to create launcher");
     log::info!("created launcher instance");
 
-    // let key_provider = Arc::new(EncryptionKeyProvider::new());
-    // let serialized_server_public_key = key_provider.get_serialized_public_key();
     let serialized_server_public_key = initialize_response
         .public_key_info
         .expect("initialize response doesn't have public key info")
