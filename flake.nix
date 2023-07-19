@@ -108,6 +108,7 @@
                 cargo-vet
                 protobuf
                 qemu_kvm
+                python312
               ];
             };
             # Minimal shell with only the dependencies needed to run the format and check-format
