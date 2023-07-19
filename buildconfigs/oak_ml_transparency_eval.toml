@@ -1,9 +1,10 @@
 command = [
   "env",
   "--chdir=oak_ml_transparency/mnist",
-  "python3",
-  "eval.py",
+  "/project/runner-musl",
   "--model=/project/mnist_model.tar.gz",
-  "--output=result.json"
+  "--model-name=mnist",
+  "--eval-script=/project/eval.py",
+  "--output=claim.json"
 ]
-artifact_path = "./oak_ml_transparency/mnist/result.json"
+artifact_path = "./oak_ml_transparency/mnist/claim.json"
