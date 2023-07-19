@@ -84,7 +84,7 @@ pub extern "C" fn rust64_start(_: u64, boot_params: &BootParams) -> ! {
         log::info!("SNP active");
 
         // Walk the null-terminated setup_data list until we find the CC blob.
-        let mut setup_data = boot_params.hdr.setup_data;
+        let mut setup_data = boot_params.hdr.setup_data();
 
         // Safety: there's a lot of dereferences of raw pointers here; unfortunately necessary as we
         // need to access the C data structures set up by the bootloader. It is safe as long as the
