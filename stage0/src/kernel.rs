@@ -62,16 +62,15 @@ impl Default for KernelInfo {
 pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<&'static CStr> {
     let (cmdline_file, buffer_size) = if let Some(cmdline_file) = fw_cfg.get_cmdline_file() {
         // The provided value is already null-terminated.
-        let size = cmdline_file.size() as usize;
+        let size = cmdline_file.size();
         (cmdline_file, size)
     } else {
         let cmdline_path = CStr::from_bytes_with_nul(CMDLINE_FILE_PATH).expect("invalid c-string");
         let cmdline_file = fw_cfg.find(cmdline_path)?;
         // Make the buffer one byte longer so that the kernel command-line is null-terminated.
-        let size = cmdline_file.size() as usize + 1;
+        let size = cmdline_file.size() + 1;
         (cmdline_file, size)
     };
-    let cmdline_size = cmdline_file.size();
     // Safety: len will always be at least 1 byte, and we don't care about alignment. If the
     // allocation fails, we won't try coercing it into a slice.
     let buf = unsafe {
@@ -85,7 +84,8 @@ pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<&'static CStr> {
         .read_file(&cmdline_file, buf)
         .expect("could not read cmdline");
     assert_eq!(
-        actual_size, cmdline_size,
+        actual_size,
+        cmdline_file.size(),
         "cmdline size did not match expected size"
     );
 
