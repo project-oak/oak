@@ -169,6 +169,9 @@
 <a href="#169" id="169">169</a>
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -324,9 +327,12 @@
     </span><span class="kw">if </span>rs &gt; <span class="number">0xFFFB_C000 </span>{
         rs = <span class="number">0xFFFB_C000</span>;
     };
-    zero_page.e820_entries = <span class="number">2</span>;
-    zero_page.e820_table[<span class="number">0</span>] = BootE820Entry::new(<span class="number">0</span>, rs <span class="kw">as </span>usize, E820EntryType::RAM);
-    zero_page.e820_table[<span class="number">1</span>] = BootE820Entry::new(
+    zero_page.e820_entries = <span class="number">4</span>;
+    zero_page.e820_table[<span class="number">0</span>] = BootE820Entry::new(<span class="number">0</span>, <span class="number">0x80000</span>, E820EntryType::RAM);
+    zero_page.e820_table[<span class="number">1</span>] = BootE820Entry::new(<span class="number">0x80000</span>, <span class="number">0x20000</span>, E820EntryType::ACPI);
+    zero_page.e820_table[<span class="number">2</span>] =
+        BootE820Entry::new(<span class="number">0xA0000</span>, (rs - <span class="number">0xA0000</span>) <span class="kw">as </span>usize, E820EntryType::RAM);
+    zero_page.e820_table[<span class="number">3</span>] = BootE820Entry::new(
         <span class="number">0xFFFB_C000</span>,
         <span class="number">0x1_0000_0000 </span>- <span class="number">0xFFFB_C000</span>,
         E820EntryType::RESERVED,
@@ -334,7 +340,7 @@
 
     <span class="kw">if </span>high &gt; <span class="number">0 </span>{
         zero_page.e820_entries += <span class="number">1</span>;
-        zero_page.e820_table[<span class="number">2</span>] =
+        zero_page.e820_table[<span class="number">4</span>] =
             BootE820Entry::new(<span class="number">0x1_0000_0000</span>, high <span class="kw">as </span>usize, E820EntryType::RAM);
     }
 
