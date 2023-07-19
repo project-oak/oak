@@ -153,9 +153,12 @@ fn build_e820_from_nvram(
     if rs > 0xFFFB_C000 {
         rs = 0xFFFB_C000;
     };
-    zero_page.e820_entries = 2;
-    zero_page.e820_table[0] = BootE820Entry::new(0, rs as usize, E820EntryType::RAM);
-    zero_page.e820_table[1] = BootE820Entry::new(
+    zero_page.e820_entries = 4;
+    zero_page.e820_table[0] = BootE820Entry::new(0, 0x80000, E820EntryType::RAM);
+    zero_page.e820_table[1] = BootE820Entry::new(0x80000, 0x20000, E820EntryType::ACPI);
+    zero_page.e820_table[2] =
+        BootE820Entry::new(0xA0000, (rs - 0xA0000) as usize, E820EntryType::RAM);
+    zero_page.e820_table[3] = BootE820Entry::new(
         0xFFFB_C000,
         0x1_0000_0000 - 0xFFFB_C000,
         E820EntryType::RESERVED,
@@ -163,7 +166,7 @@ fn build_e820_from_nvram(
 
     if high > 0 {
         zero_page.e820_entries += 1;
-        zero_page.e820_table[2] =
+        zero_page.e820_table[4] =
             BootE820Entry::new(0x1_0000_0000, high as usize, E820EntryType::RAM);
     }
 
