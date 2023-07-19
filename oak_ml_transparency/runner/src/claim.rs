@@ -15,7 +15,6 @@
 //
 
 use chrono::Utc;
-use hex;
 use sha2::{Digest, Sha256};
 
 pub fn generate_claim(

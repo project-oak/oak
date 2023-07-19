@@ -8,23 +8,21 @@ license = "Apache-2.0"
 [workspace]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 anyhow = "*"
 clap = { version = "*", features = ["derive"] }
-chrono = { version = "*" }
+chrono = { version = "0.4.22", default-features = false, features = ["clock"] }
 env_logger = "*"
 hex = "*"
 log = "*"
 sha2 = { version = "*", default-features = false }
 
-
 [dev-dependencies]
 serde_json = "*"
 
 [profile.release]
-opt-level = 'z'     # Optimize for size
-lto = true          # Enable link-time optimization
-codegen-units = 1   # Reduce number of codegen units to increase optimizations
-panic = 'abort'     # Abort on panic
-strip = true        # Strip symbols from binary*
+opt-level = 'z' # Optimize for size
+lto = true # Enable link-time optimization
+codegen-units = 1 # Reduce number of codegen units to increase optimizations
+panic = 'abort' # Abort on panic
+strip = true # Strip symbols from binary*

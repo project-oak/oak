@@ -24,3 +24,15 @@ we will provide a better provenance story for the runner.
 $./ent put ./runner/target/x86_64-unknown-linux-musl/release/runner
 sha256:ed9c35c10c084dfe25b7c22a58d14ed090801fced7e292498da5c7e77853f6ea ↑ [ent-store]
 ```
+
+## Run the runner
+
+You can run the runner directly with `cargo run`:
+
+```bash
+cargo run -- \
+--model=../mnist_model.tar.gz \
+--model-name=mnist \
+--eval-script=../mnist/eval.py \
+--output=claim.json
+```

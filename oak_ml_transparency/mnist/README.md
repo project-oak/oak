@@ -145,7 +145,7 @@ the file from Ent.
 docker build -t europe-west2-docker.pkg.dev/oak-ci/mnist-eval/mnist-eval:latest .
 ```
 
-2. Push to Oak container registry
+1. Push to Oak container registry
 
 ```bash
 docker push europe-west2-docker.pkg.dev/oak-ci/mnist-eval/mnist-eval:latest
