@@ -63,7 +63,7 @@ pub fn get_snp_page_addresses(info: &BootParams) -> SnpPageAddresses {
     assert_page_in_valid_range(phys);
     // The setup data is stored in a null-terminated linked list, so we step through the list until
     // we find an entry with the right type or reach the end.
-    let mut setup_data_ptr = info.hdr.setup_data;
+    let mut setup_data_ptr = info.hdr.setup_data();
     while !setup_data_ptr.is_null() {
         assert_pointer_in_valid_range(setup_data_ptr);
         // Safety: we have checked that the pointer is not null and at least points to memory within

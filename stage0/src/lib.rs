@@ -205,6 +205,8 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     paging::map_additional_memory(encrypted);
 
+    zero_page.try_fill_hdr_from_setup_data(&mut fwcfg);
+
     if snp {
         let cc_blob = BOOT_ALLOC
             .leak(oak_linux_boot_params::CCBlobSevInfo::new(
