@@ -3,13 +3,13 @@
 This is a command line tool for running an evaluation on a model and generating
 a claim about it.
 
-See `../mnist` for an example model evaluation project.
+See [`mnist`](../mnist) for an example model evaluation project.
 
 ## Build the runner
 
 The runner is used inside a Docker image similar to the one in
-`../mnist/Dockerfile`, so we may need to build it for various targets, including
-`musl`. Run the following under `oak/oak_ml_transparency/runner`:
+[mnist Dockerfile](../mnist/Dockerfile), so we may need to build it for various
+targets, including `musl`. Run the following under `oak_ml_transparency/runner`:
 
 ```console
 $cargo build --release --target=x86_64-unknown-linux-musl
@@ -27,12 +27,16 @@ sha256:ed9c35c10c084dfe25b7c22a58d14ed090801fced7e292498da5c7e77853f6ea ↑ [ent
 
 ## Run the runner
 
-You can run the runner directly with `cargo run`:
+You can test the runner directly with `cargo run`:
 
 ```bash
 cargo run -- \
---model=../mnist_model.tar.gz \
+--model=testdata/eval.py \
 --model-name=mnist \
---eval-script=../mnist/eval.py \
+--eval-script=testdata/eval.py \
 --output=claim.json
 ```
+
+Note that this command uses `testdata/eval.py` as the model. This works because
+currently the runner can accept any file as the model, and the test script does
+not really use the model.

@@ -14,9 +14,22 @@
 // limitations under the License.
 //
 
+use anyhow::Result;
 use chrono::Utc;
+use log::warn;
 use sha2::{Digest, Sha256};
 
+use std::{
+    fs::{remove_file, File},
+    io::{self, Read, Write},
+    path::PathBuf,
+    process::Command,
+};
+
+const RESULT_PATH: &str = "result.json";
+
+/// Generates a claim in the form of an intoto-statement about the model, identified by the given
+/// name and digest, and the given evaluation result.
 pub fn generate_claim(
     model_name: &str,
     model_digest: &str,
@@ -53,6 +66,39 @@ pub fn generate_claim(
     )
 }
 
+/// Runs the given evaluation script on the given model, and returns the result as a string, or an
+/// error if the evaluation fails.
+pub fn run_evaluation(model_path: &PathBuf, eval_path: &PathBuf) -> Result<String> {
+    // Run python evaluation script
+    let output = Command::new("python3")
+        .arg(eval_path)
+        .arg("--model")
+        .arg(model_path)
+        .arg("--output")
+        .arg(RESULT_PATH)
+        .output()?;
+
+    if !output.status.success() {
+        io::stdout().write_all(&output.stdout)?;
+        io::stderr().write_all(&output.stderr)?;
+        anyhow::bail!(
+            "Running the evaluation failed with status {}",
+            output.status,
+        )
+    }
+
+    let mut file = File::open(RESULT_PATH)?;
+    let mut result = String::new();
+    file.read_to_string(&mut result)?;
+
+    // cleanup
+    if let Err(e) = remove_file(RESULT_PATH) {
+        warn!("could not remove the result file: {e:?}");
+    }
+
+    Ok(result)
+}
+
 /// Computes a SHA-256 digest of `input` and returns it as a hex-encoded string.
 pub fn get_sha256_hex(input: &[u8]) -> String {
     let mut hasher = Sha256::new();
@@ -82,6 +128,18 @@ mod tests {
     fn get_sha256_hex_hello() {
         let got = get_sha256_hex(b"hello");
         let want = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
+        assert_eq!(want, got);
+    }
+
+    #[test]
+    fn run_evaluation_returns_result() {
+        let script_path = PathBuf::from("testdata/eval.py");
+        // This is not really a model, but the evaluation script does not care, and the runner does
+        // not care either, as long as it is a file it can load!
+        let model_path = PathBuf::from("testdata/eval.py");
+
+        let got = run_evaluation(&script_path, &model_path).expect("running evaluation failed");
+        let want = "{\n    \"test_acc\": 80.0\n}";
         assert_eq!(want, got);
     }
 }

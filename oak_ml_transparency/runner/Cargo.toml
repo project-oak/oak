@@ -15,14 +15,5 @@ chrono = { version = "0.4.22", default-features = false, features = ["clock"] }
 env_logger = "*"
 hex = "*"
 log = "*"
+serde_json = { version = "*", features = ["preserve_order"] }
 sha2 = { version = "*", default-features = false }
-
-[dev-dependencies]
-serde_json = "*"
-
-[profile.release]
-opt-level = 'z' # Optimize for size
-lto = true # Enable link-time optimization
-codegen-units = 1 # Reduce number of codegen units to increase optimizations
-panic = 'abort' # Abort on panic
-strip = true # Strip symbols from binary*

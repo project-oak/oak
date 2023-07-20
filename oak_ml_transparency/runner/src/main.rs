@@ -16,16 +16,12 @@
 
 use clap::Parser;
 use log::info;
+use serde_json::{self, Value};
 use std::{
     fs::File,
-    io::{self, Read, Write},
+    io::{Read, Write},
     path::PathBuf,
-    process::Command,
 };
-
-mod claim;
-
-const RESULT_PATH: &str = "result.json";
 
 #[derive(Parser, Clone)]
 #[command(about = "Oak Model Evaluation Runner")]
@@ -55,30 +51,10 @@ fn main() -> anyhow::Result<()> {
     // Compute the digest of the eval script
     let script_digest = sha256sum(&eval_path)?;
 
-    // Run python evaluation script
-    let output = Command::new("python3")
-        .arg(&eval_path)
-        .arg("--model")
-        .arg(model_path)
-        .arg("--output")
-        .arg(RESULT_PATH)
-        .output()
-        .expect("failed to execute process");
+    let result =
+        runner::run_evaluation(&model_path, &eval_path).expect("running the evaluation failed");
 
-    if !output.status.success() {
-        io::stdout().write_all(&output.stdout).unwrap();
-        io::stderr().write_all(&output.stderr).unwrap();
-        anyhow::bail!(
-            "Running the evaluation failed with status {}",
-            output.status,
-        )
-    }
-
-    let mut file = File::open(RESULT_PATH)?;
-    let mut result = String::new();
-    file.read_to_string(&mut result)?;
-
-    let claim = claim::generate_claim(
+    let claim = runner::generate_claim(
         &model_name,
         &model_digest,
         &eval_path.into_os_string().into_string().unwrap(),
@@ -86,9 +62,11 @@ fn main() -> anyhow::Result<()> {
         &result,
     );
 
+    let v: Value = serde_json::from_str(&claim)?;
+    let claim = serde_json::to_string_pretty(&v)?;
     let mut file = File::create(&output_path)?;
     file.write_all(claim.as_bytes())?;
-    info!("the claim is stored at {output_path:?}");
+    info!("the claim is stored in {output_path:?}");
 
     Ok(())
 }
@@ -97,5 +75,5 @@ fn sha256sum(path: &PathBuf) -> anyhow::Result<String> {
     let mut file = File::open(path)?;
     let mut bytes = Vec::new();
     file.read_to_end(&mut bytes)?;
-    Ok(claim::get_sha256_hex(&bytes))
+    Ok(runner::get_sha256_hex(&bytes))
 }
