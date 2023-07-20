@@ -31,7 +31,7 @@ pub mod proto {
 mod iree;
 
 use crate::proto::oak::iree::{
-    InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, Iree,
+    AttestationEvidence, InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, Iree,
 };
 use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 use anyhow::Context;
@@ -102,9 +102,23 @@ impl Iree for IreeService {
                         )
                     })?,
                 );
+                let attestation_evidence =
+                    attestation_handler
+                        .get_attestation_evidence()
+                        .map_err(|err| {
+                            micro_rpc::Status::new_with_message(
+                                micro_rpc::StatusCode::Internal,
+                                format!("couldn't get attestation evidence: {:?}", err),
+                            )
+                        })?;
                 self.initialization_state = InitializationState::Initialized(attestation_handler);
 
-                Ok(InitializeResponse {})
+                Ok(InitializeResponse {
+                    attestation_evidence: Some(AttestationEvidence {
+                        attestation_report: attestation_evidence.attestation,
+                        public_key: attestation_evidence.encryption_public_key,
+                    }),
+                })
             }
         }
     }
