@@ -31,7 +31,7 @@ pub mod proto {
 mod iree;
 
 use crate::proto::oak::iree::{
-    InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, AttestationEvidence, Iree,
+    AttestationEvidence, InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, Iree,
 };
 use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 use anyhow::Context;
