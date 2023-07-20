@@ -706,6 +706,20 @@
 <a href="#706" id="706">706</a>
 <a href="#707" id="707">707</a>
 <a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -851,7 +865,7 @@
 /// For more details see the Linux kernel docs:
 /// &lt;https://www.kernel.org/doc/html/latest/x86/boot.html#the-real-mode-kernel-header&gt;
 </span><span class="attr">#[repr(C, packed)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, FromBytes, AsBytes)]
 </span><span class="kw">pub struct </span>SetupHeader {
     <span class="doccomment">/// The size of the setup code in 512-byte sectors.
     ///
@@ -962,7 +976,7 @@
     <span class="doccomment">/// Boot protocol option flags
     ///
     /// Type: modify (obligatory)
-    </span><span class="kw">pub </span>loadflags: LoadFlags,
+    </span><span class="kw">pub </span>loadflags: u8,
     <span class="doccomment">/// Move to high memory size (used with hooks)
     ///
     /// Type: modify (obligatory)
@@ -1097,7 +1111,7 @@
     <span class="doccomment">/// Boot protocol option flags
     ///
     /// Type: read
-    </span><span class="kw">pub </span>xloadflags: XLoadFlags,
+    </span><span class="kw">pub </span>xloadflags: u16,
     <span class="doccomment">/// Maximum size of the kernel command line
     ///
     /// Type: read
@@ -1148,7 +1162,7 @@
     ///
     /// The 64-bit physical pointer to NULL terminated single linked list of struct setup_data.
     /// This is used to define a more extensible boot parameters passing mechanism.
-    </span><span class="kw">pub </span>setup_data: <span class="kw-2">*const </span>SetupData,
+    </span><span class="kw">pub </span>setup_data: u64,
     <span class="doccomment">/// Preferred loading address
     ///
     /// Type: read (reloc)
@@ -1185,6 +1199,20 @@
     </span><span class="kw">pub </span>kernel_info_offset: u32,
 }
 <span class="macro">static_assertions::assert_eq_size!</span>(SetupHeader, [u8; <span class="number">123usize</span>]);
+
+<span class="kw">impl </span>SetupHeader {
+    <span class="kw">pub fn </span>setup_data(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">*const </span>SetupData {
+        <span class="self">self</span>.setup_data <span class="kw">as </span><span class="kw-2">*const </span>SetupData
+    }
+
+    <span class="kw">pub fn </span>load_flags(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;LoadFlags&gt; {
+        LoadFlags::from_bits(<span class="self">self</span>.loadflags)
+    }
+
+    <span class="kw">pub fn </span>x_load_flags(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;XLoadFlags&gt; {
+        XLoadFlags::from_bits(<span class="self">self</span>.xloadflags)
+    }
+}
 
 <span class="attr">#[repr(C, packed)]
 #[derive(Debug, Copy, Clone, FromBytes, AsBytes)]

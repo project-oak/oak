@@ -453,6 +453,99 @@
 <a href="#453" id="453">453</a>
 <a href="#454" id="454">454</a>
 <a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
+<a href="#504" id="504">504</a>
+<a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -534,6 +627,9 @@
     CmdlineAddr = <span class="number">0x0013</span>,
     CmdlineSize = <span class="number">0x0014</span>,
     CmdlineData = <span class="number">0x0015</span>,
+    SetupAddr = <span class="number">0x0016</span>,
+    SetupSize = <span class="number">0x0017</span>,
+    SetupData = <span class="number">0x0018</span>,
     FileDir = <span class="number">0x0019</span>,
     E820ReservationTable = <span class="number">0x8003</span>,
 }
@@ -564,6 +660,14 @@
 }
 
 <span class="kw">impl </span>DirEntry {
+    <span class="kw">fn </span>new_for_selector(size: u32, selector: FwCfgItems) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            size: size.to_be(),
+            select: (selector <span class="kw">as </span>u16).to_be(),
+            ..Default::default()
+        }
+    }
+
     <span class="kw">pub fn </span>name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>CStr {
         CStr::from_bytes_until_nul(<span class="kw-2">&amp;</span><span class="self">self</span>.name).unwrap()
     }
@@ -732,6 +836,89 @@
         <span class="prelude-val">Ok</span>(len)
     }
 
+    <span class="doccomment">/// Reads the size of the kernel command-line.
+    </span><span class="kw">pub fn </span>read_cmdline_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>cmdline_size: u32 = <span class="number">0</span>;
+        <span class="self">self</span>.write_selector(FwCfgItems::CmdlineSize <span class="kw">as </span>u16)<span class="question-mark">?</span>;
+        <span class="self">self</span>.read(<span class="kw-2">&amp;mut </span>cmdline_size)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(cmdline_size)
+    }
+
+    <span class="doccomment">/// Gets an unnamed file representation of the kernel command-line using the dedicated selector.
+    ///
+    /// Returns `None` if the kernel command-line size is 0.
+    </span><span class="kw">pub fn </span>get_cmdline_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DirEntry&gt; {
+        <span class="kw">let </span>size = <span class="self">self
+            </span>.read_cmdline_size()
+            .expect(<span class="string">&quot;couldn&#39;t read cmdline size&quot;</span>);
+        <span class="kw">if </span>size == <span class="number">0 </span>{
+            <span class="prelude-val">None
+        </span>} <span class="kw">else </span>{
+            <span class="prelude-val">Some</span>(DirEntry::new_for_selector(size, FwCfgItems::CmdlineData))
+        }
+    }
+
+    <span class="doccomment">/// Reads the size of the initial RAM disk.
+    </span><span class="kw">pub fn </span>read_initrd_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>initrd_size: u32 = <span class="number">0</span>;
+        <span class="self">self</span>.write_selector(FwCfgItems::InitrdSize <span class="kw">as </span>u16)<span class="question-mark">?</span>;
+        <span class="self">self</span>.read(<span class="kw-2">&amp;mut </span>initrd_size)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(initrd_size)
+    }
+
+    <span class="doccomment">/// Gets an unnamed file representation of the initial RAM disk using the dedicated selector.
+    ///
+    /// Returns `None` if the initial RAM disk size is 0.
+    </span><span class="kw">pub fn </span>get_initrd_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DirEntry&gt; {
+        <span class="kw">let </span>size = <span class="self">self</span>.read_initrd_size().expect(<span class="string">&quot;couldn&#39;t read initrd size&quot;</span>);
+        <span class="kw">if </span>size == <span class="number">0 </span>{
+            <span class="prelude-val">None
+        </span>} <span class="kw">else </span>{
+            <span class="prelude-val">Some</span>(DirEntry::new_for_selector(size, FwCfgItems::InitrdData))
+        }
+    }
+
+    <span class="doccomment">/// Reads the size of the kernel.
+    </span><span class="kw">pub fn </span>read_kernel_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>kernel_size: u32 = <span class="number">0</span>;
+        <span class="self">self</span>.write_selector(FwCfgItems::KernelSize <span class="kw">as </span>u16)<span class="question-mark">?</span>;
+        <span class="self">self</span>.read(<span class="kw-2">&amp;mut </span>kernel_size)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(kernel_size)
+    }
+
+    <span class="doccomment">/// Gets an unnamed file representation of the kernel using the dedicated selector.
+    ///
+    /// Returns `None` if the kernel size is 0.
+    </span><span class="kw">pub fn </span>get_kernel_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DirEntry&gt; {
+        <span class="kw">let </span>size = <span class="self">self</span>.read_kernel_size().expect(<span class="string">&quot;couldn&#39;t read kernel size&quot;</span>);
+        <span class="kw">if </span>size == <span class="number">0 </span>{
+            <span class="prelude-val">None
+        </span>} <span class="kw">else </span>{
+            <span class="prelude-val">Some</span>(DirEntry::new_for_selector(size, FwCfgItems::KernelData))
+        }
+    }
+
+    <span class="doccomment">/// Reads the size of the setup information for the kernel.
+    </span><span class="kw">pub fn </span>read_setup_size(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>setup_size: u32 = <span class="number">0</span>;
+        <span class="self">self</span>.write_selector(FwCfgItems::SetupSize <span class="kw">as </span>u16)<span class="question-mark">?</span>;
+        <span class="self">self</span>.read(<span class="kw-2">&amp;mut </span>setup_size)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(setup_size)
+    }
+
+    <span class="doccomment">/// Gets an unnamed file representation of the kernel&#39;s setup information using the dedicated
+    /// selector.
+    ///
+    /// Returns `None` if the kernel size is 0.
+    </span><span class="kw">pub fn </span>get_setup_file(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;DirEntry&gt; {
+        <span class="kw">let </span>size = <span class="self">self</span>.read_setup_size().expect(<span class="string">&quot;couldn&#39;t read setup size&quot;</span>);
+        <span class="kw">if </span>size == <span class="number">0 </span>{
+            <span class="prelude-val">None
+        </span>} <span class="kw">else </span>{
+            <span class="prelude-val">Some</span>(DirEntry::new_for_selector(size, FwCfgItems::SetupData))
+        }
+    }
+
     <span class="kw">fn </span>write_selector(<span class="kw-2">&amp;mut </span><span class="self">self</span>, selector: u16) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="comment">// Safety: we make sure the device is available when initializing FwCfg.
         </span><span class="kw">unsafe </span>{ <span class="self">self</span>.selector.try_write(selector) }
@@ -752,7 +939,6 @@
 
     <span class="kw">fn </span>read_buf_dma(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>chunks_mut = buf.chunks_mut(Size4KiB::SIZE <span class="kw">as </span>usize);
-
         <span class="kw">for </span>chunk <span class="kw">in </span>chunks_mut.by_ref() {
             <span class="self">self</span>.read_chunk_dma(chunk)<span class="question-mark">?</span>;
         }

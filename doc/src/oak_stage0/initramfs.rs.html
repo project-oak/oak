@@ -59,6 +59,8 @@
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
 <a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -93,8 +95,10 @@
     e820_table: <span class="kw-2">&amp;</span>[BootE820Entry],
     kernel_info: <span class="kw-2">&amp;</span>KernelInfo,
 ) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[u8]&gt; {
-    <span class="kw">let </span>path = CStr::from_bytes_with_nul(INITIAL_RAM_DISK_FILE_PATH).expect(<span class="string">&quot;invalid c-string&quot;</span>);
-    <span class="kw">let </span>file = fw_cfg.find(path)<span class="question-mark">?</span>;
+    <span class="kw">let </span>file = fw_cfg.get_initrd_file().or_else(|| {
+        <span class="kw">let </span>path = CStr::from_bytes_with_nul(INITIAL_RAM_DISK_FILE_PATH).expect(<span class="string">&quot;invalid c-string&quot;</span>);
+        fw_cfg.find(path)
+    })<span class="question-mark">?</span>;
     <span class="kw">let </span>size = file.size();
     <span class="kw">let </span>initrd_address =
         find_suitable_dma_address(size, e820_table).expect(<span class="string">&quot;no suitable DMA address available&quot;</span>);

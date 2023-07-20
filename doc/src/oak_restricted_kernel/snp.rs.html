@@ -256,7 +256,7 @@
     </span>assert_page_in_valid_range(phys);
     <span class="comment">// The setup data is stored in a null-terminated linked list, so we step through the list until
     // we find an entry with the right type or reach the end.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>setup_data_ptr = info.hdr.setup_data;
+    </span><span class="kw">let </span><span class="kw-2">mut </span>setup_data_ptr = info.hdr.setup_data();
     <span class="kw">while </span>!setup_data_ptr.is_null() {
         assert_pointer_in_valid_range(setup_data_ptr);
         <span class="comment">// Safety: we have checked that the pointer is not null and at least points to memory within
