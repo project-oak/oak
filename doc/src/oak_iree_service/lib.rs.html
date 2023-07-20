@@ -133,6 +133,20 @@
 <a href="#133" id="133">133</a>
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -166,7 +180,7 @@
 <span class="kw">mod </span>iree;
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::iree::{
-    InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, Iree,
+    AttestationEvidence, InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, Iree,
 };
 <span class="kw">use </span>alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 <span class="kw">use </span>anyhow::Context;
@@ -237,9 +251,23 @@
                         )
                     })<span class="question-mark">?</span>,
                 );
+                <span class="kw">let </span>attestation_evidence =
+                    attestation_handler
+                        .get_attestation_evidence()
+                        .map_err(|err| {
+                            micro_rpc::Status::new_with_message(
+                                micro_rpc::StatusCode::Internal,
+                                <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t get attestation evidence: {:?}&quot;</span>, err),
+                            )
+                        })<span class="question-mark">?</span>;
                 <span class="self">self</span>.initialization_state = InitializationState::Initialized(attestation_handler);
 
-                <span class="prelude-val">Ok</span>(InitializeResponse {})
+                <span class="prelude-val">Ok</span>(InitializeResponse {
+                    attestation_evidence: <span class="prelude-val">Some</span>(AttestationEvidence {
+                        attestation_report: attestation_evidence.attestation,
+                        public_key: attestation_evidence.encryption_public_key,
+                    }),
+                })
             }
         }
     }

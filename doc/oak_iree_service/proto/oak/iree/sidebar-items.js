@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["InitializeRequest","InitializeResponse","InvokeRequest","InvokeResponse","IreeAsyncClient","IreeClient","IreeServer","SessionId"],"trait":["Iree"]};
+window.SIDEBAR_ITEMS = {"struct":["AttestationEvidence","InitializeRequest","InitializeResponse","InvokeRequest","InvokeResponse","IreeAsyncClient","IreeClient","IreeServer","SessionId"],"trait":["Iree"]};
