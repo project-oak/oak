@@ -18,7 +18,6 @@ package com.google.oak.crypto.hpke;
 
 import com.google.oak.util.Result;
 
-// TODO(#3642): Implement Java Hybrid Encryption.
 public final class Hpke {
   static {
     System.loadLibrary("hpke-jni");

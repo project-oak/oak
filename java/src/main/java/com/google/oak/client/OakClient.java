@@ -65,7 +65,6 @@ public class OakClient<T extends Transport> implements AutoCloseable {
    * @param requestBody request byte representation.
    * @return response byte representation wrapped in a {@code Result}
    */
-  // TODO(#3466): Actually implement attestation and encryption.
   public Result<byte[], Exception> invoke(byte[] requestBody) {
     return ClientEncryptor.create(this.serverEncryptionPublicKey)
         .andThen(encryptor
