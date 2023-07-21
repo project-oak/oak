@@ -99,7 +99,7 @@ pub fn run_evaluation(model_path: &PathBuf, eval_path: &PathBuf) -> Result<Strin
     Ok(result)
 }
 
-/// Computes a SHA-256 digest of `input` and returns it as a hex-encoded string.
+/// Computes a SHA2-256 digest of `input` and returns it as a hex-encoded string.
 pub fn get_sha256_hex(input: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(input);

@@ -27,23 +27,23 @@ use std::{
 #[command(about = "Oak Model Evaluation Runner")]
 struct Cli {
     #[arg(long, help = "Path to a tarball archive of a model to be evaluated")]
-    model: Option<PathBuf>,
+    model: PathBuf,
     #[arg(long, help = "Name of the model to include in the claim")]
-    model_name: Option<String>,
+    model_name: String,
     #[arg(long, help = "Path to an evaluation python script")]
-    eval_script: Option<PathBuf>,
+    eval_script: PathBuf,
     #[arg(long, help = "Path to store the output in")]
-    output: Option<PathBuf>,
+    output: PathBuf,
 }
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
     let cli = Cli::parse();
 
-    let model_path = cli.model.unwrap();
-    let eval_path = cli.eval_script.unwrap();
-    let model_name = cli.model_name.unwrap();
-    let output_path = cli.output.unwrap();
+    let model_path = cli.model;
+    let eval_path = cli.eval_script;
+    let model_name = cli.model_name;
+    let output_path = cli.output;
 
     // Compute the digest of the model (the tarball archive)
     let model_digest = sha256sum(&model_path)?;
