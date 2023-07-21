@@ -110,7 +110,7 @@
 <span class="kw">use </span>tonic::transport::{Endpoint, Uri};
 <span class="kw">use </span>tower::service_fn;
 
-<span class="comment">// Virtio VSOCK does not use URIs, hence this URI will never be used.
+<span class="comment">// Unix Domain Sockets do not use URIs, hence this URI will never be used.
 // It is defined purely since in order to create a channel, since a URI has to
 // be supplied to create an `Endpoint`. Even though in this case the endpoint
 // is technically a file, tonic expects us to provide our own connector, and

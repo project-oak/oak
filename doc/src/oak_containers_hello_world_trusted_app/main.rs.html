@@ -31,9 +31,6 @@
 <a href="#31" id="31">31</a>
 <a href="#32" id="32">32</a>
 <a href="#33" id="33">33</a>
-<a href="#34" id="34">34</a>
-<a href="#35" id="35">35</a>
-<a href="#36" id="36">36</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -49,11 +46,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">mod </span>app_service;
+</span><span class="kw">use </span>std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+<span class="kw">mod </span>app_service;
 <span class="kw">mod </span>orchestrator_client;
 
-<span class="kw">const </span>UNTRUSTED_APP_VSOCK_CID: u32 = vsock::VMADDR_CID_HOST;
-<span class="kw">const </span>UNTRUSTED_APP_VSOCK_PORT: u32 = <span class="number">8081</span>;
+<span class="kw">const </span>TRUSTED_APP_PORT: u16 = <span class="number">8080</span>;
 
 <span class="attr">#[tokio::main]
 </span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
@@ -62,12 +60,8 @@
         </span>.get_application_config()
         .<span class="kw">await</span><span class="question-mark">?</span>;
 
-    app_service::create(
-        UNTRUSTED_APP_VSOCK_CID,
-        UNTRUSTED_APP_VSOCK_PORT,
-        application_config,
-    )
-    .<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), TRUSTED_APP_PORT);
+    app_service::create(addr, application_config).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div></section></main></body></html>

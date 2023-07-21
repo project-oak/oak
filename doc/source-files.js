@@ -10,7 +10,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_channel":["",[],["client.rs","frame.rs","lib.rs","message.rs","server.rs"]],\
 "oak_client":["",[],["lib.rs","transport.rs","verifier.rs"]],\
 "oak_containers_hello_world_trusted_app":["",[],["app_service.rs","main.rs","orchestrator_client.rs"]],\
-"oak_containers_hello_world_untrusted_app":["",[],["app_client.rs","main.rs"]],\
+"oak_containers_hello_world_untrusted_app":["",[],["app_client.rs","lib.rs"]],\
 "oak_containers_launcher":["",[],["lib.rs","qemu.rs"]],\
 "oak_containers_launcher_server":["",[],["lib.rs"]],\
 "oak_containers_orchestrator":["",[],["container_runtime.rs","ipc_server.rs","logging.rs","main.rs"]],\

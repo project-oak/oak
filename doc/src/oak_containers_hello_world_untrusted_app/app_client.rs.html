@@ -62,32 +62,6 @@
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
-<a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
-<a href="#73" id="73">73</a>
-<a href="#74" id="74">74</a>
-<a href="#75" id="75">75</a>
-<a href="#76" id="76">76</a>
-<a href="#77" id="77">77</a>
-<a href="#78" id="78">78</a>
-<a href="#79" id="79">79</a>
-<a href="#80" id="80">80</a>
-<a href="#81" id="81">81</a>
-<a href="#82" id="82">82</a>
-<a href="#83" id="83">83</a>
-<a href="#84" id="84">84</a>
-<a href="#85" id="85">85</a>
-<a href="#86" id="86">86</a>
-<a href="#87" id="87">87</a>
-<a href="#88" id="88">88</a>
-<a href="#89" id="89">89</a>
-<a href="#90" id="90">90</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -118,13 +92,8 @@
     trusted_application_client::TrustedApplicationClient <span class="kw">as </span>GrpcTrustedApplicationClient,
     HelloRequest,
 };
-<span class="kw">use </span>tonic::transport::{Endpoint, Uri};
-<span class="kw">use </span>tower::service_fn;
-
-<span class="comment">// Virtio VSOCK does not use URIs, hence this URI will never be used.
-// It is defined purely since in order to create a channel a URI has to
-// be supplied to create an `Endpoint`.
-</span><span class="kw">static </span>IGNORED_ENDPOINT_URI: <span class="kw-2">&amp;</span>str = <span class="string">&quot;file://[::]:0&quot;</span>;
+<span class="kw">use </span>tokio::time::Duration;
+<span class="kw">use </span>tonic::transport::Endpoint;
 
 <span class="doccomment">/// Utility struct used to interface with the launcher
 </span><span class="kw">pub struct </span>TrustedApplicationClient {
@@ -132,35 +101,14 @@
 }
 
 <span class="kw">impl </span>TrustedApplicationClient {
-    <span class="kw">async fn </span>get_stream_with_trusted_app(
-        cid: u32,
-        port: u32,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;tokio_vsock::VsockStream, anyhow::Error&gt; {
-        <span class="kw">let </span>(vsock_stream, <span class="kw">_</span>) = tokio_vsock::VsockListener::bind(cid, port)
-            .context(<span class="string">&quot;failed to bind vsock listener&quot;</span>)<span class="question-mark">?
-            </span><span class="comment">// The trusted app is the only party that will connect to this listener.
-            // Hence the first incoming stream must be the trusted app.
-            //
-            // Effectively this means that while on the gRPC layer the trusted app
-            // listens for invocations from the untrusted app, the inverse is
-            // true on the layer of the VSOCK connection. There the untrusted
-            // app listens for connections, the trusted app connects to the
-            // listener.
-            </span>.accept()
-            .<span class="kw">await
-            </span>.context(<span class="string">&quot;failed to accept vsock connection&quot;</span>)<span class="question-mark">?</span>;
-
-        <span class="prelude-val">Ok</span>(vsock_stream)
-    }
-    <span class="kw">pub async fn </span>create(cid: u32, port: u32) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="kw">pub async fn </span>create(server_addr: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
         <span class="kw">let </span>inner: GrpcTrustedApplicationClient&lt;tonic::transport::channel::Channel&gt; = {
-            <span class="kw">let </span>channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
-                .context(<span class="string">&quot;couldn&#39;t form endpoint&quot;</span>)<span class="question-mark">?
-                </span>.connect_with_connector(service_fn(<span class="kw">move </span>|<span class="kw">_</span>: Uri| {
-                    TrustedApplicationClient::get_stream_with_trusted_app(cid, port)
-                }))
+            <span class="kw">let </span>channel = Endpoint::from_shared(server_addr)
+                .context(<span class="string">&quot;couldn&#39;t form channel&quot;</span>)<span class="question-mark">?
+                </span>.connect_timeout(Duration::from_secs(<span class="number">120</span>))
+                .connect()
                 .<span class="kw">await
-                </span>.context(<span class="string">&quot;couldn&#39;t connect to untrusted app VSOCK socket&quot;</span>)<span class="question-mark">?</span>;
+                </span>.context(<span class="string">&quot;couldn&#39;t connect to trusted app&quot;</span>)<span class="question-mark">?</span>;
             GrpcTrustedApplicationClient::new(channel)
         };
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ inner })

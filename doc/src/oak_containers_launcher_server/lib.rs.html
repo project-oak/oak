@@ -177,6 +177,10 @@
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -215,9 +219,12 @@
     session::v1::AttestationEvidence,
 };
 <span class="kw">use </span>anyhow::anyhow;
-<span class="kw">use </span>futures::Stream;
+<span class="kw">use </span>futures::{FutureExt, Stream};
 <span class="kw">use </span>std::{net::SocketAddr, pin::Pin, sync::Mutex};
-<span class="kw">use </span>tokio::io::{AsyncReadExt, BufReader};
+<span class="kw">use </span>tokio::{
+    io::{AsyncReadExt, BufReader},
+    sync::oneshot::Receiver,
+};
 <span class="kw">use </span>tonic::{transport::Server, Request, Response, Status};
 
 <span class="comment">// Most gRPC implementations limit message sizes to 4MiB. Let&#39;s stay
@@ -342,6 +349,7 @@
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
+    shutdown: Receiver&lt;()&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
     <span class="kw">let </span>server_impl = LauncherServerImplementation {
         system_image,
@@ -352,7 +360,7 @@
     };
     Server::builder()
         .add_service(LauncherServer::new(server_impl))
-        .serve(addr)
+        .serve_with_shutdown(addr, shutdown.map(|<span class="kw">_</span>| ()))
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;server error: {:?}&quot;</span>, error))
 }

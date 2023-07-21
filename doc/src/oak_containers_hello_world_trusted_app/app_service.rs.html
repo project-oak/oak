@@ -57,22 +57,6 @@
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
-<a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
-<a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
-<a href="#73" id="73">73</a>
-<a href="#74" id="74">74</a>
-<a href="#75" id="75">75</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -103,7 +87,7 @@
     HelloRequest, HelloResponse,
 };
 <span class="kw">use </span>anyhow::anyhow;
-<span class="kw">use </span>tokio_stream::{<span class="self">self </span><span class="kw">as </span>stream};
+<span class="kw">use </span>std::net::SocketAddr;
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">struct </span>TrustedApplicationImplementation {
@@ -123,28 +107,12 @@
     }
 }
 
-<span class="kw">pub async fn </span>create(cid: u32, port: u32, application_config: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
-    <span class="comment">// When building a gRPC server, tonic expects an async stream that yields
-    // multiple incoming connections, each representing an individual client.
-    // This case is a bit different: there will only be one client, the
-    // untrusted app.
-    </span><span class="kw">let </span>incoming = {
-        <span class="comment">// Connect to the untrusted app.
-        </span><span class="kw">let </span>stream_with_untrusted_app = tokio_vsock::VsockStream::connect(cid, port).<span class="kw">await</span>;
-        <span class="comment">// Construct a stream that immediately yields just this connection.
-        </span>stream::once(stream_with_untrusted_app)
-    };
-
+<span class="kw">pub async fn </span>create(addr: SocketAddr, application_config: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
     tonic::transport::Server::builder()
         .add_service(TrustedApplicationServer::new(
             TrustedApplicationImplementation { application_config },
         ))
-        <span class="comment">// the server is served explicitly with no shutdown, since otherwise it
-        // shuts down as soon as the incoming stream yields no more new
-        // connections even if existing connections are still active.
-        // TODO(#4166): Replace this connection with an ordinary network
-        // connection.
-        </span>.serve_with_incoming_shutdown(incoming, futures::future::pending())
+        .serve(addr)
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;server error: {:?}&quot;</span>, error))
 }

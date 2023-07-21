@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["create","path_exists"],"struct":["Args"]};
+window.SIDEBAR_ITEMS = {"fn":["path_exists"],"struct":["Args","Launcher"]};
