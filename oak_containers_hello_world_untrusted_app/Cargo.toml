@@ -10,6 +10,10 @@ oak_grpc_utils = { workspace = true }
 
 [dependencies]
 anyhow = "*"
+clap = { version = "*", features = ["derive"] }
+env_logger = "*"
+log = "*"
+oak_containers_launcher = { workspace = true }
 prost = "*"
 tokio = { version = "*", features = [
   "rt-multi-thread",
@@ -19,7 +23,7 @@ tokio = { version = "*", features = [
 ] }
 tonic = "*"
 tower = "*"
-tokio-vsock = { version = "*", features = ["tonic-conn"] }
-vsock = "*"
-oak_containers_launcher = { workspace = true }
-clap = { version = "*", features = ["derive"] }
+
+[dev-dependencies]
+duct = "*"
+xtask = { workspace = true }

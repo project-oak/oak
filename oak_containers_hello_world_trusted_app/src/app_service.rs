@@ -28,7 +28,7 @@ use self::proto::oak::containers::example::{
     HelloRequest, HelloResponse,
 };
 use anyhow::anyhow;
-use tokio_stream::{self as stream};
+use std::net::SocketAddr;
 
 #[derive(Default)]
 struct TrustedApplicationImplementation {
@@ -48,28 +48,12 @@ impl TrustedApplication for TrustedApplicationImplementation {
     }
 }
 
-pub async fn create(cid: u32, port: u32, application_config: Vec<u8>) -> Result<(), anyhow::Error> {
-    // When building a gRPC server, tonic expects an async stream that yields
-    // multiple incoming connections, each representing an individual client.
-    // This case is a bit different: there will only be one client, the
-    // untrusted app.
-    let incoming = {
-        // Connect to the untrusted app.
-        let stream_with_untrusted_app = tokio_vsock::VsockStream::connect(cid, port).await;
-        // Construct a stream that immediately yields just this connection.
-        stream::once(stream_with_untrusted_app)
-    };
-
+pub async fn create(addr: SocketAddr, application_config: Vec<u8>) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(TrustedApplicationServer::new(
             TrustedApplicationImplementation { application_config },
         ))
-        // the server is served explicitly with no shutdown, since otherwise it
-        // shuts down as soon as the incoming stream yields no more new
-        // connections even if existing connections are still active.
-        // TODO(#4166): Replace this connection with an ordinary network
-        // connection.
-        .serve_with_incoming_shutdown(incoming, futures::future::pending())
+        .serve(addr)
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))
 }

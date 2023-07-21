@@ -13,11 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 mod app_service;
 mod orchestrator_client;
 
-const UNTRUSTED_APP_VSOCK_CID: u32 = vsock::VMADDR_CID_HOST;
-const UNTRUSTED_APP_VSOCK_PORT: u32 = 8081;
+const TRUSTED_APP_PORT: u16 = 8080;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -26,11 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .get_application_config()
         .await?;
 
-    app_service::create(
-        UNTRUSTED_APP_VSOCK_CID,
-        UNTRUSTED_APP_VSOCK_PORT,
-        application_config,
-    )
-    .await?;
+    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), TRUSTED_APP_PORT);
+    app_service::create(addr, application_config).await?;
     Ok(())
 }

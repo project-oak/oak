@@ -7,8 +7,11 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
+clap = { version = "*", features = ["derive"] }
 command-fds = { version = "*", features = ["tokio"] }
+env_logger = "*"
+log = "*"
+oak_containers_launcher_server = { workspace = true }
 prost = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
-clap = { version = "*", features = ["derive"] }
-oak_containers_launcher_server = { workspace = true }
+which = "*"

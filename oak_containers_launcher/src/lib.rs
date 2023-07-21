@@ -15,9 +15,12 @@
 
 mod qemu;
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-
 use clap::Parser;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use tokio::{
+    sync::oneshot::{channel, Sender},
+    task::JoinHandle,
+};
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -33,6 +36,27 @@ pub struct Args {
     qemu_params: qemu::Params,
 }
 
+impl Args {
+    pub fn default_for_test() -> Self {
+        let system_image = format!(
+            "{}oak_containers_system_image/target/image.tar.xz",
+            env!("WORKSPACE_ROOT")
+        )
+        .into();
+        let container_bundle = format!(
+            "{}oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar",
+            env!("WORKSPACE_ROOT")
+        ).into();
+        Self {
+            port: 8080,
+            system_image,
+            container_bundle,
+            application_config: None,
+            qemu_params: qemu::Params::default_for_test(),
+        }
+    }
+}
+
 pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
     let path = std::path::PathBuf::from(s);
     if !std::fs::metadata(s)
@@ -45,21 +69,43 @@ pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
     }
 }
 
-pub async fn create(args: Args) -> Result<(), anyhow::Error> {
-    let sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), args.port);
-    let server = oak_containers_launcher_server::new(
-        sockaddr,
-        args.system_image,
-        args.container_bundle,
-        args.application_config,
-    );
+pub struct Launcher {
+    vmm: qemu::Qemu,
+    server: JoinHandle<Result<(), anyhow::Error>>,
+    shutdown: Option<Sender<()>>,
+}
 
-    let mut vmm = qemu::Qemu::start(args.qemu_params)?;
+impl Launcher {
+    pub async fn create(args: Args) -> Result<Self, anyhow::Error> {
+        let sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), args.port);
+        let (shutdown_sender, shutdown_receiver) = channel::<()>();
+        let server = tokio::spawn(oak_containers_launcher_server::new(
+            sockaddr,
+            args.system_image,
+            args.container_bundle,
+            args.application_config,
+            shutdown_receiver,
+        ));
 
-    tokio::select! {
-        _ = server => {}
-        _ = vmm.wait() => {}
+        let vmm = qemu::Qemu::start(args.qemu_params)?;
+
+        Ok(Self {
+            vmm,
+            server,
+            shutdown: Some(shutdown_sender),
+        })
     }
 
-    Ok(())
+    pub async fn wait(&mut self) -> Result<(), anyhow::Error> {
+        self.vmm.wait().await?;
+        Ok(())
+    }
+
+    pub async fn kill(&mut self) {
+        if let Some(shutdown) = self.shutdown.take() {
+            let _ = shutdown.send(());
+        }
+        let _ = self.vmm.kill().await;
+        self.server.abort();
+    }
 }

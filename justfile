@@ -29,20 +29,26 @@ stage0_bin:
 stage1_cpio:
     env --chdir=oak_containers_stage1 make
 
-vmlinux:
+oak_containers_kernel:
     env --chdir=oak_containers_kernel make
 
-image_tar:
+oak_containers_system_image:
     env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 bash build.sh
 
-hello_world_container_bundle_tar:
+oak_containers_hello_world_container_bundle_tar:
     env --chdir=oak_containers_hello_world_container DOCKER_BUILDKIT=0 bash build_container_bundle
+
+oak_containers_hello_world_untrusted_app:
+    env cargo build --release --package='oak_containers_hello_world_untrusted_app'
+
+all_oak_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_containers_hello_world_container_bundle_tar oak_containers_hello_world_untrusted_app
 
 # Entry points for Kokoro CI.
 
 kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin stage0_bin
 
-kokoro_build_binaries_oak_containers: stage1_cpio vmlinux image_tar hello_world_container_bundle_tar
+kokoro_oak_containers: all_oak_containers_binaries
+    cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
 
 kokoro_run_tests:
-    cargo nextest run --all-targets --hide-progress-bar
+    cargo nextest run --all-targets --hide-progress-bar --workspace --exclude='oak_containers_hello_world_untrusted_app'
