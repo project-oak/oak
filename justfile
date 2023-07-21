@@ -48,7 +48,7 @@ all_oak_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_co
 kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin stage0_bin
 
 kokoro_oak_containers: all_oak_containers_binaries
-    cargo nextest run --all-targets --hide-progress-bar --filter-expr='package(oak_containers_hello_world_untrusted_app)'
+    cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
 
 kokoro_run_tests:
-    cargo nextest run --all-targets --hide-progress-bar --filter-expr='not(package(oak_containers_hello_world_untrusted_app))'
+    cargo nextest run --all-targets --hide-progress-bar --workspace --exclude='oak_containers_hello_world_untrusted_app'
