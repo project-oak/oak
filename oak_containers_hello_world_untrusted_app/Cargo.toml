@@ -26,5 +26,4 @@ tower = "*"
 
 [dev-dependencies]
 duct = "*"
-which = "*"
 xtask = { workspace = true }

@@ -31,7 +31,7 @@ impl UntrustedApp {
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let launcher = oak_containers_launcher::Launcher::create(launcher_args).await?;
         // TODO(#4194): Stop sleeping once we have a mechanism to notify the untrusted app that the
-        // tursted app is ready.
+        // trusted app is ready.
         tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
         let app_client =
             app_client::TrustedApplicationClient::create(UNTRUSTED_APP_ADDRESS).await?;

@@ -59,6 +59,32 @@ pub struct Params {
     pub telnet_console: Option<u16>,
 }
 
+impl Params {
+    pub fn default_for_test() -> Self {
+        let vmm_binary = which::which("qemu-system-x86_64").expect("could not find qemu path");
+        let stage0_binary = format!(
+            "{}stage0_bin/target/x86_64-unknown-none/release/stage0_bin",
+            env!("WORKSPACE_ROOT")
+        )
+        .into();
+        let kernel = format!(
+            "{}oak_containers_kernel/target/bzImage",
+            env!("WORKSPACE_ROOT")
+        )
+        .into();
+        let initrd = format!("{}/target/stage1.cpio", env!("WORKSPACE_ROOT")).into();
+        Self {
+            vmm_binary,
+            stage0_binary,
+            kernel,
+            initrd,
+            memory_size: Some("8G".to_owned()),
+            ramdrive_size: 3_000_000,
+            telnet_console: None,
+        }
+    }
+}
+
 pub struct Qemu {
     instance: tokio::process::Child,
 }

@@ -15,7 +15,6 @@
 
 //! Integration test that launches the trusted app and invokes it.
 
-use clap::Parser;
 use oak_containers_launcher::Args;
 use std::sync::Once;
 
@@ -41,7 +40,7 @@ async fn hello_world() {
     build_dependencies().expect("couldn't build dependencies");
 
     let mut untrusted_app =
-        oak_containers_hello_world_untrusted_app::UntrustedApp::create(get_laucnher_args())
+        oak_containers_hello_world_untrusted_app::UntrustedApp::create(Args::default_for_test())
             .await
             .expect("could not create untrusted app");
     let greeting = untrusted_app
@@ -60,44 +59,4 @@ fn build_dependencies() -> anyhow::Result<()> {
         .dir(env!("WORKSPACE_ROOT"))
         .run()?;
     Ok(())
-}
-
-fn get_laucnher_args() -> Args {
-    let qemu_path = which::which("qemu-system-x86_64").expect("could not find qemu path");
-    let vmm_path_arg = format!(
-        "--vmm-binary={}",
-        qemu_path.to_str().expect("could not get qemu path as str")
-    );
-    let system_image_arg = format!(
-        "--system-image={}oak_containers_system_image/target/image.tar.xz",
-        env!("WORKSPACE_ROOT")
-    );
-    let container_bundle_arg = format!(
-        "--container-bundle={}oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar",
-        env!("WORKSPACE_ROOT")
-    );
-    let stage0_binary_arg = format!(
-        "--stage0-binary={}stage0_bin/target/x86_64-unknown-none/release/stage0_bin",
-        env!("WORKSPACE_ROOT")
-    );
-    let kernel_arg = format!(
-        "--kernel={}oak_containers_kernel/target/bzImage",
-        env!("WORKSPACE_ROOT")
-    );
-    let initrd_arg = format!("--initrd={}/target/stage1.cpio", env!("WORKSPACE_ROOT"));
-    let arg_strs = [
-        "",
-        "--port=8080",
-        &system_image_arg,
-        &container_bundle_arg,
-        &vmm_path_arg,
-        &stage0_binary_arg,
-        &kernel_arg,
-        &initrd_arg,
-        "--memory-size=8G",
-        "--ramdrive-size=3000000",
-    ];
-    Args::try_parse_from(arg_strs.iter())
-        .map_err(|err| err.print())
-        .expect("failed to parse args")
 }

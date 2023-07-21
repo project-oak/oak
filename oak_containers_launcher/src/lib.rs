@@ -36,6 +36,27 @@ pub struct Args {
     qemu_params: qemu::Params,
 }
 
+impl Args {
+    pub fn default_for_test() -> Self {
+        let system_image = format!(
+            "{}oak_containers_system_image/target/image.tar.xz",
+            env!("WORKSPACE_ROOT")
+        )
+        .into();
+        let container_bundle = format!(
+            "{}oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar",
+            env!("WORKSPACE_ROOT")
+        ).into();
+        Self {
+            port: 8080,
+            system_image,
+            container_bundle,
+            application_config: None,
+            qemu_params: qemu::Params::default_for_test(),
+        }
+    }
+}
+
 pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
     let path = std::path::PathBuf::from(s);
     if !std::fs::metadata(s)

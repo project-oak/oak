@@ -1771,7 +1771,6 @@ dependencies = [
  "tokio",
  "tonic",
  "tower",
- "which",
  "xtask",
 ]
 
@@ -1787,6 +1786,7 @@ dependencies = [
  "oak_containers_launcher_server",
  "prost",
  "tokio",
+ "which",
 ]
 
 [[package]]
