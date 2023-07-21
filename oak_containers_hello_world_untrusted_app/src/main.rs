@@ -18,6 +18,7 @@ use clap::Parser;
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let args = oak_containers_launcher::Args::parse();
+    env_logger::init();
 
     let mut untrusted_app = oak_containers_hello_world_untrusted_app::UntrustedApp::create(args)
         .await

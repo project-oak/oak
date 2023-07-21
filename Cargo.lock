@@ -1748,7 +1748,6 @@ dependencies = [
  "anyhow",
  "async-stream",
  "bytes",
- "futures",
  "oak_grpc_utils",
  "prost",
  "tokio",
