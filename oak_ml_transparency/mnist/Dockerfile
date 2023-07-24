@@ -16,5 +16,9 @@ RUN mkdir /project
 WORKDIR /project
 COPY . /project
 
+# Download the runner
+RUN curl --output runner-musl https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:c058eaa96a7c23175e161318f076d5673450d2fcad2e63752c6829b76d538b0d
+RUN chmod +x runner-musl
+
 # Download model
 RUN curl --output mnist_model.tar.gz  https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:63ea4a9906dbbb3a154f069a0d4bc6a2272b9b8151e69fbd57029c826c2cd779

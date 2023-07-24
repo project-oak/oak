@@ -135,3 +135,22 @@ following command to upload the tar file:
 
 The command returns the digest of the file, which you can use for downloading
 the file from Ent.
+
+## Pushing to container registry
+
+1. Build the Docker image and tag it with
+   `europe-west2-docker.pkg.dev/oak-ci/mnist-eval/mnist-eval`:
+
+   ```bash
+   docker build -t europe-west2-docker.pkg.dev/oak-ci/mnist-eval/mnist-eval:latest .
+   ```
+
+1. Push to Oak container registry
+
+   ```bash
+   docker push europe-west2-docker.pkg.dev/oak-ci/mnist-eval/mnist-eval:latest
+   ```
+
+You may need to follow the instructions in
+[Oak docker_push script](../../scripts/docker_push) if you run into permission
+issues.

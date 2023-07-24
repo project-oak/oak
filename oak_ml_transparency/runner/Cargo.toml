@@ -1,0 +1,19 @@
+[package]
+name = "runner"
+version = "0.1.0"
+authors = ["Razieh Behjati <razieh@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[workspace]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+anyhow = "*"
+clap = { version = "*", features = ["derive"] }
+chrono = { version = "0.4.22", default-features = false, features = ["clock"] }
+env_logger = "*"
+hex = "*"
+log = "*"
+serde_json = { version = "*", features = ["preserve_order"] }
+sha2 = { version = "*", default-features = false }

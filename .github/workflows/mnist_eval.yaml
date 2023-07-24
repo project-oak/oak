@@ -21,7 +21,7 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_container-based_slsa3.yml@v1.7.0
     with:
       builder-image: 'europe-west2-docker.pkg.dev/oak-ci/mnist-eval/mnist-eval'
-      builder-digest: 'sha256:7a0d8fd9d6f6d15d6175ceb442ea1fc96933b7c3368d8eced57048fc97ca39a2'
+      builder-digest: 'sha256:ece051dc52a67ac51ba653b409d32de00979fc952f123813b759cba53d4d1f43'
       config-path: 'buildconfigs/oak_ml_transparency_eval.toml'
       provenance-name: 'mnist_eval.intoto'
       compile-builder: true
