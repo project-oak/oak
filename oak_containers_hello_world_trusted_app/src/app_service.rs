@@ -28,7 +28,8 @@ use self::proto::oak::containers::example::{
     HelloRequest, HelloResponse,
 };
 use anyhow::anyhow;
-use std::net::SocketAddr;
+use tokio::net::TcpListener;
+use tokio_stream::wrappers::TcpListenerStream;
 
 #[derive(Default)]
 struct TrustedApplicationImplementation {
@@ -48,12 +49,15 @@ impl TrustedApplication for TrustedApplicationImplementation {
     }
 }
 
-pub async fn create(addr: SocketAddr, application_config: Vec<u8>) -> Result<(), anyhow::Error> {
+pub async fn create(
+    listener: TcpListener,
+    application_config: Vec<u8>,
+) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(TrustedApplicationServer::new(
             TrustedApplicationImplementation { application_config },
         ))
-        .serve(addr)
+        .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))
 }

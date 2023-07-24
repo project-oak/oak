@@ -31,7 +31,9 @@ use self::proto::oak::{
     containers::SendAttestationEvidenceRequest, session::v1::AttestationEvidence,
 };
 use anyhow::Context;
-use proto::oak::containers::launcher_client::LauncherClient as GrpcLauncherClient;
+use proto::oak::containers::{
+    launcher_client::LauncherClient as GrpcLauncherClient, NotifyAppReadyRequest,
+};
 use tonic::transport::Channel;
 
 /// Utility struct used to interface with the launcher
@@ -45,9 +47,10 @@ impl LauncherClient {
         Ok(Self { inner })
     }
 
-    pub async fn get_container_bundle(&mut self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    pub async fn get_container_bundle(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         let mut stream = self
             .inner
+            .clone()
             .get_container_bundle(())
             .await
             .context("couldn't form streaming connection")?
@@ -65,9 +68,10 @@ impl LauncherClient {
         Ok(container_buf)
     }
 
-    pub async fn get_application_config(&mut self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    pub async fn get_application_config(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         let application_config = self
             .inner
+            .clone()
             .get_application_config(())
             .await
             .context("couldn't form get response")?
@@ -78,17 +82,30 @@ impl LauncherClient {
     }
 
     pub async fn send_attestation_evidence(
-        &mut self,
+        &self,
         evidence: AttestationEvidence,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let request = tonic::Request::new(SendAttestationEvidenceRequest {
             evidence: Some(evidence),
         });
         self.inner
+            .clone()
             .send_attestation_evidence(request)
             .await
             .context("couldn't form get response")?;
 
+        Ok(())
+    }
+
+    pub async fn notify_app_ready(&self, port: u16) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(NotifyAppReadyRequest {
+            listening_port: port as i32,
+        });
+        self.inner
+            .clone()
+            .notify_app_ready(request)
+            .await
+            .context("couldn't send notification")?;
         Ok(())
     }
 }

@@ -31,16 +31,21 @@ mod proto {
 use self::proto::oak::{
     containers::{
         launcher_server::{Launcher, LauncherServer},
-        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+        GetApplicationConfigResponse, GetImageResponse, NotifyAppReadyRequest,
+        SendAttestationEvidenceRequest,
     },
     session::v1::AttestationEvidence,
 };
 use anyhow::anyhow;
 use futures::{FutureExt, Stream};
-use std::{net::SocketAddr, pin::Pin, sync::Mutex};
+use std::{
+    net::SocketAddr,
+    pin::Pin,
+    sync::{Mutex, OnceLock},
+};
 use tokio::{
     io::{AsyncReadExt, BufReader},
-    sync::oneshot::Receiver,
+    sync::oneshot::{Receiver, Sender},
 };
 use tonic::{transport::Server, Request, Response, Status};
 
@@ -56,7 +61,10 @@ struct LauncherServerImplementation {
     container_bundle: std::path::PathBuf,
     application_config: Option<std::path::PathBuf>,
     // Attestation Evidence is initialized by the Orchestrator.
-    attestation_evidence: Mutex<Option<AttestationEvidence>>,
+    attestation_evidence: OnceLock<AttestationEvidence>,
+    // Will be used to notify the untrusted application that the trusted application is ready and
+    // listening on a socker address.
+    app_ready_notifier: Mutex<Option<Sender<SocketAddr>>>,
 }
 
 #[tonic::async_trait]
@@ -146,18 +154,39 @@ impl Launcher for LauncherServerImplementation {
         &self,
         request: Request<SendAttestationEvidenceRequest>,
     ) -> Result<Response<()>, tonic::Status> {
-        let mut attestation_evidence = self.attestation_evidence.lock().map_err(|err| {
-            tonic::Status::internal(format!("couldn't access attestation evidence: {err}"))
-        })?;
-        match *attestation_evidence {
-            Some(_) => Err(tonic::Status::invalid_argument(
+        match self
+            .attestation_evidence
+            .set(request.into_inner().evidence.unwrap_or_default())
+        {
+            Err(_) => Err(tonic::Status::invalid_argument(
                 "attestation evidence has already been sent to the Launcher",
             )),
-            None => {
-                *attestation_evidence = request.into_inner().evidence;
-                Ok(tonic::Response::new(()))
-            }
+            Ok(()) => Ok(tonic::Response::new(())),
         }
+    }
+
+    async fn notify_app_ready(
+        &self,
+        request: Request<NotifyAppReadyRequest>,
+    ) -> Result<Response<()>, tonic::Status> {
+        let address = SocketAddr::new(
+            crate::VM_LOCAL_ADDRESS,
+            request.into_inner().listening_port as u16,
+        );
+        self.app_ready_notifier
+            .lock()
+            .map_err(|err| {
+                tonic::Status::internal(format!(
+                    "couldn't get exclusive access to notification channel: {err}"
+                ))
+            })?
+            .take()
+            .ok_or_else(|| {
+                tonic::Status::invalid_argument("app has already sent a ready notification")
+            })?
+            .send(address)
+            .map_err(|err| tonic::Status::internal(format!("couldn't send notification: {err}")))?;
+        Ok(tonic::Response::new(()))
     }
 }
 
@@ -166,6 +195,7 @@ pub async fn new(
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: Option<std::path::PathBuf>,
+    app_ready_notifier: Sender<SocketAddr>,
     shutdown: Receiver<()>,
 ) -> Result<(), anyhow::Error> {
     let server_impl = LauncherServerImplementation {
@@ -173,7 +203,8 @@ pub async fn new(
         container_bundle,
         application_config,
         // Attestation Evidence will be sent by the Orchestrator once generated.
-        attestation_evidence: Mutex::new(None),
+        attestation_evidence: OnceLock::new(),
+        app_ready_notifier: Mutex::new(Some(app_ready_notifier)),
     };
     Server::builder()
         .add_service(LauncherServer::new(server_impl))

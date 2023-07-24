@@ -33,6 +33,8 @@ use proto::oak::containers::orchestrator_client::OrchestratorClient as GrpcOrche
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
 
+use self::proto::oak::containers::NotifyAppReadyRequest;
+
 // Unix Domain Sockets do not use URIs, hence this URI will never be used.
 // It is defined purely since in order to create a channel, since a URI has to
 // be supplied to create an `Endpoint`. Even though in this case the endpoint
@@ -73,5 +75,14 @@ impl OrchestratorClient {
             .into_inner()
             .config;
         Ok(config)
+    }
+
+    pub async fn notify_app_ready(&mut self, port: u16) -> Result<(), Box<dyn std::error::Error>> {
+        self.inner
+            .notify_app_ready(tonic::Request::new(NotifyAppReadyRequest {
+                listening_port: port as i32,
+            }))
+            .await?;
+        Ok(())
     }
 }

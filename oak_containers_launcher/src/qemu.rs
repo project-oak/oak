@@ -20,6 +20,7 @@ use clap::Parser;
 use command_fds::tokio::CommandFdAsyncExt;
 use std::{
     io::{BufRead, BufReader},
+    net::Ipv4Addr,
     os::{fd::AsRawFd, unix::net::UnixStream},
     path::PathBuf,
     process::Stdio,
@@ -57,6 +58,10 @@ pub struct Params {
     /// interactive debugging.
     #[arg(long)]
     pub telnet_console: Option<u16>,
+
+    /// The host's local port that QEMU must forward to the guest.
+    #[arg(long, default_value_t = 8080)]
+    pub host_proxy_port: u16,
 }
 
 impl Params {
@@ -81,6 +86,7 @@ impl Params {
             memory_size: Some("8G".to_owned()),
             ramdrive_size: 3_000_000,
             telnet_console: None,
+            host_proxy_port: 8088,
         }
     }
 }
@@ -131,10 +137,19 @@ impl Qemu {
         }
         // Set up the networking. `rombar=0` is so that QEMU wouldn't bother with the
         // `efi-virtio.rom` file, as we're not using EFI anyway.
-        cmd.args([
-            "-netdev",
-            "user,id=netdev,hostfwd=tcp:127.0.0.1:8088-10.0.2.15:8080",
-        ]);
+        let vm_address = crate::VM_LOCAL_ADDRESS;
+        let vm_port = crate::VM_LOCAL_PORT;
+        let host_address = Ipv4Addr::LOCALHOST;
+        let host_port = params.host_proxy_port;
+        cmd.args(
+            [
+                "-netdev",
+                format!(
+                    "user,id=netdev,hostfwd=tcp:{host_address}:{host_port}-{vm_address}:{vm_port}",
+                )
+                .as_str(),
+            ],
+        );
         cmd.args(["-device", "virtio-net,netdev=netdev,rombar=0"]);
         // And yes, use stage0 as the BIOS.
         cmd.args([
@@ -165,13 +180,14 @@ impl Qemu {
                 .unwrap()
                 .as_str(),
         ]);
+        let ramdrive_size = params.ramdrive_size;
         cmd.args([
             "-append",
             [
                 "console=ttyS0",
                 "panic=-1",
                 "brd.rd_nr=1",
-                format!("brd.rd_size={}", params.ramdrive_size).as_str(),
+                format!("brd.rd_size={ramdrive_size}").as_str(),
                 "brd.max_part=1",
                 "ip=10.0.2.15:::255.255.255.0::eth0:off",
             ]

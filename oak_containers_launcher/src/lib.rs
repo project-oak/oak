@@ -14,13 +14,20 @@
 // limitations under the License.
 
 mod qemu;
+mod server;
 
 use clap::Parser;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::{
-    sync::oneshot::{channel, Sender},
+    sync::oneshot::{channel, Receiver, Sender},
     task::JoinHandle,
 };
+
+/// The local IP address assigned to the VM guest.
+const VM_LOCAL_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(10, 0, 2, 15));
+
+/// The local port that the VM guest should be listening on.
+const VM_LOCAL_PORT: u16 = 8080;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -72,6 +79,8 @@ pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
 pub struct Launcher {
     vmm: qemu::Qemu,
     server: JoinHandle<Result<(), anyhow::Error>>,
+    app_ready_notifier: Option<Receiver<SocketAddr>>,
+    trusted_app_address: Option<SocketAddr>,
     shutdown: Option<Sender<()>>,
 }
 
@@ -79,11 +88,13 @@ impl Launcher {
     pub async fn create(args: Args) -> Result<Self, anyhow::Error> {
         let sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), args.port);
         let (shutdown_sender, shutdown_receiver) = channel::<()>();
-        let server = tokio::spawn(oak_containers_launcher_server::new(
+        let (app_notifier_sender, app_notifier_receiver) = channel::<SocketAddr>();
+        let server = tokio::spawn(server::new(
             sockaddr,
             args.system_image,
             args.container_bundle,
             args.application_config,
+            app_notifier_sender,
             shutdown_receiver,
         ));
 
@@ -92,8 +103,32 @@ impl Launcher {
         Ok(Self {
             vmm,
             server,
+            app_ready_notifier: Some(app_notifier_receiver),
+            trusted_app_address: None,
             shutdown: Some(shutdown_sender),
         })
+    }
+
+    /// Gets the address on which the trusted app is listening.
+    ///
+    /// This call will wait until the trusted app has notifiied the launcher once that it is ready
+    /// via the orchestrator.
+    pub async fn get_trusted_app_address(&mut self) -> Result<SocketAddr, anyhow::Error> {
+        // If we haven't received a ready notification, wait for it.
+        if let Some(receiver) = self.app_ready_notifier.take() {
+            // Set a timeout of 30 seconds, since we don't want to wait forever if the VM didn't
+            // start properly.
+            let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(30));
+
+            tokio::select! {
+                result = receiver => {
+                    self.trusted_app_address.replace(result?);
+                }
+                _ = sleep => {}
+            }
+        }
+        self.trusted_app_address
+            .ok_or_else(|| anyhow::anyhow!("trusted app address not set"))
     }
 
     pub async fn wait(&mut self) -> Result<(), anyhow::Error> {

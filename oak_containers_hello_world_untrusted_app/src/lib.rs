@@ -13,12 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::net::Ipv4Addr;
+
 use oak_containers_launcher::Launcher;
 
 mod app_client;
 
-/// The local address that will be forwarded by the VMM to the guest on port 8080.
-const UNTRUSTED_APP_ADDRESS: &str = "http://127.0.0.1:8088";
+/// The local port that will be forwarded by the VMM to the guest on its main listening port.
+const UNTRUSTED_APP_PORT: u16 = 8088;
+
+/// The local address that will be forwarded by the VMM to the guest's IP adress.
+const UNTRUSTED_APP_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
 
 pub struct UntrustedApp {
     launcher: Launcher,
@@ -29,12 +34,14 @@ impl UntrustedApp {
     pub async fn create(
         launcher_args: oak_containers_launcher::Args,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let launcher = oak_containers_launcher::Launcher::create(launcher_args).await?;
-        // TODO(#4194): Stop sleeping once we have a mechanism to notify the untrusted app that the
-        // trusted app is ready.
-        tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
-        let app_client =
-            app_client::TrustedApplicationClient::create(UNTRUSTED_APP_ADDRESS).await?;
+        let mut launcher = oak_containers_launcher::Launcher::create(launcher_args).await?;
+        // We ignore the address, since the VMM will proxy the connection from the host's local
+        // address and port to the VM guest's listening address and port.
+        let _trusted_app_address = launcher.get_trusted_app_address().await?;
+        let app_client = app_client::TrustedApplicationClient::create(format!(
+            "http://{UNTRUSTED_APP_ADDRESS}:{UNTRUSTED_APP_PORT}"
+        ))
+        .await?;
         Ok(Self {
             launcher,
             app_client,
