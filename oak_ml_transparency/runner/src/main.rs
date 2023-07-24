@@ -16,7 +16,7 @@
 
 use clap::Parser;
 use log::info;
-use serde_json::{self, Value};
+use serde_json::{self};
 use std::{
     fs::File,
     io::{Read, Write},
@@ -60,10 +60,9 @@ fn main() -> anyhow::Result<()> {
         &eval_path.into_os_string().into_string().unwrap(),
         &script_digest,
         &result,
-    );
+    )?;
 
-    let v: Value = serde_json::from_str(&claim)?;
-    let claim = serde_json::to_string_pretty(&v)?;
+    let claim = serde_json::to_string_pretty(&claim)?;
     let mut file = File::create(&output_path)?;
     file.write_all(claim.as_bytes())?;
     info!("the claim is stored in {output_path:?}");

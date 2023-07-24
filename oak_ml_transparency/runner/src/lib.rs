@@ -17,6 +17,7 @@
 use anyhow::Result;
 use chrono::Utc;
 use log::warn;
+use serde_json::{self, Value};
 use sha2::{Digest, Sha256};
 
 use std::{
@@ -36,8 +37,9 @@ pub fn generate_claim(
     script_name: &str,
     script_digest: &str,
     result: &str,
-) -> String {
-    format!(
+) -> Result<Value> {
+    // TODO(#4196): Use objects to build an instance of the claim.
+    let claim = format!(
         r#"{{
             "_type": "https://in-toto.io/Statement/v0.1",
             "subject": [{{
@@ -63,7 +65,8 @@ pub fn generate_claim(
         script_name,
         script_digest,
         result
-    )
+    );
+    Ok(serde_json::from_str(&claim)?)
 }
 
 /// Runs the given evaluation script on the given model, and returns the result as a string, or an
@@ -109,7 +112,6 @@ pub fn get_sha256_hex(input: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::{Result, Value};
 
     #[test]
     fn generate_claim_is_valid_json() {
@@ -120,8 +122,7 @@ mod tests {
             "bbfb80f90fb8ebc98f29ccc2a258ba88e712ab0ba754cc1749cb9e8413ac26b0",
             r#"{"acc": "80.9"}"#,
         );
-        let v: Result<Value> = serde_json::from_str(&claim);
-        assert!(v.is_ok());
+        assert!(claim.is_ok());
     }
 
     #[test]
