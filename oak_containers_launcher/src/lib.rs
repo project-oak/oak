@@ -116,9 +116,9 @@ impl Launcher {
     pub async fn get_trusted_app_address(&mut self) -> Result<SocketAddr, anyhow::Error> {
         // If we haven't received a ready notification, wait for it.
         if let Some(receiver) = self.app_ready_notifier.take() {
-            // Set a timeout of 30 seconds, since we don't want to wait forever if the VM didn't
+            // Set a timeout of 5 minutes, since we don't want to wait forever if the VM didn't
             // start properly.
-            let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(30));
+            let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(300));
 
             tokio::select! {
                 result = receiver => {
