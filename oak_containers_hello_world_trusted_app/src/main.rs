@@ -13,12 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-
-use tokio::net::TcpListener;
-
 mod app_service;
 mod orchestrator_client;
+
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use tokio::net::TcpListener;
 
 const TRUSTED_APP_PORT: u16 = 8080;
 

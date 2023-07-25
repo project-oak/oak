@@ -13,11 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::net::Ipv4Addr;
+mod app_client;
 
 use oak_containers_launcher::Launcher;
-
-mod app_client;
+use std::net::Ipv4Addr;
 
 /// The local address that will be forwarded by the VMM to the guest's IP adress.
 const PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
