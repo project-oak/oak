@@ -244,7 +244,7 @@ where
         // `memory` is not available.
         instance
             .get_memory(&store, MEMORY_NAME)
-            .ok_or(anyhow::anyhow!("couldn't find Wasm `memory` export"))?;
+            .ok_or_else(|| anyhow::anyhow!("couldn't find Wasm `memory` export"))?;
 
         Ok((instance, store))
     }
@@ -478,21 +478,14 @@ where
         );
 
         let response_bytes = response.lock().clone();
+        store.data().logger.log_sensitive(
+            Level::Info,
+            &format!("response bytes: {:?}", response_bytes),
+        );
 
         let invoke_response =
             Response::create(oak_functions_abi::StatusCode::Success, response_bytes);
         Ok(invoke_response)
-    }
-}
-
-impl<L: OakLogger> micro_rpc::Transport for WasmHandler<L> {
-    type Error = anyhow::Error;
-    fn invoke(&mut self, request: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let request = Request {
-            body: request.to_vec(),
-        };
-        let response = self.handle_invoke(request)?;
-        Ok(response.body)
     }
 }
 

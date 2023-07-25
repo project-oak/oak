@@ -21,6 +21,8 @@ pub static MOCK_LOOKUP_DATA_PATH: Lazy<PathBuf> =
 static STAGE_0_DIR: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["stage0_bin"]));
 pub static OAK_RESTRICTED_KERNEL_BIN_DIR: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_restricted_kernel_bin"]));
+static OAK_FUNCTIONS_LAUNCHER_BIN_DIR: Lazy<PathBuf> =
+    Lazy::new(|| workspace_path(&["oak_functions_launcher"]));
 static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
     workspace_path(&[
         "target",
@@ -208,6 +210,13 @@ pub async fn run_oak_functions_example_in_background(
             .unwrap(),
     ))
     .await;
+    crate::testing::run_step(crate::launcher::build_binary(
+        "build Oak Functions Launcher binary",
+        crate::launcher::OAK_FUNCTIONS_LAUNCHER_BIN_DIR
+            .to_str()
+            .unwrap(),
+    ))
+    .await;
     let variant = crate::launcher::App::from_crate_name("oak_functions_enclave_app");
     crate::testing::run_step(crate::launcher::build_binary(
         "build Oak Functions enclave app",
@@ -215,7 +224,7 @@ pub async fn run_oak_functions_example_in_background(
     ))
     .await;
 
-    eprintln!("using wasm module {}", wasm_path);
+    eprintln!("using Wasm module {}", wasm_path);
 
     let port = portpicker::pick_unused_port().expect("failed to pick a port");
     eprintln!("using port {}", port);

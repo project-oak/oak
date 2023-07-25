@@ -68,6 +68,7 @@ fn path_exists(s: &str) -> Result<PathBuf, String> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Args::parse();
     env_logger::init();
+    log::info!("Oak Functions Launcher args: {:?}", cli);
 
     let lookup_data_config = LookupDataConfig {
         lookup_data_path: cli.lookup_data,
