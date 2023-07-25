@@ -63,7 +63,7 @@ struct LauncherServerImplementation {
     // Attestation Evidence is initialized by the Orchestrator.
     attestation_evidence: OnceLock<AttestationEvidence>,
     // Will be used to notify the untrusted application that the trusted application is ready and
-    // listening on a socker address.
+    // listening on a socket address.
     app_ready_notifier: Mutex<Option<Sender<SocketAddr>>>,
 }
 

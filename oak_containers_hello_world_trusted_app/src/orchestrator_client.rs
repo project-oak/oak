@@ -28,12 +28,11 @@ mod proto {
     }
 }
 
+use self::proto::oak::containers::NotifyAppReadyRequest;
 use anyhow::Context;
 use proto::oak::containers::orchestrator_client::OrchestratorClient as GrpcOrchestratorClient;
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
-
-use self::proto::oak::containers::NotifyAppReadyRequest;
 
 // Unix Domain Sockets do not use URIs, hence this URI will never be used.
 // It is defined purely since in order to create a channel, since a URI has to
