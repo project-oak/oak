@@ -135,15 +135,19 @@ impl Qemu {
         let vm_address = crate::VM_LOCAL_ADDRESS;
         let vm_port = crate::VM_LOCAL_PORT;
         let host_address = Ipv4Addr::LOCALHOST;
-        cmd.args(
+        cmd.args([
+            "-netdev",
             [
-                "-netdev",
-                format!(
-                    "user,id=netdev,guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port},hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}",
-                )
-                .as_str(),
-            ],
-        );
+                "user",
+                "id=netdev",
+                &format!(
+                    "guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}"
+                ),
+                &format!("hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}"),
+            ]
+            .join(",")
+            .as_str(),
+        ]);
         cmd.args(["-device", "virtio-net,netdev=netdev,rombar=0"]);
         // And yes, use stage0 as the BIOS.
         cmd.args([
