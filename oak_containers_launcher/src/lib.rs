@@ -19,6 +19,7 @@ mod server;
 use clap::Parser;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::{
+    net::TcpListener,
     sync::oneshot::{channel, Receiver, Sender},
     task::JoinHandle,
 };
@@ -31,8 +32,6 @@ const VM_LOCAL_PORT: u16 = 8080;
 
 #[derive(Parser, Debug)]
 pub struct Args {
-    #[arg(long, default_value_t = 8080)]
-    port: u16,
     #[arg(long, required = true, value_parser = path_exists,)]
     system_image: std::path::PathBuf,
     #[arg(long, required = true, value_parser = path_exists,)]
@@ -55,7 +54,6 @@ impl Args {
             env!("WORKSPACE_ROOT")
         ).into();
         Self {
-            port: 8085,
             system_image,
             container_bundle,
             application_config: None,
@@ -79,6 +77,7 @@ pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
 pub struct Launcher {
     vmm: qemu::Qemu,
     server: JoinHandle<Result<(), anyhow::Error>>,
+    host_proxy_port: u16,
     app_ready_notifier: Option<Receiver<SocketAddr>>,
     trusted_app_address: Option<SocketAddr>,
     shutdown: Option<Sender<()>>,
@@ -86,11 +85,15 @@ pub struct Launcher {
 
 impl Launcher {
     pub async fn create(args: Args) -> Result<Self, anyhow::Error> {
-        let sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), args.port);
+        // Let the OS assign an open port for the launcher service.
+        let sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
+        let listener = TcpListener::bind(sockaddr).await?;
+        let port = listener.local_addr()?.port();
+        log::info!("Launcher service listening on port {port}");
         let (shutdown_sender, shutdown_receiver) = channel::<()>();
         let (app_notifier_sender, app_notifier_receiver) = channel::<SocketAddr>();
         let server = tokio::spawn(server::new(
-            sockaddr,
+            listener,
             args.system_image,
             args.container_bundle,
             args.application_config,
@@ -98,11 +101,17 @@ impl Launcher {
             shutdown_receiver,
         ));
 
-        let vmm = qemu::Qemu::start(args.qemu_params, args.port)?;
+        // Also get an open port for that QEMU can use for proxying requests to the server. Since we
+        // don't have a mechanism to pass this port to QEMU we have to unbind it by dropping it.
+        // There is a small window for a race condition, but since the assigned port will be random
+        // the probability of another process grabbing the port before QEMU can should be very low.
+        let host_proxy_port = { TcpListener::bind(sockaddr).await?.local_addr()?.port() };
+        let vmm = qemu::Qemu::start(args.qemu_params, port, host_proxy_port)?;
 
         Ok(Self {
             vmm,
             server,
+            host_proxy_port,
             app_ready_notifier: Some(app_notifier_receiver),
             trusted_app_address: None,
             shutdown: Some(shutdown_sender),
@@ -129,6 +138,10 @@ impl Launcher {
         }
         self.trusted_app_address
             .ok_or_else(|| anyhow::anyhow!("trusted app address not set"))
+    }
+
+    pub fn get_proxy_port(&self) -> u16 {
+        self.host_proxy_port
     }
 
     pub async fn wait(&mut self) -> Result<(), anyhow::Error> {

@@ -1789,6 +1789,7 @@ dependencies = [
  "oak_grpc_utils",
  "prost",
  "tokio",
+ "tokio-stream",
  "tonic",
  "which",
 ]

@@ -45,8 +45,10 @@ use std::{
 };
 use tokio::{
     io::{AsyncReadExt, BufReader},
+    net::TcpListener,
     sync::oneshot::{Receiver, Sender},
 };
+use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{transport::Server, Request, Response, Status};
 
 // Most gRPC implementations limit message sizes to 4MiB. Let's stay
@@ -191,7 +193,7 @@ impl Launcher for LauncherServerImplementation {
 }
 
 pub async fn new(
-    addr: SocketAddr,
+    listener: TcpListener,
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: Option<std::path::PathBuf>,
@@ -208,7 +210,7 @@ pub async fn new(
     };
     Server::builder()
         .add_service(LauncherServer::new(server_impl))
-        .serve_with_shutdown(addr, shutdown.map(|_| ()))
+        .serve_with_incoming_shutdown(TcpListenerStream::new(listener), shutdown.map(|_| ()))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))
 }

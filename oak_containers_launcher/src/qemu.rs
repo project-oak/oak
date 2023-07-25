@@ -58,10 +58,6 @@ pub struct Params {
     /// interactive debugging.
     #[arg(long)]
     pub telnet_console: Option<u16>,
-
-    /// The host's local port that QEMU must forward to the guest.
-    #[arg(long, default_value_t = 8080)]
-    pub host_proxy_port: u16,
 }
 
 impl Params {
@@ -86,7 +82,6 @@ impl Params {
             memory_size: Some("8G".to_owned()),
             ramdrive_size: 3_000_000,
             telnet_console: None,
-            host_proxy_port: 8088,
         }
     }
 }
@@ -96,7 +91,7 @@ pub struct Qemu {
 }
 
 impl Qemu {
-    pub fn start(params: Params, launcher_service_port: u16) -> Result<Self> {
+    pub fn start(params: Params, launcher_service_port: u16, host_proxy_port: u16) -> Result<Self> {
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
         let (guest_socket, host_socket) = UnixStream::pair()?;
 
@@ -140,12 +135,11 @@ impl Qemu {
         let vm_address = crate::VM_LOCAL_ADDRESS;
         let vm_port = crate::VM_LOCAL_PORT;
         let host_address = Ipv4Addr::LOCALHOST;
-        let host_port = params.host_proxy_port;
         cmd.args(
             [
                 "-netdev",
                 format!(
-                    "user,id=netdev,guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port},hostfwd=tcp:{host_address}:{host_port}-{vm_address}:{vm_port}",
+                    "user,id=netdev,guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port},hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}",
                 )
                 .as_str(),
             ],
