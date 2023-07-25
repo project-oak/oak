@@ -29,7 +29,7 @@ const IPC_SOCKET_FILE_NAME: &str = "orchestrator_ipc";
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(default_value = "http://10.0.2.2:8080")]
+    #[arg(default_value = "http://10.0.2.100:8080")]
     launcher_addr: String,
 }
 

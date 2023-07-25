@@ -55,7 +55,7 @@ impl Args {
             env!("WORKSPACE_ROOT")
         ).into();
         Self {
-            port: 8080,
+            port: 8085,
             system_image,
             container_bundle,
             application_config: None,
@@ -98,7 +98,7 @@ impl Launcher {
             shutdown_receiver,
         ));
 
-        let vmm = qemu::Qemu::start(args.qemu_params)?;
+        let vmm = qemu::Qemu::start(args.qemu_params, args.port)?;
 
         Ok(Self {
             vmm,
