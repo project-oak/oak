@@ -19,6 +19,7 @@ package com.google.oak.util;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -109,6 +110,28 @@ public class Result<R, E> {
    */
   public R orElse(final R other) {
     return success.orElse(other);
+  }
+
+  /**
+   * If a success value is present, invoke the specified consumer with the success
+   * value, otherwise do nothing.
+   * 
+   * @param consumer block to be executed if a success value is present
+   * @throws NullPointerException if success value is present and consumer is null
+   */
+  public void ifSuccess(Consumer<R> consumer) {
+    success.ifPresent(consumer);
+  }
+
+  /**
+   * If there is an error, invoke the specified consumer with the error value,
+   * otherwise do nothing.
+   * 
+   * @param consumer block to be executed if an error value is present
+   * @throws NullPointerException if this is an error and consumer is null
+   */
+  public void ifError(Consumer<E> consumer) {
+    error.ifPresent(consumer);
   }
 
   /**
