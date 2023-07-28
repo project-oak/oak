@@ -60,7 +60,7 @@ service Launcher {
   rpc SendAttestationEvidence(SendAttestationEvidenceRequest) returns (google.protobuf.Empty) {}
 
   // Notifies the launcher that the trusted app is ready to serve requests and listening on the
-  // specified port.
+  // pre-arranged port (8080).
   rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 }
 
@@ -71,6 +71,6 @@ service Orchestrator {
   rpc GetApplicationConfig(google.protobuf.Empty) returns (GetApplicationConfigResponse) {}
 
   // Notifies the orchestrator that the trusted app is ready to serve requests and listening on the
-  // specified port.
+  // pre-arranged port (8080).
   rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 }

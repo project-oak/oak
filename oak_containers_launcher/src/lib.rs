@@ -121,7 +121,11 @@ impl Launcher {
         })
     }
 
-    /// Gets the address on which the trusted app is listening.
+    /// Gets the address that the untrusted application can use to connect to the trusted
+    /// application.
+    ///
+    /// This is a host-visible address that the VMM will proxy to the trusted application's service
+    /// endpoint.
     ///
     /// This call will wait until the trusted app has notifiied the launcher once that it is ready
     /// via the orchestrator.
