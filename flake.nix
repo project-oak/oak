@@ -160,7 +160,7 @@
                 perl
                 glibc
                 glibc.static
-		            ncurses
+                ncurses
                 netcat
               ];
             };
