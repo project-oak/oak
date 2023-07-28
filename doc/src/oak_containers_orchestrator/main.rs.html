@@ -110,7 +110,7 @@
 
 <span class="attr">#[derive(Parser, Debug)]
 </span><span class="kw">struct </span>Args {
-    <span class="attr">#[arg(default_value = <span class="string">&quot;http://10.0.2.2:8080&quot;</span>)]
+    <span class="attr">#[arg(default_value = <span class="string">&quot;http://10.0.2.100:8080&quot;</span>)]
     </span>launcher_addr: String,
 }
 
@@ -120,7 +120,7 @@
 
     <span class="kw">let </span>args = Args::parse();
 
-    <span class="kw">let </span><span class="kw-2">mut </span>launcher_client = LauncherClient::create(args.launcher_addr.parse()<span class="question-mark">?</span>)
+    <span class="kw">let </span>launcher_client = LauncherClient::create(args.launcher_addr.parse()<span class="question-mark">?</span>)
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t create client: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
@@ -154,7 +154,7 @@
     };
 
     <span class="macro">tokio::try_join!</span>(
-        <span class="kw">crate</span>::ipc_server::create(ipc_path, application_config),
+        <span class="kw">crate</span>::ipc_server::create(ipc_path, application_config, launcher_client),
         container_runtime::run(<span class="kw-2">&amp;</span>container_bundle)
     )<span class="question-mark">?</span>;
 

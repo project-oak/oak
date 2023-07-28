@@ -92,6 +92,19 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -139,9 +152,10 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ inner })
     }
 
-    <span class="kw">pub async fn </span>get_container_bundle(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="kw">pub async fn </span>get_container_bundle(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>stream = <span class="self">self
             </span>.inner
+            .clone()
             .get_container_bundle(())
             .<span class="kw">await
             </span>.context(<span class="string">&quot;couldn&#39;t form streaming connection&quot;</span>)<span class="question-mark">?
@@ -159,9 +173,10 @@
         <span class="prelude-val">Ok</span>(container_buf)
     }
 
-    <span class="kw">pub async fn </span>get_application_config(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="kw">pub async fn </span>get_application_config(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
         <span class="kw">let </span>application_config = <span class="self">self
             </span>.inner
+            .clone()
             .get_application_config(())
             .<span class="kw">await
             </span>.context(<span class="string">&quot;couldn&#39;t form get response&quot;</span>)<span class="question-mark">?
@@ -172,17 +187,28 @@
     }
 
     <span class="kw">pub async fn </span>send_attestation_evidence(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         evidence: AttestationEvidence,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
         <span class="kw">let </span>request = tonic::Request::new(SendAttestationEvidenceRequest {
             evidence: <span class="prelude-val">Some</span>(evidence),
         });
         <span class="self">self</span>.inner
+            .clone()
             .send_attestation_evidence(request)
             .<span class="kw">await
             </span>.context(<span class="string">&quot;couldn&#39;t form get response&quot;</span>)<span class="question-mark">?</span>;
 
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">pub async fn </span>notify_app_ready(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+        <span class="kw">let </span>request = tonic::Request::new(());
+        <span class="self">self</span>.inner
+            .clone()
+            .notify_app_ready(request)
+            .<span class="kw">await
+            </span>.context(<span class="string">&quot;couldn&#39;t send notification&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }

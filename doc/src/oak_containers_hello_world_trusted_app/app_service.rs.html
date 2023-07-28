@@ -57,6 +57,10 @@
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -87,7 +91,8 @@
     HelloRequest, HelloResponse,
 };
 <span class="kw">use </span>anyhow::anyhow;
-<span class="kw">use </span>std::net::SocketAddr;
+<span class="kw">use </span>tokio::net::TcpListener;
+<span class="kw">use </span>tokio_stream::wrappers::TcpListenerStream;
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">struct </span>TrustedApplicationImplementation {
@@ -107,12 +112,15 @@
     }
 }
 
-<span class="kw">pub async fn </span>create(addr: SocketAddr, application_config: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
+<span class="kw">pub async fn </span>create(
+    listener: TcpListener,
+    application_config: Vec&lt;u8&gt;,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
     tonic::transport::Server::builder()
         .add_service(TrustedApplicationServer::new(
             TrustedApplicationImplementation { application_config },
         ))
-        .serve(addr)
+        .serve_with_incoming(TcpListenerStream::new(listener))
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;server error: {:?}&quot;</span>, error))
 }

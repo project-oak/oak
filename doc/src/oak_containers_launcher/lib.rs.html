@@ -109,6 +109,59 @@
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -125,18 +178,27 @@
 // limitations under the License.
 
 </span><span class="kw">mod </span>qemu;
+<span class="kw">mod </span>server;
 
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>std::net::{IpAddr, Ipv4Addr, SocketAddr};
 <span class="kw">use </span>tokio::{
-    sync::oneshot::{channel, Sender},
+    net::TcpListener,
+    sync::oneshot::{channel, Receiver, Sender},
     task::JoinHandle,
 };
 
+<span class="doccomment">/// The local IP address assigned to the VM guest.
+</span><span class="kw">const </span>VM_LOCAL_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(<span class="number">10</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">15</span>));
+
+<span class="doccomment">/// The local port that the VM guest should be listening on.
+</span><span class="kw">const </span>VM_LOCAL_PORT: u16 = <span class="number">8080</span>;
+
+<span class="doccomment">/// The local address that will be forwarded by the VMM to the guest&#39;s IP adress.
+</span><span class="kw">const </span>PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
+
 <span class="attr">#[derive(Parser, Debug)]
 </span><span class="kw">pub struct </span>Args {
-    <span class="attr">#[arg(long, default_value_t = <span class="number">8080</span>)]
-    </span>port: u16,
     <span class="attr">#[arg(long, required = <span class="bool-val">true</span>, value_parser = path_exists,)]
     </span>system_image: std::path::PathBuf,
     <span class="attr">#[arg(long, required = <span class="bool-val">true</span>, value_parser = path_exists,)]
@@ -159,7 +221,6 @@
             <span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>)
         ).into();
         <span class="self">Self </span>{
-            port: <span class="number">8080</span>,
             system_image,
             container_bundle,
             application_config: <span class="prelude-val">None</span>,
@@ -183,28 +244,73 @@
 <span class="kw">pub struct </span>Launcher {
     vmm: qemu::Qemu,
     server: JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt;&gt;,
+    host_proxy_port: u16,
+    app_ready_notifier: <span class="prelude-ty">Option</span>&lt;Receiver&lt;()&gt;&gt;,
+    trusted_app_address: <span class="prelude-ty">Option</span>&lt;SocketAddr&gt;,
     shutdown: <span class="prelude-ty">Option</span>&lt;Sender&lt;()&gt;&gt;,
 }
 
 <span class="kw">impl </span>Launcher {
     <span class="kw">pub async fn </span>create(args: Args) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, anyhow::Error&gt; {
-        <span class="kw">let </span>sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), args.port);
+        <span class="comment">// Let the OS assign an open port for the launcher service.
+        </span><span class="kw">let </span>sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), <span class="number">0</span>);
+        <span class="kw">let </span>listener = TcpListener::bind(sockaddr).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let </span>port = listener.local_addr()<span class="question-mark">?</span>.port();
+        <span class="macro">log::info!</span>(<span class="string">&quot;Launcher service listening on port {port}&quot;</span>);
         <span class="kw">let </span>(shutdown_sender, shutdown_receiver) = channel::&lt;()&gt;();
-        <span class="kw">let </span>server = tokio::spawn(oak_containers_launcher_server::new(
-            sockaddr,
+        <span class="kw">let </span>(app_notifier_sender, app_notifier_receiver) = channel::&lt;()&gt;();
+        <span class="kw">let </span>server = tokio::spawn(server::new(
+            listener,
             args.system_image,
             args.container_bundle,
             args.application_config,
+            app_notifier_sender,
             shutdown_receiver,
         ));
 
-        <span class="kw">let </span>vmm = qemu::Qemu::start(args.qemu_params)<span class="question-mark">?</span>;
+        <span class="comment">// Also get an open port for that QEMU can use for proxying requests to the server. Since we
+        // don&#39;t have a mechanism to pass this port to QEMU we have to unbind it by dropping it.
+        // There is a small window for a race condition, but since the assigned port will be random
+        // the probability of another process grabbing the port before QEMU can should be very low.
+        </span><span class="kw">let </span>host_proxy_port = { TcpListener::bind(sockaddr).<span class="kw">await</span><span class="question-mark">?</span>.local_addr()<span class="question-mark">?</span>.port() };
+        <span class="kw">let </span>vmm = qemu::Qemu::start(args.qemu_params, port, host_proxy_port)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             vmm,
             server,
+            host_proxy_port,
+            app_ready_notifier: <span class="prelude-val">Some</span>(app_notifier_receiver),
+            trusted_app_address: <span class="prelude-val">None</span>,
             shutdown: <span class="prelude-val">Some</span>(shutdown_sender),
         })
+    }
+
+    <span class="doccomment">/// Gets the address on which the trusted app is listening.
+    ///
+    /// This call will wait until the trusted app has notifiied the launcher once that it is ready
+    /// via the orchestrator.
+    </span><span class="kw">pub async fn </span>get_trusted_app_address(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SocketAddr, anyhow::Error&gt; {
+        <span class="comment">// If we haven&#39;t received a ready notification, wait for it.
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(receiver) = <span class="self">self</span>.app_ready_notifier.take() {
+            <span class="comment">// Set a timeout of 5 minutes, since we don&#39;t want to wait forever if the VM didn&#39;t
+            // start properly.
+            </span><span class="kw">let </span>sleep = tokio::time::sleep(tokio::time::Duration::from_secs(<span class="number">300</span>));
+
+            <span class="macro">tokio::select! </span>{
+                result = receiver =&gt; {
+                    result<span class="question-mark">?</span>;
+                    <span class="self">self</span>.trusted_app_address.replace(
+                        SocketAddr::new(
+                            IpAddr::V4(PROXY_ADDRESS),
+                            <span class="self">self</span>.host_proxy_port,
+                        )
+                    );
+                }
+                <span class="kw">_ </span>= sleep =&gt; {}
+            }
+        }
+        <span class="self">self</span>.trusted_app_address
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;trusted app address not set&quot;</span>))
     }
 
     <span class="kw">pub async fn </span>wait(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {

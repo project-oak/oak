@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_containers_launcher_server/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-a23c9d150ad85d8b.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_containers_launcher_server" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (839e9a6e1 2023-07-02)" data-channel="nightly" data-search-js="search-f6292fe389d70017.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oak_containers_launcher_server/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_containers_launcher/src/server.rs`."><title>server.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-a23c9d150ad85d8b.css" id="mainThemeStyle"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_containers_launcher" data-themes="" data-resource-suffix="" data-rustdoc-version="1.72.0-nightly (839e9a6e1 2023-07-02)" data-channel="nightly" data-search-js="search-f6292fe389d70017.js" data-settings-js="settings-de11bff964e9d4e5.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-0f8c037637f9eb3e.css" data-theme-dark-css="dark-1097f8e92a01e3cf.css" data-theme-ayu-css="ayu-614652228113ac93.css" ><script src="../../static.files/storage-59fd9b8ccb335783.js"></script><script defer src="../../static.files/source-script-106908c7a7964ba4.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-0795b7d26be81095.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-0f8c037637f9eb3e.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1097f8e92a01e3cf.css"><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oak_containers_launcher/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -181,6 +181,30 @@
 <a href="#181" id="181">181</a>
 <a href="#182" id="182">182</a>
 <a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -220,11 +244,16 @@
 };
 <span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>futures::{FutureExt, Stream};
-<span class="kw">use </span>std::{net::SocketAddr, pin::Pin, sync::Mutex};
+<span class="kw">use </span>std::{
+    pin::Pin,
+    sync::{Mutex, OnceLock},
+};
 <span class="kw">use </span>tokio::{
     io::{AsyncReadExt, BufReader},
-    sync::oneshot::Receiver,
+    net::TcpListener,
+    sync::oneshot::{Receiver, Sender},
 };
+<span class="kw">use </span>tokio_stream::wrappers::TcpListenerStream;
 <span class="kw">use </span>tonic::{transport::Server, Request, Response, Status};
 
 <span class="comment">// Most gRPC implementations limit message sizes to 4MiB. Let&#39;s stay
@@ -239,7 +268,10 @@
     container_bundle: std::path::PathBuf,
     application_config: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
     <span class="comment">// Attestation Evidence is initialized by the Orchestrator.
-    </span>attestation_evidence: Mutex&lt;<span class="prelude-ty">Option</span>&lt;AttestationEvidence&gt;&gt;,
+    </span>attestation_evidence: OnceLock&lt;AttestationEvidence&gt;,
+    <span class="comment">// Will be used to notify the untrusted application that the trusted application is ready and
+    // listening on a socket address.
+    </span>app_ready_notifier: Mutex&lt;<span class="prelude-ty">Option</span>&lt;Sender&lt;()&gt;&gt;&gt;,
 }
 
 <span class="attr">#[tonic::async_trait]
@@ -329,26 +361,41 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: Request&lt;SendAttestationEvidenceRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;()&gt;, tonic::Status&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>attestation_evidence = <span class="self">self</span>.attestation_evidence.lock().map_err(|err| {
-            tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t access attestation evidence: {err}&quot;</span>))
-        })<span class="question-mark">?</span>;
-        <span class="kw">match </span><span class="kw-2">*</span>attestation_evidence {
-            <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(tonic::Status::invalid_argument(
+        <span class="kw">match </span><span class="self">self
+            </span>.attestation_evidence
+            .set(request.into_inner().evidence.unwrap_or_default())
+        {
+            <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(tonic::Status::invalid_argument(
                 <span class="string">&quot;attestation evidence has already been sent to the Launcher&quot;</span>,
             )),
-            <span class="prelude-val">None </span>=&gt; {
-                <span class="kw-2">*</span>attestation_evidence = request.into_inner().evidence;
-                <span class="prelude-val">Ok</span>(tonic::Response::new(()))
-            }
+            <span class="prelude-val">Ok</span>(()) =&gt; <span class="prelude-val">Ok</span>(tonic::Response::new(())),
         }
+    }
+
+    <span class="kw">async fn </span>notify_app_ready(<span class="kw-2">&amp;</span><span class="self">self</span>, _request: Request&lt;()&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;()&gt;, tonic::Status&gt; {
+        <span class="self">self</span>.app_ready_notifier
+            .lock()
+            .map_err(|err| {
+                tonic::Status::internal(<span class="macro">format!</span>(
+                    <span class="string">&quot;couldn&#39;t get exclusive access to notification channel: {err}&quot;
+                </span>))
+            })<span class="question-mark">?
+            </span>.take()
+            .ok_or_else(|| {
+                tonic::Status::invalid_argument(<span class="string">&quot;app has already sent a ready notification&quot;</span>)
+            })<span class="question-mark">?
+            </span>.send(())
+            .map_err(|_err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t send notification&quot;</span>)))<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(tonic::Response::new(()))
     }
 }
 
 <span class="kw">pub async fn </span>new(
-    addr: SocketAddr,
+    listener: TcpListener,
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
+    app_ready_notifier: Sender&lt;()&gt;,
     shutdown: Receiver&lt;()&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
     <span class="kw">let </span>server_impl = LauncherServerImplementation {
@@ -356,11 +403,12 @@
         container_bundle,
         application_config,
         <span class="comment">// Attestation Evidence will be sent by the Orchestrator once generated.
-        </span>attestation_evidence: Mutex::new(<span class="prelude-val">None</span>),
+        </span>attestation_evidence: OnceLock::new(),
+        app_ready_notifier: Mutex::new(<span class="prelude-val">Some</span>(app_ready_notifier)),
     };
     Server::builder()
         .add_service(LauncherServer::new(server_impl))
-        .serve_with_shutdown(addr, shutdown.map(|<span class="kw">_</span>| ()))
+        .serve_with_incoming_shutdown(TcpListenerStream::new(listener), shutdown.map(|<span class="kw">_</span>| ()))
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;server error: {:?}&quot;</span>, error))
 }
