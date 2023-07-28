@@ -615,7 +615,7 @@
             request: tonic::Request&lt;<span class="kw">super</span>::SendAttestationEvidenceRequest&gt;,
         ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;()&gt;, tonic::Status&gt;;
         <span class="doccomment">/// Notifies the launcher that the trusted app is ready to serve requests and listening on the
-        /// specified port.
+        /// pre-arranged port (8080).
         </span><span class="kw">async fn </span>notify_app_ready(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
             request: tonic::Request&lt;()&gt;,
@@ -919,7 +919,7 @@
             request: tonic::Request&lt;()&gt;,
         ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;<span class="kw">super</span>::GetApplicationConfigResponse&gt;, tonic::Status&gt;;
         <span class="doccomment">/// Notifies the orchestrator that the trusted app is ready to serve requests and listening on the
-        /// specified port.
+        /// pre-arranged port (8080).
         </span><span class="kw">async fn </span>notify_app_ready(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
             request: tonic::Request&lt;()&gt;,

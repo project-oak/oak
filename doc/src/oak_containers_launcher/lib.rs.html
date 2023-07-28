@@ -162,6 +162,10 @@
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -285,7 +289,11 @@
         })
     }
 
-    <span class="doccomment">/// Gets the address on which the trusted app is listening.
+    <span class="doccomment">/// Gets the address that the untrusted application can use to connect to the trusted
+    /// application.
+    ///
+    /// This is a host-visible address that the VMM will proxy to the trusted application&#39;s service
+    /// endpoint.
     ///
     /// This call will wait until the trusted app has notifiied the launcher once that it is ready
     /// via the orchestrator.
