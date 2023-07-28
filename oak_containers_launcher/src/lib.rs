@@ -30,6 +30,9 @@ const VM_LOCAL_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(10, 0, 2, 15));
 /// The local port that the VM guest should be listening on.
 const VM_LOCAL_PORT: u16 = 8080;
 
+/// The local address that will be forwarded by the VMM to the guest's IP adress.
+const PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
+
 #[derive(Parser, Debug)]
 pub struct Args {
     #[arg(long, required = true, value_parser = path_exists,)]
@@ -78,7 +81,7 @@ pub struct Launcher {
     vmm: qemu::Qemu,
     server: JoinHandle<Result<(), anyhow::Error>>,
     host_proxy_port: u16,
-    app_ready_notifier: Option<Receiver<SocketAddr>>,
+    app_ready_notifier: Option<Receiver<()>>,
     trusted_app_address: Option<SocketAddr>,
     shutdown: Option<Sender<()>>,
 }
@@ -91,7 +94,7 @@ impl Launcher {
         let port = listener.local_addr()?.port();
         log::info!("Launcher service listening on port {port}");
         let (shutdown_sender, shutdown_receiver) = channel::<()>();
-        let (app_notifier_sender, app_notifier_receiver) = channel::<SocketAddr>();
+        let (app_notifier_sender, app_notifier_receiver) = channel::<()>();
         let server = tokio::spawn(server::new(
             listener,
             args.system_image,
@@ -131,17 +134,19 @@ impl Launcher {
 
             tokio::select! {
                 result = receiver => {
-                    self.trusted_app_address.replace(result?);
+                    result?;
+                    self.trusted_app_address.replace(
+                        SocketAddr::new(
+                            IpAddr::V4(PROXY_ADDRESS),
+                            self.host_proxy_port,
+                        )
+                    );
                 }
                 _ = sleep => {}
             }
         }
         self.trusted_app_address
             .ok_or_else(|| anyhow::anyhow!("trusted app address not set"))
-    }
-
-    pub fn get_proxy_port(&self) -> u16 {
-        self.host_proxy_port
     }
 
     pub async fn wait(&mut self) -> Result<(), anyhow::Error> {

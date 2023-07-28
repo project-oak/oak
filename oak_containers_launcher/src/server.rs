@@ -31,15 +31,13 @@ mod proto {
 use self::proto::oak::{
     containers::{
         launcher_server::{Launcher, LauncherServer},
-        GetApplicationConfigResponse, GetImageResponse, NotifyAppReadyRequest,
-        SendAttestationEvidenceRequest,
+        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
     },
     session::v1::AttestationEvidence,
 };
 use anyhow::anyhow;
 use futures::{FutureExt, Stream};
 use std::{
-    net::SocketAddr,
     pin::Pin,
     sync::{Mutex, OnceLock},
 };
@@ -66,7 +64,7 @@ struct LauncherServerImplementation {
     attestation_evidence: OnceLock<AttestationEvidence>,
     // Will be used to notify the untrusted application that the trusted application is ready and
     // listening on a socket address.
-    app_ready_notifier: Mutex<Option<Sender<SocketAddr>>>,
+    app_ready_notifier: Mutex<Option<Sender<()>>>,
 }
 
 #[tonic::async_trait]
@@ -167,14 +165,7 @@ impl Launcher for LauncherServerImplementation {
         }
     }
 
-    async fn notify_app_ready(
-        &self,
-        request: Request<NotifyAppReadyRequest>,
-    ) -> Result<Response<()>, tonic::Status> {
-        let address = SocketAddr::new(
-            crate::VM_LOCAL_ADDRESS,
-            request.into_inner().listening_port as u16,
-        );
+    async fn notify_app_ready(&self, _request: Request<()>) -> Result<Response<()>, tonic::Status> {
         self.app_ready_notifier
             .lock()
             .map_err(|err| {
@@ -186,8 +177,8 @@ impl Launcher for LauncherServerImplementation {
             .ok_or_else(|| {
                 tonic::Status::invalid_argument("app has already sent a ready notification")
             })?
-            .send(address)
-            .map_err(|err| tonic::Status::internal(format!("couldn't send notification: {err}")))?;
+            .send(())
+            .map_err(|_err| tonic::Status::internal(format!("couldn't send notification")))?;
         Ok(tonic::Response::new(()))
     }
 }
@@ -197,7 +188,7 @@ pub async fn new(
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: Option<std::path::PathBuf>,
-    app_ready_notifier: Sender<SocketAddr>,
+    app_ready_notifier: Sender<()>,
     shutdown: Receiver<()>,
 ) -> Result<(), anyhow::Error> {
     let server_impl = LauncherServerImplementation {

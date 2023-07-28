@@ -32,7 +32,7 @@ use anyhow::Context;
 use oak_containers_orchestrator_client::LauncherClient;
 use proto::oak::containers::{
     orchestrator_server::{Orchestrator, OrchestratorServer},
-    GetApplicationConfigResponse, NotifyAppReadyRequest,
+    GetApplicationConfigResponse,
 };
 use tokio::net::UnixListener;
 use tokio_stream::wrappers::UnixListenerStream;
@@ -54,12 +54,9 @@ impl Orchestrator for ServiceImplementation {
         }))
     }
 
-    async fn notify_app_ready(
-        &self,
-        request: Request<NotifyAppReadyRequest>,
-    ) -> Result<Response<()>, tonic::Status> {
+    async fn notify_app_ready(&self, _request: Request<()>) -> Result<Response<()>, tonic::Status> {
         self.launcher_client
-            .notify_app_ready(request.into_inner().listening_port as u16)
+            .notify_app_ready()
             .await
             .map_err(|err| tonic::Status::internal(format!("couldn't send notification: {err}")))?;
         Ok(tonic::Response::new(()))

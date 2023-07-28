@@ -28,7 +28,6 @@ mod proto {
     }
 }
 
-use self::proto::oak::containers::NotifyAppReadyRequest;
 use anyhow::Context;
 use proto::oak::containers::orchestrator_client::OrchestratorClient as GrpcOrchestratorClient;
 use tonic::transport::{Endpoint, Uri};
@@ -76,12 +75,8 @@ impl OrchestratorClient {
         Ok(config)
     }
 
-    pub async fn notify_app_ready(&mut self, port: u16) -> Result<(), Box<dyn std::error::Error>> {
-        self.inner
-            .notify_app_ready(tonic::Request::new(NotifyAppReadyRequest {
-                listening_port: port as i32,
-            }))
-            .await?;
+    pub async fn notify_app_ready(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.inner.notify_app_ready(tonic::Request::new(())).await?;
         Ok(())
     }
 }

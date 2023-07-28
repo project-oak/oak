@@ -38,11 +38,6 @@ message SendAttestationEvidenceRequest {
   oak.session.v1.AttestationEvidence evidence = 1;
 }
 
-message NotifyAppReadyRequest {
-  // The port on which the app is listening.
-  int32 listening_port = 1;
-}
-
 // Defines the service exposed by the launcher, that can be invoked by the stage1 and the
 // orchestrator.
 service Launcher {
@@ -66,7 +61,7 @@ service Launcher {
 
   // Notifies the launcher that the trusted app is ready to serve requests and listening on the
   // specified port.
-  rpc NotifyAppReady(NotifyAppReadyRequest) returns (google.protobuf.Empty) {}
+  rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 }
 
 // Defines the service exposed by the orchestrator, that can be invoked by the application.
@@ -77,5 +72,5 @@ service Orchestrator {
 
   // Notifies the orchestrator that the trusted app is ready to serve requests and listening on the
   // specified port.
-  rpc NotifyAppReady(NotifyAppReadyRequest) returns (google.protobuf.Empty) {}
+  rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 }

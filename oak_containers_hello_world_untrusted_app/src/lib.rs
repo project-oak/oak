@@ -16,10 +16,6 @@
 mod app_client;
 
 use oak_containers_launcher::Launcher;
-use std::net::Ipv4Addr;
-
-/// The local address that will be forwarded by the VMM to the guest's IP adress.
-const PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
 
 pub struct UntrustedApp {
     launcher: Launcher,
@@ -31,16 +27,10 @@ impl UntrustedApp {
         launcher_args: oak_containers_launcher::Args,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let mut launcher = oak_containers_launcher::Launcher::create(launcher_args).await?;
-        let proxy_port = launcher.get_proxy_port();
-        log::info!("Assigned port {proxy_port} for proxying requests to the trusted app");
-        // We ignore the address provided by the trusted application, since the VMM will proxy the
-        // connection from the host's local address and port to the VM guest's listening
-        // address and port.
-        let _trusted_app_address = launcher.get_trusted_app_address().await?;
-        let app_client = app_client::TrustedApplicationClient::create(format!(
-            "http://{PROXY_ADDRESS}:{proxy_port}"
-        ))
-        .await?;
+        let trusted_app_address = launcher.get_trusted_app_address().await?;
+        let app_client =
+            app_client::TrustedApplicationClient::create(format!("http://{trusted_app_address}"))
+                .await?;
         Ok(Self {
             launcher,
             app_client,

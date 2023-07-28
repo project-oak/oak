@@ -31,9 +31,7 @@ use self::proto::oak::{
     containers::SendAttestationEvidenceRequest, session::v1::AttestationEvidence,
 };
 use anyhow::Context;
-use proto::oak::containers::{
-    launcher_client::LauncherClient as GrpcLauncherClient, NotifyAppReadyRequest,
-};
+use proto::oak::containers::launcher_client::LauncherClient as GrpcLauncherClient;
 use tonic::transport::Channel;
 
 /// Utility struct used to interface with the launcher
@@ -97,10 +95,8 @@ impl LauncherClient {
         Ok(())
     }
 
-    pub async fn notify_app_ready(&self, port: u16) -> Result<(), Box<dyn std::error::Error>> {
-        let request = tonic::Request::new(NotifyAppReadyRequest {
-            listening_port: port as i32,
-        });
+    pub async fn notify_app_ready(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(());
         self.inner
             .clone()
             .notify_app_ready(request)

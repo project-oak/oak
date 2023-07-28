@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), TRUSTED_APP_PORT);
     let listener = TcpListener::bind(addr).await?;
     let join_handle = tokio::spawn(app_service::create(listener, application_config));
-    client.notify_app_ready(TRUSTED_APP_PORT).await?;
+    client.notify_app_ready().await?;
     join_handle.await??;
     Ok(())
 }
