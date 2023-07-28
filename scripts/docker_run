@@ -37,6 +37,7 @@ docker_run_flags=(
   '--volume=/lib/modules:/lib/modules:ro'
   '--workdir=/workspace'
   '--network=host'
+  '--security-opt=seccomp=unconfined'
 )
 
 # If the host supports KVM, allow the docker image to use it.

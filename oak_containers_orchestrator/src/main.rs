@@ -29,7 +29,7 @@ const IPC_SOCKET_FILE_NAME: &str = "orchestrator_ipc";
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(default_value = "http://10.0.2.2:8080")]
+    #[arg(default_value = "http://10.0.2.100:8080")]
     launcher_addr: String,
 }
 
@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
-    let mut launcher_client = LauncherClient::create(args.launcher_addr.parse()?)
+    let launcher_client = LauncherClient::create(args.launcher_addr.parse()?)
         .await
         .map_err(|error| anyhow!("couldn't create client: {:?}", error))?;
 
@@ -73,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     tokio::try_join!(
-        crate::ipc_server::create(ipc_path, application_config),
+        crate::ipc_server::create(ipc_path, application_config, launcher_client),
         container_runtime::run(&container_bundle)
     )?;
 

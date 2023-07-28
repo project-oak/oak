@@ -161,7 +161,8 @@
                 perl
                 glibc
                 glibc.static
-		ncurses
+                ncurses
+                netcat
               ];
             };
             # Shell for most CI steps (i.e. without contaniners support).

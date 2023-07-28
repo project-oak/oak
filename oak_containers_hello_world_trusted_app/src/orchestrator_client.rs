@@ -74,4 +74,9 @@ impl OrchestratorClient {
             .config;
         Ok(config)
     }
+
+    pub async fn notify_app_ready(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.inner.notify_app_ready(tonic::Request::new(())).await?;
+        Ok(())
+    }
 }

@@ -29,6 +29,7 @@ mod proto {
 }
 
 use anyhow::Context;
+use oak_containers_orchestrator_client::LauncherClient;
 use proto::oak::containers::{
     orchestrator_server::{Orchestrator, OrchestratorServer},
     GetApplicationConfigResponse,
@@ -39,6 +40,7 @@ use tonic::{transport::Server, Request, Response};
 
 pub struct ServiceImplementation {
     application_config: Vec<u8>,
+    launcher_client: LauncherClient,
 }
 
 #[tonic::async_trait]
@@ -51,13 +53,28 @@ impl Orchestrator for ServiceImplementation {
             config: self.application_config.clone(),
         }))
     }
+
+    async fn notify_app_ready(&self, _request: Request<()>) -> Result<Response<()>, tonic::Status> {
+        self.launcher_client
+            .notify_app_ready()
+            .await
+            .map_err(|err| tonic::Status::internal(format!("couldn't send notification: {err}")))?;
+        Ok(tonic::Response::new(()))
+    }
 }
 
-pub async fn create<P>(socket_address: P, application_config: Vec<u8>) -> Result<(), anyhow::Error>
+pub async fn create<P>(
+    socket_address: P,
+    application_config: Vec<u8>,
+    launcher_client: LauncherClient,
+) -> Result<(), anyhow::Error>
 where
     P: AsRef<std::path::Path>,
 {
-    let service_instance = ServiceImplementation { application_config };
+    let service_instance = ServiceImplementation {
+        application_config,
+        launcher_client,
+    };
     let uds =
         UnixListener::bind(socket_address).context("could not bind to the supplied address")?;
     let uds_stream = UnixListenerStream::new(uds);

@@ -5,13 +5,25 @@ authors = ["Juliette Pretot <julsh@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[build-dependencies]
+oak_grpc_utils = { workspace = true }
+
 [dependencies]
 anyhow = "*"
+async-stream = "*"
+bytes = "*"
 clap = { version = "*", features = ["derive"] }
 command-fds = { version = "*", features = ["tokio"] }
 env_logger = "*"
+futures = "*"
 log = "*"
-oak_containers_launcher_server = { workspace = true }
 prost = "*"
-tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
+tokio = { version = "*", features = [
+  "rt-multi-thread",
+  "macros",
+  "fs",
+  "sync"
+] }
+tokio-stream = { version = "*", features = ["net"] }
+tonic = { workspace = true }
 which = "*"

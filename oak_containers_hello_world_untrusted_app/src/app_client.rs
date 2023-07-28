@@ -37,7 +37,7 @@ pub struct TrustedApplicationClient {
 }
 
 impl TrustedApplicationClient {
-    pub async fn create(server_addr: &'static str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn create(server_addr: String) -> Result<Self, Box<dyn std::error::Error>> {
         let inner: GrpcTrustedApplicationClient<tonic::transport::channel::Channel> = {
             let channel = Endpoint::from_shared(server_addr)
                 .context("couldn't form channel")?

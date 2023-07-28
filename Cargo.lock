@@ -1779,28 +1779,19 @@ name = "oak_containers_launcher"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-stream",
+ "bytes",
  "clap",
  "command-fds",
  "env_logger",
- "log",
- "oak_containers_launcher_server",
- "prost",
- "tokio",
- "which",
-]
-
-[[package]]
-name = "oak_containers_launcher_server"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-stream",
- "bytes",
  "futures",
+ "log",
  "oak_grpc_utils",
  "prost",
  "tokio",
+ "tokio-stream",
  "tonic",
+ "which",
 ]
 
 [[package]]
