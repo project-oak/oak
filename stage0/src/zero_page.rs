@@ -75,10 +75,10 @@ impl ZeroPage {
             // byte as offset 0x201 to the value 0x202.
             let hdr_end = 0x202usize + (buf[0x201] as usize);
             let src = &buf[hdr_start..hdr_end];
-            // If we are loading an older kernel, the setup header might a bit shorter. New fields
-            // for more recent versions of the boot protocol are added to the end for the setup
-            // header and there is padding after header, so the resulting data stucture should still
-            // be understood correctly by the kernel.
+            // If we are loading an older kernel, the setup header might be a bit shorter. New
+            // fields for more recent versions of the boot protocol are added to the end of the
+            // setup header and there is padding after header, so the resulting data stucture should
+            // still be understood correctly by the kernel.
             let dest = &mut self.inner.hdr.as_bytes_mut()[..src.len()];
             dest.copy_from_slice(src);
         }
