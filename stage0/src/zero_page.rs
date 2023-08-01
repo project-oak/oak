@@ -186,6 +186,10 @@ fn build_e820_from_nvram(
     let mut rs = cmos.low_ram_size()?;
     let high = cmos.high_ram_size()?;
 
+    if rs <= 0x100000 {
+        panic!("not enough RAM available: only {rs} bytes");
+    }
+
     // Time to put all that we know together.
     // First, we'll leave the top 256K just below the 4G mark reserved for the BIOS itself.
     // Second, leave the last 4 pages of low memory as reserved just below the BIOS area as
@@ -196,10 +200,13 @@ fn build_e820_from_nvram(
     };
     zero_page.e820_entries = 4;
     zero_page.e820_table[0] = BootE820Entry::new(0, 0x80000, E820EntryType::RAM);
+    // Region for ACPI data structures.
     zero_page.e820_table[1] = BootE820Entry::new(0x80000, 0x20000, E820EntryType::ACPI);
-    zero_page.e820_table[2] =
-        BootE820Entry::new(0xA0000, (rs - 0xA0000) as usize, E820EntryType::RAM);
-    zero_page.e820_table[3] = BootE820Entry::new(
+    // Unused region below 1MiB.
+    zero_page.e820_table[2] = BootE820Entry::new(0xA0000, 0x60000, E820EntryType::RESERVED);
+    zero_page.e820_table[3] =
+        BootE820Entry::new(0x100000, (rs - 0x100000) as usize, E820EntryType::RAM);
+    zero_page.e820_table[4] = BootE820Entry::new(
         0xFFFB_C000,
         0x1_0000_0000 - 0xFFFB_C000,
         E820EntryType::RESERVED,
@@ -207,7 +214,7 @@ fn build_e820_from_nvram(
 
     if high > 0 {
         zero_page.e820_entries += 1;
-        zero_page.e820_table[4] =
+        zero_page.e820_table[5] =
             BootE820Entry::new(0x1_0000_0000, high as usize, E820EntryType::RAM);
     }
 
