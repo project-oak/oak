@@ -26,6 +26,11 @@ package(
 )
 
 proto_library(
+    name = "evidence_proto",
+    srcs = ["evidence.proto"],
+)
+
+proto_library(
     name = "messages_proto",
     srcs = ["messages.proto"],
     deps = ["//oak_crypto/proto/v1:crypto_proto"],
