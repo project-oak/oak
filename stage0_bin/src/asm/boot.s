@@ -85,8 +85,8 @@ _protected_mode_start:
                               # Bit 2 - SEV-SNP active
     mov %eax, %ebp            # store the result in EBP for later use
 
-    # See if we're under SEV-SNP, and if yes, pre-emptively PVALIDATE the first megabyte of memory, as that's
-    # where we'll be storing many data structures.
+    # See if we're under SEV-SNP, and if yes, pre-emptively PVALIDATE the first 640 KiB of memory,
+    # as that's where we'll be storing many data structures.
     and $0b100, %eax          # eax &= 0b100; -- SEV-SNP active
     test %eax, %eax           # is eax zero?
     je 2f                     # if yes, no SNP, skip validation and jump ahead
@@ -97,7 +97,7 @@ _protected_mode_start:
     mov %ebx, %eax            # eax = ebx (PVALIDATE will clobber EAX)
     pvalidate                 # set validated bit in RMP, but ignore results for now
     add $0x1000, %ebx         # ebx += 0x1000
-    cmp $0x100000, %ebx       # have we covered the full megabyte?
+    cmp $0xa0000, %ebx        # have we covered the full 640 KiB?
     jl 1b                     # if no, go back
     2:
 
