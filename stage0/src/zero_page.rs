@@ -198,7 +198,7 @@ fn build_e820_from_nvram(
     if rs > 0xFFFB_C000 {
         rs = 0xFFFB_C000;
     };
-    zero_page.e820_entries = 4;
+    zero_page.e820_entries = 5;
     zero_page.e820_table[0] = BootE820Entry::new(0, 0x80000, E820EntryType::RAM);
     // Region for ACPI data structures.
     zero_page.e820_table[1] = BootE820Entry::new(0x80000, 0x20000, E820EntryType::ACPI);
