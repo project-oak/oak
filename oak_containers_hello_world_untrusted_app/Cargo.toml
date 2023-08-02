@@ -14,6 +14,7 @@ clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 log = "*"
 oak_containers_launcher = { workspace = true }
+oak_crypto = { workspace = true }
 prost = "*"
 tokio = { version = "*", features = [
   "rt-multi-thread",

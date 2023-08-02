@@ -21,6 +21,8 @@ use anyhow::Context;
 use tokio::time::Duration;
 use tonic::transport::Endpoint;
 
+const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
+
 /// Utility struct used to interface with the launcher
 pub struct TrustedApplicationClient {
     inner: GrpcTrustedApplicationClient<tonic::transport::channel::Channel>,
