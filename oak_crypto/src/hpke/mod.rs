@@ -18,6 +18,7 @@ pub(crate) mod aead;
 
 use crate::{
     hpke::aead::{AeadKey, AeadNonce, AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
+    proto::oak::crypto::v1::CryptoContext,
     util::{i2osp, xor},
 };
 use alloc::vec::Vec;
@@ -70,7 +71,7 @@ pub(crate) fn setup_base_sender(
     let recipient_public_key = PublicKey::from_bytes(serialized_recipient_public_key)
         .map_err(|error| anyhow!("couldn't deserialize recipient public key: {}", error))?;
 
-    let (encapped_key, sender_context) = hpke::setup_sender::<Aead, Kdf, Kem, _>(
+    let (encapsulated_public_key, sender_context) = hpke::setup_sender::<Aead, Kdf, Kem, _>(
         &OpModeS::Base,
         &recipient_public_key,
         info,
@@ -106,7 +107,7 @@ pub(crate) fn setup_base_sender(
         .map_err(|error| anyhow!("couldn't export response nonce: {}", error))?;
 
     Ok((
-        encapped_key.to_bytes().to_vec(),
+        encapsulated_public_key.to_bytes().to_vec(),
         SenderRequestContext {
             request_key,
             request_base_nonce,
@@ -123,11 +124,11 @@ pub(crate) fn setup_base_sender(
 /// Sets up an HPKE recipient by creating a recipient context.
 /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
 pub(crate) fn setup_base_recipient(
-    serialized_encapped_key: &[u8],
+    serialized_encapsulated_public_key: &[u8],
     recipient_key_pair: &KeyPair,
     info: &[u8],
 ) -> anyhow::Result<(RecipientRequestContext, RecipientResponseContext)> {
-    let encapped_key = EncappedKey::from_bytes(serialized_encapped_key).map_err(|error| {
+    let encapsulated_public_key = EncappedKey::from_bytes(serialized_encapsulated_public_key).map_err(|error| {
         anyhow!(
             "couldn't deserialize the encapsulated public key: {}",
             error
@@ -137,7 +138,7 @@ pub(crate) fn setup_base_recipient(
     let recipient_context = hpke::setup_receiver::<Aead, Kdf, Kem>(
         &OpModeR::Base,
         &recipient_key_pair.private_key,
-        &encapped_key,
+        &encapsulated_public_key,
         info,
     )
     .map_err(|error| anyhow!("couldn't create recipient context: {}", error))?;
@@ -308,4 +309,30 @@ fn increment_sequence_number(sequence_number: &mut u128) -> anyhow::Result<()> {
         .checked_add(1)
         .context("couldn't increment sequence number")?;
     Ok(())
+}
+
+impl RecipientContext {
+    pub fn serialize(self) -> anyhow::Result<CryptoContext> {
+        Ok(CryptoContext {
+            request_key: self.request_key,
+            request_base_nonce: self.request_base_nonce,
+            request_sequence_number: self.request_sequence_number,
+
+            response_key: self.response_key,
+            response_base_nonce: self.response_base_nonce,
+            response_sequence_number: self.response_sequence_number,
+        })
+    }
+
+    pub fn deserialize(context: CryptoContext) -> anyhow::Result<Self> {
+        Ok(Self {
+            request_key: context.request_key,
+            request_base_nonce: context.request_base_nonce,
+            request_sequence_number: context.request_sequence_number,
+
+            response_key: context.response_key,
+            response_base_nonce: context.response_base_nonce,
+            response_sequence_number: context.response_sequence_number,
+        })
+    }
 }
