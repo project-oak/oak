@@ -5,6 +5,7 @@ members = [
   "micro_rpc",
   "micro_rpc_build",
   "micro_rpc_tests",
+  "oak_attestation_verification",
   "oak_channel",
   "oak_client",
   "oak_containers_stage1",
@@ -76,6 +77,7 @@ exclude = [
 location_utils = { path = "./oak_functions/location_utils" }
 micro_rpc = { path = "./micro_rpc" }
 micro_rpc_build = { path = "./micro_rpc_build" }
+oak_attestation_verification = { path = "./oak_attestation_verification" }
 oak_channel = { path = "./oak_channel" }
 oak_client = { path = "./oak_client" }
 oak_core = { path = "./oak_core" }

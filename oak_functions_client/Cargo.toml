@@ -8,22 +8,14 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 async-stream = "*"
-base64 = "*"
 clap = { version = "*", features = ["derive"] }
-ecdsa = { version = "*", features = ["verify", "pkcs8", "pem"] }
 env_logger = "*"
-hex = "*"
 http = "*"
 log = "*"
 oak_client = { workspace = true }
 oak_functions_abi = { workspace = true }
-p256 = { version = "*", features = ["ecdsa-core", "ecdsa", "pem"] }
 prost = { workspace = true }
 regex = "*"
-serde = { version = "*", features = ["derive"] }
-serde_jcs = "*"
-serde_json = "*"
-sha2 = { version = "*", default-features = false }
 tokio = { version = "*", features = [
   "fs",
   "macros",
