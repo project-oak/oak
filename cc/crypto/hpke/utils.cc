@@ -15,8 +15,10 @@
  */
 #include "cc/crypto/hpke/utils.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "absl/base/attributes.h"
