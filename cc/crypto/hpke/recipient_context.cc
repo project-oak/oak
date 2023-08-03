@@ -74,7 +74,7 @@ absl::StatusOr<std::string> RecipientRequestContext::Open(absl::string_view ciph
   /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
   /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
   if (sequence_number_ == UINT64_MAX) {
-    return absl::OutOfRangeError("Sequence number reached");
+    return absl::OutOfRangeError("Maximum sequence number reached");
   }
   std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, sequence_number_);
 
@@ -97,7 +97,7 @@ absl::StatusOr<std::string> RecipientResponseContext::Seal(absl::string_view pla
   /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
   /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
   if (sequence_number_ == UINT64_MAX) {
-    return absl::OutOfRangeError("Sequence number reached");
+    return absl::OutOfRangeError("Maximum sequence number reached");
   }
   std::vector<uint8_t> nonce = CalculateNonce(response_base_nonce_, sequence_number_);
 
