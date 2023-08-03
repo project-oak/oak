@@ -47,5 +47,11 @@ absl::StatusOr<std::vector<uint8_t>> GetResponseBaseNonce(EVP_HPKE_CTX* ctx);
 std::vector<uint8_t> CalculateNonce(const std::vector<uint8_t>& base_nonce,
                                     uint64_t sequence_number);
 
+// Encrypts `plaintext` and authenticates `associated_data` using AEAD with `context` and `nonce`.
+absl::StatusOr<std::string> AeadSeal(const EVP_AEAD_CTX* context, std::vector<uint8_t> nonce, absl::string_view plaintext, absl::string_view associated_data);
+
+// Decrypts `ciphertext` and authenticates `associated_data` using AEAD using `context` and `nonce`.
+absl::StatusOr<std::string> AeadOpen(const EVP_AEAD_CTX* context, std::vector<uint8_t> nonce, absl::string_view ciphertext, absl::string_view associated_data);
+
 }  // namespace oak::crypto
 #endif  // CC_CRYPTO_HPKE_CONSTANTS_H_

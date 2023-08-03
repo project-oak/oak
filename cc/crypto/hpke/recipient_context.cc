@@ -16,8 +16,12 @@
 
 #include "cc/crypto/hpke/recipient_context.h"
 
+#include <memory>
+#include <vector>
+
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "cc/crypto/hpke/utils.h"
 #include "openssl/hpke.h"
 
 namespace oak::crypto {
@@ -92,40 +96,19 @@ RecipientRequestContext::~RecipientRequestContext() { EVP_HPKE_CTX_free(hpke_con
 
 absl::StatusOr<std::string> RecipientResponseContext::Seal(absl::string_view plaintext,
                                                            absl::string_view associated_data) {
-  std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
-  if (plaintext_bytes.empty()) {
-    return absl::InvalidArgumentError("No plaintext was provided");
-  }
-  std::vector<uint8_t> associated_data_bytes(associated_data.begin(), associated_data.end());
-  size_t max_out_len =
-      plaintext_bytes.size() + EVP_AEAD_max_overhead(EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()));
-
-  std::vector<uint8_t> ciphertext_bytes(max_out_len);
-  size_t ciphertext_bytes_len;
-
   /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
   /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
   if (sequence_number_ == UINT64_MAX) {
     return absl::OutOfRangeError("Sequence number reached.");
   }
   std::vector<uint8_t> nonce = CalculateNonce(response_base_nonce_, sequence_number_);
+
+  absl::StatusOr<std::string> ciphertext = AeadSeal(aead_response_context_.get(), nonce, plaintext, associated_data);
+  if (!ciphertext.ok()) {
+    return ciphertext.status();
+  }
   sequence_number_ += 1;
 
-  if (!EVP_AEAD_CTX_seal(
-          /* ctx= */ aead_response_context_.get(),
-          /* out= */ ciphertext_bytes.data(),
-          /* out_len= */ &ciphertext_bytes_len,
-          /* max_out_len= */ ciphertext_bytes.size(),
-          /* nonce= */ nonce.data(),
-          /* nonce_len= */ nonce.size(),
-          /* in= */ plaintext_bytes.data(),
-          /* in_len= */ plaintext_bytes.size(),
-          /* ad= */ associated_data_bytes.data(),
-          /* ad_len= */ associated_data_bytes.size())) {
-    return absl::AbortedError("Unable to seal response message");
-  }
-  ciphertext_bytes.resize(ciphertext_bytes_len);
-  std::string ciphertext(ciphertext_bytes.begin(), ciphertext_bytes.end());
   return ciphertext;
 }
 

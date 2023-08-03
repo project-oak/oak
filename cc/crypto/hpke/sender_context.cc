@@ -56,39 +56,19 @@ SenderRequestContext::~SenderRequestContext() { EVP_HPKE_CTX_free(hpke_context_.
 
 absl::StatusOr<std::string> SenderResponseContext::Open(absl::string_view ciphertext,
                                                         absl::string_view associated_data) {
-  std::vector<uint8_t> ciphertext_bytes(ciphertext.begin(), ciphertext.end());
-  if (ciphertext_bytes.empty()) {
-    return absl::InvalidArgumentError("No ciphertext was provided.");
-  }
-  std::vector<uint8_t> associated_data_bytes(associated_data.begin(), associated_data.end());
-
-  // The plaintext should not be longer than the ciphertext.
-  std::vector<uint8_t> plaintext_bytes(ciphertext_bytes.size());
-  size_t plaintext_bytes_size;
-
   /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
   /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
   if (sequence_number_ == UINT64_MAX) {
     return absl::OutOfRangeError("Sequence number reached.");
   }
   std::vector<uint8_t> nonce = CalculateNonce(response_base_nonce_, sequence_number_);
+  
+  absl::StatusOr<std::string> plaintext = AeadOpen(aead_response_context_.get(), nonce, ciphertext, associated_data);
+  if (!plaintext.ok()) {
+    return plaintext.status();
+  }
   sequence_number_ += 1;
 
-  if (!EVP_AEAD_CTX_open(
-          /* ctx= */ aead_response_context_.get(),
-          /* out= */ plaintext_bytes.data(),
-          /* out_len= */ &plaintext_bytes_size,
-          /* max_out_len= */ ciphertext_bytes.size(),
-          /* nonce= */ nonce.data(),
-          /* nonce_len= */ nonce.size(),
-          /* in= */ ciphertext_bytes.data(),
-          /* in_len= */ ciphertext_bytes.size(),
-          /* ad= */ associated_data_bytes.data(),
-          /* ad_len= */ associated_data_bytes.size())) {
-    return absl::AbortedError("Unable to decrypt response message");
-  }
-  plaintext_bytes.resize(plaintext_bytes_size);
-  std::string plaintext(plaintext_bytes.begin(), plaintext_bytes.end());
   return plaintext;
 }
 

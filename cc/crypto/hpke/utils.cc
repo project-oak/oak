@@ -15,6 +15,9 @@
  */
 #include "cc/crypto/hpke/utils.h"
 
+#include <string>
+#include <vector>
+
 #include "absl/base/attributes.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -85,6 +88,65 @@ std::vector<uint8_t> CalculateNonce(const std::vector<uint8_t>& base_nonce,
     nonce[i] ^= base_nonce.at(i);
   }
   return nonce;
+}
+
+absl::StatusOr<std::string> AeadSeal(const EVP_AEAD_CTX* context, std::vector<uint8_t> nonce, absl::string_view plaintext, absl::string_view associated_data) {
+  std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
+  if (plaintext_bytes.empty()) {
+    return absl::InvalidArgumentError("No plaintext was provided");
+  }
+  std::vector<uint8_t> associated_data_bytes(associated_data.begin(), associated_data.end());
+  size_t max_out_len =
+      plaintext_bytes.size() + EVP_AEAD_max_overhead(EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()));
+
+  std::vector<uint8_t> ciphertext_bytes(max_out_len);
+  size_t ciphertext_bytes_len;
+
+  if (!EVP_AEAD_CTX_seal(
+          /* ctx= */ context,
+          /* out= */ ciphertext_bytes.data(),
+          /* out_len= */ &ciphertext_bytes_len,
+          /* max_out_len= */ ciphertext_bytes.size(),
+          /* nonce= */ nonce.data(),
+          /* nonce_len= */ nonce.size(),
+          /* in= */ plaintext_bytes.data(),
+          /* in_len= */ plaintext_bytes.size(),
+          /* ad= */ associated_data_bytes.data(),
+          /* ad_len= */ associated_data_bytes.size())) {
+    return absl::AbortedError("Unable to seal response message");
+  }
+  ciphertext_bytes.resize(ciphertext_bytes_len);
+  std::string ciphertext(ciphertext_bytes.begin(), ciphertext_bytes.end());
+  return ciphertext;
+}
+
+absl::StatusOr<std::string> AeadOpen(const EVP_AEAD_CTX* context, std::vector<uint8_t> nonce, absl::string_view ciphertext, absl::string_view associated_data) {
+  std::vector<uint8_t> ciphertext_bytes(ciphertext.begin(), ciphertext.end());
+  if (ciphertext_bytes.empty()) {
+    return absl::InvalidArgumentError("No ciphertext was provided.");
+  }
+  std::vector<uint8_t> associated_data_bytes(associated_data.begin(), associated_data.end());
+
+  // The plaintext should not be longer than the ciphertext.
+  std::vector<uint8_t> plaintext_bytes(ciphertext_bytes.size());
+  size_t plaintext_bytes_size;
+
+  if (!EVP_AEAD_CTX_open(
+          /* ctx= */ context,
+          /* out= */ plaintext_bytes.data(),
+          /* out_len= */ &plaintext_bytes_size,
+          /* max_out_len= */ ciphertext_bytes.size(),
+          /* nonce= */ nonce.data(),
+          /* nonce_len= */ nonce.size(),
+          /* in= */ ciphertext_bytes.data(),
+          /* in_len= */ ciphertext_bytes.size(),
+          /* ad= */ associated_data_bytes.data(),
+          /* ad_len= */ associated_data_bytes.size())) {
+    return absl::AbortedError("Unable to decrypt response message");
+  }
+  plaintext_bytes.resize(plaintext_bytes_size);
+  std::string plaintext(plaintext_bytes.begin(), plaintext_bytes.end());
+  return plaintext;
 }
 
 }  // namespace oak::crypto
