@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package oak.crypto.v1;
+
+message EncryptedRequest {
+  // Stub to make protoc happy.
+}

@@ -86,6 +86,7 @@ impl StreamingSession for SessionProxy {
                     request_wrapper::Request::InvokeRequest(invoke_request) => {
                         let enclave_invoke_request = functions::InvokeRequest {
                             body: invoke_request.encrypted_body,
+                            encrypted_request: Some(oak_crypto::proto::oak::crypto::v1::EncryptedRequest::default()),
                         };
                         let mut enclave_client =
                             functions::OakFunctionsAsyncClient::new(connector_handle.clone());

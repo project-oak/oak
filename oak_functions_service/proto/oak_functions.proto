@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package oak.functions;
 
+import "oak_crypto.proto";
+
 service OakFunctions {
   // Initializes the service and remote attestation keys.
   // method_id: 0
@@ -64,6 +66,7 @@ message PublicKeyInfo {
 message InvokeRequest {
   // TODO(#3843): Use explicit `oak_crypto` messages.
   bytes body = 1;
+  oak.crypto.v1.EncryptedRequest encrypted_request = 2;
 }
 
 message InvokeResponse {

@@ -27,6 +27,7 @@ tokio = { version = "*", features = [
 ] }
 tonic = "*"
 tonic-web = { version = "*", optional = true }
+oak_crypto = { workspace = true }
 oak_functions_abi = { workspace = true }
 oak_launcher_utils = { workspace = true }
 micro_rpc = { workspace = true }
