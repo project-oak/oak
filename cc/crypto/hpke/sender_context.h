@@ -30,8 +30,11 @@ namespace oak::crypto {
 // Context for generating encrypted requests to the recipient.
 class SenderRequestContext {
  public:
-  SenderRequestContext(std::unique_ptr<EVP_HPKE_CTX> hpke_context)
-      : hpke_context_(std::move(hpke_context)) {}
+  SenderRequestContext(std::unique_ptr<EVP_AEAD_CTX> aead_request_context,
+                       std::vector<uint8_t> request_nonce)
+      : aead_request_context_(std::move(aead_request_context)),
+        request_base_nonce_(request_nonce),
+        sequence_number_(0) {}
 
   // Encrypts message with associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
@@ -39,7 +42,9 @@ class SenderRequestContext {
   ~SenderRequestContext();
 
  private:
-  std::unique_ptr<EVP_HPKE_CTX> hpke_context_;
+  std::unique_ptr<EVP_AEAD_CTX> aead_request_context_;
+  std::vector<uint8_t> request_base_nonce_;
+  uint64_t sequence_number_;
 };
 
 // Context for decrypting encrypted responses from the recipient. This is based on bi-directional
@@ -52,6 +57,7 @@ class SenderResponseContext {
       : aead_response_context_(std::move(aead_response_context)),
         response_base_nonce_(response_nonce),
         sequence_number_(0) {}
+
   // Decrypts response message and validates associated data using AEAD as part of
   // bidirectional communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>

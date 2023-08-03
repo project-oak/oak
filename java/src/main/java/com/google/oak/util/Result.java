@@ -115,7 +115,7 @@ public class Result<R, E> {
   /**
    * If a success value is present, invoke the specified consumer with the success
    * value, otherwise do nothing.
-   * 
+   *
    * @param consumer block to be executed if a success value is present
    * @throws NullPointerException if success value is present and consumer is null
    */
@@ -126,7 +126,7 @@ public class Result<R, E> {
   /**
    * If there is an error, invoke the specified consumer with the error value,
    * otherwise do nothing.
-   * 
+   *
    * @param consumer block to be executed if an error value is present
    * @throws NullPointerException if this is an error and consumer is null
    */

@@ -23,10 +23,8 @@ use crate::{
 use alloc::vec::Vec;
 use anyhow::{anyhow, Context};
 use hpke::{
-    aead::AesGcm256,
-    kdf::HkdfSha256,
-    kem::X25519HkdfSha256,
-    Deserializable, Kem as KemTrait, OpModeR, OpModeS, Serializable,
+    aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Deserializable, Kem as KemTrait,
+    OpModeR, OpModeS, Serializable,
 };
 use rand_core::OsRng;
 
@@ -193,8 +191,14 @@ impl SenderRequestContext {
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        seal(&self.request_key, &self.request_base_nonce, &mut self.sequence_number, plaintext, associated_data)
-            .map_err(|error| anyhow!("couldn't encrypt message: {}", error))
+        seal(
+            &self.request_key,
+            &self.request_base_nonce,
+            &mut self.sequence_number,
+            plaintext,
+            associated_data,
+        )
+        .map_err(|error| anyhow!("couldn't encrypt message: {}", error))
     }
 }
 
@@ -214,8 +218,14 @@ impl RecipientRequestContext {
         ciphertext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        open(&self.request_key, &self.request_base_nonce, &mut self.sequence_number, ciphertext, associated_data)
-            .map_err(|error| anyhow!("couldn't decrypt message: {}", error))
+        open(
+            &self.request_key,
+            &self.request_base_nonce,
+            &mut self.sequence_number,
+            ciphertext,
+            associated_data,
+        )
+        .map_err(|error| anyhow!("couldn't decrypt message: {}", error))
     }
 }
 
@@ -236,8 +246,14 @@ impl SenderResponseContext {
         ciphertext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        open(&self.response_key, &self.response_base_nonce, &mut self.sequence_number, ciphertext, associated_data)
-            .map_err(|error| anyhow!("couldn't decrypt message: {}", error))
+        open(
+            &self.response_key,
+            &self.response_base_nonce,
+            &mut self.sequence_number,
+            ciphertext,
+            associated_data,
+        )
+        .map_err(|error| anyhow!("couldn't decrypt message: {}", error))
     }
 }
 
@@ -258,8 +274,14 @@ impl RecipientResponseContext {
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        seal(&self.response_key, &self.response_base_nonce, &mut self.sequence_number, plaintext, associated_data)
-            .map_err(|error| anyhow!("couldn't encrypt message: {}", error))
+        seal(
+            &self.response_key,
+            &self.response_base_nonce,
+            &mut self.sequence_number,
+            plaintext,
+            associated_data,
+        )
+        .map_err(|error| anyhow!("couldn't encrypt message: {}", error))
     }
 }
 
@@ -270,13 +292,10 @@ fn seal(
     plaintext: &[u8],
     associated_data: &[u8],
 ) -> anyhow::Result<Vec<u8>> {
-    let nonce = compute_nonce(*sequence_number, base_nonce)
-        .context("couldn't compute nonce")?;
-    let ciphertext =
-        crate::hpke::aead::encrypt(key, &nonce, plaintext, associated_data)
-            .context("couldn't encrypt response message")?;
-    increment_sequence_number(sequence_number)
-        .context("couldn't increment sequence number")?;
+    let nonce = compute_nonce(*sequence_number, base_nonce).context("couldn't compute nonce")?;
+    let ciphertext = crate::hpke::aead::encrypt(key, &nonce, plaintext, associated_data)
+        .context("couldn't encrypt response message")?;
+    increment_sequence_number(sequence_number).context("couldn't increment sequence number")?;
     Ok(ciphertext)
 }
 
@@ -287,13 +306,10 @@ fn open(
     ciphertext: &[u8],
     associated_data: &[u8],
 ) -> anyhow::Result<Vec<u8>> {
-    let nonce = compute_nonce(*sequence_number, base_nonce)
-        .context("couldn't compute nonce")?;
-    let plaintext =
-        crate::hpke::aead::decrypt(key, &nonce, ciphertext, associated_data)
-            .context("couldn't decrypt response message")?;
-    increment_sequence_number(sequence_number)
-        .context("couldn't increment sequence number")?;
+    let nonce = compute_nonce(*sequence_number, base_nonce).context("couldn't compute nonce")?;
+    let plaintext = crate::hpke::aead::decrypt(key, &nonce, ciphertext, associated_data)
+        .context("couldn't decrypt response message")?;
+    increment_sequence_number(sequence_number).context("couldn't increment sequence number")?;
     Ok(plaintext)
 }
 
