@@ -15,6 +15,7 @@
  */
 #include "cc/crypto/hpke/utils.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 

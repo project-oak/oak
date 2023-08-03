@@ -17,11 +17,13 @@
 #include "cc/crypto/hpke/recipient_context.h"
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/crypto/hpke/utils.h"
+#include "openssl/aead.h"
 #include "openssl/hpke.h"
 
 namespace oak::crypto {
@@ -151,6 +153,11 @@ absl::StatusOr<RecipientContext> SetupBaseRecipient(
   }
 
   // Configure recipient request context and nonce.
+  // This is a deviation from the HPKE RFC, because we are deriving both session request and
+  // response keys from the exporter secret, instead of having a request key be directly derived
+  // from the shared secret. This is required to be able to share session keys between the Kernel
+  // and the Application via RPC.
+  // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
   auto aead_request_context = GetContext(hpke_recipient_context.get(), "request_key");
   if (!aead_request_context.ok()) {
     return aead_request_context.status();

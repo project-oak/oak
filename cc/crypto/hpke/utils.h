@@ -18,6 +18,7 @@
 #define CC_CRYPTO_HPKE_CONSTANTS_H_
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "absl/base/attributes.h"

@@ -17,6 +17,7 @@
 #include "cc/crypto/hpke/sender_context.h"
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "absl/status/statusor.h"
@@ -116,6 +117,11 @@ absl::StatusOr<SenderContext> SetupBaseSender(absl::string_view serialized_recip
   sender_context.encap_public_key = encap_public_key_info.key_bytes;
 
   // Configure sender request context and nonce.
+  // This is a deviation from the HPKE RFC, because we are deriving both session request and
+  // response keys from the exporter secret, instead of having a request key be directly derived
+  // from the shared secret. This is required to be able to share session keys between the Kernel
+  // and the Application via RPC.
+  // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
   auto aead_request_context = GetContext(hpke_sender_context.get(), "request_key");
   if (!aead_request_context.ok()) {
     return aead_request_context.status();
