@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "claims",
   "linux_boot_params",
   "micro_rpc",
   "micro_rpc_build",
@@ -74,6 +75,7 @@ exclude = [
 [workspace.dependencies]
 # Declare workspace-wide dependencies so that they don't need to use relative paths to refer to each other, and they are always kept in sync.
 # Local crates.
+claims = {path = "./claims" }
 location_utils = { path = "./oak_functions/location_utils" }
 micro_rpc = { path = "./micro_rpc" }
 micro_rpc_build = { path = "./micro_rpc_build" }
