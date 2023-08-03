@@ -497,7 +497,6 @@ name = "oak_core"
 version = "0.1.0"
 dependencies = [
  "getrandom",
- "lock_api",
  "spinning_top",
 ]
 

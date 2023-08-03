@@ -4,11 +4,6 @@ version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 
-[features]
-default = ["alloc"]
-alloc = ["dep:lock_api"]
-
 [dependencies]
 getrandom = { version = "*", features = ["rdrand"] }
-lock_api = { version = "*", features = ["arc_lock"], optional = true }
 spinning_top = "*"

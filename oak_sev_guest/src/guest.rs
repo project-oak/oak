@@ -348,6 +348,12 @@ impl AttestationReport {
     }
 }
 
+impl Default for AttestationReport {
+    fn default() -> Self {
+        AttestationReport::new_zeroed()
+    }
+}
+
 /// The data contained in an attestation report.
 ///
 /// See Table 21 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.

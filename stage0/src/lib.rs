@@ -16,7 +16,9 @@
 
 #![no_std]
 #![feature(int_roundings)]
+#![feature(stmt_expr_attributes)]
 
+use crate::measurement::MeasurementBuilder;
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use oak_sev_guest::io::PortFactoryWrapper;
 use x86_64::{
@@ -33,10 +35,13 @@ use x86_64::{
 mod acpi;
 mod alloc;
 mod cmos;
+#[cfg(feature = "dice")]
+pub mod dice;
 mod fw_cfg;
 mod initramfs;
 mod kernel;
 mod logging;
+pub mod measurement;
 pub mod paging;
 mod sev;
 mod zero_page;
@@ -160,6 +165,17 @@ pub fn rust64_start(encrypted: u64) -> ! {
     }
     .expect("fw_cfg device not found!");
 
+    let measurements = {
+        #[cfg(not(feature = "dice"))]
+        {
+            measurement::NoOpBuilder {}
+        }
+        #[cfg(feature = "dice")]
+        {
+            dice::DiceBuilder::default()
+        }
+    };
+
     let zero_page = BOOT_ALLOC
         .leak(zero_page::ZeroPage::new())
         .expect("failed to allocate memory for zero page");
@@ -254,6 +270,10 @@ pub fn rust64_start(encrypted: u64) -> ! {
     {
         zero_page.set_initial_ram_disk(ram_disk);
     }
+
+    measurements
+        .publish()
+        .expect("couldn't publish measurements");
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 

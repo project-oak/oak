@@ -1848,7 +1848,6 @@ name = "oak_core"
 version = "0.1.0"
 dependencies = [
  "getrandom",
- "lock_api",
  "spinning_top",
 ]
 
@@ -2248,6 +2247,7 @@ dependencies = [
  "oak_linux_boot_params",
  "oak_sev_guest",
  "sev_serial",
+ "sha2 0.9.9",
  "spinning_top",
  "static_assertions",
  "strum",
