@@ -17,6 +17,8 @@
 #ifndef CC_CRYPTO_HPKE_CONSTANTS_H_
 #define CC_CRYPTO_HPKE_CONSTANTS_H_
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -25,6 +27,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "openssl/aead.h"
+#include "openssl/base.h"
 #include "openssl/hpke.h"
 
 namespace oak::crypto {

@@ -15,6 +15,7 @@
  */
 #include "cc/crypto/hpke/utils.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -22,9 +23,11 @@
 #include <vector>
 
 #include "absl/base/attributes.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "openssl/aead.h"
+#include "openssl/base.h"
 #include "openssl/hpke.h"
 
 namespace oak::crypto {
