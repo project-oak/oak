@@ -19,7 +19,7 @@ package com.google.oak.server;
 import com.google.oak.crypto.hpke.KeyPair;
 import com.google.oak.server.ConnectionAdapter;
 import com.google.oak.server.EncryptedStreamObserver;
-import com.google.oak.server.encrypted.SecureProxyGrpc.SecureProxyImplBase;
+import com.google.oak.server.SecureProxyGrpc.SecureProxyImplBase;
 import com.google.oak.session.v1.RequestWrapper;
 import com.google.oak.session.v1.ResponseWrapper;
 import com.google.oak.util.Result;
