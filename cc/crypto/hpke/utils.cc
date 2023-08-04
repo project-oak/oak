@@ -27,6 +27,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "openssl/aead.h"
+#include "openssl/base.h"
 #include "openssl/hpke.h"
 
 namespace oak::crypto {
