@@ -99,12 +99,11 @@ public class ClientEncryptor implements AutoCloseable, Encryptor {
                   .build());
 
       // Encapsulated public key is only sent in the initial request message of the session.
-      if (this.serializedEncapsulatedPublicKey.isPresent()) {
-        byte[] serializedEncapsulatedPublicKey = this.serializedEncapsulatedPublicKey.get();
+      this.serializedEncapsulatedPublicKey.ifPresent(serializedEncapsulatedPublicKey -> {
         encryptedRequestBuilder.setSerializedEncapsulatedPublicKey(
             ByteString.copyFrom(serializedEncapsulatedPublicKey));
         this.serializedEncapsulatedPublicKey = Optional.empty();
-      }
+      });
       // TODO(#3843): Return unserialized proto messages once we have Java encryption without
       // JNI.
       return encryptedRequestBuilder.build().toByteArray();
