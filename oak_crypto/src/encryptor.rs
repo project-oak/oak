@@ -19,11 +19,8 @@
 //! <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
 
 use crate::{
-    hpke::{
-        setup_base_recipient, setup_base_sender, KeyPair, RecipientContext, SenderContext,
-        RecipientRequestContext, RecipientResponseContext, SenderRequestContext, SenderResponseContext,
-    },
-    proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse, CryptoContext},
+    hpke::{setup_base_recipient, setup_base_sender, KeyPair, RecipientContext, SenderContext},
+    proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
 use alloc::{sync::Arc, vec::Vec};
 use anyhow::{anyhow, Context};
@@ -58,11 +55,17 @@ impl EncryptionKeyProvider {
 
 pub trait RecipientContextGenerator {
     // TODO(#3841): Implement Oak Kernel Crypto API and return corresponding session keys instead.
-    fn generate_recipient_context(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<RecipientContext>;
+    fn generate_recipient_context(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<RecipientContext>;
 }
 
-impl CryptoContextGenerator for EncryptionKeyProvider {
-    fn generate_context(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<RecipientContext> {
+impl RecipientContextGenerator for EncryptionKeyProvider {
+    fn generate_recipient_context(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<RecipientContext> {
         setup_base_recipient(encapsulated_public_key, &self.key_pair, OAK_HPKE_INFO)
             .context("couldn't generate recipient crypto context")
     }
@@ -154,7 +157,7 @@ pub struct ServerEncryptor {
 }
 
 impl ServerEncryptor {
-    pub fn new(recipient_context_generator: Arc<dyn CryptoContextGenerator>) -> Self {
+    pub fn new(recipient_context_generator: Arc<dyn RecipientContextGenerator>) -> Self {
         Self {
             recipient_context_generator,
             recipient_context: None,
@@ -168,19 +171,16 @@ impl ServerEncryptor {
         &mut self,
         encrypted_request: &EncryptedRequest,
     ) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
-        match &mut self.context {
-            Some(context) => Self::decrypt_with_context(
-                encrypted_request,
-                &mut context,
-            ),
+        match &mut self.recipient_context {
+            Some(context) => Self::decrypt_with_context(encrypted_request, context),
             None => {
                 let serialized_encapsulated_public_key = encrypted_request
                     .serialized_encapsulated_public_key
                     .as_ref()
                     .context("initial request message doesn't contain encapsulated public key")?;
-                let recipient_context = self
+                let mut recipient_context = self
                     .recipient_context_generator
-                    .generate_context(serialized_encapsulated_public_key)
+                    .generate_recipient_context(serialized_encapsulated_public_key)
                     .context("couldn't generate recipient crypto context")?;
                 let (plaintext, associated_data) =
                     Self::decrypt_with_context(encrypted_request, &mut recipient_context)?;
@@ -215,10 +215,9 @@ impl ServerEncryptor {
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<EncryptedResponse> {
-        match &mut self.context {
+        match &mut self.recipient_context {
             Some(context) => {
                 let ciphertext = context
-                    .recipient_response_context
                     .seal(plaintext, associated_data)
                     .context("couldn't encrypt response")?;
                 let response = EncryptedResponse {
