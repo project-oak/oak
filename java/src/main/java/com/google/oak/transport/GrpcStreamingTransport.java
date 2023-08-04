@@ -25,7 +25,6 @@ import com.google.oak.session.v1.InvokeRequest;
 import com.google.oak.session.v1.InvokeResponse;
 import com.google.oak.session.v1.RequestWrapper;
 import com.google.oak.session.v1.ResponseWrapper;
-import com.google.oak.stub.QueueingStreamObserver;
 import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;

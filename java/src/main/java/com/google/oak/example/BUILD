@@ -29,7 +29,7 @@ java_library(
         "//java/proto/example:secure_service_java_proto",
         "//java/src/main/java/com/google/oak/crypto/hpke",
         "//java/src/main/java/com/google/oak/server",
-        "//java/src/main/java/com/google/oak/stub",
+        "//java/src/main/java/com/google/oak/transport",
         "//java/src/main/java/com/google/oak/util",
         "//oak_remote_attestation/proto/v1:service_streaming_java_proto",
         "@io_grpc_grpc_java//stub",

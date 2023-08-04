@@ -30,7 +30,7 @@ java_library(
         "//java/src/main/java/com/google/oak/crypto:encryptor",
         "//java/src/main/java/com/google/oak/crypto:server_encryptor",
         "//java/src/main/java/com/google/oak/crypto/hpke",
-        "//java/src/main/java/com/google/oak/stub",
+        "//java/src/main/java/com/google/oak/transport",
         "//java/src/main/java/com/google/oak/util",
         "//oak_remote_attestation/proto/v1:messages_java_proto",
         "//oak_remote_attestation/proto/v1:service_streaming_java_proto",

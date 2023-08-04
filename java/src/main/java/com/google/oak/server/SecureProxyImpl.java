@@ -65,6 +65,7 @@ public final class SecureProxyImpl<I, O> extends SecureProxyImplBase {
    */
   public static <I, O> Result<SecureProxyImpl<I, O>, Exception> create(
       ConnectionAdapter<I, O> connectionAdapter) {
+    // TODO(#3640): Perform an attestation of the key.
     return KeyPair.generate().map(keyPair -> new SecureProxyImpl<>(connectionAdapter, keyPair));
   }
 

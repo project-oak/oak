@@ -26,7 +26,7 @@ import com.google.oak.session.v1.GetPublicKeyResponse;
 import com.google.oak.session.v1.InvokeResponse;
 import com.google.oak.session.v1.RequestWrapper;
 import com.google.oak.session.v1.ResponseWrapper;
-import com.google.oak.stub.QueueingStreamObserver;
+import com.google.oak.transport.QueueingStreamObserver;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;

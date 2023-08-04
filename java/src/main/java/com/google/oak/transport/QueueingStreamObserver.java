@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package com.google.oak.stub;
+package com.google.oak.transport;
 
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
