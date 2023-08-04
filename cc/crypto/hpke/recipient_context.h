@@ -19,11 +19,10 @@
 
 #include <memory>
 #include <string>
-#include <tuple>
+#include <vector>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "cc/crypto/hpke/utils.h"
 #include "openssl/hpke.h"
 
 namespace oak::crypto {
@@ -38,15 +37,21 @@ struct KeyPair {
 
 class RecipientRequestContext {
  public:
-  RecipientRequestContext(std::unique_ptr<EVP_HPKE_CTX> hpke_context)
-      : hpke_context_(std::move(hpke_context)) {}
+  RecipientRequestContext(std::unique_ptr<EVP_AEAD_CTX> aead_request_context,
+                          std::vector<uint8_t> request_nonce)
+      : aead_request_context_(std::move(aead_request_context)),
+        request_base_nonce_(request_nonce),
+        sequence_number_(0) {}
+
   // Decrypts message and validates associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
   absl::StatusOr<std::string> Open(absl::string_view ciphertext, absl::string_view associated_data);
   ~RecipientRequestContext();
 
  private:
-  std::unique_ptr<EVP_HPKE_CTX> hpke_context_;
+  std::unique_ptr<EVP_AEAD_CTX> aead_request_context_;
+  std::vector<uint8_t> request_base_nonce_;
+  uint64_t sequence_number_;
 };
 
 class RecipientResponseContext {
@@ -56,6 +61,7 @@ class RecipientResponseContext {
       : aead_response_context_(std::move(aead_response_context)),
         response_base_nonce_(response_nonce),
         sequence_number_(0) {}
+
   // Encrypts response message with associated data using AEAD as part of bidirectional
   // communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
