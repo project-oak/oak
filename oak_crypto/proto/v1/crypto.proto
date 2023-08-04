@@ -49,7 +49,7 @@ message AeadEncryptedMessage {
 }
 
 // Envelope containing session keys required to encrypt/decrypt messages within a secure session.
-// Needed to serialize contexts in order to send them ofer an RPC.
+// Needed to serialize contexts in order to send them over an RPC.
 message CryptoContext {
   // AEAD key and nonce for encrypting/decrypting client requests.
   bytes request_key = 1;
