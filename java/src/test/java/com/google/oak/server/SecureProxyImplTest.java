@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package com.google.oak.example;
+package com.google.oak.server;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static junit.framework.Assert.assertTrue;
@@ -24,10 +24,11 @@ import com.google.oak.client.OakClient;
 import com.google.oak.example.UnencryptedServiceImpl;
 import com.google.oak.example.encrypted.Request;
 import com.google.oak.example.encrypted.Response;
-import com.google.oak.example.encrypted.SecureProxyGrpc;
 import com.google.oak.example.encrypted.UnencryptedServiceGrpc;
 import com.google.oak.remote_attestation.InsecureAttestationVerifier;
 import com.google.oak.server.ConnectionAdapter;
+import com.google.oak.server.SecureProxyImpl;
+import com.google.oak.server.encrypted.SecureProxyGrpc;
 import com.google.oak.transport.GrpcStreamingTransport;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;

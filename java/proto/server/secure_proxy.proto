@@ -16,24 +16,12 @@
 
 syntax = "proto3";
 
-package oak.example.encrypted;
+package oak.server.encrypted;
 
 import "oak_remote_attestation/proto/v1/service_streaming.proto";
 
 option java_multiple_files = true;
-option java_package = "com.google.oak.example.encrypted";
-
-// Secure service offers the ability to establish either an encrypted or an
-// unencrypted connection.
-service SecureService {
-  // EncryptedConnect wraps the `Connect` method in an encrypted connection
-  // between a client and a server.
-  rpc EncryptedConnect(stream oak.session.v1.RequestWrapper)
-      returns (stream oak.session.v1.ResponseWrapper) {}
-
-  // Connect connects a client to a server for a bidirectional streaming between them.
-  rpc Connect(stream Request) returns (stream Response);
-}
+option java_package = "com.google.oak.server.encrypted";
 
 // Secure proxy wraps a service in an encrypted connection.
 service SecureProxy {
@@ -41,19 +29,4 @@ service SecureProxy {
   // server, and delegates the processing of the requests to another, unencrypted, service.
   rpc EncryptedConnect(stream oak.session.v1.RequestWrapper)
       returns (stream oak.session.v1.ResponseWrapper) {}
-}
-
-// Example service that echos messages that it receives without encryption.
-service UnencryptedService {
-  // Connect connects a client to a server. The client and server can then
-  // stream messages to each other.
-  rpc Connect(stream Request) returns (stream Response);
-}
-
-message Request {
-  bytes data = 1;
-}
-
-message Response {
-  bytes data = 1;
 }

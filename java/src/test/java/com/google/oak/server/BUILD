@@ -21,12 +21,14 @@ package(
 )
 
 java_test(
-    name = "secure_service_test",
-    srcs = ["SecureServiceImplTest.java"],
-    test_class = "com.google.oak.example.SecureServiceImplTest",
+    name = "secure_proxy_test",
+    srcs = ["SecureProxyImplTest.java"],
+    test_class = "com.google.oak.server.SecureProxyImplTest",
     deps = [
         "//java/proto/example:secure_service_java_grpc",
         "//java/proto/example:secure_service_java_proto",
+        "//java/proto/server:secure_proxy_java_grpc",
+        "//java/proto/server:secure_proxy_java_proto",
         "//java/src/main/java/com/google/oak/client",
         "//java/src/main/java/com/google/oak/crypto/hpke",
         "//java/src/main/java/com/google/oak/example",

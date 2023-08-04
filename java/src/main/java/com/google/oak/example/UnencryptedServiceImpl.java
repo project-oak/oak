@@ -23,8 +23,7 @@ import io.grpc.stub.StreamObserver;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/** */
-final class UnencryptedServiceImpl extends UnencryptedServiceImplBase {
+public final class UnencryptedServiceImpl extends UnencryptedServiceImplBase {
   private static final Logger logger = Logger.getLogger(UnencryptedServiceImpl.class.getName());
 
   @Override
