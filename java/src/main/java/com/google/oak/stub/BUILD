@@ -25,7 +25,7 @@ java_library(
     name = "stub",
     srcs = glob(["*.java"]),
     deps = [
-        "@io_grpc_grpc_java//stub",
         "@io_grpc_grpc_java//api",
+        "@io_grpc_grpc_java//stub",
     ],
 )
