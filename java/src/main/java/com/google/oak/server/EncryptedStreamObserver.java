@@ -91,8 +91,8 @@ public final class EncryptedStreamObserver<I, O> implements StreamObserver<Reque
       Result<ResponseWrapper, Exception> result =
           encryptor.decrypt(message.getInvokeRequest().getEncryptedBody().toByteArray())
               .andThen(this::processMessage);
-      result.error().ifPresent(this::onError);
-      result.success().ifPresent(msg -> {
+      result.ifError(this::onError);
+      result.ifSuccess(msg -> {
         logger.log(Level.INFO, "Sending Processed response");
         outboundObserver.onNext(msg);
       });
