@@ -16,7 +16,10 @@
 
 package com.google.oak.transport;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
+import java.time.Duration;
+import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.google.oak.session.v1.AttestationBundle;
 import com.google.oak.session.v1.GetPublicKeyRequest;
@@ -25,21 +28,15 @@ import com.google.oak.session.v1.InvokeRequest;
 import com.google.oak.session.v1.InvokeResponse;
 import com.google.oak.session.v1.RequestWrapper;
 import com.google.oak.session.v1.ResponseWrapper;
-import com.google.oak.transport.EvidenceProvider;
-import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
+
 import io.grpc.stub.StreamObserver;
-import java.time.Duration;
-import java.util.concurrent.BlockingQueue;
-import java.util.function.Function;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   private static final Logger logger = Logger.getLogger(GrpcStreamingTransport.class.getName());
 
-  private static final int MESSAGE_QUEUE_TIMEOUT_SECONDS = 10;
+  private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
   /**
    * QueueingStreamObserver with a queue containing responses received from the
@@ -78,7 +75,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     ResponseWrapper responseWrapper;
     try {
       // TODO(#3644): Add retry for client messages.
-      responseWrapper = this.responseObserver.poll(Duration.ofSeconds(MESSAGE_QUEUE_TIMEOUT_SECONDS));
+      responseWrapper = this.responseObserver.poll(TIMEOUT);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Result.error("Thread interrupted while waiting for a response");
@@ -114,7 +111,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     ResponseWrapper responseWrapper;
     try {
       // TODO(#3644): Add retry for client messages.
-      responseWrapper = this.responseObserver.poll(Duration.ofSeconds(MESSAGE_QUEUE_TIMEOUT_SECONDS));
+      responseWrapper = this.responseObserver.poll(TIMEOUT);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Result.error("Thread interrupted while waiting for a response");

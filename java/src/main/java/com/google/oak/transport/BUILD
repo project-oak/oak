@@ -47,7 +47,6 @@ java_library(
         "//oak_remote_attestation/proto/v1:messages_java_proto",
         "//oak_remote_attestation/proto/v1:service_streaming_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
-        "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//stub",
     ],
 )
