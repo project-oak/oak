@@ -22,40 +22,16 @@ package(
 )
 
 java_library(
-    name = "transport",
-    srcs = [
-        "EvidenceProvider.java",
-        "QueueingStreamObserver.java",
-        "Transport.java",
-    ],
+    name = "example",
+    srcs = glob(["*.java"]),
     deps = [
+        "//java/proto/example:secure_service_java_grpc",
+        "//java/proto/example:secure_service_java_proto",
+        "//java/src/main/java/com/google/oak/crypto/hpke",
+        "//java/src/main/java/com/google/oak/server",
+        "//java/src/main/java/com/google/oak/transport",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation/proto/v1:messages_java_proto",
-        "@io_grpc_grpc_java//api",
-        "@io_grpc_grpc_java//stub",
-    ],
-)
-
-java_library(
-    name = "grpc_streaming_transport",
-    srcs = [
-        "GrpcStreamingTransport.java",
-    ],
-    deps = [
-        ":transport",
-        "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation/proto/v1:messages_java_proto",
         "//oak_remote_attestation/proto/v1:service_streaming_java_proto",
-        "@com_google_protobuf//:protobuf_javalite",
-        "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//stub",
-    ],
-)
-
-java_library(
-    name = "api_key_interceptor",
-    srcs = ["ApiKeyInterceptor.java"],
-    deps = [
-        "@io_grpc_grpc_java//api",
     ],
 )

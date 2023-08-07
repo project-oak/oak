@@ -42,37 +42,12 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
 
   private static final int MESSAGE_QUEUE_TIMEOUT_SECONDS = 10;
 
-  private class ResponseStreamObserver implements StreamObserver<ResponseWrapper> {
-    @Override
-    public void onNext(ResponseWrapper response) {
-      try {
-        messageQueue.put(response);
-      } catch (Exception e) {
-        if (e instanceof InterruptedException) {
-          Thread.currentThread().interrupt();
-        }
-        logger.log(Level.WARNING, "Couldn't send server response to the message queue: " + e);
-      }
-    }
-
-    @Override
-    public void onError(Throwable t) {
-      Status status = Status.fromThrowable(t);
-      logger.log(Level.WARNING, "Couldn't receive response: " + status);
-    }
-
-    @Override
-    public void onCompleted() {
-      logger.log(Level.FINE, "response message queue completed");
-    }
-  }
-
   /**
-   * Message queue containing responses received from the server.
+   * QueueingStreamObserver with a queue containing responses received from the server.
    * The queue size is 1 because we expect to receive a single response message
    * for each request.
    */
-  private final BlockingQueue<ResponseWrapper> messageQueue = new ArrayBlockingQueue<>(1);
+  QueueingStreamObserver<ResponseWrapper> responseObserver = new QueueingStreamObserver<>(1);
   private final StreamObserver<RequestWrapper> requestObserver;
 
   /**
@@ -84,7 +59,6 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
    */
   public GrpcStreamingTransport(
       Function<StreamObserver<ResponseWrapper>, StreamObserver<RequestWrapper>> stream) {
-    StreamObserver<ResponseWrapper> responseObserver = new ResponseStreamObserver();
     this.requestObserver = stream.apply(responseObserver);
   }
 
@@ -104,7 +78,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     ResponseWrapper responseWrapper;
     try {
       // TODO(#3644): Add retry for client messages.
-      responseWrapper = this.messageQueue.poll(MESSAGE_QUEUE_TIMEOUT_SECONDS, SECONDS);
+      responseWrapper = this.responseObserver.poll(MESSAGE_QUEUE_TIMEOUT_SECONDS, SECONDS);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Result.error("Thread interrupted while waiting for a response");
@@ -141,7 +115,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     ResponseWrapper responseWrapper;
     try {
       // TODO(#3644): Add retry for client messages.
-      responseWrapper = this.messageQueue.poll(MESSAGE_QUEUE_TIMEOUT_SECONDS, SECONDS);
+      responseWrapper = this.responseObserver.poll(MESSAGE_QUEUE_TIMEOUT_SECONDS, SECONDS);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Result.error("Thread interrupted while waiting for a response");
