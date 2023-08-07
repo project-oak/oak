@@ -16,17 +16,19 @@
 
 package com.google.oak.transport;
 
-import io.grpc.Status;
-import io.grpc.stub.StreamObserver;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+
 import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import io.grpc.stub.StreamObserver;
+
 /**
- * A thread-safe StreamObserver that queues received messages, so that they can be picked from the
+ * A thread-safe StreamObserver that queues received messages, so that they can
+ * be picked from the
  * queue once needed.
  *
  * @param <T> Type of the message
@@ -49,7 +51,7 @@ public final class QueueingStreamObserver<T> implements StreamObserver<T> {
   }
 
   public T poll(Duration timeout) throws InterruptedException {
-    return messages.poll(timeout.toMillis(), TimeUnit.MILLISECONDS);
+    return messages.poll(timeout.toMillis(), MILLISECONDS);
   }
 
   @Override
