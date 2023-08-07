@@ -18,7 +18,7 @@ package com.google.oak.transport;
 
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -48,8 +48,8 @@ public final class QueueingStreamObserver<T> implements StreamObserver<T> {
     return messages.take();
   }
 
-  public T poll(long timeout, TimeUnit unit) throws InterruptedException {
-    return messages.poll(timeout, unit);
+  public T poll(Duration timeout) throws InterruptedException {
+    return messages.poll(timeout.toMillis(), TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -59,8 +59,6 @@ public final class QueueingStreamObserver<T> implements StreamObserver<T> {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       logger.log(Level.WARNING, "Queueing the server response was interrupted");
-    } catch (Exception e) {
-      logger.log(Level.WARNING, "Couldn't add the server response to the message queue: " + e);
     }
   }
 

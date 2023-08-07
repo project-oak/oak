@@ -26,7 +26,6 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//java/proto/server:secure_proxy_java_grpc",
-        "//java/proto/server:secure_proxy_java_proto",
         "//java/src/main/java/com/google/oak/crypto:encryptor",
         "//java/src/main/java/com/google/oak/crypto:server_encryptor",
         "//java/src/main/java/com/google/oak/crypto/hpke",
