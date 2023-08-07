@@ -31,6 +31,7 @@ import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import java.time.Duration;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Function;
@@ -78,7 +79,8 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     ResponseWrapper responseWrapper;
     try {
       // TODO(#3644): Add retry for client messages.
-      responseWrapper = this.responseObserver.poll(MESSAGE_QUEUE_TIMEOUT_SECONDS, SECONDS);
+      responseWrapper =
+          this.responseObserver.poll(Duration.ofSeconds(MESSAGE_QUEUE_TIMEOUT_SECONDS));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Result.error("Thread interrupted while waiting for a response");
@@ -115,7 +117,8 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     ResponseWrapper responseWrapper;
     try {
       // TODO(#3644): Add retry for client messages.
-      responseWrapper = this.responseObserver.poll(MESSAGE_QUEUE_TIMEOUT_SECONDS, SECONDS);
+      responseWrapper =
+          this.responseObserver.poll(Duration.ofSeconds(MESSAGE_QUEUE_TIMEOUT_SECONDS));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Result.error("Thread interrupted while waiting for a response");

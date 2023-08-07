@@ -35,7 +35,7 @@ java_test(
         "//java/src/main/java/com/google/oak/transport:grpc_streaming_transport",
         "//java/src/main/java/com/google/oak/util",
         "@com_google_protobuf//:protobuf_javalite",
-        "@io_grpc_grpc_java//core",
+        "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//core:inprocess",
         "@org_assertj_assertj_core",
     ],
