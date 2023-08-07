@@ -29,10 +29,8 @@ import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
-import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -44,7 +42,8 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   private static final int MESSAGE_QUEUE_TIMEOUT_SECONDS = 10;
 
   /**
-   * QueueingStreamObserver with a queue containing responses received from the server.
+   * QueueingStreamObserver with a queue containing responses received from the
+   * server.
    * The queue size is 1 because we expect to receive a single response message
    * for each request.
    */
@@ -71,16 +70,15 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   @Override
   public Result<AttestationBundle, String> getEvidence() {
     RequestWrapper requestWrapper = RequestWrapper.newBuilder()
-                                        .setGetPublicKeyRequest(GetPublicKeyRequest.newBuilder())
-                                        .build();
+        .setGetPublicKeyRequest(GetPublicKeyRequest.newBuilder())
+        .build();
     logger.log(Level.INFO, "sending get public key request: " + requestWrapper);
     this.requestObserver.onNext(requestWrapper);
 
     ResponseWrapper responseWrapper;
     try {
       // TODO(#3644): Add retry for client messages.
-      responseWrapper =
-          this.responseObserver.poll(Duration.ofSeconds(MESSAGE_QUEUE_TIMEOUT_SECONDS));
+      responseWrapper = this.responseObserver.poll(Duration.ofSeconds(MESSAGE_QUEUE_TIMEOUT_SECONDS));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Result.error("Thread interrupted while waiting for a response");
@@ -106,19 +104,17 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
    */
   @Override
   public Result<byte[], String> invoke(byte[] requestBytes) {
-    RequestWrapper requestWrapper =
-        RequestWrapper.newBuilder()
-            .setInvokeRequest(
-                InvokeRequest.newBuilder().setEncryptedBody(ByteString.copyFrom(requestBytes)))
-            .build();
+    RequestWrapper requestWrapper = RequestWrapper.newBuilder()
+        .setInvokeRequest(
+            InvokeRequest.newBuilder().setEncryptedBody(ByteString.copyFrom(requestBytes)))
+        .build();
     logger.log(Level.INFO, "sending invoke request: " + requestWrapper);
     this.requestObserver.onNext(requestWrapper);
 
     ResponseWrapper responseWrapper;
     try {
       // TODO(#3644): Add retry for client messages.
-      responseWrapper =
-          this.responseObserver.poll(Duration.ofSeconds(MESSAGE_QUEUE_TIMEOUT_SECONDS));
+      responseWrapper = this.responseObserver.poll(Duration.ofSeconds(MESSAGE_QUEUE_TIMEOUT_SECONDS));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return Result.error("Thread interrupted while waiting for a response");
