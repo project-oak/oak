@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["AeadEncryptedMessage","EncryptedRequest","EncryptedResponse"]};
+window.SIDEBAR_ITEMS = {"struct":["AeadEncryptedMessage","CryptoContext","EncryptedRequest","EncryptedResponse"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["ClientEncryptor","EncryptionKeyProvider","RecipientContext","ServerEncryptor"],"trait":["CryptoContextGenerator"]};
+window.SIDEBAR_ITEMS = {"struct":["ClientEncryptor","EncryptionKeyProvider","ServerEncryptor"],"trait":["RecipientContextGenerator"]};

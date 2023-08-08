@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["encryptor","proto","service","signer"]};
+window.SIDEBAR_ITEMS = {"mod":["encryptor","proto","signer"]};

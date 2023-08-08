@@ -16,7 +16,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_containers_orchestrator_client":["",[],["lib.rs"]],\
 "oak_containers_stage1":["",[],["client.rs","image.rs","main.rs"]],\
 "oak_core":["",[],["lib.rs","samplestore.rs","sync.rs","timer.rs"]],\
-"oak_crypto":["",[["hpke",[],["aead.rs","mod.rs"]]],["encryptor.rs","lib.rs","service.rs","signer.rs","util.rs"]],\
+"oak_crypto":["",[["hpke",[],["aead.rs","mod.rs"]]],["encryptor.rs","lib.rs","signer.rs","util.rs"]],\
 "oak_docker_linux_init":["",[],["init.rs","main.rs"]],\
 "oak_echo_linux_init":["",[],["init.rs","main.rs"]],\
 "oak_echo_service":["",[],["lib.rs"]],\
