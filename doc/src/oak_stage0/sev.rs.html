@@ -467,6 +467,11 @@
 <a href="#467" id="467">467</a>
 <a href="#468" id="468">468</a>
 <a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -904,8 +909,13 @@
         PageTableFlags::PRESENT,
     );
 
+    <span class="comment">// We already pvalidated the memory in the first 640KiB of RAM in the boot assembly code. We
+    // avoid redoing this as calling pvalidate again on these pages leads to unexpected results,
+    // such us removing the shared state from the RMP for the fw_cfg DMA buffer.
+    </span><span class="kw">let </span>min_addr = <span class="number">0xA0000</span>;
+
     <span class="kw">for </span>entry <span class="kw">in </span>e820_table {
-        <span class="kw">if </span>entry.entry_type() != <span class="prelude-val">Some</span>(E820EntryType::RAM) {
+        <span class="kw">if </span>entry.entry_type() != <span class="prelude-val">Some</span>(E820EntryType::RAM) || entry.addr() &lt; min_addr {
             <span class="kw">continue</span>;
         }
 
