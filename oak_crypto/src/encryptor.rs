@@ -19,10 +19,7 @@
 //! <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
 
 use crate::{
-    hpke::{
-        setup_base_recipient, setup_base_sender, KeyPair, RecipientRequestContext,
-        RecipientResponseContext, SenderRequestContext, SenderResponseContext,
-    },
+    hpke::{setup_base_recipient, setup_base_sender, KeyPair, RecipientContext, SenderContext},
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
 use alloc::{sync::Arc, vec::Vec};
@@ -30,11 +27,6 @@ use anyhow::{anyhow, Context};
 
 /// Info string used by Hybrid Public Key Encryption;
 pub(crate) const OAK_HPKE_INFO: &[u8] = b"Oak Hybrid Public Key Encryption v1";
-
-pub trait CryptoContextGenerator {
-    // TODO(#3841): Implement Oak Kernel Crypto API and return corresponding session keys instead.
-    fn generate_context(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<RecipientContext>;
-}
 
 pub struct EncryptionKeyProvider {
     key_pair: KeyPair,
@@ -61,15 +53,21 @@ impl EncryptionKeyProvider {
     }
 }
 
-impl CryptoContextGenerator for EncryptionKeyProvider {
-    fn generate_context(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<RecipientContext> {
-        let (recipient_request_context, recipient_response_context) =
-            setup_base_recipient(encapsulated_public_key, &self.key_pair, OAK_HPKE_INFO)
-                .context("couldn't generate recipient crypto context")?;
-        Ok(RecipientContext {
-            recipient_request_context,
-            recipient_response_context,
-        })
+pub trait RecipientContextGenerator {
+    // TODO(#3841): Implement Oak Kernel Crypto API and return corresponding session keys instead.
+    fn generate_recipient_context(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<RecipientContext>;
+}
+
+impl RecipientContextGenerator for EncryptionKeyProvider {
+    fn generate_recipient_context(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<RecipientContext> {
+        setup_base_recipient(encapsulated_public_key, &self.key_pair, OAK_HPKE_INFO)
+            .context("couldn't generate recipient crypto context")
     }
 }
 
@@ -83,8 +81,7 @@ pub struct ClientEncryptor {
     /// Encapsulated public key needed to establish a symmetric session key.
     /// Only sent in the initial request message of the session.
     serialized_encapsulated_public_key: Option<Vec<u8>>,
-    sender_request_context: SenderRequestContext,
-    sender_response_context: SenderResponseContext,
+    sender_context: SenderContext,
 }
 
 impl ClientEncryptor {
@@ -92,13 +89,12 @@ impl ClientEncryptor {
     /// The `serialized_server_public_key` must be a NIST P-256 SEC1 encoded point public key.
     /// <https://secg.org/sec1-v2.pdf>
     pub fn create(serialized_server_public_key: &[u8]) -> anyhow::Result<Self> {
-        let (serialized_encapsulated_public_key, sender_request_context, sender_response_context) =
+        let (serialized_encapsulated_public_key, sender_context) =
             setup_base_sender(serialized_server_public_key, OAK_HPKE_INFO)
                 .context("couldn't create sender crypto context")?;
         Ok(Self {
             serialized_encapsulated_public_key: Some(serialized_encapsulated_public_key.to_vec()),
-            sender_request_context,
-            sender_response_context,
+            sender_context,
         })
     }
 
@@ -111,7 +107,7 @@ impl ClientEncryptor {
         associated_data: &[u8],
     ) -> anyhow::Result<EncryptedRequest> {
         let ciphertext = self
-            .sender_request_context
+            .sender_context
             .seal(plaintext, associated_data)
             .context("couldn't encrypt request")?;
         let request = EncryptedRequest {
@@ -137,7 +133,7 @@ impl ClientEncryptor {
             .as_ref()
             .context("response doesn't contain encrypted message")?;
         let plaintext = self
-            .sender_response_context
+            .sender_context
             .open(
                 &encrypted_message.ciphertext,
                 &encrypted_message.associated_data,
@@ -145,11 +141,6 @@ impl ClientEncryptor {
             .context("couldn't decrypt response")?;
         Ok((plaintext, encrypted_message.associated_data.to_vec()))
     }
-}
-
-pub struct RecipientContext {
-    pub(crate) recipient_request_context: RecipientRequestContext,
-    pub(crate) recipient_response_context: RecipientResponseContext,
 }
 
 /// Encryptor object for decrypting client requests that are received by the server and encrypting
@@ -161,15 +152,15 @@ pub struct RecipientContext {
 /// Sequence numbers for requests and responses are incremented separately, meaning that there could
 /// be multiple responses per request and multiple requests per response.
 pub struct ServerEncryptor {
-    crypto_context_generator: Arc<dyn CryptoContextGenerator>,
-    context: Option<RecipientContext>,
+    recipient_context_generator: Arc<dyn RecipientContextGenerator>,
+    recipient_context: Option<RecipientContext>,
 }
 
 impl ServerEncryptor {
-    pub fn new(crypto_context_generator: Arc<dyn CryptoContextGenerator>) -> Self {
+    pub fn new(recipient_context_generator: Arc<dyn RecipientContextGenerator>) -> Self {
         Self {
-            crypto_context_generator,
-            context: None,
+            recipient_context_generator,
+            recipient_context: None,
         }
     }
 
@@ -180,30 +171,20 @@ impl ServerEncryptor {
         &mut self,
         encrypted_request: &EncryptedRequest,
     ) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
-        match &mut self.context {
-            Some(context) => Self::decrypt_with_context(
-                encrypted_request,
-                &mut context.recipient_request_context,
-            ),
+        match &mut self.recipient_context {
+            Some(context) => Self::decrypt_with_context(encrypted_request, context),
             None => {
                 let serialized_encapsulated_public_key = encrypted_request
                     .serialized_encapsulated_public_key
                     .as_ref()
                     .context("initial request message doesn't contain encapsulated public key")?;
-                let crypto_context = self
-                    .crypto_context_generator
-                    .generate_context(serialized_encapsulated_public_key)
+                let mut recipient_context = self
+                    .recipient_context_generator
+                    .generate_recipient_context(serialized_encapsulated_public_key)
                     .context("couldn't generate recipient crypto context")?;
-                let (mut recipient_request_context, recipient_response_context) = (
-                    crypto_context.recipient_request_context,
-                    crypto_context.recipient_response_context,
-                );
                 let (plaintext, associated_data) =
-                    Self::decrypt_with_context(encrypted_request, &mut recipient_request_context)?;
-                self.context = Some(RecipientContext {
-                    recipient_request_context,
-                    recipient_response_context,
-                });
+                    Self::decrypt_with_context(encrypted_request, &mut recipient_context)?;
+                self.recipient_context = Some(recipient_context);
                 Ok((plaintext, associated_data))
             }
         }
@@ -211,7 +192,7 @@ impl ServerEncryptor {
 
     fn decrypt_with_context(
         encrypted_request: &EncryptedRequest,
-        context: &mut RecipientRequestContext,
+        context: &mut RecipientContext,
     ) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
         let encrypted_message = encrypted_request
             .encrypted_message
@@ -234,10 +215,9 @@ impl ServerEncryptor {
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<EncryptedResponse> {
-        match &mut self.context {
+        match &mut self.recipient_context {
             Some(context) => {
                 let ciphertext = context
-                    .recipient_response_context
                     .seal(plaintext, associated_data)
                     .context("couldn't encrypt response")?;
                 let response = EncryptedResponse {

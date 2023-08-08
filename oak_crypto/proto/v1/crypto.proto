@@ -47,3 +47,17 @@ message AeadEncryptedMessage {
   bytes ciphertext = 1;
   bytes associated_data = 2;
 }
+
+// Envelope containing session keys required to encrypt/decrypt messages within a secure session.
+// Needed to serialize contexts in order to send them over an RPC.
+message CryptoContext {
+  // AEAD key and nonce for encrypting/decrypting client requests.
+  bytes request_key = 1;
+  bytes request_base_nonce = 2;
+  uint64 request_sequence_number = 3;
+
+  // Symmetric key and nonce for encrypting/decrypting enclave responses.
+  bytes response_key = 4;
+  bytes response_base_nonce = 5;
+  uint64 response_sequence_number = 6;
+}
