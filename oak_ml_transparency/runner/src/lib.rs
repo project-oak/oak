@@ -14,11 +14,19 @@
 // limitations under the License.
 //
 
+extern crate alloc;
+
+use alloc::{collections::BTreeMap, string::String};
 use anyhow::Result;
-use chrono::Utc;
+use claims::{
+    claims::{ClaimPredicate, ClaimSpec},
+    intoto::{Statement, Subject},
+};
 use log::warn;
+use serde::{Deserialize, Serialize};
 use serde_json::{self, Value};
 use sha2::{Digest, Sha256};
+use time::OffsetDateTime;
 
 use std::{
     fs::{remove_file, File},
@@ -29,6 +37,14 @@ use std::{
 
 const RESULT_PATH: &str = "result.json";
 
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct ModelEvaluationSpec {
+    script: Subject,
+    result: Value,
+}
+
+impl ClaimSpec for ModelEvaluationSpec {}
+
 /// Generates a claim in the form of an intoto-statement about the model, identified by the given
 /// name and digest, and the given evaluation result.
 pub fn generate_claim(
@@ -37,36 +53,31 @@ pub fn generate_claim(
     script_name: &str,
     script_digest: &str,
     result: &str,
-) -> Result<Value> {
-    // TODO(#4196): Use objects to build an instance of the claim.
-    let claim = format!(
-        r#"{{
-            "_type": "https://in-toto.io/Statement/v0.1",
-            "subject": [{{
-                "name":"{}",
-                "digest":{{"sha256":"{}"}}
-            }}],
-            "predicateType": "https://github.com/project-oak/transparent-release/schema/claim/v1",
-            "predicate": {{
-                "claimType": "https://github.com/project-oak/transparent-release/ml-eval/v0",
-                "issuedOn": "{}",
-                "claimSpec": {{
-                    "script": {{
-                        "name":"{}",
-                        "digest":{{"sha256":"{}"}}
-                    }},
-                    "result": {}
-                }}
-            }}
-        }}"#,
-        model_name,
-        model_digest,
-        Utc::now().to_rfc3339(),
-        script_name,
-        script_digest,
-        result
-    );
-    Ok(serde_json::from_str(&claim)?)
+) -> Result<Statement<ClaimPredicate<ModelEvaluationSpec>>> {
+    let claim_spec = ModelEvaluationSpec {
+        script: Subject {
+            name: String::from(script_name),
+            digest: BTreeMap::from([(String::from("sha256"), String::from(script_digest))]),
+        },
+        result: serde_json::from_str(result)?,
+    };
+    let predicate = ClaimPredicate {
+        claim_type: String::from("https://github.com/project-oak/transparent-release/ml-eval/v0"),
+        claim_spec: Some(claim_spec),
+        issued_on: OffsetDateTime::now_utc(),
+        validity: None,
+        evidence: vec![],
+    };
+
+    Ok(Statement {
+        _type: String::from(claims::intoto::STATEMENT_INTOTO_V01),
+        predicate_type: String::from(claims::claims::CLAIM_V1),
+        subject: vec![Subject {
+            name: String::from(model_name),
+            digest: BTreeMap::from([(String::from("sha256"), String::from(model_digest))]),
+        }],
+        predicate,
+    })
 }
 
 /// Runs the given evaluation script on the given model, and returns the result as a string, or an
@@ -112,6 +123,7 @@ pub fn get_sha256_hex(input: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use claims::claims::validate_claim;
 
     #[test]
     fn generate_claim_is_valid_json() {
@@ -123,6 +135,7 @@ mod tests {
             r#"{"acc": "80.9"}"#,
         );
         assert!(claim.is_ok());
+        assert!(validate_claim(&claim.unwrap()).is_ok());
     }
 
     #[test]

@@ -10,10 +10,12 @@ license = "Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 anyhow = "*"
+claims = { path = "../../claims" }
 clap = { version = "*", features = ["derive"] }
-chrono = { version = "0.4.22", default-features = false, features = ["clock"] }
 env_logger = "*"
 hex = "*"
 log = "*"
+serde = { version = "1.0.138", features = ["derive"] }
 serde_json = { version = "*", features = ["preserve_order"] }
 sha2 = { version = "*", default-features = false }
+time = { version = "0.3.25", features = ["serde", "parsing", "formatting"] }

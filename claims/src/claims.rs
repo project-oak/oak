@@ -58,8 +58,9 @@ pub struct ClaimPredicate<S: ClaimSpec> {
     #[serde(rename = "issuedOn")]
     pub issued_on: OffsetDateTime,
     /// Validity duration of this claim.
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "validity")]
-    pub validity: ClaimValidity,
+    pub validity: Option<ClaimValidity>,
     /// A collection of artifacts that support the truth of the claim.
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     #[serde(rename = "evidence")]
@@ -106,11 +107,11 @@ pub fn parse_endorsement_statement(
     serde_json::from_slice(bytes).context("parsing endorsement bytes")
 }
 
-/// Check that the given endorsement statement:
-/// - has valid Statement, Predicate, and claim types, and
+/// Check that the given statement is a valid claim:
+/// - has valid Statement and Predicate types, and
 /// - has a valid validity duration.
-pub fn validate_endorsement(
-    claim: &Statement<ClaimPredicate<EndorsementStatement>>,
+pub fn validate_claim<T: ClaimSpec>(
+    claim: &Statement<ClaimPredicate<T>>,
 ) -> Result<(), InvalidClaimData> {
     if claim._type != STATEMENT_INTOTO_V01 {
         return Err(InvalidClaimData::StatementType);
@@ -118,20 +119,30 @@ pub fn validate_endorsement(
     if claim.predicate_type != CLAIM_V1 {
         return Err(InvalidClaimData::PredicateType);
     }
+    if let Some(validity) = &claim.predicate.validity {
+        if validity.not_before < claim.predicate.issued_on {
+            return Err(InvalidClaimData::Validity(String::from(
+                "notBefore before issuedOn",
+            )));
+        }
+        if validity.not_before > validity.not_after {
+            return Err(InvalidClaimData::Validity(String::from(
+                "notBefore after notAfter",
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+/// Check that the given endorsement statement, is a valid claim, and had the correct claim type.
+pub fn validate_endorsement(
+    claim: &Statement<ClaimPredicate<EndorsementStatement>>,
+) -> Result<(), InvalidClaimData> {
+    validate_claim(claim)?;
     if claim.predicate.claim_type != ENDORSEMENT_V2 {
         return Err(InvalidClaimData::ClaimType);
     }
-    if claim.predicate.validity.not_before < claim.predicate.issued_on {
-        return Err(InvalidClaimData::Validity(String::from(
-            "notBefore before issuedOn",
-        )));
-    }
-    if claim.predicate.validity.not_before > claim.predicate.validity.not_after {
-        return Err(InvalidClaimData::Validity(String::from(
-            "notBefore after notAfter",
-        )));
-    }
-
     Ok(())
 }
 
