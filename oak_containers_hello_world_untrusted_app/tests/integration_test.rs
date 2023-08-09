@@ -43,6 +43,10 @@ async fn hello_world() {
         oak_containers_hello_world_untrusted_app::UntrustedApp::create(Args::default_for_test())
             .await
             .expect("could not create untrusted app");
+
+    let get_endorsed_evidence_result = untrusted_app.get_endorsed_evidence().await;
+    assert!(get_endorsed_evidence_result.is_ok());
+
     let greeting = untrusted_app
         .hello("fancy test")
         .await
