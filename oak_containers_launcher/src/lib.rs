@@ -52,6 +52,8 @@ const VM_LOCAL_PORT: u16 = 8080;
 /// The local address that will be forwarded by the VMM to the guest's IP adress.
 const PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
 
+const VM_START_TIMEOUT: u64 = 300;
+
 #[derive(Parser, Debug)]
 pub struct Args {
     #[arg(long, required = true, value_parser = path_exists,)]
@@ -104,7 +106,7 @@ pub struct Launcher {
     // Endorsed Attestation Evidence consists of Attestation Evidence (initialized by the
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
     endorsed_attestation_evidence: Option<AttestationBundle>,
-    // Reciever that is used to get the Attestation Evidence from the server implementation.
+    // Receiver that is used to get the Attestation Evidence from the server implementation.
     attestation_evidence_receiver: Option<Receiver<AttestationEvidence>>,
     app_ready_notifier: Option<Receiver<()>>,
     trusted_app_address: Option<SocketAddr>,
@@ -176,7 +178,7 @@ impl Launcher {
         if let Some(receiver) = self.app_ready_notifier.take() {
             // Set a timeout of 5 minutes, since we don't want to wait forever if the VM didn't
             // start properly.
-            let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(300));
+            let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(VM_START_TIMEOUT));
 
             tokio::select! {
                 result = receiver => {
@@ -202,7 +204,7 @@ impl Launcher {
         if let Some(receiver) = self.attestation_evidence_receiver.take() {
             // Set a timeout of 5 minutes, since we don't want to wait forever if the VM didn't
             // start properly.
-            let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(300));
+            let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(VM_START_TIMEOUT));
 
             tokio::select! {
                 result = receiver => {
