@@ -152,15 +152,6 @@ impl Launcher for LauncherServerImplementation {
                 tonic::Status::internal(format!("couldn't send attestation evidence"))
             })?;
         Ok(tonic::Response::new(()))
-        // match self
-        //     .attestation_evidence
-        //     .set(request.into_inner().evidence.unwrap_or_default())
-        // {
-        //     Err(_) => Err(tonic::Status::invalid_argument(
-        //         "attestation evidence has already been sent to the Launcher",
-        //     )),
-        //     Ok(()) => Ok(tonic::Response::new(())),
-        // }
     }
 
     async fn notify_app_ready(&self, _request: Request<()>) -> Result<Response<()>, tonic::Status> {
