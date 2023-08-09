@@ -13,21 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod proto {
-    pub mod oak {
-        pub mod containers {
-            pub mod example {
-                tonic::include_proto!("oak.containers.example");
-            }
-        }
-    }
-}
-
-use anyhow::Context;
-use proto::oak::containers::example::{
+use crate::proto::oak::containers::example::{
     trusted_application_client::TrustedApplicationClient as GrpcTrustedApplicationClient,
     HelloRequest,
 };
+use anyhow::Context;
 use tokio::time::Duration;
 use tonic::transport::Endpoint;
 
