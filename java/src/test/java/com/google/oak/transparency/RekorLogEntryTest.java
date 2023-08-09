@@ -27,7 +27,7 @@ import org.junit.runners.JUnit4;
 public class RekorLogEntryTest {
   @Test
   public void testUnmarshalRekorLogEntry() throws Exception {
-    String logEntryPath = "oak_functions_client/testdata/logentry.json";
+    String logEntryPath = "oak_remote_attestation_verification/testdata/logentry.json";
 
     String json = Files.readString(Path.of(logEntryPath));
     RekorLogEntry.LogEntry entry = RekorLogEntry.unmarshalLogEntry(json).logEntry;
