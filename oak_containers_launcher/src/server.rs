@@ -13,22 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod proto {
-    pub mod oak {
-        pub mod containers {
-            #![allow(clippy::return_self_not_must_use)]
-            tonic::include_proto!("oak.containers");
-        }
-        pub mod session {
-            pub mod v1 {
-                #![allow(clippy::return_self_not_must_use)]
-                tonic::include_proto!("oak.session.v1");
-            }
-        }
-    }
-}
-
-use self::proto::oak::{
+use crate::proto::oak::{
     containers::{
         launcher_server::{Launcher, LauncherServer},
         GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
@@ -37,10 +22,7 @@ use self::proto::oak::{
 };
 use anyhow::anyhow;
 use futures::{FutureExt, Stream};
-use std::{
-    pin::Pin,
-    sync::{Mutex, OnceLock},
-};
+use std::{pin::Pin, sync::Mutex};
 use tokio::{
     io::{AsyncReadExt, BufReader},
     net::TcpListener,
@@ -60,8 +42,8 @@ struct LauncherServerImplementation {
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: Option<std::path::PathBuf>,
-    // Attestation Evidence is initialized by the Orchestrator.
-    attestation_evidence: OnceLock<AttestationEvidence>,
+    // Will be used to send the Attestation Evidence to the Launcher.
+    attestation_evidence_sender: Mutex<Option<Sender<AttestationEvidence>>>,
     // Will be used to notify the untrusted application that the trusted application is ready and
     // listening on a socket address.
     app_ready_notifier: Mutex<Option<Sender<()>>>,
@@ -154,15 +136,29 @@ impl Launcher for LauncherServerImplementation {
         &self,
         request: Request<SendAttestationEvidenceRequest>,
     ) -> Result<Response<()>, tonic::Status> {
-        match self
-            .attestation_evidence
-            .set(request.into_inner().evidence.unwrap_or_default())
-        {
-            Err(_) => Err(tonic::Status::invalid_argument(
-                "attestation evidence has already been sent to the Launcher",
-            )),
-            Ok(()) => Ok(tonic::Response::new(())),
-        }
+        self.attestation_evidence_sender
+            .lock()
+            .map_err(|err| {
+                tonic::Status::internal(format!(
+                    "couldn't get exclusive access to attestation evidence sender: {err}"
+                ))
+            })?
+            .take()
+            .ok_or_else(|| {
+                tonic::Status::invalid_argument("app has already sent an attestation evidence")
+            })?
+            .send(request.into_inner().evidence.unwrap_or_default())
+            .map_err(|_err| tonic::Status::internal(format!("couldn't send attestation evidence")))?;
+        Ok(tonic::Response::new(()))
+        // match self
+        //     .attestation_evidence
+        //     .set(request.into_inner().evidence.unwrap_or_default())
+        // {
+        //     Err(_) => Err(tonic::Status::invalid_argument(
+        //         "attestation evidence has already been sent to the Launcher",
+        //     )),
+        //     Ok(()) => Ok(tonic::Response::new(())),
+        // }
     }
 
     async fn notify_app_ready(&self, _request: Request<()>) -> Result<Response<()>, tonic::Status> {
@@ -188,6 +184,7 @@ pub async fn new(
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: Option<std::path::PathBuf>,
+    attestation_evidence_sender: Sender<AttestationEvidence>,
     app_ready_notifier: Sender<()>,
     shutdown: Receiver<()>,
 ) -> Result<(), anyhow::Error> {
@@ -195,8 +192,7 @@ pub async fn new(
         system_image,
         container_bundle,
         application_config,
-        // Attestation Evidence will be sent by the Orchestrator once generated.
-        attestation_evidence: OnceLock::new(),
+        attestation_evidence_sender: Mutex::new(Some(attestation_evidence_sender)),
         app_ready_notifier: Mutex::new(Some(app_ready_notifier)),
     };
     Server::builder()
