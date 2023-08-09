@@ -31,8 +31,8 @@ mod proto {
 mod qemu;
 mod server;
 
-use crate::proto::oak::{
-    session::v1::{AttestationEvidence, AttestationEndorsement, AttestationBundle, BinaryAttestation},
+use crate::proto::oak::session::v1::{
+    AttestationBundle, AttestationEndorsement, AttestationEvidence, BinaryAttestation,
 };
 use anyhow::Context;
 use clap::Parser;
@@ -101,8 +101,8 @@ pub struct Launcher {
     server: JoinHandle<Result<(), anyhow::Error>>,
     host_proxy_port: u16,
     attestation_endorsement: AttestationEndorsement,
-    // Endorsed Attestation Evidence consists of Attestation Evidence (initialized by the Orchestrator)
-    // and Attestation Endorsement (initialized by the Launcher).
+    // Endorsed Attestation Evidence consists of Attestation Evidence (initialized by the
+    // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
     endorsed_attestation_evidence: Option<AttestationBundle>,
     // Reciever that is used to get the Attestation Evidence from the server implementation.
     attestation_evidence_receiver: Option<Receiver<AttestationEvidence>>,
@@ -118,7 +118,8 @@ impl Launcher {
         let listener = TcpListener::bind(sockaddr).await?;
         let port = listener.local_addr()?.port();
         log::info!("Launcher service listening on port {port}");
-        let (attestation_evidence_sender, attestation_evidence_receiver) = channel::<AttestationEvidence>();
+        let (attestation_evidence_sender, attestation_evidence_receiver) =
+            channel::<AttestationEvidence>();
         let (shutdown_sender, shutdown_receiver) = channel::<()>();
         let (app_notifier_sender, app_notifier_receiver) = channel::<()>();
         let server = tokio::spawn(server::new(

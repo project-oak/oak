@@ -148,7 +148,9 @@ impl Launcher for LauncherServerImplementation {
                 tonic::Status::invalid_argument("app has already sent an attestation evidence")
             })?
             .send(request.into_inner().evidence.unwrap_or_default())
-            .map_err(|_err| tonic::Status::internal(format!("couldn't send attestation evidence")))?;
+            .map_err(|_err| {
+                tonic::Status::internal(format!("couldn't send attestation evidence"))
+            })?;
         Ok(tonic::Response::new(()))
         // match self
         //     .attestation_evidence
