@@ -18,14 +18,13 @@ package com.google.oak.transport;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
+import io.grpc.Status;
+import io.grpc.stub.StreamObserver;
 import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import io.grpc.Status;
-import io.grpc.stub.StreamObserver;
 
 /**
  * A thread-safe StreamObserver that queues received messages, so that they can
