@@ -6,6 +6,6 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-bitflags = "*"
+bitflags = "1.3.2"
 strum = { version = "*", default-features = false, features = ["derive"] }
 x86_64 = "*"
