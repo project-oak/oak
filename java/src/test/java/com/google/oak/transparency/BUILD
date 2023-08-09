@@ -23,7 +23,7 @@ package(
 java_test(
     name = "rekor_log_entry_test",
     srcs = ["RekorLogEntryTest.java"],
-    data = ["//oak_attestation_verification/testdata:logentry.json"],
+    data = ["//oak_remote_attestation_verification/testdata:logentry.json"],
     test_class = "com.google.oak.transparency.RekorLogEntryTest",
     deps = [
         "//java/src/main/java/com/google/oak/transparency:rekor",
