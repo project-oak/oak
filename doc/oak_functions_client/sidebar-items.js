@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["rekor"],"struct":["OakFunctionsClient"]};
+window.SIDEBAR_ITEMS = {"struct":["OakFunctionsClient"]};
