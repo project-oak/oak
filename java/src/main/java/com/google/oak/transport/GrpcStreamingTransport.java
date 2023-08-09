@@ -16,11 +16,6 @@
 
 package com.google.oak.transport;
 
-import java.time.Duration;
-import java.util.function.Function;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import com.google.oak.session.v1.AttestationBundle;
 import com.google.oak.session.v1.GetPublicKeyRequest;
 import com.google.oak.session.v1.GetPublicKeyResponse;
@@ -30,8 +25,11 @@ import com.google.oak.session.v1.RequestWrapper;
 import com.google.oak.session.v1.ResponseWrapper;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
-
 import io.grpc.stub.StreamObserver;
+import java.time.Duration;
+import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   private static final Logger logger = Logger.getLogger(GrpcStreamingTransport.class.getName());
@@ -67,8 +65,8 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   @Override
   public Result<AttestationBundle, String> getEvidence() {
     RequestWrapper requestWrapper = RequestWrapper.newBuilder()
-        .setGetPublicKeyRequest(GetPublicKeyRequest.newBuilder())
-        .build();
+                                        .setGetPublicKeyRequest(GetPublicKeyRequest.newBuilder())
+                                        .build();
     logger.log(Level.INFO, "sending get public key request: " + requestWrapper);
     this.requestObserver.onNext(requestWrapper);
 
@@ -101,10 +99,11 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
    */
   @Override
   public Result<byte[], String> invoke(byte[] requestBytes) {
-    RequestWrapper requestWrapper = RequestWrapper.newBuilder()
-        .setInvokeRequest(
-            InvokeRequest.newBuilder().setEncryptedBody(ByteString.copyFrom(requestBytes)))
-        .build();
+    RequestWrapper requestWrapper =
+        RequestWrapper.newBuilder()
+            .setInvokeRequest(
+                InvokeRequest.newBuilder().setEncryptedBody(ByteString.copyFrom(requestBytes)))
+            .build();
     logger.log(Level.INFO, "sending invoke request: " + requestWrapper);
     this.requestObserver.onNext(requestWrapper);
 
