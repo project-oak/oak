@@ -13,7 +13,7 @@ rust-crypto = ["aes-gcm"]
 aes-gcm = { version = "*", optional = true, default-features = false, features = [
   "aes"
 ] }
-bitflags = "*"
+bitflags = "1.3.2"
 lock_api = "*"
 spinning_top = "*"
 static_assertions = "*"

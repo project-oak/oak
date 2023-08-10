@@ -6,6 +6,5 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-bitflags = "*"
 oak_sev_guest = { workspace = true }
 x86_64 = "*"
