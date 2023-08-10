@@ -94,16 +94,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "claims"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "serde",
- "serde_json",
- "time",
-]
-
-[[package]]
 name = "clap"
 version = "4.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -320,6 +310,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
+name = "oak_transparency_claims"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+ "time",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -377,11 +377,11 @@ name = "runner"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "claims",
  "clap",
  "env_logger",
  "hex",
  "log",
+ "oak_transparency_claims",
  "serde",
  "serde_json",
  "sha2",

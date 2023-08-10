@@ -14,11 +14,13 @@
 // limitations under the License.
 //
 
-//! This module contains structs for specifying claims about software artifacts.
+//! This module contains structs for specifying claims about software artifacts. The structs in
+//! this module must be kept in sync with the structs defined in
+//! <https://github.com/project-oak/transparent-release/blob/main/pkg/claims/claim.go>.
 
 extern crate alloc;
 
-use crate::intoto::{DigestSet, Predicate, Statement, STATEMENT_INTOTO_V01};
+use crate::intoto::{DigestSet, Statement, STATEMENT_INTOTO_V01};
 use alloc::{string::String, vec::Vec};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
@@ -32,9 +34,6 @@ pub const CLAIM_V1: &str = "https://github.com/project-oak/transparent-release/c
 pub const ENDORSEMENT_V2: &str =
     "https://github.com/project-oak/transparent-release/endorsement/v2";
 
-/// Trait representing a claim specification.
-pub trait ClaimSpec {}
-
 pub enum InvalidClaimData {
     StatementType,
     PredicateType,
@@ -44,9 +43,9 @@ pub enum InvalidClaimData {
 
 /// Detailed content of a claim.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct ClaimPredicate<S: ClaimSpec> {
+pub struct ClaimPredicate<S> {
     /// URI indicating the type of the claim. It determines the meaning of
-    /// `ClaimSpec` and `Evidence`.
+    /// `claimSpec` and `evidence`.
     #[serde(rename = "claimType")]
     pub claim_type: String,
     /// A detailed description of the claim, as an optional arbitrary object.
@@ -66,8 +65,6 @@ pub struct ClaimPredicate<S: ClaimSpec> {
     #[serde(rename = "evidence")]
     pub evidence: Vec<ClaimEvidence>,
 }
-
-impl<T: ClaimSpec> Predicate for ClaimPredicate<T> {}
 
 /// Validity time range of an issued claim.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
@@ -98,8 +95,6 @@ pub struct ClaimEvidence {
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct EndorsementStatement {}
 
-impl ClaimSpec for EndorsementStatement {}
-
 /// Convert the given byte array into an endorsement statement, or return an error.
 pub fn parse_endorsement_statement(
     bytes: &[u8],
@@ -110,9 +105,7 @@ pub fn parse_endorsement_statement(
 /// Check that the given statement is a valid claim:
 /// - has valid Statement and Predicate types, and
 /// - has a valid validity duration.
-pub fn validate_claim<T: ClaimSpec>(
-    claim: &Statement<ClaimPredicate<T>>,
-) -> Result<(), InvalidClaimData> {
+pub fn validate_claim<T>(claim: &Statement<ClaimPredicate<T>>) -> Result<(), InvalidClaimData> {
     if claim._type != STATEMENT_INTOTO_V01 {
         return Err(InvalidClaimData::StatementType);
     }

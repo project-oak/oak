@@ -14,7 +14,9 @@
 // limitations under the License.
 //
 
-//! This module contains structs for specifying in-toto statements.
+//! This module contains structs for specifying in-toto statements. The structs in
+//! this module must be kept in sync with the structs defined in
+//! <https://github.com/project-oak/transparent-release/blob/main/pkg/intoto/intoto.go>.
 
 extern crate alloc;
 
@@ -24,9 +26,6 @@ use serde::{Deserialize, Serialize};
 /// URI representing in-toto v01 statements. This is constant for all predicate
 /// types.
 pub const STATEMENT_INTOTO_V01: &str = "https://in-toto.io/Statement/v0.1";
-
-/// Trait representing a predicate about a software artifact.
-pub trait Predicate {}
 
 // A map from algorithm name to lowercase hex-encoded value.
 pub type DigestSet = BTreeMap<String, String>;
@@ -41,7 +40,7 @@ pub struct Subject {
 /// This struct represents a generic statement that binds a predicate to a
 /// particular subject.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct Statement<P: Predicate> {
+pub struct Statement<P> {
     pub _type: String,
     #[serde(rename = "predicateType")]
     pub predicate_type: String,

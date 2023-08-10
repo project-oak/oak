@@ -18,11 +18,11 @@ extern crate alloc;
 
 use alloc::{collections::BTreeMap, string::String};
 use anyhow::Result;
-use claims::{
-    claims::{ClaimPredicate, ClaimSpec},
-    intoto::{Statement, Subject},
-};
 use log::warn;
+use oak_transparency_claims::{
+    claims::{ClaimPredicate, CLAIM_V1},
+    intoto::{Statement, Subject, STATEMENT_INTOTO_V01},
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{self, Value};
 use sha2::{Digest, Sha256};
@@ -42,8 +42,6 @@ pub struct ModelEvaluationSpec {
     script: Subject,
     result: Value,
 }
-
-impl ClaimSpec for ModelEvaluationSpec {}
 
 /// Generates a claim in the form of an intoto-statement about the model, identified by the given
 /// name and digest, and the given evaluation result.
@@ -70,8 +68,8 @@ pub fn generate_claim(
     };
 
     Ok(Statement {
-        _type: String::from(claims::intoto::STATEMENT_INTOTO_V01),
-        predicate_type: String::from(claims::claims::CLAIM_V1),
+        _type: String::from(STATEMENT_INTOTO_V01),
+        predicate_type: String::from(CLAIM_V1),
         subject: vec![Subject {
             name: String::from(model_name),
             digest: BTreeMap::from([(String::from("sha256"), String::from(model_digest))]),
@@ -123,7 +121,7 @@ pub fn get_sha256_hex(input: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use claims::claims::validate_claim;
+    use oak_transparency_claims::claims::validate_claim;
 
     #[test]
     fn generate_claim_is_valid_json() {
