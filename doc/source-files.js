@@ -46,6 +46,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_stage0":["",[],["acpi.rs","alloc.rs","cmos.rs","fw_cfg.rs","initramfs.rs","kernel.rs","lib.rs","logging.rs","paging.rs","sev.rs","zero_page.rs"]],\
 "oak_tdx_guest":["",[],["lib.rs","tdcall.rs","vmcall.rs"]],\
 "oak_tensorflow_service":["",[],["lib.rs","tflite.rs"]],\
+"oak_transparency_claims":["",[],["claims.rs","intoto.rs","lib.rs"]],\
 "oak_virtio":["",[["console",[],["mod.rs"]],["queue",[],["mod.rs","virtq.rs"]],["vsock",[["socket",[],["mod.rs"]]],["mod.rs","packet.rs"]]],["lib.rs"]],\
 "quirk_echo_launcher":["",[],["lib.rs"]],\
 "quirk_echo_service":["",[],["lib.rs"]],\
