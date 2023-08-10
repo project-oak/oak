@@ -16,7 +16,7 @@ jobs:
   generate_provenance:
     if: |
       github.event_name == 'workflow_dispatch' ||
-      contains(github.event.pull_request.labels.*.name, 'provenance:force-run')
+      contains(github.event.pull_request.labels.*.name, 'ml-transparency:force-run')
     permissions:
       actions: read
       id-token: write
@@ -24,7 +24,7 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/builder_container-based_slsa3.yml@v1.7.0
     with:
       builder-image: 'europe-west2-docker.pkg.dev/oak-ci/mnist-eval/mnist-eval'
-      builder-digest: 'sha256:ece051dc52a67ac51ba653b409d32de00979fc952f123813b759cba53d4d1f43'
+      builder-digest: 'sha256:67d6e00569a6d6bdfa1eb63021b089e2947611ff17ea6694f0e15568bb9cd598'
       config-path: 'buildconfigs/oak_ml_transparency_eval.toml'
       provenance-name: 'mnist_eval.intoto'
       compile-builder: true

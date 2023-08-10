@@ -17,7 +17,7 @@ WORKDIR /project
 COPY . /project
 
 # Download the runner
-RUN curl --output runner-musl https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:c058eaa96a7c23175e161318f076d5673450d2fcad2e63752c6829b76d538b0d
+RUN curl --output runner-musl https://ent-server-62sa4xcfia-ew.a.run.app/raw/sha256:aa713743ee042da9c481e18d6c031753685c7939e847c27c578129768d1c4e39
 RUN chmod +x runner-musl
 
 # Download model
