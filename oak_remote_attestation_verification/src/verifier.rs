@@ -16,8 +16,11 @@
 
 use alloc::vec::Vec;
 use oak_remote_attestation::proto::oak::session::v1::{
-    AttestationEndorsement, AttestationEvidence,
+    AttestationEndorsement, AttestationEvidence, BinaryAttestation,
 };
+
+use crate::rekor::verify_rekor_log_entry;
+use oak_transparency_claims::claims::{parse_endorsement_statement, validate_endorsement};
 
 /// Reference values used by the verifier to appraise the attestation evidence.
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
@@ -63,4 +66,47 @@ impl AttestationVerifier for InsecureAttestationVerifier {
             ))
         }
     }
+}
+
+// Verifies the given BinaryAttestation object using the given Rekor and endorser public keys, and
+// reference value.
+pub fn verify_binary_attestation(
+    binary_attestation: &BinaryAttestation,
+    reference_value: &ReferenceValue,
+    pem_encoded_rekor_public_key_bytes: &[u8],
+    pem_encoded_endorser_key_bytes: &[u8],
+) -> anyhow::Result<()> {
+    verify_rekor_log_entry(
+        &binary_attestation.rekor_log_entry,
+        pem_encoded_rekor_public_key_bytes,
+        pem_encoded_endorser_key_bytes,
+        &binary_attestation.endorsement_statement,
+    )?;
+    verify_endorsement_statement(&binary_attestation.endorsement_statement, reference_value)
+}
+
+// Parses the given bytes into an endorsement statement and verifies it against the given Reference
+// values.
+pub fn verify_endorsement_statement(
+    endorsement_bytes: &[u8],
+    reference_value: &ReferenceValue,
+) -> anyhow::Result<()> {
+    let claim = parse_endorsement_statement(endorsement_bytes)?;
+    if let Err(err) = validate_endorsement(&claim) {
+        anyhow::bail!("validating endorsement: {err:?}");
+    }
+    let binary_digest = core::str::from_utf8(&reference_value.binary_hash)?;
+    if claim.subject.len() != 1 {
+        anyhow::bail!(
+            "expected 1 subject in the endorsement, found {}",
+            claim.subject.len()
+        );
+    }
+    if claim.subject[0].digest["sha256"] != binary_digest {
+        anyhow::bail!(
+            "unexpected binary SHA256 digest: expected {binary_digest}, got {}",
+            claim.subject[0].digest["sha256"]
+        );
+    }
+    Ok(())
 }

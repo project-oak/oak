@@ -171,17 +171,17 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
 /// The verification involves the following:
 ///
 /// 1. verifying the signature in `signedEntryTimestamp`, using Rekor's public key,
-/// 1. verifying the signature in `body.RekordObj.signature`, using Oak's public key,
+/// 1. verifying the signature in `body.RekordObj.signature`, using the endorser's public key,
 /// 1. verifying that the content of the body matches the input `endorsement_bytes`.
 ///
 /// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
 pub fn verify_rekor_log_entry(
     log_entry_bytes: &[u8],
-    pem_encoded_public_key_bytes: &[u8],
-    oak_public_key_bytes: &[u8],
+    pem_encoded_rekor_public_key_bytes: &[u8],
+    pem_encoded_endorser_key_bytes: &[u8],
     endorsement_bytes: &[u8],
 ) -> anyhow::Result<()> {
-    verify_rekor_signature(log_entry_bytes, pem_encoded_public_key_bytes)?;
+    verify_rekor_signature(log_entry_bytes, pem_encoded_rekor_public_key_bytes)?;
 
     let parsed: BTreeMap<String, LogEntry> = serde_json::from_slice(log_entry_bytes)
         .context("couldn't parse bytes into a LogEntry object")?;
@@ -195,7 +195,7 @@ pub fn verify_rekor_log_entry(
         serde_json::from_slice(&body_bytes).context("couldn't parse bytes into a Body object")?;
 
     // Verify the body in the Rekor LogEntry
-    verify_rekor_body(&body, endorsement_bytes, oak_public_key_bytes)?;
+    verify_rekor_body(&body, endorsement_bytes, pem_encoded_endorser_key_bytes)?;
 
     Ok(())
 }
@@ -209,14 +209,14 @@ pub fn verify_rekor_log_entry(
 /// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
 pub fn verify_rekor_signature(
     log_entry_bytes: &[u8],
-    pem_encoded_public_key_bytes: &[u8],
+    pem_encoded_rekor_public_key_bytes: &[u8],
 ) -> anyhow::Result<()> {
     let signature_bundle = rekor_signature_bundle(log_entry_bytes)?;
 
     verify_signature(
         &signature_bundle.base64_signature,
         &signature_bundle.canonicalized,
-        pem_encoded_public_key_bytes,
+        pem_encoded_rekor_public_key_bytes,
     )
     .context("couldn't verify signedEntryTimestamp of the Rekor LogEntry")
 }
