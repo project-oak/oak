@@ -17,12 +17,15 @@
 //! This module provides structs for representing a Rekor LogEntry, as well as logic for parsing and
 //! verifying signatures in a Rekor LogEntry.
 
+extern crate alloc;
+
+use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
+use core::{cmp::Ordering, str::FromStr};
 use ecdsa::{signature::Verifier, Signature};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{cmp::Ordering, str::FromStr};
 
 /// Struct representing a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.>
@@ -182,9 +185,8 @@ pub fn verify_rekor_log_entry(
 ) -> anyhow::Result<()> {
     verify_rekor_signature(log_entry_bytes, pem_encoded_public_key_bytes)?;
 
-    let parsed: std::collections::HashMap<String, LogEntry> =
-        serde_json::from_slice(log_entry_bytes)
-            .context("couldn't parse bytes into a LogEntry object")?;
+    let parsed: BTreeMap<String, LogEntry> = serde_json::from_slice(log_entry_bytes)
+        .context("couldn't parse bytes into a LogEntry object")?;
     let entry = parsed.values().next().context("no entry in the map")?;
 
     // Parse base64-encoded entry.body into an instance of Body.
@@ -302,15 +304,14 @@ pub fn verify_signature(
 pub fn unmarshal_pem_to_p256_public_key(
     pem_bytes: &[u8],
 ) -> anyhow::Result<p256::ecdsa::VerifyingKey> {
-    let pem_str = std::str::from_utf8(pem_bytes).context("couldn't convert bytes to string")?;
+    let pem_str = core::str::from_utf8(pem_bytes).context("couldn't convert bytes to string")?;
     p256::ecdsa::VerifyingKey::from_str(pem_str)
         .context("couldn't parse pem as a p256::ecdsa::VerifyingKey")
 }
 
 fn rekor_signature_bundle(log_entry_bytes: &[u8]) -> anyhow::Result<RekorSignatureBundle> {
-    let parsed: std::collections::HashMap<String, LogEntry> =
-        serde_json::from_slice(log_entry_bytes)
-            .context("couldn't parse bytes into a LogEntry object")?;
+    let parsed: BTreeMap<String, LogEntry> = serde_json::from_slice(log_entry_bytes)
+        .context("couldn't parse bytes into a LogEntry object")?;
     let entry = parsed.values().next().context("no entry in the map")?;
 
     RekorSignatureBundle::try_from(entry)
