@@ -17,8 +17,6 @@
 //! This module provides structs for representing a Rekor LogEntry, as well as logic for parsing and
 //! verifying signatures in a Rekor LogEntry.
 
-extern crate alloc;
-
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};

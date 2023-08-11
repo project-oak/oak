@@ -2143,6 +2143,8 @@ dependencies = [
  "base64 0.21.0",
  "ecdsa",
  "hex",
+ "oak_crypto",
+ "oak_remote_attestation",
  "p256",
  "serde",
  "serde_jcs",

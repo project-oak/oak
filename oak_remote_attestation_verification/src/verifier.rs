@@ -14,8 +14,10 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::session::v1::{AttestationEndorsement, AttestationEvidence};
 use alloc::vec::Vec;
+use oak_remote_attestation::proto::oak::session::v1::{
+    AttestationEndorsement, AttestationEvidence,
+};
 
 /// Reference values used by the verifier to appraise the attestation evidence.
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>

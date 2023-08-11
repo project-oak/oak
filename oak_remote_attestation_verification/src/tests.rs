@@ -17,6 +17,24 @@
 use crate::rekor::*;
 use std::fs;
 
+use alloc::{sync::Arc, vec};
+use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_remote_attestation::{
+    attester::{Attester, EmptyAttestationReportGenerator},
+    proto::oak::session::v1::AttestationEndorsement,
+};
+
+use crate::verifier::{AttestationVerifier, InsecureAttestationVerifier, ReferenceValue};
+
+const TEST_ATTESTATION_ENDORSEMENT: AttestationEndorsement = AttestationEndorsement {
+    tee_certificates: vec![],
+    binary_attestation: None,
+    application_data: None,
+};
+const TEST_REFERENCE_VALUE: ReferenceValue = ReferenceValue {
+    binary_hash: vec![],
+};
+
 #[test]
 fn test_verify_rekor_log_entry() {
     // Example endorsement file generated with the following provenance as the evidence:
@@ -78,4 +96,24 @@ fn test_verify_rekor_signature() {
     let result = verify_rekor_signature(&log_entry_bytes, &pem_bytes);
 
     assert!(result.is_ok());
+}
+
+#[test]
+fn test_empty_attestation() {
+    let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
+    let encryption_key_provider = Arc::new(EncryptionKeyProvider::new());
+    let attester = Arc::new(Attester::new(
+        attestation_report_generator,
+        encryption_key_provider,
+    ));
+    let attestation_evidence = attester
+        .generate_attestation_evidence()
+        .expect("couldn't generate attestation evidence");
+
+    let verify_result = InsecureAttestationVerifier::verify(
+        &attestation_evidence,
+        &TEST_ATTESTATION_ENDORSEMENT,
+        &TEST_REFERENCE_VALUE,
+    );
+    assert!(verify_result.is_ok());
 }
