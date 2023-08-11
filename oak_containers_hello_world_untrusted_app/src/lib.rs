@@ -20,11 +20,13 @@ mod proto {
                 tonic::include_proto!("oak.containers.example");
             }
         }
+        pub use oak_crypto::proto::oak::crypto;
     }
 }
 
 mod app_client;
 
+use crate::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
 use oak_containers_launcher::{proto::oak::session::v1::AttestationBundle, Launcher};
 
 pub struct UntrustedApp {
@@ -51,8 +53,11 @@ impl UntrustedApp {
         self.launcher.get_endorsed_evidence().await
     }
 
-    pub async fn hello(&mut self, name: &str) -> Result<String, Box<dyn std::error::Error>> {
-        self.app_client.hello(name).await
+    pub async fn hello(
+        &mut self,
+        encrypted_request: EncryptedRequest,
+    ) -> anyhow::Result<EncryptedResponse> {
+        self.app_client.hello(encrypted_request).await
     }
 
     pub async fn kill(&mut self) {

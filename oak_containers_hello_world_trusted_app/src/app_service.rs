@@ -21,18 +21,22 @@ use crate::{
     },
 };
 use anyhow::anyhow;
+use oak_crypto::encryptor::ServerEncryptor;
+use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 
+const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
+
 struct TrustedApplicationImplementation {
-    _orchestrator_client: OrchestratorClient,
+    orchestrator_client: OrchestratorClient,
     application_config: Vec<u8>,
 }
 
 impl TrustedApplicationImplementation {
     pub fn new(orchestrator_client: OrchestratorClient, application_config: Vec<u8>) -> Self {
         Self {
-            _orchestrator_client: orchestrator_client,
+            orchestrator_client,
             application_config,
         }
     }
@@ -44,10 +48,32 @@ impl TrustedApplication for TrustedApplicationImplementation {
         &self,
         request: tonic::Request<HelloRequest>,
     ) -> Result<tonic::Response<HelloResponse>, tonic::Status> {
-        let name = request.into_inner().name;
+        let mut server_encryptor = ServerEncryptor::new(Arc::new(self.orchestrator_client.clone()));
+
+        let encrypted_request = request
+            .into_inner()
+            .encrypted_request
+            .ok_or(tonic::Status::internal("encrypted request wasn't provided"))?;
+
+        // Associated data is ignored.
+        let (name_bytes, _) = server_encryptor
+            .decrypt(&encrypted_request)
+            .map_err(|error| {
+                tonic::Status::internal(format!("couldn't decrypt request: {:?}", error))
+            })?;
+
+        let name = String::from_utf8(name_bytes)
+            .map_err(|error| tonic::Status::internal(format!("name is not UTF-8: {:?}", error)))?;
         let greeting: String = format!("Hello from the trusted side, {}! Btw, the Trusted App has a config with a length of {} bytes.", name, self.application_config.len());
-        let response = tonic::Response::new(HelloResponse { greeting });
-        Ok(response)
+        let response = server_encryptor
+            .encrypt(greeting.as_bytes(), EMPTY_ASSOCIATED_DATA)
+            .map_err(|error| {
+                tonic::Status::internal(format!("couldn't encrypt response: {:?}", error))
+            })?;
+
+        Ok(tonic::Response::new(HelloResponse {
+            encrypted_response: Some(response),
+        }))
     }
 }
 
