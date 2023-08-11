@@ -13,9 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+mod proto {
+    pub mod oak {
+        pub mod containers {
+            pub mod example {
+                tonic::include_proto!("oak.containers.example");
+            }
+        }
+    }
+}
+
 mod app_client;
 
-use oak_containers_launcher::Launcher;
+use oak_containers_launcher::{proto::oak::session::v1::AttestationBundle, Launcher};
 
 pub struct UntrustedApp {
     launcher: Launcher,
@@ -35,6 +45,10 @@ impl UntrustedApp {
             launcher,
             app_client,
         })
+    }
+
+    pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<AttestationBundle> {
+        self.launcher.get_endorsed_evidence().await
     }
 
     pub async fn hello(&mut self, name: &str) -> Result<String, Box<dyn std::error::Error>> {

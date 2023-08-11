@@ -13,9 +13,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub mod proto {
+    pub mod oak {
+        pub mod containers {
+            #![allow(clippy::return_self_not_must_use)]
+            tonic::include_proto!("oak.containers");
+        }
+        pub mod session {
+            pub mod v1 {
+                #![allow(clippy::return_self_not_must_use)]
+                tonic::include_proto!("oak.session.v1");
+            }
+        }
+    }
+}
+
 mod qemu;
 mod server;
 
+use crate::proto::oak::session::v1::{
+    AttestationBundle, AttestationEndorsement, AttestationEvidence, BinaryAttestation,
+};
+use anyhow::Context;
 use clap::Parser;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::{
@@ -32,6 +51,8 @@ const VM_LOCAL_PORT: u16 = 8080;
 
 /// The local address that will be forwarded by the VMM to the guest's IP adress.
 const PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
+
+const VM_START_TIMEOUT: u64 = 300;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -81,6 +102,12 @@ pub struct Launcher {
     vmm: qemu::Qemu,
     server: JoinHandle<Result<(), anyhow::Error>>,
     host_proxy_port: u16,
+    attestation_endorsement: AttestationEndorsement,
+    // Endorsed Attestation Evidence consists of Attestation Evidence (initialized by the
+    // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
+    endorsed_attestation_evidence: Option<AttestationBundle>,
+    // Receiver that is used to get the Attestation Evidence from the server implementation.
+    attestation_evidence_receiver: Option<Receiver<AttestationEvidence>>,
     app_ready_notifier: Option<Receiver<()>>,
     trusted_app_address: Option<SocketAddr>,
     shutdown: Option<Sender<()>>,
@@ -93,6 +120,8 @@ impl Launcher {
         let listener = TcpListener::bind(sockaddr).await?;
         let port = listener.local_addr()?.port();
         log::info!("Launcher service listening on port {port}");
+        let (attestation_evidence_sender, attestation_evidence_receiver) =
+            channel::<AttestationEvidence>();
         let (shutdown_sender, shutdown_receiver) = channel::<()>();
         let (app_notifier_sender, app_notifier_receiver) = channel::<()>();
         let server = tokio::spawn(server::new(
@@ -100,6 +129,7 @@ impl Launcher {
             args.system_image,
             args.container_bundle,
             args.application_config,
+            attestation_evidence_sender,
             app_notifier_sender,
             shutdown_receiver,
         ));
@@ -115,6 +145,20 @@ impl Launcher {
             vmm,
             server,
             host_proxy_port,
+            // TODO(#3640): Provide hardware manufacturer's certificates.
+            attestation_endorsement: AttestationEndorsement {
+                tee_certificates: vec![],
+                binary_attestation: Some(BinaryAttestation {
+                    endorsement_statement: vec![],
+                    rekor_log_entry: vec![],
+                }),
+                application_data: None,
+            },
+            // Attestation Evidence will be sent by the Orchestrator once generated.
+            // And after the Evidence is received it will be endorsed by the Launcher (it will
+            // provide corresponding hardware manufacturer's certificates).
+            endorsed_attestation_evidence: None,
+            attestation_evidence_receiver: Some(attestation_evidence_receiver),
             app_ready_notifier: Some(app_notifier_receiver),
             trusted_app_address: None,
             shutdown: Some(shutdown_sender),
@@ -134,7 +178,7 @@ impl Launcher {
         if let Some(receiver) = self.app_ready_notifier.take() {
             // Set a timeout of 5 minutes, since we don't want to wait forever if the VM didn't
             // start properly.
-            let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(300));
+            let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(VM_START_TIMEOUT));
 
             tokio::select! {
                 result = receiver => {
@@ -151,6 +195,32 @@ impl Launcher {
         }
         self.trusted_app_address
             .ok_or_else(|| anyhow::anyhow!("trusted app address not set"))
+    }
+
+    /// Gets the endorsed attestation evidence that the untrusted application can send to remote
+    /// clients, which will verify it before connecting.
+    pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<AttestationBundle> {
+        // If we haven't received an attestation evidence, wait for it.
+        if let Some(receiver) = self.attestation_evidence_receiver.take() {
+            // Set a timeout of 5 minutes, since we don't want to wait forever if the VM didn't
+            // start properly.
+            let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(VM_START_TIMEOUT));
+
+            tokio::select! {
+                result = receiver => {
+                    let evidence = result.context("couldn't get attestation evidence")?;
+                    let endorsed_attestation_evidence = AttestationBundle {
+                        attestation_evidence: Some(evidence),
+                        attestation_endorsement: Some(self.attestation_endorsement.clone()),
+                    };
+                    self.endorsed_attestation_evidence.replace(endorsed_attestation_evidence);
+                }
+                _ = sleep => {}
+            }
+        }
+        self.endorsed_attestation_evidence
+            .clone()
+            .ok_or_else(|| anyhow::anyhow!("endorsed evidence is not set"))
     }
 
     pub async fn wait(&mut self) -> Result<(), anyhow::Error> {
