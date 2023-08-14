@@ -15,6 +15,7 @@
 
 use anyhow::anyhow;
 use clap::Parser;
+use oak_containers_orchestrator::{IPC_SOCKET_FILE_NAME, UTIL_DIR};
 use oak_containers_orchestrator_client::LauncherClient;
 use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_remote_attestation::attester::{Attester, EmptyAttestationReportGenerator};
@@ -28,7 +29,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    logging::setup()?;
+    oak_containers_orchestrator::logging::setup()?;
 
     let args = Args::parse();
 
@@ -60,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .map_err(|error| anyhow!("couldn't send attestation evidence: {:?}", error))?;
 
-    let util_dir_absolute_path = std::path::Path::new("/").join(crate::UTIL_DIR);
+    let util_dir_absolute_path = std::path::Path::new("/").join(UTIL_DIR);
     tokio::fs::create_dir_all(&util_dir_absolute_path).await?;
     let ipc_path = {
         let mut path = util_dir_absolute_path;
@@ -69,14 +70,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     tokio::try_join!(
-        crate::ipc_server::create(
+        oak_containers_orchestrator::ipc_server::create(
             ipc_path,
-            application_config,
-            attester,
             encryption_key_provider,
+            attester,
+            application_config,
             launcher_client
         ),
-        container_runtime::run(&container_bundle)
+        oak_containers_orchestrator::container_runtime::run(&container_bundle)
     )?;
 
     Ok(())

@@ -75,6 +75,10 @@ impl Orchestrator for ServiceImplementation {
             .generate_recipient_context(&request.into_inner().serialized_encapsulated_public_key)
             .map_err(|err| {
                 tonic::Status::internal(format!("couldn't generate crypto context: {err}"))
+            })?
+            .serialize()
+            .map_err(|err| {
+                tonic::Status::internal(format!("couldn't serialize crypto context: {err}"))
             })?;
         Ok(tonic::Response::new(GetCryptoContextResponse {
             context: Some(context),
