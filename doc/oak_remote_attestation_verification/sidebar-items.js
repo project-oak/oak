@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["rekor"]};
+window.SIDEBAR_ITEMS = {"mod":["rekor","verifier"]};

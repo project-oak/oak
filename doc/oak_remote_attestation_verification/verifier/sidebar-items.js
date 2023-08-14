@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["verify_binary_attestation","verify_endorsement_statement"],"struct":["InsecureAttestationVerifier","ReferenceValue"],"trait":["AttestationVerifier"]};

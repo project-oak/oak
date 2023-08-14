@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["attester","handler","proto","verifier"]};
+window.SIDEBAR_ITEMS = {"mod":["attester","handler","proto"]};
