@@ -74,12 +74,12 @@ pub fn verify_binary_attestation(
     binary_attestation: &BinaryAttestation,
     reference_value: &ReferenceValue,
     pem_encoded_rekor_public_key_bytes: &[u8],
-    pem_encoded_endorser_key_bytes: &[u8],
+    pem_encoded_endorser_public_key_bytes: &[u8],
 ) -> anyhow::Result<()> {
     verify_rekor_log_entry(
         &binary_attestation.rekor_log_entry,
         pem_encoded_rekor_public_key_bytes,
-        pem_encoded_endorser_key_bytes,
+        pem_encoded_endorser_public_key_bytes,
         &binary_attestation.endorsement_statement,
     )?;
     verify_endorsement_statement(&binary_attestation.endorsement_statement, reference_value)

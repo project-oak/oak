@@ -41,8 +41,8 @@ const BINARY_HASH: &str = "39051983bbb600bbfb91bd22ee4c976420f8f0c6a895fd083dcb0
 struct TestData {
     endorsement_bytes: Vec<u8>,
     log_entry_bytes: Vec<u8>,
-    rekor_key_pem_bytes: Vec<u8>,
-    endorser_key_pem_bytes: Vec<u8>,
+    rekor_public_key_pem_bytes: Vec<u8>,
+    endorser_public_key_pem_bytes: Vec<u8>,
 }
 
 fn load_testdata() -> TestData {
@@ -69,16 +69,16 @@ fn load_testdata() -> TestData {
 
     let endorsement_bytes = fs::read(endorsement_path).expect("couldn't read endorsement file");
     let log_entry_bytes = fs::read(log_entry_path).expect("couldn't read log entry file");
-    let rekor_key_pem_bytes =
+    let rekor_public_key_pem_bytes =
         fs::read(rekor_pubkey_path).expect("couldn't read Rekor's public key file");
-    let endorser_key_pem_bytes =
+    let endorser_public_key_pem_bytes =
         fs::read(pubkey_path).expect("couldn't read product team's public key file");
 
     TestData {
         endorsement_bytes,
         log_entry_bytes,
-        rekor_key_pem_bytes,
-        endorser_key_pem_bytes,
+        rekor_public_key_pem_bytes,
+        endorser_public_key_pem_bytes,
     }
 }
 
@@ -88,8 +88,8 @@ fn test_verify_rekor_log_entry() {
 
     let result = verify_rekor_log_entry(
         &testdata.log_entry_bytes,
-        &testdata.rekor_key_pem_bytes,
-        &testdata.endorser_key_pem_bytes,
+        &testdata.rekor_public_key_pem_bytes,
+        &testdata.endorser_public_key_pem_bytes,
         &testdata.endorsement_bytes,
     );
     assert!(result.is_ok(), "{:?}", result);
@@ -151,8 +151,8 @@ fn test_verify_binary_attestation() {
     let result = verify_binary_attestation(
         &binary_attestation,
         &reference_value,
-        &testdata.rekor_key_pem_bytes,
-        &testdata.endorser_key_pem_bytes,
+        &testdata.rekor_public_key_pem_bytes,
+        &testdata.endorser_public_key_pem_bytes,
     );
     assert!(result.is_ok(), "{:?}", result);
 }

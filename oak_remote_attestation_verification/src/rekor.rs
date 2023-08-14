@@ -178,7 +178,7 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
 pub fn verify_rekor_log_entry(
     log_entry_bytes: &[u8],
     pem_encoded_rekor_public_key_bytes: &[u8],
-    pem_encoded_endorser_key_bytes: &[u8],
+    pem_encoded_endorser_public_key_bytes: &[u8],
     endorsement_bytes: &[u8],
 ) -> anyhow::Result<()> {
     verify_rekor_signature(log_entry_bytes, pem_encoded_rekor_public_key_bytes)?;
@@ -195,7 +195,11 @@ pub fn verify_rekor_log_entry(
         serde_json::from_slice(&body_bytes).context("couldn't parse bytes into a Body object")?;
 
     // Verify the body in the Rekor LogEntry
-    verify_rekor_body(&body, endorsement_bytes, pem_encoded_endorser_key_bytes)?;
+    verify_rekor_body(
+        &body,
+        endorsement_bytes,
+        pem_encoded_endorser_public_key_bytes,
+    )?;
 
     Ok(())
 }
