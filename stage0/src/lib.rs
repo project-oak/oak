@@ -29,6 +29,12 @@ use x86_64::{
     },
     PhysAddr, VirtAddr,
 };
+#[cfg(feature = "ecdsa")]
+use p384::ecdsa::{signature::Signer, Signature, SigningKey};
+#[cfg(feature = "ecdsa")]
+use p384::ecdsa::{signature::Verifier, VerifyingKey};
+#[cfg(feature = "ecdsa")]
+use rand_core::OsRng;
 
 mod acpi;
 mod alloc;
@@ -87,13 +93,28 @@ pub unsafe fn jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -> ! {
     );
 }
 
+#[cfg(feature = "ecdsa")]
+pub fn generate_and_sign_stage1_key() -> ! {
+    // Generate stage 0 CA keys
+    let stage0_ca_key = SigningKey::random(&mut OsRng); // Serialize with `::to_bytes()`
+    let stage0_ca_verifying_key = VerifyingKey::from(&stage0_ca_key);
+    // Make a call to generate_attestation_report(data) function and pass 'stage0_ca_key'
+    // as an argument so that the resulting report will sign the public key.
+
+    // Generate stage 1 CA keys.
+    let stage1_ca_key = SigningKey::random(&mut OsRng); // Serialize with `::to_bytes()`
+    let stage1_ca_verifying_key = VerifyingKey::from(&stage1_ca_key);
+    let signed_stage1_ca_verifying_key: Signature = stage0_ca_key.sign(stage1_ca_verifying_key);
+    return signed_stage1_ca_verifying_key::to_bytes();
+}
+
 /// Entry point for the Rust code in the stage0 BIOS.
 ///
 /// # Arguments
 ///
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page tables.
 pub fn rust64_start(encrypted: u64) -> ! {
-    let (es, snp) = if encrypted > 0 {
+    let (es, snp) = if encrypted > 0 { 
         // We're under some form of memory encryption, thus it's safe to access the SEV_STATUS MSR.
         let status =
             oak_sev_guest::msr::get_sev_status().unwrap_or(oak_sev_guest::msr::SevStatus::empty());
@@ -254,6 +275,9 @@ pub fn rust64_start(encrypted: u64) -> ! {
     {
         zero_page.set_initial_ram_disk(ram_disk);
     }
+
+    #[cfg(feature = "ecdsa")]
+    generate_and_sign_stage1_key();
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 
