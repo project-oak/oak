@@ -61,6 +61,9 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -76,27 +79,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">mod </span>proto {
-    <span class="kw">pub mod </span>oak {
-        <span class="kw">pub mod </span>containers {
-            <span class="kw">pub mod </span>example {
-                <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.containers.example&quot;</span>);
-            }
-        }
-    }
-}
-
-<span class="kw">use </span><span class="self">self</span>::proto::oak::containers::example::{
-    trusted_application_server::{TrustedApplication, TrustedApplicationServer},
-    HelloRequest, HelloResponse,
+</span><span class="kw">use crate</span>::{
+    orchestrator_client::OrchestratorClient,
+    proto::oak::containers::example::{
+        trusted_application_server::{TrustedApplication, TrustedApplicationServer},
+        HelloRequest, HelloResponse,
+    },
 };
 <span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>tokio::net::TcpListener;
 <span class="kw">use </span>tokio_stream::wrappers::TcpListenerStream;
 
-<span class="attr">#[derive(Default)]
-</span><span class="kw">struct </span>TrustedApplicationImplementation {
+<span class="kw">struct </span>TrustedApplicationImplementation {
+    _orchestrator_client: OrchestratorClient,
     application_config: Vec&lt;u8&gt;,
+}
+
+<span class="kw">impl </span>TrustedApplicationImplementation {
+    <span class="kw">pub fn </span>new(orchestrator_client: OrchestratorClient, application_config: Vec&lt;u8&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            _orchestrator_client: orchestrator_client,
+            application_config,
+        }
+    }
 }
 
 <span class="attr">#[tonic::async_trait]
@@ -114,11 +119,12 @@
 
 <span class="kw">pub async fn </span>create(
     listener: TcpListener,
+    orchestrator_client: OrchestratorClient,
     application_config: Vec&lt;u8&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
     tonic::transport::Server::builder()
         .add_service(TrustedApplicationServer::new(
-            TrustedApplicationImplementation { application_config },
+            TrustedApplicationImplementation::new(orchestrator_client, application_config),
         ))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .<span class="kw">await

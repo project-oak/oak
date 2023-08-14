@@ -80,6 +80,12 @@
 <a href="#80" id="80">80</a>
 <a href="#81" id="81">81</a>
 <a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -95,23 +101,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">mod </span>proto {
-    <span class="kw">pub mod </span>oak {
-        <span class="kw">pub mod </span>containers {
-            <span class="attr">#![allow(clippy::return_self_not_must_use)]
-            </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.containers&quot;</span>);
-        }
-        <span class="kw">pub mod </span>session {
-            <span class="kw">pub mod </span>v1 {
-                <span class="attr">#![allow(clippy::return_self_not_must_use)]
-                </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.session.v1&quot;</span>);
-            }
-        }
-    }
-}
-
+</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::containers::{
+    orchestrator_client::OrchestratorClient <span class="kw">as </span>GrpcOrchestratorClient, GetCryptoContextRequest,
+};
 <span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>proto::oak::containers::orchestrator_client::OrchestratorClient <span class="kw">as </span>GrpcOrchestratorClient;
+<span class="kw">use </span>oak_crypto::proto::oak::crypto::v1::CryptoContext;
 <span class="kw">use </span>tonic::transport::{Endpoint, Uri};
 <span class="kw">use </span>tower::service_fn;
 
@@ -127,6 +121,7 @@
 </span><span class="kw">const </span>IPC_SOCKET: <span class="kw-2">&amp;</span>str = <span class="string">&quot;/oak_utils/orchestrator_ipc&quot;</span>;
 
 <span class="doccomment">/// Utility struct used to interface with the launcher
+</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>OrchestratorClient {
     inner: GrpcOrchestratorClient&lt;tonic::transport::channel::Channel&gt;,
 }
@@ -155,6 +150,23 @@
             </span>.into_inner()
             .config;
         <span class="prelude-val">Ok</span>(config)
+    }
+
+    <span class="kw">pub async fn </span>get_crypto_context(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        serialized_encapsulated_public_key: <span class="kw-2">&amp;</span>[u8],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;CryptoContext, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+        <span class="kw">let </span>context = <span class="self">self
+            </span>.inner
+            .get_crypto_context(GetCryptoContextRequest {
+                serialized_encapsulated_public_key: serialized_encapsulated_public_key.to_vec(),
+            })
+            .<span class="kw">await</span><span class="question-mark">?
+            </span>.into_inner()
+            <span class="comment">// Crypto context.
+            </span>.context
+            .context(<span class="string">&quot;crypto context wasn&#39;t provided&quot;</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(context)
     }
 
     <span class="kw">pub async fn </span>notify_app_ready(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {

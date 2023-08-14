@@ -64,7 +64,7 @@
     /// using the derived session key.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>encrypted_message: ::core::option::Option&lt;AeadEncryptedMessage&gt;,
-    <span class="doccomment">/// Ephemeral Diffie-Hellman key that is needed to derive a session key.
+    <span class="doccomment">/// Ephemeral Diffie-Hellman client public key that is needed to derive a session key.
     /// Only sent in the first message of the secure session.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>serialized_encapsulated_public_key: ::core::option::Option&lt;

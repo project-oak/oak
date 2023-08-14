@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["launcher_server","orchestrator_server"],"struct":["GetApplicationConfigResponse","GetImageResponse","SendAttestationEvidenceRequest"]};

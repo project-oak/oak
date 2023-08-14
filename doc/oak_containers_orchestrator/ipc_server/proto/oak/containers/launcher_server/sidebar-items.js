@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["LauncherServer","_Inner"],"trait":["Launcher"]};

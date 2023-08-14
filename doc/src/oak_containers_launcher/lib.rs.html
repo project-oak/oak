@@ -232,10 +232,6 @@
 <a href="#232" id="232">232</a>
 <a href="#233" id="233">233</a>
 <a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -257,12 +253,8 @@
             <span class="attr">#![allow(clippy::return_self_not_must_use)]
             </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.containers&quot;</span>);
         }
-        <span class="kw">pub mod </span>session {
-            <span class="kw">pub mod </span>v1 {
-                <span class="attr">#![allow(clippy::return_self_not_must_use)]
-                </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.session.v1&quot;</span>);
-            }
-        }
+        <span class="kw">pub use </span>oak_crypto::proto::oak::crypto;
+        <span class="kw">pub use </span>oak_remote_attestation::proto::oak::session;
     }
 }
 

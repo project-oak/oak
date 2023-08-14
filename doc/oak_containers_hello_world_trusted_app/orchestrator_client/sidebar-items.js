@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["IPC_SOCKET"],"mod":["proto"],"static":["IGNORED_ENDPOINT_URI"],"struct":["OrchestratorClient"]};
+window.SIDEBAR_ITEMS = {"struct":["OrchestratorClient"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["CONTAINER_DIR"],"fn":["rmount_dir","run","run_command_and_log_output"],"struct":["OciFilesystemBundleConfig","OciFilesystemBundleConfigProcess","OciFilesystemBundleConfigProcessUser","OciFilesystemBundleConfigRoot"]};
+window.SIDEBAR_ITEMS = {"fn":["run"]};
