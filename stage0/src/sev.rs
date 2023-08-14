@@ -165,6 +165,12 @@ pub fn init_ghcb(
     GHCB_WRAPPER.get().unwrap()
 }
 
+/// Stops sharing the GHCB with the hypervisor when running with AMD SEV-SNP enabled.
+pub fn deinit_ghcb() {
+    let ghcb_addr = VirtAddr::new(GHCB_WRAPPER.get().unwrap().lock().get_gpa().as_u64());
+    unshare_page(Page::containing_address(ghcb_addr));
+}
+
 /// Shares a single 4KiB page with the hypervisor.
 pub fn share_page(page: Page<Size4KiB>, snp: bool) {
     let page_start = page.start_address().as_u64();
@@ -196,6 +202,11 @@ pub fn unshare_page(page: Page<Size4KiB>) {
     let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Private)
         .expect("invalid address for page location");
     change_snp_page_state(request).expect("couldn't change SNP state for page");
+    if let Err(err) = page.pvalidate() {
+        if !matches!(err, InstructionError::ValidationStatusNotUpdated) {
+            panic!("pvalidate failed");
+        }
+    }
 }
 
 // Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However, `PVALIDATE` can only
@@ -215,7 +226,7 @@ impl ValidatablePageSize for Size2MiB {
     const SEV_PAGE_SIZE: SevPageSize = SevPageSize::Page2MiB;
 }
 
-pub trait Validate<S: PageSize> {
+trait Validate<S: PageSize> {
     fn pvalidate(&self) -> Result<(), InstructionError>;
 }
 
