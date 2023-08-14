@@ -765,6 +765,7 @@ dependencies = [
  "ff",
  "generic-array",
  "group",
+ "hkdf",
  "pem-rfc7468",
  "pkcs8",
  "rand_core 0.6.4",
@@ -2239,6 +2240,7 @@ dependencies = [
  "oak_core",
  "oak_linux_boot_params",
  "oak_sev_guest",
+ "p384",
  "sev_serial",
  "spinning_top",
  "static_assertions",
@@ -2333,6 +2335,18 @@ name = "p256"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c9863ad85fa8f4460f9c48cb909d38a0d689dba1f6f6988a5e3e0d31071bcd4b"
+dependencies = [
+ "ecdsa",
+ "elliptic-curve",
+ "primeorder",
+ "sha2",
+]
+
+[[package]]
+name = "p384"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70786f51bcc69f6a4c0360e063a4cac5419ef7c5cd5b3c99ad70f3be5ba79209"
 dependencies = [
  "ecdsa",
  "elliptic-curve",
