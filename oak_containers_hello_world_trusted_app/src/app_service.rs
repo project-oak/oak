@@ -13,27 +13,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod proto {
-    pub mod oak {
-        pub mod containers {
-            pub mod example {
-                tonic::include_proto!("oak.containers.example");
-            }
-        }
-    }
-}
-
-use self::proto::oak::containers::example::{
-    trusted_application_server::{TrustedApplication, TrustedApplicationServer},
-    HelloRequest, HelloResponse,
+use crate::{
+    orchestrator_client::OrchestratorClient,
+    proto::oak::containers::example::{
+        trusted_application_server::{TrustedApplication, TrustedApplicationServer},
+        HelloRequest, HelloResponse,
+    },
 };
 use anyhow::anyhow;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 
-#[derive(Default)]
 struct TrustedApplicationImplementation {
+    _orchestrator_client: OrchestratorClient,
     application_config: Vec<u8>,
+}
+
+impl TrustedApplicationImplementation {
+    pub fn new(orchestrator_client: OrchestratorClient, application_config: Vec<u8>) -> Self {
+        Self {
+            _orchestrator_client: orchestrator_client,
+            application_config,
+        }
+    }
 }
 
 #[tonic::async_trait]
@@ -51,11 +53,12 @@ impl TrustedApplication for TrustedApplicationImplementation {
 
 pub async fn create(
     listener: TcpListener,
+    orchestrator_client: OrchestratorClient,
     application_config: Vec<u8>,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(TrustedApplicationServer::new(
-            TrustedApplicationImplementation { application_config },
+            TrustedApplicationImplementation::new(orchestrator_client, application_config),
         ))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await

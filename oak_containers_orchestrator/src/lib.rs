@@ -12,24 +12,22 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
-use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Generate gRPC code for exchanging messages with clients.
-    generate_grpc_code(
-        "../",
-        &[
-            "oak_containers/proto/interfaces.proto",
-            "oak_crypto/proto/v1/crypto.proto",
-            "oak_remote_attestation/proto/v1/messages.proto",
-        ],
-        CodegenOptions {
-            build_client: true,
-            ..Default::default()
-        },
-    )?;
-
-    Ok(())
+mod proto {
+    pub mod oak {
+        pub mod containers {
+            #![allow(clippy::return_self_not_must_use)]
+            tonic::include_proto!("oak.containers");
+        }
+        pub use oak_crypto::proto::oak::crypto;
+        pub use oak_remote_attestation::proto::oak::session;
+    }
 }
+
+pub mod container_runtime;
+pub mod ipc_server;
+pub mod logging;
+
+// Utility directory that is shared between the orchestrator & container
+pub const UTIL_DIR: &str = "oak_utils";
+pub const IPC_SOCKET_FILE_NAME: &str = "orchestrator_ipc";

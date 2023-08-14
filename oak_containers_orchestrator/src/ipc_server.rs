@@ -13,32 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod proto {
-    pub mod oak {
-        pub mod containers {
-            #![allow(clippy::return_self_not_must_use)]
-            tonic::include_proto!("oak.containers");
-        }
-        pub mod session {
-            pub mod v1 {
-                #![allow(clippy::return_self_not_must_use)]
-                tonic::include_proto!("oak.session.v1");
-            }
-        }
-    }
-}
-
+use crate::proto::oak::containers::{
+    orchestrator_server::{Orchestrator, OrchestratorServer},
+    GetApplicationConfigResponse, GetAttestationEvidenceResponse, GetCryptoContextRequest,
+    GetCryptoContextResponse,
+};
 use anyhow::Context;
 use oak_containers_orchestrator_client::LauncherClient;
-use proto::oak::containers::{
-    orchestrator_server::{Orchestrator, OrchestratorServer},
-    GetApplicationConfigResponse,
-};
+use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
+use oak_remote_attestation::attester::Attester;
+use std::sync::Arc;
 use tokio::net::UnixListener;
 use tokio_stream::wrappers::UnixListenerStream;
 use tonic::{transport::Server, Request, Response};
 
 pub struct ServiceImplementation {
+    attester: Attester,
+    encryption_key_provider: Arc<EncryptionKeyProvider>,
     application_config: Vec<u8>,
     launcher_client: LauncherClient,
 }
@@ -61,10 +52,44 @@ impl Orchestrator for ServiceImplementation {
             .map_err(|err| tonic::Status::internal(format!("couldn't send notification: {err}")))?;
         Ok(tonic::Response::new(()))
     }
+
+    async fn get_attestation_evidence(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<GetAttestationEvidenceResponse>, tonic::Status> {
+        let evidence = self
+            .attester
+            .generate_attestation_evidence()
+            .map_err(|err| tonic::Status::internal(format!("couldn't generate evidence: {err}")))?;
+        Ok(tonic::Response::new(GetAttestationEvidenceResponse {
+            evidence: Some(evidence),
+        }))
+    }
+
+    async fn get_crypto_context(
+        &self,
+        request: Request<GetCryptoContextRequest>,
+    ) -> Result<Response<GetCryptoContextResponse>, tonic::Status> {
+        let context = self
+            .encryption_key_provider
+            .generate_recipient_context(&request.into_inner().serialized_encapsulated_public_key)
+            .map_err(|err| {
+                tonic::Status::internal(format!("couldn't generate crypto context: {err}"))
+            })?
+            .serialize()
+            .map_err(|err| {
+                tonic::Status::internal(format!("couldn't serialize crypto context: {err}"))
+            })?;
+        Ok(tonic::Response::new(GetCryptoContextResponse {
+            context: Some(context),
+        }))
+    }
 }
 
 pub async fn create<P>(
     socket_address: P,
+    encryption_key_provider: Arc<EncryptionKeyProvider>,
+    attester: Attester,
     application_config: Vec<u8>,
     launcher_client: LauncherClient,
 ) -> Result<(), anyhow::Error>
@@ -72,6 +97,8 @@ where
     P: AsRef<std::path::Path>,
 {
     let service_instance = ServiceImplementation {
+        attester,
+        encryption_key_provider,
         application_config,
         launcher_client,
     };
