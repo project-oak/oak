@@ -165,12 +165,6 @@ pub fn init_ghcb(
     GHCB_WRAPPER.get().unwrap()
 }
 
-/// Stops sharing the GHCB with the hypervisor when running with AMD SEV-SNP enabled.
-pub fn deinit_ghcb() {
-    let ghcb_addr = VirtAddr::new(GHCB_WRAPPER.get().unwrap().lock().get_gpa().as_u64());
-    unshare_page(Page::containing_address(ghcb_addr));
-}
-
 /// Shares a single 4KiB page with the hypervisor.
 pub fn share_page(page: Page<Size4KiB>, snp: bool) {
     let page_start = page.start_address().as_u64();
@@ -221,7 +215,7 @@ impl ValidatablePageSize for Size2MiB {
     const SEV_PAGE_SIZE: SevPageSize = SevPageSize::Page2MiB;
 }
 
-trait Validate<S: PageSize> {
+pub trait Validate<S: PageSize> {
     fn pvalidate(&self) -> Result<(), InstructionError>;
 }
 

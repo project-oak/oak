@@ -17,6 +17,7 @@
 #![no_std]
 #![feature(int_roundings)]
 
+use crate::sev::Validate;
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use oak_sev_guest::io::PortFactoryWrapper;
 use x86_64::{
@@ -25,7 +26,7 @@ use x86_64::{
     structures::{
         gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector},
         idt::InterruptDescriptorTable,
-        paging::{Page, PageSize, Size1GiB},
+        paging::{Page, PageSize, Size1GiB, Size4KiB},
     },
     PhysAddr, VirtAddr,
 };
@@ -260,13 +261,19 @@ pub fn rust64_start(encrypted: u64) -> ! {
     // Clean-ups we need to do just before we jump to the kernel proper: clean up the early GHCB and
     // FW_CFG DMA buffers we used, and switch back to a hugepage for the first 2M of memory.
     if snp {
-        sev::unshare_page(Page::containing_address(dma_buf_address));
-        sev::unshare_page(Page::containing_address(dma_access_address));
-        if ghcb_protocol.is_some() {
-            sev::deinit_ghcb();
-        }
+        sev::unshare_page(Page::<Size4KiB>::containing_address(dma_buf_address));
+        sev::unshare_page(Page::<Size4KiB>::containing_address(dma_access_address));
+        sev::unshare_page(ghcb_protocol.unwrap().lock().get_page());
     }
     paging::remap_first_huge_page(encrypted);
+    // Call pvalidate again on the pages we just unshared now that they are marked as encrypted in
+    // the pages table.
+    if snp {
+        // Ignore any errors. Th GHCB is unshared at this point, so we cannot log anymore.
+        let _ = Page::<Size4KiB>::containing_address(dma_buf_address).pvalidate();
+        let _ = Page::<Size4KiB>::containing_address(dma_access_address).pvalidate();
+        let _ = ghcb_protocol.unwrap().lock().get_page().pvalidate();
+    }
 
     unsafe {
         jump_to_kernel(entry, zero_page as *const _ as usize);

@@ -26,7 +26,10 @@ use crate::{
     Translator,
 };
 use bitflags::bitflags;
-use x86_64::{PhysAddr, VirtAddr};
+use x86_64::{
+    structures::paging::{Page, Size4KiB},
+    PhysAddr, VirtAddr,
+};
 use zerocopy::FromBytes;
 
 /// The size of the GHCB page.
@@ -306,6 +309,12 @@ where
     /// Gets the guest-physical address for the guest-hypervisor communication block.
     pub fn get_gpa(&self) -> PhysAddr {
         self.gpa
+    }
+
+    /// Gets the memory page that contains the guest-hypervisor communication block.
+    pub fn get_page(&self) -> Page<Size4KiB> {
+        Page::from_start_address(VirtAddr::from_ptr(self.ghcb.as_ref() as *const Ghcb))
+            .expect("ghcb not aligned")
     }
 
     /// Registers the address of the GHCB with the hypervisor.
