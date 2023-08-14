@@ -14,7 +14,12 @@
 // limitations under the License.
 //
 
+#![cfg_attr(not(test), no_std)]
+
+extern crate alloc;
+
 pub mod rekor;
+pub mod verifier;
 
 #[cfg(test)]
 mod tests;

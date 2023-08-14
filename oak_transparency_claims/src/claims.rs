@@ -34,6 +34,7 @@ pub const CLAIM_V1: &str = "https://github.com/project-oak/transparent-release/c
 pub const ENDORSEMENT_V2: &str =
     "https://github.com/project-oak/transparent-release/endorsement/v2";
 
+#[derive(Debug)]
 pub enum InvalidClaimData {
     StatementType,
     PredicateType,

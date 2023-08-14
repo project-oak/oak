@@ -32,7 +32,7 @@ public class RekorLogEntryTest {
     String json = Files.readString(Path.of(logEntryPath));
     RekorLogEntry.LogEntry entry = RekorLogEntry.unmarshalLogEntry(json).logEntry;
     Assert.assertTrue(entry.body.length() > 0);
-    Assert.assertEquals(entry.logIndex, 1323526);
+    Assert.assertEquals(entry.logIndex, 30891523);
     Assert.assertEquals(entry.bodyObject.kind, "rekord");
     Assert.assertEquals(entry.bodyObject.spec.data.hash.algorithm, "sha256");
     Assert.assertEquals(entry.bodyObject.spec.signature.format, "x509");
