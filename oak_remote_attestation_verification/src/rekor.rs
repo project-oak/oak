@@ -178,11 +178,27 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
 pub fn verify_rekor_log_entry(
     log_entry_bytes: &[u8],
     pem_encoded_rekor_public_key_bytes: &[u8],
-    pem_encoded_endorser_public_key_bytes: &[u8],
     endorsement_bytes: &[u8],
 ) -> anyhow::Result<()> {
     verify_rekor_signature(log_entry_bytes, pem_encoded_rekor_public_key_bytes)?;
 
+    let body = parse_rekor_log_entry_body(log_entry_bytes)?;
+
+    let pem_encoded_endorser_public_key_bytes = BASE64_STANDARD
+        .decode(body.spec.signature.public_key.content.clone())
+        .context("couldn't decode Base64 endorser public key")?;
+
+    // Verify the body in the Rekor LogEntry
+    verify_rekor_body(
+        &body,
+        endorsement_bytes,
+        &pem_encoded_endorser_public_key_bytes,
+    )?;
+
+    Ok(())
+}
+
+pub fn parse_rekor_log_entry_body(log_entry_bytes: &[u8]) -> anyhow::Result<Body> {
     let parsed: BTreeMap<String, LogEntry> = serde_json::from_slice(log_entry_bytes)
         .context("couldn't parse bytes into a LogEntry object")?;
     let entry = parsed.values().next().context("no entry in the map")?;
@@ -191,17 +207,8 @@ pub fn verify_rekor_log_entry(
     let body_bytes: Vec<u8> = BASE64_STANDARD
         .decode(entry.body.clone())
         .context("couldn't decode Base64 signature")?;
-    let body: Body =
-        serde_json::from_slice(&body_bytes).context("couldn't parse bytes into a Body object")?;
 
-    // Verify the body in the Rekor LogEntry
-    verify_rekor_body(
-        &body,
-        endorsement_bytes,
-        pem_encoded_endorser_public_key_bytes,
-    )?;
-
-    Ok(())
+    serde_json::from_slice(&body_bytes).context("couldn't parse bytes into a Body object")
 }
 
 /// Parses `log_entry_bytes` into a Rekor LogEntry, and verifies the signature in

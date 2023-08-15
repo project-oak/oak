@@ -75,6 +75,9 @@ message BinaryAttestation {
   bytes endorsement_statement = 1;
   // The serialized Rekor LogEntry as proof of the inclusion of the endorsement statement in Rekor.
   bytes rekor_log_entry = 2;
+  // Public key of rekor at the time of uploading the endorsement statement. This is required for
+  // verifying the log entry.
+  string base64_pem_encoded_rekor_public_key = 3;
 }
 
 message ApplicationData {

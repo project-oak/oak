@@ -18,6 +18,7 @@ use crate::rekor::*;
 use std::fs;
 
 use alloc::{sync::Arc, vec};
+use base64::{prelude::BASE64_STANDARD, Engine as _};
 use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_remote_attestation::{
     attester::{Attester, EmptyAttestationReportGenerator},
@@ -89,7 +90,7 @@ fn test_verify_rekor_log_entry() {
     let result = verify_rekor_log_entry(
         &testdata.log_entry_bytes,
         &testdata.rekor_public_key_pem_bytes,
-        &testdata.endorser_public_key_pem_bytes,
+        // &testdata.endorser_public_key_pem_bytes,
         &testdata.endorsement_bytes,
     );
     assert!(result.is_ok(), "{:?}", result);
@@ -140,9 +141,12 @@ fn test_empty_attestation() {
 #[test]
 fn test_verify_binary_attestation() {
     let testdata = load_testdata();
+    let base64_pem_encoded_rekor_public_key =
+        BASE64_STANDARD.encode(&testdata.rekor_public_key_pem_bytes);
     let binary_attestation = BinaryAttestation {
         endorsement_statement: testdata.endorsement_bytes,
         rekor_log_entry: testdata.log_entry_bytes,
+        base64_pem_encoded_rekor_public_key,
     };
     let reference_value = ReferenceValue {
         binary_hash: BINARY_HASH.as_bytes().to_vec(),
