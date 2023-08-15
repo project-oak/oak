@@ -182,7 +182,7 @@ pub fn verify_rekor_log_entry(
 ) -> anyhow::Result<()> {
     verify_rekor_signature(log_entry_bytes, pem_encoded_rekor_public_key_bytes)?;
 
-    let body = parse_rekor_log_entry_body(log_entry_bytes)?;
+    let body = get_rekor_log_entry_body(log_entry_bytes)?;
 
     let pem_encoded_endorser_public_key_bytes = BASE64_STANDARD
         .decode(body.spec.signature.public_key.content.clone())
@@ -198,7 +198,9 @@ pub fn verify_rekor_log_entry(
     Ok(())
 }
 
-pub fn parse_rekor_log_entry_body(log_entry_bytes: &[u8]) -> anyhow::Result<Body> {
+/// Parses the given bytes into a Rekor `LogEntry` object, and returns its `body` parsed into an
+/// instance of `Body`.
+pub fn get_rekor_log_entry_body(log_entry_bytes: &[u8]) -> anyhow::Result<Body> {
     let parsed: BTreeMap<String, LogEntry> = serde_json::from_slice(log_entry_bytes)
         .context("couldn't parse bytes into a LogEntry object")?;
     let entry = parsed.values().next().context("no entry in the map")?;

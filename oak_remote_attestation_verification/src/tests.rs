@@ -90,7 +90,6 @@ fn test_verify_rekor_log_entry() {
     let result = verify_rekor_log_entry(
         &testdata.log_entry_bytes,
         &testdata.rekor_public_key_pem_bytes,
-        // &testdata.endorser_public_key_pem_bytes,
         &testdata.endorsement_bytes,
     );
     assert!(result.is_ok(), "{:?}", result);

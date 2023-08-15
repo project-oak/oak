@@ -20,7 +20,7 @@ use oak_remote_attestation::proto::oak::session::v1::{
     AttestationEndorsement, AttestationEvidence, BinaryAttestation,
 };
 
-use crate::rekor::{parse_rekor_log_entry_body, verify_rekor_log_entry};
+use crate::rekor::{get_rekor_log_entry_body, verify_rekor_log_entry};
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use oak_transparency_claims::claims::{parse_endorsement_statement, validate_endorsement};
 
@@ -90,8 +90,8 @@ pub fn verify_binary_attestation(
     verify_endorsement_statement(&binary_attestation.endorsement_statement, reference_value)
 }
 
-// Parses the given bytes into an endorsement statement and verifies it against the given Reference
-// values.
+/// Parses the given bytes into an endorsement statement and verifies it against the given Reference
+/// values.
 pub fn verify_endorsement_statement(
     endorsement_bytes: &[u8],
     reference_value: &ReferenceValue,
@@ -116,8 +116,8 @@ pub fn verify_endorsement_statement(
     Ok(())
 }
 
-// Verifies that the rekor public key in the given BinaryAttestation is the same as the given
-// public key, signed by it, or derived from it.
+/// Verifies that the rekor public key in the given BinaryAttestation is either the same as the
+/// given public key, signed by it, or derived from it.
 fn verify_rekor_public_key(
     binary_attestation: &BinaryAttestation,
     pem_encoded_rekor_public_key_bytes: &[u8],
@@ -125,8 +125,8 @@ fn verify_rekor_public_key(
     let rekor_public_key_bytes =
         BASE64_STANDARD.decode(&binary_attestation.base64_pem_encoded_rekor_public_key)?;
 
-    // Currently, we only check that the public keys are the same. Once Rekor starts using rolling
-    // keys, the verification logic will have to be updated.
+    // TODO(#4231): Currently, we only check that the public keys are the same. Once Rekor starts
+    // using rolling keys, the verification logic will have to be updated.
     if rekor_public_key_bytes != pem_encoded_rekor_public_key_bytes {
         anyhow::bail!("Rekor public key verification failed: expected {pem_encoded_rekor_public_key_bytes:?}, got {rekor_public_key_bytes:?}");
     }
@@ -134,19 +134,20 @@ fn verify_rekor_public_key(
     Ok(())
 }
 
-// Verifies that the endorser's public key in the Rekor log entry in the given BinaryAttestation is
-// the same as the given public key, signed by it, or derived from it.
+/// Verifies that the endorser's public key in the Rekor log entry in the given BinaryAttestation is
+/// either the same as the given public key, signed by it, or derived from it.
 fn verify_endorser_public_key(
     binary_attestation: &BinaryAttestation,
     pem_encoded_endorser_public_key_bytes: &[u8],
 ) -> anyhow::Result<()> {
-    let body = parse_rekor_log_entry_body(&binary_attestation.rekor_log_entry)?;
+    let body = get_rekor_log_entry_body(&binary_attestation.rekor_log_entry)?;
 
     let endorser_public_key_bytes = BASE64_STANDARD
         .decode(body.spec.signature.public_key.content.clone())
         .context("couldn't decode Base64 endorser public key")?;
 
-    // Currently, we only check that the public keys are the same.
+    // TODO(#4231): Currently, we only check that the public keys are the same. Should be updated to
+    // support verifying rolling keys.
     if endorser_public_key_bytes != pem_encoded_endorser_public_key_bytes {
         anyhow::bail!("endorser public key verification failed: expected {pem_encoded_endorser_public_key_bytes:?}, got {endorser_public_key_bytes:?}");
     }
