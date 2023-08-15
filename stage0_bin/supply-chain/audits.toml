@@ -91,6 +91,26 @@ By design, all the macros in `static_assertions` run at compile time, which mean
 Only one short block of unsafe code in `assert_eq_size_ptr`, which looks reasonable.
 """
 
+[[audits.strum]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.24.1"
+notes = """
+This crate doesn't contain any unsafe code. Most of the work is delegated to the strum_macros crate.
+
+This crate doesn't implement any cryptographic algorithms.
+"""
+
+[[audits.strum_macros]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.24.3"
+notes = """
+This crate doesn'tt contain any unsafe code. The macro implementations look reasonable.
+
+This crate doesn't implement any cryptographic algorithms.
+"""
+
 [[audits.synstructure]]
 who = "Conrad Grobler <grobler@google.com>"
 criteria = "does-not-implement-crypto"
