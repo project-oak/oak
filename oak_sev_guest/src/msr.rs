@@ -511,7 +511,7 @@ pub fn request_termination(request: TerminationRequest) -> ! {
 
 bitflags! {
     /// Flags indicating which SEV features are active.
-    #[derive(Default)]
+    #[derive(Clone, Copy, Default)]
     pub struct SevStatus: u64 {
         /// SEV is enabled for this guest.
         const SEV_ENABLED = (1 << 0);

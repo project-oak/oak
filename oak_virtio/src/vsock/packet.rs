@@ -347,6 +347,7 @@ bitflags! {
     ///
     /// Used in a connection shutdown request.
     /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-4070005>.
+    #[derive(Debug)]
     pub struct VSockFlags: u32 {
         /// Indicates that no more payload data will be received.
         const NO_RECEIVE = 1;
