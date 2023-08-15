@@ -21,21 +21,106 @@ use crate::fw_cfg::FwCfg;
 use core::{
     ffi::CStr,
     fmt::{Debug, Formatter, Result as FmtResult},
-    mem::{zeroed, MaybeUninit},
+    mem::{size_of, zeroed, MaybeUninit},
 };
 use strum::FromRepr;
-use x86_64::PhysAddr;
-use zerocopy::AsBytes;
+use zerocopy::{AsBytes, FromBytes};
 
-// RSDP has to be within the first 1 KiB of EBDA, so we treat it separately.
-// See Section 5.2.5 of the ACPI Specification, Release 6.5 for more details about RSDP, it's size,
-// structure, and where it should be placed.
-const RSDP_SIZE: usize = 36;
-// Rest of the EBDA. The full size of EBDA is 128 KiB, but let's reserve the whole 1 KiB for the
-// RSDP.
+/// ACPI Root System Description Pointer.
+///
+/// Used to locate either the RSDT or XSDT in memory.
+///
+/// See Section 5.2.5 in the ACPI specification, Version 6.5 for more details.
+#[derive(FromBytes, AsBytes)]
+#[repr(C, packed)]
+pub struct Rsdp {
+    /// Signature: "RSD PTR " (note the trailing space).
+    signature: [u8; 8],
+
+    /// Checksum for fields defined in the ACPI 1.0 specification.
+    checksum: u8,
+
+    /// OEM-supplied identification string.
+    oemid: [u8; 6],
+
+    /// Revision of this structure.
+    ///
+    /// ACPI 1.0 value is zero, ACPI 2.0 value is 2.
+    revision: u8,
+
+    /// 32-bit physical address of the RSDT.
+    rsdt_address: u32,
+
+    // ACPI 2.0 fields.
+    /// Length of the table, including the header.
+    length: u32,
+
+    /// 64-bit physical address of the XSDT.
+    xsdt_address: u64,
+
+    /// Checksum of the entire table, including both checksum fields.
+    extended_checksum: u8,
+
+    /// Reserved
+    _reserved: [u8; 3],
+}
+static_assertions::assert_eq_size!(Rsdp, [u8; 36usize]);
+
+impl Rsdp {
+    fn validate(&self) -> Result<(), &'static str> {
+        if &self.signature != b"RSD PTR " {
+            return Err("Invalid RSDP signature");
+        }
+        let len = if self.revision > 2 { self.length } else { 20 } as usize;
+
+        if len > size_of::<Rsdp>() {
+            return Err("invalid RSDP size");
+        }
+
+        let checksum = self.as_bytes()[..20]
+            .iter()
+            .fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
+
+        if checksum != 0 {
+            return Err("Invalid RSDP checksum");
+        }
+
+        if self.revision > 2 {
+            let checksum = self
+                .as_bytes()
+                .iter()
+                .fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
+
+            if checksum != 0 {
+                return Err("Invalid RSDP extended checksum");
+            }
+        }
+
+        // Check the pointer addresses; if they are valid, they should point within the EBDA.
+        // Safety: we will never dereference the pointer, we just need to know where it points to.
+        let ebda_base = unsafe { EBDA.as_ptr() } as usize;
+        if self.rsdt_address > 0
+            && ((self.rsdt_address as usize) < ebda_base
+                || (self.rsdt_address as usize) >= ebda_base + EBDA_SIZE)
+        {
+            return Err("Invalid RSDT address: does not point to within EBDA");
+        }
+        if self.xsdt_address > 0
+            && ((self.xsdt_address as usize) < ebda_base
+                || (self.xsdt_address as usize) >= ebda_base + EBDA_SIZE)
+        {
+            return Err("Invalid XSDT address: does not point to within EBDA");
+        }
+
+        Ok(())
+    }
+}
+
+// RSDP has to be within the first 1 KiB of EBDA, so we treat it separately. The full size of EBDA
+// is 128 KiB, but let's reserve the whole 1 KiB for the RSDP.
 const EBDA_SIZE: usize = 127 * 1024;
 #[link_section = ".ebda.rsdp"]
-static mut RSDP: MaybeUninit<[u8; RSDP_SIZE]> = MaybeUninit::uninit();
+static mut RSDP: MaybeUninit<Rsdp> = MaybeUninit::uninit();
 #[link_section = ".ebda"]
 static mut EBDA: MaybeUninit<[u8; EBDA_SIZE]> = MaybeUninit::uninit();
 
@@ -54,7 +139,7 @@ fn get_file(name: &CStr) -> Result<&'static mut [u8], &'static str> {
     // Allocate has not been called yet, all values are valid for an [u8].
     let name = name.to_str().map_err(|_| "invalid file name")?;
     if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
-        Ok(unsafe { RSDP.assume_init_mut() })
+        Ok(unsafe { RSDP.assume_init_mut().as_bytes_mut() })
     } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
         Ok(unsafe { EBDA.assume_init_mut() })
     } else {
@@ -109,7 +194,7 @@ impl Allocate {
             // ACPI 1.0 RSDP is 20 bytes, ACPI 2.0 RSDP is 36 bytes.
             // We don't really care which version we're dealing with, as long as the data structure
             // is one of the two.
-            if file.size() > RSDP_SIZE || (file.size() != 20 && file.size() != 36) {
+            if file.size() > size_of::<Rsdp>() || (file.size() != 20 && file.size() != 36) {
                 return Err("RSDP doesn't match expected size");
             }
 
@@ -117,17 +202,15 @@ impl Allocate {
             let buf = unsafe { RSDP.write(zeroed()) };
 
             // Sanity checks.
-            if (buf.as_ptr() as *const _ as u64) < 0x80000
-                || (buf.as_ptr() as *const _ as u64) > 0x81000
-            {
+            if (buf as *const _ as u64) < 0x80000 || (buf as *const _ as u64) > 0x81000 {
                 log::error!("RSDP address: {:p}", buf);
                 return Err("RSDP address is not within the first 1 KiB of EBDA");
             }
-            if (buf.as_ptr() as *const _ as u64) % self.align as u64 != 0 {
+            if (buf as *const _ as u64) % self.align as u64 != 0 {
                 return Err("RSDP address not aligned properly");
             }
 
-            fwcfg.read_file(&file, buf).map(|_| ())
+            fwcfg.read_file(&file, buf.as_bytes_mut()).map(|_| ())
         } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
             // Safety: we do not have concurrent threads so accessing the static is safe.
             let buf = unsafe { EBDA.write(zeroed()) };
@@ -400,7 +483,7 @@ impl RomfileCommand {
 /// Populates the ACPI tables per linking instructions in `etc/table-loader`.
 ///
 /// Returns the address of the RSDP table.
-pub fn build_acpi_tables(fwcfg: &mut FwCfg) -> Result<PhysAddr, &'static str> {
+pub fn build_acpi_tables(fwcfg: &mut FwCfg) -> Result<&'static Rsdp, &'static str> {
     let mut commands: [RomfileCommand; 32] = Default::default();
 
     let file = fwcfg
@@ -431,6 +514,8 @@ pub fn build_acpi_tables(fwcfg: &mut FwCfg) -> Result<PhysAddr, &'static str> {
         command.invoke(fwcfg)?;
     }
 
-    // stage0 runs under identity mapping so virtual == physical
-    Ok(PhysAddr::new(unsafe { RSDP.as_ptr() } as u64))
+    // Safety: we ensure that the RSDP is valid before returning a reference to it.
+    let rsdp = unsafe { RSDP.assume_init_ref() };
+    rsdp.validate()?;
+    Ok(rsdp)
 }

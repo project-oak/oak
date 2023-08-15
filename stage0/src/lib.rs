@@ -247,7 +247,8 @@ pub fn rust64_start(encrypted: u64) -> ! {
         entry = VirtAddr::new(header.e_entry);
     }
 
-    zero_page.set_acpi_rsdp_addr(acpi::build_acpi_tables(&mut fwcfg).unwrap());
+    let rsdp = acpi::build_acpi_tables(&mut fwcfg).unwrap();
+    zero_page.set_acpi_rsdp_addr(PhysAddr::new(rsdp as *const _ as u64));
 
     if let Some(ram_disk) =
         initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel_info)
