@@ -336,6 +336,15 @@
 <a href="#336" id="336">336</a>
 <a href="#337" id="337">337</a>
 <a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -516,11 +525,29 @@
 </span><span class="kw">pub fn </span>verify_rekor_log_entry(
     log_entry_bytes: <span class="kw-2">&amp;</span>[u8],
     pem_encoded_rekor_public_key_bytes: <span class="kw-2">&amp;</span>[u8],
-    pem_encoded_endorser_public_key_bytes: <span class="kw-2">&amp;</span>[u8],
     endorsement_bytes: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;()&gt; {
     verify_rekor_signature(log_entry_bytes, pem_encoded_rekor_public_key_bytes)<span class="question-mark">?</span>;
 
+    <span class="kw">let </span>body = get_rekor_log_entry_body(log_entry_bytes)<span class="question-mark">?</span>;
+
+    <span class="kw">let </span>pem_encoded_endorser_public_key_bytes = BASE64_STANDARD
+        .decode(body.spec.signature.public_key.content.clone())
+        .context(<span class="string">&quot;couldn&#39;t decode Base64 endorser public key&quot;</span>)<span class="question-mark">?</span>;
+
+    <span class="comment">// Verify the body in the Rekor LogEntry
+    </span>verify_rekor_body(
+        <span class="kw-2">&amp;</span>body,
+        endorsement_bytes,
+        <span class="kw-2">&amp;</span>pem_encoded_endorser_public_key_bytes,
+    )<span class="question-mark">?</span>;
+
+    <span class="prelude-val">Ok</span>(())
+}
+
+<span class="doccomment">/// Parses the given bytes into a Rekor `LogEntry` object, and returns its `body` parsed into an
+/// instance of `Body`.
+</span><span class="kw">pub fn </span>get_rekor_log_entry_body(log_entry_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Body&gt; {
     <span class="kw">let </span>parsed: BTreeMap&lt;String, LogEntry&gt; = serde_json::from_slice(log_entry_bytes)
         .context(<span class="string">&quot;couldn&#39;t parse bytes into a LogEntry object&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>entry = parsed.values().next().context(<span class="string">&quot;no entry in the map&quot;</span>)<span class="question-mark">?</span>;
@@ -529,17 +556,8 @@
     </span><span class="kw">let </span>body_bytes: Vec&lt;u8&gt; = BASE64_STANDARD
         .decode(entry.body.clone())
         .context(<span class="string">&quot;couldn&#39;t decode Base64 signature&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span>body: Body =
-        serde_json::from_slice(<span class="kw-2">&amp;</span>body_bytes).context(<span class="string">&quot;couldn&#39;t parse bytes into a Body object&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="comment">// Verify the body in the Rekor LogEntry
-    </span>verify_rekor_body(
-        <span class="kw-2">&amp;</span>body,
-        endorsement_bytes,
-        pem_encoded_endorser_public_key_bytes,
-    )<span class="question-mark">?</span>;
-
-    <span class="prelude-val">Ok</span>(())
+    serde_json::from_slice(<span class="kw-2">&amp;</span>body_bytes).context(<span class="string">&quot;couldn&#39;t parse bytes into a Body object&quot;</span>)
 }
 
 <span class="doccomment">/// Parses `log_entry_bytes` into a Rekor LogEntry, and verifies the signature in

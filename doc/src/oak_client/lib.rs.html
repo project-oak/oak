@@ -97,6 +97,7 @@
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
 <a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -118,6 +119,7 @@
         <span class="kw">pub mod </span>session {
             <span class="kw">pub mod </span>v1 {
                 <span class="attr">#![allow(clippy::return_self_not_must_use)]
+                #![allow(clippy::large_enum_variant)]
                 </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.session.v1&quot;</span>);
             }
         }

@@ -245,6 +245,10 @@
 <a href="#245" id="245">245</a>
 <a href="#246" id="246">246</a>
 <a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// AttestationEvidence contains all the information that originates in the TEE and can serve as
 /// claims about the Target Environment. The name is chosen to match the RATS terminology
 /// (see &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence&gt;).
@@ -309,6 +313,10 @@
     <span class="doccomment">/// The serialized Rekor LogEntry as proof of the inclusion of the endorsement statement in Rekor.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>rekor_log_entry: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// Public key of rekor at the time of uploading the endorsement statement. This is required for
+    /// verifying the log entry.
+    </span><span class="attr">#[prost(string, tag = <span class="string">&quot;3&quot;</span>)]
+    </span><span class="kw">pub </span>base64_pem_encoded_rekor_public_key: ::prost::alloc::string::String,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
