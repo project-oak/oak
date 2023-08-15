@@ -32,6 +32,12 @@ criteria = ["safe-to-deploy", "does-not-implement-crypto"]
 version = "1.3.2"
 notes = "Limited use of unsafe code that is well commented and unproblematic. Does not implement crypto algorithms."
 
+[[audits.bitflags]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+delta = "1.3.2 -> 2.4.0"
+notes = "Version 2.4.0 has significantly less unsafe code than the previous version. The two new unsafe blocks that have been added are well documented."
+
 [[audits.byteorder]]
 who = "Conrad Grobler <grobler@google.com>"
 criteria = ["safe-to-deploy", "does-not-implement-crypto"]
