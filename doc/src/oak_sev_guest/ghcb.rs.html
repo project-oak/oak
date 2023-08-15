@@ -512,6 +512,9 @@
 <a href="#512" id="512">512</a>
 <a href="#513" id="513">513</a>
 <a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -712,10 +715,13 @@
 
 <span class="macro">static_assertions::assert_eq_size!</span>(Ghcb, [u8; GHCB_PAGE_SIZE]);
 
+<span class="doccomment">/// Flags indicating which fields in a specific GHCB instance are valid.
+</span><span class="attr">#[derive(Debug, Default, FromBytes)]
+#[repr(transparent)]
+</span><span class="kw">pub struct </span>ValidBitmap(u128);
+
 <span class="macro">bitflags! </span>{
-    <span class="doccomment">/// Flags indicating which fields in a specific GHCB instance are valid.
-    </span><span class="attr">#[derive(Default, FromBytes)]
-    </span><span class="kw">pub struct </span>ValidBitmap: u128 {
+    <span class="kw">impl </span>ValidBitmap: u128 {
         <span class="kw">const </span>CPL = (<span class="number">1 </span>&lt;&lt; <span class="number">25</span>);
         <span class="kw">const </span>XSS = (<span class="number">1 </span>&lt;&lt; <span class="number">40</span>);
         <span class="kw">const </span>DR7 = (<span class="number">1 </span>&lt;&lt; <span class="number">44</span>);

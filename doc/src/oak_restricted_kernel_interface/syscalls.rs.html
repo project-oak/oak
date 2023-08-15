@@ -112,6 +112,7 @@
 <a href="#112" id="112">112</a>
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -214,7 +215,8 @@
 }
 
 <span class="macro">bitflags! </span>{
-    <span class="attr">#[repr(C)]
+    <span class="attr">#[derive(Debug)]
+    #[repr(C)]
     </span><span class="kw">pub struct </span>MmapFlags: i32 {
         <span class="doccomment">/// Private copy-on-write mapping.
         </span><span class="kw">const </span>MAP_PRIVATE = <span class="number">0x02</span>;

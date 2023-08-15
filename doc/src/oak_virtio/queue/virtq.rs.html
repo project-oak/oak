@@ -170,6 +170,8 @@
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -194,6 +196,7 @@
     <span class="doccomment">/// Flags about a descriptor.
     ///
     /// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-320005&gt;.
+    </span><span class="attr">#[derive(Clone, Copy, Debug)]
     </span><span class="kw">pub struct </span>DescFlags: u16 {
         <span class="doccomment">/// This marks a buffer as continuing via the next field to chain descriptors together.
         ///
@@ -249,6 +252,7 @@
 
 <span class="macro">bitflags! </span>{
     <span class="doccomment">/// Flags about the available and used rings.
+    </span><span class="attr">#[derive(Debug)]
     </span><span class="kw">pub struct </span>RingFlags: u16 {
         <span class="doccomment">/// This indicates that the owner of the ring does not require queue notifications.
         </span><span class="kw">const </span>NO_NOTIFY = <span class="number">1</span>;

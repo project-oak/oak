@@ -680,7 +680,7 @@
         <span class="macro">asm!</span>(
             <span class="string">&quot;tdcall&quot;</span>,
             inout(<span class="string">&quot;rax&quot;</span>) VM_CALL_LEAF =&gt; vm_call_result,
-            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits,
+            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits(),
             inout(<span class="string">&quot;r10&quot;</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
             inout(<span class="string">&quot;r11&quot;</span>) SUB_FUNCTION =&gt; failing_gpa,
             <span class="kw">in</span>(<span class="string">&quot;r12&quot;</span>) gpa_start,
@@ -745,7 +745,7 @@
         <span class="macro">asm!</span>(
             <span class="string">&quot;tdcall&quot;</span>,
             inout(<span class="string">&quot;rax&quot;</span>) VM_CALL_LEAF =&gt; vm_call_result,
-            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits,
+            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits(),
             inout(<span class="string">&quot;r10&quot;</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
             <span class="kw">in</span>(<span class="string">&quot;r11&quot;</span>) SUB_FUNCTION,
             inout(<span class="string">&quot;r12&quot;</span>) leaf <span class="kw">as </span>u64 =&gt; eax,
@@ -861,7 +861,7 @@
         <span class="macro">asm!</span>(
             <span class="string">&quot;tdcall&quot;</span>,
             inout(<span class="string">&quot;rax&quot;</span>) VM_CALL_LEAF =&gt; vm_call_result,
-            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits,
+            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits(),
             inout(<span class="string">&quot;r10&quot;</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
             inout(<span class="string">&quot;r11&quot;</span>) SUB_FUNCTION =&gt; data,
             <span class="kw">in</span>(<span class="string">&quot;r12&quot;</span>) size <span class="kw">as </span>u64,
@@ -922,7 +922,7 @@
         <span class="macro">asm!</span>(
             <span class="string">&quot;tdcall&quot;</span>,
             inout(<span class="string">&quot;rax&quot;</span>) VM_CALL_LEAF =&gt; vm_call_result,
-            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits,
+            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits(),
             inout(<span class="string">&quot;r10&quot;</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
             <span class="kw">in</span>(<span class="string">&quot;r11&quot;</span>) SUB_FUNCTION,
             <span class="kw">in</span>(<span class="string">&quot;r12&quot;</span>) size <span class="kw">as </span>u64,
@@ -983,7 +983,7 @@
         <span class="macro">asm!</span>(
             <span class="string">&quot;tdcall&quot;</span>,
             inout(<span class="string">&quot;rax&quot;</span>) VM_CALL_LEAF =&gt; vm_call_result,
-            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits,
+            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits(),
             inout(<span class="string">&quot;r10&quot;</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
             <span class="kw">in</span>(<span class="string">&quot;r11&quot;</span>) SUB_FUNCTION,
             <span class="kw">in</span>(<span class="string">&quot;r12&quot;</span>) msr <span class="kw">as </span>u64,
@@ -1038,7 +1038,7 @@
         <span class="macro">asm!</span>(
             <span class="string">&quot;tdcall&quot;</span>,
             inout(<span class="string">&quot;rax&quot;</span>) VM_CALL_LEAF =&gt; vm_call_result,
-            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits,
+            <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) registers.bits(),
             inout(<span class="string">&quot;r10&quot;</span>) DEFAULT_SUB_FUNCTION_USAGE =&gt; sub_function_result,
             inout(<span class="string">&quot;r11&quot;</span>) SUB_FUNCTION =&gt; data,
             <span class="kw">in</span>(<span class="string">&quot;r12&quot;</span>) msr <span class="kw">as </span>u64,

@@ -425,6 +425,7 @@
 <a href="#425" id="425">425</a>
 <a href="#426" id="426">426</a>
 <a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -774,6 +775,7 @@
     ///
     /// Used in a connection shutdown request.
     /// See &lt;https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-4070005&gt;.
+    </span><span class="attr">#[derive(Debug, PartialEq)]
     </span><span class="kw">pub struct </span>VSockFlags: u32 {
         <span class="doccomment">/// Indicates that no more payload data will be received.
         </span><span class="kw">const </span>NO_RECEIVE = <span class="number">1</span>;

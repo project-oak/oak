@@ -1200,7 +1200,7 @@
 
 <span class="macro">bitflags! </span>{
     <span class="doccomment">/// Flags indicating which features are supported by the hypervisor.
-    </span><span class="attr">#[derive(Default)]
+    </span><span class="attr">#[derive(Debug, Default, PartialEq)]
     </span><span class="kw">pub struct </span>HypervisorFeatureSupportResponse: u64 {
         <span class="doccomment">/// AMD SEV-SNP is supported.
         </span><span class="kw">const </span>SEV_SNP = (<span class="number">1 </span>&lt;&lt; <span class="number">0</span>);
@@ -1269,7 +1269,7 @@
 
 <span class="macro">bitflags! </span>{
     <span class="doccomment">/// Flags indicating which SEV features are active.
-    </span><span class="attr">#[derive(Default)]
+    </span><span class="attr">#[derive(Clone, Copy, Default)]
     </span><span class="kw">pub struct </span>SevStatus: u64 {
         <span class="doccomment">/// SEV is enabled for this guest.
         </span><span class="kw">const </span>SEV_ENABLED = (<span class="number">1 </span>&lt;&lt; <span class="number">0</span>);
