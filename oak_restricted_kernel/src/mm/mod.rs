@@ -74,6 +74,7 @@ bitflags::bitflags! {
     /// Possible flags for a page table entry.
     ///
     /// See <x86_64::structures::paging::PageTableFlags> for more details.
+    #[derive(Clone, Copy, Debug)]
     pub struct PageTableFlags: u64 {
         const PRESENT = 1;
         const WRITABLE = 1 << 1;

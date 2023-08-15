@@ -32,7 +32,7 @@ pub const LENGTH_SIZE: usize = 2;
 static_assertions::assert_eq_size!([u8; LENGTH_SIZE], Length);
 
 bitflags! {
-    #[derive(Default)]
+    #[derive(Clone, Debug, Default)]
     pub struct Flags: u16 {
         const START = 1;
         const END = 2;
@@ -75,7 +75,7 @@ impl Frame<'_> {
         };
         channel.write(PADDING)?;
         channel.write(&frame_length.to_le_bytes())?;
-        channel.write(&self.flags.bits.to_le_bytes())?;
+        channel.write(&self.flags.bits().to_le_bytes())?;
         channel.write(self.body)?;
         Ok(())
     }

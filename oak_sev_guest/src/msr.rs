@@ -442,7 +442,7 @@ impl From<HypervisorFeatureSupportRequest> for u64 {
 
 bitflags! {
     /// Flags indicating which features are supported by the hypervisor.
-    #[derive(Default)]
+    #[derive(Debug, Default, PartialEq)]
     pub struct HypervisorFeatureSupportResponse: u64 {
         /// AMD SEV-SNP is supported.
         const SEV_SNP = (1 << 0);
@@ -511,7 +511,7 @@ pub fn request_termination(request: TerminationRequest) -> ! {
 
 bitflags! {
     /// Flags indicating which SEV features are active.
-    #[derive(Default)]
+    #[derive(Clone, Copy, Default)]
     pub struct SevStatus: u64 {
         /// SEV is enabled for this guest.
         const SEV_ENABLED = (1 << 0);
