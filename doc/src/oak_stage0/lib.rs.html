@@ -291,6 +291,7 @@
 <a href="#291" id="291">291</a>
 <a href="#292" id="292">292</a>
 <a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -540,7 +541,8 @@
         </span>entry = VirtAddr::new(header.e_entry);
     }
 
-    zero_page.set_acpi_rsdp_addr(acpi::build_acpi_tables(<span class="kw-2">&amp;mut </span>fwcfg).unwrap());
+    <span class="kw">let </span>rsdp = acpi::build_acpi_tables(<span class="kw-2">&amp;mut </span>fwcfg).unwrap();
+    zero_page.set_acpi_rsdp_addr(PhysAddr::new(rsdp <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64));
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(ram_disk) =
         initramfs::try_load_initial_ram_disk(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table(), <span class="kw-2">&amp;</span>kernel_info)
