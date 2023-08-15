@@ -22,8 +22,10 @@ use core::{
     ffi::CStr,
     fmt::{Debug, Formatter, Result as FmtResult},
     mem::{size_of, zeroed, MaybeUninit},
+    slice::from_raw_parts,
 };
 use strum::FromRepr;
+use x86_64::VirtAddr;
 use zerocopy::{AsBytes, FromBytes};
 
 /// ACPI Root System Description Pointer.
@@ -113,6 +115,118 @@ impl Rsdp {
         }
 
         Ok(())
+    }
+
+    pub fn xsdt(&self) -> Result<Option<&Xsdt>, &'static str> {
+        if self.xsdt_address == 0 {
+            Ok(None)
+        } else {
+            Xsdt::new(VirtAddr::new(self.xsdt_address)).map(Some)
+        }
+    }
+}
+
+/// Header common for all ACPI tables.
+///
+/// See Section 5.2.6, System Description Table Header, in the ACPI specification for more details.
+#[repr(C, packed)]
+pub struct DescriptionHeader {
+    /// ASCII string representation of the table identifer.
+    pub signature: [u8; 4],
+
+    /// Length of the table, in bytes, including the header.
+    length: u32,
+
+    /// Revision of the struture corresponding to the signature field for this table.
+    revision: u8,
+
+    /// The entire table, including the checksum field, must add to zero to be considered valid.
+    checksum: u8,
+
+    /// OEM-supplied string that identifies the OEM.
+    oem_id: [u8; 6],
+
+    /// OEM-supplied string that the OEM uses to identify the particular data table.
+    oem_table_id: [u8; 8],
+
+    /// OEM-supplied revision number.
+    oem_revision: u32,
+
+    /// Vendor ID of utility that created the table, e.g. the ASL Compiler.
+    creator_id: u32,
+
+    /// Revision of the utility that created the table, e.g. revision of the ASL Compiler.
+    creator_revision: u32,
+}
+
+/// Extended System Description Table.
+///
+/// See Section 5.2.8 in the ACPI specification for more details.
+#[repr(C, packed)]
+pub struct Xsdt {
+    header: DescriptionHeader,
+    // The XSDT contains an array of pointers to other tables, but unfortunately this can't be
+    // expressed in Rust.
+}
+
+impl Xsdt {
+    pub fn new(addr: VirtAddr) -> Result<&'static Xsdt, &'static str> {
+        // Safety: we're checking that the claimed XSDT is entirely within the EBDA.
+        let ebda_base = unsafe { EBDA.as_ptr() } as usize;
+        let xsdt = unsafe { &*addr.as_ptr::<Xsdt>() };
+
+        if (addr.as_u64() as usize) < ebda_base
+            || addr.as_u64() as usize + xsdt.header.length as usize > ebda_base + EBDA_SIZE
+        {
+            return Err("XSDT doesn't fit in EBDA");
+        }
+        xsdt.validate()?;
+        Ok(xsdt)
+    }
+
+    fn validate(&self) -> Result<(), &'static str> {
+        // Unfortunately we have to exceed our bounds to compute the checksum.
+        // Safety: we've checked that the address + len is weithin the EBDA bounds in `new()`.
+        let data =
+            unsafe { from_raw_parts(self as *const _ as *const u8, self.header.length as usize) };
+        let checksum = data.iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
+        if checksum != 0 {
+            return Err("XSDT checksum invalid");
+        }
+        // Check that all the pointers within the XSDT point to locations within the EBDA.
+        if (self.header.length as usize - size_of::<DescriptionHeader>()) % size_of::<usize>() != 0
+        {
+            return Err("XSDT invalid: entries size not a multiple of pointer size");
+        }
+
+        // Safety: we're never dereferencing the pointer.
+        let ebda_base = unsafe { EBDA.as_ptr() } as usize;
+        for &entry in self.entries() {
+            let ptr = entry as *const _ as usize;
+            if !(ebda_base..ebda_base + EBDA_SIZE).contains(&ptr) {
+                return Err("XSDT invalid: entry points outside EBDA");
+            }
+        }
+        Ok(())
+    }
+
+    pub fn entries(&self) -> &[&'static DescriptionHeader] {
+        let entries_base = self as *const _ as usize + size_of::<DescriptionHeader>();
+        // Safety: we've validated that the address and length makes sense in `validate()`.
+        unsafe {
+            from_raw_parts(
+                entries_base as *const &DescriptionHeader,
+                (self.header.length as usize - size_of::<DescriptionHeader>()) / size_of::<usize>(),
+            )
+        }
+    }
+
+    /// Finds a table based on the signature, if it is present.
+    pub fn get(&self, table: &[u8; 4]) -> Option<&'static DescriptionHeader> {
+        self.entries()
+            .iter()
+            .find(|&&entry| entry.signature == *table)
+            .copied()
     }
 }
 

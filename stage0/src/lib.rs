@@ -250,6 +250,11 @@ pub fn rust64_start(encrypted: u64) -> ! {
     let rsdp = acpi::build_acpi_tables(&mut fwcfg).unwrap();
     zero_page.set_acpi_rsdp_addr(PhysAddr::new(rsdp as *const _ as u64));
 
+    // TODO(#4235): Bootstrap the APs.
+    if let Some(xsdt) = rsdp.xsdt().unwrap() {
+        let _madt = xsdt.get(b"MADT");
+    }
+
     if let Some(ram_disk) =
         initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel_info)
     {
