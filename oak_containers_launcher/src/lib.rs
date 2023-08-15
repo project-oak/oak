@@ -147,6 +147,7 @@ impl Launcher {
                 binary_attestation: Some(BinaryAttestation {
                     endorsement_statement: vec![],
                     rekor_log_entry: vec![],
+                    base64_pem_encoded_rekor_public_key: "".to_string(),
                 }),
                 application_data: None,
             },
