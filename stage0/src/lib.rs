@@ -30,8 +30,6 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
-use crate::acpi::{Madt, ProcessorLocalApic, ProcessorLocalX2Apic};
-
 mod acpi;
 mod alloc;
 mod cmos;
@@ -41,6 +39,7 @@ mod kernel;
 mod logging;
 pub mod paging;
 mod sev;
+mod smp;
 mod zero_page;
 
 // Reserve 128K for boot data structures.
@@ -252,27 +251,11 @@ pub fn rust64_start(encrypted: u64) -> ! {
     let rsdp = acpi::build_acpi_tables(&mut fwcfg).unwrap();
     zero_page.set_acpi_rsdp_addr(PhysAddr::new(rsdp as *const _ as u64));
 
-    // TODO(#4235): Bootstrap the APs.
-    if let Some(xsdt) = rsdp.xsdt().unwrap() {
-        if let Some(madt) = xsdt.get(Madt::SIGNATURE) {
-            let madt = Madt::new(madt).expect("invalid MADT");
-            log::debug!("Found ACPI MADT table: {:?}", madt);
-            for item in madt.iter() {
-                match item.structure_type {
-                    ProcessorLocalApic::STRUCTURE_TYPE => {
-                        log::debug!("Local APIC: {:?}", ProcessorLocalApic::new(item).unwrap());
-                    }
-                    ProcessorLocalX2Apic::STRUCTURE_TYPE => {
-                        log::info!(
-                            "Local X2 APIC: {:?}",
-                            ProcessorLocalX2Apic::new(item).unwrap()
-                        );
-                    }
-                    // We don't care about other interrupt controller structure types.
-                    _ => {}
-                }
-            }
-        }
+    if let Err(err) = smp::bootstrap_aps(rsdp) {
+        log::warn!(
+            "Failed to bootstrap APs: {}. APs may not be properly initialized.",
+            err
+        );
     }
 
     if let Some(ram_disk) =
