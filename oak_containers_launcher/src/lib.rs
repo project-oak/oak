@@ -37,6 +37,7 @@ use tokio::{
     net::TcpListener,
     sync::oneshot::{channel, Receiver, Sender},
     task::JoinHandle,
+    time::{timeout, Duration},
 };
 
 /// The local IP address assigned to the VM guest.
@@ -48,6 +49,7 @@ const VM_LOCAL_PORT: u16 = 8080;
 /// The local address that will be forwarded by the VMM to the guest's IP adress.
 const PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
 
+/// Number of seconds to wait for the VM to start up.
 const VM_START_TIMEOUT: u64 = 300;
 
 #[derive(Parser, Debug)]
@@ -173,22 +175,12 @@ impl Launcher {
     pub async fn get_trusted_app_address(&mut self) -> Result<SocketAddr, anyhow::Error> {
         // If we haven't received a ready notification, wait for it.
         if let Some(receiver) = self.app_ready_notifier.take() {
-            // Set a timeout of 5 minutes, since we don't want to wait forever if the VM didn't
-            // start properly.
-            let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(VM_START_TIMEOUT));
-
-            tokio::select! {
-                result = receiver => {
-                    result?;
-                    self.trusted_app_address.replace(
-                        SocketAddr::new(
-                            IpAddr::V4(PROXY_ADDRESS),
-                            self.host_proxy_port,
-                        )
-                    );
-                }
-                _ = sleep => {}
-            }
+            // Set a timeout since we don't want to wait forever if the VM didn't start properly.
+            timeout(Duration::from_secs(VM_START_TIMEOUT), receiver).await??;
+            self.trusted_app_address.replace(SocketAddr::new(
+                IpAddr::V4(PROXY_ADDRESS),
+                self.host_proxy_port,
+            ));
         }
         self.trusted_app_address
             .ok_or_else(|| anyhow::anyhow!("trusted app address not set"))
@@ -199,21 +191,17 @@ impl Launcher {
     pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<AttestationBundle> {
         // If we haven't received an attestation evidence, wait for it.
         if let Some(receiver) = self.attestation_evidence_receiver.take() {
-            // Set a timeout of 5 minutes, since we don't want to wait forever if the VM didn't
-            // start properly.
-            let sleep = tokio::time::sleep(tokio::time::Duration::from_secs(VM_START_TIMEOUT));
-
-            tokio::select! {
-                result = receiver => {
-                    let evidence = result.context("couldn't get attestation evidence")?;
-                    let endorsed_attestation_evidence = AttestationBundle {
-                        attestation_evidence: Some(evidence),
-                        attestation_endorsement: Some(self.attestation_endorsement.clone()),
-                    };
-                    self.endorsed_attestation_evidence.replace(endorsed_attestation_evidence);
-                }
-                _ = sleep => {}
-            }
+            // Set a timeout since we don't want to wait forever if the VM didn't start properly.
+            let evidence = timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
+                .await
+                .context("couldn't get attestation evidence before timeout")?
+                .context("no attestation evidence available")?;
+            let endorsed_attestation_evidence = AttestationBundle {
+                attestation_evidence: Some(evidence),
+                attestation_endorsement: Some(self.attestation_endorsement.clone()),
+            };
+            self.endorsed_attestation_evidence
+                .replace(endorsed_attestation_evidence);
         }
         self.endorsed_attestation_evidence
             .clone()
