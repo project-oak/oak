@@ -2253,6 +2253,7 @@ dependencies = [
  "oak_linux_boot_params",
  "oak_sev_guest",
  "sev_serial",
+ "sha2",
  "spinning_top",
  "static_assertions",
  "strum",
