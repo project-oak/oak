@@ -221,18 +221,6 @@
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
 <a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -272,6 +260,7 @@
     net::TcpListener,
     sync::oneshot::{channel, Receiver, Sender},
     task::JoinHandle,
+    time::{timeout, Duration},
 };
 
 <span class="doccomment">/// The local IP address assigned to the VM guest.
@@ -283,7 +272,8 @@
 <span class="doccomment">/// The local address that will be forwarded by the VMM to the guest&#39;s IP adress.
 </span><span class="kw">const </span>PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
 
-<span class="kw">const </span>VM_START_TIMEOUT: u64 = <span class="number">300</span>;
+<span class="doccomment">/// Number of seconds to wait for the VM to start up.
+</span><span class="kw">const </span>VM_START_TIMEOUT: u64 = <span class="number">300</span>;
 
 <span class="attr">#[derive(Parser, Debug)]
 </span><span class="kw">pub struct </span>Args {
@@ -408,22 +398,12 @@
     </span><span class="kw">pub async fn </span>get_trusted_app_address(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;SocketAddr, anyhow::Error&gt; {
         <span class="comment">// If we haven&#39;t received a ready notification, wait for it.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(receiver) = <span class="self">self</span>.app_ready_notifier.take() {
-            <span class="comment">// Set a timeout of 5 minutes, since we don&#39;t want to wait forever if the VM didn&#39;t
-            // start properly.
-            </span><span class="kw">let </span>sleep = tokio::time::sleep(tokio::time::Duration::from_secs(VM_START_TIMEOUT));
-
-            <span class="macro">tokio::select! </span>{
-                result = receiver =&gt; {
-                    result<span class="question-mark">?</span>;
-                    <span class="self">self</span>.trusted_app_address.replace(
-                        SocketAddr::new(
-                            IpAddr::V4(PROXY_ADDRESS),
-                            <span class="self">self</span>.host_proxy_port,
-                        )
-                    );
-                }
-                <span class="kw">_ </span>= sleep =&gt; {}
-            }
+            <span class="comment">// Set a timeout since we don&#39;t want to wait forever if the VM didn&#39;t start properly.
+            </span>timeout(Duration::from_secs(VM_START_TIMEOUT), receiver).<span class="kw">await</span><span class="question-mark">??</span>;
+            <span class="self">self</span>.trusted_app_address.replace(SocketAddr::new(
+                IpAddr::V4(PROXY_ADDRESS),
+                <span class="self">self</span>.host_proxy_port,
+            ));
         }
         <span class="self">self</span>.trusted_app_address
             .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;trusted app address not set&quot;</span>))
@@ -434,21 +414,17 @@
     </span><span class="kw">pub async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;AttestationBundle&gt; {
         <span class="comment">// If we haven&#39;t received an attestation evidence, wait for it.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(receiver) = <span class="self">self</span>.attestation_evidence_receiver.take() {
-            <span class="comment">// Set a timeout of 5 minutes, since we don&#39;t want to wait forever if the VM didn&#39;t
-            // start properly.
-            </span><span class="kw">let </span>sleep = tokio::time::sleep(tokio::time::Duration::from_secs(VM_START_TIMEOUT));
-
-            <span class="macro">tokio::select! </span>{
-                result = receiver =&gt; {
-                    <span class="kw">let </span>evidence = result.context(<span class="string">&quot;couldn&#39;t get attestation evidence&quot;</span>)<span class="question-mark">?</span>;
-                    <span class="kw">let </span>endorsed_attestation_evidence = AttestationBundle {
-                        attestation_evidence: <span class="prelude-val">Some</span>(evidence),
-                        attestation_endorsement: <span class="prelude-val">Some</span>(<span class="self">self</span>.attestation_endorsement.clone()),
-                    };
-                    <span class="self">self</span>.endorsed_attestation_evidence.replace(endorsed_attestation_evidence);
-                }
-                <span class="kw">_ </span>= sleep =&gt; {}
-            }
+            <span class="comment">// Set a timeout since we don&#39;t want to wait forever if the VM didn&#39;t start properly.
+            </span><span class="kw">let </span>evidence = timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
+                .<span class="kw">await
+                </span>.context(<span class="string">&quot;couldn&#39;t get attestation evidence before timeout&quot;</span>)<span class="question-mark">?
+                </span>.context(<span class="string">&quot;no attestation evidence available&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>endorsed_attestation_evidence = AttestationBundle {
+                attestation_evidence: <span class="prelude-val">Some</span>(evidence),
+                attestation_endorsement: <span class="prelude-val">Some</span>(<span class="self">self</span>.attestation_endorsement.clone()),
+            };
+            <span class="self">self</span>.endorsed_attestation_evidence
+                .replace(endorsed_attestation_evidence);
         }
         <span class="self">self</span>.endorsed_attestation_evidence
             .clone()
