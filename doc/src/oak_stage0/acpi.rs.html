@@ -633,6 +633,23 @@
 <a href="#633" id="633">633</a>
 <a href="#634" id="634">634</a>
 <a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -767,7 +784,7 @@
 </span><span class="attr">#[repr(C, packed)]
 </span><span class="kw">pub struct </span>DescriptionHeader {
     <span class="doccomment">/// ASCII string representation of the table identifer.
-    </span><span class="kw">pub </span>signature: [u8; <span class="number">4</span>],
+    </span>signature: [u8; <span class="number">4</span>],
 
     <span class="doccomment">/// Length of the table, in bytes, including the header.
     </span>length: u32,
@@ -794,6 +811,31 @@
     </span>creator_revision: u32,
 }
 
+<span class="kw">impl </span>DescriptionHeader {
+    <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="comment">// Safety: we&#39;re never dereferencing this pointer.
+        </span><span class="kw">let </span>ebda_base = <span class="kw">unsafe </span>{ EBDA.as_ptr() } <span class="kw">as </span>usize;
+        <span class="kw">let </span>ebda = ebda_base..ebda_base + EBDA_SIZE;
+        <span class="kw">let </span>table = {
+            <span class="kw">let </span>base = <span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize;
+            base..base + <span class="self">self</span>.length <span class="kw">as </span>usize
+        };
+
+        <span class="kw">if </span>!ebda.contains(<span class="kw-2">&amp;</span>table.start) || !ebda.contains(<span class="kw-2">&amp;</span>table.end) {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;ACPI table falls outside EBDA&quot;</span>);
+        }
+
+        <span class="comment">// Safety: we&#39;ve ensured that the table is within EBDA.
+        </span><span class="kw">let </span>data = <span class="kw">unsafe </span>{ from_raw_parts(table.start <span class="kw">as </span><span class="kw-2">*const </span>u8, <span class="self">self</span>.length <span class="kw">as </span>usize) };
+        <span class="kw">let </span>checksum = data.iter().fold(<span class="number">0u8</span>, |lhs, <span class="kw-2">&amp;</span>rhs| lhs.wrapping_add(rhs));
+        <span class="kw">if </span>checksum != <span class="number">0 </span>{
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;ACPI table checksum invalid&quot;</span>);
+        }
+
+        <span class="prelude-val">Ok</span>(())
+    }
+}
+
 <span class="doccomment">/// Extended System Description Table.
 ///
 /// See Section 5.2.8 in the ACPI specification for more details.
@@ -805,31 +847,23 @@
 </span>}
 
 <span class="kw">impl </span>Xsdt {
-    <span class="kw">pub fn </span>new(addr: VirtAddr) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Xsdt, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="comment">// Safety: we&#39;re checking that the claimed XSDT is entirely within the EBDA.
-        </span><span class="kw">let </span>ebda_base = <span class="kw">unsafe </span>{ EBDA.as_ptr() } <span class="kw">as </span>usize;
-        <span class="kw">let </span>xsdt = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>addr.as_ptr::&lt;Xsdt&gt;() };
+    <span class="kw">const </span>SIGNATURE: <span class="kw-2">&amp;</span>[u8; <span class="number">4</span>] = <span class="string">b&quot;XSDT&quot;</span>;
 
-        <span class="kw">if </span>(addr.as_u64() <span class="kw">as </span>usize) &lt; ebda_base
-            || addr.as_u64() <span class="kw">as </span>usize + xsdt.header.length <span class="kw">as </span>usize &gt; ebda_base + EBDA_SIZE
-        {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;XSDT doesn&#39;t fit in EBDA&quot;</span>);
-        }
+    <span class="kw">pub fn </span>new(addr: VirtAddr) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Xsdt, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="comment">// Safety: we&#39;re checking that it&#39;s a valid XSDT in `validate()`.
+        </span><span class="kw">let </span>xsdt = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>addr.as_ptr::&lt;Xsdt&gt;() };
         xsdt.validate()<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(xsdt)
     }
 
     <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="comment">// Unfortunately we have to exceed our bounds to compute the checksum.
-        // Safety: we&#39;ve checked that the address + len is weithin the EBDA bounds in `new()`.
-        </span><span class="kw">let </span>data =
-            <span class="kw">unsafe </span>{ from_raw_parts(<span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span><span class="kw-2">*const </span>u8, <span class="self">self</span>.header.length <span class="kw">as </span>usize) };
-        <span class="kw">let </span>checksum = data.iter().fold(<span class="number">0u8</span>, |lhs, <span class="kw-2">&amp;</span>rhs| lhs.wrapping_add(rhs));
-        <span class="kw">if </span>checksum != <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;XSDT checksum invalid&quot;</span>);
+        <span class="self">self</span>.header.validate()<span class="question-mark">?</span>;
+
+        <span class="kw">if </span><span class="self">self</span>.header.signature != <span class="kw-2">*</span><span class="self">Self</span>::SIGNATURE {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;Invalid signature for XSDT table&quot;</span>);
         }
-        <span class="comment">// Check that all the pointers within the XSDT point to locations within the EBDA.
-        </span><span class="kw">if </span>(<span class="self">self</span>.header.length <span class="kw">as </span>usize - size_of::&lt;DescriptionHeader&gt;()) % size_of::&lt;usize&gt;() != <span class="number">0
+
+        <span class="kw">if </span>(<span class="self">self</span>.header.length <span class="kw">as </span>usize - size_of::&lt;DescriptionHeader&gt;()) % size_of::&lt;usize&gt;() != <span class="number">0
         </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;XSDT invalid: entries size not a multiple of pointer size&quot;</span>);
         }
