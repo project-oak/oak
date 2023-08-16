@@ -17,8 +17,14 @@
 #![no_std]
 #![feature(int_roundings)]
 
+#[macro_use]
+extern crate alloc as other_alloc;
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
+use coset::{cbor::value::Value, cwt, iana, CborSerializable, CoseError};
+use hkdf::Hkdf;
 use oak_sev_guest::io::PortFactoryWrapper;
+use other_alloc::{string::String, vec::Vec};
+use sha2::Sha256;
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
     registers::segmentation::*,
@@ -29,12 +35,9 @@ use x86_64::{
     },
     PhysAddr, VirtAddr,
 };
-#[cfg(feature = "ecdsa")]
-use {
-    p384::ecdsa::{signature::Signer, Signature, SigningKey},
-    p384::ecdsa::{signature::Verifier, VerifyingKey},
-    rand_core::OsRng,
-};
+// #[cfg(feature = "ecdsa")]
+use p384::ecdsa::{signature::Signer, Signature, SigningKey, VerifyingKey};
+use rand_core::OsRng;
 
 mod acpi;
 mod alloc;
@@ -46,6 +49,9 @@ mod logging;
 pub mod paging;
 mod sev;
 mod zero_page;
+
+pub const ID_SALT: &str = "DICE_ID_SALT";
+pub const SIGNATURE_LENGTH: usize = 20;
 
 // Reserve 128K for boot data structures.
 static BOOT_ALLOC: alloc::Allocator<0x20000> = alloc::Allocator::uninit();
@@ -93,20 +99,91 @@ pub unsafe fn jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -> ! {
     );
 }
 
-#[cfg(feature = "ecdsa")]
-pub fn generate_and_sign_stage1_key() -> (bytes) {
-    // Generate stage 0 CA keys
-    let stage0_ca_key = SigningKey::random(&mut OsRng); // Serialize with `::to_bytes()`
-    let stage0_ca_verifying_key = VerifyingKey::from(&stage0_ca_key);
-    // Make a call to generate_attestation_report(data) function and pass 'stage0_ca_key'
-    // as an argument so that the resulting report will sign the public key.
+fn perform_sign(signing_key: SigningKey, to_be_signed: &[u8]) -> Vec<u8> {
+    let signed_stage1_ca_verifying_key: Signature = signing_key.sign(to_be_signed);
+    Vec::from(signed_stage1_ca_verifying_key.to_bytes().as_slice())
+}
 
-    // Generate stage 1 CA keys.
-    let stage1_ca_key = SigningKey::random(&mut OsRng); // Serialize with `::to_bytes()`
-    let stage1_ca_verifying_key = VerifyingKey::from(&stage1_ca_key);
-    let signed_stage1_ca_verifying_key: Signature = stage0_ca_key.sign(stage1_ca_verifying_key);
-    // Signtaure::from_bytes() to read the unserialized version
-    return signed_stage1_ca_verifying_key.to_bytes();
+fn derive_id(ikm: &[u8], info: Option<&[u8]>) -> [u8; SIGNATURE_LENGTH] {
+    let hkdf = Hkdf::<Sha256>::new(Some(&(ID_SALT.as_bytes().to_vec())), &ikm);
+    let mut okm: [u8; SIGNATURE_LENGTH] = [0u8; SIGNATURE_LENGTH];
+    hkdf.expand(info.unwrap_or(&[]), &mut okm)
+        .expect("20 is a valid length for Sha256 to output");
+
+    okm
+}
+
+fn generate_ecdsa_keys(info: &str) -> (SigningKey, [u8; SIGNATURE_LENGTH]) {
+    let key = SigningKey::random(&mut OsRng);
+    let public_key = VerifyingKey::from(&key);
+    let key_id = derive_id(
+        public_key.to_encoded_point(false).as_bytes(),
+        Some(info.as_bytes()),
+    );
+    (key, key_id)
+}
+
+fn generate_stage1_ca_cwt(
+    stage0_eca_key: SigningKey,
+    stage0_cert_id_hex: String,
+) -> Result<Vec<u8>, CoseError> {
+    // Generate Stage 1 keys and Signer.
+    let info_str = "ID";
+    let stage1_ca_key = generate_ecdsa_keys(info_str);
+    let stage1_ca_verifying_key = VerifyingKey::from(&stage1_ca_key.0);
+
+    // Generate claims
+    let claims = cwt::ClaimsSetBuilder::new()
+        .issuer(stage0_cert_id_hex)
+        .subject(hex::encode(stage1_ca_key.1))
+        .cwt_id(Vec::from(stage1_ca_key.1))
+        // Add additional private-use claim.
+        .private_claim(
+            -4670552,
+            Value::Bytes(Vec::from(
+                stage1_ca_verifying_key.to_encoded_point(false).as_bytes(),
+            )),
+        )
+        .build();
+
+    let aad = b"";
+
+    // Build a `CoseSign1` object.
+    let protected = coset::HeaderBuilder::new()
+        .algorithm(iana::Algorithm::ES384)
+        .build();
+    let unprotected = coset::HeaderBuilder::new()
+        .key_id((*b"AsymmetricECDSA384").into())
+        .build();
+    let sign1 = coset::CoseSign1Builder::new()
+        .protected(protected)
+        .unprotected(unprotected)
+        .payload(claims.clone().to_vec()?)
+        .create_signature(aad, |_| {
+            perform_sign(
+                stage0_eca_key,
+                stage1_ca_verifying_key.to_encoded_point(false).as_bytes(),
+            )
+        })
+        .build();
+    sign1.to_vec()
+}
+
+pub fn generate_stage1_attestation() {
+    // Generate Stage0 keys. This key will be used to sign Stage1
+    // measurement+config and the stage1_ca_key
+    let info_str = "ID";
+    let stage0_ca_key = generate_ecdsa_keys(info_str);
+    let stage0_ca_verifying_key = VerifyingKey::from(&stage0_ca_key.0);
+
+    // Call generate_attestation_report() to get 'stage0_ca_verifying_key' added to attestation report.
+    log::debug!("Stage0 Verification key: {}", hex::encode(stage0_ca_verifying_key.to_encoded_point(false).as_bytes()));
+
+    // Generate Stage1 CWT
+    let stage1_cwt = generate_stage1_ca_cwt(stage0_ca_key.0, hex::encode(stage0_ca_key.1));
+    if stage1_cwt.is_ok() {
+        // Call code that transmits the serialized cwt to Stage1
+    }
 }
 
 /// Entry point for the Rust code in the stage0 BIOS.
@@ -115,7 +192,7 @@ pub fn generate_and_sign_stage1_key() -> (bytes) {
 ///
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page tables.
 pub fn rust64_start(encrypted: u64) -> ! {
-    let (es, snp) = if encrypted > 0 { 
+    let (es, snp) = if encrypted > 0 {
         // We're under some form of memory encryption, thus it's safe to access the SEV_STATUS MSR.
         let status =
             oak_sev_guest::msr::get_sev_status().unwrap_or(oak_sev_guest::msr::SevStatus::empty());
@@ -276,9 +353,6 @@ pub fn rust64_start(encrypted: u64) -> ! {
     {
         zero_page.set_initial_ram_disk(ram_disk);
     }
-
-    #[cfg(feature = "ecdsa")]
-    generate_and_sign_stage1_key();
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 
