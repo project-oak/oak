@@ -366,7 +366,7 @@ pub struct ProcessorLocalX2Apic {
 }
 
 impl ProcessorLocalX2Apic {
-    pub const STRUCTURE_TYPE: u8 = 16;
+    pub const STRUCTURE_TYPE: u8 = 9;
 
     pub fn new(header: &ControllerHeader) -> Result<&Self, &'static str> {
         if header.structure_type != Self::STRUCTURE_TYPE {
