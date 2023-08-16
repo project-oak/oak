@@ -24,7 +24,7 @@ use quirk_echo_launcher::proto::quirk::echo::{EchoAsyncClient, EchoRequest};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cli = crate::launcher::virtualized::Params::parse();
+    let cli = crate::launcher::Params::parse();
     env_logger::init();
 
     log::info!("calling launcher");

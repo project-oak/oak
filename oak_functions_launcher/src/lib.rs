@@ -57,7 +57,7 @@ pub struct LookupDataConfig {
 }
 
 pub async fn create(
-    params: launcher::virtualized::Params,
+    params: launcher::Params,
     lookup_data_config: LookupDataConfig,
     wasm_path: PathBuf,
     constant_response_size: u32,

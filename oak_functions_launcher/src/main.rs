@@ -32,7 +32,7 @@ use ubyte::ByteUnit;
 struct Args {
     /// launcher params.
     #[clap(flatten)]
-    launcher_params: oak_launcher_utils::launcher::virtualized::Params,
+    launcher_params: oak_launcher_utils::launcher::Params,
     /// Consistent response size that the enclave should apply
     #[arg(long, default_value = "1024")]
     constant_response_size: u32,
