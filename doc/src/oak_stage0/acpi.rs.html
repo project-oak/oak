@@ -1206,7 +1206,7 @@
 }
 
 <span class="kw">impl </span>ProcessorLocalX2Apic {
-    <span class="kw">pub const </span>STRUCTURE_TYPE: u8 = <span class="number">16</span>;
+    <span class="kw">pub const </span>STRUCTURE_TYPE: u8 = <span class="number">9</span>;
 
     <span class="kw">pub fn </span>new(header: <span class="kw-2">&amp;</span>ControllerHeader) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">if </span>header.structure_type != <span class="self">Self</span>::STRUCTURE_TYPE {

@@ -300,23 +300,6 @@
 <a href="#300" id="300">300</a>
 <a href="#301" id="301">301</a>
 <a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a>
-<a href="#308" id="308">308</a>
-<a href="#309" id="309">309</a>
-<a href="#310" id="310">310</a>
-<a href="#311" id="311">311</a>
-<a href="#312" id="312">312</a>
-<a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
-<a href="#319" id="319">319</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -349,8 +332,6 @@
     PhysAddr, VirtAddr,
 };
 
-<span class="kw">use </span><span class="kw">crate</span>::acpi::{Madt, ProcessorLocalApic, ProcessorLocalX2Apic};
-
 <span class="kw">mod </span>acpi;
 <span class="kw">mod </span>alloc;
 <span class="kw">mod </span>cmos;
@@ -360,6 +341,7 @@
 <span class="kw">mod </span>logging;
 <span class="kw">pub mod </span>paging;
 <span class="kw">mod </span>sev;
+<span class="kw">mod </span>smp;
 <span class="kw">mod </span>zero_page;
 
 <span class="comment">// Reserve 128K for boot data structures.
@@ -571,27 +553,11 @@
     <span class="kw">let </span>rsdp = acpi::build_acpi_tables(<span class="kw-2">&amp;mut </span>fwcfg).unwrap();
     zero_page.set_acpi_rsdp_addr(PhysAddr::new(rsdp <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64));
 
-    <span class="comment">// TODO(#4235): Bootstrap the APs.
-    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(xsdt) = rsdp.xsdt().unwrap() {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(madt) = xsdt.get(Madt::SIGNATURE) {
-            <span class="kw">let </span>madt = Madt::new(madt).expect(<span class="string">&quot;invalid MADT&quot;</span>);
-            <span class="macro">log::debug!</span>(<span class="string">&quot;Found ACPI MADT table: {:?}&quot;</span>, madt);
-            <span class="kw">for </span>item <span class="kw">in </span>madt.iter() {
-                <span class="kw">match </span>item.structure_type {
-                    ProcessorLocalApic::STRUCTURE_TYPE =&gt; {
-                        <span class="macro">log::debug!</span>(<span class="string">&quot;Local APIC: {:?}&quot;</span>, ProcessorLocalApic::new(item).unwrap());
-                    }
-                    ProcessorLocalX2Apic::STRUCTURE_TYPE =&gt; {
-                        <span class="macro">log::info!</span>(
-                            <span class="string">&quot;Local X2 APIC: {:?}&quot;</span>,
-                            ProcessorLocalX2Apic::new(item).unwrap()
-                        );
-                    }
-                    <span class="comment">// We don&#39;t care about other interrupt controller structure types.
-                    </span><span class="kw">_ </span>=&gt; {}
-                }
-            }
-        }
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = smp::bootstrap_aps(rsdp) {
+        <span class="macro">log::warn!</span>(
+            <span class="string">&quot;Failed to bootstrap APs: {}. APs may not be properly initialized.&quot;</span>,
+            err
+        );
     }
 
     <span class="kw">if let </span><span class="prelude-val">Some</span>(ram_disk) =

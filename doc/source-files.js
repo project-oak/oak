@@ -43,7 +43,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_restricted_kernel_interface":["",[],["errno.rs","lib.rs","syscalls.rs"]],\
 "oak_sev_guest":["",[],["cpuid.rs","crypto.rs","ghcb.rs","guest.rs","instructions.rs","interrupts.rs","io.rs","lib.rs","msr.rs","secrets.rs","vmsa.rs"]],\
 "oak_simple_io":["",[],["lib.rs"]],\
-"oak_stage0":["",[],["acpi.rs","alloc.rs","cmos.rs","fw_cfg.rs","initramfs.rs","kernel.rs","lib.rs","logging.rs","paging.rs","sev.rs","zero_page.rs"]],\
+"oak_stage0":["",[],["acpi.rs","alloc.rs","cmos.rs","fw_cfg.rs","initramfs.rs","kernel.rs","lib.rs","logging.rs","paging.rs","sev.rs","smp.rs","zero_page.rs"]],\
 "oak_tdx_guest":["",[],["lib.rs","tdcall.rs","vmcall.rs"]],\
 "oak_tensorflow_service":["",[],["lib.rs","tflite.rs"]],\
 "oak_transparency_claims":["",[],["claims.rs","intoto.rs","lib.rs"]],\
