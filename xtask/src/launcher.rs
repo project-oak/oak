@@ -90,7 +90,6 @@ impl LauncherMode {
     pub fn variant_subcommand(&self) -> Vec<String> {
         match self {
             LauncherMode::Virtual(_) => vec![
-                "virtualized".to_string(),
                 format!(
                     "--enclave-binary={}",
                     workspace_path(&[

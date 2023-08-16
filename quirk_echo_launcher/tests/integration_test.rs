@@ -19,7 +19,7 @@ use std::time::Duration;
 
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
-async fn test_launcher_virtual() {
+async fn test_launcher() {
     if xtask::testing::skip_test() {
         log::info!("skipping test");
         return;

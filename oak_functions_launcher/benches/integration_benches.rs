@@ -95,7 +95,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
 
     let (launched_instance, connector_handle, initialize_response) = runtime
         .block_on(oak_functions_launcher::create(
-            launcher::GuestMode::Virtualized(params),
+            params,
             lookup_data_config,
             config.wasm_path.to_path_buf(),
             constant_response_size,
