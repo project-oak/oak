@@ -132,7 +132,7 @@ impl Rsdp {
 #[repr(C, packed)]
 pub struct DescriptionHeader {
     /// ASCII string representation of the table identifer.
-    pub signature: [u8; 4],
+    signature: [u8; 4],
 
     /// Length of the table, in bytes, including the header.
     length: u32,
@@ -159,6 +159,31 @@ pub struct DescriptionHeader {
     creator_revision: u32,
 }
 
+impl DescriptionHeader {
+    fn validate(&self) -> Result<(), &'static str> {
+        // Safety: we're never dereferencing this pointer.
+        let ebda_base = unsafe { EBDA.as_ptr() } as usize;
+        let ebda = ebda_base..ebda_base + EBDA_SIZE;
+        let table = {
+            let base = self as *const _ as usize;
+            base..base + self.length as usize
+        };
+
+        if !ebda.contains(&table.start) || !ebda.contains(&table.end) {
+            return Err("ACPI table falls outside EBDA");
+        }
+
+        // Safety: we've ensured that the table is within EBDA.
+        let data = unsafe { from_raw_parts(table.start as *const u8, self.length as usize) };
+        let checksum = data.iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
+        if checksum != 0 {
+            return Err("ACPI table checksum invalid");
+        }
+
+        Ok(())
+    }
+}
+
 /// Extended System Description Table.
 ///
 /// See Section 5.2.8 in the ACPI specification for more details.
@@ -170,30 +195,22 @@ pub struct Xsdt {
 }
 
 impl Xsdt {
-    pub fn new(addr: VirtAddr) -> Result<&'static Xsdt, &'static str> {
-        // Safety: we're checking that the claimed XSDT is entirely within the EBDA.
-        let ebda_base = unsafe { EBDA.as_ptr() } as usize;
-        let xsdt = unsafe { &*addr.as_ptr::<Xsdt>() };
+    const SIGNATURE: &[u8; 4] = b"XSDT";
 
-        if (addr.as_u64() as usize) < ebda_base
-            || addr.as_u64() as usize + xsdt.header.length as usize > ebda_base + EBDA_SIZE
-        {
-            return Err("XSDT doesn't fit in EBDA");
-        }
+    pub fn new(addr: VirtAddr) -> Result<&'static Xsdt, &'static str> {
+        // Safety: we're checking that it's a valid XSDT in `validate()`.
+        let xsdt = unsafe { &*addr.as_ptr::<Xsdt>() };
         xsdt.validate()?;
         Ok(xsdt)
     }
 
     fn validate(&self) -> Result<(), &'static str> {
-        // Unfortunately we have to exceed our bounds to compute the checksum.
-        // Safety: we've checked that the address + len is weithin the EBDA bounds in `new()`.
-        let data =
-            unsafe { from_raw_parts(self as *const _ as *const u8, self.header.length as usize) };
-        let checksum = data.iter().fold(0u8, |lhs, &rhs| lhs.wrapping_add(rhs));
-        if checksum != 0 {
-            return Err("XSDT checksum invalid");
+        self.header.validate()?;
+
+        if self.header.signature != *Self::SIGNATURE {
+            return Err("Invalid signature for XSDT table");
         }
-        // Check that all the pointers within the XSDT point to locations within the EBDA.
+
         if (self.header.length as usize - size_of::<DescriptionHeader>()) % size_of::<usize>() != 0
         {
             return Err("XSDT invalid: entries size not a multiple of pointer size");
