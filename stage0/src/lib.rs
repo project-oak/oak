@@ -30,6 +30,8 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
+use crate::acpi::{Madt, ProcessorLocalApic, ProcessorLocalX2Apic};
+
 mod acpi;
 mod alloc;
 mod cmos;
@@ -252,7 +254,25 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     // TODO(#4235): Bootstrap the APs.
     if let Some(xsdt) = rsdp.xsdt().unwrap() {
-        let _madt = xsdt.get(b"MADT");
+        if let Some(madt) = xsdt.get(Madt::SIGNATURE) {
+            let madt = Madt::new(madt).expect("invalid MADT");
+            log::debug!("Found ACPI MADT table: {:?}", madt);
+            for item in madt.iter() {
+                match item.structure_type {
+                    ProcessorLocalApic::STRUCTURE_TYPE => {
+                        log::debug!("Local APIC: {:?}", ProcessorLocalApic::new(item).unwrap());
+                    }
+                    ProcessorLocalX2Apic::STRUCTURE_TYPE => {
+                        log::info!(
+                            "Local X2 APIC: {:?}",
+                            ProcessorLocalX2Apic::new(item).unwrap()
+                        );
+                    }
+                    // We don't care about other interrupt controller structure types.
+                    _ => {}
+                }
+            }
+        }
     }
 
     if let Some(ram_disk) =

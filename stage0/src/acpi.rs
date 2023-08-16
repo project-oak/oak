@@ -18,6 +18,7 @@
 // defines the interface.
 
 use crate::fw_cfg::FwCfg;
+use bitflags::bitflags;
 use core::{
     ffi::CStr,
     fmt::{Debug, Formatter, Result as FmtResult},
@@ -129,6 +130,7 @@ impl Rsdp {
 /// Header common for all ACPI tables.
 ///
 /// See Section 5.2.6, System Description Table Header, in the ACPI specification for more details.
+#[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct DescriptionHeader {
     /// ASCII string representation of the table identifer.
@@ -160,6 +162,13 @@ pub struct DescriptionHeader {
 }
 
 impl DescriptionHeader {
+    #[allow(dead_code)]
+    pub fn signature(&self) -> &str {
+        // Per the ACPI spec, the signature is in ASCII, which is always valid UTF-8.
+        core::str::from_utf8(&self.signature)
+            .expect("invalid ACPI table signature; not valid UTF-8")
+    }
+
     fn validate(&self) -> Result<(), &'static str> {
         // Safety: we're never dereferencing this pointer.
         let ebda_base = unsafe { EBDA.as_ptr() } as usize;
@@ -244,6 +253,185 @@ impl Xsdt {
             .iter()
             .find(|&&entry| entry.signature == *table)
             .copied()
+    }
+}
+
+bitflags! {
+    #[derive(Clone, Copy, Debug)]
+    struct MadtFlags: u32 {
+        /// The system also has a PC-AT-compatible dual-8259 setup.
+        ///
+        /// The 8259 vectors must be disabled (that is, masked) when enabling the ACPI APIC operation.
+        const PCAT_COMPAT = 1;
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    struct LocalApicFlags: u32 {
+        /// Processor is ready to use.
+        const ENABLED = 1;
+
+        /// If disabled, system hardware supports enabling this processor during OS runtime.
+        const ONLINE_CAPABLE = 2;
+    }
+}
+/// Multiple APIC Description Table (MADT).
+///
+/// See Section 5.2.12 in the ACPI specification for more details.
+#[derive(Debug)]
+#[repr(C, packed)]
+pub struct Madt {
+    header: DescriptionHeader,
+
+    /// Physical address of the local APIC for each CPU.
+    local_apic_address: u32,
+
+    /// Multiple APIC flags.
+    flags: MadtFlags,
+    // This is followed by a dynamic number of variable-length interrupt controller structures,
+    // which unfortunately can't be expressed in safe Rust.
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C, packed)]
+pub struct ControllerHeader {
+    pub structure_type: u8,
+    len: u8,
+}
+
+impl ControllerHeader {
+    fn validate(&self) -> Result<(), &'static str> {
+        // Safety: we're never dereferencing this pointer.
+        let ebda_base = unsafe { EBDA.as_ptr() } as usize;
+        let ebda = ebda_base..ebda_base + EBDA_SIZE;
+        let structure = {
+            let base = self as *const _ as usize;
+            base..base + self.len as usize
+        };
+
+        if !ebda.contains(&structure.start) || !ebda.contains(&structure.end) {
+            return Err("ACPI interrupt data structure falls outside EBDA");
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+#[repr(C, packed)]
+pub struct ProcessorLocalApic {
+    header: ControllerHeader,
+
+    /// Deprecated; maps to a Processor object in the ACPI tree.
+    processor_uid: u8,
+
+    /// Processor's local APIC ID.
+    apic_id: u8,
+
+    /// Local APIC flags.
+    flags: LocalApicFlags,
+}
+
+impl ProcessorLocalApic {
+    pub const STRUCTURE_TYPE: u8 = 0;
+
+    pub fn new(header: &ControllerHeader) -> Result<&Self, &'static str> {
+        if header.structure_type != Self::STRUCTURE_TYPE {
+            return Err("structure is not Processor Local APIC Structure");
+        }
+        header.validate()?;
+
+        // Safety: we're verified that the structure type is correct.
+        Ok(unsafe { &*(header as *const _ as usize as *const Self) })
+    }
+}
+
+#[derive(Debug)]
+#[repr(C, packed)]
+pub struct ProcessorLocalX2Apic {
+    header: ControllerHeader,
+
+    /// Reserverd, must be zero.
+    _reserved: u16,
+
+    /// The processor's local X2APIC ID.
+    x2apic_id: u32,
+
+    /// Local APIC flags.
+    flags: LocalApicFlags,
+
+    /// OSPM associates the X2APIC Structure with a processor object declared in the namespace
+    /// using the Device statement, when the _UID child object of the processor device evaluates to
+    /// a numeric value, by matching the numeric value with this field.
+    processor_uid: u32,
+}
+
+impl ProcessorLocalX2Apic {
+    pub const STRUCTURE_TYPE: u8 = 16;
+
+    pub fn new(header: &ControllerHeader) -> Result<&Self, &'static str> {
+        if header.structure_type != Self::STRUCTURE_TYPE {
+            return Err("structure is not Processor Local X2APIC Structure");
+        }
+        header.validate()?;
+
+        // Safety: we're verified that the structure type is correct.
+        Ok(unsafe { &*(header as *const _ as usize as *const Self) })
+    }
+}
+
+impl Madt {
+    pub const SIGNATURE: &[u8; 4] = b"APIC";
+
+    pub fn new(hdr: &DescriptionHeader) -> Result<&'static Madt, &'static str> {
+        // Safety: we're checking that it's a valid XSDT in `validate()`.
+        let madt = unsafe { &*(hdr as *const _ as usize as *const Madt) };
+        madt.validate()?;
+        Ok(madt)
+    }
+
+    fn validate(&self) -> Result<(), &'static str> {
+        self.header.validate()?;
+
+        if self.header.signature != *Self::SIGNATURE {
+            return Err("Invalid signature for MADT table");
+        }
+
+        Ok(())
+    }
+
+    pub fn iter(&self) -> MadtIterator<'_> {
+        MadtIterator {
+            madt: self,
+            offset: size_of::<Madt>(),
+        }
+    }
+}
+
+pub struct MadtIterator<'a> {
+    madt: &'a Madt,
+    offset: usize,
+}
+
+impl<'a> Iterator for MadtIterator<'a> {
+    type Item = &'a ControllerHeader;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.offset + size_of::<ControllerHeader>() > self.madt.header.length as usize {
+            // we'd overflow the MADT structure; nothing more to read
+            return None;
+        }
+        // Safety: now we know that at least reading the header won't overflow the data
+        // structure.
+        let header = unsafe {
+            &*((self.madt as *const _ as *const u8).add(self.offset) as *const ControllerHeader)
+        };
+        if self.offset + header.len as usize > self.madt.header.length as usize {
+            // returning this header would overflow MADT
+            return None;
+        }
+
+        self.offset += header.len as usize;
+        Some(header)
     }
 }
 
