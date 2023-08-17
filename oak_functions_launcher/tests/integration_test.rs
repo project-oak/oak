@@ -186,7 +186,7 @@ async fn test_load_large_lookup_data() {
         vmm_binary: "/usr/bin/qemu-system-x86_64".into(),
         app_binary: oak_functions_enclave_app_path.into(),
         bios_binary: workspace_path(&[
-            "stage0",
+            "stage0_bin",
             "target",
             "x86_64-unknown-none",
             "release",
@@ -281,7 +281,7 @@ async fn test_load_two_gib_lookup_data() {
         vmm_binary: "/usr/bin/qemu-system-x86_64".into(),
         app_binary: oak_functions_enclave_app_path.into(),
         bios_binary: workspace_path(&[
-            "stage0",
+            "stage0_bin",
             "target",
             "x86_64-unknown-none",
             "release",
