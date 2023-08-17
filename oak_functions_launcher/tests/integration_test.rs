@@ -193,7 +193,7 @@ async fn test_load_large_lookup_data() {
             "oak_stage0.bin",
         ]),
         gdb: None,
-        memory_size: None,
+        memory_size: Some("256M".to_string()),
     };
     log::debug!("launcher params: {:?}", params);
 
