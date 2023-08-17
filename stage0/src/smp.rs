@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use crate::acpi::{Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp};
+use crate::acpi_tables::{Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp};
 
 // TODO(#4235): Bootstrap the APs.
 pub fn bootstrap_aps(rsdp: &Rsdp) -> Result<(), &'static str> {

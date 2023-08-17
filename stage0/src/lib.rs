@@ -31,6 +31,7 @@ use x86_64::{
 };
 
 mod acpi;
+mod acpi_tables;
 mod alloc;
 mod cmos;
 mod fw_cfg;
