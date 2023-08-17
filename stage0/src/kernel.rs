@@ -21,6 +21,7 @@ use crate::{
 use core::{alloc::Layout, ffi::CStr, ptr::NonNull, slice};
 use elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
 use oak_linux_boot_params::BootE820Entry;
+use sha2::{Digest, Sha384};
 use x86_64::{PhysAddr, VirtAddr};
 
 /// The default start location and entry point for the kernel if a kernel wasn't supplied via the
@@ -40,9 +41,14 @@ const CMDLINE_FILE_PATH: &[u8] = b"opt/stage0/cmdline\0";
 
 /// Information about the kernel image.
 pub struct KernelInfo {
+    /// The start address where the kernel is loaded.
     pub start_address: VirtAddr,
+    /// The size of the kernel image.
     pub size: usize,
+    /// The entry point for the kernel.
     pub entry: VirtAddr,
+    /// The SHA2-384 digest of the raw kernel image.
+    pub measurement: [u8; 48],
 }
 
 impl Default for KernelInfo {
@@ -51,6 +57,7 @@ impl Default for KernelInfo {
             start_address: VirtAddr::new(DEFAULT_KERNEL_START),
             size: DEFAULT_KERNEL_SIZE,
             entry: VirtAddr::new(DEFAULT_KERNEL_START),
+            measurement: [0u8; 48],
         }
     }
 }
@@ -99,7 +106,7 @@ pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<&'static CStr> {
 
 /// Tries to load a kernel image from the QEMU fw_cfg device.
 ///
-/// We assume that a kernel file provided via the traditional seletor is a compressed kernel using
+/// We assume that a kernel file provided via the traditional selector is a compressed kernel using
 /// the bzImage format. We assume that a kernel file provided via the custom filename of
 /// "opt/stage0/elf_kernel" is an uncompressed ELF file.
 ///
@@ -139,6 +146,12 @@ pub fn try_load_kernel_image(
         .expect("could not read kernel file");
     assert_eq!(actual_size, size, "kernel size did not match expected size");
 
+    let mut digest = Sha384::default();
+    digest.update(&buf);
+    let digest = digest.finalize();
+    let mut measurement = [0u8; 48];
+    measurement[..].copy_from_slice(&digest[..]);
+
     if bzimage {
         // For a bzImage the 64-bit entry point is at offset 0x200 from the start of the 64-bit
         // kernel. See <https://www.kernel.org/doc/html/v6.3/x86/boot.html>.
@@ -148,13 +161,14 @@ pub fn try_load_kernel_image(
             start_address,
             size,
             entry,
+            measurement,
         })
     } else {
-        Some(parse_elf_file(buf, e820_table))
+        Some(parse_elf_file(buf, e820_table, measurement))
     }
 }
 
-fn parse_elf_file(buf: &[u8], e820_table: &[BootE820Entry]) -> KernelInfo {
+fn parse_elf_file(buf: &[u8], e820_table: &[BootE820Entry], measurement: [u8; 48]) -> KernelInfo {
     let mut kernel_start = VirtAddr::new(crate::TOP_OF_VIRTUAL_MEMORY);
     let mut kernel_end = VirtAddr::new(0);
     // We expect an uncompressed ELF kernel, so we parse it and lay it out in memory.
@@ -188,6 +202,7 @@ fn parse_elf_file(buf: &[u8], e820_table: &[BootE820Entry]) -> KernelInfo {
         start_address: kernel_start,
         size: kernel_size,
         entry,
+        measurement,
     }
 }
 

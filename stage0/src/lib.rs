@@ -230,6 +230,8 @@ pub fn rust64_start(encrypted: u64) -> ! {
         .unwrap_or(kernel::KernelInfo::default());
     let mut entry = kernel_info.entry;
 
+    log::debug!("Kernel image digest: {:?}", kernel_info.measurement);
+
     // Attempt to parse 64 bytes at the suggested entry point as an ELF header. If it works, extract
     // the entry point address from there; if there is no valid ELF header at that address, assume
     // it's code, and jump there directly.
