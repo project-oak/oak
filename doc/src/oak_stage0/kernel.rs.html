@@ -219,6 +219,21 @@
 <a href="#219" id="219">219</a>
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -242,6 +257,7 @@
 <span class="kw">use </span>core::{alloc::Layout, ffi::CStr, ptr::NonNull, slice};
 <span class="kw">use </span>elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
 <span class="kw">use </span>oak_linux_boot_params::BootE820Entry;
+<span class="kw">use </span>sha2::{Digest, Sha384};
 <span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
 
 <span class="doccomment">/// The default start location and entry point for the kernel if a kernel wasn&#39;t supplied via the
@@ -261,9 +277,14 @@
 
 <span class="doccomment">/// Information about the kernel image.
 </span><span class="kw">pub struct </span>KernelInfo {
-    <span class="kw">pub </span>start_address: VirtAddr,
-    <span class="kw">pub </span>size: usize,
-    <span class="kw">pub </span>entry: VirtAddr,
+    <span class="doccomment">/// The start address where the kernel is loaded.
+    </span><span class="kw">pub </span>start_address: VirtAddr,
+    <span class="doccomment">/// The size of the kernel image.
+    </span><span class="kw">pub </span>size: usize,
+    <span class="doccomment">/// The entry point for the kernel.
+    </span><span class="kw">pub </span>entry: VirtAddr,
+    <span class="doccomment">/// The SHA2-384 digest of the raw kernel image.
+    </span><span class="kw">pub </span>measurement: [u8; <span class="number">48</span>],
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>KernelInfo {
@@ -272,6 +293,7 @@
             start_address: VirtAddr::new(DEFAULT_KERNEL_START),
             size: DEFAULT_KERNEL_SIZE,
             entry: VirtAddr::new(DEFAULT_KERNEL_START),
+            measurement: [<span class="number">0u8</span>; <span class="number">48</span>],
         }
     }
 }
@@ -320,7 +342,7 @@
 
 <span class="doccomment">/// Tries to load a kernel image from the QEMU fw_cfg device.
 ///
-/// We assume that a kernel file provided via the traditional seletor is a compressed kernel using
+/// We assume that a kernel file provided via the traditional selector is a compressed kernel using
 /// the bzImage format. We assume that a kernel file provided via the custom filename of
 /// &quot;opt/stage0/elf_kernel&quot; is an uncompressed ELF file.
 ///
@@ -360,6 +382,12 @@
         .expect(<span class="string">&quot;could not read kernel file&quot;</span>);
     <span class="macro">assert_eq!</span>(actual_size, size, <span class="string">&quot;kernel size did not match expected size&quot;</span>);
 
+    <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha384::default();
+    digest.update(<span class="kw-2">&amp;</span>buf);
+    <span class="kw">let </span>digest = digest.finalize();
+    <span class="kw">let </span><span class="kw-2">mut </span>measurement = [<span class="number">0u8</span>; <span class="number">48</span>];
+    measurement[..].copy_from_slice(<span class="kw-2">&amp;</span>digest[..]);
+
     <span class="kw">if </span>bzimage {
         <span class="comment">// For a bzImage the 64-bit entry point is at offset 0x200 from the start of the 64-bit
         // kernel. See &lt;https://www.kernel.org/doc/html/v6.3/x86/boot.html&gt;.
@@ -369,13 +397,14 @@
             start_address,
             size,
             entry,
+            measurement,
         })
     } <span class="kw">else </span>{
-        <span class="prelude-val">Some</span>(parse_elf_file(buf, e820_table))
+        <span class="prelude-val">Some</span>(parse_elf_file(buf, e820_table, measurement))
     }
 }
 
-<span class="kw">fn </span>parse_elf_file(buf: <span class="kw-2">&amp;</span>[u8], e820_table: <span class="kw-2">&amp;</span>[BootE820Entry]) -&gt; KernelInfo {
+<span class="kw">fn </span>parse_elf_file(buf: <span class="kw-2">&amp;</span>[u8], e820_table: <span class="kw-2">&amp;</span>[BootE820Entry], measurement: [u8; <span class="number">48</span>]) -&gt; KernelInfo {
     <span class="kw">let </span><span class="kw-2">mut </span>kernel_start = VirtAddr::new(<span class="kw">crate</span>::TOP_OF_VIRTUAL_MEMORY);
     <span class="kw">let </span><span class="kw-2">mut </span>kernel_end = VirtAddr::new(<span class="number">0</span>);
     <span class="comment">// We expect an uncompressed ELF kernel, so we parse it and lay it out in memory.
@@ -409,6 +438,7 @@
         start_address: kernel_start,
         size: kernel_size,
         entry,
+        measurement,
     }
 }
 

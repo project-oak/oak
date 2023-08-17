@@ -300,6 +300,8 @@
 <a href="#300" id="300">300</a>
 <a href="#301" id="301">301</a>
 <a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -531,6 +533,8 @@
     <span class="kw">let </span>kernel_info = kernel::try_load_kernel_image(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table())
         .unwrap_or(kernel::KernelInfo::default());
     <span class="kw">let </span><span class="kw-2">mut </span>entry = kernel_info.entry;
+
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image digest: {:?}&quot;</span>, kernel_info.measurement);
 
     <span class="comment">// Attempt to parse 64 bytes at the suggested entry point as an ELF header. If it works, extract
     // the entry point address from there; if there is no valid ELF header at that address, assume
