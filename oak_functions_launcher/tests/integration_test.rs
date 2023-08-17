@@ -157,6 +157,11 @@ async fn test_launcher_weather_lookup() {
 
 #[tokio::test]
 async fn test_load_large_lookup_data() {
+    if xtask::testing::skip_test() {
+        log::info!("skipping test");
+        return;
+    }
+
     xtask::testing::run_step(xtask::launcher::build_stage0()).await;
     xtask::testing::run_step(xtask::launcher::build_binary(
         "build Oak Restricted Kernel binary",
@@ -247,6 +252,11 @@ async fn test_load_large_lookup_data() {
 #[ignore = "too expensive"]
 #[tokio::test]
 async fn test_load_two_gib_lookup_data() {
+    if xtask::testing::skip_test() {
+        log::info!("skipping test");
+        return;
+    }
+
     xtask::testing::run_step(xtask::launcher::build_stage0()).await;
     xtask::testing::run_step(xtask::launcher::build_binary(
         "build Oak Restricted Kernel binary",
