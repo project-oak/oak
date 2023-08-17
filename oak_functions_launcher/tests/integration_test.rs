@@ -16,7 +16,12 @@
 //! Integration tests for the Oak Functions Launcher.
 
 use oak_functions_client::OakFunctionsClient;
-use std::time::Duration;
+use oak_functions_launcher::{
+    proto::oak::functions::OakFunctionsAsyncClient, update_lookup_data, LookupDataConfig,
+};
+use oak_launcher_utils::launcher;
+use std::{io::Write, time::Duration};
+use ubyte::ByteUnit;
 use xtask::{launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
 
 // Allow enough worker threads to collect output from background tasks.
@@ -148,4 +153,150 @@ async fn test_launcher_weather_lookup() {
         .expect("failed to wait for bazel");
     eprintln!("bazel status: {:?}", status);
     assert!(status.success());
+}
+
+#[tokio::test]
+async fn test_load_large_lookup_data() {
+    xtask::testing::run_step(xtask::launcher::build_stage0()).await;
+    xtask::testing::run_step(xtask::launcher::build_binary(
+        "build Oak Restricted Kernel binary",
+        xtask::launcher::OAK_RESTRICTED_KERNEL_BIN_DIR
+            .to_str()
+            .unwrap(),
+    ))
+    .await;
+
+    let oak_functions_enclave_app_path =
+        oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
+            .expect("Failed to build oak_functions_enclave_app");
+
+    let params = launcher::Params {
+        enclave_binary: workspace_path(&[
+            "oak_restricted_kernel_bin",
+            "target",
+            "x86_64-unknown-none",
+            "debug",
+            "oak_restricted_kernel_bin",
+        ]),
+        vmm_binary: "/usr/bin/qemu-system-x86_64".into(),
+        app_binary: oak_functions_enclave_app_path.into(),
+        bios_binary: workspace_path(&[
+            "stage0",
+            "target",
+            "x86_64-unknown-none",
+            "release",
+            "oak_stage0.bin",
+        ]),
+        gdb: None,
+        memory_size: None,
+    };
+    log::debug!("launcher params: {:?}", params);
+
+    let max_chunk_size = ByteUnit::Kilobyte(2);
+
+    // Initialize with 1 chunk.
+    let entries_one_chunk = oak_functions_test_utils::create_test_lookup_data(max_chunk_size, 1);
+    let mut lookup_data_file = oak_functions_test_utils::write_to_temp_file(
+        &oak_functions_test_utils::serialize_entries(entries_one_chunk),
+    );
+    let lookup_data_config = LookupDataConfig {
+        lookup_data_path: lookup_data_file.path().to_path_buf(),
+        update_interval: None,
+        max_chunk_size,
+    };
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
+        .expect("Failed to build Wasm module");
+    let status_one_chunk =
+        oak_functions_launcher::create(params, lookup_data_config, wasm_path.into(), 1024).await;
+    assert!(status_one_chunk.is_ok());
+
+    let (launched_instance, connector_handle, _) = status_one_chunk.unwrap();
+    let mut client = OakFunctionsAsyncClient::new(connector_handle);
+
+    let lookup_data_config = LookupDataConfig {
+        lookup_data_path: lookup_data_file.path().to_path_buf(),
+        update_interval: None,
+        max_chunk_size,
+    };
+
+    // Write 2 chunks in lookup data.
+    let enteries_two_chunks = oak_functions_test_utils::create_test_lookup_data(max_chunk_size, 2);
+    let write_result = lookup_data_file.write_all(&oak_functions_test_utils::serialize_entries(
+        enteries_two_chunks,
+    ));
+    assert!(write_result.is_ok());
+    let status_two_chunks = update_lookup_data(&mut client, &lookup_data_config).await;
+    assert!(status_two_chunks.is_ok());
+
+    let enteries_four_chunks = oak_functions_test_utils::create_test_lookup_data(max_chunk_size, 4);
+    let write_result = lookup_data_file.write_all(&oak_functions_test_utils::serialize_entries(
+        enteries_four_chunks,
+    ));
+    assert!(write_result.is_ok());
+
+    // Write 4 chunks in lookup data.
+    let status_four_chunks = update_lookup_data(&mut client, &lookup_data_config).await;
+    assert!(status_four_chunks.is_ok());
+
+    launched_instance
+        .kill()
+        .await
+        .expect("Failed to stop launcher");
+}
+
+#[ignore = "too expensive"]
+#[tokio::test]
+async fn test_load_two_gib_lookup_data() {
+    xtask::testing::run_step(xtask::launcher::build_stage0()).await;
+    xtask::testing::run_step(xtask::launcher::build_binary(
+        "build Oak Restricted Kernel binary",
+        xtask::launcher::OAK_RESTRICTED_KERNEL_BIN_DIR
+            .to_str()
+            .unwrap(),
+    ))
+    .await;
+
+    let oak_functions_enclave_app_path =
+        oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
+            .expect("Failed to build oak_functions_enclave_app");
+
+    let params = launcher::Params {
+        enclave_binary: workspace_path(&[
+            "oak_restricted_kernel_bin",
+            "target",
+            "x86_64-unknown-none",
+            "debug",
+            "oak_restricted_kernel_bin",
+        ]),
+        vmm_binary: "/usr/bin/qemu-system-x86_64".into(),
+        app_binary: oak_functions_enclave_app_path.into(),
+        bios_binary: workspace_path(&[
+            "stage0",
+            "target",
+            "x86_64-unknown-none",
+            "release",
+            "oak_stage0.bin",
+        ]),
+        gdb: None,
+        memory_size: None,
+    };
+    log::debug!("launcher params: {:?}", params);
+
+    let max_chunk_size = ByteUnit::Gibibyte(2);
+    // Initialize with 2 chunks.
+    let entries_two_chunks = oak_functions_test_utils::create_test_lookup_data(max_chunk_size, 2);
+    let lookup_data_file = oak_functions_test_utils::write_to_temp_file(
+        &oak_functions_test_utils::serialize_entries(entries_two_chunks),
+    );
+    // This takes >5 min but will get there eventually.
+    let lookup_data_config = LookupDataConfig {
+        lookup_data_path: lookup_data_file.path().to_path_buf(),
+        update_interval: None,
+        max_chunk_size,
+    };
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
+        .expect("Failed to build Wasm module");
+    let status =
+        oak_functions_launcher::create(params, lookup_data_config, wasm_path.into(), 1024).await;
+    assert!(status.is_ok());
 }
