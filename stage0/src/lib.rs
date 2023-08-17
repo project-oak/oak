@@ -233,10 +233,6 @@ pub fn rust64_start(encrypted: u64) -> ! {
         .unwrap_or(kernel::KernelInfo::default());
     let mut entry = kernel_info.entry;
 
-    log::debug!("Kernel image digest: {:?}", kernel_info.measurement);
-    log::debug!("Kernel setup data digest: {:?}", setup_data_measurement);
-    log::debug!("Kernel image digest: {:?}", cmdline_measurment);
-
     // Attempt to parse 64 bytes at the suggested entry point as an ELF header. If it works, extract
     // the entry point address from there; if there is no valid ELF header at that address, assume
     // it's code, and jump there directly.
@@ -265,11 +261,18 @@ pub fn rust64_start(encrypted: u64) -> ! {
         );
     }
 
+    let mut ram_disk_measurment = [0u8; 48];
     if let Some(ram_disk) =
         initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel_info)
     {
+        populate_measurement(&mut ram_disk_measurment, ram_disk);
         zero_page.set_initial_ram_disk(ram_disk);
     }
+
+    log::debug!("Kernel image digest: {:?}", kernel_info.measurement);
+    log::debug!("Kernel setup data digest: {:?}", setup_data_measurement);
+    log::debug!("Kernel image digest: {:?}", cmdline_measurment);
+    log::debug!("Initial RAM disk digest: {:?}", ram_disk_measurment);
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 
