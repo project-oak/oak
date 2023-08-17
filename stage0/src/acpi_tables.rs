@@ -109,6 +109,14 @@ impl Rsdp {
         Ok(())
     }
 
+    pub fn rsdt(&self) -> Result<Option<&Rsdt>, &'static str> {
+        if self.rsdt_address == 0 {
+            Ok(None)
+        } else {
+            Rsdt::new(VirtAddr::new(self.rsdt_address as u64)).map(Some)
+        }
+    }
+
     pub fn xsdt(&self) -> Result<Option<&Xsdt>, &'static str> {
         if self.xsdt_address == 0 {
             Ok(None)
@@ -181,6 +189,73 @@ impl DescriptionHeader {
         }
 
         Ok(())
+    }
+}
+
+/// Root System Description Table.
+///
+/// See Section 5.2.7 in the ACPI specification for more details.
+#[repr(C, packed)]
+pub struct Rsdt {
+    header: DescriptionHeader,
+    // The RSDT contains an array of pointers to other tables, but unfortunately this can't be
+    // expressed in Rust.
+}
+
+impl Rsdt {
+    const SIGNATURE: &[u8; 4] = b"RSDT";
+
+    pub fn new(addr: VirtAddr) -> Result<&'static Rsdt, &'static str> {
+        // Safety: we're checking that it's a valid XSDT in `validate()`.
+        let rsdt = unsafe { &*addr.as_ptr::<Rsdt>() };
+        rsdt.validate()?;
+        Ok(rsdt)
+    }
+
+    fn validate(&self) -> Result<(), &'static str> {
+        self.header.validate()?;
+
+        if self.header.signature != *Self::SIGNATURE {
+            return Err("Invalid signature for RSDT table");
+        }
+
+        if (self.header.length as usize - size_of::<DescriptionHeader>()) % size_of::<u32>() != 0 {
+            return Err("RSDT invalid: entries size not a multiple of pointer size");
+        }
+
+        // Safety: we're never dereferencing the pointer.
+        let ebda_base = unsafe { EBDA.as_ptr() } as usize;
+        for &entry in self.entries() {
+            let ptr: usize = entry as usize;
+            if !(ebda_base..ebda_base + EBDA_SIZE).contains(&ptr) {
+                return Err("RSDT invalid: entry points outside EBDA");
+            }
+        }
+        Ok(())
+    }
+
+    fn entries(&self) -> &[u32] {
+        let entries_base = self as *const _ as usize + size_of::<DescriptionHeader>();
+        // Safety: we've validated that the address and length makes sense in `validate()`.
+        unsafe {
+            slice::from_raw_parts(
+                entries_base as *const u32,
+                (self.header.length as usize - size_of::<DescriptionHeader>()) / size_of::<u32>(),
+            )
+        }
+    }
+
+    /// Finds a table based on the signature, if it is present.
+    pub fn get(&self, table: &[u8; 4]) -> Option<&'static DescriptionHeader> {
+        self.entries().iter().find_map(|&entry| {
+            let ptr = entry as usize;
+            let entry: &'static DescriptionHeader = unsafe { &*(ptr as *const DescriptionHeader) };
+            if entry.signature == *table {
+                Some(entry)
+            } else {
+                None
+            }
+        })
     }
 }
 

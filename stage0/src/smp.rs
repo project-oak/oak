@@ -18,12 +18,16 @@ use crate::acpi_tables::{Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp};
 
 // TODO(#4235): Bootstrap the APs.
 pub fn bootstrap_aps(rsdp: &Rsdp) -> Result<(), &'static str> {
-    // TODO(#4235): Bootstrap the APs.
-    let xsdt = rsdp.xsdt()?.ok_or("XSDT not found")?;
-
-    let madt = xsdt
-        .get(Madt::SIGNATURE)
-        .ok_or("MADT table not found in XSDT")?;
+    // If XSDT exists, then per ACPI spec we have to prefer that. If it doesn't, see if we can use
+    // the old RSDT. (If we have neither XSDT or RSDT, the ACPI tables are broken.)
+    let madt = if let Ok(Some(xsdt)) = rsdp.xsdt() {
+        xsdt.get(Madt::SIGNATURE)
+            .ok_or("MADT table not found in XSDT")?
+    } else {
+        let rsdt = rsdp.rsdt()?.ok_or("RSDT not found")?;
+        rsdt.get(Madt::SIGNATURE)
+            .ok_or("MADT table not found in RSDT")?
+    };
     let madt = Madt::new(madt).expect("invalid MADT");
 
     log::debug!("Found ACPI MADT table: {:?}", madt);
