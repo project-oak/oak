@@ -311,7 +311,7 @@ fn phys_to_virt(address: PhysAddr) -> VirtAddr {
 /// Overwrites `measurement` with the SHA2-384 digest or `source`.
 fn populate_measurement(measurement: &mut [u8; 48], source: &[u8]) {
     let mut digest = Sha384::default();
-    digest.update(&source);
+    digest.update(source);
     let digest = digest.finalize();
     measurement[..].copy_from_slice(&digest[..]);
 }
