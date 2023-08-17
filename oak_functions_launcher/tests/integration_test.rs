@@ -155,7 +155,7 @@ async fn test_launcher_weather_lookup() {
     assert!(status.success());
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_load_large_lookup_data() {
     if xtask::testing::skip_test() {
         log::info!("skipping test");
@@ -250,7 +250,7 @@ async fn test_load_large_lookup_data() {
 }
 
 #[ignore = "too expensive"]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_load_two_gib_lookup_data() {
     if xtask::testing::skip_test() {
         log::info!("skipping test");
