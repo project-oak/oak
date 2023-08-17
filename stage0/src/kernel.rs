@@ -21,7 +21,6 @@ use crate::{
 use core::{alloc::Layout, ffi::CStr, ptr::NonNull, slice};
 use elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
 use oak_linux_boot_params::BootE820Entry;
-use sha2::{Digest, Sha384};
 use x86_64::{PhysAddr, VirtAddr};
 
 /// The default start location and entry point for the kernel if a kernel wasn't supplied via the
@@ -146,11 +145,8 @@ pub fn try_load_kernel_image(
         .expect("could not read kernel file");
     assert_eq!(actual_size, size, "kernel size did not match expected size");
 
-    let mut digest = Sha384::default();
-    digest.update(&buf);
-    let digest = digest.finalize();
     let mut measurement = [0u8; 48];
-    measurement[..].copy_from_slice(&digest[..]);
+    crate::populate_measurement(&mut measurement, buf);
 
     if bzimage {
         // For a bzImage the 64-bit entry point is at offset 0x200 from the start of the 64-bit

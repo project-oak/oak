@@ -55,7 +55,11 @@ impl ZeroPage {
     /// it is split off from start of the bzImage file.
     ///
     /// See <https://www.kernel.org/doc/html/v6.3/x86/boot.html> for more information.
-    pub fn try_fill_hdr_from_setup_data(&mut self, fw_cfg: &mut FwCfg) {
+    ///
+    /// Returns the measurement (SHA2-384 digest) of the setup data if it was found, otherwise the
+    /// measurement is all zeros.
+    pub fn try_fill_hdr_from_setup_data(&mut self, fw_cfg: &mut FwCfg) -> [u8; 48] {
+        let mut measurement = [0u8; 48];
         if let Some(file) = fw_cfg.get_setup_file() {
             let size = file.size();
             // We temporarily copy the setup data to the end of available mapped virtual memory.
@@ -68,6 +72,7 @@ impl ZeroPage {
                 .read_file(&file, buf)
                 .expect("could not read setup data");
             assert_eq!(actual_size, size, "setup data did not match expected size");
+            crate::populate_measurement(&mut measurement, buf);
 
             // The header information starts at offset 0x01F1 from the start of the setup data.
             let hdr_start = 0x1F1usize;
@@ -82,6 +87,7 @@ impl ZeroPage {
             let dest = &mut self.inner.hdr.as_bytes_mut()[..src.len()];
             dest.copy_from_slice(src);
         }
+        measurement
     }
 
     /// Fills the E820 memory map (layout of the physical memory of the machine) in the zero page.
