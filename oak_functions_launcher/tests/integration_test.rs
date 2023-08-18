@@ -157,6 +157,8 @@ async fn test_launcher_weather_lookup() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_load_large_lookup_data() {
+    let _ = env_logger::builder().is_test(true).try_init();
+
     if xtask::testing::skip_test() {
         log::info!("skipping test");
         return;
@@ -183,7 +185,7 @@ async fn test_load_large_lookup_data() {
             "debug",
             "oak_restricted_kernel_bin",
         ]),
-        vmm_binary: "/usr/bin/qemu-system-x86_64".into(),
+        vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: oak_functions_enclave_app_path.into(),
         bios_binary: workspace_path(&[
             "stage0_bin",
@@ -213,6 +215,7 @@ async fn test_load_large_lookup_data() {
         .expect("Failed to build Wasm module");
     let status_one_chunk =
         oak_functions_launcher::create(params, lookup_data_config, wasm_path.into(), 1024).await;
+    log::info!("received status: {:?}", status_one_chunk);
     assert!(status_one_chunk.is_ok());
 
     let (launched_instance, connector_handle, _) = status_one_chunk.unwrap();
@@ -278,7 +281,7 @@ async fn test_load_two_gib_lookup_data() {
             "debug",
             "oak_restricted_kernel_bin",
         ]),
-        vmm_binary: "/usr/bin/qemu-system-x86_64".into(),
+        vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: oak_functions_enclave_app_path.into(),
         bios_binary: workspace_path(&[
             "stage0_bin",
@@ -288,7 +291,7 @@ async fn test_load_two_gib_lookup_data() {
             "oak_stage0.bin",
         ]),
         gdb: None,
-        memory_size: None,
+        memory_size: Some("256M".to_string()),
     };
     log::debug!("launcher params: {:?}", params);
 
