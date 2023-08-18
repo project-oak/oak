@@ -157,6 +157,8 @@ async fn test_launcher_weather_lookup() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_load_large_lookup_data() {
+    std::env::set_var("RUST_LOG", "debug");
+
     let _ = env_logger::builder().is_test(true).try_init();
 
     if xtask::testing::skip_test() {

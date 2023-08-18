@@ -15,7 +15,7 @@ export XDG_RUNTIME_DIR=/var/run
 cd "$(dirname "$0")/.."
 
 ./scripts/docker_pull
-./scripts/docker_run nix develop .#ci --command RUST_LOG=debug cargo nextest run test_load_large_lookup_data --no-capture
+./scripts/docker_run nix develop .#ci --command cargo nextest run test_load_large_lookup_data --no-capture
 
 mkdir -p "$KOKORO_ARTIFACTS_DIR/test_logs/"
 cp ./target/nextest/default/*.xml "$KOKORO_ARTIFACTS_DIR/test_logs/" || true
