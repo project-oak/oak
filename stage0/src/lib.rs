@@ -19,6 +19,7 @@
 
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use oak_sev_guest::io::PortFactoryWrapper;
+use sha2::{Digest, Sha256};
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
     registers::segmentation::*,
@@ -207,7 +208,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     paging::map_additional_memory(encrypted);
 
-    zero_page.try_fill_hdr_from_setup_data(&mut fwcfg);
+    let setup_data_measurement = zero_page.try_fill_hdr_from_setup_data(&mut fwcfg);
 
     if snp {
         let cc_blob = BOOT_ALLOC
@@ -223,15 +224,15 @@ pub fn rust64_start(encrypted: u64) -> ! {
         zero_page.add_setup_data(setup_data);
     }
 
+    let mut cmdline_measurment = [0u8; 32];
     if let Some(cmdline) = kernel::try_load_cmdline(&mut fwcfg) {
+        populate_measurement(&mut cmdline_measurment, cmdline.to_bytes());
         zero_page.set_cmdline(cmdline);
     }
 
     let kernel_info = kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table())
         .unwrap_or(kernel::KernelInfo::default());
     let mut entry = kernel_info.entry;
-
-    log::debug!("Kernel image digest: {:?}", kernel_info.measurement);
 
     // Attempt to parse 64 bytes at the suggested entry point as an ELF header. If it works, extract
     // the entry point address from there; if there is no valid ELF header at that address, assume
@@ -261,11 +262,18 @@ pub fn rust64_start(encrypted: u64) -> ! {
         );
     }
 
+    let mut ram_disk_measurment = [0u8; 32];
     if let Some(ram_disk) =
         initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel_info)
     {
+        populate_measurement(&mut ram_disk_measurment, ram_disk);
         zero_page.set_initial_ram_disk(ram_disk);
     }
+
+    log::debug!("Kernel image digest: {:?}", kernel_info.measurement);
+    log::debug!("Kernel setup data digest: {:?}", setup_data_measurement);
+    log::debug!("Kernel image digest: {:?}", cmdline_measurment);
+    log::debug!("Initial RAM disk digest: {:?}", ram_disk_measurment);
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 
@@ -302,4 +310,12 @@ pub fn panic(info: &PanicInfo) -> ! {
 fn phys_to_virt(address: PhysAddr) -> VirtAddr {
     // We use an identity mapping throughout.
     VirtAddr::new(address.as_u64())
+}
+
+/// Overwrites `measurement` with the SHA2-256 digest or `source`.
+fn populate_measurement(measurement: &mut [u8; 32], source: &[u8]) {
+    let mut digest = Sha256::default();
+    digest.update(source);
+    let digest = digest.finalize();
+    measurement[..].copy_from_slice(&digest[..]);
 }
