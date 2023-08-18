@@ -217,7 +217,7 @@ async fn test_load_large_lookup_data() {
         .expect("Failed to build Wasm module");
     let status_one_chunk =
         oak_functions_launcher::create(params, lookup_data_config, wasm_path.into(), 1024).await;
-    // assert!(status_one_chunk.is_ok());
+    assert!(status_one_chunk.is_ok());
 
     let (launched_instance, connector_handle, _) = status_one_chunk.unwrap();
     let mut client = OakFunctionsAsyncClient::new(connector_handle);
