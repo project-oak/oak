@@ -220,6 +220,12 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -277,7 +283,11 @@
     /// it is split off from start of the bzImage file.
     ///
     /// See &lt;https://www.kernel.org/doc/html/v6.3/x86/boot.html&gt; for more information.
-    </span><span class="kw">pub fn </span>try_fill_hdr_from_setup_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg) {
+    ///
+    /// Returns the measurement (SHA2-384 digest) of the setup data if it was found, otherwise the
+    /// measurement is all zeros.
+    </span><span class="kw">pub fn </span>try_fill_hdr_from_setup_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg) -&gt; [u8; <span class="number">32</span>] {
+        <span class="kw">let </span><span class="kw-2">mut </span>measurement = [<span class="number">0u8</span>; <span class="number">32</span>];
         <span class="kw">if let </span><span class="prelude-val">Some</span>(file) = fw_cfg.get_setup_file() {
             <span class="kw">let </span>size = file.size();
             <span class="comment">// We temporarily copy the setup data to the end of available mapped virtual memory.
@@ -290,6 +300,7 @@
                 .read_file(<span class="kw-2">&amp;</span>file, buf)
                 .expect(<span class="string">&quot;could not read setup data&quot;</span>);
             <span class="macro">assert_eq!</span>(actual_size, size, <span class="string">&quot;setup data did not match expected size&quot;</span>);
+            <span class="kw">crate</span>::populate_measurement(<span class="kw-2">&amp;mut </span>measurement, buf);
 
             <span class="comment">// The header information starts at offset 0x01F1 from the start of the setup data.
             </span><span class="kw">let </span>hdr_start = <span class="number">0x1F1usize</span>;
@@ -304,6 +315,7 @@
             </span><span class="kw">let </span>dest = <span class="kw-2">&amp;mut </span><span class="self">self</span>.inner.hdr.as_bytes_mut()[..src.len()];
             dest.copy_from_slice(src);
         }
+        measurement
     }
 
     <span class="doccomment">/// Fills the E820 memory map (layout of the physical memory of the machine) in the zero page.

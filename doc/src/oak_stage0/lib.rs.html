@@ -303,6 +303,22 @@
 <a href="#303" id="303">303</a>
 <a href="#304" id="304">304</a>
 <a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -324,6 +340,7 @@
 
 </span><span class="kw">use </span>core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 <span class="kw">use </span>oak_sev_guest::io::PortFactoryWrapper;
+<span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
     registers::segmentation::<span class="kw-2">*</span>,
@@ -512,7 +529,7 @@
 
     paging::map_additional_memory(encrypted);
 
-    zero_page.try_fill_hdr_from_setup_data(<span class="kw-2">&amp;mut </span>fwcfg);
+    <span class="kw">let </span>setup_data_measurement = zero_page.try_fill_hdr_from_setup_data(<span class="kw-2">&amp;mut </span>fwcfg);
 
     <span class="kw">if </span>snp {
         <span class="kw">let </span>cc_blob = BOOT_ALLOC
@@ -528,15 +545,15 @@
         zero_page.add_setup_data(setup_data);
     }
 
+    <span class="kw">let </span><span class="kw-2">mut </span>cmdline_measurment = [<span class="number">0u8</span>; <span class="number">32</span>];
     <span class="kw">if let </span><span class="prelude-val">Some</span>(cmdline) = kernel::try_load_cmdline(<span class="kw-2">&amp;mut </span>fwcfg) {
+        populate_measurement(<span class="kw-2">&amp;mut </span>cmdline_measurment, cmdline.to_bytes());
         zero_page.set_cmdline(cmdline);
     }
 
     <span class="kw">let </span>kernel_info = kernel::try_load_kernel_image(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table())
         .unwrap_or(kernel::KernelInfo::default());
     <span class="kw">let </span><span class="kw-2">mut </span>entry = kernel_info.entry;
-
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image digest: {:?}&quot;</span>, kernel_info.measurement);
 
     <span class="comment">// Attempt to parse 64 bytes at the suggested entry point as an ELF header. If it works, extract
     // the entry point address from there; if there is no valid ELF header at that address, assume
@@ -566,11 +583,18 @@
         );
     }
 
+    <span class="kw">let </span><span class="kw-2">mut </span>ram_disk_measurment = [<span class="number">0u8</span>; <span class="number">32</span>];
     <span class="kw">if let </span><span class="prelude-val">Some</span>(ram_disk) =
         initramfs::try_load_initial_ram_disk(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table(), <span class="kw-2">&amp;</span>kernel_info)
     {
+        populate_measurement(<span class="kw-2">&amp;mut </span>ram_disk_measurment, ram_disk);
         zero_page.set_initial_ram_disk(ram_disk);
     }
+
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image digest: {:?}&quot;</span>, kernel_info.measurement);
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel setup data digest: {:?}&quot;</span>, setup_data_measurement);
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image digest: {:?}&quot;</span>, cmdline_measurment);
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Initial RAM disk digest: {:?}&quot;</span>, ram_disk_measurment);
 
     <span class="macro">log::info!</span>(<span class="string">&quot;jumping to kernel at {:#018x}&quot;</span>, entry.as_u64());
 
@@ -607,5 +631,13 @@
 <span class="kw">fn </span>phys_to_virt(address: PhysAddr) -&gt; VirtAddr {
     <span class="comment">// We use an identity mapping throughout.
     </span>VirtAddr::new(address.as_u64())
+}
+
+<span class="doccomment">/// Overwrites `measurement` with the SHA2-256 digest or `source`.
+</span><span class="kw">fn </span>populate_measurement(measurement: <span class="kw-2">&amp;mut </span>[u8; <span class="number">32</span>], source: <span class="kw-2">&amp;</span>[u8]) {
+    <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha256::default();
+    digest.update(source);
+    <span class="kw">let </span>digest = digest.finalize();
+    measurement[..].copy_from_slice(<span class="kw-2">&amp;</span>digest[..]);
 }
 </code></pre></div></section></main></body></html>
