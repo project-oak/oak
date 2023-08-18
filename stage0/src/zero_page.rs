@@ -58,8 +58,8 @@ impl ZeroPage {
     ///
     /// Returns the measurement (SHA2-384 digest) of the setup data if it was found, otherwise the
     /// measurement is all zeros.
-    pub fn try_fill_hdr_from_setup_data(&mut self, fw_cfg: &mut FwCfg) -> [u8; 48] {
-        let mut measurement = [0u8; 48];
+    pub fn try_fill_hdr_from_setup_data(&mut self, fw_cfg: &mut FwCfg) -> [u8; 32] {
+        let mut measurement = [0u8; 32];
         if let Some(file) = fw_cfg.get_setup_file() {
             let size = file.size();
             // We temporarily copy the setup data to the end of available mapped virtual memory.

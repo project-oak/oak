@@ -46,8 +46,8 @@ pub struct KernelInfo {
     pub size: usize,
     /// The entry point for the kernel.
     pub entry: VirtAddr,
-    /// The SHA2-384 digest of the raw kernel image.
-    pub measurement: [u8; 48],
+    /// The SHA2-256 digest of the raw kernel image.
+    pub measurement: [u8; 32],
 }
 
 impl Default for KernelInfo {
@@ -56,7 +56,7 @@ impl Default for KernelInfo {
             start_address: VirtAddr::new(DEFAULT_KERNEL_START),
             size: DEFAULT_KERNEL_SIZE,
             entry: VirtAddr::new(DEFAULT_KERNEL_START),
-            measurement: [0u8; 48],
+            measurement: [0u8; 32],
         }
     }
 }
@@ -145,7 +145,7 @@ pub fn try_load_kernel_image(
         .expect("could not read kernel file");
     assert_eq!(actual_size, size, "kernel size did not match expected size");
 
-    let mut measurement = [0u8; 48];
+    let mut measurement = [0u8; 32];
     crate::populate_measurement(&mut measurement, buf);
 
     if bzimage {
@@ -164,7 +164,7 @@ pub fn try_load_kernel_image(
     }
 }
 
-fn parse_elf_file(buf: &[u8], e820_table: &[BootE820Entry], measurement: [u8; 48]) -> KernelInfo {
+fn parse_elf_file(buf: &[u8], e820_table: &[BootE820Entry], measurement: [u8; 32]) -> KernelInfo {
     let mut kernel_start = VirtAddr::new(crate::TOP_OF_VIRTUAL_MEMORY);
     let mut kernel_end = VirtAddr::new(0);
     // We expect an uncompressed ELF kernel, so we parse it and lay it out in memory.
