@@ -33,7 +33,7 @@ impl<T> Read for Channel<T>
 where
     T: oak_virtio::Read,
 {
-    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
+    fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         self.inner.read(data)
     }
 }
@@ -42,7 +42,7 @@ impl<T> Write for Channel<T>
 where
     T: oak_virtio::Write,
 {
-    fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
+    fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()> {
         self.inner.write(data)
     }
     fn flush(&mut self) -> anyhow::Result<()> {

@@ -73,10 +73,10 @@ impl Frame<'_> {
                 ))
             })?
         };
-        channel.write(PADDING)?;
-        channel.write(&frame_length.to_le_bytes())?;
-        channel.write(&self.flags.bits().to_le_bytes())?;
-        channel.write(self.body)?;
+        channel.write_all(PADDING)?;
+        channel.write_all(&frame_length.to_le_bytes())?;
+        channel.write_all(&self.flags.bits().to_le_bytes())?;
+        channel.write_all(self.body)?;
         Ok(())
     }
 }
@@ -96,7 +96,7 @@ impl Framed {
     ) -> anyhow::Result<(Frame<'a>, Timer)> {
         {
             let mut padding_bytes = [0; PADDING_SIZE];
-            self.inner.read(&mut padding_bytes)?;
+            self.inner.read_exact(&mut padding_bytes)?;
         };
         // As the read() above can block indefinitely we'll start measuring the time it took to read
         // the data _after_ we've read the padding bytes. Strictly speaking we should start
@@ -105,7 +105,7 @@ impl Framed {
         let timer = Timer::new_rdtsc();
         let length: usize = {
             let mut length_bytes = [0; LENGTH_SIZE];
-            self.inner.read(&mut length_bytes)?;
+            self.inner.read_exact(&mut length_bytes)?;
             let length = Length::from_le_bytes(length_bytes).into();
             if length <= BODY_OFFSET {
                 return Err(anyhow::Error::msg("frame is too small"));
@@ -117,7 +117,7 @@ impl Framed {
         };
         let flags = {
             let mut flags_bytes = [0; FLAGS_SIZE];
-            self.inner.read(&mut flags_bytes)?;
+            self.inner.read_exact(&mut flags_bytes)?;
             Flags::from_bits_truncate(u16::from_le_bytes(flags_bytes))
         };
 
@@ -128,7 +128,7 @@ impl Framed {
             let tail = message_buffer.len();
             // Lack of capacity indicates corrupted frames and causes panic.
             message_buffer.put_bytes(0x00, body_length);
-            self.inner.read(&mut message_buffer[tail..])?;
+            self.inner.read_exact(&mut message_buffer[tail..])?;
             &message_buffer[tail..]
         };
 

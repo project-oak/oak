@@ -50,10 +50,10 @@ fn start_echo_server() -> ! {
     loop {
         let bytes = {
             let mut bytes: Vec<u8> = vec![0; MESSAGE_SIZE];
-            channel.read(&mut bytes).expect("couldn't read bytes");
+            channel.read_exact(&mut bytes).expect("couldn't read bytes");
             bytes
         };
-        channel.write(&bytes).expect("couldn't write bytes");
+        channel.write_all(&bytes).expect("couldn't write bytes");
     }
 }
 

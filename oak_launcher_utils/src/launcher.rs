@@ -160,7 +160,7 @@ impl Instance {
         // Loading the application binary needs to happen before we start using microrpc over the
         // channel.
         host_socket
-            .write(&(app_bytes.len() as u32).to_le_bytes())
+            .write_all(&(app_bytes.len() as u32).to_le_bytes())
             .expect("failed to send application binary length to enclave");
 
         // The kernel expects data to be transmitted in chunks of one page.
@@ -180,9 +180,9 @@ impl Instance {
     /// Writes a chunk to a channel, and expects an acknowledgement containing the length of the
     /// chunk.
     fn write_chunk(channel: &mut dyn oak_channel::Channel, chunk: &[u8]) -> Result<()> {
-        channel.write(chunk)?;
+        channel.write_all(chunk)?;
         let mut ack: [u8; 4] = Default::default();
-        channel.read(&mut ack)?;
+        channel.read_exact(&mut ack)?;
         if u32::from_le_bytes(ack) as usize != chunk.len() {
             anyhow::bail!("ack wasn't of correct length");
         }

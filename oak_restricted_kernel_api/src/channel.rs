@@ -38,7 +38,7 @@ impl Default for FileDescriptorChannel {
 }
 
 impl Read for FileDescriptorChannel {
-    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
+    fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let len = data.len();
         let mut remaining = data.len();
 
@@ -52,7 +52,7 @@ impl Read for FileDescriptorChannel {
 }
 
 impl Write for FileDescriptorChannel {
-    fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
+    fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let len = data.len();
         let mut remaining = data.len();
 
