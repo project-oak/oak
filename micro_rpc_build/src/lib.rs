@@ -194,7 +194,7 @@ fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
     let method_name = method_name(method);
     Ok(vec![
         format!("            {method_id} => {{"),
-        // We need the angle brackets around the type in order to make sure it works with Rust well 
+        // We need the angle brackets around the type in order to make sure it works with Rust well
         // known types, e.g. when `google.protobuf.Empty` is replaced by `()`.
         format!("                let request = <{request_type}>::decode(request.body.as_ref()).map_err(|err| {{"),
         format!("                    ::micro_rpc::Status::new_with_message("),
@@ -202,7 +202,7 @@ fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
         format!("                        ::micro_rpc::format!(\"Service failed to deserialize the request: {{:?}}\", err)"),
         format!("                    )"),
         format!("                }})?;"),
-        format!("                let response = self.service.{method_name}(&request)?;"),
+        format!("                let response = self.service.{method_name}(request)?;"),
         format!("                let response_body = response.encode_to_vec();"),
         format!("                Ok(response_body)"),
         format!("            }}",),
@@ -213,7 +213,7 @@ fn generate_service_method(method: &Method) -> Vec<String> {
     let method_name = method_name(method);
     let request_type = request_type(method);
     let response_type = response_type(method);
-    vec![format!("    fn {method_name}(&mut self, request: &{request_type}) -> Result<{response_type}, ::micro_rpc::Status>;")]
+    vec![format!("    fn {method_name}(&mut self, request: {request_type}) -> Result<{response_type}, ::micro_rpc::Status>;")]
 }
 
 /// Returns the value of the `method_id` comment on the method.

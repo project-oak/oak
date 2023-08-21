@@ -67,7 +67,7 @@ pub struct StdWasmApiImpl {
 impl StdWasmApi for StdWasmApiImpl {
     fn read_request(
         &mut self,
-        _: &ReadRequestRequest,
+        _: ReadRequestRequest,
     ) -> Result<ReadRequestResponse, micro_rpc::Status> {
         self.logger
             .log_sensitive(Level::Debug, "invoked read_request");
@@ -77,15 +77,15 @@ impl StdWasmApi for StdWasmApiImpl {
     }
     fn write_response(
         &mut self,
-        req: &WriteResponseRequest,
+        req: WriteResponseRequest,
     ) -> Result<WriteResponseResponse, micro_rpc::Status> {
         self.logger
             .log_sensitive(Level::Debug, "invoked write_response");
-        *self.response.lock() = req.body.clone();
+        *self.response.lock() = req.body;
         Ok(WriteResponseResponse::default())
     }
 
-    fn log(&mut self, request: &LogRequest) -> Result<LogResponse, ::micro_rpc::Status> {
+    fn log(&mut self, request: LogRequest) -> Result<LogResponse, ::micro_rpc::Status> {
         self.logger.log_sensitive(Level::Debug, "invoked log");
         self.logger
             .log_sensitive(Level::Debug, &format!("[Wasm] {}", request.message));
@@ -94,12 +94,12 @@ impl StdWasmApi for StdWasmApiImpl {
 
     fn lookup_data(
         &mut self,
-        request: &LookupDataRequest,
+        request: LookupDataRequest,
     ) -> Result<LookupDataResponse, ::micro_rpc::Status> {
         self.logger
             .log_sensitive(Level::Debug, "invoked lookup_data");
         // The request is the key to lookup.
-        let key = request.key.clone();
+        let key = request.key;
         let key_to_log = key.iter().take(512).cloned().collect::<Vec<_>>();
         self.logger.log_sensitive(
             Level::Debug,
@@ -126,14 +126,10 @@ impl StdWasmApi for StdWasmApiImpl {
         Ok(LookupDataResponse { value })
     }
 
-    fn test(&mut self, req: &TestRequest) -> Result<TestResponse, micro_rpc::Status> {
+    fn test(&mut self, req: TestRequest) -> Result<TestResponse, micro_rpc::Status> {
         self.logger.log_sensitive(Level::Debug, "invoked test");
         Ok(TestResponse {
-            body: if req.echo {
-                req.body.clone()
-            } else {
-                Vec::new()
-            },
+            body: if req.echo { req.body } else { Vec::new() },
         })
     }
 }

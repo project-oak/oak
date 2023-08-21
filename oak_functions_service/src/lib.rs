@@ -77,7 +77,7 @@ impl OakFunctionsService {
 impl OakFunctions for OakFunctionsService {
     fn initialize(
         &mut self,
-        initialization: &InitializeRequest,
+        initialization: InitializeRequest,
     ) -> Result<InitializeResponse, micro_rpc::Status> {
         match &mut self.initialization_state {
             InitializationState::Initialized(_attestation_handler) => {
@@ -132,7 +132,7 @@ impl OakFunctions for OakFunctionsService {
 
     fn invoke(
         &mut self,
-        request_message: &InvokeRequest,
+        request_message: InvokeRequest,
     ) -> Result<InvokeResponse, micro_rpc::Status> {
         match &mut self.initialization_state {
             InitializationState::Uninitialized => Err(micro_rpc::Status::new_with_message(
@@ -156,16 +156,16 @@ impl OakFunctions for OakFunctionsService {
 
     fn extend_next_lookup_data(
         &mut self,
-        request: &ExtendNextLookupDataRequest,
+        request: ExtendNextLookupDataRequest,
     ) -> Result<ExtendNextLookupDataResponse, micro_rpc::Status> {
         self.lookup_data_manager
-            .extend_next_lookup_data(to_data(&request.chunk));
+            .extend_next_lookup_data(to_data(request.chunk));
         Ok(ExtendNextLookupDataResponse {})
     }
 
     fn finish_next_lookup_data(
         &mut self,
-        _request: &FinishNextLookupDataRequest,
+        _request: FinishNextLookupDataRequest,
     ) -> Result<FinishNextLookupDataResponse, micro_rpc::Status> {
         self.lookup_data_manager.finish_next_lookup_data();
         Ok(FinishNextLookupDataResponse {})
@@ -173,7 +173,7 @@ impl OakFunctions for OakFunctionsService {
 
     fn abort_next_lookup_data(
         &mut self,
-        _request: &Empty,
+        _request: Empty,
     ) -> Result<AbortNextLookupDataResponse, micro_rpc::Status> {
         self.lookup_data_manager.abort_next_lookup_data();
         Ok(AbortNextLookupDataResponse {})
@@ -182,12 +182,12 @@ impl OakFunctions for OakFunctionsService {
 
 // Helper function to convert LookupDataChunk to Data.
 // TODO(#3791): Check if we really have to copy here.
-fn to_data(chunk: &Option<LookupDataChunk>) -> Data {
+fn to_data(mut chunk: Option<LookupDataChunk>) -> Data {
     chunk
-        .as_ref()
-        .unwrap()
+        .take()
+        .expect("expected a LookupDataChunk, but found none")
         .items
-        .iter()
-        .map(|entry| (entry.key.clone(), entry.value.clone()))
+        .into_iter()
+        .map(|entry| (entry.key, entry.value))
         .collect()
 }
