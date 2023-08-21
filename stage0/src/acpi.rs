@@ -23,6 +23,7 @@ use core::{
     fmt::{Debug, Formatter, Result as FmtResult},
     mem::{size_of, zeroed, MaybeUninit},
 };
+use sha2::{Digest, Sha256};
 use strum::FromRepr;
 use zerocopy::AsBytes;
 
@@ -96,7 +97,7 @@ impl Allocate {
         Zone::from_repr(self.zone)
     }
 
-    fn invoke(&self, fwcfg: &mut FwCfg) -> Result<(), &'static str> {
+    fn invoke(&self, fwcfg: &mut FwCfg, acpi_digest: &mut Sha256) -> Result<(), &'static str> {
         let file = fwcfg.find(self.file()).unwrap();
         let name = self.file().to_str().map_err(|_| "invalid file name")?;
 
@@ -120,7 +121,9 @@ impl Allocate {
                 return Err("RSDP address not aligned properly");
             }
 
-            fwcfg.read_file(&file, buf.as_bytes_mut()).map(|_| ())
+            fwcfg.read_file(&file, buf.as_bytes_mut())?;
+            acpi_digest.update(buf.as_bytes());
+            Ok(())
         } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
             // Safety: we do not have concurrent threads so accessing the static is safe.
             let buf = unsafe { EBDA.write(zeroed()) };
@@ -133,7 +136,9 @@ impl Allocate {
                 );
                 return Err("ACPI tables address not aligned properly");
             }
-            fwcfg.read_file(&file, buf).map(|_| ())
+            fwcfg.read_file(&file, buf)?;
+            acpi_digest.update(buf);
+            Ok(())
         } else {
             Err("Unsupported file in table-loader")
         }
@@ -338,9 +343,9 @@ enum Command<'a> {
 }
 
 impl Command<'_> {
-    pub fn invoke(&self, fwcfg: &mut FwCfg) -> Result<(), &'static str> {
+    pub fn invoke(&self, fwcfg: &mut FwCfg, acpi_digest: &mut Sha256) -> Result<(), &'static str> {
         match self {
-            Command::Allocate(allocate) => allocate.invoke(fwcfg),
+            Command::Allocate(allocate) => allocate.invoke(fwcfg, acpi_digest),
             Command::AddPointer(add_pointer) => add_pointer.invoke(),
             Command::AddChecksum(add_checksum) => add_checksum.invoke(),
             Command::WritePointer(write_pointer) => write_pointer.invoke(),
@@ -369,7 +374,7 @@ impl RomfileCommand {
         }
     }
 
-    fn invoke(&self, fwcfg: &mut FwCfg) -> Result<(), &'static str> {
+    fn invoke(&self, fwcfg: &mut FwCfg, acpi_digest: &mut Sha256) -> Result<(), &'static str> {
         if self.tag > 0x80000000 {
             log::warn!(
                 "ignoring proprietary ACPI linker command with tag {:#x}",
@@ -386,14 +391,17 @@ impl RomfileCommand {
             );
             return Ok(());
         }
-        self.extract()?.invoke(fwcfg)
+        self.extract()?.invoke(fwcfg, acpi_digest)
     }
 }
 
 /// Populates the ACPI tables per linking instructions in `etc/table-loader`.
 ///
 /// Returns the address of the RSDP table.
-pub fn build_acpi_tables(fwcfg: &mut FwCfg) -> Result<&'static Rsdp, &'static str> {
+pub fn build_acpi_tables(
+    fwcfg: &mut FwCfg,
+    acpi_digest: &mut Sha256,
+) -> Result<&'static Rsdp, &'static str> {
     let mut commands: [RomfileCommand; 32] = Default::default();
 
     let file = fwcfg
@@ -413,15 +421,18 @@ pub fn build_acpi_tables(fwcfg: &mut FwCfg) -> Result<&'static Rsdp, &'static st
     // Safety: we're using `size_of` here to ensure that we don't go over the boundaries of the
     // original array.
 
-    fwcfg.read_file(&file, unsafe {
+    let buf = unsafe {
         core::slice::from_raw_parts_mut(
             &mut commands as *mut _ as usize as *mut u8,
             core::mem::size_of_val(&commands),
         )
-    })?;
+    };
+
+    fwcfg.read_file(&file, buf)?;
+    acpi_digest.update(buf);
 
     for command in &commands[..(file.size() / core::mem::size_of::<RomfileCommand>())] {
-        command.invoke(fwcfg)?;
+        command.invoke(fwcfg, acpi_digest)?;
     }
 
     // Safety: we ensure that the RSDP is valid before returning a reference to it.

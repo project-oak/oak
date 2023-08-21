@@ -30,6 +30,7 @@ use x86_64::{
     },
     PhysAddr, VirtAddr,
 };
+use zerocopy::AsBytes;
 
 mod acpi;
 mod acpi_tables;
@@ -43,6 +44,8 @@ pub mod paging;
 mod sev;
 mod smp;
 mod zero_page;
+
+type Measurement = [u8; 32];
 
 // Reserve 128K for boot data structures.
 static BOOT_ALLOC: alloc::Allocator<0x20000> = alloc::Allocator::uninit();
@@ -208,7 +211,9 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     paging::map_additional_memory(encrypted);
 
-    let setup_data_measurement = zero_page.try_fill_hdr_from_setup_data(&mut fwcfg);
+    let setup_data_measurement = zero_page
+        .try_fill_hdr_from_setup_data(&mut fwcfg)
+        .unwrap_or_default();
 
     if snp {
         let cc_blob = BOOT_ALLOC
@@ -224,11 +229,12 @@ pub fn rust64_start(encrypted: u64) -> ! {
         zero_page.add_setup_data(setup_data);
     }
 
-    let mut cmdline_measurment = [0u8; 32];
-    if let Some(cmdline) = kernel::try_load_cmdline(&mut fwcfg) {
-        populate_measurement(&mut cmdline_measurment, cmdline.to_bytes());
-        zero_page.set_cmdline(cmdline);
-    }
+    let cmdline_measurement = kernel::try_load_cmdline(&mut fwcfg)
+        .map(|cmdline| {
+            zero_page.set_cmdline(cmdline);
+            measure_byte_slice(cmdline.to_bytes())
+        })
+        .unwrap_or_default();
 
     let kernel_info = kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table())
         .unwrap_or(kernel::KernelInfo::default());
@@ -252,8 +258,12 @@ pub fn rust64_start(encrypted: u64) -> ! {
         entry = VirtAddr::new(header.e_entry);
     }
 
-    let rsdp = acpi::build_acpi_tables(&mut fwcfg).unwrap();
+    let mut acpi_digest = Sha256::default();
+    let rsdp = acpi::build_acpi_tables(&mut fwcfg, &mut acpi_digest).unwrap();
     zero_page.set_acpi_rsdp_addr(PhysAddr::new(rsdp as *const _ as u64));
+    let acpi_digest = acpi_digest.finalize();
+    let mut acpi_measurement = Measurement::default();
+    acpi_measurement[..].copy_from_slice(&acpi_digest[..]);
 
     if let Err(err) = smp::bootstrap_aps(rsdp) {
         log::warn!(
@@ -262,18 +272,22 @@ pub fn rust64_start(encrypted: u64) -> ! {
         );
     }
 
-    let mut ram_disk_measurment = [0u8; 32];
-    if let Some(ram_disk) =
+    let ram_disk_measurement =
         initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel_info)
-    {
-        populate_measurement(&mut ram_disk_measurment, ram_disk);
-        zero_page.set_initial_ram_disk(ram_disk);
-    }
+            .map(|ram_disk| {
+                zero_page.set_initial_ram_disk(ram_disk);
+                measure_byte_slice(ram_disk)
+            })
+            .unwrap_or_default();
+
+    let memory_map_measurement = measure_byte_slice(zero_page.e820_table().as_bytes());
 
     log::debug!("Kernel image digest: {:?}", kernel_info.measurement);
     log::debug!("Kernel setup data digest: {:?}", setup_data_measurement);
-    log::debug!("Kernel image digest: {:?}", cmdline_measurment);
-    log::debug!("Initial RAM disk digest: {:?}", ram_disk_measurment);
+    log::debug!("Kernel image digest: {:?}", cmdline_measurement);
+    log::debug!("Initial RAM disk digest: {:?}", ram_disk_measurement);
+    log::debug!("ACPI table generation digest: {:?}", acpi_measurement);
+    log::debug!("E820 table digest: {:?}", memory_map_measurement);
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 
@@ -312,10 +326,12 @@ fn phys_to_virt(address: PhysAddr) -> VirtAddr {
     VirtAddr::new(address.as_u64())
 }
 
-/// Overwrites `measurement` with the SHA2-256 digest or `source`.
-fn populate_measurement(measurement: &mut [u8; 32], source: &[u8]) {
+/// Calculates the SHA2-256 digest of `source`.
+fn measure_byte_slice(source: &[u8]) -> Measurement {
+    let mut measurement = Measurement::default();
     let mut digest = Sha256::default();
     digest.update(source);
     let digest = digest.finalize();
     measurement[..].copy_from_slice(&digest[..]);
+    measurement
 }

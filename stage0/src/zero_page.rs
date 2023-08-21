@@ -58,9 +58,8 @@ impl ZeroPage {
     ///
     /// Returns the measurement (SHA2-384 digest) of the setup data if it was found, otherwise the
     /// measurement is all zeros.
-    pub fn try_fill_hdr_from_setup_data(&mut self, fw_cfg: &mut FwCfg) -> [u8; 32] {
-        let mut measurement = [0u8; 32];
-        if let Some(file) = fw_cfg.get_setup_file() {
+    pub fn try_fill_hdr_from_setup_data(&mut self, fw_cfg: &mut FwCfg) -> Option<[u8; 32]> {
+        fw_cfg.get_setup_file().map(|file| {
             let size = file.size();
             // We temporarily copy the setup data to the end of available mapped virtual memory.
             let start = find_suitable_dma_address(size, self.inner.e820_table())
@@ -72,22 +71,22 @@ impl ZeroPage {
                 .read_file(&file, buf)
                 .expect("could not read setup data");
             assert_eq!(actual_size, size, "setup data did not match expected size");
-            crate::populate_measurement(&mut measurement, buf);
+            let measurement = crate::measure_byte_slice(buf);
 
             // The header information starts at offset 0x01F1 from the start of the setup data.
             let hdr_start = 0x1F1usize;
-            // We can determine the end of the setup header information by adding the value of the
-            // byte as offset 0x201 to the value 0x202.
+            // We can determine the end of the setup header information by adding the value of
+            // the byte as offset 0x201 to the value 0x202.
             let hdr_end = 0x202usize + (buf[0x201] as usize);
             let src = &buf[hdr_start..hdr_end];
             // If we are loading an older kernel, the setup header might be a bit shorter. New
             // fields for more recent versions of the boot protocol are added to the end of the
-            // setup header and there is padding after header, so the resulting data stucture should
-            // still be understood correctly by the kernel.
+            // setup header and there is padding after header, so the resulting data stucture
+            // should still be understood correctly by the kernel.
             let dest = &mut self.inner.hdr.as_bytes_mut()[..src.len()];
             dest.copy_from_slice(src);
-        }
-        measurement
+            measurement
+        })
     }
 
     /// Fills the E820 memory map (layout of the physical memory of the machine) in the zero page.
