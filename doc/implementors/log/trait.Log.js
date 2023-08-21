@@ -1,4 +1,3 @@
 (function() {var implementors = {
-"oak_functions_linux_fd_bin":[["impl <a class=\"trait\" href=\"https://docs.rs/log/0.4.17/log/trait.Log.html\" title=\"trait log::Log\">Log</a> for <a class=\"struct\" href=\"oak_functions_linux_fd_bin/struct.Logger.html\" title=\"struct oak_functions_linux_fd_bin::Logger\">Logger</a>"]],
 "oak_restricted_kernel_api":[["impl <a class=\"trait\" href=\"https://docs.rs/log/0.4.17/log/trait.Log.html\" title=\"trait log::Log\">Log</a> for <a class=\"struct\" href=\"oak_restricted_kernel_api/struct.StderrLogger.html\" title=\"struct oak_restricted_kernel_api::StderrLogger\">StderrLogger</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

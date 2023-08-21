@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["GuestMode"],"fn":["launch"],"mod":["native","virtualized"],"trait":["GuestInstance"]};
+window.SIDEBAR_ITEMS = {"fn":["launch"],"struct":["Instance","Params"],"trait":["GuestInstance"]};

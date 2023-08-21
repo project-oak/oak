@@ -208,7 +208,7 @@
 }
 
 <span class="kw">pub async fn </span>create(
-    mode: launcher::GuestMode,
+    params: launcher::Params,
     lookup_data_config: LookupDataConfig,
     wasm_path: PathBuf,
     constant_response_size: u32,
@@ -220,7 +220,7 @@
     ),
     Box&lt;<span class="kw">dyn </span>std::error::Error&gt;,
 &gt; {
-    <span class="kw">let </span>(launched_instance, connector_handle) = launcher::launch(mode).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let </span>(launched_instance, connector_handle) = launcher::launch(params).<span class="kw">await</span><span class="question-mark">?</span>;
     setup_lookup_data(connector_handle.clone(), lookup_data_config).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>intialize_response =
         intialize_enclave(connector_handle.clone(), <span class="kw-2">&amp;</span>wasm_path, constant_response_size).<span class="kw">await</span><span class="question-mark">?</span>;

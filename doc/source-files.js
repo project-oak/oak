@@ -24,7 +24,6 @@ var sourcesIndex = JSON.parse('{\
 "oak_functions_abi":["",[],["lib.rs"]],\
 "oak_functions_client":["",[],["lib.rs"]],\
 "oak_functions_launcher":["",[],["lib.rs","lookup.rs","server.rs"]],\
-"oak_functions_linux_fd_bin":["",[],["main.rs"]],\
 "oak_functions_load_test":["",[],["main.rs"]],\
 "oak_functions_sdk":["",[],["lib.rs"]],\
 "oak_functions_sdk_abi_test_get_storage_item":["",[],["lib.rs"]],\
@@ -34,7 +33,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_grpc_utils":["",[],["lib.rs"]],\
 "oak_hello_world_linux_init":["",[],["init.rs","main.rs"]],\
 "oak_iree_service":["",[],["iree.rs","lib.rs"]],\
-"oak_launcher_utils":["",[["launcher",[],["native.rs","virtualized.rs"]]],["channel.rs","launcher.rs","lib.rs"]],\
+"oak_launcher_utils":["",[],["channel.rs","launcher.rs","lib.rs"]],\
 "oak_linux_boot_params":["",[],["lib.rs"]],\
 "oak_remote_attestation":["",[],["attester.rs","handler.rs","lib.rs"]],\
 "oak_remote_attestation_verification":["",[],["lib.rs","rekor.rs","verifier.rs"]],\

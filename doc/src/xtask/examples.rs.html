@@ -68,8 +68,6 @@
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -88,9 +86,10 @@
 
 </span><span class="kw">use crate</span>::{
     internal::<span class="kw-2">*</span>,
+    launcher,
     launcher::{
         build_binary, build_stage0, run_oak_functions_launcher_example_with_lookup_data,
-        LauncherMode, MOCK_LOOKUP_DATA_PATH, OAK_RESTRICTED_KERNEL_BIN_DIR,
+        MOCK_LOOKUP_DATA_PATH, OAK_RESTRICTED_KERNEL_BIN_DIR,
     },
 };
 
@@ -111,7 +110,7 @@
 }
 
 <span class="kw">pub fn </span>run_oak_functions_example(opt: <span class="kw-2">&amp;</span>RunOakExampleOpt) -&gt; Step {
-    <span class="kw">let </span>variant = LauncherMode::Virtual(<span class="string">&quot;oak_functions_enclave_app&quot;</span>.to_string());
+    <span class="kw">let </span>app = launcher::App::from_crate_name(<span class="string">&quot;oak_functions_enclave_app&quot;</span>);
 
     <span class="kw">let </span>wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path(<span class="kw-2">&amp;</span>opt.example_name);
 
@@ -123,15 +122,12 @@
                 <span class="string">&quot;build Oak Restricted Kernel binary&quot;</span>,
                 OAK_RESTRICTED_KERNEL_BIN_DIR.to_str().unwrap(),
             ),
-            build_binary(
-                <span class="string">&quot;build Oak Functions enclave app&quot;</span>,
-                <span class="kw-2">&amp;</span>variant.enclave_crate_path(),
-            ),
+            build_binary(<span class="string">&quot;build Oak Functions enclave app&quot;</span>, <span class="kw-2">&amp;</span>app.enclave_crate_path()),
             build_rust_crate_wasm(<span class="kw-2">&amp;</span>opt.example_name),
             Step::Single {
                 name: <span class="string">&quot;server&quot;</span>.to_string(),
                 command: run_oak_functions_launcher_example_with_lookup_data(
-                    <span class="kw-2">&amp;</span>variant,
+                    <span class="kw-2">&amp;</span>app,
                     <span class="kw-2">&amp;</span>wasm_path,
                     <span class="number">8080</span>,
                     <span class="kw-2">&amp;</span>opt.lookup_data_path

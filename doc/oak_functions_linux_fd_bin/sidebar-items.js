@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["main"],"static":["LOGGER"],"struct":["Logger","Opt"]};
