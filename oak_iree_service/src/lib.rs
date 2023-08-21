@@ -75,7 +75,7 @@ impl IreeService {
 impl Iree for IreeService {
     fn initialize(
         &mut self,
-        _initialization: &InitializeRequest,
+        _initialization: InitializeRequest,
     ) -> Result<InitializeResponse, micro_rpc::Status> {
         match &mut self.initialization_state {
             InitializationState::Initialized(_attestation_handler) => {
@@ -125,7 +125,7 @@ impl Iree for IreeService {
 
     fn invoke(
         &mut self,
-        request_message: &InvokeRequest,
+        request_message: InvokeRequest,
     ) -> Result<InvokeResponse, micro_rpc::Status> {
         match &mut self.initialization_state {
             InitializationState::Uninitialized => Err(micro_rpc::Status::new_with_message(
