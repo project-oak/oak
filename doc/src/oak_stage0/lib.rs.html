@@ -319,6 +319,22 @@
 <a href="#319" id="319">319</a>
 <a href="#320" id="320">320</a>
 <a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -351,6 +367,7 @@
     },
     PhysAddr, VirtAddr,
 };
+<span class="kw">use </span>zerocopy::AsBytes;
 
 <span class="kw">mod </span>acpi;
 <span class="kw">mod </span>acpi_tables;
@@ -364,6 +381,8 @@
 <span class="kw">mod </span>sev;
 <span class="kw">mod </span>smp;
 <span class="kw">mod </span>zero_page;
+
+<span class="kw">type </span>Measurement = [u8; <span class="number">32</span>];
 
 <span class="comment">// Reserve 128K for boot data structures.
 </span><span class="kw">static </span>BOOT_ALLOC: alloc::Allocator&lt;<span class="number">0x20000</span>&gt; = alloc::Allocator::uninit();
@@ -529,7 +548,9 @@
 
     paging::map_additional_memory(encrypted);
 
-    <span class="kw">let </span>setup_data_measurement = zero_page.try_fill_hdr_from_setup_data(<span class="kw-2">&amp;mut </span>fwcfg);
+    <span class="kw">let </span>setup_data_measurement = zero_page
+        .try_fill_hdr_from_setup_data(<span class="kw-2">&amp;mut </span>fwcfg)
+        .unwrap_or_default();
 
     <span class="kw">if </span>snp {
         <span class="kw">let </span>cc_blob = BOOT_ALLOC
@@ -545,11 +566,12 @@
         zero_page.add_setup_data(setup_data);
     }
 
-    <span class="kw">let </span><span class="kw-2">mut </span>cmdline_measurment = [<span class="number">0u8</span>; <span class="number">32</span>];
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(cmdline) = kernel::try_load_cmdline(<span class="kw-2">&amp;mut </span>fwcfg) {
-        populate_measurement(<span class="kw-2">&amp;mut </span>cmdline_measurment, cmdline.to_bytes());
-        zero_page.set_cmdline(cmdline);
-    }
+    <span class="kw">let </span>cmdline_measurement = kernel::try_load_cmdline(<span class="kw-2">&amp;mut </span>fwcfg)
+        .map(|cmdline| {
+            zero_page.set_cmdline(cmdline);
+            measure_byte_slice(cmdline.to_bytes())
+        })
+        .unwrap_or_default();
 
     <span class="kw">let </span>kernel_info = kernel::try_load_kernel_image(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table())
         .unwrap_or(kernel::KernelInfo::default());
@@ -573,8 +595,12 @@
         </span>entry = VirtAddr::new(header.e_entry);
     }
 
-    <span class="kw">let </span>rsdp = acpi::build_acpi_tables(<span class="kw-2">&amp;mut </span>fwcfg).unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>acpi_digest = Sha256::default();
+    <span class="kw">let </span>rsdp = acpi::build_acpi_tables(<span class="kw-2">&amp;mut </span>fwcfg, <span class="kw-2">&amp;mut </span>acpi_digest).unwrap();
     zero_page.set_acpi_rsdp_addr(PhysAddr::new(rsdp <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64));
+    <span class="kw">let </span>acpi_digest = acpi_digest.finalize();
+    <span class="kw">let </span><span class="kw-2">mut </span>acpi_measurement = Measurement::default();
+    acpi_measurement[..].copy_from_slice(<span class="kw-2">&amp;</span>acpi_digest[..]);
 
     <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = smp::bootstrap_aps(rsdp) {
         <span class="macro">log::warn!</span>(
@@ -583,18 +609,22 @@
         );
     }
 
-    <span class="kw">let </span><span class="kw-2">mut </span>ram_disk_measurment = [<span class="number">0u8</span>; <span class="number">32</span>];
-    <span class="kw">if let </span><span class="prelude-val">Some</span>(ram_disk) =
+    <span class="kw">let </span>ram_disk_measurement =
         initramfs::try_load_initial_ram_disk(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table(), <span class="kw-2">&amp;</span>kernel_info)
-    {
-        populate_measurement(<span class="kw-2">&amp;mut </span>ram_disk_measurment, ram_disk);
-        zero_page.set_initial_ram_disk(ram_disk);
-    }
+            .map(|ram_disk| {
+                zero_page.set_initial_ram_disk(ram_disk);
+                measure_byte_slice(ram_disk)
+            })
+            .unwrap_or_default();
+
+    <span class="kw">let </span>memory_map_measurement = measure_byte_slice(zero_page.e820_table().as_bytes());
 
     <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image digest: {:?}&quot;</span>, kernel_info.measurement);
     <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel setup data digest: {:?}&quot;</span>, setup_data_measurement);
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image digest: {:?}&quot;</span>, cmdline_measurment);
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Initial RAM disk digest: {:?}&quot;</span>, ram_disk_measurment);
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image digest: {:?}&quot;</span>, cmdline_measurement);
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Initial RAM disk digest: {:?}&quot;</span>, ram_disk_measurement);
+    <span class="macro">log::debug!</span>(<span class="string">&quot;ACPI table generation digest: {:?}&quot;</span>, acpi_measurement);
+    <span class="macro">log::debug!</span>(<span class="string">&quot;E820 table digest: {:?}&quot;</span>, memory_map_measurement);
 
     <span class="macro">log::info!</span>(<span class="string">&quot;jumping to kernel at {:#018x}&quot;</span>, entry.as_u64());
 
@@ -633,11 +663,13 @@
     </span>VirtAddr::new(address.as_u64())
 }
 
-<span class="doccomment">/// Overwrites `measurement` with the SHA2-256 digest or `source`.
-</span><span class="kw">fn </span>populate_measurement(measurement: <span class="kw-2">&amp;mut </span>[u8; <span class="number">32</span>], source: <span class="kw-2">&amp;</span>[u8]) {
+<span class="doccomment">/// Calculates the SHA2-256 digest of `source`.
+</span><span class="kw">fn </span>measure_byte_slice(source: <span class="kw-2">&amp;</span>[u8]) -&gt; Measurement {
+    <span class="kw">let </span><span class="kw-2">mut </span>measurement = Measurement::default();
     <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha256::default();
     digest.update(source);
     <span class="kw">let </span>digest = digest.finalize();
     measurement[..].copy_from_slice(<span class="kw-2">&amp;</span>digest[..]);
+    measurement
 }
 </code></pre></div></section></main></body></html>

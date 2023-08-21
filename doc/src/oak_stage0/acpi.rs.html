@@ -429,6 +429,17 @@
 <a href="#429" id="429">429</a>
 <a href="#430" id="430">430</a>
 <a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -454,6 +465,7 @@
     fmt::{Debug, Formatter, <span class="prelude-ty">Result </span><span class="kw">as </span>FmtResult},
     mem::{size_of, zeroed, MaybeUninit},
 };
+<span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>strum::FromRepr;
 <span class="kw">use </span>zerocopy::AsBytes;
 
@@ -527,7 +539,7 @@
         Zone::from_repr(<span class="self">self</span>.zone)
     }
 
-    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg, acpi_digest: <span class="kw-2">&amp;mut </span>Sha256) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span>file = fwcfg.find(<span class="self">self</span>.file()).unwrap();
         <span class="kw">let </span>name = <span class="self">self</span>.file().to_str().map_err(|<span class="kw">_</span>| <span class="string">&quot;invalid file name&quot;</span>)<span class="question-mark">?</span>;
 
@@ -551,7 +563,9 @@
                 <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;RSDP address not aligned properly&quot;</span>);
             }
 
-            fwcfg.read_file(<span class="kw-2">&amp;</span>file, buf.as_bytes_mut()).map(|<span class="kw">_</span>| ())
+            fwcfg.read_file(<span class="kw-2">&amp;</span>file, buf.as_bytes_mut())<span class="question-mark">?</span>;
+            acpi_digest.update(buf.as_bytes());
+            <span class="prelude-val">Ok</span>(())
         } <span class="kw">else if </span>name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
             <span class="comment">// Safety: we do not have concurrent threads so accessing the static is safe.
             </span><span class="kw">let </span>buf = <span class="kw">unsafe </span>{ EBDA.write(zeroed()) };
@@ -564,7 +578,9 @@
                 );
                 <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;ACPI tables address not aligned properly&quot;</span>);
             }
-            fwcfg.read_file(<span class="kw-2">&amp;</span>file, buf).map(|<span class="kw">_</span>| ())
+            fwcfg.read_file(<span class="kw-2">&amp;</span>file, buf)<span class="question-mark">?</span>;
+            acpi_digest.update(buf);
+            <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(<span class="string">&quot;Unsupported file in table-loader&quot;</span>)
         }
@@ -769,9 +785,9 @@
 }
 
 <span class="kw">impl </span>Command&lt;<span class="lifetime">&#39;_</span>&gt; {
-    <span class="kw">pub fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">pub fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg, acpi_digest: <span class="kw-2">&amp;mut </span>Sha256) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">match </span><span class="self">self </span>{
-            Command::Allocate(allocate) =&gt; allocate.invoke(fwcfg),
+            Command::Allocate(allocate) =&gt; allocate.invoke(fwcfg, acpi_digest),
             Command::AddPointer(add_pointer) =&gt; add_pointer.invoke(),
             Command::AddChecksum(add_checksum) =&gt; add_checksum.invoke(),
             Command::WritePointer(write_pointer) =&gt; write_pointer.invoke(),
@@ -800,7 +816,7 @@
         }
     }
 
-    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, fwcfg: <span class="kw-2">&amp;mut </span>FwCfg, acpi_digest: <span class="kw-2">&amp;mut </span>Sha256) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">if </span><span class="self">self</span>.tag &gt; <span class="number">0x80000000 </span>{
             <span class="macro">log::warn!</span>(
                 <span class="string">&quot;ignoring proprietary ACPI linker command with tag {:#x}&quot;</span>,
@@ -817,14 +833,17 @@
             );
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
-        <span class="self">self</span>.extract()<span class="question-mark">?</span>.invoke(fwcfg)
+        <span class="self">self</span>.extract()<span class="question-mark">?</span>.invoke(fwcfg, acpi_digest)
     }
 }
 
 <span class="doccomment">/// Populates the ACPI tables per linking instructions in `etc/table-loader`.
 ///
 /// Returns the address of the RSDP table.
-</span><span class="kw">pub fn </span>build_acpi_tables(fwcfg: <span class="kw-2">&amp;mut </span>FwCfg) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Rsdp, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>build_acpi_tables(
+    fwcfg: <span class="kw-2">&amp;mut </span>FwCfg,
+    acpi_digest: <span class="kw-2">&amp;mut </span>Sha256,
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Rsdp, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>commands: [RomfileCommand; <span class="number">32</span>] = Default::default();
 
     <span class="kw">let </span>file = fwcfg
@@ -844,15 +863,18 @@
     // Safety: we&#39;re using `size_of` here to ensure that we don&#39;t go over the boundaries of the
     // original array.
 
-    </span>fwcfg.read_file(<span class="kw-2">&amp;</span>file, <span class="kw">unsafe </span>{
+    </span><span class="kw">let </span>buf = <span class="kw">unsafe </span>{
         core::slice::from_raw_parts_mut(
             <span class="kw-2">&amp;mut </span>commands <span class="kw">as </span><span class="kw-2">*mut </span><span class="kw">_ as </span>usize <span class="kw">as </span><span class="kw-2">*mut </span>u8,
             core::mem::size_of_val(<span class="kw-2">&amp;</span>commands),
         )
-    })<span class="question-mark">?</span>;
+    };
+
+    fwcfg.read_file(<span class="kw-2">&amp;</span>file, buf)<span class="question-mark">?</span>;
+    acpi_digest.update(buf);
 
     <span class="kw">for </span>command <span class="kw">in </span><span class="kw-2">&amp;</span>commands[..(file.size() / core::mem::size_of::&lt;RomfileCommand&gt;())] {
-        command.invoke(fwcfg)<span class="question-mark">?</span>;
+        command.invoke(fwcfg, acpi_digest)<span class="question-mark">?</span>;
     }
 
     <span class="comment">// Safety: we ensure that the RSDP is valid before returning a reference to it.

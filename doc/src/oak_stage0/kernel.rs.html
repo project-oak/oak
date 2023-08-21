@@ -230,6 +230,9 @@
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
 <a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -279,7 +282,7 @@
     <span class="doccomment">/// The entry point for the kernel.
     </span><span class="kw">pub </span>entry: VirtAddr,
     <span class="doccomment">/// The SHA2-256 digest of the raw kernel image.
-    </span><span class="kw">pub </span>measurement: [u8; <span class="number">32</span>],
+    </span><span class="kw">pub </span>measurement: <span class="kw">crate</span>::Measurement,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>KernelInfo {
@@ -288,7 +291,7 @@
             start_address: VirtAddr::new(DEFAULT_KERNEL_START),
             size: DEFAULT_KERNEL_SIZE,
             entry: VirtAddr::new(DEFAULT_KERNEL_START),
-            measurement: [<span class="number">0u8</span>; <span class="number">32</span>],
+            measurement: <span class="kw">crate</span>::Measurement::default(),
         }
     }
 }
@@ -377,8 +380,7 @@
         .expect(<span class="string">&quot;could not read kernel file&quot;</span>);
     <span class="macro">assert_eq!</span>(actual_size, size, <span class="string">&quot;kernel size did not match expected size&quot;</span>);
 
-    <span class="kw">let </span><span class="kw-2">mut </span>measurement = [<span class="number">0u8</span>; <span class="number">32</span>];
-    <span class="kw">crate</span>::populate_measurement(<span class="kw-2">&amp;mut </span>measurement, buf);
+    <span class="kw">let </span>measurement = <span class="kw">crate</span>::measure_byte_slice(buf);
 
     <span class="kw">if </span>bzimage {
         <span class="comment">// For a bzImage the 64-bit entry point is at offset 0x200 from the start of the 64-bit
@@ -396,7 +398,11 @@
     }
 }
 
-<span class="kw">fn </span>parse_elf_file(buf: <span class="kw-2">&amp;</span>[u8], e820_table: <span class="kw-2">&amp;</span>[BootE820Entry], measurement: [u8; <span class="number">32</span>]) -&gt; KernelInfo {
+<span class="kw">fn </span>parse_elf_file(
+    buf: <span class="kw-2">&amp;</span>[u8],
+    e820_table: <span class="kw-2">&amp;</span>[BootE820Entry],
+    measurement: <span class="kw">crate</span>::Measurement,
+) -&gt; KernelInfo {
     <span class="kw">let </span><span class="kw-2">mut </span>kernel_start = VirtAddr::new(<span class="kw">crate</span>::TOP_OF_VIRTUAL_MEMORY);
     <span class="kw">let </span><span class="kw-2">mut </span>kernel_end = VirtAddr::new(<span class="number">0</span>);
     <span class="comment">// We expect an uncompressed ELF kernel, so we parse it and lay it out in memory.
