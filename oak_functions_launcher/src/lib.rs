@@ -57,7 +57,7 @@ pub struct LookupDataConfig {
 }
 
 pub async fn create(
-    mode: launcher::GuestMode,
+    params: launcher::Params,
     lookup_data_config: LookupDataConfig,
     wasm_path: PathBuf,
     constant_response_size: u32,
@@ -69,7 +69,7 @@ pub async fn create(
     ),
     Box<dyn std::error::Error>,
 > {
-    let (launched_instance, connector_handle) = launcher::launch(mode).await?;
+    let (launched_instance, connector_handle) = launcher::launch(params).await?;
     setup_lookup_data(connector_handle.clone(), lookup_data_config).await?;
     let intialize_response =
         intialize_enclave(connector_handle.clone(), &wasm_path, constant_response_size).await?;

@@ -30,10 +30,9 @@ use ubyte::ByteUnit;
 
 #[derive(Parser, Debug)]
 struct Args {
-    /// Execution mode.
-    #[command(subcommand)]
-    mode: oak_launcher_utils::launcher::GuestMode,
-
+    /// launcher params.
+    #[clap(flatten)]
+    launcher_params: oak_launcher_utils::launcher::Params,
     /// Consistent response size that the enclave should apply
     #[arg(long, default_value = "1024")]
     constant_response_size: u32,
@@ -80,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let (mut launched_instance, connector_handle, initialize_response) =
         oak_functions_launcher::create(
-            cli.mode,
+            cli.launcher_params,
             lookup_data_config,
             cli.wasm,
             cli.constant_response_size,

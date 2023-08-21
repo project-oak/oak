@@ -22,24 +22,13 @@ use clap::Parser;
 use oak_launcher_utils::launcher;
 use quirk_echo_launcher::proto::quirk::echo::{EchoAsyncClient, EchoRequest};
 
-#[derive(Parser, Debug)]
-struct Args {
-    /// Execution mode.
-    #[command(subcommand)]
-    mode: crate::launcher::GuestMode,
-
-    /// Port to listen on.
-    #[arg(long, default_value = "8080")]
-    port: u16,
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let cli = Args::parse();
+    let cli = crate::launcher::Params::parse();
     env_logger::init();
 
     log::info!("calling launcher");
-    let (guest_instance, connector_handle) = launcher::launch(cli.mode).await?;
+    let (guest_instance, connector_handle) = launcher::launch(cli).await?;
 
     let mut client = EchoAsyncClient::new(connector_handle);
     let body = b"test_msg".to_vec();

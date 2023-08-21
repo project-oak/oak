@@ -41,24 +41,23 @@ pub static QUIRK_ECHO_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
 use crate::{internal::*, workspace_path};
 use once_cell::sync::Lazy;
 use std::path::{Path, PathBuf};
-use strum::IntoEnumIterator;
-use strum_macros::{Display, EnumIter};
 
-#[derive(Debug, Display, Clone, PartialEq, EnumIter)]
-pub enum LauncherMode {
-    /// Virtual launch mode parameterized by the app binary crate name.
-    Virtual(String),
-    /// Native launch mode parameterized by the app binary crate name.
-    Native(String),
+#[derive(Debug, Clone, PartialEq)]
+pub struct App {
+    /// app binary crate name.
+    crate_name: String,
 }
 
-impl LauncherMode {
+impl App {
+    pub fn from_crate_name(crate_name: &str) -> Self {
+        Self {
+            crate_name: crate_name.to_string(),
+        }
+    }
+
     /// Get the crate name of respective enclave binary variant
     pub fn enclave_crate_name(&self) -> String {
-        match self {
-            LauncherMode::Virtual(s) => s.clone(),
-            LauncherMode::Native(s) => s.clone(),
-        }
+        self.crate_name.clone()
     }
 
     /// Get the path to the respective enclave binary variant that should be launched
@@ -71,92 +70,66 @@ impl LauncherMode {
 
     /// Get the path to the respective enclave binary variant that should be launched
     pub fn enclave_binary_path(&self) -> String {
-        match self {
-            LauncherMode::Virtual(_) => workspace_path(&[
-                "enclave_apps",
-                "target",
-                "x86_64-unknown-none",
-                "debug",
-                &self.enclave_crate_name(),
-            ])
-            .to_str()
-            .unwrap()
-            .to_string(),
-            LauncherMode::Native(_) => format!("./target/debug/{}", self.enclave_crate_name()),
-        }
+        workspace_path(&[
+            "enclave_apps",
+            "target",
+            "x86_64-unknown-none",
+            "debug",
+            &self.enclave_crate_name(),
+        ])
+        .to_str()
+        .unwrap()
+        .to_string()
     }
 
     /// Get the subcommand for launching in this mode
-    pub fn variant_subcommand(&self) -> Vec<String> {
-        match self {
-            LauncherMode::Virtual(_) => vec![
-                "virtualized".to_string(),
-                format!(
-                    "--enclave-binary={}",
-                    workspace_path(&[
-                        "oak_restricted_kernel_bin",
-                        "target",
-                        "x86_64-unknown-none",
-                        "debug",
-                        "oak_restricted_kernel_bin",
-                    ])
+    pub fn subcommand(&self) -> Vec<String> {
+        vec![
+            format!(
+                "--enclave-binary={}",
+                workspace_path(&[
+                    "oak_restricted_kernel_bin",
+                    "target",
+                    "x86_64-unknown-none",
+                    "debug",
+                    "oak_restricted_kernel_bin",
+                ])
+                .to_str()
+                .unwrap()
+            ),
+            format!(
+                "--vmm-binary={}",
+                which::which("qemu-system-x86_64")
+                    .unwrap()
                     .to_str()
                     .unwrap()
-                ),
-                format!(
-                    "--vmm-binary={}",
-                    which::which("qemu-system-x86_64")
-                        .unwrap()
-                        .to_str()
-                        .unwrap()
-                ),
-                "--memory-size=256M".to_string(),
-                format!("--app-binary={}", &self.enclave_binary_path()),
-                format!(
-                    "--bios-binary={}",
-                    workspace_path(&[
-                        "stage0_bin",
-                        "target",
-                        "x86_64-unknown-none",
-                        "release",
-                        "oak_stage0.bin",
-                    ])
-                    .to_str()
-                    .unwrap()
-                ),
-            ],
-            LauncherMode::Native(_) => vec![
-                "native".to_string(),
-                format!("--enclave-binary={}", &self.enclave_binary_path()),
-            ],
-        }
+            ),
+            "--memory-size=256M".to_string(),
+            format!("--app-binary={}", &self.enclave_binary_path()),
+            format!(
+                "--bios-binary={}",
+                workspace_path(&[
+                    "stage0_bin",
+                    "target",
+                    "x86_64-unknown-none",
+                    "release",
+                    "oak_stage0.bin",
+                ])
+                .to_str()
+                .unwrap()
+            ),
+        ]
     }
 }
 
-pub fn build_enclave_binary_variants(opt: &BuildEnclaveBinaryVariantsOpt) -> Step {
-    Step::Multiple {
-        name: "Build enclave binary variants".to_string(),
-        steps: LauncherMode::iter()
-            .filter(|v| option_covers_variant(opt, v))
-            .map(|v| build_released_binary(&v.to_string(), &v.enclave_crate_path()))
-            .collect(),
-    }
-}
-
-fn option_covers_variant(opt: &BuildEnclaveBinaryVariantsOpt, variant: &LauncherMode) -> bool {
-    match &opt.variant {
-        None => true,
-        Some(var) => match *variant {
-            LauncherMode::Native(_) => var == "native",
-            LauncherMode::Virtual(_) => var == "virtual",
-        },
-    }
-}
-
-fn build_released_binary(name: &str, directory: &str) -> Step {
+pub fn build_enclave_binary() -> Step {
     Step::Single {
-        name: name.to_string(),
-        command: Cmd::new_in_dir("cargo", vec!["build", "--release"], Path::new(directory)),
+        name: "Build enclave binary variants".to_string(),
+        command: Cmd::new_in_dir(
+            "cargo",
+            vec!["build", "--release"],
+            Path::new(&App::from_crate_name("").enclave_crate_path()),
+        ),
     }
 }
 
@@ -188,12 +161,12 @@ pub fn build_binary(name: &str, directory: &str) -> Step {
 /// Runs the Oak Functions launcher configured with a default Wasm module for key / value lookups
 /// and mock lookup data.
 pub fn run_oak_functions_launcher_example(
-    variant: &LauncherMode,
+    app: &App,
     wasm_path: &str,
     port: u16,
 ) -> Box<dyn Runnable> {
     run_oak_functions_launcher_example_with_lookup_data(
-        variant,
+        app,
         wasm_path,
         port,
         MOCK_LOOKUP_DATA_PATH.to_str().unwrap(),
@@ -201,7 +174,7 @@ pub fn run_oak_functions_launcher_example(
 }
 
 pub fn run_oak_functions_launcher_example_with_lookup_data(
-    variant: &LauncherMode,
+    app: &App,
     wasm_path: &str,
     port: u16,
     lookup_data_path: &str,
@@ -211,13 +184,13 @@ pub fn run_oak_functions_launcher_example_with_lookup_data(
         format!("--port={}", port),
         format!("--lookup-data={}", lookup_data_path),
     ];
-    args.append(&mut variant.variant_subcommand());
+    args.append(&mut app.subcommand());
     Cmd::new(OAK_FUNCTIONS_LAUNCHER_BIN.to_str().unwrap(), args)
 }
 
-pub fn run_launcher(launcher_bin: &str, variant: &LauncherMode) -> Box<dyn Runnable> {
+pub fn run_launcher(launcher_bin: &str, app: &App) -> Box<dyn Runnable> {
     let mut args = vec![];
-    args.append(&mut variant.variant_subcommand());
+    args.append(&mut app.subcommand());
     Cmd::new(launcher_bin, args)
 }
 
@@ -235,7 +208,7 @@ pub async fn run_oak_functions_example_in_background(
             .unwrap(),
     ))
     .await;
-    let variant = crate::launcher::LauncherMode::Virtual("oak_functions_enclave_app".to_string());
+    let variant = crate::launcher::App::from_crate_name("oak_functions_enclave_app");
     crate::testing::run_step(crate::launcher::build_binary(
         "build Oak Functions enclave app",
         &variant.enclave_crate_path(),
