@@ -34,7 +34,7 @@ where
     T: oak_virtio::Read,
 {
     fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
-        self.inner.read(data)
+        self.inner.read_exact(data)
     }
 }
 
@@ -43,7 +43,7 @@ where
     T: oak_virtio::Write,
 {
     fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()> {
-        self.inner.write(data)
+        self.inner.write_all(data)
     }
     fn flush(&mut self) -> anyhow::Result<()> {
         self.inner.flush()
