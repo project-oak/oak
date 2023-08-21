@@ -224,7 +224,7 @@
 <span class="kw">impl </span>Iree <span class="kw">for </span>IreeService {
     <span class="kw">fn </span>initialize(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        _initialization: <span class="kw-2">&amp;</span>InitializeRequest,
+        _initialization: InitializeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InitializeResponse, micro_rpc::Status&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.initialization_state {
             InitializationState::Initialized(_attestation_handler) =&gt; {
@@ -274,7 +274,7 @@
 
     <span class="kw">fn </span>invoke(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request_message: <span class="kw-2">&amp;</span>InvokeRequest,
+        request_message: InvokeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, micro_rpc::Status&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.initialization_state {
             InitializationState::Uninitialized =&gt; <span class="prelude-val">Err</span>(micro_rpc::Status::new_with_message(

@@ -121,7 +121,7 @@
 <span class="kw">impl </span>Tensorflow <span class="kw">for </span>TensorflowService {
     <span class="kw">fn </span>initialize(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        initialization: <span class="kw-2">&amp;</span>InitializeRequest,
+        initialization: InitializeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InitializeResponse, micro_rpc::Status&gt; {
         <span class="self">self</span>.tflite_model
             .initialize(<span class="kw-2">&amp;</span>initialization.tensorflow_model)
@@ -131,7 +131,7 @@
 
     <span class="kw">fn </span>invoke(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request_message: <span class="kw-2">&amp;</span>InvokeRequest,
+        request_message: InvokeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, micro_rpc::Status&gt; {
         <span class="kw">let </span>response = <span class="self">self
             </span>.tflite_model

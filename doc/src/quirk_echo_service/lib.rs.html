@@ -86,13 +86,13 @@
 </span><span class="kw">pub struct </span>EchoService;
 
 <span class="kw">impl </span>Echo <span class="kw">for </span>EchoService {
-    <span class="kw">fn </span>echo(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>EchoRequest) -&gt; <span class="prelude-ty">Result</span>&lt;EchoResponse, micro_rpc::Status&gt; {
-        <span class="kw">let </span>request_body: <span class="kw-2">&amp;</span>[u8] = request.body.as_ref();
+    <span class="kw">fn </span>echo(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: EchoRequest) -&gt; <span class="prelude-ty">Result</span>&lt;EchoResponse, micro_rpc::Status&gt; {
+        <span class="kw">let </span>request_body = request.body;
         <span class="macro">info!</span>(<span class="string">&quot;Received a request, size: {}&quot;</span>, request_body.len());
         <span class="kw">let </span>response_body = request_body;
 
         <span class="prelude-val">Ok</span>(EchoResponse {
-            body: response_body.to_vec(),
+            body: response_body,
         })
     }
 }

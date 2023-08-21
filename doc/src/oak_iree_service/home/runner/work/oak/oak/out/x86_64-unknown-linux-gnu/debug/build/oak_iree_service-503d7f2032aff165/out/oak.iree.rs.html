@@ -232,7 +232,7 @@
                             ),
                         )
                     })<span class="question-mark">?</span>;
-                <span class="kw">let </span>response = <span class="self">self</span>.service.initialize(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>response = <span class="self">self</span>.service.initialize(request)<span class="question-mark">?</span>;
                 <span class="kw">let </span>response_body = response.encode_to_vec();
                 <span class="prelude-val">Ok</span>(response_body)
             }
@@ -246,7 +246,7 @@
                             ),
                         )
                     })<span class="question-mark">?</span>;
-                <span class="kw">let </span>response = <span class="self">self</span>.service.invoke(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>response = <span class="self">self</span>.service.invoke(request)<span class="question-mark">?</span>;
                 <span class="kw">let </span>response_body = response.encode_to_vec();
                 <span class="prelude-val">Ok</span>(response_body)
             }
@@ -257,11 +257,11 @@
 <span class="kw">pub trait </span>Iree: Sized {
     <span class="kw">fn </span>initialize(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request: <span class="kw-2">&amp;</span>InitializeRequest,
+        request: InitializeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InitializeResponse, ::micro_rpc::Status&gt;;
     <span class="kw">fn </span>invoke(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request: <span class="kw-2">&amp;</span>InvokeRequest,
+        request: InvokeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, ::micro_rpc::Status&gt;;
 }
 <span class="kw">pub struct </span>IreeClient&lt;T: ::micro_rpc::Transport&gt; {

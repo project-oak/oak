@@ -152,7 +152,7 @@
                             ),
                         )
                     })<span class="question-mark">?</span>;
-                <span class="kw">let </span>response = <span class="self">self</span>.service.echo(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>response = <span class="self">self</span>.service.echo(request)<span class="question-mark">?</span>;
                 <span class="kw">let </span>response_body = response.encode_to_vec();
                 <span class="prelude-val">Ok</span>(response_body)
             }
@@ -163,7 +163,7 @@
 <span class="kw">pub trait </span>Echo: Sized {
     <span class="kw">fn </span>echo(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request: <span class="kw-2">&amp;</span>EchoRequest,
+        request: EchoRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;EchoResponse, ::micro_rpc::Status&gt;;
 }
 <span class="kw">pub struct </span>EchoClient&lt;T: ::micro_rpc::Transport&gt; {

@@ -353,7 +353,7 @@
                             ),
                         )
                     })<span class="question-mark">?</span>;
-                <span class="kw">let </span>response = <span class="self">self</span>.service.read_request(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>response = <span class="self">self</span>.service.read_request(request)<span class="question-mark">?</span>;
                 <span class="kw">let </span>response_body = response.encode_to_vec();
                 <span class="prelude-val">Ok</span>(response_body)
             }
@@ -367,7 +367,7 @@
                             ),
                         )
                     })<span class="question-mark">?</span>;
-                <span class="kw">let </span>response = <span class="self">self</span>.service.write_response(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>response = <span class="self">self</span>.service.write_response(request)<span class="question-mark">?</span>;
                 <span class="kw">let </span>response_body = response.encode_to_vec();
                 <span class="prelude-val">Ok</span>(response_body)
             }
@@ -381,7 +381,7 @@
                             ),
                         )
                     })<span class="question-mark">?</span>;
-                <span class="kw">let </span>response = <span class="self">self</span>.service.log(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>response = <span class="self">self</span>.service.log(request)<span class="question-mark">?</span>;
                 <span class="kw">let </span>response_body = response.encode_to_vec();
                 <span class="prelude-val">Ok</span>(response_body)
             }
@@ -395,7 +395,7 @@
                             ),
                         )
                     })<span class="question-mark">?</span>;
-                <span class="kw">let </span>response = <span class="self">self</span>.service.lookup_data(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>response = <span class="self">self</span>.service.lookup_data(request)<span class="question-mark">?</span>;
                 <span class="kw">let </span>response_body = response.encode_to_vec();
                 <span class="prelude-val">Ok</span>(response_body)
             }
@@ -409,7 +409,7 @@
                             ),
                         )
                     })<span class="question-mark">?</span>;
-                <span class="kw">let </span>response = <span class="self">self</span>.service.test(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>response = <span class="self">self</span>.service.test(request)<span class="question-mark">?</span>;
                 <span class="kw">let </span>response_body = response.encode_to_vec();
                 <span class="prelude-val">Ok</span>(response_body)
             }
@@ -420,20 +420,20 @@
 <span class="kw">pub trait </span>StdWasmApi: Sized {
     <span class="kw">fn </span>read_request(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request: <span class="kw-2">&amp;</span>ReadRequestRequest,
+        request: ReadRequestRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ReadRequestResponse, ::micro_rpc::Status&gt;;
     <span class="kw">fn </span>write_response(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request: <span class="kw-2">&amp;</span>WriteResponseRequest,
+        request: WriteResponseRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;WriteResponseResponse, ::micro_rpc::Status&gt;;
-    <span class="kw">fn </span>log(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>LogRequest) -&gt; <span class="prelude-ty">Result</span>&lt;LogResponse, ::micro_rpc::Status&gt;;
+    <span class="kw">fn </span>log(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: LogRequest) -&gt; <span class="prelude-ty">Result</span>&lt;LogResponse, ::micro_rpc::Status&gt;;
     <span class="kw">fn </span>lookup_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request: <span class="kw-2">&amp;</span>LookupDataRequest,
+        request: LookupDataRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;LookupDataResponse, ::micro_rpc::Status&gt;;
     <span class="kw">fn </span>test(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request: <span class="kw-2">&amp;</span>TestRequest,
+        request: TestRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;TestResponse, ::micro_rpc::Status&gt;;
 }
 <span class="kw">pub struct </span>StdWasmApiClient&lt;T: ::micro_rpc::Transport&gt; {

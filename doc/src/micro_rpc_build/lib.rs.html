@@ -469,7 +469,7 @@
     <span class="kw">let </span>method_name = method_name(method);
     <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[
         <span class="macro">format!</span>(<span class="string">&quot;            {method_id} =&gt; {{&quot;</span>),
-        <span class="comment">// We need the angle brackets around the type in order to make sure it works with Rust well 
+        <span class="comment">// We need the angle brackets around the type in order to make sure it works with Rust well
         // known types, e.g. when `google.protobuf.Empty` is replaced by `()`.
         </span><span class="macro">format!</span>(<span class="string">&quot;                let request = &lt;{request_type}&gt;::decode(request.body.as_ref()).map_err(|err| {{&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                    ::micro_rpc::Status::new_with_message(&quot;</span>),
@@ -477,7 +477,7 @@
         <span class="macro">format!</span>(<span class="string">&quot;                        ::micro_rpc::format!(\&quot;Service failed to deserialize the request: {{:?}}\&quot;, err)&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                    )&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                }})?;&quot;</span>),
-        <span class="macro">format!</span>(<span class="string">&quot;                let response = self.service.{method_name}(&amp;request)?;&quot;</span>),
+        <span class="macro">format!</span>(<span class="string">&quot;                let response = self.service.{method_name}(request)?;&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                let response_body = response.encode_to_vec();&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;                Ok(response_body)&quot;</span>),
         <span class="macro">format!</span>(<span class="string">&quot;            }}&quot;</span>,),
@@ -488,7 +488,7 @@
     <span class="kw">let </span>method_name = method_name(method);
     <span class="kw">let </span>request_type = request_type(method);
     <span class="kw">let </span>response_type = response_type(method);
-    <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;    fn {method_name}(&amp;mut self, request: &amp;{request_type}) -&gt; Result&lt;{response_type}, ::micro_rpc::Status&gt;;&quot;</span>)]
+    <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">&quot;    fn {method_name}(&amp;mut self, request: {request_type}) -&gt; Result&lt;{response_type}, ::micro_rpc::Status&gt;;&quot;</span>)]
 }
 
 <span class="doccomment">/// Returns the value of the `method_id` comment on the method.

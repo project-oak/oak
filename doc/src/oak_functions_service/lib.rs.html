@@ -270,7 +270,7 @@
 <span class="kw">impl </span>OakFunctions <span class="kw">for </span>OakFunctionsService {
     <span class="kw">fn </span>initialize(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        initialization: <span class="kw-2">&amp;</span>InitializeRequest,
+        initialization: InitializeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InitializeResponse, micro_rpc::Status&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.initialization_state {
             InitializationState::Initialized(_attestation_handler) =&gt; {
@@ -325,7 +325,7 @@
 
     <span class="kw">fn </span>invoke(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request_message: <span class="kw-2">&amp;</span>InvokeRequest,
+        request_message: InvokeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, micro_rpc::Status&gt; {
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.initialization_state {
             InitializationState::Uninitialized =&gt; <span class="prelude-val">Err</span>(micro_rpc::Status::new_with_message(
@@ -349,16 +349,16 @@
 
     <span class="kw">fn </span>extend_next_lookup_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        request: <span class="kw-2">&amp;</span>ExtendNextLookupDataRequest,
+        request: ExtendNextLookupDataRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ExtendNextLookupDataResponse, micro_rpc::Status&gt; {
         <span class="self">self</span>.lookup_data_manager
-            .extend_next_lookup_data(to_data(<span class="kw-2">&amp;</span>request.chunk));
+            .extend_next_lookup_data(to_data(request.chunk));
         <span class="prelude-val">Ok</span>(ExtendNextLookupDataResponse {})
     }
 
     <span class="kw">fn </span>finish_next_lookup_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        _request: <span class="kw-2">&amp;</span>FinishNextLookupDataRequest,
+        _request: FinishNextLookupDataRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;FinishNextLookupDataResponse, micro_rpc::Status&gt; {
         <span class="self">self</span>.lookup_data_manager.finish_next_lookup_data();
         <span class="prelude-val">Ok</span>(FinishNextLookupDataResponse {})
@@ -366,7 +366,7 @@
 
     <span class="kw">fn </span>abort_next_lookup_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        _request: <span class="kw-2">&amp;</span>Empty,
+        _request: Empty,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;AbortNextLookupDataResponse, micro_rpc::Status&gt; {
         <span class="self">self</span>.lookup_data_manager.abort_next_lookup_data();
         <span class="prelude-val">Ok</span>(AbortNextLookupDataResponse {})
@@ -375,13 +375,13 @@
 
 <span class="comment">// Helper function to convert LookupDataChunk to Data.
 // TODO(#3791): Check if we really have to copy here.
-</span><span class="kw">fn </span>to_data(chunk: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;LookupDataChunk&gt;) -&gt; Data {
+</span><span class="kw">fn </span>to_data(<span class="kw-2">mut </span>chunk: <span class="prelude-ty">Option</span>&lt;LookupDataChunk&gt;) -&gt; Data {
     chunk
-        .as_ref()
-        .unwrap()
+        .take()
+        .expect(<span class="string">&quot;expected a LookupDataChunk, but found none&quot;</span>)
         .items
-        .iter()
-        .map(|entry| (entry.key.clone(), entry.value.clone()))
+        .into_iter()
+        .map(|entry| (entry.key, entry.value))
         .collect()
 }
 </code></pre></div></section></main></body></html>
