@@ -21,7 +21,7 @@
 
 use bitflags::bitflags;
 use core::mem::size_of;
-use strum::FromRepr;
+use strum::{EnumIter, FromRepr};
 use zerocopy::{AsBytes, FromBytes};
 
 /// The size of a guest message, including the header and maximum payload size.
@@ -210,7 +210,7 @@ pub enum MessageType {
     CpuidRequest = 1,
     /// CPUID response.
     CpuidResponse = 2,
-    /// Request for a derivce key.
+    /// Request for a derived key.
     KeyRequest = 3,
     /// Derived key response.
     KeyResponse = 4,
@@ -242,6 +242,191 @@ pub enum MessageType {
     TscInfoRequest = 17,
     /// Timestamp counter information response.
     TccInfoReqsponse = 18,
+}
+
+/// Request for a derived key.
+///
+/// See Table 17 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+#[repr(C)]
+#[derive(Debug, AsBytes, FromBytes)]
+pub struct KeyRequest {
+    /// Selects which key will be used to derive the key.
+    ///
+    /// This contains the ROOT_KEY_SELECT and KEY_SEL bit-fields. To interact with the individual
+    /// bit-fields use `KeyRequest::get_key_select`, `KeyRequest::get_root_key_select`,
+    /// `KeyRequest::set_key_select` or `KeyRequest::set_root_key_select`
+    key_select: u32,
+    /// Reserved, must be zero.
+    _reserved: u32,
+    /// Mask indicating which guest data will be mixed into the derived key.
+    ///
+    /// Use `KeyRequest::get_guest_field_select_flags` to try to convert this to a
+    /// `GuestFieldFlags` enum.
+    pub guest_field_select: u64,
+    /// The VM Protection Level (VMPL) to mix into the derived key.
+    ///
+    /// Must be greater or equal to the current VMPL and at most 3.
+    pub vmpl: u32,
+    /// The guest security version number (SVN) to mix into the key.
+    ///
+    /// Must not exceed the guest SVN provided at launch in the ID block.
+    pub guest_svn: u32,
+    /// The TCB version to mix into the key.
+    ///
+    /// Must not exceed the committed TCB.
+    pub tcb_version: u64,
+}
+
+static_assertions::assert_eq_size!(KeyRequest, [u8; 32]);
+
+impl KeyRequest {
+    /// The bit mask for the root key select bit.
+    const ROOT_KEY_SELECT_MASK: u32 = 1 << 0;
+
+    /// The bit mask for the key select bits.
+    const KEY_SELECT_MASK: u32 = (1 << 1) | (1 << 2);
+
+    pub const fn new() -> Self {
+        Self {
+            key_select: 0,
+            _reserved: 0,
+            guest_field_select: 0,
+            vmpl: 0,
+            guest_svn: 0,
+            tcb_version: 0,
+        }
+    }
+
+    /// Gets the `guest_field_select` field as a `GuestFieldFlags` representation if possible.
+    pub fn get_guest_field_select_flags(&self) -> Option<GuestFieldFlags> {
+        GuestFieldFlags::from_bits(self.guest_field_select)
+    }
+
+    /// Gets bit 0 of the `key_select` field as a `RootKeySelect` enum.
+    pub fn get_root_key_select(&self) -> RootKeySelect {
+        RootKeySelect::from_repr(self.key_select & KeyRequest::ROOT_KEY_SELECT_MASK).unwrap()
+    }
+
+    /// Gets bits 1 and 2 of the `key_select` field as a `KeySelect` enum.
+    pub fn get_key_select(&self) -> KeySelect {
+        KeySelect::from_repr((self.key_select & KeyRequest::KEY_SELECT_MASK) >> 1).unwrap()
+    }
+
+    /// Sets bit 0 of the `key_select` field.
+    pub fn set_root_key_select(&mut self, root_key_select: RootKeySelect) {
+        self.key_select = self.key_select & !KeyRequest::ROOT_KEY_SELECT_MASK
+            | (root_key_select as u32) & KeyRequest::ROOT_KEY_SELECT_MASK;
+    }
+
+    /// Sets bits 1 and 2 of the `key_select` field.
+    pub fn set_key_select(&mut self, key_select: KeySelect) {
+        self.key_select = self.key_select & !KeyRequest::KEY_SELECT_MASK
+            | (key_select as u32) << 1 & KeyRequest::KEY_SELECT_MASK;
+    }
+}
+
+impl Message for KeyRequest {
+    fn get_message_type() -> MessageType {
+        MessageType::KeyRequest
+    }
+}
+
+/// Response containing the derived key.
+///
+/// See Table 19 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+#[repr(C)]
+#[derive(Debug, FromBytes, AsBytes)]
+pub struct KeyResponse {
+    /// The status of the operation.
+    ///
+    /// Use `KeyResponse::get_status` to try to convert this to a `KeyStatus` enum.
+    pub status: u32,
+    /// Reserved. Must be 0.
+    _reserved: [u8; 28],
+    /// The derived key if status is `KeyStatus::Success`.
+    pub derived_key: [u8; 32],
+}
+
+static_assertions::assert_eq_size!(KeyResponse, [u8; 64]);
+
+impl Message for KeyResponse {
+    fn get_message_type() -> MessageType {
+        MessageType::ReportResponse
+    }
+}
+
+impl KeyResponse {
+    /// Gets the status field as a `KeyStatus` enum if possible.
+    pub fn get_status(&self) -> Option<KeyStatus> {
+        KeyStatus::from_repr(self.status)
+    }
+
+    /// Checks that all reserved bytes are zero and that the status field, the report size and the
+    /// report format are all valid.
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if self._reserved.iter().any(|&value| value != 0) {
+            return Err("nonzero value in _reserved");
+        }
+        if self.get_status().is_none() {
+            return Err("invalid status");
+        }
+        Ok(())
+    }
+}
+
+/// The selected key to use for key derivation.
+#[derive(Clone, Copy, Debug, EnumIter, FromRepr, PartialEq)]
+#[repr(u32)]
+pub enum KeySelect {
+    /// Use VLEK if installed, otherwise use the VCEK.
+    Default = 0,
+    /// Use the Versioned Chip Endorsement Key (VCEK).
+    VCEK = 1,
+    /// Use the Loaded Chip Endorsement Key (VLEK).
+    VLEK = 2,
+    /// Reserved.
+    Reserved = 3,
+}
+
+/// The selected root key to use for key derivation.
+#[derive(Clone, Copy, Debug, EnumIter, FromRepr, PartialEq)]
+#[repr(u32)]
+pub enum RootKeySelect {
+    /// Use the Versioned Chip Endorsement Key (VCEK).
+    VCEK = 0,
+    /// Use the Virtual Machine Root Key (VMRK) provided by the migration agent.
+    VMRK = 1,
+}
+
+/// The status of the report response.
+#[derive(Debug, FromRepr, PartialEq)]
+#[repr(u32)]
+pub enum KeyStatus {
+    /// Report was successfully generated.
+    Success = 0,
+    /// The supplied parameters in the request was invalid.
+    InvalidParams = 0x16,
+    /// The key selection field was invalid.
+    InvalidKeySelection = 0x27,
+}
+
+bitflags! {
+    /// Flags indicating allowed policy options.
+    #[derive(Default)]
+    pub struct GuestFieldFlags: u64 {
+        /// The guest policy will be mixed into the key.
+        const GUEST_POLICY = (1 << 0);
+        /// The image ID provided in the ID block will be mixed into the key.
+        const IMAGE_ID = (1 << 1);
+        /// The family ID provided in the ID block will be mixed into the key.
+        const FAMILY_ID = (1 << 2);
+        /// The launch measurement of the VM will be mixed into the key.
+        const MEASUREMENT = (1 << 3);
+        /// The guest-provided SVN will be mixed into the key.
+        const GUEST_SVN = (1 << 4);
+        /// The guest-provided TCB version will be mixed into the key.
+        const TCB_VERSION = (1 << 5);
+    }
 }
 
 /// Request for an attestation report.
@@ -672,4 +857,32 @@ pub enum EccCurve {
 
 pub trait Message {
     fn get_message_type() -> MessageType;
+}
+
+#[cfg(test)]
+mod tests {
+    //! Test to check the getters and setters for the bit fields of the `key_select` field in the
+    //! `KeyRequest` struct.
+
+    use super::*;
+    use strum::IntoEnumIterator;
+
+    #[test]
+    fn test_key_request_key_select() {
+        let mut request = KeyRequest::new();
+        assert_eq!(request.get_key_select(), KeySelect::Default);
+        assert_eq!(request.get_root_key_select(), RootKeySelect::VCEK);
+
+        for key_select in KeySelect::iter() {
+            let current_root = request.get_root_key_select();
+            request.set_key_select(key_select);
+            assert_eq!(request.get_key_select(), key_select);
+            assert_eq!(request.get_root_key_select(), current_root);
+            for root_key_select in RootKeySelect::iter() {
+                request.set_root_key_select(root_key_select);
+                assert_eq!(request.get_key_select(), key_select);
+                assert_eq!(request.get_root_key_select(), root_key_select);
+            }
+        }
+    }
 }
