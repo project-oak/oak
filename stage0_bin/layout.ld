@@ -115,7 +115,7 @@ SECTIONS {
     /* Everything below this line interacts with 16-bit code, so should be kept as close to the end of the file as
      * possible; max TOP - 32k. */
 
-    .text16 TOP - 1K : {
+    .text16 TOP - 4K : {
         *(.text16 .text16.*)
     } > bios
 
