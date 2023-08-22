@@ -33,13 +33,16 @@ impl ChannelDescriptor {
 impl FileDescriptor for ChannelDescriptor {
     fn read(&mut self, buf: &mut [u8]) -> Result<isize, Errno> {
         let size: isize = buf.len().try_into().map_err(|_| Errno::EINVAL)?;
-        self.channel.read(buf).map_err(|_| Errno::EIO).map(|_| size)
+        self.channel
+            .read_exact(buf)
+            .map_err(|_| Errno::EIO)
+            .map(|_| size)
     }
 
     fn write(&mut self, buf: &[u8]) -> Result<isize, Errno> {
         let size: isize = buf.len().try_into().map_err(|_| Errno::EINVAL)?;
         self.channel
-            .write(buf)
+            .write_all(buf)
             .map_err(|_| Errno::EIO)
             .map(|_| size)
     }

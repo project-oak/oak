@@ -94,6 +94,12 @@ criteria = ["safe-to-deploy", "does-not-implement-crypto"]
 version = "1.1.0"
 notes = "Logic is sound, no crypto use, no ambient capabilities, no unsafe code."
 
+[[audits.spinning_top]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.2.4"
+notes = "The crate's logic is sound. No ambient capabilities. Implements unsafe traits, but uses no unsafe code."
+
 [[audits.static_assertions]]
 who = "Andri Saar <andrisaar@google.com>"
 criteria = "safe-to-deploy"

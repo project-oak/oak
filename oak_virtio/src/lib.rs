@@ -41,7 +41,7 @@ pub mod vsock;
 /// minimum and works in a `no_std` environment.
 pub trait Read {
     /// Read bytes until `data` has been filled.
-    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
+    fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
 }
 
 /// Write bytes to a source.
@@ -50,7 +50,7 @@ pub trait Read {
 /// minimum and works in a `no_std` environment.
 pub trait Write {
     /// Write all bytes in `data`.
-    fn write(&mut self, data: &[u8]) -> anyhow::Result<()>;
+    fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()>;
 
     /// Flush any output buffers, if they exist.
     fn flush(&mut self) -> anyhow::Result<()>;
