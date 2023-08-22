@@ -259,6 +259,9 @@ pub struct KeyRequest {
     /// Reserved, must be zero.
     _reserved: u32,
     /// Mask indicating which guest data will be mixed into the derived key.
+    ///
+    /// Use `KeyRequest::get_guest_field_select_flags` to try to convert this to a
+    /// `GuestFieldFlags` enum.
     pub guest_field_select: u64,
     /// The VM Protection Level (VMPL) to mix into the derived key.
     ///
@@ -289,6 +292,11 @@ impl KeyRequest {
             guest_svn: 0,
             tcb_version: 0,
         }
+    }
+
+    /// Gets the `guest_field_select` field as a `GuestFieldFlags` representation if possible.
+    pub fn get_guest_field_select_flags(&self) -> Option<GuestFieldFlags> {
+        GuestFieldFlags::from_bits(self.guest_field_select)
     }
 
     /// Gets bit 0 of the `key_select` field as a `RootKeySelect` enum.
@@ -397,6 +405,25 @@ pub enum KeyStatus {
     InvalidParams = 0x16,
     /// The key selection field was invalid.
     InvalidKeySelection = 0x27,
+}
+
+bitflags! {
+    /// Flags indicating allowed policy options.
+    #[derive(Default)]
+    pub struct GuestFieldFlags: u64 {
+        /// The guest policy will be mixed into the key.
+        const GUEST_POLICY = (1 << 0);
+        /// The image ID provided in the ID block will be mixed into the key.
+        const IMAGE_ID = (1 << 1);
+        /// The family ID provided in the ID block will be mixed into the key.
+        const FAMILY_ID = (1 << 2);
+        /// The launch measurement of the VM will be mixed into the key.
+        const MEASUREMENT = (1 << 3);
+        /// The guest-provided SVN will be mixed into the key.
+        const GUEST_SVN = (1 << 4);
+        /// The guest-provided TCB version will be mixed into the key.
+        const TCB_VERSION = (1 << 5);
+    }
 }
 
 /// Request for an attestation report.
