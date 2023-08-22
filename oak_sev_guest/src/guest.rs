@@ -279,13 +279,13 @@ pub struct KeyRequest {
 
 static_assertions::assert_eq_size!(KeyRequest, [u8; 32]);
 
-/// The bit mask for the root key select bit.
-const ROOT_KEY_SELECT_MASK: u32 = 1 << 0;
-
-/// The bit mask for the key select bits.
-const KEY_SELECT_MASK: u32 = (1 << 1) | (1 << 2);
-
 impl KeyRequest {
+    /// The bit mask for the root key select bit.
+    const ROOT_KEY_SELECT_MASK: u32 = 1 << 0;
+
+    /// The bit mask for the key select bits.
+    const KEY_SELECT_MASK: u32 = (1 << 1) | (1 << 2);
+
     pub const fn new() -> Self {
         Self {
             key_select: 0,
@@ -304,24 +304,24 @@ impl KeyRequest {
 
     /// Gets bit 0 of the `key_select` field as a `RootKeySelect` enum.
     pub fn get_root_key_select(&self) -> RootKeySelect {
-        RootKeySelect::from_repr(self.key_select & ROOT_KEY_SELECT_MASK).unwrap()
+        RootKeySelect::from_repr(self.key_select & KeyRequest::ROOT_KEY_SELECT_MASK).unwrap()
     }
 
     /// Gets bits 1 and 2 of the `key_select` field as a `KeySelect` enum.
     pub fn get_key_select(&self) -> KeySelect {
-        KeySelect::from_repr((self.key_select & KEY_SELECT_MASK) >> 1).unwrap()
+        KeySelect::from_repr((self.key_select & KeyRequest::KEY_SELECT_MASK) >> 1).unwrap()
     }
 
     /// Sets bit 0 of the `key_select` field.
     pub fn set_root_key_select(&mut self, root_key_select: RootKeySelect) {
-        self.key_select = self.key_select & !ROOT_KEY_SELECT_MASK
-            | (root_key_select as u32) & ROOT_KEY_SELECT_MASK;
+        self.key_select = self.key_select & !KeyRequest::ROOT_KEY_SELECT_MASK
+            | (root_key_select as u32) & KeyRequest::ROOT_KEY_SELECT_MASK;
     }
 
     /// Sets bits 1 and 2 of the `key_select` field.
     pub fn set_key_select(&mut self, key_select: KeySelect) {
-        self.key_select =
-            self.key_select & !KEY_SELECT_MASK | (key_select as u32) << 1 & KEY_SELECT_MASK;
+        self.key_select = self.key_select & !KeyRequest::KEY_SELECT_MASK
+            | (key_select as u32) << 1 & KeyRequest::KEY_SELECT_MASK;
     }
 }
 
