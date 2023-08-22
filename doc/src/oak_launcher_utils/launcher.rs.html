@@ -420,7 +420,7 @@
         <span class="comment">// Loading the application binary needs to happen before we start using microrpc over the
         // channel.
         </span>host_socket
-            .write(<span class="kw-2">&amp;</span>(app_bytes.len() <span class="kw">as </span>u32).to_le_bytes())
+            .write_all(<span class="kw-2">&amp;</span>(app_bytes.len() <span class="kw">as </span>u32).to_le_bytes())
             .expect(<span class="string">&quot;failed to send application binary length to enclave&quot;</span>);
 
         <span class="comment">// The kernel expects data to be transmitted in chunks of one page.
@@ -440,9 +440,9 @@
     <span class="doccomment">/// Writes a chunk to a channel, and expects an acknowledgement containing the length of the
     /// chunk.
     </span><span class="kw">fn </span>write_chunk(channel: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>oak_channel::Channel, chunk: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        channel.write(chunk)<span class="question-mark">?</span>;
+        channel.write_all(chunk)<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>ack: [u8; <span class="number">4</span>] = Default::default();
-        channel.read(<span class="kw-2">&amp;mut </span>ack)<span class="question-mark">?</span>;
+        channel.read_exact(<span class="kw-2">&amp;mut </span>ack)<span class="question-mark">?</span>;
         <span class="kw">if </span>u32::from_le_bytes(ack) <span class="kw">as </span>usize != chunk.len() {
             <span class="macro">anyhow::bail!</span>(<span class="string">&quot;ack wasn&#39;t of correct length&quot;</span>);
         }

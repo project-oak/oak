@@ -751,7 +751,7 @@
 <span class="kw">where
     </span>T: VirtioTransport,
 {
-    <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;mut </span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">fn </span>read_exact(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;mut </span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
         <span class="kw">let </span>len = data.len();
         <span class="kw">let </span><span class="kw-2">mut </span>count = <span class="number">0</span>;
         <span class="kw">while </span>count &lt; len {
@@ -773,7 +773,7 @@
 <span class="kw">where
     </span>T: VirtioTransport,
 {
-    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">fn </span>write_all(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>start = <span class="number">0</span>;
         <span class="kw">let </span>data_len = data.len();
         <span class="kw">while </span>start &lt; data_len {

@@ -244,8 +244,8 @@
         .len()
         .try_into()
         .map_err(|<span class="kw">_</span>| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;chunk too big&quot;</span>))<span class="question-mark">?</span>;
-    channel.read(chunk)<span class="question-mark">?</span>;
-    channel.write(<span class="kw-2">&amp;</span>len.to_le_bytes())
+    channel.read_exact(chunk)<span class="question-mark">?</span>;
+    channel.write_all(<span class="kw-2">&amp;</span>len.to_le_bytes())
 }
 
 <span class="macro">self_cell!</span>(
@@ -278,7 +278,7 @@
     </span><span class="kw">pub fn </span>load_raw&lt;C: Channel + <span class="question-mark">?</span>Sized&gt;(channel: <span class="kw-2">&amp;mut </span>C) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>payload_len = {
             <span class="kw">let </span><span class="kw-2">mut </span>buf: [u8; <span class="number">4</span>] = Default::default();
-            channel.read(<span class="kw-2">&amp;mut </span>buf)<span class="question-mark">?</span>;
+            channel.read_exact(<span class="kw-2">&amp;mut </span>buf)<span class="question-mark">?</span>;
             u32::from_le_bytes(buf)
         };
         <span class="kw">let </span><span class="kw-2">mut </span>payload = <span class="macro">vec!</span>[<span class="number">0</span>; payload_len <span class="kw">as </span>usize];

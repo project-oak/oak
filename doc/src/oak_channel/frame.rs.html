@@ -244,10 +244,10 @@
                 ))
             })<span class="question-mark">?
         </span>};
-        channel.write(PADDING)<span class="question-mark">?</span>;
-        channel.write(<span class="kw-2">&amp;</span>frame_length.to_le_bytes())<span class="question-mark">?</span>;
-        channel.write(<span class="kw-2">&amp;</span><span class="self">self</span>.flags.bits().to_le_bytes())<span class="question-mark">?</span>;
-        channel.write(<span class="self">self</span>.body)<span class="question-mark">?</span>;
+        channel.write_all(PADDING)<span class="question-mark">?</span>;
+        channel.write_all(<span class="kw-2">&amp;</span>frame_length.to_le_bytes())<span class="question-mark">?</span>;
+        channel.write_all(<span class="kw-2">&amp;</span><span class="self">self</span>.flags.bits().to_le_bytes())<span class="question-mark">?</span>;
+        channel.write_all(<span class="self">self</span>.body)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
@@ -267,7 +267,7 @@
     ) -&gt; anyhow::Result&lt;(Frame&lt;<span class="lifetime">&#39;a</span>&gt;, Timer)&gt; {
         {
             <span class="kw">let </span><span class="kw-2">mut </span>padding_bytes = [<span class="number">0</span>; PADDING_SIZE];
-            <span class="self">self</span>.inner.read(<span class="kw-2">&amp;mut </span>padding_bytes)<span class="question-mark">?</span>;
+            <span class="self">self</span>.inner.read_exact(<span class="kw-2">&amp;mut </span>padding_bytes)<span class="question-mark">?</span>;
         };
         <span class="comment">// As the read() above can block indefinitely we&#39;ll start measuring the time it took to read
         // the data _after_ we&#39;ve read the padding bytes. Strictly speaking we should start
@@ -276,7 +276,7 @@
         </span><span class="kw">let </span>timer = Timer::new_rdtsc();
         <span class="kw">let </span>length: usize = {
             <span class="kw">let </span><span class="kw-2">mut </span>length_bytes = [<span class="number">0</span>; LENGTH_SIZE];
-            <span class="self">self</span>.inner.read(<span class="kw-2">&amp;mut </span>length_bytes)<span class="question-mark">?</span>;
+            <span class="self">self</span>.inner.read_exact(<span class="kw-2">&amp;mut </span>length_bytes)<span class="question-mark">?</span>;
             <span class="kw">let </span>length = Length::from_le_bytes(length_bytes).into();
             <span class="kw">if </span>length &lt;= BODY_OFFSET {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(anyhow::Error::msg(<span class="string">&quot;frame is too small&quot;</span>));
@@ -288,7 +288,7 @@
         };
         <span class="kw">let </span>flags = {
             <span class="kw">let </span><span class="kw-2">mut </span>flags_bytes = [<span class="number">0</span>; FLAGS_SIZE];
-            <span class="self">self</span>.inner.read(<span class="kw-2">&amp;mut </span>flags_bytes)<span class="question-mark">?</span>;
+            <span class="self">self</span>.inner.read_exact(<span class="kw-2">&amp;mut </span>flags_bytes)<span class="question-mark">?</span>;
             Flags::from_bits_truncate(u16::from_le_bytes(flags_bytes))
         };
 
@@ -299,7 +299,7 @@
             <span class="kw">let </span>tail = message_buffer.len();
             <span class="comment">// Lack of capacity indicates corrupted frames and causes panic.
             </span>message_buffer.put_bytes(<span class="number">0x00</span>, body_length);
-            <span class="self">self</span>.inner.read(<span class="kw-2">&amp;mut </span>message_buffer[tail..])<span class="question-mark">?</span>;
+            <span class="self">self</span>.inner.read_exact(<span class="kw-2">&amp;mut </span>message_buffer[tail..])<span class="question-mark">?</span>;
             <span class="kw-2">&amp;</span>message_buffer[tail..]
         };
 
