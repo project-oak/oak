@@ -279,7 +279,10 @@ pub struct KeyRequest {
 
 static_assertions::assert_eq_size!(KeyRequest, [u8; 32]);
 
+/// The bit mask for the root key select bit.
 const ROOT_KEY_SELECT_MASK: u32 = 1 << 0;
+
+/// The bit mask for the key select bits.
 const KEY_SELECT_MASK: u32 = (1 << 1) | (1 << 2);
 
 impl KeyRequest {
