@@ -82,6 +82,12 @@ criteria = "safe-to-deploy"
 version = "0.4.0"
 notes = "This crate does not have any unsafe code and does not use any ambient capabilities such as filesystem or network access."
 
+[[audits.lock_api]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.4.9"
+notes = "Limited unsafe code that is well commented to explain safety. No ambient capabilities. No crypto implementation."
+
 [[audits.rustversion]]
 who = "Conrad Grobler <grobler@google.com>"
 criteria = "does-not-implement-crypto"
