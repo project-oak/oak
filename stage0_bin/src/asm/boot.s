@@ -1,5 +1,17 @@
 .code16
 .section .text16, "ax"
+# Entry point for APs. This needs to be page-aligned, so let's stick it as the very first thing in the block of 16-bit code.
+.align 4096
+.global ap_start
+ap_start:
+    mov $'!', %al
+    mov $0x3f8, %dx
+    out %al, %dx
+1:
+    hlt
+    jmp 1b
+
+.align 16
 .global _start
 _start :
     # Enter long mode. This code is inspired by the approach shown at

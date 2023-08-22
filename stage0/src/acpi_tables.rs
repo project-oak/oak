@@ -332,7 +332,7 @@ bitflags! {
     }
 
     #[derive(Clone, Copy, Debug)]
-    struct LocalApicFlags: u32 {
+    pub struct LocalApicFlags: u32 {
         /// Processor is ready to use.
         const ENABLED = 1;
 
@@ -391,10 +391,10 @@ pub struct ProcessorLocalApic {
     processor_uid: u8,
 
     /// Processor's local APIC ID.
-    apic_id: u8,
+    pub apic_id: u8,
 
     /// Local APIC flags.
-    flags: LocalApicFlags,
+    pub flags: LocalApicFlags,
 }
 
 impl ProcessorLocalApic {
@@ -420,10 +420,10 @@ pub struct ProcessorLocalX2Apic {
     _reserved: u16,
 
     /// The processor's local X2APIC ID.
-    x2apic_id: u32,
+    pub x2apic_id: u32,
 
     /// Local APIC flags.
-    flags: LocalApicFlags,
+    pub flags: LocalApicFlags,
 
     /// OSPM associates the X2APIC Structure with a processor object declared in the namespace
     /// using the Device statement, when the _UID child object of the processor device evaluates to
