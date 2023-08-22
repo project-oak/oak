@@ -88,6 +88,12 @@ criteria = "does-not-implement-crypto"
 version = "1.0.9"
 notes = "This crate does not implement any cryptographic algorithms."
 
+[[audits.spinning_top]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.2.4"
+notes = "The crate's logic is sound. No ambient capabilities. Implements unsafe traits, but uses no unsafe code."
+
 [[audits.static_assertions]]
 who = "Andri Saar <andrisaar@google.com>"
 criteria = "safe-to-deploy"
