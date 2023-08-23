@@ -139,6 +139,12 @@ criteria = "does-not-implement-crypto"
 version = "0.12.6"
 notes = "Crate does not implement any cryptographic algorithms"
 
+[[audits.typenum]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = "safe-to-deploy"
+version = "1.15.0"
+notes = "No unsafe code (enforced by compiler). No access to ambient capabilities. Logic appears sound."
+
 [[audits.unicode-ident]]
 who = "Andri Saar <andrisaar@google.com>"
 criteria = ["safe-to-deploy", "does-not-implement-crypto"]
