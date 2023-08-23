@@ -21,7 +21,7 @@ use x86_64::PhysAddr;
 
 use crate::{
     acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
-    apic::{Lapic, X2ApicIdRegister},
+    apic::Lapic,
     pic::disable_pic8259,
 };
 
@@ -30,8 +30,8 @@ extern "C" {
     static AP_START: c_void;
 }
 
-pub fn start_ap(lapic: &Lapic, physical_apic_id: u32) -> Result<(), &'static str> {
-    lapic.send_init_ipi(physical_apic_id);
+pub fn start_ap(lapic: &mut Lapic, physical_apic_id: u32) -> Result<(), &'static str> {
+    lapic.send_init_ipi(physical_apic_id)?;
     // TODO(#4235): wait 10 ms
     // Safety: we're not going to dereference the memory, we're just interested in the pointer
     // value.
@@ -59,9 +59,9 @@ pub fn bootstrap_aps(rsdp: &Rsdp, port_factory: &PortFactoryWrapper) -> Result<(
     // Disable the local PIC and set up our local APIC, as we need to send IPIs to APs via the APIC.
     // Safety: we can reasonably expect the PICs to be available.
     unsafe { disable_pic8259(port_factory)? };
-    let lapic = Lapic::enable()?;
+    let mut lapic = Lapic::enable()?;
 
-    let local_apic_id = X2ApicIdRegister::read();
+    let local_apic_id = lapic.local_apic_id();
 
     // APIC and X2APIC structures are largely the same; X2APIC entries are used if the APIC ID is
     // too large to fit into the one-byte field of the APIC structure (e.g. if you have more than
@@ -94,7 +94,7 @@ pub fn bootstrap_aps(rsdp: &Rsdp, port_factory: &PortFactoryWrapper) -> Result<(
             continue;
         }
 
-        start_ap(&lapic, remote_lapic_id)?;
+        start_ap(&mut lapic, remote_lapic_id)?;
     }
 
     Ok(())

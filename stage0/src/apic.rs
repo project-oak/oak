@@ -19,6 +19,36 @@ use core::arch::x86_64::__cpuid;
 use bitflags::bitflags;
 use x86_64::{registers::model_specific::Msr, PhysAddr};
 
+pub(crate) enum ApicRegister {
+    X2apic(Msr),
+}
+
+impl ApicRegister {
+    fn read(&self) -> u64 {
+        match self {
+            ApicRegister::X2apic(msr) => unsafe { msr.read() },
+        }
+    }
+
+    fn write(&mut self, value: u64) {
+        match self {
+            ApicRegister::X2apic(msr) => unsafe { msr.write(value) },
+        }
+    }
+}
+
+mod x2apic {
+    use super::*;
+    use x86_64::registers::model_specific::Msr;
+
+    pub(crate) const X2APIC_ID_REGISTER: ApicRegister =
+        ApicRegister::X2apic(Msr::new(0x0000_00802));
+    pub(crate) const ERROR_STATUS_REGISTER: ApicRegister =
+        ApicRegister::X2apic(Msr::new(0x0000_00828));
+    pub(crate) const INTERRUPT_COMMAND_REGISTER: ApicRegister =
+        ApicRegister::X2apic(Msr::new(0x0000_00830));
+}
+
 bitflags! {
     /// Flags in the APIC Base Address Register (MSR 0x1B)
     #[derive(Clone, Copy, Debug)]
@@ -82,18 +112,11 @@ impl ApicBase {
 ///
 /// See Section 16.12 (x2APIC_ID) in the AMD64 Architecture Programmer's Manual, Volume 2 for more
 /// details.
-pub struct X2ApicIdRegister;
+pub struct X2ApicIdRegister(ApicRegister);
 
 impl X2ApicIdRegister {
-    pub const MSR: Msr = Msr::new(0x0000_0802);
-
-    fn read_raw() -> u64 {
-        // Safety: this is safe to read if the system supports x2APIC.
-        unsafe { Self::MSR.read() }
-    }
-
-    pub fn read() -> u32 {
-        Self::read_raw() as u32
+    pub fn read(&self) -> u32 {
+        self.0.read() as u32
     }
 }
 
@@ -103,7 +126,7 @@ impl X2ApicIdRegister {
 ///
 /// See Section 16.5 (Interprocessor Interrupts) and Section 16/13 (x2APIC Interrupt Command
 /// Register Operations) in the AMD64 Architecture Programmer's Manual, Volume 2 for more details.
-pub struct InterruptCommandRegister;
+pub struct InterruptCommandRegister(ApicRegister);
 
 /// Interrupt types that can be sent via the Interrupt Command Register.
 ///
@@ -187,16 +210,10 @@ pub enum DestinationShorthand {
 }
 
 impl InterruptCommandRegister {
-    pub const MSR: Msr = Msr::new(0x0000_00830);
-
-    fn write_raw(value: u64) {
-        let mut msr = Self::MSR;
-        // Safety: this MSR is safe to access if the system supports x2APIC.
-        unsafe { msr.write(value) }
-    }
-
     /// Sends an IPI (inter-processor interrupt) to another LAPIC in the system.
+    #[allow(clippy::too_many_arguments)]
     pub fn write(
+        &mut self,
         destination: u32,
         vector: u8,
         message_type: MessageType,
@@ -212,7 +229,7 @@ impl InterruptCommandRegister {
         value |= (destination_mode as u64) << 11;
         value |= (message_type as u64) << 8;
         value |= vector as u64;
-        Self::write_raw(value)
+        self.0.write(value)
     }
 }
 
@@ -220,26 +237,22 @@ impl InterruptCommandRegister {
 ///
 /// See Section 16.4.6 (APIC Error Interrupts) in the AMD64 Architecture Programmer's Manual, Volume
 /// 2 for more details.
-pub struct ErrorStatusRegister;
+struct ErrorStatusRegister(ApicRegister);
 
 impl ErrorStatusRegister {
-    pub const MSR: Msr = Msr::new(0x0000_00828);
-
-    fn write_raw(value: u64) {
-        let mut msr = Self::MSR;
-        // Safety: this MSR is safe to write if the system supports x2APIC.
-        unsafe { msr.write(value) }
-    }
-
-    pub fn clear() {
-        Self::write_raw(0);
+    pub fn clear(&mut self) {
+        self.0.write(0)
     }
 }
 
 /// Wrapper for the local APIC.
 ///
 /// Currenty only supports x2APIC mode.
-pub struct Lapic {}
+pub struct Lapic {
+    apic_id_register: X2ApicIdRegister,
+    error_status_register: ErrorStatusRegister,
+    interrupt_command_register: InterruptCommandRegister,
+}
 
 impl Lapic {
     pub fn enable() -> Result<Self, &'static str> {
@@ -260,13 +273,19 @@ impl Lapic {
             ApicBase::write(apa, flags);
         }
 
-        Ok(Lapic {})
+        Ok(Lapic {
+            apic_id_register: X2ApicIdRegister(x2apic::X2APIC_ID_REGISTER),
+            error_status_register: ErrorStatusRegister(x2apic::ERROR_STATUS_REGISTER),
+            interrupt_command_register: InterruptCommandRegister(
+                x2apic::INTERRUPT_COMMAND_REGISTER,
+            ),
+        })
     }
 
     /// Sends an INIT IPI to the local APIC specified by `destination`.
-    pub fn send_init_ipi(&self, destination: u32) {
-        ErrorStatusRegister::clear();
-        InterruptCommandRegister::write(
+    pub fn send_init_ipi(&mut self, destination: u32) -> Result<(), &'static str> {
+        self.error_status_register.clear();
+        self.interrupt_command_register.write(
             destination,
             0,
             MessageType::Init,
@@ -275,7 +294,7 @@ impl Lapic {
             TriggerMode::Edge,
             DestinationShorthand::DestinationField,
         );
-        InterruptCommandRegister::write(
+        self.interrupt_command_register.write(
             destination,
             0,
             MessageType::Init,
@@ -284,10 +303,15 @@ impl Lapic {
             TriggerMode::Edge,
             DestinationShorthand::DestinationField,
         );
+        Ok(())
     }
 
     /// Sends a STARTUP IPI (SIPI) to the local APIC specified by `destination`.
-    pub fn send_startup_ipi(&self, destination: u32, vector: PhysAddr) -> Result<(), &'static str> {
+    pub fn send_startup_ipi(
+        &mut self,
+        destination: u32,
+        vector: PhysAddr,
+    ) -> Result<(), &'static str> {
         if !vector.is_aligned(0x1000u64) {
             return Err("startup vector is not page-aligned");
         }
@@ -295,8 +319,8 @@ impl Lapic {
         if vector > 0x100000 {
             return Err("startup vector needs to be in the first megabyte of memory");
         }
-        ErrorStatusRegister::clear();
-        InterruptCommandRegister::write(
+        self.error_status_register.clear();
+        self.interrupt_command_register.write(
             destination,
             (vector / 0x1000) as u8,
             MessageType::Startup,
@@ -306,5 +330,9 @@ impl Lapic {
             DestinationShorthand::DestinationField,
         );
         Ok(())
+    }
+
+    pub fn local_apic_id(&self) -> u32 {
+        self.apic_id_register.read()
     }
 }
