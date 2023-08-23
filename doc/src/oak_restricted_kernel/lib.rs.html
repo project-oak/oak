@@ -341,6 +341,18 @@
 <a href="#341" id="341">341</a>
 <a href="#342" id="342">342</a>
 <a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -411,9 +423,11 @@
     acpi::Acpi,
     mm::Translator,
     snp::{get_snp_page_addresses, init_snp_pages},
+    snp_guest::DerivedKey,
 };
 <span class="kw">use </span>alloc::{alloc::Allocator, boxed::Box};
 <span class="kw">use </span>core::{marker::Sync, panic::PanicInfo, str::FromStr};
+<span class="kw">use </span>hkdf::HkdfExtract;
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>log::{error, info};
 <span class="kw">use </span>mm::{
@@ -424,6 +438,7 @@
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_linux_boot_params::BootParams;
 <span class="kw">use </span>oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
+<span class="kw">use </span>sha2::Sha256;
 <span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>strum::{EnumIter, EnumString, IntoEnumIterator};
 <span class="kw">use </span>x86_64::{
@@ -610,9 +625,6 @@
             snp_guest::get_attestation([<span class="number">42</span>; <span class="number">64</span>]).expect(<span class="string">&quot;couldn&#39;t generate attestation report&quot;</span>);
         <span class="macro">info!</span>(<span class="string">&quot;Attestation: {:?}&quot;</span>, report);
         report.validate().expect(<span class="string">&quot;attestation report is invalid&quot;</span>);
-
-        <span class="kw">let </span>key = snp_guest::get_derived_key().expect(<span class="string">&quot;couldn&#39;t derive key&quot;</span>);
-        <span class="macro">info!</span>(<span class="string">&quot;Derived key: {:?}&quot;</span>, key);
     }
 
     <span class="kw">let </span><span class="kw-2">mut </span>channel = get_channel(
@@ -628,7 +640,19 @@
     <span class="kw">let </span>application = payload::Application::load_raw(<span class="kw-2">&amp;mut *</span>channel)
         .expect(<span class="string">&quot;failed to load application binary from channel&quot;</span>);
 
-    syscall::enable_syscalls(channel);
+    <span class="kw">let </span>derived_key = <span class="kw">if </span>sev_snp_enabled {
+        snp_guest::get_derived_key().expect(<span class="string">&quot;couldn&#39;t derive key&quot;</span>)
+    } <span class="kw">else </span>{
+        <span class="comment">// Zero fixed key since we can&#39;t derive a consistent key without SEV-SNP.
+        </span>DerivedKey::default()
+    };
+    <span class="comment">// Mix the application digest into the final derived key.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>extraction = HkdfExtract::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(<span class="string">b&quot;Oak application key&quot;</span>));
+    extraction.input_ikm(<span class="kw-2">&amp;</span>derived_key);
+    extraction.input_ikm(application.digest());
+    <span class="kw">let </span>(derived_key, <span class="kw">_</span>) = extraction.finalize();
+
+    syscall::enable_syscalls(channel, derived_key.into());
 
     <span class="comment">// Safety: we&#39;ve loaded the Restricted Application. Whether that&#39;s valid or not is no longer
     // under the kernel&#39;s control.

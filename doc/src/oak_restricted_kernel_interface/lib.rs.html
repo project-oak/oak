@@ -24,6 +24,9 @@
 <a href="#24" id="24">24</a>
 <a href="#25" id="25">25</a>
 <a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -49,5 +52,8 @@
 <span class="kw">pub use </span>syscalls::Syscall;
 
 <span class="doccomment">/// Predefined file descriptor for the Oak communication channel.
-</span><span class="kw">pub const </span>OAK_CHANNEL_FD: i32 = <span class="number">10</span>;
+</span><span class="kw">pub const </span>OAK_CHANNEL_FD: i32 = <span class="number">0xa</span>;
+
+<span class="doccomment">/// Predefined file descriptor for reading a derived key.
+</span><span class="kw">pub const </span>DERIVED_KEY_FD: i32 = <span class="number">0x21</span>;
 </code></pre></div></section></main></body></html>
