@@ -50,7 +50,7 @@ pub fn get_attestation(report_data: [u8; REPORT_DATA_SIZE]) -> anyhow::Result<At
 /// guest policy and uses VMPL0.
 pub fn get_derived_key() -> anyhow::Result<[u8; 32]> {
     let mut key_request = KeyRequest::new();
-    let selected_fields = GuestFieldFlags::MEASUREMENT.union(GuestFieldFlags::GUEST_POLICY);
+    let selected_fields = GuestFieldFlags::MEASUREMENT | GuestFieldFlags::GUEST_POLICY;
     key_request.guest_field_select = selected_fields.bits();
     let key_response: KeyResponse = send_guest_message_request(key_request)?;
     Ok(key_response.derived_key)
