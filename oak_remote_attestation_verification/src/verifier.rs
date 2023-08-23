@@ -70,11 +70,12 @@ impl AttestationVerifier for InsecureAttestationVerifier {
     }
 }
 
-// Verifies the given BinaryAttestation object using the given Rekor and endorser public keys, and
-// reference value.
+// Verifies the given BinaryAttestation object using the given Rekor and endorser public keys. Also
+// verifies that the given binary_digest is the same as the digest in the endorsement statement in
+// the input BinaryAttestation.
 pub fn verify_binary_attestation(
+    binary_digest: &[u8],
     binary_attestation: &BinaryAttestation,
-    reference_value: &ReferenceValue,
     pem_encoded_rekor_public_key_bytes: &[u8],
     pem_encoded_endorser_public_key_bytes: &[u8],
 ) -> anyhow::Result<()> {
@@ -87,20 +88,20 @@ pub fn verify_binary_attestation(
     )?;
     verify_rekor_public_key(binary_attestation, pem_encoded_rekor_public_key_bytes)?;
     verify_endorser_public_key(binary_attestation, pem_encoded_endorser_public_key_bytes)?;
-    verify_endorsement_statement(&binary_attestation.endorsement_statement, reference_value)
+    verify_endorsement_statement(&binary_attestation.endorsement_statement, binary_digest)
 }
 
 /// Parses the given bytes into an endorsement statement and verifies it against the given Reference
 /// values.
 pub fn verify_endorsement_statement(
     endorsement_bytes: &[u8],
-    reference_value: &ReferenceValue,
+    binary_digest: &[u8],
 ) -> anyhow::Result<()> {
+    let binary_digest = core::str::from_utf8(binary_digest)?;
     let claim = parse_endorsement_statement(endorsement_bytes)?;
     if let Err(err) = validate_endorsement(&claim) {
         anyhow::bail!("validating endorsement: {err:?}");
     }
-    let binary_digest = core::str::from_utf8(&reference_value.binary_hash)?;
     if claim.subject.len() != 1 {
         anyhow::bail!(
             "expected 1 subject in the endorsement, found {}",

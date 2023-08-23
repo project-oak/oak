@@ -147,13 +147,10 @@ fn test_verify_binary_attestation() {
         rekor_log_entry: testdata.log_entry_bytes,
         base64_pem_encoded_rekor_public_key,
     };
-    let reference_value = ReferenceValue {
-        binary_hash: BINARY_HASH.as_bytes().to_vec(),
-    };
 
     let result = verify_binary_attestation(
+        BINARY_HASH.as_bytes(),
         &binary_attestation,
-        &reference_value,
         &testdata.rekor_public_key_pem_bytes,
         &testdata.endorser_public_key_pem_bytes,
     );
