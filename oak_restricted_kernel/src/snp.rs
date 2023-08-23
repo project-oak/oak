@@ -14,17 +14,23 @@
 // limitations under the License.
 //
 
-use crate::mm::Translator;
+use crate::{ghcb::GHCB_PROTOCOL, mm::Translator, GUEST_HOST_HEAP, PAGE_TABLES};
+use alloc::boxed::Box;
 use core::{panic, slice::from_raw_parts};
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
-use oak_sev_guest::{cpuid::CpuidPage, crypto::GuestMessageEncryptor, secrets::SecretsPage};
+use oak_sev_guest::{
+    cpuid::CpuidPage,
+    crypto::GuestMessageEncryptor,
+    guest::{GuestMessage, Message},
+    secrets::SecretsPage,
+};
 use spinning_top::{const_spinlock, Spinlock};
 use x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
 };
-use zerocopy::FromBytes;
+use zerocopy::{AsBytes, FromBytes};
 
 /// The exclusive upper limit of the address range where we expect the SNP-specific pages to reside.
 ///
@@ -160,6 +166,54 @@ pub fn init_guest_message_encryptor() {
     GUEST_MESSAGE_ENCRYPTOR
         .lock()
         .replace(GuestMessageEncryptor::new(key).expect("couldn't create guest message encryptor"));
+}
+
+pub fn send_guest_message_request<
+    Request: AsBytes + FromBytes + Message,
+    Response: AsBytes + FromBytes + Message,
+>(
+    request: Request,
+) -> anyhow::Result<Response> {
+    let mut guard = GUEST_MESSAGE_ENCRYPTOR.lock();
+    let encryptor = guard
+        .as_mut()
+        .ok_or_else(|| anyhow::anyhow!("guest message encryptor is not initialized"))?;
+
+    let alloc = GUEST_HOST_HEAP
+        .get()
+        .ok_or_else(|| anyhow::anyhow!("guest-host heap is not initialized"))?;
+
+    let mut request_message = Box::new_in(GuestMessage::new(), alloc);
+    encryptor
+        .encrypt_message(request, request_message.as_mut())
+        .map_err(anyhow::Error::msg)?;
+    let response_message = Box::new_in(GuestMessage::new(), alloc);
+
+    let translator = PAGE_TABLES
+        .get()
+        .ok_or_else(|| anyhow::anyhow!("address translator is not initialized"))?;
+    let request_address = translator
+        .translate_virtual(VirtAddr::from_ptr(
+            request_message.as_ref() as *const GuestMessage
+        ))
+        .ok_or_else(|| anyhow::anyhow!("couldn't translate request address"))?;
+    let response_address = translator
+        .translate_virtual(VirtAddr::from_ptr(
+            response_message.as_ref() as *const GuestMessage
+        ))
+        .ok_or_else(|| anyhow::anyhow!("couldn't translate response address"))?;
+
+    GHCB_PROTOCOL
+        .get()
+        .expect("ghcb not initialized")
+        .lock()
+        .do_guest_message_request(request_address, response_address)
+        .map_err(anyhow::Error::msg)?;
+
+    response_message.validate().map_err(anyhow::Error::msg)?;
+    encryptor
+        .decrypt_message::<Response>(&response_message)
+        .map_err(anyhow::Error::msg)
 }
 
 /// Panics if the physical address is not the start of a 4KiB page, null, or not below the maximum
