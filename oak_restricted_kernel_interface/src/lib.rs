@@ -23,4 +23,7 @@ pub use errno::Errno;
 pub use syscalls::Syscall;
 
 /// Predefined file descriptor for the Oak communication channel.
-pub const OAK_CHANNEL_FD: i32 = 10;
+pub const OAK_CHANNEL_FD: i32 = 0xa;
+
+/// Predefined file descriptor for reading a derived key.
+pub const DERIVED_KEY_FD: i32 = 0x21;
