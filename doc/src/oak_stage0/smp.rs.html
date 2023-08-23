@@ -51,6 +51,54 @@
 <a href="#51" id="51">51</a>
 <a href="#52" id="52">52</a>
 <a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -67,10 +115,36 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::acpi_tables::{Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp};
+</span><span class="kw">use </span>core::ffi::c_void;
+
+<span class="kw">use </span>oak_sev_guest::io::PortFactoryWrapper;
+<span class="kw">use </span>x86_64::PhysAddr;
+
+<span class="kw">use crate</span>::{
+    acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
+    apic::{Lapic, X2ApicIdRegister},
+    pic::disable_pic8259,
+};
+
+<span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
+    <span class="attr">#[link_name = <span class="string">&quot;ap_start&quot;</span>]
+    </span><span class="kw">static </span>AP_START: c_void;
+}
+
+<span class="kw">pub fn </span>start_ap(lapic: <span class="kw-2">&amp;</span>Lapic, physical_apic_id: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    lapic.send_init_ipi(physical_apic_id);
+    <span class="comment">// TODO(#4235): wait 10 ms
+    // Safety: we&#39;re not going to dereference the memory, we&#39;re just interested in the pointer
+    // value.
+    // We also mask the high bits, as the AP will be in the &#39;magic&#39; real mode that reads data from
+    // the end of the 4 GiB space (aka the BIOS area) much like the BSP.
+    </span><span class="kw">let </span>vector = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;</span>AP_START <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64 } &amp; <span class="number">0xFFFFF</span>;
+    lapic.send_startup_ipi(physical_apic_id, PhysAddr::new(vector))
+    <span class="comment">// TODO(#4235): wait 200 us, send SIPI again if the core hasn&#39;t started
+</span>}
 
 <span class="comment">// TODO(#4235): Bootstrap the APs.
-</span><span class="kw">pub fn </span>bootstrap_aps(rsdp: <span class="kw-2">&amp;</span>Rsdp) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>bootstrap_aps(rsdp: <span class="kw-2">&amp;</span>Rsdp, port_factory: <span class="kw-2">&amp;</span>PortFactoryWrapper) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// If XSDT exists, then per ACPI spec we have to prefer that. If it doesn&#39;t, see if we can use
     // the old RSDT. (If we have neither XSDT or RSDT, the ACPI tables are broken.)
     </span><span class="kw">let </span>madt = <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(xsdt)) = rsdp.xsdt() {
@@ -83,23 +157,45 @@
     </span>};
     <span class="kw">let </span>madt = Madt::new(madt).expect(<span class="string">&quot;invalid MADT&quot;</span>);
 
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Found ACPI MADT table: {:?}&quot;</span>, madt);
-    <span class="kw">for </span>item <span class="kw">in </span>madt.iter() {
-        <span class="kw">match </span>item.structure_type {
+    <span class="comment">// Disable the local PIC and set up our local APIC, as we need to send IPIs to APs via the APIC.
+    // Safety: we can reasonably expect the PICs to be available.
+    </span><span class="kw">unsafe </span>{ disable_pic8259(port_factory)<span class="question-mark">? </span>};
+    <span class="kw">let </span>lapic = Lapic::enable()<span class="question-mark">?</span>;
+
+    <span class="kw">let </span>local_apic_id = X2ApicIdRegister::read();
+
+    <span class="comment">// APIC and X2APIC structures are largely the same; X2APIC entries are used if the APIC ID is
+    // too large to fit into the one-byte field of the APIC structure (e.g. if you have more than
+    // 256 CPUs).
+    </span><span class="kw">for </span>item <span class="kw">in </span>madt.iter() {
+        <span class="kw">let </span>(remote_lapic_id, flags) = <span class="kw">match </span>item.structure_type {
             ProcessorLocalApic::STRUCTURE_TYPE =&gt; {
-                <span class="macro">log::debug!</span>(<span class="string">&quot;Local APIC: {:?}&quot;</span>, ProcessorLocalApic::new(item).unwrap());
+                <span class="kw">let </span>remote_lapic = ProcessorLocalApic::new(item)<span class="question-mark">?</span>;
+                <span class="macro">log::debug!</span>(<span class="string">&quot;Local APIC: {:?}&quot;</span>, remote_lapic);
+                (remote_lapic.apic_id <span class="kw">as </span>u32, remote_lapic.flags)
             }
             ProcessorLocalX2Apic::STRUCTURE_TYPE =&gt; {
-                <span class="macro">log::debug!</span>(
-                    <span class="string">&quot;Local X2 APIC: {:?}&quot;</span>,
-                    ProcessorLocalX2Apic::new(item).unwrap()
-                );
+                <span class="kw">let </span>remote_lapic = ProcessorLocalX2Apic::new(item)<span class="question-mark">?</span>;
+                <span class="macro">log::debug!</span>(<span class="string">&quot;Local X2APIC: {:?}&quot;</span>, remote_lapic);
+                (remote_lapic.x2apic_id, remote_lapic.flags)
             }
             <span class="comment">// We don&#39;t care about other interrupt controller structure types.
             </span><span class="kw">_ </span>=&gt; {
                 <span class="macro">log::debug!</span>(<span class="string">&quot;uninteresting structure: {}&quot;</span>, item.structure_type);
+                <span class="kw">continue</span>;
             }
+        };
+
+        <span class="kw">if </span>remote_lapic_id == local_apic_id {
+            <span class="comment">// Don&#39;t wake ourselves.
+            </span><span class="kw">continue</span>;
         }
+        <span class="kw">if </span>!flags.contains(LocalApicFlags::ENABLED) {
+            <span class="comment">// Don&#39;t wake disabled CPUs.
+            </span><span class="kw">continue</span>;
+        }
+
+        start_ap(<span class="kw-2">&amp;</span>lapic, remote_lapic_id)<span class="question-mark">?</span>;
     }
 
     <span class="prelude-val">Ok</span>(())

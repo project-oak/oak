@@ -834,7 +834,7 @@
     }
 
     <span class="attr">#[derive(Clone, Copy, Debug)]
-    </span><span class="kw">struct </span>LocalApicFlags: u32 {
+    </span><span class="kw">pub struct </span>LocalApicFlags: u32 {
         <span class="doccomment">/// Processor is ready to use.
         </span><span class="kw">const </span>ENABLED = <span class="number">1</span>;
 
@@ -893,10 +893,10 @@
     </span>processor_uid: u8,
 
     <span class="doccomment">/// Processor&#39;s local APIC ID.
-    </span>apic_id: u8,
+    </span><span class="kw">pub </span>apic_id: u8,
 
     <span class="doccomment">/// Local APIC flags.
-    </span>flags: LocalApicFlags,
+    </span><span class="kw">pub </span>flags: LocalApicFlags,
 }
 
 <span class="kw">impl </span>ProcessorLocalApic {
@@ -922,10 +922,10 @@
     </span>_reserved: u16,
 
     <span class="doccomment">/// The processor&#39;s local X2APIC ID.
-    </span>x2apic_id: u32,
+    </span><span class="kw">pub </span>x2apic_id: u32,
 
     <span class="doccomment">/// Local APIC flags.
-    </span>flags: LocalApicFlags,
+    </span><span class="kw">pub </span>flags: LocalApicFlags,
 
     <span class="doccomment">/// OSPM associates the X2APIC Structure with a processor object declared in the namespace
     /// using the Device statement, when the _UID child object of the processor device evaluates to
