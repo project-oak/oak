@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["AuthorKey"],"fn":["get_attestation"],"struct":["AttestationReport","AttestationReportData","EcdsaSignature","GuestPolicy","TcbVersion"]};

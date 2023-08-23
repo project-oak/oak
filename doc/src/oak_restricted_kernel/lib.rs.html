@@ -338,6 +338,9 @@
 <a href="#338" id="338">338</a>
 <a href="#339" id="339">339</a>
 <a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -378,7 +381,6 @@
 
 </span><span class="kw">mod </span>acpi;
 <span class="kw">mod </span>args;
-<span class="kw">pub mod </span>attestation;
 <span class="kw">mod </span>avx;
 <span class="kw">mod </span>boot;
 <span class="kw">mod </span>descriptors;
@@ -396,6 +398,7 @@
 <span class="attr">#[cfg(feature = <span class="string">&quot;simple_io_channel&quot;</span>)]
 </span><span class="kw">mod </span>simpleio;
 <span class="kw">mod </span>snp;
+<span class="kw">pub mod </span>snp_guest;
 <span class="kw">mod </span>syscall;
 <span class="attr">#[cfg(feature = <span class="string">&quot;vsock_channel&quot;</span>)]
 </span><span class="kw">mod </span>virtio;
@@ -604,9 +607,12 @@
         <span class="comment">// For now we just generate a sample attestation report and log the value.
         // TODO(#2842): Use attestation report in attestation behaviour.
         </span><span class="kw">let </span>report =
-            attestation::get_attestation([<span class="number">42</span>; <span class="number">64</span>]).expect(<span class="string">&quot;couldn&#39;t generate attestation report&quot;</span>);
+            snp_guest::get_attestation([<span class="number">42</span>; <span class="number">64</span>]).expect(<span class="string">&quot;couldn&#39;t generate attestation report&quot;</span>);
         <span class="macro">info!</span>(<span class="string">&quot;Attestation: {:?}&quot;</span>, report);
         report.validate().expect(<span class="string">&quot;attestation report is invalid&quot;</span>);
+
+        <span class="kw">let </span>key = snp_guest::get_derived_key().expect(<span class="string">&quot;couldn&#39;t derive key&quot;</span>);
+        <span class="macro">info!</span>(<span class="string">&quot;Derived key: {:?}&quot;</span>, key);
     }
 
     <span class="kw">let </span><span class="kw-2">mut </span>channel = get_channel(
