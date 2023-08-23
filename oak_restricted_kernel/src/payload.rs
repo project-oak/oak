@@ -101,6 +101,10 @@ impl Application {
         })
     }
 
+    pub fn digest(&self) -> &[u8] {
+        &self.digest[..]
+    }
+
     fn program_headers(&self) -> &ProgramHeaders {
         &self.binary.borrow_dependent().program_headers
     }

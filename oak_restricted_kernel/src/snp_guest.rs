@@ -22,6 +22,8 @@ use oak_sev_guest::guest::{
     AttestationRequest, AttestationResponse, GuestFieldFlags, KeyRequest, KeyResponse, ReportStatus,
 };
 
+pub type DerivedKey = [u8; 32];
+
 // The number of custom bytes that can be included in the attestation report.
 const REPORT_DATA_SIZE: usize = 64;
 
@@ -48,7 +50,7 @@ pub fn get_attestation(report_data: [u8; REPORT_DATA_SIZE]) -> anyhow::Result<At
 ///
 /// The key is derived from the VCEK. The key derivation mixes in the VM launch measurement and
 /// guest policy and uses VMPL0.
-pub fn get_derived_key() -> anyhow::Result<[u8; 32]> {
+pub fn get_derived_key() -> anyhow::Result<DerivedKey> {
     let mut key_request = KeyRequest::new();
     let selected_fields = GuestFieldFlags::MEASUREMENT | GuestFieldFlags::GUEST_POLICY;
     key_request.guest_field_select = selected_fields.bits();
