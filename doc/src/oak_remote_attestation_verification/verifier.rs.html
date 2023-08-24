@@ -154,6 +154,7 @@
 <a href="#154" id="154">154</a>
 <a href="#155" id="155">155</a>
 <a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -226,11 +227,12 @@
     }
 }
 
-<span class="comment">// Verifies the given BinaryAttestation object using the given Rekor and endorser public keys, and
-// reference value.
+<span class="comment">// Verifies the given BinaryAttestation object using the given Rekor and endorser public keys. Also
+// verifies that the given binary_digest is the same as the digest in the endorsement statement in
+// the input BinaryAttestation.
 </span><span class="kw">pub fn </span>verify_binary_attestation(
+    binary_digest: <span class="kw-2">&amp;</span>[u8],
     binary_attestation: <span class="kw-2">&amp;</span>BinaryAttestation,
-    reference_value: <span class="kw-2">&amp;</span>ReferenceValue,
     pem_encoded_rekor_public_key_bytes: <span class="kw-2">&amp;</span>[u8],
     pem_encoded_endorser_public_key_bytes: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;()&gt; {
@@ -243,20 +245,20 @@
     )<span class="question-mark">?</span>;
     verify_rekor_public_key(binary_attestation, pem_encoded_rekor_public_key_bytes)<span class="question-mark">?</span>;
     verify_endorser_public_key(binary_attestation, pem_encoded_endorser_public_key_bytes)<span class="question-mark">?</span>;
-    verify_endorsement_statement(<span class="kw-2">&amp;</span>binary_attestation.endorsement_statement, reference_value)
+    verify_endorsement_statement(<span class="kw-2">&amp;</span>binary_attestation.endorsement_statement, binary_digest)
 }
 
 <span class="doccomment">/// Parses the given bytes into an endorsement statement and verifies it against the given Reference
 /// values.
 </span><span class="kw">pub fn </span>verify_endorsement_statement(
     endorsement_bytes: <span class="kw-2">&amp;</span>[u8],
-    reference_value: <span class="kw-2">&amp;</span>ReferenceValue,
+    binary_digest: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>binary_digest = core::str::from_utf8(binary_digest)<span class="question-mark">?</span>;
     <span class="kw">let </span>claim = parse_endorsement_statement(endorsement_bytes)<span class="question-mark">?</span>;
     <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = validate_endorsement(<span class="kw-2">&amp;</span>claim) {
         <span class="macro">anyhow::bail!</span>(<span class="string">&quot;validating endorsement: {err:?}&quot;</span>);
     }
-    <span class="kw">let </span>binary_digest = core::str::from_utf8(<span class="kw-2">&amp;</span>reference_value.binary_hash)<span class="question-mark">?</span>;
     <span class="kw">if </span>claim.subject.len() != <span class="number">1 </span>{
         <span class="macro">anyhow::bail!</span>(
             <span class="string">&quot;expected 1 subject in the endorsement, found {}&quot;</span>,
