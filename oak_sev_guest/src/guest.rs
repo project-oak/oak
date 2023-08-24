@@ -351,7 +351,7 @@ static_assertions::assert_eq_size!(KeyResponse, [u8; 64]);
 
 impl Message for KeyResponse {
     fn get_message_type() -> MessageType {
-        MessageType::ReportResponse
+        MessageType::KeyResponse
     }
 }
 
