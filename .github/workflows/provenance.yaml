@@ -24,6 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         buildconfig:
+          - buildconfigs/key_xor_test.toml
           - buildconfigs/oak_echo_enclave_app.toml
           - buildconfigs/oak_echo_raw_enclave_app.toml
           - buildconfigs/oak_restricted_kernel_bin.toml
