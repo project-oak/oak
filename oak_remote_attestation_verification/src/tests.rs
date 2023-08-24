@@ -17,16 +17,22 @@
 use crate::rekor::*;
 use std::fs;
 
-use alloc::{sync::Arc, vec};
+use alloc::{collections::BTreeMap, sync::Arc, vec, vec::Vec};
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_remote_attestation::{
     attester::{Attester, EmptyAttestationReportGenerator},
-    proto::oak::session::v1::{AttestationEndorsement, BinaryAttestation},
+    proto::oak::session::v1::{AttestationEndorsement, AttestationEvidence, BinaryAttestation},
+};
+
+use crate::proto::oak::verification::v1::{
+    transparency_verification_options::RekorEntryVerification::Base64PemEncodedRekorPublicKey,
+    AttestationVerificationOptions, LayerVerificationOptions, TransparencyVerificationOptions,
 };
 
 use crate::verifier::{
-    verify_binary_attestation, AttestationVerifier, InsecureAttestationVerifier, ReferenceValue,
+    AttestationVerifier, ConfigurableAttestationVerifier, InsecureAttestationVerifier,
+    ReferenceValue,
 };
 
 const TEST_ATTESTATION_ENDORSEMENT: AttestationEndorsement = AttestationEndorsement {
@@ -37,7 +43,6 @@ const TEST_ATTESTATION_ENDORSEMENT: AttestationEndorsement = AttestationEndorsem
 const TEST_REFERENCE_VALUE: ReferenceValue = ReferenceValue {
     binary_hash: vec![],
 };
-const BINARY_HASH: &str = "39051983bbb600bbfb91bd22ee4c976420f8f0c6a895fd083dcb0d153ddd5fd6";
 
 struct TestData {
     endorsement_bytes: Vec<u8>,
@@ -119,17 +124,9 @@ fn test_verify_rekor_signature() {
 
 #[test]
 fn test_empty_attestation() {
-    let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
-    let encryption_key_provider = Arc::new(EncryptionKeyProvider::new());
-    let attester = Arc::new(Attester::new(
-        attestation_report_generator,
-        encryption_key_provider,
-    ));
-    let attestation_evidence = attester
-        .generate_attestation_evidence()
-        .expect("couldn't generate attestation evidence");
+    let attestation_evidence = generate_empty_attestation_evidence();
 
-    let verify_result = InsecureAttestationVerifier::verify(
+    let verify_result = InsecureAttestationVerifier {}.verify(
         &attestation_evidence,
         &TEST_ATTESTATION_ENDORSEMENT,
         &TEST_REFERENCE_VALUE,
@@ -138,21 +135,66 @@ fn test_empty_attestation() {
 }
 
 #[test]
-fn test_verify_binary_attestation() {
+fn test_configurable_attestation_verifier() {
     let testdata = load_testdata();
-    let base64_pem_encoded_rekor_public_key =
-        BASE64_STANDARD.encode(&testdata.rekor_public_key_pem_bytes);
+    let verifier = ConfigurableAttestationVerifier::create(&get_verification_options(&testdata));
+
     let binary_attestation = BinaryAttestation {
         endorsement_statement: testdata.endorsement_bytes,
         rekor_log_entry: testdata.log_entry_bytes,
-        base64_pem_encoded_rekor_public_key,
+        base64_pem_encoded_rekor_public_key: BASE64_STANDARD
+            .encode(&testdata.rekor_public_key_pem_bytes),
     };
 
-    let result = verify_binary_attestation(
-        BINARY_HASH.as_bytes(),
-        &binary_attestation,
-        &testdata.rekor_public_key_pem_bytes,
-        &testdata.endorser_public_key_pem_bytes,
+    let attestation_evidence = generate_empty_attestation_evidence();
+    let attestation_endorsement = AttestationEndorsement {
+        tee_certificates: vec![],
+        binary_attestation: Some(binary_attestation),
+        application_data: None,
+    };
+
+    let result = verifier.verify(
+        &attestation_evidence,
+        &attestation_endorsement,
+        &TEST_REFERENCE_VALUE,
     );
     assert!(result.is_ok(), "{:?}", result);
+}
+
+fn get_verification_options(testdata: &TestData) -> AttestationVerificationOptions {
+    let base64_pem_encoded_rekor_public_key =
+        BASE64_STANDARD.encode(&testdata.rekor_public_key_pem_bytes);
+    let base64_pem_encoded_endorser_public_key =
+        BASE64_STANDARD.encode(&testdata.endorser_public_key_pem_bytes);
+    let default_transparency_verification_options = Some(TransparencyVerificationOptions {
+        base64_pem_encoded_endorser_public_key,
+        rekor_entry_verification: Some(Base64PemEncodedRekorPublicKey(
+            base64_pem_encoded_rekor_public_key,
+        )),
+    });
+    let default_layer_verification_option = Some(LayerVerificationOptions {
+        transparency_verification_options: BTreeMap::new(),
+        default_transparency_verification_options,
+        reference_value_verification_options: None,
+    });
+
+    AttestationVerificationOptions {
+        supported_tee_platforms: Vec::new(),
+        skip_tee_certificate_verification: true,
+        layer_verification_options: BTreeMap::new(),
+        default_layer_verification_option,
+    }
+}
+
+fn generate_empty_attestation_evidence() -> AttestationEvidence {
+    let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
+    let encryption_key_provider = Arc::new(EncryptionKeyProvider::new());
+    let attester = Arc::new(Attester::new(
+        attestation_report_generator,
+        encryption_key_provider,
+    ));
+
+    attester
+        .generate_attestation_evidence()
+        .expect("couldn't generate attestation evidence")
 }

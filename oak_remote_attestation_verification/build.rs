@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,23 +14,8 @@
 // limitations under the License.
 //
 
-#![cfg_attr(not(test), no_std)]
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    micro_rpc_build::compile(&["proto/v1/verification.proto"], &["proto/v1"]);
 
-extern crate alloc;
-
-pub mod proto {
-    pub mod oak {
-        pub mod verification {
-            pub mod v1 {
-                #![allow(dead_code)]
-                include!(concat!(env!("OUT_DIR"), "/oak.verification.v1.rs"));
-            }
-        }
-    }
+    Ok(())
 }
-
-pub mod rekor;
-pub mod verifier;
-
-#[cfg(test)]
-mod tests;
