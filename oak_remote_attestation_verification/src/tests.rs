@@ -17,6 +17,7 @@
 use crate::rekor::*;
 use std::fs;
 
+use crate::proto::oak::verification::v1::RekorEntryVerificationData;
 use alloc::{collections::BTreeMap, sync::Arc, vec, vec::Vec};
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use oak_crypto::encryptor::EncryptionKeyProvider;
@@ -26,8 +27,9 @@ use oak_remote_attestation::{
 };
 
 use crate::proto::oak::verification::v1::{
-    transparency_verification_options::RekorEntryVerification::Base64PemEncodedRekorPublicKey,
-    AttestationVerificationOptions, LayerVerificationOptions, TransparencyVerificationOptions,
+    transparency_verification_options::RekorEntryVerification::{self, VerificationData},
+    AttestationVerificationOptions, LayerVerificationOptions, SkipRekorEntryVerification,
+    TransparencyVerificationOptions,
 };
 
 use crate::verifier::{
@@ -137,7 +139,8 @@ fn test_empty_attestation() {
 #[test]
 fn test_configurable_attestation_verifier() {
     let testdata = load_testdata();
-    let verifier = ConfigurableAttestationVerifier::create(&get_verification_options(&testdata));
+    let verifier =
+        ConfigurableAttestationVerifier::create(&get_verification_options(&testdata, false));
 
     let binary_attestation = BinaryAttestation {
         endorsement_statement: testdata.endorsement_bytes,
@@ -161,16 +164,79 @@ fn test_configurable_attestation_verifier() {
     assert!(result.is_ok(), "{:?}", result);
 }
 
-fn get_verification_options(testdata: &TestData) -> AttestationVerificationOptions {
+#[test]
+fn test_configurable_attestation_verifier_no_rekor_entry_and_skip_rekor_verification() {
+    let testdata = load_testdata();
+    let verifier =
+        ConfigurableAttestationVerifier::create(&get_verification_options(&testdata, true));
+
+    let binary_attestation = BinaryAttestation {
+        endorsement_statement: testdata.endorsement_bytes,
+        rekor_log_entry: Vec::new(),
+        base64_pem_encoded_rekor_public_key: "".to_string(),
+    };
+
+    let attestation_evidence = generate_empty_attestation_evidence();
+    let attestation_endorsement = AttestationEndorsement {
+        tee_certificates: vec![],
+        binary_attestation: Some(binary_attestation),
+        application_data: None,
+    };
+
+    let result = verifier.verify(
+        &attestation_evidence,
+        &attestation_endorsement,
+        &TEST_REFERENCE_VALUE,
+    );
+    assert!(result.is_ok(), "{:?}", result);
+}
+
+#[test]
+fn test_configurable_attestation_verifier_no_rekor_entry_and_require_rekor_verification() {
+    let testdata = load_testdata();
+    let verifier =
+        ConfigurableAttestationVerifier::create(&get_verification_options(&testdata, false));
+
+    let binary_attestation = BinaryAttestation {
+        endorsement_statement: testdata.endorsement_bytes,
+        rekor_log_entry: Vec::new(),
+        base64_pem_encoded_rekor_public_key: "".to_string(),
+    };
+
+    let attestation_evidence = generate_empty_attestation_evidence();
+    let attestation_endorsement = AttestationEndorsement {
+        tee_certificates: vec![],
+        binary_attestation: Some(binary_attestation),
+        application_data: None,
+    };
+
+    let result = verifier.verify(
+        &attestation_evidence,
+        &attestation_endorsement,
+        &TEST_REFERENCE_VALUE,
+    );
+    assert!(result.is_err(), "{:?}", result);
+}
+
+fn get_verification_options(
+    testdata: &TestData,
+    skip_rekor_verification: bool,
+) -> AttestationVerificationOptions {
     let base64_pem_encoded_rekor_public_key =
         BASE64_STANDARD.encode(&testdata.rekor_public_key_pem_bytes);
     let base64_pem_encoded_endorser_public_key =
         BASE64_STANDARD.encode(&testdata.endorser_public_key_pem_bytes);
-    let default_transparency_verification_options = Some(TransparencyVerificationOptions {
-        base64_pem_encoded_endorser_public_key,
-        rekor_entry_verification: Some(Base64PemEncodedRekorPublicKey(
+
+    let rekor_entry_verification = match skip_rekor_verification {
+        true => Some(RekorEntryVerification::Skip(SkipRekorEntryVerification {})),
+        false => Some(VerificationData(RekorEntryVerificationData {
             base64_pem_encoded_rekor_public_key,
-        )),
+            base64_pem_encoded_endorser_public_key,
+        })),
+    };
+
+    let default_transparency_verification_options = Some(TransparencyVerificationOptions {
+        rekor_entry_verification,
     });
     let default_layer_verification_option = Some(LayerVerificationOptions {
         transparency_verification_options: BTreeMap::new(),

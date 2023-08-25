@@ -49,18 +49,23 @@ message LayerVerificationOptions {
   ReferenceValueVerificationOptions reference_value_verification_options = 3;
 }
 
-// Provides the public key of a trusted endorser, which is required for verifying an endorsement
-// statement. This option also specifies whether verifying a Rekor log entry is required or not.
+// Specifies whether verifying a Rekor log entry should be skipped. If not, provides the data,
+// including public keys, required for verifying the Rekor log entry.
 message TransparencyVerificationOptions {
-  string base64_pem_encoded_endorser_public_key = 1;
   oneof rekor_entry_verification {
-    SkipRekorEntryVrification skip_rekor_entry_verification = 2;
-    string base64_pem_encoded_rekor_public_key = 3;
+    SkipRekorEntryVerification skip = 1;
+    RekorEntryVerificationData verification_data = 2;
   }
 }
 
+// Data, including public keys, required for verifying a Rekor log entry.
+message RekorEntryVerificationData {
+  string base64_pem_encoded_rekor_public_key = 1;
+  string base64_pem_encoded_endorser_public_key = 2;
+}
+
 // A singleton value to allow skipping the verification of Rekor log entry.
-message SkipRekorEntryVrification {}
+message SkipRekorEntryVerification {}
 
 message ReferenceValueVerificationOptions {
   // key:value pairs of reference values to check the attestation evidence against.

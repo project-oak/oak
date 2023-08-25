@@ -15,11 +15,10 @@
 //
 
 use crate::proto::oak::verification::v1::{
-    transparency_verification_options::RekorEntryVerification::Base64PemEncodedRekorPublicKey,
+    transparency_verification_options::RekorEntryVerification::VerificationData,
     AttestationVerificationOptions, LayerVerificationOptions, TransparencyVerificationOptions,
 };
 use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
-use anyhow::Context;
 use oak_remote_attestation::proto::oak::session::v1::{
     AttestationEndorsement, AttestationEvidence, BinaryAttestation,
 };
@@ -168,20 +167,19 @@ pub fn create_transparency_verifier(
     opts: &TransparencyVerificationOptions,
 ) -> Vec<Box<dyn AttestationVerifier>> {
     let mut verifiers: Vec<Box<dyn AttestationVerifier>> = Vec::new();
-    verifiers.push(Box::new(EndorsementStatementVerifier {
-        base64_pem_encoded_endorser_public_key: opts.base64_pem_encoded_endorser_public_key.clone(),
-    }));
-    if let Some(Base64PemEncodedRekorPublicKey(pub_key)) = &opts.rekor_entry_verification {
+    verifiers.push(Box::new(EndorsementStatementVerifier {}));
+    if let Some(VerificationData(data)) = &opts.rekor_entry_verification {
         verifiers.push(Box::new(RekorLogEntryVerifier {
-            base64_pem_encoded_rekor_public_key: pub_key.clone(),
+            base64_pem_encoded_rekor_public_key: data.base64_pem_encoded_rekor_public_key.clone(),
+            base64_pem_encoded_endorser_public_key: data
+                .base64_pem_encoded_endorser_public_key
+                .clone(),
         }))
     }
     verifiers
 }
 
-pub struct EndorsementStatementVerifier {
-    base64_pem_encoded_endorser_public_key: String,
-}
+pub struct EndorsementStatementVerifier {}
 
 impl AttestationVerifier for EndorsementStatementVerifier {
     fn verify(
@@ -191,9 +189,6 @@ impl AttestationVerifier for EndorsementStatementVerifier {
         _reference_value: &ReferenceValue,
     ) -> anyhow::Result<()> {
         if let Some(binary_attestation) = &endorsement.binary_attestation {
-            let pem_encoded_endorser_public_key_bytes =
-                BASE64_STANDARD.decode(&self.base64_pem_encoded_endorser_public_key)?;
-            verify_endorser_public_key(binary_attestation, &pem_encoded_endorser_public_key_bytes)?;
             verify_endorsement_statement(
                 &binary_attestation.endorsement_statement,
                 &get_binary_digest(evidence),
@@ -242,18 +237,16 @@ pub fn verify_endorsement_statement(
 /// either the same as the given public key, signed by it, or derived from it.
 fn verify_endorser_public_key(
     binary_attestation: &BinaryAttestation,
-    pem_encoded_endorser_public_key_bytes: &[u8],
+    base64_pem_encoded_endorser_public_key: &str,
 ) -> anyhow::Result<()> {
     let body = get_rekor_log_entry_body(&binary_attestation.rekor_log_entry)?;
 
-    let endorser_public_key_bytes = BASE64_STANDARD
-        .decode(body.spec.signature.public_key.content.clone())
-        .context("couldn't decode Base64 endorser public key")?;
+    let endorser_public_key = body.spec.signature.public_key.content.clone();
 
     // TODO(#4231): Currently, we only check that the public keys are the same. Should be updated to
     // support verifying rolling keys.
-    if endorser_public_key_bytes != pem_encoded_endorser_public_key_bytes {
-        anyhow::bail!("endorser public key verification failed: expected {pem_encoded_endorser_public_key_bytes:?}, got {endorser_public_key_bytes:?}");
+    if endorser_public_key != base64_pem_encoded_endorser_public_key {
+        anyhow::bail!("endorser public key verification failed: expected {base64_pem_encoded_endorser_public_key}, got {endorser_public_key}");
     }
 
     Ok(())
@@ -261,6 +254,7 @@ fn verify_endorser_public_key(
 
 pub struct RekorLogEntryVerifier {
     base64_pem_encoded_rekor_public_key: String,
+    base64_pem_encoded_endorser_public_key: String,
 }
 
 impl AttestationVerifier for RekorLogEntryVerifier {
@@ -281,6 +275,10 @@ impl AttestationVerifier for RekorLogEntryVerifier {
             verify_rekor_public_key(
                 binary_attestation,
                 &self.base64_pem_encoded_rekor_public_key,
+            )?;
+            verify_endorser_public_key(
+                binary_attestation,
+                &self.base64_pem_encoded_endorser_public_key,
             )?;
         }
         Ok(())
