@@ -21,12 +21,19 @@ package oak.functions.benchmark;
 // A request to execute a benchmark action a specified number of times.
 message BenchmarkRequest {
   uint32 iterations = 1;
+  // TODO(#4294): Use micro RPC instead of this oneof.
   oneof action {
     LookupTest lookup = 2;
+    EchoAndPanicTest echo_and_panic = 3;
   }
 }
 
 // Container for the key to use when doing a benchmark lookup.
 message LookupTest {
   bytes key = 1;
+}
+
+// Echo the bytes back, and then causes the benchmark to panic.
+message EchoAndPanicTest {
+  bytes data = 1;
 }

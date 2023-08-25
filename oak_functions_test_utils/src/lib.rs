@@ -265,10 +265,7 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {
         .await
         .expect("couldn't create client");
 
-    client
-        .invoke(request_body)
-        .await
-        .expect("error while awaiting response")
+    client.invoke(request_body).await.expect("error response")
 }
 
 // Assert that string value of the body of the given response matches the expected string.

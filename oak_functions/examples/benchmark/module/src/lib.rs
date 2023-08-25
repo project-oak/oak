@@ -20,7 +20,7 @@ pub mod proto {
 }
 
 use prost::Message;
-use proto::{benchmark_request::Action, BenchmarkRequest, LookupTest};
+use proto::{benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest, LookupTest};
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {
@@ -36,6 +36,10 @@ pub extern "C" fn main() {
                     .unwrap_or_default();
             }
             oak_functions_sdk::write_response(&response).expect("couldn't write response body");
+        }
+        Action::EchoAndPanic(EchoAndPanicTest { data }) => {
+            oak_functions_sdk::write_response(&data).expect("couldn't write response body");
+            panic!("panic requested");
         }
     };
 }
