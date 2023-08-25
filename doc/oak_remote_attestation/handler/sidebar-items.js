@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["AttestationSessionHandler","PublicKeyInfo"],"trait":["AttestationHandler"]};
+window.SIDEBAR_ITEMS = {"struct":["EncryptionHandler","PublicKeyInfo"]};

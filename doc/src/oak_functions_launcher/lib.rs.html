@@ -149,6 +149,9 @@
 <a href="#149" id="149">149</a>
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -220,10 +223,11 @@
     ),
     Box&lt;<span class="kw">dyn </span>std::error::Error&gt;,
 &gt; {
+    <span class="macro">log::info!</span>(<span class="string">&quot;creating Oak Functions guest instance&quot;</span>);
     <span class="kw">let </span>(launched_instance, connector_handle) = launcher::launch(params).<span class="kw">await</span><span class="question-mark">?</span>;
-    setup_lookup_data(connector_handle.clone(), lookup_data_config).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>intialize_response =
         intialize_enclave(connector_handle.clone(), <span class="kw-2">&amp;</span>wasm_path, constant_response_size).<span class="kw">await</span><span class="question-mark">?</span>;
+    setup_lookup_data(connector_handle.clone(), lookup_data_config).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>((launched_instance, connector_handle, intialize_response))
 }
 
@@ -232,6 +236,7 @@
     connector_handle: channel::ConnectorHandle,
     config: LookupDataConfig,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="macro">log::info!</span>(<span class="string">&quot;setting up lookup data&quot;</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>client = OakFunctionsAsyncClient::new(connector_handle);
 
     <span class="comment">// Block for [invariant that lookup data is fully loaded](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-fully-loaded-lookup-data)
@@ -265,10 +270,11 @@
     client: <span class="kw-2">&amp;mut </span>OakFunctionsAsyncClient&lt;ConnectorHandle&gt;,
     config: <span class="kw-2">&amp;</span>LookupDataConfig,
 ) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="macro">log::info!</span>(<span class="string">&quot;updating lookup data&quot;</span>);
     lookup::update_lookup_data(client, <span class="kw-2">&amp;</span>config.lookup_data_path, config.max_chunk_size).<span class="kw">await
 </span>}
 
-<span class="comment">// Loads application config (including wasm bytes) into the enclave and returns a remote attestation
+<span class="comment">// Loads application config (including Wasm bytes) into the enclave and returns a remote attestation
 // evidence.
 </span><span class="kw">async fn </span>intialize_enclave(
     connector_handle: channel::ConnectorHandle,
@@ -290,12 +296,12 @@
     };
 
     <span class="kw">let </span><span class="kw-2">mut </span>client = OakFunctionsAsyncClient::new(connector_handle);
+    <span class="macro">log::info!</span>(<span class="string">&quot;sending initialize request&quot;</span>);
     <span class="kw">let </span>initialize_response = client
         .initialize(<span class="kw-2">&amp;</span>request)
         .<span class="kw">await
         </span>.flatten()
         .expect(<span class="string">&quot;couldn&#39;t initialize service&quot;</span>);
-
     <span class="macro">log::info!</span>(<span class="string">&quot;service initialized: {:?}&quot;</span>, initialize_response);
 
     <span class="prelude-val">Ok</span>(initialize_response)
