@@ -23,6 +23,7 @@ wasmi = { version = "*", default-features = false }
 micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
+env_logger = { version = "*", default-features = false }
 oak_functions_test_utils = { workspace = true }
 oak_remote_attestation = { workspace = true }
 async-trait = "*"

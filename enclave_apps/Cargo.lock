@@ -506,6 +506,7 @@ dependencies = [
  "anyhow",
  "bitflags 2.4.0",
  "bytes",
+ "log",
  "micro_rpc",
  "oak_core",
  "static_assertions",
@@ -663,6 +664,7 @@ dependencies = [
  "log",
  "micro_rpc",
  "micro_rpc_build",
+ "oak_crypto",
  "oak_remote_attestation",
  "prost",
 ]
@@ -672,7 +674,7 @@ name = "oak_remote_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "micro_rpc",
+ "log",
  "micro_rpc_build",
  "oak_crypto",
  "prost",

@@ -33,93 +33,76 @@ pub mod proto {
     }
 }
 
+pub mod instance;
 pub mod logger;
 pub mod lookup;
 pub mod wasm;
 
-use alloc::{boxed::Box, format, sync::Arc};
-use logger::StandaloneLogger;
-use lookup::{Data, LookupDataManager};
+use alloc::{format, sync::Arc};
+use instance::OakFunctionsInstance;
+use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_remote_attestation::{
-    attester::AttestationReportGenerator,
-    handler::{AttestationHandler, AttestationSessionHandler},
+    attester::{AttestationReportGenerator, Attester},
+    handler::EncryptionHandler,
 };
 use proto::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
     FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
-    InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk, OakFunctions,
-    PublicKeyInfo,
+    InitializeResponse, InvokeRequest, InvokeResponse, OakFunctions, PublicKeyInfo,
 };
-
-enum InitializationState {
-    Uninitialized,
-    Initialized(Box<dyn AttestationHandler>),
-}
 
 pub struct OakFunctionsService {
     attestation_report_generator: Arc<dyn AttestationReportGenerator>,
-    initialization_state: InitializationState,
-    lookup_data_manager: Arc<LookupDataManager<StandaloneLogger>>,
+    encryption_key_provider: Arc<EncryptionKeyProvider>,
+    instance: Option<OakFunctionsInstance>,
 }
 
 impl OakFunctionsService {
     pub fn new(attestation_report_generator: Arc<dyn AttestationReportGenerator>) -> Self {
         Self {
             attestation_report_generator,
-            initialization_state: InitializationState::Uninitialized,
-            lookup_data_manager: Arc::new(
-                LookupDataManager::new_empty(StandaloneLogger::default()),
-            ),
+            encryption_key_provider: Arc::new(EncryptionKeyProvider::new()),
+            instance: None,
         }
+    }
+    fn get_instance(&mut self) -> Result<&mut OakFunctionsInstance, micro_rpc::Status> {
+        self.instance.as_mut().ok_or_else(|| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::FailedPrecondition,
+                "not initialized",
+            )
+        })
     }
 }
 
 impl OakFunctions for OakFunctionsService {
     fn initialize(
         &mut self,
-        initialization: InitializeRequest,
+        request: InitializeRequest,
     ) -> Result<InitializeResponse, micro_rpc::Status> {
-        match &mut self.initialization_state {
-            InitializationState::Initialized(_attestation_handler) => {
-                Err(micro_rpc::Status::new_with_message(
-                    micro_rpc::StatusCode::FailedPrecondition,
-                    "already initialized",
-                ))
-            }
-            InitializationState::Uninitialized => {
-                // TODO(#3442): Implement constant response size policy.
-                let wasm_handler = wasm::new_wasm_handler(
-                    &initialization.wasm_module,
-                    self.lookup_data_manager.clone(),
-                )
-                .map_err(|err| {
-                    micro_rpc::Status::new_with_message(
-                        micro_rpc::StatusCode::Internal,
-                        format!("couldn't initialize Wasm handler: {:?}", err),
-                    )
-                })?;
-                let attestation_handler = Box::new(
-                    AttestationSessionHandler::create(
-                        self.attestation_report_generator.clone(),
-                        wasm_handler,
-                    )
-                    .map_err(|err| {
-                        micro_rpc::Status::new_with_message(
-                            micro_rpc::StatusCode::Internal,
-                            format!("couldn't create attestation handler: {:?}", err),
-                        )
-                    })?,
+        log::debug!(
+            "called initialize (Wasm module size: {} bytes)",
+            request.wasm_module.len()
+        );
+        match &mut self.instance {
+            Some(_) => Err(micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::FailedPrecondition,
+                "already initialized",
+            )),
+            None => {
+                let instance = OakFunctionsInstance::new(&request)?;
+                let attester = Attester::new(
+                    self.attestation_report_generator.clone(),
+                    self.encryption_key_provider.clone(),
                 );
                 let attestation_evidence =
-                    attestation_handler
-                        .get_attestation_evidence()
-                        .map_err(|err| {
-                            micro_rpc::Status::new_with_message(
-                                micro_rpc::StatusCode::Internal,
-                                format!("couldn't get attestation evidence: {:?}", err),
-                            )
-                        })?;
-                self.initialization_state = InitializationState::Initialized(attestation_handler);
+                    attester.generate_attestation_evidence().map_err(|err| {
+                        micro_rpc::Status::new_with_message(
+                            micro_rpc::StatusCode::Internal,
+                            format!("couldn't get attestation evidence: {:?}", err),
+                        )
+                    })?;
+                self.instance = Some(instance);
                 Ok(InitializeResponse {
                     public_key_info: Some(PublicKeyInfo {
                         public_key: attestation_evidence.encryption_public_key,
@@ -130,64 +113,49 @@ impl OakFunctions for OakFunctionsService {
         }
     }
 
-    fn invoke(
-        &mut self,
-        request_message: InvokeRequest,
-    ) -> Result<InvokeResponse, micro_rpc::Status> {
-        match &mut self.initialization_state {
-            InitializationState::Uninitialized => Err(micro_rpc::Status::new_with_message(
-                micro_rpc::StatusCode::FailedPrecondition,
-                "not initialized",
-            )),
-            InitializationState::Initialized(attestation_handler) => {
-                let response =
-                    attestation_handler
-                        .invoke(&request_message.body)
-                        .map_err(|err| {
-                            micro_rpc::Status::new_with_message(
-                                micro_rpc::StatusCode::Internal,
-                                format!("{:?}", err),
-                            )
-                        })?;
-                Ok(InvokeResponse { body: response })
-            }
-        }
+    fn invoke(&mut self, request: InvokeRequest) -> Result<InvokeResponse, micro_rpc::Status> {
+        log::debug!("called invoke");
+        let encryption_key_provider = self.encryption_key_provider.clone();
+        let instance = self.get_instance()?;
+        EncryptionHandler::create(encryption_key_provider, |r| {
+            instance
+                .invoke(&r)
+                .map_err(|err| anyhow::anyhow!("couldn't handle invoke: {:?}", err))
+        })
+        .invoke(&request.body)
+        .map(|response| InvokeResponse { body: response })
+        .map_err(|err| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::Internal,
+                format!("couldn't invoke handler: {:?}", err),
+            )
+        })
     }
 
     fn extend_next_lookup_data(
         &mut self,
         request: ExtendNextLookupDataRequest,
     ) -> Result<ExtendNextLookupDataResponse, micro_rpc::Status> {
-        self.lookup_data_manager
-            .extend_next_lookup_data(to_data(request.chunk));
-        Ok(ExtendNextLookupDataResponse {})
+        log::debug!(
+            "called extend_next_lookup_data (items: {})",
+            request.chunk.as_ref().map(|c| c.items.len()).unwrap_or(0)
+        );
+        self.get_instance()?.extend_next_lookup_data(request)
     }
 
     fn finish_next_lookup_data(
         &mut self,
-        _request: FinishNextLookupDataRequest,
+        request: FinishNextLookupDataRequest,
     ) -> Result<FinishNextLookupDataResponse, micro_rpc::Status> {
-        self.lookup_data_manager.finish_next_lookup_data();
-        Ok(FinishNextLookupDataResponse {})
+        log::debug!("called finish_next_lookup_data");
+        self.get_instance()?.finish_next_lookup_data(request)
     }
 
     fn abort_next_lookup_data(
         &mut self,
-        _request: Empty,
+        request: Empty,
     ) -> Result<AbortNextLookupDataResponse, micro_rpc::Status> {
-        self.lookup_data_manager.abort_next_lookup_data();
-        Ok(AbortNextLookupDataResponse {})
+        log::debug!("called abort_next_lookup_data");
+        self.get_instance()?.abort_next_lookup_data(request)
     }
-}
-
-// Helper function to convert LookupDataChunk to Data.
-// TODO(#3791): Check if we really have to copy here.
-fn to_data(mut chunk: Option<LookupDataChunk>) -> Data {
-    chunk
-        .take()
-        .expect("expected a LookupDataChunk, but found none")
-        .items
-        .into_iter()
-        .map(|entry| (entry.key, entry.value))
-        .collect()
 }

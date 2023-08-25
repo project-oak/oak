@@ -6,8 +6,8 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
+log = { version = "*", default-features = false }
 oak_crypto = { workspace = true }
-micro_rpc = { workspace = true }
 prost = { workspace = true }
 
 [build-dependencies]
