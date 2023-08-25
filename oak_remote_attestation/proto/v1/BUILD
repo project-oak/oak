@@ -26,6 +26,16 @@ package(
 )
 
 proto_library(
+    name = "certificate_authority_proto",
+    srcs = ["certificate_authority.proto"],
+)
+
+proto_library(
+    name = "endorsement_proto",
+    srcs = ["endorsement.proto"],
+)
+
+proto_library(
     name = "evidence_proto",
     srcs = ["evidence.proto"],
 )
