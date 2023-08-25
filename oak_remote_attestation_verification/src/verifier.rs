@@ -74,6 +74,7 @@ impl AttestationVerifier for InsecureAttestationVerifier {
     }
 }
 
+/// An AttestationVerifier that can be configured using an AttestationVerificationOptions object.
 pub struct ConfigurableAttestationVerifier {
     verifiers: Vec<Box<dyn AttestationVerifier>>,
     layer_verifiers: BTreeMap<String, Box<AttestationLayerVerifier>>,
@@ -82,7 +83,7 @@ pub struct ConfigurableAttestationVerifier {
 
 impl ConfigurableAttestationVerifier {
     pub fn create(opts: &AttestationVerificationOptions) -> ConfigurableAttestationVerifier {
-        // TODO(#3641): Add more verifiers based on the config, and once #4074 is completed
+        // TODO(#3641): Add more verifiers based on the config, and once #4074 is completed.
         let default_layer_verifier = opts
             .default_layer_verification_option
             .as_ref()
@@ -117,6 +118,8 @@ impl AttestationVerifier for ConfigurableAttestationVerifier {
     }
 }
 
+/// Verification logic for verifying evidence from a single DICE layer. This verifier can be
+/// configured using an instance of LayerVerificationOptions.
 pub struct AttestationLayerVerifier {
     verifiers: Vec<Box<dyn AttestationVerifier>>,
     binary_verifiers: BTreeMap<String, Vec<Box<dyn AttestationVerifier>>>,
@@ -179,7 +182,12 @@ pub fn create_transparency_verifier(
     verifiers
 }
 
-pub struct EndorsementStatementVerifier {}
+/// AttestationVerifier for verifying the content of an endorsement statement and checking that it
+/// has the same subject as the measurement.
+pub struct EndorsementStatementVerifier {
+    // TODO(#3641): Additional info may be required here to correctly extract the binary digest from
+// the given evidence.
+}
 
 impl AttestationVerifier for EndorsementStatementVerifier {
     fn verify(
@@ -246,7 +254,11 @@ fn verify_endorser_public_key(
     // TODO(#4231): Currently, we only check that the public keys are the same. Should be updated to
     // support verifying rolling keys.
     if endorser_public_key != base64_pem_encoded_endorser_public_key {
-        anyhow::bail!("endorser public key verification failed: expected {base64_pem_encoded_endorser_public_key}, got {endorser_public_key}");
+        anyhow::bail!(
+            "endorser public key verification failed: expected {}, got {}",
+            base64_pem_encoded_endorser_public_key,
+            endorser_public_key
+        );
     }
 
     Ok(())
