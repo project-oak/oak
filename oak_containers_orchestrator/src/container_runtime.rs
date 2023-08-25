@@ -30,9 +30,12 @@ struct OciFilesystemBundleConfig {
 
 #[derive(serde::Deserialize)]
 struct OciFilesystemBundleConfigProcess {
-    user: OciFilesystemBundleConfigProcessUser,
     args: Vec<String>,
+    #[serde(default)]
     cwd: std::path::PathBuf,
+    #[serde(default)]
+    env: Vec<String>,
+    user: OciFilesystemBundleConfigProcessUser,
 }
 
 #[derive(serde::Deserialize)]
@@ -146,10 +149,20 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
     };
 
     let prep_trusted_app_process = move || {
-        // Run the trusted app in a chroot enviroment of the container.
+        // Run the trusted app in a chroot environment of the container.
         std::os::unix::fs::chroot(container_rootfs_path.clone())?;
-        // Set the specified working directory
-        std::env::set_current_dir(oci_filesystem_bundle_config.process.cwd.clone())?;
+        let cwd = oci_filesystem_bundle_config.process.cwd.clone();
+        if cwd.has_root() {
+            log::debug!("Setting cwd: {cwd:?}");
+            // Set the specified working directory
+            std::env::set_current_dir(cwd)?;
+        }
+        for variable in oci_filesystem_bundle_config.process.env.clone() {
+            if let Some((key, value)) = variable.split_once('=') {
+                log::debug!("Setting env: key: {key}, value: {value}");
+                std::env::set_var(key, value);
+            }
+        }
         Ok(())
     };
     // Safety: this unsafe block exists soley we can call the unsafe `pre_exec`
