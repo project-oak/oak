@@ -97,7 +97,11 @@ message Evidence {
   repeated LayerEvidence layer_evidence = 2;
 
   // Application keys signed by the penultimate layer’s ECA key.
-  // We are not signing these keys with the last layer's ECA key, because the last layer is the
-  // application layer and it
+  //
+  // We are not signing these keys with the last layer's ECA key, because it's the application layer
+  // and the these keys are never shared with it.
+  // The last layer uses an API to the previous layer to:
+  // - Derive session keys from the encryption key
+  // - Sign arbitrary data with the signing key
   optional ApplicationKeys application_keys = 3;
 }
