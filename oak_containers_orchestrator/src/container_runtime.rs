@@ -52,8 +52,7 @@ struct OciFilesystemBundleConfigRoot {
 async fn run_command_and_log_output(
     command: &mut tokio::process::Command,
 ) -> Result<(), Box<std::io::Error>> {
-    let output = command.output().await;
-    log::info!("{:?}: {:?}", command, output);
+    command.status().await?;
     Ok(())
 }
 
@@ -84,6 +83,7 @@ async fn rmount_dir(source: PathBuf, target: PathBuf) -> Result<(), anyhow::Erro
 
 pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
     tokio::fs::create_dir(CONTAINER_DIR).await?;
+    log::info!("Unpacking container bundle");
     tar::Archive::new(container_bundle).unpack(CONTAINER_DIR)?;
 
     let oci_filesystem_bundle_config: OciFilesystemBundleConfig = {
@@ -96,6 +96,8 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
 
         serde_json::from_str(&oci_filesystem_bundle_config_file)?
     };
+
+    log::info!("Setting up container");
 
     let container_rootfs_path = {
         let mut base = std::path::PathBuf::from(CONTAINER_DIR);
@@ -139,6 +141,7 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
     };
     rmount_dir(std::path::PathBuf::from("/proc"), container_proc_path).await?;
 
+    log::info!("Command: {:?}", oci_filesystem_bundle_config.process.args);
     let mut start_trusted_app_cmd = {
         let mut cmd =
             tokio::process::Command::new(oci_filesystem_bundle_config.process.args[0].clone());
@@ -148,18 +151,18 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
         cmd
     };
 
+    log::info!("CWD: {:?}", oci_filesystem_bundle_config.process.cwd);
+    log::info!("ENV: {:?}", oci_filesystem_bundle_config.process.env);
+
     let prep_trusted_app_process = move || {
         // Run the trusted app in a chroot environment of the container.
         std::os::unix::fs::chroot(container_rootfs_path.clone())?;
         let cwd = oci_filesystem_bundle_config.process.cwd.clone();
         if cwd.has_root() {
-            log::debug!("Setting cwd: {cwd:?}");
-            // Set the specified working directory
             std::env::set_current_dir(cwd)?;
         }
         for variable in oci_filesystem_bundle_config.process.env.clone() {
             if let Some((key, value)) = variable.split_once('=') {
-                log::debug!("Setting env: key: {key}, value: {value}");
                 std::env::set_var(key, value);
             }
         }
@@ -171,9 +174,10 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
     // unexpectedly. For our case that's fine though, since we just use it to
     // make chdir & chroot syscalls.
     // Ref: https://docs.rs/tokio/latest/tokio/process/struct.Command.html#safety
-    unsafe { start_trusted_app_cmd.pre_exec(prep_trusted_app_process) }
-        .spawn()?
-        .wait()
+    let status = unsafe { start_trusted_app_cmd.pre_exec(prep_trusted_app_process) }
+        .status()
         .await?;
+    log::info!("Container exited with status {status:?}");
+
     Ok(())
 }
