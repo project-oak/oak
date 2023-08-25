@@ -129,6 +129,24 @@ pub fn validate_claim<T>(claim: &Statement<ClaimPredicate<T>>) -> Result<(), Inv
     Ok(())
 }
 
+/// Check that the input claim has a validity duration, and that the validity is not expired.
+pub fn verify_validity_duration<T>(claim: &Statement<ClaimPredicate<T>>) -> anyhow::Result<()> {
+    match &claim.predicate.validity {
+        Some(validity) => {
+            // We only compare the day, not the exact time.
+            let today = OffsetDateTime::now_utc().to_julian_day();
+            if validity.not_before.to_julian_day() > today {
+                anyhow::bail!("the claim is not yet applicable")
+            }
+            if validity.not_after.to_julian_day() < today {
+                anyhow::bail!("the claim is no longer applicable")
+            }
+            Ok(())
+        }
+        None => anyhow::bail!("the validity field is not set"),
+    }
+}
+
 /// Check that the given endorsement statement, is a valid claim, and had the correct claim type.
 pub fn validate_endorsement(
     claim: &Statement<ClaimPredicate<EndorsementStatement>>,

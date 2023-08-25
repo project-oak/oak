@@ -14,9 +14,12 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::verification::v1::{
-    transparency_verification_options::RekorEntryVerification::VerificationData,
-    AttestationVerificationOptions, LayerVerificationOptions, TransparencyVerificationOptions,
+use crate::{
+    alloc::borrow::ToOwned,
+    proto::oak::verification::v1::{
+        transparency_verification_options::RekorEntryVerification::VerificationData,
+        AttestationVerificationOptions, LayerVerificationOptions, TransparencyVerificationOptions,
+    },
 };
 use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
 use oak_remote_attestation::proto::oak::session::v1::{
@@ -25,7 +28,9 @@ use oak_remote_attestation::proto::oak::session::v1::{
 
 use crate::rekor::{get_rekor_log_entry_body, verify_rekor_log_entry};
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use oak_transparency_claims::claims::{parse_endorsement_statement, validate_endorsement};
+use oak_transparency_claims::claims::{
+    parse_endorsement_statement, validate_endorsement, verify_validity_duration,
+};
 
 /// Reference values used by the verifier to appraise the attestation evidence.
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
@@ -83,14 +88,24 @@ pub struct ConfigurableAttestationVerifier {
 
 impl ConfigurableAttestationVerifier {
     pub fn create(opts: &AttestationVerificationOptions) -> ConfigurableAttestationVerifier {
-        // TODO(#3641): Add more verifiers based on the config, and once #4074 is completed.
         let default_layer_verifier = opts
             .default_layer_verification_option
             .as_ref()
             .map(|opt| Box::new(AttestationLayerVerifier::create(opt)));
+        let mut layer_verifiers = BTreeMap::new();
+        opts.layer_verification_options
+            .iter()
+            .for_each(|(name, opt)| {
+                layer_verifiers.insert(
+                    name.to_owned(),
+                    Box::new(AttestationLayerVerifier::create(opt)),
+                );
+            });
+        // TODO(#3641): Set other verifiers, e.g., for verifying TEE certificate.
+        let verifiers = Vec::new();
         Self {
-            verifiers: Vec::new(),
-            layer_verifiers: BTreeMap::new(),
+            verifiers,
+            layer_verifiers,
             default_layer_verifier,
         }
     }
@@ -132,9 +147,18 @@ impl AttestationLayerVerifier {
             .default_transparency_verification_options
             .as_ref()
             .map(create_transparency_verifier);
+
+        let mut binary_verifiers = BTreeMap::new();
+        opts.transparency_verification_options
+            .iter()
+            .for_each(|(name, opt)| {
+                binary_verifiers.insert(name.to_owned(), create_transparency_verifier(opt));
+            });
+        // TODO(#3641): Set other verifiers, e.g., reference value verifiers.
+        let verifiers = Vec::new();
         Self {
-            verifiers: Vec::new(),
-            binary_verifiers: BTreeMap::new(),
+            verifiers,
+            binary_verifiers,
             default_binary_verifier,
         }
     }
@@ -166,7 +190,8 @@ impl AttestationVerifier for AttestationLayerVerifier {
     }
 }
 
-pub fn create_transparency_verifier(
+/// Creates a list of AttestationVerifiers based on the given verification options.
+fn create_transparency_verifier(
     opts: &TransparencyVerificationOptions,
 ) -> Vec<Box<dyn AttestationVerifier>> {
     let mut verifiers: Vec<Box<dyn AttestationVerifier>> = Vec::new();
@@ -183,10 +208,10 @@ pub fn create_transparency_verifier(
 }
 
 /// AttestationVerifier for verifying the content of an endorsement statement and checking that it
-/// has the same subject as the measurement.
+/// has the same binary digest as the measurement.
 pub struct EndorsementStatementVerifier {
     // TODO(#3641): Additional info may be required here to correctly extract the binary digest from
-// the given evidence.
+    // the given evidence.
 }
 
 impl AttestationVerifier for EndorsementStatementVerifier {
@@ -221,6 +246,7 @@ pub fn verify_endorsement_statement(
     if let Err(err) = validate_endorsement(&claim) {
         anyhow::bail!("validating endorsement: {err:?}");
     }
+    verify_validity_duration(&claim)?;
     if claim.subject.len() != 1 {
         anyhow::bail!(
             "expected 1 subject in the endorsement, found {}",
@@ -228,7 +254,7 @@ pub fn verify_endorsement_statement(
         );
     }
 
-    // TODO(#3641): Require that binary digest is not empty.
+    // TODO(#3641): Instead of the if-block, fail if the binary digest is empty.
     if !binary_digest.is_empty() {
         let binary_digest = core::str::from_utf8(binary_digest)?;
         if claim.subject[0].digest["sha256"] != binary_digest {
@@ -238,29 +264,6 @@ pub fn verify_endorsement_statement(
             );
         }
     }
-    Ok(())
-}
-
-/// Verifies that the endorser's public key in the Rekor log entry in the given BinaryAttestation is
-/// either the same as the given public key, signed by it, or derived from it.
-fn verify_endorser_public_key(
-    binary_attestation: &BinaryAttestation,
-    base64_pem_encoded_endorser_public_key: &str,
-) -> anyhow::Result<()> {
-    let body = get_rekor_log_entry_body(&binary_attestation.rekor_log_entry)?;
-
-    let endorser_public_key = body.spec.signature.public_key.content.clone();
-
-    // TODO(#4231): Currently, we only check that the public keys are the same. Should be updated to
-    // support verifying rolling keys.
-    if endorser_public_key != base64_pem_encoded_endorser_public_key {
-        anyhow::bail!(
-            "endorser public key verification failed: expected {}, got {}",
-            base64_pem_encoded_endorser_public_key,
-            endorser_public_key
-        );
-    }
-
     Ok(())
 }
 
@@ -309,6 +312,29 @@ fn verify_rekor_public_key(
     {
         anyhow::bail!("Rekor public key verification failed: expected {base64_pem_encoded_rekor_public_key}, got {}", 
         binary_attestation.base64_pem_encoded_rekor_public_key);
+    }
+
+    Ok(())
+}
+
+/// Verifies that the endorser's public key in the Rekor log entry in the given BinaryAttestation is
+/// either the same as the given public key, signed by it, or derived from it.
+fn verify_endorser_public_key(
+    binary_attestation: &BinaryAttestation,
+    base64_pem_encoded_endorser_public_key: &str,
+) -> anyhow::Result<()> {
+    let body = get_rekor_log_entry_body(&binary_attestation.rekor_log_entry)?;
+
+    let endorser_public_key = body.spec.signature.public_key.content.clone();
+
+    // TODO(#4231): Currently, we only check that the public keys are the same. Should be updated to
+    // support verifying rolling keys.
+    if endorser_public_key != base64_pem_encoded_endorser_public_key {
+        anyhow::bail!(
+            "endorser public key verification failed: expected {}, got {}",
+            base64_pem_encoded_endorser_public_key,
+            endorser_public_key
+        );
     }
 
     Ok(())
