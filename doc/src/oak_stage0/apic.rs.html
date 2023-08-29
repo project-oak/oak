@@ -308,6 +308,34 @@
 <a href="#308" id="308">308</a>
 <a href="#309" id="309">309</a>
 <a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -328,6 +356,36 @@
 
 <span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>x86_64::{registers::model_specific::Msr, PhysAddr};
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">enum </span>ApicRegister {
+    X2apic(Msr),
+}
+
+<span class="kw">impl </span>ApicRegister {
+    <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
+        <span class="kw">match </span><span class="self">self </span>{
+            ApicRegister::X2apic(msr) =&gt; <span class="kw">unsafe </span>{ msr.read() },
+        }
+    }
+
+    <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, value: u64) {
+        <span class="kw">match </span><span class="self">self </span>{
+            ApicRegister::X2apic(msr) =&gt; <span class="kw">unsafe </span>{ msr.write(value) },
+        }
+    }
+}
+
+<span class="kw">mod </span>x2apic {
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span>x86_64::registers::model_specific::Msr;
+
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>X2APIC_ID_REGISTER: ApicRegister =
+        ApicRegister::X2apic(Msr::new(<span class="number">0x0000_00802</span>));
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>ERROR_STATUS_REGISTER: ApicRegister =
+        ApicRegister::X2apic(Msr::new(<span class="number">0x0000_00828</span>));
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>INTERRUPT_COMMAND_REGISTER: ApicRegister =
+        ApicRegister::X2apic(Msr::new(<span class="number">0x0000_00830</span>));
+}
 
 <span class="macro">bitflags! </span>{
     <span class="doccomment">/// Flags in the APIC Base Address Register (MSR 0x1B)
@@ -392,18 +450,11 @@
 ///
 /// See Section 16.12 (x2APIC_ID) in the AMD64 Architecture Programmer&#39;s Manual, Volume 2 for more
 /// details.
-</span><span class="kw">pub struct </span>X2ApicIdRegister;
+</span><span class="kw">pub struct </span>X2ApicIdRegister(ApicRegister);
 
 <span class="kw">impl </span>X2ApicIdRegister {
-    <span class="kw">pub const </span>MSR: Msr = Msr::new(<span class="number">0x0000_0802</span>);
-
-    <span class="kw">fn </span>read_raw() -&gt; u64 {
-        <span class="comment">// Safety: this is safe to read if the system supports x2APIC.
-        </span><span class="kw">unsafe </span>{ <span class="self">Self</span>::MSR.read() }
-    }
-
-    <span class="kw">pub fn </span>read() -&gt; u32 {
-        <span class="self">Self</span>::read_raw() <span class="kw">as </span>u32
+    <span class="kw">pub fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="self">self</span>.<span class="number">0</span>.read() <span class="kw">as </span>u32
     }
 }
 
@@ -413,7 +464,7 @@
 ///
 /// See Section 16.5 (Interprocessor Interrupts) and Section 16/13 (x2APIC Interrupt Command
 /// Register Operations) in the AMD64 Architecture Programmer&#39;s Manual, Volume 2 for more details.
-</span><span class="kw">pub struct </span>InterruptCommandRegister;
+</span><span class="kw">pub struct </span>InterruptCommandRegister(ApicRegister);
 
 <span class="doccomment">/// Interrupt types that can be sent via the Interrupt Command Register.
 ///
@@ -497,16 +548,10 @@
 }
 
 <span class="kw">impl </span>InterruptCommandRegister {
-    <span class="kw">pub const </span>MSR: Msr = Msr::new(<span class="number">0x0000_00830</span>);
-
-    <span class="kw">fn </span>write_raw(value: u64) {
-        <span class="kw">let </span><span class="kw-2">mut </span>msr = <span class="self">Self</span>::MSR;
-        <span class="comment">// Safety: this MSR is safe to access if the system supports x2APIC.
-        </span><span class="kw">unsafe </span>{ msr.write(value) }
-    }
-
     <span class="doccomment">/// Sends an IPI (inter-processor interrupt) to another LAPIC in the system.
+    </span><span class="attr">#[allow(clippy::too_many_arguments)]
     </span><span class="kw">pub fn </span>write(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         destination: u32,
         vector: u8,
         message_type: MessageType,
@@ -522,7 +567,7 @@
         value |= (destination_mode <span class="kw">as </span>u64) &lt;&lt; <span class="number">11</span>;
         value |= (message_type <span class="kw">as </span>u64) &lt;&lt; <span class="number">8</span>;
         value |= vector <span class="kw">as </span>u64;
-        <span class="self">Self</span>::write_raw(value)
+        <span class="self">self</span>.<span class="number">0</span>.write(value)
     }
 }
 
@@ -530,26 +575,22 @@
 ///
 /// See Section 16.4.6 (APIC Error Interrupts) in the AMD64 Architecture Programmer&#39;s Manual, Volume
 /// 2 for more details.
-</span><span class="kw">pub struct </span>ErrorStatusRegister;
+</span><span class="kw">struct </span>ErrorStatusRegister(ApicRegister);
 
 <span class="kw">impl </span>ErrorStatusRegister {
-    <span class="kw">pub const </span>MSR: Msr = Msr::new(<span class="number">0x0000_00828</span>);
-
-    <span class="kw">fn </span>write_raw(value: u64) {
-        <span class="kw">let </span><span class="kw-2">mut </span>msr = <span class="self">Self</span>::MSR;
-        <span class="comment">// Safety: this MSR is safe to write if the system supports x2APIC.
-        </span><span class="kw">unsafe </span>{ msr.write(value) }
-    }
-
-    <span class="kw">pub fn </span>clear() {
-        <span class="self">Self</span>::write_raw(<span class="number">0</span>);
+    <span class="kw">pub fn </span>clear(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="self">self</span>.<span class="number">0</span>.write(<span class="number">0</span>)
     }
 }
 
 <span class="doccomment">/// Wrapper for the local APIC.
 ///
 /// Currenty only supports x2APIC mode.
-</span><span class="kw">pub struct </span>Lapic {}
+</span><span class="kw">pub struct </span>Lapic {
+    apic_id_register: X2ApicIdRegister,
+    error_status_register: ErrorStatusRegister,
+    interrupt_command_register: InterruptCommandRegister,
+}
 
 <span class="kw">impl </span>Lapic {
     <span class="kw">pub fn </span>enable() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
@@ -570,13 +611,19 @@
             ApicBase::write(apa, flags);
         }
 
-        <span class="prelude-val">Ok</span>(Lapic {})
+        <span class="prelude-val">Ok</span>(Lapic {
+            apic_id_register: X2ApicIdRegister(x2apic::X2APIC_ID_REGISTER),
+            error_status_register: ErrorStatusRegister(x2apic::ERROR_STATUS_REGISTER),
+            interrupt_command_register: InterruptCommandRegister(
+                x2apic::INTERRUPT_COMMAND_REGISTER,
+            ),
+        })
     }
 
     <span class="doccomment">/// Sends an INIT IPI to the local APIC specified by `destination`.
-    </span><span class="kw">pub fn </span>send_init_ipi(<span class="kw-2">&amp;</span><span class="self">self</span>, destination: u32) {
-        ErrorStatusRegister::clear();
-        InterruptCommandRegister::write(
+    </span><span class="kw">pub fn </span>send_init_ipi(<span class="kw-2">&amp;mut </span><span class="self">self</span>, destination: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="self">self</span>.error_status_register.clear();
+        <span class="self">self</span>.interrupt_command_register.write(
             destination,
             <span class="number">0</span>,
             MessageType::Init,
@@ -585,7 +632,7 @@
             TriggerMode::Edge,
             DestinationShorthand::DestinationField,
         );
-        InterruptCommandRegister::write(
+        <span class="self">self</span>.interrupt_command_register.write(
             destination,
             <span class="number">0</span>,
             MessageType::Init,
@@ -594,10 +641,15 @@
             TriggerMode::Edge,
             DestinationShorthand::DestinationField,
         );
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Sends a STARTUP IPI (SIPI) to the local APIC specified by `destination`.
-    </span><span class="kw">pub fn </span>send_startup_ipi(<span class="kw-2">&amp;</span><span class="self">self</span>, destination: u32, vector: PhysAddr) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub fn </span>send_startup_ipi(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        destination: u32,
+        vector: PhysAddr,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">if </span>!vector.is_aligned(<span class="number">0x1000u64</span>) {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;startup vector is not page-aligned&quot;</span>);
         }
@@ -605,8 +657,8 @@
         <span class="kw">if </span>vector &gt; <span class="number">0x100000 </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;startup vector needs to be in the first megabyte of memory&quot;</span>);
         }
-        ErrorStatusRegister::clear();
-        InterruptCommandRegister::write(
+        <span class="self">self</span>.error_status_register.clear();
+        <span class="self">self</span>.interrupt_command_register.write(
             destination,
             (vector / <span class="number">0x1000</span>) <span class="kw">as </span>u8,
             MessageType::Startup,
@@ -616,6 +668,10 @@
             DestinationShorthand::DestinationField,
         );
         <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">pub fn </span>local_apic_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
+        <span class="self">self</span>.apic_id_register.read()
     }
 }
 </code></pre></div></section></main></body></html>

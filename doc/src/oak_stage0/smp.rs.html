@@ -122,7 +122,7 @@
 
 <span class="kw">use crate</span>::{
     acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
-    apic::{Lapic, X2ApicIdRegister},
+    apic::Lapic,
     pic::disable_pic8259,
 };
 
@@ -131,8 +131,8 @@
     </span><span class="kw">static </span>AP_START: c_void;
 }
 
-<span class="kw">pub fn </span>start_ap(lapic: <span class="kw-2">&amp;</span>Lapic, physical_apic_id: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-    lapic.send_init_ipi(physical_apic_id);
+<span class="kw">pub fn </span>start_ap(lapic: <span class="kw-2">&amp;mut </span>Lapic, physical_apic_id: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    lapic.send_init_ipi(physical_apic_id)<span class="question-mark">?</span>;
     <span class="comment">// TODO(#4235): wait 10 ms
     // Safety: we&#39;re not going to dereference the memory, we&#39;re just interested in the pointer
     // value.
@@ -160,9 +160,9 @@
     <span class="comment">// Disable the local PIC and set up our local APIC, as we need to send IPIs to APs via the APIC.
     // Safety: we can reasonably expect the PICs to be available.
     </span><span class="kw">unsafe </span>{ disable_pic8259(port_factory)<span class="question-mark">? </span>};
-    <span class="kw">let </span>lapic = Lapic::enable()<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>lapic = Lapic::enable()<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>local_apic_id = X2ApicIdRegister::read();
+    <span class="kw">let </span>local_apic_id = lapic.local_apic_id();
 
     <span class="comment">// APIC and X2APIC structures are largely the same; X2APIC entries are used if the APIC ID is
     // too large to fit into the one-byte field of the APIC structure (e.g. if you have more than
@@ -195,7 +195,7 @@
             </span><span class="kw">continue</span>;
         }
 
-        start_ap(<span class="kw-2">&amp;</span>lapic, remote_lapic_id)<span class="question-mark">?</span>;
+        start_ap(<span class="kw-2">&amp;mut </span>lapic, remote_lapic_id)<span class="question-mark">?</span>;
     }
 
     <span class="prelude-val">Ok</span>(())
