@@ -19,6 +19,7 @@ load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_java//java:defs.bzl", "java_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@build_stack_rules_proto//dart:dart_proto_library.bzl", "dart_proto_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -97,4 +98,9 @@ java_grpc_library(
     name = "service_unary_java_grpc",
     srcs = [":service_unary_proto"],
     deps = [":service_unary_java_proto"],
+)
+
+dart_proto_library(
+    name = "service_streaming_dart_proto",
+    deps = [":service_streaming_proto"],
 )
