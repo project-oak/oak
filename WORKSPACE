@@ -190,3 +190,13 @@ http_archive(
 )
 
 register_toolchains("//toolchain:oak")
+
+# Bazel rules for dart.
+git_repository(
+    name = "build_stack_rules_proto",
+    remote = "https://github.com/stackb/rules_proto.git",
+    commit = "3ef9c0d847f9f23e8086ea1bb8c02231671beb31"
+)
+
+load("@build_stack_rules_proto//dart:deps.bzl", "dart_proto_library")
+dart_proto_library()
