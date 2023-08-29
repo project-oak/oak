@@ -8,23 +8,24 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 clap = { version = "*", features = ["derive"] }
+futures = "*"
+log = "*"
 oak_containers_orchestrator_client = { workspace = true }
 oak_crypto = { workspace = true }
 oak_remote_attestation = { workspace = true }
+prost = "*"
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
+syslog = "*"
+tar = "*"
 tokio = { version = "*", features = [
   "rt-multi-thread",
   "macros",
   "sync",
   "fs",
   "process",
-  "net"
+  "net",
 ] }
-log = "*"
-syslog = "*"
-tar = "*"
-serde = { version = "*", features = ["derive"] }
-serde_json = "*"
-prost = "*"
 tokio-stream = { version = "*", features = ["net"] }
 tonic = { workspace = true }
 

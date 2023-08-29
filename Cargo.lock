@@ -1791,6 +1791,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "futures",
  "log",
  "oak_containers_orchestrator_client",
  "oak_crypto",
