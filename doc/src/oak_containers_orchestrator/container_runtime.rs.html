@@ -164,6 +164,21 @@
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
 <a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -196,9 +211,12 @@
 
 <span class="attr">#[derive(serde::Deserialize)]
 </span><span class="kw">struct </span>OciFilesystemBundleConfigProcess {
-    user: OciFilesystemBundleConfigProcessUser,
     args: Vec&lt;String&gt;,
-    cwd: std::path::PathBuf,
+    <span class="attr">#[serde(default)]
+    </span>cwd: std::path::PathBuf,
+    <span class="attr">#[serde(default)]
+    </span>env: Vec&lt;String&gt;,
+    user: OciFilesystemBundleConfigProcessUser,
 }
 
 <span class="attr">#[derive(serde::Deserialize)]
@@ -210,14 +228,6 @@
 <span class="attr">#[derive(serde::Deserialize)]
 </span><span class="kw">struct </span>OciFilesystemBundleConfigRoot {
     path: std::path::PathBuf,
-}
-
-<span class="kw">async fn </span>run_command_and_log_output(
-    command: <span class="kw-2">&amp;mut </span>tokio::process::Command,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;std::io::Error&gt;&gt; {
-    <span class="kw">let </span>output = command.output().<span class="kw">await</span>;
-    <span class="macro">log::info!</span>(<span class="string">&quot;{:?}: {:?}&quot;</span>, command, output);
-    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="comment">// Directory at which the container OCI filesystem bundle will be unpacked.
@@ -233,20 +243,20 @@
         .<span class="kw">await
         </span>.context(<span class="string">&quot;failed to create a directory at the target&quot;</span>)<span class="question-mark">?</span>;
 
-    run_command_and_log_output(
-        tokio::process::Command::new(<span class="string">&quot;mount&quot;</span>)
-            .current_dir(CONTAINER_DIR)
-            .arg(<span class="string">&quot;--rbind&quot;</span>)
-            .arg(<span class="kw-2">&amp;</span>source)
-            .arg(<span class="kw-2">&amp;</span>target),
-    )
-    .<span class="kw">await</span><span class="question-mark">?</span>;
+    tokio::process::Command::new(<span class="string">&quot;mount&quot;</span>)
+        .current_dir(CONTAINER_DIR)
+        .arg(<span class="string">&quot;--rbind&quot;</span>)
+        .arg(<span class="kw-2">&amp;</span>source)
+        .arg(<span class="kw-2">&amp;</span>target)
+        .status()
+        .<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())
 }
 
 <span class="kw">pub async fn </span>run(container_bundle: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
     tokio::fs::create_dir(CONTAINER_DIR).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="macro">log::info!</span>(<span class="string">&quot;Unpacking container bundle&quot;</span>);
     tar::Archive::new(container_bundle).unpack(CONTAINER_DIR)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>oci_filesystem_bundle_config: OciFilesystemBundleConfig = {
@@ -259,6 +269,8 @@
 
         serde_json::from_str(<span class="kw-2">&amp;</span>oci_filesystem_bundle_config_file)<span class="question-mark">?
     </span>};
+
+    <span class="macro">log::info!</span>(<span class="string">&quot;Setting up container&quot;</span>);
 
     <span class="kw">let </span>container_rootfs_path = {
         <span class="kw">let </span><span class="kw-2">mut </span>base = std::path::PathBuf::from(CONTAINER_DIR);
@@ -302,32 +314,50 @@
     };
     rmount_dir(std::path::PathBuf::from(<span class="string">&quot;/proc&quot;</span>), container_proc_path).<span class="kw">await</span><span class="question-mark">?</span>;
 
+    <span class="macro">log::debug!</span>(
+        <span class="string">&quot;Startup command: {:?}&quot;</span>,
+        oci_filesystem_bundle_config.process.args
+    );
     <span class="kw">let </span><span class="kw-2">mut </span>start_trusted_app_cmd = {
         <span class="kw">let </span><span class="kw-2">mut </span>cmd =
             tokio::process::Command::new(oci_filesystem_bundle_config.process.args[<span class="number">0</span>].clone());
         cmd.args(oci_filesystem_bundle_config.process.args.as_slice()[<span class="number">1</span>..].to_vec())
             .uid(oci_filesystem_bundle_config.process.user.uid)
             .gid(oci_filesystem_bundle_config.process.user.gid);
+        <span class="kw">for </span>variable <span class="kw">in </span>oci_filesystem_bundle_config.process.env.clone() {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>((key, value)) = variable.split_once(<span class="string">&#39;=&#39;</span>) {
+                <span class="macro">log::debug!</span>(<span class="string">&quot;Setting environment variable: {key}={value}&quot;</span>);
+                cmd.env(key, value);
+            }
+        }
         cmd
     };
 
+    <span class="macro">log::debug!</span>(
+        <span class="string">&quot;Setting working directory: {:?}&quot;</span>,
+        oci_filesystem_bundle_config.process.cwd
+    );
+
     <span class="kw">let </span>prep_trusted_app_process = <span class="kw">move </span>|| {
-        <span class="comment">// Run the trusted app in a chroot enviroment of the container.
+        <span class="comment">// Run the trusted app in a chroot environment of the container.
         </span>std::os::unix::fs::chroot(container_rootfs_path.clone())<span class="question-mark">?</span>;
-        <span class="comment">// Set the specified working directory
-        </span>std::env::set_current_dir(oci_filesystem_bundle_config.process.cwd.clone())<span class="question-mark">?</span>;
+        <span class="kw">let </span>cwd = oci_filesystem_bundle_config.process.cwd.clone();
+        <span class="kw">if </span>cwd.has_root() {
+            std::env::set_current_dir(cwd)<span class="question-mark">?</span>;
+        }
         <span class="prelude-val">Ok</span>(())
     };
-    <span class="comment">// Safety: this unsafe block exists soley we can call the unsafe `pre_exec`
+    <span class="comment">// Safety: this unsafe block exists solely we can call the unsafe `pre_exec`
     // method, allowing us to use a closure to prep the newly forked child
-    // process. That closure runs in a special enviroment so it can behave a bit
+    // process. That closure runs in a special environment so it can behave a bit
     // unexpectedly. For our case that&#39;s fine though, since we just use it to
     // make chdir &amp; chroot syscalls.
     // Ref: https://docs.rs/tokio/latest/tokio/process/struct.Command.html#safety
-    </span><span class="kw">unsafe </span>{ start_trusted_app_cmd.pre_exec(prep_trusted_app_process) }
-        .spawn()<span class="question-mark">?
-        </span>.wait()
+    </span><span class="kw">let </span>status = <span class="kw">unsafe </span>{ start_trusted_app_cmd.pre_exec(prep_trusted_app_process) }
+        .status()
         .<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="macro">log::info!</span>(<span class="string">&quot;Container exited with status {status:?}&quot;</span>);
+
     <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div></section></main></body></html>
