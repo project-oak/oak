@@ -18,6 +18,12 @@ syntax = "proto3";
 
 package oak.verification.v1;
 
+// This package provides constructs for configuring the logic for verifying remote attestation evidence and endorsement. The general verification process involves:
+// 1. Verifying the TEE certificate from endorsement and matching it against the attestation report from evidence.
+// 2. Iterate over DICE evidence layers and for each layer:
+//   2.1 Check the signatures, and verify that the layer is in the expected order.
+//   2.2 For each binary verify it against the transparent release endorsement and reference values.
+
 // Client-side options for verifying the attestation endorsement for a binary.
 message AttestationVerificationOptions {
   // TEE platforms that the client is allowed to interact with, and can verify the evidence
@@ -25,28 +31,20 @@ message AttestationVerificationOptions {
   repeated TeePlatform supported_tee_platforms = 1;
   // Whether to skip TEE certificate verification.
   bool skip_tee_certificate_verification = 2;
-  // Verification option for each DICE layer.
-  map<string, LayerVerificationOptions> layer_verification_options = 3;
-  // If provided, will be used for verifying any layer that does not have a matching verification
-  // option in `layer_verification_options`.
-  LayerVerificationOptions default_layer_verification_option = 4;
+  // Options for verifying transparency evidence. The mapping allows associating a different set
+  // of options to each binary.
+  map<string, TransparencyVerificationOptions> transparency_verification_options = 3;
+  // Default transparency verification options for binaries that are absent from
+  // transparency_verification_options.
+  TransparencyVerificationOptions default_transparency_verification_options = 4;
+  // Options for verifying evidence against reference values
+  ReferenceValueVerificationOptions reference_value_verification_options = 5;
 }
 
 enum TeePlatform {
   UNSPECIFIED = 0;
   AMD_SEV_SNP = 1;
   INTEL_TDX = 2;
-}
-
-message LayerVerificationOptions {
-  // Options for verifying transparency evidence. The mapping allows associating a different set
-  // of options to each binary.
-  map<string, TransparencyVerificationOptions> transparency_verification_options = 1;
-  // Default transparency verification options for binaries that are absent from
-  // transparency_verification_options.
-  TransparencyVerificationOptions default_transparency_verification_options = 2;
-  // Options for verifying evidence against reference values
-  ReferenceValueVerificationOptions reference_value_verification_options = 3;
 }
 
 // Specifies whether verifying a Rekor log entry should be skipped. If not, provides the data,
@@ -67,6 +65,7 @@ message RekorEntryVerificationData {
 // A singleton value to allow skipping the verification of Rekor log entry.
 message SkipRekorEntryVerification {}
 
+// TODO(#3641): This needs to be updated with more details. In particular, the client should be able to specify the order in which it expects the layers to appear.
 message ReferenceValueVerificationOptions {
   // key:value pairs of reference values to check the attestation evidence against.
   map<string, string> reference_values = 1;
