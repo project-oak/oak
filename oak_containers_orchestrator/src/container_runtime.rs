@@ -49,13 +49,6 @@ struct OciFilesystemBundleConfigRoot {
     path: std::path::PathBuf,
 }
 
-async fn run_command_and_log_output(
-    command: &mut tokio::process::Command,
-) -> Result<(), Box<std::io::Error>> {
-    command.status().await?;
-    Ok(())
-}
-
 // Directory at which the container OCI filesystem bundle will be unpacked.
 const CONTAINER_DIR: &str = "/oak_container";
 
@@ -69,14 +62,13 @@ async fn rmount_dir(source: PathBuf, target: PathBuf) -> Result<(), anyhow::Erro
         .await
         .context("failed to create a directory at the target")?;
 
-    run_command_and_log_output(
-        tokio::process::Command::new("mount")
-            .current_dir(CONTAINER_DIR)
-            .arg("--rbind")
-            .arg(&source)
-            .arg(&target),
-    )
-    .await?;
+    tokio::process::Command::new("mount")
+        .current_dir(CONTAINER_DIR)
+        .arg("--rbind")
+        .arg(&source)
+        .arg(&target)
+        .status()
+        .await?;
 
     Ok(())
 }
@@ -141,18 +133,29 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
     };
     rmount_dir(std::path::PathBuf::from("/proc"), container_proc_path).await?;
 
-    log::info!("Command: {:?}", oci_filesystem_bundle_config.process.args);
+    log::debug!(
+        "Startup command: {:?}",
+        oci_filesystem_bundle_config.process.args
+    );
     let mut start_trusted_app_cmd = {
         let mut cmd =
             tokio::process::Command::new(oci_filesystem_bundle_config.process.args[0].clone());
         cmd.args(oci_filesystem_bundle_config.process.args.as_slice()[1..].to_vec())
             .uid(oci_filesystem_bundle_config.process.user.uid)
             .gid(oci_filesystem_bundle_config.process.user.gid);
+        for variable in oci_filesystem_bundle_config.process.env.clone() {
+            if let Some((key, value)) = variable.split_once('=') {
+                log::debug!("Setting environment variable: {key}={value}");
+                cmd.env(key, value);
+            }
+        }
         cmd
     };
 
-    log::info!("CWD: {:?}", oci_filesystem_bundle_config.process.cwd);
-    log::info!("ENV: {:?}", oci_filesystem_bundle_config.process.env);
+    log::debug!(
+        "Setting working directory: {:?}",
+        oci_filesystem_bundle_config.process.cwd
+    );
 
     let prep_trusted_app_process = move || {
         // Run the trusted app in a chroot environment of the container.
@@ -161,16 +164,11 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
         if cwd.has_root() {
             std::env::set_current_dir(cwd)?;
         }
-        for variable in oci_filesystem_bundle_config.process.env.clone() {
-            if let Some((key, value)) = variable.split_once('=') {
-                std::env::set_var(key, value);
-            }
-        }
         Ok(())
     };
-    // Safety: this unsafe block exists soley we can call the unsafe `pre_exec`
+    // Safety: this unsafe block exists solely we can call the unsafe `pre_exec`
     // method, allowing us to use a closure to prep the newly forked child
-    // process. That closure runs in a special enviroment so it can behave a bit
+    // process. That closure runs in a special environment so it can behave a bit
     // unexpectedly. For our case that's fine though, since we just use it to
     // make chdir & chroot syscalls.
     // Ref: https://docs.rs/tokio/latest/tokio/process/struct.Command.html#safety
