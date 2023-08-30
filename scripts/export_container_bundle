@@ -1,5 +1,5 @@
-#!/bin/bash
-#
+#!/usr/bin/env bash
+
 # Script to export a container image and convert it into an OCI Runtimte Bundle.
 # (https://github.com/opencontainers/runtime-spec/blob/4e3b9264a330d094b0386c3703c5f379119711e8/bundle.md)
 
@@ -43,6 +43,10 @@ if [ -z "${OUTPUT_FILE}" ]; then
   OUTPUT_FILE="${CONTAINER_IMAGE}.tar"
 fi
 
+readonly WORK_DIR="$(mktemp --directory)"
+readonly ROOTFS_DIR="${WORK_DIR}/rootfs"
+mkdir "${ROOTFS_DIR}"
+
 echo "[INFO] Exporting the container image"
 docker export "$(docker create "${CONTAINER_IMAGE}")" \
   | tar --directory="${ROOTFS_DIR}" --extract --file=-
@@ -68,10 +72,6 @@ fi
 
 echo "[INFO] Container entry point cmd: \"${CONTAINER_CMD}\""
 
-readonly WORK_DIR="$(mktemp --directory)"
-readonly ROOTFS_DIR="${WORK_DIR}/rootfs"
-mkdir "${ROOTFS_DIR}"
-
 echo "[INFO] Creating config.json"
 (
     cd "${WORK_DIR}"
@@ -84,4 +84,3 @@ echo "[INFO] Creating config.json"
 echo "[INFO] Creating runtime bundle"
 
 tar --create --file="${OUTPUT_FILE}" --directory="${WORK_DIR}" ./rootfs ./config.json
-
