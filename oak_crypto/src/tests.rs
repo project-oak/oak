@@ -141,8 +141,10 @@ fn test_encryptor() {
                 .serialized_encapsulated_public_key
                 .as_ref()
                 .expect("initial request message doesn't contain encapsulated public key");
-            server_encryptor = Some(ServerEncryptor::create(serialized_encapsulated_public_key, key_provider.clone())
-                .expect("couldn't create server encryptor"));
+            server_encryptor = Some(
+                ServerEncryptor::create(serialized_encapsulated_public_key, key_provider.clone())
+                    .expect("couldn't create server encryptor"),
+            );
         }
 
         let (decrypted_request, request_associated_data) = server_encryptor
