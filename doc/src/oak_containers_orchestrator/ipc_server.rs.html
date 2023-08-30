@@ -113,6 +113,8 @@
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -134,11 +136,12 @@
     GetCryptoContextResponse,
 };
 <span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>futures::FutureExt;
 <span class="kw">use </span>oak_containers_orchestrator_client::LauncherClient;
 <span class="kw">use </span>oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
 <span class="kw">use </span>oak_remote_attestation::attester::Attester;
 <span class="kw">use </span>std::sync::Arc;
-<span class="kw">use </span>tokio::net::UnixListener;
+<span class="kw">use </span>tokio::{net::UnixListener, sync::oneshot::Receiver};
 <span class="kw">use </span>tokio_stream::wrappers::UnixListenerStream;
 <span class="kw">use </span>tonic::{transport::Server, Request, Response};
 
@@ -207,6 +210,7 @@
     attester: Attester,
     application_config: Vec&lt;u8&gt;,
     launcher_client: LauncherClient,
+    shutdown_receiver: Receiver&lt;()&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt;
 <span class="kw">where
     </span>P: AsRef&lt;std::path::Path&gt;,
@@ -223,7 +227,7 @@
 
     Server::builder()
         .add_service(OrchestratorServer::new(service_instance))
-        .serve_with_incoming(uds_stream)
+        .serve_with_incoming_shutdown(uds_stream, shutdown_receiver.map(|<span class="kw">_</span>| ()))
         .<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())
