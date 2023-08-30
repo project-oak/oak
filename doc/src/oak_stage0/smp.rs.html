@@ -99,6 +99,17 @@
 <a href="#99" id="99">99</a>
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -115,7 +126,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>core::ffi::c_void;
+</span><span class="kw">use </span>core::{arch::x86_64::_mm_pause, ffi::c_void};
 
 <span class="kw">use </span>oak_sev_guest::io::PortFactoryWrapper;
 <span class="kw">use </span>x86_64::PhysAddr;
@@ -133,15 +144,26 @@
 
 <span class="kw">pub fn </span>start_ap(lapic: <span class="kw-2">&amp;mut </span>Lapic, physical_apic_id: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     lapic.send_init_ipi(physical_apic_id)<span class="question-mark">?</span>;
-    <span class="comment">// TODO(#4235): wait 10 ms
-    // Safety: we&#39;re not going to dereference the memory, we&#39;re just interested in the pointer
+    <span class="comment">// TODO(#4235): wait 10 ms. The numbers chosen here are arbitrary and have no connection to
+    // actual seconds.
+    </span><span class="kw">for _ in </span><span class="number">1</span>..(<span class="number">1 </span>&lt;&lt; <span class="number">15</span>) {
+        <span class="comment">// Safety: SSE2 is supported in all 64-bit processors.
+        </span><span class="kw">unsafe </span>{ _mm_pause() };
+    }
+    <span class="comment">// Safety: we&#39;re not going to dereference the memory, we&#39;re just interested in the pointer
     // value.
     // We also mask the high bits, as the AP will be in the &#39;magic&#39; real mode that reads data from
     // the end of the 4 GiB space (aka the BIOS area) much like the BSP.
     </span><span class="kw">let </span>vector = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;</span>AP_START <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64 } &amp; <span class="number">0xFFFFF</span>;
-    lapic.send_startup_ipi(physical_apic_id, PhysAddr::new(vector))
-    <span class="comment">// TODO(#4235): wait 200 us, send SIPI again if the core hasn&#39;t started
-</span>}
+    lapic.send_startup_ipi(physical_apic_id, PhysAddr::new(vector))<span class="question-mark">?</span>;
+    <span class="comment">// TODO(#4235): wait 200 us (instead of _some_ unknown amount of time); send SIPI again if the
+    // core hasn&#39;t started
+    </span><span class="kw">for _ in </span><span class="number">1</span>..(<span class="number">1 </span>&lt;&lt; <span class="number">12</span>) {
+        <span class="comment">// Safety: SSE2 is supported in all 64-bit processors.
+        </span><span class="kw">unsafe </span>{ _mm_pause() };
+    }
+    <span class="prelude-val">Ok</span>(())
+}
 
 <span class="comment">// TODO(#4235): Bootstrap the APs.
 </span><span class="kw">pub fn </span>bootstrap_aps(rsdp: <span class="kw-2">&amp;</span>Rsdp, port_factory: <span class="kw-2">&amp;</span>PortFactoryWrapper) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
