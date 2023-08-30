@@ -20,6 +20,7 @@ use oak_containers_orchestrator_client::LauncherClient;
 use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_remote_attestation::attester::{Attester, EmptyAttestationReportGenerator};
 use std::sync::Arc;
+use tokio::sync::oneshot::channel;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -68,6 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         path.push(IPC_SOCKET_FILE_NAME);
         path
     };
+    let (exit_notification_sender, shutdown_receiver) = channel::<()>();
 
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
@@ -75,9 +77,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             encryption_key_provider,
             attester,
             application_config,
-            launcher_client
+            launcher_client,
+            shutdown_receiver
         ),
-        oak_containers_orchestrator::container_runtime::run(&container_bundle)
+        oak_containers_orchestrator::container_runtime::run(
+            &container_bundle,
+            exit_notification_sender
+        )
     )?;
 
     Ok(())
