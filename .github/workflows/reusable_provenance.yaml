@@ -79,10 +79,10 @@ jobs:
         if: steps.cache-ent.outputs.cache-hit != 'true'
         env:
           ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
-          ENT_DIGEST: 944a34854a2bf9c5d32f3bffa93885ee1c7ef8ab0f4fcc30898a981050ae4233
+          ENT_DIGEST: 56c331e5f329e9496795bdfbecfe25a1e9a3e7b57d3452be4bf3aa749c0cb6d2
         run: |
           set -e
-          curl --fail ${ENT_URL}/raw/sha256:${ENT_DIGEST} > /usr/local/bin/ent
+          curl --fail ${ENT_URL}/raw/sha2-256:${ENT_DIGEST} > /usr/local/bin/ent
           echo "${ENT_DIGEST} /usr/local/bin/ent" | sha256sum -c
           chmod +x /usr/local/bin/ent
           ent
