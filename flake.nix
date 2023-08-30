@@ -157,12 +157,14 @@
                 docker
                 elfutils
                 flex
+                jq
                 libelf
                 perl
                 glibc
                 glibc.static
                 ncurses
                 netcat
+                runc
               ];
             };
             # Shell for most CI steps (i.e. without contaniners support).
