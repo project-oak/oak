@@ -149,7 +149,7 @@ fn test_encryptor() {
 
         let (decrypted_request, request_associated_data) = server_encryptor
             .as_mut()
-            .expect("server encryptor is not inexpectitialized")
+            .expect("server encryptor is not initialized")
             .decrypt(&encrypted_request)
             .expect("server couldn't decrypt request");
         assert_eq!(test_request_message, decrypted_request);
