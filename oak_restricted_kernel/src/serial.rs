@@ -37,7 +37,7 @@ impl Serial {
 }
 
 impl oak_channel::Write for Serial {
-    fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
+    fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()> {
         for byte in data {
             self.port.borrow_mut().send_raw(*byte);
         }
@@ -50,7 +50,7 @@ impl oak_channel::Write for Serial {
 }
 
 impl oak_channel::Read for Serial {
-    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
+    fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         #[allow(clippy::needless_range_loop)]
         for i in 0..data.len() {
             data[i] = self.port.borrow_mut().receive();

@@ -36,10 +36,11 @@
               includeSystemImages = false;
             }).androidsdk;
           rustToolchain =
-            pkgs.rust-bin.nightly."2023-02-13".default.override {
+            pkgs.rust-bin.nightly.latest.default.override {
               extensions = [
                 "clippy"
                 "llvm-tools-preview"
+                "rust-analyzer"
                 "rust-src"
                 "rustfmt"
               ];
@@ -104,8 +105,10 @@
                 cargo-fuzz
                 cargo-nextest
                 cargo-udeps
+                cargo-vet
                 protobuf
                 qemu_kvm
+                python312
               ];
             };
             # Minimal shell with only the dependencies needed to run the format and check-format
@@ -134,7 +137,7 @@
               '';
               packages = [
                 jdk11_headless
-                bazel_6
+                bazel
                 androidSdk
                 bazel-buildtools
               ];
@@ -156,6 +159,10 @@
                 flex
                 libelf
                 perl
+                glibc
+                glibc.static
+                ncurses
+                netcat
               ];
             };
             # Shell for most CI steps (i.e. without contaniners support).

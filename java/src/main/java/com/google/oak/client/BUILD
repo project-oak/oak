@@ -28,10 +28,8 @@ java_library(
     ],
     deps = [
         "//java/src/main/java/com/google/oak/crypto:client_encryptor",
-        "//java/src/main/java/com/google/oak/crypto:encryptor",
         "//java/src/main/java/com/google/oak/remote_attestation:attestation_verifier",
         "//java/src/main/java/com/google/oak/transport",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation/proto/v1:messages_java_proto",
     ],
 )

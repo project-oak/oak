@@ -20,6 +20,7 @@ use clap::Parser;
 use command_fds::tokio::CommandFdAsyncExt;
 use std::{
     io::{BufRead, BufReader},
+    net::Ipv4Addr,
     os::{fd::AsRawFd, unix::net::UnixStream},
     path::PathBuf,
     process::Stdio,
@@ -52,6 +53,37 @@ pub struct Params {
     /// Size (in kilobytes) of the ramdrive used for the system root.
     #[arg(long)]
     pub ramdrive_size: u32,
+
+    /// Optional port where QEMU will start a telnet server for the serial console; useful for
+    /// interactive debugging.
+    #[arg(long)]
+    pub telnet_console: Option<u16>,
+}
+
+impl Params {
+    pub fn default_for_test() -> Self {
+        let vmm_binary = which::which("qemu-system-x86_64").expect("could not find qemu path");
+        let stage0_binary = format!(
+            "{}stage0_bin/target/x86_64-unknown-none/release/stage0_bin",
+            env!("WORKSPACE_ROOT")
+        )
+        .into();
+        let kernel = format!(
+            "{}oak_containers_kernel/target/bzImage",
+            env!("WORKSPACE_ROOT")
+        )
+        .into();
+        let initrd = format!("{}/target/stage1.cpio", env!("WORKSPACE_ROOT")).into();
+        Self {
+            vmm_binary,
+            stage0_binary,
+            kernel,
+            initrd,
+            memory_size: Some("8G".to_owned()),
+            ramdrive_size: 3_000_000,
+            telnet_console: None,
+        }
+    }
 }
 
 pub struct Qemu {
@@ -59,7 +91,7 @@ pub struct Qemu {
 }
 
 impl Qemu {
-    pub fn start(params: Params, vsock_cid: u32) -> Result<Self> {
+    pub fn start(params: Params, launcher_service_port: u16, host_proxy_port: u16) -> Result<Self> {
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
         let (guest_socket, host_socket) = UnixStream::pair()?;
 
@@ -86,20 +118,37 @@ impl Qemu {
         // Use the `microvm` machine as the basis, and ensure ACPI and PCIe are enabled.
         cmd.args(["-machine", "microvm,acpi=on,pcie=on"]);
         // Route first serial port to console.
+        if let Some(port) = params.telnet_console {
+            cmd.args([
+                "-serial",
+                format!("telnet:localhost:{},server", port).as_str(),
+            ]);
+        } else {
+            cmd.args([
+                "-chardev",
+                format!("socket,id=consock,fd={}", guest_socket.as_raw_fd()).as_str(),
+            ]);
+            cmd.args(["-serial", "chardev:consock"]);
+        }
+        // Set up the networking. `rombar=0` is so that QEMU wouldn't bother with the
+        // `efi-virtio.rom` file, as we're not using EFI anyway.
+        let vm_address = crate::VM_LOCAL_ADDRESS;
+        let vm_port = crate::VM_LOCAL_PORT;
+        let host_address = Ipv4Addr::LOCALHOST;
         cmd.args([
-            "-chardev",
-            format!("socket,id=consock,fd={}", guest_socket.as_raw_fd()).as_str(),
-        ]);
-        cmd.args(["-serial", "chardev:consock"]);
-        // Set up the virtio-vsock device.
-        cmd.args([
-            "-device",
-            format!(
-                "vhost-vsock-pci,id=vhost-vsock-pci0,guest-cid={}",
-                vsock_cid
-            )
+            "-netdev",
+            [
+                "user",
+                "id=netdev",
+                &format!(
+                    "guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}"
+                ),
+                &format!("hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}"),
+            ]
+            .join(",")
             .as_str(),
         ]);
+        cmd.args(["-device", "virtio-net,netdev=netdev,rombar=0"]);
         // And yes, use stage0 as the BIOS.
         cmd.args([
             "-bios",
@@ -112,53 +161,61 @@ impl Qemu {
         ]);
         // stage0 accoutrements: the kernel, initrd and inital kernel cmdline.
         cmd.args([
-            "-fw_cfg",
-            format!(
-                "name=opt/stage0/elf_kernel,file={}",
-                params
-                    .kernel
-                    .into_os_string()
-                    .into_string()
-                    .unwrap()
-                    .as_str()
-            )
-            .as_str(),
+            "-kernel",
+            params
+                .kernel
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .as_str(),
         ]);
         cmd.args([
-            "-fw_cfg",
-            format!(
-                "name=opt/stage0/initramfs,file={}",
-                params
-                    .initrd
-                    .into_os_string()
-                    .into_string()
-                    .unwrap()
-                    .as_str()
-            )
+            "-initrd",
+            params
+                .initrd
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .as_str(),
+        ]);
+        let ramdrive_size = params.ramdrive_size;
+        cmd.args([
+            "-append",
+            [
+                "console=ttyS0",
+                "panic=-1",
+                "brd.rd_nr=1",
+                format!("brd.rd_size={ramdrive_size}").as_str(),
+                "brd.max_part=1",
+                format!("ip={vm_address}:::255.255.255.0::eth0:off").as_str(),
+            ]
+            .join(" ")
             .as_str(),
         ]);
-        cmd.args([
-            "-fw_cfg",
-            format!(
-            "name=opt/stage0/cmdline,string=console=ttyS0 panic=-1 brd.rd_nr=1 brd.rd_size={} brd.max_part=1", params.ramdrive_size).as_str()
-        ]);
 
-        println!("QEMU command line: {:?}", cmd);
+        log::debug!("QEMU command line: {:?}", cmd);
 
-        // Spit out everything we read.
-        tokio::spawn(async {
-            let mut reader = BufReader::new(host_socket);
+        // Spit out everything we read, if we were not using telnet console.
+        if params.telnet_console.is_none() {
+            tokio::spawn(async {
+                let mut reader = BufReader::new(host_socket);
 
-            let mut line = String::new();
-            while reader.read_line(&mut line).expect("couldn't read line") > 0 {
-                print!("{}", line);
-                line.clear();
-            }
-        });
+                let mut line = String::new();
+                while reader.read_line(&mut line).expect("couldn't read line") > 0 {
+                    print!("{}", line);
+                    line.clear();
+                }
+            });
+        }
 
         let instance = cmd.spawn()?;
 
         Ok(Self { instance })
+    }
+
+    pub async fn kill(&mut self) -> Result<std::process::ExitStatus> {
+        self.instance.start_kill()?;
+        self.wait().await
     }
 
     pub async fn wait(&mut self) -> Result<std::process::ExitStatus> {

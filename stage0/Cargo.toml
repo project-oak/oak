@@ -13,6 +13,7 @@ oak_core = { path = "../oak_core", default-features = false }
 oak_linux_boot_params = { path = "../linux_boot_params" }
 oak_sev_guest = { path = "../oak_sev_guest", default-features = false }
 sev_serial = { path = "../sev_serial" }
+sha2 = { version = "*", default-features = false, features = ["force-soft"] }
 spinning_top = "*"
 static_assertions = "*"
 strum = { version = "*", default-features = false, features = ["derive"] }

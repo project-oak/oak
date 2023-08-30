@@ -20,10 +20,12 @@ package oak.functions;
 
 service OakFunctions {
   // Initializes the service and remote attestation keys.
+  //
   // method_id: 0
   rpc Initialize(InitializeRequest) returns (InitializeResponse);
 
   // Handles an invocation coming from a client.
+  //
   // method_id: 1
   rpc Invoke(InvokeRequest) returns (InvokeResponse);
 

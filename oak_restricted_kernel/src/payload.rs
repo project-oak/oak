@@ -38,8 +38,8 @@ fn read_chunk<C: Channel + ?Sized>(channel: &mut C, chunk: &mut [u8]) -> Result<
         .len()
         .try_into()
         .map_err(|_| anyhow::anyhow!("chunk too big"))?;
-    channel.read(chunk)?;
-    channel.write(&len.to_le_bytes())
+    channel.read_exact(chunk)?;
+    channel.write_all(&len.to_le_bytes())
 }
 
 self_cell!(
@@ -72,7 +72,7 @@ impl Application {
     pub fn load_raw<C: Channel + ?Sized>(channel: &mut C) -> Result<Self> {
         let payload_len = {
             let mut buf: [u8; 4] = Default::default();
-            channel.read(&mut buf)?;
+            channel.read_exact(&mut buf)?;
             u32::from_le_bytes(buf)
         };
         let mut payload = vec![0; payload_len as usize];
@@ -99,6 +99,10 @@ impl Application {
             })?,
             digest,
         })
+    }
+
+    pub fn digest(&self) -> &[u8] {
+        &self.digest[..]
     }
 
     fn program_headers(&self) -> &ProgramHeaders {

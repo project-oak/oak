@@ -94,9 +94,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn match_cmd(opt: &Opt) -> Step {
     match opt.cmd {
-        Command::BuildEnclaveBinaryVariants(ref opts) => {
-            launcher::build_enclave_binary_variants(opts)
-        }
+        Command::BuildEnclaveBinary => launcher::build_enclave_binary(),
         Command::RunOakFunctionsExample(ref run_opt) => run_oak_functions_example(run_opt),
         Command::RunTests => run_tests(),
         Command::RunCargoClippy => run_cargo_clippy(&opt.scope),
@@ -655,6 +653,8 @@ fn run_cargo_udeps(scope: &Scope) -> Step {
         name: "cargo udeps".to_string(),
         steps: workspace_manifest_files()
             .filter(|path| all_affected_crates.contains_path(path))
+            // TODO(#4129): Remove when cargo-udeps supports build-std.
+            .filter(|path| path != Path::new("./stage0_bin/Cargo.toml"))
             .map(|entry| Step::Single {
                 name: entry.to_str().unwrap().to_string(),
                 command: Cmd::new_in_dir(

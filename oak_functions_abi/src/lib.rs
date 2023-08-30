@@ -21,10 +21,7 @@
 
 extern crate alloc;
 
-pub use crate::proto::ExtensionHandle;
-use alloc::{string::String, vec::Vec};
-use core::mem::size_of;
-use serde::{Deserialize, Serialize};
+use alloc::vec::Vec;
 
 pub mod proto {
     include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
@@ -155,86 +152,14 @@ impl Response {
     }
 }
 
-/// Holds the optional value from the storage.
-pub struct StorageGetItemResponse {
-    pub value: Option<Vec<u8>>,
-}
-
-impl From<StorageGetItemResponse> for Vec<u8> {
-    fn from(response: StorageGetItemResponse) -> Self {
-        // Temporary manual serialisation to avoid `bincode` when using `no_std`.
-        // TODO(#2975): Replace this with a microRPC implemenation when the ABI is converted.
-        match response.value {
-            None => Vec::new(),
-            Some(value) => {
-                let mut result = Vec::with_capacity(value.len() + size_of::<u64>());
-                result.extend_from_slice(&(value.len() as u64).to_le_bytes());
-                result.extend_from_slice(&value);
-                result
-            }
-        }
-    }
-}
-
-impl TryFrom<&[u8]> for StorageGetItemResponse {
-    type Error = anyhow::Error;
-    fn try_from(buffer: &[u8]) -> Result<Self, Self::Error> {
-        // Temporary manual deserialisation to avoid `bincode` when using `no_std`.
-        // TODO(#2975): Replace this with a microRPC implemenation when the ABI is converted.
-        const LENGTH_SIZE: usize = size_of::<u64>();
-        // The encoding represents the `None` value as an empty buffer. For a value of
-        // `Some(Vec<u8>)` it adds a length-prefix that is also used for additional validation,
-        if buffer.is_empty() {
-            return Ok(StorageGetItemResponse { value: None });
-        }
-        if buffer.len() < LENGTH_SIZE {
-            anyhow::bail!("invalid buffer: buffer too small")
-        }
-
-        let mut len_buffer = [0; LENGTH_SIZE];
-        len_buffer.copy_from_slice(&buffer[..LENGTH_SIZE]);
-        let len = u64::from_le_bytes(len_buffer);
-
-        if buffer.len() != len as usize + LENGTH_SIZE {
-            anyhow::bail!(
-                "invalid buffer: expected buffer size of {}, but found {}",
-                len as usize + LENGTH_SIZE,
-                buffer.len()
-            )
-        }
-
-        Ok(StorageGetItemResponse {
-            value: Some(buffer[LENGTH_SIZE..].to_vec()),
-        })
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub enum TestingRequest {
-    Echo(String),
-    Blackhole(String),
-}
-
-#[derive(Serialize, Deserialize)]
-pub enum TestingResponse {
-    Echo(String),
-}
-
 // The Oak-Functions ABI primarily consists of a collection of Wasm host functions in the
 // "oak_functions" module that are made available to WebAssembly modules running as Oak-Functions
 // workloads.
 // See https://rustwasm.github.io/book/reference/js-ffi.html
 #[link(wasm_import_module = "oak_functions")]
 extern "C" {
-    /// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#read_request).
-    pub fn read_request(buf_ptr_ptr: *mut *mut u8, buf_len_ptr: *mut usize) -> u32;
-
-    /// See [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
-    pub fn write_response(buf_ptr: *const u8, buf_len: usize) -> u32;
-
     /// See [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#invoke).
     pub fn invoke(
-        handle: ExtensionHandle,
         request_ptr: *const u8,
         request_len: usize,
         response_ptr_ptr: *mut *mut u8,

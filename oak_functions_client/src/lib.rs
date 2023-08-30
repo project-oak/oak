@@ -13,17 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod rekor;
-
 use anyhow::Context;
 use oak_client::{
     proto::oak::session::v1::streaming_session_client::StreamingSessionClient,
     transport::GrpcStreamingTransport, OakClient,
 };
 use tonic::transport::Channel;
-
-#[cfg(test)]
-mod tests;
 
 pub struct OakFunctionsClient {
     oak_client: oak_client::OakClient<GrpcStreamingTransport>,

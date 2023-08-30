@@ -37,13 +37,13 @@ use crate::proto::quirk::echo::{Echo, EchoRequest, EchoResponse};
 pub struct EchoService;
 
 impl Echo for EchoService {
-    fn echo(&mut self, request: &EchoRequest) -> Result<EchoResponse, micro_rpc::Status> {
-        let request_body: &[u8] = request.body.as_ref();
+    fn echo(&mut self, request: EchoRequest) -> Result<EchoResponse, micro_rpc::Status> {
+        let request_body = request.body;
         info!("Received a request, size: {}", request_body.len());
         let response_body = request_body;
 
         Ok(EchoResponse {
-            body: response_body.to_vec(),
+            body: response_body,
         })
     }
 }

@@ -6,18 +6,16 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-bincode = "*"
+micro_rpc = { workspace = true }
 oak_functions_abi = { workspace = true }
-serde = "*"
-serde_derive = "*"
+prost = { workspace = true }
+
+[build-dependencies]
+micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
 hashbrown = "*"
 lazy_static = "*"
-oak_functions_service = { workspace = true }
-oak_functions_wasm = { workspace = true }
-oak_functions_lookup = { workspace = true }
-oak_functions_testing_extension = { workspace = true }
-oak_functions_workload_logging = { workspace = true }
 oak_functions_test_utils = { workspace = true }
+oak_functions_service = { workspace = true }
 tokio = "*"

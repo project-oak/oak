@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/crypto/client_encryptor.h"
 #include "cc/crypto/hpke/recipient_context.h"
@@ -99,8 +98,7 @@ TEST(EncryptorTest, ClientEncryptorAndServerEncryptorCommunicateMismatchPublicKe
   auto server_decryption_result = server_encryptor.Decrypt(*client_ciphertext);
   EXPECT_FALSE(server_decryption_result.ok());
   EXPECT_EQ(server_decryption_result.status().code(), absl::StatusCode::kAborted);
-  EXPECT_THAT(server_decryption_result.status().message(),
-              StrEq("Failed to open encrypted message."));
+  EXPECT_THAT(server_decryption_result.status().message(), StrEq("Unable to decrypt message"));
 }
 
 }  // namespace

@@ -99,6 +99,7 @@ bitflags! {
     /// Permission mask used by the RMP.
     ///
     /// See Table 15-38 in <https://www.amd.com/system/files/TechDocs/24593.pdf> for more details.
+    #[derive(Clone, Debug, PartialEq)]
     pub struct PermissionMask: u8 {
         /// The target VMPL can read the page.
         const READ = 1;

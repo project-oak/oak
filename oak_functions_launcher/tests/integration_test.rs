@@ -15,23 +15,18 @@
 
 //! Integration tests for the Oak Functions Launcher.
 
-use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedResponse};
 use oak_functions_client::OakFunctionsClient;
 use oak_functions_launcher::{
-    proto::oak::functions::{InvokeRequest, OakFunctionsAsyncClient},
-    update_lookup_data, LookupDataConfig,
+    proto::oak::functions::OakFunctionsAsyncClient, update_lookup_data, LookupDataConfig,
 };
 use oak_launcher_utils::launcher;
-use prost::Message;
 use std::{io::Write, time::Duration};
 use ubyte::ByteUnit;
 use xtask::{launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
 
-const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
-
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
-async fn test_launcher_key_value_lookup_virtual() {
+async fn test_launcher_key_value_lookup() {
     if xtask::testing::skip_test() {
         log::info!("skipping test");
         return;
@@ -59,7 +54,7 @@ async fn test_launcher_key_value_lookup_virtual() {
 
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
-async fn test_launcher_echo_virtual() {
+async fn test_launcher_echo() {
     if xtask::testing::skip_test() {
         log::info!("skipping test");
         return;
@@ -87,7 +82,7 @@ async fn test_launcher_echo_virtual() {
 
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
-async fn test_launcher_weather_lookup_virtual() {
+async fn test_launcher_weather_lookup() {
     if xtask::testing::skip_test() {
         log::info!("skipping test");
         return;
@@ -126,6 +121,7 @@ async fn test_launcher_weather_lookup_virtual() {
         r#"{"temperature_degrees_celsius":29}"#
     );
 
+    // TODO(#4177): Check response in the integration test.
     // Run Java client via Bazel.
     let status = tokio::process::Command::new("bazel")
         .arg("run")
@@ -140,97 +136,66 @@ async fn test_launcher_weather_lookup_virtual() {
         .expect("failed to wait for bazel");
     eprintln!("bazel status: {:?}", status);
     assert!(status.success());
+
+    // TODO(#4177): Check response in the integration test.
+    // Run C++ client via Bazel.
+    let status = tokio::process::Command::new("bazel")
+        .arg("run")
+        .arg("//cc/client:cli")
+        .arg("--")
+        .arg(format!("--address=localhost:{port}"))
+        .arg("--request={\"lat\":0,\"lng\":0}")
+        .current_dir(workspace_path(&[]))
+        .spawn()
+        .expect("failed to spawn bazel")
+        .wait()
+        .await
+        .expect("failed to wait for bazel");
+    eprintln!("bazel status: {:?}", status);
+    assert!(status.success());
 }
 
-#[tokio::test]
-async fn test_launcher_looks_up_key() {
-    let oak_functions_linux_fd_bin_path =
-        oak_functions_test_utils::build_rust_crate_linux("oak_functions_linux_fd_bin")
-            .expect("Failed to build oak_functions_linux_fd_bin");
-
-    let params = launcher::native::Params {
-        enclave_binary: oak_functions_linux_fd_bin_path.into(),
-    };
-
-    // Make sure the response fits in the response size.
-    let constant_response_size: u32 = 1024;
-
-    let lookup_data_config = LookupDataConfig {
-        lookup_data_path: xtask::launcher::MOCK_LOOKUP_DATA_PATH.to_path_buf(),
-        update_interval: None,
-        max_chunk_size: ByteUnit::Gibibyte(2),
-    };
-
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
-        .expect("Failed to build Wasm module");
-
-    let (launched_instance, connector_handle, initialize_response) =
-        oak_functions_launcher::create(
-            launcher::GuestMode::Native(params),
-            lookup_data_config,
-            wasm_path.into(),
-            constant_response_size,
-        )
-        .await
-        .expect("Failed to create launcher");
-    let server_encryption_public_key = initialize_response
-        .public_key_info
-        .expect("no public key info returned")
-        .public_key;
-
-    let mut client = OakFunctionsAsyncClient::new(connector_handle);
-    let request_body = b"test_key".to_vec();
-
-    // Encrypt request.
-    let mut client_encryptor =
-        ClientEncryptor::create(&server_encryption_public_key).expect("couldn't create encryptor");
-    let encrypted_request = client_encryptor
-        .encrypt(&request_body, EMPTY_ASSOCIATED_DATA)
-        .expect("couldn't encrypt request");
-
-    // Serialize request.
-    let mut serialized_request = vec![];
-    encrypted_request
-        .encode(&mut serialized_request)
-        .expect("couldn't serialize request");
-
-    // Send invoke request.
-    let invoke_request = InvokeRequest {
-        body: serialized_request,
-    };
-    let invoke_response = client
-        .invoke(&invoke_request)
-        .await
-        .expect("couldn't receive response");
-    assert!(invoke_response.is_ok());
-    let serialized_response = invoke_response.unwrap().body;
-
-    // Deserialize response.
-    let encrypted_response = EncryptedResponse::decode(serialized_response.as_ref())
-        .expect("couldn't deserialize response");
-
-    // Decrypt response.
-    let (response, _) = client_encryptor
-        .decrypt(&encrypted_response)
-        .expect("client couldn't decrypt response");
-
-    assert_eq!(std::str::from_utf8(&response).unwrap(), "test_value");
-
-    launched_instance
-        .kill()
-        .await
-        .expect("Failed to stop launcher");
-}
-
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_load_large_lookup_data() {
-    let oak_functions_linux_fd_bin_path =
-        oak_functions_test_utils::build_rust_crate_linux("oak_functions_linux_fd_bin")
-            .expect("Failed to build oak_functions_linux_fd_bin");
+    if xtask::testing::skip_test() {
+        log::info!("skipping test");
+        return;
+    }
 
-    let params = launcher::native::Params {
-        enclave_binary: oak_functions_linux_fd_bin_path.into(),
+    xtask::testing::run_step(xtask::launcher::build_stage0()).await;
+    xtask::testing::run_step(xtask::launcher::build_binary(
+        "build Oak Restricted Kernel binary",
+        xtask::launcher::OAK_RESTRICTED_KERNEL_BIN_DIR
+            .to_str()
+            .unwrap(),
+    ))
+    .await;
+
+    let oak_functions_enclave_app_path =
+        oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
+            .expect("Failed to build oak_functions_enclave_app");
+
+    let params = launcher::Params {
+        enclave_binary: workspace_path(&[
+            "oak_restricted_kernel_bin",
+            "target",
+            "x86_64-unknown-none",
+            "debug",
+            "oak_restricted_kernel_bin",
+        ]),
+        vmm_binary: which::which("qemu-system-x86_64").unwrap(),
+        app_binary: oak_functions_enclave_app_path.into(),
+        bios_binary: workspace_path(&[
+            "stage0_bin",
+            "target",
+            "x86_64-unknown-none",
+            "release",
+            "oak_stage0.bin",
+        ]),
+        gdb: None,
+        memory_size: Some("256M".to_string()),
     };
+    log::debug!("launcher params: {:?}", params);
 
     let max_chunk_size = ByteUnit::Kilobyte(2);
 
@@ -246,13 +211,8 @@ async fn test_load_large_lookup_data() {
     };
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
         .expect("Failed to build Wasm module");
-    let status_one_chunk = oak_functions_launcher::create(
-        launcher::GuestMode::Native(params),
-        lookup_data_config,
-        wasm_path.into(),
-        1024,
-    )
-    .await;
+    let status_one_chunk =
+        oak_functions_launcher::create(params, lookup_data_config, wasm_path.into(), 1024).await;
     assert!(status_one_chunk.is_ok());
 
     let (launched_instance, connector_handle, _) = status_one_chunk.unwrap();
@@ -290,15 +250,47 @@ async fn test_load_large_lookup_data() {
 }
 
 #[ignore = "too expensive"]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_load_two_gib_lookup_data() {
-    let oak_functions_linux_fd_bin_path =
-        oak_functions_test_utils::build_rust_crate_linux("oak_functions_linux_fd_bin")
-            .expect("Failed to build oak_functions_linux_fd_bin");
+    if xtask::testing::skip_test() {
+        log::info!("skipping test");
+        return;
+    }
 
-    let params = launcher::native::Params {
-        enclave_binary: oak_functions_linux_fd_bin_path.into(),
+    xtask::testing::run_step(xtask::launcher::build_stage0()).await;
+    xtask::testing::run_step(xtask::launcher::build_binary(
+        "build Oak Restricted Kernel binary",
+        xtask::launcher::OAK_RESTRICTED_KERNEL_BIN_DIR
+            .to_str()
+            .unwrap(),
+    ))
+    .await;
+
+    let oak_functions_enclave_app_path =
+        oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
+            .expect("Failed to build oak_functions_enclave_app");
+
+    let params = launcher::Params {
+        enclave_binary: workspace_path(&[
+            "oak_restricted_kernel_bin",
+            "target",
+            "x86_64-unknown-none",
+            "debug",
+            "oak_restricted_kernel_bin",
+        ]),
+        vmm_binary: which::which("qemu-system-x86_64").unwrap(),
+        app_binary: oak_functions_enclave_app_path.into(),
+        bios_binary: workspace_path(&[
+            "stage0_bin",
+            "target",
+            "x86_64-unknown-none",
+            "release",
+            "oak_stage0.bin",
+        ]),
+        gdb: None,
+        memory_size: Some("256M".to_string()),
     };
+    log::debug!("launcher params: {:?}", params);
 
     let max_chunk_size = ByteUnit::Gibibyte(2);
     // Initialize with 2 chunks.
@@ -314,12 +306,7 @@ async fn test_load_two_gib_lookup_data() {
     };
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
         .expect("Failed to build Wasm module");
-    let status = oak_functions_launcher::create(
-        launcher::GuestMode::Native(params),
-        lookup_data_config,
-        wasm_path.into(),
-        1024,
-    )
-    .await;
+    let status =
+        oak_functions_launcher::create(params, lookup_data_config, wasm_path.into(), 1024).await;
     assert!(status.is_ok());
 }

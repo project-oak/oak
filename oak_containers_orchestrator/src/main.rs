@@ -15,35 +15,70 @@
 
 use anyhow::anyhow;
 use clap::Parser;
+use oak_containers_orchestrator::{IPC_SOCKET_FILE_NAME, UTIL_DIR};
 use oak_containers_orchestrator_client::LauncherClient;
+use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_remote_attestation::attester::{Attester, EmptyAttestationReportGenerator};
+use std::sync::Arc;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(long, default_value_t = 2)]
-    launcher_vsock_cid: u32,
-
-    #[arg(long, default_value_t = 8080)]
-    launcher_vsock_port: u32,
+    #[arg(default_value = "http://10.0.2.100:8080")]
+    launcher_addr: String,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    oak_containers_orchestrator::logging::setup()?;
+
     let args = Args::parse();
 
-    let mut launcher_client =
-        LauncherClient::create(args.launcher_vsock_cid, args.launcher_vsock_port)
-            .await
-            .map_err(|error| anyhow!("couldn't create client: {:?}", error))?;
+    let launcher_client = LauncherClient::create(args.launcher_addr.parse()?)
+        .await
+        .map_err(|error| anyhow!("couldn't create client: {:?}", error))?;
 
-    let _container_bundle = launcher_client
+    let container_bundle = launcher_client
         .get_container_bundle()
         .await
         .map_err(|error| anyhow!("couldn't get container bundle: {:?}", error))?;
 
-    let _application_config = launcher_client
+    let application_config = launcher_client
         .get_application_config()
         .await
         .map_err(|error| anyhow!("couldn't get application config: {:?}", error))?;
+
+    let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
+    let encryption_key_provider = Arc::new(EncryptionKeyProvider::new());
+    let attester = Attester::new(
+        attestation_report_generator,
+        encryption_key_provider.clone(),
+    );
+    let evidence = attester
+        .generate_attestation_evidence()
+        .map_err(|error| anyhow!("couldn't generate attestation evidence: {:?}", error))?;
+    launcher_client
+        .send_attestation_evidence(evidence)
+        .await
+        .map_err(|error| anyhow!("couldn't send attestation evidence: {:?}", error))?;
+
+    let util_dir_absolute_path = std::path::Path::new("/").join(UTIL_DIR);
+    tokio::fs::create_dir_all(&util_dir_absolute_path).await?;
+    let ipc_path = {
+        let mut path = util_dir_absolute_path;
+        path.push(IPC_SOCKET_FILE_NAME);
+        path
+    };
+
+    tokio::try_join!(
+        oak_containers_orchestrator::ipc_server::create(
+            ipc_path,
+            encryption_key_provider,
+            attester,
+            application_config,
+            launcher_client
+        ),
+        oak_containers_orchestrator::container_runtime::run(&container_bundle)
+    )?;
 
     Ok(())
 }

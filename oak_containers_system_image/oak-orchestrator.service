@@ -1,11 +1,12 @@
 [Unit]
 Description=Oak Containers Orchestrator
-After=docker.service
-Requires=docker.service
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
 ExecStart=/bin/oak_containers_orchestrator
+FailureAction=poweroff-force
 
 [Install]
 WantedBy=multi-user.target

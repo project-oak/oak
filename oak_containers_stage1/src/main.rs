@@ -22,6 +22,7 @@ mod image;
 use anyhow::Context;
 use clap::Parser;
 use client::LauncherClient;
+use futures_util::TryStreamExt;
 use nix::{
     mount::{mount, umount2, MntFlags, MsFlags},
     unistd::chroot,
@@ -29,17 +30,15 @@ use nix::{
 use std::{
     error::Error,
     fs::{self, create_dir},
+    io::ErrorKind,
     path::Path,
 };
 use tokio::process::Command;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(long, default_value_t = 2)]
-    launcher_vsock_cid: u32,
-
-    #[arg(long, default_value_t = 8080)]
-    launcher_vsock_port: u32,
+    #[arg(default_value = "http://10.0.2.100:8080")]
+    launcher_addr: String,
 
     #[arg(default_value = "/sbin/init")]
     init: String,
@@ -90,7 +89,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .context("error mounting /proc")?;
 
-    let mut client = LauncherClient::new(args.launcher_vsock_cid, args.launcher_vsock_port)
+    let mut client = LauncherClient::new(args.launcher_addr.parse()?)
         .await
         .context("error creating the launcher client")?;
 
@@ -104,5 +103,41 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if !Path::new("/etc/machine-id").exists() {
         fs::write("/etc/machine-id", []).context("error writing placeholder /etc/machine-id")?;
     }
+
+    // Configure eth0 down, as systemd will want to manage it itself and gets confused if it already
+    // has an IP address.
+    {
+        let (connection, handle, _) =
+            rtnetlink::new_connection().context("error opening netlink connection")?;
+        tokio::spawn(connection);
+
+        // `ip link show eth0`
+        let mut links = handle.link().get().match_name("eth0".to_string()).execute();
+
+        if let Some(link) = links.try_next().await? {
+            // `ip link set dev $INDEX down`
+            handle
+                .link()
+                .set(link.header.index)
+                .down()
+                .execute()
+                .await?;
+        } else {
+            println!("warning: eth0 not found");
+        }
+    }
+
+    // We're not running under Docker, so if the system image has a lingering `/.dockerenv` in it,
+    // remove it.
+    fs::remove_file("/.dockerenv")
+        .or_else(|err| {
+            if err.kind() == ErrorKind::NotFound {
+                Ok(())
+            } else {
+                Err(err)
+            }
+        })
+        .context("error removing `/.dockerenv`")?;
+
     image::switch(&args.init).context("error switching to the system image")?
 }

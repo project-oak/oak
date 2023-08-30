@@ -14,81 +14,99 @@
 // limitations under the License.
 //
 
-#![doc = include_str!("../README.md")]
+#![no_std]
+#![feature(never_type)]
+#![feature(result_flattening)]
+#![doc = core::include_str!("../README.md")]
 
-use oak_functions_abi::{proto::OakStatus, StorageGetItemResponse};
-use std::convert::AsRef;
+extern crate alloc;
 
-/// See [`read_request`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#oak_functions_abi.md#read_request).
-pub fn read_request() -> Result<Vec<u8>, OakStatus> {
-    let mut buf_ptr: *mut u8 = std::ptr::null_mut();
-    let mut buf_len: usize = 0;
-    let status_code = unsafe { oak_functions_abi::read_request(&mut buf_ptr, &mut buf_len) };
-    let status = OakStatus::from_i32(status_code as i32).ok_or(OakStatus::ErrInternal)?;
-    match status {
-        OakStatus::Ok => {
-            let buf = from_alloc_buffer(buf_ptr, buf_len);
-            Ok(buf)
+pub mod proto {
+    pub mod oak {
+        pub mod functions {
+            pub mod wasm {
+                pub mod v1 {
+
+                    use prost::Message;
+                    include!(concat!(env!("OUT_DIR"), "/oak.functions.wasm.v1.rs"));
+                }
+            }
         }
-        status => Err(status),
     }
 }
 
-/// See [`write_response`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#write_response).
-pub fn write_response(buf: &[u8]) -> Result<(), OakStatus> {
-    let status = unsafe { oak_functions_abi::write_response(buf.as_ptr(), buf.len()) };
-    result_from_status(status as i32, ())
+use alloc::{string::ToString, vec::Vec};
+use micro_rpc::{Status, StatusCode};
+use proto::oak::functions::wasm::v1::{
+    LogRequest, LogResponse, LookupDataRequest, LookupDataResponse, ReadRequestRequest,
+    ReadRequestResponse, StdWasmApiClient, TestRequest, TestResponse, WriteResponseRequest,
+    WriteResponseResponse,
+};
+
+/// See [`StdWasmApiClient::read_request`].
+pub fn read_request() -> Result<Vec<u8>, Status> {
+    client()
+        .read_request(&ReadRequestRequest {})
+        .flatten()
+        .map(|ReadRequestResponse { body }| body)
 }
 
-/// Looks up an item from the in-memory lookup store.
-pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, OakStatus> {
-    let response = invoke(oak_functions_abi::ExtensionHandle::LookupHandle, key)?;
-    let result: StorageGetItemResponse = (&response[..]).try_into().map_err(|err| {
-        log!("Failed to deserialize response: {}", err);
-        OakStatus::ErrSerializing
-    })?;
-    Ok(result.value)
+/// See [`StdWasmApiClient::write_response`].
+pub fn write_response(buf: &[u8]) -> Result<(), Status> {
+    client()
+        .write_response(&WriteResponseRequest { body: buf.to_vec() })
+        .flatten()
+        .map(|WriteResponseResponse {}| ())
 }
 
-/// Writes a debug log message.
-///
-/// These log messages are considered sensitive, so will only be logged by the runtime if the
-/// `oak_unsafe` feature is enabled.
-pub fn write_log_message<T: AsRef<str>>(message: T) -> Result<(), OakStatus> {
-    let buf = message.as_ref().as_bytes();
-    invoke(oak_functions_abi::ExtensionHandle::LoggingHandle, buf)?;
-    Ok(())
+/// See [`StdWasmApiClient::lookup_data`].
+pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, Status> {
+    client()
+        .lookup_data(&LookupDataRequest { key: key.to_vec() })
+        .flatten()
+        .map(|LookupDataResponse { value }| value)
 }
 
-/// Calls the testing extension with the given request. The response is directly passed on, as it is
-/// decoded by the caller.
-pub fn testing(request: &[u8]) -> Result<Vec<u8>, OakStatus> {
-    invoke(oak_functions_abi::ExtensionHandle::TestingHandle, request)
+/// See [`StdWasmApiClient::log`].
+pub fn write_log_message<T: AsRef<str>>(message: T) -> Result<(), Status> {
+    client()
+        .log(&LogRequest {
+            message: message.as_ref().to_string(),
+        })
+        .flatten()
+        .map(|LogResponse {}| ())
+}
+
+/// See [`StdWasmApiClient::test`].
+pub fn testing(request: &[u8], echo: bool) -> Result<Vec<u8>, Status> {
+    client()
+        .test(&TestRequest {
+            body: request.to_vec(),
+            echo,
+        })
+        .flatten()
+        .map(|TestResponse { body }| body)
 }
 
 /// See [`invoke`](https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md#invoke).
-fn invoke(
-    handle: oak_functions_abi::ExtensionHandle,
-    request: &[u8],
-) -> Result<Vec<u8>, OakStatus> {
-    let mut response_ptr: *mut u8 = std::ptr::null_mut();
+fn invoke(request: &[u8]) -> Result<Vec<u8>, Status> {
+    let mut response_ptr: *mut u8 = core::ptr::null_mut();
     let mut response_len: usize = 0;
     let status_code = unsafe {
         oak_functions_abi::invoke(
-            handle,
             request.as_ptr(),
             request.len(),
             &mut response_ptr,
             &mut response_len,
         )
     };
-    let status = OakStatus::from_i32(status_code as i32).ok_or(OakStatus::ErrInternal)?;
-    match status {
-        OakStatus::Ok => {
+    let status_code: StatusCode = status_code.into();
+    match status_code {
+        StatusCode::Ok => {
             let response = from_alloc_buffer(response_ptr, response_len);
             Ok(response)
         }
-        status => Err(status),
+        status_code => Err(Status::new(status_code)),
     }
 }
 
@@ -103,21 +121,22 @@ macro_rules! log {
     }
 }
 
-/// Convert a status returned from a host function call to a `Result`.
+/// A wrapper around the `invoke` function that implements the [`micro_rpc::Transport`] trait.
 ///
-/// The status is interpreted as an int representing an `OakStatus` enum value.
-///
-/// If the status is [`OakStatus::Ok`] then returns the provided value as [`Result::Ok`], otherwise
-/// returns the status as [`Result::Err`].
-///
-/// Note that host function calls usually return an `u32` because of limitations of the Wasm type
-/// system, so these values would usually be converted (via a cast) to `i32` by callers.
-pub fn result_from_status<T>(status: i32, val: T) -> Result<T, OakStatus> {
-    match OakStatus::from_i32(status) {
-        Some(OakStatus::Ok) => Ok(val),
-        Some(status) => Err(status),
-        None => Err(OakStatus::Unspecified),
+/// This object is stateless, so it can be created and discarded for each invocation.
+struct Transport;
+
+impl micro_rpc::Transport for Transport {
+    type Error = Status;
+
+    fn invoke(&mut self, request_bytes: &[u8]) -> Result<Vec<u8>, Self::Error> {
+        invoke(request_bytes)
     }
+}
+
+/// Creates a new client for the Oak Functions ABI.
+fn client() -> StdWasmApiClient<Transport> {
+    StdWasmApiClient::new(Transport)
 }
 
 #[no_mangle]
@@ -126,7 +145,7 @@ pub extern "C" fn alloc(len: u32) -> *mut u8 {
     let mut buf = Vec::with_capacity(len as usize);
     let ptr = buf.as_mut_ptr();
     // Take ownership of the buffer and ensure that it is not freed at the end of this function.
-    std::mem::forget(buf);
+    core::mem::forget(buf);
     // Return the pointer so the runtime can write data at this address.
     ptr
 }

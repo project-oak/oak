@@ -21,7 +21,7 @@ import com.google.oak.session.v1.AttestationEvidence;
 import com.google.oak.util.Result;
 
 /**
- * A test verifier implementation that doesn't verify attestation evidence and is used for testing.
+ * Verifier implementation that doesn't verify attestation evidence and is used for testing.
  */
 public class InsecureAttestationVerifier implements AttestationVerifier {
   /**

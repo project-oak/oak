@@ -56,7 +56,6 @@ public class ClientEncryptor implements AutoCloseable, Encryptor {
    * @param serializedServerPublicKey a NIST P-256 SEC1 encoded point public key; see
    * <https://secg.org/sec1-v2.pdf>
    */
-  // TODO(#3642): Implement Java Hybrid Encryption.
   public static final Result<ClientEncryptor, Exception> create(
       final byte[] serializedServerPublicKey) {
     return Hpke.setupBaseSender(serializedServerPublicKey, OAK_HPKE_INFO).map(ClientEncryptor::new);
@@ -90,10 +89,7 @@ public class ClientEncryptor implements AutoCloseable, Encryptor {
   public final Result<byte[], Exception> encrypt(
       final byte[] plaintext, final byte[] associatedData) {
     // Encrypt request.
-    Result<byte[], Exception> sealResult =
-        this.senderRequestContext.seal(plaintext, associatedData);
-
-    return sealResult.map(ciphertext -> {
+    return this.senderRequestContext.seal(plaintext, associatedData).map(ciphertext -> {
       // Create request message.
       EncryptedRequest.Builder encryptedRequestBuilder =
           EncryptedRequest.newBuilder().setEncryptedMessage(
@@ -103,13 +99,13 @@ public class ClientEncryptor implements AutoCloseable, Encryptor {
                   .build());
 
       // Encapsulated public key is only sent in the initial request message of the session.
-      if (this.serializedEncapsulatedPublicKey.isPresent()) {
-        byte[] serializedEncapsulatedPublicKey = this.serializedEncapsulatedPublicKey.get();
+      this.serializedEncapsulatedPublicKey.ifPresent(serializedEncapsulatedPublicKey -> {
         encryptedRequestBuilder.setSerializedEncapsulatedPublicKey(
             ByteString.copyFrom(serializedEncapsulatedPublicKey));
         this.serializedEncapsulatedPublicKey = Optional.empty();
-      }
-      // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
+      });
+      // TODO(#3843): Return unserialized proto messages once we have Java encryption without
+      // JNI.
       return encryptedRequestBuilder.build().toByteArray();
     });
   }

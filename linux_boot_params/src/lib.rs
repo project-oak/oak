@@ -143,7 +143,7 @@ impl CCSetupData {
 /// For more details see the Linux kernel docs:
 /// <https://www.kernel.org/doc/html/latest/x86/boot.html#the-real-mode-kernel-header>
 #[repr(C, packed)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, FromBytes, AsBytes)]
 pub struct SetupHeader {
     /// The size of the setup code in 512-byte sectors.
     ///
@@ -254,7 +254,7 @@ pub struct SetupHeader {
     /// Boot protocol option flags
     ///
     /// Type: modify (obligatory)
-    pub loadflags: LoadFlags,
+    pub loadflags: u8,
     /// Move to high memory size (used with hooks)
     ///
     /// Type: modify (obligatory)
@@ -389,7 +389,7 @@ pub struct SetupHeader {
     /// Boot protocol option flags
     ///
     /// Type: read
-    pub xloadflags: XLoadFlags,
+    pub xloadflags: u16,
     /// Maximum size of the kernel command line
     ///
     /// Type: read
@@ -440,7 +440,7 @@ pub struct SetupHeader {
     ///
     /// The 64-bit physical pointer to NULL terminated single linked list of struct setup_data.
     /// This is used to define a more extensible boot parameters passing mechanism.
-    pub setup_data: *const SetupData,
+    pub setup_data: u64,
     /// Preferred loading address
     ///
     /// Type: read (reloc)
@@ -477,6 +477,20 @@ pub struct SetupHeader {
     pub kernel_info_offset: u32,
 }
 static_assertions::assert_eq_size!(SetupHeader, [u8; 123usize]);
+
+impl SetupHeader {
+    pub fn setup_data(&self) -> *const SetupData {
+        self.setup_data as *const SetupData
+    }
+
+    pub fn load_flags(&self) -> Option<LoadFlags> {
+        LoadFlags::from_bits(self.loadflags)
+    }
+
+    pub fn x_load_flags(&self) -> Option<XLoadFlags> {
+        XLoadFlags::from_bits(self.xloadflags)
+    }
+}
 
 #[repr(C, packed)]
 #[derive(Debug, Copy, Clone, FromBytes, AsBytes)]

@@ -84,6 +84,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
+name = "bitflags"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4682ae6287fcf752ecaabbfcc7b6f9b72aa33933dc23a554d853aea8eea8635"
+
+[[package]]
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -406,6 +412,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "key_xor_test_app"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "micro_rpc",
+ "oak_channel",
+ "oak_enclave_runtime_support",
+ "oak_restricted_kernel_api",
+ "oak_restricted_kernel_interface",
+ "static_assertions",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -485,8 +504,9 @@ name = "oak_channel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bitflags",
+ "bitflags 2.4.0",
  "bytes",
+ "log",
  "micro_rpc",
  "oak_core",
  "static_assertions",
@@ -572,7 +592,6 @@ dependencies = [
  "anyhow",
  "prost",
  "prost-build",
- "serde",
  "static_assertions",
  "strum",
 ]
@@ -593,25 +612,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_functions_extension"
+name = "oak_functions_sdk"
 version = "0.1.0"
 dependencies = [
- "anyhow",
+ "micro_rpc",
+ "micro_rpc_build",
  "oak_functions_abi",
- "oak_logger",
-]
-
-[[package]]
-name = "oak_functions_lookup"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "hashbrown",
- "log",
- "oak_functions_abi",
- "oak_functions_extension",
- "oak_logger",
- "spinning_top",
+ "prost",
 ]
 
 [[package]]
@@ -619,44 +626,18 @@ name = "oak_functions_service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "byteorder",
  "hashbrown",
  "log",
  "micro_rpc",
  "micro_rpc_build",
  "oak_crypto",
  "oak_functions_abi",
- "oak_functions_lookup",
- "oak_functions_wasm",
- "oak_functions_workload_logging",
- "oak_logger",
+ "oak_functions_sdk",
  "oak_remote_attestation",
  "prost",
-]
-
-[[package]]
-name = "oak_functions_wasm"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "byteorder",
- "hashbrown",
- "log",
- "micro_rpc",
- "oak_functions_abi",
- "oak_functions_extension",
- "oak_logger",
+ "spinning_top",
  "wasmi",
-]
-
-[[package]]
-name = "oak_functions_workload_logging"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "log",
- "oak_functions_abi",
- "oak_functions_extension",
- "oak_logger",
 ]
 
 [[package]]
@@ -683,15 +664,9 @@ dependencies = [
  "log",
  "micro_rpc",
  "micro_rpc_build",
+ "oak_crypto",
  "oak_remote_attestation",
  "prost",
-]
-
-[[package]]
-name = "oak_logger"
-version = "0.1.0"
-dependencies = [
- "log",
 ]
 
 [[package]]
@@ -699,7 +674,7 @@ name = "oak_remote_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "micro_rpc",
+ "log",
  "micro_rpc_build",
  "oak_crypto",
  "prost",
@@ -720,7 +695,7 @@ dependencies = [
 name = "oak_restricted_kernel_interface"
 version = "0.1.0"
 dependencies = [
- "bitflags",
+ "bitflags 2.4.0",
  "strum",
 ]
 
@@ -920,7 +895,7 @@ version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fb5a58c1855b4b6819d59012155603f0b22ad30cad752600aadfcb695265519a"
 dependencies = [
- "bitflags",
+ "bitflags 1.3.2",
 ]
 
 [[package]]
@@ -956,7 +931,7 @@ version = "0.36.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd5c6ff11fecd55b40746d1995a02f2eb375bf8c00d192d521ee09f42bef37bc"
 dependencies = [
- "bitflags",
+ "bitflags 1.3.2",
  "errno",
  "io-lifetimes",
  "libc",
@@ -975,26 +950,6 @@ name = "scopeguard"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
-
-[[package]]
-name = "serde"
-version = "1.0.145"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "728eb6351430bccb993660dfffc5a72f91ccc1295abaa8ce19b27ebe4f75568b"
-dependencies = [
- "serde_derive",
-]
-
-[[package]]
-name = "serde_derive"
-version = "1.0.145"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81fa1584d3d1bcacd84c277a0dfe21f5b0f6accf4a23d04d4c6d61f1af522b4c"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "sha2"

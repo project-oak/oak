@@ -24,7 +24,7 @@ use oak_linux_boot_params::BootE820Entry;
 use x86_64::{PhysAddr, VirtAddr};
 
 /// The default start location and entry point for the kernel if a kernel wasn't supplied via the
-/// QEMU fw_cfg device.
+/// QEMU fw_cfg device. This is also used for the default location when loading a compressed kernel.
 const DEFAULT_KERNEL_START: u64 = 0x200000;
 
 /// The default size for the kernel if a kernel wasn't supplied via the QEMU fw_cfg device.
@@ -40,9 +40,14 @@ const CMDLINE_FILE_PATH: &[u8] = b"opt/stage0/cmdline\0";
 
 /// Information about the kernel image.
 pub struct KernelInfo {
+    /// The start address where the kernel is loaded.
     pub start_address: VirtAddr,
+    /// The size of the kernel image.
     pub size: usize,
+    /// The entry point for the kernel.
     pub entry: VirtAddr,
+    /// The SHA2-256 digest of the raw kernel image.
+    pub measurement: crate::Measurement,
 }
 
 impl Default for KernelInfo {
@@ -51,22 +56,33 @@ impl Default for KernelInfo {
             start_address: VirtAddr::new(DEFAULT_KERNEL_START),
             size: DEFAULT_KERNEL_SIZE,
             entry: VirtAddr::new(DEFAULT_KERNEL_START),
+            measurement: crate::Measurement::default(),
         }
     }
 }
 
+/// Tries to load the kernel command-line from the fw_cfg device.
+///
+/// We first try to read it using the traditional selector. If it is not available there we try to
+/// read it using a custom file path.
 pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<&'static CStr> {
-    let cmdline_path = CStr::from_bytes_with_nul(CMDLINE_FILE_PATH).expect("invalid c-string");
-    let cmdline_file = fw_cfg.find(cmdline_path)?;
-    let cmdline_size = cmdline_file.size();
-    // Make the buffer one byte longer so that the kernel command-line is null-terminated.
+    let (cmdline_file, buffer_size) = if let Some(cmdline_file) = fw_cfg.get_cmdline_file() {
+        // The provided value is already null-terminated.
+        let size = cmdline_file.size();
+        (cmdline_file, size)
+    } else {
+        let cmdline_path = CStr::from_bytes_with_nul(CMDLINE_FILE_PATH).expect("invalid c-string");
+        let cmdline_file = fw_cfg.find(cmdline_path)?;
+        // Make the buffer one byte longer so that the kernel command-line is null-terminated.
+        let size = cmdline_file.size() + 1;
+        (cmdline_file, size)
+    };
     // Safety: len will always be at least 1 byte, and we don't care about alignment. If the
     // allocation fails, we won't try coercing it into a slice.
     let buf = unsafe {
-        let len = cmdline_size + 1;
         NonNull::slice_from_raw_parts(
-            BOOT_ALLOC.allocate(Layout::from_size_align(len, 1).unwrap())?,
-            len,
+            BOOT_ALLOC.allocate(Layout::from_size_align(buffer_size, 1).unwrap())?,
+            buffer_size,
         )
         .as_mut()
     };
@@ -74,7 +90,8 @@ pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<&'static CStr> {
         .read_file(&cmdline_file, buf)
         .expect("could not read cmdline");
     assert_eq!(
-        actual_size, cmdline_size,
+        actual_size,
+        cmdline_file.size(),
         "cmdline size did not match expected size"
     );
 
@@ -88,22 +105,33 @@ pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<&'static CStr> {
 
 /// Tries to load a kernel image from the QEMU fw_cfg device.
 ///
-/// We expect the kernel to be available with a filename of "opt/stage0/elf_kernel". We only support
-/// uncompressed ELF kernels at the moment.
+/// We assume that a kernel file provided via the traditional selector is a compressed kernel using
+/// the bzImage format. We assume that a kernel file provided via the custom filename of
+/// "opt/stage0/elf_kernel" is an uncompressed ELF file.
 ///
-/// If it finds a RAM disk it returns the information about the kernel, otherwise `None`.
+/// If it finds a kernel it returns the information about the kernel, otherwise `None`.
 pub fn try_load_kernel_image(
     fw_cfg: &mut FwCfg,
     e820_table: &[BootE820Entry],
 ) -> Option<KernelInfo> {
-    let path = CStr::from_bytes_with_nul(KERNEL_FILE_PATH).expect("invalid c-string");
-    let file = fw_cfg.find(path)?;
+    let (file, bzimage) = if let Some(file) = fw_cfg.get_kernel_file() {
+        (file, true)
+    } else {
+        let path = CStr::from_bytes_with_nul(KERNEL_FILE_PATH).expect("invalid c-string");
+        let file = fw_cfg.find(path)?;
+        (file, false)
+    };
     let size = file.size();
 
-    // We copy the kernel image to a temporary location where we can parse it.
-    let dma_address =
-        find_suitable_dma_address(size, e820_table).expect("no suitable DMA address available");
-    let start_address = crate::phys_to_virt(PhysAddr::new(dma_address.as_u64()));
+    let dma_address = if bzimage {
+        // For a compressed kernel we use the default start address.
+        PhysAddr::new(DEFAULT_KERNEL_START)
+    } else {
+        // For an Elf kernel we copy the kernel image to a temporary location at the end of
+        // available mapped virtual memory where we can parse it.
+        find_suitable_dma_address(size, e820_table).expect("no suitable DMA address available")
+    };
+    let start_address = crate::phys_to_virt(dma_address);
     log::debug!("Kernel image size {}", size);
     log::debug!(
         "Kernel image start address {:#018x}",
@@ -117,9 +145,31 @@ pub fn try_load_kernel_image(
         .expect("could not read kernel file");
     assert_eq!(actual_size, size, "kernel size did not match expected size");
 
+    let measurement = crate::measure_byte_slice(buf);
+
+    if bzimage {
+        // For a bzImage the 64-bit entry point is at offset 0x200 from the start of the 64-bit
+        // kernel. See <https://www.kernel.org/doc/html/v6.3/x86/boot.html>.
+        let entry = start_address + 0x200usize;
+        log::debug!("Kernel entry point {:#018x}", entry.as_u64());
+        Some(KernelInfo {
+            start_address,
+            size,
+            entry,
+            measurement,
+        })
+    } else {
+        Some(parse_elf_file(buf, e820_table, measurement))
+    }
+}
+
+fn parse_elf_file(
+    buf: &[u8],
+    e820_table: &[BootE820Entry],
+    measurement: crate::Measurement,
+) -> KernelInfo {
     let mut kernel_start = VirtAddr::new(crate::TOP_OF_VIRTUAL_MEMORY);
     let mut kernel_end = VirtAddr::new(0);
-
     // We expect an uncompressed ELF kernel, so we parse it and lay it out in memory.
     let file = ElfBytes::<AnyEndian>::minimal_parse(buf).expect("couldn't parse kernel header");
 
@@ -147,11 +197,12 @@ pub fn try_load_kernel_image(
     log::debug!("Kernel start address {:#018x}", kernel_start.as_u64());
     log::debug!("Kernel entry point {:#018x}", entry.as_u64());
 
-    Some(KernelInfo {
+    KernelInfo {
         start_address: kernel_start,
         size: kernel_size,
         entry,
-    })
+        measurement,
+    }
 }
 
 /// Loads a segment from an ELF file into memory.

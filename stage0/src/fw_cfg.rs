@@ -34,6 +34,16 @@ const FWCFG_PORT_DMA: u16 = 0x514;
 
 const SIGNATURE: &[u8] = b"QEMU";
 
+bitflags! {
+    /// The interface features supported by the device.
+    struct Features: u8 {
+        /// Indicates that the device supports the traditional byte-by-byte interface.
+        const TRADITIONAL = 1 << 0;
+        /// Indicates that the device supports the DMA interface.
+        const DMA = 1 << 1;
+    }
+}
+
 /// A single 4KiB buffer that is 4KiB page-aligned.
 #[repr(C, align(4096))]
 #[derive(Debug)]
@@ -58,6 +68,7 @@ impl Default for DmaBuffer {
 #[repr(u16)]
 enum FwCfgItems {
     Signature = 0x0000,
+    Features = 0x0001,
     KernelAddr = 0x0007,
     KernelSize = 0x0008,
     InitrdAddr = 0x000a,
@@ -68,6 +79,9 @@ enum FwCfgItems {
     CmdlineAddr = 0x0013,
     CmdlineSize = 0x0014,
     CmdlineData = 0x0015,
+    SetupAddr = 0x0016,
+    SetupSize = 0x0017,
+    SetupData = 0x0018,
     FileDir = 0x0019,
     E820ReservationTable = 0x8003,
 }
@@ -98,6 +112,14 @@ impl Default for DirEntry {
 }
 
 impl DirEntry {
+    fn new_for_selector(size: u32, selector: FwCfgItems) -> Self {
+        Self {
+            size: size.to_be(),
+            select: (selector as u16).to_be(),
+            ..Default::default()
+        }
+    }
+
     pub fn name(&self) -> &CStr {
         CStr::from_bytes_until_nul(&self.name).unwrap()
     }
@@ -131,6 +153,7 @@ pub struct FwCfg {
     dma_low: PortWrapper<u32>,
     dma_buf: &'static mut DmaBuffer,
     dma_access: &'static mut FwCfgDmaAccess,
+    dma_enabled: bool,
 }
 
 impl FwCfg {
@@ -156,6 +179,7 @@ impl FwCfg {
             dma_low: port_factory.new_writer(FWCFG_PORT_DMA + 4),
             dma_buf,
             dma_access,
+            dma_enabled: false,
         };
 
         // Make sure the fw_cfg device is available. If the device is not available, writing and
@@ -163,6 +187,17 @@ impl FwCfg {
         fwcfg.write_selector(FwCfgItems::Signature as u16)?;
         let mut signature = [0u8; SIGNATURE.len()];
         fwcfg.read(&mut signature)?;
+
+        // Check whether DMA is enabled.
+        let mut features = 0u8;
+        fwcfg.write_selector(FwCfgItems::Features as u16)?;
+        fwcfg.read(&mut features)?;
+
+        let features =
+            Features::from_bits(features).ok_or("invalid fw_cfg device features received")?;
+        if features.contains(Features::DMA) {
+            fwcfg.dma_enabled = true;
+        }
 
         if signature == SIGNATURE {
             Ok(fwcfg)
@@ -245,10 +280,95 @@ impl FwCfg {
     pub fn read_file(&mut self, file: &DirEntry, buf: &mut [u8]) -> Result<usize, &'static str> {
         self.write_selector(file.selector())?;
         let len = min(buf.len(), file.size());
-        if self.read_buf_dma(&mut buf[..len]).is_err() {
+        if self.dma_enabled {
+            self.read_buf_dma(&mut buf[..len])?;
+        } else {
             self.read_buf(&mut buf[..len])?;
         }
         Ok(len)
+    }
+
+    /// Reads the size of the kernel command-line.
+    pub fn read_cmdline_size(&mut self) -> Result<u32, &'static str> {
+        let mut cmdline_size: u32 = 0;
+        self.write_selector(FwCfgItems::CmdlineSize as u16)?;
+        self.read(&mut cmdline_size)?;
+        Ok(cmdline_size)
+    }
+
+    /// Gets an unnamed file representation of the kernel command-line using the dedicated selector.
+    ///
+    /// Returns `None` if the kernel command-line size is 0.
+    pub fn get_cmdline_file(&mut self) -> Option<DirEntry> {
+        let size = self
+            .read_cmdline_size()
+            .expect("couldn't read cmdline size");
+        if size == 0 {
+            None
+        } else {
+            Some(DirEntry::new_for_selector(size, FwCfgItems::CmdlineData))
+        }
+    }
+
+    /// Reads the size of the initial RAM disk.
+    pub fn read_initrd_size(&mut self) -> Result<u32, &'static str> {
+        let mut initrd_size: u32 = 0;
+        self.write_selector(FwCfgItems::InitrdSize as u16)?;
+        self.read(&mut initrd_size)?;
+        Ok(initrd_size)
+    }
+
+    /// Gets an unnamed file representation of the initial RAM disk using the dedicated selector.
+    ///
+    /// Returns `None` if the initial RAM disk size is 0.
+    pub fn get_initrd_file(&mut self) -> Option<DirEntry> {
+        let size = self.read_initrd_size().expect("couldn't read initrd size");
+        if size == 0 {
+            None
+        } else {
+            Some(DirEntry::new_for_selector(size, FwCfgItems::InitrdData))
+        }
+    }
+
+    /// Reads the size of the kernel.
+    pub fn read_kernel_size(&mut self) -> Result<u32, &'static str> {
+        let mut kernel_size: u32 = 0;
+        self.write_selector(FwCfgItems::KernelSize as u16)?;
+        self.read(&mut kernel_size)?;
+        Ok(kernel_size)
+    }
+
+    /// Gets an unnamed file representation of the kernel using the dedicated selector.
+    ///
+    /// Returns `None` if the kernel size is 0.
+    pub fn get_kernel_file(&mut self) -> Option<DirEntry> {
+        let size = self.read_kernel_size().expect("couldn't read kernel size");
+        if size == 0 {
+            None
+        } else {
+            Some(DirEntry::new_for_selector(size, FwCfgItems::KernelData))
+        }
+    }
+
+    /// Reads the size of the setup information for the kernel.
+    pub fn read_setup_size(&mut self) -> Result<u32, &'static str> {
+        let mut setup_size: u32 = 0;
+        self.write_selector(FwCfgItems::SetupSize as u16)?;
+        self.read(&mut setup_size)?;
+        Ok(setup_size)
+    }
+
+    /// Gets an unnamed file representation of the kernel's setup information using the dedicated
+    /// selector.
+    ///
+    /// Returns `None` if the kernel size is 0.
+    pub fn get_setup_file(&mut self) -> Option<DirEntry> {
+        let size = self.read_setup_size().expect("couldn't read setup size");
+        if size == 0 {
+            None
+        } else {
+            Some(DirEntry::new_for_selector(size, FwCfgItems::SetupData))
+        }
     }
 
     fn write_selector(&mut self, selector: u16) -> Result<(), &'static str> {
@@ -271,7 +391,6 @@ impl FwCfg {
 
     fn read_buf_dma(&mut self, buf: &mut [u8]) -> Result<(), &'static str> {
         let mut chunks_mut = buf.chunks_mut(Size4KiB::SIZE as usize);
-
         for chunk in chunks_mut.by_ref() {
             self.read_chunk_dma(chunk)?;
         }

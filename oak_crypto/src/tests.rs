@@ -44,7 +44,7 @@ const TEST_SESSION_SIZE: usize = 8;
 
 #[test]
 fn test_aead() {
-    let encrypted_message = crate::hpke::aead::_encrypt(
+    let encrypted_message = crate::hpke::aead::encrypt(
         &TEST_AEAD_KEY,
         &TEST_NONCE,
         TEST_REQUEST_MESSAGE,
@@ -53,7 +53,7 @@ fn test_aead() {
     .expect("couldn't encrypt test message");
     // Check that the message was encrypted.
     assert_ne!(TEST_REQUEST_MESSAGE, encrypted_message);
-    let decrypted_message = crate::hpke::aead::_decrypt(
+    let decrypted_message = crate::hpke::aead::decrypt(
         &TEST_AEAD_KEY,
         &TEST_NONCE,
         &encrypted_message,
@@ -67,13 +67,12 @@ fn test_aead() {
 #[test]
 fn test_hpke() {
     let recipient_key_pair = KeyPair::generate();
-    let (serialized_encapsulated_public_key, mut sender_context, mut sender_response_context) =
-        setup_base_sender(
-            &recipient_key_pair.get_serialized_public_key(),
-            TEST_HPKE_INFO,
-        )
-        .expect("couldn't setup base sender");
-    let (mut recipient_context, mut recipient_response_context) = setup_base_recipient(
+    let (serialized_encapsulated_public_key, mut sender_context) = setup_base_sender(
+        &recipient_key_pair.get_serialized_public_key(),
+        TEST_HPKE_INFO,
+    )
+    .expect("couldn't setup base sender");
+    let mut recipient_context = setup_base_recipient(
         &serialized_encapsulated_public_key,
         &recipient_key_pair,
         TEST_HPKE_INFO,
@@ -90,20 +89,18 @@ fn test_hpke() {
             .seal(&test_request_message, &test_request_associated_data)
             .expect("sender context couldn't seal request");
         // Check that the message was encrypted.
-        // TODO(#3642): Uncomment message encryption/decryption once Java encryption is implemented.
-        // assert_ne!(test_request_message, encrypted_request);
+        assert_ne!(test_request_message, encrypted_request);
         let decrypted_request = recipient_context
             .open(&encrypted_request, &test_request_associated_data)
             .expect("recipient context couldn't open request");
         assert_eq!(test_request_message, decrypted_request);
 
-        let encrypted_response = recipient_response_context
+        let encrypted_response = recipient_context
             .seal(&test_response_message, &test_response_associated_data)
             .expect("recipient context couldn't seal response");
         // Check that the message was encrypted.
-        // TODO(#3642): Uncomment message encryption/decryption once Java encryption is implemented.
-        // assert_ne!(test_response_message, encrypted_response);
-        let decrypted_response = sender_response_context
+        assert_ne!(test_response_message, encrypted_response);
+        let decrypted_response = sender_context
             .open(&encrypted_response, &test_response_associated_data)
             .expect("sender couldn't open response");
         assert_eq!(test_response_message, decrypted_response);
@@ -129,8 +126,14 @@ fn test_encryptor() {
             .encrypt(&test_request_message, &test_request_associated_data)
             .expect("client couldn't encrypt request");
         // Check that the message was encrypted.
-        // TODO(#3642): Uncomment message encryption/decryption once Java encryption is implemented.
-        // assert_ne!(test_request_message, encrypted_request);
+        assert_ne!(
+            test_request_message,
+            encrypted_request
+                .encrypted_message
+                .clone()
+                .unwrap()
+                .ciphertext
+        );
         let (decrypted_request, request_associated_data) = server_encryptor
             .decrypt(&encrypted_request)
             .expect("server couldn't decrypt request");
@@ -141,8 +144,14 @@ fn test_encryptor() {
             .encrypt(&test_response_message, &test_response_associated_data)
             .expect("server couldn't encrypt response");
         // Check that the message was encrypted.
-        // TODO(#3642): Uncomment message encryption/decryption once Java encryption is implemented.
-        // assert_ne!(test_response_message, encrypted_response);
+        assert_ne!(
+            test_response_message,
+            encrypted_response
+                .encrypted_message
+                .clone()
+                .unwrap()
+                .ciphertext
+        );
         let (decrypted_response, response_associated_data) = client_encryptor
             .decrypt(&encrypted_response)
             .expect("client couldn't decrypt response");

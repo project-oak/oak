@@ -19,17 +19,14 @@
 
 extern crate test;
 
-use oak_crypto::{
-    encryptor::{ClientEncryptor, EncryptionKeyProvider},
-    proto::oak::crypto::v1::EncryptedResponse,
-};
+use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedResponse};
 use oak_functions_launcher::{
     proto::oak::functions::{InvokeRequest, OakFunctionsAsyncClient},
     LookupDataConfig,
 };
 use oak_launcher_utils::launcher;
 use prost::Message;
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 use test::Bencher;
 use ubyte::ByteUnit;
 use xtask::workspace_path;
@@ -65,7 +62,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
             .expect("Failed to build oak_functions_enclave_app");
 
-    let params = launcher::virtualized::Params {
+    let params = launcher::Params {
         enclave_binary: workspace_path(&[
             "oak_restricted_kernel_bin",
             "target",
@@ -96,9 +93,9 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         max_chunk_size: ByteUnit::Gibibyte(2),
     };
 
-    let (launched_instance, connector_handle, _) = runtime
+    let (launched_instance, connector_handle, initialize_response) = runtime
         .block_on(oak_functions_launcher::create(
-            launcher::GuestMode::Virtualized(params),
+            params,
             lookup_data_config,
             config.wasm_path.to_path_buf(),
             constant_response_size,
@@ -106,8 +103,10 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         .expect("Failed to create launcher");
     log::info!("created launcher instance");
 
-    let key_provider = Arc::new(EncryptionKeyProvider::new());
-    let serialized_server_public_key = key_provider.get_serialized_public_key();
+    let serialized_server_public_key = initialize_response
+        .public_key_info
+        .expect("initialize response doesn't have public key info")
+        .public_key;
 
     let mut client_encryptor = ClientEncryptor::create(&serialized_server_public_key)
         .expect("couldn't create client encryptor");

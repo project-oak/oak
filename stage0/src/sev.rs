@@ -435,8 +435,13 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
         PageTableFlags::PRESENT,
     );
 
+    // We already pvalidated the memory in the first 640KiB of RAM in the boot assembly code. We
+    // avoid redoing this as calling pvalidate again on these pages leads to unexpected results,
+    // such us removing the shared state from the RMP for the fw_cfg DMA buffer.
+    let min_addr = 0xA0000;
+
     for entry in e820_table {
-        if entry.entry_type() != Some(E820EntryType::RAM) {
+        if entry.entry_type() != Some(E820EntryType::RAM) || entry.addr() < min_addr {
             continue;
         }
 

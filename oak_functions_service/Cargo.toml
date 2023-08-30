@@ -7,22 +7,23 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
+byteorder = { version = "*", default-features = false }
 hashbrown = "*"
 log = "*"
 micro_rpc = { workspace = true }
 oak_crypto = { workspace = true }
-oak_functions_wasm = { workspace = true }
 oak_functions_abi = { workspace = true }
-oak_functions_lookup = { workspace = true }
-oak_functions_workload_logging = { workspace = true }
+oak_functions_sdk = { workspace = true }
 oak_remote_attestation = { workspace = true }
-oak_logger = { workspace = true }
 prost = { workspace = true }
+spinning_top = "*"
+wasmi = { version = "*", default-features = false }
 
 [build-dependencies]
 micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
+env_logger = { version = "*", default-features = false }
 oak_functions_test_utils = { workspace = true }
 oak_remote_attestation = { workspace = true }
 async-trait = "*"

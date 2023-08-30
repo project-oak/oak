@@ -68,9 +68,10 @@ fn build_bazel_target(target_dir: &str, target: &str) -> PathBuf {
     let dependency_paths = from_utf8(&output.stdout)
         .expect("couldn't parse bazel query output")
         .split('\n')
-        .map(build_target_to_path)
+        .filter_map(build_target_to_path)
         .collect::<Vec<_>>();
 
+    println!("deps={:?}\n", dependency_paths);
     // Rerun `build.rs` next time one of the dependencies has been updated.
     for path in dependency_paths {
         rerun_if_changed(&path);
@@ -94,13 +95,21 @@ fn build_bazel_target(target_dir: &str, target: &str) -> PathBuf {
         .collect();
 }
 
-fn build_target_to_path(target: &str) -> PathBuf {
-    let file_path = target
-        .split("//")
-        .last()
-        .expect("couldn't remove bazel build target prefix")
-        .replace(':', "/");
-    return [env!("WORKSPACE_ROOT"), &file_path].iter().collect();
+fn build_target_to_path(target: &str) -> Option<PathBuf> {
+    if target.starts_with('@') {
+        None
+    } else {
+        let file_path = target
+            .split("//")
+            .last()
+            .expect("couldn't remove bazel build target prefix")
+            .replace(':', "/");
+        if file_path.is_empty() {
+            None
+        } else {
+            Some([env!("WORKSPACE_ROOT"), &file_path].iter().collect())
+        }
+    }
 }
 
 fn rerun_if_changed<P: AsRef<Path>>(path: P) {

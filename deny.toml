@@ -12,8 +12,8 @@ unsound = "deny"
 yanked = "deny"
 notice = "deny"
 ignore = [
-  # TODO(#3845): Stop ignoring when the colored crate no longer relies on atty.
-  "RUSTSEC-2021-0145",
+  # TODO(#4251): Remove once the webpki crate is fixed.
+  "RUSTSEC-2023-0052",
 ]
 
 [bans]

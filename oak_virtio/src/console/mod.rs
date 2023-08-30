@@ -219,7 +219,7 @@ impl<'a, T, A: Allocator> Read for Console<'a, T, A>
 where
     T: VirtioTransport,
 {
-    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
+    fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let len = data.len();
         let mut count = 0;
         while count < len {
@@ -234,7 +234,7 @@ impl<'a, T, A: Allocator> Write for Console<'a, T, A>
 where
     T: VirtioTransport,
 {
-    fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
+    fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut start = 0;
         let data_len = data.len();
         while start < data_len {

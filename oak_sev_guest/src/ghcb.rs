@@ -198,10 +198,13 @@ impl AsRef<Ghcb> for Ghcb {
 
 static_assertions::assert_eq_size!(Ghcb, [u8; GHCB_PAGE_SIZE]);
 
+/// Flags indicating which fields in a specific GHCB instance are valid.
+#[derive(Debug, Default, FromBytes)]
+#[repr(transparent)]
+pub struct ValidBitmap(u128);
+
 bitflags! {
-    /// Flags indicating which fields in a specific GHCB instance are valid.
-    #[derive(Default, FromBytes)]
-    pub struct ValidBitmap: u128 {
+    impl ValidBitmap: u128 {
         const CPL = (1 << 25);
         const XSS = (1 << 40);
         const DR7 = (1 << 44);

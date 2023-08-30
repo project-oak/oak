@@ -12,4 +12,4 @@ rlsf = "*"
 log = "*"
 oak_restricted_kernel_api = { workspace = true }
 oak_restricted_kernel_interface = { workspace = true }
-spinning_top = { version = "*" }
+spinning_top = "*"

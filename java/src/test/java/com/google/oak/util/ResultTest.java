@@ -19,6 +19,8 @@ package com.google.oak.util;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
 
 public class ResultTest {
@@ -38,6 +40,46 @@ public class ResultTest {
     assertTrue(error.isError());
     assertEquals(ERR_MSG, error.error().get());
     assertTrue(error.success().isEmpty());
+  }
+
+  @Test
+  public void testOrElseForSuccess() {
+    int value = Result.success(1).orElse(2);
+    assertEquals(1, value);
+  }
+
+  @Test
+  public void testOrElseForError() {
+    int value = (Integer) Result.error("error").orElse(2);
+    assertEquals(2, value);
+  }
+
+  @Test
+  public void testIfSuccessForSuccess() {
+    AtomicInteger value = new AtomicInteger(0);
+    Result.success(1).ifSuccess(value::set);
+    assertEquals(1, value.get());
+  }
+
+  @Test
+  public void testIfSuccessForError() {
+    AtomicInteger value = new AtomicInteger(0);
+    Result.error("error").ifSuccess(o -> value.set((Integer) o));
+    assertEquals(0, value.get());
+  }
+
+  @Test
+  public void testIfErrorForSuccess() {
+    AtomicInteger value = new AtomicInteger();
+    Result.success(1).ifError(o -> value.set((Integer) o));
+    assertEquals(0, value.get());
+  }
+
+  @Test
+  public void testIfErrorForError() {
+    AtomicInteger value = new AtomicInteger(0);
+    Result.error(2).ifError(value::set);
+    assertEquals(2, value.get());
   }
 
   @Test

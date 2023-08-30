@@ -22,41 +22,53 @@ package(
 # Libraries
 
 cc_library(
-    name = "crypto_provider",
-    hdrs = ["crypto_provider.h"],
-    deps = [
-        "@com_google_absl//absl/status:statusor",
-    ],
-)
-
-cc_library(
-    name = "evidence_provider",
-    hdrs = ["evidence_provider.h"],
-    deps = [
-        "//oak_remote_attestation/proto/v1:messages_cc_proto",
-    ],
-)
-
-cc_library(
     name = "client",
     srcs = ["client.cc"],
     hdrs = ["client.h"],
     deps = [
-        ":crypto_provider",
-        ":evidence_provider",
-        ":verifier",
+        "//cc/crypto:client_encryptor",
+        "//cc/crypto:common",
+        "//cc/remote_attestation:attestation_verifier",
         "//cc/transport",
         "//oak_remote_attestation/proto/v1:messages_cc_proto",
+        "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
     ],
 )
 
-cc_library(
-    name = "verifier",
-    hdrs = ["verifier.h"],
+# Tests
+
+cc_test(
+    name = "client_test",
+    size = "small",
+    srcs = ["client_test.cc"],
     deps = [
-        ":evidence_provider",
+        ":client",
+        "//cc/crypto:server_encryptor",
+        "//cc/crypto/hpke:recipient_context",
+        "//cc/remote_attestation:insecure_attestation_verifier",
+        "//cc/transport",
         "//oak_remote_attestation/proto/v1:messages_cc_proto",
-        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+# Binaries
+
+cc_binary(
+    name = "cli",
+    srcs = ["grpc_client_cli.cc"],
+    deps = [
+        ":client",
+        "//cc/remote_attestation:insecure_attestation_verifier",
+        "//cc/transport:grpc_streaming_transport",
+        "//oak_remote_attestation/proto/v1:service_streaming_cc_grpc",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/flags:flag",
+        "@com_google_absl//absl/flags:parse",
+        "@com_google_absl//absl/log",
     ],
 )

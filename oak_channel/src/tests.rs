@@ -79,14 +79,14 @@ struct MessageStore {
 }
 
 impl Read for MessageStore {
-    fn read(&mut self, buf: &mut [u8]) -> anyhow::Result<()> {
+    fn read_exact(&mut self, buf: &mut [u8]) -> anyhow::Result<()> {
         buf.fill_with(|| self.inner.pop_front().unwrap());
         Ok(())
     }
 }
 
 impl Write for MessageStore {
-    fn write(&mut self, buf: &[u8]) -> anyhow::Result<()> {
+    fn write_all(&mut self, buf: &[u8]) -> anyhow::Result<()> {
         self.inner.reserve(buf.len());
         self.inner.extend(buf);
         Ok(())
