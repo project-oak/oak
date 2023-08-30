@@ -69,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         path.push(IPC_SOCKET_FILE_NAME);
         path
     };
-    let (shutdown_sender, shutdown_receiver) = channel::<()>();
+    let (exit_notification_sender, shutdown_receiver) = channel::<()>();
 
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
@@ -80,7 +80,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             launcher_client,
             shutdown_receiver
         ),
-        oak_containers_orchestrator::container_runtime::run(&container_bundle, shutdown_sender)
+        oak_containers_orchestrator::container_runtime::run(
+            &container_bundle,
+            exit_notification_sender
+        )
     )?;
 
     Ok(())

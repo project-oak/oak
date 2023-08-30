@@ -76,7 +76,7 @@ async fn rmount_dir(source: PathBuf, target: PathBuf) -> Result<(), anyhow::Erro
 
 pub async fn run(
     container_bundle: &[u8],
-    shutdown_sender: Sender<()>,
+    exit_notification_sender: Sender<()>,
 ) -> Result<(), anyhow::Error> {
     tokio::fs::create_dir(CONTAINER_DIR).await?;
     log::info!("Unpacking container bundle");
@@ -181,6 +181,6 @@ pub async fn run(
         .await?;
     log::info!("Container exited with status {status:?}");
 
-    let _ = shutdown_sender.send(());
+    let _ = exit_notification_sender.send(());
     Ok(())
 }
