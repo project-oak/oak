@@ -210,30 +210,6 @@
 <a href="#210" id="210">210</a>
 <a href="#211" id="211">211</a>
 <a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
-<a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -259,7 +235,7 @@
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
 <span class="kw">use </span>alloc::{sync::Arc, vec::Vec};
-<span class="kw">use </span>anyhow::{anyhow, Context};
+<span class="kw">use </span>anyhow::Context;
 
 <span class="doccomment">/// Info string used by Hybrid Public Key Encryption;
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>OAK_HPKE_INFO: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;Oak Hybrid Public Key Encryption v1&quot;</span>;
@@ -382,22 +358,26 @@
 <span class="doccomment">/// Encryptor object for decrypting client requests that are received by the server and encrypting
 /// server responses that will be sent back to the client. Each Encryptor object corresponds to a
 /// single crypto session between the client and the server.
-/// Encryptor state is initialized after receiving an initial request message containing client&#39;s
-/// encapsulated public key.
 ///
 /// Sequence numbers for requests and responses are incremented separately, meaning that there could
 /// be multiple responses per request and multiple requests per response.
 </span><span class="kw">pub struct </span>ServerEncryptor {
-    recipient_context_generator: Arc&lt;<span class="kw">dyn </span>RecipientContextGenerator&gt;,
-    recipient_context: <span class="prelude-ty">Option</span>&lt;RecipientContext&gt;,
+    recipient_context: RecipientContext,
 }
 
 <span class="kw">impl </span>ServerEncryptor {
-    <span class="kw">pub fn </span>new(recipient_context_generator: Arc&lt;<span class="kw">dyn </span>RecipientContextGenerator&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            recipient_context_generator,
-            recipient_context: <span class="prelude-val">None</span>,
-        }
+    <span class="kw">pub fn </span>create(
+        serialized_encapsulated_public_key: <span class="kw-2">&amp;</span>[u8],
+        recipient_context_generator: Arc&lt;<span class="kw">dyn </span>RecipientContextGenerator&gt;,
+    ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span>recipient_context = recipient_context_generator
+            .generate_recipient_context(serialized_encapsulated_public_key)
+            .context(<span class="string">&quot;couldn&#39;t generate recipient crypto context&quot;</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span>::new(recipient_context))
+    }
+
+    <span class="kw">pub fn </span>new(recipient_context: RecipientContext) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ recipient_context }
     }
 
     <span class="doccomment">/// Decrypts a [`EncryptedRequest`] proto message using AEAD.
@@ -407,34 +387,12 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
     ) -&gt; anyhow::Result&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
-        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.recipient_context {
-            <span class="prelude-val">Some</span>(context) =&gt; <span class="self">Self</span>::decrypt_with_context(encrypted_request, context),
-            <span class="prelude-val">None </span>=&gt; {
-                <span class="kw">let </span>serialized_encapsulated_public_key = encrypted_request
-                    .serialized_encapsulated_public_key
-                    .as_ref()
-                    .context(<span class="string">&quot;initial request message doesn&#39;t contain encapsulated public key&quot;</span>)<span class="question-mark">?</span>;
-                <span class="kw">let </span><span class="kw-2">mut </span>recipient_context = <span class="self">self
-                    </span>.recipient_context_generator
-                    .generate_recipient_context(serialized_encapsulated_public_key)
-                    .context(<span class="string">&quot;couldn&#39;t generate recipient crypto context&quot;</span>)<span class="question-mark">?</span>;
-                <span class="kw">let </span>(plaintext, associated_data) =
-                    <span class="self">Self</span>::decrypt_with_context(encrypted_request, <span class="kw-2">&amp;mut </span>recipient_context)<span class="question-mark">?</span>;
-                <span class="self">self</span>.recipient_context = <span class="prelude-val">Some</span>(recipient_context);
-                <span class="prelude-val">Ok</span>((plaintext, associated_data))
-            }
-        }
-    }
-
-    <span class="kw">fn </span>decrypt_with_context(
-        encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
-        context: <span class="kw-2">&amp;mut </span>RecipientContext,
-    ) -&gt; anyhow::Result&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
         <span class="kw">let </span>encrypted_message = encrypted_request
             .encrypted_message
             .as_ref()
             .context(<span class="string">&quot;request doesn&#39;t contain encrypted message&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>plaintext = context
+        <span class="kw">let </span>plaintext = <span class="self">self
+            </span>.recipient_context
             .open(
                 <span class="kw-2">&amp;</span>encrypted_message.ciphertext,
                 <span class="kw-2">&amp;</span>encrypted_message.associated_data,
@@ -451,23 +409,17 @@
         plaintext: <span class="kw-2">&amp;</span>[u8],
         associated_data: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
-        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.recipient_context {
-            <span class="prelude-val">Some</span>(context) =&gt; {
-                <span class="kw">let </span>ciphertext = context
-                    .seal(plaintext, associated_data)
-                    .context(<span class="string">&quot;couldn&#39;t encrypt response&quot;</span>)<span class="question-mark">?</span>;
-                <span class="kw">let </span>response = EncryptedResponse {
-                    encrypted_message: <span class="prelude-val">Some</span>(AeadEncryptedMessage {
-                        ciphertext,
-                        associated_data: associated_data.to_vec(),
-                    }),
-                };
-                <span class="prelude-val">Ok</span>(response)
-            }
-            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;couldn&#39;t encrypt response because crypto context is not initialized&quot;
-            </span>)),
-        }
+        <span class="kw">let </span>ciphertext = <span class="self">self
+            </span>.recipient_context
+            .seal(plaintext, associated_data)
+            .context(<span class="string">&quot;couldn&#39;t encrypt response&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>response = EncryptedResponse {
+            encrypted_message: <span class="prelude-val">Some</span>(AeadEncryptedMessage {
+                ciphertext,
+                associated_data: associated_data.to_vec(),
+            }),
+        };
+        <span class="prelude-val">Ok</span>(response)
     }
 }
 </code></pre></div></section></main></body></html>

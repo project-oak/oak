@@ -81,6 +81,17 @@
 <a href="#81" id="81">81</a>
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -137,12 +148,23 @@
 
 <span class="kw">impl</span>&lt;H: FnOnce(Vec&lt;u8&gt;) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt;&gt; EncryptionHandler&lt;H&gt; {
     <span class="kw">pub fn </span>invoke(<span class="self">self</span>, request_body: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>server_encryptor = ServerEncryptor::new(<span class="self">self</span>.encryption_key_provider.clone());
-
-        <span class="comment">// Deserialize and decrypt request.
+        <span class="comment">// Deserialize request.
         </span><span class="kw">let </span>encrypted_request = EncryptedRequest::decode(request_body)
             .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialize request: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
-        <span class="kw">let </span>(request, <span class="kw">_</span>) = server_encryptor
+
+        <span class="comment">// Initialize server encryptor.
+        </span><span class="kw">let </span>serialized_encapsulated_public_key = encrypted_request
+            .serialized_encapsulated_public_key
+            .as_ref()
+            .expect(<span class="string">&quot;initial request message doesn&#39;t contain encapsulated public key&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>server_encryptor = ServerEncryptor::create(
+            serialized_encapsulated_public_key,
+            <span class="self">self</span>.encryption_key_provider.clone(),
+        )
+        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t create server encryptor: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+
+        <span class="comment">// Decrypt request.
+        </span><span class="kw">let </span>(request, <span class="kw">_</span>) = server_encryptor
             .decrypt(<span class="kw-2">&amp;</span>encrypted_request)
             .context(<span class="string">&quot;couldn&#39;t decrypt request&quot;</span>)<span class="question-mark">?</span>;
 
