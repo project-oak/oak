@@ -136,7 +136,7 @@ fn test_encryptor() {
         );
 
         // Initialize server encryptor.
-        if server_encryptor.as_mut().is_none() {
+        if server_encryptor.is_none() {
             let serialized_encapsulated_public_key = encrypted_request
                 .serialized_encapsulated_public_key
                 .as_ref()
