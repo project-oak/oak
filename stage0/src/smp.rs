@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use core::ffi::c_void;
+use core::{arch::x86_64::_mm_pause, ffi::c_void};
 
 use oak_sev_guest::io::PortFactoryWrapper;
 use x86_64::PhysAddr;
@@ -32,14 +32,25 @@ extern "C" {
 
 pub fn start_ap(lapic: &mut Lapic, physical_apic_id: u32) -> Result<(), &'static str> {
     lapic.send_init_ipi(physical_apic_id)?;
-    // TODO(#4235): wait 10 ms
+    // TODO(#4235): wait 10 ms. The numbers chosen here are arbitrary and have no connection to
+    // actual seconds.
+    for _ in 1..(1 << 15) {
+        // Safety: SSE2 is supported in all 64-bit processors.
+        unsafe { _mm_pause() };
+    }
     // Safety: we're not going to dereference the memory, we're just interested in the pointer
     // value.
     // We also mask the high bits, as the AP will be in the 'magic' real mode that reads data from
     // the end of the 4 GiB space (aka the BIOS area) much like the BSP.
     let vector = unsafe { &AP_START as *const _ as u64 } & 0xFFFFF;
-    lapic.send_startup_ipi(physical_apic_id, PhysAddr::new(vector))
-    // TODO(#4235): wait 200 us, send SIPI again if the core hasn't started
+    lapic.send_startup_ipi(physical_apic_id, PhysAddr::new(vector))?;
+    // TODO(#4235): wait 200 us (instead of _some_ unknown amount of time); send SIPI again if the
+    // core hasn't started
+    for _ in 1..(1 << 12) {
+        // Safety: SSE2 is supported in all 64-bit processors.
+        unsafe { _mm_pause() };
+    }
+    Ok(())
 }
 
 // TODO(#4235): Bootstrap the APs.
