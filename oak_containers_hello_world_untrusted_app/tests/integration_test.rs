@@ -16,7 +16,10 @@
 //! Integration test that launches the trusted app and invokes it.
 
 use oak_containers_launcher::Args;
+use oak_crypto::encryptor::ClientEncryptor;
 use std::sync::Once;
+
+const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 static INIT: Once = Once::new();
 
@@ -46,11 +49,27 @@ async fn hello_world() {
 
     let get_endorsed_evidence_result = untrusted_app.get_endorsed_evidence().await;
     assert!(get_endorsed_evidence_result.is_ok());
+    let endorsed_evidence = get_endorsed_evidence_result.unwrap();
+    let encryption_public_key = endorsed_evidence
+        .attestation_evidence
+        .expect("no attestation evidence provided")
+        .encryption_public_key;
 
-    let greeting = untrusted_app
-        .hello("fancy test")
+    let mut client_encryptor =
+        ClientEncryptor::create(&encryption_public_key).expect("couldn't create client encryptor");
+    let encrypted_request = client_encryptor
+        .encrypt("fancy test".as_bytes(), EMPTY_ASSOCIATED_DATA)
+        .expect("couldn't encrypt request");
+
+    let encrypted_response = untrusted_app
+        .hello(encrypted_request)
         .await
         .expect("couldn't get greeting");
+
+    let (response, _) = client_encryptor
+        .decrypt(&encrypted_response)
+        .expect("couldn't decrypt response");
+    let greeting = String::from_utf8(response).expect("couldn't parse response");
 
     untrusted_app.kill().await;
 

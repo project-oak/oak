@@ -65,11 +65,12 @@ impl OrchestratorClient {
     }
 
     pub async fn get_crypto_context(
-        &mut self,
+        &self,
         serialized_encapsulated_public_key: &[u8],
     ) -> Result<CryptoContext, Box<dyn std::error::Error>> {
         let context = self
             .inner
+            .clone()
             .get_crypto_context(GetCryptoContextRequest {
                 serialized_encapsulated_public_key: serialized_encapsulated_public_key.to_vec(),
             })
