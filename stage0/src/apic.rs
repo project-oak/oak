@@ -151,11 +151,11 @@ mod xapic {
             self.interrupt_command_register_high
                 .write((destination as u32) << 24);
             self.interrupt_command_register_low.write(
-                (destination_shorthand as u32) << 18
-                    | (trigger_mode as u32) << 15
-                    | (level as u32) << 14
-                    | (destination_mode as u32) << 11
-                    | (message_type as u32) << 8
+                destination_shorthand as u32
+                    | trigger_mode as u32
+                    | level as u32
+                    | destination_mode as u32
+                    | message_type as u32
                     | vector as u32,
             );
             Ok(())
@@ -270,11 +270,11 @@ mod x2apic {
             destination_shorthand: super::DestinationShorthand,
         ) -> Result<(), &'static str> {
             let mut value: u64 = (destination as u64) << 32;
-            value |= (destination_shorthand as u64) << 18;
-            value |= (trigger_mode as u64) << 15;
-            value |= (level as u64) << 14;
-            value |= (destination_mode as u64) << 11;
-            value |= (message_type as u64) << 8;
+            value |= destination_shorthand as u64;
+            value |= trigger_mode as u64;
+            value |= level as u64;
+            value |= destination_mode as u64;
+            value |= message_type as u64;
             value |= vector as u64;
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
             unsafe { self.0.write(value) };
@@ -437,27 +437,28 @@ impl ApicBase {
 /// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer's Manual,
 /// Volume 2 for more details.
 #[allow(dead_code, clippy::upper_case_acronyms)]
+#[repr(u32)]
 pub enum MessageType {
     /// IPI delivers an interrupt to the target local APIC specified in the Destination field.
-    Fixed = 0b000,
+    Fixed = 0b000 << 8,
 
     /// IPI delivers an SMI interrupt to the target local APIC(s). Trigger mode is edge-triggered
     /// and Vector must be 0x00.
-    SMI = 0b010,
+    SMI = 0b010 << 8,
 
     // IPI delivers an non-maskable interrupt to the target local APIC specified in the
     // Destination field. Vector is ignored.
-    NMI = 0b100,
+    NMI = 0b100 << 8,
 
     /// IPI delivers an INIT request to the target local APIC(s), causing the CPU core to assume
     /// INIT state. Trigger mode is edge-triggered, Vector must be 0x00. After INIT, target APIC
     /// will only accept a Startup IPI, all other interrupts will be held pending.
-    Init = 0b101,
+    Init = 0b101 << 8,
 
     /// IPI delives a start-up request (SIPI) to the target local APIC(s) in the Destination field,
     /// causing the core to start processing the routing whose address is specified by the Vector
     /// field.
-    Startup = 0b110,
+    Startup = 0b110 << 8,
 }
 
 /// Values for the destination mode flag in the Interrupt Command Register.
@@ -465,30 +466,33 @@ pub enum MessageType {
 /// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer's Manual,
 /// Volume 2 for more details.
 #[allow(dead_code)]
+#[repr(u32)]
 pub enum DestinationMode {
     // Physical destination, single local APIC ID.
-    Physical = 0,
+    Physical = 0 << 11,
 
     /// Logical destination, one or more local APICs with a common destination logical ID.
-    Logical = 1,
+    Logical = 1 << 11,
 }
 
 /// Values for the level flag in the Interrupt Command Register.
 ///
 /// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer's Manual,
 /// Volume 2 for more details.
+#[repr(u32)]
 pub enum Level {
-    Deassert = 0,
-    Assert = 1,
+    Deassert = 0 << 14,
+    Assert = 1 << 14,
 }
 
 /// Values for the trigger mode flag in the Interrupt Command Register.
 ///
 /// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer's Manual,
 /// Volume 2 for more details.
+#[repr(u32)]
 pub enum TriggerMode {
-    Edge = 0,
-    Level = 1,
+    Edge = 0 << 15,
+    Level = 1 << 15,
 }
 
 /// Values for the destination shorthand flag in the Interrupt Command Register.
@@ -496,18 +500,19 @@ pub enum TriggerMode {
 /// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer's Manual,
 /// Volume 2 for more details.
 #[allow(dead_code)]
+#[repr(u32)]
 pub enum DestinationShorthand {
     /// Destination field is required to specify the destination.
-    DestinationField = 0b00,
+    DestinationField = 0b00 << 18,
 
     /// The issuing APIC is the only destination.
-    SelfOnly = 0b01,
+    SelfOnly = 0b01 << 18,
 
     /// The IPI is sent to all local APICs including itself (destination field = 0xFF)
-    AllInclSelf = 0b10,
+    AllInclSelf = 0b10 << 18,
 
     /// The IPI is sent to all local APICs except itself (destination field = 0xFF)
-    AllExclSelf = 0b11,
+    AllExclSelf = 0b11 << 18,
 }
 
 enum Apic {
