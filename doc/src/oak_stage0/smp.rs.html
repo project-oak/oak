@@ -110,6 +110,38 @@
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
 <a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -126,7 +158,11 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>core::{arch::x86_64::_mm_pause, ffi::c_void};
+</span><span class="kw">use </span>core::{
+    arch::x86_64::_mm_pause,
+    ffi::c_void,
+    sync::atomic::{AtomicU32, Ordering},
+};
 
 <span class="kw">use </span>oak_sev_guest::io::PortFactoryWrapper;
 <span class="kw">use </span>x86_64::PhysAddr;
@@ -141,6 +177,11 @@
     <span class="attr">#[link_name = <span class="string">&quot;ap_start&quot;</span>]
     </span><span class="kw">static </span>AP_START: c_void;
 }
+
+<span class="comment">// This symbol will be referenced from outside Rust, from the AP bootstrap code, to denote that an
+// AP has become alive.
+</span><span class="attr">#[no_mangle]
+</span><span class="kw">static </span>LIVE_AP_COUNT: AtomicU32 = AtomicU32::new(<span class="number">0</span>);
 
 <span class="kw">pub fn </span>start_ap(lapic: <span class="kw-2">&amp;mut </span>Lapic, physical_apic_id: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     lapic.send_init_ipi(physical_apic_id)<span class="question-mark">?</span>;
@@ -186,6 +227,9 @@
 
     <span class="kw">let </span>local_apic_id = lapic.local_apic_id();
 
+    <span class="comment">// How many APs do we expect to come online?
+    </span><span class="kw">let </span><span class="kw-2">mut </span>expected_aps = <span class="number">0</span>;
+
     <span class="comment">// APIC and X2APIC structures are largely the same; X2APIC entries are used if the APIC ID is
     // too large to fit into the one-byte field of the APIC structure (e.g. if you have more than
     // 256 CPUs).
@@ -217,7 +261,27 @@
             </span><span class="kw">continue</span>;
         }
 
+        expected_aps += <span class="number">1</span>;
         start_ap(<span class="kw-2">&amp;mut </span>lapic, remote_lapic_id)<span class="question-mark">?</span>;
+    }
+
+    <span class="comment">// Wait until all APs have told they are online. Or we time out waiting for them.
+    // The timeout has been chosen arbitrarily and may need to be tuned.
+    </span><span class="kw">for _ in </span><span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; <span class="number">23</span>) {
+        <span class="kw">if </span>LIVE_AP_COUNT.load(Ordering::SeqCst) == expected_aps {
+            <span class="kw">break</span>;
+        }
+        <span class="comment">// Safety: SSE2 is supported in all 64-bit processors.
+        </span><span class="kw">unsafe </span>{ _mm_pause() };
+    }
+    <span class="macro">log::info!</span>(
+        <span class="string">&quot;Expected number of APs: {}, started number of APs: {}&quot;</span>,
+        expected_aps,
+        LIVE_AP_COUNT.load(Ordering::SeqCst)
+    );
+
+    <span class="kw">if </span>LIVE_AP_COUNT.load(Ordering::SeqCst) != expected_aps {
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;not all APs came online&quot;</span>);
     }
 
     <span class="prelude-val">Ok</span>(())
