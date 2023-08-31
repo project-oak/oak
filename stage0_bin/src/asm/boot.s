@@ -4,9 +4,8 @@
 .align 4096
 .global ap_start
 ap_start:
-    mov $'!', %al
-    mov $0x3f8, %dx
-    out %al, %dx
+    # Let the BSP know we're alive.
+    lock incl (LIVE_AP_COUNT)
 1:
     hlt
     jmp 1b
