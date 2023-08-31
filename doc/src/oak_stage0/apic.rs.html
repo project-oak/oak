@@ -659,6 +659,11 @@
 <a href="#659" id="659">659</a>
 <a href="#660" id="660">660</a>
 <a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -812,12 +817,12 @@
             <span class="self">self</span>.interrupt_command_register_high
                 .write((destination <span class="kw">as </span>u32) &lt;&lt; <span class="number">24</span>);
             <span class="self">self</span>.interrupt_command_register_low.write(
-                (destination_shorthand <span class="kw">as </span>u32) &lt;&lt; <span class="number">18
-                    </span>| (trigger_mode <span class="kw">as </span>u32) &lt;&lt; <span class="number">15
-                    </span>| (level <span class="kw">as </span>u32) &lt;&lt; <span class="number">14
-                    </span>| (destination_mode <span class="kw">as </span>u32) &lt;&lt; <span class="number">11
-                    </span>| (message_type <span class="kw">as </span>u32) &lt;&lt; <span class="number">8
-                    </span>| vector <span class="kw">as </span>u32,
+                destination_shorthand <span class="kw">as </span>u32
+                    | trigger_mode <span class="kw">as </span>u32
+                    | level <span class="kw">as </span>u32
+                    | destination_mode <span class="kw">as </span>u32
+                    | message_type <span class="kw">as </span>u32
+                    | vector <span class="kw">as </span>u32,
             );
             <span class="prelude-val">Ok</span>(())
         }
@@ -931,11 +936,11 @@
             destination_shorthand: <span class="kw">super</span>::DestinationShorthand,
         ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
             <span class="kw">let </span><span class="kw-2">mut </span>value: u64 = (destination <span class="kw">as </span>u64) &lt;&lt; <span class="number">32</span>;
-            value |= (destination_shorthand <span class="kw">as </span>u64) &lt;&lt; <span class="number">18</span>;
-            value |= (trigger_mode <span class="kw">as </span>u64) &lt;&lt; <span class="number">15</span>;
-            value |= (level <span class="kw">as </span>u64) &lt;&lt; <span class="number">14</span>;
-            value |= (destination_mode <span class="kw">as </span>u64) &lt;&lt; <span class="number">11</span>;
-            value |= (message_type <span class="kw">as </span>u64) &lt;&lt; <span class="number">8</span>;
+            value |= destination_shorthand <span class="kw">as </span>u64;
+            value |= trigger_mode <span class="kw">as </span>u64;
+            value |= level <span class="kw">as </span>u64;
+            value |= destination_mode <span class="kw">as </span>u64;
+            value |= message_type <span class="kw">as </span>u64;
             value |= vector <span class="kw">as </span>u64;
             <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
             </span><span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.write(value) };
@@ -1098,27 +1103,28 @@
 /// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer&#39;s Manual,
 /// Volume 2 for more details.
 </span><span class="attr">#[allow(dead_code, clippy::upper_case_acronyms)]
+#[repr(u32)]
 </span><span class="kw">pub enum </span>MessageType {
     <span class="doccomment">/// IPI delivers an interrupt to the target local APIC specified in the Destination field.
-    </span>Fixed = <span class="number">0b000</span>,
+    </span>Fixed = <span class="number">0b000 </span>&lt;&lt; <span class="number">8</span>,
 
     <span class="doccomment">/// IPI delivers an SMI interrupt to the target local APIC(s). Trigger mode is edge-triggered
     /// and Vector must be 0x00.
-    </span>SMI = <span class="number">0b010</span>,
+    </span>SMI = <span class="number">0b010 </span>&lt;&lt; <span class="number">8</span>,
 
     <span class="comment">// IPI delivers an non-maskable interrupt to the target local APIC specified in the
     // Destination field. Vector is ignored.
-    </span>NMI = <span class="number">0b100</span>,
+    </span>NMI = <span class="number">0b100 </span>&lt;&lt; <span class="number">8</span>,
 
     <span class="doccomment">/// IPI delivers an INIT request to the target local APIC(s), causing the CPU core to assume
     /// INIT state. Trigger mode is edge-triggered, Vector must be 0x00. After INIT, target APIC
     /// will only accept a Startup IPI, all other interrupts will be held pending.
-    </span>Init = <span class="number">0b101</span>,
+    </span>Init = <span class="number">0b101 </span>&lt;&lt; <span class="number">8</span>,
 
     <span class="doccomment">/// IPI delives a start-up request (SIPI) to the target local APIC(s) in the Destination field,
     /// causing the core to start processing the routing whose address is specified by the Vector
     /// field.
-    </span>Startup = <span class="number">0b110</span>,
+    </span>Startup = <span class="number">0b110 </span>&lt;&lt; <span class="number">8</span>,
 }
 
 <span class="doccomment">/// Values for the destination mode flag in the Interrupt Command Register.
@@ -1126,30 +1132,33 @@
 /// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer&#39;s Manual,
 /// Volume 2 for more details.
 </span><span class="attr">#[allow(dead_code)]
+#[repr(u32)]
 </span><span class="kw">pub enum </span>DestinationMode {
     <span class="comment">// Physical destination, single local APIC ID.
-    </span>Physical = <span class="number">0</span>,
+    </span>Physical = <span class="number">0 </span>&lt;&lt; <span class="number">11</span>,
 
     <span class="doccomment">/// Logical destination, one or more local APICs with a common destination logical ID.
-    </span>Logical = <span class="number">1</span>,
+    </span>Logical = <span class="number">1 </span>&lt;&lt; <span class="number">11</span>,
 }
 
 <span class="doccomment">/// Values for the level flag in the Interrupt Command Register.
 ///
 /// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer&#39;s Manual,
 /// Volume 2 for more details.
+</span><span class="attr">#[repr(u32)]
 </span><span class="kw">pub enum </span>Level {
-    Deassert = <span class="number">0</span>,
-    Assert = <span class="number">1</span>,
+    Deassert = <span class="number">0 </span>&lt;&lt; <span class="number">14</span>,
+    Assert = <span class="number">1 </span>&lt;&lt; <span class="number">14</span>,
 }
 
 <span class="doccomment">/// Values for the trigger mode flag in the Interrupt Command Register.
 ///
 /// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer&#39;s Manual,
 /// Volume 2 for more details.
+</span><span class="attr">#[repr(u32)]
 </span><span class="kw">pub enum </span>TriggerMode {
-    Edge = <span class="number">0</span>,
-    Level = <span class="number">1</span>,
+    Edge = <span class="number">0 </span>&lt;&lt; <span class="number">15</span>,
+    Level = <span class="number">1 </span>&lt;&lt; <span class="number">15</span>,
 }
 
 <span class="doccomment">/// Values for the destination shorthand flag in the Interrupt Command Register.
@@ -1157,18 +1166,19 @@
 /// See Section 16.5 (Interprocessor Interrupts) in the AMD64 Architecture Programmer&#39;s Manual,
 /// Volume 2 for more details.
 </span><span class="attr">#[allow(dead_code)]
+#[repr(u32)]
 </span><span class="kw">pub enum </span>DestinationShorthand {
     <span class="doccomment">/// Destination field is required to specify the destination.
-    </span>DestinationField = <span class="number">0b00</span>,
+    </span>DestinationField = <span class="number">0b00 </span>&lt;&lt; <span class="number">18</span>,
 
     <span class="doccomment">/// The issuing APIC is the only destination.
-    </span>SelfOnly = <span class="number">0b01</span>,
+    </span>SelfOnly = <span class="number">0b01 </span>&lt;&lt; <span class="number">18</span>,
 
     <span class="doccomment">/// The IPI is sent to all local APICs including itself (destination field = 0xFF)
-    </span>AllInclSelf = <span class="number">0b10</span>,
+    </span>AllInclSelf = <span class="number">0b10 </span>&lt;&lt; <span class="number">18</span>,
 
     <span class="doccomment">/// The IPI is sent to all local APICs except itself (destination field = 0xFF)
-    </span>AllExclSelf = <span class="number">0b11</span>,
+    </span>AllExclSelf = <span class="number">0b11 </span>&lt;&lt; <span class="number">18</span>,
 }
 
 <span class="kw">enum </span>Apic {
