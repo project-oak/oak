@@ -52,6 +52,12 @@
 <a href="#52" id="52">52</a>
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -67,9 +73,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::containers::example::{
-    trusted_application_client::TrustedApplicationClient <span class="kw">as </span>GrpcTrustedApplicationClient,
-    HelloRequest,
+</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
+    containers::example::{
+        trusted_application_client::TrustedApplicationClient <span class="kw">as </span>GrpcTrustedApplicationClient,
+        HelloRequest,
+    },
+    crypto::v1::{EncryptedRequest, EncryptedResponse},
 };
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>tokio::time::Duration;
@@ -94,16 +103,19 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ inner })
     }
 
-    <span class="kw">pub async fn </span>hello(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;String, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
-        <span class="kw">let </span>greeting = <span class="self">self
-            </span>.inner
+    <span class="kw">pub async fn </span>hello(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        encrypted_request: EncryptedRequest,
+    ) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
+        <span class="self">self</span>.inner
             .hello(HelloRequest {
-                name: name.to_string(),
+                encrypted_request: <span class="prelude-val">Some</span>(encrypted_request),
             })
-            .<span class="kw">await</span><span class="question-mark">?
+            .<span class="kw">await
+            </span>.context(<span class="string">&quot;couldn&#39;t send hello request&quot;</span>)<span class="question-mark">?
             </span>.into_inner()
-            .greeting;
-        <span class="prelude-val">Ok</span>(greeting)
+            .encrypted_response
+            .context(<span class="string">&quot;no response provided&quot;</span>)
     }
 }
 </code></pre></div></section></main></body></html>
