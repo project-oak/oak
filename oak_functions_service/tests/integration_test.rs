@@ -51,7 +51,7 @@ fn it_should_not_handle_user_requests_before_initialization() {
     let request = InvokeRequest {
         body: vec![1, 2, 3],
     };
-    let result = client.invoke(&request).into_ok();
+    let result = client.handle_user_request(&request).into_ok();
 
     assert_matches!(
         result,
@@ -98,7 +98,7 @@ fn it_should_handle_user_requests_after_initialization() {
     let invoke_request = InvokeRequest {
         body: serialized_request,
     };
-    let result = client.invoke(&invoke_request).into_ok();
+    let result = client.handle_user_request(&invoke_request).into_ok();
     assert!(result.is_ok());
 }
 
@@ -176,7 +176,7 @@ async fn it_should_support_lookup_data() {
 
     // Send invoke request.
     let lookup_response = client
-        .invoke(&InvokeRequest {
+        .handle_user_request(&InvokeRequest {
             body: serialized_request,
         })
         .expect("couldn't receive response");
