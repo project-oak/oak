@@ -16,12 +16,8 @@
 use crate::proto::oak::containers::{
     orchestrator_client::OrchestratorClient as GrpcOrchestratorClient, GetCryptoContextRequest,
 };
-use anyhow::{anyhow, Context};
-use oak_crypto::{
-    encryptor::RecipientContextGenerator, hpke::RecipientContext,
-    proto::oak::crypto::v1::CryptoContext,
-};
-use tokio::runtime::Handle;
+use anyhow::Context;
+use oak_crypto::proto::oak::crypto::v1::CryptoContext;
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
 
@@ -89,25 +85,5 @@ impl OrchestratorClient {
     pub async fn notify_app_ready(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         self.inner.notify_app_ready(tonic::Request::new(())).await?;
         Ok(())
-    }
-}
-
-impl RecipientContextGenerator for OrchestratorClient {
-    fn generate_recipient_context(
-        &self,
-        serialized_encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<RecipientContext> {
-        // TODO(#4258): Don't block the thread and allow creating `ServerEncryptor` directly from
-        // crypto context.
-        let handle = Handle::current();
-        let context = handle
-            .block_on(self.get_crypto_context(serialized_encapsulated_public_key))
-            .map_err(|error| {
-                anyhow!(
-                    "couldn't get crypto context from the Orchestrator: {:?}",
-                    error
-                )
-            })?;
-        RecipientContext::deserialize(context)
     }
 }
