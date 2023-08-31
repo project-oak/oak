@@ -113,7 +113,10 @@ impl OakFunctions for OakFunctionsService {
         }
     }
 
-    fn handle_user_request(&mut self, request: InvokeRequest) -> Result<InvokeResponse, micro_rpc::Status> {
+    fn handle_user_request(
+        &mut self,
+        request: InvokeRequest,
+    ) -> Result<InvokeResponse, micro_rpc::Status> {
         log::debug!("called handle_user_request");
         let encryption_key_provider = self.encryption_key_provider.clone();
         let instance = self.get_instance()?;
