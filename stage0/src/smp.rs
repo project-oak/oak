@@ -14,7 +14,11 @@
 // limitations under the License.
 //
 
-use core::{arch::x86_64::_mm_pause, ffi::c_void};
+use core::{
+    arch::x86_64::_mm_pause,
+    ffi::c_void,
+    sync::atomic::{AtomicU32, Ordering},
+};
 
 use oak_sev_guest::io::PortFactoryWrapper;
 use x86_64::PhysAddr;
@@ -29,6 +33,11 @@ extern "C" {
     #[link_name = "ap_start"]
     static AP_START: c_void;
 }
+
+// This symbol will be referenced from outside Rust, from the AP bootstrap code, to denote that an
+// AP has become alive.
+#[no_mangle]
+static LIVE_AP_COUNT: AtomicU32 = AtomicU32::new(0);
 
 pub fn start_ap(lapic: &mut Lapic, physical_apic_id: u32) -> Result<(), &'static str> {
     lapic.send_init_ipi(physical_apic_id)?;
@@ -74,6 +83,9 @@ pub fn bootstrap_aps(rsdp: &Rsdp, port_factory: &PortFactoryWrapper) -> Result<(
 
     let local_apic_id = lapic.local_apic_id();
 
+    // How many APs do we expect to come online?
+    let mut expected_aps = 0;
+
     // APIC and X2APIC structures are largely the same; X2APIC entries are used if the APIC ID is
     // too large to fit into the one-byte field of the APIC structure (e.g. if you have more than
     // 256 CPUs).
@@ -105,7 +117,27 @@ pub fn bootstrap_aps(rsdp: &Rsdp, port_factory: &PortFactoryWrapper) -> Result<(
             continue;
         }
 
+        expected_aps += 1;
         start_ap(&mut lapic, remote_lapic_id)?;
+    }
+
+    // Wait until all APs have told they are online. Or we time out waiting for them.
+    // The timeout has been chosen arbitrarily and may need to be tuned.
+    for _ in 0..(1 << 23) {
+        if LIVE_AP_COUNT.load(Ordering::SeqCst) == expected_aps {
+            break;
+        }
+        // Safety: SSE2 is supported in all 64-bit processors.
+        unsafe { _mm_pause() };
+    }
+    log::info!(
+        "Expected number of APs: {}, started number of APs: {}",
+        expected_aps,
+        LIVE_AP_COUNT.load(Ordering::SeqCst)
+    );
+
+    if LIVE_AP_COUNT.load(Ordering::SeqCst) != expected_aps {
+        return Err("not all APs came online");
     }
 
     Ok(())
