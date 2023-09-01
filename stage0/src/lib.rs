@@ -55,7 +55,7 @@ type Measurement = [u8; 32];
 // Reserve 128K for boot data structures that will outlive Stage 0.
 static BOOT_ALLOC: allocator::BumpAllocator<0x20000> = allocator::BumpAllocator::uninit();
 
-// Heap for short-term allocations. These allocations are note expected to outlive Stage 0.
+// Heap for short-term allocations. These allocations are not expected to outlive Stage 0.
 #[cfg_attr(not(test), global_allocator)]
 static SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
 
@@ -223,9 +223,6 @@ pub fn rust64_start(encrypted: u64) -> ! {
     // Initialize the short-term heap. Any allocations that rely on a global allocator before this
     // point will fail.
     allocator::init_global_allocator(zero_page.e820_table());
-
-    let test = alloc::vec![1u8, 2];
-    log::info!("test: {test:?}");
 
     let setup_data_measurement = zero_page
         .try_fill_hdr_from_setup_data(&mut fwcfg)
