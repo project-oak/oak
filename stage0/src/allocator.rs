@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn simple_alloc() {
-        let alloc = Allocator::<16>::uninit();
+        let alloc = BumpAllocator::<16>::uninit();
         let val = alloc.leak([0u8; 16]);
         assert!(val.is_some());
         let val = alloc.leak([0u8; 16]);
@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn two_alloc() {
-        let alloc = Allocator::<16>::uninit();
+        let alloc = BumpAllocator::<16>::uninit();
         let val = alloc.leak([0u8; 8]);
         assert!(val.is_some());
         let val = alloc.leak([0u8; 8]);
@@ -159,7 +159,7 @@ mod tests {
         // Allow for max 7-byte alignment + 2*8 (size of Foo)
         // The padding we need to use is ~random; it depends where exactly in memory our buffer
         // lands, as that is not required to be perfectly aligned with any particular boundary.
-        let alloc = Allocator::<23>::uninit();
+        let alloc = BumpAllocator::<23>::uninit();
         let val = alloc.leak(Foo { x: 16, _y: 16 }).unwrap();
         assert_eq!(0, val as *const Foo as usize % core::mem::align_of::<Foo>());
         assert_eq!(16, val.x);
@@ -171,7 +171,7 @@ mod tests {
 
     #[test]
     fn failing_alloc() {
-        let alloc = Allocator::<4>::uninit();
+        let alloc = BumpAllocator::<4>::uninit();
         assert!(alloc.leak(0u64).is_none());
         assert!(alloc.leak(0u32).is_some());
         assert!(alloc.leak(0u8).is_none());
