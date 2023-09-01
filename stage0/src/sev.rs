@@ -133,7 +133,7 @@ impl MTRRDefType {
     }
 }
 
-static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
+pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
 pub fn init_ghcb(
     ghcb: &'static mut Ghcb,
