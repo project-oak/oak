@@ -354,8 +354,6 @@
 <a href="#354" id="354">354</a>
 <a href="#355" id="355">355</a>
 <a href="#356" id="356">356</a>
-<a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -636,19 +634,17 @@
     <span class="kw">let </span><span class="kw-2">mut </span>acpi_measurement = Measurement::default();
     acpi_measurement[..].copy_from_slice(<span class="kw-2">&amp;</span>acpi_digest[..]);
 
-    <span class="kw">if </span>!es {
-        <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = smp::bootstrap_aps(
-            rsdp,
-            <span class="kw-2">&amp;</span><span class="kw">match </span>ghcb_protocol {
-                <span class="prelude-val">Some</span>(protocol) =&gt; PortFactoryWrapper::new_ghcb(protocol),
-                <span class="prelude-val">None </span>=&gt; PortFactoryWrapper::new_raw(),
-            },
-        ) {
-            <span class="macro">log::warn!</span>(
-                <span class="string">&quot;Failed to bootstrap APs: {}. APs may not be properly initialized.&quot;</span>,
-                err
-            );
-        }
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = smp::bootstrap_aps(
+        rsdp,
+        <span class="kw-2">&amp;</span><span class="kw">match </span>ghcb_protocol {
+            <span class="prelude-val">Some</span>(protocol) =&gt; PortFactoryWrapper::new_ghcb(protocol),
+            <span class="prelude-val">None </span>=&gt; PortFactoryWrapper::new_raw(),
+        },
+    ) {
+        <span class="macro">log::warn!</span>(
+            <span class="string">&quot;Failed to bootstrap APs: {}. APs may not be properly initialized.&quot;</span>,
+            err
+        );
     }
 
     <span class="kw">let </span>ram_disk_measurement =

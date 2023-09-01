@@ -142,6 +142,17 @@
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -179,8 +190,10 @@
 }
 
 <span class="comment">// This symbol will be referenced from outside Rust, from the AP bootstrap code, to denote that an
-// AP has become alive.
+// AP has become alive. It&#39;s in a special magic section as we have to ensure it&#39;s in the first 64K
+// fo memory (or: the first segment).
 </span><span class="attr">#[no_mangle]
+#[link_section = <span class="string">&quot;.ap_bss&quot;</span>]
 </span><span class="kw">static </span>LIVE_AP_COUNT: AtomicU32 = AtomicU32::new(<span class="number">0</span>);
 
 <span class="kw">pub fn </span>start_ap(lapic: <span class="kw-2">&amp;mut </span>Lapic, physical_apic_id: u32) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
@@ -191,17 +204,26 @@
         <span class="comment">// Safety: SSE2 is supported in all 64-bit processors.
         </span><span class="kw">unsafe </span>{ _mm_pause() };
     }
+    <span class="comment">// We assume that we&#39;re not going to call start_ap() concurrently, so there is no race condition
+    // here. Which should be true, as we don&#39;t have threads and this is running on the sole BSP.
+    </span><span class="kw">let </span>current_live_count = LIVE_AP_COUNT.load(Ordering::SeqCst);
     <span class="comment">// Safety: we&#39;re not going to dereference the memory, we&#39;re just interested in the pointer
     // value.
-    // We also mask the high bits, as the AP will be in the &#39;magic&#39; real mode that reads data from
-    // the end of the 4 GiB space (aka the BIOS area) much like the BSP.
-    </span><span class="kw">let </span>vector = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;</span>AP_START <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64 } &amp; <span class="number">0xFFFFF</span>;
+    </span><span class="kw">let </span>vector = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;</span>AP_START <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64 };
     lapic.send_startup_ipi(physical_apic_id, PhysAddr::new(vector))<span class="question-mark">?</span>;
     <span class="comment">// TODO(#4235): wait 200 us (instead of _some_ unknown amount of time); send SIPI again if the
     // core hasn&#39;t started
-    </span><span class="kw">for _ in </span><span class="number">1</span>..(<span class="number">1 </span>&lt;&lt; <span class="number">12</span>) {
+    </span><span class="kw">for _ in </span><span class="number">1</span>..(<span class="number">1 </span>&lt;&lt; <span class="number">20</span>) {
         <span class="comment">// Safety: SSE2 is supported in all 64-bit processors.
         </span><span class="kw">unsafe </span>{ _mm_pause() };
+        <span class="kw">if </span>LIVE_AP_COUNT.load(Ordering::SeqCst) &gt; current_live_count {
+            <span class="comment">// it&#39;s alive!
+            </span><span class="kw">break</span>;
+        }
+    }
+    <span class="kw">if </span>LIVE_AP_COUNT.load(Ordering::SeqCst) == current_live_count {
+        <span class="comment">// TODO(#4235): try sending a second SIPI before giving up on the AP
+        </span><span class="macro">log::warn!</span>(<span class="string">&quot;AP {} failed to start up&quot;</span>, physical_apic_id);
     }
     <span class="prelude-val">Ok</span>(())
 }
