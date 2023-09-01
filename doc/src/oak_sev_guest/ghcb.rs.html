@@ -515,6 +515,65 @@
 <a href="#515" id="515">515</a>
 <a href="#516" id="516">516</a>
 <a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -544,7 +603,7 @@
 };
 <span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
-<span class="kw">use </span>zerocopy::FromBytes;
+<span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
 
 <span class="doccomment">/// The size of the GHCB page.
 </span><span class="kw">pub const </span>GHCB_PAGE_SIZE: usize = <span class="number">4096</span>;
@@ -566,6 +625,16 @@
 ///
 /// See section 4 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
 </span><span class="kw">const </span>SW_EXIT_CODE_CPUID: u64 = <span class="number">0x72</span>;
+
+<span class="doccomment">/// The value of the sw_exit_code field when doing a MMIO read.
+///
+/// See section 4 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
+</span><span class="kw">const </span>SW_EXIT_CODE_MMIO_READ: u64 = <span class="number">0x8000_0001</span>;
+
+<span class="doccomment">/// The value of the sw_exit_code field when doing a MMIO read.
+///
+/// See section 4 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
+</span><span class="kw">const </span>SW_EXIT_CODE_MMIO_WRITE: u64 = <span class="number">0x8000_0002</span>;
 
 <span class="doccomment">/// The value of the sw_exit_code field when doing a Guest Message request.
 ///
@@ -833,6 +902,55 @@
         register_ghcb_location(RegisterGhcbGpaRequest::new(
             <span class="self">self</span>.get_gpa().as_u64() <span class="kw">as </span>usize
         )<span class="question-mark">?</span>)
+    }
+
+    <span class="doccomment">/// Read a 32-bit value from a MMIO memory address via the MMIO Access protocol.
+    ///
+    /// See Section 4.1.5 in &lt;https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
+    </span><span class="kw">pub fn </span>mmio_read_u32(<span class="kw-2">&amp;mut </span><span class="self">self</span>, source: PhysAddr) -&gt; <span class="prelude-ty">Result</span>&lt;u32, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span>gpa_base = <span class="self">self</span>.get_gpa().as_u64();
+        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
+
+        ghcb.reset();
+        ghcb.sw_exit_code = SW_EXIT_CODE_MMIO_READ;
+        ghcb.sw_exit_info_1 = source.as_u64();
+        ghcb.sw_exit_info_2 = core::mem::size_of::&lt;u32&gt;() <span class="kw">as </span>u64;
+        <span class="comment">// Use the shared_buffer as the unencrypted guest memory. This is mandated as of Version
+        // 2 of the communication block.
+        </span>ghcb.sw_scratch = gpa_base + (<span class="macro">core::mem::offset_of!</span>(Ghcb, shared_buffer) <span class="kw">as </span>u64);
+        ghcb.valid_bitmap = BASE_VALID_BITMAP | ValidBitmap::SW_SCRATCH;
+
+        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(u32::from_ne_bytes(
+            <span class="self">self</span>.ghcb.as_ref().shared_buffer[<span class="number">0</span>..core::mem::size_of::&lt;u32&gt;()]
+                .as_bytes()
+                .try_into()
+                .unwrap(),
+        ))
+    }
+
+    <span class="doccomment">/// Write a 32-bit value to a MMIO memory address via the MMIO Access protocol.
+    ///
+    /// See Section 4.1.5 in &lt;https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
+    </span><span class="kw">pub fn </span>mmio_write_u32(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        destination: PhysAddr,
+        value: u32,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span>gpa_base = <span class="self">self</span>.get_gpa().as_u64();
+        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
+
+        ghcb.reset();
+        ghcb.sw_exit_code = SW_EXIT_CODE_MMIO_WRITE;
+        ghcb.sw_exit_info_1 = destination.as_u64();
+        ghcb.sw_exit_info_2 = core::mem::size_of::&lt;u32&gt;() <span class="kw">as </span>u64;
+        <span class="comment">// Pointer to `shared_buffer` inside the GHCB.
+        </span>ghcb.sw_scratch = gpa_base + (<span class="macro">core::mem::offset_of!</span>(Ghcb, shared_buffer) <span class="kw">as </span>u64);
+        ghcb.valid_bitmap = BASE_VALID_BITMAP | ValidBitmap::SW_SCRATCH;
+        <span class="comment">// Safety: the shared buffer is bigger than an u32.
+        </span>ghcb.shared_buffer.as_bytes_mut()[<span class="number">0</span>..core::mem::size_of::&lt;u32&gt;()]
+            .copy_from_slice(value.as_bytes());
+        <span class="self">self</span>.do_vmg_exit()
     }
 
     <span class="doccomment">/// Writes an 8 bit number to an IO port via the IOIO protocol.

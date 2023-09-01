@@ -37,6 +37,7 @@
 <a href="#37" id="37">37</a>
 <a href="#38" id="38">38</a>
 <a href="#39" id="39">39</a>
+<a href="#40" id="40">40</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -57,6 +58,7 @@
 //! interact with the hypervisor and the secure processor.
 
 </span><span class="attr">#![no_std]
+#![feature(offset_of)]
 
 </span><span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
 
