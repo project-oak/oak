@@ -17,7 +17,10 @@
 #![no_std]
 #![feature(int_roundings)]
 
+extern crate alloc;
+
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
+use linked_list_allocator::LockedHeap;
 use oak_sev_guest::io::PortFactoryWrapper;
 use sha2::{Digest, Sha256};
 use x86_64::{
@@ -34,7 +37,7 @@ use zerocopy::AsBytes;
 
 mod acpi;
 mod acpi_tables;
-mod alloc;
+mod allocator;
 mod apic;
 mod cmos;
 mod fw_cfg;
@@ -49,8 +52,12 @@ mod zero_page;
 
 type Measurement = [u8; 32];
 
-// Reserve 128K for boot data structures.
-static BOOT_ALLOC: alloc::Allocator<0x20000> = alloc::Allocator::uninit();
+// Reserve 128K for boot data structures that will outlive Stage 0.
+static BOOT_ALLOC: allocator::BumpAllocator<0x20000> = allocator::BumpAllocator::uninit();
+
+// Heap for short-term allocations. These allocations are not expected to outlive Stage 0.
+#[cfg_attr(not(test), global_allocator)]
+static SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
 
 #[link_section = ".boot"]
 #[no_mangle]
@@ -212,6 +219,10 @@ pub fn rust64_start(encrypted: u64) -> ! {
     idt.load();
 
     paging::map_additional_memory(encrypted);
+
+    // Initialize the short-term heap. Any allocations that rely on a global allocator before this
+    // point will fail.
+    allocator::init_global_allocator(zero_page.e820_table());
 
     let setup_data_measurement = zero_page
         .try_fill_hdr_from_setup_data(&mut fwcfg)
