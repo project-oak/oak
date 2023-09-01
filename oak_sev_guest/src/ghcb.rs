@@ -60,6 +60,12 @@ const SW_EXIT_CODE_MMIO_READ: u64 = 0x8000_0001;
 /// See section 4 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
 const SW_EXIT_CODE_MMIO_WRITE: u64 = 0x8000_0002;
 
+/// The value of the sw_exit_code field when managing the AP Jump Table under SEV-ES.
+///
+/// See table 6 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
+const SW_EXIT_CODE_AP_JUMP_TABLE: u64 = 0x8000_0005;
+
+///
 /// The value of the sw_exit_code field when doing a Guest Message request.
 ///
 /// See table 6 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
@@ -326,6 +332,30 @@ where
         register_ghcb_location(RegisterGhcbGpaRequest::new(
             self.get_gpa().as_u64() as usize
         )?)
+    }
+
+    pub fn set_ap_jump_table(&mut self, jump_table: PhysAddr) -> Result<(), &'static str> {
+        let ghcb = self.ghcb.as_mut();
+
+        ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
+        ghcb.sw_exit_info_1 = 0; // SET
+        ghcb.sw_exit_info_2 = jump_table.as_u64();
+        ghcb.valid_bitmap = BASE_VALID_BITMAP;
+
+        self.do_vmg_exit()
+    }
+
+    pub fn get_ap_jump_table(&mut self) -> Result<PhysAddr, &'static str> {
+        let ghcb = self.ghcb.as_mut();
+
+        ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
+        ghcb.sw_exit_info_1 = 1; // GET
+        ghcb.sw_exit_info_2 = 0;
+        ghcb.valid_bitmap = BASE_VALID_BITMAP;
+
+        self.do_vmg_exit()?;
+
+        Ok(PhysAddr::new(self.ghcb.as_ref().sw_exit_info_2))
     }
 
     /// Read a 32-bit value from a MMIO memory address via the MMIO Access protocol.

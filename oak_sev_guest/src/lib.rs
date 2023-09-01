@@ -22,6 +22,7 @@
 
 use x86_64::{PhysAddr, VirtAddr};
 
+pub mod ap_jump_table;
 pub mod cpuid;
 #[cfg(feature = "rust-crypto")]
 pub mod crypto;
