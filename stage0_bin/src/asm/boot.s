@@ -1,16 +1,6 @@
 .code16
-.section .text16, "ax"
-# Entry point for APs. This needs to be page-aligned, so let's stick it as the very first thing in the block of 16-bit code.
-.align 4096
-.global ap_start
-ap_start:
-    # Let the BSP know we're alive.
-    lock incl (LIVE_AP_COUNT)
-1:
-    hlt
-    jmp 1b
-
 .align 16
+.section .text16, "ax"
 .global _start
 _start :
     # Enter long mode. This code is inspired by the approach shown at
@@ -118,11 +108,22 @@ _protected_mode_start:
     xor %eax, %eax
     rep stosb
 
+    mov $ap_bss_start, %edi
+    mov $ap_bss_size, %ecx
+    xor %eax, %eax
+    rep stosb
+
     # Copy DATA from the ROM image (stored just after TEXT) to the expected location.
     # Source address goes to ESI, destination goes to EDI, count goes to ECX.
     mov $text_end, %esi
     mov $data_start, %edi
     mov $data_size, %ecx
+    rep movsb
+
+    # Copy AP bootstrap code to the expected location, similar to DATA above.
+    mov $0xFFFFF000, %esi
+    mov $ap_text_start, %edi
+    mov $ap_text_size, %ecx
     rep movsb
 
     # Set the first entry of PML4 to point to PDPT (0..512GiB).

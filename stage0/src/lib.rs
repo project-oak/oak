@@ -278,19 +278,17 @@ pub fn rust64_start(encrypted: u64) -> ! {
     let mut acpi_measurement = Measurement::default();
     acpi_measurement[..].copy_from_slice(&acpi_digest[..]);
 
-    if !es {
-        if let Err(err) = smp::bootstrap_aps(
-            rsdp,
-            &match ghcb_protocol {
-                Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
-                None => PortFactoryWrapper::new_raw(),
-            },
-        ) {
-            log::warn!(
-                "Failed to bootstrap APs: {}. APs may not be properly initialized.",
-                err
-            );
-        }
+    if let Err(err) = smp::bootstrap_aps(
+        rsdp,
+        &match ghcb_protocol {
+            Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
+            None => PortFactoryWrapper::new_raw(),
+        },
+    ) {
+        log::warn!(
+            "Failed to bootstrap APs: {}. APs may not be properly initialized.",
+            err
+        );
     }
 
     let ram_disk_measurement =
