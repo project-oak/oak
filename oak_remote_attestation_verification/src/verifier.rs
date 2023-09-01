@@ -75,27 +75,30 @@ impl AttestationVerifier for InsecureAttestationVerifier {
     }
 }
 
-/// Verifies the transparent release endorsement for a given measurement (which must be a SHA256
-/// digest), using the given verification options to control the extent of the verification.
-/// Summary of the verification logic:
+/// Verifies the transparent release endorsement for a given measurement, using the given
+/// verification options to control the extent of the verification. Summary of the verification
+/// logic:
 ///
 /// 1. Verifies that the endorsement statement in the given `BinaryAttestation` instance contains a
-/// single subject with a SHA256 digest equal to `measurement_from_evidence`.
+/// single subject with a digest measured using the given measurement algorithm, equal to
+/// `measurement_from_evidence`.
 /// 1. If the input `TransparencyVerificationOptions` requires Rekor log verification:
 ///     1. verifies that the `BinaryAttestation` contains a valid Rekor log entry (see
-/// `verify_rekor_log_entry` for details.),
+///        `verify_rekor_log_entry` for details.),
 ///     1. verifies the Rekor public key in `BinaryAttestation` against the Rekor public key in
-/// `TransparencyVerificationOptions`,
-///     1. verifies the endorser public key included in the Rekor
-/// log entry against the endorser public key in `TransparencyVerificationOptions`.
+///        `TransparencyVerificationOptions`,
+///     1. verifies the endorser public key included in the Rekor log entry against the endorser
+///        public key in `TransparencyVerificationOptions`.
 pub fn verify_transparent_release_endorsement(
     measurement_from_evidence: &[u8],
+    measurement_alg: &str,
     binary_attestation: &BinaryAttestation,
     opts: &TransparencyVerificationOptions,
 ) -> anyhow::Result<()> {
     verify_endorsement_statement(
         &binary_attestation.endorsement_statement,
         measurement_from_evidence,
+        measurement_alg,
     )?;
 
     if let Some(VerificationData(data)) = &opts.rekor_entry_verification {
@@ -122,6 +125,7 @@ pub fn verify_transparent_release_endorsement(
 pub fn verify_endorsement_statement(
     endorsement_bytes: &[u8],
     binary_digest: &[u8],
+    measurement_alg: &str,
 ) -> anyhow::Result<()> {
     let claim = parse_endorsement_statement(endorsement_bytes)?;
     if let Err(err) = validate_endorsement(&claim) {
@@ -136,10 +140,10 @@ pub fn verify_endorsement_statement(
     }
 
     let binary_digest = core::str::from_utf8(binary_digest)?;
-    if claim.subject[0].digest["sha256"] != binary_digest {
+    if claim.subject[0].digest[measurement_alg] != binary_digest {
         anyhow::bail!(
-            "unexpected binary SHA256 digest: expected {binary_digest}, got {}",
-            claim.subject[0].digest["sha256"]
+            "unexpected binary {measurement_alg} digest: expected {binary_digest}, got {}",
+            claim.subject[0].digest[measurement_alg]
         );
     }
 

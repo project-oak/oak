@@ -160,6 +160,7 @@ fn test_verify_transparent_release_endorsement_with_rekor_verification() {
 
     let result = verify_transparent_release_endorsement(
         BINARY_DIGEST.as_bytes(),
+        "sha256",
         &binary_attestation,
         &verification_options,
     );
@@ -180,6 +181,7 @@ fn test_verify_transparent_release_endorsement_no_rekor_entry_and_skip_rekor_ver
 
     let result = verify_transparent_release_endorsement(
         BINARY_DIGEST.as_bytes(),
+        "sha256",
         &binary_attestation,
         &verification_options,
     );
@@ -200,6 +202,7 @@ fn test_verify_transparent_release_endorsement_no_rekor_entry_but_require_rekor_
 
     let result = verify_transparent_release_endorsement(
         BINARY_DIGEST.as_bytes(),
+        "sha256",
         &binary_attestation,
         &verification_options,
     );
