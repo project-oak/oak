@@ -16,7 +16,10 @@
 
 use bitflags::bitflags;
 use core::arch::x86_64::__cpuid;
+use oak_sev_guest::cpuid::CpuidInput;
 use x86_64::{registers::model_specific::Msr, PhysAddr};
+
+use crate::sev::GHCB_WRAPPER;
 
 /// Interrupt Command.
 ///
@@ -73,7 +76,7 @@ trait SpuriousInterrupts {
 }
 
 mod xapic {
-    use crate::paging::PAGE_TABLE_REFS;
+    use crate::{paging::PAGE_TABLE_REFS, sev::GHCB_WRAPPER};
     use core::mem::MaybeUninit;
     use x86_64::{
         instructions::tlb::flush_all,
@@ -83,23 +86,6 @@ mod xapic {
 
     use super::{ApicErrorFlags, SpuriousInterruptFlags};
 
-    /// Wrapper for a MMIO register in memory.
-    #[repr(transparent)]
-    struct ApicRegister(u32);
-
-    impl ApicRegister {
-        fn read(&self) -> u32 {
-            // Safety: these registers can only be accessed through ApicRegisters, by which we
-            // should have established where the MMIO area is.
-            unsafe { (self as *const _ as *const u32).read_volatile() }
-        }
-        fn write(&mut self, val: u32) {
-            // Safety: these registers can only be accessed through ApicRegisters, by which we
-            // should have established where the MMIO area is.
-            unsafe { (self as *mut _ as *mut u32).write_volatile(val) }
-        }
-    }
-
     /// Representation of the APIC MMIO registers.
     ///
     /// We do not represent _all_ the xAPIC registers here, but only the ones we are interested in.
@@ -107,34 +93,64 @@ mod xapic {
     /// The exact layout is defined in Table 16-2 and Section 16.3.2 (APIC Registers) of the AMD64
     /// Architecture Programmer's Manual, Volume 2.
     #[repr(C, align(4096))]
-    pub(crate) struct ApicRegisters {
-        _reserved: [u8; 0x20],                         // [0x000..0x020)
-        apic_id_register: ApicRegister,                // [0x020..0x024)
-        _reserved_2: [u8; 0xc],                        // [0x024..0x030)
-        apic_version_register: ApicRegister,           // [0x030..0x034)
-        _reserved_3: [u8; 0xbc],                       // [0x034..0x0F0)
-        spurious_interrupt_register: ApicRegister,     // [0x0F0..0x0F4)
-        _reserved_4: [u8; 0x18c],                      // [0x0F4..0x280)
-        error_status_register: ApicRegister,           // [0x280..0x284)
-        _reserved_5: [u8; 0x7c],                       // [0x284..0x300]
-        interrupt_command_register_low: ApicRegister,  // [0x300..0x304)
-        _reserved_6: [u8; 0xc],                        // [0x304..0x310)
-        interrupt_command_register_high: ApicRegister, // [0x310..0x314)
-        _padding: [u8; 0xcec],                         // [0x314..0x1000)
+    struct ApicRegisters {
+        registers: [u32; 1024],
     }
     static_assertions::assert_eq_size!(ApicRegisters, [u8; Size4KiB::SIZE as usize]);
 
-    impl super::ApicId for ApicRegisters {
+    // We divide the offset by 4 as we're indexing by u32's, not bytes.
+    const APIC_ID_REGISTER_OFFSET: usize = 0x020 / core::mem::size_of::<u32>();
+    const APIC_VERSION_REGISTER_OFFSET: usize = 0x30 / core::mem::size_of::<u32>();
+    const SPURIOUS_INTERRUPT_REGISTER_OFFSET: usize = 0x0F0 / core::mem::size_of::<u32>();
+    const ERROR_STATUS_REGISTER_OFFSET: usize = 0x280 / core::mem::size_of::<u32>();
+    const INTERRUPT_COMMAND_REGISTER_LOW_OFFSET: usize = 0x300 / core::mem::size_of::<u32>();
+    const INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET: usize = 0x310 / core::mem::size_of::<u32>();
+
+    pub(crate) struct Xapic {
+        mmio_area: &'static mut ApicRegisters,
+
+        // APIC base address, we keep track of it as we may need to use the GHCB protocol instead
+        // of accessing `mmio_area` directly
+        aba: PhysAddr,
+    }
+
+    impl Xapic {
+        fn read(&self, register: usize) -> u32 {
+            // Safety: these registers can only be accessed through ApicRegisters, by which we
+            // should have established where the MMIO area is.
+            if let Some(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .mmio_read_u32(self.aba + (register * core::mem::size_of::<u32>()))
+                    .expect("couldn't read the MSR using the GHCB protocol")
+            } else {
+                // Safety: the APIC base register is supported in all modern CPUs.
+                unsafe { (&self.mmio_area.registers[register] as *const u32).read_volatile() }
+            }
+        }
+        fn write(&mut self, register: usize, val: u32) {
+            if let Some(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .mmio_write_u32(self.aba + (register * core::mem::size_of::<u32>()), val)
+                    .expect("couldn't read the MSR using the GHCB protocol")
+            } else {
+                // Safety: these registers can only be accessed through ApicRegisters, by which we
+                // should have established where the MMIO area is.
+                unsafe { (&mut self.mmio_area.registers[register] as *mut u32).write_volatile(val) }
+            }
+        }
+    }
+
+    impl super::ApicId for Xapic {
         /// Read the Local APIC ID register.
         ///
         /// See Section 16.3.3 in the AMD64 Architecture Programmer's Manual, Volume 2 for the
         /// register format.
         fn apic_id(&self) -> u32 {
-            self.apic_id_register.read() >> 24
+            self.read(APIC_ID_REGISTER_OFFSET) >> 24
         }
     }
 
-    impl super::InterprocessorInterrupt for ApicRegisters {
+    impl super::InterprocessorInterrupt for Xapic {
         fn send(
             &mut self,
             destination: u32,
@@ -148,9 +164,12 @@ mod xapic {
             let destination: u8 = destination
                 .try_into()
                 .map_err(|_| "destination APIC ID too big for xAPIC")?;
-            self.interrupt_command_register_high
-                .write((destination as u32) << 24);
-            self.interrupt_command_register_low.write(
+            self.write(
+                INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET,
+                (destination as u32) << 24,
+            );
+            self.write(
+                INTERRUPT_COMMAND_REGISTER_LOW_OFFSET,
                 destination_shorthand as u32
                     | trigger_mode as u32
                     | level as u32
@@ -162,19 +181,19 @@ mod xapic {
         }
     }
 
-    impl super::ErrorStatus for ApicRegisters {
+    impl super::ErrorStatus for Xapic {
         fn read(&self) -> ApicErrorFlags {
-            ApicErrorFlags::from_bits_truncate(self.error_status_register.read())
+            ApicErrorFlags::from_bits_truncate(self.read(ERROR_STATUS_REGISTER_OFFSET))
         }
 
         fn clear(&mut self) {
-            self.error_status_register.write(0)
+            self.write(ERROR_STATUS_REGISTER_OFFSET, 0)
         }
     }
 
-    impl super::ApicVersion for ApicRegisters {
+    impl super::ApicVersion for Xapic {
         fn read(&self) -> (bool, u8, u8) {
-            let val = self.apic_version_register.read();
+            let val = self.read(APIC_VERSION_REGISTER_OFFSET);
 
             (
                 val & (1 << 31) > 0,            // EAS
@@ -184,9 +203,9 @@ mod xapic {
         }
     }
 
-    impl super::SpuriousInterrupts for ApicRegisters {
+    impl super::SpuriousInterrupts for Xapic {
         fn read(&self) -> (SpuriousInterruptFlags, u8) {
-            let val = self.spurious_interrupt_register.read();
+            let val = self.read(SPURIOUS_INTERRUPT_REGISTER_OFFSET);
 
             (
                 SpuriousInterruptFlags::from_bits_truncate(val),
@@ -195,8 +214,10 @@ mod xapic {
         }
 
         fn write(&mut self, flags: super::SpuriousInterruptFlags, vec: u8) {
-            self.spurious_interrupt_register
-                .write(flags.bits() | vec as u32)
+            self.write(
+                SPURIOUS_INTERRUPT_REGISTER_OFFSET,
+                flags.bits() | vec as u32,
+            )
         }
     }
 
@@ -204,7 +225,7 @@ mod xapic {
     // overlap and can change the physical address it points to.
     static mut APIC_MMIO_AREA: MaybeUninit<ApicRegisters> = MaybeUninit::uninit();
 
-    pub(crate) fn init(apic_base: PhysAddr) -> &'static mut ApicRegisters {
+    pub(crate) fn init(apic_base: PhysAddr) -> Xapic {
         // Remap APIC_MMIO_AREA to be backed by `apic_base`. We expect APIC_MMIO_AREA virtual
         // address to be somewhere in the first two megabytes.
 
@@ -221,24 +242,25 @@ mod xapic {
         );
         flush_all();
         // Safety: we've mapped APIC_MMIO_AREA to where the caller claimed it to be.
-        unsafe { APIC_MMIO_AREA.assume_init_mut() }
+        Xapic {
+            mmio_area: unsafe { APIC_MMIO_AREA.assume_init_mut() },
+            aba: apic_base,
+        }
     }
 }
 
 mod x2apic {
+    use super::{ApicErrorFlags, SpuriousInterruptFlags};
+    use crate::sev::GHCB_WRAPPER;
     use x86_64::registers::model_specific::Msr;
 
-    use super::{ApicErrorFlags, SpuriousInterruptFlags};
-
-    pub(crate) const APIC_ID_REGISTER: X2ApicIdRegister = X2ApicIdRegister(Msr::new(0x0000_00802));
-    pub(crate) const APIC_VERSION_REGISTER: ApicVersionRegister =
-        ApicVersionRegister(Msr::new(0x0000_00803));
-    pub(crate) const ERROR_STATUS_REGISTER: ErrorStatusRegister =
-        ErrorStatusRegister(Msr::new(0x0000_00828));
+    pub(crate) const APIC_ID_REGISTER: X2ApicIdRegister = X2ApicIdRegister;
+    pub(crate) const APIC_VERSION_REGISTER: ApicVersionRegister = ApicVersionRegister;
+    pub(crate) const ERROR_STATUS_REGISTER: ErrorStatusRegister = ErrorStatusRegister;
     pub(crate) const INTERRUPT_COMMAND_REGISTER: InterruptCommandRegister =
-        InterruptCommandRegister(Msr::new(0x0000_00830));
+        InterruptCommandRegister;
     pub(crate) const SPURIOUS_INTERRUPT_REGISTER: SpuriousInterruptRegister =
-        SpuriousInterruptRegister(Msr::new(0x0000_00830));
+        SpuriousInterruptRegister;
 
     /// The x2APIC_ID register.
     ///
@@ -247,16 +269,32 @@ mod x2apic {
     ///
     /// See Section 16.12 (x2APIC_ID) in the AMD64 Architecture Programmer's Manual, Volume 2 for
     /// more details.
-    pub(crate) struct X2ApicIdRegister(Msr);
+    pub(crate) struct X2ApicIdRegister;
+
+    impl X2ApicIdRegister {
+        const MSR_ID: u32 = 0x0000_00802;
+        const MSR: Msr = Msr::new(Self::MSR_ID);
+    }
 
     impl super::ApicId for X2ApicIdRegister {
         fn apic_id(&self) -> u32 {
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
-            unsafe { self.0.read() as u32 }
+            if let Some(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .msr_read(Self::MSR_ID)
+                    .expect("couldn't read the MSR using the GHCB protocol") as u32
+            } else {
+                unsafe { Self::MSR.read() as u32 }
+            }
         }
     }
 
-    pub(crate) struct InterruptCommandRegister(Msr);
+    pub(crate) struct InterruptCommandRegister;
+
+    impl InterruptCommandRegister {
+        const MSR_ID: u32 = 0x0000_00830;
+        const MSR: Msr = Msr::new(Self::MSR_ID);
+    }
 
     impl super::InterprocessorInterrupt for InterruptCommandRegister {
         fn send(
@@ -277,30 +315,65 @@ mod x2apic {
             value |= message_type as u64;
             value |= vector as u64;
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
-            unsafe { self.0.write(value) };
-            Ok(())
+            if let Some(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock().msr_write(Self::MSR_ID, value)
+            } else {
+                let mut msr = Self::MSR;
+                unsafe { msr.write(value) };
+                Ok(())
+            }
         }
     }
 
-    pub(crate) struct ErrorStatusRegister(Msr);
+    pub(crate) struct ErrorStatusRegister;
+
+    impl ErrorStatusRegister {
+        const MSR_ID: u32 = 0x0000_0828;
+        const MSR: Msr = Msr::new(Self::MSR_ID);
+    }
 
     impl super::ErrorStatus for ErrorStatusRegister {
         fn read(&self) -> ApicErrorFlags {
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
-            ApicErrorFlags::from_bits_truncate(unsafe { self.0.read() }.try_into().unwrap())
+            let val = if let Some(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .msr_read(Self::MSR_ID)
+                    .expect("couldn't read the MSR using the GHCB protocol")
+            } else {
+                unsafe { Self::MSR.read() }
+            };
+            ApicErrorFlags::from_bits_truncate(val.try_into().unwrap())
         }
         fn clear(&mut self) {
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
-            unsafe { self.0.write(0) }
+            if let Some(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .msr_write(Self::MSR_ID, 0)
+                    .expect("couldn't write the MSR using the GHCB protocol");
+            } else {
+                let mut msr = Self::MSR;
+                unsafe { msr.write(0) };
+            }
         }
     }
 
-    pub(crate) struct ApicVersionRegister(Msr);
+    pub(crate) struct ApicVersionRegister;
+
+    impl ApicVersionRegister {
+        const MSR_ID: u32 = 0x0000_0803;
+        const MSR: Msr = Msr::new(Self::MSR_ID);
+    }
 
     impl super::ApicVersion for ApicVersionRegister {
         fn read(&self) -> (bool, u8, u8) {
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
-            let val = unsafe { self.0.read() };
+            let val = if let Some(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .msr_read(Self::MSR_ID)
+                    .expect("couldn't read the MSR using the GHCB protocol")
+            } else {
+                unsafe { Self::MSR.read() }
+            };
 
             (
                 val & (1 << 31) > 0,            // EAS
@@ -310,12 +383,23 @@ mod x2apic {
         }
     }
 
-    pub(crate) struct SpuriousInterruptRegister(Msr);
+    pub(crate) struct SpuriousInterruptRegister;
+
+    impl SpuriousInterruptRegister {
+        const MSR_ID: u32 = 0x0000_080F;
+        const MSR: Msr = Msr::new(Self::MSR_ID);
+    }
 
     impl super::SpuriousInterrupts for SpuriousInterruptRegister {
         fn read(&self) -> (SpuriousInterruptFlags, u8) {
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
-            let val = unsafe { self.0.read() } as u32;
+            let val = if let Some(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .msr_read(Self::MSR_ID)
+                    .expect("couldn't read the MSR using the GHCB protocol")
+            } else {
+                unsafe { Self::MSR.read() }
+            } as u32;
 
             (
                 SpuriousInterruptFlags::from_bits_truncate(val),
@@ -325,7 +409,15 @@ mod x2apic {
 
         fn write(&mut self, flags: SpuriousInterruptFlags, vec: u8) {
             // Safety: we've estabished we're using x2APIC, so accessing the MSR is safe.
-            unsafe { self.0.write(flags.bits() as u64 | vec as u64) };
+            let val = flags.bits() as u64 | vec as u64;
+            if let Some(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .msr_write(Self::MSR_ID, val)
+                    .expect("couldn't write the MSR using the GHCB protocol");
+            } else {
+                let mut msr = Self::MSR;
+                unsafe { msr.write(val) };
+            }
         }
     }
 }
@@ -402,17 +494,30 @@ bitflags! {
 pub struct ApicBase;
 
 impl ApicBase {
-    pub const MSR: Msr = Msr::new(0x0000_001B);
+    const MSR_ID: u32 = 0x0000_001B;
+    pub const MSR: Msr = Msr::new(Self::MSR_ID);
 
     fn read_raw() -> u64 {
-        // Safety: the APIC base register is supported in all modern CPUs.
-        unsafe { Self::MSR.read() }
+        if let Some(ghcb) = GHCB_WRAPPER.get() {
+            ghcb.lock()
+                .msr_read(Self::MSR_ID)
+                .expect("couldn't read the MSR using the GHCB protocol")
+        } else {
+            // Safety: the APIC base register is supported in all modern CPUs.
+            unsafe { Self::MSR.read() }
+        }
     }
 
     fn write_raw(value: u64) {
-        let mut msr = Self::MSR;
-        // Safety: the APIC base register is supported in all modern CPUs.
-        unsafe { msr.write(value) }
+        if let Some(ghcb) = GHCB_WRAPPER.get() {
+            ghcb.lock()
+                .msr_write(Self::MSR_ID, value)
+                .expect("couldn't write the MSR using the GHCB protocol")
+        } else {
+            let mut msr = Self::MSR;
+            // Safety: the APIC base register is supported in all modern CPUs.
+            unsafe { msr.write(value) }
+        }
     }
 
     /// Returns the APIC Base Address and flags.
@@ -516,7 +621,7 @@ pub enum DestinationShorthand {
 }
 
 enum Apic {
-    Xapic(&'static mut xapic::ApicRegisters),
+    Xapic(xapic::Xapic),
     X2apic(
         x2apic::InterruptCommandRegister,
         x2apic::ErrorStatusRegister,
@@ -535,9 +640,20 @@ pub struct Lapic {
 
 impl Lapic {
     pub fn enable() -> Result<Self, &'static str> {
-        // Safety: the CPUs we support are new enough to support CPUID.
-        let result = unsafe { __cpuid(0x0000_0001) };
-        let x2apic = result.ecx & (1 << 21) > 0;
+        let x2apic = if let Some(ghcb) = GHCB_WRAPPER.get() {
+            ghcb.lock()
+                .get_cpuid(CpuidInput {
+                    eax: 0x0000_0001,
+                    ecx: 0,
+                    xcr0: 0,
+                    xss: 0,
+                })?
+                .ecx
+        } else {
+            // Safety: the CPUs we support are new enough to support CPUID.
+            unsafe { __cpuid(0x0000_0001) }.ecx
+        } & (1 << 21)
+            > 0;
         // See Section 16.9 in the AMD64 Architecture Programmer's Manual, Volume 2 for explanation
         // of the initialization procedure.
         let (aba, mut flags) = ApicBase::read();
@@ -586,28 +702,28 @@ impl Lapic {
 
     fn error_status(&mut self) -> &mut dyn ErrorStatus {
         match &mut self.interface {
-            Apic::Xapic(regs) => *regs,
+            Apic::Xapic(regs) => regs,
             Apic::X2apic(_, ref mut err, _, _) => err,
         }
     }
 
     fn interrupt_command(&mut self) -> &mut dyn InterprocessorInterrupt {
         match &mut self.interface {
-            Apic::Xapic(regs) => *regs,
+            Apic::Xapic(regs) => regs,
             Apic::X2apic(ref mut icr, _, _, _) => icr,
         }
     }
 
     fn apic_version(&mut self) -> &mut dyn ApicVersion {
         match &mut self.interface {
-            Apic::Xapic(regs) => *regs,
+            Apic::Xapic(regs) => regs,
             Apic::X2apic(_, _, ver, _) => ver,
         }
     }
 
     fn spurious_interrupt_register(&mut self) -> &mut dyn SpuriousInterrupts {
         match &mut self.interface {
-            Apic::Xapic(regs) => *regs,
+            Apic::Xapic(regs) => regs,
             Apic::X2apic(_, _, _, spi) => spi,
         }
     }
