@@ -35,8 +35,10 @@ extern "C" {
 }
 
 // This symbol will be referenced from outside Rust, from the AP bootstrap code, to denote that an
-// AP has become alive.
+// AP has become alive. It's in a special magic section as we have to ensure it's in the first 64K
+// fo memory (or: the first segment).
 #[no_mangle]
+#[link_section = ".ap_bss"]
 static LIVE_AP_COUNT: AtomicU32 = AtomicU32::new(0);
 
 pub fn start_ap(lapic: &mut Lapic, physical_apic_id: u32) -> Result<(), &'static str> {
@@ -47,17 +49,26 @@ pub fn start_ap(lapic: &mut Lapic, physical_apic_id: u32) -> Result<(), &'static
         // Safety: SSE2 is supported in all 64-bit processors.
         unsafe { _mm_pause() };
     }
+    // We assume that we're not going to call start_ap() concurrently, so there is no race condition
+    // here. Which should be true, as we don't have threads and this is running on the sole BSP.
+    let current_live_count = LIVE_AP_COUNT.load(Ordering::SeqCst);
     // Safety: we're not going to dereference the memory, we're just interested in the pointer
     // value.
-    // We also mask the high bits, as the AP will be in the 'magic' real mode that reads data from
-    // the end of the 4 GiB space (aka the BIOS area) much like the BSP.
-    let vector = unsafe { &AP_START as *const _ as u64 } & 0xFFFFF;
+    let vector = unsafe { &AP_START as *const _ as u64 };
     lapic.send_startup_ipi(physical_apic_id, PhysAddr::new(vector))?;
     // TODO(#4235): wait 200 us (instead of _some_ unknown amount of time); send SIPI again if the
     // core hasn't started
-    for _ in 1..(1 << 12) {
+    for _ in 1..(1 << 20) {
         // Safety: SSE2 is supported in all 64-bit processors.
         unsafe { _mm_pause() };
+        if LIVE_AP_COUNT.load(Ordering::SeqCst) > current_live_count {
+            // it's alive!
+            break;
+        }
+    }
+    if LIVE_AP_COUNT.load(Ordering::SeqCst) == current_live_count {
+        // TODO(#4235): try sending a second SIPI before giving up on the AP
+        log::warn!("AP {} failed to start up", physical_apic_id);
     }
     Ok(())
 }
