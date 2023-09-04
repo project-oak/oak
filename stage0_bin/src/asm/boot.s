@@ -91,7 +91,7 @@ _protected_mode_start:
     and $0b100, %eax          # eax &= 0b100; -- SEV-SNP active
     test %eax, %eax           # is eax zero?
     je 2f                     # if yes, no SNP, skip validation and jump ahead
-    mov $0x1000, %ebx         # ebx = 0x1000 -- start address (skipping first page as that's not mapped)
+    mov $0x0000, %ebx         # ebx = 0x0000 -- start address
     xor %ecx, %ecx            # ecx = 0 -- we're using 4K pages
     mov $0b1, %edx            # edx = 1 -- set RMP VALIDATED bit
     1:
