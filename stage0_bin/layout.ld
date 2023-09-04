@@ -129,7 +129,7 @@ SECTIONS {
     /* Everything below this line interacts with 16-bit code, so should be kept as close to the end of the file as
      * possible; max TOP - 32k. */
 
-    .text16 ALIGN(TOP - 4K + SIZEOF(.data), 16) : {
+    .text16 ALIGN(TOP - 4K + SIZEOF(.ap_text), 16) : {
         *(.text16 .text16.*)
     } > bios
 
@@ -314,7 +314,7 @@ SECTIONS {
 
         /* SEV-ES reset block: uint32 addr, uint16 size, 16-byte GUID */
         HIDDEN(sev_es_reset_block_start = .);
-        LONG(ap_start)
+        LONG(sev_es_start)
         SHORT(sev_es_reset_block_end - sev_es_reset_block_start)
         LONG(0x00f771de)
         SHORT(0x1a7e)

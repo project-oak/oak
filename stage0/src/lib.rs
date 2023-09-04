@@ -35,6 +35,8 @@ use x86_64::{
 };
 use zerocopy::AsBytes;
 
+use crate::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
+
 mod acpi;
 mod acpi_tables;
 mod allocator;
@@ -61,7 +63,7 @@ static SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
 
 #[link_section = ".boot"]
 #[no_mangle]
-static SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
+static mut SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
 #[link_section = ".boot"]
 #[no_mangle]
 static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
@@ -229,9 +231,10 @@ pub fn rust64_start(encrypted: u64) -> ! {
         .unwrap_or_default();
 
     if snp {
+        // Safety: we're only interested in the pointer value of SEV_SECRETS, not its contents.
         let cc_blob = BOOT_ALLOC
             .leak(oak_linux_boot_params::CCBlobSevInfo::new(
-                SEV_SECRETS.as_ptr(),
+                unsafe { SEV_SECRETS.as_ptr() },
                 SEV_CPUID.as_ptr(),
             ))
             .expect("Failed to allocate memory for CCBlobSevInfo");
@@ -289,6 +292,26 @@ pub fn rust64_start(encrypted: u64) -> ! {
             "Failed to bootstrap APs: {}. APs may not be properly initialized.",
             err
         );
+    }
+
+    // Register the AP Jump Table, if required.
+    if es {
+        // This assumes identity mapping. Which we have in stage0.
+        let jump_table_pa = AP_JUMP_TABLE.as_ptr() as u64;
+        if snp {
+            // Under SNP we need to place the jump table address in the secrets page.
+            // Safety: we don't care about the contents of the secrets page beyond writing our jump
+            // table address into it.
+            let secrets = unsafe { SEV_SECRETS.assume_init_mut() };
+            secrets.guest_area_0.ap_jump_table_pa = jump_table_pa;
+        } else {
+            // Plain old SEV-ES, use the GHCB protocol.
+            if let Some(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .set_ap_jump_table(PhysAddr::new(jump_table_pa))
+                    .expect("failed to set AP Jump Table");
+            }
+        }
     }
 
     let ram_disk_measurement =

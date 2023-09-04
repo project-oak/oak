@@ -29,6 +29,55 @@ pub const SECRETS_PAGE_MIN_VERSION: u32 = 2;
 /// The mmaximum version of the secrets pages that we expect to receive.
 pub const SECRETS_PAGE_MAX_VERSION: u32 = 3;
 
+/// Representation of the Secrets Page Guest Reserved Area.
+///
+/// See Table 4 in <https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56421-guest-hypervisor-communication-block-standardization.pdf>
+#[repr(C)]
+#[derive(Debug, FromBytes)]
+pub struct GuestReservedArea {
+    /// VMPL0 Current Guest Message Sequence Number \[31:0\]
+    pub vmpl0_guest_seq_low: u32,
+
+    /// VMPL1 Current Guest Message Sequence Number \[31:0\]
+    pub vmpl1_guest_seq_low: u32,
+
+    /// VMPL2 Current Guest Message Sequence Number \[31:0\]
+    pub vmpl2_guest_seq_low: u32,
+
+    /// VMPL3 Current Guest Message Sequence Number \[31:0\]
+    pub vmpl3_guest_seq_low: u32,
+
+    /// AP Jump Table Physical Address
+    pub ap_jump_table_pa: u64,
+
+    /// (Rev 2.01+) VMPL0 Current Guest Message Sequence Number \[63:32\]
+    /// Otherwise: Reseved, MBZ
+    pub vmpl0_guest_seq_high: u32,
+
+    /// (Rev 2.01+) VMPL1 Current Guest Message Sequence Number \[63:32\]
+    /// Otherwise: Reseved, MBZ
+    pub vmpl1_guest_seq_high: u32,
+
+    /// (Rev 2.01+) VMPL2 Current Guest Message Sequence Number \[63:32\]
+    /// Otherwise: Reseved, MBZ
+    pub vmpl2_guest_seq_high: u32,
+
+    /// (Rev 2.01+) VMPL3 Current Guest Message Sequence Number \[63:32\]
+    /// Otherwise: Reseved, MBZ
+    pub vmpl3_guest_seq_high: u32,
+
+    /// Reserved: MBZ
+    _reserved_4: [u8; 0x16],
+
+    /// (Rev 2.01+) Version (1 = 2.01)
+    /// Otherwise: Reserved, MBZ
+    pub version: u16,
+
+    /// Guest Usage
+    pub guest_usage: [u8; 0x20],
+}
+static_assertions::assert_eq_size!(GuestReservedArea, [u8; 96]);
+
 /// Representation of the secrets page.
 ///
 /// See: Table 68 in <https://www.amd.com/system/files/TechDocs/56860.pdf>
@@ -59,7 +108,7 @@ pub struct SecretsPage {
     /// VM-platform communication key 3. AES key used for encrypting messages to the platform.
     pub vmpck_3: [u8; 32],
     /// Area reserved for guest OS use.
-    pub guest_area_0: [u8; 96],
+    pub guest_area_0: GuestReservedArea,
     /// Bitmap indicating which quadwords of the VM Save Area have been tweaked. This is only used
     /// if the VMSA Register Protection feature is enabled.
     pub vmsa_tweak_bitmap: [u8; 64],
