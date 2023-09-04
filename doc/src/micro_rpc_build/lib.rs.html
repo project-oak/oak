@@ -273,6 +273,8 @@
 <a href="#273" id="273">273</a>
 <a href="#274" id="274">274</a>
 <a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -325,6 +327,8 @@
     <span class="kw">let </span><span class="kw-2">mut </span>config = prost_build::Config::new();
     config.service_generator(Box::new(ServiceGenerator {}));
     config
+        <span class="comment">// Use BTreeMap to allow using this function in no-std crates.
+        </span>.btree_map([<span class="string">&quot;.&quot;</span>])
         .compile_protos(protos, includes)
         .expect(<span class="string">&quot;couldn&#39;t compile protobuffer schema&quot;</span>);
 }
