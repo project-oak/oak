@@ -46,6 +46,7 @@ mod fw_cfg;
 mod initramfs;
 mod kernel;
 mod logging;
+mod msr;
 pub mod paging;
 mod pic;
 mod sev;
@@ -158,7 +159,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
         // support very old processors. However, note that, this branch is only executed if
         // we have encryption, and this wouldn't be true for very old processors.
         unsafe {
-            sev::MTRRDefType::write(sev::MTRRDefTypeFlags::MTRR_ENABLE, sev::MemoryType::WP);
+            msr::MTRRDefType::write(msr::MTRRDefTypeFlags::MTRR_ENABLE, msr::MemoryType::WP);
         }
         sev::share_page(Page::containing_address(dma_buf_address), snp);
         sev::share_page(Page::containing_address(dma_access_address), snp);
