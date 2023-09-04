@@ -140,11 +140,18 @@ pub fn verify_endorsement_statement(
     }
 
     let binary_digest = core::str::from_utf8(binary_digest)?;
-    if claim.subject[0].digest[measurement_alg] != binary_digest {
-        anyhow::bail!(
-            "unexpected binary {measurement_alg} digest: expected {binary_digest}, got {}",
-            claim.subject[0].digest[measurement_alg]
-        );
+    match claim.subject[0].digest.get(measurement_alg) {
+        Some(found_digest) => {
+            if found_digest != binary_digest {
+                anyhow::bail!(
+                    "unexpected binary {} digest: expected {}, got {}",
+                    measurement_alg,
+                    binary_digest,
+                    found_digest
+                )
+            }
+        }
+        None => anyhow::bail!("missing {measurement_alg} digest in the endorsement statement"),
     }
 
     Ok(())

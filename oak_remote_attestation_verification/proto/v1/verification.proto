@@ -18,7 +18,8 @@ syntax = "proto3";
 
 package oak.verification.v1;
 
-// Specifies whether verifying a Rekor log entry should be skipped. If not, provides the data,
+// Options for verifying transparent-release endorsement statements. Includes options for
+// specifying whether verifying a Rekor log entry should be skipped. If not, provides the data,
 // including public keys, required for verifying the Rekor log entry.
 message TransparencyVerificationOptions {
   oneof rekor_entry_verification {
@@ -33,5 +34,5 @@ message RekorEntryVerificationData {
   string base64_pem_encoded_endorser_public_key = 2;
 }
 
-// A singleton value to allow skipping the verification of Rekor log entry.
+// A singleton value to allow skipping the verification of the Rekor log entry.
 message SkipRekorEntryVerification {}

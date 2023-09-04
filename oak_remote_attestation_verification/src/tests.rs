@@ -168,6 +168,59 @@ fn test_verify_transparent_release_endorsement_with_rekor_verification() {
 }
 
 #[test]
+fn test_verify_transparent_release_endorsement_with_rekor_verification_but_missing_digest() {
+    let testdata = load_testdata();
+    let skip_rekor_verification = false;
+    let verification_options = get_verification_options(&testdata, skip_rekor_verification);
+
+    let binary_attestation = BinaryAttestation {
+        endorsement_statement: testdata.endorsement_bytes,
+        rekor_log_entry: testdata.log_entry_bytes,
+        base64_pem_encoded_rekor_public_key: BASE64_STANDARD
+            .encode(&testdata.rekor_public_key_pem_bytes),
+    };
+
+    let result = verify_transparent_release_endorsement(
+        BINARY_DIGEST.as_bytes(),
+        "sha2-384",
+        &binary_attestation,
+        &verification_options,
+    );
+    assert!(result.is_err(), "{:?}", result);
+    assert!(result
+        .map_err(|err| format!("{err}"))
+        .unwrap_err()
+        .contains("missing sha2-384 digest"));
+}
+
+#[test]
+fn test_verify_transparent_release_endorsement_with_rekor_verification_but_invalid_rekor_public_key(
+) {
+    let testdata = load_testdata();
+    let skip_rekor_verification = false;
+    let verification_options = get_verification_options(&testdata, skip_rekor_verification);
+
+    let binary_attestation = BinaryAttestation {
+        endorsement_statement: testdata.endorsement_bytes,
+        rekor_log_entry: testdata.log_entry_bytes,
+        base64_pem_encoded_rekor_public_key: BASE64_STANDARD
+            .encode(&testdata.endorser_public_key_pem_bytes),
+    };
+
+    let result = verify_transparent_release_endorsement(
+        BINARY_DIGEST.as_bytes(),
+        "sha256",
+        &binary_attestation,
+        &verification_options,
+    );
+    assert!(result.is_err(), "{:?}", result);
+    assert!(result
+        .map_err(|err| format!("{err}"))
+        .unwrap_err()
+        .contains("Rekor public key verification failed"));
+}
+
+#[test]
 fn test_verify_transparent_release_endorsement_no_rekor_entry_and_skip_rekor_verification() {
     let testdata = load_testdata();
     let skip_rekor_verification = true;
