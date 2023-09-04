@@ -664,6 +664,122 @@
 <a href="#664" id="664">664</a>
 <a href="#665" id="665">665</a>
 <a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -682,7 +798,10 @@
 
 </span><span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>core::arch::x86_64::__cpuid;
+<span class="kw">use </span>oak_sev_guest::cpuid::CpuidInput;
 <span class="kw">use </span>x86_64::{registers::model_specific::Msr, PhysAddr};
+
+<span class="kw">use </span><span class="kw">crate</span>::sev::GHCB_WRAPPER;
 
 <span class="doccomment">/// Interrupt Command.
 ///
@@ -739,7 +858,7 @@
 }
 
 <span class="kw">mod </span>xapic {
-    <span class="kw">use </span><span class="kw">crate</span>::paging::PAGE_TABLE_REFS;
+    <span class="kw">use crate</span>::{paging::PAGE_TABLE_REFS, sev::GHCB_WRAPPER};
     <span class="kw">use </span>core::mem::MaybeUninit;
     <span class="kw">use </span>x86_64::{
         instructions::tlb::flush_all,
@@ -749,23 +868,6 @@
 
     <span class="kw">use super</span>::{ApicErrorFlags, SpuriousInterruptFlags};
 
-    <span class="doccomment">/// Wrapper for a MMIO register in memory.
-    </span><span class="attr">#[repr(transparent)]
-    </span><span class="kw">struct </span>ApicRegister(u32);
-
-    <span class="kw">impl </span>ApicRegister {
-        <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
-            <span class="comment">// Safety: these registers can only be accessed through ApicRegisters, by which we
-            // should have established where the MMIO area is.
-            </span><span class="kw">unsafe </span>{ (<span class="self">self </span><span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span><span class="kw-2">*const </span>u32).read_volatile() }
-        }
-        <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, val: u32) {
-            <span class="comment">// Safety: these registers can only be accessed through ApicRegisters, by which we
-            // should have established where the MMIO area is.
-            </span><span class="kw">unsafe </span>{ (<span class="self">self </span><span class="kw">as </span><span class="kw-2">*mut </span><span class="kw">_ as </span><span class="kw-2">*mut </span>u32).write_volatile(val) }
-        }
-    }
-
     <span class="doccomment">/// Representation of the APIC MMIO registers.
     ///
     /// We do not represent _all_ the xAPIC registers here, but only the ones we are interested in.
@@ -773,34 +875,64 @@
     /// The exact layout is defined in Table 16-2 and Section 16.3.2 (APIC Registers) of the AMD64
     /// Architecture Programmer&#39;s Manual, Volume 2.
     </span><span class="attr">#[repr(C, align(<span class="number">4096</span>))]
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ApicRegisters {
-        _reserved: [u8; <span class="number">0x20</span>],                         <span class="comment">// [0x000..0x020)
-        </span>apic_id_register: ApicRegister,                <span class="comment">// [0x020..0x024)
-        </span>_reserved_2: [u8; <span class="number">0xc</span>],                        <span class="comment">// [0x024..0x030)
-        </span>apic_version_register: ApicRegister,           <span class="comment">// [0x030..0x034)
-        </span>_reserved_3: [u8; <span class="number">0xbc</span>],                       <span class="comment">// [0x034..0x0F0)
-        </span>spurious_interrupt_register: ApicRegister,     <span class="comment">// [0x0F0..0x0F4)
-        </span>_reserved_4: [u8; <span class="number">0x18c</span>],                      <span class="comment">// [0x0F4..0x280)
-        </span>error_status_register: ApicRegister,           <span class="comment">// [0x280..0x284)
-        </span>_reserved_5: [u8; <span class="number">0x7c</span>],                       <span class="comment">// [0x284..0x300]
-        </span>interrupt_command_register_low: ApicRegister,  <span class="comment">// [0x300..0x304)
-        </span>_reserved_6: [u8; <span class="number">0xc</span>],                        <span class="comment">// [0x304..0x310)
-        </span>interrupt_command_register_high: ApicRegister, <span class="comment">// [0x310..0x314)
-        </span>_padding: [u8; <span class="number">0xcec</span>],                         <span class="comment">// [0x314..0x1000)
-    </span>}
+    </span><span class="kw">struct </span>ApicRegisters {
+        registers: [u32; <span class="number">1024</span>],
+    }
     <span class="macro">static_assertions::assert_eq_size!</span>(ApicRegisters, [u8; Size4KiB::SIZE <span class="kw">as </span>usize]);
 
-    <span class="kw">impl </span><span class="kw">super</span>::ApicId <span class="kw">for </span>ApicRegisters {
+    <span class="comment">// We divide the offset by 4 as we&#39;re indexing by u32&#39;s, not bytes.
+    </span><span class="kw">const </span>APIC_ID_REGISTER_OFFSET: usize = <span class="number">0x020 </span>/ core::mem::size_of::&lt;u32&gt;();
+    <span class="kw">const </span>APIC_VERSION_REGISTER_OFFSET: usize = <span class="number">0x30 </span>/ core::mem::size_of::&lt;u32&gt;();
+    <span class="kw">const </span>SPURIOUS_INTERRUPT_REGISTER_OFFSET: usize = <span class="number">0x0F0 </span>/ core::mem::size_of::&lt;u32&gt;();
+    <span class="kw">const </span>ERROR_STATUS_REGISTER_OFFSET: usize = <span class="number">0x280 </span>/ core::mem::size_of::&lt;u32&gt;();
+    <span class="kw">const </span>INTERRUPT_COMMAND_REGISTER_LOW_OFFSET: usize = <span class="number">0x300 </span>/ core::mem::size_of::&lt;u32&gt;();
+    <span class="kw">const </span>INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET: usize = <span class="number">0x310 </span>/ core::mem::size_of::&lt;u32&gt;();
+
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>Xapic {
+        mmio_area: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>ApicRegisters,
+
+        <span class="comment">// APIC base address, we keep track of it as we may need to use the GHCB protocol instead
+        // of accessing `mmio_area` directly
+        </span>aba: PhysAddr,
+    }
+
+    <span class="kw">impl </span>Xapic {
+        <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>, register: usize) -&gt; u32 {
+            <span class="comment">// Safety: these registers can only be accessed through ApicRegisters, by which we
+            // should have established where the MMIO area is.
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .mmio_read_u32(<span class="self">self</span>.aba + (register * core::mem::size_of::&lt;u32&gt;()))
+                    .expect(<span class="string">&quot;couldn&#39;t read the MSR using the GHCB protocol&quot;</span>)
+            } <span class="kw">else </span>{
+                <span class="comment">// Safety: the APIC base register is supported in all modern CPUs.
+                </span><span class="kw">unsafe </span>{ (<span class="kw-2">&amp;</span><span class="self">self</span>.mmio_area.registers[register] <span class="kw">as </span><span class="kw-2">*const </span>u32).read_volatile() }
+            }
+        }
+        <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, register: usize, val: u32) {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .mmio_write_u32(<span class="self">self</span>.aba + (register * core::mem::size_of::&lt;u32&gt;()), val)
+                    .expect(<span class="string">&quot;couldn&#39;t read the MSR using the GHCB protocol&quot;</span>)
+            } <span class="kw">else </span>{
+                <span class="comment">// Safety: these registers can only be accessed through ApicRegisters, by which we
+                // should have established where the MMIO area is.
+                </span><span class="kw">unsafe </span>{ (<span class="kw-2">&amp;mut </span><span class="self">self</span>.mmio_area.registers[register] <span class="kw">as </span><span class="kw-2">*mut </span>u32).write_volatile(val) }
+            }
+        }
+    }
+
+    <span class="kw">impl </span><span class="kw">super</span>::ApicId <span class="kw">for </span>Xapic {
         <span class="doccomment">/// Read the Local APIC ID register.
         ///
         /// See Section 16.3.3 in the AMD64 Architecture Programmer&#39;s Manual, Volume 2 for the
         /// register format.
         </span><span class="kw">fn </span>apic_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
-            <span class="self">self</span>.apic_id_register.read() &gt;&gt; <span class="number">24
+            <span class="self">self</span>.read(APIC_ID_REGISTER_OFFSET) &gt;&gt; <span class="number">24
         </span>}
     }
 
-    <span class="kw">impl </span><span class="kw">super</span>::InterprocessorInterrupt <span class="kw">for </span>ApicRegisters {
+    <span class="kw">impl </span><span class="kw">super</span>::InterprocessorInterrupt <span class="kw">for </span>Xapic {
         <span class="kw">fn </span>send(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             destination: u32,
@@ -814,9 +946,12 @@
             <span class="kw">let </span>destination: u8 = destination
                 .try_into()
                 .map_err(|<span class="kw">_</span>| <span class="string">&quot;destination APIC ID too big for xAPIC&quot;</span>)<span class="question-mark">?</span>;
-            <span class="self">self</span>.interrupt_command_register_high
-                .write((destination <span class="kw">as </span>u32) &lt;&lt; <span class="number">24</span>);
-            <span class="self">self</span>.interrupt_command_register_low.write(
+            <span class="self">self</span>.write(
+                INTERRUPT_COMMAND_REGISTER_HIGH_OFFSET,
+                (destination <span class="kw">as </span>u32) &lt;&lt; <span class="number">24</span>,
+            );
+            <span class="self">self</span>.write(
+                INTERRUPT_COMMAND_REGISTER_LOW_OFFSET,
                 destination_shorthand <span class="kw">as </span>u32
                     | trigger_mode <span class="kw">as </span>u32
                     | level <span class="kw">as </span>u32
@@ -828,19 +963,19 @@
         }
     }
 
-    <span class="kw">impl </span><span class="kw">super</span>::ErrorStatus <span class="kw">for </span>ApicRegisters {
+    <span class="kw">impl </span><span class="kw">super</span>::ErrorStatus <span class="kw">for </span>Xapic {
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ApicErrorFlags {
-            ApicErrorFlags::from_bits_truncate(<span class="self">self</span>.error_status_register.read())
+            ApicErrorFlags::from_bits_truncate(<span class="self">self</span>.read(ERROR_STATUS_REGISTER_OFFSET))
         }
 
         <span class="kw">fn </span>clear(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-            <span class="self">self</span>.error_status_register.write(<span class="number">0</span>)
+            <span class="self">self</span>.write(ERROR_STATUS_REGISTER_OFFSET, <span class="number">0</span>)
         }
     }
 
-    <span class="kw">impl </span><span class="kw">super</span>::ApicVersion <span class="kw">for </span>ApicRegisters {
+    <span class="kw">impl </span><span class="kw">super</span>::ApicVersion <span class="kw">for </span>Xapic {
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (bool, u8, u8) {
-            <span class="kw">let </span>val = <span class="self">self</span>.apic_version_register.read();
+            <span class="kw">let </span>val = <span class="self">self</span>.read(APIC_VERSION_REGISTER_OFFSET);
 
             (
                 val &amp; (<span class="number">1 </span>&lt;&lt; <span class="number">31</span>) &gt; <span class="number">0</span>,            <span class="comment">// EAS
@@ -850,9 +985,9 @@
         }
     }
 
-    <span class="kw">impl </span><span class="kw">super</span>::SpuriousInterrupts <span class="kw">for </span>ApicRegisters {
+    <span class="kw">impl </span><span class="kw">super</span>::SpuriousInterrupts <span class="kw">for </span>Xapic {
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (SpuriousInterruptFlags, u8) {
-            <span class="kw">let </span>val = <span class="self">self</span>.spurious_interrupt_register.read();
+            <span class="kw">let </span>val = <span class="self">self</span>.read(SPURIOUS_INTERRUPT_REGISTER_OFFSET);
 
             (
                 SpuriousInterruptFlags::from_bits_truncate(val),
@@ -861,8 +996,10 @@
         }
 
         <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, flags: <span class="kw">super</span>::SpuriousInterruptFlags, vec: u8) {
-            <span class="self">self</span>.spurious_interrupt_register
-                .write(flags.bits() | vec <span class="kw">as </span>u32)
+            <span class="self">self</span>.write(
+                SPURIOUS_INTERRUPT_REGISTER_OFFSET,
+                flags.bits() | vec <span class="kw">as </span>u32,
+            )
         }
     }
 
@@ -870,7 +1007,7 @@
     // overlap and can change the physical address it points to.
     </span><span class="kw">static </span><span class="kw-2">mut </span>APIC_MMIO_AREA: MaybeUninit&lt;ApicRegisters&gt; = MaybeUninit::uninit();
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>init(apic_base: PhysAddr) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>ApicRegisters {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>init(apic_base: PhysAddr) -&gt; Xapic {
         <span class="comment">// Remap APIC_MMIO_AREA to be backed by `apic_base`. We expect APIC_MMIO_AREA virtual
         // address to be somewhere in the first two megabytes.
 
@@ -887,24 +1024,25 @@
         );
         flush_all();
         <span class="comment">// Safety: we&#39;ve mapped APIC_MMIO_AREA to where the caller claimed it to be.
-        </span><span class="kw">unsafe </span>{ APIC_MMIO_AREA.assume_init_mut() }
+        </span>Xapic {
+            mmio_area: <span class="kw">unsafe </span>{ APIC_MMIO_AREA.assume_init_mut() },
+            aba: apic_base,
+        }
     }
 }
 
 <span class="kw">mod </span>x2apic {
+    <span class="kw">use super</span>::{ApicErrorFlags, SpuriousInterruptFlags};
+    <span class="kw">use </span><span class="kw">crate</span>::sev::GHCB_WRAPPER;
     <span class="kw">use </span>x86_64::registers::model_specific::Msr;
 
-    <span class="kw">use super</span>::{ApicErrorFlags, SpuriousInterruptFlags};
-
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>APIC_ID_REGISTER: X2ApicIdRegister = X2ApicIdRegister(Msr::new(<span class="number">0x0000_00802</span>));
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>APIC_VERSION_REGISTER: ApicVersionRegister =
-        ApicVersionRegister(Msr::new(<span class="number">0x0000_00803</span>));
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>ERROR_STATUS_REGISTER: ErrorStatusRegister =
-        ErrorStatusRegister(Msr::new(<span class="number">0x0000_00828</span>));
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>APIC_ID_REGISTER: X2ApicIdRegister = X2ApicIdRegister;
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>APIC_VERSION_REGISTER: ApicVersionRegister = ApicVersionRegister;
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>ERROR_STATUS_REGISTER: ErrorStatusRegister = ErrorStatusRegister;
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>INTERRUPT_COMMAND_REGISTER: InterruptCommandRegister =
-        InterruptCommandRegister(Msr::new(<span class="number">0x0000_00830</span>));
+        InterruptCommandRegister;
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>SPURIOUS_INTERRUPT_REGISTER: SpuriousInterruptRegister =
-        SpuriousInterruptRegister(Msr::new(<span class="number">0x0000_00830</span>));
+        SpuriousInterruptRegister;
 
     <span class="doccomment">/// The x2APIC_ID register.
     ///
@@ -913,16 +1051,32 @@
     ///
     /// See Section 16.12 (x2APIC_ID) in the AMD64 Architecture Programmer&#39;s Manual, Volume 2 for
     /// more details.
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>X2ApicIdRegister(Msr);
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>X2ApicIdRegister;
+
+    <span class="kw">impl </span>X2ApicIdRegister {
+        <span class="kw">const </span>MSR_ID: u32 = <span class="number">0x0000_00802</span>;
+        <span class="kw">const </span>MSR: Msr = Msr::new(<span class="self">Self</span>::MSR_ID);
+    }
 
     <span class="kw">impl </span><span class="kw">super</span>::ApicId <span class="kw">for </span>X2ApicIdRegister {
         <span class="kw">fn </span>apic_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u32 {
             <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
-            </span><span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.read() <span class="kw">as </span>u32 }
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .msr_read(<span class="self">Self</span>::MSR_ID)
+                    .expect(<span class="string">&quot;couldn&#39;t read the MSR using the GHCB protocol&quot;</span>) <span class="kw">as </span>u32
+            } <span class="kw">else </span>{
+                <span class="kw">unsafe </span>{ <span class="self">Self</span>::MSR.read() <span class="kw">as </span>u32 }
+            }
         }
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>InterruptCommandRegister(Msr);
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>InterruptCommandRegister;
+
+    <span class="kw">impl </span>InterruptCommandRegister {
+        <span class="kw">const </span>MSR_ID: u32 = <span class="number">0x0000_00830</span>;
+        <span class="kw">const </span>MSR: Msr = Msr::new(<span class="self">Self</span>::MSR_ID);
+    }
 
     <span class="kw">impl </span><span class="kw">super</span>::InterprocessorInterrupt <span class="kw">for </span>InterruptCommandRegister {
         <span class="kw">fn </span>send(
@@ -943,30 +1097,65 @@
             value |= message_type <span class="kw">as </span>u64;
             value |= vector <span class="kw">as </span>u64;
             <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
-            </span><span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.write(value) };
-            <span class="prelude-val">Ok</span>(())
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock().msr_write(<span class="self">Self</span>::MSR_ID, value)
+            } <span class="kw">else </span>{
+                <span class="kw">let </span><span class="kw-2">mut </span>msr = <span class="self">Self</span>::MSR;
+                <span class="kw">unsafe </span>{ msr.write(value) };
+                <span class="prelude-val">Ok</span>(())
+            }
         }
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ErrorStatusRegister(Msr);
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ErrorStatusRegister;
+
+    <span class="kw">impl </span>ErrorStatusRegister {
+        <span class="kw">const </span>MSR_ID: u32 = <span class="number">0x0000_0828</span>;
+        <span class="kw">const </span>MSR: Msr = Msr::new(<span class="self">Self</span>::MSR_ID);
+    }
 
     <span class="kw">impl </span><span class="kw">super</span>::ErrorStatus <span class="kw">for </span>ErrorStatusRegister {
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ApicErrorFlags {
             <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
-            </span>ApicErrorFlags::from_bits_truncate(<span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.read() }.try_into().unwrap())
+            </span><span class="kw">let </span>val = <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .msr_read(<span class="self">Self</span>::MSR_ID)
+                    .expect(<span class="string">&quot;couldn&#39;t read the MSR using the GHCB protocol&quot;</span>)
+            } <span class="kw">else </span>{
+                <span class="kw">unsafe </span>{ <span class="self">Self</span>::MSR.read() }
+            };
+            ApicErrorFlags::from_bits_truncate(val.try_into().unwrap())
         }
         <span class="kw">fn </span>clear(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
             <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
-            </span><span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.write(<span class="number">0</span>) }
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .msr_write(<span class="self">Self</span>::MSR_ID, <span class="number">0</span>)
+                    .expect(<span class="string">&quot;couldn&#39;t write the MSR using the GHCB protocol&quot;</span>);
+            } <span class="kw">else </span>{
+                <span class="kw">let </span><span class="kw-2">mut </span>msr = <span class="self">Self</span>::MSR;
+                <span class="kw">unsafe </span>{ msr.write(<span class="number">0</span>) };
+            }
         }
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ApicVersionRegister(Msr);
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>ApicVersionRegister;
+
+    <span class="kw">impl </span>ApicVersionRegister {
+        <span class="kw">const </span>MSR_ID: u32 = <span class="number">0x0000_0803</span>;
+        <span class="kw">const </span>MSR: Msr = Msr::new(<span class="self">Self</span>::MSR_ID);
+    }
 
     <span class="kw">impl </span><span class="kw">super</span>::ApicVersion <span class="kw">for </span>ApicVersionRegister {
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (bool, u8, u8) {
             <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
-            </span><span class="kw">let </span>val = <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.read() };
+            </span><span class="kw">let </span>val = <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .msr_read(<span class="self">Self</span>::MSR_ID)
+                    .expect(<span class="string">&quot;couldn&#39;t read the MSR using the GHCB protocol&quot;</span>)
+            } <span class="kw">else </span>{
+                <span class="kw">unsafe </span>{ <span class="self">Self</span>::MSR.read() }
+            };
 
             (
                 val &amp; (<span class="number">1 </span>&lt;&lt; <span class="number">31</span>) &gt; <span class="number">0</span>,            <span class="comment">// EAS
@@ -976,12 +1165,23 @@
         }
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>SpuriousInterruptRegister(Msr);
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>SpuriousInterruptRegister;
+
+    <span class="kw">impl </span>SpuriousInterruptRegister {
+        <span class="kw">const </span>MSR_ID: u32 = <span class="number">0x0000_080F</span>;
+        <span class="kw">const </span>MSR: Msr = Msr::new(<span class="self">Self</span>::MSR_ID);
+    }
 
     <span class="kw">impl </span><span class="kw">super</span>::SpuriousInterrupts <span class="kw">for </span>SpuriousInterruptRegister {
         <span class="kw">fn </span>read(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (SpuriousInterruptFlags, u8) {
             <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
-            </span><span class="kw">let </span>val = <span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.read() } <span class="kw">as </span>u32;
+            </span><span class="kw">let </span>val = <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .msr_read(<span class="self">Self</span>::MSR_ID)
+                    .expect(<span class="string">&quot;couldn&#39;t read the MSR using the GHCB protocol&quot;</span>)
+            } <span class="kw">else </span>{
+                <span class="kw">unsafe </span>{ <span class="self">Self</span>::MSR.read() }
+            } <span class="kw">as </span>u32;
 
             (
                 SpuriousInterruptFlags::from_bits_truncate(val),
@@ -991,7 +1191,15 @@
 
         <span class="kw">fn </span>write(<span class="kw-2">&amp;mut </span><span class="self">self</span>, flags: SpuriousInterruptFlags, vec: u8) {
             <span class="comment">// Safety: we&#39;ve estabished we&#39;re using x2APIC, so accessing the MSR is safe.
-            </span><span class="kw">unsafe </span>{ <span class="self">self</span>.<span class="number">0</span>.write(flags.bits() <span class="kw">as </span>u64 | vec <span class="kw">as </span>u64) };
+            </span><span class="kw">let </span>val = flags.bits() <span class="kw">as </span>u64 | vec <span class="kw">as </span>u64;
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .msr_write(<span class="self">Self</span>::MSR_ID, val)
+                    .expect(<span class="string">&quot;couldn&#39;t write the MSR using the GHCB protocol&quot;</span>);
+            } <span class="kw">else </span>{
+                <span class="kw">let </span><span class="kw-2">mut </span>msr = <span class="self">Self</span>::MSR;
+                <span class="kw">unsafe </span>{ msr.write(val) };
+            }
         }
     }
 }
@@ -1068,17 +1276,30 @@
 </span><span class="kw">pub struct </span>ApicBase;
 
 <span class="kw">impl </span>ApicBase {
-    <span class="kw">pub const </span>MSR: Msr = Msr::new(<span class="number">0x0000_001B</span>);
+    <span class="kw">const </span>MSR_ID: u32 = <span class="number">0x0000_001B</span>;
+    <span class="kw">pub const </span>MSR: Msr = Msr::new(<span class="self">Self</span>::MSR_ID);
 
     <span class="kw">fn </span>read_raw() -&gt; u64 {
-        <span class="comment">// Safety: the APIC base register is supported in all modern CPUs.
-        </span><span class="kw">unsafe </span>{ <span class="self">Self</span>::MSR.read() }
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
+            ghcb.lock()
+                .msr_read(<span class="self">Self</span>::MSR_ID)
+                .expect(<span class="string">&quot;couldn&#39;t read the MSR using the GHCB protocol&quot;</span>)
+        } <span class="kw">else </span>{
+            <span class="comment">// Safety: the APIC base register is supported in all modern CPUs.
+            </span><span class="kw">unsafe </span>{ <span class="self">Self</span>::MSR.read() }
+        }
     }
 
     <span class="kw">fn </span>write_raw(value: u64) {
-        <span class="kw">let </span><span class="kw-2">mut </span>msr = <span class="self">Self</span>::MSR;
-        <span class="comment">// Safety: the APIC base register is supported in all modern CPUs.
-        </span><span class="kw">unsafe </span>{ msr.write(value) }
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
+            ghcb.lock()
+                .msr_write(<span class="self">Self</span>::MSR_ID, value)
+                .expect(<span class="string">&quot;couldn&#39;t write the MSR using the GHCB protocol&quot;</span>)
+        } <span class="kw">else </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>msr = <span class="self">Self</span>::MSR;
+            <span class="comment">// Safety: the APIC base register is supported in all modern CPUs.
+            </span><span class="kw">unsafe </span>{ msr.write(value) }
+        }
     }
 
     <span class="doccomment">/// Returns the APIC Base Address and flags.
@@ -1182,7 +1403,7 @@
 }
 
 <span class="kw">enum </span>Apic {
-    Xapic(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>xapic::ApicRegisters),
+    Xapic(xapic::Xapic),
     X2apic(
         x2apic::InterruptCommandRegister,
         x2apic::ErrorStatusRegister,
@@ -1201,9 +1422,20 @@
 
 <span class="kw">impl </span>Lapic {
     <span class="kw">pub fn </span>enable() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-        <span class="comment">// Safety: the CPUs we support are new enough to support CPUID.
-        </span><span class="kw">let </span>result = <span class="kw">unsafe </span>{ __cpuid(<span class="number">0x0000_0001</span>) };
-        <span class="kw">let </span>x2apic = result.ecx &amp; (<span class="number">1 </span>&lt;&lt; <span class="number">21</span>) &gt; <span class="number">0</span>;
+        <span class="kw">let </span>x2apic = <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
+            ghcb.lock()
+                .get_cpuid(CpuidInput {
+                    eax: <span class="number">0x0000_0001</span>,
+                    ecx: <span class="number">0</span>,
+                    xcr0: <span class="number">0</span>,
+                    xss: <span class="number">0</span>,
+                })<span class="question-mark">?
+                </span>.ecx
+        } <span class="kw">else </span>{
+            <span class="comment">// Safety: the CPUs we support are new enough to support CPUID.
+            </span><span class="kw">unsafe </span>{ __cpuid(<span class="number">0x0000_0001</span>) }.ecx
+        } &amp; (<span class="number">1 </span>&lt;&lt; <span class="number">21</span>)
+            &gt; <span class="number">0</span>;
         <span class="comment">// See Section 16.9 in the AMD64 Architecture Programmer&#39;s Manual, Volume 2 for explanation
         // of the initialization procedure.
         </span><span class="kw">let </span>(aba, <span class="kw-2">mut </span>flags) = ApicBase::read();
@@ -1252,28 +1484,28 @@
 
     <span class="kw">fn </span>error_status(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>ErrorStatus {
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.interface {
-            Apic::Xapic(regs) =&gt; <span class="kw-2">*</span>regs,
+            Apic::Xapic(regs) =&gt; regs,
             Apic::X2apic(<span class="kw">_</span>, <span class="kw-2">ref mut </span>err, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; err,
         }
     }
 
     <span class="kw">fn </span>interrupt_command(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>InterprocessorInterrupt {
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.interface {
-            Apic::Xapic(regs) =&gt; <span class="kw-2">*</span>regs,
+            Apic::Xapic(regs) =&gt; regs,
             Apic::X2apic(<span class="kw-2">ref mut </span>icr, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; icr,
         }
     }
 
     <span class="kw">fn </span>apic_version(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>ApicVersion {
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.interface {
-            Apic::Xapic(regs) =&gt; <span class="kw-2">*</span>regs,
+            Apic::Xapic(regs) =&gt; regs,
             Apic::X2apic(<span class="kw">_</span>, <span class="kw">_</span>, ver, <span class="kw">_</span>) =&gt; ver,
         }
     }
 
     <span class="kw">fn </span>spurious_interrupt_register(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>SpuriousInterrupts {
         <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.interface {
-            Apic::Xapic(regs) =&gt; <span class="kw-2">*</span>regs,
+            Apic::Xapic(regs) =&gt; regs,
             Apic::X2apic(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, spi) =&gt; spi,
         }
     }
