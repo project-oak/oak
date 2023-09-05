@@ -76,8 +76,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>core::{fmt::Write, ops::DerefMut};
-<span class="kw">use </span>oak_sev_guest::io::PortFactoryWrapper;
+</span><span class="kw">use </span><span class="kw">crate</span>::io_port_factory;
+<span class="kw">use </span>core::{fmt::Write, ops::DerefMut};
 <span class="kw">use </span>sev_serial::SerialPort;
 <span class="kw">use </span>spinning_top::Spinlock;
 
@@ -109,10 +109,10 @@
 
 <span class="kw">static </span>LOGGER: Logger = Logger {};
 
-<span class="kw">pub fn </span>init_logging(port_factory: PortFactoryWrapper) {
+<span class="kw">pub fn </span>init_logging() {
     <span class="comment">// Our contract with the launcher requires the first serial port to be
     // available, so assuming the loader adheres to it, this is safe.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>port = <span class="kw">unsafe </span>{ SerialPort::new(SERIAL_BASE, port_factory) };
+    </span><span class="kw">let </span><span class="kw-2">mut </span>port = <span class="kw">unsafe </span>{ SerialPort::new(SERIAL_BASE, io_port_factory()) };
     port.init()
         .expect(<span class="string">&quot;couldn&#39;t initialize logging serial port&quot;</span>);
     {

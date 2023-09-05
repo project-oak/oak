@@ -76,6 +76,7 @@
 <a href="#76" id="76">76</a>
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -92,7 +93,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortWrapper, PortWriter};
+</span><span class="kw">use </span><span class="kw">crate</span>::io_port_factory;
+<span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortWrapper, PortWriter};
 
 <span class="kw">const </span>PIC0_BASE: u16 = <span class="number">0x20</span>;
 <span class="kw">const </span>PIC1_BASE: u16 = <span class="number">0xA0</span>;
@@ -103,10 +105,10 @@
 }
 
 <span class="kw">impl </span>Pic {
-    <span class="kw">pub fn </span>new(port_factory: <span class="kw-2">&amp;</span>PortFactoryWrapper, base: u16) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(base: u16) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            command: port_factory.new_writer(base),
-            data: port_factory.new_writer(base + <span class="number">1</span>),
+            command: io_port_factory().new_writer(base),
+            data: io_port_factory().new_writer(base + <span class="number">1</span>),
         }
     }
 
@@ -145,9 +147,9 @@
 ///
 /// The caller needs to guarantee that the PIC0 and PIC1 are at their well-known I/O ports of 0x20
 /// and 0xA0.
-</span><span class="kw">pub unsafe fn </span>disable_pic8259(port_factory: <span class="kw-2">&amp;</span>PortFactoryWrapper) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>pic0 = Pic::new(port_factory, PIC0_BASE);
-    <span class="kw">let </span><span class="kw-2">mut </span>pic1 = Pic::new(port_factory, PIC1_BASE);
+</span><span class="kw">pub unsafe fn </span>disable_pic8259() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>pic0 = Pic::new(PIC0_BASE);
+    <span class="kw">let </span><span class="kw-2">mut </span>pic1 = Pic::new(PIC1_BASE);
 
     <span class="comment">// PIC0 interrupts will start at 0x20 (32), PIC1 at IRQ2, disable all interrupts
     </span>pic0.init(<span class="number">0x20</span>, <span class="number">4</span>, <span class="number">0xFF</span>)<span class="question-mark">?</span>;

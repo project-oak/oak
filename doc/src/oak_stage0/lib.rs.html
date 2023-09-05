@@ -360,24 +360,6 @@
 <a href="#360" id="360">360</a>
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
-<a href="#365" id="365">365</a>
-<a href="#366" id="366">366</a>
-<a href="#367" id="367">367</a>
-<a href="#368" id="368">368</a>
-<a href="#369" id="369">369</a>
-<a href="#370" id="370">370</a>
-<a href="#371" id="371">371</a>
-<a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
-<a href="#374" id="374">374</a>
-<a href="#375" id="375">375</a>
-<a href="#376" id="376">376</a>
-<a href="#377" id="377">377</a>
-<a href="#378" id="378">378</a>
-<a href="#379" id="379">379</a>
-<a href="#380" id="380">380</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -399,6 +381,7 @@
 
 </span><span class="kw">extern crate </span>alloc;
 
+<span class="kw">use crate</span>::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 <span class="kw">use </span>core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>oak_sev_guest::io::PortFactoryWrapper;
@@ -414,8 +397,6 @@
     PhysAddr, VirtAddr,
 };
 <span class="kw">use </span>zerocopy::AsBytes;
-
-<span class="kw">use crate</span>::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 
 <span class="kw">mod </span>acpi;
 <span class="kw">mod </span>acpi_tables;
@@ -509,7 +490,7 @@
     paging::init_page_table_refs(encrypted);
 
     <span class="comment">// If we&#39;re under SEV-ES or SNP, we need a GHCB block for communication (SNP implies SEV-ES).
-    </span><span class="kw">let </span>ghcb_protocol = <span class="kw">if </span>es {
+    </span><span class="kw">if </span>es {
         <span class="comment">// No point in calling expect() here, the logging isn&#39;t set up yet.
         // In any case, this allocation should not fail. This is the first thing we allocate, the
         // GHCB is 4K in size, and the allocator should be far bigger than that (as we have more
@@ -517,15 +498,10 @@
         // If the allocation does fail, something is horribly broken and we have no hope of
         // continuing.
         </span><span class="kw">let </span>ghcb = BOOT_ALLOC.leak(sev::Ghcb::new()).unwrap();
-        <span class="prelude-val">Some</span>(sev::init_ghcb(ghcb, snp))
-    } <span class="kw">else </span>{
-        <span class="prelude-val">None
-    </span>};
+        sev::init_ghcb(ghcb, snp);
+    }
 
-    logging::init_logging(<span class="kw">match </span>ghcb_protocol {
-        <span class="prelude-val">Some</span>(protocol) =&gt; PortFactoryWrapper::new_ghcb(protocol),
-        <span class="prelude-val">None </span>=&gt; PortFactoryWrapper::new_raw(),
-    });
+    logging::init_logging();
     <span class="macro">log::info!</span>(<span class="string">&quot;starting...&quot;</span>);
 
     <span class="kw">let </span>dma_buf = BOOT_ALLOC.leak(fw_cfg::DmaBuffer::default()).unwrap();
@@ -546,29 +522,14 @@
     }
 
     <span class="comment">// Safety: we assume there won&#39;t be any other hardware devices using the fw_cfg IO ports.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>fwcfg = <span class="kw">unsafe </span>{
-        fw_cfg::FwCfg::new(
-            <span class="kw">match </span>ghcb_protocol {
-                <span class="prelude-val">Some</span>(protocol) =&gt; PortFactoryWrapper::new_ghcb(protocol),
-                <span class="prelude-val">None </span>=&gt; PortFactoryWrapper::new_raw(),
-            },
-            dma_buf,
-            dma_access,
-        )
-    }
-    .expect(<span class="string">&quot;fw_cfg device not found!&quot;</span>);
+    </span><span class="kw">let </span><span class="kw-2">mut </span>fwcfg =
+        <span class="kw">unsafe </span>{ fw_cfg::FwCfg::new(dma_buf, dma_access) }.expect(<span class="string">&quot;fw_cfg device not found!&quot;</span>);
 
     <span class="kw">let </span>zero_page = BOOT_ALLOC
         .leak(zero_page::ZeroPage::new())
         .expect(<span class="string">&quot;failed to allocate memory for zero page&quot;</span>);
 
-    zero_page.fill_e820_table(
-        <span class="kw-2">&amp;mut </span>fwcfg,
-        <span class="kw">match </span>ghcb_protocol {
-            <span class="prelude-val">Some</span>(protocol) =&gt; PortFactoryWrapper::new_ghcb(protocol),
-            <span class="prelude-val">None </span>=&gt; PortFactoryWrapper::new_raw(),
-        },
-    );
+    zero_page.fill_e820_table(<span class="kw-2">&amp;mut </span>fwcfg);
 
     <span class="kw">if </span>snp {
         sev::validate_memory(zero_page.e820_table(), encrypted);
@@ -662,13 +623,7 @@
     <span class="kw">let </span><span class="kw-2">mut </span>acpi_measurement = Measurement::default();
     acpi_measurement[..].copy_from_slice(<span class="kw-2">&amp;</span>acpi_digest[..]);
 
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = smp::bootstrap_aps(
-        rsdp,
-        <span class="kw-2">&amp;</span><span class="kw">match </span>ghcb_protocol {
-            <span class="prelude-val">Some</span>(protocol) =&gt; PortFactoryWrapper::new_ghcb(protocol),
-            <span class="prelude-val">None </span>=&gt; PortFactoryWrapper::new_raw(),
-        },
-    ) {
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = smp::bootstrap_aps(rsdp) {
         <span class="macro">log::warn!</span>(
             <span class="string">&quot;Failed to bootstrap APs: {}. APs may not be properly initialized.&quot;</span>,
             err
@@ -719,7 +674,7 @@
     </span><span class="kw">if </span>snp {
         sev::unshare_page(Page::containing_address(dma_buf_address));
         sev::unshare_page(Page::containing_address(dma_access_address));
-        <span class="kw">if </span>ghcb_protocol.is_some() {
+        <span class="kw">if </span>GHCB_WRAPPER.get().is_some() {
             sev::deinit_ghcb();
         }
     }
@@ -757,5 +712,14 @@
     <span class="kw">let </span>digest = digest.finalize();
     measurement[..].copy_from_slice(<span class="kw-2">&amp;</span>digest[..]);
     measurement
+}
+
+<span class="doccomment">/// Creates a factory for accessing raw I/O ports.
+</span><span class="kw">fn </span>io_port_factory() -&gt; PortFactoryWrapper {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
+        PortFactoryWrapper::new_ghcb(ghcb)
+    } <span class="kw">else </span>{
+        PortFactoryWrapper::new_raw()
+    }
 }
 </code></pre></div></section></main></body></html>

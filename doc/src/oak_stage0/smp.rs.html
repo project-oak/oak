@@ -156,8 +156,6 @@
 <a href="#156" id="156">156</a>
 <a href="#157" id="157">157</a>
 <a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -174,21 +172,19 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>core::{
+</span><span class="kw">use crate</span>::{
+    acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
+    apic::Lapic,
+    pic::disable_pic8259,
+};
+<span class="kw">use </span>core::{
     arch::x86_64::_mm_pause,
     ffi::c_void,
     mem::MaybeUninit,
     sync::atomic::{AtomicU32, Ordering},
 };
-
-<span class="kw">use </span>oak_sev_guest::{ap_jump_table::ApJumpTable, io::PortFactoryWrapper};
+<span class="kw">use </span>oak_sev_guest::ap_jump_table::ApJumpTable;
 <span class="kw">use </span>x86_64::PhysAddr;
-
-<span class="kw">use crate</span>::{
-    acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
-    apic::Lapic,
-    pic::disable_pic8259,
-};
 
 <span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
     <span class="attr">#[link_name = <span class="string">&quot;ap_start&quot;</span>]
@@ -239,7 +235,7 @@
 }
 
 <span class="comment">// TODO(#4235): Bootstrap the APs.
-</span><span class="kw">pub fn </span>bootstrap_aps(rsdp: <span class="kw-2">&amp;</span>Rsdp, port_factory: <span class="kw-2">&amp;</span>PortFactoryWrapper) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>bootstrap_aps(rsdp: <span class="kw-2">&amp;</span>Rsdp) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// If XSDT exists, then per ACPI spec we have to prefer that. If it doesn&#39;t, see if we can use
     // the old RSDT. (If we have neither XSDT or RSDT, the ACPI tables are broken.)
     </span><span class="kw">let </span>madt = <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(xsdt)) = rsdp.xsdt() {
@@ -254,7 +250,7 @@
 
     <span class="comment">// Disable the local PIC and set up our local APIC, as we need to send IPIs to APs via the APIC.
     // Safety: we can reasonably expect the PICs to be available.
-    </span><span class="kw">unsafe </span>{ disable_pic8259(port_factory)<span class="question-mark">? </span>};
+    </span><span class="kw">unsafe </span>{ disable_pic8259()<span class="question-mark">? </span>};
     <span class="kw">let </span><span class="kw-2">mut </span>lapic = Lapic::enable()<span class="question-mark">?</span>;
 
     <span class="kw">let </span>local_apic_id = lapic.local_apic_id();

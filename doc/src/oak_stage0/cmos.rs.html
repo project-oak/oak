@@ -84,6 +84,7 @@
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -100,7 +101,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
+</span><span class="kw">use </span><span class="kw">crate</span>::io_port_factory;
+<span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortReader, PortWrapper, PortWriter};
 
 <span class="kw">const </span>CMOS_INDEX_PORT: u16 = <span class="number">0x0070</span>;
 <span class="kw">const </span>CMOS_DATA_PORT: u16 = <span class="number">0x0071</span>;
@@ -129,10 +131,10 @@
     /// It&#39;s up to the caller to guarantee that there will be no other readers/writers to the CMOS
     /// ports (0x70, 0x71) and that CMOS is actually available on those ports, otherwise the
     /// behaviour is undefined.
-    </span><span class="kw">pub unsafe fn </span>new(port_factory: PortFactoryWrapper) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub unsafe fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            index_port: port_factory.new_writer(CMOS_INDEX_PORT),
-            data_port: port_factory.new_reader(CMOS_DATA_PORT),
+            index_port: io_port_factory().new_writer(CMOS_INDEX_PORT),
+            data_port: io_port_factory().new_reader(CMOS_DATA_PORT),
         }
     }
 
