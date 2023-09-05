@@ -113,21 +113,24 @@ impl OakFunctions for OakFunctionsService {
         }
     }
 
-    fn invoke(&mut self, request: InvokeRequest) -> Result<InvokeResponse, micro_rpc::Status> {
-        log::debug!("called invoke");
+    fn handle_user_request(
+        &mut self,
+        request: InvokeRequest,
+    ) -> Result<InvokeResponse, micro_rpc::Status> {
+        log::debug!("called handle_user_request");
         let encryption_key_provider = self.encryption_key_provider.clone();
         let instance = self.get_instance()?;
         EncryptionHandler::create(encryption_key_provider, |r| {
             instance
-                .invoke(&r)
-                .map_err(|err| anyhow::anyhow!("couldn't handle invoke: {:?}", err))
+                .handle_user_request(&r)
+                .map_err(|err| anyhow::anyhow!("couldn't handle user request: {:?}", err))
         })
         .invoke(&request.body)
         .map(|response| InvokeResponse { body: response })
         .map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
-                format!("couldn't invoke handler: {:?}", err),
+                format!("couldn't call handle_user_request handler: {:?}", err),
             )
         })
     }
