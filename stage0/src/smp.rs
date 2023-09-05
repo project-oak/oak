@@ -14,9 +14,14 @@
 // limitations under the License.
 //
 
-use core::ffi::c_void;
+use core::{
+    arch::x86_64::_mm_pause,
+    ffi::c_void,
+    mem::MaybeUninit,
+    sync::atomic::{AtomicU32, Ordering},
+};
 
-use oak_sev_guest::io::PortFactoryWrapper;
+use oak_sev_guest::{ap_jump_table::ApJumpTable, io::PortFactoryWrapper};
 use x86_64::PhysAddr;
 
 use crate::{
@@ -30,16 +35,47 @@ extern "C" {
     static AP_START: c_void;
 }
 
+// This symbol will be referenced from outside Rust, from the AP bootstrap code, to denote that an
+// AP has become alive. It's in a special magic section as we have to ensure it's in the first 64K
+// fo memory (or: the first segment).
+#[no_mangle]
+#[link_section = ".ap_bss"]
+static LIVE_AP_COUNT: AtomicU32 = AtomicU32::new(0);
+
+#[no_mangle]
+#[link_section = ".ap_bss"]
+pub static AP_JUMP_TABLE: MaybeUninit<ApJumpTable> = MaybeUninit::uninit();
+
 pub fn start_ap(lapic: &mut Lapic, physical_apic_id: u32) -> Result<(), &'static str> {
     lapic.send_init_ipi(physical_apic_id)?;
-    // TODO(#4235): wait 10 ms
+    // TODO(#4235): wait 10 ms. The numbers chosen here are arbitrary and have no connection to
+    // actual seconds.
+    for _ in 1..(1 << 15) {
+        // Safety: SSE2 is supported in all 64-bit processors.
+        unsafe { _mm_pause() };
+    }
+    // We assume that we're not going to call start_ap() concurrently, so there is no race condition
+    // here. Which should be true, as we don't have threads and this is running on the sole BSP.
+    let current_live_count = LIVE_AP_COUNT.load(Ordering::SeqCst);
     // Safety: we're not going to dereference the memory, we're just interested in the pointer
     // value.
-    // We also mask the high bits, as the AP will be in the 'magic' real mode that reads data from
-    // the end of the 4 GiB space (aka the BIOS area) much like the BSP.
-    let vector = unsafe { &AP_START as *const _ as u64 } & 0xFFFFF;
-    lapic.send_startup_ipi(physical_apic_id, PhysAddr::new(vector))
-    // TODO(#4235): wait 200 us, send SIPI again if the core hasn't started
+    let vector = unsafe { &AP_START as *const _ as u64 };
+    lapic.send_startup_ipi(physical_apic_id, PhysAddr::new(vector))?;
+    // TODO(#4235): wait 200 us (instead of _some_ unknown amount of time); send SIPI again if the
+    // core hasn't started
+    for _ in 1..(1 << 20) {
+        // Safety: SSE2 is supported in all 64-bit processors.
+        unsafe { _mm_pause() };
+        if LIVE_AP_COUNT.load(Ordering::SeqCst) > current_live_count {
+            // it's alive!
+            break;
+        }
+    }
+    if LIVE_AP_COUNT.load(Ordering::SeqCst) == current_live_count {
+        // TODO(#4235): try sending a second SIPI before giving up on the AP
+        log::warn!("AP {} failed to start up", physical_apic_id);
+    }
+    Ok(())
 }
 
 // TODO(#4235): Bootstrap the APs.
@@ -62,6 +98,9 @@ pub fn bootstrap_aps(rsdp: &Rsdp, port_factory: &PortFactoryWrapper) -> Result<(
     let mut lapic = Lapic::enable()?;
 
     let local_apic_id = lapic.local_apic_id();
+
+    // How many APs do we expect to come online?
+    let mut expected_aps = 0;
 
     // APIC and X2APIC structures are largely the same; X2APIC entries are used if the APIC ID is
     // too large to fit into the one-byte field of the APIC structure (e.g. if you have more than
@@ -94,7 +133,27 @@ pub fn bootstrap_aps(rsdp: &Rsdp, port_factory: &PortFactoryWrapper) -> Result<(
             continue;
         }
 
+        expected_aps += 1;
         start_ap(&mut lapic, remote_lapic_id)?;
+    }
+
+    // Wait until all APs have told they are online. Or we time out waiting for them.
+    // The timeout has been chosen arbitrarily and may need to be tuned.
+    for _ in 0..(1 << 23) {
+        if LIVE_AP_COUNT.load(Ordering::SeqCst) == expected_aps {
+            break;
+        }
+        // Safety: SSE2 is supported in all 64-bit processors.
+        unsafe { _mm_pause() };
+    }
+    log::info!(
+        "Expected number of APs: {}, started number of APs: {}",
+        expected_aps,
+        LIVE_AP_COUNT.load(Ordering::SeqCst)
+    );
+
+    if LIVE_AP_COUNT.load(Ordering::SeqCst) != expected_aps {
+        return Err("not all APs came online");
     }
 
     Ok(())

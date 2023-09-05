@@ -17,7 +17,10 @@
 #![no_std]
 #![feature(int_roundings)]
 
+extern crate alloc;
+
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
+use linked_list_allocator::LockedHeap;
 use oak_sev_guest::io::PortFactoryWrapper;
 use sha2::{Digest, Sha256};
 use x86_64::{
@@ -32,15 +35,18 @@ use x86_64::{
 };
 use zerocopy::AsBytes;
 
+use crate::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
+
 mod acpi;
 mod acpi_tables;
-mod alloc;
+mod allocator;
 mod apic;
 mod cmos;
 mod fw_cfg;
 mod initramfs;
 mod kernel;
 mod logging;
+mod msr;
 pub mod paging;
 mod pic;
 mod sev;
@@ -49,12 +55,16 @@ mod zero_page;
 
 type Measurement = [u8; 32];
 
-// Reserve 128K for boot data structures.
-static BOOT_ALLOC: alloc::Allocator<0x20000> = alloc::Allocator::uninit();
+// Reserve 128K for boot data structures that will outlive Stage 0.
+static BOOT_ALLOC: allocator::BumpAllocator<0x20000> = allocator::BumpAllocator::uninit();
+
+// Heap for short-term allocations. These allocations are not expected to outlive Stage 0.
+#[cfg_attr(not(test), global_allocator)]
+static SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
 
 #[link_section = ".boot"]
 #[no_mangle]
-static SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
+static mut SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
 #[link_section = ".boot"]
 #[no_mangle]
 static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
@@ -149,7 +159,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
         // support very old processors. However, note that, this branch is only executed if
         // we have encryption, and this wouldn't be true for very old processors.
         unsafe {
-            sev::MTRRDefType::write(sev::MTRRDefTypeFlags::MTRR_ENABLE, sev::MemoryType::WP);
+            msr::MTRRDefType::write(msr::MTRRDefTypeFlags::MTRR_ENABLE, msr::MemoryType::WP);
         }
         sev::share_page(Page::containing_address(dma_buf_address), snp);
         sev::share_page(Page::containing_address(dma_access_address), snp);
@@ -213,14 +223,19 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     paging::map_additional_memory(encrypted);
 
+    // Initialize the short-term heap. Any allocations that rely on a global allocator before this
+    // point will fail.
+    allocator::init_global_allocator(zero_page.e820_table());
+
     let setup_data_measurement = zero_page
         .try_fill_hdr_from_setup_data(&mut fwcfg)
         .unwrap_or_default();
 
     if snp {
+        // Safety: we're only interested in the pointer value of SEV_SECRETS, not its contents.
         let cc_blob = BOOT_ALLOC
             .leak(oak_linux_boot_params::CCBlobSevInfo::new(
-                SEV_SECRETS.as_ptr(),
+                unsafe { SEV_SECRETS.as_ptr() },
                 SEV_CPUID.as_ptr(),
             ))
             .expect("Failed to allocate memory for CCBlobSevInfo");
@@ -267,18 +282,36 @@ pub fn rust64_start(encrypted: u64) -> ! {
     let mut acpi_measurement = Measurement::default();
     acpi_measurement[..].copy_from_slice(&acpi_digest[..]);
 
-    if !es {
-        if let Err(err) = smp::bootstrap_aps(
-            rsdp,
-            &match ghcb_protocol {
-                Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
-                None => PortFactoryWrapper::new_raw(),
-            },
-        ) {
-            log::warn!(
-                "Failed to bootstrap APs: {}. APs may not be properly initialized.",
-                err
-            );
+    if let Err(err) = smp::bootstrap_aps(
+        rsdp,
+        &match ghcb_protocol {
+            Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
+            None => PortFactoryWrapper::new_raw(),
+        },
+    ) {
+        log::warn!(
+            "Failed to bootstrap APs: {}. APs may not be properly initialized.",
+            err
+        );
+    }
+
+    // Register the AP Jump Table, if required.
+    if es {
+        // This assumes identity mapping. Which we have in stage0.
+        let jump_table_pa = AP_JUMP_TABLE.as_ptr() as u64;
+        if snp {
+            // Under SNP we need to place the jump table address in the secrets page.
+            // Safety: we don't care about the contents of the secrets page beyond writing our jump
+            // table address into it.
+            let secrets = unsafe { SEV_SECRETS.assume_init_mut() };
+            secrets.guest_area_0.ap_jump_table_pa = jump_table_pa;
+        } else {
+            // Plain old SEV-ES, use the GHCB protocol.
+            if let Some(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .set_ap_jump_table(PhysAddr::new(jump_table_pa))
+                    .expect("failed to set AP Jump Table");
+            }
         }
     }
 

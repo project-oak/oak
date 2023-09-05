@@ -18,6 +18,17 @@
 
 extern crate alloc;
 
+pub mod proto {
+    pub mod oak {
+        pub mod verification {
+            pub mod v1 {
+                #![allow(dead_code)]
+                include!(concat!(env!("OUT_DIR"), "/oak.verification.v1.rs"));
+            }
+        }
+    }
+}
+
 pub mod rekor;
 pub mod verifier;
 

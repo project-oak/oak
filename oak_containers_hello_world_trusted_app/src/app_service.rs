@@ -21,18 +21,21 @@ use crate::{
     },
 };
 use anyhow::anyhow;
+use oak_crypto::{encryptor::ServerEncryptor, hpke::RecipientContext};
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 
+const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
+
 struct TrustedApplicationImplementation {
-    _orchestrator_client: OrchestratorClient,
+    orchestrator_client: OrchestratorClient,
     application_config: Vec<u8>,
 }
 
 impl TrustedApplicationImplementation {
     pub fn new(orchestrator_client: OrchestratorClient, application_config: Vec<u8>) -> Self {
         Self {
-            _orchestrator_client: orchestrator_client,
+            orchestrator_client,
             application_config,
         }
     }
@@ -44,10 +47,53 @@ impl TrustedApplication for TrustedApplicationImplementation {
         &self,
         request: tonic::Request<HelloRequest>,
     ) -> Result<tonic::Response<HelloResponse>, tonic::Status> {
-        let name = request.into_inner().name;
+        let encrypted_request = request
+            .into_inner()
+            .encrypted_request
+            .ok_or(tonic::Status::internal("encrypted request wasn't provided"))?;
+
+        // Initialize server encryptor.
+        let serialized_encapsulated_public_key = encrypted_request
+            .serialized_encapsulated_public_key
+            .as_ref()
+            .ok_or(tonic::Status::invalid_argument(
+                "initial request message doesn't contain encapsulated public key",
+            ))?;
+        let serialized_crypto_context = self
+            .orchestrator_client
+            .get_crypto_context(serialized_encapsulated_public_key)
+            .await
+            .map_err(|error| {
+                tonic::Status::internal(format!(
+                    "couldn't get crypto context from the Orchestrator: {:?}",
+                    error
+                ))
+            })?;
+        let crypto_context =
+            RecipientContext::deserialize(serialized_crypto_context).map_err(|error| {
+                tonic::Status::internal(format!("couldn't deserialize crypto context: {:?}", error))
+            })?;
+        let mut server_encryptor = ServerEncryptor::new(crypto_context);
+
+        // Associated data is ignored.
+        let (name_bytes, _) = server_encryptor
+            .decrypt(&encrypted_request)
+            .map_err(|error| {
+                tonic::Status::internal(format!("couldn't decrypt request: {:?}", error))
+            })?;
+
+        let name = String::from_utf8(name_bytes)
+            .map_err(|error| tonic::Status::internal(format!("name is not UTF-8: {:?}", error)))?;
         let greeting: String = format!("Hello from the trusted side, {}! Btw, the Trusted App has a config with a length of {} bytes.", name, self.application_config.len());
-        let response = tonic::Response::new(HelloResponse { greeting });
-        Ok(response)
+        let response = server_encryptor
+            .encrypt(greeting.as_bytes(), EMPTY_ASSOCIATED_DATA)
+            .map_err(|error| {
+                tonic::Status::internal(format!("couldn't encrypt response: {:?}", error))
+            })?;
+
+        Ok(tonic::Response::new(HelloResponse {
+            encrypted_response: Some(response),
+        }))
     }
 }
 

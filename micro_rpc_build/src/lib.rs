@@ -50,6 +50,8 @@ pub fn compile(protos: &[impl AsRef<Path>], includes: &[impl AsRef<Path>]) {
     let mut config = prost_build::Config::new();
     config.service_generator(Box::new(ServiceGenerator {}));
     config
+        // Use BTreeMap to allow using this function in no-std crates.
+        .btree_map(["."])
         .compile_protos(protos, includes)
         .expect("couldn't compile protobuffer schema");
 }

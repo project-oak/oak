@@ -14,24 +14,8 @@
 // limitations under the License.
 //
 
-#![no_std]
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    micro_rpc_build::compile(&["proto/v1/verification.proto"], &["proto/v1"]);
 
-extern crate alloc;
-
-pub mod proto {
-    pub mod oak {
-        pub mod crypto {
-            pub mod v1 {
-                #![allow(dead_code)]
-                include!(concat!(env!("OUT_DIR"), "/oak.crypto.v1.rs"));
-            }
-        }
-    }
+    Ok(())
 }
-
-pub mod encryptor;
-pub mod hpke;
-pub mod signer;
-#[cfg(test)]
-mod tests;
-mod util;

@@ -114,7 +114,7 @@ fn test_encryptor() {
 
     let mut client_encryptor = ClientEncryptor::create(&serialized_server_public_key)
         .expect("couldn't create client encryptor");
-    let mut server_encryptor = ServerEncryptor::new(key_provider);
+    let mut server_encryptor = None;
 
     for i in 0..TEST_SESSION_SIZE {
         let test_request_message = [TEST_REQUEST_MESSAGE, &[i as u8]].concat();
@@ -134,13 +134,30 @@ fn test_encryptor() {
                 .unwrap()
                 .ciphertext
         );
+
+        // Initialize server encryptor.
+        if server_encryptor.is_none() {
+            let serialized_encapsulated_public_key = encrypted_request
+                .serialized_encapsulated_public_key
+                .as_ref()
+                .expect("initial request message doesn't contain encapsulated public key");
+            server_encryptor = Some(
+                ServerEncryptor::create(serialized_encapsulated_public_key, key_provider.clone())
+                    .expect("couldn't create server encryptor"),
+            );
+        }
+
         let (decrypted_request, request_associated_data) = server_encryptor
+            .as_mut()
+            .expect("server encryptor is not initialized")
             .decrypt(&encrypted_request)
             .expect("server couldn't decrypt request");
         assert_eq!(test_request_message, decrypted_request);
         assert_eq!(test_request_associated_data, request_associated_data);
 
         let encrypted_response = server_encryptor
+            .as_mut()
+            .expect("server encryptor is not initialized")
             .encrypt(&test_response_message, &test_response_associated_data)
             .expect("server couldn't encrypt response");
         // Check that the message was encrypted.
