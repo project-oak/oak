@@ -32,20 +32,19 @@ static LOGGER: StderrLogger = StderrLogger {};
 #[no_mangle]
 fn _start() -> ! {
     log::set_logger(&LOGGER).unwrap();
-    #[cfg(debug_assertions)]
-    {
-        log::set_max_level(log::LevelFilter::Debug);
-    }
-    #[cfg(not(debug_assertions))]
-    {
-        log::set_max_level(log::LevelFilter::Warn);
-    }
+    log::set_max_level(log::LevelFilter::Debug);
     oak_enclave_runtime_support::init();
     main();
 }
 
 fn main() -> ! {
     info!("In main!");
+    #[cfg(feature = "deny_sensitive_logging")]
+    {
+        // Only log warnings and errors to reduce the risk of accidentally leaking execution
+        // information through debug logs.
+        log::set_max_level(log::LevelFilter::Warn);
+    }
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
     let service =
         oak_functions_service::OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
