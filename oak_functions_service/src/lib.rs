@@ -122,7 +122,7 @@ impl OakFunctions for OakFunctionsService {
         let instance = self.get_instance()?;
         EncryptionHandler::create(encryption_key_provider, |r| {
             instance
-                .invoke(&r)
+                .handle_user_request(&r)
                 .map_err(|err| anyhow::anyhow!("couldn't handle user request: {:?}", err))
         })
         .invoke(&request.body)
