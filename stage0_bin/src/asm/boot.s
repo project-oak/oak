@@ -80,6 +80,8 @@ _protected_mode_start:
     mov $0xc0010131, %ecx     # SEV_STATUS MSR. See Section 15.34.10 in AMD64 Architecture Programmer's
                               # Manual, Volume 2 for more details.
     rdmsr                     # EDX:EAX <- MSR[ECX]
+    push %edx                 # Store the raw result for future use on the stack.
+    push %eax
     and $0b111, %eax          # eax &= 0b111;
                               # Bit 0 - SEV enabled
                               # Bit 1 - SEV-ES enabled
@@ -112,6 +114,12 @@ _protected_mode_start:
     mov $ap_bss_size, %ecx
     xor %eax, %eax
     rep stosb
+
+    # now that BSS is set up, initialize the raw Rust variables
+    pop %eax
+    pop %edx
+    mov %eax, (SEV_STATUS)     # Initialize the SEV_STATUS static variable in Rust.
+    mov %edx, (SEV_STATUS+4)
 
     # Copy DATA from the ROM image (stored just after TEXT) to the expected location.
     # Source address goes to ESI, destination goes to EDI, count goes to ECX.

@@ -22,7 +22,7 @@ extern crate alloc;
 use crate::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use linked_list_allocator::LockedHeap;
-use oak_sev_guest::io::PortFactoryWrapper;
+use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
 use sha2::{Digest, Sha256};
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
@@ -68,6 +68,10 @@ static mut SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = Maybe
 #[no_mangle]
 static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
 
+// Will be set in the bootstrap assembly code where we have to read the MSR anyway.
+#[no_mangle]
+static mut SEV_STATUS: SevStatus = SevStatus::empty();
+
 /// We create an identity map for the first 1GiB of memory.
 const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
 
@@ -104,31 +108,27 @@ pub unsafe fn jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -> ! {
     );
 }
 
+/// Returns the value of the SEV_STATUS MSR that's safe to read even if the CPU doesn't support it.
+///
+/// Initialized in the bootstrap assembly code.
+pub fn sev_status() -> SevStatus {
+    // Safety: we don't allow mutation and this is initialized in the bootstrap assembly.
+    unsafe { SEV_STATUS }
+}
+
 /// Entry point for the Rust code in the stage0 BIOS.
 ///
 /// # Arguments
 ///
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page tables.
 pub fn rust64_start(encrypted: u64) -> ! {
-    let (es, snp) = if encrypted > 0 {
-        // We're under some form of memory encryption, thus it's safe to access the SEV_STATUS MSR.
-        let status =
-            oak_sev_guest::msr::get_sev_status().unwrap_or(oak_sev_guest::msr::SevStatus::empty());
-        (
-            status.contains(oak_sev_guest::msr::SevStatus::SEV_ES_ENABLED),
-            status.contains(oak_sev_guest::msr::SevStatus::SNP_ACTIVE),
-        )
-    } else {
-        (false, false)
-    };
-
     // We assume 0-th bit is never the encrypted bit.
     let encrypted = if encrypted > 0 { 1 << encrypted } else { 0 };
 
     paging::init_page_table_refs(encrypted);
 
     // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP implies SEV-ES).
-    if es {
+    if sev_status().contains(SevStatus::SEV_ES_ENABLED) {
         // No point in calling expect() here, the logging isn't set up yet.
         // In any case, this allocation should not fail. This is the first thing we allocate, the
         // GHCB is 4K in size, and the allocator should be far bigger than that (as we have more
@@ -136,17 +136,18 @@ pub fn rust64_start(encrypted: u64) -> ! {
         // If the allocation does fail, something is horribly broken and we have no hope of
         // continuing.
         let ghcb = BOOT_ALLOC.leak(sev::Ghcb::new()).unwrap();
-        sev::init_ghcb(ghcb, snp);
+        sev::init_ghcb(ghcb);
     }
 
     logging::init_logging();
     log::info!("starting...");
+    log::info!("Enabled SEV features: {:?}", sev_status());
 
     let dma_buf = BOOT_ALLOC.leak(fw_cfg::DmaBuffer::default()).unwrap();
     let dma_buf_address = VirtAddr::from_ptr(dma_buf as *const _);
     let dma_access = BOOT_ALLOC.leak(fw_cfg::FwCfgDmaAccess::default()).unwrap();
     let dma_access_address = VirtAddr::from_ptr(dma_access as *const _);
-    if encrypted > 0 {
+    if sev_status().contains(SevStatus::SEV_ENABLED) {
         // Safety: This is safe for SEV-ES and SNP because we're using an originally supported mode
         // of the Pentium 6: Write-protect, with MTRR enabled.  If we get CPUID reads
         // working, we may want to check that MTRR is supported, but only if we want to
@@ -155,8 +156,8 @@ pub fn rust64_start(encrypted: u64) -> ! {
         unsafe {
             msr::MTRRDefType::write(msr::MTRRDefTypeFlags::MTRR_ENABLE, msr::MemoryType::WP);
         }
-        sev::share_page(Page::containing_address(dma_buf_address), snp);
-        sev::share_page(Page::containing_address(dma_access_address), snp);
+        sev::share_page(Page::containing_address(dma_buf_address));
+        sev::share_page(Page::containing_address(dma_access_address));
     }
 
     // Safety: we assume there won't be any other hardware devices using the fw_cfg IO ports.
@@ -169,7 +170,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     zero_page.fill_e820_table(&mut fwcfg);
 
-    if snp {
+    if sev_status().contains(SevStatus::SNP_ACTIVE) {
         sev::validate_memory(zero_page.e820_table(), encrypted);
     }
 
@@ -210,7 +211,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
         .try_fill_hdr_from_setup_data(&mut fwcfg)
         .unwrap_or_default();
 
-    if snp {
+    if sev_status().contains(SevStatus::SNP_ACTIVE) {
         // Safety: we're only interested in the pointer value of SEV_SECRETS, not its contents.
         let cc_blob = BOOT_ALLOC
             .leak(oak_linux_boot_params::CCBlobSevInfo::new(
@@ -269,10 +270,10 @@ pub fn rust64_start(encrypted: u64) -> ! {
     }
 
     // Register the AP Jump Table, if required.
-    if es {
+    if sev_status().contains(SevStatus::SEV_ES_ENABLED) {
         // This assumes identity mapping. Which we have in stage0.
         let jump_table_pa = AP_JUMP_TABLE.as_ptr() as u64;
-        if snp {
+        if sev_status().contains(SevStatus::SNP_ACTIVE) {
             // Under SNP we need to place the jump table address in the secrets page.
             // Safety: we don't care about the contents of the secrets page beyond writing our jump
             // table address into it.
@@ -309,7 +310,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     // Clean-ups we need to do just before we jump to the kernel proper: clean up the early GHCB and
     // FW_CFG DMA buffers we used, and switch back to a hugepage for the first 2M of memory.
-    if snp {
+    if sev_status().contains(SevStatus::SNP_ACTIVE) {
         sev::unshare_page(Page::containing_address(dma_buf_address));
         sev::unshare_page(Page::containing_address(dma_access_address));
         if GHCB_WRAPPER.get().is_some() {
