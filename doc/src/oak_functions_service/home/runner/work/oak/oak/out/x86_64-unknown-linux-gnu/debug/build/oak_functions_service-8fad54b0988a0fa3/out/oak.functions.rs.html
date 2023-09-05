@@ -412,7 +412,7 @@
                             ),
                         )
                     })<span class="question-mark">?</span>;
-                <span class="kw">let </span>response = <span class="self">self</span>.service.invoke(request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>response = <span class="self">self</span>.service.handle_user_request(request)<span class="question-mark">?</span>;
                 <span class="kw">let </span>response_body = response.encode_to_vec();
                 <span class="prelude-val">Ok</span>(response_body)
             }
@@ -471,7 +471,7 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request: InitializeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InitializeResponse, ::micro_rpc::Status&gt;;
-    <span class="kw">fn </span>invoke(
+    <span class="kw">fn </span>handle_user_request(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request: InvokeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, ::micro_rpc::Status&gt;;
@@ -501,7 +501,7 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;InitializeResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
         ::micro_rpc::client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">0</span>, request)
     }
-    <span class="kw">pub fn </span>invoke(
+    <span class="kw">pub fn </span>handle_user_request(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request: <span class="kw-2">&amp;</span>InvokeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;InvokeResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
@@ -539,7 +539,7 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;InitializeResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
         ::micro_rpc::async_client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">0</span>, request).<span class="kw">await
     </span>}
-    <span class="kw">pub async fn </span>invoke(
+    <span class="kw">pub async fn </span>handle_user_request(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request: <span class="kw-2">&amp;</span>InvokeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;InvokeResponse, ::micro_rpc::Status&gt;, T::Error&gt; {

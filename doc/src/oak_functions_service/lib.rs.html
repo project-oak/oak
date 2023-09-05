@@ -159,6 +159,9 @@
 <a href="#159" id="159">159</a>
 <a href="#160" id="160">160</a>
 <a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -274,21 +277,24 @@
         }
     }
 
-    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: InvokeRequest) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, micro_rpc::Status&gt; {
-        <span class="macro">log::debug!</span>(<span class="string">&quot;called invoke&quot;</span>);
+    <span class="kw">fn </span>handle_user_request(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request: InvokeRequest,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, micro_rpc::Status&gt; {
+        <span class="macro">log::debug!</span>(<span class="string">&quot;called handle_user_request&quot;</span>);
         <span class="kw">let </span>encryption_key_provider = <span class="self">self</span>.encryption_key_provider.clone();
         <span class="kw">let </span>instance = <span class="self">self</span>.get_instance()<span class="question-mark">?</span>;
         EncryptionHandler::create(encryption_key_provider, |r| {
             instance
-                .invoke(<span class="kw-2">&amp;</span>r)
-                .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t handle invoke: {:?}&quot;</span>, err))
+                .handle_user_request(<span class="kw-2">&amp;</span>r)
+                .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t handle user request: {:?}&quot;</span>, err))
         })
         .invoke(<span class="kw-2">&amp;</span>request.body)
         .map(|response| InvokeResponse { body: response })
         .map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
-                <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t invoke handler: {:?}&quot;</span>, err),
+                <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t call handle_user_request handler: {:?}&quot;</span>, err),
             )
         })
     }

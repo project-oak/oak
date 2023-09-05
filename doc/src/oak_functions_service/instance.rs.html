@@ -157,8 +157,8 @@
             wasm_handler,
         })
     }
-    <span class="doccomment">/// See [`crate::proto::oak::functions::OakFunctions::invoke`].
-    </span><span class="kw">pub fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, micro_rpc::Status&gt; {
+    <span class="doccomment">/// See [`crate::proto::oak::functions::OakFunctions::handle_user_request`].
+    </span><span class="kw">pub fn </span>handle_user_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, micro_rpc::Status&gt; {
         <span class="comment">// TODO(#3442): Implement constant response size policy.
         </span><span class="self">self</span>.wasm_handler
             .handle_invoke(Request {
@@ -168,7 +168,7 @@
             .map_err(|err| {
                 micro_rpc::Status::new_with_message(
                     micro_rpc::StatusCode::Internal,
-                    <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t handle invoke: {:?}&quot;</span>, err),
+                    <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t handle user request: {:?}&quot;</span>, err),
                 )
             })
     }
