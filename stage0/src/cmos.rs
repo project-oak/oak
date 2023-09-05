@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-use oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
+use crate::io_port_factory;
+use oak_sev_guest::io::{IoPortFactory, PortReader, PortWrapper, PortWriter};
 
 const CMOS_INDEX_PORT: u16 = 0x0070;
 const CMOS_DATA_PORT: u16 = 0x0071;
@@ -43,10 +44,10 @@ impl Cmos {
     /// It's up to the caller to guarantee that there will be no other readers/writers to the CMOS
     /// ports (0x70, 0x71) and that CMOS is actually available on those ports, otherwise the
     /// behaviour is undefined.
-    pub unsafe fn new(port_factory: PortFactoryWrapper) -> Self {
+    pub unsafe fn new() -> Self {
         Self {
-            index_port: port_factory.new_writer(CMOS_INDEX_PORT),
-            data_port: port_factory.new_reader(CMOS_DATA_PORT),
+            index_port: io_port_factory().new_writer(CMOS_INDEX_PORT),
+            data_port: io_port_factory().new_reader(CMOS_DATA_PORT),
         }
     }
 

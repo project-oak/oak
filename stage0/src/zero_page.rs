@@ -20,7 +20,6 @@ use crate::{
 };
 use core::{ffi::CStr, mem::size_of, slice};
 use oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
-use oak_sev_guest::io::PortFactoryWrapper;
 use x86_64::PhysAddr;
 use zerocopy::AsBytes;
 
@@ -93,7 +92,7 @@ impl ZeroPage {
     ///
     /// We first try to read "etc/e820" via the QEMU fw_cfg interface, and if that is not available,
     /// fall back to querying RTC NVRAM.
-    pub fn fill_e820_table(&mut self, fw_cfg: &mut FwCfg, port_factory: PortFactoryWrapper) {
+    pub fn fill_e820_table(&mut self, fw_cfg: &mut FwCfg) {
         // Try to load the E820 table from fw_cfg.
         // Safety: BootE820Entry has the same structure as what qemu uses, and we're limiting
         // ourselves to up to 128 entries.
@@ -118,8 +117,7 @@ impl ZeroPage {
                     panic!("QEMU_E820_RESERVATION_TABLE was not empty!");
                 }
 
-                build_e820_from_nvram(&mut self.inner, port_factory)
-                    .expect("failed to read from CMOS");
+                build_e820_from_nvram(&mut self.inner).expect("failed to read from CMOS");
             }
         };
 
@@ -180,14 +178,11 @@ impl ZeroPage {
 /// The code is largely based on what SeaBIOS is doing (see `qemu_preinit()` and `qemu_cfg_e820()`
 /// in <https://github.com/qemu/seabios/blob/b0d61ecef66eb05bd7a4eb7ada88ec5dab06dfee/src/fw/paravirt.c>),
 /// but <https://wiki.osdev.org/Detecting_Memory_%28x86%29> is also a good read on the topic.
-fn build_e820_from_nvram(
-    zero_page: &mut BootParams,
-    port_factory: PortFactoryWrapper,
-) -> Result<(), &'static str> {
+fn build_e820_from_nvram(zero_page: &mut BootParams) -> Result<(), &'static str> {
     // Safety: (a) fw_cfg is available, so we're running under QEMU(ish) and (b) there was no
     // pre-built E820 table in fw_cfg; thus, we can reasonably expect CMOS to available, as that's
     // what SeaBIOS would use in that situation to build the E820 table.
-    let mut cmos = unsafe { Cmos::new(port_factory) };
+    let mut cmos = unsafe { Cmos::new() };
     let mut rs = cmos.low_ram_size()?;
     let high = cmos.high_ram_size()?;
 
