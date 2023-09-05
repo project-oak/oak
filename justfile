@@ -5,17 +5,21 @@
 # - https://github.com/casey/just
 # - https://just.systems/man/en/
 
+key_xor_test_app: (build_enclave_app "key_xor_test_app")
 oak_echo_enclave_app: (build_enclave_app "oak_echo_enclave_app")
 oak_echo_raw_enclave_app: (build_enclave_app "oak_echo_raw_enclave_app")
 oak_functions_enclave_app: (build_enclave_app "oak_functions_enclave_app")
 oak_tensorflow_enclave_app: (build_enclave_app "oak_tensorflow_enclave_app")
 quirk_echo_enclave_app: (build_enclave_app "quirk_echo_enclave_app")
 
-all_enclave_apps: oak_echo_enclave_app oak_echo_raw_enclave_app oak_functions_enclave_app oak_tensorflow_enclave_app quirk_echo_enclave_app
+all_enclave_apps: key_xor_test_app oak_echo_enclave_app oak_echo_raw_enclave_app oak_functions_enclave_app oak_functions_insecure_enclave_app oak_tensorflow_enclave_app quirk_echo_enclave_app
 
 # Build a single enclave app, given its name.
 build_enclave_app name:
     env --chdir=enclave_apps/$(name) cargo build --release
+
+oak_functions_insecure_enclave_app:
+    env --chdir=enclave_apps/oak_functions_enclave_app cargo build --release --no-default-features --features=allow_sensitive_logging
 
 oak_restricted_kernel_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release
@@ -45,7 +49,7 @@ all_oak_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_co
 
 # Entry points for Kokoro CI.
 
-kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin stage0_bin
+kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin oak_restricted_kernel_simple_io_bin stage0_bin
 
 kokoro_oak_containers: all_oak_containers_binaries
     cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'

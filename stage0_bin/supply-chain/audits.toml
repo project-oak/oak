@@ -1,6 +1,4 @@
-
 # cargo-vet audits file
-
 [criteria.crypto-safe]
 description = """
 All crypto algorithms in this crate have been reviewed by a relevant expert.
@@ -31,6 +29,12 @@ who = "Juliette Pretot <julsh@google.com>"
 criteria = ["safe-to-deploy", "does-not-implement-crypto"]
 version = "1.3.2"
 notes = "Limited use of unsafe code that is well commented and unproblematic. Does not implement crypto algorithms."
+
+[[audits.bitflags]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+delta = "1.3.2 -> 2.4.0"
+notes = "Version 2.4.0 has significantly less unsafe code than the previous version. The two new unsafe blocks that have been added are well documented."
 
 [[audits.byteorder]]
 who = "Conrad Grobler <grobler@google.com>"
@@ -76,11 +80,29 @@ criteria = "safe-to-deploy"
 version = "0.4.0"
 notes = "This crate does not have any unsafe code and does not use any ambient capabilities such as filesystem or network access."
 
+[[audits.lock_api]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.4.9"
+notes = "Logic is reasonable. Limited unsafe code that is well commented to explain safety. No ambient capabilities. No crypto implementation."
+
 [[audits.rustversion]]
 who = "Conrad Grobler <grobler@google.com>"
 criteria = "does-not-implement-crypto"
 version = "1.0.9"
 notes = "This crate does not implement any cryptographic algorithms."
+
+[[audits.scopeguard]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "1.1.0"
+notes = "Logic is sound, no crypto use, no ambient capabilities, no unsafe code."
+
+[[audits.spinning_top]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.2.4"
+notes = "The crate's logic is sound. No ambient capabilities. Implements unsafe traits, but uses no unsafe code."
 
 [[audits.static_assertions]]
 who = "Andri Saar <andrisaar@google.com>"
@@ -91,11 +113,37 @@ By design, all the macros in `static_assertions` run at compile time, which mean
 Only one short block of unsafe code in `assert_eq_size_ptr`, which looks reasonable.
 """
 
+[[audits.strum]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.24.1"
+notes = """
+This crate doesn't contain any unsafe code. Most of the work is delegated to the strum_macros crate.
+
+This crate doesn't implement any cryptographic algorithms.
+"""
+
+[[audits.strum_macros]]
+who = "Conrad Grobler <grobler@google.com>"
+criteria = ["safe-to-deploy", "does-not-implement-crypto"]
+version = "0.24.3"
+notes = """
+This crate doesn'tt contain any unsafe code. The macro implementations look reasonable.
+
+This crate doesn't implement any cryptographic algorithms.
+"""
+
 [[audits.synstructure]]
 who = "Conrad Grobler <grobler@google.com>"
 criteria = "does-not-implement-crypto"
 version = "0.12.6"
 notes = "Crate does not implement any cryptographic algorithms"
+
+[[audits.typenum]]
+who = "Juliette Pretot <julsh@google.com>"
+criteria = "safe-to-deploy"
+version = "1.15.0"
+notes = "No unsafe code (enforced by compiler). No access to ambient capabilities. Logic appears sound."
 
 [[audits.unicode-ident]]
 who = "Andri Saar <andrisaar@google.com>"

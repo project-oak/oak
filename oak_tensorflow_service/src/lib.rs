@@ -50,7 +50,7 @@ impl TensorflowService {
 impl Tensorflow for TensorflowService {
     fn initialize(
         &mut self,
-        initialization: &InitializeRequest,
+        initialization: InitializeRequest,
     ) -> Result<InitializeResponse, micro_rpc::Status> {
         self.tflite_model
             .initialize(&initialization.tensorflow_model)
@@ -60,7 +60,7 @@ impl Tensorflow for TensorflowService {
 
     fn invoke(
         &mut self,
-        request_message: &InvokeRequest,
+        request_message: InvokeRequest,
     ) -> Result<InvokeResponse, micro_rpc::Status> {
         let response = self
             .tflite_model

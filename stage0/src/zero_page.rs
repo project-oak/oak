@@ -20,7 +20,6 @@ use crate::{
 };
 use core::{ffi::CStr, mem::size_of, slice};
 use oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
-use oak_sev_guest::io::PortFactoryWrapper;
 use x86_64::PhysAddr;
 use zerocopy::AsBytes;
 
@@ -55,8 +54,11 @@ impl ZeroPage {
     /// it is split off from start of the bzImage file.
     ///
     /// See <https://www.kernel.org/doc/html/v6.3/x86/boot.html> for more information.
-    pub fn try_fill_hdr_from_setup_data(&mut self, fw_cfg: &mut FwCfg) {
-        if let Some(file) = fw_cfg.get_setup_file() {
+    ///
+    /// Returns the measurement (SHA2-384 digest) of the setup data if it was found, otherwise the
+    /// measurement is all zeros.
+    pub fn try_fill_hdr_from_setup_data(&mut self, fw_cfg: &mut FwCfg) -> Option<[u8; 32]> {
+        fw_cfg.get_setup_file().map(|file| {
             let size = file.size();
             // We temporarily copy the setup data to the end of available mapped virtual memory.
             let start = find_suitable_dma_address(size, self.inner.e820_table())
@@ -68,27 +70,29 @@ impl ZeroPage {
                 .read_file(&file, buf)
                 .expect("could not read setup data");
             assert_eq!(actual_size, size, "setup data did not match expected size");
+            let measurement = crate::measure_byte_slice(buf);
 
             // The header information starts at offset 0x01F1 from the start of the setup data.
             let hdr_start = 0x1F1usize;
-            // We can determine the end of the setup header information by adding the value of the
-            // byte as offset 0x201 to the value 0x202.
+            // We can determine the end of the setup header information by adding the value of
+            // the byte as offset 0x201 to the value 0x202.
             let hdr_end = 0x202usize + (buf[0x201] as usize);
             let src = &buf[hdr_start..hdr_end];
             // If we are loading an older kernel, the setup header might be a bit shorter. New
             // fields for more recent versions of the boot protocol are added to the end of the
-            // setup header and there is padding after header, so the resulting data stucture should
-            // still be understood correctly by the kernel.
+            // setup header and there is padding after header, so the resulting data stucture
+            // should still be understood correctly by the kernel.
             let dest = &mut self.inner.hdr.as_bytes_mut()[..src.len()];
             dest.copy_from_slice(src);
-        }
+            measurement
+        })
     }
 
     /// Fills the E820 memory map (layout of the physical memory of the machine) in the zero page.
     ///
     /// We first try to read "etc/e820" via the QEMU fw_cfg interface, and if that is not available,
     /// fall back to querying RTC NVRAM.
-    pub fn fill_e820_table(&mut self, fw_cfg: &mut FwCfg, port_factory: PortFactoryWrapper) {
+    pub fn fill_e820_table(&mut self, fw_cfg: &mut FwCfg) {
         // Try to load the E820 table from fw_cfg.
         // Safety: BootE820Entry has the same structure as what qemu uses, and we're limiting
         // ourselves to up to 128 entries.
@@ -113,8 +117,7 @@ impl ZeroPage {
                     panic!("QEMU_E820_RESERVATION_TABLE was not empty!");
                 }
 
-                build_e820_from_nvram(&mut self.inner, port_factory)
-                    .expect("failed to read from CMOS");
+                build_e820_from_nvram(&mut self.inner).expect("failed to read from CMOS");
             }
         };
 
@@ -175,14 +178,11 @@ impl ZeroPage {
 /// The code is largely based on what SeaBIOS is doing (see `qemu_preinit()` and `qemu_cfg_e820()`
 /// in <https://github.com/qemu/seabios/blob/b0d61ecef66eb05bd7a4eb7ada88ec5dab06dfee/src/fw/paravirt.c>),
 /// but <https://wiki.osdev.org/Detecting_Memory_%28x86%29> is also a good read on the topic.
-fn build_e820_from_nvram(
-    zero_page: &mut BootParams,
-    port_factory: PortFactoryWrapper,
-) -> Result<(), &'static str> {
+fn build_e820_from_nvram(zero_page: &mut BootParams) -> Result<(), &'static str> {
     // Safety: (a) fw_cfg is available, so we're running under QEMU(ish) and (b) there was no
     // pre-built E820 table in fw_cfg; thus, we can reasonably expect CMOS to available, as that's
     // what SeaBIOS would use in that situation to build the E820 table.
-    let mut cmos = unsafe { Cmos::new(port_factory) };
+    let mut cmos = unsafe { Cmos::new() };
     let mut rs = cmos.low_ram_size()?;
     let high = cmos.high_ram_size()?;
 

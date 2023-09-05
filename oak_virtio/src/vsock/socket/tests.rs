@@ -98,8 +98,8 @@ fn test_read_exact() {
     let mut second = [0; 2];
     let (mut socket, transport) = new_socket_and_transport();
     transport.device_write_to_queue::<QUEUE_SIZE>(0, packet.as_slice());
-    assert!(socket.read(&mut first).is_ok());
-    assert!(socket.read(&mut second).is_ok());
+    assert!(socket.read_exact(&mut first).is_ok());
+    assert!(socket.read_exact(&mut second).is_ok());
     assert_eq!(&data[..11], &first[..]);
     assert_eq!(&data[11..13], &second[..]);
     assert!(socket.pending_data.is_some());
@@ -111,7 +111,7 @@ fn test_write_all() {
     // Send data larger than the max payload size, so we expect 2 packets.
     let data = [31; 5000];
     let (mut socket, transport) = new_socket_and_transport();
-    assert!(socket.write(&data[..]).is_ok());
+    assert!(socket.write_all(&data[..]).is_ok());
     let first = Packet::new(
         transport
             .device_read_once_from_queue::<QUEUE_SIZE>(1)
@@ -152,10 +152,10 @@ fn test_many_echos() {
         packet.set_fwd_cnt(i * DATA_LEN as u32);
         let mut buffer = vec![0; DATA_LEN];
         transport.device_write_to_queue::<QUEUE_SIZE>(0, packet.as_slice());
-        assert!(socket.read(&mut buffer).is_ok());
+        assert!(socket.read_exact(&mut buffer).is_ok());
 
         // Echo back.
-        assert!(socket.write(&buffer[..]).is_ok());
+        assert!(socket.write_all(&buffer[..]).is_ok());
         let output = Packet::new(
             transport
                 .device_read_once_from_queue::<QUEUE_SIZE>(1)

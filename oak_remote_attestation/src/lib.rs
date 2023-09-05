@@ -31,6 +31,3 @@ pub mod proto {
 
 pub mod attester;
 pub mod handler;
-#[cfg(test)]
-mod tests;
-pub mod verifier;

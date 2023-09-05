@@ -147,7 +147,7 @@ pub unsafe fn map_gpa(frames: PhysFrameRange<Size4KiB>) -> Result<(), MapGpaErro
         asm!(
             "tdcall",
             inout("rax") VM_CALL_LEAF => vm_call_result,
-            in("rcx") registers.bits,
+            in("rcx") registers.bits(),
             inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
             inout("r11") SUB_FUNCTION => failing_gpa,
             in("r12") gpa_start,
@@ -212,7 +212,7 @@ pub fn call_cpuid(leaf: u32, sub_leaf: u32) -> Result<CpuidResult, &'static str>
         asm!(
             "tdcall",
             inout("rax") VM_CALL_LEAF => vm_call_result,
-            in("rcx") registers.bits,
+            in("rcx") registers.bits(),
             inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
             in("r11") SUB_FUNCTION,
             inout("r12") leaf as u64 => eax,
@@ -328,7 +328,7 @@ fn io_read(port: u32, size: IoWidth) -> Result<u64, &'static str> {
         asm!(
             "tdcall",
             inout("rax") VM_CALL_LEAF => vm_call_result,
-            in("rcx") registers.bits,
+            in("rcx") registers.bits(),
             inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
             inout("r11") SUB_FUNCTION => data,
             in("r12") size as u64,
@@ -389,7 +389,7 @@ fn io_write(port: u32, size: IoWidth, data: u64) -> Result<(), &'static str> {
         asm!(
             "tdcall",
             inout("rax") VM_CALL_LEAF => vm_call_result,
-            in("rcx") registers.bits,
+            in("rcx") registers.bits(),
             inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
             in("r11") SUB_FUNCTION,
             in("r12") size as u64,
@@ -450,7 +450,7 @@ pub unsafe fn msr_write(msr: u32, data: u64) -> Result<(), &'static str> {
         asm!(
             "tdcall",
             inout("rax") VM_CALL_LEAF => vm_call_result,
-            in("rcx") registers.bits,
+            in("rcx") registers.bits(),
             inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
             in("r11") SUB_FUNCTION,
             in("r12") msr as u64,
@@ -505,7 +505,7 @@ pub fn msr_read(msr: u32) -> Result<u64, &'static str> {
         asm!(
             "tdcall",
             inout("rax") VM_CALL_LEAF => vm_call_result,
-            in("rcx") registers.bits,
+            in("rcx") registers.bits(),
             inout("r10") DEFAULT_SUB_FUNCTION_USAGE => sub_function_result,
             inout("r11") SUB_FUNCTION => data,
             in("r12") msr as u64,

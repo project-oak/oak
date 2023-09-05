@@ -16,6 +16,7 @@
 
 mod channel;
 mod fd;
+mod key;
 pub mod mmap;
 mod process;
 mod stdio;
@@ -25,7 +26,7 @@ use self::{
     mmap::syscall_mmap,
     process::syscall_exit,
 };
-use crate::mm;
+use crate::{mm, snp_guest::DerivedKey};
 use alloc::boxed::Box;
 use core::{arch::asm, ffi::c_void};
 use oak_channel::Channel;
@@ -57,9 +58,10 @@ struct GsData {
     user_flags: usize,
 }
 
-pub fn enable_syscalls(channel: Box<dyn Channel>) {
+pub fn enable_syscalls(channel: Box<dyn Channel>, derived_key: DerivedKey) {
     channel::register(channel);
     stdio::register();
+    key::register(derived_key);
 
     // Allocate a stack for the system call handler.
     let kernel_sp = mm::allocate_stack();

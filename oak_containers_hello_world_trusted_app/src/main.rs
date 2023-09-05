@@ -13,9 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod app_service;
-mod orchestrator_client;
-
+use anyhow::anyhow;
+use oak_containers_hello_world_trusted_app::orchestrator_client::OrchestratorClient;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::net::TcpListener;
 
@@ -23,11 +22,17 @@ const TRUSTED_APP_PORT: u16 = 8080;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut client = orchestrator_client::OrchestratorClient::create().await?;
-    let application_config = client.get_application_config().await?;
+    let mut client = OrchestratorClient::create()
+        .await
+        .map_err(|error| anyhow!("couldn't create Orchestrator client: {:?}", error))?;
+    let application_config = client.clone().get_application_config().await?;
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), TRUSTED_APP_PORT);
     let listener = TcpListener::bind(addr).await?;
-    let join_handle = tokio::spawn(app_service::create(listener, application_config));
+    let join_handle = tokio::spawn(oak_containers_hello_world_trusted_app::app_service::create(
+        listener,
+        client.clone(),
+        application_config,
+    ));
     client.notify_app_ready().await?;
     join_handle.await??;
     Ok(())

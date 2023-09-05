@@ -103,8 +103,8 @@ fn test_read_exact() {
     let mut console = Console::new(device, identity_map, &Global);
     console.init(identity_map, inverse_identity_map).unwrap();
     transport.device_write_to_queue::<QUEUE_SIZE>(0, &data[..]);
-    assert!(console.read(&mut first).is_ok());
-    assert!(console.read(&mut second).is_ok());
+    assert!(console.read_exact(&mut first).is_ok());
+    assert!(console.read_exact(&mut second).is_ok());
     assert_eq!(&data[..5], &first[..]);
     assert_eq!(&data[5..8], &second[..]);
     assert!(console.pending_data.is_some());
@@ -118,7 +118,7 @@ fn test_write_all() {
     let device = VirtioBaseDevice::new(transport.clone());
     let mut console = Console::new(device, identity_map, &Global);
     console.init(identity_map, inverse_identity_map).unwrap();
-    assert!(console.write(&data[..]).is_ok());
+    assert!(console.write_all(&data[..]).is_ok());
     let first = transport
         .device_read_once_from_queue::<QUEUE_SIZE>(1)
         .unwrap();

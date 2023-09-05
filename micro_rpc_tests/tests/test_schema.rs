@@ -46,7 +46,7 @@ struct TestServiceImpl;
 impl test_schema::TestService for TestServiceImpl {
     fn lookup_data(
         &mut self,
-        request: &test_schema::LookupDataRequest,
+        request: test_schema::LookupDataRequest,
     ) -> Result<test_schema::LookupDataResponse, micro_rpc::Status> {
         let h = maplit::hashmap! {
             vec![14, 12] => vec![19, 88]
@@ -60,30 +60,30 @@ impl test_schema::TestService for TestServiceImpl {
 
     fn log(
         &mut self,
-        request: &test_schema::LogRequest,
+        request: test_schema::LogRequest,
     ) -> Result<test_schema::LogResponse, micro_rpc::Status> {
         eprintln!("log: {}", request.entry);
         Ok(test_schema::LogResponse {})
     }
 
-    fn empty(&mut self, _request: &()) -> Result<(), ::micro_rpc::Status> {
+    fn empty(&mut self, _request: ()) -> Result<(), ::micro_rpc::Status> {
         Ok(())
     }
     fn duration(
         &mut self,
-        _request: &::prost_types::Duration,
+        _request: ::prost_types::Duration,
     ) -> Result<::prost_types::Duration, ::micro_rpc::Status> {
         Ok(std::time::Duration::from_millis(123).try_into().unwrap())
     }
     fn timestamp(
         &mut self,
-        _request: &::prost_types::Timestamp,
+        _request: ::prost_types::Timestamp,
     ) -> Result<::prost_types::Timestamp, ::micro_rpc::Status> {
         Ok(std::time::SystemTime::UNIX_EPOCH.try_into().unwrap())
     }
     fn any(
         &mut self,
-        _request: &::prost_types::Any,
+        _request: ::prost_types::Any,
     ) -> Result<::prost_types::Any, ::micro_rpc::Status> {
         Ok(prost_types::Any::default())
     }

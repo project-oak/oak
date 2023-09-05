@@ -13,23 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod proto {
-    pub mod oak {
-        pub mod containers {
-            #![allow(clippy::return_self_not_must_use)]
-            tonic::include_proto!("oak.containers");
-        }
-        pub mod session {
-            pub mod v1 {
-                #![allow(clippy::return_self_not_must_use)]
-                tonic::include_proto!("oak.session.v1");
-            }
-        }
-    }
-}
-
+use crate::proto::oak::containers::{
+    orchestrator_client::OrchestratorClient as GrpcOrchestratorClient, GetCryptoContextRequest,
+};
 use anyhow::Context;
-use proto::oak::containers::orchestrator_client::OrchestratorClient as GrpcOrchestratorClient;
+use oak_crypto::proto::oak::crypto::v1::CryptoContext;
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
 
@@ -45,6 +33,7 @@ static IGNORED_ENDPOINT_URI: &str = "file://[::]:0";
 const IPC_SOCKET: &str = "/oak_utils/orchestrator_ipc";
 
 /// Utility struct used to interface with the launcher
+#[derive(Clone)]
 pub struct OrchestratorClient {
     inner: GrpcOrchestratorClient<tonic::transport::channel::Channel>,
 }
@@ -73,6 +62,24 @@ impl OrchestratorClient {
             .into_inner()
             .config;
         Ok(config)
+    }
+
+    pub async fn get_crypto_context(
+        &self,
+        serialized_encapsulated_public_key: &[u8],
+    ) -> Result<CryptoContext, Box<dyn std::error::Error>> {
+        let context = self
+            .inner
+            .clone()
+            .get_crypto_context(GetCryptoContextRequest {
+                serialized_encapsulated_public_key: serialized_encapsulated_public_key.to_vec(),
+            })
+            .await?
+            .into_inner()
+            // Crypto context.
+            .context
+            .context("crypto context wasn't provided")?;
+        Ok(context)
     }
 
     pub async fn notify_app_ready(&mut self) -> Result<(), Box<dyn std::error::Error>> {

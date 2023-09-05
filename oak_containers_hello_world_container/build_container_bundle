@@ -4,15 +4,19 @@
 # that can be executed on Oak Containers. Used for manual testing during
 # development. Down the line we probably want to replace this.
 
+readonly CONTAINER_IMAGE='oak_container_example'
 set -e
-rm -rf ./target
-mkdir -p ./target
-cargo build --package="oak_containers_hello_world_trusted_app" --target="x86_64-unknown-linux-musl" -Z unstable-options --out-dir="./target/"
-docker build --tag="oak_container_example" .
-mkdir -p ./target/oci_filesystem_bundle
-docker export --output="./target/oak_container_example_rootfs.tar" "$(docker create oak_container_example)"
-mkdir -p ./target/oci_filesystem_bundle/rootfs
-tar -xf ./target/oak_container_example_rootfs.tar -C ./target/oci_filesystem_bundle/rootfs
-cp ./config.json ./target/oci_filesystem_bundle
-tar -cvf ./target/oak_container_example_oci_filesystem_bundle.tar -C ./target/oci_filesystem_bundle .
+rm --recursive --force ./target
+mkdir --parents ./target
 
+cargo build \
+    --package='oak_containers_hello_world_trusted_app' \
+    --target='x86_64-unknown-linux-musl' \
+    -Zunstable-options \
+    --out-dir='./target/'
+
+docker build --tag="${CONTAINER_IMAGE}" .
+
+../scripts/export_container_bundle \
+    -c "${CONTAINER_IMAGE}" \
+    -o './target/oak_container_example_oci_filesystem_bundle.tar'

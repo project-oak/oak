@@ -5,6 +5,14 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = ["deny_sensitive_logging"]
+# Disable sensitive logging.
+deny_sensitive_logging = ["oak_functions_service/deny_sensitive_logging"]
+# Feature allow_sensitive_logging is not actually used in the code. It is only used as a
+# required feature to differentiate between the two binaries.
+allow_sensitive_logging = []
+
 [dependencies]
 oak_functions_service = { path = "../../oak_functions_service" }
 log = "*"
@@ -20,3 +28,11 @@ static_assertions = "*"
 name = "oak_functions_enclave_app"
 test = false
 bench = false
+required-features = ["deny_sensitive_logging"]
+
+[[bin]]
+path = "src/main.rs"
+name = "oak_functions_insecure_enclave_app"
+test = false
+bench = false
+required-features = ["allow_sensitive_logging"]

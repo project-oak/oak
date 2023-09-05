@@ -55,7 +55,7 @@ pub struct Opt {
 
 #[derive(Subcommand, Clone, Debug)]
 pub enum Command {
-    BuildEnclaveBinaryVariants(BuildEnclaveBinaryVariantsOpt),
+    BuildEnclaveBinary,
     RunOakFunctionsExample(RunOakExampleOpt),
     Format,
     CheckFormat,
@@ -207,15 +207,6 @@ pub struct RunCargoFuzz {
     /// Additional `libFuzzer` arguments passed through to the binary
     #[arg(last(true))]
     pub args: Vec<String>,
-}
-
-#[derive(Parser, Clone, Debug)]
-pub struct BuildEnclaveBinaryVariantsOpt {
-    #[arg(
-        long,
-        help = "name of a specific enclave binary variant. If not specified, builds all variants."
-    )]
-    pub variant: Option<String>,
 }
 
 /// Partial representation of Cargo manifest files.

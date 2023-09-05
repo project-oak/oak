@@ -27,7 +27,7 @@ message EncryptedRequest {
   // Message encrypted with Authenticated Encryption with Associated Data (AEAD)
   // using the derived session key.
   AeadEncryptedMessage encrypted_message = 1;
-  // Ephemeral Diffie-Hellman key that is needed to derive a session key.
+  // Ephemeral Diffie-Hellman client public key that is needed to derive a session key.
   // Only sent in the first message of the secure session.
   optional bytes serialized_encapsulated_public_key = 2;
 }

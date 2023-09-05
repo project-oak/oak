@@ -17,6 +17,7 @@
 #![no_std]
 #![feature(int_roundings)]
 
+<<<<<<< HEAD
 #[macro_use]
 extern crate alloc as other_alloc;
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
@@ -25,6 +26,15 @@ use hkdf::Hkdf;
 use oak_sev_guest::io::PortFactoryWrapper;
 use other_alloc::{string::String, vec::Vec};
 use sha2::Sha256;
+=======
+extern crate alloc;
+
+use crate::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
+use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
+use linked_list_allocator::LockedHeap;
+use oak_sev_guest::io::PortFactoryWrapper;
+use sha2::{Digest, Sha256};
+>>>>>>> 8fb273ea5232aa1e6080696aa320073fe6d47adf
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
     registers::segmentation::*,
@@ -35,30 +45,50 @@ use x86_64::{
     },
     PhysAddr, VirtAddr,
 };
+<<<<<<< HEAD
 // #[cfg(feature = "ecdsa")]
 use p384::ecdsa::{signature::Signer, Signature, SigningKey, VerifyingKey};
 use rand_core::OsRng;
+=======
+use zerocopy::AsBytes;
+>>>>>>> 8fb273ea5232aa1e6080696aa320073fe6d47adf
 
 mod acpi;
-mod alloc;
+mod acpi_tables;
+mod allocator;
+mod apic;
 mod cmos;
 mod fw_cfg;
 mod initramfs;
 mod kernel;
 mod logging;
+mod msr;
 pub mod paging;
+mod pic;
 mod sev;
+mod smp;
 mod zero_page;
 
+<<<<<<< HEAD
 pub const ID_SALT: &str = "DICE_ID_SALT";
 pub const SIGNATURE_LENGTH: usize = 20;
 
 // Reserve 128K for boot data structures.
 static BOOT_ALLOC: alloc::Allocator<0x20000> = alloc::Allocator::uninit();
+=======
+type Measurement = [u8; 32];
+
+// Reserve 128K for boot data structures that will outlive Stage 0.
+static BOOT_ALLOC: allocator::BumpAllocator<0x20000> = allocator::BumpAllocator::uninit();
+
+// Heap for short-term allocations. These allocations are not expected to outlive Stage 0.
+#[cfg_attr(not(test), global_allocator)]
+static SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
+>>>>>>> 8fb273ea5232aa1e6080696aa320073fe6d47adf
 
 #[link_section = ".boot"]
 #[no_mangle]
-static SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
+static mut SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
 #[link_section = ".boot"]
 #[no_mangle]
 static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
@@ -210,7 +240,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     paging::init_page_table_refs(encrypted);
 
     // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP implies SEV-ES).
-    let ghcb_protocol = if es {
+    if es {
         // No point in calling expect() here, the logging isn't set up yet.
         // In any case, this allocation should not fail. This is the first thing we allocate, the
         // GHCB is 4K in size, and the allocator should be far bigger than that (as we have more
@@ -218,15 +248,10 @@ pub fn rust64_start(encrypted: u64) -> ! {
         // If the allocation does fail, something is horribly broken and we have no hope of
         // continuing.
         let ghcb = BOOT_ALLOC.leak(sev::Ghcb::new()).unwrap();
-        Some(sev::init_ghcb(ghcb, snp))
-    } else {
-        None
-    };
+        sev::init_ghcb(ghcb, snp);
+    }
 
-    logging::init_logging(match ghcb_protocol {
-        Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
-        None => PortFactoryWrapper::new_raw(),
-    });
+    logging::init_logging();
     log::info!("starting...");
 
     let dma_buf = BOOT_ALLOC.leak(fw_cfg::DmaBuffer::default()).unwrap();
@@ -240,36 +265,21 @@ pub fn rust64_start(encrypted: u64) -> ! {
         // support very old processors. However, note that, this branch is only executed if
         // we have encryption, and this wouldn't be true for very old processors.
         unsafe {
-            sev::MTRRDefType::write(sev::MTRRDefTypeFlags::MTRR_ENABLE, sev::MemoryType::WP);
+            msr::MTRRDefType::write(msr::MTRRDefTypeFlags::MTRR_ENABLE, msr::MemoryType::WP);
         }
         sev::share_page(Page::containing_address(dma_buf_address), snp);
         sev::share_page(Page::containing_address(dma_access_address), snp);
     }
 
     // Safety: we assume there won't be any other hardware devices using the fw_cfg IO ports.
-    let mut fwcfg = unsafe {
-        fw_cfg::FwCfg::new(
-            match ghcb_protocol {
-                Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
-                None => PortFactoryWrapper::new_raw(),
-            },
-            dma_buf,
-            dma_access,
-        )
-    }
-    .expect("fw_cfg device not found!");
+    let mut fwcfg =
+        unsafe { fw_cfg::FwCfg::new(dma_buf, dma_access) }.expect("fw_cfg device not found!");
 
     let zero_page = BOOT_ALLOC
         .leak(zero_page::ZeroPage::new())
         .expect("failed to allocate memory for zero page");
 
-    zero_page.fill_e820_table(
-        &mut fwcfg,
-        match ghcb_protocol {
-            Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
-            None => PortFactoryWrapper::new_raw(),
-        },
-    );
+    zero_page.fill_e820_table(&mut fwcfg);
 
     if snp {
         sev::validate_memory(zero_page.e820_table(), encrypted);
@@ -304,12 +314,19 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     paging::map_additional_memory(encrypted);
 
-    zero_page.try_fill_hdr_from_setup_data(&mut fwcfg);
+    // Initialize the short-term heap. Any allocations that rely on a global allocator before this
+    // point will fail.
+    allocator::init_global_allocator(zero_page.e820_table());
+
+    let setup_data_measurement = zero_page
+        .try_fill_hdr_from_setup_data(&mut fwcfg)
+        .unwrap_or_default();
 
     if snp {
+        // Safety: we're only interested in the pointer value of SEV_SECRETS, not its contents.
         let cc_blob = BOOT_ALLOC
             .leak(oak_linux_boot_params::CCBlobSevInfo::new(
-                SEV_SECRETS.as_ptr(),
+                unsafe { SEV_SECRETS.as_ptr() },
                 SEV_CPUID.as_ptr(),
             ))
             .expect("Failed to allocate memory for CCBlobSevInfo");
@@ -320,9 +337,12 @@ pub fn rust64_start(encrypted: u64) -> ! {
         zero_page.add_setup_data(setup_data);
     }
 
-    if let Some(cmdline) = kernel::try_load_cmdline(&mut fwcfg) {
-        zero_page.set_cmdline(cmdline);
-    }
+    let cmdline_measurement = kernel::try_load_cmdline(&mut fwcfg)
+        .map(|cmdline| {
+            zero_page.set_cmdline(cmdline);
+            measure_byte_slice(cmdline.to_bytes())
+        })
+        .unwrap_or_default();
 
     let kernel_info = kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table())
         .unwrap_or(kernel::KernelInfo::default());
@@ -346,13 +366,56 @@ pub fn rust64_start(encrypted: u64) -> ! {
         entry = VirtAddr::new(header.e_entry);
     }
 
-    zero_page.set_acpi_rsdp_addr(acpi::build_acpi_tables(&mut fwcfg).unwrap());
+    let mut acpi_digest = Sha256::default();
+    let rsdp = acpi::build_acpi_tables(&mut fwcfg, &mut acpi_digest).unwrap();
+    zero_page.set_acpi_rsdp_addr(PhysAddr::new(rsdp as *const _ as u64));
+    let acpi_digest = acpi_digest.finalize();
+    let mut acpi_measurement = Measurement::default();
+    acpi_measurement[..].copy_from_slice(&acpi_digest[..]);
 
-    if let Some(ram_disk) =
-        initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel_info)
-    {
-        zero_page.set_initial_ram_disk(ram_disk);
+    if let Err(err) = smp::bootstrap_aps(rsdp) {
+        log::warn!(
+            "Failed to bootstrap APs: {}. APs may not be properly initialized.",
+            err
+        );
     }
+
+    // Register the AP Jump Table, if required.
+    if es {
+        // This assumes identity mapping. Which we have in stage0.
+        let jump_table_pa = AP_JUMP_TABLE.as_ptr() as u64;
+        if snp {
+            // Under SNP we need to place the jump table address in the secrets page.
+            // Safety: we don't care about the contents of the secrets page beyond writing our jump
+            // table address into it.
+            let secrets = unsafe { SEV_SECRETS.assume_init_mut() };
+            secrets.guest_area_0.ap_jump_table_pa = jump_table_pa;
+        } else {
+            // Plain old SEV-ES, use the GHCB protocol.
+            if let Some(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .set_ap_jump_table(PhysAddr::new(jump_table_pa))
+                    .expect("failed to set AP Jump Table");
+            }
+        }
+    }
+
+    let ram_disk_measurement =
+        initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel_info)
+            .map(|ram_disk| {
+                zero_page.set_initial_ram_disk(ram_disk);
+                measure_byte_slice(ram_disk)
+            })
+            .unwrap_or_default();
+
+    let memory_map_measurement = measure_byte_slice(zero_page.e820_table().as_bytes());
+
+    log::debug!("Kernel image digest: {:?}", kernel_info.measurement);
+    log::debug!("Kernel setup data digest: {:?}", setup_data_measurement);
+    log::debug!("Kernel image digest: {:?}", cmdline_measurement);
+    log::debug!("Initial RAM disk digest: {:?}", ram_disk_measurement);
+    log::debug!("ACPI table generation digest: {:?}", acpi_measurement);
+    log::debug!("E820 table digest: {:?}", memory_map_measurement);
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 
@@ -361,7 +424,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     if snp {
         sev::unshare_page(Page::containing_address(dma_buf_address));
         sev::unshare_page(Page::containing_address(dma_access_address));
-        if ghcb_protocol.is_some() {
+        if GHCB_WRAPPER.get().is_some() {
             sev::deinit_ghcb();
         }
     }
@@ -389,4 +452,23 @@ pub fn panic(info: &PanicInfo) -> ! {
 fn phys_to_virt(address: PhysAddr) -> VirtAddr {
     // We use an identity mapping throughout.
     VirtAddr::new(address.as_u64())
+}
+
+/// Calculates the SHA2-256 digest of `source`.
+fn measure_byte_slice(source: &[u8]) -> Measurement {
+    let mut measurement = Measurement::default();
+    let mut digest = Sha256::default();
+    digest.update(source);
+    let digest = digest.finalize();
+    measurement[..].copy_from_slice(&digest[..]);
+    measurement
+}
+
+/// Creates a factory for accessing raw I/O ports.
+fn io_port_factory() -> PortFactoryWrapper {
+    if let Some(ghcb) = GHCB_WRAPPER.get() {
+        PortFactoryWrapper::new_ghcb(ghcb)
+    } else {
+        PortFactoryWrapper::new_raw()
+    }
 }

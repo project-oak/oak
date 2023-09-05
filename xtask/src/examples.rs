@@ -16,9 +16,10 @@
 
 use crate::{
     internal::*,
+    launcher,
     launcher::{
         build_binary, build_stage0, run_oak_functions_launcher_example_with_lookup_data,
-        LauncherMode, MOCK_LOOKUP_DATA_PATH, OAK_RESTRICTED_KERNEL_BIN_DIR,
+        MOCK_LOOKUP_DATA_PATH, OAK_RESTRICTED_KERNEL_BIN_DIR,
     },
 };
 
@@ -39,7 +40,7 @@ pub fn build_rust_crate_wasm(crate_name: &str) -> Step {
 }
 
 pub fn run_oak_functions_example(opt: &RunOakExampleOpt) -> Step {
-    let variant = LauncherMode::Virtual("oak_functions_enclave_app".to_string());
+    let app = launcher::App::from_crate_name("oak_functions_enclave_app");
 
     let wasm_path = oak_functions_test_utils::rust_crate_wasm_out_path(&opt.example_name);
 
@@ -51,15 +52,12 @@ pub fn run_oak_functions_example(opt: &RunOakExampleOpt) -> Step {
                 "build Oak Restricted Kernel binary",
                 OAK_RESTRICTED_KERNEL_BIN_DIR.to_str().unwrap(),
             ),
-            build_binary(
-                "build Oak Functions enclave app",
-                &variant.enclave_crate_path(),
-            ),
+            build_binary("build Oak Functions enclave app", &app.enclave_crate_path()),
             build_rust_crate_wasm(&opt.example_name),
             Step::Single {
                 name: "server".to_string(),
                 command: run_oak_functions_launcher_example_with_lookup_data(
-                    &variant,
+                    &app,
                     &wasm_path,
                     8080,
                     &opt.lookup_data_path

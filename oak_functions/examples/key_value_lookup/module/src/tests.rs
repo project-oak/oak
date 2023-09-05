@@ -46,7 +46,7 @@ async fn test_server() {
         .await;
 
     // Wait for the server to start up.
-    std::thread::sleep(Duration::from_secs(20));
+    std::thread::sleep(Duration::from_secs(10));
 
     {
         // Lookup match.

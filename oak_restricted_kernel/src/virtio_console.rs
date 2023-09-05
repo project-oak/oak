@@ -126,7 +126,7 @@ unsafe impl Sync for MmioConsoleChannel {}
 unsafe impl Send for MmioConsoleChannel {}
 
 impl Read for MmioConsoleChannel {
-    fn read(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
+    fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let mut console = self.inner.lock();
 
         let len = data.len();
@@ -146,7 +146,7 @@ impl Read for MmioConsoleChannel {
 }
 
 impl Write for MmioConsoleChannel {
-    fn write(&mut self, data: &[u8]) -> anyhow::Result<()> {
+    fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut console = self.inner.lock();
 
         for char in data {

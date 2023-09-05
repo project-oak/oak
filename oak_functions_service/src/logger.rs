@@ -38,9 +38,13 @@ pub struct StandaloneLogger {}
 
 // TODO(#2783): Implement a logger that differentiates between public and sensitive loges.
 impl OakLogger for StandaloneLogger {
+    #[cfg(not(feature = "deny_sensitive_logging"))]
     fn log_sensitive(&self, level: Level, message: &str) {
         log::log!(level, "{}", message,);
     }
+
+    #[cfg(feature = "deny_sensitive_logging")]
+    fn log_sensitive(&self, _level: Level, _message: &str) {}
 
     fn log_public(&self, level: Level, message: &str) {
         log::log!(level, "{}", message,);

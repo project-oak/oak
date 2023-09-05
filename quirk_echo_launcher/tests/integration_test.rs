@@ -19,7 +19,7 @@ use std::time::Duration;
 
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
-async fn test_launcher_virtual() {
+async fn test_launcher() {
     if xtask::testing::skip_test() {
         log::info!("skipping test");
         return;
@@ -33,16 +33,16 @@ async fn test_launcher_virtual() {
             .unwrap(),
     ))
     .await;
-    let variant = xtask::launcher::LauncherMode::Virtual("quirk_echo_enclave_app".to_string());
+    let app = xtask::launcher::App::from_crate_name("quirk_echo_enclave_app");
     xtask::testing::run_step(xtask::launcher::build_binary(
         "build Quirk Echo enclave app",
-        &variant.enclave_crate_path(),
+        &app.enclave_crate_path(),
     ))
     .await;
 
     let _background = xtask::testing::run_background(xtask::launcher::run_launcher(
         xtask::launcher::QUIRK_ECHO_LAUNCHER_BIN.to_str().unwrap(),
-        &variant,
+        &app,
     ))
     .await;
 

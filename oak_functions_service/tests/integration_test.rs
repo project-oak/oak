@@ -37,15 +37,21 @@ const LOOKUP_TEST_KEY: &[u8] = b"test_key";
 const LOOKUP_TEST_VALUE: &[u8] = b"test_value";
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
+fn init() {
+    // See https://github.com/rust-cli/env_logger/#in-tests.
+    let _ = env_logger::builder().is_test(true).try_init();
+}
+
 #[test]
 fn it_should_not_handle_user_requests_before_initialization() {
+    init();
     let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let request = InvokeRequest {
         body: vec![1, 2, 3],
     };
-    let result = client.invoke(&request).into_ok();
+    let result = client.handle_user_request(&request).into_ok();
 
     assert_matches!(
         result,
@@ -58,6 +64,7 @@ fn it_should_not_handle_user_requests_before_initialization() {
 
 #[test]
 fn it_should_handle_user_requests_after_initialization() {
+    init();
     let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
@@ -91,12 +98,13 @@ fn it_should_handle_user_requests_after_initialization() {
     let invoke_request = InvokeRequest {
         body: serialized_request,
     };
-    let result = client.invoke(&invoke_request).into_ok();
+    let result = client.handle_user_request(&invoke_request).into_ok();
     assert!(result.is_ok());
 }
 
 #[test]
 fn it_should_only_initialize_once() {
+    init();
     let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
@@ -121,6 +129,7 @@ fn it_should_only_initialize_once() {
 
 #[tokio::test]
 async fn it_should_support_lookup_data() {
+    init();
     let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
@@ -167,7 +176,7 @@ async fn it_should_support_lookup_data() {
 
     // Send invoke request.
     let lookup_response = client
-        .invoke(&InvokeRequest {
+        .handle_user_request(&InvokeRequest {
             body: serialized_request,
         })
         .expect("couldn't receive response");

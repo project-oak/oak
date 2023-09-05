@@ -3,3 +3,4 @@ FROM debian@${debian_snapshot}
 
 COPY ./target/oak_containers_hello_world_trusted_app /usr/bin/
 
+CMD ["/bin/oak_containers_hello_world_trusted_app"]
