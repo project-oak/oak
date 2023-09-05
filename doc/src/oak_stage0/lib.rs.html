@@ -377,6 +377,7 @@
 <a href="#377" id="377">377</a>
 <a href="#378" id="378">378</a>
 <a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -425,6 +426,7 @@
 <span class="kw">mod </span>initramfs;
 <span class="kw">mod </span>kernel;
 <span class="kw">mod </span>logging;
+<span class="kw">mod </span>msr;
 <span class="kw">pub mod </span>paging;
 <span class="kw">mod </span>pic;
 <span class="kw">mod </span>sev;
@@ -537,7 +539,7 @@
         // support very old processors. However, note that, this branch is only executed if
         // we have encryption, and this wouldn&#39;t be true for very old processors.
         </span><span class="kw">unsafe </span>{
-            sev::MTRRDefType::write(sev::MTRRDefTypeFlags::MTRR_ENABLE, sev::MemoryType::WP);
+            msr::MTRRDefType::write(msr::MTRRDefTypeFlags::MTRR_ENABLE, msr::MemoryType::WP);
         }
         sev::share_page(Page::containing_address(dma_buf_address), snp);
         sev::share_page(Page::containing_address(dma_access_address), snp);
