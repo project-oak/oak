@@ -14,21 +14,19 @@
 // limitations under the License.
 //
 
+use crate::{
+    acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
+    apic::Lapic,
+    pic::disable_pic8259,
+};
 use core::{
     arch::x86_64::_mm_pause,
     ffi::c_void,
     mem::MaybeUninit,
     sync::atomic::{AtomicU32, Ordering},
 };
-
-use oak_sev_guest::{ap_jump_table::ApJumpTable, io::PortFactoryWrapper};
+use oak_sev_guest::ap_jump_table::ApJumpTable;
 use x86_64::PhysAddr;
-
-use crate::{
-    acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
-    apic::Lapic,
-    pic::disable_pic8259,
-};
 
 extern "C" {
     #[link_name = "ap_start"]
@@ -79,7 +77,7 @@ pub fn start_ap(lapic: &mut Lapic, physical_apic_id: u32) -> Result<(), &'static
 }
 
 // TODO(#4235): Bootstrap the APs.
-pub fn bootstrap_aps(rsdp: &Rsdp, port_factory: &PortFactoryWrapper) -> Result<(), &'static str> {
+pub fn bootstrap_aps(rsdp: &Rsdp) -> Result<(), &'static str> {
     // If XSDT exists, then per ACPI spec we have to prefer that. If it doesn't, see if we can use
     // the old RSDT. (If we have neither XSDT or RSDT, the ACPI tables are broken.)
     let madt = if let Ok(Some(xsdt)) = rsdp.xsdt() {
@@ -94,7 +92,7 @@ pub fn bootstrap_aps(rsdp: &Rsdp, port_factory: &PortFactoryWrapper) -> Result<(
 
     // Disable the local PIC and set up our local APIC, as we need to send IPIs to APs via the APIC.
     // Safety: we can reasonably expect the PICs to be available.
-    unsafe { disable_pic8259(port_factory)? };
+    unsafe { disable_pic8259()? };
     let mut lapic = Lapic::enable()?;
 
     let local_apic_id = lapic.local_apic_id();

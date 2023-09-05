@@ -37,10 +37,7 @@ use x86_64::{
 
 pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
-pub fn init_ghcb(
-    ghcb: &'static mut Ghcb,
-    snp: bool,
-) -> &'static Spinlock<GhcbProtocol<'static, Ghcb>> {
+pub fn init_ghcb(ghcb: &'static mut Ghcb, snp: bool) {
     let ghcb_addr = VirtAddr::from_ptr(ghcb as *const _);
 
     share_page(Page::containing_address(ghcb_addr), snp);
@@ -64,7 +61,6 @@ pub fn init_ghcb(
     {
         panic!("couldn't initialize GHCB wrapper");
     }
-    GHCB_WRAPPER.get().unwrap()
 }
 
 /// Stops sharing the GHCB with the hypervisor when running with AMD SEV-SNP enabled.

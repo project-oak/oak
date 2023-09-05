@@ -19,6 +19,7 @@
 
 extern crate alloc;
 
+use crate::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use linked_list_allocator::LockedHeap;
 use oak_sev_guest::io::PortFactoryWrapper;
@@ -34,8 +35,6 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 use zerocopy::AsBytes;
-
-use crate::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 
 mod acpi;
 mod acpi_tables;
@@ -129,7 +128,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     paging::init_page_table_refs(encrypted);
 
     // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP implies SEV-ES).
-    let ghcb_protocol = if es {
+    if es {
         // No point in calling expect() here, the logging isn't set up yet.
         // In any case, this allocation should not fail. This is the first thing we allocate, the
         // GHCB is 4K in size, and the allocator should be far bigger than that (as we have more
@@ -137,15 +136,10 @@ pub fn rust64_start(encrypted: u64) -> ! {
         // If the allocation does fail, something is horribly broken and we have no hope of
         // continuing.
         let ghcb = BOOT_ALLOC.leak(sev::Ghcb::new()).unwrap();
-        Some(sev::init_ghcb(ghcb, snp))
-    } else {
-        None
-    };
+        sev::init_ghcb(ghcb, snp);
+    }
 
-    logging::init_logging(match ghcb_protocol {
-        Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
-        None => PortFactoryWrapper::new_raw(),
-    });
+    logging::init_logging();
     log::info!("starting...");
 
     let dma_buf = BOOT_ALLOC.leak(fw_cfg::DmaBuffer::default()).unwrap();
@@ -166,29 +160,14 @@ pub fn rust64_start(encrypted: u64) -> ! {
     }
 
     // Safety: we assume there won't be any other hardware devices using the fw_cfg IO ports.
-    let mut fwcfg = unsafe {
-        fw_cfg::FwCfg::new(
-            match ghcb_protocol {
-                Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
-                None => PortFactoryWrapper::new_raw(),
-            },
-            dma_buf,
-            dma_access,
-        )
-    }
-    .expect("fw_cfg device not found!");
+    let mut fwcfg =
+        unsafe { fw_cfg::FwCfg::new(dma_buf, dma_access) }.expect("fw_cfg device not found!");
 
     let zero_page = BOOT_ALLOC
         .leak(zero_page::ZeroPage::new())
         .expect("failed to allocate memory for zero page");
 
-    zero_page.fill_e820_table(
-        &mut fwcfg,
-        match ghcb_protocol {
-            Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
-            None => PortFactoryWrapper::new_raw(),
-        },
-    );
+    zero_page.fill_e820_table(&mut fwcfg);
 
     if snp {
         sev::validate_memory(zero_page.e820_table(), encrypted);
@@ -282,13 +261,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     let mut acpi_measurement = Measurement::default();
     acpi_measurement[..].copy_from_slice(&acpi_digest[..]);
 
-    if let Err(err) = smp::bootstrap_aps(
-        rsdp,
-        &match ghcb_protocol {
-            Some(protocol) => PortFactoryWrapper::new_ghcb(protocol),
-            None => PortFactoryWrapper::new_raw(),
-        },
-    ) {
+    if let Err(err) = smp::bootstrap_aps(rsdp) {
         log::warn!(
             "Failed to bootstrap APs: {}. APs may not be properly initialized.",
             err
@@ -339,7 +312,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     if snp {
         sev::unshare_page(Page::containing_address(dma_buf_address));
         sev::unshare_page(Page::containing_address(dma_access_address));
-        if ghcb_protocol.is_some() {
+        if GHCB_WRAPPER.get().is_some() {
             sev::deinit_ghcb();
         }
     }
@@ -377,4 +350,13 @@ fn measure_byte_slice(source: &[u8]) -> Measurement {
     let digest = digest.finalize();
     measurement[..].copy_from_slice(&digest[..]);
     measurement
+}
+
+/// Creates a factory for accessing raw I/O ports.
+fn io_port_factory() -> PortFactoryWrapper {
+    if let Some(ghcb) = GHCB_WRAPPER.get() {
+        PortFactoryWrapper::new_ghcb(ghcb)
+    } else {
+        PortFactoryWrapper::new_raw()
+    }
 }
