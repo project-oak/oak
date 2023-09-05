@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["SECRETS_PAGE_MAX_VERSION","SECRETS_PAGE_MIN_VERSION","SECRETS_PAGE_SIZE"],"enum":["Imi"],"struct":["SecretsPage"]};
+window.SIDEBAR_ITEMS = {"constant":["SECRETS_PAGE_MAX_VERSION","SECRETS_PAGE_MIN_VERSION","SECRETS_PAGE_SIZE"],"enum":["Imi"],"struct":["GuestReservedArea","SecretsPage"]};

@@ -574,6 +574,36 @@
 <a href="#574" id="574">574</a>
 <a href="#575" id="575">575</a>
 <a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -636,7 +666,13 @@
 /// See section 4 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
 </span><span class="kw">const </span>SW_EXIT_CODE_MMIO_WRITE: u64 = <span class="number">0x8000_0002</span>;
 
-<span class="doccomment">/// The value of the sw_exit_code field when doing a Guest Message request.
+<span class="doccomment">/// The value of the sw_exit_code field when managing the AP Jump Table under SEV-ES.
+///
+/// See table 6 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
+</span><span class="kw">const </span>SW_EXIT_CODE_AP_JUMP_TABLE: u64 = <span class="number">0x8000_0005</span>;
+
+<span class="doccomment">///
+/// The value of the sw_exit_code field when doing a Guest Message request.
 ///
 /// See table 6 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;.
 </span><span class="kw">const </span>SW_EXIT_CODE_GUEST_REQUEST: u64 = <span class="number">0x8000_0011</span>;
@@ -902,6 +938,30 @@
         register_ghcb_location(RegisterGhcbGpaRequest::new(
             <span class="self">self</span>.get_gpa().as_u64() <span class="kw">as </span>usize
         )<span class="question-mark">?</span>)
+    }
+
+    <span class="kw">pub fn </span>set_ap_jump_table(<span class="kw-2">&amp;mut </span><span class="self">self</span>, jump_table: PhysAddr) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
+
+        ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
+        ghcb.sw_exit_info_1 = <span class="number">0</span>; <span class="comment">// SET
+        </span>ghcb.sw_exit_info_2 = jump_table.as_u64();
+        ghcb.valid_bitmap = BASE_VALID_BITMAP;
+
+        <span class="self">self</span>.do_vmg_exit()
+    }
+
+    <span class="kw">pub fn </span>get_ap_jump_table(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;PhysAddr, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">let </span>ghcb = <span class="self">self</span>.ghcb.as_mut();
+
+        ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
+        ghcb.sw_exit_info_1 = <span class="number">1</span>; <span class="comment">// GET
+        </span>ghcb.sw_exit_info_2 = <span class="number">0</span>;
+        ghcb.valid_bitmap = BASE_VALID_BITMAP;
+
+        <span class="self">self</span>.do_vmg_exit()<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(PhysAddr::new(<span class="self">self</span>.ghcb.as_ref().sw_exit_info_2))
     }
 
     <span class="doccomment">/// Read a 32-bit value from a MMIO memory address via the MMIO Access protocol.

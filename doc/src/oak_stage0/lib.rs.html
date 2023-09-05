@@ -354,6 +354,29 @@
 <a href="#354" id="354">354</a>
 <a href="#355" id="355">355</a>
 <a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -391,6 +414,8 @@
 };
 <span class="kw">use </span>zerocopy::AsBytes;
 
+<span class="kw">use crate</span>::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
+
 <span class="kw">mod </span>acpi;
 <span class="kw">mod </span>acpi_tables;
 <span class="kw">mod </span>allocator;
@@ -417,7 +442,7 @@
 
 <span class="attr">#[link_section = <span class="string">&quot;.boot&quot;</span>]
 #[no_mangle]
-</span><span class="kw">static </span>SEV_SECRETS: MaybeUninit&lt;oak_sev_guest::secrets::SecretsPage&gt; = MaybeUninit::uninit();
+</span><span class="kw">static </span><span class="kw-2">mut </span>SEV_SECRETS: MaybeUninit&lt;oak_sev_guest::secrets::SecretsPage&gt; = MaybeUninit::uninit();
 <span class="attr">#[link_section = <span class="string">&quot;.boot&quot;</span>]
 #[no_mangle]
 </span><span class="kw">static </span>SEV_CPUID: MaybeUninit&lt;oak_sev_guest::cpuid::CpuidPage&gt; = MaybeUninit::uninit();
@@ -585,9 +610,10 @@
         .unwrap_or_default();
 
     <span class="kw">if </span>snp {
-        <span class="kw">let </span>cc_blob = BOOT_ALLOC
+        <span class="comment">// Safety: we&#39;re only interested in the pointer value of SEV_SECRETS, not its contents.
+        </span><span class="kw">let </span>cc_blob = BOOT_ALLOC
             .leak(oak_linux_boot_params::CCBlobSevInfo::new(
-                SEV_SECRETS.as_ptr(),
+                <span class="kw">unsafe </span>{ SEV_SECRETS.as_ptr() },
                 SEV_CPUID.as_ptr(),
             ))
             .expect(<span class="string">&quot;Failed to allocate memory for CCBlobSevInfo&quot;</span>);
@@ -645,6 +671,26 @@
             <span class="string">&quot;Failed to bootstrap APs: {}. APs may not be properly initialized.&quot;</span>,
             err
         );
+    }
+
+    <span class="comment">// Register the AP Jump Table, if required.
+    </span><span class="kw">if </span>es {
+        <span class="comment">// This assumes identity mapping. Which we have in stage0.
+        </span><span class="kw">let </span>jump_table_pa = AP_JUMP_TABLE.as_ptr() <span class="kw">as </span>u64;
+        <span class="kw">if </span>snp {
+            <span class="comment">// Under SNP we need to place the jump table address in the secrets page.
+            // Safety: we don&#39;t care about the contents of the secrets page beyond writing our jump
+            // table address into it.
+            </span><span class="kw">let </span>secrets = <span class="kw">unsafe </span>{ SEV_SECRETS.assume_init_mut() };
+            secrets.guest_area_0.ap_jump_table_pa = jump_table_pa;
+        } <span class="kw">else </span>{
+            <span class="comment">// Plain old SEV-ES, use the GHCB protocol.
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ghcb) = GHCB_WRAPPER.get() {
+                ghcb.lock()
+                    .set_ap_jump_table(PhysAddr::new(jump_table_pa))
+                    .expect(<span class="string">&quot;failed to set AP Jump Table&quot;</span>);
+            }
+        }
     }
 
     <span class="kw">let </span>ram_disk_measurement =

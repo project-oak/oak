@@ -38,6 +38,7 @@
 <a href="#38" id="38">38</a>
 <a href="#39" id="39">39</a>
 <a href="#40" id="40">40</a>
+<a href="#41" id="41">41</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -62,6 +63,7 @@
 
 </span><span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
 
+<span class="kw">pub mod </span>ap_jump_table;
 <span class="kw">pub mod </span>cpuid;
 <span class="attr">#[cfg(feature = <span class="string">&quot;rust-crypto&quot;</span>)]
 </span><span class="kw">pub mod </span>crypto;

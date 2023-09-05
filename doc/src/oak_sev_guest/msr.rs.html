@@ -756,6 +756,56 @@
 <a href="#756" id="756">756</a>
 <a href="#757" id="757">757</a>
 <a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
+<a href="#792" id="792">792</a>
+<a href="#793" id="793">793</a>
+<a href="#794" id="794">794</a>
+<a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -1232,6 +1282,34 @@
     read_protocol_msr().try_into()
 }
 
+<span class="kw">pub struct </span>ApResetHoldRequest;
+
+<span class="kw">impl </span>From&lt;ApResetHoldRequest&gt; <span class="kw">for </span>u64 {
+    <span class="kw">fn </span>from(<span class="kw">_</span>: ApResetHoldRequest) -&gt; <span class="self">Self </span>{
+        <span class="number">0x006
+    </span>}
+}
+
+<span class="kw">pub struct </span>ApResetHoldResponse(bool);
+
+<span class="kw">impl </span>TryFrom&lt;u64&gt; <span class="kw">for </span>ApResetHoldResponse {
+    <span class="kw">type </span>Error = <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str;
+    <span class="kw">fn </span>try_from(msr_value: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+        <span class="kw">const </span>AP_RESET_HOLD_RESPONSE_INFO: u64 = <span class="number">0x007</span>;
+        <span class="kw">if </span>msr_value &amp; GHCB_INFO_MASK != AP_RESET_HOLD_RESPONSE_INFO {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;value is not a valid AP Reset Hold response&quot;</span>);
+        }
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span>((msr_value &amp; !GHCB_INFO_MASK) &gt; <span class="number">0</span>))
+    }
+}
+
+<span class="kw">pub fn </span>ap_reset_hold() -&gt; <span class="prelude-ty">Result</span>&lt;bool, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">let </span>request = ApResetHoldRequest;
+    write_protocol_msr_and_exit(request.into());
+    <span class="kw">let </span>response: ApResetHoldResponse = read_protocol_msr().try_into()<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(response.<span class="number">0</span>)
+}
+
 <span class="doccomment">/// The reason for requesting termination from the hypervisor.
 </span><span class="attr">#[derive(Debug)]
 #[repr(u8)]
@@ -1512,6 +1590,28 @@
         };
         <span class="kw">let </span>expected = <span class="number">0x100u64 </span>| ((TerminationReason::GhcbProtocolVersion <span class="kw">as </span>u64) &lt;&lt; <span class="number">16</span>);
         <span class="macro">assert_eq!</span>(expected, request.into());
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_ap_reset_hold_request() {
+        <span class="kw">let </span>request = ApResetHoldRequest;
+        <span class="macro">assert_eq!</span>(<span class="number">0x006u64</span>, request.into());
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_ap_reset_hold_response() {
+        <span class="kw">let </span>invalid = <span class="number">1234u64</span>;
+        <span class="kw">let </span>failure = <span class="number">0x007u64</span>;
+        <span class="kw">let </span>success = <span class="number">0x1234007u64</span>;
+
+        <span class="kw">let </span>error: <span class="prelude-ty">Result</span>&lt;ApResetHoldResponse, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; = invalid.try_into();
+        <span class="macro">assert!</span>(error.is_err());
+
+        <span class="kw">let </span>failure: ApResetHoldResponse = failure.try_into().unwrap();
+        <span class="macro">assert!</span>(!failure.<span class="number">0</span>);
+
+        <span class="kw">let </span>success: ApResetHoldResponse = success.try_into().unwrap();
+        <span class="macro">assert!</span>(success.<span class="number">0</span>);
     }
 }
 </code></pre></div></section></main></body></html>
