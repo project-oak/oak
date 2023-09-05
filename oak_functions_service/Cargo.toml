@@ -5,6 +5,11 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = ["deny_sensitive_logging"]
+# Disable sensitive logging.
+deny_sensitive_logging = []
+
 [dependencies]
 anyhow = { version = "*", default-features = false }
 byteorder = { version = "*", default-features = false }

@@ -39,6 +39,12 @@ fn _start() -> ! {
 
 fn main() -> ! {
     info!("In main!");
+    #[cfg(feature = "deny_sensitive_logging")]
+    {
+        // Only log warnings and errors to reduce the risk of accidentally leaking execution
+        // information through debug logs.
+        log::set_max_level(log::LevelFilter::Warn);
+    }
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
     let service =
         oak_functions_service::OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
