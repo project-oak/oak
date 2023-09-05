@@ -539,7 +539,7 @@ pub fn request_termination(request: TerminationRequest) -> ! {
 
 bitflags! {
     /// Flags indicating which SEV features are active.
-    #[derive(Clone, Copy, Default)]
+    #[derive(Clone, Copy, Debug, Default)]
     pub struct SevStatus: u64 {
         /// SEV is enabled for this guest.
         const SEV_ENABLED = (1 << 0);
@@ -561,10 +561,18 @@ bitflags! {
         const PREVENT_HOST_IBS_ENABLED = (1 << 8);
         /// SNP Branch Target Buffer Isolation is enabled for this guest.
         const SNP_BTB_ISOLATION_ENABLED = (1 << 9);
+        /// VMPL SSS (Supervisor Shadow Stack) is enabled for this guest.
+        const VMPL_SSS_ENABLED = (1 << 10);
         /// Secure Timestamp Counter is enabled for this guest.
         const SECURE_TSC_ENABLED = (1 << 11);
+        /// VMGEXIT Parameter is enabled for this guest.aes_gcm
+        const VMGEXIT_PARAMETER_ENABLED = (1 << 12);
+        /// The gust was run with Instruction-Based Virtualization enabled.
+        const INSTRUCTION_BASED_SAMPLING_ENABLED = (1 << 14);
         /// VMSA Register Protection is enabled for this guest.
         const VMSA_REG_PROT_ENABLED = (1 << 16);
+        /// SMT Protection is enabled for this guest.
+        const SMT_PROTECTION_ENABLED = (1 << 17);
     }
 }
 
