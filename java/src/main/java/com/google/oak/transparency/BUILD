@@ -25,6 +25,8 @@ java_library(
     name = "rekor",
     srcs = glob(["*.java"]),
     deps = [
+        "//java/src/main/java/com/google/oak/util",
+        "//oak_remote_attestation/proto/v1:messages_java_proto",
         "@com_google_code_gson_gson",
     ],
 )

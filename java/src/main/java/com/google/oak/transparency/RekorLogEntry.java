@@ -18,6 +18,8 @@ package com.google.oak.transparency;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.oak.util.Result;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
@@ -196,5 +198,22 @@ public final class RekorLogEntry {
     String decodedBody = new String(Base64.getDecoder().decode(entry.body));
     entry.bodyObject = gson.fromJson(decodedBody, Body.class);
     return new RekorLogEntry(entry);
+  }
+
+  /**
+   * Converts the given bytes into string, and tries to unmarshal the result into an instance of
+   * {@code RekorLogEntry}. If the conversion is successful, return the body of the resulting entry,
+   * otherwise returns and error.
+   * @param logEntryBytes bytes to parse and extract the Rekor log entry body from.
+   * @return A result, either wrapping a {@code Body} or an exception representing a failure to
+   *     parse and unmarshal the input bytes.
+   */
+  public static Result<Body, Exception> getRekorLogEntryBody(byte[] logEntryBytes) {
+    try {
+      RekorLogEntry logEntry = unmarshalLogEntry(new String(logEntryBytes, StandardCharsets.UTF_8));
+      return Result.success(logEntry.bodyObject);
+    } catch (RekorValidationException e) {
+      return Result.error(e);
+    }
   }
 }
