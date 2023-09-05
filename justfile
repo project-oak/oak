@@ -19,7 +19,7 @@ build_enclave_app name:
     env --chdir=enclave_apps/$(name) cargo build --release
 
 oak_functions_insecure_enclave_app:
-    env --chdir=enclave_apps/oak_functions_enclave_app cargo build --release --no-default-features --feature=allow_sensitive_logging
+    env --chdir=enclave_apps/oak_functions_enclave_app cargo build --release --no-default-features --features=allow_sensitive_logging
 
 oak_restricted_kernel_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release
