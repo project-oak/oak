@@ -1,4 +1,5 @@
 .code16
+.align 16
 .section .text16, "ax"
 .global _start
 _start :
@@ -90,7 +91,7 @@ _protected_mode_start:
     and $0b100, %eax          # eax &= 0b100; -- SEV-SNP active
     test %eax, %eax           # is eax zero?
     je 2f                     # if yes, no SNP, skip validation and jump ahead
-    mov $0x1000, %ebx         # ebx = 0x1000 -- start address (skipping first page as that's not mapped)
+    mov $0x0000, %ebx         # ebx = 0x0000 -- start address
     xor %ecx, %ecx            # ecx = 0 -- we're using 4K pages
     mov $0b1, %edx            # edx = 1 -- set RMP VALIDATED bit
     1:
@@ -107,11 +108,22 @@ _protected_mode_start:
     xor %eax, %eax
     rep stosb
 
+    mov $ap_bss_start, %edi
+    mov $ap_bss_size, %ecx
+    xor %eax, %eax
+    rep stosb
+
     # Copy DATA from the ROM image (stored just after TEXT) to the expected location.
     # Source address goes to ESI, destination goes to EDI, count goes to ECX.
     mov $text_end, %esi
     mov $data_start, %edi
     mov $data_size, %ecx
+    rep movsb
+
+    # Copy AP bootstrap code to the expected location, similar to DATA above.
+    mov $0xFFFFF000, %esi
+    mov $ap_text_start, %edi
+    mov $ap_text_size, %ecx
     rep movsb
 
     # Set the first entry of PML4 to point to PDPT (0..512GiB).

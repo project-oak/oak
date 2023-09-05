@@ -33,19 +33,19 @@ mod iree;
 use crate::proto::oak::iree::{
     AttestationEvidence, InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, Iree,
 };
-use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
+use alloc::{format, sync::Arc, vec::Vec};
 use anyhow::Context;
+use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_remote_attestation::{
-    attester::AttestationReportGenerator,
-    handler::{AttestationHandler, AttestationSessionHandler},
+    attester::{AttestationReportGenerator, Attester},
+    handler::EncryptionHandler,
 };
 
-struct IreeHandler {
+struct OakIreeInstance {
     iree_model: iree::IreeModel,
 }
 
-impl micro_rpc::Transport for IreeHandler {
-    type Error = anyhow::Error;
+impl OakIreeInstance {
     fn invoke(&mut self, request: &[u8]) -> anyhow::Result<Vec<u8>> {
         self.iree_model
             .run(request)
@@ -53,66 +53,60 @@ impl micro_rpc::Transport for IreeHandler {
     }
 }
 
-enum InitializationState {
-    Uninitialized,
-    Initialized(Box<dyn AttestationHandler>),
-}
-
 pub struct IreeService {
     attestation_report_generator: Arc<dyn AttestationReportGenerator>,
-    initialization_state: InitializationState,
+    encryption_key_provider: Arc<EncryptionKeyProvider>,
+    instance: Option<OakIreeInstance>,
 }
 
 impl IreeService {
     pub fn new(attestation_report_generator: Arc<dyn AttestationReportGenerator>) -> Self {
         Self {
             attestation_report_generator,
-            initialization_state: InitializationState::Uninitialized,
+            encryption_key_provider: Arc::new(EncryptionKeyProvider::new()),
+            instance: None,
         }
+    }
+    fn get_instance(&mut self) -> Result<&mut OakIreeInstance, micro_rpc::Status> {
+        self.instance.as_mut().ok_or_else(|| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::FailedPrecondition,
+                "not initialized",
+            )
+        })
     }
 }
 
 impl Iree for IreeService {
     fn initialize(
         &mut self,
-        _initialization: &InitializeRequest,
+        _initialization: InitializeRequest,
     ) -> Result<InitializeResponse, micro_rpc::Status> {
-        match &mut self.initialization_state {
-            InitializationState::Initialized(_attestation_handler) => {
-                Err(micro_rpc::Status::new_with_message(
-                    micro_rpc::StatusCode::FailedPrecondition,
-                    "already initialized",
-                ))
-            }
-            InitializationState::Uninitialized => {
-                let mut iree_model = iree::IreeModel::new();
-                iree_model
-                    .initialize()
-                    .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
-
-                let attestation_handler = Box::new(
-                    AttestationSessionHandler::create(
-                        self.attestation_report_generator.clone(),
-                        IreeHandler { iree_model },
-                    )
-                    .map_err(|err| {
-                        micro_rpc::Status::new_with_message(
-                            micro_rpc::StatusCode::Internal,
-                            format!("couldn't create attestation handler: {:?}", err),
-                        )
-                    })?,
+        match &mut self.instance {
+            Some(_) => Err(micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::FailedPrecondition,
+                "already initialized",
+            )),
+            None => {
+                let instance = {
+                    let mut iree_model = iree::IreeModel::new();
+                    iree_model
+                        .initialize()
+                        .map_err(|_err| micro_rpc::Status::new(micro_rpc::StatusCode::Internal))?;
+                    OakIreeInstance { iree_model }
+                };
+                let attester = Attester::new(
+                    self.attestation_report_generator.clone(),
+                    self.encryption_key_provider.clone(),
                 );
                 let attestation_evidence =
-                    attestation_handler
-                        .get_attestation_evidence()
-                        .map_err(|err| {
-                            micro_rpc::Status::new_with_message(
-                                micro_rpc::StatusCode::Internal,
-                                format!("couldn't get attestation evidence: {:?}", err),
-                            )
-                        })?;
-                self.initialization_state = InitializationState::Initialized(attestation_handler);
-
+                    attester.generate_attestation_evidence().map_err(|err| {
+                        micro_rpc::Status::new_with_message(
+                            micro_rpc::StatusCode::Internal,
+                            format!("couldn't get attestation evidence: {:?}", err),
+                        )
+                    })?;
+                self.instance = Some(instance);
                 Ok(InitializeResponse {
                     attestation_evidence: Some(AttestationEvidence {
                         attestation_report: attestation_evidence.attestation,
@@ -125,25 +119,22 @@ impl Iree for IreeService {
 
     fn invoke(
         &mut self,
-        request_message: &InvokeRequest,
+        request_message: InvokeRequest,
     ) -> Result<InvokeResponse, micro_rpc::Status> {
-        match &mut self.initialization_state {
-            InitializationState::Uninitialized => Err(micro_rpc::Status::new_with_message(
-                micro_rpc::StatusCode::FailedPrecondition,
-                "not initialized",
-            )),
-            InitializationState::Initialized(attestation_handler) => {
-                let response =
-                    attestation_handler
-                        .invoke(&request_message.body)
-                        .map_err(|err| {
-                            micro_rpc::Status::new_with_message(
-                                micro_rpc::StatusCode::Internal,
-                                format!("{:?}", err),
-                            )
-                        })?;
-                Ok(InvokeResponse { body: response })
-            }
-        }
+        let encryption_key_provider = self.encryption_key_provider.clone();
+        let instance = self.get_instance()?;
+        EncryptionHandler::create(encryption_key_provider, |r| {
+            instance
+                .invoke(&r)
+                .map_err(|err| anyhow::anyhow!("couldn't handle invoke: {:?}", err))
+        })
+        .invoke(&request_message.body)
+        .map(|response| InvokeResponse { body: response })
+        .map_err(|err| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::Internal,
+                format!("couldn't invoke handler: {:?}", err),
+            )
+        })
     }
 }

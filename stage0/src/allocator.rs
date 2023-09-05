@@ -20,7 +20,9 @@ use core::{
     ptr::{write, NonNull},
     sync::atomic::{AtomicUsize, Ordering},
 };
+use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use spinning_top::Spinlock;
+use x86_64::VirtAddr;
 
 struct Inner<const N: usize> {
     index: AtomicUsize,
@@ -40,20 +42,20 @@ impl<const N: usize> Inner<N> {
 ///
 /// The algorithm is rather simple: we maintain an index into the buffer we hold, that marks the
 /// high water mark (already allocated memory). Whenever a request for memory comes in, me move the
-/// index forward by the padding necessary to maintain proper alighment for the structure plus the
+/// index forward by the padding necessary to maintain proper alignment for the structure plus the
 /// size of the structure.
 ///
 /// We do not support deallocation, and there is no optimizations to pack the allocations as
 /// efficiently as possible.
 ///
-/// For stage0 uses these limitations are not an issue because (a) we use the allocator to allocate
-/// data structures we expect to outive stage0 and (b) we allocate only a small number of data
-/// structures, so the padding overhead is minimal.
-pub struct Allocator<const N: usize> {
+/// For stage0 uses these limitations are not an issue because (a) we use this allocator to allocate
+/// data structures we expect to outlive stage0 and (b) we allocate only a small number of data
+/// structures from it, so the padding overhead is minimal.
+pub struct BumpAllocator<const N: usize> {
     inner: Spinlock<Inner<N>>,
 }
 
-impl<const N: usize> Allocator<N> {
+impl<const N: usize> BumpAllocator<N> {
     pub const fn uninit() -> Self {
         Self {
             inner: Spinlock::new(Inner::new()),
@@ -99,13 +101,37 @@ impl<const N: usize> Allocator<N> {
     }
 }
 
+pub fn init_global_allocator(e820_table: &[BootE820Entry]) {
+    // Create the heap between 1MiB and 2MiB.
+    let start = VirtAddr::new(0x100000);
+    let size = 0x100000usize;
+    let end = start + size as u64;
+
+    // Check that this range is backed by physical memory.
+    if !e820_table.iter().any(|entry| {
+        entry.entry_type() == Some(E820EntryType::RAM)
+            && entry.addr() as u64 <= start.as_u64()
+            && (entry.addr() + entry.size()) as u64 >= end.as_u64()
+    }) {
+        panic!("heap is not backed by physical memory");
+    }
+
+    // Safety: The memory between 1MiB and 2MiB is not used for anything else, and we have checked
+    // that this range is backed by physical memory.
+    unsafe {
+        crate::SHORT_TERM_ALLOC
+            .lock()
+            .init(start.as_mut_ptr(), size);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn simple_alloc() {
-        let alloc = Allocator::<16>::uninit();
+        let alloc = BumpAllocator::<16>::uninit();
         let val = alloc.leak([0u8; 16]);
         assert!(val.is_some());
         let val = alloc.leak([0u8; 16]);
@@ -116,7 +142,7 @@ mod tests {
 
     #[test]
     fn two_alloc() {
-        let alloc = Allocator::<16>::uninit();
+        let alloc = BumpAllocator::<16>::uninit();
         let val = alloc.leak([0u8; 8]);
         assert!(val.is_some());
         let val = alloc.leak([0u8; 8]);
@@ -133,7 +159,7 @@ mod tests {
         // Allow for max 7-byte alignment + 2*8 (size of Foo)
         // The padding we need to use is ~random; it depends where exactly in memory our buffer
         // lands, as that is not required to be perfectly aligned with any particular boundary.
-        let alloc = Allocator::<23>::uninit();
+        let alloc = BumpAllocator::<23>::uninit();
         let val = alloc.leak(Foo { x: 16, _y: 16 }).unwrap();
         assert_eq!(0, val as *const Foo as usize % core::mem::align_of::<Foo>());
         assert_eq!(16, val.x);
@@ -145,7 +171,7 @@ mod tests {
 
     #[test]
     fn failing_alloc() {
-        let alloc = Allocator::<4>::uninit();
+        let alloc = BumpAllocator::<4>::uninit();
         assert!(alloc.leak(0u64).is_none());
         assert!(alloc.leak(0u32).is_some());
         assert!(alloc.leak(0u8).is_none());

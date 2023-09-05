@@ -13,19 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod container_runtime;
-mod ipc_server;
-mod logging;
-
 use anyhow::anyhow;
 use clap::Parser;
-use oak_containers_orchestrator_client::{
-    proto::oak::session::v1::AttestationEvidence, LauncherClient,
-};
-
-// Utility directory that is shared between the orchestrator & container
-const UTIL_DIR: &str = "oak_utils";
-const IPC_SOCKET_FILE_NAME: &str = "orchestrator_ipc";
+use oak_containers_orchestrator::{IPC_SOCKET_FILE_NAME, UTIL_DIR};
+use oak_containers_orchestrator_client::LauncherClient;
+use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_remote_attestation::attester::{Attester, EmptyAttestationReportGenerator};
+use std::sync::Arc;
+use tokio::sync::oneshot::channel;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -35,7 +30,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    logging::setup()?;
+    oak_containers_orchestrator::logging::setup()?;
 
     let args = Args::parse();
 
@@ -53,28 +48,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .map_err(|error| anyhow!("couldn't get application config: {:?}", error))?;
 
-    let evidence = AttestationEvidence {
-        encryption_public_key: vec![],
-        signing_public_key: vec![],
-        attestation: vec![],
-        signed_application_data: vec![],
-    };
+    let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
+    let encryption_key_provider = Arc::new(EncryptionKeyProvider::new());
+    let attester = Attester::new(
+        attestation_report_generator,
+        encryption_key_provider.clone(),
+    );
+    let evidence = attester
+        .generate_attestation_evidence()
+        .map_err(|error| anyhow!("couldn't generate attestation evidence: {:?}", error))?;
     launcher_client
         .send_attestation_evidence(evidence)
         .await
         .map_err(|error| anyhow!("couldn't send attestation evidence: {:?}", error))?;
 
-    let util_dir_absolute_path = std::path::Path::new("/").join(crate::UTIL_DIR);
+    let util_dir_absolute_path = std::path::Path::new("/").join(UTIL_DIR);
     tokio::fs::create_dir_all(&util_dir_absolute_path).await?;
     let ipc_path = {
         let mut path = util_dir_absolute_path;
         path.push(IPC_SOCKET_FILE_NAME);
         path
     };
+    let (exit_notification_sender, shutdown_receiver) = channel::<()>();
 
     tokio::try_join!(
-        crate::ipc_server::create(ipc_path, application_config, launcher_client),
-        container_runtime::run(&container_bundle)
+        oak_containers_orchestrator::ipc_server::create(
+            ipc_path,
+            encryption_key_provider,
+            attester,
+            application_config,
+            launcher_client,
+            shutdown_receiver
+        ),
+        oak_containers_orchestrator::container_runtime::run(
+            &container_bundle,
+            exit_notification_sender
+        )
     )?;
 
     Ok(())

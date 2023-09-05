@@ -18,12 +18,14 @@ syntax = "proto3";
 
 package oak.containers.example;
 
+import "oak_crypto/proto/v1/crypto.proto";
+
 message HelloRequest {
-  string name = 1;
+  oak.crypto.v1.EncryptedRequest encrypted_request = 1;
 }
 
 message HelloResponse {
-  string greeting = 1;
+  oak.crypto.v1.EncryptedResponse encrypted_response = 1;
 }
 
 service TrustedApplication {

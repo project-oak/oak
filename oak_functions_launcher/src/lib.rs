@@ -31,6 +31,7 @@ pub mod proto {
         pub mod session {
             pub mod v1 {
                 #![allow(clippy::return_self_not_must_use)]
+                #![allow(clippy::large_enum_variant)]
                 tonic::include_proto!("oak.session.v1");
             }
         }
@@ -56,7 +57,7 @@ pub struct LookupDataConfig {
 }
 
 pub async fn create(
-    mode: launcher::GuestMode,
+    params: launcher::Params,
     lookup_data_config: LookupDataConfig,
     wasm_path: PathBuf,
     constant_response_size: u32,
@@ -68,10 +69,11 @@ pub async fn create(
     ),
     Box<dyn std::error::Error>,
 > {
-    let (launched_instance, connector_handle) = launcher::launch(mode).await?;
-    setup_lookup_data(connector_handle.clone(), lookup_data_config).await?;
+    log::info!("creating Oak Functions guest instance");
+    let (launched_instance, connector_handle) = launcher::launch(params).await?;
     let intialize_response =
         intialize_enclave(connector_handle.clone(), &wasm_path, constant_response_size).await?;
+    setup_lookup_data(connector_handle.clone(), lookup_data_config).await?;
     Ok((launched_instance, connector_handle, intialize_response))
 }
 
@@ -80,6 +82,7 @@ async fn setup_lookup_data(
     connector_handle: channel::ConnectorHandle,
     config: LookupDataConfig,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    log::info!("setting up lookup data");
     let mut client = OakFunctionsAsyncClient::new(connector_handle);
 
     // Block for [invariant that lookup data is fully loaded](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-fully-loaded-lookup-data)
@@ -113,10 +116,11 @@ pub async fn update_lookup_data(
     client: &mut OakFunctionsAsyncClient<ConnectorHandle>,
     config: &LookupDataConfig,
 ) -> anyhow::Result<()> {
+    log::info!("updating lookup data");
     lookup::update_lookup_data(client, &config.lookup_data_path, config.max_chunk_size).await
 }
 
-// Loads application config (including wasm bytes) into the enclave and returns a remote attestation
+// Loads application config (including Wasm bytes) into the enclave and returns a remote attestation
 // evidence.
 async fn intialize_enclave(
     connector_handle: channel::ConnectorHandle,
@@ -138,12 +142,12 @@ async fn intialize_enclave(
     };
 
     let mut client = OakFunctionsAsyncClient::new(connector_handle);
+    log::info!("sending initialize request");
     let initialize_response = client
         .initialize(&request)
         .await
         .flatten()
         .expect("couldn't initialize service");
-
     log::info!("service initialized: {:?}", initialize_response);
 
     Ok(initialize_response)

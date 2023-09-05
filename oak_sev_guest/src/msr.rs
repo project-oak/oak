@@ -442,7 +442,7 @@ impl From<HypervisorFeatureSupportRequest> for u64 {
 
 bitflags! {
     /// Flags indicating which features are supported by the hypervisor.
-    #[derive(Default)]
+    #[derive(Debug, Default, PartialEq)]
     pub struct HypervisorFeatureSupportResponse: u64 {
         /// AMD SEV-SNP is supported.
         const SEV_SNP = (1 << 0);
@@ -472,6 +472,34 @@ pub fn get_hypervisor_feature_support() -> Result<HypervisorFeatureSupportRespon
     let request = HypervisorFeatureSupportRequest;
     write_protocol_msr_and_exit(request.into());
     read_protocol_msr().try_into()
+}
+
+pub struct ApResetHoldRequest;
+
+impl From<ApResetHoldRequest> for u64 {
+    fn from(_: ApResetHoldRequest) -> Self {
+        0x006
+    }
+}
+
+pub struct ApResetHoldResponse(bool);
+
+impl TryFrom<u64> for ApResetHoldResponse {
+    type Error = &'static str;
+    fn try_from(msr_value: u64) -> Result<Self, &'static str> {
+        const AP_RESET_HOLD_RESPONSE_INFO: u64 = 0x007;
+        if msr_value & GHCB_INFO_MASK != AP_RESET_HOLD_RESPONSE_INFO {
+            return Err("value is not a valid AP Reset Hold response");
+        }
+        Ok(Self((msr_value & !GHCB_INFO_MASK) > 0))
+    }
+}
+
+pub fn ap_reset_hold() -> Result<bool, &'static str> {
+    let request = ApResetHoldRequest;
+    write_protocol_msr_and_exit(request.into());
+    let response: ApResetHoldResponse = read_protocol_msr().try_into()?;
+    Ok(response.0)
 }
 
 /// The reason for requesting termination from the hypervisor.
@@ -511,7 +539,7 @@ pub fn request_termination(request: TerminationRequest) -> ! {
 
 bitflags! {
     /// Flags indicating which SEV features are active.
-    #[derive(Default)]
+    #[derive(Clone, Copy, Default)]
     pub struct SevStatus: u64 {
         /// SEV is enabled for this guest.
         const SEV_ENABLED = (1 << 0);
@@ -754,5 +782,27 @@ mod tests {
         };
         let expected = 0x100u64 | ((TerminationReason::GhcbProtocolVersion as u64) << 16);
         assert_eq!(expected, request.into());
+    }
+
+    #[test]
+    fn test_ap_reset_hold_request() {
+        let request = ApResetHoldRequest;
+        assert_eq!(0x006u64, request.into());
+    }
+
+    #[test]
+    fn test_ap_reset_hold_response() {
+        let invalid = 1234u64;
+        let failure = 0x007u64;
+        let success = 0x1234007u64;
+
+        let error: Result<ApResetHoldResponse, &'static str> = invalid.try_into();
+        assert!(error.is_err());
+
+        let failure: ApResetHoldResponse = failure.try_into().unwrap();
+        assert!(!failure.0);
+
+        let success: ApResetHoldResponse = success.try_into().unwrap();
+        assert!(success.0);
     }
 }

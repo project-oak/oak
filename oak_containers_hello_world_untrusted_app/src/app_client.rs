@@ -13,21 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod proto {
-    pub mod oak {
-        pub mod containers {
-            pub mod example {
-                tonic::include_proto!("oak.containers.example");
-            }
-        }
-    }
-}
-
-use anyhow::Context;
-use proto::oak::containers::example::{
-    trusted_application_client::TrustedApplicationClient as GrpcTrustedApplicationClient,
-    HelloRequest,
+use crate::proto::oak::{
+    containers::example::{
+        trusted_application_client::TrustedApplicationClient as GrpcTrustedApplicationClient,
+        HelloRequest,
+    },
+    crypto::v1::{EncryptedRequest, EncryptedResponse},
 };
+use anyhow::Context;
 use tokio::time::Duration;
 use tonic::transport::Endpoint;
 
@@ -50,15 +43,18 @@ impl TrustedApplicationClient {
         Ok(Self { inner })
     }
 
-    pub async fn hello(&mut self, name: &str) -> Result<String, Box<dyn std::error::Error>> {
-        let greeting = self
-            .inner
+    pub async fn hello(
+        &mut self,
+        encrypted_request: EncryptedRequest,
+    ) -> anyhow::Result<EncryptedResponse> {
+        self.inner
             .hello(HelloRequest {
-                name: name.to_string(),
+                encrypted_request: Some(encrypted_request),
             })
-            .await?
+            .await
+            .context("couldn't send hello request")?
             .into_inner()
-            .greeting;
-        Ok(greeting)
+            .encrypted_response
+            .context("no response provided")
     }
 }

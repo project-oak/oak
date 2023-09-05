@@ -14,10 +14,6 @@
 // limitations under the License.
 //
 
-use crate::{
-    attester::{AttestationReportGenerator, Attester},
-    proto::oak::session::v1::AttestationEvidence,
-};
 use alloc::{sync::Arc, vec, vec::Vec};
 use anyhow::{anyhow, Context};
 use oak_crypto::{
@@ -38,53 +34,49 @@ pub struct PublicKeyInfo {
     pub attestation: Vec<u8>,
 }
 
-pub trait AttestationHandler: micro_rpc::Transport<Error = anyhow::Error> {
-    fn get_attestation_evidence(&self) -> anyhow::Result<AttestationEvidence>;
-}
-
-pub struct AttestationSessionHandler<H: micro_rpc::Transport<Error = anyhow::Error>> {
+/// Wraps a closure to an underlying function with request encryption and response decryption logic,
+/// based on the provided encryption key.
+pub struct EncryptionHandler<H: FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>> {
     // TODO(#3442): Use attester to attest to the public key.
-    attester: Arc<Attester>,
     encryption_key_provider: Arc<EncryptionKeyProvider>,
     request_handler: H,
 }
 
-impl<H: micro_rpc::Transport<Error = anyhow::Error>> AttestationSessionHandler<H> {
-    pub fn create(
-        attestation_report_generator: Arc<dyn AttestationReportGenerator>,
-        request_handler: H,
-    ) -> anyhow::Result<Self> {
-        let encryption_key_provider = Arc::new(EncryptionKeyProvider::new());
-        Ok(Self {
-            attester: Arc::new(Attester::new(
-                attestation_report_generator,
-                encryption_key_provider.clone(),
-            )),
+// TODO(#4249): Make the inner function infallible.
+impl<H: FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>> EncryptionHandler<H> {
+    pub fn create(encryption_key_provider: Arc<EncryptionKeyProvider>, request_handler: H) -> Self {
+        Self {
             encryption_key_provider,
             request_handler,
-        })
+        }
     }
 }
 
-impl<H: micro_rpc::Transport<Error = anyhow::Error>> micro_rpc::Transport
-    for AttestationSessionHandler<H>
-{
-    type Error = anyhow::Error;
-    fn invoke(&mut self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let mut server_encryptor = ServerEncryptor::new(self.encryption_key_provider.clone());
-
-        // Deserialize and decrypt request.
+impl<H: FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>> EncryptionHandler<H> {
+    pub fn invoke(self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
+        // Deserialize request.
         let encrypted_request = EncryptedRequest::decode(request_body)
             .map_err(|error| anyhow!("couldn't deserialize request: {:?}", error))?;
+
+        // Initialize server encryptor.
+        let serialized_encapsulated_public_key = encrypted_request
+            .serialized_encapsulated_public_key
+            .as_ref()
+            .expect("initial request message doesn't contain encapsulated public key");
+        let mut server_encryptor = ServerEncryptor::create(
+            serialized_encapsulated_public_key,
+            self.encryption_key_provider.clone(),
+        )
+        .map_err(|error| anyhow!("couldn't create server encryptor: {:?}", error))?;
+
+        // Decrypt request.
         let (request, _) = server_encryptor
             .decrypt(&encrypted_request)
             .context("couldn't decrypt request")?;
 
         // Handle request.
-        let response = self
-            .request_handler
-            .invoke(&request)
-            .context("couldn't handle request")?;
+        let response = (self.request_handler)(request).context("couldn't handle request")?;
+        log::info!("plaintext response: {:?}", response);
 
         // Encrypt and serialize response.
         // The resulting decryptor for consequent requests is discarded because we don't expect
@@ -98,15 +90,5 @@ impl<H: micro_rpc::Transport<Error = anyhow::Error>> micro_rpc::Transport
             .map_err(|error| anyhow!("couldn't serialize response: {:?}", error))?;
 
         Ok(serialized_response)
-    }
-}
-
-impl<H: micro_rpc::Transport<Error = anyhow::Error>> AttestationHandler
-    for AttestationSessionHandler<H>
-{
-    fn get_attestation_evidence(&self) -> anyhow::Result<AttestationEvidence> {
-        self.attester
-            .generate_attestation_evidence()
-            .context("couldn't generate attestation evidence")
     }
 }

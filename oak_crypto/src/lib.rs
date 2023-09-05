@@ -30,7 +30,7 @@ pub mod proto {
 }
 
 pub mod encryptor;
-mod hpke;
+pub mod hpke;
 pub mod signer;
 #[cfg(test)]
 mod tests;

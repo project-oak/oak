@@ -62,7 +62,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
             .expect("Failed to build oak_functions_enclave_app");
 
-    let params = launcher::virtualized::Params {
+    let params = launcher::Params {
         enclave_binary: workspace_path(&[
             "oak_restricted_kernel_bin",
             "target",
@@ -95,7 +95,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
 
     let (launched_instance, connector_handle, initialize_response) = runtime
         .block_on(oak_functions_launcher::create(
-            launcher::GuestMode::Virtualized(params),
+            params,
             lookup_data_config,
             config.wasm_path.to_path_buf(),
             constant_response_size,
@@ -121,9 +121,9 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
 
     // Invoke the function once outside of the benchmark loop to make sure it's ready.
     {
-        log::debug!("invoking function");
+        log::debug!("handle_user_request function");
         let response = runtime
-            .block_on(client.invoke(&invoke_request))
+            .block_on(client.handle_user_request(&invoke_request))
             .expect("Failed to receive response.");
         log::debug!("received response {:?}", response);
         assert!(response.is_ok());
@@ -137,11 +137,11 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         assert_eq!(decrypted_response, config.expected_response);
     }
 
-    // We need to make sure to block on the future returned by `invoke`, otherwise the benchmark
-    // will finish before the request is sent.
+    // We need to make sure to block on the future returned by `handle_user_request`, otherwise the
+    // benchmark will finish before the request is sent.
     b.iter(|| {
         let response = runtime
-            .block_on(client.invoke(&invoke_request))
+            .block_on(client.handle_user_request(&invoke_request))
             .expect("Failed to receive response.");
         assert!(response.is_ok());
     });

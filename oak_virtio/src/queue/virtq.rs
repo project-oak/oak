@@ -22,6 +22,7 @@ bitflags! {
     /// Flags about a descriptor.
     ///
     /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-320005>.
+    #[derive(Clone, Copy, Debug)]
     pub struct DescFlags: u16 {
         /// This marks a buffer as continuing via the next field to chain descriptors together.
         ///
@@ -77,6 +78,7 @@ impl Desc {
 
 bitflags! {
     /// Flags about the available and used rings.
+    #[derive(Debug)]
     pub struct RingFlags: u16 {
         /// This indicates that the owner of the ring does not require queue notifications.
         const NO_NOTIFY = 1;

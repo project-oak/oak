@@ -2,11 +2,12 @@
 Description=Oak Containers Orchestrator
 After=network-online.target
 Wants=network-online.target
+FailureAction=poweroff-force
+SuccessAction=poweroff-force
 
 [Service]
 Type=simple
 ExecStart=/bin/oak_containers_orchestrator
-FailureAction=poweroff-force
 
 [Install]
 WantedBy=multi-user.target

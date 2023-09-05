@@ -13,7 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use anyhow::Context;
 use clap::Parser;
+use oak_crypto::encryptor::ClientEncryptor;
+
+const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
@@ -24,10 +28,30 @@ async fn main() -> Result<(), anyhow::Error> {
         .await
         .map_err(|error| anyhow::anyhow!("couldn't create untrusted app: {}", error))?;
 
-    let greeting = untrusted_app
-        .hello("Untrusted App")
+    let endorsed_evidence = untrusted_app
+        .get_endorsed_evidence()
         .await
-        .map_err(|error| anyhow::anyhow!("couldn't get greeting: {}", error))?;
+        .map_err(|error| anyhow::anyhow!("couldn't get endorsed evidence: {}", error))?;
+    let encryption_public_key = endorsed_evidence
+        .attestation_evidence
+        .context("no attestation evidence provided")?
+        .encryption_public_key;
+
+    let mut client_encryptor = ClientEncryptor::create(&encryption_public_key)
+        .context("couldn't create client encryptor")?;
+    let encrypted_request = client_encryptor
+        .encrypt("Untrusted App".as_bytes(), EMPTY_ASSOCIATED_DATA)
+        .context("couldn't encrypt request")?;
+
+    let encrypted_response = untrusted_app
+        .hello(encrypted_request)
+        .await
+        .map_err(|error| anyhow::anyhow!("couldn't get encrypted response: {}", error))?;
+
+    let (response, _) = client_encryptor
+        .decrypt(&encrypted_response)
+        .context("couldn't decrypt response")?;
+    let greeting = String::from_utf8(response).expect("couldn't parse response");
 
     log::info!("Received a greeting from the trusted app: {:?}", greeting);
 

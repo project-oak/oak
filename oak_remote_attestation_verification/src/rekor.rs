@@ -17,12 +17,13 @@
 //! This module provides structs for representing a Rekor LogEntry, as well as logic for parsing and
 //! verifying signatures in a Rekor LogEntry.
 
+use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
+use core::{cmp::Ordering, str::FromStr};
 use ecdsa::{signature::Verifier, Signature};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{cmp::Ordering, str::FromStr};
 
 /// Struct representing a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.>
@@ -170,34 +171,46 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
 /// The verification involves the following:
 ///
 /// 1. verifying the signature in `signedEntryTimestamp`, using Rekor's public key,
-/// 1. verifying the signature in `body.RekordObj.signature`, using Oak's public key,
+/// 1. verifying the signature in `body.RekordObj.signature`, using the endorser's public key,
 /// 1. verifying that the content of the body matches the input `endorsement_bytes`.
 ///
 /// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
 pub fn verify_rekor_log_entry(
     log_entry_bytes: &[u8],
-    pem_encoded_public_key_bytes: &[u8],
-    oak_public_key_bytes: &[u8],
+    pem_encoded_rekor_public_key_bytes: &[u8],
     endorsement_bytes: &[u8],
 ) -> anyhow::Result<()> {
-    verify_rekor_signature(log_entry_bytes, pem_encoded_public_key_bytes)?;
+    verify_rekor_signature(log_entry_bytes, pem_encoded_rekor_public_key_bytes)?;
 
-    let parsed: std::collections::HashMap<String, LogEntry> =
-        serde_json::from_slice(log_entry_bytes)
-            .context("couldn't parse bytes into a LogEntry object")?;
+    let body = get_rekor_log_entry_body(log_entry_bytes)?;
+
+    let pem_encoded_endorser_public_key_bytes = BASE64_STANDARD
+        .decode(body.spec.signature.public_key.content.clone())
+        .context("couldn't decode Base64 endorser public key")?;
+
+    // Verify the body in the Rekor LogEntry
+    verify_rekor_body(
+        &body,
+        endorsement_bytes,
+        &pem_encoded_endorser_public_key_bytes,
+    )?;
+
+    Ok(())
+}
+
+/// Parses the given bytes into a Rekor `LogEntry` object, and returns its `body` parsed into an
+/// instance of `Body`.
+pub fn get_rekor_log_entry_body(log_entry_bytes: &[u8]) -> anyhow::Result<Body> {
+    let parsed: BTreeMap<String, LogEntry> = serde_json::from_slice(log_entry_bytes)
+        .context("couldn't parse bytes into a LogEntry object")?;
     let entry = parsed.values().next().context("no entry in the map")?;
 
     // Parse base64-encoded entry.body into an instance of Body.
     let body_bytes: Vec<u8> = BASE64_STANDARD
         .decode(entry.body.clone())
         .context("couldn't decode Base64 signature")?;
-    let body: Body =
-        serde_json::from_slice(&body_bytes).context("couldn't parse bytes into a Body object")?;
 
-    // Verify the body in the Rekor LogEntry
-    verify_rekor_body(&body, endorsement_bytes, oak_public_key_bytes)?;
-
-    Ok(())
+    serde_json::from_slice(&body_bytes).context("couldn't parse bytes into a Body object")
 }
 
 /// Parses `log_entry_bytes` into a Rekor LogEntry, and verifies the signature in
@@ -209,14 +222,14 @@ pub fn verify_rekor_log_entry(
 /// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
 pub fn verify_rekor_signature(
     log_entry_bytes: &[u8],
-    pem_encoded_public_key_bytes: &[u8],
+    pem_encoded_rekor_public_key_bytes: &[u8],
 ) -> anyhow::Result<()> {
     let signature_bundle = rekor_signature_bundle(log_entry_bytes)?;
 
     verify_signature(
         &signature_bundle.base64_signature,
         &signature_bundle.canonicalized,
-        pem_encoded_public_key_bytes,
+        pem_encoded_rekor_public_key_bytes,
     )
     .context("couldn't verify signedEntryTimestamp of the Rekor LogEntry")
 }
@@ -302,15 +315,14 @@ pub fn verify_signature(
 pub fn unmarshal_pem_to_p256_public_key(
     pem_bytes: &[u8],
 ) -> anyhow::Result<p256::ecdsa::VerifyingKey> {
-    let pem_str = std::str::from_utf8(pem_bytes).context("couldn't convert bytes to string")?;
+    let pem_str = core::str::from_utf8(pem_bytes).context("couldn't convert bytes to string")?;
     p256::ecdsa::VerifyingKey::from_str(pem_str)
         .context("couldn't parse pem as a p256::ecdsa::VerifyingKey")
 }
 
 fn rekor_signature_bundle(log_entry_bytes: &[u8]) -> anyhow::Result<RekorSignatureBundle> {
-    let parsed: std::collections::HashMap<String, LogEntry> =
-        serde_json::from_slice(log_entry_bytes)
-            .context("couldn't parse bytes into a LogEntry object")?;
+    let parsed: BTreeMap<String, LogEntry> = serde_json::from_slice(log_entry_bytes)
+        .context("couldn't parse bytes into a LogEntry object")?;
     let entry = parsed.values().next().context("no entry in the map")?;
 
     RekorSignatureBundle::try_from(entry)

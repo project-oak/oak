@@ -28,11 +28,22 @@ pub fn start_blocking_server<T: micro_rpc::Transport<Error = !>>(
 ) -> anyhow::Result<!> {
     let channel_handle = &mut ServerChannelHandle::new(channel);
     loop {
+        log::debug!("waiting for a request message");
         let (request_message, timer) = channel_handle
             .read_request()
             .context("couldn't receive message")?;
         let request_message_invocation_id = request_message.invocation_id;
+        log::debug!(
+            "received request message with invocation id {} ({} bytes)",
+            request_message_invocation_id,
+            request_message.body.len()
+        );
         let response = server.invoke(request_message.body.as_ref()).into_ok();
+        log::debug!(
+            "sending response message with invocation id {} ({} bytes)",
+            request_message_invocation_id,
+            response.len()
+        );
         let response_message = message::ResponseMessage {
             invocation_id: request_message_invocation_id,
             body: response,

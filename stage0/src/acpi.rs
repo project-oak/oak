@@ -17,27 +17,23 @@
 // These data structures (and constants) are derived from qemu/hw/acpi/bios-linker-loader.c that
 // defines the interface.
 
-use crate::fw_cfg::FwCfg;
+use crate::{acpi_tables::Rsdp, fw_cfg::FwCfg};
 use core::{
     ffi::CStr,
     fmt::{Debug, Formatter, Result as FmtResult},
-    mem::{zeroed, MaybeUninit},
+    mem::{size_of, zeroed, MaybeUninit},
 };
+use sha2::{Digest, Sha256};
 use strum::FromRepr;
-use x86_64::PhysAddr;
 use zerocopy::AsBytes;
 
-// RSDP has to be within the first 1 KiB of EBDA, so we treat it separately.
-// See Section 5.2.5 of the ACPI Specification, Release 6.5 for more details about RSDP, it's size,
-// structure, and where it should be placed.
-const RSDP_SIZE: usize = 36;
-// Rest of the EBDA. The full size of EBDA is 128 KiB, but let's reserve the whole 1 KiB for the
-// RSDP.
-const EBDA_SIZE: usize = 127 * 1024;
+// RSDP has to be within the first 1 KiB of EBDA, so we treat it separately. The full size of EBDA
+// is 128 KiB, but let's reserve the whole 1 KiB for the RSDP.
+pub const EBDA_SIZE: usize = 127 * 1024;
 #[link_section = ".ebda.rsdp"]
-static mut RSDP: MaybeUninit<[u8; RSDP_SIZE]> = MaybeUninit::uninit();
+static mut RSDP: MaybeUninit<Rsdp> = MaybeUninit::uninit();
 #[link_section = ".ebda"]
-static mut EBDA: MaybeUninit<[u8; EBDA_SIZE]> = MaybeUninit::uninit();
+pub static mut EBDA: MaybeUninit<[u8; EBDA_SIZE]> = MaybeUninit::uninit();
 
 // Safety: we include a nul byte at the end of the string, and that is the only nul byte.
 const TABLE_LOADER_FILE_NAME: &CStr =
@@ -54,7 +50,7 @@ fn get_file(name: &CStr) -> Result<&'static mut [u8], &'static str> {
     // Allocate has not been called yet, all values are valid for an [u8].
     let name = name.to_str().map_err(|_| "invalid file name")?;
     if name.ends_with(RSDP_FILE_NAME_SUFFIX) {
-        Ok(unsafe { RSDP.assume_init_mut() })
+        Ok(unsafe { RSDP.assume_init_mut().as_bytes_mut() })
     } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
         Ok(unsafe { EBDA.assume_init_mut() })
     } else {
@@ -101,7 +97,7 @@ impl Allocate {
         Zone::from_repr(self.zone)
     }
 
-    fn invoke(&self, fwcfg: &mut FwCfg) -> Result<(), &'static str> {
+    fn invoke(&self, fwcfg: &mut FwCfg, acpi_digest: &mut Sha256) -> Result<(), &'static str> {
         let file = fwcfg.find(self.file()).unwrap();
         let name = self.file().to_str().map_err(|_| "invalid file name")?;
 
@@ -109,7 +105,7 @@ impl Allocate {
             // ACPI 1.0 RSDP is 20 bytes, ACPI 2.0 RSDP is 36 bytes.
             // We don't really care which version we're dealing with, as long as the data structure
             // is one of the two.
-            if file.size() > RSDP_SIZE || (file.size() != 20 && file.size() != 36) {
+            if file.size() > size_of::<Rsdp>() || (file.size() != 20 && file.size() != 36) {
                 return Err("RSDP doesn't match expected size");
             }
 
@@ -117,17 +113,17 @@ impl Allocate {
             let buf = unsafe { RSDP.write(zeroed()) };
 
             // Sanity checks.
-            if (buf.as_ptr() as *const _ as u64) < 0x80000
-                || (buf.as_ptr() as *const _ as u64) > 0x81000
-            {
+            if (buf as *const _ as u64) < 0x80000 || (buf as *const _ as u64) > 0x81000 {
                 log::error!("RSDP address: {:p}", buf);
                 return Err("RSDP address is not within the first 1 KiB of EBDA");
             }
-            if (buf.as_ptr() as *const _ as u64) % self.align as u64 != 0 {
+            if (buf as *const _ as u64) % self.align as u64 != 0 {
                 return Err("RSDP address not aligned properly");
             }
 
-            fwcfg.read_file(&file, buf).map(|_| ())
+            fwcfg.read_file(&file, buf.as_bytes_mut())?;
+            acpi_digest.update(buf.as_bytes());
+            Ok(())
         } else if name.ends_with(ACPI_TABLES_FILE_NAME_SUFFIX) {
             // Safety: we do not have concurrent threads so accessing the static is safe.
             let buf = unsafe { EBDA.write(zeroed()) };
@@ -140,7 +136,9 @@ impl Allocate {
                 );
                 return Err("ACPI tables address not aligned properly");
             }
-            fwcfg.read_file(&file, buf).map(|_| ())
+            fwcfg.read_file(&file, buf)?;
+            acpi_digest.update(buf);
+            Ok(())
         } else {
             Err("Unsupported file in table-loader")
         }
@@ -345,9 +343,9 @@ enum Command<'a> {
 }
 
 impl Command<'_> {
-    pub fn invoke(&self, fwcfg: &mut FwCfg) -> Result<(), &'static str> {
+    pub fn invoke(&self, fwcfg: &mut FwCfg, acpi_digest: &mut Sha256) -> Result<(), &'static str> {
         match self {
-            Command::Allocate(allocate) => allocate.invoke(fwcfg),
+            Command::Allocate(allocate) => allocate.invoke(fwcfg, acpi_digest),
             Command::AddPointer(add_pointer) => add_pointer.invoke(),
             Command::AddChecksum(add_checksum) => add_checksum.invoke(),
             Command::WritePointer(write_pointer) => write_pointer.invoke(),
@@ -376,7 +374,7 @@ impl RomfileCommand {
         }
     }
 
-    fn invoke(&self, fwcfg: &mut FwCfg) -> Result<(), &'static str> {
+    fn invoke(&self, fwcfg: &mut FwCfg, acpi_digest: &mut Sha256) -> Result<(), &'static str> {
         if self.tag > 0x80000000 {
             log::warn!(
                 "ignoring proprietary ACPI linker command with tag {:#x}",
@@ -393,14 +391,17 @@ impl RomfileCommand {
             );
             return Ok(());
         }
-        self.extract()?.invoke(fwcfg)
+        self.extract()?.invoke(fwcfg, acpi_digest)
     }
 }
 
 /// Populates the ACPI tables per linking instructions in `etc/table-loader`.
 ///
 /// Returns the address of the RSDP table.
-pub fn build_acpi_tables(fwcfg: &mut FwCfg) -> Result<PhysAddr, &'static str> {
+pub fn build_acpi_tables(
+    fwcfg: &mut FwCfg,
+    acpi_digest: &mut Sha256,
+) -> Result<&'static Rsdp, &'static str> {
     let mut commands: [RomfileCommand; 32] = Default::default();
 
     let file = fwcfg
@@ -420,17 +421,22 @@ pub fn build_acpi_tables(fwcfg: &mut FwCfg) -> Result<PhysAddr, &'static str> {
     // Safety: we're using `size_of` here to ensure that we don't go over the boundaries of the
     // original array.
 
-    fwcfg.read_file(&file, unsafe {
+    let buf = unsafe {
         core::slice::from_raw_parts_mut(
             &mut commands as *mut _ as usize as *mut u8,
             core::mem::size_of_val(&commands),
         )
-    })?;
+    };
+
+    fwcfg.read_file(&file, buf)?;
+    acpi_digest.update(buf);
 
     for command in &commands[..(file.size() / core::mem::size_of::<RomfileCommand>())] {
-        command.invoke(fwcfg)?;
+        command.invoke(fwcfg, acpi_digest)?;
     }
 
-    // stage0 runs under identity mapping so virtual == physical
-    Ok(PhysAddr::new(unsafe { RSDP.as_ptr() } as u64))
+    // Safety: we ensure that the RSDP is valid before returning a reference to it.
+    let rsdp = unsafe { RSDP.assume_init_ref() };
+    rsdp.validate()?;
+    Ok(rsdp)
 }

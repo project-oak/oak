@@ -100,6 +100,7 @@ bitflags! {
 }
 
 bitflags! {
+    #[derive(Debug)]
     #[repr(C)]
     pub struct MmapFlags: i32 {
         /// Private copy-on-write mapping.

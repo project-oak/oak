@@ -38,7 +38,6 @@
 
 mod acpi;
 mod args;
-pub mod attestation;
 mod avx;
 mod boot;
 mod descriptors;
@@ -56,6 +55,7 @@ pub mod shutdown;
 #[cfg(feature = "simple_io_channel")]
 mod simpleio;
 mod snp;
+pub mod snp_guest;
 mod syscall;
 #[cfg(feature = "vsock_channel")]
 mod virtio;
@@ -68,9 +68,11 @@ use crate::{
     acpi::Acpi,
     mm::Translator,
     snp::{get_snp_page_addresses, init_snp_pages},
+    snp_guest::DerivedKey,
 };
 use alloc::{alloc::Allocator, boxed::Box};
 use core::{marker::Sync, panic::PanicInfo, str::FromStr};
+use hkdf::HkdfExtract;
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
@@ -81,6 +83,7 @@ use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::BootParams;
 use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
+use sha2::Sha256;
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
@@ -264,7 +267,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
         // For now we just generate a sample attestation report and log the value.
         // TODO(#2842): Use attestation report in attestation behaviour.
         let report =
-            attestation::get_attestation([42; 64]).expect("couldn't generate attestation report");
+            snp_guest::get_attestation([42; 64]).expect("couldn't generate attestation report");
         info!("Attestation: {:?}", report);
         report.validate().expect("attestation report is invalid");
     }
@@ -282,7 +285,19 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let application = payload::Application::load_raw(&mut *channel)
         .expect("failed to load application binary from channel");
 
-    syscall::enable_syscalls(channel);
+    let derived_key = if sev_snp_enabled {
+        snp_guest::get_derived_key().expect("couldn't derive key")
+    } else {
+        // Zero fixed key since we can't derive a consistent key without SEV-SNP.
+        DerivedKey::default()
+    };
+    // Mix the application digest into the final derived key.
+    let mut extraction = HkdfExtract::<Sha256>::new(Some(b"Oak application key"));
+    extraction.input_ikm(&derived_key);
+    extraction.input_ikm(application.digest());
+    let (derived_key, _) = extraction.finalize();
+
+    syscall::enable_syscalls(channel, derived_key.into());
 
     // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
     // under the kernel's control.
