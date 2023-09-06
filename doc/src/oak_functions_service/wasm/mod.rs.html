@@ -507,6 +507,27 @@
 <a href="#507" id="507">507</a>
 <a href="#508" id="508">508</a>
 <a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -728,32 +749,53 @@
         <span class="self">self</span>,
         <span class="kw-2">mut </span>store: Store&lt;UserState&lt;L&gt;&gt;,
         module: Arc&lt;wasmi::Module&gt;,
-    ) -&gt; anyhow::Result&lt;(wasmi::Instance, Store&lt;UserState&lt;L&gt;&gt;)&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(wasmi::Instance, Store&lt;UserState&lt;L&gt;&gt;), micro_rpc::Status&gt; {
         <span class="kw">let </span>instance = <span class="self">self
             </span>.linker
             .instantiate(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;</span>module)
-            .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;failed to instantiate Wasm module: {:?}&quot;</span>, err))<span class="question-mark">?
+            .map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::Internal,
+                    <span class="macro">format!</span>(<span class="string">&quot;could not instantiate Wasm module: {:?}&quot;</span>, err),
+                )
+            })<span class="question-mark">?
             </span><span class="comment">// Use `main` as entry point.
             </span>.ensure_no_start(<span class="kw-2">&amp;mut </span>store)
             .map_err(|err| {
-                <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;failed to ensure no start in Wasm module: {:?}&quot;</span>, err)
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::Internal,
+                    <span class="macro">format!</span>(<span class="string">&quot;failed to ensure no start in Wasm module: {:?}&quot;</span>, err),
+                )
             })<span class="question-mark">?</span>;
 
         <span class="comment">// Check that the instance exports &quot;main&quot;.
         </span><span class="kw">let _ </span>= <span class="kw-2">&amp;</span>instance
             .get_typed_func::&lt;(), ()&gt;(<span class="kw-2">&amp;</span>store, MAIN_FUNCTION_NAME)
-            .expect(<span class="string">&quot;couldn&#39;t validate `main` export&quot;</span>);
+            .map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::Internal,
+                    <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t validate `main` export: {:?}&quot;</span>, err),
+                )
+            })<span class="question-mark">?</span>;
 
         <span class="comment">// Check that the instance exports &quot;alloc&quot;.
         </span><span class="kw">let _ </span>= <span class="kw-2">&amp;</span>instance
             .get_typed_func::&lt;i32, AbiPointer&gt;(<span class="kw-2">&amp;</span>store, ALLOC_FUNCTION_NAME)
-            .expect(<span class="string">&quot;couldn&#39;t validate `alloc` export&quot;</span>);
+            .map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::Internal,
+                    <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t validate `alloc` export: {:?}&quot;</span>, err),
+                )
+            })<span class="question-mark">?</span>;
 
         <span class="comment">// Make sure that non-empty `memory` is attached to the instance. Fail early if
         // `memory` is not available.
-        </span>instance
-            .get_memory(<span class="kw-2">&amp;</span>store, MEMORY_NAME)
-            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t find Wasm `memory` export&quot;</span>))<span class="question-mark">?</span>;
+        </span>instance.get_memory(<span class="kw-2">&amp;</span>store, MEMORY_NAME).ok_or_else(|| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::Internal,
+                <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t find Wasm `memory` export&quot;</span>),
+            )
+        })<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>((instance, store))
     }
@@ -955,7 +997,7 @@
 
     <span class="doccomment">/// Handles a call to invoke by getting the raw request bytes from the body of the request to
     /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
-    </span><span class="kw">pub fn </span>handle_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, invoke_request: Request) -&gt; anyhow::Result&lt;Response&gt; {
+    </span><span class="kw">pub fn </span>handle_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, invoke_request: Request) -&gt; <span class="prelude-ty">Result</span>&lt;Response, micro_rpc::Status&gt; {
         <span class="kw">let </span>module = <span class="self">self</span>.wasm_module.clone();
 
         <span class="kw">let </span>request = invoke_request.body;

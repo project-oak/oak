@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["benchmark_request"],"struct":["BenchmarkRequest","LookupTest"]};
+window.SIDEBAR_ITEMS = {"mod":["benchmark_request"],"struct":["BenchmarkRequest","EchoAndPanicTest","LookupTest"]};

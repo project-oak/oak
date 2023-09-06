@@ -97,12 +97,6 @@
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
 <a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -165,12 +159,6 @@
                 body: request.to_vec(),
             })
             .map(|response| response.body)
-            .map_err(|err| {
-                micro_rpc::Status::new_with_message(
-                    micro_rpc::StatusCode::Internal,
-                    <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t handle user request: {:?}&quot;</span>, err),
-                )
-            })
     }
     <span class="doccomment">/// See [`crate::proto::oak::functions::OakFunctions::extend_next_lookup_data`].
     </span><span class="kw">pub fn </span>extend_next_lookup_data(

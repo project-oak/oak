@@ -39,6 +39,10 @@
 <a href="#39" id="39">39</a>
 <a href="#40" id="40">40</a>
 <a href="#41" id="41">41</a>
+<a href="#42" id="42">42</a>
+<a href="#43" id="43">43</a>
+<a href="#44" id="44">44</a>
+<a href="#45" id="45">45</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -61,7 +65,7 @@
 }
 
 <span class="kw">use </span>prost::Message;
-<span class="kw">use </span>proto::{benchmark_request::Action, BenchmarkRequest, LookupTest};
+<span class="kw">use </span>proto::{benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest, LookupTest};
 
 <span class="attr">#[cfg_attr(not(test), no_mangle)]
 </span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>main() {
@@ -77,6 +81,10 @@
                     .unwrap_or_default();
             }
             oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>response).expect(<span class="string">&quot;couldn&#39;t write response body&quot;</span>);
+        }
+        Action::EchoAndPanic(EchoAndPanicTest { data }) =&gt; {
+            oak_functions_sdk::write_response(<span class="kw-2">&amp;</span>data).expect(<span class="string">&quot;couldn&#39;t write response body&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">&quot;panic requested&quot;</span>);
         }
     };
 }

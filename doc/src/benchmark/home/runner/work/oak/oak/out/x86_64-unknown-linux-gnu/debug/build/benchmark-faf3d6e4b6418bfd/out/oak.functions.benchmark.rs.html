@@ -23,22 +23,37 @@
 <a href="#23" id="23">23</a>
 <a href="#24" id="24">24</a>
 <a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// A request to execute a benchmark action a specified number of times.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>BenchmarkRequest {
     <span class="attr">#[prost(uint32, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>iterations: u32,
-    <span class="attr">#[prost(oneof = <span class="string">&quot;benchmark_request::Action&quot;</span>, tags = <span class="string">&quot;2&quot;</span>)]
+    <span class="doccomment">/// TODO(#4294): Use micro RPC instead of this oneof.
+    </span><span class="attr">#[prost(oneof = <span class="string">&quot;benchmark_request::Action&quot;</span>, tags = <span class="string">&quot;2, 3&quot;</span>)]
     </span><span class="kw">pub </span>action: ::core::option::Option&lt;benchmark_request::Action&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `BenchmarkRequest`.
 </span><span class="kw">pub mod </span>benchmark_request {
-    <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+    <span class="doccomment">/// TODO(#4294): Use micro RPC instead of this oneof.
+    </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>Action {
         <span class="attr">#[prost(message, tag = <span class="string">&quot;2&quot;</span>)]
         </span>Lookup(<span class="kw">super</span>::LookupTest),
+        <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
+        </span>EchoAndPanic(<span class="kw">super</span>::EchoAndPanicTest),
     }
 }
 <span class="doccomment">/// Container for the key to use when doing a benchmark lookup.
@@ -47,5 +62,12 @@
 </span><span class="kw">pub struct </span>LookupTest {
     <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>key: ::prost::alloc::vec::Vec&lt;u8&gt;,
+}
+<span class="doccomment">/// Echo the bytes back, and then causes the benchmark to panic.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>EchoAndPanicTest {
+    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>data: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 </code></pre></div></section></main></body></html>

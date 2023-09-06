@@ -138,6 +138,12 @@
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -180,16 +186,23 @@
     attester::{AttestationReportGenerator, Attester},
     handler::EncryptionHandler,
 };
+<span class="kw">use </span>prost::Message;
 
 <span class="kw">struct </span>OakIreeInstance {
     iree_model: iree::IreeModel,
 }
 
 <span class="kw">impl </span>OakIreeInstance {
-    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
+    <span class="kw">fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, micro_rpc::Status&gt; {
         <span class="self">self</span>.iree_model
             .run(request)
             .context(<span class="string">&quot;couldn&#39;t run IREE inference&quot;</span>)
+            .map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::Internal,
+                    <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t handle invoke: {:?}&quot;</span>, err),
+                )
+            })
     }
 }
 
@@ -264,9 +277,8 @@
         <span class="kw">let </span>encryption_key_provider = <span class="self">self</span>.encryption_key_provider.clone();
         <span class="kw">let </span>instance = <span class="self">self</span>.get_instance()<span class="question-mark">?</span>;
         EncryptionHandler::create(encryption_key_provider, |r| {
-            instance
-                .invoke(<span class="kw-2">&amp;</span>r)
-                .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t handle invoke: {:?}&quot;</span>, err))
+            <span class="kw">let </span>response: micro_rpc::Response = instance.invoke(<span class="kw-2">&amp;</span>r).into();
+            response.encode_to_vec()
         })
         .invoke(<span class="kw-2">&amp;</span>request_message.body)
         .map(|response| InvokeResponse { body: response })

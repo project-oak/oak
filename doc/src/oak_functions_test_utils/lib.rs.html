@@ -276,9 +276,6 @@
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
 <a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -546,10 +543,7 @@
         .<span class="kw">await
         </span>.expect(<span class="string">&quot;couldn&#39;t create client&quot;</span>);
 
-    client
-        .invoke(request_body)
-        .<span class="kw">await
-        </span>.expect(<span class="string">&quot;error while awaiting response&quot;</span>)
+    client.invoke(request_body).<span class="kw">await</span>.expect(<span class="string">&quot;error response&quot;</span>)
 }
 
 <span class="comment">// Assert that string value of the body of the given response matches the expected string.

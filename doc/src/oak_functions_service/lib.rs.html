@@ -162,6 +162,10 @@
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -202,13 +206,14 @@
 <span class="kw">pub mod </span>lookup;
 <span class="kw">pub mod </span>wasm;
 
-<span class="kw">use </span>alloc::{format, sync::Arc};
+<span class="kw">use </span>alloc::{format, sync::Arc, vec::Vec};
 <span class="kw">use </span>instance::OakFunctionsInstance;
 <span class="kw">use </span>oak_crypto::encryptor::EncryptionKeyProvider;
 <span class="kw">use </span>oak_remote_attestation::{
     attester::{AttestationReportGenerator, Attester},
     handler::EncryptionHandler,
 };
+<span class="kw">use </span>prost::Message;
 <span class="kw">use </span>proto::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
     FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
@@ -285,9 +290,12 @@
         <span class="kw">let </span>encryption_key_provider = <span class="self">self</span>.encryption_key_provider.clone();
         <span class="kw">let </span>instance = <span class="self">self</span>.get_instance()<span class="question-mark">?</span>;
         EncryptionHandler::create(encryption_key_provider, |r| {
-            instance
-                .handle_user_request(<span class="kw-2">&amp;</span>r)
-                .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t handle user request: {:?}&quot;</span>, err))
+            <span class="comment">// Wrap the invocation result (which may be an Error) into a micro RPC Response
+            // wrapper protobuf, and encode that as bytes.
+            </span><span class="kw">let </span>response_result: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, micro_rpc::Status&gt; =
+                instance.handle_user_request(<span class="kw-2">&amp;</span>r);
+            <span class="kw">let </span>response: micro_rpc::Response = response_result.into();
+            response.encode_to_vec()
         })
         .invoke(<span class="kw-2">&amp;</span>request.body)
         .map(|response| InvokeResponse { body: response })

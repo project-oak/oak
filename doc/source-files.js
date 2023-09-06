@@ -1,6 +1,7 @@
 var sourcesIndex = JSON.parse('{\
 "benchmark":["",[],["lib.rs"]],\
 "echo":["",[],["lib.rs"]],\
+"invalid_module":["",[],["lib.rs"]],\
 "key_value_lookup":["",[],["lib.rs"]],\
 "location_utils":["",[],["lib.rs"]],\
 "lookup_data_checker":["",[],["main.rs"]],\

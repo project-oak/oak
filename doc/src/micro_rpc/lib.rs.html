@@ -173,6 +173,15 @@
 <a href="#173" id="173">173</a>
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -191,6 +200,7 @@
 
 </span><span class="attr">#![no_std]
 #![feature(associated_type_defaults)]
+#![feature(error_in_core)]
 #![feature(never_type)]
 #![feature(try_blocks)]
 
@@ -247,20 +257,29 @@
     }
 }
 
-<span class="doccomment">/// Creates a [`Response`] representing an error.
-</span><span class="kw">pub fn </span>error_response(error: Status) -&gt; Response {
-    Response {
-        response: <span class="prelude-val">Some</span>(proto::response::Response::Error(proto::Status {
-            code: error.code <span class="kw">as </span>i32,
-            message: error.message,
-        })),
+<span class="kw">impl </span>From&lt;proto::Response&gt; <span class="kw">for </span><span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt; {
+    <span class="kw">fn </span>from(value: proto::Response) -&gt; <span class="self">Self </span>{
+        <span class="kw">match </span>value.response {
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(Status::new_with_message(
+                StatusCode::InvalidArgument,
+                <span class="string">&quot;invalid response wrapper&quot;</span>,
+            )),
+            <span class="prelude-val">Some</span>(proto::response::Response::Error(error)) =&gt; <span class="prelude-val">Err</span>(error.into()),
+            <span class="prelude-val">Some</span>(proto::response::Response::Body(body)) =&gt; <span class="prelude-val">Ok</span>(body),
+        }
     }
 }
 
-<span class="doccomment">/// Creates a [`Response`] representing success.
-</span><span class="kw">pub fn </span>success_response(body: Vec&lt;u8&gt;) -&gt; Response {
-    Response {
-        response: <span class="prelude-val">Some</span>(proto::response::Response::Body(body)),
+<span class="kw">impl </span>From&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt;&gt; <span class="kw">for </span>proto::Response {
+    <span class="kw">fn </span>from(value: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt;) -&gt; <span class="self">Self </span>{
+        <span class="kw">match </span>value {
+            <span class="prelude-val">Ok</span>(body) =&gt; proto::Response {
+                response: <span class="prelude-val">Some</span>(proto::response::Response::Body(body)),
+            },
+            <span class="prelude-val">Err</span>(error) =&gt; proto::Response {
+                response: <span class="prelude-val">Some</span>(proto::response::Response::Error(error.into())),
+            },
+        }
     }
 }
 
@@ -296,16 +315,15 @@
                 <span class="macro">format!</span>(<span class="string">&quot;Client failed to deserialize response wrapper: {}&quot;</span>, err),
             )
         })<span class="question-mark">?</span>;
-        <span class="kw">match </span>response.response {
-            <span class="prelude-val">Some</span>(response::Response::Error(err)) =&gt; <span class="prelude-val">Err</span>(err.into()),
-            <span class="prelude-val">Some</span>(response::Response::Body(body)) =&gt; Res::decode(body.as_ref()).map_err(|err| {
+        <span class="kw">let </span>response_result: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt; = response.into();
+        response_result.and_then(|body| {
+            Res::decode(body.as_ref()).map_err(|err| {
                 Status::new_with_message(
                     StatusCode::Internal,
                     <span class="macro">format!</span>(<span class="string">&quot;Client failed to deserialize response body: {}&quot;</span>, err),
                 )
-            }),
-            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(Status::new(StatusCode::Internal)),
-        }<span class="question-mark">?
+            })
+        })<span class="question-mark">?
     </span>};
     <span class="prelude-val">Ok</span>(result)
 }
