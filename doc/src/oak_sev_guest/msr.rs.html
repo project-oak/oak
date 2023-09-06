@@ -806,6 +806,14 @@
 <a href="#806" id="806">806</a>
 <a href="#807" id="807">807</a>
 <a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -1347,7 +1355,7 @@
 
 <span class="macro">bitflags! </span>{
     <span class="doccomment">/// Flags indicating which SEV features are active.
-    </span><span class="attr">#[derive(Clone, Copy, Default)]
+    </span><span class="attr">#[derive(Clone, Copy, Debug, Default)]
     </span><span class="kw">pub struct </span>SevStatus: u64 {
         <span class="doccomment">/// SEV is enabled for this guest.
         </span><span class="kw">const </span>SEV_ENABLED = (<span class="number">1 </span>&lt;&lt; <span class="number">0</span>);
@@ -1369,10 +1377,18 @@
         </span><span class="kw">const </span>PREVENT_HOST_IBS_ENABLED = (<span class="number">1 </span>&lt;&lt; <span class="number">8</span>);
         <span class="doccomment">/// SNP Branch Target Buffer Isolation is enabled for this guest.
         </span><span class="kw">const </span>SNP_BTB_ISOLATION_ENABLED = (<span class="number">1 </span>&lt;&lt; <span class="number">9</span>);
+        <span class="doccomment">/// VMPL SSS (Supervisor Shadow Stack) is enabled for this guest.
+        </span><span class="kw">const </span>VMPL_SSS_ENABLED = (<span class="number">1 </span>&lt;&lt; <span class="number">10</span>);
         <span class="doccomment">/// Secure Timestamp Counter is enabled for this guest.
         </span><span class="kw">const </span>SECURE_TSC_ENABLED = (<span class="number">1 </span>&lt;&lt; <span class="number">11</span>);
+        <span class="doccomment">/// VMGEXIT Parameter is enabled for this guest.aes_gcm
+        </span><span class="kw">const </span>VMGEXIT_PARAMETER_ENABLED = (<span class="number">1 </span>&lt;&lt; <span class="number">12</span>);
+        <span class="doccomment">/// The gust was run with Instruction-Based Virtualization enabled.
+        </span><span class="kw">const </span>INSTRUCTION_BASED_SAMPLING_ENABLED = (<span class="number">1 </span>&lt;&lt; <span class="number">14</span>);
         <span class="doccomment">/// VMSA Register Protection is enabled for this guest.
         </span><span class="kw">const </span>VMSA_REG_PROT_ENABLED = (<span class="number">1 </span>&lt;&lt; <span class="number">16</span>);
+        <span class="doccomment">/// SMT Protection is enabled for this guest.
+        </span><span class="kw">const </span>SMT_PROTECTION_ENABLED = (<span class="number">1 </span>&lt;&lt; <span class="number">17</span>);
     }
 }
 

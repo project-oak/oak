@@ -370,6 +370,7 @@
 <a href="#370" id="370">370</a>
 <a href="#371" id="371">371</a>
 <a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -386,7 +387,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>oak_core::sync::OnceCell;
+</span><span class="kw">use </span><span class="kw">crate</span>::sev_status;
+<span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">pub use </span>oak_sev_guest::ghcb::Ghcb;
 <span class="kw">use </span>oak_sev_guest::{
@@ -394,7 +396,7 @@
     instructions::{pvalidate, InstructionError, PageSize <span class="kw">as </span>SevPageSize, Validation},
     msr::{
         change_snp_page_state, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
-        SnpPageStateChangeRequest,
+        SevStatus, SnpPageStateChangeRequest,
     },
 };
 <span class="kw">use </span>spinning_top::Spinlock;
@@ -409,13 +411,13 @@
 
 <span class="kw">pub static </span>GHCB_WRAPPER: OnceCell&lt;Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;&gt;&gt; = OnceCell::new();
 
-<span class="kw">pub fn </span>init_ghcb(ghcb: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>Ghcb, snp: bool) {
+<span class="kw">pub fn </span>init_ghcb(ghcb: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>Ghcb) {
     <span class="kw">let </span>ghcb_addr = VirtAddr::from_ptr(ghcb <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>);
 
-    share_page(Page::containing_address(ghcb_addr), snp);
+    share_page(Page::containing_address(ghcb_addr));
 
     <span class="comment">// SNP requires that the GHCB is registered with the hypervisor.
-    </span><span class="kw">if </span>snp {
+    </span><span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
         <span class="kw">let </span>ghcb_location_request = RegisterGhcbGpaRequest::new(ghcb_addr.as_u64() <span class="kw">as </span>usize)
             .expect(<span class="string">&quot;invalid address for GHCB location&quot;</span>);
         register_ghcb_location(ghcb_location_request)
@@ -442,7 +444,7 @@
 }
 
 <span class="doccomment">/// Shares a single 4KiB page with the hypervisor.
-</span><span class="kw">pub fn </span>share_page(page: Page&lt;Size4KiB&gt;, snp: bool) {
+</span><span class="kw">pub fn </span>share_page(page: Page&lt;Size4KiB&gt;) {
     <span class="kw">let </span>page_start = page.start_address().as_u64();
     <span class="comment">// Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that range.
     </span><span class="macro">assert!</span>(page_start &lt; Size2MiB::SIZE);
@@ -459,7 +461,7 @@
     tlb::flush_all();
 
     <span class="comment">// SNP requires extra handling beyond just removing the encrypted bit.
-    </span><span class="kw">if </span>snp {
+    </span><span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
         <span class="kw">let </span>request = SnpPageStateChangeRequest::new(page_start <span class="kw">as </span>usize, PageAssignment::Shared)
             .expect(<span class="string">&quot;invalid address for page location&quot;</span>);
         change_snp_page_state(request).expect(<span class="string">&quot;couldn&#39;t change SNP state for page&quot;</span>);

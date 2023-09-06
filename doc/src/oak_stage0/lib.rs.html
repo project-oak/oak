@@ -360,6 +360,7 @@
 <a href="#360" id="360">360</a>
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -384,7 +385,7 @@
 <span class="kw">use crate</span>::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 <span class="kw">use </span>core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
-<span class="kw">use </span>oak_sev_guest::io::PortFactoryWrapper;
+<span class="kw">use </span>oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
 <span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
@@ -430,6 +431,10 @@
 #[no_mangle]
 </span><span class="kw">static </span>SEV_CPUID: MaybeUninit&lt;oak_sev_guest::cpuid::CpuidPage&gt; = MaybeUninit::uninit();
 
+<span class="comment">// Will be set in the bootstrap assembly code where we have to read the MSR anyway.
+</span><span class="attr">#[no_mangle]
+</span><span class="kw">static </span><span class="kw-2">mut </span>SEV_STATUS: SevStatus = SevStatus::empty();
+
 <span class="doccomment">/// We create an identity map for the first 1GiB of memory.
 </span><span class="kw">const </span>TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
 
@@ -466,31 +471,27 @@
     );
 }
 
+<span class="doccomment">/// Returns the value of the SEV_STATUS MSR that&#39;s safe to read even if the CPU doesn&#39;t support it.
+///
+/// Initialized in the bootstrap assembly code.
+</span><span class="kw">pub fn </span>sev_status() -&gt; SevStatus {
+    <span class="comment">// Safety: we don&#39;t allow mutation and this is initialized in the bootstrap assembly.
+    </span><span class="kw">unsafe </span>{ SEV_STATUS }
+}
+
 <span class="doccomment">/// Entry point for the Rust code in the stage0 BIOS.
 ///
 /// # Arguments
 ///
 /// * `encrypted` - If not zero, the `encrypted`-th bit will be set in the page tables.
 </span><span class="kw">pub fn </span>rust64_start(encrypted: u64) -&gt; ! {
-    <span class="kw">let </span>(es, snp) = <span class="kw">if </span>encrypted &gt; <span class="number">0 </span>{
-        <span class="comment">// We&#39;re under some form of memory encryption, thus it&#39;s safe to access the SEV_STATUS MSR.
-        </span><span class="kw">let </span>status =
-            oak_sev_guest::msr::get_sev_status().unwrap_or(oak_sev_guest::msr::SevStatus::empty());
-        (
-            status.contains(oak_sev_guest::msr::SevStatus::SEV_ES_ENABLED),
-            status.contains(oak_sev_guest::msr::SevStatus::SNP_ACTIVE),
-        )
-    } <span class="kw">else </span>{
-        (<span class="bool-val">false</span>, <span class="bool-val">false</span>)
-    };
-
     <span class="comment">// We assume 0-th bit is never the encrypted bit.
     </span><span class="kw">let </span>encrypted = <span class="kw">if </span>encrypted &gt; <span class="number">0 </span>{ <span class="number">1 </span>&lt;&lt; encrypted } <span class="kw">else </span>{ <span class="number">0 </span>};
 
     paging::init_page_table_refs(encrypted);
 
     <span class="comment">// If we&#39;re under SEV-ES or SNP, we need a GHCB block for communication (SNP implies SEV-ES).
-    </span><span class="kw">if </span>es {
+    </span><span class="kw">if </span>sev_status().contains(SevStatus::SEV_ES_ENABLED) {
         <span class="comment">// No point in calling expect() here, the logging isn&#39;t set up yet.
         // In any case, this allocation should not fail. This is the first thing we allocate, the
         // GHCB is 4K in size, and the allocator should be far bigger than that (as we have more
@@ -498,17 +499,18 @@
         // If the allocation does fail, something is horribly broken and we have no hope of
         // continuing.
         </span><span class="kw">let </span>ghcb = BOOT_ALLOC.leak(sev::Ghcb::new()).unwrap();
-        sev::init_ghcb(ghcb, snp);
+        sev::init_ghcb(ghcb);
     }
 
     logging::init_logging();
     <span class="macro">log::info!</span>(<span class="string">&quot;starting...&quot;</span>);
+    <span class="macro">log::info!</span>(<span class="string">&quot;Enabled SEV features: {:?}&quot;</span>, sev_status());
 
     <span class="kw">let </span>dma_buf = BOOT_ALLOC.leak(fw_cfg::DmaBuffer::default()).unwrap();
     <span class="kw">let </span>dma_buf_address = VirtAddr::from_ptr(dma_buf <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>);
     <span class="kw">let </span>dma_access = BOOT_ALLOC.leak(fw_cfg::FwCfgDmaAccess::default()).unwrap();
     <span class="kw">let </span>dma_access_address = VirtAddr::from_ptr(dma_access <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_</span>);
-    <span class="kw">if </span>encrypted &gt; <span class="number">0 </span>{
+    <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
         <span class="comment">// Safety: This is safe for SEV-ES and SNP because we&#39;re using an originally supported mode
         // of the Pentium 6: Write-protect, with MTRR enabled.  If we get CPUID reads
         // working, we may want to check that MTRR is supported, but only if we want to
@@ -517,8 +519,8 @@
         </span><span class="kw">unsafe </span>{
             msr::MTRRDefType::write(msr::MTRRDefTypeFlags::MTRR_ENABLE, msr::MemoryType::WP);
         }
-        sev::share_page(Page::containing_address(dma_buf_address), snp);
-        sev::share_page(Page::containing_address(dma_access_address), snp);
+        sev::share_page(Page::containing_address(dma_buf_address));
+        sev::share_page(Page::containing_address(dma_access_address));
     }
 
     <span class="comment">// Safety: we assume there won&#39;t be any other hardware devices using the fw_cfg IO ports.
@@ -531,7 +533,7 @@
 
     zero_page.fill_e820_table(<span class="kw-2">&amp;mut </span>fwcfg);
 
-    <span class="kw">if </span>snp {
+    <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
         sev::validate_memory(zero_page.e820_table(), encrypted);
     }
 
@@ -572,7 +574,7 @@
         .try_fill_hdr_from_setup_data(<span class="kw-2">&amp;mut </span>fwcfg)
         .unwrap_or_default();
 
-    <span class="kw">if </span>snp {
+    <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
         <span class="comment">// Safety: we&#39;re only interested in the pointer value of SEV_SECRETS, not its contents.
         </span><span class="kw">let </span>cc_blob = BOOT_ALLOC
             .leak(oak_linux_boot_params::CCBlobSevInfo::new(
@@ -631,10 +633,10 @@
     }
 
     <span class="comment">// Register the AP Jump Table, if required.
-    </span><span class="kw">if </span>es {
+    </span><span class="kw">if </span>sev_status().contains(SevStatus::SEV_ES_ENABLED) {
         <span class="comment">// This assumes identity mapping. Which we have in stage0.
         </span><span class="kw">let </span>jump_table_pa = AP_JUMP_TABLE.as_ptr() <span class="kw">as </span>u64;
-        <span class="kw">if </span>snp {
+        <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
             <span class="comment">// Under SNP we need to place the jump table address in the secrets page.
             // Safety: we don&#39;t care about the contents of the secrets page beyond writing our jump
             // table address into it.
@@ -671,7 +673,7 @@
 
     <span class="comment">// Clean-ups we need to do just before we jump to the kernel proper: clean up the early GHCB and
     // FW_CFG DMA buffers we used, and switch back to a hugepage for the first 2M of memory.
-    </span><span class="kw">if </span>snp {
+    </span><span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
         sev::unshare_page(Page::containing_address(dma_buf_address));
         sev::unshare_page(Page::containing_address(dma_access_address));
         <span class="kw">if </span>GHCB_WRAPPER.get().is_some() {
