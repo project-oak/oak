@@ -16,10 +16,12 @@
 
 #![no_std]
 #![feature(int_roundings)]
+#![feature(allocator_api)]
 
 extern crate alloc;
 
 use crate::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
+use alloc::boxed::Box;
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use linked_list_allocator::LockedHeap;
 use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
@@ -135,7 +137,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
         // data structures we need to allocate in there).
         // If the allocation does fail, something is horribly broken and we have no hope of
         // continuing.
-        let ghcb = BOOT_ALLOC.leak(sev::Ghcb::new()).unwrap();
+        let ghcb = Box::leak(Box::new_in(sev::Ghcb::new(), &BOOT_ALLOC));
         sev::init_ghcb(ghcb);
     }
 
@@ -143,9 +145,9 @@ pub fn rust64_start(encrypted: u64) -> ! {
     log::info!("starting...");
     log::info!("Enabled SEV features: {:?}", sev_status());
 
-    let dma_buf = BOOT_ALLOC.leak(fw_cfg::DmaBuffer::default()).unwrap();
+    let dma_buf = Box::leak(Box::new_in(fw_cfg::DmaBuffer::default(), &BOOT_ALLOC));
     let dma_buf_address = VirtAddr::from_ptr(dma_buf as *const _);
-    let dma_access = BOOT_ALLOC.leak(fw_cfg::FwCfgDmaAccess::default()).unwrap();
+    let dma_access = Box::leak(Box::new_in(fw_cfg::FwCfgDmaAccess::default(), &BOOT_ALLOC));
     let dma_access_address = VirtAddr::from_ptr(dma_access as *const _);
     if sev_status().contains(SevStatus::SEV_ENABLED) {
         // Safety: This is safe for SEV-ES and SNP because we're using an originally supported mode
@@ -164,9 +166,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     let mut fwcfg =
         unsafe { fw_cfg::FwCfg::new(dma_buf, dma_access) }.expect("fw_cfg device not found!");
 
-    let zero_page = BOOT_ALLOC
-        .leak(zero_page::ZeroPage::new())
-        .expect("failed to allocate memory for zero page");
+    let zero_page = Box::leak(Box::new_in(zero_page::ZeroPage::new(), &BOOT_ALLOC));
 
     zero_page.fill_e820_table(&mut fwcfg);
 
@@ -178,9 +178,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
      * See https://www.kernel.org/doc/html/latest/x86/boot.html#id1 for the particular requirements.
      */
 
-    let gdt = BOOT_ALLOC
-        .leak(GlobalDescriptorTable::new())
-        .expect("Failed to allocate memory for GDT");
+    let gdt = Box::leak(Box::new_in(GlobalDescriptorTable::new(), &BOOT_ALLOC));
 
     let (cs, ds) = create_gdt(gdt);
     gdt.load();
@@ -194,9 +192,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
         SS::set_reg(ds);
     }
 
-    let idt = BOOT_ALLOC
-        .leak(InterruptDescriptorTable::new())
-        .expect("Failed to allocate memory for IDT");
+    let idt = Box::leak(Box::new_in(InterruptDescriptorTable::new(), &BOOT_ALLOC));
 
     create_idt(idt);
     idt.load();
@@ -213,15 +209,17 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     if sev_status().contains(SevStatus::SNP_ACTIVE) {
         // Safety: we're only interested in the pointer value of SEV_SECRETS, not its contents.
-        let cc_blob = BOOT_ALLOC
-            .leak(oak_linux_boot_params::CCBlobSevInfo::new(
+        let cc_blob = Box::leak(Box::new_in(
+            oak_linux_boot_params::CCBlobSevInfo::new(
                 unsafe { SEV_SECRETS.as_ptr() },
                 SEV_CPUID.as_ptr(),
-            ))
-            .expect("Failed to allocate memory for CCBlobSevInfo");
-        let setup_data = BOOT_ALLOC
-            .leak(oak_linux_boot_params::CCSetupData::new(cc_blob))
-            .expect("Failed to allocate memory for CCSetupData");
+            ),
+            &BOOT_ALLOC,
+        ));
+        let setup_data = Box::leak(Box::new_in(
+            oak_linux_boot_params::CCSetupData::new(cc_blob),
+            &BOOT_ALLOC,
+        ));
 
         zero_page.add_setup_data(setup_data);
     }

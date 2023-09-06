@@ -18,7 +18,8 @@ use crate::{
     fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg},
     BOOT_ALLOC,
 };
-use core::{alloc::Layout, ffi::CStr, ptr::NonNull, slice};
+use alloc::vec::Vec;
+use core::{ffi::CStr, slice};
 use elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
 use oak_linux_boot_params::BootE820Entry;
 use x86_64::{PhysAddr, VirtAddr};
@@ -79,15 +80,10 @@ pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<&'static CStr> {
     };
     // Safety: len will always be at least 1 byte, and we don't care about alignment. If the
     // allocation fails, we won't try coercing it into a slice.
-    let buf = unsafe {
-        NonNull::slice_from_raw_parts(
-            BOOT_ALLOC.allocate(Layout::from_size_align(buffer_size, 1).unwrap())?,
-            buffer_size,
-        )
-        .as_mut()
-    };
+    let mut buf = Vec::with_capacity_in(buffer_size, &BOOT_ALLOC);
+    buf.resize(buffer_size, 0u8);
     let actual_size = fw_cfg
-        .read_file(&cmdline_file, buf)
+        .read_file(&cmdline_file, &mut buf)
         .expect("could not read cmdline");
     assert_eq!(
         actual_size,
@@ -95,7 +91,7 @@ pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<&'static CStr> {
         "cmdline size did not match expected size"
     );
 
-    let cmdline = CStr::from_bytes_with_nul(buf).expect("invalid kernel command-line");
+    let cmdline = CStr::from_bytes_with_nul(buf.leak()).expect("invalid kernel command-line");
     log::debug!(
         "Kernel cmdline: {}",
         cmdline.to_str().expect("invalid kernel commande-line")
