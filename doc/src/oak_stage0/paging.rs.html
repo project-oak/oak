@@ -131,6 +131,9 @@
 <a href="#131" id="131">131</a>
 <a href="#132" id="132">132</a>
 <a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -147,13 +150,16 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>oak_core::sync::OnceCell;
+</span><span class="kw">use </span>alloc::boxed::Box;
+<span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>x86_64::{
     instructions::tlb::flush_all,
     structures::paging::{page_table::PageTableFlags, PageSize, PageTable, Size2MiB, Size4KiB},
     PhysAddr,
 };
+
+<span class="kw">use </span><span class="kw">crate</span>::BOOT_ALLOC;
 
 <span class="kw">pub static </span><span class="kw-2">mut </span>PML4: PageTable = PageTable::new();
 <span class="kw">pub static </span><span class="kw-2">mut </span>PDPT: PageTable = PageTable::new();
@@ -197,7 +203,7 @@
     <span class="comment">// Set up a new page table that maps the first 2MiB as 4KiB pages, so that we can share
     // individual 4KiB pages with the hypervisor as needed. We are using an identity mapping
     // between virtual and physical addresses.
-    </span><span class="kw">let </span>pt_0 = <span class="kw">crate</span>::BOOT_ALLOC.leak(PageTable::new()).unwrap();
+    </span><span class="kw">let </span>pt_0 = Box::leak(Box::new_in(PageTable::new(), <span class="kw-2">&amp;</span>BOOT_ALLOC));
     pt_0.iter_mut().enumerate().skip(<span class="number">1</span>).for_each(|(i, entry)| {
         entry.set_addr(
             PhysAddr::new(((i <span class="kw">as </span>u64) * Size4KiB::SIZE) | encrypted),

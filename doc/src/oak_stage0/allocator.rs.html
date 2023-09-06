@@ -177,6 +177,7 @@
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -194,9 +195,9 @@
 //
 
 </span><span class="kw">use </span>core::{
-    alloc::Layout,
+    alloc::{AllocError, Allocator, Layout},
     mem::MaybeUninit,
-    ptr::{write, NonNull},
+    ptr::NonNull,
     sync::atomic::{AtomicUsize, Ordering},
 };
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
@@ -240,8 +241,10 @@
             inner: Spinlock::new(Inner::new()),
         }
     }
+}
 
-    <span class="kw">pub fn </span>allocate(<span class="kw-2">&amp;</span><span class="self">self</span>, layout: Layout) -&gt; <span class="prelude-ty">Option</span>&lt;NonNull&lt;u8&gt;&gt; {
+<span class="kw">unsafe impl</span>&lt;<span class="kw">const </span>N: usize&gt; Allocator <span class="kw">for </span>BumpAllocator&lt;N&gt; {
+    <span class="kw">fn </span>allocate(<span class="kw-2">&amp;</span><span class="self">self</span>, layout: Layout) -&gt; <span class="prelude-ty">Result</span>&lt;NonNull&lt;[u8]&gt;, AllocError&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.inner.lock();
         <span class="kw">let </span>offset = inner.index.load(Ordering::Acquire);
         <span class="kw">let </span>storage_ptr = inner.storage.as_mut_ptr() <span class="kw">as </span><span class="kw-2">*mut </span>u8;
@@ -255,7 +258,7 @@
 
         <span class="kw">if </span>offset + align + layout.size() &gt; N {
             <span class="comment">// memory exhausted
-            </span><span class="kw">return </span><span class="prelude-val">None</span>;
+            </span><span class="kw">return </span><span class="prelude-val">Err</span>(AllocError);
         }
 
         inner
@@ -264,20 +267,15 @@
 
         <span class="comment">// Safety: we&#39;ve reserved memory from [offset, offset + align + size) so this will not
         // exceed the bounds of `self.storage` and is not aliased.
-        </span>NonNull::new(<span class="kw">unsafe </span>{ storage_ptr.add(offset + align) })
+        </span><span class="prelude-val">Ok</span>(NonNull::slice_from_raw_parts(
+            <span class="kw">unsafe </span>{ NonNull::new_unchecked(storage_ptr.add(offset + align)) },
+            layout.size(),
+        ))
     }
 
-    <span class="kw">pub fn </span>leak&lt;T&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, val: T) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>T&gt; {
-        <span class="kw">let </span>ptr = <span class="self">self</span>.allocate(Layout::for_value(<span class="kw-2">&amp;</span>val))<span class="question-mark">?</span>.cast().as_ptr();
-
-        <span class="comment">// Safety: we&#39;ve successfully allocated enough memory that is of the correct size, therefore
-        // writing `val` to it is safe. We also ensure that the pointer is properly initialized and
-        // aligned, so dereferencing it as a reference is fine.
-        </span><span class="kw">unsafe </span>{
-            write(ptr, val);
-            ptr.as_mut()
-        }
-    }
+    <span class="kw">unsafe fn </span>deallocate(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: NonNull&lt;u8&gt;, <span class="kw">_</span>: Layout) {
+        <span class="comment">// Bump allocator never deallocates.
+    </span>}
 }
 
 <span class="kw">pub fn </span>init_global_allocator(e820_table: <span class="kw-2">&amp;</span>[BootE820Entry]) {
@@ -307,25 +305,26 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use </span>alloc::boxed::Box;
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>simple_alloc() {
         <span class="kw">let </span>alloc = BumpAllocator::&lt;<span class="number">16</span>&gt;::uninit();
-        <span class="kw">let </span>val = alloc.leak([<span class="number">0u8</span>; <span class="number">16</span>]);
-        <span class="macro">assert!</span>(val.is_some());
-        <span class="kw">let </span>val = alloc.leak([<span class="number">0u8</span>; <span class="number">16</span>]);
-        <span class="macro">assert!</span>(val.is_none());
-        <span class="kw">let </span>val = alloc.leak(<span class="number">0u8</span>);
-        <span class="macro">assert!</span>(val.is_none());
+        <span class="kw">let </span>val = Box::try_new_in([<span class="number">0u8</span>; <span class="number">16</span>], <span class="kw-2">&amp;</span>alloc);
+        <span class="macro">assert!</span>(val.is_ok());
+        <span class="kw">let </span>val = Box::try_new_in([<span class="number">0u8</span>; <span class="number">16</span>], <span class="kw-2">&amp;</span>alloc);
+        <span class="macro">assert!</span>(val.is_err());
+        <span class="kw">let </span>val = Box::try_new_in(<span class="number">0u8</span>, <span class="kw-2">&amp;</span>alloc);
+        <span class="macro">assert!</span>(val.is_err());
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>two_alloc() {
         <span class="kw">let </span>alloc = BumpAllocator::&lt;<span class="number">16</span>&gt;::uninit();
-        <span class="kw">let </span>val = alloc.leak([<span class="number">0u8</span>; <span class="number">8</span>]);
-        <span class="macro">assert!</span>(val.is_some());
-        <span class="kw">let </span>val = alloc.leak([<span class="number">0u8</span>; <span class="number">8</span>]);
-        <span class="macro">assert!</span>(val.is_some());
+        <span class="kw">let </span>val = Box::try_new_in([<span class="number">0u8</span>; <span class="number">8</span>], <span class="kw-2">&amp;</span>alloc);
+        <span class="macro">assert!</span>(val.is_ok());
+        <span class="kw">let </span>val = Box::try_new_in([<span class="number">0u8</span>; <span class="number">8</span>], <span class="kw-2">&amp;</span>alloc);
+        <span class="macro">assert!</span>(val.is_ok());
     }
 
     <span class="attr">#[test]
@@ -339,21 +338,24 @@
         // The padding we need to use is ~random; it depends where exactly in memory our buffer
         // lands, as that is not required to be perfectly aligned with any particular boundary.
         </span><span class="kw">let </span>alloc = BumpAllocator::&lt;<span class="number">23</span>&gt;::uninit();
-        <span class="kw">let </span>val = alloc.leak(Foo { x: <span class="number">16</span>, _y: <span class="number">16 </span>}).unwrap();
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, val <span class="kw">as </span><span class="kw-2">*const </span>Foo <span class="kw">as </span>usize % core::mem::align_of::&lt;Foo&gt;());
+        <span class="kw">let </span>val = Box::new_in(Foo { x: <span class="number">16</span>, _y: <span class="number">16 </span>}, <span class="kw-2">&amp;</span>alloc);
+        <span class="macro">assert_eq!</span>(
+            <span class="number">0</span>,
+            val.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>Foo <span class="kw">as </span>usize % core::mem::align_of::&lt;Foo&gt;()
+        );
         <span class="macro">assert_eq!</span>(<span class="number">16</span>, val.x);
         <span class="comment">// Even if the initial alignment was perfect by chance, we&#39;ve used up 16 bytes, so this
         // won&#39;t fit
-        </span><span class="kw">let </span>val = alloc.leak(Foo { x: <span class="number">1</span>, _y: <span class="number">1 </span>});
-        <span class="macro">assert!</span>(val.is_none());
+        </span><span class="kw">let </span>val = Box::try_new_in(Foo { x: <span class="number">1</span>, _y: <span class="number">1 </span>}, <span class="kw-2">&amp;</span>alloc);
+        <span class="macro">assert!</span>(val.is_err());
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>failing_alloc() {
         <span class="kw">let </span>alloc = BumpAllocator::&lt;<span class="number">4</span>&gt;::uninit();
-        <span class="macro">assert!</span>(alloc.leak(<span class="number">0u64</span>).is_none());
-        <span class="macro">assert!</span>(alloc.leak(<span class="number">0u32</span>).is_some());
-        <span class="macro">assert!</span>(alloc.leak(<span class="number">0u8</span>).is_none());
+        <span class="macro">assert!</span>(Box::try_new_in(<span class="number">0u64</span>, <span class="kw-2">&amp;</span>alloc).is_err());
+        <span class="macro">assert!</span>(Box::try_new_in(<span class="number">0u32</span>, <span class="kw-2">&amp;</span>alloc).is_ok());
+        <span class="macro">assert!</span>(Box::try_new_in(<span class="number">0u8</span>, <span class="kw-2">&amp;</span>alloc).is_err());
     }
 }
 </code></pre></div></section></main></body></html>
