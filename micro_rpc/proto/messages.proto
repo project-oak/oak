@@ -18,6 +18,9 @@ syntax = "proto3";
 
 package micro_rpc;
 
+option java_multiple_files = true;
+option java_package = "com.google.micro_rpc";
+
 // A wrapper message representing a request over a transport.
 message Request {
   // The id of the method to invoke. This is usually specified via the IDL that drives the code

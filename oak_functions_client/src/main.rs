@@ -68,10 +68,7 @@ async fn main() -> anyhow::Result<()> {
     if opt.test_large_message {
         // The client should be a able to send a large message without
         // crashing or hanging.
-        let response = client
-            .invoke(&LARGE_MESSAGE)
-            .await
-            .context("error invoking Oak Functions instance");
+        let response = client.invoke(&LARGE_MESSAGE).await;
         assert!(response.is_ok());
         return Ok(());
     }
@@ -88,10 +85,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     for _ in 0..iterations {
-        let response = client
-            .invoke(request.as_bytes())
-            .await
-            .context("couldn't invoke Oak Functions")?;
+        let response = client.invoke(request.as_bytes()).await?;
 
         println!("Response: {:?}", response);
         let response_body = std::str::from_utf8(&response).unwrap();
