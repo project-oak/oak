@@ -21,4 +21,6 @@ package(
 
 exports_files([
     "logentry.json",
+    "endorsement.json",
+    "rekor_public_key.pem",
 ])

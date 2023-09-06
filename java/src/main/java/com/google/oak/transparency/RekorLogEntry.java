@@ -84,7 +84,7 @@ public final class RekorLogEntry {
     long logIndex;
 
     /** Includes a signature over the body, integratedTime, logID, and logIndex. */
-    Optional<LogEntryVerification> verification;
+    LogEntryVerification verification;
   }
 
   /**
@@ -120,9 +120,7 @@ public final class RekorLogEntry {
    * Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.>
    */
-  static class Data {
-    Hash hash;
-  }
+  static class Data { Hash hash; }
 
   /**
    * Represents a hash digest.
@@ -212,7 +210,7 @@ public final class RekorLogEntry {
     if (entryMap.size() != 1) {
       throw new RekorValidationException(
           "Expected exactly one entry in the json-formatted Rekor log entry, found "
-              + entryMap.size());
+          + entryMap.size());
     }
 
     String entryStr = gson.toJson(entryMap.values().iterator().next());
@@ -231,7 +229,7 @@ public final class RekorLogEntry {
    * {@code RekorLogEntry}. If the conversion is successful, return the body of
    * the resulting entry,
    * otherwise returns and error.
-   * 
+   *
    * @param logEntryBytes bytes to parse and extract the Rekor log entry body
    *                      from.
    * @return A result, either wrapping a {@code Body} or an exception representing

@@ -20,6 +20,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Convenient struct for verifying the `signedEntryTimestamp` in a Rekor
@@ -32,6 +34,7 @@ import java.util.Optional;
  * x509/PKIX public key.
  */
 public class RekorSignatureBundle {
+  private static Logger logger = Logger.getLogger(RekorSignatureBundle.class.getName());
   /**
    * Canonicalized JSON representation, based on RFC 8785 rules, of a subset of a
    * Rekor LogEntry
@@ -61,7 +64,7 @@ public class RekorSignatureBundle {
 
   /**
    * Create a RekorSignatureBundle from the given LogEntry.
-   * 
+   *
    * @param entry
    * @return
    */
@@ -72,15 +75,21 @@ public class RekorSignatureBundle {
     entrySubset.integratedTime = entry.logEntry.integratedTime;
     entrySubset.logId = entry.logEntry.logId;
     entrySubset.logIndex = entry.logEntry.logIndex;
-    entrySubset.verification = Optional.empty();
 
     // Canonicalized JSON document that is signed. Canonicalization should follow
     // the RFC 8785
     // rules.
     Gson gson = new GsonBuilder().create();
     String canonicalized = gson.toJson(entrySubset);
+    logger.log(Level.INFO,
+        String.format("canonicalized log entry content has length: %s", canonicalized.length()));
 
-    return entry.logEntry.verification.map(
-        verification -> new RekorSignatureBundle(canonicalized, verification.signedEntryTimestamp));
+    if (entry.logEntry.verification == null) {
+      logger.log(Level.INFO, "no verification in the log entry");
+    }
+
+    return Optional.ofNullable(entry.logEntry.verification)
+        .map(verification
+            -> new RekorSignatureBundle(canonicalized, verification.signedEntryTimestamp));
   }
 }

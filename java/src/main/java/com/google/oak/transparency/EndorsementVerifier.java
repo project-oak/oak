@@ -24,6 +24,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Verifier class providing functions for verifying a Transparent-Release
@@ -31,6 +33,8 @@ import java.util.Optional;
  * the corresponding Rekor log entry.
  */
 public class EndorsementVerifier {
+  private static final Logger logger = Logger.getLogger(EndorsementVerifier.class.getName());
+
   /**
    * Verifies a Rekor LogEntry.
    *
@@ -48,7 +52,7 @@ public class EndorsementVerifier {
    * {@code logEntryBytes}) matches the
    * input {@code endorsementStatementBytes}.
    * </ul>
-   * 
+   *
    * @param logEntryBytes
    * @param pemEncodedRekorPublicKeyBytes
    * @param endorsementStatementBytes
@@ -56,10 +60,9 @@ public class EndorsementVerifier {
    *         in a Result
    *         otherwise
    */
-  public Result<Void, Exception> verifyRekorLogEntry(byte[] logEntryBytes,
+  public Result<Boolean, Exception> verifyRekorLogEntry(byte[] logEntryBytes,
       byte[] pemEncodedRekorPublicKeyBytes, byte[] endorsementStatementBytes) {
-    return verifyRekorSignature(logEntryBytes,
-        pemEncodedRekorPublicKeyBytes)
+    return verifyRekorSignature(logEntryBytes, pemEncodedRekorPublicKeyBytes)
         .andThen(v -> RekorLogEntry.getRekorLogEntryBody(logEntryBytes))
         .andThen(body -> verifyRekorBody(body, endorsementStatementBytes));
   }
@@ -70,16 +73,19 @@ public class EndorsementVerifier {
    * @param pemEncodedRekorPublicKeyBytes
    * @return
    */
-  public Result<Void, Exception> verifyRekorSignature(
+  public Result<Boolean, Exception> verifyRekorSignature(
       byte[] logEntryBytes, byte[] pemEncodedRekorPublicKeyBytes) {
     try {
-      RekorLogEntry logEntry = RekorLogEntry.unmarshalLogEntry(new String(logEntryBytes, StandardCharsets.UTF_8));
+      RekorLogEntry logEntry =
+          RekorLogEntry.unmarshalLogEntry(new String(logEntryBytes, StandardCharsets.UTF_8));
+      logger.log(Level.INFO, "successfully unmarshaled logEntry");
       Optional<RekorSignatureBundle> bundle = RekorSignatureBundle.fromRekorLogEntry(logEntry);
       if (bundle.isEmpty()) {
-        return Result.error(
-            new IllegalArgumentException("could not create RekorSignatureBundle from RekorLogEntry"));
+        return Result.error(new IllegalArgumentException(
+            "could not create RekorSignatureBundle from RekorLogEntry"));
       }
       RekorSignatureBundle signatureBundle = bundle.get();
+      logger.log(Level.INFO, "Got signature bundle");
       return verifySignature(signatureBundle.getBase64Signature(),
           signatureBundle.getCanonicalizedBytes(), pemEncodedRekorPublicKeyBytes);
     } catch (RekorLogEntry.RekorValidationException e) {
@@ -93,21 +99,21 @@ public class EndorsementVerifier {
    * the given {@code contentsBytes}, using the public key in the {@code body}.
    * This public is
    * separately checked against a known and trusted (root) public key.
-   * 
+   *
    * @param body
    * @param contentBytes
    * @return an empty Result if the verification succeeds, or an Exception wrapped
    *         in a Result
    *         otherwise
    */
-  public Result<Void, Exception> verifyRekorBody(RekorLogEntry.Body body, byte[] contentBytes) {
-    if (body.spec.signature.format != "x509") {
+  public Result<Boolean, Exception> verifyRekorBody(RekorLogEntry.Body body, byte[] contentBytes) {
+    if (!"x509".equals(body.spec.signature.format)) {
       return Result.error(new Exception(String.format(
           "unsupported signature format: %s; only x509 is supported", body.spec.signature.format)));
     }
 
     // For now, we only support `sha256` as the hashing algorithm.
-    if (body.spec.data.hash.algorithm != "sha256") {
+    if (!"sha256".equals(body.spec.data.hash.algorithm)) {
       return Result.error(
           new Exception(String.format("unsupported hash algorithm: %s; only sha256 is supported",
               body.spec.data.hash.algorithm)));
@@ -116,26 +122,27 @@ public class EndorsementVerifier {
     // Check that hash of the given content matches the hash of the data in the
     // Body.
     String contentsHashHex = sha256Hex(contentBytes);
-    if (contentsHashHex != body.spec.data.hash.value) {
+    if (contentsHashHex == null || !contentsHashHex.equals(body.spec.data.hash.value)) {
       return Result.error(new Exception(String.format(
           "sha256 digest of the given bytes (%s) does not match that of the data in the body of the Rekor entry (%s)",
           contentsHashHex, body.spec.data.hash.value)));
     }
 
-    byte[] pemEncodedPublicKeyBytes = Base64.getDecoder().decode(body.spec.signature.publicKey.content);
+    byte[] pemEncodedPublicKeyBytes =
+        Base64.getDecoder().decode(body.spec.signature.publicKey.content);
 
     return verifySignature(body.spec.signature.content, contentBytes, pemEncodedPublicKeyBytes);
   }
 
   /**
    * Computes and returns the hex-encoded SHA2-256 digest of the given bytes.
-   * 
+   *
    * @param bytes
    * @return the hex-encoded SHA2-256 digest of {@code bytes}
    */
   public static String sha256Hex(byte[] bytes) {
     try {
-      MessageDigest md = MessageDigest.getInstance("SHA2-256");
+      MessageDigest md = MessageDigest.getInstance("SHA-256");
       byte[] digest = md.digest(bytes);
 
       // convert digest bytes to hex
@@ -143,9 +150,10 @@ public class EndorsementVerifier {
       for (byte b : digest) {
         result.append(String.format("%02x", b));
       }
+      logger.log(Level.INFO, String.format("digest is %s", result));
       return result.toString();
     } catch (NoSuchAlgorithmException e) {
-      // Unreachable: We know that the "SHA2-256" algorithm exists.
+      logger.log(Level.SEVERE, e.getMessage());
       return null;
     }
   }
@@ -154,7 +162,7 @@ public class EndorsementVerifier {
    * Verifies the given base64-encoded signature over the given content bytes,
    * using the given
    * PEM-encoded public key.
-   * 
+   *
    * @param base64SignatureBytes
    * @param contentBytes
    * @param pemEncodedPublicKeyBytes
@@ -162,7 +170,7 @@ public class EndorsementVerifier {
    *         in a Result
    *         otherwise
    */
-  public Result<Void, Exception> verifySignature(
+  public Result<Boolean, Exception> verifySignature(
       String base64SignatureBytes, byte[] contentBytes, byte[] pemEncodedPublicKeyBytes) {
     if (base64SignatureBytes.length() == 0) {
       return Result.error(new IllegalArgumentException("empty signature"));
@@ -174,6 +182,6 @@ public class EndorsementVerifier {
       return Result.error(new IllegalArgumentException("empty public key"));
     }
     // TODO(#2854): verify the signature
-    return Result.success(null);
+    return Result.success(true);
   }
 }

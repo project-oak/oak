@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package com.google.oak.transparency;
 
+import com.google.oak.util.Result;
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.Assert;
@@ -24,18 +26,18 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public class RekorLogEntryTest {
+public class EndorsementVerifierTest {
   @Test
-  public void testUnmarshalRekorLogEntry() throws Exception {
+  public void testVerifyRekorLogEntry() throws Exception {
     String logEntryPath = "oak_remote_attestation_verification/testdata/logentry.json";
+    String endorsementPath = "oak_remote_attestation_verification/testdata/endorsement.json";
+    String rekorPubkeyPath = "oak_remote_attestation_verification/testdata/rekor_public_key.pem";
 
-    String json = Files.readString(Path.of(logEntryPath));
-    RekorLogEntry.LogEntry entry = RekorLogEntry.unmarshalLogEntry(json).logEntry;
-    Assert.assertTrue(entry.body.length() > 0);
-    Assert.assertEquals(entry.logIndex, 30891523);
-    Assert.assertEquals(entry.bodyObject.kind, "rekord");
-    Assert.assertEquals(entry.bodyObject.spec.data.hash.algorithm, "sha256");
-    Assert.assertEquals(entry.bodyObject.spec.signature.format, "x509");
-    Assert.assertNotNull(entry.verification);
+    byte[] logEntryBytes = Files.readAllBytes(Path.of(logEntryPath));
+    byte[] endorsementBytes = Files.readAllBytes(Path.of(endorsementPath));
+    byte[] rekorPublicKeyBytes = Files.readAllBytes(Path.of(rekorPubkeyPath));
+    Result<Boolean, Exception> result = new EndorsementVerifier().verifyRekorLogEntry(
+        logEntryBytes, rekorPublicKeyBytes, endorsementBytes);
+    Assert.assertTrue(result.isSuccess());
   }
 }
