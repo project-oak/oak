@@ -28,7 +28,8 @@ import java.util.Optional;
  * This class represents a Rekor LogEntry as defined in
  * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89>.
  *
- * A static factory method, {@code unmarshalLogEntry}, is provided that creates an instance of this
+ * A static factory method, {@code unmarshalLogEntry}, is provided that creates
+ * an instance of this
  * class by parsing it from a json string.
  */
 public final class RekorLogEntry {
@@ -43,23 +44,29 @@ public final class RekorLogEntry {
   // The following nested classes represent a subset of Rekor types defined in
   // <https://github.com/sigstore/rekor/tree/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models>.
   //
-  // These classes are intentionally made package-private and immutable, as the clients are not
-  // expected to instantiate them directly. The fields are not explicitly made final to allow
+  // These classes are intentionally made package-private and immutable, as the
+  // clients are not
+  // expected to instantiate them directly. The fields are not explicitly made
+  // final to allow
   // instantiation with Gson.
   //
 
   /**
    * Represents a Rekor LogEntry.
    *
-   * <p>Based on
+   * <p>
+   * Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.>
    */
   static class LogEntry {
-    /** We cannot directly use the type `Body` here, since body is Base64-encoded. */
+    /**
+     * We cannot directly use the type `Body` here, since body is Base64-encoded.
+     */
     String body;
 
     /**
-     * Unmarshaled body of this LogEntry. It is declared as a transient field, so that it is
+     * Unmarshaled body of this LogEntry. It is declared as a transient field, so
+     * that it is
      * excluded when serializing and deserializing instances of LogEntry.
      */
     transient Body bodyObject;
@@ -67,7 +74,8 @@ public final class RekorLogEntry {
     long integratedTime;
 
     /**
-     * This is the SHA256 hash of the DER-encoded public key for the log at the time the entry was
+     * This is the SHA256 hash of the DER-encoded public key for the log at the time
+     * the entry was
      * included in the log. Pattern: ^[0-9a-fA-F]{64}$
      */
     String logId;
@@ -82,7 +90,8 @@ public final class RekorLogEntry {
   /**
    * Represents the body in a Rekor LogEntry.
    *
-   * <p>Based on
+   * <p>
+   * Based on
    * <https://github.com/sigstore/rekor/blob/fc913fe7800ea5faed1c4900d8a6ffe11eb7be32/pkg/generated/models/rekord.go#L38>.
    * Note that `kind` is a derived field.
    */
@@ -95,7 +104,8 @@ public final class RekorLogEntry {
   /**
    * Represents the `spec` in the body of a Rekor LogEntry.
    *
-   * <p>Based on
+   * <p>
+   * Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L39.>
    */
   static class Spec {
@@ -106,15 +116,19 @@ public final class RekorLogEntry {
   /**
    * Represents the hashed data in the body of a Rekor LogEntry.
    *
-   * <p>Based on
+   * <p>
+   * Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.>
    */
-  static class Data { Hash hash; }
+  static class Data {
+    Hash hash;
+  }
 
   /**
    * Represents a hash digest.
    *
-   * <p>Based on
+   * <p>
+   * Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L273.>
    */
   static class Hash {
@@ -125,7 +139,8 @@ public final class RekorLogEntry {
   /**
    * Represents a signature in the body of a Rekor LogEntry.
    *
-   * <p>Based on
+   * <p>
+   * Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L383>
    */
   static class GenericSignature {
@@ -142,7 +157,8 @@ public final class RekorLogEntry {
   /**
    * Represents a public key included in the body of a Rekor LogEntry.
    *
-   * <p>Based on
+   * <p>
+   * Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L551.>
    */
   static class PublicKey {
@@ -151,20 +167,26 @@ public final class RekorLogEntry {
   }
 
   /**
-   * Represents a verification object in a Rekor LogEntry. The verification object in Rekor also
-   * contains an inclusion proof. Since we currently don't verify the inclusion proof in the client,
+   * Represents a verification object in a Rekor LogEntry. The verification object
+   * in Rekor also
+   * contains an inclusion proof. Since we currently don't verify the inclusion
+   * proof in the client,
    * it is omitted from this struct.
    *
-   * <p>Based on
+   * <p>
+   * Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L341>.
    */
   static class LogEntryVerification {
-    /** Base64-encoded signature over the body, integratedTime, logID, and logIndex. */
+    /**
+     * Base64-encoded signature over the body, integratedTime, logID, and logIndex.
+     */
     String signedEntryTimestamp;
   }
 
   /**
-   * The class {@code Model.RekorValidationException} indicates erroneous conditions that happened
+   * The class {@code Model.RekorValidationException} indicates erroneous
+   * conditions that happened
    * while creating instances of the classes in {@code Model}.
    */
   public static class RekorValidationException extends Exception {
@@ -177,8 +199,10 @@ public final class RekorLogEntry {
    * Parses the given JSON string into an instance of {@code Model.LogEntry}.
    *
    * @param json the input JSON string.
-   * @return an instance of Model.RekorLogEntry created from parsing and unmarshaling {@code json}.
-   * @throws RekorValidationException if the validation of the unmarshaled LogEntry fails.
+   * @return an instance of Model.RekorLogEntry created from parsing and
+   *         unmarshaling {@code json}.
+   * @throws RekorValidationException if the validation of the unmarshaled
+   *                                  LogEntry fails.
    */
   public static RekorLogEntry unmarshalLogEntry(String json) throws RekorValidationException {
     // Use a default Gson instance to parse JSON strings into Java objects.
@@ -188,30 +212,36 @@ public final class RekorLogEntry {
     if (entryMap.size() != 1) {
       throw new RekorValidationException(
           "Expected exactly one entry in the json-formatted Rekor log entry, found "
-          + entryMap.size());
+              + entryMap.size());
     }
 
     String entryStr = gson.toJson(entryMap.values().iterator().next());
     LogEntry entry = gson.fromJson(entryStr, LogEntry.class);
 
-    // Parse the body string into an instance of Body, and set entry.bodyObject to it.
+    // Parse the body string into an instance of Body, and set entry.bodyObject to
+    // it.
     String decodedBody = new String(Base64.getDecoder().decode(entry.body));
     entry.bodyObject = gson.fromJson(decodedBody, Body.class);
     return new RekorLogEntry(entry);
   }
 
   /**
-   * Converts the given bytes into string, and tries to unmarshal the result into an instance of
-   * {@code RekorLogEntry}. If the conversion is successful, return the body of the resulting entry,
+   * Converts the given bytes into string, and tries to unmarshal the result into
+   * an instance of
+   * {@code RekorLogEntry}. If the conversion is successful, return the body of
+   * the resulting entry,
    * otherwise returns and error.
-   * @param logEntryBytes bytes to parse and extract the Rekor log entry body from.
-   * @return A result, either wrapping a {@code Body} or an exception representing a failure to
-   *     parse and unmarshal the input bytes.
+   * 
+   * @param logEntryBytes bytes to parse and extract the Rekor log entry body
+   *                      from.
+   * @return A result, either wrapping a {@code Body} or an exception representing
+   *         a failure to
+   *         parse and unmarshal the input bytes.
    */
   public static Result<Body, Exception> getRekorLogEntryBody(byte[] logEntryBytes) {
     try {
       RekorLogEntry logEntry = unmarshalLogEntry(new String(logEntryBytes, StandardCharsets.UTF_8));
-      return Result.success(logEntry.bodyObject);
+      return Result.success(logEntry.logEntry.bodyObject);
     } catch (RekorValidationException e) {
       return Result.error(e);
     }

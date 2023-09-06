@@ -16,21 +16,27 @@
 
 package com.google.oak.transparency;
 
-import com.google.oak.transparency.RekorLogEntry;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 /**
- * Convenient struct for verifying the `signedEntryTimestamp` in a Rekor LogEntry.
+ * Convenient struct for verifying the `signedEntryTimestamp` in a Rekor
+ * LogEntry.
  *
- * This bundle can be verified using the public key from Rekor. The public key can be obtained from
- * the /api/v1/log/publicKey Rest API. For {@link sigstore.dev}, it is a PEM-encoded
+ * This bundle can be verified using the public key from Rekor. The public key
+ * can be obtained from
+ * the /api/v1/log/publicKey Rest API. For {@link sigstore.dev}, it is a
+ * PEM-encoded
  * x509/PKIX public key.
  */
 public class RekorSignatureBundle {
   /**
-   * Canonicalized JSON representation, based on RFC 8785 rules, of a subset of a Rekor LogEntry
-   * fields that are signed to generate `signedEntryTimestamp` (also a field in the Rekor LogEntry).
+   * Canonicalized JSON representation, based on RFC 8785 rules, of a subset of a
+   * Rekor LogEntry
+   * fields that are signed to generate `signedEntryTimestamp` (also a field in
+   * the Rekor LogEntry).
    * These fields include body, integratedTime, logID and logIndex.
    */
   private final String canonicalized;
@@ -55,23 +61,26 @@ public class RekorSignatureBundle {
 
   /**
    * Create a RekorSignatureBundle from the given LogEntry.
+   * 
    * @param entry
    * @return
    */
   public static Optional<RekorSignatureBundle> fromRekorLogEntry(RekorLogEntry entry) {
     // Create a copy of the LogEntry, but skip the verification.
-    RekorLogEntry entrySubset = new RekorLogEntry();
-    entrySubset.body = entry.body;
-    entrySubset.integratedTime = entry.integratedTime;
-    entrySubset.logId = entry.logId;
-    entrySubset.logIndex = entry.logIndex;
+    RekorLogEntry.LogEntry entrySubset = new RekorLogEntry.LogEntry();
+    entrySubset.body = entry.logEntry.body;
+    entrySubset.integratedTime = entry.logEntry.integratedTime;
+    entrySubset.logId = entry.logEntry.logId;
+    entrySubset.logIndex = entry.logEntry.logIndex;
     entrySubset.verification = Optional.empty();
 
-    // Canonicalized JSON document that is signed. Canonicalization should follow the RFC 8785
+    // Canonicalized JSON document that is signed. Canonicalization should follow
+    // the RFC 8785
     // rules.
+    Gson gson = new GsonBuilder().create();
     String canonicalized = gson.toJson(entrySubset);
 
-    return entry.verification.map(
+    return entry.logEntry.verification.map(
         verification -> new RekorSignatureBundle(canonicalized, verification.signedEntryTimestamp));
   }
 }
