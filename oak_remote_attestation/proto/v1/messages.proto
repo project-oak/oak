@@ -113,13 +113,13 @@ message InvokeResponse {
 }
 
 // Used for encrypted client requests to the untrusted launcher.
-message TEEExecuteRequest {
+message EnclaveExecuteRequest {
   // Body of the request, encrypted with the enclave public key.
   bytes encrypted_body = 1;
 }
 
-// Used to send encrypted responses from the TEE back to the client.
-message TEEExecuteResponse {
+// Used to send encrypted responses from the enclave back to the client.
+message EnclaveExecuteResponse {
   // Body of the request, encrypted with the client public or symmetric key.
   bytes encrypted_body = 1;
 }

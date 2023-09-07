@@ -41,7 +41,7 @@ service UnarySession {
   // response in return. The request should be encrypted using the public key
   // provided by the enclave. The response is encrypted using the ephemeral
   // response key (supplied by the client in HPKE).
-  rpc TEEExecute(TEEExecuteRequest) returns (TEEExecuteResponse) {
+  rpc EnclaveExecute(EnclaveExecuteRequest) returns (EnclaveExecuteResponse) {
     option deadline = 10.0;
   }
 }

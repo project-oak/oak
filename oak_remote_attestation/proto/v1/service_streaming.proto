@@ -27,7 +27,7 @@ message RequestWrapper {
   oneof request {
     GetPublicKeyRequest get_public_key_request = 1;
     InvokeRequest invoke_request = 2;
-    TEEExecuteRequest tee_execute_request = 3;
+    EnclaveExecuteRequest enclave_execute_request = 3;
   }
 }
 
@@ -35,7 +35,7 @@ message ResponseWrapper {
   oneof response {
     GetPublicKeyResponse get_public_key_response = 1;
     InvokeResponse invoke_response = 2;
-    TEEExecuteResponse tee_execute_response = 3;
+    EnclaveExecuteResponse enclave_execute_response = 3;
   }
 }
 

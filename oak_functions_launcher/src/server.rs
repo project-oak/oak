@@ -21,8 +21,8 @@ use crate::{
         session::v1::{
             request_wrapper, response_wrapper,
             streaming_session_server::{StreamingSession, StreamingSessionServer},
-            AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
-            InvokeResponse, RequestWrapper, ResponseWrapper,
+            AttestationBundle, AttestationEndorsement, AttestationEvidence, EnclaveExecuteResponse,
+            GetPublicKeyResponse, InvokeResponse, RequestWrapper, ResponseWrapper,
         },
     },
 };
@@ -98,6 +98,11 @@ impl StreamingSession for SessionProxy {
                             })?;
                         response_wrapper::Response::InvokeResponse(InvokeResponse {
                             encrypted_body: enclave_invoke_response.body,
+                        })
+                    }
+                    request_wrapper::Request::EnclaveExecuteRequest(_enclave_execute_request) => {
+                        response_wrapper::Response::EnclaveExecuteResponse(EnclaveExecuteResponse {
+                            encrypted_body: Default::default(),
                         })
                     }
                 };
