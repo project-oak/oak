@@ -433,13 +433,6 @@
 <a href="#433" id="433">433</a>
 <a href="#434" id="434">434</a>
 <a href="#435" id="435">435</a>
-<a href="#436" id="436">436</a>
-<a href="#437" id="437">437</a>
-<a href="#438" id="438">438</a>
-<a href="#439" id="439">439</a>
-<a href="#440" id="440">440</a>
-<a href="#441" id="441">441</a>
-<a href="#442" id="442">442</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -844,8 +837,6 @@
     fwcfg: <span class="kw-2">&amp;mut </span>FwCfg,
     acpi_digest: <span class="kw-2">&amp;mut </span>Sha256,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Rsdp, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>commands: [RomfileCommand; <span class="number">32</span>] = Default::default();
-
     <span class="kw">let </span>file = fwcfg
         .find(TABLE_LOADER_FILE_NAME)
         .ok_or(<span class="string">&quot;Could not find &#39;etc/table-loader&#39; in fw_cfg&quot;</span>)<span class="question-mark">?</span>;
@@ -854,26 +845,21 @@
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;length of &#39;etc/table-loader&#39; is not a multiple of command struct size&quot;</span>);
     }
 
-    <span class="kw">if </span>file.size() &gt; core::mem::size_of_val(<span class="kw-2">&amp;</span>commands) {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;too many commands in &#39;etc/table-loader&#39;&quot;</span>);
-    }
+    <span class="kw">let </span>buf = fwcfg.read_file_vec(<span class="kw-2">&amp;</span>file)<span class="question-mark">?</span>;
+    acpi_digest.update(<span class="kw-2">&amp;</span>buf);
 
     <span class="comment">// We can&#39;t use zerocopy::FromBytes/AsBytes here, as the fields of the structs have padding that
     // zerocopy doesn&#39;t support.
     // Safety: we&#39;re using `size_of` here to ensure that we don&#39;t go over the boundaries of the
     // original array.
-
-    </span><span class="kw">let </span>buf = <span class="kw">unsafe </span>{
-        core::slice::from_raw_parts_mut(
-            <span class="kw-2">&amp;mut </span>commands <span class="kw">as </span><span class="kw-2">*mut </span><span class="kw">_ as </span>usize <span class="kw">as </span><span class="kw-2">*mut </span>u8,
-            core::mem::size_of_val(<span class="kw-2">&amp;</span>commands),
+    </span><span class="kw">let </span>commands = <span class="kw">unsafe </span>{
+        core::slice::from_raw_parts(
+            buf.as_ptr() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span><span class="kw-2">*const </span>RomfileCommand,
+            buf.len() / core::mem::size_of::&lt;RomfileCommand&gt;(),
         )
     };
 
-    fwcfg.read_file(<span class="kw-2">&amp;</span>file, buf)<span class="question-mark">?</span>;
-    acpi_digest.update(buf);
-
-    <span class="kw">for </span>command <span class="kw">in </span><span class="kw-2">&amp;</span>commands[..(file.size() / core::mem::size_of::&lt;RomfileCommand&gt;())] {
+    <span class="kw">for </span>command <span class="kw">in </span>commands {
         command.invoke(fwcfg, acpi_digest)<span class="question-mark">?</span>;
     }
 
