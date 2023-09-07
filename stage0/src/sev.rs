@@ -14,7 +14,14 @@
 // limitations under the License.
 //
 
-use crate::sev_status;
+use core::{
+    alloc::Allocator,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
+
+use crate::{sev_status, BootAllocator};
+use alloc::boxed::Box;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 pub use oak_sev_guest::ghcb::Ghcb;
@@ -38,8 +45,78 @@ use x86_64::{
 
 pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
-pub fn init_ghcb(ghcb: &'static mut Ghcb) {
-    let ghcb_addr = VirtAddr::from_ptr(ghcb as *const _);
+// Ensures that the inner data structure is page-aligned.
+// Ideally this'd be repr(transparent) but that means we can't force the 4K alignment.
+#[repr(C, align(4096))]
+struct OnePage<T>(T);
+
+/// Stores a data structure on a shared page.
+///
+/// Warning: the data structure is *never destructed* and the memory is *leaked*!
+pub struct Shared<T: 'static, A: Allocator> {
+    inner: &'static mut OnePage<T>,
+    phantom: PhantomData<A>,
+}
+
+impl<T, A: Allocator> Shared<T, A> {
+    pub fn new_in(t: T, alloc: A) -> Self
+    where
+        A: 'static,
+    {
+        let this = Self {
+            inner: Box::leak(Box::new_in(OnePage(t), alloc)),
+            phantom: PhantomData,
+        };
+        this.share();
+        this
+    }
+
+    fn share(&self) {
+        if sev_status().contains(SevStatus::SEV_ENABLED) {
+            // We don't expect the unwrap to ever fail, as the struct inside the Box should be
+            // page-aligned.
+            share_page(Page::from_start_address(VirtAddr::from_ptr(self.inner)).unwrap());
+        }
+    }
+
+    fn unshare(&self) {
+        if sev_status().contains(SevStatus::SEV_ENABLED) {
+            // We don't expect the unwrap to ever fail, as the struct inside the Box should be
+            // page-aligned.
+            unshare_page(Page::from_start_address(VirtAddr::from_ptr(self.inner)).unwrap());
+        }
+    }
+}
+
+impl<T, A: Allocator> Drop for Shared<T, A> {
+    fn drop(&mut self) {
+        self.unshare();
+    }
+}
+
+impl<T, A: Allocator> Deref for Shared<T, A> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner.0
+    }
+}
+
+impl<T, A: Allocator> DerefMut for Shared<T, A> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner.0
+    }
+}
+
+impl<T, A: Allocator> AsRef<T> for Shared<T, A> {
+    fn as_ref(&self) -> &T {
+        &self.inner.0
+    }
+}
+
+pub fn init_ghcb(alloc: &'static BootAllocator) {
+    let ghcb = Box::leak(Box::new_in(Ghcb::default(), alloc));
+    let ghcb_addr = VirtAddr::from_ptr(ghcb);
 
     share_page(Page::containing_address(ghcb_addr));
 
