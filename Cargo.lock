@@ -1861,6 +1861,7 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
+ "async-trait",
  "bytes",
  "hkdf",
  "hpke",
@@ -1868,6 +1869,7 @@ dependencies = [
  "prost",
  "rand_core 0.6.4",
  "sha2",
+ "tokio",
 ]
 
 [[package]]
