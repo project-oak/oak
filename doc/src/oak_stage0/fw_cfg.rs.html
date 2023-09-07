@@ -562,9 +562,6 @@
 <a href="#562" id="562">562</a>
 <a href="#563" id="563">563</a>
 <a href="#564" id="564">564</a>
-<a href="#565" id="565">565</a>
-<a href="#566" id="566">566</a>
-<a href="#567" id="567">567</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -595,7 +592,7 @@
 };
 <span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
 
-<span class="kw">use </span><span class="kw">crate</span>::io_port_factory;
+<span class="kw">use crate</span>::{io_port_factory, sev::Shared, BootAllocator};
 
 <span class="comment">// See https://www.qemu.org/docs/master/specs/fw_cfg.html for documentation about the various data structures and constants.
 </span><span class="kw">const </span>FWCFG_PORT_SELECTOR: u16 = <span class="number">0x510</span>;
@@ -721,8 +718,8 @@
     data: PortWrapper&lt;u8&gt;,
     dma_high: PortWrapper&lt;u32&gt;,
     dma_low: PortWrapper&lt;u32&gt;,
-    dma_buf: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>DmaBuffer,
-    dma_access: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>FwCfgDmaAccess,
+    dma_buf: Shared&lt;DmaBuffer, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>BootAllocator&gt;,
+    dma_access: Shared&lt;FwCfgDmaAccess, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>BootAllocator&gt;,
     dma_enabled: bool,
 }
 
@@ -735,10 +732,7 @@
     ///
     /// The caller has to guarantee that at least doing the probe will not cause any adverse
     /// effects.
-    </span><span class="kw">pub unsafe fn </span>new(
-        dma_buf: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>DmaBuffer,
-        dma_access: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>FwCfgDmaAccess,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    </span><span class="kw">pub unsafe fn </span>new(alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>BootAllocator) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>fwcfg = <span class="self">Self </span>{
             selector: io_port_factory().new_writer(FWCFG_PORT_SELECTOR),
             data: io_port_factory().new_reader(FWCFG_PORT_DATA),
@@ -746,8 +740,8 @@
             <span class="comment">// The DMA address must be big-endian encoded, so the low address is 4 bytes further
             // than the high address.
             </span>dma_low: io_port_factory().new_writer(FWCFG_PORT_DMA + <span class="number">4</span>),
-            dma_buf,
-            dma_access,
+            dma_buf: Shared::new_in(DmaBuffer::default(), alloc),
+            dma_access: Shared::new_in(FwCfgDmaAccess::default(), alloc),
             dma_enabled: <span class="bool-val">false</span>,
         };
 
@@ -996,7 +990,7 @@
         // physical memory to virtual memory.
         </span><span class="kw">let </span>length = chunk.len() <span class="kw">as </span>u32;
         <span class="kw-2">*</span><span class="self">self</span>.dma_access = FwCfgDmaAccess::new(ControlFlags::READ, length, address);
-        <span class="kw">let </span>dma_access_address = <span class="self">self</span>.dma_access <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize <span class="kw">as </span>u64;
+        <span class="kw">let </span>dma_access_address = <span class="self">self</span>.dma_access.as_ref() <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize <span class="kw">as </span>u64;
         <span class="kw">let </span>dma_low = (dma_access_address &amp; <span class="number">0xFFFFFFFF</span>) <span class="kw">as </span>u32;
         <span class="kw">let </span>dma_high = (dma_access_address &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>u32;
         <span class="comment">// The DMA address halves must be written in big endian format, and the high half must be
