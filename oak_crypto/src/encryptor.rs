@@ -228,6 +228,8 @@ impl ServerEncryptor {
 ///
 /// Sequence numbers for requests and responses are incremented separately, meaning that there could
 /// be multiple responses per request and multiple requests per response.
+// TODO(#4311): Merge `AsyncServerEncryptor` and `ServerEncryptor` once there is `async` support in
+// the Restricted Kernel.
 pub struct AsyncServerEncryptor {
     recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator>,
     recipient_context: Option<RecipientContext>,
