@@ -21,19 +21,11 @@ mod asm;
 
 use core::panic::PanicInfo;
 use oak_linux_boot_params::BootParams;
-use x86_64::registers::{
-    control::{Cr0, Cr0Flags, Cr4, Cr4Flags},
-    xcontrol::{XCr0, XCr0Flags},
-};
 
 /// Entry point for the 64-bit Rust code.
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, _rsi: &BootParams) -> ! {
-    enable_avx();
-    // The path to the artifact from the binary dependency is stored in the
-    // CARGO_<ARTIFACT-TYPE>_FILE_<DEP> environment variable.
-    // See <https://doc.rust-lang.org/nightly/cargo/reference/unstable.html?#artifact-dependencies-environment-variables>.
-    let _payload = include_bytes!(env!("CARGO_BIN_FILE_OAK_RESTRICTED_KERNEL_BIN"));
+    let _payload = include_bytes!(env!("PAYLOAD_PATH"));
     loop {}
 }
 
@@ -41,24 +33,4 @@ pub extern "C" fn rust64_start(_rdi: u64, _rsi: &BootParams) -> ! {
 fn panic(_info: &PanicInfo) -> ! {
     // For now just go into an infinite loop when panicking.
     loop {}
-}
-
-/// Enables Streaming SIMD Extensions (SEE) and Advanced Vector Extensions (AVX).
-///
-/// See <https://wiki.osdev.org/SSE> for more information.
-fn enable_avx() {
-    unsafe {
-        let mut cr0 = Cr0::read();
-        cr0 &= !Cr0Flags::EMULATE_COPROCESSOR;
-        cr0 |= Cr0Flags::MONITOR_COPROCESSOR;
-        Cr0::write(cr0);
-        let cr0 = Cr0::read();
-        assert!(cr0 & Cr0Flags::TASK_SWITCHED != Cr0Flags::TASK_SWITCHED);
-        let mut cr4 = Cr4::read();
-        cr4 |= Cr4Flags::OSFXSR | Cr4Flags::OSXMMEXCPT_ENABLE | Cr4Flags::OSXSAVE;
-        Cr4::write(cr4);
-        let mut xcr0 = XCr0::read();
-        xcr0 |= XCr0Flags::X87 | XCr0Flags::SSE | XCr0Flags::AVX;
-        XCr0::write(xcr0);
-    }
 }

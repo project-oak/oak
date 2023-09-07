@@ -10,10 +10,7 @@ resolver = "2"
 members = ["."]
 
 [dependencies]
-elf = { version = "*", default-features = false }
-oak_restricted_kernel_bin = { path = "../oak_restricted_kernel_bin", artifact = "bin" }
 oak_linux_boot_params = { path = "../linux_boot_params" }
-x86_64 = "*"
 
 [profile.dev]
 opt-level = "z"
@@ -21,7 +18,6 @@ panic = "abort"
 
 [profile.release]
 opt-level = "z"
-debug = true
 lto = true
 panic = "abort"
 
