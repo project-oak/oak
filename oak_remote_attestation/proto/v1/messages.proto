@@ -111,3 +111,15 @@ message InvokeResponse {
   // TODO(#3843): Use explicit `oak_crypto` messages.
   bytes encrypted_body = 1;
 }
+
+// Used for encrypted client requests to the untrusted launcher.
+message TEEExecuteRequest {
+  // Body of the request, encrypted with the enclave public key.
+  bytes encrypted_body = 1;
+}
+
+// Used to send encrypted responses from the TEE back to the client.
+message TEEExecuteResponse {
+  // Body of the request, encrypted with the client public or symmetric key.
+  bytes encrypted_body = 1;
+}
