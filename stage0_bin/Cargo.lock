@@ -27,15 +27,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
-<<<<<<< HEAD
-=======
 name = "bitflags"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4682ae6287fcf752ecaabbfcc7b6f9b72aa33933dc23a554d853aea8eea8635"
 
 [[package]]
->>>>>>> 8fb273ea5232aa1e6080696aa320073fe6d47adf
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -57,7 +54,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-<<<<<<< HEAD
 name = "ciborium"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -101,8 +97,6 @@ dependencies = [
 ]
 
 [[package]]
-=======
->>>>>>> 8fb273ea5232aa1e6080696aa320073fe6d47adf
 name = "cpufeatures"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -112,7 +106,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
 name = "crypto-bigint"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -125,8 +118,6 @@ dependencies = [
 ]
 
 [[package]]
-=======
->>>>>>> 8fb273ea5232aa1e6080696aa320073fe6d47adf
 name = "crypto-common"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -137,7 +128,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
 name = "der"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -148,21 +138,15 @@ dependencies = [
 ]
 
 [[package]]
-=======
->>>>>>> 8fb273ea5232aa1e6080696aa320073fe6d47adf
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
 dependencies = [
  "block-buffer",
-<<<<<<< HEAD
  "const-oid",
  "crypto-common",
  "subtle",
-=======
- "crypto-common",
->>>>>>> 8fb273ea5232aa1e6080696aa320073fe6d47adf
 ]
 
 [[package]]
@@ -191,7 +175,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2b183d6ce6ca4cf30e3db37abf5b52568b5f9015c97d9fbdd7026aa5dcdd758"
 
 [[package]]
-<<<<<<< HEAD
 name = "elliptic-curve"
 version = "0.13.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -220,8 +203,6 @@ dependencies = [
 ]
 
 [[package]]
-=======
->>>>>>> 8fb273ea5232aa1e6080696aa320073fe6d47adf
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -229,10 +210,7 @@ checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
  "typenum",
  "version_check",
-<<<<<<< HEAD
  "zeroize",
-=======
->>>>>>> 8fb273ea5232aa1e6080696aa320073fe6d47adf
 ]
 
 [[package]]
@@ -363,17 +341,11 @@ dependencies = [
 name = "oak_stage0"
 version = "0.1.0"
 dependencies = [
-<<<<<<< HEAD
  "bitflags",
  "coset",
  "elf",
  "hex",
  "hkdf",
-=======
- "bitflags 2.4.0",
- "elf",
- "linked_list_allocator",
->>>>>>> 8fb273ea5232aa1e6080696aa320073fe6d47adf
  "log",
  "oak_core",
  "oak_linux_boot_params",
@@ -519,7 +491,6 @@ dependencies = [
 ]
 
 [[package]]
-<<<<<<< HEAD
 name = "signature"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -530,8 +501,6 @@ dependencies = [
 ]
 
 [[package]]
-=======
->>>>>>> 8fb273ea5232aa1e6080696aa320073fe6d47adf
 name = "snafu"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
