@@ -205,6 +205,8 @@ pub fn generate_stage1_attestation() {
     if stage1_cwt.is_ok() {
         // Call code that transmits the serialized cwt to Stage1
     }
+}
+
 /// Returns the value of the SEV_STATUS MSR that's safe to read even if the CPU doesn't support it.
 ///
 /// Initialized in the bootstrap assembly code.
