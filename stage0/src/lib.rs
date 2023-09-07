@@ -32,7 +32,7 @@ use x86_64::{
     structures::{
         gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector},
         idt::InterruptDescriptorTable,
-        paging::{Page, PageSize, Size1GiB},
+        paging::{PageSize, Size1GiB},
     },
     PhysAddr, VirtAddr,
 };
@@ -57,7 +57,8 @@ mod zero_page;
 type Measurement = [u8; 32];
 
 // Reserve 128K for boot data structures that will outlive Stage 0.
-static BOOT_ALLOC: allocator::BumpAllocator<0x20000> = allocator::BumpAllocator::uninit();
+type BootAllocator = allocator::BumpAllocator<0x20000>;
+static BOOT_ALLOC: BootAllocator = BootAllocator::uninit();
 
 // Heap for short-term allocations. These allocations are not expected to outlive Stage 0.
 #[cfg_attr(not(test), global_allocator)]
@@ -131,24 +132,13 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     // If we're under SEV-ES or SNP, we need a GHCB block for communication (SNP implies SEV-ES).
     if sev_status().contains(SevStatus::SEV_ES_ENABLED) {
-        // No point in calling expect() here, the logging isn't set up yet.
-        // In any case, this allocation should not fail. This is the first thing we allocate, the
-        // GHCB is 4K in size, and the allocator should be far bigger than that (as we have more
-        // data structures we need to allocate in there).
-        // If the allocation does fail, something is horribly broken and we have no hope of
-        // continuing.
-        let ghcb = Box::leak(Box::new_in(sev::Ghcb::new(), &BOOT_ALLOC));
-        sev::init_ghcb(ghcb);
+        sev::init_ghcb(&BOOT_ALLOC);
     }
 
     logging::init_logging();
     log::info!("starting...");
     log::info!("Enabled SEV features: {:?}", sev_status());
 
-    let dma_buf = Box::leak(Box::new_in(fw_cfg::DmaBuffer::default(), &BOOT_ALLOC));
-    let dma_buf_address = VirtAddr::from_ptr(dma_buf as *const _);
-    let dma_access = Box::leak(Box::new_in(fw_cfg::FwCfgDmaAccess::default(), &BOOT_ALLOC));
-    let dma_access_address = VirtAddr::from_ptr(dma_access as *const _);
     if sev_status().contains(SevStatus::SEV_ENABLED) {
         // Safety: This is safe for SEV-ES and SNP because we're using an originally supported mode
         // of the Pentium 6: Write-protect, with MTRR enabled.  If we get CPUID reads
@@ -158,13 +148,10 @@ pub fn rust64_start(encrypted: u64) -> ! {
         unsafe {
             msr::MTRRDefType::write(msr::MTRRDefTypeFlags::MTRR_ENABLE, msr::MemoryType::WP);
         }
-        sev::share_page(Page::containing_address(dma_buf_address));
-        sev::share_page(Page::containing_address(dma_access_address));
     }
 
     // Safety: we assume there won't be any other hardware devices using the fw_cfg IO ports.
-    let mut fwcfg =
-        unsafe { fw_cfg::FwCfg::new(dma_buf, dma_access) }.expect("fw_cfg device not found!");
+    let mut fwcfg = unsafe { fw_cfg::FwCfg::new(&BOOT_ALLOC) }.expect("fw_cfg device not found!");
 
     let zero_page = Box::leak(Box::new_in(zero_page::ZeroPage::new(), &BOOT_ALLOC));
 
@@ -308,12 +295,9 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     // Clean-ups we need to do just before we jump to the kernel proper: clean up the early GHCB and
     // FW_CFG DMA buffers we used, and switch back to a hugepage for the first 2M of memory.
-    if sev_status().contains(SevStatus::SNP_ACTIVE) {
-        sev::unshare_page(Page::containing_address(dma_buf_address));
-        sev::unshare_page(Page::containing_address(dma_access_address));
-        if GHCB_WRAPPER.get().is_some() {
-            sev::deinit_ghcb();
-        }
+    drop(fwcfg);
+    if sev_status().contains(SevStatus::SNP_ACTIVE) && GHCB_WRAPPER.get().is_some() {
+        sev::deinit_ghcb();
     }
     paging::remap_first_huge_page(encrypted);
 

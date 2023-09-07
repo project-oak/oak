@@ -28,7 +28,7 @@ use x86_64::{
 };
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::io_port_factory;
+use crate::{io_port_factory, sev::Shared, BootAllocator};
 
 // See https://www.qemu.org/docs/master/specs/fw_cfg.html for documentation about the various data structures and constants.
 const FWCFG_PORT_SELECTOR: u16 = 0x510;
@@ -154,8 +154,8 @@ pub struct FwCfg {
     data: PortWrapper<u8>,
     dma_high: PortWrapper<u32>,
     dma_low: PortWrapper<u32>,
-    dma_buf: &'static mut DmaBuffer,
-    dma_access: &'static mut FwCfgDmaAccess,
+    dma_buf: Shared<DmaBuffer, &'static BootAllocator>,
+    dma_access: Shared<FwCfgDmaAccess, &'static BootAllocator>,
     dma_enabled: bool,
 }
 
@@ -168,10 +168,7 @@ impl FwCfg {
     ///
     /// The caller has to guarantee that at least doing the probe will not cause any adverse
     /// effects.
-    pub unsafe fn new(
-        dma_buf: &'static mut DmaBuffer,
-        dma_access: &'static mut FwCfgDmaAccess,
-    ) -> Result<Self, &'static str> {
+    pub unsafe fn new(alloc: &'static BootAllocator) -> Result<Self, &'static str> {
         let mut fwcfg = Self {
             selector: io_port_factory().new_writer(FWCFG_PORT_SELECTOR),
             data: io_port_factory().new_reader(FWCFG_PORT_DATA),
@@ -179,8 +176,8 @@ impl FwCfg {
             // The DMA address must be big-endian encoded, so the low address is 4 bytes further
             // than the high address.
             dma_low: io_port_factory().new_writer(FWCFG_PORT_DMA + 4),
-            dma_buf,
-            dma_access,
+            dma_buf: Shared::new_in(DmaBuffer::default(), alloc),
+            dma_access: Shared::new_in(FwCfgDmaAccess::default(), alloc),
             dma_enabled: false,
         };
 
@@ -429,7 +426,7 @@ impl FwCfg {
         // physical memory to virtual memory.
         let length = chunk.len() as u32;
         *self.dma_access = FwCfgDmaAccess::new(ControlFlags::READ, length, address);
-        let dma_access_address = self.dma_access as *const _ as usize as u64;
+        let dma_access_address = self.dma_access.as_ref() as *const _ as usize as u64;
         let dma_low = (dma_access_address & 0xFFFFFFFF) as u32;
         let dma_high = (dma_access_address >> 32) as u32;
         // The DMA address halves must be written in big endian format, and the high half must be
