@@ -18,6 +18,9 @@
 
 extern crate alloc;
 
+#[cfg(test)]
+extern crate std;
+
 pub mod proto {
     pub mod oak {
         pub mod crypto {
