@@ -151,20 +151,6 @@ jobs:
           fi
           echo "provenance_digest=$(ent put --digest-format=human --porcelain $PROVENANCE_FILENAME)" >> $GITHUB_OUTPUT
 
-      # Add the provenance digest to the ./comment file as a TOML formatted doc.
-      # Print the contents of the ./comment file to the log to help debugging.
-      - name: Format artifact and provenance digest
-        run: |
-          set -o errexit
-          set -o nounset
-          set -o xtrace
-          set -o pipefail
-          echo -e "\n" >> ./comment
-          echo -e "artifact_name = \"$(basename ${{ needs.get_inputs.outputs.artifact-path }})\"" >> ./comment
-          echo -e "artifact_digest = \"${{ steps.ent_upload_binary.outputs.binary_digest }}\"" >> ./comment
-          echo -e "provenance_digest = \"${{ steps.ent_upload_provenance.outputs.provenance_digest }}\"" >> ./comment
-          cat ./comment
-
       - name: Upload signed tag to Ent
         run: |
           set -o errexit
@@ -178,36 +164,6 @@ jobs:
           ent tag set --public-key=${{ inputs.ent-public-key }} \
             --label="provenance_${GITHUB_SHA}_${BINARY_NAME}" \
             --target=${{ steps.ent_upload_provenance.outputs.provenance_digest }}
-
-      # Post a comment on the PR containing the sha256 digests of the binary and its provenance.
-      - name: Post the comment (post-merge only)
-        if: github.event_name == 'push'
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs').promises;
-            const comment_contents = await fs.readFile('./comment');
-
-            const opts = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: context.sha
-            });
-            // See:
-            // - https://octokit.github.io/rest.js/v17#previews
-            // - https://developer.github.com/v3/repos/commits/#list-pull-requests-associated-with-commit
-            opts.mediaType = {
-                previews: ['groot']
-            };
-
-            const issues = await github.paginate(opts);
-
-            await github.rest.issues.createComment({
-              issue_number: issues[0].number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `${comment_contents}`});
 
   # Debug step similar to `upload_provenance`, but runs on pull-request events. Differs from
   # `upload_provenance` in that it does not publish the binary and its provenance into Ent and that
@@ -243,17 +199,3 @@ jobs:
         working-directory: downloads
         run: |
           echo "$(sha256sum ${{ needs.get_inputs.outputs.provenance-name }})"
-
-      - name: Format artifact and provenance digest (debug-step)
-        working-directory: downloads
-        run: |
-          echo -e "\n" >> ./comment
-          echo -e "artifact_name = \"$(basename ${{ needs.get_inputs.outputs.artifact-path }})\"" >> ./comment
-          echo -e "artifact_digest = \"$(cut -d' ' -f1 <<<$(sha256sum ${{ needs.get_inputs.outputs.artifact-path }}))\"" >> ./comment
-          echo -e "provenance_digest = \"$(cut -d' ' -f1 <<<$(sha256sum ${{ needs.get_inputs.outputs.provenance-name }}))\"" >> ./comment
-
-      # Debug step: Print the content of the ./comment file & inputs to the workflow.
-      - name: Print ./comment & inputs
-        working-directory: downloads
-        run: |
-          head -n 15 ./comment
