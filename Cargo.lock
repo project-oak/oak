@@ -1309,6 +1309,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "invalid_module"
+version = "0.1.0"
+
+[[package]]
 name = "io-lifetimes"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1976,6 +1980,7 @@ dependencies = [
  "env_logger",
  "http",
  "log",
+ "micro_rpc",
  "oak_client",
  "oak_functions_abi",
  "prost",
@@ -2069,6 +2074,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "benchmark",
  "byteorder",
  "env_logger",
  "hashbrown 0.13.2",

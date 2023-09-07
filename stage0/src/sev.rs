@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use crate::sev_status;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 pub use oak_sev_guest::ghcb::Ghcb;
@@ -22,7 +23,7 @@ use oak_sev_guest::{
     instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
     msr::{
         change_snp_page_state, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
-        SnpPageStateChangeRequest,
+        SevStatus, SnpPageStateChangeRequest,
     },
 };
 use spinning_top::Spinlock;
@@ -37,13 +38,13 @@ use x86_64::{
 
 pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
-pub fn init_ghcb(ghcb: &'static mut Ghcb, snp: bool) {
+pub fn init_ghcb(ghcb: &'static mut Ghcb) {
     let ghcb_addr = VirtAddr::from_ptr(ghcb as *const _);
 
-    share_page(Page::containing_address(ghcb_addr), snp);
+    share_page(Page::containing_address(ghcb_addr));
 
     // SNP requires that the GHCB is registered with the hypervisor.
-    if snp {
+    if sev_status().contains(SevStatus::SNP_ACTIVE) {
         let ghcb_location_request = RegisterGhcbGpaRequest::new(ghcb_addr.as_u64() as usize)
             .expect("invalid address for GHCB location");
         register_ghcb_location(ghcb_location_request)
@@ -70,7 +71,7 @@ pub fn deinit_ghcb() {
 }
 
 /// Shares a single 4KiB page with the hypervisor.
-pub fn share_page(page: Page<Size4KiB>, snp: bool) {
+pub fn share_page(page: Page<Size4KiB>) {
     let page_start = page.start_address().as_u64();
     // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that range.
     assert!(page_start < Size2MiB::SIZE);
@@ -87,7 +88,7 @@ pub fn share_page(page: Page<Size4KiB>, snp: bool) {
     tlb::flush_all();
 
     // SNP requires extra handling beyond just removing the encrypted bit.
-    if snp {
+    if sev_status().contains(SevStatus::SNP_ACTIVE) {
         let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Shared)
             .expect("invalid address for page location");
         change_snp_page_state(request).expect("couldn't change SNP state for page");

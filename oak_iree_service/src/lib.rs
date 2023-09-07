@@ -40,16 +40,23 @@ use oak_remote_attestation::{
     attester::{AttestationReportGenerator, Attester},
     handler::EncryptionHandler,
 };
+use prost::Message;
 
 struct OakIreeInstance {
     iree_model: iree::IreeModel,
 }
 
 impl OakIreeInstance {
-    fn invoke(&mut self, request: &[u8]) -> anyhow::Result<Vec<u8>> {
+    fn invoke(&mut self, request: &[u8]) -> Result<Vec<u8>, micro_rpc::Status> {
         self.iree_model
             .run(request)
             .context("couldn't run IREE inference")
+            .map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::Internal,
+                    format!("couldn't handle invoke: {:?}", err),
+                )
+            })
     }
 }
 
@@ -124,9 +131,8 @@ impl Iree for IreeService {
         let encryption_key_provider = self.encryption_key_provider.clone();
         let instance = self.get_instance()?;
         EncryptionHandler::create(encryption_key_provider, |r| {
-            instance
-                .invoke(&r)
-                .map_err(|err| anyhow::anyhow!("couldn't handle invoke: {:?}", err))
+            let response: micro_rpc::Response = instance.invoke(&r).into();
+            response.encode_to_vec()
         })
         .invoke(&request_message.body)
         .map(|response| InvokeResponse { body: response })

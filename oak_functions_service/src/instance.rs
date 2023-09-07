@@ -60,12 +60,6 @@ impl OakFunctionsInstance {
                 body: request.to_vec(),
             })
             .map(|response| response.body)
-            .map_err(|err| {
-                micro_rpc::Status::new_with_message(
-                    micro_rpc::StatusCode::Internal,
-                    format!("couldn't handle user request: {:?}", err),
-                )
-            })
     }
     /// See [`crate::proto::oak::functions::OakFunctions::extend_next_lookup_data`].
     pub fn extend_next_lookup_data(

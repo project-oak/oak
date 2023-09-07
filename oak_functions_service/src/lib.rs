@@ -38,13 +38,14 @@ pub mod logger;
 pub mod lookup;
 pub mod wasm;
 
-use alloc::{format, sync::Arc};
+use alloc::{format, sync::Arc, vec::Vec};
 use instance::OakFunctionsInstance;
 use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_remote_attestation::{
     attester::{AttestationReportGenerator, Attester},
     handler::EncryptionHandler,
 };
+use prost::Message;
 use proto::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
     FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
@@ -121,9 +122,12 @@ impl OakFunctions for OakFunctionsService {
         let encryption_key_provider = self.encryption_key_provider.clone();
         let instance = self.get_instance()?;
         EncryptionHandler::create(encryption_key_provider, |r| {
-            instance
-                .handle_user_request(&r)
-                .map_err(|err| anyhow::anyhow!("couldn't handle user request: {:?}", err))
+            // Wrap the invocation result (which may be an Error) into a micro RPC Response
+            // wrapper protobuf, and encode that as bytes.
+            let response_result: Result<Vec<u8>, micro_rpc::Status> =
+                instance.handle_user_request(&r);
+            let response: micro_rpc::Response = response_result.into();
+            response.encode_to_vec()
         })
         .invoke(&request.body)
         .map(|response| InvokeResponse { body: response })

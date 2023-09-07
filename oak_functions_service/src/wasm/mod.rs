@@ -219,32 +219,53 @@ where
         self,
         mut store: Store<UserState<L>>,
         module: Arc<wasmi::Module>,
-    ) -> anyhow::Result<(wasmi::Instance, Store<UserState<L>>)> {
+    ) -> Result<(wasmi::Instance, Store<UserState<L>>), micro_rpc::Status> {
         let instance = self
             .linker
             .instantiate(&mut store, &module)
-            .map_err(|err| anyhow::anyhow!("failed to instantiate Wasm module: {:?}", err))?
+            .map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::Internal,
+                    format!("could not instantiate Wasm module: {:?}", err),
+                )
+            })?
             // Use `main` as entry point.
             .ensure_no_start(&mut store)
             .map_err(|err| {
-                anyhow::anyhow!("failed to ensure no start in Wasm module: {:?}", err)
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::Internal,
+                    format!("failed to ensure no start in Wasm module: {:?}", err),
+                )
             })?;
 
         // Check that the instance exports "main".
         let _ = &instance
             .get_typed_func::<(), ()>(&store, MAIN_FUNCTION_NAME)
-            .expect("couldn't validate `main` export");
+            .map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::Internal,
+                    format!("couldn't validate `main` export: {:?}", err),
+                )
+            })?;
 
         // Check that the instance exports "alloc".
         let _ = &instance
             .get_typed_func::<i32, AbiPointer>(&store, ALLOC_FUNCTION_NAME)
-            .expect("couldn't validate `alloc` export");
+            .map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::Internal,
+                    format!("couldn't validate `alloc` export: {:?}", err),
+                )
+            })?;
 
         // Make sure that non-empty `memory` is attached to the instance. Fail early if
         // `memory` is not available.
-        instance
-            .get_memory(&store, MEMORY_NAME)
-            .ok_or_else(|| anyhow::anyhow!("couldn't find Wasm `memory` export"))?;
+        instance.get_memory(&store, MEMORY_NAME).ok_or_else(|| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::Internal,
+                format!("couldn't find Wasm `memory` export"),
+            )
+        })?;
 
         Ok((instance, store))
     }
@@ -446,7 +467,7 @@ where
 
     /// Handles a call to invoke by getting the raw request bytes from the body of the request to
     /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
-    pub fn handle_invoke(&self, invoke_request: Request) -> anyhow::Result<Response> {
+    pub fn handle_invoke(&self, invoke_request: Request) -> Result<Response, micro_rpc::Status> {
         let module = self.wasm_module.clone();
 
         let request = invoke_request.body;
