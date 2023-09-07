@@ -17,6 +17,7 @@
 // TODO(#3703): Remove when fixed.
 #![allow(clippy::extra_unused_type_parameters)]
 
+use alloc::vec::Vec;
 use bitflags::bitflags;
 use core::{cmp::min, ffi::CStr};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
@@ -287,6 +288,23 @@ impl FwCfg {
             self.read_buf(&mut buf[..len])?;
         }
         Ok(len)
+    }
+
+    /// Reads contents of a file; returns a vector with the bytes read.
+    ///
+    /// See <read_file> for more information.
+    pub fn read_file_vec(&mut self, file: &DirEntry) -> Result<Vec<u8>, &'static str> {
+        self.write_selector(file.selector())?;
+        let mut buf = Vec::new();
+        buf.resize(file.size(), 0);
+
+        if self.dma_enabled {
+            self.read_buf_dma(&mut buf)?;
+        } else {
+            self.read_buf(&mut buf)?;
+        }
+
+        Ok(buf)
     }
 
     /// Reads the size of the kernel command-line.
