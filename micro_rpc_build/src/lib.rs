@@ -50,6 +50,8 @@ pub fn compile(protos: &[impl AsRef<Path>], includes: &[impl AsRef<Path>]) {
     let mut config = prost_build::Config::new();
     config.service_generator(Box::new(ServiceGenerator {}));
     config
+        // Use BTreeMap to allow using this function in no-std crates.
+        .btree_map(["."])
         .compile_protos(protos, includes)
         .expect("couldn't compile protobuffer schema");
 }
@@ -81,13 +83,10 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!(""),
         format!("impl <S: {service_name}> ::micro_rpc::Transport for {server_name}<S> {{"),
         format!("    fn invoke(&mut self, request_bytes: &[u8]) -> Result<::prost::alloc::vec::Vec<u8>, !> {{"),
-        format!("        let response_bytes = self"),
+        format!("        let response: ::micro_rpc::Response = self"),
         format!("            .invoke_inner(request_bytes)"),
-        format!("            .map_or_else("),
-        format!("                ::micro_rpc::error_response,"),
-        format!("                ::micro_rpc::success_response,"),
-        format!("            )"),
-        format!("            .encode_to_vec();"),
+        format!("            .into();"),
+        format!("        let response_bytes = response.encode_to_vec();"),
         format!("        Ok(response_bytes)"),
         format!("    }}"),
         format!("}}"),

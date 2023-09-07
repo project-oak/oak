@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use bitflags::bitflags;
+use crate::sev_status;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 pub use oak_sev_guest::ghcb::Ghcb;
@@ -23,14 +23,12 @@ use oak_sev_guest::{
     instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
     msr::{
         change_snp_page_state, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
-        SnpPageStateChangeRequest,
+        SevStatus, SnpPageStateChangeRequest,
     },
 };
 use spinning_top::Spinlock;
-use strum::FromRepr;
 use x86_64::{
     instructions::tlb,
-    registers::model_specific::Msr,
     structures::paging::{
         frame::PhysFrameRange, page::AddressNotAligned, Page, PageSize, PageTable, PageTableFlags,
         PhysFrame, Size1GiB, Size2MiB, Size4KiB,
@@ -38,113 +36,15 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
-/// The cache memory type used with MTRR.  We only use Write-Protect mode which the Linux kernel
-/// expects to be enabled by the firmware in order to enable SEV.
-#[repr(u8)]
-#[allow(dead_code)] // Remove if this is ever ported to a public crate.
-#[derive(FromRepr)]
-pub enum MemoryType {
-    UC = 0, // Uncacheable.
-    WC = 1, // Write-Combining.
-    WT = 4, // Writethrough	Reads.
-    WP = 5, // Write-Protect.
-    WB = 6, // Writeback.
-}
+pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
-impl TryFrom<u8> for MemoryType {
-    type Error = &'static str;
-    fn try_from(value: u8) -> Result<MemoryType, &'static str> {
-        MemoryType::from_repr(value).ok_or("invalid value for MemoryType")
-    }
-}
-
-/// IA32_MTRR_DefType base model specific register.
-/// See <https://wiki.osdev.org/MTRR> for documentation.
-#[derive(Debug)]
-pub struct MTRRDefType;
-
-bitflags! {
-    /// Flags of the MTRRDefType Register.
-    pub struct MTRRDefTypeFlags: u64 {
-        /// Set this to enable MTRR.
-        const MTRR_ENABLE = 1 << 11;
-        /// Set to enable fixed-range support.
-        const FIXED_RANGE_ENABLE = 1 << 10;
-    }
-}
-
-impl MTRRDefType {
-    // The numeric ID of the model specific register.
-    const MSR_ID: u32 = 0x2ff;
-    // The underlying model specific register.
-    const MSR: Msr = Msr::new(Self::MSR_ID);
-
-    pub fn read() -> (MTRRDefTypeFlags, MemoryType) {
-        // If the GHCB is available we are running on SEV-ES or SEV-SNP, so we use the GHCB protocol
-        // to read the MSR, otherwise we read the MSR directly.
-        let msr_value = if let Some(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock()
-                .msr_read(Self::MSR_ID)
-                .expect("couldn't read the MSR using the GHCB protocol")
-        } else {
-            // Safety: This is safe because this MSR has been supported since the P6 family of
-            // Pentium processors (see https://en.wikipedia.org/wiki/Memory_type_range_register).
-            unsafe { Self::MSR.read() }
-        };
-        let memory_type: MemoryType = (msr_value as u8)
-            .try_into()
-            .expect("invalid MemoryType value");
-        (MTRRDefTypeFlags::from_bits_truncate(msr_value), memory_type)
-    }
-
-    /// Write the MTRRDefType flags and caching mode, preserving reserved values.
-    /// The Linux kernel requires the mode be set to `MemoryType::WP` since
-    /// July, 2022, with this requirement back-ported to 5.15.X, or it will silently crash when
-    /// SEV is enabled.
-    ///
-    /// The Linux kernel gives a warning that MTRR is not setup properly, which we can igore:
-    /// [    0.120763] mtrr: your CPUs had inconsistent MTRRdefType settings
-    /// [    0.121529] mtrr: probably your BIOS does not setup all CPUs.
-    /// [    0.122245] mtrr: corrected configuration.
-    ///
-    /// ## Safety
-    ///
-    /// Unsafe in rare cases such as when ROM is memory mapped, and we write to ROM, in a mode that
-    /// caches the write, although this would require unsafe code to do.
-    ///
-    /// When called with MTRRDefType::MTRR_ENABLE and MemoryType::WP, this operation is safe because
-    /// this specific MSR and mode has been supported since the P6 family of Pentium processors
-    /// (see <https://en.wikipedia.org/wiki/Memory_type_range_register>).
-    pub unsafe fn write(flags: MTRRDefTypeFlags, default_type: MemoryType) {
-        // Preserve values of reserved bits.
-        let (old_flags, _old_memory_type) = Self::read();
-        let reserved = old_flags.bits() & !MTRRDefTypeFlags::all().bits();
-        let new_value = reserved | flags.bits() | (default_type as u64);
-        let mut msr = Self::MSR;
-        // If the GHCB is available we are running on SEV-ES or SEV-SNP, so we use the GHCB protocol
-        // to write the MSR, otherwise we write the MSR directly.
-        if let Some(ghcb) = GHCB_WRAPPER.get() {
-            ghcb.lock()
-                .msr_write(Self::MSR_ID, new_value)
-                .expect("couldn't write the MSR using the GHCB protocol");
-        } else {
-            msr.write(new_value);
-        }
-    }
-}
-
-static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
-
-pub fn init_ghcb(
-    ghcb: &'static mut Ghcb,
-    snp: bool,
-) -> &'static Spinlock<GhcbProtocol<'static, Ghcb>> {
+pub fn init_ghcb(ghcb: &'static mut Ghcb) {
     let ghcb_addr = VirtAddr::from_ptr(ghcb as *const _);
 
-    share_page(Page::containing_address(ghcb_addr), snp);
+    share_page(Page::containing_address(ghcb_addr));
 
     // SNP requires that the GHCB is registered with the hypervisor.
-    if snp {
+    if sev_status().contains(SevStatus::SNP_ACTIVE) {
         let ghcb_location_request = RegisterGhcbGpaRequest::new(ghcb_addr.as_u64() as usize)
             .expect("invalid address for GHCB location");
         register_ghcb_location(ghcb_location_request)
@@ -162,7 +62,6 @@ pub fn init_ghcb(
     {
         panic!("couldn't initialize GHCB wrapper");
     }
-    GHCB_WRAPPER.get().unwrap()
 }
 
 /// Stops sharing the GHCB with the hypervisor when running with AMD SEV-SNP enabled.
@@ -172,7 +71,7 @@ pub fn deinit_ghcb() {
 }
 
 /// Shares a single 4KiB page with the hypervisor.
-pub fn share_page(page: Page<Size4KiB>, snp: bool) {
+pub fn share_page(page: Page<Size4KiB>) {
     let page_start = page.start_address().as_u64();
     // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that range.
     assert!(page_start < Size2MiB::SIZE);
@@ -189,7 +88,7 @@ pub fn share_page(page: Page<Size4KiB>, snp: bool) {
     tlb::flush_all();
 
     // SNP requires extra handling beyond just removing the encrypted bit.
-    if snp {
+    if sev_status().contains(SevStatus::SNP_ACTIVE) {
         let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Shared)
             .expect("invalid address for page location");
         change_snp_page_state(request).expect("couldn't change SNP state for page");

@@ -9,6 +9,7 @@ license = "Apache-2.0"
 bitflags = "*"
 elf = { version = "*", default-features = false }
 log = "*"
+linked_list_allocator = "*"
 oak_core = { path = "../oak_core", default-features = false }
 oak_linux_boot_params = { path = "../linux_boot_params" }
 oak_sev_guest = { path = "../oak_sev_guest", default-features = false }

@@ -44,7 +44,6 @@ struct OakFunctionsTestConfig {
 /// Similar to the integration test, but wrapped in a non-async function, and invoking the Wasm
 /// module in the benchmark loop.
 fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
-    env_logger::init();
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
@@ -121,9 +120,9 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
 
     // Invoke the function once outside of the benchmark loop to make sure it's ready.
     {
-        log::debug!("invoking function");
+        log::debug!("invoking handle_user_request");
         let response = runtime
-            .block_on(client.invoke(&invoke_request))
+            .block_on(client.handle_user_request(&invoke_request))
             .expect("Failed to receive response.");
         log::debug!("received response {:?}", response);
         assert!(response.is_ok());
@@ -134,14 +133,18 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         let (decrypted_response, _authenticated_data) = client_encryptor
             .decrypt(&encrypted_response)
             .expect("could not decrypt response");
-        assert_eq!(decrypted_response, config.expected_response);
+        let response: Result<Vec<u8>, micro_rpc::Status> =
+            micro_rpc::Response::decode(decrypted_response.as_ref())
+                .expect("could not decode response")
+                .into();
+        assert_eq!(response.unwrap(), config.expected_response);
     }
 
-    // We need to make sure to block on the future returned by `invoke`, otherwise the benchmark
-    // will finish before the request is sent.
+    // We need to make sure to block on the future returned by `handle_user_request`, otherwise the
+    // benchmark will finish before the request is sent.
     b.iter(|| {
         let response = runtime
-            .block_on(client.invoke(&invoke_request))
+            .block_on(client.handle_user_request(&invoke_request))
             .expect("Failed to receive response.");
         assert!(response.is_ok());
     });
@@ -155,6 +158,12 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
 
 #[bench]
 fn bench_key_value_lookup(b: &mut Bencher) {
+    // See https://github.com/rust-cli/env_logger/#in-tests.
+    let _ = env_logger::builder()
+        .is_test(true)
+        .filter_level(log::LevelFilter::Trace)
+        .try_init();
+
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
         .expect("Failed to build Wasm module");
     run_bench(

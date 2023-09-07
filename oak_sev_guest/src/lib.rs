@@ -18,9 +18,11 @@
 //! interact with the hypervisor and the secure processor.
 
 #![no_std]
+#![feature(offset_of)]
 
 use x86_64::{PhysAddr, VirtAddr};
 
+pub mod ap_jump_table;
 pub mod cpuid;
 #[cfg(feature = "rust-crypto")]
 pub mod crypto;

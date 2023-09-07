@@ -17,7 +17,8 @@
 use crate::rekor::*;
 use std::fs;
 
-use alloc::{sync::Arc, vec};
+use crate::proto::oak::verification::v1::RekorEntryVerificationData;
+use alloc::{sync::Arc, vec, vec::Vec};
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_remote_attestation::{
@@ -25,8 +26,14 @@ use oak_remote_attestation::{
     proto::oak::session::v1::{AttestationEndorsement, BinaryAttestation},
 };
 
+use crate::proto::oak::verification::v1::{
+    transparency_verification_options::RekorEntryVerification::{self, VerificationData},
+    SkipRekorEntryVerification, TransparencyVerificationOptions,
+};
+
 use crate::verifier::{
-    verify_binary_attestation, AttestationVerifier, InsecureAttestationVerifier, ReferenceValue,
+    verify_transparent_release_endorsement, AttestationVerifier, InsecureAttestationVerifier,
+    ReferenceValue,
 };
 
 const TEST_ATTESTATION_ENDORSEMENT: AttestationEndorsement = AttestationEndorsement {
@@ -37,7 +44,8 @@ const TEST_ATTESTATION_ENDORSEMENT: AttestationEndorsement = AttestationEndorsem
 const TEST_REFERENCE_VALUE: ReferenceValue = ReferenceValue {
     binary_hash: vec![],
 };
-const BINARY_HASH: &str = "39051983bbb600bbfb91bd22ee4c976420f8f0c6a895fd083dcb0d153ddd5fd6";
+
+const BINARY_DIGEST: &str = "39051983bbb600bbfb91bd22ee4c976420f8f0c6a895fd083dcb0d153ddd5fd6";
 
 struct TestData {
     endorsement_bytes: Vec<u8>,
@@ -138,21 +146,140 @@ fn test_empty_attestation() {
 }
 
 #[test]
-fn test_verify_binary_attestation() {
+fn test_verify_transparent_release_endorsement_with_rekor_verification() {
     let testdata = load_testdata();
-    let base64_pem_encoded_rekor_public_key =
-        BASE64_STANDARD.encode(&testdata.rekor_public_key_pem_bytes);
+    let skip_rekor_verification = false;
+    let verification_options = get_verification_options(&testdata, skip_rekor_verification);
+
     let binary_attestation = BinaryAttestation {
         endorsement_statement: testdata.endorsement_bytes,
         rekor_log_entry: testdata.log_entry_bytes,
-        base64_pem_encoded_rekor_public_key,
+        base64_pem_encoded_rekor_public_key: BASE64_STANDARD
+            .encode(&testdata.rekor_public_key_pem_bytes),
     };
 
-    let result = verify_binary_attestation(
-        BINARY_HASH.as_bytes(),
+    let result = verify_transparent_release_endorsement(
+        BINARY_DIGEST.as_bytes(),
+        "sha256",
         &binary_attestation,
-        &testdata.rekor_public_key_pem_bytes,
-        &testdata.endorser_public_key_pem_bytes,
+        &verification_options,
     );
     assert!(result.is_ok(), "{:?}", result);
+}
+
+#[test]
+fn test_verify_transparent_release_endorsement_with_rekor_verification_but_missing_digest() {
+    let testdata = load_testdata();
+    let skip_rekor_verification = false;
+    let verification_options = get_verification_options(&testdata, skip_rekor_verification);
+
+    let binary_attestation = BinaryAttestation {
+        endorsement_statement: testdata.endorsement_bytes,
+        rekor_log_entry: testdata.log_entry_bytes,
+        base64_pem_encoded_rekor_public_key: BASE64_STANDARD
+            .encode(&testdata.rekor_public_key_pem_bytes),
+    };
+
+    let result = verify_transparent_release_endorsement(
+        BINARY_DIGEST.as_bytes(),
+        "sha2-384",
+        &binary_attestation,
+        &verification_options,
+    );
+    assert!(result.is_err(), "{:?}", result);
+    assert!(result
+        .map_err(|err| format!("{err}"))
+        .unwrap_err()
+        .contains("missing sha2-384 digest"));
+}
+
+#[test]
+fn test_verify_transparent_release_endorsement_with_rekor_verification_but_invalid_rekor_public_key(
+) {
+    let testdata = load_testdata();
+    let skip_rekor_verification = false;
+    let verification_options = get_verification_options(&testdata, skip_rekor_verification);
+
+    let binary_attestation = BinaryAttestation {
+        endorsement_statement: testdata.endorsement_bytes,
+        rekor_log_entry: testdata.log_entry_bytes,
+        base64_pem_encoded_rekor_public_key: BASE64_STANDARD
+            .encode(&testdata.endorser_public_key_pem_bytes),
+    };
+
+    let result = verify_transparent_release_endorsement(
+        BINARY_DIGEST.as_bytes(),
+        "sha256",
+        &binary_attestation,
+        &verification_options,
+    );
+    assert!(result.is_err(), "{:?}", result);
+    assert!(result
+        .map_err(|err| format!("{err}"))
+        .unwrap_err()
+        .contains("Rekor public key verification failed"));
+}
+
+#[test]
+fn test_verify_transparent_release_endorsement_no_rekor_entry_and_skip_rekor_verification() {
+    let testdata = load_testdata();
+    let skip_rekor_verification = true;
+    let verification_options = get_verification_options(&testdata, skip_rekor_verification);
+
+    let binary_attestation = BinaryAttestation {
+        endorsement_statement: testdata.endorsement_bytes,
+        rekor_log_entry: Vec::new(),
+        base64_pem_encoded_rekor_public_key: "".to_string(),
+    };
+
+    let result = verify_transparent_release_endorsement(
+        BINARY_DIGEST.as_bytes(),
+        "sha256",
+        &binary_attestation,
+        &verification_options,
+    );
+    assert!(result.is_ok(), "{:?}", result);
+}
+
+#[test]
+fn test_verify_transparent_release_endorsement_no_rekor_entry_but_require_rekor_verification() {
+    let testdata = load_testdata();
+    let skip_rekor_verification = false;
+    let verification_options = get_verification_options(&testdata, skip_rekor_verification);
+
+    let binary_attestation = BinaryAttestation {
+        endorsement_statement: testdata.endorsement_bytes,
+        rekor_log_entry: Vec::new(),
+        base64_pem_encoded_rekor_public_key: "".to_string(),
+    };
+
+    let result = verify_transparent_release_endorsement(
+        BINARY_DIGEST.as_bytes(),
+        "sha256",
+        &binary_attestation,
+        &verification_options,
+    );
+    assert!(result.is_err(), "{:?}", result);
+}
+
+fn get_verification_options(
+    testdata: &TestData,
+    skip_rekor_verification: bool,
+) -> TransparencyVerificationOptions {
+    let base64_pem_encoded_rekor_public_key =
+        BASE64_STANDARD.encode(&testdata.rekor_public_key_pem_bytes);
+    let base64_pem_encoded_endorser_public_key =
+        BASE64_STANDARD.encode(&testdata.endorser_public_key_pem_bytes);
+
+    let rekor_entry_verification = match skip_rekor_verification {
+        true => Some(RekorEntryVerification::Skip(SkipRekorEntryVerification {})),
+        false => Some(VerificationData(RekorEntryVerificationData {
+            base64_pem_encoded_rekor_public_key,
+            base64_pem_encoded_endorser_public_key,
+        })),
+    };
+
+    TransparencyVerificationOptions {
+        rekor_entry_verification,
+    }
 }

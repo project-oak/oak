@@ -36,14 +36,13 @@ pub struct PublicKeyInfo {
 
 /// Wraps a closure to an underlying function with request encryption and response decryption logic,
 /// based on the provided encryption key.
-pub struct EncryptionHandler<H: FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>> {
+pub struct EncryptionHandler<H: FnOnce(Vec<u8>) -> Vec<u8>> {
     // TODO(#3442): Use attester to attest to the public key.
     encryption_key_provider: Arc<EncryptionKeyProvider>,
     request_handler: H,
 }
 
-// TODO(#4249): Make the inner function infallible.
-impl<H: FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>> EncryptionHandler<H> {
+impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
     pub fn create(encryption_key_provider: Arc<EncryptionKeyProvider>, request_handler: H) -> Self {
         Self {
             encryption_key_provider,
@@ -52,19 +51,30 @@ impl<H: FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>> EncryptionHandler<H> {
     }
 }
 
-impl<H: FnOnce(Vec<u8>) -> anyhow::Result<Vec<u8>>> EncryptionHandler<H> {
+impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
     pub fn invoke(self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
-        let mut server_encryptor = ServerEncryptor::new(self.encryption_key_provider.clone());
-
-        // Deserialize and decrypt request.
+        // Deserialize request.
         let encrypted_request = EncryptedRequest::decode(request_body)
             .map_err(|error| anyhow!("couldn't deserialize request: {:?}", error))?;
+
+        // Initialize server encryptor.
+        let serialized_encapsulated_public_key = encrypted_request
+            .serialized_encapsulated_public_key
+            .as_ref()
+            .expect("initial request message doesn't contain encapsulated public key");
+        let mut server_encryptor = ServerEncryptor::create(
+            serialized_encapsulated_public_key,
+            self.encryption_key_provider.clone(),
+        )
+        .map_err(|error| anyhow!("couldn't create server encryptor: {:?}", error))?;
+
+        // Decrypt request.
         let (request, _) = server_encryptor
             .decrypt(&encrypted_request)
             .context("couldn't decrypt request")?;
 
         // Handle request.
-        let response = (self.request_handler)(request).context("couldn't handle request")?;
+        let response = (self.request_handler)(request);
         log::info!("plaintext response: {:?}", response);
 
         // Encrypt and serialize response.

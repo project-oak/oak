@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use alloc::boxed::Box;
 use oak_core::sync::OnceCell;
 use spinning_top::Spinlock;
 use x86_64::{
@@ -21,6 +22,8 @@ use x86_64::{
     structures::paging::{page_table::PageTableFlags, PageSize, PageTable, Size2MiB, Size4KiB},
     PhysAddr,
 };
+
+use crate::BOOT_ALLOC;
 
 pub static mut PML4: PageTable = PageTable::new();
 pub static mut PDPT: PageTable = PageTable::new();
@@ -64,7 +67,7 @@ pub fn init_page_table_refs(encrypted: u64) {
     // Set up a new page table that maps the first 2MiB as 4KiB pages, so that we can share
     // individual 4KiB pages with the hypervisor as needed. We are using an identity mapping
     // between virtual and physical addresses.
-    let pt_0 = crate::BOOT_ALLOC.leak(PageTable::new()).unwrap();
+    let pt_0 = Box::leak(Box::new_in(PageTable::new(), &BOOT_ALLOC));
     pt_0.iter_mut().enumerate().skip(1).for_each(|(i, entry)| {
         entry.set_addr(
             PhysAddr::new(((i as u64) * Size4KiB::SIZE) | encrypted),

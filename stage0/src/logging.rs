@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
+use crate::io_port_factory;
 use core::{fmt::Write, ops::DerefMut};
-use oak_sev_guest::io::PortFactoryWrapper;
 use sev_serial::SerialPort;
 use spinning_top::Spinlock;
 
@@ -47,10 +47,10 @@ impl log::Log for Logger {
 
 static LOGGER: Logger = Logger {};
 
-pub fn init_logging(port_factory: PortFactoryWrapper) {
+pub fn init_logging() {
     // Our contract with the launcher requires the first serial port to be
     // available, so assuming the loader adheres to it, this is safe.
-    let mut port = unsafe { SerialPort::new(SERIAL_BASE, port_factory) };
+    let mut port = unsafe { SerialPort::new(SERIAL_BASE, io_port_factory()) };
     port.init()
         .expect("couldn't initialize logging serial port");
     {

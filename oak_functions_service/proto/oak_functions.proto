@@ -27,7 +27,7 @@ service OakFunctions {
   // Handles an invocation coming from a client.
   //
   // method_id: 1
-  rpc Invoke(InvokeRequest) returns (InvokeResponse);
+  rpc HandleUserRequest(InvokeRequest) returns (InvokeResponse);
 
   // Extends the next lookup data by the given chunk of lookup data. Only
   // after the sender calls finishes building the next lookup data, the receiver replaces the

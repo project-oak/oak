@@ -14,6 +14,7 @@ hex = "*"
 oak_remote_attestation = { workspace = true }
 oak_transparency_claims = { workspace = true }
 p256 = { version = "*", features = ["ecdsa-core", "ecdsa", "pem"] }
+prost = { workspace = true }
 serde = { version = "*", features = ["derive"] }
 serde_jcs = "*"
 serde_json = "*"
@@ -21,3 +22,6 @@ sha2 = { version = "*", default-features = false }
 
 [dev-dependencies]
 oak_crypto = { workspace = true }
+
+[build-dependencies]
+micro_rpc_build = { workspace = true }

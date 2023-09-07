@@ -52,20 +52,14 @@ impl OakFunctionsInstance {
             wasm_handler,
         })
     }
-    /// See [`crate::proto::oak::functions::OakFunctions::invoke`].
-    pub fn invoke(&mut self, request: &[u8]) -> Result<Vec<u8>, micro_rpc::Status> {
+    /// See [`crate::proto::oak::functions::OakFunctions::handle_user_request`].
+    pub fn handle_user_request(&mut self, request: &[u8]) -> Result<Vec<u8>, micro_rpc::Status> {
         // TODO(#3442): Implement constant response size policy.
         self.wasm_handler
             .handle_invoke(Request {
                 body: request.to_vec(),
             })
             .map(|response| response.body)
-            .map_err(|err| {
-                micro_rpc::Status::new_with_message(
-                    micro_rpc::StatusCode::Internal,
-                    format!("couldn't handle invoke: {:?}", err),
-                )
-            })
     }
     /// See [`crate::proto::oak::functions::OakFunctions::extend_next_lookup_data`].
     pub fn extend_next_lookup_data(

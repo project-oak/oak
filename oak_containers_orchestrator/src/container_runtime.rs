@@ -19,6 +19,7 @@
 
 use anyhow::Context;
 use std::path::PathBuf;
+use tokio::sync::oneshot::Sender;
 
 /// Representation of a minimal OCI filesystem bundle config, including just the required fields.
 /// Ref: <https://github.com/opencontainers/runtime-spec/blob/c4ee7d12c742ffe806cd9350b6af3b4b19faed6f/config.md>
@@ -73,7 +74,10 @@ async fn rmount_dir(source: PathBuf, target: PathBuf) -> Result<(), anyhow::Erro
     Ok(())
 }
 
-pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
+pub async fn run(
+    container_bundle: &[u8],
+    exit_notification_sender: Sender<()>,
+) -> Result<(), anyhow::Error> {
     tokio::fs::create_dir(CONTAINER_DIR).await?;
     log::info!("Unpacking container bundle");
     tar::Archive::new(container_bundle).unpack(CONTAINER_DIR)?;
@@ -177,5 +181,6 @@ pub async fn run(container_bundle: &[u8]) -> Result<(), anyhow::Error> {
         .await?;
     log::info!("Container exited with status {status:?}");
 
+    let _ = exit_notification_sender.send(());
     Ok(())
 }

@@ -22,8 +22,9 @@ use crate::{
     hpke::{setup_base_recipient, setup_base_sender, KeyPair, RecipientContext, SenderContext},
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
-use alloc::{sync::Arc, vec::Vec};
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use anyhow::{anyhow, Context};
+use async_trait::async_trait;
 
 /// Info string used by Hybrid Public Key Encryption;
 pub(crate) const OAK_HPKE_INFO: &[u8] = b"Oak Hybrid Public Key Encryption v1";
@@ -69,6 +70,14 @@ impl RecipientContextGenerator for EncryptionKeyProvider {
         setup_base_recipient(encapsulated_public_key, &self.key_pair, OAK_HPKE_INFO)
             .context("couldn't generate recipient crypto context")
     }
+}
+
+#[async_trait]
+pub trait AsyncRecipientContextGenerator {
+    async fn generate_recipient_context(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<RecipientContext>;
 }
 
 /// Encryptor object for encrypting client requests that will be sent to the server and decrypting
@@ -146,22 +155,26 @@ impl ClientEncryptor {
 /// Encryptor object for decrypting client requests that are received by the server and encrypting
 /// server responses that will be sent back to the client. Each Encryptor object corresponds to a
 /// single crypto session between the client and the server.
-/// Encryptor state is initialized after receiving an initial request message containing client's
-/// encapsulated public key.
 ///
 /// Sequence numbers for requests and responses are incremented separately, meaning that there could
 /// be multiple responses per request and multiple requests per response.
 pub struct ServerEncryptor {
-    recipient_context_generator: Arc<dyn RecipientContextGenerator>,
-    recipient_context: Option<RecipientContext>,
+    recipient_context: RecipientContext,
 }
 
 impl ServerEncryptor {
-    pub fn new(recipient_context_generator: Arc<dyn RecipientContextGenerator>) -> Self {
-        Self {
-            recipient_context_generator,
-            recipient_context: None,
-        }
+    pub fn create(
+        serialized_encapsulated_public_key: &[u8],
+        recipient_context_generator: Arc<dyn RecipientContextGenerator>,
+    ) -> anyhow::Result<Self> {
+        let recipient_context = recipient_context_generator
+            .generate_recipient_context(serialized_encapsulated_public_key)
+            .context("couldn't generate recipient crypto context")?;
+        Ok(Self::new(recipient_context))
+    }
+
+    pub fn new(recipient_context: RecipientContext) -> Self {
+        Self { recipient_context }
     }
 
     /// Decrypts a [`EncryptedRequest`] proto message using AEAD.
@@ -171,34 +184,12 @@ impl ServerEncryptor {
         &mut self,
         encrypted_request: &EncryptedRequest,
     ) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
-        match &mut self.recipient_context {
-            Some(context) => Self::decrypt_with_context(encrypted_request, context),
-            None => {
-                let serialized_encapsulated_public_key = encrypted_request
-                    .serialized_encapsulated_public_key
-                    .as_ref()
-                    .context("initial request message doesn't contain encapsulated public key")?;
-                let mut recipient_context = self
-                    .recipient_context_generator
-                    .generate_recipient_context(serialized_encapsulated_public_key)
-                    .context("couldn't generate recipient crypto context")?;
-                let (plaintext, associated_data) =
-                    Self::decrypt_with_context(encrypted_request, &mut recipient_context)?;
-                self.recipient_context = Some(recipient_context);
-                Ok((plaintext, associated_data))
-            }
-        }
-    }
-
-    fn decrypt_with_context(
-        encrypted_request: &EncryptedRequest,
-        context: &mut RecipientContext,
-    ) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
         let encrypted_message = encrypted_request
             .encrypted_message
             .as_ref()
             .context("request doesn't contain encrypted message")?;
-        let plaintext = context
+        let plaintext = self
+            .recipient_context
             .open(
                 &encrypted_message.ciphertext,
                 &encrypted_message.associated_data,
@@ -215,19 +206,80 @@ impl ServerEncryptor {
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<EncryptedResponse> {
-        match &mut self.recipient_context {
-            Some(context) => {
-                let ciphertext = context
-                    .seal(plaintext, associated_data)
-                    .context("couldn't encrypt response")?;
-                let response = EncryptedResponse {
-                    encrypted_message: Some(AeadEncryptedMessage {
-                        ciphertext,
-                        associated_data: associated_data.to_vec(),
-                    }),
-                };
-                Ok(response)
+        let ciphertext = self
+            .recipient_context
+            .seal(plaintext, associated_data)
+            .context("couldn't encrypt response")?;
+        let response = EncryptedResponse {
+            encrypted_message: Some(AeadEncryptedMessage {
+                ciphertext,
+                associated_data: associated_data.to_vec(),
+            }),
+        };
+        Ok(response)
+    }
+}
+
+/// Encryptor object for decrypting client requests that are received by the server and encrypting
+/// server responses that will be sent back to the client. Each Encryptor object corresponds to a
+/// single crypto session between the client and the server.
+/// Encryptor state is initialized after receiving an initial request message containing client's
+/// encapsulated public key.
+///
+/// Sequence numbers for requests and responses are incremented separately, meaning that there could
+/// be multiple responses per request and multiple requests per response.
+// TODO(#4311): Merge `AsyncServerEncryptor` and `ServerEncryptor` once there is `async` support in
+// the Restricted Kernel.
+pub struct AsyncServerEncryptor {
+    recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator>,
+    inner: Option<ServerEncryptor>,
+}
+
+impl AsyncServerEncryptor {
+    pub fn new(recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator>) -> Self {
+        Self {
+            recipient_context_generator,
+            inner: None,
+        }
+    }
+
+    /// Decrypts a [`EncryptedRequest`] proto message using AEAD.
+    /// Returns a response message plaintext and associated data.
+    /// <https://datatracker.ietf.org/doc/html/rfc5116>
+    pub async fn decrypt(
+        &mut self,
+        encrypted_request: &EncryptedRequest,
+    ) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
+        match &mut self.inner {
+            Some(inner) => inner.decrypt(encrypted_request),
+            None => {
+                let serialized_encapsulated_public_key = encrypted_request
+                    .serialized_encapsulated_public_key
+                    .as_ref()
+                    .context("initial request message doesn't contain encapsulated public key")?;
+                let recipient_context = self
+                    .recipient_context_generator
+                    .generate_recipient_context(serialized_encapsulated_public_key)
+                    .await
+                    .context("couldn't generate recipient crypto context")?;
+                let mut inner = ServerEncryptor::new(recipient_context);
+                let (plaintext, associated_data) = inner.decrypt(encrypted_request)?;
+                self.inner = Some(inner);
+                Ok((plaintext, associated_data))
             }
+        }
+    }
+
+    /// Encrypts `plaintext` and authenticates `associated_data` using AEAD.
+    /// Returns a [`EncryptedResponse`] proto message.
+    /// <https://datatracker.ietf.org/doc/html/rfc5116>
+    pub fn encrypt(
+        &mut self,
+        plaintext: &[u8],
+        associated_data: &[u8],
+    ) -> anyhow::Result<EncryptedResponse> {
+        match &mut self.inner {
+            Some(inner) => inner.encrypt(plaintext, associated_data),
             None => Err(anyhow!(
                 "couldn't encrypt response because crypto context is not initialized"
             )),

@@ -17,7 +17,25 @@ url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
 [policy.bitflags]
 criteria = ["safe-to-deploy", "crypto-safe"]
 
+[policy.block-buffer]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.cpufeatures]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.crypto-common]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.digest]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.generic-array]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
 [policy.elf]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[policy.linked_list_allocator]
 criteria = ["safe-to-deploy", "crypto-safe"]
 
 [policy.log]
@@ -35,6 +53,9 @@ criteria = ["safe-to-deploy", "crypto-safe"]
 [policy.sev_serial]
 criteria = ["safe-to-deploy", "crypto-safe"]
 
+[policy.sha2]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
 [policy.spinning_top]
 criteria = ["safe-to-deploy", "crypto-safe"]
 
@@ -48,4 +69,8 @@ criteria = ["safe-to-deploy", "crypto-safe"]
 criteria = ["safe-to-deploy", "crypto-safe"]
 
 [policy.zerocopy]
+criteria = ["safe-to-deploy", "crypto-safe"]
+
+[[exemptions.elf]]
+version = "0.7.2"
 criteria = ["safe-to-deploy", "crypto-safe"]

@@ -474,6 +474,34 @@ pub fn get_hypervisor_feature_support() -> Result<HypervisorFeatureSupportRespon
     read_protocol_msr().try_into()
 }
 
+pub struct ApResetHoldRequest;
+
+impl From<ApResetHoldRequest> for u64 {
+    fn from(_: ApResetHoldRequest) -> Self {
+        0x006
+    }
+}
+
+pub struct ApResetHoldResponse(bool);
+
+impl TryFrom<u64> for ApResetHoldResponse {
+    type Error = &'static str;
+    fn try_from(msr_value: u64) -> Result<Self, &'static str> {
+        const AP_RESET_HOLD_RESPONSE_INFO: u64 = 0x007;
+        if msr_value & GHCB_INFO_MASK != AP_RESET_HOLD_RESPONSE_INFO {
+            return Err("value is not a valid AP Reset Hold response");
+        }
+        Ok(Self((msr_value & !GHCB_INFO_MASK) > 0))
+    }
+}
+
+pub fn ap_reset_hold() -> Result<bool, &'static str> {
+    let request = ApResetHoldRequest;
+    write_protocol_msr_and_exit(request.into());
+    let response: ApResetHoldResponse = read_protocol_msr().try_into()?;
+    Ok(response.0)
+}
+
 /// The reason for requesting termination from the hypervisor.
 #[derive(Debug)]
 #[repr(u8)]
@@ -511,7 +539,7 @@ pub fn request_termination(request: TerminationRequest) -> ! {
 
 bitflags! {
     /// Flags indicating which SEV features are active.
-    #[derive(Clone, Copy, Default)]
+    #[derive(Clone, Copy, Debug, Default)]
     pub struct SevStatus: u64 {
         /// SEV is enabled for this guest.
         const SEV_ENABLED = (1 << 0);
@@ -533,10 +561,18 @@ bitflags! {
         const PREVENT_HOST_IBS_ENABLED = (1 << 8);
         /// SNP Branch Target Buffer Isolation is enabled for this guest.
         const SNP_BTB_ISOLATION_ENABLED = (1 << 9);
+        /// VMPL SSS (Supervisor Shadow Stack) is enabled for this guest.
+        const VMPL_SSS_ENABLED = (1 << 10);
         /// Secure Timestamp Counter is enabled for this guest.
         const SECURE_TSC_ENABLED = (1 << 11);
+        /// VMGEXIT Parameter is enabled for this guest.aes_gcm
+        const VMGEXIT_PARAMETER_ENABLED = (1 << 12);
+        /// The gust was run with Instruction-Based Virtualization enabled.
+        const INSTRUCTION_BASED_SAMPLING_ENABLED = (1 << 14);
         /// VMSA Register Protection is enabled for this guest.
         const VMSA_REG_PROT_ENABLED = (1 << 16);
+        /// SMT Protection is enabled for this guest.
+        const SMT_PROTECTION_ENABLED = (1 << 17);
     }
 }
 
@@ -754,5 +790,27 @@ mod tests {
         };
         let expected = 0x100u64 | ((TerminationReason::GhcbProtocolVersion as u64) << 16);
         assert_eq!(expected, request.into());
+    }
+
+    #[test]
+    fn test_ap_reset_hold_request() {
+        let request = ApResetHoldRequest;
+        assert_eq!(0x006u64, request.into());
+    }
+
+    #[test]
+    fn test_ap_reset_hold_response() {
+        let invalid = 1234u64;
+        let failure = 0x007u64;
+        let success = 0x1234007u64;
+
+        let error: Result<ApResetHoldResponse, &'static str> = invalid.try_into();
+        assert!(error.is_err());
+
+        let failure: ApResetHoldResponse = failure.try_into().unwrap();
+        assert!(!failure.0);
+
+        let success: ApResetHoldResponse = success.try_into().unwrap();
+        assert!(success.0);
     }
 }

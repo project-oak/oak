@@ -1266,6 +1266,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "invalid_module"
+version = "0.1.0"
+
+[[package]]
 name = "io-lifetimes"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1737,6 +1741,7 @@ dependencies = [
  "bytes",
  "oak_crypto",
  "oak_grpc_utils",
+ "oak_remote_attestation",
  "prost",
  "tokio",
  "tokio-stream",
@@ -1791,6 +1796,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "futures",
  "log",
  "oak_containers_orchestrator_client",
  "oak_crypto",
@@ -1855,6 +1861,7 @@ version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
+ "async-trait",
  "bytes",
  "hkdf",
  "hpke",
@@ -1862,6 +1869,7 @@ dependencies = [
  "prost",
  "rand_core 0.6.4",
  "sha2",
+ "tokio",
 ]
 
 [[package]]
@@ -1931,6 +1939,7 @@ dependencies = [
  "env_logger",
  "http",
  "log",
+ "micro_rpc",
  "oak_client",
  "oak_functions_abi",
  "prost",
@@ -2024,6 +2033,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "benchmark",
  "byteorder",
  "env_logger",
  "hashbrown 0.13.2",
@@ -2143,10 +2153,12 @@ dependencies = [
  "base64 0.21.0",
  "ecdsa",
  "hex",
+ "micro_rpc_build",
  "oak_crypto",
  "oak_remote_attestation",
  "oak_transparency_claims",
  "p256",
+ "prost",
  "serde",
  "serde_jcs",
  "serde_json",
@@ -2239,6 +2251,7 @@ version = "0.1.0"
 dependencies = [
  "bitflags 2.3.3",
  "elf",
+ "linked_list_allocator",
  "log",
  "oak_core",
  "oak_linux_boot_params",

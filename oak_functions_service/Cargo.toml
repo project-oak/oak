@@ -5,6 +5,11 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = ["deny_sensitive_logging"]
+# Disable sensitive logging.
+deny_sensitive_logging = []
+
 [dependencies]
 anyhow = { version = "*", default-features = false }
 byteorder = { version = "*", default-features = false }
@@ -23,6 +28,7 @@ wasmi = { version = "*", default-features = false }
 micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
+benchmark = { workspace = true }
 env_logger = { version = "*", default-features = false }
 oak_functions_test_utils = { workspace = true }
 oak_remote_attestation = { workspace = true }

@@ -50,6 +50,10 @@ pub struct Params {
     #[arg(long)]
     pub memory_size: Option<String>,
 
+    /// How many CPUs to give to the VM.
+    #[arg(long, default_value_t = 1)]
+    pub num_cpus: u8,
+
     /// Size (in kilobytes) of the ramdrive used for the system root.
     #[arg(long)]
     pub ramdrive_size: u32,
@@ -80,6 +84,7 @@ impl Params {
             kernel,
             initrd,
             memory_size: Some("8G".to_owned()),
+            num_cpus: 2,
             ramdrive_size: 3_000_000,
             telnet_console: None,
         }
@@ -109,6 +114,8 @@ impl Qemu {
         if let Some(memory_size) = params.memory_size {
             cmd.args(["-m", &memory_size]);
         };
+        // Number of CPUs to give to the VM.
+        cmd.args(["-smp", format!("{}", params.num_cpus).as_str()]);
         // Disable a bunch of hardware we don't need.
         cmd.arg("-nodefaults");
         cmd.arg("-nographic");

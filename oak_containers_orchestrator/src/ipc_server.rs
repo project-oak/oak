@@ -19,11 +19,12 @@ use crate::proto::oak::containers::{
     GetCryptoContextResponse,
 };
 use anyhow::Context;
+use futures::FutureExt;
 use oak_containers_orchestrator_client::LauncherClient;
 use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
 use oak_remote_attestation::attester::Attester;
 use std::sync::Arc;
-use tokio::net::UnixListener;
+use tokio::{net::UnixListener, sync::oneshot::Receiver};
 use tokio_stream::wrappers::UnixListenerStream;
 use tonic::{transport::Server, Request, Response};
 
@@ -92,6 +93,7 @@ pub async fn create<P>(
     attester: Attester,
     application_config: Vec<u8>,
     launcher_client: LauncherClient,
+    shutdown_receiver: Receiver<()>,
 ) -> Result<(), anyhow::Error>
 where
     P: AsRef<std::path::Path>,
@@ -108,7 +110,7 @@ where
 
     Server::builder()
         .add_service(OrchestratorServer::new(service_instance))
-        .serve_with_incoming(uds_stream)
+        .serve_with_incoming_shutdown(uds_stream, shutdown_receiver.map(|_| ()))
         .await?;
 
     Ok(())

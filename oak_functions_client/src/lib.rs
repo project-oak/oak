@@ -18,6 +18,7 @@ use oak_client::{
     proto::oak::session::v1::streaming_session_client::StreamingSessionClient,
     transport::GrpcStreamingTransport, OakClient,
 };
+use prost::Message;
 use tonic::transport::Channel;
 
 pub struct OakFunctionsClient {
@@ -38,10 +39,22 @@ impl OakFunctionsClient {
         Ok(Self { oak_client })
     }
 
-    pub async fn invoke(&mut self, request: &[u8]) -> anyhow::Result<Vec<u8>> {
-        self.oak_client
-            .invoke(request)
-            .await
-            .context("error invoking Oak Functions instance")
+    pub async fn invoke(&mut self, request: &[u8]) -> Result<Vec<u8>, micro_rpc::Status> {
+        // An error here indicates a failure with gRPC or encoding / decoding.
+        let response_bytes = self.oak_client.invoke(request).await.map_err(|err| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::Internal,
+                format!("couldn't invoke Oak Functions: {:?}", err),
+            )
+        })?;
+        // An error here is specific to the Oak Functions application (e.g. the Wasm module does not
+        // have the correct exported / imported functions).
+        let response = micro_rpc::Response::decode(response_bytes.as_slice()).map_err(|err| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::Internal,
+                format!("couldn't deserialize response wrapper: {:?}", err),
+            )
+        })?;
+        response.into()
     }
 }

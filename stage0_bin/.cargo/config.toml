@@ -6,4 +6,4 @@ rustflags = "-C relocation-model=static -C code-model=large"
 
 [unstable]
 # We need to build std / core because of the code model. This may be removed if / when it's possible to build stage0 without it in the future.
-build-std = ["core"]
+build-std = ["alloc", "core"]

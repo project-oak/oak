@@ -19,6 +19,7 @@
 
 extern crate alloc;
 
+use benchmark::proto::{benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest};
 use core::assert_matches::assert_matches;
 use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedResponse};
 use oak_functions_service::{
@@ -39,7 +40,10 @@ const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 fn init() {
     // See https://github.com/rust-cli/env_logger/#in-tests.
-    let _ = env_logger::builder().is_test(true).try_init();
+    let _ = env_logger::builder()
+        .is_test(true)
+        .filter_level(log::LevelFilter::Trace)
+        .try_init();
 }
 
 #[test]
@@ -51,7 +55,7 @@ fn it_should_not_handle_user_requests_before_initialization() {
     let request = InvokeRequest {
         body: vec![1, 2, 3],
     };
-    let result = client.invoke(&request).into_ok();
+    let result = client.handle_user_request(&request).into_ok();
 
     assert_matches!(
         result,
@@ -98,7 +102,7 @@ fn it_should_handle_user_requests_after_initialization() {
     let invoke_request = InvokeRequest {
         body: serialized_request,
     };
-    let result = client.invoke(&invoke_request).into_ok();
+    let result = client.handle_user_request(&invoke_request).into_ok();
     assert!(result.is_ok());
 }
 
@@ -124,6 +128,82 @@ fn it_should_only_initialize_once() {
             code: micro_rpc::StatusCode::FailedPrecondition,
             ..
         })
+    );
+}
+
+#[tokio::test]
+async fn it_should_error_on_invalid_wasm_module() {
+    init();
+    let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
+    let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
+
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("invalid_module").unwrap();
+    let wasm_bytes = std::fs::read(wasm_path).unwrap();
+    let request = InitializeRequest {
+        wasm_module: wasm_bytes,
+        constant_response_size: MOCK_CONSTANT_RESPONSE_SIZE,
+    };
+
+    let initialize_response = client.initialize(&request).into_ok().unwrap();
+    let server_encryption_public_key = initialize_response
+        .public_key_info
+        .expect("no public key info returned")
+        .public_key;
+
+    // TODO(#4274): Deduplicate this logic with Oak Client library.
+
+    // Encrypt request.
+    let mut client_encryptor =
+        ClientEncryptor::create(&server_encryption_public_key).expect("couldn't create encryptor");
+    let encrypted_request = client_encryptor
+        .encrypt(LOOKUP_TEST_KEY, EMPTY_ASSOCIATED_DATA)
+        .expect("couldn't encrypt request");
+
+    // Serialize request.
+    let mut serialized_request = vec![];
+    encrypted_request
+        .encode(&mut serialized_request)
+        .expect("couldn't serialize request");
+
+    // Send invoke request.
+    let lookup_response = client
+        .handle_user_request(&InvokeRequest {
+            body: serialized_request,
+        })
+        .expect("couldn't receive response");
+    assert!(lookup_response.is_ok());
+    let serialized_response = lookup_response.unwrap().body;
+
+    // Deserialize response.
+    let encrypted_response = EncryptedResponse::decode(serialized_response.as_ref())
+        .expect("couldn't deserialize response");
+
+    // Decrypt response.
+    let (response_bytes, _) = client_encryptor
+        .decrypt(&encrypted_response)
+        .expect("client couldn't decrypt response");
+
+    let response = micro_rpc::Response::decode(response_bytes.as_slice())
+        .map_err(|err| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::Internal,
+                format!("couldn't deserialize response wrapper: {:?}", err),
+            )
+        })
+        .expect("couldn't deserialize response wrapper");
+    log::info!("response: {:?}", response);
+    let response_result: Result<Vec<u8>, micro_rpc::Status> = response.into();
+    log::info!("response_result: {:?}", response_result);
+
+    // The error is encrypted and sent only to the client, and should say something about the Wasm
+    // module not being valid. The error is mostly user facing, so its details may change in the
+    // future, but here we check for a reasonable substring.
+    assert!(response_result.is_err());
+    let err = response_result.unwrap_err();
+    assert_eq!(err.code, micro_rpc::StatusCode::Internal);
+    assert_eq!(
+        err.message,
+        "couldn't validate `main` export: Func(ExportedFuncNotFound)"
     );
 }
 
@@ -161,6 +241,8 @@ async fn it_should_support_lookup_data() {
         .into_ok()
         .unwrap();
 
+    // TODO(#4274): Deduplicate this logic with Oak Client library.
+
     // Encrypt request.
     let mut client_encryptor =
         ClientEncryptor::create(&server_encryption_public_key).expect("couldn't create encryptor");
@@ -176,7 +258,7 @@ async fn it_should_support_lookup_data() {
 
     // Send invoke request.
     let lookup_response = client
-        .invoke(&InvokeRequest {
+        .handle_user_request(&InvokeRequest {
             body: serialized_request,
         })
         .expect("couldn't receive response");
@@ -188,9 +270,99 @@ async fn it_should_support_lookup_data() {
         .expect("couldn't deserialize response");
 
     // Decrypt response.
-    let (response, _) = client_encryptor
+    let (response_bytes, _) = client_encryptor
         .decrypt(&encrypted_response)
         .expect("client couldn't decrypt response");
 
-    assert_eq!(LOOKUP_TEST_VALUE, response);
+    let response = micro_rpc::Response::decode(response_bytes.as_slice())
+        .map_err(|err| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::Internal,
+                format!("couldn't deserialize response wrapper: {:?}", err),
+            )
+        })
+        .expect("couldn't deserialize response wrapper");
+    log::info!("response: {:?}", response);
+    let response_result: Result<Vec<u8>, micro_rpc::Status> = response.into();
+    log::info!("response_result: {:?}", response_result);
+
+    assert_eq!(LOOKUP_TEST_VALUE, response_result.unwrap());
+}
+
+#[tokio::test]
+async fn it_should_handle_wasm_panic() {
+    init();
+    let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
+    let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
+
+    // Use the benchmark Wasm module, which contains a function that panics.
+    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("benchmark").unwrap();
+    let wasm_bytes = std::fs::read(wasm_path).unwrap();
+    let request = InitializeRequest {
+        wasm_module: wasm_bytes,
+        constant_response_size: MOCK_CONSTANT_RESPONSE_SIZE,
+    };
+
+    let initialize_response = client.initialize(&request).into_ok().unwrap();
+    let server_encryption_public_key = initialize_response
+        .public_key_info
+        .expect("no public key info returned")
+        .public_key;
+
+    // Encrypt request.
+    let mut client_encryptor =
+        ClientEncryptor::create(&server_encryption_public_key).expect("couldn't create encryptor");
+
+    let request_data = vec![14, 12, 88];
+
+    let request = BenchmarkRequest {
+        action: Some(Action::EchoAndPanic(EchoAndPanicTest {
+            data: request_data.clone(),
+        })),
+        iterations: 1,
+    };
+
+    let encrypted_request = client_encryptor
+        .encrypt(&request.encode_to_vec(), EMPTY_ASSOCIATED_DATA)
+        .expect("couldn't encrypt request");
+
+    // Serialize request.
+    let mut serialized_request = vec![];
+    encrypted_request
+        .encode(&mut serialized_request)
+        .expect("couldn't serialize request");
+
+    // Send invoke request.
+    let lookup_response = client
+        .handle_user_request(&InvokeRequest {
+            body: serialized_request,
+        })
+        .expect("couldn't receive response");
+    assert!(lookup_response.is_ok());
+    let serialized_response = lookup_response.unwrap().body;
+
+    // Deserialize response.
+    let encrypted_response = EncryptedResponse::decode(serialized_response.as_ref())
+        .expect("couldn't deserialize response");
+
+    // Decrypt response.
+    let (response_bytes, _) = client_encryptor
+        .decrypt(&encrypted_response)
+        .expect("client couldn't decrypt response");
+
+    let response = micro_rpc::Response::decode(response_bytes.as_slice())
+        .map_err(|err| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::Internal,
+                format!("couldn't deserialize response wrapper: {:?}", err),
+            )
+        })
+        .expect("couldn't deserialize response wrapper");
+    log::info!("response: {:?}", response);
+    let response_result: Result<Vec<u8>, micro_rpc::Status> = response.into();
+    log::info!("response_result: {:?}", response_result);
+
+    // The current behaviour is that the panic is ignored and the response is the latest value
+    // written.
+    assert_eq!(request_data, response_result.unwrap());
 }

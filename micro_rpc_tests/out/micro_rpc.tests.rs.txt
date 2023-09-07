@@ -28,10 +28,8 @@ impl<S: TestService> ::micro_rpc::Transport for TestServiceServer<S> {
         &mut self,
         request_bytes: &[u8],
     ) -> Result<::prost::alloc::vec::Vec<u8>, !> {
-        let response_bytes = self
-            .invoke_inner(request_bytes)
-            .map_or_else(::micro_rpc::error_response, ::micro_rpc::success_response)
-            .encode_to_vec();
+        let response: ::micro_rpc::Response = self.invoke_inner(request_bytes).into();
+        let response_bytes = response.encode_to_vec();
         Ok(response_bytes)
     }
 }

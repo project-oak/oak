@@ -14,15 +14,20 @@
 // limitations under the License.
 //
 
+use crate::proto::oak::verification::v1::{
+    transparency_verification_options::RekorEntryVerification::VerificationData,
+    TransparencyVerificationOptions,
+};
 use alloc::vec::Vec;
-use anyhow::Context;
 use oak_remote_attestation::proto::oak::session::v1::{
     AttestationEndorsement, AttestationEvidence, BinaryAttestation,
 };
 
 use crate::rekor::{get_rekor_log_entry_body, verify_rekor_log_entry};
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use oak_transparency_claims::claims::{parse_endorsement_statement, validate_endorsement};
+use oak_transparency_claims::claims::{
+    parse_endorsement_statement, validate_endorsement, verify_validity_duration,
+};
 
 /// Reference values used by the verifier to appraise the attestation evidence.
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
@@ -70,25 +75,49 @@ impl AttestationVerifier for InsecureAttestationVerifier {
     }
 }
 
-// Verifies the given BinaryAttestation object using the given Rekor and endorser public keys. Also
-// verifies that the given binary_digest is the same as the digest in the endorsement statement in
-// the input BinaryAttestation.
-pub fn verify_binary_attestation(
-    binary_digest: &[u8],
+/// Verifies the transparent release endorsement for a given measurement, using the given
+/// verification options to control the extent of the verification. Summary of the verification
+/// logic:
+///
+/// 1. Verifies that the endorsement statement in the given `BinaryAttestation` instance contains a
+/// single subject with a digest measured using the given measurement algorithm, equal to
+/// `measurement_from_evidence`.
+/// 1. If the input `TransparencyVerificationOptions` requires Rekor log verification:
+///     1. verifies that the `BinaryAttestation` contains a valid Rekor log entry (see
+///        `verify_rekor_log_entry` for details.),
+///     1. verifies the Rekor public key in `BinaryAttestation` against the Rekor public key in
+///        `TransparencyVerificationOptions`,
+///     1. verifies the endorser public key included in the Rekor log entry against the endorser
+///        public key in `TransparencyVerificationOptions`.
+pub fn verify_transparent_release_endorsement(
+    measurement_from_evidence: &[u8],
+    measurement_alg: &str,
     binary_attestation: &BinaryAttestation,
-    pem_encoded_rekor_public_key_bytes: &[u8],
-    pem_encoded_endorser_public_key_bytes: &[u8],
+    opts: &TransparencyVerificationOptions,
 ) -> anyhow::Result<()> {
-    let rekor_public_key_bytes =
-        BASE64_STANDARD.decode(&binary_attestation.base64_pem_encoded_rekor_public_key)?;
-    verify_rekor_log_entry(
-        &binary_attestation.rekor_log_entry,
-        &rekor_public_key_bytes,
+    verify_endorsement_statement(
         &binary_attestation.endorsement_statement,
+        measurement_from_evidence,
+        measurement_alg,
     )?;
-    verify_rekor_public_key(binary_attestation, pem_encoded_rekor_public_key_bytes)?;
-    verify_endorser_public_key(binary_attestation, pem_encoded_endorser_public_key_bytes)?;
-    verify_endorsement_statement(&binary_attestation.endorsement_statement, binary_digest)
+
+    if let Some(VerificationData(data)) = &opts.rekor_entry_verification {
+        let base64_pem_encoded_rekor_public_key = data.base64_pem_encoded_rekor_public_key.clone();
+        let base64_pem_encoded_endorser_public_key =
+            data.base64_pem_encoded_endorser_public_key.clone();
+        let rekor_public_key_bytes =
+            BASE64_STANDARD.decode(&base64_pem_encoded_rekor_public_key)?;
+
+        verify_rekor_log_entry(
+            &binary_attestation.rekor_log_entry,
+            &rekor_public_key_bytes,
+            &binary_attestation.endorsement_statement,
+        )?;
+        verify_rekor_public_key(binary_attestation, &base64_pem_encoded_rekor_public_key)?;
+        verify_endorser_public_key(binary_attestation, &base64_pem_encoded_endorser_public_key)?;
+    }
+
+    Ok(())
 }
 
 /// Parses the given bytes into an endorsement statement and verifies it against the given Reference
@@ -96,24 +125,35 @@ pub fn verify_binary_attestation(
 pub fn verify_endorsement_statement(
     endorsement_bytes: &[u8],
     binary_digest: &[u8],
+    measurement_alg: &str,
 ) -> anyhow::Result<()> {
-    let binary_digest = core::str::from_utf8(binary_digest)?;
     let claim = parse_endorsement_statement(endorsement_bytes)?;
     if let Err(err) = validate_endorsement(&claim) {
         anyhow::bail!("validating endorsement: {err:?}");
     }
+    verify_validity_duration(&claim)?;
     if claim.subject.len() != 1 {
         anyhow::bail!(
             "expected 1 subject in the endorsement, found {}",
             claim.subject.len()
         );
     }
-    if claim.subject[0].digest["sha256"] != binary_digest {
-        anyhow::bail!(
-            "unexpected binary SHA256 digest: expected {binary_digest}, got {}",
-            claim.subject[0].digest["sha256"]
-        );
+
+    let binary_digest = core::str::from_utf8(binary_digest)?;
+    match claim.subject[0].digest.get(measurement_alg) {
+        Some(found_digest) => {
+            if found_digest != binary_digest {
+                anyhow::bail!(
+                    "unexpected binary {} digest: expected {}, got {}",
+                    measurement_alg,
+                    binary_digest,
+                    found_digest
+                )
+            }
+        }
+        None => anyhow::bail!("missing {measurement_alg} digest in the endorsement statement"),
     }
+
     Ok(())
 }
 
@@ -121,15 +161,14 @@ pub fn verify_endorsement_statement(
 /// given public key, signed by it, or derived from it.
 fn verify_rekor_public_key(
     binary_attestation: &BinaryAttestation,
-    pem_encoded_rekor_public_key_bytes: &[u8],
+    base64_pem_encoded_rekor_public_key: &str,
 ) -> anyhow::Result<()> {
-    let rekor_public_key_bytes =
-        BASE64_STANDARD.decode(&binary_attestation.base64_pem_encoded_rekor_public_key)?;
-
     // TODO(#4231): Currently, we only check that the public keys are the same. Once Rekor starts
     // using rolling keys, the verification logic will have to be updated.
-    if rekor_public_key_bytes != pem_encoded_rekor_public_key_bytes {
-        anyhow::bail!("Rekor public key verification failed: expected {pem_encoded_rekor_public_key_bytes:?}, got {rekor_public_key_bytes:?}");
+    if binary_attestation.base64_pem_encoded_rekor_public_key != base64_pem_encoded_rekor_public_key
+    {
+        anyhow::bail!("Rekor public key verification failed: expected {base64_pem_encoded_rekor_public_key}, got {}", 
+        binary_attestation.base64_pem_encoded_rekor_public_key);
     }
 
     Ok(())
@@ -139,18 +178,20 @@ fn verify_rekor_public_key(
 /// either the same as the given public key, signed by it, or derived from it.
 fn verify_endorser_public_key(
     binary_attestation: &BinaryAttestation,
-    pem_encoded_endorser_public_key_bytes: &[u8],
+    base64_pem_encoded_endorser_public_key: &str,
 ) -> anyhow::Result<()> {
     let body = get_rekor_log_entry_body(&binary_attestation.rekor_log_entry)?;
 
-    let endorser_public_key_bytes = BASE64_STANDARD
-        .decode(body.spec.signature.public_key.content.clone())
-        .context("couldn't decode Base64 endorser public key")?;
+    let endorser_public_key = body.spec.signature.public_key.content.clone();
 
     // TODO(#4231): Currently, we only check that the public keys are the same. Should be updated to
     // support verifying rolling keys.
-    if endorser_public_key_bytes != pem_encoded_endorser_public_key_bytes {
-        anyhow::bail!("endorser public key verification failed: expected {pem_encoded_endorser_public_key_bytes:?}, got {endorser_public_key_bytes:?}");
+    if endorser_public_key != base64_pem_encoded_endorser_public_key {
+        anyhow::bail!(
+            "endorser public key verification failed: expected {}, got {}",
+            base64_pem_encoded_endorser_public_key,
+            endorser_public_key
+        );
     }
 
     Ok(())

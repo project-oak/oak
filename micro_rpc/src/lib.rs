@@ -16,6 +16,7 @@
 
 #![no_std]
 #![feature(associated_type_defaults)]
+#![feature(error_in_core)]
 #![feature(never_type)]
 #![feature(try_blocks)]
 
@@ -72,20 +73,29 @@ impl From<proto::Status> for Status {
     }
 }
 
-/// Creates a [`Response`] representing an error.
-pub fn error_response(error: Status) -> Response {
-    Response {
-        response: Some(proto::response::Response::Error(proto::Status {
-            code: error.code as i32,
-            message: error.message,
-        })),
+impl From<proto::Response> for Result<Vec<u8>, Status> {
+    fn from(value: proto::Response) -> Self {
+        match value.response {
+            None => Err(Status::new_with_message(
+                StatusCode::InvalidArgument,
+                "invalid response wrapper",
+            )),
+            Some(proto::response::Response::Error(error)) => Err(error.into()),
+            Some(proto::response::Response::Body(body)) => Ok(body),
+        }
     }
 }
 
-/// Creates a [`Response`] representing success.
-pub fn success_response(body: Vec<u8>) -> Response {
-    Response {
-        response: Some(proto::response::Response::Body(body)),
+impl From<Result<Vec<u8>, Status>> for proto::Response {
+    fn from(value: Result<Vec<u8>, Status>) -> Self {
+        match value {
+            Ok(body) => proto::Response {
+                response: Some(proto::response::Response::Body(body)),
+            },
+            Err(error) => proto::Response {
+                response: Some(proto::response::Response::Error(error.into())),
+            },
+        }
     }
 }
 
@@ -121,16 +131,15 @@ pub fn client_invoke<T: Transport, Req: prost::Message, Res: prost::Message + De
                 format!("Client failed to deserialize response wrapper: {}", err),
             )
         })?;
-        match response.response {
-            Some(response::Response::Error(err)) => Err(err.into()),
-            Some(response::Response::Body(body)) => Res::decode(body.as_ref()).map_err(|err| {
+        let response_result: Result<Vec<u8>, Status> = response.into();
+        response_result.and_then(|body| {
+            Res::decode(body.as_ref()).map_err(|err| {
                 Status::new_with_message(
                     StatusCode::Internal,
                     format!("Client failed to deserialize response body: {}", err),
                 )
-            }),
-            None => Err(Status::new(StatusCode::Internal)),
-        }?
+            })
+        })?
     };
     Ok(result)
 }

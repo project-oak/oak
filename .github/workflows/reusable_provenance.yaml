@@ -8,8 +8,16 @@ on:
       build-config-path:
         required: true
         type: string
+      # Public key corresponding to the private key used to sign Ent tags.
+      ent-public-key:
+        required: true
+        type: string
     secrets:
+      # The Ent API key is used to upload the binary and its provenance to Ent.
       ENT_API_KEY:
+        required: true
+      # The Ent secret key is used to sign Ent tags, mapping the identifier of a binary to its provenance.
+      ENT_SECRET_KEY:
         required: true
 
 jobs:
@@ -64,7 +72,8 @@ jobs:
   # This job uploads the signed provenance from the previous step to Ent, and
   # publishes a comment for each binary on the PR.
   upload_provenance:
-    if: github.event_name != 'pull_request'
+    if: |
+      github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'provenance:force-run')
     needs: [get_inputs, generate_provenance]
     runs-on: ubuntu-20.04
     permissions:
@@ -79,14 +88,18 @@ jobs:
         if: steps.cache-ent.outputs.cache-hit != 'true'
         env:
           ENT_URL: https://ent-server-62sa4xcfia-ew.a.run.app
-          ENT_DIGEST: 944a34854a2bf9c5d32f3bffa93885ee1c7ef8ab0f4fcc30898a981050ae4233
+          ENT_DIGEST_SHA_2_256: ca76e76e32e0b984a8d55d1a27d587865774b29a2ae2fffd756ffc2dbd4880bd
         run: |
-          set -e
-          curl --fail ${ENT_URL}/raw/sha256:${ENT_DIGEST} > /usr/local/bin/ent
-          echo "${ENT_DIGEST} /usr/local/bin/ent" | sha256sum -c
+          set -o errexit
+          set -o nounset
+          set -o xtrace
+          set -o pipefail
+          curl --fail ${ENT_URL}/raw/sha2-256:${ENT_DIGEST_SHA_2_256} > /usr/local/bin/ent
+          echo "${ENT_DIGEST_SHA_2_256} /usr/local/bin/ent" | sha256sum --check
           chmod +x /usr/local/bin/ent
           ent
           cat <<EOF > ~/.config/ent.toml
+          secret_key = '${{ secrets.ENT_SECRET_KEY }}'
           [[remotes]]
           name = 'ent-store'
           url = '${ENT_URL}'
@@ -115,7 +128,11 @@ jobs:
         id: ent_upload_binary
         working-directory: downloads
         run: |
-          echo "binary_digest=$(ent put ${{ needs.get_inputs.outputs.artifact-path }})" >> $GITHUB_OUTPUT
+          set -o errexit
+          set -o nounset
+          set -o xtrace
+          set -o pipefail
+          echo "binary_digest=$(ent put --digest-format=human --porcelain ${{ needs.get_inputs.outputs.artifact-path }})" >> $GITHUB_OUTPUT
 
       - name: Upload provenance to Ent
         id: ent_upload_provenance
@@ -123,15 +140,44 @@ jobs:
         # The output on any trigger other than "pull_request" has an addition ".sigstore" suffix.
         # See https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/docker#workflow-outputs
         run: |
-          echo "provenance_digest=$(ent put ${{ needs.get_inputs.outputs.provenance-name }}.sigstore)" >> $GITHUB_OUTPUT
+          set -o errexit
+          set -o nounset
+          set -o xtrace
+          set -o pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PROVENANCE_FILENAME="${{ needs.get_inputs.outputs.provenance-name }}"
+          else
+            PROVENANCE_FILENAME="${{ needs.get_inputs.outputs.provenance-name }}.sigstore"
+          fi
+          echo "provenance_digest=$(ent put --digest-format=human --porcelain $PROVENANCE_FILENAME)" >> $GITHUB_OUTPUT
 
       # Add the provenance digest to the ./comment file as a TOML formatted doc.
-      - name: Format artifact and provenance digest (post-merge only)
+      # Print the contents of the ./comment file to the log to help debugging.
+      - name: Format artifact and provenance digest
         run: |
+          set -o errexit
+          set -o nounset
+          set -o xtrace
+          set -o pipefail
           echo -e "\n" >> ./comment
           echo -e "artifact_name = \"$(basename ${{ needs.get_inputs.outputs.artifact-path }})\"" >> ./comment
-          echo -e "artifact_digest = \"$(cut -d' ' -f1 <<<'${{ steps.ent_upload_binary.outputs.binary_digest }}')\"" >> ./comment
-          echo -e "provenance_digest = \"$(cut -d' ' -f1 <<<'${{ steps.ent_upload_provenance.outputs.provenance_digest }}')\"" >> ./comment
+          echo -e "artifact_digest = \"${{ steps.ent_upload_binary.outputs.binary_digest }}\"" >> ./comment
+          echo -e "provenance_digest = \"${{ steps.ent_upload_provenance.outputs.provenance_digest }}\"" >> ./comment
+          cat ./comment
+
+      - name: Upload signed tag to Ent
+        run: |
+          set -o errexit
+          set -o nounset
+          set -o xtrace
+          set -o pipefail
+          export BINARY_NAME="$(basename ${{ needs.get_inputs.outputs.artifact-path }})"
+          ent tag set --public-key=${{ inputs.ent-public-key }} \
+            --label="artifact_${GITHUB_SHA}_${BINARY_NAME}" \
+            --target=${{ steps.ent_upload_binary.outputs.binary_digest }}
+          ent tag set --public-key=${{ inputs.ent-public-key }} \
+            --label="provenance_${GITHUB_SHA}_${BINARY_NAME}" \
+            --target=${{ steps.ent_upload_provenance.outputs.provenance_digest }}
 
       # Post a comment on the PR containing the sha256 digests of the binary and its provenance.
       - name: Post the comment (post-merge only)

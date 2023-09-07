@@ -72,7 +72,7 @@ Inspect the directory structure using the `ls` command. You should see that the
 
 ```console
 root@hostname:/project# ls
-Dockerfile  README.md  build.py  eval.py  mnist_model.tar.gz
+Dockerfile  README.md  build.py  eval.py  mnist_model.tar.gz runner-musl
 ```
 
 For development and testing, you can mount the current directory, to run the
@@ -99,14 +99,20 @@ script on the model:
 python3 eval.py --model=mnist_model.tar.gz --output=result.json
 ```
 
-The first command is needed because currently the model is downloaded and
-embedded in the Docker image as a tar file. We need to decompress it before
-using it with the `eval` script.
+Or using the runner:
+
+```bash
+./runner-musl \
+  --model=mnist_model.tar.gz \
+  --model-name=mnist \
+  --eval-script=eval.py \
+  --output=claim.json
+```
 
 ## Building the model
 
-Similarly, you can use the following command to train the model, and save it in
-the given path:
+You can use the following command to train the model, and save it in the given
+path:
 
 ```bash
 python3 build.py --output mnist-model

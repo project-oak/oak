@@ -17,15 +17,18 @@
 // TODO(#3703): Remove when fixed.
 #![allow(clippy::extra_unused_type_parameters)]
 
+use alloc::vec::Vec;
 use bitflags::bitflags;
 use core::{cmp::min, ffi::CStr};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
-use oak_sev_guest::io::{IoPortFactory, PortFactoryWrapper, PortReader, PortWrapper, PortWriter};
+use oak_sev_guest::io::{IoPortFactory, PortReader, PortWrapper, PortWriter};
 use x86_64::{
     structures::paging::{PageSize, Size2MiB, Size4KiB},
     PhysAddr, VirtAddr,
 };
 use zerocopy::{AsBytes, FromBytes};
+
+use crate::io_port_factory;
 
 // See https://www.qemu.org/docs/master/specs/fw_cfg.html for documentation about the various data structures and constants.
 const FWCFG_PORT_SELECTOR: u16 = 0x510;
@@ -166,17 +169,16 @@ impl FwCfg {
     /// The caller has to guarantee that at least doing the probe will not cause any adverse
     /// effects.
     pub unsafe fn new(
-        port_factory: PortFactoryWrapper,
         dma_buf: &'static mut DmaBuffer,
         dma_access: &'static mut FwCfgDmaAccess,
     ) -> Result<Self, &'static str> {
         let mut fwcfg = Self {
-            selector: port_factory.new_writer(FWCFG_PORT_SELECTOR),
-            data: port_factory.new_reader(FWCFG_PORT_DATA),
-            dma_high: port_factory.new_writer(FWCFG_PORT_DMA),
+            selector: io_port_factory().new_writer(FWCFG_PORT_SELECTOR),
+            data: io_port_factory().new_reader(FWCFG_PORT_DATA),
+            dma_high: io_port_factory().new_writer(FWCFG_PORT_DMA),
             // The DMA address must be big-endian encoded, so the low address is 4 bytes further
             // than the high address.
-            dma_low: port_factory.new_writer(FWCFG_PORT_DMA + 4),
+            dma_low: io_port_factory().new_writer(FWCFG_PORT_DMA + 4),
             dma_buf,
             dma_access,
             dma_enabled: false,
@@ -286,6 +288,23 @@ impl FwCfg {
             self.read_buf(&mut buf[..len])?;
         }
         Ok(len)
+    }
+
+    /// Reads contents of a file; returns a vector with the bytes read.
+    ///
+    /// See <read_file> for more information.
+    pub fn read_file_vec(&mut self, file: &DirEntry) -> Result<Vec<u8>, &'static str> {
+        self.write_selector(file.selector())?;
+        let mut buf = Vec::new();
+        buf.resize(file.size(), 0);
+
+        if self.dma_enabled {
+            self.read_buf_dma(&mut buf)?;
+        } else {
+            self.read_buf(&mut buf)?;
+        }
+
+        Ok(buf)
     }
 
     /// Reads the size of the kernel command-line.

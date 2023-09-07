@@ -90,7 +90,7 @@ impl StreamingSession for SessionProxy {
                         let mut enclave_client =
                             functions::OakFunctionsAsyncClient::new(connector_handle.clone());
                         let enclave_invoke_response = enclave_client
-                            .invoke(&enclave_invoke_request)
+                            .handle_user_request(&enclave_invoke_request)
                             .await
                             .flatten()
                             .map_err(|err| {

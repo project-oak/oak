@@ -27,7 +27,7 @@ use crate::{
 };
 use bitflags::bitflags;
 use x86_64::{PhysAddr, VirtAddr};
-use zerocopy::FromBytes;
+use zerocopy::{AsBytes, FromBytes};
 
 /// The size of the GHCB page.
 pub const GHCB_PAGE_SIZE: usize = 4096;
@@ -50,6 +50,22 @@ const SW_EXIT_CODE_MSR_PROT: u64 = 0x7C;
 /// See section 4 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
 const SW_EXIT_CODE_CPUID: u64 = 0x72;
 
+/// The value of the sw_exit_code field when doing a MMIO read.
+///
+/// See section 4 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
+const SW_EXIT_CODE_MMIO_READ: u64 = 0x8000_0001;
+
+/// The value of the sw_exit_code field when doing a MMIO read.
+///
+/// See section 4 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
+const SW_EXIT_CODE_MMIO_WRITE: u64 = 0x8000_0002;
+
+/// The value of the sw_exit_code field when managing the AP Jump Table under SEV-ES.
+///
+/// See table 6 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
+const SW_EXIT_CODE_AP_JUMP_TABLE: u64 = 0x8000_0005;
+
+///
 /// The value of the sw_exit_code field when doing a Guest Message request.
 ///
 /// See table 6 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
@@ -316,6 +332,79 @@ where
         register_ghcb_location(RegisterGhcbGpaRequest::new(
             self.get_gpa().as_u64() as usize
         )?)
+    }
+
+    pub fn set_ap_jump_table(&mut self, jump_table: PhysAddr) -> Result<(), &'static str> {
+        let ghcb = self.ghcb.as_mut();
+
+        ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
+        ghcb.sw_exit_info_1 = 0; // SET
+        ghcb.sw_exit_info_2 = jump_table.as_u64();
+        ghcb.valid_bitmap = BASE_VALID_BITMAP;
+
+        self.do_vmg_exit()
+    }
+
+    pub fn get_ap_jump_table(&mut self) -> Result<PhysAddr, &'static str> {
+        let ghcb = self.ghcb.as_mut();
+
+        ghcb.sw_exit_code = SW_EXIT_CODE_AP_JUMP_TABLE;
+        ghcb.sw_exit_info_1 = 1; // GET
+        ghcb.sw_exit_info_2 = 0;
+        ghcb.valid_bitmap = BASE_VALID_BITMAP;
+
+        self.do_vmg_exit()?;
+
+        Ok(PhysAddr::new(self.ghcb.as_ref().sw_exit_info_2))
+    }
+
+    /// Read a 32-bit value from a MMIO memory address via the MMIO Access protocol.
+    ///
+    /// See Section 4.1.5 in <https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56421-guest-hypervisor-communication-block-standardization.pdf>.
+    pub fn mmio_read_u32(&mut self, source: PhysAddr) -> Result<u32, &'static str> {
+        let gpa_base = self.get_gpa().as_u64();
+        let ghcb = self.ghcb.as_mut();
+
+        ghcb.reset();
+        ghcb.sw_exit_code = SW_EXIT_CODE_MMIO_READ;
+        ghcb.sw_exit_info_1 = source.as_u64();
+        ghcb.sw_exit_info_2 = core::mem::size_of::<u32>() as u64;
+        // Use the shared_buffer as the unencrypted guest memory. This is mandated as of Version
+        // 2 of the communication block.
+        ghcb.sw_scratch = gpa_base + (core::mem::offset_of!(Ghcb, shared_buffer) as u64);
+        ghcb.valid_bitmap = BASE_VALID_BITMAP | ValidBitmap::SW_SCRATCH;
+
+        self.do_vmg_exit()?;
+        Ok(u32::from_ne_bytes(
+            self.ghcb.as_ref().shared_buffer[0..core::mem::size_of::<u32>()]
+                .as_bytes()
+                .try_into()
+                .unwrap(),
+        ))
+    }
+
+    /// Write a 32-bit value to a MMIO memory address via the MMIO Access protocol.
+    ///
+    /// See Section 4.1.5 in <https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56421-guest-hypervisor-communication-block-standardization.pdf>.
+    pub fn mmio_write_u32(
+        &mut self,
+        destination: PhysAddr,
+        value: u32,
+    ) -> Result<(), &'static str> {
+        let gpa_base = self.get_gpa().as_u64();
+        let ghcb = self.ghcb.as_mut();
+
+        ghcb.reset();
+        ghcb.sw_exit_code = SW_EXIT_CODE_MMIO_WRITE;
+        ghcb.sw_exit_info_1 = destination.as_u64();
+        ghcb.sw_exit_info_2 = core::mem::size_of::<u32>() as u64;
+        // Pointer to `shared_buffer` inside the GHCB.
+        ghcb.sw_scratch = gpa_base + (core::mem::offset_of!(Ghcb, shared_buffer) as u64);
+        ghcb.valid_bitmap = BASE_VALID_BITMAP | ValidBitmap::SW_SCRATCH;
+        // Safety: the shared buffer is bigger than an u32.
+        ghcb.shared_buffer.as_bytes_mut()[0..core::mem::size_of::<u32>()]
+            .copy_from_slice(value.as_bytes());
+        self.do_vmg_exit()
     }
 
     /// Writes an 8 bit number to an IO port via the IOIO protocol.
