@@ -15,9 +15,9 @@
 //
 
 use core::{
-    alloc::Allocator,
-    marker::PhantomData,
+    alloc::{AllocError, Allocator, Layout},
     ops::{Deref, DerefMut},
+    ptr::NonNull,
 };
 
 use crate::{sev_status, BootAllocator};
@@ -45,17 +45,64 @@ use x86_64::{
 
 pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
-// Ensures that the inner data structure is page-aligned.
-// Ideally this'd be repr(transparent) but that means we can't force the 4K alignment.
-#[repr(C, align(4096))]
-struct OnePage<T>(T);
+/// Allocator that forces allocations to be 4K-aligned (and sized) and marks the pages as shared.
+///
+/// This allocator is inefficient as it will only allocate 4K chunks, potentially wasting memory.
+/// For example, if you allocate two u32-s, although they could well fit on one page, currently
+/// that'd use 8K of memory.
+/// That, however, is an implementation detail, and may change in the future.
+#[repr(transparent)]
+struct SharedAllocator<A: Allocator> {
+    inner: A,
+}
+
+impl<A: Allocator> SharedAllocator<A> {
+    fn new(allocator: A) -> Self {
+        Self { inner: allocator }
+    }
+}
+
+unsafe impl<A: Allocator> Allocator for SharedAllocator<A> {
+    fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+        let layout = layout
+            .align_to(Size4KiB::SIZE as usize)
+            .map_err(|_| AllocError)?
+            .pad_to_align();
+        let allocation = self.inner.allocate(layout)?;
+        if sev_status().contains(SevStatus::SEV_ENABLED) {
+            for offset in (0..allocation.len()).step_by(Size4KiB::SIZE as usize) {
+                // Safety: the allocation has succeeded and the offset won't exceed the size of the
+                // allocation.
+                share_page(Page::containing_address(VirtAddr::from_ptr(unsafe {
+                    allocation.as_non_null_ptr().as_ptr().add(offset)
+                })))
+            }
+        }
+        Ok(allocation)
+    }
+
+    unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+        let layout = layout
+            .align_to(Size4KiB::SIZE as usize)
+            .map_err(|_| AllocError)
+            .unwrap()
+            .pad_to_align();
+        if sev_status().contains(SevStatus::SEV_ENABLED) {
+            for offset in (0..layout.size()).step_by(Size4KiB::SIZE as usize) {
+                // Safety: the allocation has succeeded and the offset won't exceed the size of the
+                // allocation.
+                unshare_page(Page::containing_address(VirtAddr::from_ptr(unsafe {
+                    ptr.as_ptr().add(offset)
+                })))
+            }
+        }
+        self.inner.deallocate(ptr, layout)
+    }
+}
 
 /// Stores a data structure on a shared page.
-///
-/// Warning: the data structure is *never destructed* and the memory is *leaked*!
 pub struct Shared<T: 'static, A: Allocator> {
-    inner: &'static mut OnePage<T>,
-    phantom: PhantomData<A>,
+    inner: Box<T, SharedAllocator<A>>,
 }
 
 impl<T, A: Allocator> Shared<T, A> {
@@ -63,34 +110,9 @@ impl<T, A: Allocator> Shared<T, A> {
     where
         A: 'static,
     {
-        let this = Self {
-            inner: Box::leak(Box::new_in(OnePage(t), alloc)),
-            phantom: PhantomData,
-        };
-        this.share();
-        this
-    }
-
-    fn share(&self) {
-        if sev_status().contains(SevStatus::SEV_ENABLED) {
-            // We don't expect the unwrap to ever fail, as the struct inside the Box should be
-            // page-aligned.
-            share_page(Page::from_start_address(VirtAddr::from_ptr(self.inner)).unwrap());
+        Self {
+            inner: Box::new_in(t, SharedAllocator::new(alloc)),
         }
-    }
-
-    fn unshare(&self) {
-        if sev_status().contains(SevStatus::SEV_ENABLED) {
-            // We don't expect the unwrap to ever fail, as the struct inside the Box should be
-            // page-aligned.
-            unshare_page(Page::from_start_address(VirtAddr::from_ptr(self.inner)).unwrap());
-        }
-    }
-}
-
-impl<T, A: Allocator> Drop for Shared<T, A> {
-    fn drop(&mut self) {
-        self.unshare();
     }
 }
 
@@ -98,19 +120,19 @@ impl<T, A: Allocator> Deref for Shared<T, A> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        &self.inner.0
+        &self.inner
     }
 }
 
 impl<T, A: Allocator> DerefMut for Shared<T, A> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner.0
+        &mut self.inner
     }
 }
 
 impl<T, A: Allocator> AsRef<T> for Shared<T, A> {
     fn as_ref(&self) -> &T {
-        &self.inner.0
+        &self.inner
     }
 }
 

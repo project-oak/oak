@@ -17,6 +17,7 @@
 #![no_std]
 #![feature(int_roundings)]
 #![feature(allocator_api)]
+#![feature(slice_ptr_get)]
 
 extern crate alloc;
 
