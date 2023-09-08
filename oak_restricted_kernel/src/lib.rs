@@ -38,7 +38,7 @@
 
 mod acpi;
 mod args;
-pub mod avx;
+mod avx;
 mod boot;
 mod descriptors;
 mod elf;

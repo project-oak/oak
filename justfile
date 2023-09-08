@@ -27,6 +27,9 @@ oak_restricted_kernel_bin:
 oak_restricted_kernel_simple_io_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel
 
+oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
+    env --chdir=oak_restricted_kernel_wrapper cargo build --release
+
 stage0_bin:
     env --chdir=stage0_bin cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/stage0_bin
 

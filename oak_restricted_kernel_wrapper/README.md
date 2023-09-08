@@ -7,3 +7,11 @@ kernel.
 
 The wrapper is responsible for parsing the payload (the Oak Restricted Kernel)
 as an ELF file, laying it out in memory and doing any required relocations.
+
+NOTE: This wrapper is not intended to be build using `cargo build` directly.
+
+To build it, run the following in the workspace root:
+
+```bash
+just oak_restricted_kernel_wrapper
+```
