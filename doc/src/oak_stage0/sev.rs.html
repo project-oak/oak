@@ -448,6 +448,28 @@
 <a href="#448" id="448">448</a>
 <a href="#449" id="449">449</a>
 <a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -465,9 +487,9 @@
 //
 
 </span><span class="kw">use </span>core::{
-    alloc::Allocator,
-    marker::PhantomData,
+    alloc::{AllocError, Allocator, Layout},
     ops::{Deref, DerefMut},
+    ptr::NonNull,
 };
 
 <span class="kw">use crate</span>::{sev_status, BootAllocator};
@@ -495,17 +517,64 @@
 
 <span class="kw">pub static </span>GHCB_WRAPPER: OnceCell&lt;Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;&gt;&gt; = OnceCell::new();
 
-<span class="comment">// Ensures that the inner data structure is page-aligned.
-// Ideally this&#39;d be repr(transparent) but that means we can&#39;t force the 4K alignment.
-</span><span class="attr">#[repr(C, align(<span class="number">4096</span>))]
-</span><span class="kw">struct </span>OnePage&lt;T&gt;(T);
+<span class="doccomment">/// Allocator that forces allocations to be 4K-aligned (and sized) and marks the pages as shared.
+///
+/// This allocator is inefficient as it will only allocate 4K chunks, potentially wasting memory.
+/// For example, if you allocate two u32-s, although they could well fit on one page, currently
+/// that&#39;d use 8K of memory.
+/// That, however, is an implementation detail, and may change in the future.
+</span><span class="attr">#[repr(transparent)]
+</span><span class="kw">struct </span>SharedAllocator&lt;A: Allocator&gt; {
+    inner: A,
+}
+
+<span class="kw">impl</span>&lt;A: Allocator&gt; SharedAllocator&lt;A&gt; {
+    <span class="kw">fn </span>new(allocator: A) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ inner: allocator }
+    }
+}
+
+<span class="kw">unsafe impl</span>&lt;A: Allocator&gt; Allocator <span class="kw">for </span>SharedAllocator&lt;A&gt; {
+    <span class="kw">fn </span>allocate(<span class="kw-2">&amp;</span><span class="self">self</span>, layout: Layout) -&gt; <span class="prelude-ty">Result</span>&lt;NonNull&lt;[u8]&gt;, AllocError&gt; {
+        <span class="kw">let </span>layout = layout
+            .align_to(Size4KiB::SIZE <span class="kw">as </span>usize)
+            .map_err(|<span class="kw">_</span>| AllocError)<span class="question-mark">?
+            </span>.pad_to_align();
+        <span class="kw">let </span>allocation = <span class="self">self</span>.inner.allocate(layout)<span class="question-mark">?</span>;
+        <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
+            <span class="kw">for </span>offset <span class="kw">in </span>(<span class="number">0</span>..allocation.len()).step_by(Size4KiB::SIZE <span class="kw">as </span>usize) {
+                <span class="comment">// Safety: the allocation has succeeded and the offset won&#39;t exceed the size of the
+                // allocation.
+                </span>share_page(Page::containing_address(VirtAddr::from_ptr(<span class="kw">unsafe </span>{
+                    allocation.as_non_null_ptr().as_ptr().add(offset)
+                })))
+            }
+        }
+        <span class="prelude-val">Ok</span>(allocation)
+    }
+
+    <span class="kw">unsafe fn </span>deallocate(<span class="kw-2">&amp;</span><span class="self">self</span>, ptr: NonNull&lt;u8&gt;, layout: Layout) {
+        <span class="kw">let </span>layout = layout
+            .align_to(Size4KiB::SIZE <span class="kw">as </span>usize)
+            .map_err(|<span class="kw">_</span>| AllocError)
+            .unwrap()
+            .pad_to_align();
+        <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
+            <span class="kw">for </span>offset <span class="kw">in </span>(<span class="number">0</span>..layout.size()).step_by(Size4KiB::SIZE <span class="kw">as </span>usize) {
+                <span class="comment">// Safety: the allocation has succeeded and the offset won&#39;t exceed the size of the
+                // allocation.
+                </span>unshare_page(Page::containing_address(VirtAddr::from_ptr(<span class="kw">unsafe </span>{
+                    ptr.as_ptr().add(offset)
+                })))
+            }
+        }
+        <span class="self">self</span>.inner.deallocate(ptr, layout)
+    }
+}
 
 <span class="doccomment">/// Stores a data structure on a shared page.
-///
-/// Warning: the data structure is *never destructed* and the memory is *leaked*!
 </span><span class="kw">pub struct </span>Shared&lt;T: <span class="lifetime">&#39;static</span>, A: Allocator&gt; {
-    inner: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span><span class="kw-2">mut </span>OnePage&lt;T&gt;,
-    phantom: PhantomData&lt;A&gt;,
+    inner: Box&lt;T, SharedAllocator&lt;A&gt;&gt;,
 }
 
 <span class="kw">impl</span>&lt;T, A: Allocator&gt; Shared&lt;T, A&gt; {
@@ -513,34 +582,9 @@
     </span><span class="kw">where
         </span>A: <span class="lifetime">&#39;static</span>,
     {
-        <span class="kw">let </span>this = <span class="self">Self </span>{
-            inner: Box::leak(Box::new_in(OnePage(t), alloc)),
-            phantom: PhantomData,
-        };
-        this.share();
-        this
-    }
-
-    <span class="kw">fn </span>share(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
-            <span class="comment">// We don&#39;t expect the unwrap to ever fail, as the struct inside the Box should be
-            // page-aligned.
-            </span>share_page(Page::from_start_address(VirtAddr::from_ptr(<span class="self">self</span>.inner)).unwrap());
+        <span class="self">Self </span>{
+            inner: Box::new_in(t, SharedAllocator::new(alloc)),
         }
-    }
-
-    <span class="kw">fn </span>unshare(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-        <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
-            <span class="comment">// We don&#39;t expect the unwrap to ever fail, as the struct inside the Box should be
-            // page-aligned.
-            </span>unshare_page(Page::from_start_address(VirtAddr::from_ptr(<span class="self">self</span>.inner)).unwrap());
-        }
-    }
-}
-
-<span class="kw">impl</span>&lt;T, A: Allocator&gt; Drop <span class="kw">for </span>Shared&lt;T, A&gt; {
-    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="self">self</span>.unshare();
     }
 }
 
@@ -548,20 +592,20 @@
     <span class="kw">type </span>Target = T;
 
     <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.inner.<span class="number">0
-    </span>}
+        <span class="kw-2">&amp;</span><span class="self">self</span>.inner
+    }
 }
 
 <span class="kw">impl</span>&lt;T, A: Allocator&gt; DerefMut <span class="kw">for </span>Shared&lt;T, A&gt; {
     <span class="kw">fn </span>deref_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span><span class="self">Self</span>::Target {
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>.inner.<span class="number">0
-    </span>}
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.inner
+    }
 }
 
 <span class="kw">impl</span>&lt;T, A: Allocator&gt; AsRef&lt;T&gt; <span class="kw">for </span>Shared&lt;T, A&gt; {
     <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>T {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.inner.<span class="number">0
-    </span>}
+        <span class="kw-2">&amp;</span><span class="self">self</span>.inner
+    }
 }
 
 <span class="kw">pub fn </span>init_ghcb(alloc: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>BootAllocator) {
