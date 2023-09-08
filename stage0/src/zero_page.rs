@@ -33,6 +33,12 @@ pub struct ZeroPage {
     inner: BootParams,
 }
 
+impl Default for ZeroPage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ZeroPage {
     /// Constructs a empty zero page, filling in some magic values needed by the kernel.
     pub fn new() -> Self {
@@ -96,18 +102,19 @@ impl ZeroPage {
         // Try to load the E820 table from fw_cfg.
         // Safety: BootE820Entry has the same structure as what qemu uses, and we're limiting
         // ourselves to up to 128 entries.
+        let mut e820_table = [oak_linux_boot_params::BootE820Entry::default(); 128];
+        let e820_entries;
         let len_bytes = unsafe {
             fw_cfg.read_file_by_name(
                 CStr::from_bytes_with_nul(b"etc/e820\0").unwrap(),
-                &mut self.inner.e820_table,
+                &mut e820_table,
             )
         };
 
         match len_bytes {
             Ok(len_bytes) => {
-                self.inner.e820_entries = (len_bytes / size_of::<BootE820Entry>()) as u8;
-                self.inner.e820_table[..(self.inner.e820_entries as usize)]
-                    .sort_unstable_by_key(|x| x.addr());
+                e820_entries = len_bytes / size_of::<BootE820Entry>();
+                e820_table[..e820_entries].sort_unstable_by_key(|x| x.addr());
             }
             Err(err) => {
                 log::warn!("Failed to read 'etc/e820': {}, failing back to CMOS", err);
@@ -117,9 +124,53 @@ impl ZeroPage {
                     panic!("QEMU_E820_RESERVATION_TABLE was not empty!");
                 }
 
-                build_e820_from_nvram(&mut self.inner).expect("failed to read from CMOS");
+                e820_entries =
+                    build_e820_from_nvram(&mut e820_table).expect("failed to read from CMOS");
             }
         };
+
+        // Construct the "real" E820 table, carving out a chunk of memory out for the ACPI area and
+        // reserved memory just below 1 MiB.
+        for entry in &e820_table[0..e820_entries] {
+            if entry.addr() < 0x8_0000 && entry.addr() + entry.size() >= 0x10_0000 {
+                // any memory before our hole?
+                let low_size = if entry.addr() < 0x8_0000 {
+                    let size = 0x8_0000 - entry.addr();
+                    self.inner.append_e820_entry(BootE820Entry::new(
+                        entry.addr(),
+                        size,
+                        entry.entry_type().unwrap(),
+                    ));
+                    size
+                } else {
+                    0
+                };
+
+                // ACPI tables
+                self.inner.append_e820_entry(BootE820Entry::new(
+                    0x8_0000,
+                    0x2_0000,
+                    E820EntryType::ACPI,
+                ));
+                // Unused region below 1MiB.
+                self.inner.append_e820_entry(BootE820Entry::new(
+                    0xA_0000,
+                    0x6_0000,
+                    E820EntryType::RESERVED,
+                ));
+
+                // any memory after us?
+                if entry.addr() + entry.size() > 0x10_0000 {
+                    self.inner.append_e820_entry(BootE820Entry::new(
+                        0x10_0000,
+                        entry.size() - 0x8_0000 - low_size,
+                        entry.entry_type().unwrap(),
+                    ));
+                }
+            } else {
+                self.inner.append_e820_entry(*entry);
+            }
+        }
 
         for entry in self.inner.e820_table() {
             log::debug!(
@@ -178,7 +229,7 @@ impl ZeroPage {
 /// The code is largely based on what SeaBIOS is doing (see `qemu_preinit()` and `qemu_cfg_e820()`
 /// in <https://github.com/qemu/seabios/blob/b0d61ecef66eb05bd7a4eb7ada88ec5dab06dfee/src/fw/paravirt.c>),
 /// but <https://wiki.osdev.org/Detecting_Memory_%28x86%29> is also a good read on the topic.
-fn build_e820_from_nvram(zero_page: &mut BootParams) -> Result<(), &'static str> {
+fn build_e820_from_nvram(e820_table: &mut [BootE820Entry]) -> Result<usize, &'static str> {
     // Safety: (a) fw_cfg is available, so we're running under QEMU(ish) and (b) there was no
     // pre-built E820 table in fw_cfg; thus, we can reasonably expect CMOS to available, as that's
     // what SeaBIOS would use in that situation to build the E820 table.
@@ -198,25 +249,18 @@ fn build_e820_from_nvram(zero_page: &mut BootParams) -> Result<(), &'static str>
     if rs > 0xFFFB_C000 {
         rs = 0xFFFB_C000;
     };
-    zero_page.e820_entries = 5;
-    zero_page.e820_table[0] = BootE820Entry::new(0, 0x80000, E820EntryType::RAM);
-    // Region for ACPI data structures.
-    zero_page.e820_table[1] = BootE820Entry::new(0x80000, 0x20000, E820EntryType::ACPI);
-    // Unused region below 1MiB.
-    zero_page.e820_table[2] = BootE820Entry::new(0xA0000, 0x60000, E820EntryType::RESERVED);
-    zero_page.e820_table[3] =
-        BootE820Entry::new(0x100000, (rs - 0x100000) as usize, E820EntryType::RAM);
-    zero_page.e820_table[4] = BootE820Entry::new(
+    let mut e820_entries = 2;
+    e820_table[0] = BootE820Entry::new(0, rs as usize, E820EntryType::RAM);
+    e820_table[1] = BootE820Entry::new(
         0xFFFB_C000,
         0x1_0000_0000 - 0xFFFB_C000,
         E820EntryType::RESERVED,
     );
 
     if high > 0 {
-        zero_page.e820_entries += 1;
-        zero_page.e820_table[5] =
-            BootE820Entry::new(0x1_0000_0000, high as usize, E820EntryType::RAM);
+        e820_entries += 1;
+        e820_table[2] = BootE820Entry::new(0x1_0000_0000, high as usize, E820EntryType::RAM);
     }
 
-    Ok(())
+    Ok(e820_entries)
 }

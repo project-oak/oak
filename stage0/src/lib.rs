@@ -72,10 +72,6 @@ static mut SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = Maybe
 #[no_mangle]
 static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
 
-// Will be set in the bootstrap assembly code where we have to read the MSR anyway.
-#[no_mangle]
-static mut SEV_STATUS: SevStatus = SevStatus::empty();
-
 /// We create an identity map for the first 1GiB of memory.
 const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
 
@@ -97,7 +93,10 @@ pub fn create_idt(_idt: &mut InterruptDescriptorTable) {}
 /// # Safety
 ///
 /// This assumes that the kernel entry point is valid.
-pub unsafe fn jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -> ! {
+pub unsafe fn jump_to_kernel<A: core::alloc::Allocator>(
+    entry_point: VirtAddr,
+    zero_page: Box<zero_page::ZeroPage, &A>,
+) -> ! {
     asm!(
         // Boot stack pointer
         "mov {1}, %rsp",
@@ -107,7 +106,7 @@ pub unsafe fn jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -> ! {
         "jmp *{0}",
         in(reg) entry_point.as_u64(),
         in(reg) &BOOT_STACK_POINTER as *const _ as u64,
-        in(reg) zero_page as u64,
+        in(reg) Box::leak(zero_page),
         options(noreturn, att_syntax)
     );
 }
@@ -116,6 +115,10 @@ pub unsafe fn jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -> ! {
 ///
 /// Initialized in the bootstrap assembly code.
 pub fn sev_status() -> SevStatus {
+    // Will be set in the bootstrap assembly code where we have to read the MSR anyway.
+    #[no_mangle]
+    static mut SEV_STATUS: SevStatus = SevStatus::empty();
+
     // Safety: we don't allow mutation and this is initialized in the bootstrap assembly.
     unsafe { SEV_STATUS }
 }
@@ -154,7 +157,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     // Safety: we assume there won't be any other hardware devices using the fw_cfg IO ports.
     let mut fwcfg = unsafe { fw_cfg::FwCfg::new(&BOOT_ALLOC) }.expect("fw_cfg device not found!");
 
-    let zero_page = Box::leak(Box::new_in(zero_page::ZeroPage::new(), &BOOT_ALLOC));
+    let mut zero_page = Box::new_in(zero_page::ZeroPage::new(), &BOOT_ALLOC);
 
     zero_page.fill_e820_table(&mut fwcfg);
 
@@ -303,7 +306,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     paging::remap_first_huge_page(encrypted);
 
     unsafe {
-        jump_to_kernel(entry, zero_page as *const _ as usize);
+        jump_to_kernel(entry, zero_page);
     }
 }
 
