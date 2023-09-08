@@ -220,6 +220,50 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -253,6 +297,12 @@
 #[derive(Debug)]
 </span><span class="kw">pub struct </span>ZeroPage {
     inner: BootParams,
+}
+
+<span class="kw">impl </span>Default <span class="kw">for </span>ZeroPage {
+    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new()
+    }
 }
 
 <span class="kw">impl </span>ZeroPage {
@@ -318,18 +368,19 @@
         <span class="comment">// Try to load the E820 table from fw_cfg.
         // Safety: BootE820Entry has the same structure as what qemu uses, and we&#39;re limiting
         // ourselves to up to 128 entries.
-        </span><span class="kw">let </span>len_bytes = <span class="kw">unsafe </span>{
+        </span><span class="kw">let </span><span class="kw-2">mut </span>e820_table = [oak_linux_boot_params::BootE820Entry::default(); <span class="number">128</span>];
+        <span class="kw">let </span>e820_entries;
+        <span class="kw">let </span>len_bytes = <span class="kw">unsafe </span>{
             fw_cfg.read_file_by_name(
                 CStr::from_bytes_with_nul(<span class="string">b&quot;etc/e820\0&quot;</span>).unwrap(),
-                <span class="kw-2">&amp;mut </span><span class="self">self</span>.inner.e820_table,
+                <span class="kw-2">&amp;mut </span>e820_table,
             )
         };
 
         <span class="kw">match </span>len_bytes {
             <span class="prelude-val">Ok</span>(len_bytes) =&gt; {
-                <span class="self">self</span>.inner.e820_entries = (len_bytes / size_of::&lt;BootE820Entry&gt;()) <span class="kw">as </span>u8;
-                <span class="self">self</span>.inner.e820_table[..(<span class="self">self</span>.inner.e820_entries <span class="kw">as </span>usize)]
-                    .sort_unstable_by_key(|x| x.addr());
+                e820_entries = len_bytes / size_of::&lt;BootE820Entry&gt;();
+                e820_table[..e820_entries].sort_unstable_by_key(|x| x.addr());
             }
             <span class="prelude-val">Err</span>(err) =&gt; {
                 <span class="macro">log::warn!</span>(<span class="string">&quot;Failed to read &#39;etc/e820&#39;: {}, failing back to CMOS&quot;</span>, err);
@@ -339,9 +390,53 @@
                     <span class="macro">panic!</span>(<span class="string">&quot;QEMU_E820_RESERVATION_TABLE was not empty!&quot;</span>);
                 }
 
-                build_e820_from_nvram(<span class="kw-2">&amp;mut </span><span class="self">self</span>.inner).expect(<span class="string">&quot;failed to read from CMOS&quot;</span>);
+                e820_entries =
+                    build_e820_from_nvram(<span class="kw-2">&amp;mut </span>e820_table).expect(<span class="string">&quot;failed to read from CMOS&quot;</span>);
             }
         };
+
+        <span class="comment">// Construct the &quot;real&quot; E820 table, carving out a chunk of memory out for the ACPI area and
+        // reserved memory just below 1 MiB.
+        </span><span class="kw">for </span>entry <span class="kw">in </span><span class="kw-2">&amp;</span>e820_table[<span class="number">0</span>..e820_entries] {
+            <span class="kw">if </span>entry.addr() &lt; <span class="number">0x8_0000 </span>&amp;&amp; entry.addr() + entry.size() &gt;= <span class="number">0x10_0000 </span>{
+                <span class="comment">// any memory before our hole?
+                </span><span class="kw">let </span>low_size = <span class="kw">if </span>entry.addr() &lt; <span class="number">0x8_0000 </span>{
+                    <span class="kw">let </span>size = <span class="number">0x8_0000 </span>- entry.addr();
+                    <span class="self">self</span>.inner.append_e820_entry(BootE820Entry::new(
+                        entry.addr(),
+                        size,
+                        entry.entry_type().unwrap(),
+                    ));
+                    size
+                } <span class="kw">else </span>{
+                    <span class="number">0
+                </span>};
+
+                <span class="comment">// ACPI tables
+                </span><span class="self">self</span>.inner.append_e820_entry(BootE820Entry::new(
+                    <span class="number">0x8_0000</span>,
+                    <span class="number">0x2_0000</span>,
+                    E820EntryType::ACPI,
+                ));
+                <span class="comment">// Unused region below 1MiB.
+                </span><span class="self">self</span>.inner.append_e820_entry(BootE820Entry::new(
+                    <span class="number">0xA_0000</span>,
+                    <span class="number">0x6_0000</span>,
+                    E820EntryType::RESERVED,
+                ));
+
+                <span class="comment">// any memory after us?
+                </span><span class="kw">if </span>entry.addr() + entry.size() &gt; <span class="number">0x10_0000 </span>{
+                    <span class="self">self</span>.inner.append_e820_entry(BootE820Entry::new(
+                        <span class="number">0x10_0000</span>,
+                        entry.size() - <span class="number">0x8_0000 </span>- low_size,
+                        entry.entry_type().unwrap(),
+                    ));
+                }
+            } <span class="kw">else </span>{
+                <span class="self">self</span>.inner.append_e820_entry(<span class="kw-2">*</span>entry);
+            }
+        }
 
         <span class="kw">for </span>entry <span class="kw">in </span><span class="self">self</span>.inner.e820_table() {
             <span class="macro">log::debug!</span>(
@@ -400,7 +495,7 @@
 /// The code is largely based on what SeaBIOS is doing (see `qemu_preinit()` and `qemu_cfg_e820()`
 /// in &lt;https://github.com/qemu/seabios/blob/b0d61ecef66eb05bd7a4eb7ada88ec5dab06dfee/src/fw/paravirt.c&gt;),
 /// but &lt;https://wiki.osdev.org/Detecting_Memory_%28x86%29&gt; is also a good read on the topic.
-</span><span class="kw">fn </span>build_e820_from_nvram(zero_page: <span class="kw-2">&amp;mut </span>BootParams) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">fn </span>build_e820_from_nvram(e820_table: <span class="kw-2">&amp;mut </span>[BootE820Entry]) -&gt; <span class="prelude-ty">Result</span>&lt;usize, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// Safety: (a) fw_cfg is available, so we&#39;re running under QEMU(ish) and (b) there was no
     // pre-built E820 table in fw_cfg; thus, we can reasonably expect CMOS to available, as that&#39;s
     // what SeaBIOS would use in that situation to build the E820 table.
@@ -420,26 +515,19 @@
     </span><span class="kw">if </span>rs &gt; <span class="number">0xFFFB_C000 </span>{
         rs = <span class="number">0xFFFB_C000</span>;
     };
-    zero_page.e820_entries = <span class="number">5</span>;
-    zero_page.e820_table[<span class="number">0</span>] = BootE820Entry::new(<span class="number">0</span>, <span class="number">0x80000</span>, E820EntryType::RAM);
-    <span class="comment">// Region for ACPI data structures.
-    </span>zero_page.e820_table[<span class="number">1</span>] = BootE820Entry::new(<span class="number">0x80000</span>, <span class="number">0x20000</span>, E820EntryType::ACPI);
-    <span class="comment">// Unused region below 1MiB.
-    </span>zero_page.e820_table[<span class="number">2</span>] = BootE820Entry::new(<span class="number">0xA0000</span>, <span class="number">0x60000</span>, E820EntryType::RESERVED);
-    zero_page.e820_table[<span class="number">3</span>] =
-        BootE820Entry::new(<span class="number">0x100000</span>, (rs - <span class="number">0x100000</span>) <span class="kw">as </span>usize, E820EntryType::RAM);
-    zero_page.e820_table[<span class="number">4</span>] = BootE820Entry::new(
+    <span class="kw">let </span><span class="kw-2">mut </span>e820_entries = <span class="number">2</span>;
+    e820_table[<span class="number">0</span>] = BootE820Entry::new(<span class="number">0</span>, rs <span class="kw">as </span>usize, E820EntryType::RAM);
+    e820_table[<span class="number">1</span>] = BootE820Entry::new(
         <span class="number">0xFFFB_C000</span>,
         <span class="number">0x1_0000_0000 </span>- <span class="number">0xFFFB_C000</span>,
         E820EntryType::RESERVED,
     );
 
     <span class="kw">if </span>high &gt; <span class="number">0 </span>{
-        zero_page.e820_entries += <span class="number">1</span>;
-        zero_page.e820_table[<span class="number">5</span>] =
-            BootE820Entry::new(<span class="number">0x1_0000_0000</span>, high <span class="kw">as </span>usize, E820EntryType::RAM);
+        e820_entries += <span class="number">1</span>;
+        e820_table[<span class="number">2</span>] = BootE820Entry::new(<span class="number">0x1_0000_0000</span>, high <span class="kw">as </span>usize, E820EntryType::RAM);
     }
 
-    <span class="prelude-val">Ok</span>(())
+    <span class="prelude-val">Ok</span>(e820_entries)
 }
 </code></pre></div></section></main></body></html>

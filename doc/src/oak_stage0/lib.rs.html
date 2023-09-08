@@ -344,6 +344,9 @@
 <a href="#344" id="344">344</a>
 <a href="#345" id="345">345</a>
 <a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -418,10 +421,6 @@
 #[no_mangle]
 </span><span class="kw">static </span>SEV_CPUID: MaybeUninit&lt;oak_sev_guest::cpuid::CpuidPage&gt; = MaybeUninit::uninit();
 
-<span class="comment">// Will be set in the bootstrap assembly code where we have to read the MSR anyway.
-</span><span class="attr">#[no_mangle]
-</span><span class="kw">static </span><span class="kw-2">mut </span>SEV_STATUS: SevStatus = SevStatus::empty();
-
 <span class="doccomment">/// We create an identity map for the first 1GiB of memory.
 </span><span class="kw">const </span>TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
 
@@ -443,7 +442,10 @@
 /// # Safety
 ///
 /// This assumes that the kernel entry point is valid.
-</span><span class="kw">pub unsafe fn </span>jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -&gt; ! {
+</span><span class="kw">pub unsafe fn </span>jump_to_kernel&lt;A: core::alloc::Allocator&gt;(
+    entry_point: VirtAddr,
+    zero_page: Box&lt;zero_page::ZeroPage, <span class="kw-2">&amp;</span>A&gt;,
+) -&gt; ! {
     <span class="macro">asm!</span>(
         <span class="comment">// Boot stack pointer
         </span><span class="string">&quot;mov {1}, %rsp&quot;</span>,
@@ -453,7 +455,7 @@
         </span><span class="string">&quot;jmp *{0}&quot;</span>,
         <span class="kw">in</span>(reg) entry_point.as_u64(),
         <span class="kw">in</span>(reg) <span class="kw-2">&amp;</span>BOOT_STACK_POINTER <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64,
-        <span class="kw">in</span>(reg) zero_page <span class="kw">as </span>u64,
+        <span class="kw">in</span>(reg) Box::leak(zero_page),
         options(noreturn, att_syntax)
     );
 }
@@ -462,6 +464,10 @@
 ///
 /// Initialized in the bootstrap assembly code.
 </span><span class="kw">pub fn </span>sev_status() -&gt; SevStatus {
+    <span class="comment">// Will be set in the bootstrap assembly code where we have to read the MSR anyway.
+    </span><span class="attr">#[no_mangle]
+    </span><span class="kw">static </span><span class="kw-2">mut </span>SEV_STATUS: SevStatus = SevStatus::empty();
+
     <span class="comment">// Safety: we don&#39;t allow mutation and this is initialized in the bootstrap assembly.
     </span><span class="kw">unsafe </span>{ SEV_STATUS }
 }
@@ -500,7 +506,7 @@
     <span class="comment">// Safety: we assume there won&#39;t be any other hardware devices using the fw_cfg IO ports.
     </span><span class="kw">let </span><span class="kw-2">mut </span>fwcfg = <span class="kw">unsafe </span>{ fw_cfg::FwCfg::new(<span class="kw-2">&amp;</span>BOOT_ALLOC) }.expect(<span class="string">&quot;fw_cfg device not found!&quot;</span>);
 
-    <span class="kw">let </span>zero_page = Box::leak(Box::new_in(zero_page::ZeroPage::new(), <span class="kw-2">&amp;</span>BOOT_ALLOC));
+    <span class="kw">let </span><span class="kw-2">mut </span>zero_page = Box::new_in(zero_page::ZeroPage::new(), <span class="kw-2">&amp;</span>BOOT_ALLOC);
 
     zero_page.fill_e820_table(<span class="kw-2">&amp;mut </span>fwcfg);
 
@@ -649,7 +655,7 @@
     paging::remap_first_huge_page(encrypted);
 
     <span class="kw">unsafe </span>{
-        jump_to_kernel(entry, zero_page <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>usize);
+        jump_to_kernel(entry, zero_page);
     }
 }
 
