@@ -22,10 +22,10 @@ oak_functions_insecure_enclave_app:
     env --chdir=enclave_apps/oak_functions_enclave_app cargo build --release --no-default-features --features=allow_sensitive_logging
 
 oak_restricted_kernel_bin:
-    env --chdir=oak_restricted_kernel_bin cargo build --release
+    env --chdir=oak_restricted_kernel_bin cargo build --release --bin=oak_restricted_kernel_bin
 
 oak_restricted_kernel_simple_io_bin:
-    env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel
+    env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel --bin=oak_restricted_kernel_simple_io_bin
 
 oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
     env --chdir=oak_restricted_kernel_wrapper cargo build --release

@@ -14,7 +14,11 @@
 // limitations under the License.
 //
 
-use std::path::PathBuf;
+use std::{
+    fs::{copy, File},
+    io::Write,
+    path::PathBuf,
+};
 
 fn main() {
     println!("cargo:rerun-if-changed=layout.ld");
@@ -22,14 +26,26 @@ fn main() {
     let kernel_directory = "oak_restricted_kernel_bin";
     let file_name = "oak_restricted_kernel_bin";
 
-    let mut kernel_path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
-    kernel_path.pop();
-    kernel_path.push(kernel_directory);
-    let mut source_path = kernel_path.clone();
+    // The source file is the output from building "../oak_restricted_kernel_bin" in release mode.
+    let mut source_path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    source_path.pop();
+    source_path.push(kernel_directory);
     source_path.push("target/x86_64-unknown-none/release");
     source_path.push(file_name);
+    let mut destination_path = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    destination_path.push(file_name);
+    if destination_path.exists() {
+        copy(&source_path, &destination_path).unwrap();
+    } else {
+        // Create a fake file so cargo clippy doesn't break if the kernel was not built.
+        File::create(&destination_path)
+            .unwrap()
+            .write_all(b"invalid")
+            .unwrap();
+    }
+
     println!(
         "cargo:rustc-env=PAYLOAD_PATH={}",
-        source_path.to_str().unwrap()
+        destination_path.to_str().unwrap()
     );
 }
