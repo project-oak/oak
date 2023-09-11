@@ -27,11 +27,15 @@ RUN systemctl enable oak-orchestrator
 # Override the default journald configuration
 COPY journald.conf /etc/systemd/journald.conf.d/clear.conf
 
+# Only enable interactive logins if the kernel was booted with "debug" flag.
+COPY serial-getty@.override.conf /etc/systemd/system/serial-getty@.service.d/override.conf
+RUN systemctl disable getty@
+COPY root-passwd.service /etc/systemd/system
+RUN chmod 644 /etc/systemd/system/root-passwd.service
+RUN systemctl enable root-passwd
+
 # Don't bother starting the graphical interface, let's stick with the basic multi-user target.
 RUN systemctl set-default multi-user
 
 # Clean up some stuff we don't need
 RUN rm -rf /usr/share/doc /usr/share/info /usr/share/man
-
-# Debugging aid: if you get your hands on the console and try logging in as root, force a password change.
-RUN passwd --delete --expire root

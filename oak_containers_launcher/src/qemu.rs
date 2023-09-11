@@ -189,6 +189,7 @@ impl Qemu {
         cmd.args([
             "-append",
             [
+                params.telnet_console.map_or_else(|| "", |_| "debug"),
                 "console=ttyS0",
                 "panic=-1",
                 "brd.rd_nr=1",
