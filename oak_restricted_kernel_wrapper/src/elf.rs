@@ -22,7 +22,7 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
-/// We assume Stage 0 created an identity map for the first 1GiB of memory.
+// We assume Stage 0 created an identity map for the first 1GiB of memory.
 const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
 
 /// Parses an ELF file and lays it out in memory.

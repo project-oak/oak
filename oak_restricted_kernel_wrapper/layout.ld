@@ -17,14 +17,56 @@
 ENTRY(_wrapper_entry)
 
 SECTIONS {
+    /* 
+     * The setup-data for the kernel. In the Linux kernel this also includes
+     * the real-mode code, which we don't support. 
+     *
+     * This section will be split off by the hypervisor and loaded separately.
+     * It acts as the initial values for the setup_data field in the boot
+     * parameters. We can mostly leave it 0 for the restricted kernel, as long
+     * as it looks similar enough to a Linux bzImage so that the VMM will
+     * recognize it.
+     */
+    . = 16M - 4K;
+    .setupdata ALIGN(4K) : {
+        FILL(0x00)
+        /* Padding until the setup struct starts. */
+        . += 0x1F1;
+        /* Number of 512B sectors -1. Setup section is 4KiB. */ 
+        BYTE(0x07)
+        /* Padding for ignored fields. */
+        . += 0xC;
+        /* Magic number (0xAA55) */
+        SHORT(0xAA55)
+        /* Jump instruction. */
+        BYTE(0xEB)
+        /*
+         * Relative offset for the jump instruction, which can be used to
+         * determine the size of the header (Header ends at 0x202 + 0x6A).
+         */
+        BYTE(0x6A)
+        /* Magic number (HdrS) */
+        LONG(0x53726448)
+        /* Boot protocol version (2.15) */
+        SHORT(0x020F)
+        /*
+          * We ignore all further fields since the relevant ones will be
+          * populated by Stage 0.
+          */
+    } : setupdata
     /* The Restricted Kernel is Loaded between 2MiB and 11MiB, so we
      * load this wrapper at 16Mib for now. This will go away once the
      * wrapper and the Restricted Kernel supports relocation.
      */
     . = 16M;
 
-    /* 64-bit Entrypoint for the wrapper. */
-    .boot : ALIGN(4K) {
+    /* Start of the kernel proper. */
+    .boot ALIGN(4K) : {
+        FILL(0x00)
+        /* The 64-bit entry point must be at offset 0x200 from the start of
+         * kernel.
+         */
+        . += 0x200;
         *(.boot)
     } : boot
 

@@ -46,7 +46,9 @@ pub extern "C" fn rust64_start(_rdi: u64, boot_params: &BootParams) -> ! {
 
 /// Passes control to the extracted kernel.
 ///
-/// The stack is reset without dropping anything that was allocated on the stack.
+/// The stack is reset without dropping anything that is currently allocated on the stack. This is
+/// OK, since the wrapper code and data structures will essentially disappear after the jump. No
+/// structures in the wrapper are intended to outlive the wrapper itself.
 ///
 /// # Safety
 ///
