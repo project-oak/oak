@@ -55,11 +55,11 @@ pub extern "C" fn rust64_start(_rdi: u64, boot_params: &BootParams) -> ! {
 /// This assumes that the kernel entry point is valid.
 unsafe fn jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -> ! {
     core::arch::asm!(
-        // Boot stack pointer
+        // Reset the boot stack.
         "mov {1}, %rsp",
-        // Zero page address
+        // Set the address of the boot parameters.
         "mov {2}, %rsi",
-        // ...and away we go!
+        // Jump to the kernel entrypoint.
         "jmp *{0}",
         in(reg) entry_point.as_u64(),
         in(reg) &BOOT_STACK_POINTER as *const _ as u64,

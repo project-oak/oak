@@ -27,7 +27,7 @@ SECTIONS {
      * as it looks similar enough to a Linux bzImage so that the VMM will
      * recognize it.
      */
-    . = 16M - 4K;
+    . = 32M - 4K;
     .setupdata ALIGN(4K) : {
         FILL(0x00)
         /* Padding until the setup struct starts. */
@@ -54,11 +54,11 @@ SECTIONS {
           * populated by Stage 0.
           */
     } : setupdata
-    /* The Restricted Kernel is Loaded between 2MiB and 11MiB, so we
-     * load this wrapper at 16Mib for now. This will go away once the
+    /* The Restricted Kernel is Loaded between 2MiB and 17MiB, so we
+     * load this wrapper at 32Mib for now. This will go away once the
      * wrapper and the Restricted Kernel supports relocation.
      */
-    . = 16M;
+    . = 32M;
 
     /* Start of the kernel proper. */
     .boot ALIGN(4K) : {

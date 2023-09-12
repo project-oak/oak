@@ -24,8 +24,11 @@ use oak_linux_boot_params::BootE820Entry;
 use x86_64::{PhysAddr, VirtAddr};
 
 /// The default start location and entry point for the kernel if a kernel wasn't supplied via the
-/// QEMU fw_cfg device. This is also used for the default location when loading a compressed kernel.
+/// QEMU fw_cfg device.
 const DEFAULT_KERNEL_START: u64 = 0x200000;
+
+/// The default location for loading a compressed (bzImage format) kerne.
+const DEFAULT_BZIMAGE_SATRT: u64 = 0x2000000;
 
 /// The default size for the kernel if a kernel wasn't supplied via the QEMU fw_cfg device.
 ///
@@ -124,8 +127,7 @@ pub fn try_load_kernel_image(
     let size = file.size();
 
     let dma_address = if bzimage {
-        // For a compressed kernel we use the default start address.
-        PhysAddr::new(DEFAULT_KERNEL_START)
+        PhysAddr::new(DEFAULT_BZIMAGE_SATRT)
     } else {
         // For an Elf kernel we copy the kernel image to a temporary location at the end of
         // available mapped virtual memory where we can parse it.
