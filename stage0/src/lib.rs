@@ -43,6 +43,7 @@ mod acpi_tables;
 mod allocator;
 mod apic;
 mod cmos;
+mod dice_attestation;
 mod fw_cfg;
 mod initramfs;
 mod kernel;
@@ -53,7 +54,6 @@ mod pic;
 mod sev;
 mod smp;
 mod zero_page;
-mod dice_attestation;
 
 type Measurement = [u8; 32];
 
@@ -232,8 +232,6 @@ pub fn rust64_start(encrypted: u64) -> ! {
         })
         .unwrap_or_default();
 
-    dice_attestation::generate_stage1_attestation();
-
     let kernel_info = kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table())
         .unwrap_or(kernel::KernelInfo::default());
     let mut entry = kernel_info.entry;
@@ -306,6 +304,17 @@ pub fn rust64_start(encrypted: u64) -> ! {
     log::debug!("Initial RAM disk digest: {:?}", ram_disk_measurement);
     log::debug!("ACPI table generation digest: {:?}", acpi_measurement);
     log::debug!("E820 table digest: {:?}", memory_map_measurement);
+
+    let measurements = dice_attestation::Measurements {
+        acpi_measurement: acpi_measurement,
+        kernel_measurement: kernel_info.measurement,
+        cmdline_measurement: cmdline_measurement,
+        ram_disk_measurement: ram_disk_measurement,
+        setup_data_measurement: setup_data_measurement,
+        memory_map_measurement: memory_map_measurement,
+    };
+
+    dice_attestation::generate_stage1_attestation(&measurements);
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 

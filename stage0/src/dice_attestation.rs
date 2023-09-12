@@ -23,7 +23,6 @@ use p384::ecdsa::{signature::Signer, Signature, SigningKey, VerifyingKey};
 use rand_core::OsRng;
 use sha2::Sha256;
 
-
 pub const ID_SALT: &str = "DICE_ID_SALT";
 pub const SIGNATURE_LENGTH: usize = 20;
 
@@ -32,6 +31,15 @@ pub const SIGNATURE_LENGTH: usize = 20;
 /// Returns Signed Stage1 key and measurments
 struct Stage0Signer {
     signing_key: SigningKey,
+}
+// Measurements of various components in Stage1 
+pub struct Measurements {
+    pub kernel_measurement: [u8; 32],
+    pub cmdline_measurement: [u8; 32],
+    pub setup_data_measurement: [u8; 32],
+    pub ram_disk_measurement: [u8; 32],
+    pub memory_map_measurement: [u8; 32],
+    pub acpi_measurement: [u8; 32],
 }
 
 // Signer implementation.
@@ -64,6 +72,7 @@ fn generate_ecdsa_keys(info: &str) -> (SigningKey, [u8; SIGNATURE_LENGTH]) {
 fn generate_stage1_ca_cwt(
     stage0_eca_key: SigningKey,
     stage0_cert_id_hex: String,
+    measurements: &Measurements,
 ) -> Result<Vec<u8>, CoseError> {
     // Generate Stage 1 keys and Signer.
     let info_str = "ID";
@@ -73,7 +82,7 @@ fn generate_stage1_ca_cwt(
         signing_key: stage0_eca_key,
     };
 
-    // Generate claims
+    // Generate claims and add the Stage1 CA key.
     let claims = cwt::ClaimsSetBuilder::new()
         .issuer(stage0_cert_id_hex)
         .subject(hex::encode(stage1_ca_key.1))
@@ -84,6 +93,30 @@ fn generate_stage1_ca_cwt(
             Value::Bytes(Vec::from(
                 stage1_ca_verifying_key.to_encoded_point(false).as_bytes(),
             )),
+        )
+        .private_claim(
+            -4670555,
+            Value::Bytes(Vec::from(measurements.kernel_measurement)),
+        )
+        .private_claim(
+            -4670556,
+            Value::Bytes(Vec::from(measurements.kernel_measurement)),
+        )
+        .private_claim(
+            -4670557,
+            Value::Bytes(Vec::from(measurements.setup_data_measurement)),
+        )
+        .private_claim(
+            -4670558,
+            Value::Bytes(Vec::from(measurements.ram_disk_measurement)),
+        )
+        .private_claim(
+            -4670559,
+            Value::Bytes(Vec::from(measurements.memory_map_measurement)),
+        )
+        .private_claim(
+            -4670560,
+            Value::Bytes(Vec::from(measurements.acpi_measurement)),
         )
         .build();
 
@@ -105,7 +138,7 @@ fn generate_stage1_ca_cwt(
     sign1.to_vec()
 }
 
-pub fn generate_stage1_attestation() {
+pub fn generate_stage1_attestation(measurements: &Measurements) {
     // Generate Stage0 keys. This key will be used to sign Stage1
     // measurement+config and the stage1_ca_key
     let info_str = "ID";
@@ -119,7 +152,8 @@ pub fn generate_stage1_attestation() {
     );
 
     // Generate Stage1 CWT
-    let stage1_cwt = generate_stage1_ca_cwt(stage0_ca_key.0, hex::encode(stage0_ca_key.1));
+    let stage1_cwt =
+        generate_stage1_ca_cwt(stage0_ca_key.0, hex::encode(stage0_ca_key.1), measurements);
     if stage1_cwt.is_ok() {
         // Call code that transmits the serialized cwt to Stage1
         log::debug!("Signing was successful..");
