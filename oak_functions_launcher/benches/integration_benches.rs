@@ -134,7 +134,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
             .decrypt(&encrypted_response)
             .expect("could not decrypt response");
         let response: Result<Vec<u8>, micro_rpc::Status> =
-            micro_rpc::ResponseWraper::decode(decrypted_response.as_ref())
+            micro_rpc::ResponseWrapper::decode(decrypted_response.as_ref())
                 .expect("could not decode response")
                 .into();
         assert_eq!(response.unwrap(), config.expected_response);
