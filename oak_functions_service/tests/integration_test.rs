@@ -183,7 +183,7 @@ async fn it_should_error_on_invalid_wasm_module() {
         .decrypt(&encrypted_response)
         .expect("client couldn't decrypt response");
 
-    let response = micro_rpc::Response::decode(response_bytes.as_slice())
+    let response = micro_rpc::ResponseWrapper::decode(response_bytes.as_slice())
         .map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
@@ -274,7 +274,7 @@ async fn it_should_support_lookup_data() {
         .decrypt(&encrypted_response)
         .expect("client couldn't decrypt response");
 
-    let response = micro_rpc::Response::decode(response_bytes.as_slice())
+    let response = micro_rpc::ResponseWrapper::decode(response_bytes.as_slice())
         .map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
@@ -350,7 +350,7 @@ async fn it_should_handle_wasm_panic() {
         .decrypt(&encrypted_response)
         .expect("client couldn't decrypt response");
 
-    let response = micro_rpc::Response::decode(response_bytes.as_slice())
+    let response = micro_rpc::ResponseWrapper::decode(response_bytes.as_slice())
         .map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,

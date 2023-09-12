@@ -22,7 +22,7 @@ option java_multiple_files = true;
 option java_package = "com.google.micro_rpc";
 
 // A wrapper message representing a request over a transport.
-message Request {
+message RequestWrapper {
   // The id of the method to invoke. This is usually specified via the IDL that drives the code
   // generation. In other contexts (e.g. gRPC), IDLs may use the method name as part of the
   // serialization, but here we prefer an opaque numeric identifier for both conciseness and
@@ -45,7 +45,7 @@ message Status {
 }
 
 // A wrapper message representing a response over a transport.
-message Response {
+message ResponseWrapper {
   oneof response {
     // A status / error message, in case of failure.
     Status error = 1;

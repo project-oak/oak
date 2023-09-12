@@ -83,7 +83,7 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!(""),
         format!("impl <S: {service_name}> ::micro_rpc::Transport for {server_name}<S> {{"),
         format!("    fn invoke(&mut self, request_bytes: &[u8]) -> Result<::prost::alloc::vec::Vec<u8>, !> {{"),
-        format!("        let response: ::micro_rpc::Response = self"),
+        format!("        let response: ::micro_rpc::ResponseWrapper = self"),
         format!("            .invoke_inner(request_bytes)"),
         format!("            .into();"),
         format!("        let response_bytes = response.encode_to_vec();"),
@@ -97,7 +97,7 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!("    }}"),
         // invoke_inner returns either a successful response body, or an error represented as Status.
         format!("    fn invoke_inner(&mut self, request_bytes: &[u8]) -> Result<::prost::alloc::vec::Vec<u8>, ::micro_rpc::Status> {{"),
-        format!("        let request = ::micro_rpc::Request::decode(request_bytes).map_err(|err| {{"),
+        format!("        let request = ::micro_rpc::RequestWrapper::decode(request_bytes).map_err(|err| {{"),
         format!("            ::micro_rpc::Status::new_with_message("),
         format!("                ::micro_rpc::StatusCode::Internal,"),
         format!("                ::micro_rpc::format!(\"Client failed to deserialize the response: {{:?}}\", err),"),

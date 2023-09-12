@@ -18,13 +18,13 @@ package com.google.oak.client.weather_lookup_client;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.micro_rpc.ResponseWrapper;
 import com.google.oak.client.OakClient;
 import com.google.oak.remote_attestation.InsecureAttestationVerifier;
 import com.google.oak.session.v1.StreamingSessionGrpc;
 import com.google.oak.transport.ApiKeyInterceptor;
 import com.google.oak.transport.GrpcStreamingTransport;
 import com.google.oak.util.Result;
-import com.google.micro_rpc.Response;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
@@ -59,9 +59,10 @@ public class Main {
     byte[] requestBody = "{\"lat\":0,\"lng\":0}".getBytes(UTF_8);
     Result<byte[], Exception> oakClientInvokeResult = oakClient.invoke(requestBody);
     byte[] responseWrapperBytes = oakClientInvokeResult.unwrap("invoking client");
-    Response responseWrapper = Response.parseFrom(responseWrapperBytes);
+    ResponseWrapper responseWrapper = ResponseWrapper.parseFrom(responseWrapperBytes);
     logger.log(Level.INFO, "Client received response wrapper: " + responseWrapper.toString());
-    String decodedResponse = new String(responseWrapper.getBody().toByteArray(), StandardCharsets.UTF_8);
+    String decodedResponse =
+        new String(responseWrapper.getBody().toByteArray(), StandardCharsets.UTF_8);
 
     if (decodedResponse.matches(EXPECTED_RESPONSE_PATTERN)) {
       logger.log(Level.INFO, "Client received the expected response: " + decodedResponse);
