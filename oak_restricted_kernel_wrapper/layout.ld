@@ -50,9 +50,9 @@ SECTIONS {
         /* Boot protocol version (2.15) */
         SHORT(0x020F)
         /*
-          * We ignore all further fields since the relevant ones will be
-          * populated by Stage 0.
-          */
+         * We ignore all further fields since the relevant ones will be
+         * populated by Stage 0.
+         */
     } : setupdata
     /* The Restricted Kernel is Loaded between 2MiB and 17MiB, so we
      * load this wrapper at 32Mib for now. This will go away once the
@@ -88,7 +88,7 @@ SECTIONS {
 
     /* Stack grows down, so stack_start is the upper address in memory. */
     .stack (NOLOAD) : ALIGN(4K) {
-        . += 512K;
+        . += 32K;
     } : bss
     stack_start = .;
 

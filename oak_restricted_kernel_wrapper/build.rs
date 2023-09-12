@@ -34,7 +34,7 @@ fn main() {
     source_path.push(file_name);
     let mut destination_path = PathBuf::from(std::env::var("OUT_DIR").unwrap());
     destination_path.push(file_name);
-    if destination_path.exists() {
+    if source_path.exists() {
         copy(&source_path, &destination_path).unwrap();
     } else {
         // Create a fake file so cargo clippy doesn't break if the kernel was not built.
