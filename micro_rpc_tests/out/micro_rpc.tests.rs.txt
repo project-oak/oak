@@ -28,7 +28,9 @@ impl<S: TestService> ::micro_rpc::Transport for TestServiceServer<S> {
         &mut self,
         request_bytes: &[u8],
     ) -> Result<::prost::alloc::vec::Vec<u8>, !> {
-        let response: ::micro_rpc::Response = self.invoke_inner(request_bytes).into();
+        let response: ::micro_rpc::ResponseWrapper = self
+            .invoke_inner(request_bytes)
+            .into();
         let response_bytes = response.encode_to_vec();
         Ok(response_bytes)
     }
@@ -41,7 +43,7 @@ impl<S: TestService> TestServiceServer<S> {
         &mut self,
         request_bytes: &[u8],
     ) -> Result<::prost::alloc::vec::Vec<u8>, ::micro_rpc::Status> {
-        let request = ::micro_rpc::Request::decode(request_bytes)
+        let request = ::micro_rpc::RequestWrapper::decode(request_bytes)
             .map_err(|err| {
                 ::micro_rpc::Status::new_with_message(
                     ::micro_rpc::StatusCode::Internal,

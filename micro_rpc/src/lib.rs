@@ -36,7 +36,7 @@ pub use core::result::{
     Result::{Err, Ok},
 };
 use prost::Message;
-pub use proto::{response, Request, Response};
+pub use proto::{response_wrapper, RequestWrapper, ResponseWrapper};
 pub use status::{Status, StatusCode};
 
 /// A message-oriented transport that allows performing invocations.
@@ -73,27 +73,27 @@ impl From<proto::Status> for Status {
     }
 }
 
-impl From<proto::Response> for Result<Vec<u8>, Status> {
-    fn from(value: proto::Response) -> Self {
+impl From<proto::ResponseWrapper> for Result<Vec<u8>, Status> {
+    fn from(value: proto::ResponseWrapper) -> Self {
         match value.response {
             None => Err(Status::new_with_message(
                 StatusCode::InvalidArgument,
                 "invalid response wrapper",
             )),
-            Some(proto::response::Response::Error(error)) => Err(error.into()),
-            Some(proto::response::Response::Body(body)) => Ok(body),
+            Some(proto::response_wrapper::Response::Error(error)) => Err(error.into()),
+            Some(proto::response_wrapper::Response::Body(body)) => Ok(body),
         }
     }
 }
 
-impl From<Result<Vec<u8>, Status>> for proto::Response {
+impl From<Result<Vec<u8>, Status>> for proto::ResponseWrapper {
     fn from(value: Result<Vec<u8>, Status>) -> Self {
         match value {
-            Ok(body) => proto::Response {
-                response: Some(proto::response::Response::Body(body)),
+            Ok(body) => proto::ResponseWrapper {
+                response: Some(proto::response_wrapper::Response::Body(body)),
             },
-            Err(error) => proto::Response {
-                response: Some(proto::response::Response::Error(error.into())),
+            Err(error) => proto::ResponseWrapper {
+                response: Some(proto::response_wrapper::Response::Error(error.into())),
             },
         }
     }
@@ -102,7 +102,7 @@ impl From<Result<Vec<u8>, Status>> for proto::Response {
 /// Invokes the method identified by `method_id` via the provided [`Transport`], taking care of the
 /// serialization and deserialization over the transport.
 ///
-/// The return value has two layers of [`Result`]:
+/// The return value has two layers of [`ResultWrapper`]:
 ///
 /// - the outer layer represents failure of the underlying tansport; if that transport is infallible
 ///   (i.e. the error variant is `!`), callers of this function can just safely `unwrap` that layer;
@@ -117,7 +117,7 @@ pub fn client_invoke<T: Transport, Req: prost::Message, Res: prost::Message + De
     request: &Req,
 ) -> Result<Result<Res, Status>, T::Error> {
     let request_body = request.encode_to_vec();
-    let request = Request {
+    let request = RequestWrapper {
         method_id,
         body: request_body,
     };
@@ -125,7 +125,7 @@ pub fn client_invoke<T: Transport, Req: prost::Message, Res: prost::Message + De
     // This may result in tranport errors, corresponding to the outer Result layer.
     let response_bytes = transport.invoke(&request_bytes)?;
     let result: Result<Res, Status> = try {
-        let response = Response::decode(response_bytes.as_ref()).map_err(|err| {
+        let response = ResponseWrapper::decode(response_bytes.as_ref()).map_err(|err| {
             Status::new_with_message(
                 StatusCode::Internal,
                 format!("Client failed to deserialize response wrapper: {}", err),
@@ -155,7 +155,7 @@ pub async fn async_client_invoke<
     request: &Req,
 ) -> Result<Result<Res, Status>, T::Error> {
     let request_body = request.encode_to_vec();
-    let request = Request {
+    let request = RequestWrapper {
         method_id,
         body: request_body,
     };
@@ -163,20 +163,22 @@ pub async fn async_client_invoke<
     // This may result in tranport errors, corresponding to the outer Result layer.
     let response_bytes = transport.invoke(&request_bytes).await?;
     let result: Result<Res, Status> = try {
-        let response = Response::decode(response_bytes.as_ref()).map_err(|err| {
+        let response = ResponseWrapper::decode(response_bytes.as_ref()).map_err(|err| {
             Status::new_with_message(
                 StatusCode::Internal,
                 format!("Client failed to deserialize response wrapper: {}", err),
             )
         })?;
         match response.response {
-            Some(response::Response::Error(err)) => Err(err.into()),
-            Some(response::Response::Body(body)) => Res::decode(body.as_ref()).map_err(|err| {
-                Status::new_with_message(
-                    StatusCode::Internal,
-                    format!("Client failed to deserialize response body: {}", err),
-                )
-            }),
+            Some(response_wrapper::Response::Error(err)) => Err(err.into()),
+            Some(response_wrapper::Response::Body(body)) => {
+                Res::decode(body.as_ref()).map_err(|err| {
+                    Status::new_with_message(
+                        StatusCode::Internal,
+                        format!("Client failed to deserialize response body: {}", err),
+                    )
+                })
+            }
             None => Err(Status::new(StatusCode::Internal)),
         }?
     };
