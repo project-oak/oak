@@ -102,7 +102,7 @@ impl From<Result<Vec<u8>, Status>> for proto::ResponseWrapper {
 /// Invokes the method identified by `method_id` via the provided [`Transport`], taking care of the
 /// serialization and deserialization over the transport.
 ///
-/// The return value has two layers of [`ResultWrapper`]:
+/// The return value has two layers of [`Result`]:
 ///
 /// - the outer layer represents failure of the underlying tansport; if that transport is infallible
 ///   (i.e. the error variant is `!`), callers of this function can just safely `unwrap` that layer;
