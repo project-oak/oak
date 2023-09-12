@@ -58,6 +58,7 @@
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -109,12 +110,13 @@
         })<span class="question-mark">?</span>;
         <span class="comment">// An error here is specific to the Oak Functions application (e.g. the Wasm module does not
         // have the correct exported / imported functions).
-        </span><span class="kw">let </span>response = micro_rpc::Response::decode(response_bytes.as_slice()).map_err(|err| {
-            micro_rpc::Status::new_with_message(
-                micro_rpc::StatusCode::Internal,
-                <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t deserialize response wrapper: {:?}&quot;</span>, err),
-            )
-        })<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>response =
+            micro_rpc::ResponseWrapper::decode(response_bytes.as_slice()).map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::Internal,
+                    <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t deserialize response wrapper: {:?}&quot;</span>, err),
+                )
+            })<span class="question-mark">?</span>;
         response.into()
     }
 }

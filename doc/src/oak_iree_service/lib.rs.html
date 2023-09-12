@@ -277,7 +277,7 @@
         <span class="kw">let </span>encryption_key_provider = <span class="self">self</span>.encryption_key_provider.clone();
         <span class="kw">let </span>instance = <span class="self">self</span>.get_instance()<span class="question-mark">?</span>;
         EncryptionHandler::create(encryption_key_provider, |r| {
-            <span class="kw">let </span>response: micro_rpc::Response = instance.invoke(<span class="kw-2">&amp;</span>r).into();
+            <span class="kw">let </span>response: micro_rpc::ResponseWrapper = instance.invoke(<span class="kw-2">&amp;</span>r).into();
             response.encode_to_vec()
         })
         .invoke(<span class="kw-2">&amp;</span>request_message.body)

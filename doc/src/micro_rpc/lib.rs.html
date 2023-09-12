@@ -182,6 +182,8 @@
 <a href="#182" id="182">182</a>
 <a href="#183" id="183">183</a>
 <a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -220,7 +222,7 @@
     <span class="prelude-ty">Result</span>::{<span class="prelude-val">Err</span>, <span class="prelude-val">Ok</span>},
 };
 <span class="kw">use </span>prost::Message;
-<span class="kw">pub use </span>proto::{response, Request, Response};
+<span class="kw">pub use </span>proto::{response_wrapper, RequestWrapper, ResponseWrapper};
 <span class="kw">pub use </span>status::{Status, StatusCode};
 
 <span class="doccomment">/// A message-oriented transport that allows performing invocations.
@@ -257,27 +259,27 @@
     }
 }
 
-<span class="kw">impl </span>From&lt;proto::Response&gt; <span class="kw">for </span><span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt; {
-    <span class="kw">fn </span>from(value: proto::Response) -&gt; <span class="self">Self </span>{
+<span class="kw">impl </span>From&lt;proto::ResponseWrapper&gt; <span class="kw">for </span><span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt; {
+    <span class="kw">fn </span>from(value: proto::ResponseWrapper) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>value.response {
             <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(Status::new_with_message(
                 StatusCode::InvalidArgument,
                 <span class="string">&quot;invalid response wrapper&quot;</span>,
             )),
-            <span class="prelude-val">Some</span>(proto::response::Response::Error(error)) =&gt; <span class="prelude-val">Err</span>(error.into()),
-            <span class="prelude-val">Some</span>(proto::response::Response::Body(body)) =&gt; <span class="prelude-val">Ok</span>(body),
+            <span class="prelude-val">Some</span>(proto::response_wrapper::Response::Error(error)) =&gt; <span class="prelude-val">Err</span>(error.into()),
+            <span class="prelude-val">Some</span>(proto::response_wrapper::Response::Body(body)) =&gt; <span class="prelude-val">Ok</span>(body),
         }
     }
 }
 
-<span class="kw">impl </span>From&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt;&gt; <span class="kw">for </span>proto::Response {
+<span class="kw">impl </span>From&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt;&gt; <span class="kw">for </span>proto::ResponseWrapper {
     <span class="kw">fn </span>from(value: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>value {
-            <span class="prelude-val">Ok</span>(body) =&gt; proto::Response {
-                response: <span class="prelude-val">Some</span>(proto::response::Response::Body(body)),
+            <span class="prelude-val">Ok</span>(body) =&gt; proto::ResponseWrapper {
+                response: <span class="prelude-val">Some</span>(proto::response_wrapper::Response::Body(body)),
             },
-            <span class="prelude-val">Err</span>(error) =&gt; proto::Response {
-                response: <span class="prelude-val">Some</span>(proto::response::Response::Error(error.into())),
+            <span class="prelude-val">Err</span>(error) =&gt; proto::ResponseWrapper {
+                response: <span class="prelude-val">Some</span>(proto::response_wrapper::Response::Error(error.into())),
             },
         }
     }
@@ -301,7 +303,7 @@
     request: <span class="kw-2">&amp;</span>Req,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;Res, Status&gt;, T::Error&gt; {
     <span class="kw">let </span>request_body = request.encode_to_vec();
-    <span class="kw">let </span>request = Request {
+    <span class="kw">let </span>request = RequestWrapper {
         method_id,
         body: request_body,
     };
@@ -309,7 +311,7 @@
     <span class="comment">// This may result in tranport errors, corresponding to the outer Result layer.
     </span><span class="kw">let </span>response_bytes = transport.invoke(<span class="kw-2">&amp;</span>request_bytes)<span class="question-mark">?</span>;
     <span class="kw">let </span>result: <span class="prelude-ty">Result</span>&lt;Res, Status&gt; = <span class="kw">try </span>{
-        <span class="kw">let </span>response = Response::decode(response_bytes.as_ref()).map_err(|err| {
+        <span class="kw">let </span>response = ResponseWrapper::decode(response_bytes.as_ref()).map_err(|err| {
             Status::new_with_message(
                 StatusCode::Internal,
                 <span class="macro">format!</span>(<span class="string">&quot;Client failed to deserialize response wrapper: {}&quot;</span>, err),
@@ -339,7 +341,7 @@
     request: <span class="kw-2">&amp;</span>Req,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;Res, Status&gt;, T::Error&gt; {
     <span class="kw">let </span>request_body = request.encode_to_vec();
-    <span class="kw">let </span>request = Request {
+    <span class="kw">let </span>request = RequestWrapper {
         method_id,
         body: request_body,
     };
@@ -347,20 +349,22 @@
     <span class="comment">// This may result in tranport errors, corresponding to the outer Result layer.
     </span><span class="kw">let </span>response_bytes = transport.invoke(<span class="kw-2">&amp;</span>request_bytes).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let </span>result: <span class="prelude-ty">Result</span>&lt;Res, Status&gt; = <span class="kw">try </span>{
-        <span class="kw">let </span>response = Response::decode(response_bytes.as_ref()).map_err(|err| {
+        <span class="kw">let </span>response = ResponseWrapper::decode(response_bytes.as_ref()).map_err(|err| {
             Status::new_with_message(
                 StatusCode::Internal,
                 <span class="macro">format!</span>(<span class="string">&quot;Client failed to deserialize response wrapper: {}&quot;</span>, err),
             )
         })<span class="question-mark">?</span>;
         <span class="kw">match </span>response.response {
-            <span class="prelude-val">Some</span>(response::Response::Error(err)) =&gt; <span class="prelude-val">Err</span>(err.into()),
-            <span class="prelude-val">Some</span>(response::Response::Body(body)) =&gt; Res::decode(body.as_ref()).map_err(|err| {
-                Status::new_with_message(
-                    StatusCode::Internal,
-                    <span class="macro">format!</span>(<span class="string">&quot;Client failed to deserialize response body: {}&quot;</span>, err),
-                )
-            }),
+            <span class="prelude-val">Some</span>(response_wrapper::Response::Error(err)) =&gt; <span class="prelude-val">Err</span>(err.into()),
+            <span class="prelude-val">Some</span>(response_wrapper::Response::Body(body)) =&gt; {
+                Res::decode(body.as_ref()).map_err(|err| {
+                    Status::new_with_message(
+                        StatusCode::Internal,
+                        <span class="macro">format!</span>(<span class="string">&quot;Client failed to deserialize response body: {}&quot;</span>, err),
+                    )
+                })
+            }
             <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(Status::new(StatusCode::Internal)),
         }<span class="question-mark">?
     </span>};

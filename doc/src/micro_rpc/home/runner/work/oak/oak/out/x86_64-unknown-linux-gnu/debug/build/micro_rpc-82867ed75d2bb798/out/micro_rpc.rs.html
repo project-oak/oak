@@ -49,7 +49,7 @@
 </pre></div><pre class="rust"><code><span class="doccomment">/// A wrapper message representing a request over a transport.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>Request {
+</span><span class="kw">pub struct </span>RequestWrapper {
     <span class="doccomment">/// The id of the method to invoke. This is usually specified via the IDL that drives the code
     /// generation. In other contexts (e.g. gRPC), IDLs may use the method name as part of the
     /// serialization, but here we prefer an opaque numeric identifier for both conciseness and
@@ -77,12 +77,12 @@
 <span class="doccomment">/// A wrapper message representing a response over a transport.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>Response {
-    <span class="attr">#[prost(oneof = <span class="string">&quot;response::Response&quot;</span>, tags = <span class="string">&quot;1, 2&quot;</span>)]
-    </span><span class="kw">pub </span>response: ::core::option::Option&lt;response::Response&gt;,
+</span><span class="kw">pub struct </span>ResponseWrapper {
+    <span class="attr">#[prost(oneof = <span class="string">&quot;response_wrapper::Response&quot;</span>, tags = <span class="string">&quot;1, 2&quot;</span>)]
+    </span><span class="kw">pub </span>response: ::core::option::Option&lt;response_wrapper::Response&gt;,
 }
-<span class="doccomment">/// Nested message and enum types in `Response`.
-</span><span class="kw">pub mod </span>response {
+<span class="doccomment">/// Nested message and enum types in `ResponseWrapper`.
+</span><span class="kw">pub mod </span>response_wrapper {
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>Response {

@@ -141,6 +141,8 @@
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
 </pre></div><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InitializeRequest {
@@ -179,7 +181,9 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request_bytes: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;::prost::alloc::vec::Vec&lt;u8&gt;, !&gt; {
-        <span class="kw">let </span>response: ::micro_rpc::Response = <span class="self">self</span>.invoke_inner(request_bytes).into();
+        <span class="kw">let </span>response: ::micro_rpc::ResponseWrapper = <span class="self">self
+            </span>.invoke_inner(request_bytes)
+            .into();
         <span class="kw">let </span>response_bytes = response.encode_to_vec();
         <span class="prelude-val">Ok</span>(response_bytes)
     }
@@ -192,7 +196,7 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         request_bytes: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;::prost::alloc::vec::Vec&lt;u8&gt;, ::micro_rpc::Status&gt; {
-        <span class="kw">let </span>request = ::micro_rpc::Request::decode(request_bytes)
+        <span class="kw">let </span>request = ::micro_rpc::RequestWrapper::decode(request_bytes)
             .map_err(|err| {
                 ::micro_rpc::Status::new_with_message(
                     ::micro_rpc::StatusCode::Internal,
