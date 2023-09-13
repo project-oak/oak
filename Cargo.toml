@@ -59,17 +59,17 @@ members = [
 ]
 exclude = [
   "fuzz",
-  "oak_enclave_binary",
+  "enclave_applications",
   "oak_functions/loader/fuzz",
-  "oak_functions_app",
-  "oak_tensorflow_app",
+  "oak_restricted_kernel_bin",
+  "oak_restricted_kernel_wrapper",
   "stage0_bin",
   "testing/oak_echo_app",
   "testing/oak_echo_raw_app",
   "testing/sev_snp_hello_world_kernel",
   "third_party/curve25519-dalek",
   "third_party/rust-hypervisor-firmware-virtio",
-  "third_party/x25519-dalek"
+  "third_party/x25519-dalek",
 ]
 
 [workspace.dependencies]

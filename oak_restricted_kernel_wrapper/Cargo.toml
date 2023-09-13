@@ -1,0 +1,29 @@
+[package]
+name = "oak_restricted_kernel_wrapper"
+version = "0.1.0"
+authors = ["Conrad Grobler <grobler@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[workspace]
+resolver = "2"
+members = ["."]
+
+[dependencies]
+elf = { version = "*", default-features = false }
+oak_linux_boot_params = { path = "../linux_boot_params" }
+x86_64 = "*"
+
+[profile.dev]
+opt-level = "z"
+panic = "abort"
+
+[profile.release]
+opt-level = "z"
+lto = true
+panic = "abort"
+
+[[bin]]
+name = "oak_restricted_kernel_wrapper"
+test = false
+bench = false
