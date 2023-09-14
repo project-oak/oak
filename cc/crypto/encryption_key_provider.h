@@ -42,7 +42,7 @@ class EncryptionKeyProvider : public RecipientContextGenerator {
   absl::StatusOr<RecipientContext> GenerateRecipientContext(
       absl::string_view serialized_encapsulated_public_key) override;
 
-  std::string GetSerializedPublicKey() const;
+  std::string GetSerializedPublicKey() const { return key_pair_.public_key; }
 
  private:
   KeyPair key_pair_;

@@ -38,6 +38,4 @@ absl::StatusOr<RecipientContext> EncryptionKeyProvider::GenerateRecipientContext
   return SetupBaseRecipient(serialized_encapsulated_public_key, key_pair_, kOakHPKEInfo);
 }
 
-std::string EncryptionKeyProvider::GetSerializedPublicKey() const { return key_pair_.public_key; }
-
 }  // namespace oak::crypto
