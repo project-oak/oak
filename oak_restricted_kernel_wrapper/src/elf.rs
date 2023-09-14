@@ -68,7 +68,14 @@ fn load_segment(
     // Zero out the target in case the file content is shorter than the target.
     target.fill(0);
 
-    target[..file_length].copy_from_slice(source);
+    // Manually copy between slices to avoid the compiler's intrinsic memcpy which uses an indirect
+    // call, causing a relocation entry in the resulting ELF binary.
+    #[allow(clippy::manual_memcpy)]
+    {
+        for i in 0..file_length {
+            target[i] = source[i]
+        }
+    }
     Ok(())
 }
 

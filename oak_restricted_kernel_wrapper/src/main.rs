@@ -20,18 +20,13 @@
 mod asm;
 mod elf;
 
-use core::{ffi::c_void, panic::PanicInfo};
+use core::panic::PanicInfo;
 use elf::parse_elf_file;
 use oak_linux_boot_params::BootParams;
 use x86_64::{
     instructions::{hlt, interrupts::int3},
     VirtAddr,
 };
-
-extern "C" {
-    #[link_name = "stack_start"]
-    static BOOT_STACK_POINTER: c_void;
-}
 
 /// Entry point for the 64-bit Rust code.
 ///
@@ -56,13 +51,12 @@ pub extern "C" fn rust64_start(_rdi: u64, boot_params: &BootParams) -> ! {
 unsafe fn jump_to_kernel(entry_point: VirtAddr, zero_page: usize) -> ! {
     core::arch::asm!(
         // Reset the boot stack.
-        "mov {1}, %rsp",
+        "lea stack_start(%rip), %rsp",
         // Set the address of the boot parameters.
-        "mov {2}, %rsi",
+        "mov {1}, %rsi",
         // Jump to the kernel entrypoint.
         "jmp *{0}",
         in(reg) entry_point.as_u64(),
-        in(reg) &BOOT_STACK_POINTER as *const _ as u64,
         in(reg) zero_page as u64,
         options(noreturn, att_syntax)
     );

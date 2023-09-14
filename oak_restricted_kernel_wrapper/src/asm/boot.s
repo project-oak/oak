@@ -25,7 +25,7 @@ _wrapper_entry:
     # Note: don't touch %rsi, as that contains the address of the zero page.
 
     # Set up the new stack.
-    mov $stack_start, %rsp
+    lea stack_start(%rip), %rsp
     # Push 8 bytes to fix stack alignment issue. Because we enter rust64_start with a jmp rather
     # than a call the function prologue means that the stack is no longer 16-byte aligned.
     push $0
