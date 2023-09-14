@@ -6,7 +6,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get --yes update \
   && apt-get install --yes --no-install-recommends \
-  systemd systemd-sysv dbus udev\
+  systemd systemd-sysv systemd-container dbus udev\
   # Cleanup
   && apt-get clean \
   && rm --recursive --force /var/lib/apt/lists/*
