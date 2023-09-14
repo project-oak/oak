@@ -30,11 +30,12 @@ constexpr absl::string_view kOakHPKEInfoTest = "Oak Hybrid Public Key Encryption
 // Client Encryptor and Server Encryptor can communicate.
 TEST(EncryptorTest, ClientEncryptorAndServerEncryptorCommunicateSuccess) {
   // Set up client and server encryptors.
-  auto key_pair = KeyPair::Generate();
-  std::string public_key = key_pair->public_key;
+  auto encryption_key_provider = EncryptionKeyProvider::Create();
+  ASSERT_TRUE(encryption_key_provider.ok());
+  std::string public_key = (*encryption_key_provider)->GetSerializedPublicKey();
   auto client_encryptor = ClientEncryptor::Create(public_key);
   ASSERT_TRUE(client_encryptor.ok());
-  ServerEncryptor server_encryptor = ServerEncryptor(*key_pair);
+  ServerEncryptor server_encryptor = ServerEncryptor(std::move(*encryption_key_provider));
 
   // Here we have the client send 2 encrypted messages to the server to ensure that nonce's align
   // for multi-message communication.
@@ -81,13 +82,14 @@ TEST(EncryptorTest, ClientEncryptorAndServerEncryptorCommunicateSuccess) {
 
 TEST(EncryptorTest, ClientEncryptorAndServerEncryptorCommunicateMismatchPublicKeysFailure) {
   // Set up client and server encryptors.
-  auto key_pair = KeyPair::Generate();
-  std::string wrong_public_key = key_pair->public_key;
+  auto encryption_key_provider = EncryptionKeyProvider::Create();
+  ASSERT_TRUE(encryption_key_provider.ok());
+  std::string wrong_public_key = (*encryption_key_provider)->GetSerializedPublicKey();
   // Edit the public key that the client uses to make it incorrect.
   wrong_public_key[0] = (wrong_public_key[0] + 1) % 128;
   auto client_encryptor = ClientEncryptor::Create(wrong_public_key);
   ASSERT_TRUE(client_encryptor.ok());
-  ServerEncryptor server_encryptor = ServerEncryptor(*key_pair);
+  ServerEncryptor server_encryptor = ServerEncryptor(std::move(*encryption_key_provider));
 
   std::string client_plaintext_message = "Hello server";
 

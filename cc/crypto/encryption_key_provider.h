@@ -35,12 +35,14 @@ class RecipientContextGenerator {
 
 class EncryptionKeyProvider : public RecipientContextGenerator {
  public:
-  absl::StatusOr<std::unique_ptr<EncryptionKeyProvider>> Create();
+  static absl::StatusOr<std::unique_ptr<EncryptionKeyProvider>> Create();
 
   explicit EncryptionKeyProvider(KeyPair key_pair) : key_pair_(key_pair) {}
 
   absl::StatusOr<RecipientContext> GenerateRecipientContext(
       absl::string_view serialized_encapsulated_public_key) override;
+
+  std::string GetSerializedPublicKey() const;
 
  private:
   KeyPair key_pair_;
