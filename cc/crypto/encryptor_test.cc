@@ -35,7 +35,7 @@ TEST(EncryptorTest, ClientEncryptorAndServerEncryptorCommunicateSuccess) {
   std::string public_key = (*encryption_key_provider)->GetSerializedPublicKey();
   auto client_encryptor = ClientEncryptor::Create(public_key);
   ASSERT_TRUE(client_encryptor.ok());
-  ServerEncryptor server_encryptor = ServerEncryptor(std::move(*encryption_key_provider));
+  ServerEncryptor server_encryptor = ServerEncryptor(*encryption_key_provider);
 
   // Here we have the client send 2 encrypted messages to the server to ensure that nonce's align
   // for multi-message communication.
@@ -89,7 +89,7 @@ TEST(EncryptorTest, ClientEncryptorAndServerEncryptorCommunicateMismatchPublicKe
   wrong_public_key[0] = (wrong_public_key[0] + 1) % 128;
   auto client_encryptor = ClientEncryptor::Create(wrong_public_key);
   ASSERT_TRUE(client_encryptor.ok());
-  ServerEncryptor server_encryptor = ServerEncryptor(std::move(*encryption_key_provider));
+  ServerEncryptor server_encryptor = ServerEncryptor(*encryption_key_provider);
 
   std::string client_plaintext_message = "Hello server";
 

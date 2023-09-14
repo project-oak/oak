@@ -31,6 +31,7 @@
 namespace oak::client {
 namespace {
 
+using ::oak::crypto::EncryptionKeyProvider;
 using ::oak::crypto::KeyPair;
 using ::oak::crypto::ServerEncryptor;
 using ::oak::remote_attestation::InsecureAttestationVerifier;
@@ -48,17 +49,17 @@ constexpr uint8_t kTestSessionSize = 8;
 // TODO(#3641): Send test remote attestation report to the client and add corresponding tests.
 class TestTransport : public TransportWrapper {
  public:
-  TestTransport() : key_pair_(*KeyPair::Generate()) {}
+  TestTransport() : encryption_key_provider_(*EncryptionKeyProvider::Create()) {}
 
   absl::StatusOr<AttestationBundle> GetEvidence() override {
     AttestationBundle endorsed_evidence;
     endorsed_evidence.mutable_attestation_evidence()->set_encryption_public_key(
-        key_pair_.public_key);
+        encryption_key_provider_->GetSerializedPublicKey());
     return endorsed_evidence;
   }
 
   absl::StatusOr<std::string> Invoke(absl::string_view request_bytes) override {
-    ServerEncryptor server_encryptor = ServerEncryptor(key_pair_);
+    ServerEncryptor server_encryptor = ServerEncryptor(encryption_key_provider_);
     auto decrypted_request = server_encryptor.Decrypt(request_bytes);
     if (!decrypted_request.ok()) {
       return decrypted_request.status();
@@ -74,7 +75,7 @@ class TestTransport : public TransportWrapper {
   }
 
  private:
-  KeyPair key_pair_;
+  std::shared_ptr<EncryptionKeyProvider> encryption_key_provider_;
 };
 
 // Client can process attestation evidence and invoke the backend.

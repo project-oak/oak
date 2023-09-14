@@ -35,7 +35,7 @@ class RecipientContextGenerator {
 
 class EncryptionKeyProvider : public RecipientContextGenerator {
  public:
-  static absl::StatusOr<std::unique_ptr<EncryptionKeyProvider>> Create();
+  static absl::StatusOr<std::shared_ptr<EncryptionKeyProvider>> Create();
 
   explicit EncryptionKeyProvider(KeyPair key_pair) : key_pair_(key_pair) {}
 

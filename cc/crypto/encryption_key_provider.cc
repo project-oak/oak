@@ -25,12 +25,12 @@
 
 namespace oak::crypto {
 
-absl::StatusOr<std::unique_ptr<EncryptionKeyProvider>> EncryptionKeyProvider::Create() {
+absl::StatusOr<std::shared_ptr<EncryptionKeyProvider>> EncryptionKeyProvider::Create() {
   absl::StatusOr<KeyPair> key_pair = KeyPair::Generate();
   if (!key_pair.ok()) {
     return key_pair.status();
   }
-  return std::make_unique<EncryptionKeyProvider>(*key_pair);
+  return std::make_shared<EncryptionKeyProvider>(*key_pair);
 }
 
 absl::StatusOr<RecipientContext> EncryptionKeyProvider::GenerateRecipientContext(
