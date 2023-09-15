@@ -4,7 +4,7 @@
 # that can be executed on Oak Containers. Used for manual testing during
 # development. Down the line we probably want to replace this.
 
-readonly CONTAINER_IMAGE='oak_container_example'
+readonly OCI_IMAGE_FILE='./target/oak_container_example_oci_image.tar'
 set -e
 rm --recursive --force ./target
 mkdir --parents ./target
@@ -15,8 +15,13 @@ cargo build \
     -Zunstable-options \
     --out-dir='./target/'
 
-docker build --tag="${CONTAINER_IMAGE}" .
+# Export the container as an OCI Image. Ref:
+docker buildx build \
+    --tag latest \
+    --output="type=oci,dest=${OCI_IMAGE_FILE}" \
+    .
+
 
 ../scripts/export_container_bundle \
-    -c "${CONTAINER_IMAGE}" \
+    -c "${OCI_IMAGE_FILE}" \
     -o './target/oak_container_example_oci_filesystem_bundle.tar'

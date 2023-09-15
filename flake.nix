@@ -164,7 +164,7 @@
                 glibc.static
                 ncurses
                 netcat
-                runc
+                umoci
               ];
             };
             # Shell for most CI steps (i.e. without contaniners support).
