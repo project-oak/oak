@@ -19,7 +19,10 @@ cargo build \
 
 # Export the container as an OCI Image.
 # Ref: https://docs.docker.com/build/exporters/oci-docker/
-docker buildx build \
+readonly BUILDER="$(docker buildx create --driver docker-container)"
+docker buildx \
+    --builder="${BUILDER}" \
+    build \
     --tag="latest" \
     --output="type=oci,dest=${OCI_IMAGE_FILE}" \
     .
