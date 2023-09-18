@@ -470,6 +470,8 @@
 <a href="#470" id="470">470</a>
 <a href="#471" id="471">471</a>
 <a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -668,10 +670,12 @@
 
 <span class="doccomment">/// Stops sharing a single 4KiB page with the hypervisor when running with AMD SEV-SNP enabled.
 </span><span class="kw">pub fn </span>unshare_page(page: Page&lt;Size4KiB&gt;) {
-    <span class="kw">let </span>page_start = page.start_address().as_u64();
-    <span class="kw">let </span>request = SnpPageStateChangeRequest::new(page_start <span class="kw">as </span>usize, PageAssignment::Private)
-        .expect(<span class="string">&quot;invalid address for page location&quot;</span>);
-    change_snp_page_state(request).expect(<span class="string">&quot;couldn&#39;t change SNP state for page&quot;</span>);
+    <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
+        <span class="kw">let </span>page_start = page.start_address().as_u64();
+        <span class="kw">let </span>request = SnpPageStateChangeRequest::new(page_start <span class="kw">as </span>usize, PageAssignment::Private)
+            .expect(<span class="string">&quot;invalid address for page location&quot;</span>);
+        change_snp_page_state(request).expect(<span class="string">&quot;couldn&#39;t change SNP state for page&quot;</span>);
+    }
 }
 
 <span class="comment">// Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However, `PVALIDATE` can only
