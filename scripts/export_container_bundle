@@ -52,7 +52,7 @@ echo "[INFO] Exporting the container as an OCI image"
 readonly OCI_IMAGE_DIR="${WORK_DIR}/image"
 mkdir "${OCI_IMAGE_DIR}"
 tar --extract \
-    --tar="${WORK_DIR}/oci_image.tar" \
+    --file="${INPUT_OCI_IMAGE_TAR}" \
     --directory="${OCI_IMAGE_DIR}"
 
 echo "[INFO] Creating runtime bundle"
@@ -67,4 +67,4 @@ umoci unpack \
 
 # Bundle just the files and directories that constitute the deterministically
 # generated OCI bundle.
-tar --create --tar="${OUTPUT_OCI_BUNDLE_TAR}" --directory="${OCI_BUNDLE_DIR}" ./rootfs ./config.json
+tar --create --file="${OUTPUT_OCI_BUNDLE_TAR}" --directory="${OCI_BUNDLE_DIR}" ./rootfs ./config.json
