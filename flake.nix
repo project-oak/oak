@@ -52,7 +52,7 @@
             };
           craneLib = (crane.mkLib pkgs).overrideToolchain rustToolchain;
           src = ./.;
-          # Build xtask as a package so that we can use it in the devShell and cache it in the 
+          # Build xtask as a package so that we can use it in the devShell and cache it in the
           # future, without rebuilding it every time.
           xtask = craneLib.buildPackage {
             inherit src;
@@ -78,7 +78,7 @@
           # We define a recursive set of shells, so that we can easily create a shell with a subset
           # of the dependencies for specific CI steps, without having to pull everything all the time.
           #
-          # To add a new dependency, you can search it on https://search.nixos.org/packages and add its 
+          # To add a new dependency, you can search it on https://search.nixos.org/packages and add its
           # name to one of the shells defined below.
           devShells = rec {
             # Base shell with shared dependencies.
@@ -142,7 +142,7 @@
                 bazel-buildtools
               ];
             };
-            # Shell for building Oak Containers kernel and system image. This is not included in the 
+            # Shell for building Oak Containers kernel and system image. This is not included in the
             # default shell because it is not needed as part of the CI.
             containers = with pkgs; mkShell {
               inputsFrom = [
@@ -157,7 +157,6 @@
                 docker
                 elfutils
                 flex
-                jq
                 libelf
                 perl
                 glibc
