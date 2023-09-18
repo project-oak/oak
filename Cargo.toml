@@ -115,3 +115,6 @@ prost-types = "*"
 tokio = "*"
 tonic = "*"
 tonic-build = { version = "*", default-features = false }
+
+[patch.crates-io]
+hpke = { git = "https://github.com/rozbb/rust-hpke.git" }
