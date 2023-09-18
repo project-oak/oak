@@ -4,6 +4,8 @@
 # that can be executed on Oak Containers. Used for manual testing during
 # development. Down the line we probably want to replace this.
 
+set -o errexit
+
 readonly OCI_IMAGE_FILE="./target/oak_container_example_oci_image.tar"
 set -e
 rm --recursive --force ./target
