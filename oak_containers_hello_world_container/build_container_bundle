@@ -15,7 +15,8 @@ cargo build \
     -Zunstable-options \
     --out-dir="./target/"
 
-# Export the container as an OCI Image. Ref:
+# Export the container as an OCI Image.
+# Ref: https://docs.docker.com/build/exporters/oci-docker/
 docker buildx build \
     --tag="latest" \
     --output="type=oci,dest=${OCI_IMAGE_FILE}" \
