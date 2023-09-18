@@ -36,12 +36,12 @@ while getopts "hc:o:" opt; do
   esac
 done
 
-if [ -z "${INPUT_OCI_IMAGE_TAR}" ]; then
+if [[ -z "${INPUT_OCI_IMAGE_TAR}" ]]; then
   echo "Missing required option: -c <input-oci-image-tar>"
   exit 1
 fi
 
-if [ -z "${OUTPUT_OCI_BUNDLE_TAR}" ]; then
+if [[ -z "${OUTPUT_OCI_BUNDLE_TAR}" ]]; then
   echo "Missing required option: -o <output-oci-bundle-tar>"
   exit 1
 fi
