@@ -39,7 +39,10 @@ namespace oak::crypto {
 // be multiple responses per request and multiple requests per response.
 class ServerEncryptor {
  public:
-  ServerEncryptor(std::shared_ptr<RecipientContextGenerator> recipient_context_generator)
+  // Constructor for `ServerEncryptor`.
+  // `RecipientContextGenerator` argument is a long-term object containing the private key and
+  // should outlive the per-session `ServerEncryptor` object.
+  ServerEncryptor(RecipientContextGenerator& recipient_context_generator)
       : recipient_context_generator_(recipient_context_generator),
         recipient_request_context_(nullptr),
         recipient_response_context_(nullptr){};
@@ -61,7 +64,7 @@ class ServerEncryptor {
                                       absl::string_view associated_data);
 
  private:
-  std::shared_ptr<RecipientContextGenerator> recipient_context_generator_;
+  RecipientContextGenerator& recipient_context_generator_;
   std::unique_ptr<RecipientRequestContext> recipient_request_context_;
   std::unique_ptr<RecipientResponseContext> recipient_response_context_;
 

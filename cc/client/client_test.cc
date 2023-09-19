@@ -16,8 +16,6 @@
 
 #include "cc/client/client.h"
 
-#include <memory>
-
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/crypto/hpke/recipient_context.h"
@@ -54,7 +52,7 @@ class TestTransport : public TransportWrapper {
   absl::StatusOr<AttestationBundle> GetEvidence() override {
     AttestationBundle endorsed_evidence;
     endorsed_evidence.mutable_attestation_evidence()->set_encryption_public_key(
-        encryption_key_provider_->GetSerializedPublicKey());
+        encryption_key_provider_.GetSerializedPublicKey());
     return endorsed_evidence;
   }
 
@@ -75,7 +73,7 @@ class TestTransport : public TransportWrapper {
   }
 
  private:
-  std::shared_ptr<EncryptionKeyProvider> encryption_key_provider_;
+  EncryptionKeyProvider encryption_key_provider_;
 };
 
 // Client can process attestation evidence and invoke the backend.

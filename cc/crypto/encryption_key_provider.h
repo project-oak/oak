@@ -17,7 +17,6 @@
 #ifndef CC_CRYPTO_ENCRYPTION_KEY_PROVIDER_H_
 #define CC_CRYPTO_ENCRYPTION_KEY_PROVIDER_H_
 
-#include <memory>
 #include <string>
 #include <tuple>
 
@@ -35,7 +34,7 @@ class RecipientContextGenerator {
 
 class EncryptionKeyProvider : public RecipientContextGenerator {
  public:
-  static absl::StatusOr<std::shared_ptr<EncryptionKeyProvider>> Create();
+  static absl::StatusOr<EncryptionKeyProvider> Create();
 
   explicit EncryptionKeyProvider(KeyPair key_pair) : key_pair_(key_pair) {}
 

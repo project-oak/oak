@@ -91,7 +91,7 @@ absl::Status ServerEncryptor::InitializeRecipientContexts(const EncryptedRequest
 
   // Create recipient contexts.
   absl::StatusOr<RecipientContext> recipient_context =
-      recipient_context_generator_->GenerateRecipientContext(serialized_encapsulated_public_key);
+      recipient_context_generator_.GenerateRecipientContext(serialized_encapsulated_public_key);
   if (!recipient_context.ok()) {
     return recipient_context.status();
   }

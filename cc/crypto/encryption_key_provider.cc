@@ -16,8 +16,6 @@
 
 #include "cc/crypto/encryption_key_provider.h"
 
-#include <memory>
-
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/crypto/common.h"
@@ -25,12 +23,12 @@
 
 namespace oak::crypto {
 
-absl::StatusOr<std::shared_ptr<EncryptionKeyProvider>> EncryptionKeyProvider::Create() {
+absl::StatusOr<EncryptionKeyProvider> EncryptionKeyProvider::Create() {
   absl::StatusOr<KeyPair> key_pair = KeyPair::Generate();
   if (!key_pair.ok()) {
     return key_pair.status();
   }
-  return std::make_shared<EncryptionKeyProvider>(*key_pair);
+  return EncryptionKeyProvider(*key_pair);
 }
 
 absl::StatusOr<RecipientContext> EncryptionKeyProvider::GenerateRecipientContext(
