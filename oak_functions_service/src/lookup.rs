@@ -26,7 +26,7 @@ use log::{info, Level};
 use spinning_top::Spinlock;
 
 // Data maintains the invariant on lookup data to have [at most one
-// value](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-at-most-one-value)
+// value](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md#invariant-at-most-one-value)
 pub type Data = HashMap<Vec<u8>, Vec<u8>>;
 
 #[derive(Default)]
@@ -67,8 +67,8 @@ impl DataBuilder {
 /// use the new data, but earlier instances will still used the earlier data.
 ///
 /// LookupDataManager maintains the invariants [consistent view on lookup
-/// data](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-consistent-view-on-lookup-data) , and [shared
-/// lookup data](https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-shared-lookup-data)
+/// data](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md##invariant-consistent-view-on-lookup-data) , and [shared
+/// lookup data](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md##invariant-shared-lookup-data)
 ///
 /// Note that the data is never mutated in-place, but only ever replaced. So instead of the Rust
 /// idiom `Arc<Spinlock<T>>` we have `Spinlock<Arc<T>>`.
