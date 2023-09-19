@@ -2,8 +2,8 @@
 <p><code>LookupDataManager</code> can be used to create <code>LookupData</code> instances that share the underlying data.
 It can also update the underlying data. After updating the data, new <code>LookupData</code> instances will
 use the new data, but earlier instances will still used the earlier data.</p>
-<p>LookupDataManager maintains the invariants <a href="https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-consistent-view-on-lookup-data">consistent view on lookup
-data</a> , and <a href="https://github.com/project-oak/oak/tree/main/oak_functions/lookup/README.md#invariant-shared-lookup-data">shared
+<p>LookupDataManager maintains the invariants <a href="https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md##invariant-consistent-view-on-lookup-data">consistent view on lookup
+data</a> , and <a href="https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md##invariant-shared-lookup-data">shared
 lookup data</a></p>
 <p>Note that the data is never mutated in-place, but only ever replaced. So instead of the Rust
 idiom <code>Arc&lt;Spinlock&lt;T&gt;&gt;</code> we have <code>Spinlock&lt;Arc&lt;T&gt;&gt;</code>.</p>
