@@ -38,9 +38,23 @@ cc_library(
     hdrs = ["server_encryptor.h"],
     deps = [
         ":common",
+        ":encryption_key_provider",
         "//cc/crypto/hpke:recipient_context",
         "//oak_crypto/proto/v1:crypto_cc_proto",
         "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "encryption_key_provider",
+    srcs = ["encryption_key_provider.cc"],
+    hdrs = ["encryption_key_provider.h"],
+    deps = [
+        ":common",
+        "//cc/crypto/hpke:recipient_context",
+        "//oak_crypto/proto/v1:crypto_cc_proto",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],

@@ -25,6 +25,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/crypto/common.h"
+#include "cc/crypto/encryption_key_provider.h"
 #include "cc/crypto/hpke/recipient_context.h"
 #include "oak_crypto/proto/v1/crypto.pb.h"
 
@@ -38,8 +39,11 @@ namespace oak::crypto {
 // be multiple responses per request and multiple requests per response.
 class ServerEncryptor {
  public:
-  ServerEncryptor(const KeyPair& server_key_pair)
-      : server_key_pair_(server_key_pair),
+  // Constructor for `ServerEncryptor`.
+  // `RecipientContextGenerator` argument is a long-term object containing the private key and
+  // should outlive the per-session `ServerEncryptor` object.
+  ServerEncryptor(RecipientContextGenerator& recipient_context_generator)
+      : recipient_context_generator_(recipient_context_generator),
         recipient_request_context_(nullptr),
         recipient_response_context_(nullptr){};
 
@@ -60,7 +64,7 @@ class ServerEncryptor {
                                       absl::string_view associated_data);
 
  private:
-  KeyPair server_key_pair_;
+  RecipientContextGenerator& recipient_context_generator_;
   std::unique_ptr<RecipientRequestContext> recipient_request_context_;
   std::unique_ptr<RecipientResponseContext> recipient_response_context_;
 
