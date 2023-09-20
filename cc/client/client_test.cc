@@ -47,7 +47,16 @@ constexpr uint8_t kTestSessionSize = 8;
 // TODO(#3641): Send test remote attestation report to the client and add corresponding tests.
 class TestTransport : public TransportWrapper {
  public:
-  TestTransport() : encryption_key_provider_(*EncryptionKeyProvider::Create()) {}
+  static absl::StatusOr<std::unique_ptr<TestTransport>> Create() {
+    auto encryption_key_provider = EncryptionKeyProvider::Create();
+    if (!encryption_key_provider.ok()) {
+      return encryption_key_provider.status();
+    }
+    return std::make_unique<TestTransport>(*encryption_key_provider);
+  }
+
+  explicit TestTransport(EncryptionKeyProvider encryption_key_provider)
+      : encryption_key_provider_(encryption_key_provider) {}
 
   absl::StatusOr<AttestationBundle> GetEvidence() override {
     AttestationBundle endorsed_evidence;
@@ -78,9 +87,10 @@ class TestTransport : public TransportWrapper {
 
 // Client can process attestation evidence and invoke the backend.
 TEST(EncryptorTest, ClientCreateAndInvokeSuccess) {
-  auto transport = std::make_unique<TestTransport>();
+  auto transport = TestTransport::Create();
+  ASSERT_TRUE(transport.ok());
   InsecureAttestationVerifier verifier = InsecureAttestationVerifier();
-  auto oak_client = OakClient::Create(std::move(transport), verifier);
+  auto oak_client = OakClient::Create(std::move(*transport), verifier);
   ASSERT_TRUE(oak_client.ok());
 
   for (int i = 0; i < kTestSessionSize; i++) {

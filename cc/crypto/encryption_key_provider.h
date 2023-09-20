@@ -36,8 +36,6 @@ class EncryptionKeyProvider : public RecipientContextGenerator {
  public:
   static absl::StatusOr<EncryptionKeyProvider> Create();
 
-  explicit EncryptionKeyProvider(KeyPair key_pair) : key_pair_(key_pair) {}
-
   absl::StatusOr<RecipientContext> GenerateRecipientContext(
       absl::string_view serialized_encapsulated_public_key) override;
 
@@ -45,6 +43,8 @@ class EncryptionKeyProvider : public RecipientContextGenerator {
 
  private:
   KeyPair key_pair_;
+
+  explicit EncryptionKeyProvider(KeyPair key_pair) : key_pair_(key_pair) {}
 };
 
 }  // namespace oak::crypto
