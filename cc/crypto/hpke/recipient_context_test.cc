@@ -94,27 +94,23 @@ TEST_F(RecipientContextTest, SetupBaseRecipientMismatchedKeyPairReturnsFailure) 
 TEST_F(RecipientContextTest, SetupBaseRecipientReturnsValidPointersOnSuccess) {
   auto recipient_context = SetupBaseRecipient(encap_public_key_, recipient_key_pair_, info_string_);
   ASSERT_TRUE(recipient_context.ok());
-  EXPECT_TRUE(recipient_context->recipient_request_context);
-  EXPECT_TRUE(recipient_context->recipient_response_context);
+  EXPECT_TRUE(*recipient_context);
 }
 
-TEST_F(RecipientContextTest, RecipientRequestContextOpenSuccess) {
+TEST_F(RecipientContextTest, RecipientContextOpenSuccess) {
   // Initialize an HPKE sender.
   auto sender_context = SetupBaseSender(recipient_key_pair_.public_key, info_string_);
   ASSERT_TRUE(sender_context.ok());
 
   std::string plaintext = "Hello World";
 
-  auto ciphertext =
-      sender_context->sender_request_context->Seal(plaintext, associated_data_request_);
+  auto ciphertext = (*sender_context)->Seal(plaintext, associated_data_request_);
   ASSERT_TRUE(ciphertext.ok());
 
-  std::string encap_public_key(sender_context->encap_public_key.begin(),
-                               sender_context->encap_public_key.end());
+  std::string encap_public_key = (*sender_context)->GetSerializedEncapsulatedPublicKey();
   auto recipient_context = SetupBaseRecipient(encap_public_key, recipient_key_pair_, info_string_);
   ASSERT_TRUE(recipient_context.ok());
-  auto received_plaintext =
-      recipient_context->recipient_request_context->Open(*ciphertext, associated_data_request_);
+  auto received_plaintext = (*recipient_context)->Open(*ciphertext, associated_data_request_);
   ASSERT_TRUE(received_plaintext.ok());
 
   EXPECT_THAT(*received_plaintext, StrEq(plaintext));
@@ -127,19 +123,16 @@ TEST_F(RecipientContextTest, RecipientRequestContextOpenFailure) {
 
   std::string plaintext = "Hello World";
 
-  auto ciphertext =
-      sender_context->sender_request_context->Seal(plaintext, associated_data_request_);
+  auto ciphertext = (*sender_context)->Seal(plaintext, associated_data_request_);
   ASSERT_TRUE(ciphertext.ok());
 
   std::string edited_ciphertext = absl::StrCat(*ciphertext, "no!");
 
-  std::string encap_public_key(sender_context->encap_public_key.begin(),
-                               sender_context->encap_public_key.end());
+  std::string encap_public_key = (*sender_context)->GetSerializedEncapsulatedPublicKey();
   auto recipient_context = SetupBaseRecipient(encap_public_key, recipient_key_pair_, info_string_);
   ASSERT_TRUE(recipient_context.ok());
 
-  auto received_plaintext = recipient_context->recipient_request_context->Open(
-      edited_ciphertext, associated_data_request_);
+  auto received_plaintext = (*recipient_context)->Open(edited_ciphertext, associated_data_request_);
   EXPECT_FALSE(received_plaintext.ok());
   EXPECT_EQ(received_plaintext.status().code(), absl::StatusCode::kAborted);
 }
@@ -150,8 +143,7 @@ TEST_F(RecipientContextTest, RecipientResponseContextSealSuccess) {
 
   std::string plaintext = "Hello World";
 
-  auto ciphertext =
-      recipient_context->recipient_response_context->Seal(plaintext, associated_data_response_);
+  auto ciphertext = (*recipient_context)->Seal(plaintext, associated_data_response_);
   ASSERT_TRUE(ciphertext.ok());
   EXPECT_THAT(plaintext, StrNe(*ciphertext));
 }
@@ -162,8 +154,7 @@ TEST_F(RecipientContextTest, RecipientResponseContextSealFailure) {
 
   std::string empty_plaintext = "";
 
-  auto ciphertext = recipient_context->recipient_response_context->Seal(empty_plaintext,
-                                                                        associated_data_response_);
+  auto ciphertext = (*recipient_context)->Seal(empty_plaintext, associated_data_response_);
   EXPECT_FALSE(ciphertext.ok());
   EXPECT_EQ(ciphertext.status().code(), absl::StatusCode::kInvalidArgument);
 }
@@ -175,8 +166,7 @@ TEST_F(RecipientContextTest, GenerateKeysAndSetupBaseRecipientSuccess) {
   auto sender_context = SetupBaseSender(key_pair->public_key, info_string_);
   ASSERT_TRUE(sender_context.ok());
 
-  std::string encap_public_key(sender_context->encap_public_key.begin(),
-                               sender_context->encap_public_key.end());
+  std::string encap_public_key = (*sender_context)->GetSerializedEncapsulatedPublicKey();
 
   auto recipient_context = SetupBaseRecipient(encap_public_key, *key_pair, info_string_);
   EXPECT_TRUE(recipient_context.ok());

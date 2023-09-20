@@ -18,8 +18,8 @@ package com.google.oak.crypto;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.oak.crypto.hpke.Context;
 import com.google.oak.crypto.hpke.Hpke;
+import com.google.oak.crypto.hpke.SenderContext;
 import com.google.oak.crypto.v1.AeadEncryptedMessage;
 import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
@@ -43,9 +43,8 @@ public class ClientEncryptor implements AutoCloseable, Encryptor {
 
   // Encapsulated public key needed to establish a symmetric session key.
   // Only sent in the initial request message of the session.
-  private Optional<byte[]> serializedEncapsulatedPublicKey;
-  private final Context.SenderRequestContext senderRequestContext;
-  private final Context.SenderResponseContext senderResponseContext;
+  private boolean serializedEncapsulatedPublicKeyHasBeenSent;
+  private final SenderContext senderContext;
 
   /**
    * Creates a new instance of {@code ClientEncryptor}.
@@ -66,15 +65,12 @@ public class ClientEncryptor implements AutoCloseable, Encryptor {
    */
   @Override
   public void close() {
-    senderRequestContext.close();
-    senderResponseContext.close();
+    senderContext.close();
   }
 
-  private ClientEncryptor(Hpke.SenderContext senderContext) {
-    this.serializedEncapsulatedPublicKey =
-        Optional.ofNullable(senderContext.serializedEncapsulatedPublicKey);
-    this.senderRequestContext = senderContext.senderRequestContext;
-    this.senderResponseContext = senderContext.senderResponseContext;
+  private ClientEncryptor(SenderContext senderContext) {
+    this.serializedEncapsulatedPublicKeyHasBeenSent = false;
+    this.senderContext = senderContext;
   }
 
   /**
@@ -89,7 +85,7 @@ public class ClientEncryptor implements AutoCloseable, Encryptor {
   public final Result<byte[], Exception> encrypt(
       final byte[] plaintext, final byte[] associatedData) {
     // Encrypt request.
-    return this.senderRequestContext.seal(plaintext, associatedData).map(ciphertext -> {
+    return senderContext.seal(plaintext, associatedData).map(ciphertext -> {
       // Create request message.
       EncryptedRequest.Builder encryptedRequestBuilder =
           EncryptedRequest.newBuilder().setEncryptedMessage(
@@ -99,11 +95,12 @@ public class ClientEncryptor implements AutoCloseable, Encryptor {
                   .build());
 
       // Encapsulated public key is only sent in the initial request message of the session.
-      this.serializedEncapsulatedPublicKey.ifPresent(serializedEncapsulatedPublicKey -> {
+      if (!serializedEncapsulatedPublicKeyHasBeenSent) {
         encryptedRequestBuilder.setSerializedEncapsulatedPublicKey(
-            ByteString.copyFrom(serializedEncapsulatedPublicKey));
-        this.serializedEncapsulatedPublicKey = Optional.empty();
-      });
+            ByteString.copyFrom(senderContext.getSerializedEncapsulatedPublicKey()));
+        serializedEncapsulatedPublicKeyHasBeenSent = true;
+      }
+
       // TODO(#3843): Return unserialized proto messages once we have Java encryption without
       // JNI.
       return encryptedRequestBuilder.build().toByteArray();
@@ -133,7 +130,7 @@ public class ClientEncryptor implements AutoCloseable, Encryptor {
     byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
 
     // Decrypt response.
-    return this.senderResponseContext.open(ciphertext, associatedData)
+    return senderContext.open(ciphertext, associatedData)
         .map(plaintext
             ->
             // TODO(#3843): Accept unserialized proto messages once we have Java encryption without

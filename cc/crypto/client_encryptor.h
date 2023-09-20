@@ -47,12 +47,9 @@ class ClientEncryptor {
       absl::string_view serialized_server_public_key);
 
   // Constructor for initializing all private variables of the class.
-  ClientEncryptor(SenderContext& sender_hpke_info)
-      : serialized_encapsulated_public_key_(sender_hpke_info.encap_public_key.begin(),
-                                            sender_hpke_info.encap_public_key.end()),
-        serialized_encapsulated_public_key_has_been_sent_(false),
-        sender_request_context_(std::move(sender_hpke_info.sender_request_context)),
-        sender_response_context_(std::move(sender_hpke_info.sender_response_context)){};
+  ClientEncryptor(std::unique_ptr<SenderContext> sender_context)
+      : serialized_encapsulated_public_key_has_been_sent_(false),
+        sender_context_(std::move(sender_context)){};
 
   // Encrypts `plaintext` and authenticates `associated_data` using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
@@ -73,10 +70,8 @@ class ClientEncryptor {
  private:
   // Encapsulated public key needed to establish a symmetric session key.
   // Only sent in the initial request message of the session.
-  std::string serialized_encapsulated_public_key_;
   bool serialized_encapsulated_public_key_has_been_sent_;
-  std::unique_ptr<SenderRequestContext> sender_request_context_;
-  std::unique_ptr<SenderResponseContext> sender_response_context_;
+  std::unique_ptr<SenderContext> sender_context_;
 };
 
 }  // namespace oak::crypto
