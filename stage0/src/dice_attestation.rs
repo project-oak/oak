@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,23 +16,42 @@
 
 extern crate alloc;
 
-use alloc::{string::String, vec::Vec};
-use coset::{cbor::value::Value, cwt, iana, CborSerializable, CoseError};
+use alloc::{string::String, vec, vec::Vec};
+use coset::{
+    cbor::value::Value, cwt, iana, Algorithm, CborSerializable, CoseError, CoseKey, KeyOperation,
+    KeyType, Label,
+};
 use hkdf::Hkdf;
 use p384::ecdsa::{signature::Signer, Signature, SigningKey, VerifyingKey};
 use rand_core::OsRng;
 use sha2::Sha256;
 
+/// String to be used as salt for generating Key IDs.
 pub const ID_SALT: &str = "DICE_ID_SALT";
-pub const SIGNATURE_LENGTH: usize = 20;
+/// ID for the CWT private claim corresponding to the Subject of the CWT.
+pub const SUBJECT_PUBLIC_KEY_ID: i64 = -4670552;
+/// ID for the CWT private claim corresponding to the VM kernel measurement.
+pub const KERNEL_MEASUREMENT_ID: i64 = -4670555;
+/// ID for the CWT private claim corresponding to the VM kernel commandline measurement.
+pub const KERNEL_COMMANDLINE_MEASUREMENT_ID: i64 = -4670556;
+/// ID for the CWT private claim corresponding to the VM kernel setup data measurement.
+pub const SETUP_DATA_MEASUREMENT_ID: i64 = -4670557;
+/// ID for the CWT private claim corresponding to the initial ramdisk measurement.
+pub const INITRD_MEASUREMENT_ID: i64 = -4670558;
+/// ID for the CWT private claim corresponding to the physical memory map (e820 table).
+pub const MEMORY_MAP_MEASUREMENT_ID: i64 = -4670559;
+/// ID for the CWT private claim corresponding to the hash of the commands for building the ACPI tables.
+pub const ACPI_MEASUREMENT_ID: i64 = -4670560;
+/// Length of the unique ID for ECDSA keys generated.
+pub const KEY_ID_LENGTH: usize = 20;
 
-/// Attestation related functions
+/// Attestation related functions.
 ///
-/// Returns Signed Stage1 key and measurments
+/// Returns Signed Stage1 key and measurments.
 struct Stage0Signer {
     signing_key: SigningKey,
 }
-// Measurements of various components in Stage1 
+/// Measurements of various components in Stage1.
 pub struct Measurements {
     pub kernel_measurement: [u8; 32],
     pub cmdline_measurement: [u8; 32],
@@ -42,7 +61,7 @@ pub struct Measurements {
     pub acpi_measurement: [u8; 32],
 }
 
-// Signer implementation.
+/// Signer implementation.
 impl Stage0Signer {
     fn sign(&self, data: &[u8]) -> Vec<u8> {
         let signed_stage1_ca_verifying_key: Signature = self.signing_key.sign(data);
@@ -50,16 +69,16 @@ impl Stage0Signer {
     }
 }
 
-fn derive_id(ikm: &[u8], info: Option<&[u8]>) -> [u8; SIGNATURE_LENGTH] {
+fn derive_id(ikm: &[u8], info: Option<&[u8]>) -> [u8; KEY_ID_LENGTH] {
     let hkdf = Hkdf::<Sha256>::new(Some(ID_SALT.as_bytes()), ikm);
-    let mut okm: [u8; SIGNATURE_LENGTH] = [0u8; SIGNATURE_LENGTH];
+    let mut okm: [u8; KEY_ID_LENGTH] = [0u8; KEY_ID_LENGTH];
     hkdf.expand(info.unwrap_or(&[]), &mut okm)
-        .expect("20 is a valid length for Sha256 to output");
+        .expect("invalid length for HKDF output");
 
     okm
 }
 
-fn generate_ecdsa_keys(info: &str) -> (SigningKey, [u8; SIGNATURE_LENGTH]) {
+fn generate_ecdsa_keys(info: &str) -> (SigningKey, [u8; KEY_ID_LENGTH]) {
     let key = SigningKey::random(&mut OsRng);
     let public_key = VerifyingKey::from(&key);
     let key_id = derive_id(
@@ -69,53 +88,78 @@ fn generate_ecdsa_keys(info: &str) -> (SigningKey, [u8; SIGNATURE_LENGTH]) {
     (key, key_id)
 }
 
-fn generate_stage1_ca_cwt(
+fn generate_stage1_eca_cwt(
     stage0_eca_key: SigningKey,
-    stage0_cert_id_hex: String,
+    stage0_cert_issuer: String,
     measurements: &Measurements,
 ) -> Result<Vec<u8>, CoseError> {
     // Generate Stage 1 keys and Signer.
     let info_str = "ID";
-    let stage1_ca_key = generate_ecdsa_keys(info_str);
-    let stage1_ca_verifying_key = VerifyingKey::from(&stage1_ca_key.0);
+    let stage1_eca_key = generate_ecdsa_keys(info_str);
+    let stage1_eca_verifying_key = VerifyingKey::from(&stage1_eca_key.0);
     let stage0_signer = Stage0Signer {
         signing_key: stage0_eca_key,
     };
 
+    let encoded_point = stage1_eca_verifying_key.to_encoded_point(false);
+    let x = encoded_point.x();
+    let y = encoded_point.y();
+
+    let stage1_eca_verifying_cose_key = CoseKey {
+        kty: KeyType::Assigned(iana::KeyType::EC2),
+        key_id: Vec::from(stage1_eca_key.1),
+        alg: Some(Algorithm::Assigned(iana::Algorithm::ES384)),
+        key_ops: vec![KeyOperation::Assigned(iana::KeyOperation::Verify)]
+            .into_iter()
+            .collect(),
+        params: vec![
+            (
+                Label::Int(iana::Ec2KeyParameter::Crv as i64),
+                Value::from(iana::EllipticCurve::P_384 as u64),
+            ),
+            (
+                Label::Int(iana::Ec2KeyParameter::X as i64),
+                Value::Bytes(x.unwrap().to_vec()),
+            ),
+            (
+                Label::Int(iana::Ec2KeyParameter::Y as i64),
+                Value::Bytes(y.unwrap().to_vec()),
+            ),
+        ],
+        ..Default::default()
+    };
+
     // Generate claims and add the Stage1 CA key.
     let claims = cwt::ClaimsSetBuilder::new()
-        .issuer(stage0_cert_id_hex)
-        .subject(hex::encode(stage1_ca_key.1))
-        .cwt_id(Vec::from(stage1_ca_key.1))
+        .issuer(stage0_cert_issuer)
+        .subject(hex::encode(stage1_eca_key.1))
         // Add additional private-use claim.
         .private_claim(
-            -4670552,
-            Value::Bytes(Vec::from(
-                stage1_ca_verifying_key.to_encoded_point(false).as_bytes(),
-            )),
+            SUBJECT_PUBLIC_KEY_ID,
+            Value::Bytes(stage1_eca_verifying_cose_key.to_vec().unwrap()),
         )
         .private_claim(
-            -4670555,
+            KERNEL_MEASUREMENT_ID,
             Value::Bytes(Vec::from(measurements.kernel_measurement)),
         )
         .private_claim(
-            -4670556,
-            Value::Bytes(Vec::from(measurements.kernel_measurement)),
+            KERNEL_COMMANDLINE_MEASUREMENT_ID,
+            Value::Bytes(Vec::from(measurements.cmdline_measurement)),
         )
         .private_claim(
-            -4670557,
+            SETUP_DATA_MEASUREMENT_ID,
             Value::Bytes(Vec::from(measurements.setup_data_measurement)),
         )
         .private_claim(
-            -4670558,
+            INITRD_MEASUREMENT_ID,
             Value::Bytes(Vec::from(measurements.ram_disk_measurement)),
         )
         .private_claim(
-            -4670559,
+            MEMORY_MAP_MEASUREMENT_ID,
             Value::Bytes(Vec::from(measurements.memory_map_measurement)),
         )
         .private_claim(
-            -4670560,
+            ACPI_MEASUREMENT_ID,
             Value::Bytes(Vec::from(measurements.acpi_measurement)),
         )
         .build();
@@ -138,24 +182,29 @@ fn generate_stage1_ca_cwt(
     sign1.to_vec()
 }
 
+/// Generate signed attestation for the 'measurements' of all Stage 1 components.
 pub fn generate_stage1_attestation(measurements: &Measurements) {
     // Generate Stage0 keys. This key will be used to sign Stage1
-    // measurement+config and the stage1_ca_key
+    // measurement+config and the stage1_ca_key.
     let info_str = "ID";
-    let stage0_ca_key = generate_ecdsa_keys(info_str);
-    let stage0_ca_verifying_key = VerifyingKey::from(&stage0_ca_key.0);
+    let stage0_eca_key = generate_ecdsa_keys(info_str);
+    let stage0_eca_verifying_key = VerifyingKey::from(&stage0_eca_key.0);
 
-    // Call generate_attestation_report() to get 'stage0_ca_verifying_key' added to attestation report.
+    // Call generate_attestation_report() to get 'stage0_ca_verifying_key' added to attestation
+    // report.
     log::debug!(
         "Stage0 Verification key: {}",
-        hex::encode(stage0_ca_verifying_key.to_encoded_point(false).as_bytes())
+        hex::encode(stage0_eca_verifying_key.to_encoded_point(false).as_bytes())
     );
 
-    // Generate Stage1 CWT
-    let stage1_cwt =
-        generate_stage1_ca_cwt(stage0_ca_key.0, hex::encode(stage0_ca_key.1), measurements);
+    // Generate Stage1 CWT.
+    let stage1_cwt = generate_stage1_eca_cwt(
+        stage0_eca_key.0,
+        hex::encode(stage0_eca_key.1),
+        measurements,
+    );
     if stage1_cwt.is_ok() {
-        // Call code that transmits the serialized cwt to Stage1
+        // Call code that transmits the serialized cwt to Stage1.
         log::debug!("Signing was successful..");
         return;
     }
