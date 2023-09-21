@@ -23,6 +23,7 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "oak_crypto/proto/v1/crypto.pb.h"
 #include "openssl/hpke.h"
 
 namespace oak::crypto {
@@ -47,6 +48,9 @@ class RecipientContext {
         response_aead_context_(std::move(response_aead_context)),
         response_base_nonce_(response_base_nonce),
         response_sequence_number_(response_sequence_number) {}
+
+  absl::StatusOr<std::unique_ptr<RecipientContext>> Deserialize(
+      ::oak::crypto::v1::CryptoContext serialized_recipient_context);
 
   // Decrypts message and validates associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
