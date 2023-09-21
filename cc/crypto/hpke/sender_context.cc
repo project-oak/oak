@@ -140,9 +140,13 @@ absl::StatusOr<std::unique_ptr<SenderContext>> SetupBaseSender(
 
   // Create sender context.
   std::unique_ptr<SenderContext> sender_context = std::make_unique<SenderContext>(
-      encap_public_key_info.key_bytes, *std::move(request_aead_context), *request_nonce,
-      kStartingSequenceNumber, *std::move(response_aead_context), *response_nonce,
-      kStartingSequenceNumber);
+      /* encapsulated_public_key= */ encap_public_key_info.key_bytes,
+      /* request_aead_context= */ *std::move(request_aead_context),
+      /* request_base_nonce= */ *request_nonce,
+      /* request_sequence_number= */ kStartingSequenceNumber,
+      /* response_aead_context= */ *std::move(response_aead_context),
+      /* response_base_nonce= */ *response_nonce,
+      /* response_sequence_number= */ kStartingSequenceNumber);
 
   EVP_HPKE_CTX_free(hpke_sender_context.release());
   return sender_context;
