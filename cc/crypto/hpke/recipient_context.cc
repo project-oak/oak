@@ -97,18 +97,19 @@ absl::StatusOr<std::unique_ptr<RecipientContext>> RecipientContext::Deserialize(
     return absl::AbortedError("Unable to deserialize response AEAD context");
   }
 
-  std::vector<uint8_t> request_nonce(serialized_recipient_context.request_base_nonce().begin(),
-                                     serialized_recipient_context.request_base_nonce().end());
+  std::vector<uint8_t> request_base_nonce(serialized_recipient_context.request_base_nonce().begin(),
+                                          serialized_recipient_context.request_base_nonce().end());
 
-  std::vector<uint8_t> response_nonce(serialized_recipient_context.response_base_nonce().begin(),
-                                      serialized_recipient_context.response_base_nonce().end());
+  std::vector<uint8_t> response_base_nonce(
+      serialized_recipient_context.response_base_nonce().begin(),
+      serialized_recipient_context.response_base_nonce().end());
 
   return std::make_unique<RecipientContext>(
       /* request_aead_context= */ std::move(request_aead_context),
-      /* request_base_nonce= */ request_nonce,
+      /* request_base_nonce= */ request_base_nonce,
       /* request_sequence_number= */ serialized_recipient_context.request_sequence_number(),
       /* response_aead_context= */ std::move(response_aead_context),
-      /* response_base_nonce= */ response_nonce,
+      /* response_base_nonce= */ response_base_nonce,
       /* response_sequence_number= */ serialized_recipient_context.response_sequence_number());
 }
 
