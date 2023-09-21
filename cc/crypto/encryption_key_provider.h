@@ -17,6 +17,7 @@
 #ifndef CC_CRYPTO_ENCRYPTION_KEY_PROVIDER_H_
 #define CC_CRYPTO_ENCRYPTION_KEY_PROVIDER_H_
 
+#include <memory>
 #include <string>
 #include <tuple>
 
@@ -28,7 +29,7 @@ namespace oak::crypto {
 
 class RecipientContextGenerator {
  public:
-  virtual absl::StatusOr<RecipientContext> GenerateRecipientContext(
+  virtual absl::StatusOr<std::unique_ptr<RecipientContext>> GenerateRecipientContext(
       absl::string_view serialized_encapsulated_public_key) = 0;
 };
 
@@ -36,7 +37,7 @@ class EncryptionKeyProvider : public RecipientContextGenerator {
  public:
   static absl::StatusOr<EncryptionKeyProvider> Create();
 
-  absl::StatusOr<RecipientContext> GenerateRecipientContext(
+  absl::StatusOr<std::unique_ptr<RecipientContext>> GenerateRecipientContext(
       absl::string_view serialized_encapsulated_public_key) override;
 
   std::string GetSerializedPublicKey() const { return key_pair_.public_key; }

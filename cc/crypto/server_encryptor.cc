@@ -89,13 +89,8 @@ absl::Status ServerEncryptor::InitializeRecipientContexts(const EncryptedRequest
   std::string serialized_encapsulated_public_key = request.serialized_encapsulated_public_key();
 
   // Create recipient contexts.
-<<<<<<< HEAD
-  absl::StatusOr<RecipientContext> recipient_context =
-      recipient_context_generator_.GenerateRecipientContext(serialized_encapsulated_public_key);
-=======
   absl::StatusOr<std::unique_ptr<RecipientContext>> recipient_context =
-      SetupBaseRecipient(serialized_encapsulated_public_key, server_key_pair_, kOakHPKEInfo);
->>>>>>> 299e6c1aa (Merge request and response encryption contexts in C++ and Java)
+      recipient_context_generator_.GenerateRecipientContext(serialized_encapsulated_public_key);
   if (!recipient_context.ok()) {
     return recipient_context.status();
   }
