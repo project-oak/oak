@@ -49,7 +49,7 @@ class RecipientContext {
         response_base_nonce_(response_base_nonce),
         response_sequence_number_(response_sequence_number) {}
 
-  absl::StatusOr<std::unique_ptr<RecipientContext>> Deserialize(
+  static absl::StatusOr<std::unique_ptr<RecipientContext>> Deserialize(
       ::oak::crypto::v1::CryptoContext serialized_recipient_context);
 
   // Decrypts message and validates associated data using AEAD.

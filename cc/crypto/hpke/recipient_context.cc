@@ -77,37 +77,39 @@ absl::Status ValidateKeys(std::vector<uint8_t>& public_key_bytes,
 }
 }  // namespace
 
-absl::StatusOr<std::unique_ptr<RecipientContext>>
-RecipientContext::Deserialize(CryptoContext serialized_recipient_context) {
+absl::StatusOr<std::unique_ptr<RecipientContext>> RecipientContext::Deserialize(
+    CryptoContext serialized_recipient_context) {
   std::unique_ptr<EVP_AEAD_CTX> request_aead_context(EVP_AEAD_CTX_new(
       /* aead= */ EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()),
-      /* key= */ serialized_recipient_context.request_key.data(),
-      /* key_len= */ serialized_recipient_context.request_key.size(),
+      /* key= */ (uint8_t*)serialized_recipient_context.request_key().data(),
+      /* key_len= */ serialized_recipient_context.request_key().size(),
       /* tag_len= */ 0));
-  if (aead_context == nullptr) {
+  if (request_aead_context == nullptr) {
     return absl::AbortedError("Unable to deserialize request AEAD context");
   }
 
   std::unique_ptr<EVP_AEAD_CTX> response_aead_context(EVP_AEAD_CTX_new(
       /* aead= */ EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()),
-      /* key= */ serialized_recipient_context.response_key.data(),
-      /* key_len= */ serialized_recipient_context.response_key.size(),
+      /* key= */ (uint8_t*)serialized_recipient_context.response_key().data(),
+      /* key_len= */ serialized_recipient_context.response_key().size(),
       /* tag_len= */ 0));
-  if (aead_context == nullptr) {
+  if (response_aead_context == nullptr) {
     return absl::AbortedError("Unable to deserialize response AEAD context");
   }
 
-  std::vector<uint8_t> request_nonce(
-      serialized_recipient_context.request_base_nonce.begin(),
-      serialized_recipient_context.request_base_nonce.end());
+  std::vector<uint8_t> request_nonce(serialized_recipient_context.request_base_nonce().begin(),
+                                     serialized_recipient_context.request_base_nonce().end());
 
-  std::vector<uint8_t> response_nonce(
-      serialized_recipient_context.response_base_nonce.begin(),
-      serialized_recipient_context.response_base_nonce.end());
+  std::vector<uint8_t> response_nonce(serialized_recipient_context.response_base_nonce().begin(),
+                                      serialized_recipient_context.response_base_nonce().end());
 
   return std::make_unique<RecipientContext>(
-      std::move(request_aead_context), request_nonce, serialized_recipient_context.request_sequence_number,
-      std::move(response_aead_context), response_nonce, serialized_recipient_context.response_sequence_number);
+      /* request_aead_context= */ std::move(request_aead_context),
+      /* request_base_nonce= */ request_nonce,
+      /* request_sequence_number= */ serialized_recipient_context.request_sequence_number(),
+      /* response_aead_context= */ std::move(response_aead_context),
+      /* response_base_nonce= */ response_nonce,
+      /* response_sequence_number= */ serialized_recipient_context.response_sequence_number());
 }
 
 absl::StatusOr<std::string> RecipientContext::Open(absl::string_view ciphertext,
