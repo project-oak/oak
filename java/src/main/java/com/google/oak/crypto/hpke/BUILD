@@ -24,9 +24,10 @@ package(
 java_library(
     name = "hpke",
     srcs = [
-        "Context.java",
         "Hpke.java",
         "KeyPair.java",
+        "RecipientContext.java",
+        "SenderContext.java",
     ],
     runtime_deps = [
         "//cc/crypto/hpke/jni:libhpke-jni.so",

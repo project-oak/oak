@@ -35,55 +35,43 @@ struct KeyPair {
   static absl::StatusOr<KeyPair> Generate();
 };
 
-class RecipientRequestContext {
+class RecipientContext {
  public:
-  RecipientRequestContext(std::unique_ptr<EVP_AEAD_CTX> aead_request_context,
-                          std::vector<uint8_t> request_nonce)
-      : aead_request_context_(std::move(aead_request_context)),
-        request_base_nonce_(request_nonce),
-        sequence_number_(0) {}
+  RecipientContext(std::unique_ptr<EVP_AEAD_CTX> request_aead_context,
+                   std::vector<uint8_t> request_base_nonce, uint64_t request_sequence_number,
+                   std::unique_ptr<EVP_AEAD_CTX> response_aead_context,
+                   std::vector<uint8_t> response_base_nonce, uint64_t response_sequence_number)
+      : request_aead_context_(std::move(request_aead_context)),
+        request_base_nonce_(request_base_nonce),
+        request_sequence_number_(request_sequence_number),
+        response_aead_context_(std::move(response_aead_context)),
+        response_base_nonce_(response_base_nonce),
+        response_sequence_number_(response_sequence_number) {}
 
   // Decrypts message and validates associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
   absl::StatusOr<std::string> Open(absl::string_view ciphertext, absl::string_view associated_data);
-  ~RecipientRequestContext();
-
- private:
-  std::unique_ptr<EVP_AEAD_CTX> aead_request_context_;
-  std::vector<uint8_t> request_base_nonce_;
-  uint64_t sequence_number_;
-};
-
-class RecipientResponseContext {
- public:
-  RecipientResponseContext(std::unique_ptr<EVP_AEAD_CTX> aead_response_context,
-                           std::vector<uint8_t> response_nonce)
-      : aead_response_context_(std::move(aead_response_context)),
-        response_base_nonce_(response_nonce),
-        sequence_number_(0) {}
 
   // Encrypts response message with associated data using AEAD as part of bidirectional
   // communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
   absl::StatusOr<std::string> Seal(absl::string_view plaintext, absl::string_view associated_data);
-  ~RecipientResponseContext();
+
+  ~RecipientContext();
 
  private:
-  std::unique_ptr<EVP_AEAD_CTX> aead_response_context_;
-  std::vector<uint8_t> response_base_nonce_;
-  uint64_t sequence_number_;
-};
+  std::unique_ptr<EVP_AEAD_CTX> request_aead_context_;
+  std::vector<uint8_t> request_base_nonce_;
+  uint64_t request_sequence_number_;
 
-// Holds all necessary recipient contexts.
-struct RecipientContext {
-  std::unique_ptr<RecipientRequestContext> recipient_request_context;
-  std::unique_ptr<RecipientResponseContext> recipient_response_context;
+  std::unique_ptr<EVP_AEAD_CTX> response_aead_context_;
+  std::vector<uint8_t> response_base_nonce_;
+  uint64_t response_sequence_number_;
 };
 
 // Sets up an HPKE recipient by creating a recipient context.
-// Returns a tuple with a recipient request and recipient response contexts.
 // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
-absl::StatusOr<RecipientContext> SetupBaseRecipient(
+absl::StatusOr<std::unique_ptr<RecipientContext>> SetupBaseRecipient(
     absl::string_view serialized_encapsulated_public_key, const KeyPair& recipient_key_pair,
     absl::string_view info);
 

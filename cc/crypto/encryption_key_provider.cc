@@ -16,6 +16,8 @@
 
 #include "cc/crypto/encryption_key_provider.h"
 
+#include <memory>
+
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/crypto/common.h"
@@ -31,7 +33,7 @@ absl::StatusOr<EncryptionKeyProvider> EncryptionKeyProvider::Create() {
   return EncryptionKeyProvider(*key_pair);
 }
 
-absl::StatusOr<RecipientContext> EncryptionKeyProvider::GenerateRecipientContext(
+absl::StatusOr<std::unique_ptr<RecipientContext>> EncryptionKeyProvider::GenerateRecipientContext(
     absl::string_view serialized_encapsulated_public_key) {
   return SetupBaseRecipient(serialized_encapsulated_public_key, key_pair_, kOakHPKEInfo);
 }

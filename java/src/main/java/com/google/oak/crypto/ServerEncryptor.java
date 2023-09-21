@@ -18,9 +18,9 @@ package com.google.oak.crypto;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import com.google.oak.crypto.hpke.Context;
 import com.google.oak.crypto.hpke.Hpke;
 import com.google.oak.crypto.hpke.KeyPair;
+import com.google.oak.crypto.hpke.RecipientContext;
 import com.google.oak.crypto.v1.AeadEncryptedMessage;
 import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
@@ -44,10 +44,9 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
 
   private final KeyPair serverKeyPair;
 
-  // Contexts are initialized after receiving an initial request messagecontaining client's
+  // Context is initialized after receiving an initial request messagecontaining client's
   // encapsulated public key.
-  private Optional<Context.RecipientRequestContext> recipientRequestContext;
-  private Optional<Context.RecipientResponseContext> recipientResponseContext;
+  private Optional<RecipientContext> recipientContext;
 
   /**
    * Creates a new instance of {@code ServerEncryptor}.
@@ -56,8 +55,7 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
    */
   public ServerEncryptor(KeyPair serverKeyPair) {
     this.serverKeyPair = serverKeyPair;
-    this.recipientRequestContext = Optional.empty();
-    this.recipientResponseContext = Optional.empty();
+    this.recipientContext = Optional.empty();
   }
 
   /**
@@ -65,13 +63,9 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
    */
   @Override
   public void close() {
-    if (this.recipientRequestContext.isPresent()) {
-      this.recipientRequestContext.get().close();
-      this.recipientRequestContext = Optional.empty();
-    }
-    if (this.recipientResponseContext.isPresent()) {
-      this.recipientResponseContext.get().close();
-      this.recipientResponseContext = Optional.empty();
+    if (recipientContext.isPresent()) {
+      recipientContext.get().close();
+      recipientContext = Optional.empty();
     }
   }
 
@@ -99,7 +93,7 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
     byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
 
     // Get recipient context.
-    if (this.recipientRequestContext.isEmpty()) {
+    if (recipientContext.isEmpty()) {
       // Get serialized encapsulated public key.
       if (encryptedRequest.getSerializedEncapsulatedPublicKey().equals(ByteString.EMPTY)) {
         return Result.error(new Exception(
@@ -109,18 +103,15 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
           encryptedRequest.getSerializedEncapsulatedPublicKey().toByteArray();
 
       // Create recipient context.
-      Result<Hpke.RecipientContext, Exception> setupBaseRecipientResult = Hpke.setupBaseRecipient(
-          serializedEncapsulatedPublicKey, this.serverKeyPair, OAK_HPKE_INFO);
+      Result<RecipientContext, Exception> setupBaseRecipientResult =
+          Hpke.setupBaseRecipient(serializedEncapsulatedPublicKey, serverKeyPair, OAK_HPKE_INFO);
 
-      this.recipientRequestContext =
-          setupBaseRecipientResult.success().map(r -> r.recipientRequestContext);
-      this.recipientResponseContext =
-          setupBaseRecipientResult.success().map(r -> r.recipientResponseContext);
+      recipientContext = setupBaseRecipientResult.success();
     }
-    Context.RecipientRequestContext recipientRequestContext = this.recipientRequestContext.get();
 
     // Decrypt request.
-    return recipientRequestContext.open(ciphertext, associatedData)
+    return recipientContext.get()
+        .open(ciphertext, associatedData)
         .map(plaintext
             ->
             // TODO(#3843): Accept unserialized proto messages once we have Java encryption
@@ -141,13 +132,12 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
   public final Result<byte[], Exception> encrypt(
       final byte[] plaintext, final byte[] associatedData) {
     // Get recipient context.
-    if (this.recipientResponseContext.isEmpty()) {
+    if (recipientContext.isEmpty()) {
       return Result.error(new Exception("server encryptor is not initialized"));
     }
-    Context.RecipientResponseContext recipientResponseContext = this.recipientResponseContext.get();
 
     // Encrypt response.
-    return recipientResponseContext
+    return recipientContext.get()
         .seal(plaintext, associatedData)
         // Create response message.
         .map(ciphertext
