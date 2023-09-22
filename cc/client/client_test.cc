@@ -16,8 +16,12 @@
 
 #include "cc/client/client.h"
 
+#include <memory>
+#include <utility>
+
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "cc/crypto/encryption_key_provider.h"
 #include "cc/crypto/hpke/recipient_context.h"
 #include "cc/crypto/server_encryptor.h"
 #include "cc/remote_attestation/insecure_attestation_verifier.h"

@@ -27,7 +27,6 @@ import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.InvalidProtocolBufferException;
-import java.util.Optional;
 
 /**
  * Encryptor class for encrypting client requests that will be sent to the server and decrypting

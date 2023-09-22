@@ -63,4 +63,4 @@ public final class RecipientContext implements AutoCloseable {
   public void close() {
     nativeDestroy();
   }
-};
+}
