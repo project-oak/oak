@@ -163,6 +163,7 @@
                 glibc.static
                 ncurses
                 netcat
+                systemd
                 umoci
               ];
             };

@@ -14,6 +14,7 @@ members = [
   "oak_containers_orchestrator",
   "oak_containers_orchestrator_client",
   "oak_containers_launcher",
+  "oak_containers_syslogd",
   "oak_crypto",
   "oak_docker_linux_init",
   "oak_echo_linux_init",
