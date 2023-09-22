@@ -20,11 +20,13 @@
 #include "cc/crypto/hpke/sender_context.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "oak_crypto/proto/v1/crypto.pb.h"
 #include "openssl/hpke.h"
 
 namespace oak::crypto {
 namespace {
 
+using ::oak::crypto::v1::CryptoContext;
 using ::testing::StrEq;
 using ::testing::StrNe;
 
@@ -54,12 +56,32 @@ class RecipientContextTest : public testing::Test {
     info_string_ = "Test HPKE info";
     associated_data_response_ = "Test response associated data";
     associated_data_request_ = "Test request associated data";
+
+    const std::vector<uint8_t> request_key = {164, 174, 176, 213, 235, 46, 157, 155, 157, 138, 173,
+                                              65,  231, 242, 53,  28,  46, 170, 179, 170, 172, 110,
+                                              195, 108, 240, 157, 178, 24, 91,  148, 232, 121};
+    *crypto_context_.mutable_request_key() = std::string(request_key.begin(), request_key.end());
+    const std::vector<uint8_t> request_base_nonce = {155, 198, 201, 66, 230, 227,
+                                                     208, 99,  5,   64, 207, 183};
+    *crypto_context_.mutable_request_base_nonce() =
+        std::string(request_base_nonce.begin(), request_base_nonce.end());
+    crypto_context_.set_request_sequence_number(0);
+    const std::vector<uint8_t> response_key = {
+        109, 21,  112, 119, 203, 119, 184, 30,  12,  31,  93,  71, 171, 224, 74,  241,
+        113, 168, 228, 50,  145, 105, 164, 174, 206, 149, 197, 5,  25,  186, 254, 154};
+    *crypto_context_.mutable_response_key() = std::string(response_key.begin(), response_key.end());
+    const std::vector<uint8_t> response_base_nonce = {111, 93,  22, 215, 77, 149,
+                                                      30,  204, 13, 168, 55, 163};
+    *crypto_context_.mutable_response_base_nonce() =
+        std::string(response_base_nonce.begin(), response_base_nonce.end());
+    crypto_context_.set_response_sequence_number(0);
   }
   KeyPair recipient_key_pair_;
   std::string encap_public_key_;
   std::string info_string_;
   std::string associated_data_response_;
   std::string associated_data_request_;
+  CryptoContext crypto_context_;
 };
 
 TEST_F(RecipientContextTest, SetupBaseRecipientEmptyEncapKeyReturnsFailure) {
@@ -169,6 +191,11 @@ TEST_F(RecipientContextTest, GenerateKeysAndSetupBaseRecipientSuccess) {
   std::string encap_public_key = (*sender_context)->GetSerializedEncapsulatedPublicKey();
 
   auto recipient_context = SetupBaseRecipient(encap_public_key, *key_pair, info_string_);
+  EXPECT_TRUE(recipient_context.ok());
+}
+
+TEST_F(RecipientContextTest, DeserializeSuccess) {
+  auto recipient_context = RecipientContext::Deserialize(crypto_context_);
   EXPECT_TRUE(recipient_context.ok());
 }
 
