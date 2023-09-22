@@ -16,6 +16,9 @@
 
 #include "cc/crypto/client_encryptor.h"
 
+#include <memory>
+#include <utility>
+
 #include "absl/status/statusor.h"
 #include "cc/crypto/common.h"
 #include "cc/crypto/hpke/sender_context.h"

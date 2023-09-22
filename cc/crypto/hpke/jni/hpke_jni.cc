@@ -18,6 +18,7 @@
 
 #include "../recipient_context.h"
 #include "../sender_context.h"
+#include "absl/status/statusor.h"
 #include "com_google_oak_crypto_hpke_Hpke.h"
 #include "jni_helper.h"
 

@@ -70,4 +70,4 @@ public final class SenderContext implements AutoCloseable {
   public void close() {
     nativeDestroy();
   }
-};
+}

@@ -75,6 +75,7 @@ cc_test(
     deps = [
         ":client_encryptor",
         ":common",
+        ":encryption_key_provider",
         ":server_encryptor",
         "//cc/crypto/hpke:recipient_context",
         "@com_google_absl//absl/strings",

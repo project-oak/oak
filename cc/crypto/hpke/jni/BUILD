@@ -38,6 +38,7 @@ cc_library(
         ":jni",
         "//cc/crypto/hpke:recipient_context",
         "//cc/crypto/hpke:sender_context",
+        "@com_google_absl//absl/status:statusor",
     ],
     alwayslink = 1,
 )
