@@ -1,0 +1,16 @@
+[Unit]
+Description=Oak Containers Log Forwarder
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/oak_containers_syslogd
+# If the log forwarder outputs something, print it directly to the emergency serial console. After
+# all, this is the tool that is supposed to make logs available to the launcher; if it fails, there
+# is no point in it writing to the log as the log will never be exported.
+StandardOutput=tty
+StandardError=tty
+
+[Install]
+WantedBy=multi-user.target

@@ -196,6 +196,7 @@ impl Qemu {
                 format!("brd.rd_size={ramdrive_size}").as_str(),
                 "brd.max_part=1",
                 format!("ip={vm_address}:::255.255.255.0::eth0:off").as_str(),
+                "quiet",
             ]
             .join(" ")
             .as_str(),

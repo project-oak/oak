@@ -24,6 +24,10 @@ RUN chmod 644 /etc/systemd/system/oak-orchestrator.service
 # Start the orchestartor at boot
 RUN systemctl enable oak-orchestrator
 
+COPY ./target/oak_containers_syslogd /usr/bin
+COPY oak-syslogd.service /etc/systemd/system
+RUN systemctl enable oak-syslogd
+
 # Override the default journald configuration
 COPY journald.conf /etc/systemd/journald.conf.d/clear.conf
 

@@ -16,7 +16,7 @@
 use crate::proto::oak::{
     containers::{
         launcher_server::{Launcher, LauncherServer},
-        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+        GetApplicationConfigResponse, GetImageResponse, LogRequest, SendAttestationEvidenceRequest,
     },
     session::v1::AttestationEvidence,
 };
@@ -168,6 +168,21 @@ impl Launcher for LauncherServerImplementation {
             })?
             .send(())
             .map_err(|_err| tonic::Status::internal(format!("couldn't send notification")))?;
+        Ok(tonic::Response::new(()))
+    }
+
+    async fn log(&self, request: Request<LogRequest>) -> Result<Response<()>, tonic::Status> {
+        for ref message in request.into_inner().entry {
+            let unit = message
+                .fields
+                .get("_SYSTEMD_UNIT")
+                .map_or("", |unit| unit.as_str());
+            let message = message
+                .fields
+                .get("MESSAGE")
+                .map_or("", |message| message.as_str());
+            println!("{}: {}", unit, message);
+        }
         Ok(tonic::Response::new(()))
     }
 }
