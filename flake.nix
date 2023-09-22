@@ -107,6 +107,7 @@
                 cargo-udeps
                 cargo-vet
                 protobuf
+                systemd
                 qemu_kvm
                 python312
               ];
@@ -163,7 +164,6 @@
                 glibc.static
                 ncurses
                 netcat
-                systemd
                 umoci
               ];
             };

@@ -27,10 +27,9 @@ use self::proto::oak::{
     containers::SendAttestationEvidenceRequest, session::v1::AttestationEvidence,
 };
 use anyhow::Context;
-use proto::oak::containers::{
-    launcher_client::LauncherClient as GrpcLauncherClient, LogEntry, LogRequest,
-};
+use proto::oak::containers::{launcher_client::LauncherClient as GrpcLauncherClient, LogEntry};
 use std::collections::HashMap;
+use tokio_stream::{Stream, StreamExt};
 use tonic::transport::Channel;
 
 /// Utility struct used to interface with the launcher
@@ -104,21 +103,16 @@ impl LauncherClient {
         Ok(())
     }
 
-    pub async fn log<I>(&self, fields: I) -> Result<(), Box<dyn std::error::Error>>
+    pub async fn log<I>(&self, entry: I) -> Result<(), Box<dyn std::error::Error>>
     where
-        I: IntoIterator<Item = HashMap<String, String>>,
+        I: Stream<Item = HashMap<String, String>> + Send + 'static,
     {
-        let request = tonic::Request::new(LogRequest {
-            entry: fields
-                .into_iter()
-                .map(|fields| LogEntry { fields })
-                .collect(),
-        });
+        let request = tonic::Request::new(entry.map(|fields| LogEntry { fields }));
         self.inner
             .clone()
             .log(request)
             .await
-            .context("couldn't send log message")?;
+            .context("couldn't stream log messages")?;
         Ok(())
     }
 }
