@@ -14,7 +14,7 @@ deny_sensitive_logging = ["oak_functions_service/deny_sensitive_logging"]
 allow_sensitive_logging = []
 
 [dependencies]
-oak_functions_service = { path = "../../oak_functions_service" }
+oak_functions_service = { path = "../../oak_functions_service", default-features = false }
 log = "*"
 micro_rpc = { workspace = true }
 oak_enclave_runtime_support = { workspace = true }
