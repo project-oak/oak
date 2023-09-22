@@ -16,12 +16,12 @@
 use crate::proto::oak::{
     containers::{
         launcher_server::{Launcher, LauncherServer},
-        GetApplicationConfigResponse, GetImageResponse, LogRequest, SendAttestationEvidenceRequest,
+        GetApplicationConfigResponse, GetImageResponse, LogEntry, SendAttestationEvidenceRequest,
     },
     session::v1::AttestationEvidence,
 };
 use anyhow::anyhow;
-use futures::{FutureExt, Stream};
+use futures::{FutureExt, Stream, StreamExt};
 use std::{pin::Pin, sync::Mutex};
 use tokio::{
     io::{AsyncReadExt, BufReader},
@@ -171,8 +171,14 @@ impl Launcher for LauncherServerImplementation {
         Ok(tonic::Response::new(()))
     }
 
-    async fn log(&self, request: Request<LogRequest>) -> Result<Response<()>, tonic::Status> {
-        for ref message in request.into_inner().entry {
+    async fn log(
+        &self,
+        request: Request<tonic::Streaming<LogEntry>>,
+    ) -> Result<Response<()>, tonic::Status> {
+        let mut stream = request.into_inner();
+        while let Some(message) = stream.next().await {
+            let message = message?;
+
             let unit = message
                 .fields
                 .get("_SYSTEMD_UNIT")

@@ -14,7 +14,10 @@
 // limitations under the License.
 //
 
+#![feature(c_size_t)]
+
 mod log_relay;
+mod systemd_journal;
 
 use anyhow::anyhow;
 use clap::Parser;

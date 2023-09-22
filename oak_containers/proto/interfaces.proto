@@ -61,10 +61,6 @@ message LogEntry {
   map<string, string> fields = 1;
 }
 
-message LogRequest {
-  repeated LogEntry entry = 1;
-}
-
 // Defines the service exposed by the launcher, that can be invoked by the stage1 and the
 // orchestrator.
 service Launcher {
@@ -91,7 +87,7 @@ service Launcher {
   rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {}
 
   // Logs a set of log entries from the guest.
-  rpc Log(LogRequest) returns (google.protobuf.Empty) {}
+  rpc Log(stream LogEntry) returns (google.protobuf.Empty) {}
 }
 
 // Defines the service exposed by the orchestrator, that can be invoked by the application.

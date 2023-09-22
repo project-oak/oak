@@ -7,9 +7,10 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
+bitflags = "*"
 clap = { version = "*", features = ["derive"] }
 oak_containers_orchestrator_client = { workspace = true }
-systemd = "*"
+nix = "*"
 tokio = { version = "*", features = [
   "rt-multi-thread",
   "macros",
@@ -18,6 +19,7 @@ tokio = { version = "*", features = [
   "process",
   "net",
 ] }
+tokio-stream = "*"
 
 [build-dependencies]
 oak_grpc_utils = { workspace = true }
