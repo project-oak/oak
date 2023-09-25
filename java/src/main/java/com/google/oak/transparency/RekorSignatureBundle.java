@@ -28,19 +28,16 @@ import java.util.logging.Logger;
  * LogEntry.
  *
  * This bundle can be verified using the public key from Rekor. The public key
- * can be obtained from
- * the /api/v1/log/publicKey Rest API. For {@link sigstore.dev}, it is a
- * PEM-encoded
- * x509/PKIX public key.
+ * can be obtained from the /api/v1/log/publicKey Rest API. For
+ * {@link sigstore.dev}, it is a PEM-encoded x509/PKIX public key.
  */
 public class RekorSignatureBundle {
   private static Logger logger = Logger.getLogger(RekorSignatureBundle.class.getName());
   /**
    * Canonicalized JSON representation, based on RFC 8785 rules, of a subset of a
-   * Rekor LogEntry
-   * fields that are signed to generate `signedEntryTimestamp` (also a field in
-   * the Rekor LogEntry).
-   * These fields include body, integratedTime, logID and logIndex.
+   * Rekor LogEntry fields that are signed to generate `signedEntryTimestamp`
+   * (also a field in the Rekor LogEntry). These fields include body,
+   * integratedTime, logID and logIndex.
    */
   private final String canonicalized;
 
@@ -77,8 +74,7 @@ public class RekorSignatureBundle {
     entrySubset.logIndex = entry.logEntry.logIndex;
 
     // Canonicalized JSON document that is signed. Canonicalization should follow
-    // the RFC 8785
-    // rules.
+    // the RFC 8785 rules.
     Gson gson = new GsonBuilder().create();
     String canonicalized = gson.toJson(entrySubset);
     logger.log(Level.INFO,

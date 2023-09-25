@@ -29,8 +29,7 @@ import java.util.Optional;
  * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89>.
  *
  * A static factory method, {@code unmarshalLogEntry}, is provided that creates
- * an instance of this
- * class by parsing it from a json string.
+ * an instance of this class by parsing it from a json string.
  */
 public final class RekorLogEntry {
   // This filed is intentionally made package-private to allow testing.
@@ -45,10 +44,8 @@ public final class RekorLogEntry {
   // <https://github.com/sigstore/rekor/tree/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models>.
   //
   // These classes are intentionally made package-private and immutable, as the
-  // clients are not
-  // expected to instantiate them directly. The fields are not explicitly made
-  // final to allow
-  // instantiation with Gson.
+  // clients are not expected to instantiate them directly. The fields are not
+  // explicitly made final to allow instantiation with Gson.
   //
 
   /**
@@ -66,8 +63,7 @@ public final class RekorLogEntry {
 
     /**
      * Unmarshaled body of this LogEntry. It is declared as a transient field, so
-     * that it is
-     * excluded when serializing and deserializing instances of LogEntry.
+     * that it is excluded when serializing and deserializing instances of LogEntry.
      */
     transient Body bodyObject;
 
@@ -75,8 +71,7 @@ public final class RekorLogEntry {
 
     /**
      * This is the SHA256 hash of the DER-encoded public key for the log at the time
-     * the entry was
-     * included in the log. Pattern: ^[0-9a-fA-F]{64}$
+     * the entry was included in the log. Pattern: ^[0-9a-fA-F]{64}$
      */
     String logId;
 
@@ -166,10 +161,8 @@ public final class RekorLogEntry {
 
   /**
    * Represents a verification object in a Rekor LogEntry. The verification object
-   * in Rekor also
-   * contains an inclusion proof. Since we currently don't verify the inclusion
-   * proof in the client,
-   * it is omitted from this struct.
+   * in Rekor also contains an inclusion proof. Since we currently don't verify
+   * the inclusion proof in the client, it is omitted from this struct.
    *
    * <p>
    * Based on
@@ -184,8 +177,8 @@ public final class RekorLogEntry {
 
   /**
    * The class {@code Model.RekorValidationException} indicates erroneous
-   * conditions that happened
-   * while creating instances of the classes in {@code Model}.
+   * conditions that happened while creating instances of the classes in
+   * {@code Model}.
    */
   public static class RekorValidationException extends Exception {
     public RekorValidationException(String msg) {
@@ -225,16 +218,13 @@ public final class RekorLogEntry {
 
   /**
    * Converts the given bytes into string, and tries to unmarshal the result into
-   * an instance of
-   * {@code RekorLogEntry}. If the conversion is successful, return the body of
-   * the resulting entry,
-   * otherwise returns and error.
+   * an instance of {@code RekorLogEntry}. If the conversion is successful, return
+   * the body of the resulting entry, otherwise returns and error.
    *
    * @param logEntryBytes bytes to parse and extract the Rekor log entry body
    *                      from.
    * @return A result, either wrapping a {@code Body} or an exception representing
-   *         a failure to
-   *         parse and unmarshal the input bytes.
+   *         a failure to parse and unmarshal the input bytes.
    */
   public static Result<Body, Exception> getRekorLogEntryBody(byte[] logEntryBytes) {
     try {

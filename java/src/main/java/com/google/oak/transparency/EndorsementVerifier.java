@@ -29,8 +29,7 @@ import java.util.logging.Logger;
 
 /**
  * Verifier class providing functions for verifying a Transparent-Release
- * endorsement statement, and
- * the corresponding Rekor log entry.
+ * endorsement statement, and the corresponding Rekor log entry.
  */
 public class EndorsementVerifier {
   private static final Logger logger = Logger.getLogger(EndorsementVerifier.class.getName());
@@ -41,24 +40,20 @@ public class EndorsementVerifier {
    * The verification involves checking the following:
    * <ul>
    * <li>verifying the signature in {@code signedEntryTimestamp} (retrieved from
-   * {@code
-   * logEntryBytes}), using Rekor's public key
+   * {@code logEntryBytes}), using Rekor's public key
    * ({@code pemEncodedRekorPublicKeyBytes}).
    * <li>verifying the signature in {@code body.RekordObj.signature} (retrieved
-   * from {@code
-   * logEntryBytes}), using the endorser's public key (also retrieved from
-   * {@code logEntryBytes}).
+   * from {@code logEntryBytes}), using the endorser's public key (also retrieved
+   * from {@code logEntryBytes}).
    * <li>verifying that the content of the body (retrieved from
-   * {@code logEntryBytes}) matches the
-   * input {@code endorsementStatementBytes}.
+   * {@code logEntryBytes}) matches the input {@code endorsementStatementBytes}.
    * </ul>
    *
    * @param logEntryBytes
    * @param pemEncodedRekorPublicKeyBytes
    * @param endorsementStatementBytes
    * @return an empty Result if the verification succeeds, or an Exception wrapped
-   *         in a Result
-   *         otherwise
+   *         in a Result otherwise
    */
   public Result<Boolean, Exception> verifyRekorLogEntry(byte[] logEntryBytes,
       byte[] pemEncodedRekorPublicKeyBytes, byte[] endorsementStatementBytes) {
@@ -95,16 +90,14 @@ public class EndorsementVerifier {
 
   /**
    * Verifies the integrity of the Rekor body, by verifying the signature in the
-   * {@code body} over
-   * the given {@code contentsBytes}, using the public key in the {@code body}.
-   * This public is
-   * separately checked against a known and trusted (root) public key.
+   * {@code body} over the given {@code contentsBytes}, using the public key in
+   * the {@code body}. This public is separately checked against a known and
+   * trusted (root) public key.
    *
    * @param body
    * @param contentBytes
    * @return an empty Result if the verification succeeds, or an Exception wrapped
-   *         in a Result
-   *         otherwise
+   *         in a Result otherwise
    */
   public Result<Boolean, Exception> verifyRekorBody(RekorLogEntry.Body body, byte[] contentBytes) {
     if (!"x509".equals(body.spec.signature.format)) {
@@ -160,15 +153,13 @@ public class EndorsementVerifier {
 
   /**
    * Verifies the given base64-encoded signature over the given content bytes,
-   * using the given
-   * PEM-encoded public key.
+   * using the given PEM-encoded public key.
    *
    * @param base64SignatureBytes
    * @param contentBytes
    * @param pemEncodedPublicKeyBytes
    * @return an empty Result if the verification succeeds, or an Exception wrapped
-   *         in a Result
-   *         otherwise
+   *         in a Result otherwise
    */
   public Result<Boolean, Exception> verifySignature(
       String base64SignatureBytes, byte[] contentBytes, byte[] pemEncodedPublicKeyBytes) {
