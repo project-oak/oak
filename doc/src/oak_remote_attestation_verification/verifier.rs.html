@@ -196,6 +196,26 @@
 <a href="#196" id="196">196</a>
 <a href="#197" id="197">197</a>
 <a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -221,8 +241,10 @@
     AttestationEndorsement, AttestationEvidence, BinaryAttestation,
 };
 
-<span class="kw">use </span><span class="kw">crate</span>::rekor::{get_rekor_log_entry_body, verify_rekor_log_entry};
+<span class="kw">use </span><span class="kw">crate</span>::rekor::{compare_keys, get_rekor_log_entry_body, verify_rekor_log_entry};
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
+<span class="kw">use </span>core::cmp::Ordering;
 <span class="kw">use </span>oak_transparency_claims::claims::{
     parse_endorsement_statement, validate_endorsement, verify_validity_duration,
 };
@@ -363,10 +385,21 @@
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="comment">// TODO(#4231): Currently, we only check that the public keys are the same. Once Rekor starts
     // using rolling keys, the verification logic will have to be updated.
-    </span><span class="kw">if </span>binary_attestation.base64_pem_encoded_rekor_public_key != base64_pem_encoded_rekor_public_key
-    {
-        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Rekor public key verification failed: expected {base64_pem_encoded_rekor_public_key}, got {}&quot;</span>, 
-        binary_attestation.base64_pem_encoded_rekor_public_key);
+
+    </span><span class="kw">let </span>public_key_from_server = BASE64_STANDARD
+        .decode(<span class="kw-2">&amp;</span>binary_attestation.base64_pem_encoded_rekor_public_key)
+        .context(<span class="string">&quot;couldn&#39;t base64-decode public key bytes from server&quot;</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">let </span>public_key_from_client = BASE64_STANDARD
+        .decode(base64_pem_encoded_rekor_public_key)
+        .context(<span class="string">&quot;couldn&#39;t base64-decode public key bytes from client&quot;</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">if </span>compare_keys(<span class="kw-2">&amp;</span>public_key_from_server, <span class="kw-2">&amp;</span>public_key_from_client)<span class="question-mark">? </span>!= Ordering::Equal {
+        <span class="macro">anyhow::bail!</span>(
+            <span class="string">&quot;Rekor public key verification failed: expected {:?} found {:?}&quot;</span>,
+            public_key_from_client,
+            public_key_from_server,
+        )
     }
 
     <span class="prelude-val">Ok</span>(())
@@ -378,18 +411,25 @@
     binary_attestation: <span class="kw-2">&amp;</span>BinaryAttestation,
     base64_pem_encoded_endorser_public_key: <span class="kw-2">&amp;</span>str,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">let </span>body = get_rekor_log_entry_body(<span class="kw-2">&amp;</span>binary_attestation.rekor_log_entry)<span class="question-mark">?</span>;
-
-    <span class="kw">let </span>endorser_public_key = body.spec.signature.public_key.content.clone();
-
     <span class="comment">// TODO(#4231): Currently, we only check that the public keys are the same. Should be updated to
     // support verifying rolling keys.
-    </span><span class="kw">if </span>endorser_public_key != base64_pem_encoded_endorser_public_key {
+
+    </span><span class="kw">let </span>body = get_rekor_log_entry_body(<span class="kw-2">&amp;</span>binary_attestation.rekor_log_entry)<span class="question-mark">?</span>;
+
+    <span class="kw">let </span>public_key_from_server = BASE64_STANDARD
+        .decode(body.spec.signature.public_key.content)
+        .context(<span class="string">&quot;couldn&#39;t base64-decode public key bytes from server&quot;</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">let </span>public_key_from_client = BASE64_STANDARD
+        .decode(base64_pem_encoded_endorser_public_key)
+        .context(<span class="string">&quot;couldn&#39;t base64-decode public key bytes from client&quot;</span>)<span class="question-mark">?</span>;
+
+    <span class="kw">if </span>compare_keys(<span class="kw-2">&amp;</span>public_key_from_server, <span class="kw-2">&amp;</span>public_key_from_client)<span class="question-mark">? </span>!= Ordering::Equal {
         <span class="macro">anyhow::bail!</span>(
-            <span class="string">&quot;endorser public key verification failed: expected {}, got {}&quot;</span>,
-            base64_pem_encoded_endorser_public_key,
-            endorser_public_key
-        );
+            <span class="string">&quot;endorser public key verification failed: expected {:?} found {:?}&quot;</span>,
+            public_key_from_client,
+            public_key_from_server,
+        )
     }
 
     <span class="prelude-val">Ok</span>(())
