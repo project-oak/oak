@@ -18,10 +18,9 @@ package com.google.oak.transparency;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.oak.util.Result;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Convenient struct for verifying the `signedEntryTimestamp` in a Rekor
@@ -32,7 +31,6 @@ import java.util.logging.Logger;
  * {@link sigstore.dev}, it is a PEM-encoded x509/PKIX public key.
  */
 public class RekorSignatureBundle {
-  private static Logger logger = Logger.getLogger(RekorSignatureBundle.class.getName());
   /**
    * Canonicalized JSON representation, based on RFC 8785 rules, of a subset of a
    * Rekor LogEntry fields that are signed to generate `signedEntryTimestamp`
@@ -65,7 +63,7 @@ public class RekorSignatureBundle {
    * @param entry
    * @return
    */
-  public static Optional<RekorSignatureBundle> fromRekorLogEntry(RekorLogEntry entry) {
+  public static Result<RekorSignatureBundle, Exception> fromRekorLogEntry(RekorLogEntry entry) {
     // Create a copy of the LogEntry, but skip the verification.
     RekorLogEntry.LogEntry entrySubset = new RekorLogEntry.LogEntry();
     entrySubset.body = entry.logEntry.body;
@@ -77,15 +75,13 @@ public class RekorSignatureBundle {
     // the RFC 8785 rules.
     Gson gson = new GsonBuilder().create();
     String canonicalized = gson.toJson(entrySubset);
-    logger.log(Level.INFO,
-        String.format("canonicalized log entry content has length: %s", canonicalized.length()));
 
     if (entry.logEntry.verification == null) {
-      logger.log(Level.INFO, "no verification in the log entry");
+      return Result.error(
+          new IllegalArgumentException("no verification in the log entry"));
     }
 
-    return Optional.ofNullable(entry.logEntry.verification)
-        .map(verification
-            -> new RekorSignatureBundle(canonicalized, verification.signedEntryTimestamp));
+    return Result.success(
+        new RekorSignatureBundle(canonicalized, entry.logEntry.verification.signedEntryTimestamp));
   }
 }

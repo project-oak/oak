@@ -37,7 +37,7 @@ public class EndorsementVerifier {
   /**
    * Verifies a Rekor LogEntry.
    *
-   * The verification involves checking the following:
+   * The verification involves the following steps:
    * <ul>
    * <li>verifying the signature in {@code signedEntryTimestamp} (retrieved from
    * {@code logEntryBytes}), using Rekor's public key
@@ -52,8 +52,8 @@ public class EndorsementVerifier {
    * @param logEntryBytes
    * @param pemEncodedRekorPublicKeyBytes
    * @param endorsementStatementBytes
-   * @return an empty Result if the verification succeeds, or an Exception wrapped
-   *         in a Result otherwise
+   * @return a Result containing true if the verification succeeds, or
+   *         wrapping an Exception otherwise
    */
   public Result<Boolean, Exception> verifyRekorLogEntry(byte[] logEntryBytes,
       byte[] pemEncodedRekorPublicKeyBytes, byte[] endorsementStatementBytes) {
@@ -63,10 +63,18 @@ public class EndorsementVerifier {
   }
 
   /**
+   * Unmarshales the given bytes in {@code logEntryBytes} into an instance of
+   * {@code RekorLogEntry}, and if the conversion is successful, verifies the
+   * signature in the resulting LogEntry using the give public key in
+   * {@code pemEncodedRekorPublicKeyBytes}.
+   *
+   * Returns an error if either the conversion or the verification of the
+   * signature fails.
    *
    * @param logEntryBytes
    * @param pemEncodedRekorPublicKeyBytes
-   * @return
+   * @return a Result containing true if the verification succeeds, or
+   *         wrapping an Exception otherwise
    */
   public Result<Boolean, Exception> verifyRekorSignature(
       byte[] logEntryBytes, byte[] pemEncodedRekorPublicKeyBytes) {
@@ -74,15 +82,9 @@ public class EndorsementVerifier {
       RekorLogEntry logEntry =
           RekorLogEntry.unmarshalLogEntry(new String(logEntryBytes, StandardCharsets.UTF_8));
       logger.log(Level.INFO, "successfully unmarshaled logEntry");
-      Optional<RekorSignatureBundle> bundle = RekorSignatureBundle.fromRekorLogEntry(logEntry);
-      if (bundle.isEmpty()) {
-        return Result.error(new IllegalArgumentException(
-            "could not create RekorSignatureBundle from RekorLogEntry"));
-      }
-      RekorSignatureBundle signatureBundle = bundle.get();
-      logger.log(Level.INFO, "Got signature bundle");
-      return verifySignature(signatureBundle.getBase64Signature(),
-          signatureBundle.getCanonicalizedBytes(), pemEncodedRekorPublicKeyBytes);
+      return RekorSignatureBundle.fromRekorLogEntry(logEntry).andThen(signatureBundle
+          -> verifySignature(signatureBundle.getBase64Signature(),
+              signatureBundle.getCanonicalizedBytes(), pemEncodedRekorPublicKeyBytes));
     } catch (RekorLogEntry.RekorValidationException e) {
       return Result.error(e);
     }
@@ -143,7 +145,6 @@ public class EndorsementVerifier {
       for (byte b : digest) {
         result.append(String.format("%02x", b));
       }
-      logger.log(Level.INFO, String.format("digest is %s", result));
       return result.toString();
     } catch (NoSuchAlgorithmException e) {
       logger.log(Level.SEVERE, e.getMessage());

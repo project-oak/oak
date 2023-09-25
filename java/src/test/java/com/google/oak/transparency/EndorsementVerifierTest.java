@@ -17,7 +17,6 @@
 package com.google.oak.transparency;
 
 import com.google.oak.util.Result;
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.Assert;
