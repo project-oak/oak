@@ -184,16 +184,8 @@ pub fn verify_rekor_log_entry(
 
     let body = get_rekor_log_entry_body(log_entry_bytes)?;
 
-    let pem_encoded_endorser_public_key_bytes = BASE64_STANDARD
-        .decode(body.spec.signature.public_key.content.clone())
-        .context("couldn't decode Base64 endorser public key")?;
-
     // Verify the body in the Rekor LogEntry
-    verify_rekor_body(
-        &body,
-        endorsement_bytes,
-        &pem_encoded_endorser_public_key_bytes,
-    )?;
+    verify_rekor_body(&body, endorsement_bytes)?;
 
     Ok(())
 }
@@ -238,11 +230,7 @@ pub fn verify_rekor_signature(
 /// `pem_encoded_public_key_bytes`.
 ///
 /// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
-pub fn verify_rekor_body(
-    body: &Body,
-    contents_bytes: &[u8],
-    pem_encoded_public_key_bytes: &[u8],
-) -> anyhow::Result<()> {
+pub fn verify_rekor_body(body: &Body, contents_bytes: &[u8]) -> anyhow::Result<()> {
     if body.spec.signature.format != "x509" {
         anyhow::bail!(
             "unsupported signature format: {}; only x509 is supported",
@@ -269,23 +257,14 @@ pub fn verify_rekor_body(
         )
     }
 
-    // Check that the public key in the body matches the given public key. This in fact checks the
-    // consistency of the Rekor LogEntry, and we expect these public keys to always be the same.
     let public_key_bytes: Vec<u8> = BASE64_STANDARD
         .decode(body.spec.signature.public_key.content.as_bytes())
         .expect("couldn't base64-decode the public key bytes in the Rekor LogEntry body");
-    if compare_keys(&public_key_bytes, pem_encoded_public_key_bytes)? != Ordering::Equal {
-        anyhow::bail!(
-            "the given public key is different from the public key in the rekor entry: {:?} vs. {:?}",
-            public_key_bytes,
-            pem_encoded_public_key_bytes,
-        )
-    }
 
     verify_signature(
         body.spec.signature.content.as_str().as_bytes(),
         contents_bytes,
-        pem_encoded_public_key_bytes,
+        &public_key_bytes,
     )
     .context("couldn't verify signature over the endorsement file")
 }
@@ -331,7 +310,10 @@ fn rekor_signature_bundle(log_entry_bytes: &[u8]) -> anyhow::Result<RekorSignatu
 /// Compares two pem-encoded ECDSA public keys. Instead of comparing the bytes, we parse the bytes
 /// and compare p256 keys. Keys are considered equal if they are the same on the elliptic curve.
 /// This means that the keys could have different bytes, but still be the same key.
-fn compare_keys(public_key_bytes_a: &[u8], public_key_bytes_b: &[u8]) -> anyhow::Result<Ordering> {
+pub fn compare_keys(
+    public_key_bytes_a: &[u8],
+    public_key_bytes_b: &[u8],
+) -> anyhow::Result<Ordering> {
     let key_a = unmarshal_pem_to_p256_public_key(public_key_bytes_a)?;
     let key_b = unmarshal_pem_to_p256_public_key(public_key_bytes_b)?;
 
