@@ -15,6 +15,7 @@ oak_crypto = { workspace = true }
 oak_remote_attestation = { workspace = true }
 prost = "*"
 prost-types = "*"
+procfs = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 syslog = "*"

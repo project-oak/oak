@@ -30,7 +30,10 @@ use self::proto::oak::{
     containers::SendAttestationEvidenceRequest, session::v1::AttestationEvidence,
 };
 use anyhow::Context;
-use proto::oak::containers::{launcher_client::LauncherClient as GrpcLauncherClient, LogEntry};
+use proto::{
+    oak::containers::{launcher_client::LauncherClient as GrpcLauncherClient, LogEntry},
+    openmetrics,
+};
 use std::collections::HashMap;
 use tokio_stream::{Stream, StreamExt};
 use tonic::transport::Channel;
@@ -116,6 +119,19 @@ impl LauncherClient {
             .log(request)
             .await
             .context("couldn't stream log messages")?;
+        Ok(())
+    }
+
+    pub async fn push_metrics(
+        &self,
+        metric_families: Vec<openmetrics::MetricFamily>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let request = tonic::Request::new(openmetrics::MetricSet { metric_families });
+        self.inner
+            .clone()
+            .push_metrics(request)
+            .await
+            .context("couldn't push metrics")?;
         Ok(())
     }
 }

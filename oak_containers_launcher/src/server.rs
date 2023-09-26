@@ -198,8 +198,10 @@ impl Launcher for LauncherServerImplementation {
 
     async fn push_metrics(
         &self,
-        _request: tonic::Request<MetricSet>,
+        request: tonic::Request<MetricSet>,
     ) -> Result<Response<()>, tonic::Status> {
+        let metrics = request.into_inner();
+        log::debug!("metrics: {:?}", metrics);
         Ok(tonic::Response::new(()))
     }
 }
