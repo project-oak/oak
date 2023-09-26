@@ -116,6 +116,9 @@
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
 <a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -138,6 +141,9 @@
         }
         <span class="kw">pub use </span>oak_crypto::proto::oak::crypto;
         <span class="kw">pub use </span>oak_remote_attestation::proto::oak::session;
+    }
+    <span class="kw">pub mod </span>openmetrics {
+        <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;openmetrics&quot;</span>);
     }
 }
 

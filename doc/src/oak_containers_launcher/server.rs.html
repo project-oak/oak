@@ -215,6 +215,17 @@
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
 <a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -230,12 +241,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
-    containers::{
-        launcher_server::{Launcher, LauncherServer},
-        GetApplicationConfigResponse, GetImageResponse, LogEntry, SendAttestationEvidenceRequest,
+</span><span class="kw">use </span><span class="kw">crate</span>::proto::{
+    oak::{
+        containers::{
+            launcher_server::{Launcher, LauncherServer},
+            GetApplicationConfigResponse, GetImageResponse, LogEntry,
+            SendAttestationEvidenceRequest,
+        },
+        session::v1::AttestationEvidence,
     },
-    session::v1::AttestationEvidence,
+    openmetrics::MetricSet,
 };
 <span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>futures::{FutureExt, Stream, StreamExt};
@@ -406,6 +421,13 @@
                 .map_or(<span class="string">&quot;&quot;</span>, |message| message.as_str());
             <span class="macro">println!</span>(<span class="string">&quot;{}: {}&quot;</span>, unit, message);
         }
+        <span class="prelude-val">Ok</span>(tonic::Response::new(()))
+    }
+
+    <span class="kw">async fn </span>push_metrics(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        _request: tonic::Request&lt;MetricSet&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;()&gt;, tonic::Status&gt; {
         <span class="prelude-val">Ok</span>(tonic::Response::new(()))
     }
 }
