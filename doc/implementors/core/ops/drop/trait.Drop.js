@@ -1,3 +1,4 @@
 (function() {var implementors = {
+"oak_containers_syslogd":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"oak_containers_syslogd/systemd_journal/struct.Journal.html\" title=\"struct oak_containers_syslogd::systemd_journal::Journal\">Journal</a>"]],
 "xtask":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/drop/trait.Drop.html\" title=\"trait core::ops::drop::Drop\">Drop</a> for <a class=\"struct\" href=\"xtask/testing/struct.BackgroundStep.html\" title=\"struct xtask::testing::BackgroundStep\">BackgroundStep</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

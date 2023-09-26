@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["main"],"mod":["log_relay","systemd_journal"],"struct":["Args"]};

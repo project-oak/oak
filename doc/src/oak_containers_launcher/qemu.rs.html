@@ -230,6 +230,7 @@
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
 <a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -428,6 +429,7 @@
                 <span class="macro">format!</span>(<span class="string">&quot;brd.rd_size={ramdrive_size}&quot;</span>).as_str(),
                 <span class="string">&quot;brd.max_part=1&quot;</span>,
                 <span class="macro">format!</span>(<span class="string">&quot;ip={vm_address}:::255.255.255.0::eth0:off&quot;</span>).as_str(),
+                <span class="string">&quot;quiet&quot;</span>,
             ]
             .join(<span class="string">&quot; &quot;</span>)
             .as_str(),

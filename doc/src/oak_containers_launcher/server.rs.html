@@ -194,6 +194,27 @@
 <a href="#194" id="194">194</a>
 <a href="#195" id="195">195</a>
 <a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -212,12 +233,12 @@
 </span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
     containers::{
         launcher_server::{Launcher, LauncherServer},
-        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+        GetApplicationConfigResponse, GetImageResponse, LogEntry, SendAttestationEvidenceRequest,
     },
     session::v1::AttestationEvidence,
 };
 <span class="kw">use </span>anyhow::anyhow;
-<span class="kw">use </span>futures::{FutureExt, Stream};
+<span class="kw">use </span>futures::{FutureExt, Stream, StreamExt};
 <span class="kw">use </span>std::{pin::Pin, sync::Mutex};
 <span class="kw">use </span>tokio::{
     io::{AsyncReadExt, BufReader},
@@ -364,6 +385,27 @@
             })<span class="question-mark">?
             </span>.send(())
             .map_err(|_err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t send notification&quot;</span>)))<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(tonic::Response::new(()))
+    }
+
+    <span class="kw">async fn </span>log(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        request: Request&lt;tonic::Streaming&lt;LogEntry&gt;&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;()&gt;, tonic::Status&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>stream = request.into_inner();
+        <span class="kw">while let </span><span class="prelude-val">Some</span>(message) = stream.next().<span class="kw">await </span>{
+            <span class="kw">let </span>message = message<span class="question-mark">?</span>;
+
+            <span class="kw">let </span>unit = message
+                .fields
+                .get(<span class="string">&quot;_SYSTEMD_UNIT&quot;</span>)
+                .map_or(<span class="string">&quot;&quot;</span>, |unit| unit.as_str());
+            <span class="kw">let </span>message = message
+                .fields
+                .get(<span class="string">&quot;MESSAGE&quot;</span>)
+                .map_or(<span class="string">&quot;&quot;</span>, |message| message.as_str());
+            <span class="macro">println!</span>(<span class="string">&quot;{}: {}&quot;</span>, unit, message);
+        }
         <span class="prelude-val">Ok</span>(tonic::Response::new(()))
     }
 }
