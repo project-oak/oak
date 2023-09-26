@@ -16,6 +16,7 @@ oak_crypto = { workspace = true }
 oak_remote_attestation = { workspace = true }
 nix = "*"
 prost = { workspace = true }
+prost-types = "*"
 rtnetlink = "*"
 tar = "*"
 tokio = { version = "*", features = [
