@@ -13,12 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::proto::oak::{
-    containers::{
-        launcher_server::{Launcher, LauncherServer},
-        GetApplicationConfigResponse, GetImageResponse, LogEntry, SendAttestationEvidenceRequest,
+use crate::proto::{
+    oak::{
+        containers::{
+            launcher_server::{Launcher, LauncherServer},
+            GetApplicationConfigResponse, GetImageResponse, LogEntry,
+            SendAttestationEvidenceRequest,
+        },
+        session::v1::AttestationEvidence,
     },
-    session::v1::AttestationEvidence,
+    openmetrics::MetricSet,
 };
 use anyhow::anyhow;
 use futures::{FutureExt, Stream, StreamExt};
@@ -189,6 +193,13 @@ impl Launcher for LauncherServerImplementation {
                 .map_or("", |message| message.as_str());
             println!("{}: {}", unit, message);
         }
+        Ok(tonic::Response::new(()))
+    }
+
+    async fn push_metrics(
+        &self,
+        _request: tonic::Request<MetricSet>,
+    ) -> Result<Response<()>, tonic::Status> {
         Ok(tonic::Response::new(()))
     }
 }

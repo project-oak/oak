@@ -21,6 +21,7 @@ package oak.containers;
 import "google/protobuf/empty.proto";
 import "oak_crypto/proto/v1/crypto.proto";
 import "oak_remote_attestation/proto/v1/messages.proto";
+import "third_party/OpenMetrics/proto/openmetrics_data_model.proto";
 
 // As images can be large (hundreds of megabytes), the launcher chunks up the response into smaller
 // pieces to respect proto/gRPC limits. The image needs to be reassembled in the stage1 or the
@@ -88,6 +89,10 @@ service Launcher {
 
   // Logs a set of log entries from the guest.
   rpc Log(stream LogEntry) returns (google.protobuf.Empty) {}
+
+  // Pushes a set of monitoring metrics to the launcher, which can then forward them to the
+  // monitoring system of choice.
+  rpc PushMetrics(openmetrics.MetricSet) returns (google.protobuf.Empty) {}
 }
 
 // Defines the service exposed by the orchestrator, that can be invoked by the application.
