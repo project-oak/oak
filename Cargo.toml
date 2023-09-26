@@ -67,9 +67,7 @@ exclude = [
   "testing/oak_echo_app",
   "testing/oak_echo_raw_app",
   "testing/sev_snp_hello_world_kernel",
-  "third_party/curve25519-dalek",
   "third_party/rust-hypervisor-firmware-virtio",
-  "third_party/x25519-dalek",
 ]
 
 [workspace.dependencies]
