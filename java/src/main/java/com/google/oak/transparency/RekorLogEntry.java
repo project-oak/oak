@@ -18,6 +18,7 @@ package com.google.oak.transparency;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 import com.google.oak.util.Result;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
@@ -169,7 +170,8 @@ public final class RekorLogEntry {
   public static RekorLogEntry createFromJson(String json) {
     // Use a default Gson instance to parse JSON strings into Java objects.
     Gson gson = new GsonBuilder().create();
-    Map<String, Object> entryMap = gson.fromJson(json, Map.class);
+    Map<String, Object> entryMap = gson.fromJson(json, new TypeToken<Map<String, Object>>() {
+    }.getType());
 
     if (entryMap.size() != 1) {
       throw new IllegalArgumentException(
