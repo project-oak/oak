@@ -35,7 +35,7 @@ public class EndorsementVerifierTest {
   @Test
   public void testVerifyRekorLogEntry() throws Exception {
     byte[] logEntryBytes = Files.readAllBytes(Path.of(LOG_ENTRY_PATH));
-    byte[] endorsementBytes = Files.readAllBytes(Path.of(REKOR_PUBLIC_KEY_PATH));
+    byte[] endorsementBytes = Files.readAllBytes(Path.of(ENDORSEMENT_PATH));
     byte[] rekorPublicKeyBytes = Files.readAllBytes(Path.of(REKOR_PUBLIC_KEY_PATH));
 
     RekorLogEntry logEntry = RekorLogEntry.createFromJson(logEntryBytes);
