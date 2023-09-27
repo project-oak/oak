@@ -226,6 +226,8 @@
 <a href="#226" id="226">226</a>
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -426,8 +428,10 @@
 
     <span class="kw">async fn </span>push_metrics(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _request: tonic::Request&lt;MetricSet&gt;,
+        request: tonic::Request&lt;MetricSet&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;()&gt;, tonic::Status&gt; {
+        <span class="kw">let </span>metrics = request.into_inner();
+        <span class="macro">log::debug!</span>(<span class="string">&quot;metrics: {:?}&quot;</span>, metrics);
         <span class="prelude-val">Ok</span>(tonic::Response::new(()))
     }
 }

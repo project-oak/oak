@@ -149,7 +149,7 @@
     attester: Attester,
     encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;,
     application_config: Vec&lt;u8&gt;,
-    launcher_client: LauncherClient,
+    launcher_client: Arc&lt;LauncherClient&gt;,
 }
 
 <span class="attr">#[tonic::async_trait]
@@ -209,7 +209,7 @@
     encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;,
     attester: Attester,
     application_config: Vec&lt;u8&gt;,
-    launcher_client: LauncherClient,
+    launcher_client: Arc&lt;LauncherClient&gt;,
     shutdown_receiver: Receiver&lt;()&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt;
 <span class="kw">where
