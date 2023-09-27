@@ -25,17 +25,17 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class RekorLogEntryTest {
-  @Test
-  public void testUnmarshalRekorLogEntry() throws Exception {
-    String logEntryPath = "oak_remote_attestation_verification/testdata/logentry.json";
+  private static final String LOG_ENTRY_PATH = "oak_remote_attestation_verification/testdata/logentry.json";
 
-    String json = Files.readString(Path.of(logEntryPath));
-    RekorLogEntry.LogEntry entry = RekorLogEntry.unmarshalLogEntry(json).logEntry;
-    Assert.assertTrue(entry.body.length() > 0);
-    Assert.assertEquals(entry.logIndex, 30891523);
-    Assert.assertEquals(entry.bodyObject.kind, "rekord");
-    Assert.assertEquals(entry.bodyObject.spec.data.hash.algorithm, "sha256");
-    Assert.assertEquals(entry.bodyObject.spec.signature.format, "x509");
-    Assert.assertNotNull(entry.verification);
+  @Test
+  public void testCreate() throws Exception {
+    String json = Files.readString(Path.of(LOG_ENTRY_PATH));
+    RekorLogEntry r = RekorLogEntry.createFromJson(json);
+    Assert.assertTrue(r.hasVerification());
+    Assert.assertTrue(r.logEntry.body.length() > 0);
+    Assert.assertEquals(r.logEntry.logIndex, 30891523);
+    Assert.assertEquals(r.logEntry.bodyObject.kind, "rekord");
+    Assert.assertEquals(r.logEntry.bodyObject.spec.data.hash.algorithm, "sha256");
+    Assert.assertEquals(r.logEntry.bodyObject.spec.signature.format, "x509");
   }
 }

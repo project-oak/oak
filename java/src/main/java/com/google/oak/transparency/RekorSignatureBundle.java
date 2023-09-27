@@ -39,9 +39,7 @@ public class RekorSignatureBundle {
    */
   private final String canonicalized;
 
-  /**
-   * Base64-encoded signature over the canonicalized JSON document.
-   */
+  /** Base64-encoded signature over the canonicalized JSON document. */
   private final String base64Signature;
 
   public RekorSignatureBundle(String canonicalized, String base64Signature) {
@@ -57,31 +55,17 @@ public class RekorSignatureBundle {
     return this.canonicalized.getBytes(StandardCharsets.UTF_8);
   }
 
-  /**
-   * Create a RekorSignatureBundle from the given LogEntry.
-   *
-   * @param entry
-   * @return
-   */
-  public static Result<RekorSignatureBundle, Exception> fromRekorLogEntry(RekorLogEntry entry) {
-    // Create a copy of the LogEntry, but skip the verification.
+  /** Creates a bundle from the given log entry. */
+  public static RekorSignatureBundle create(RekorLogEntry entry) {
     RekorLogEntry.LogEntry entrySubset = new RekorLogEntry.LogEntry();
     entrySubset.body = entry.logEntry.body;
     entrySubset.integratedTime = entry.logEntry.integratedTime;
     entrySubset.logId = entry.logEntry.logId;
     entrySubset.logIndex = entry.logEntry.logIndex;
 
-    // Canonicalized JSON document that is signed. Canonicalization should follow
-    // the RFC 8785 rules.
     Gson gson = new GsonBuilder().create();
     String canonicalized = gson.toJson(entrySubset);
 
-    if (entry.logEntry.verification == null) {
-      return Result.error(
-          new IllegalArgumentException("no verification in the log entry"));
-    }
-
-    return Result.success(
-        new RekorSignatureBundle(canonicalized, entry.logEntry.verification.signedEntryTimestamp));
+    return new RekorSignatureBundle(canonicalized, entry.logEntry.verification.signedEntryTimestamp);
   }
 }

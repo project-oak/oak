@@ -19,6 +19,8 @@ package com.google.oak.transparency;
 import com.google.oak.util.Result;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -26,17 +28,20 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class EndorsementVerifierTest {
+  private static final String LOG_ENTRY_PATH = "oak_remote_attestation_verification/testdata/logentry.json";
+  private static final String ENDORSEMENT_PATH = "oak_remote_attestation_verification/testdata/endorsement.json";
+  private static final String REKOR_PUBLIC_KEY_PATH = "oak_remote_attestation_verification/testdata/rekor_public_key.pem";
+
   @Test
   public void testVerifyRekorLogEntry() throws Exception {
-    String logEntryPath = "oak_remote_attestation_verification/testdata/logentry.json";
-    String endorsementPath = "oak_remote_attestation_verification/testdata/endorsement.json";
-    String rekorPubkeyPath = "oak_remote_attestation_verification/testdata/rekor_public_key.pem";
+    byte[] logEntryBytes = Files.readAllBytes(Path.of(LOG_ENTRY_PATH));
+    byte[] endorsementBytes = Files.readAllBytes(Path.of(REKOR_PUBLIC_KEY_PATH));
+    byte[] rekorPublicKeyBytes = Files.readAllBytes(Path.of(REKOR_PUBLIC_KEY_PATH));
 
-    byte[] logEntryBytes = Files.readAllBytes(Path.of(logEntryPath));
-    byte[] endorsementBytes = Files.readAllBytes(Path.of(endorsementPath));
-    byte[] rekorPublicKeyBytes = Files.readAllBytes(Path.of(rekorPubkeyPath));
-    Result<Boolean, Exception> result = new EndorsementVerifier().verifyRekorLogEntry(
-        logEntryBytes, rekorPublicKeyBytes, endorsementBytes);
-    Assert.assertTrue(result.isSuccess());
+    RekorLogEntry logEntry = RekorLogEntry.createFromJson(logEntryBytes);
+    Optional<String> error = EndorsementVerifier.verifyRekorLogEntry(
+        logEntry, rekorPublicKeyBytes, endorsementBytes);
+
+    Assert.assertFalse(error.isPresent());
   }
 }
