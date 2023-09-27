@@ -1,8 +1,8 @@
 # Java Code
 
-Top-level directory for all Java code.
+Top-level directory for all Java code. To build and test:
 
 ```bash
-apt get bazel
+sudo apt-get install bazel
 bazel test java/...
 ```
