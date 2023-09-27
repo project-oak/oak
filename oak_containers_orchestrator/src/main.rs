@@ -34,9 +34,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
-    let launcher_client = LauncherClient::create(args.launcher_addr.parse()?)
-        .await
-        .map_err(|error| anyhow!("couldn't create client: {:?}", error))?;
+    let launcher_client = Arc::new(
+        LauncherClient::create(args.launcher_addr.parse()?)
+            .await
+            .map_err(|error| anyhow!("couldn't create client: {:?}", error))?,
+    );
 
     let container_bundle = launcher_client
         .get_container_bundle()
@@ -77,13 +79,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             encryption_key_provider,
             attester,
             application_config,
-            launcher_client,
+            launcher_client.clone(),
             shutdown_receiver
         ),
         oak_containers_orchestrator::container_runtime::run(
             &container_bundle,
             exit_notification_sender
-        )
+        ),
+        oak_containers_orchestrator::metrics::run(launcher_client),
     )?;
 
     Ok(())
