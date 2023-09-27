@@ -57,17 +57,10 @@ public class EndorsementVerifier {
   public static Optional<String> verifyRekorLogEntry(
       RekorLogEntry logEntry, byte[] publicKeyBytes, byte[] endorsementBytes) {
     Optional<String> rekorSigVer = verifyRekorSignature(logEntry, publicKeyBytes);
-    logger.warning("HEYJA ");
     if (rekorSigVer.isPresent()) {
-      logger.warning("HEY " + rekorSigVer.get());
       return rekorSigVer;
     }
-    logger.warning("DIG " + sha256Hex(endorsementBytes));
-    Optional<String> b = verifyRekorBody(logEntry.getBody(), endorsementBytes);
-    if (b.isPresent()) {
-      logger.warning("HUU " + b.get());
-    }
-    return b;
+    return verifyRekorBody(logEntry.getBody(), endorsementBytes);
   }
 
   /**
