@@ -3,6 +3,6 @@
 Top-level directory for all Java code. To build and test:
 
 ```bash
-sudo apt-get install bazel
+nix develop
 bazel test java/...
 ```
