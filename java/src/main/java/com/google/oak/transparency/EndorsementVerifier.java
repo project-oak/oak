@@ -16,11 +16,8 @@
 
 package com.google.oak.transparency;
 
-import com.google.oak.session.v1.AttestationEndorsement;
-import com.google.oak.session.v1.AttestationEvidence;
-import com.google.oak.transparency.RekorLogEntry.Body;
-import com.google.oak.util.Result;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
@@ -28,11 +25,31 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- * Verifies a Transparent-Release endorsement statement and the corresponding
- * Rekor log entry.
- */
+/** Verifies an endorsement statement and the corresponding Rekor log entry. */
 public class EndorsementVerifier {
+  /**
+   * Needs three paths as command line arguments, corresponding to the arguments
+   * of {@code #verifyRekorLogEntry()}. Verification failure is signalled via exit
+   * code.
+   */
+  public static void main(String[] args) throws Exception {
+    if (args.length != 3) {
+      System.exit(1);
+    }
+
+    byte[] logEntryBytes = Files.readAllBytes(Path.of(args[0]));
+    byte[] rekorPublicKeyBytes = Files.readAllBytes(Path.of(args[1]));
+    byte[] endorsementBytes = Files.readAllBytes(Path.of(args[2]));
+
+    RekorLogEntry logEntry = RekorLogEntry.createFromJson(logEntryBytes);
+    Optional<Failure> failure = verifyRekorLogEntry(
+        logEntry, rekorPublicKeyBytes, endorsementBytes);
+    if (failure.isPresent()) {
+      System.err.println("Verification failed: " + failure.get().getMessage());
+      System.exit(2);
+    }
+  }
+
   private static final Logger logger = Logger.getLogger(EndorsementVerifier.class.getName());
 
   /** Signals verification failure. */
@@ -166,5 +183,8 @@ public class EndorsementVerifier {
     }
     // TODO(#2854): verify the signature
     return Optional.empty();
+  }
+
+  private EndorsementVerifier() {
   }
 }

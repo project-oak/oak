@@ -18,7 +18,6 @@ package com.google.oak.transparency;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.oak.util.Result;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 

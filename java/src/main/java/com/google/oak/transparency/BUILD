@@ -14,19 +14,25 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:defs.bzl", "java_binary", "java_library")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
+java_binary(
+    name = "endorsement_verifier",
+    main_class = "com.google.oak.transparency.EndorsementVerifier",
+    runtime_deps = [
+        ":transparency",
+    ],
+)
+
 java_library(
-    name = "rekor",
+    name = "transparency",
     srcs = glob(["*.java"]),
     deps = [
-        "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation/proto/v1:messages_java_proto",
         "@com_google_code_gson_gson",
     ],
 )

@@ -26,7 +26,7 @@ java_test(
     data = ["//oak_remote_attestation_verification/testdata:logentry.json"],
     test_class = "com.google.oak.transparency.RekorLogEntryTest",
     deps = [
-        "//java/src/main/java/com/google/oak/transparency:rekor",
+        "//java/src/main/java/com/google/oak/transparency",
     ],
 )
 
@@ -40,7 +40,6 @@ java_test(
     ],
     test_class = "com.google.oak.transparency.EndorsementVerifierTest",
     deps = [
-        "//java/src/main/java/com/google/oak/transparency:rekor",
-        "//java/src/main/java/com/google/oak/util",
+        "//java/src/main/java/com/google/oak/transparency",
     ],
 )
