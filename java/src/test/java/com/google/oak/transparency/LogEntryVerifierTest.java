@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,24 +18,28 @@ package com.google.oak.transparency;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public class RekorLogEntryTest {
+public class LogEntryVerifierTest {
   private static final String LOG_ENTRY_PATH = "oak_remote_attestation_verification/testdata/logentry.json";
+  private static final String REKOR_PUBLIC_KEY_PATH = "oak_remote_attestation_verification/testdata/rekor_public_key.pem";
+  private static final String ENDORSEMENT_PATH = "oak_remote_attestation_verification/testdata/endorsement.json";
 
   @Test
-  public void testCreate() throws Exception {
-    String json = Files.readString(Path.of(LOG_ENTRY_PATH));
-    RekorLogEntry r = RekorLogEntry.createFromJson(json);
-    Assert.assertTrue(r.hasVerification());
-    Assert.assertTrue(r.logEntry.body.length() > 0);
-    Assert.assertEquals(r.logEntry.logIndex, 30891523);
-    Assert.assertEquals(r.logEntry.bodyObject.kind, "rekord");
-    Assert.assertEquals(r.logEntry.bodyObject.spec.data.hash.algorithm, "sha256");
-    Assert.assertEquals(r.logEntry.bodyObject.spec.signature.format, "x509");
+  public void testVerifySucceeds() throws Exception {
+    byte[] logEntryBytes = Files.readAllBytes(Path.of(LOG_ENTRY_PATH));
+    byte[] rekorPublicKeyBytes = Files.readAllBytes(Path.of(REKOR_PUBLIC_KEY_PATH));
+    byte[] endorsementBytes = Files.readAllBytes(Path.of(ENDORSEMENT_PATH));
+
+    RekorLogEntry logEntry = RekorLogEntry.createFromJson(logEntryBytes);
+    Optional<Failure> failure = LogEntryVerifier.verify(
+        logEntry, rekorPublicKeyBytes, endorsementBytes);
+
+    Assert.assertFalse(failure.isPresent());
   }
 }
