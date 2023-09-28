@@ -55,16 +55,11 @@ public class EndorsementVerifier {
   /**
    * Verifies a Rekor LogEntry.
    *
-   * Verifies the following items:
-   * <ul>
-   * <li>The signature in {@code signedEntryTimestamp} (retrieved from
-   * {@code logEntryBytes}), using Rekor's public key ({@code publicKeyBytes}).
-   * <li>The signature in {@code body.RekordObj.signature} (retrieved
-   * from {@code logEntryBytes}), using the endorser's public key (also retrieved
-   * from {@code logEntryBytes}).
-   * <li>Equality of the content of the body (retrieved from
-   * {@code logEntryBytes}) and the input {@code endorsementBytes}.
-   * </ul>
+   * Verifies the signature of {@code logEntry.verification.signedEntryTimestamp}
+   * using the provided public key, the signature in
+   * {@code logEntry.body.RekordObj.signature} using the endorser's public key
+   * {@code logEntry.body.spec.signature.publicKey}, as well as digest equality of
+   * {@code logEntry.body.spec.data.hash} and the endorsement statement.
    *
    * @param logEntry         The Rekor log entry
    * @param publicKeyBytes   The PEM-encoded public key from Rekor
