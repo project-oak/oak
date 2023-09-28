@@ -35,6 +35,23 @@ import java.util.logging.Logger;
 public class EndorsementVerifier {
   private static final Logger logger = Logger.getLogger(EndorsementVerifier.class.getName());
 
+  /** Signals verification failure. */
+  public static class Failure {
+    public Failure(String message) {
+      this.message = message;
+    }
+
+    public String getMessage() {
+      return message;
+    }
+
+    private final String message;
+  }
+
+  private static Optional<Failure> failure(String message) {
+    return Optional.of(new Failure(message));
+  }
+
   /**
    * Verifies a Rekor LogEntry.
    *
@@ -52,11 +69,11 @@ public class EndorsementVerifier {
    * @param logEntry         The Rekor log entry
    * @param publicKeyBytes   The PEM-encoded public key from Rekor
    * @param endorsementBytes The serialized endorsement statement
-   * @return Empty if the verification succeeds, or an error message otherwise
+   * @return Empty if the verification succeeds, or a failure otherwise
    */
-  public static Optional<String> verifyRekorLogEntry(
+  public static Optional<Failure> verifyRekorLogEntry(
       RekorLogEntry logEntry, byte[] publicKeyBytes, byte[] endorsementBytes) {
-    Optional<String> rekorSigVer = verifyRekorSignature(logEntry, publicKeyBytes);
+    Optional<Failure> rekorSigVer = verifyRekorSignature(logEntry, publicKeyBytes);
     if (rekorSigVer.isPresent()) {
       return rekorSigVer;
     }
@@ -64,18 +81,15 @@ public class EndorsementVerifier {
   }
 
   /**
-   * Unmarshals the given bytes in {@code logEntryBytes} into an instance of
-   * {@code RekorLogEntry}, and if the conversion is successful, verifies the
-   * signature in the resulting LogEntry using the give public key in
-   * {@code publicKeyBytes}.
+   * Verifies the Rekor signature of a log entry using a public key.
    *
    * @param logEntry       The Rekor log entry
    * @param publicKeyBytes The PEM-encoded public key
-   * @return Empty if the verification succeeds, or an error message otherwise
+   * @return Empty if the verification succeeds, or a failure otherwise
    */
-  public static Optional<String> verifyRekorSignature(RekorLogEntry logEntry, byte[] publicKeyBytes) {
+  public static Optional<Failure> verifyRekorSignature(RekorLogEntry logEntry, byte[] publicKeyBytes) {
     if (!logEntry.hasVerification()) {
-      return Optional.of("no verification in the log entry");
+      return failure("no verification in the log entry");
     }
     RekorSignatureBundle bundle = RekorSignatureBundle.create(logEntry);
     return verifySignature(bundle.getBase64Signature(), bundle.getCanonicalizedBytes(), publicKeyBytes);
@@ -89,26 +103,24 @@ public class EndorsementVerifier {
    *
    * @param body         The body of the Rekor log entry
    * @param contentBytes The serialized content
-   * @return Empty if the verification succeeds, or an error message otherwise
+   * @return Empty if the verification succeeds, or a failure otherwise
    */
-  static Optional<String> verifyRekorBody(RekorLogEntry.Body body, byte[] contentBytes) {
+  static Optional<Failure> verifyRekorBody(RekorLogEntry.Body body, byte[] contentBytes) {
     if (!"x509".equals(body.spec.signature.format)) {
-      return Optional.of(String.format(
+      return failure(String.format(
           "unsupported signature format: %s; only x509 is supported", body.spec.signature.format));
     }
 
     // For now, we only support `sha256` as the hashing algorithm.
     if (!"sha256".equals(body.spec.data.hash.algorithm)) {
-      return Optional.of(
-          String.format("unsupported hash algorithm: %s; only sha256 is supported",
-              body.spec.data.hash.algorithm));
+      return failure(String.format("unsupported hash algorithm: %s; only sha256 is supported",
+          body.spec.data.hash.algorithm));
     }
 
-    // Check that hash of the given content matches the hash of the data in the
-    // Body.
+    // Content digest must match the hash mentioned in the body.
     String digest = sha256Hex(contentBytes);
     if (digest == null || !digest.equals(body.spec.data.hash.value)) {
-      return Optional.of(String.format(
+      return failure(String.format(
           "SHA2-256 digest of contents (%s) differs from that in Rekor entry body (%s)",
           digest, body.spec.data.hash.value));
     }
@@ -139,24 +151,23 @@ public class EndorsementVerifier {
   }
 
   /**
-   * Verifies the given base64-encoded signature over the given content bytes,
-   * using the given PEM-encoded public key.
+   * Verifies the signature over content bytes using a public key.
    *
    * @param signature      The base64-encoded signature
    * @param contentBytes   The serialized content
    * @param publicKeyBytes The PEM-encoded public key
-   * @return Empty if the verification succeeds, or an error message otherwise
+   * @return Empty if the verification succeeds, or a failure otherwise
    */
-  public static Optional<String> verifySignature(
+  public static Optional<Failure> verifySignature(
       String signature, byte[] contentBytes, byte[] publicKeyBytes) {
     if (signature == null || signature.length() == 0) {
-      return Optional.of("empty signature");
+      return failure("empty signature");
     }
     if (contentBytes == null || contentBytes.length == 0) {
-      return Optional.of("empty content");
+      return failure("empty content");
     }
     if (publicKeyBytes == null || publicKeyBytes.length == 0) {
-      return Optional.of("empty public key");
+      return failure("empty public key");
     }
     // TODO(#2854): verify the signature
     return Optional.empty();

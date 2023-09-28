@@ -39,9 +39,9 @@ public class EndorsementVerifierTest {
     byte[] rekorPublicKeyBytes = Files.readAllBytes(Path.of(REKOR_PUBLIC_KEY_PATH));
 
     RekorLogEntry logEntry = RekorLogEntry.createFromJson(logEntryBytes);
-    Optional<String> error = EndorsementVerifier.verifyRekorLogEntry(
+    Optional<EndorsementVerifier.Failure> failure = EndorsementVerifier.verifyRekorLogEntry(
         logEntry, rekorPublicKeyBytes, endorsementBytes);
 
-    Assert.assertFalse(error.isPresent());
+    Assert.assertFalse(failure.isPresent());
   }
 }
