@@ -25,19 +25,19 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
-public class EndorsementVerifierTest {
+public class LogEntryVerifierTest {
   private static final String LOG_ENTRY_PATH = "oak_remote_attestation_verification/testdata/logentry.json";
   private static final String REKOR_PUBLIC_KEY_PATH = "oak_remote_attestation_verification/testdata/rekor_public_key.pem";
   private static final String ENDORSEMENT_PATH = "oak_remote_attestation_verification/testdata/endorsement.json";
 
   @Test
-  public void testVerifyRekorLogEntry() throws Exception {
+  public void testVerifySucceeds() throws Exception {
     byte[] logEntryBytes = Files.readAllBytes(Path.of(LOG_ENTRY_PATH));
     byte[] rekorPublicKeyBytes = Files.readAllBytes(Path.of(REKOR_PUBLIC_KEY_PATH));
     byte[] endorsementBytes = Files.readAllBytes(Path.of(ENDORSEMENT_PATH));
 
     RekorLogEntry logEntry = RekorLogEntry.createFromJson(logEntryBytes);
-    Optional<EndorsementVerifier.Failure> failure = EndorsementVerifier.verifyRekorLogEntry(
+    Optional<Failure> failure = LogEntryVerifier.verify(
         logEntry, rekorPublicKeyBytes, endorsementBytes);
 
     Assert.assertFalse(failure.isPresent());

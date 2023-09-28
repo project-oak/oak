@@ -31,14 +31,14 @@ java_test(
 )
 
 java_test(
-    name = "endorsement_verifier_test",
-    srcs = ["EndorsementVerifierTest.java"],
+    name = "log_entry_verifier_test",
+    srcs = ["LogEntryVerifierTest.java"],
     data = [
         "//oak_remote_attestation_verification/testdata:endorsement.json",
         "//oak_remote_attestation_verification/testdata:logentry.json",
         "//oak_remote_attestation_verification/testdata:rekor_public_key.pem",
     ],
-    test_class = "com.google.oak.transparency.EndorsementVerifierTest",
+    test_class = "com.google.oak.transparency.LogEntryVerifierTest",
     deps = [
         "//java/src/main/java/com/google/oak/transparency",
     ],

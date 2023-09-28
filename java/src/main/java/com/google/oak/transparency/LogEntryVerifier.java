@@ -25,52 +25,37 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/** Verifies an endorsement statement and the corresponding Rekor log entry. */
-public class EndorsementVerifier {
+/** Verifies a Rekor log entry against an endorsement statement. */
+public class LogEntryVerifier {
   /**
    * Needs three paths as command line arguments, corresponding to the arguments
-   * of {@code #verifyRekorLogEntry()}. Verification failure is signalled via exit
-   * code.
+   * of {@code #verify()}. Verification failure is signalled via exit code.
    */
   public static void main(String[] args) throws Exception {
     if (args.length != 3) {
-      System.exit(1);
+      System.exit(2);
     }
 
     byte[] logEntryBytes = Files.readAllBytes(Path.of(args[0]));
-    byte[] rekorPublicKeyBytes = Files.readAllBytes(Path.of(args[1]));
+    byte[] publicKeyBytes = Files.readAllBytes(Path.of(args[1]));
     byte[] endorsementBytes = Files.readAllBytes(Path.of(args[2]));
 
     RekorLogEntry logEntry = RekorLogEntry.createFromJson(logEntryBytes);
-    Optional<Failure> failure = verifyRekorLogEntry(
-        logEntry, rekorPublicKeyBytes, endorsementBytes);
+    Optional<Failure> failure = verify(logEntry, publicKeyBytes, endorsementBytes);
     if (failure.isPresent()) {
       System.err.println("Verification failed: " + failure.get().getMessage());
-      System.exit(2);
+      System.exit(1);
     }
   }
 
-  private static final Logger logger = Logger.getLogger(EndorsementVerifier.class.getName());
-
-  /** Signals verification failure. */
-  public static class Failure {
-    public Failure(String message) {
-      this.message = message;
-    }
-
-    public String getMessage() {
-      return message;
-    }
-
-    private final String message;
-  }
+  private static final Logger logger = Logger.getLogger(LogEntryVerifier.class.getName());
 
   private static Optional<Failure> failure(String message) {
     return Optional.of(new Failure(message));
   }
 
   /**
-   * Verifies a Rekor LogEntry.
+   * Verifies a Rekor log entry.
    *
    * Verifies the signature of {@code logEntry.verification.signedEntryTimestamp}
    * using the provided public key, the signature in
@@ -83,7 +68,7 @@ public class EndorsementVerifier {
    * @param endorsementBytes The serialized endorsement statement
    * @return Empty if the verification succeeds, or a failure otherwise
    */
-  public static Optional<Failure> verifyRekorLogEntry(
+  public static Optional<Failure> verify(
       RekorLogEntry logEntry, byte[] publicKeyBytes, byte[] endorsementBytes) {
     Optional<Failure> rekorSigVer = verifyRekorSignature(logEntry, publicKeyBytes);
     if (rekorSigVer.isPresent()) {
@@ -99,12 +84,12 @@ public class EndorsementVerifier {
    * @param publicKeyBytes The PEM-encoded public key
    * @return Empty if the verification succeeds, or a failure otherwise
    */
-  public static Optional<Failure> verifyRekorSignature(RekorLogEntry logEntry, byte[] publicKeyBytes) {
+  static Optional<Failure> verifyRekorSignature(RekorLogEntry logEntry, byte[] publicKeyBytes) {
     if (!logEntry.hasVerification()) {
       return failure("no verification in the log entry");
     }
     RekorSignatureBundle bundle = RekorSignatureBundle.create(logEntry);
-    return verifySignature(bundle.getBase64Signature(), bundle.getCanonicalizedBytes(), publicKeyBytes);
+    return SignatureVerifier.verify(bundle.getBase64Signature(), bundle.getCanonicalizedBytes(), publicKeyBytes);
   }
 
   /**
@@ -138,7 +123,7 @@ public class EndorsementVerifier {
     }
 
     byte[] publicKeyBytes = Base64.getDecoder().decode(body.spec.signature.publicKey.content);
-    return verifySignature(body.spec.signature.content, contentBytes, publicKeyBytes);
+    return SignatureVerifier.verify(body.spec.signature.content, contentBytes, publicKeyBytes);
   }
 
   /**
@@ -162,29 +147,6 @@ public class EndorsementVerifier {
     }
   }
 
-  /**
-   * Verifies the signature over content bytes using a public key.
-   *
-   * @param signature      The base64-encoded signature
-   * @param contentBytes   The serialized content
-   * @param publicKeyBytes The PEM-encoded public key
-   * @return Empty if the verification succeeds, or a failure otherwise
-   */
-  public static Optional<Failure> verifySignature(
-      String signature, byte[] contentBytes, byte[] publicKeyBytes) {
-    if (signature == null || signature.length() == 0) {
-      return failure("empty signature");
-    }
-    if (contentBytes == null || contentBytes.length == 0) {
-      return failure("empty content");
-    }
-    if (publicKeyBytes == null || publicKeyBytes.length == 0) {
-      return failure("empty public key");
-    }
-    // TODO(#2854): verify the signature
-    return Optional.empty();
-  }
-
-  private EndorsementVerifier() {
+  private LogEntryVerifier() {
   }
 }

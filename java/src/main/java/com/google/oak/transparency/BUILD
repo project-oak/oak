@@ -22,8 +22,16 @@ package(
 )
 
 java_binary(
-    name = "endorsement_verifier",
-    main_class = "com.google.oak.transparency.EndorsementVerifier",
+    name = "log_entry_verifier",
+    main_class = "com.google.oak.transparency.LogEntryVerifier",
+    runtime_deps = [
+        ":transparency",
+    ],
+)
+
+java_binary(
+    name = "signature_verifier",
+    main_class = "com.google.oak.transparency.SignatureVerifier",
     runtime_deps = [
         ":transparency",
     ],
