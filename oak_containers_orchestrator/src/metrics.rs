@@ -15,152 +15,110 @@
 //
 
 use anyhow::Result;
-use oak_containers_orchestrator_client::{
-    proto::openmetrics::{
-        self, counter_value::Total, CounterValue, GaugeValue, Label, Metric, MetricFamily,
-        MetricPoint, MetricType,
-    },
-    LauncherClient,
+use oak_containers_orchestrator_client::LauncherClient;
+use opentelemetry_api::{
+    metrics::{AsyncInstrument, Meter, MeterProvider, ObservableCounter, ObservableGauge, Unit},
+    KeyValue,
 };
 use std::{sync::Arc, time::Duration};
 
-fn gauge(name: String, unit: String, help: String, value: i64) -> MetricFamily {
-    MetricFamily {
-        name,
-        r#type: MetricType::Gauge.into(),
-        unit,
-        help,
-        metrics: vec![Metric {
-            labels: Vec::new(),
-            metric_points: vec![MetricPoint {
-                timestamp: None,
-                value: Some(openmetrics::metric_point::Value::GaugeValue(GaugeValue {
-                    value: Some(openmetrics::gauge_value::Value::IntValue(value)),
-                })),
-            }],
-        }],
+// It's not dead, it's just asynchronous.
+#[allow(dead_code)]
+pub struct SystemMetrics {
+    cpu_seconds_total: ObservableCounter<u64>,
+    context_switches_total: ObservableCounter<u64>,
+    forks_total: ObservableCounter<u64>,
+    procs_blocked: ObservableGauge<u64>,
+    procs_running: ObservableGauge<u64>,
+}
+
+impl SystemMetrics {
+    fn new(meter: Meter) -> Result<Self> {
+        Ok(Self {
+            cpu_seconds_total: meter
+                .u64_observable_counter("cpu_seconds_total")
+                .with_unit(Unit::new("seconds"))
+                .with_callback(Self::cpu_seconds_total)
+                .try_init()?,
+            context_switches_total: meter
+                .u64_observable_counter("context_switches_total")
+                .with_callback(Self::context_switches_total)
+                .try_init()?,
+            forks_total: meter
+                .u64_observable_counter("forks_total")
+                .with_callback(Self::forks_total)
+                .try_init()?,
+            procs_blocked: meter
+                .u64_observable_gauge("procs_blocked")
+                .with_callback(Self::procs_blocked)
+                .try_init()?,
+            procs_running: meter
+                .u64_observable_gauge("procs_running")
+                .with_callback(Self::procs_running)
+                .try_init()?,
+        })
+    }
+
+    fn cpu_seconds_total(counter: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::KernelStats::new().unwrap();
+
+        for (cpu, stats) in stats.cpu_time.iter().enumerate() {
+            let attributes = |mode| {
+                [
+                    KeyValue::new("cpu", cpu.to_string()),
+                    KeyValue::new("mode", mode),
+                ]
+            };
+
+            counter.observe(stats.user, &attributes("user"));
+            counter.observe(stats.idle, &attributes("idle"));
+            counter.observe(stats.nice, &attributes("nice"));
+            counter.observe(stats.system, &attributes("system"));
+            if let Some(iowait) = stats.iowait {
+                counter.observe(iowait, &attributes("iowait"));
+            }
+            if let Some(irq) = stats.irq {
+                counter.observe(irq, &attributes("irq"));
+            }
+            if let Some(softirq) = stats.softirq {
+                counter.observe(softirq, &attributes("softirq"));
+            }
+            if let Some(steal) = stats.steal {
+                counter.observe(steal, &attributes("steal"));
+            }
+        }
+    }
+
+    fn context_switches_total(counter: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::KernelStats::new().unwrap();
+        counter.observe(stats.ctxt, &[]);
+    }
+
+    fn forks_total(counter: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::KernelStats::new().unwrap();
+        counter.observe(stats.processes, &[]);
+    }
+
+    fn procs_blocked(gauge: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::KernelStats::new().unwrap();
+        if let Some(procs_blocked) = stats.procs_blocked {
+            gauge.observe(procs_blocked.into(), &[]);
+        }
+    }
+
+    fn procs_running(gauge: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::KernelStats::new().unwrap();
+        if let Some(procs_running) = stats.procs_running {
+            gauge.observe(procs_running.into(), &[]);
+        }
     }
 }
 
-fn counter(name: String, unit: String, help: String, value: u64) -> MetricFamily {
-    MetricFamily {
-        name,
-        r#type: MetricType::Counter.into(),
-        unit,
-        help,
-        metrics: vec![Metric {
-            labels: Vec::new(),
-            metric_points: vec![MetricPoint {
-                timestamp: None,
-                value: Some(openmetrics::metric_point::Value::CounterValue(
-                    CounterValue {
-                        created: None,
-                        exemplar: None,
-                        total: Some(Total::IntValue(value)),
-                    },
-                )),
-            }],
-        }],
-    }
-}
-
-fn collect_proc_stat() -> Result<Vec<MetricFamily>> {
-    let stats = procfs::KernelStats::new()?;
-
-    let mut metrics = Vec::new();
-
-    let create_cpu_metric = |cpu: usize, mode: &'static str, value: u64| Metric {
-        labels: vec![
-            Label {
-                name: "cpu".to_string(),
-                value: cpu.to_string(),
-            },
-            Label {
-                name: "mode".to_string(),
-                value: mode.to_string(),
-            },
-        ],
-        metric_points: vec![MetricPoint {
-            value: Some(openmetrics::metric_point::Value::CounterValue(
-                CounterValue {
-                    created: None,
-                    exemplar: None,
-                    total: Some(Total::IntValue(value)),
-                },
-            )),
-            timestamp: None,
-        }],
-    };
-
-    let mut cpu_seconds = Vec::new();
-    for (cpu, stats) in stats.cpu_time.iter().enumerate() {
-        cpu_seconds.push(create_cpu_metric(cpu, "user", stats.user));
-        cpu_seconds.push(create_cpu_metric(cpu, "idle", stats.idle));
-        cpu_seconds.push(create_cpu_metric(cpu, "nice", stats.nice));
-        cpu_seconds.push(create_cpu_metric(cpu, "system", stats.system));
-        if let Some(iowait) = stats.iowait {
-            cpu_seconds.push(create_cpu_metric(cpu, "iowait", iowait));
-        }
-        if let Some(irq) = stats.irq {
-            cpu_seconds.push(create_cpu_metric(cpu, "irq", irq));
-        }
-        if let Some(softirq) = stats.irq {
-            cpu_seconds.push(create_cpu_metric(cpu, "softirq", softirq));
-        }
-        if let Some(steal) = stats.steal {
-            cpu_seconds.push(create_cpu_metric(cpu, "steal", steal));
-        }
-    }
-    metrics.push(MetricFamily {
-        name: "cpu_seconds_total".to_string(),
-        r#type: MetricType::Counter.into(),
-        unit: "seconds".to_string(),
-        help: "Seconds the CPUs spent in each mode.".to_string(),
-        metrics: cpu_seconds,
-    });
-
-    metrics.push(counter(
-        "context_switches_total".to_string(),
-        String::new(),
-        "Total number of context switches.".to_string(),
-        stats.ctxt,
-    ));
-    metrics.push(counter(
-        "forks_total".to_string(),
-        String::new(),
-        "Total number of forks.".to_string(),
-        stats.processes,
-    ));
-    if let Some(blocked) = stats.procs_blocked {
-        gauge(
-            "procs_blocked".to_string(),
-            String::new(),
-            "Number of processes blocked waiting for I/O to complete.".to_string(),
-            blocked.into(),
-        );
-    }
-    if let Some(running) = stats.procs_running {
-        metrics.push(gauge(
-            "procs_running".to_string(),
-            String::new(),
-            "Number of processes in runnable state.".to_string(),
-            running.into(),
-        ));
-    }
-
-    Ok(metrics)
-}
-
-pub async fn run(launcher_client: Arc<LauncherClient>) -> Result<()> {
-    let mut interval = tokio::time::interval(Duration::from_secs(60));
-
-    loop {
-        interval.tick().await;
-        let mut metric_families = Vec::new();
-        metric_families.append(&mut collect_proc_stat()?);
-        launcher_client
-            .push_metrics(metric_families)
-            .await
-            .map_err(|err| anyhow::anyhow!("failed to push metrics: {}", err))?;
-    }
+pub fn run(launcher_client: Arc<LauncherClient>) -> Result<SystemMetrics> {
+    let metrics = opentelemetry_otlp::new_pipeline()
+        .metrics(opentelemetry_sdk::runtime::Tokio)
+        .with_exporter(launcher_client.openmetrics_builder())
+        .with_period(Duration::from_secs(60))
+        .build()?;
+    SystemMetrics::new(metrics.meter("oak_containers_orchestrator"))
 }

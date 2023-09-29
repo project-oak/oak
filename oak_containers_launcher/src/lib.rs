@@ -22,9 +22,6 @@ pub mod proto {
         pub use oak_crypto::proto::oak::crypto;
         pub use oak_remote_attestation::proto::oak::session;
     }
-    pub mod openmetrics {
-        tonic::include_proto!("openmetrics");
-    }
 }
 
 mod qemu;

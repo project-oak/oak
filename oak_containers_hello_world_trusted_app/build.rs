@@ -33,7 +33,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &[
             "oak_containers/proto/interfaces.proto",
             "oak_remote_attestation/proto/v1/messages.proto",
-            "third_party/OpenMetrics/proto/openmetrics_data_model.proto",
         ],
         CodegenOptions {
             build_client: true,

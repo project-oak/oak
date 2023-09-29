@@ -21,32 +21,29 @@ pub mod proto {
         pub use oak_crypto::proto::oak::crypto;
         pub use oak_remote_attestation::proto::oak::session;
     }
-    pub mod openmetrics {
-        tonic::include_proto!("openmetrics");
-    }
 }
 
 use self::proto::oak::{
     containers::SendAttestationEvidenceRequest, session::v1::AttestationEvidence,
 };
 use anyhow::Context;
-use proto::{
-    oak::containers::{launcher_client::LauncherClient as GrpcLauncherClient, LogEntry},
-    openmetrics,
-};
+use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
+use proto::oak::containers::{launcher_client::LauncherClient as GrpcLauncherClient, LogEntry};
 use std::collections::HashMap;
 use tokio_stream::{Stream, StreamExt};
 use tonic::transport::Channel;
 
 /// Utility struct used to interface with the launcher
 pub struct LauncherClient {
-    inner: GrpcLauncherClient<tonic::transport::channel::Channel>,
+    addr: tonic::transport::Uri,
+    inner: GrpcLauncherClient<Channel>,
 }
 
 impl LauncherClient {
     pub async fn create(addr: tonic::transport::Uri) -> Result<Self, Box<dyn std::error::Error>> {
-        let inner = GrpcLauncherClient::<Channel>::connect(addr).await?;
-        Ok(Self { inner })
+        let channel = Channel::builder(addr.clone()).connect().await?;
+        let inner = GrpcLauncherClient::new(channel);
+        Ok(Self { addr, inner })
     }
 
     pub async fn get_container_bundle(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -122,16 +119,9 @@ impl LauncherClient {
         Ok(())
     }
 
-    pub async fn push_metrics(
-        &self,
-        metric_families: Vec<openmetrics::MetricFamily>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let request = tonic::Request::new(openmetrics::MetricSet { metric_families });
-        self.inner
-            .clone()
-            .push_metrics(request)
-            .await
-            .context("couldn't push metrics")?;
-        Ok(())
+    pub fn openmetrics_builder(&self) -> TonicExporterBuilder {
+        opentelemetry_otlp::new_exporter()
+            .tonic()
+            .with_endpoint(self.addr.clone().to_string())
     }
 }
