@@ -18,8 +18,6 @@ package com.google.oak.transparency;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 
 /**
  * Convenient struct for verifying the `signedEntryTimestamp` in a Rekor
@@ -46,12 +44,12 @@ public class RekorSignatureBundle {
     this.base64Signature = base64Signature;
   }
 
-  public String getBase64Signature() {
-    return this.base64Signature;
+  public String getCanonicalized() {
+    return this.canonicalized;
   }
 
-  public byte[] getCanonicalizedBytes() {
-    return this.canonicalized.getBytes(StandardCharsets.UTF_8);
+  public String getBase64Signature() {
+    return this.base64Signature;
   }
 
   /** Creates a bundle from the given log entry. */
@@ -59,7 +57,7 @@ public class RekorSignatureBundle {
     RekorLogEntry.LogEntry entrySubset = new RekorLogEntry.LogEntry();
     entrySubset.body = entry.logEntry.body;
     entrySubset.integratedTime = entry.logEntry.integratedTime;
-    entrySubset.logId = entry.logEntry.logId;
+    entrySubset.logID = entry.logEntry.logID;
     entrySubset.logIndex = entry.logEntry.logIndex;
 
     Gson gson = new GsonBuilder().create();
