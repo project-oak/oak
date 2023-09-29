@@ -73,20 +73,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let (exit_notification_sender, shutdown_receiver) = channel::<()>();
 
+    let _metrics = oak_containers_orchestrator::metrics::run(launcher_client.clone())?;
+
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
             ipc_path,
             encryption_key_provider,
             attester,
             application_config,
-            launcher_client.clone(),
+            launcher_client,
             shutdown_receiver
         ),
         oak_containers_orchestrator::container_runtime::run(
             &container_bundle,
             exit_notification_sender
         ),
-        oak_containers_orchestrator::metrics::run(launcher_client),
     )?;
 
     Ok(())
