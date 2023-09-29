@@ -44,7 +44,7 @@ public class SignatureVerifierTest {
     }
 
     @Test
-    public void testVerifySucceeds() throws Exception {
+    public void testVerifySucceeds() {
         Optional<Failure> failure = SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
 
         Assert.assertFalse(failure.isPresent());
