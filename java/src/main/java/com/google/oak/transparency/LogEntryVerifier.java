@@ -43,7 +43,7 @@ public class LogEntryVerifier {
 
     // Auto-detect PEM format of public key.
     String publicKeyString = new String(publicKeyBytes, StandardCharsets.UTF_8);
-    if (publicKeyString.startsWith("-----BEGIN PUBLIC KEY-----")) {
+    if (SignatureVerifier.looksLikePem(publicKeyString)) {
       publicKeyBytes = SignatureVerifier.convertPemToRaw(publicKeyString);
     }
 

@@ -43,7 +43,7 @@ public class SignatureVerifier {
 
         // Auto-detect PEM format of public key.
         String publicKeyString = new String(publicKeyBytes, StandardCharsets.UTF_8);
-        if (publicKeyString.startsWith("-----BEGIN PUBLIC KEY-----")) {
+        if (looksLikePem(publicKeyString)) {
             publicKeyBytes = convertPemToRaw(publicKeyString);
         }
 
@@ -80,29 +80,37 @@ public class SignatureVerifier {
 
         X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKeyBytes);
         Exception exception = null;
-        boolean outcome = false;
+        boolean success = false;
         try {
             KeyFactory keyFactory = KeyFactory.getInstance("EC");
             PublicKey publicKey = keyFactory.generatePublic(keySpec);
             Signature s = Signature.getInstance("SHA256withECDSA");
             s.initVerify(publicKey);
             s.update(contentBytes);
-            outcome = s.verify(signatureBytes);
+            success = s.verify(signatureBytes);
         } catch (Exception e) {
             exception = e;
         }
 
-        return outcome ? Optional.empty()
+        return success ? Optional.empty()
                 : failure(exception != null
                         ? String.format("%s: %s", exception.getClass().getName(), exception.getMessage())
                         : "Signature verification failed");
     }
 
+    private static final String PEM_HEADER = "-----BEGIN PUBLIC KEY-----";
+    private static final String PEM_FOOTER = "-----END PUBLIC KEY-----";
+
+    /** Makes a plausible guess whether the public key is in PEM format. */
+    static boolean looksLikePem(String maybePem) {
+        return maybePem.startsWith(PEM_HEADER) && maybePem.endsWith(PEM_FOOTER);
+    }
+
     /** Converts a public key from PEM (on disk format) to raw binary format. */
     static byte[] convertPemToRaw(String pem) {
         String trimmed = pem
-                .replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "")
+                .replace(PEM_HEADER, "")
+                .replace(PEM_FOOTER, "")
                 .replace("\n", "")
                 .trim();
         return Base64.getDecoder().decode(trimmed);
