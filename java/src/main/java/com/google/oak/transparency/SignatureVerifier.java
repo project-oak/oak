@@ -103,7 +103,8 @@ public class SignatureVerifier {
 
     /** Makes a plausible guess whether the public key is in PEM format. */
     static boolean looksLikePem(String maybePem) {
-        return maybePem.startsWith(PEM_HEADER) && maybePem.endsWith(PEM_FOOTER);
+        String p = maybePem.trim();
+        return p.startsWith(PEM_HEADER) && p.endsWith(PEM_FOOTER);
     }
 
     /** Converts a public key from PEM (on disk format) to raw binary format. */
