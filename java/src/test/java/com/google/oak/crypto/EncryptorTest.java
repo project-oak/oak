@@ -28,71 +28,71 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class EncryptorTest {
-    private static final byte[] TEST_REQUEST_PLAINTEXT = new byte[] { 'R', 'e', 'q', 'u', 'e', 's', 't' };
-    private static final byte[] TEST_REQUEST_ASSOCIATED_DATA = new byte[] { 'd', 'a', 't', 'a', '1' };
-    private static final byte[] TEST_RESPONSE_PLAINTEXT = new byte[] { 'R', 'e', 's', 'p', 'o', 'n', 's', 'e' };
-    private static final byte[] TEST_RESPONSE_ASSOCIATED_DATA = new byte[] { 'd', 'a', 't', 'a', '2' };
+  private static final byte[] TEST_REQUEST_PLAINTEXT = new byte[] { 'R', 'e', 'q', 'u', 'e', 's', 't' };
+  private static final byte[] TEST_REQUEST_ASSOCIATED_DATA = new byte[] { 'd', 'a', 't', 'a', '1' };
+  private static final byte[] TEST_RESPONSE_PLAINTEXT = new byte[] { 'R', 'e', 's', 'p', 'o', 'n', 's', 'e' };
+  private static final byte[] TEST_RESPONSE_ASSOCIATED_DATA = new byte[] { 'd', 'a', 't', 'a', '2' };
 
-    // Number of message exchanges done to test secure session handling.
-    private static final int TEST_SESSION_SIZE = 8;
+  // Number of message exchanges done to test secure session handling.
+  private static final int TEST_SESSION_SIZE = 8;
 
-    @Test
-    public void testEncryptor() throws Exception {
-        // Generate key pair.
-        Result<KeyPair, Exception> keyPairGenerateResult = KeyPair.generate();
-        KeyPair keyPair = keyPairGenerateResult.unwrap("couldn't create key pair");
+  @Test
+  public void testEncryptor() throws Exception {
+    // Generate key pair.
+    Result<KeyPair, Exception> keyPairGenerateResult = KeyPair.generate();
+    KeyPair keyPair = keyPairGenerateResult.unwrap("couldn't create key pair");
 
-        ServerEncryptor serverEncryptor = new ServerEncryptor(keyPair);
-        Result<ClientEncryptor, Exception> clientEncryptorCreateResult = ClientEncryptor.create(keyPair.publicKey);
-        Assert.assertTrue(clientEncryptorCreateResult.isSuccess());
-        ClientEncryptor clientEncryptor = clientEncryptorCreateResult.success().get();
+    ServerEncryptor serverEncryptor = new ServerEncryptor(keyPair);
+    Result<ClientEncryptor, Exception> clientEncryptorCreateResult = ClientEncryptor.create(keyPair.publicKey);
+    Assert.assertTrue(clientEncryptorCreateResult.isSuccess());
+    ClientEncryptor clientEncryptor = clientEncryptorCreateResult.success().get();
 
-        for (int i = 0; i < TEST_SESSION_SIZE; i++) {
-            // Test request encryption/decryption.
-            Result<byte[], Exception> encryptRequestResult = clientEncryptor.encrypt(TEST_REQUEST_PLAINTEXT,
-                    TEST_REQUEST_ASSOCIATED_DATA);
-            Assert.assertTrue(encryptRequestResult.isSuccess());
-            byte[] serializedEncryptedRequest = encryptRequestResult.success().get();
+    for (int i = 0; i < TEST_SESSION_SIZE; i++) {
+      // Test request encryption/decryption.
+      Result<byte[], Exception> encryptRequestResult = clientEncryptor.encrypt(TEST_REQUEST_PLAINTEXT,
+          TEST_REQUEST_ASSOCIATED_DATA);
+      Assert.assertTrue(encryptRequestResult.isSuccess());
+      byte[] serializedEncryptedRequest = encryptRequestResult.success().get();
 
-            EncryptedRequest encryptedRequest = EncryptedRequest.parseFrom(serializedEncryptedRequest);
-            Assert.assertFalse(
-                    Arrays.equals(encryptedRequest.getEncryptedMessage().getCiphertext().toByteArray(),
-                            TEST_REQUEST_PLAINTEXT));
-            Assert.assertArrayEquals(
-                    encryptedRequest.getEncryptedMessage().getAssociatedData().toByteArray(),
-                    TEST_REQUEST_ASSOCIATED_DATA);
+      EncryptedRequest encryptedRequest = EncryptedRequest.parseFrom(serializedEncryptedRequest);
+      Assert.assertFalse(
+          Arrays.equals(encryptedRequest.getEncryptedMessage().getCiphertext().toByteArray(),
+              TEST_REQUEST_PLAINTEXT));
+      Assert.assertArrayEquals(
+          encryptedRequest.getEncryptedMessage().getAssociatedData().toByteArray(),
+          TEST_REQUEST_ASSOCIATED_DATA);
 
-            Result<Encryptor.DecryptionResult, Exception> decryptRequestResult = serverEncryptor
-                    .decrypt(encryptedRequest.toByteArray());
-            Assert.assertTrue(decryptRequestResult.isSuccess());
-            Assert.assertArrayEquals(
-                    decryptRequestResult.success().get().plaintext, TEST_REQUEST_PLAINTEXT);
-            Assert.assertArrayEquals(
-                    decryptRequestResult.success().get().associatedData, TEST_REQUEST_ASSOCIATED_DATA);
+      Result<Encryptor.DecryptionResult, Exception> decryptRequestResult = serverEncryptor
+          .decrypt(encryptedRequest.toByteArray());
+      Assert.assertTrue(decryptRequestResult.isSuccess());
+      Assert.assertArrayEquals(
+          decryptRequestResult.success().get().plaintext, TEST_REQUEST_PLAINTEXT);
+      Assert.assertArrayEquals(
+          decryptRequestResult.success().get().associatedData, TEST_REQUEST_ASSOCIATED_DATA);
 
-            // Test response encryption/decryption.
-            Result<byte[], Exception> encryptResponseResult = serverEncryptor.encrypt(TEST_RESPONSE_PLAINTEXT,
-                    TEST_RESPONSE_ASSOCIATED_DATA);
-            Assert.assertTrue(encryptResponseResult.isSuccess());
-            byte[] serializedEncryptedResponse = encryptResponseResult.success().get();
+      // Test response encryption/decryption.
+      Result<byte[], Exception> encryptResponseResult = serverEncryptor.encrypt(TEST_RESPONSE_PLAINTEXT,
+          TEST_RESPONSE_ASSOCIATED_DATA);
+      Assert.assertTrue(encryptResponseResult.isSuccess());
+      byte[] serializedEncryptedResponse = encryptResponseResult.success().get();
 
-            EncryptedResponse encryptedResponse = EncryptedResponse.parseFrom(serializedEncryptedResponse);
-            Assert.assertFalse(
-                    Arrays.equals(encryptedResponse.getEncryptedMessage().getCiphertext().toByteArray(),
-                            TEST_RESPONSE_PLAINTEXT));
-            Assert.assertArrayEquals(
-                    encryptedResponse.getEncryptedMessage().getAssociatedData().toByteArray(),
-                    TEST_RESPONSE_ASSOCIATED_DATA);
+      EncryptedResponse encryptedResponse = EncryptedResponse.parseFrom(serializedEncryptedResponse);
+      Assert.assertFalse(
+          Arrays.equals(encryptedResponse.getEncryptedMessage().getCiphertext().toByteArray(),
+              TEST_RESPONSE_PLAINTEXT));
+      Assert.assertArrayEquals(
+          encryptedResponse.getEncryptedMessage().getAssociatedData().toByteArray(),
+          TEST_RESPONSE_ASSOCIATED_DATA);
 
-            Result<Encryptor.DecryptionResult, Exception> decryptResponseResult = clientEncryptor
-                    .decrypt(encryptedResponse.toByteArray());
-            Assert.assertTrue(decryptResponseResult.isSuccess());
-            Assert.assertArrayEquals(
-                    decryptResponseResult.success().get().plaintext, TEST_RESPONSE_PLAINTEXT);
-            Assert.assertArrayEquals(
-                    decryptResponseResult.success().get().associatedData, TEST_RESPONSE_ASSOCIATED_DATA);
-        }
-        serverEncryptor.close();
-        clientEncryptor.close();
+      Result<Encryptor.DecryptionResult, Exception> decryptResponseResult = clientEncryptor
+          .decrypt(encryptedResponse.toByteArray());
+      Assert.assertTrue(decryptResponseResult.isSuccess());
+      Assert.assertArrayEquals(
+          decryptResponseResult.success().get().plaintext, TEST_RESPONSE_PLAINTEXT);
+      Assert.assertArrayEquals(
+          decryptResponseResult.success().get().associatedData, TEST_RESPONSE_ASSOCIATED_DATA);
     }
+    serverEncryptor.close();
+    clientEncryptor.close();
+  }
 }
