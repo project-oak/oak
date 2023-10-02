@@ -18,8 +18,6 @@ package com.google.oak.remote_attestation;
 
 import com.google.oak.remote_attestation.AmdAttestationVerifier;
 import com.google.oak.util.Result;
-import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;

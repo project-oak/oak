@@ -22,7 +22,10 @@ import static org.junit.Assert.assertTrue;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
+@RunWith(JUnit4.class)
 public class ResultTest {
   private static String ERR_MSG = "error!";
 
@@ -192,7 +195,7 @@ public class ResultTest {
     Result<Integer, String> error = Result.error(ERR_MSG);
     assertTrue(error.isError());
     try {
-      error.unwrap("Expecting error");
+      Integer unused = error.unwrap("Expecting error");
     } catch (RuntimeException e) {
       assertEquals(String.format("Expecting error: %s", ERR_MSG), e.getMessage());
     }
