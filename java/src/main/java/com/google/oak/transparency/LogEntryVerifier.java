@@ -103,7 +103,7 @@ public class LogEntryVerifier {
 
   /**
    * Verifies the integrity of the Rekor body, by verifying the signature in the
-   * {@code body} over the given {@code contentsBytes}, using the public key in
+   * {@code body} over the given {@code contentBytes}, using the public key in
    * the {@code body}.
    *
    * @param body         the body of the Rekor log entry
