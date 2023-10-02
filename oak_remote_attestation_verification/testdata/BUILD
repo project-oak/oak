@@ -20,7 +20,9 @@ package(
 )
 
 exports_files([
-    "logentry.json",
     "endorsement.json",
+    "endorsement.json.sig",
+    "logentry.json",
+    "oak-development.pem",
     "rekor_public_key.pem",
 ])

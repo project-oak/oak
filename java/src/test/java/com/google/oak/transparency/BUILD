@@ -43,3 +43,17 @@ java_test(
         "//java/src/main/java/com/google/oak/transparency",
     ],
 )
+
+java_test(
+    name = "signature_verifier_test",
+    srcs = ["SignatureVerifierTest.java"],
+    data = [
+        "//oak_remote_attestation_verification/testdata:endorsement.json",
+        "//oak_remote_attestation_verification/testdata:endorsement.json.sig",
+        "//oak_remote_attestation_verification/testdata:oak-development.pem",
+    ],
+    test_class = "com.google.oak.transparency.SignatureVerifierTest",
+    deps = [
+        "//java/src/main/java/com/google/oak/transparency",
+    ],
+)

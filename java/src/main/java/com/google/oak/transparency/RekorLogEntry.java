@@ -53,7 +53,7 @@ public final class RekorLogEntry {
      * The SHA2-256 hash of the DER-encoded public key for the log at the time
      * the entry was included in the log. Pattern: ^[0-9a-fA-F]{64}$
      */
-    String logId;
+    String logID;
 
     /** Minimum: 0 */
     long logIndex;
@@ -178,9 +178,6 @@ public final class RekorLogEntry {
 
     String entryStr = gson.toJson(entryMap.values().iterator().next());
     LogEntry entry = gson.fromJson(entryStr, LogEntry.class);
-
-    // Parse the body string into an instance of Body, and set entry.bodyObject to
-    // it.
     String decodedBody = new String(Base64.getDecoder().decode(entry.body));
     entry.bodyObject = gson.fromJson(decodedBody, Body.class);
     return new RekorLogEntry(entry);

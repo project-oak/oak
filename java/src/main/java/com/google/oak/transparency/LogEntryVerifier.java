@@ -16,6 +16,7 @@
 
 package com.google.oak.transparency;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
@@ -40,6 +41,12 @@ public class LogEntryVerifier {
     byte[] publicKeyBytes = Files.readAllBytes(Path.of(args[1]));
     byte[] endorsementBytes = Files.readAllBytes(Path.of(args[2]));
 
+    // Auto-detect PEM format of public key.
+    String publicKeyString = new String(publicKeyBytes, StandardCharsets.UTF_8);
+    if (SignatureVerifier.looksLikePem(publicKeyString)) {
+      publicKeyBytes = SignatureVerifier.convertPemToRaw(publicKeyString);
+    }
+
     RekorLogEntry logEntry = RekorLogEntry.createFromJson(logEntryBytes);
     Optional<Failure> failure = verify(logEntry, publicKeyBytes, endorsementBytes);
     if (failure.isPresent()) {
@@ -63,10 +70,10 @@ public class LogEntryVerifier {
    * {@code logEntry.body.spec.signature.publicKey}, as well as digest equality of
    * {@code logEntry.body.spec.data.hash} and the endorsement statement.
    *
-   * @param logEntry         The Rekor log entry
-   * @param publicKeyBytes   The PEM-encoded public key from Rekor
-   * @param endorsementBytes The serialized endorsement statement
-   * @return Empty if the verification succeeds, or a failure otherwise
+   * @param logEntry         the Rekor log entry
+   * @param publicKeyBytes   the raw public key from Rekor
+   * @param endorsementBytes the serialized endorsement statement
+   * @return empty if the verification succeeds, or a failure otherwise
    */
   public static Optional<Failure> verify(
       RekorLogEntry logEntry, byte[] publicKeyBytes, byte[] endorsementBytes) {
@@ -80,27 +87,28 @@ public class LogEntryVerifier {
   /**
    * Verifies the Rekor signature of a log entry using a public key.
    *
-   * @param logEntry       The Rekor log entry
-   * @param publicKeyBytes The PEM-encoded public key
-   * @return Empty if the verification succeeds, or a failure otherwise
+   * @param logEntry       the Rekor log entry
+   * @param publicKeyBytes the raw public key
+   * @return empty if the verification succeeds, or a failure otherwise
    */
   static Optional<Failure> verifyRekorSignature(RekorLogEntry logEntry, byte[] publicKeyBytes) {
     if (!logEntry.hasVerification()) {
       return failure("no verification in the log entry");
     }
     RekorSignatureBundle bundle = RekorSignatureBundle.create(logEntry);
-    return SignatureVerifier.verify(bundle.getBase64Signature(), bundle.getCanonicalizedBytes(), publicKeyBytes);
+    byte[] signatureBytes = Base64.getDecoder().decode(bundle.getBase64Signature());
+    byte[] contentBytes = bundle.getCanonicalized().getBytes(StandardCharsets.UTF_8);
+    return SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
   }
 
   /**
    * Verifies the integrity of the Rekor body, by verifying the signature in the
    * {@code body} over the given {@code contentsBytes}, using the public key in
-   * the {@code body}. This public is separately checked against a known and
-   * trusted (root) public key.
+   * the {@code body}.
    *
-   * @param body         The body of the Rekor log entry
-   * @param contentBytes The serialized content
-   * @return Empty if the verification succeeds, or a failure otherwise
+   * @param body         the body of the Rekor log entry
+   * @param contentBytes the serialized content
+   * @return empty if the verification succeeds, or a failure otherwise
    */
   static Optional<Failure> verifyRekorBody(RekorLogEntry.Body body, byte[] contentBytes) {
     if (!"x509".equals(body.spec.signature.format)) {
@@ -122,14 +130,17 @@ public class LogEntryVerifier {
           digest, body.spec.data.hash.value));
     }
 
-    byte[] publicKeyBytes = Base64.getDecoder().decode(body.spec.signature.publicKey.content);
-    return SignatureVerifier.verify(body.spec.signature.content, contentBytes, publicKeyBytes);
+    byte[] signatureBytes = Base64.getDecoder().decode(body.spec.signature.content);
+    byte[] publicKeyBytes = SignatureVerifier.convertPemToRaw(new String(
+        Base64.getDecoder().decode(body.spec.signature.publicKey.content),
+        StandardCharsets.UTF_8));
+    return SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
   }
 
   /**
    * Computes the hex-encoded SHA2-256 digest.
    *
-   * @param bytes The binary content to compute the digest from
+   * @param bytes the binary content to compute the digest from
    * @return the hex-encoded SHA2-256 digest of {@code bytes}
    */
   public static String sha256Hex(byte[] bytes) {
