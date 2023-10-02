@@ -31,6 +31,8 @@ class RecipientContextGenerator {
  public:
   virtual absl::StatusOr<std::unique_ptr<RecipientContext>> GenerateRecipientContext(
       absl::string_view serialized_encapsulated_public_key) = 0;
+
+  virtual ~RecipientContextGenerator() = default;
 };
 
 class EncryptionKeyProvider : public RecipientContextGenerator {
