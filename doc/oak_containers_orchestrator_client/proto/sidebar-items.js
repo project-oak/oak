@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["oak","openmetrics"]};
+window.SIDEBAR_ITEMS = {"mod":["oak"]};

@@ -228,6 +228,14 @@
 <a href="#228" id="228">228</a>
 <a href="#229" id="229">229</a>
 <a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -243,19 +251,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::{
-    oak::{
-        containers::{
-            launcher_server::{Launcher, LauncherServer},
-            GetApplicationConfigResponse, GetImageResponse, LogEntry,
-            SendAttestationEvidenceRequest,
-        },
-        session::v1::AttestationEvidence,
+</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
+    containers::{
+        launcher_server::{Launcher, LauncherServer},
+        GetApplicationConfigResponse, GetImageResponse, LogEntry, SendAttestationEvidenceRequest,
     },
-    openmetrics::MetricSet,
+    session::v1::AttestationEvidence,
 };
 <span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>futures::{FutureExt, Stream, StreamExt};
+<span class="kw">use </span>opentelemetry_proto::tonic::collector::metrics::v1::{
+    metrics_service_server::{MetricsService, MetricsServiceServer},
+    ExportMetricsServiceRequest, ExportMetricsServiceResponse,
+};
 <span class="kw">use </span>std::{pin::Pin, sync::Mutex};
 <span class="kw">use </span>tokio::{
     io::{AsyncReadExt, BufReader},
@@ -425,14 +433,21 @@
         }
         <span class="prelude-val">Ok</span>(tonic::Response::new(()))
     }
+}
 
-    <span class="kw">async fn </span>push_metrics(
+<span class="kw">struct </span>LogServer;
+
+<span class="attr">#[tonic::async_trait]
+</span><span class="kw">impl </span>MetricsService <span class="kw">for </span>LogServer {
+    <span class="kw">async fn </span>export(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        request: tonic::Request&lt;MetricSet&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;()&gt;, tonic::Status&gt; {
-        <span class="kw">let </span>metrics = request.into_inner();
-        <span class="macro">log::debug!</span>(<span class="string">&quot;metrics: {:?}&quot;</span>, metrics);
-        <span class="prelude-val">Ok</span>(tonic::Response::new(()))
+        request: Request&lt;ExportMetricsServiceRequest&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;ExportMetricsServiceResponse&gt;, tonic::Status&gt; {
+        <span class="kw">let </span>request = request.into_inner();
+        <span class="macro">log::debug!</span>(<span class="string">&quot;metrics: {:?}&quot;</span>, request);
+        <span class="prelude-val">Ok</span>(Response::new(ExportMetricsServiceResponse {
+            partial_success: <span class="prelude-val">None</span>,
+        }))
     }
 }
 
@@ -454,6 +469,7 @@
     };
     Server::builder()
         .add_service(LauncherServer::new(server_impl))
+        .add_service(MetricsServiceServer::new(LogServer))
         .serve_with_incoming_shutdown(TcpListenerStream::new(listener), shutdown.map(|<span class="kw">_</span>| ()))
         .<span class="kw">await
         </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;server error: {:?}&quot;</span>, error))
