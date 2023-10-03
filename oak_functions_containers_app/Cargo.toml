@@ -1,0 +1,15 @@
+[package]
+name = "oak_functions_containers_app"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[build-dependencies]
+oak_grpc_utils = { workspace = true }
+
+[dependencies]
+anyhow = "*"
+prost = "*"
+tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
+tokio-stream = { version = "*", features = ["net"] }
+tonic = { workspace = true }

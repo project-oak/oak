@@ -29,6 +29,7 @@ members = [
   "oak_functions/lookup_data_generator",
   "oak_functions_abi",
   "oak_functions_client",
+  "oak_functions_containers_app",
   "oak_functions_launcher",
   "oak_functions_sdk",
   "oak_functions_sdk/tests/lookup_module",
