@@ -36,4 +36,13 @@ service UnarySession {
   rpc Invoke(InvokeRequest) returns (InvokeResponse) {
     option deadline = 10.0;
   }
+
+  // Validates the client enclave's attestation evidence and returns the
+  // leader enclave's public key, attestation evidence, and encrypted private
+  // key. This method should only be called by a separate (dependent) enclave
+  // instance. If the dependent enclave does not have the same attestation
+  // information an error is returned.
+  rpc GetEncryptionKey(GetEncryptionKeyRequest) returns (GetEncryptionKeyResponse) {
+    option deadline = 10.0;
+  }
 }
