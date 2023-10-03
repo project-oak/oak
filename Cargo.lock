@@ -1922,6 +1922,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_dice"
+version = "0.1.0"
+dependencies = [
+ "static_assertions",
+ "zerocopy",
+]
+
+[[package]]
 name = "oak_docker_linux_init"
 version = "0.1.0"
 dependencies = [
