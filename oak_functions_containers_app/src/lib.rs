@@ -33,7 +33,7 @@ mod proto {
     }
 }
 
-#[derive(Default)]
+// Instance of the OakFunctions service for Oak Containers.
 pub struct OakFunctionsContainersService {}
 
 // Temporarily allow unused varaibles for requests.
@@ -44,7 +44,7 @@ impl OakFunctions for OakFunctionsContainersService {
         &self,
         request: tonic::Request<InitializeRequest>,
     ) -> Result<tonic::Response<InitializeResponse>, tonic::Status> {
-        println!("Received an initialize request");
+        println!("Received initialize request: {:?}", request);
         let response = InitializeResponse::default();
         Ok(tonic::Response::new(response))
     }
@@ -53,7 +53,7 @@ impl OakFunctions for OakFunctionsContainersService {
         &self,
         request: tonic::Request<InvokeRequest>,
     ) -> Result<tonic::Response<InvokeResponse>, tonic::Status> {
-        println!("Received an invoke request");
+        println!("Received invoke request: {:?}", request);
         let response = InvokeResponse::default();
         Ok(tonic::Response::new(response))
     }
@@ -62,7 +62,7 @@ impl OakFunctions for OakFunctionsContainersService {
         &self,
         request: tonic::Request<ExtendNextLookupDataRequest>,
     ) -> Result<tonic::Response<ExtendNextLookupDataResponse>, tonic::Status> {
-        println!("Received an extended_next_lookup_data request");
+        println!("Received extended_next_lookup_data request: {:?}", request);
         let response = ExtendNextLookupDataResponse::default();
         Ok(tonic::Response::new(response))
     }
@@ -71,7 +71,7 @@ impl OakFunctions for OakFunctionsContainersService {
         &self,
         request: tonic::Request<FinishNextLookupDataRequest>,
     ) -> Result<tonic::Response<FinishNextLookupDataResponse>, tonic::Status> {
-        println!("Received an finish_next_lookup_data request");
+        println!("Received finish_next_lookup_data request: {:?}", request);
         let response = FinishNextLookupDataResponse::default();
         Ok(tonic::Response::new(response))
     }
@@ -80,7 +80,7 @@ impl OakFunctions for OakFunctionsContainersService {
         &self,
         request: tonic::Request<Empty>,
     ) -> Result<tonic::Response<AbortNextLookupDataResponse>, tonic::Status> {
-        println!("Received an abort_next_lookup_data request");
+        println!("Received abort_next_lookup_data request: {:?}", request);
         let response = AbortNextLookupDataResponse::default();
         Ok(tonic::Response::new(response))
     }
@@ -88,9 +88,7 @@ impl OakFunctions for OakFunctionsContainersService {
 
 pub async fn create(listener: TcpListener) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
-        .add_service(OakFunctionsServer::new(
-            OakFunctionsContainersService::default(),
-        ))
+        .add_service(OakFunctionsServer::new(OakFunctionsContainersService {}))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))

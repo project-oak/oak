@@ -6,5 +6,5 @@
 
 # Oak Functions App For Oak Containers
 
-Implementation of the trusted part (inside the TEE) of the Oak Functions application on Oak
-Containers.
+Implementation of the trusted part (inside the TEE) of the Oak Functions
+application on Oak Containers.

@@ -29,7 +29,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!(
         "Running Oak Functions on Oak Containers at port: {OAK_FUNCTIONS_CONTAINERS_APP_PORT}"
     );
-    server.await??;
-
-    Ok(())
+    Ok(server.await??)
 }
