@@ -53,8 +53,8 @@ static_assertions::assert_eq_size!([u8; 2304], RootLayerEvidence);
 #[derive(AsBytes, FromBytes)]
 #[repr(C)]
 pub struct CertificateAuthority {
-    /// The RAW bytes representing an ECDSA public key that can be used to sign the certificate for
-    /// the next layer.
+    /// The RAW bytes representing an ECDSA private key that can be used to sign the certificate
+    /// for the next layer.
     pub eca_private_key: [u8; PRIVATE_KEY_SIZE],
     /// Serialized CWT certificate for the private key. The certificate must include measurements
     /// of the layer that owns the private key.
@@ -88,7 +88,7 @@ pub struct ApplicationKeys {
     pub signing_certificate: [u8; CERTIFICATE_SIZE],
     /// The RAW bytes representing an ECDSA private key that can be used for hybrid encryption.
     pub encryption_key: [u8; PRIVATE_KEY_SIZE],
-    /// Serialized CWT certificate for the ecnryption private key. The certificate must include
+    /// Serialized CWT certificate for the encryption private key. The certificate must include
     /// measurements of the application.
     pub encryption_certificate: [u8; CERTIFICATE_SIZE],
 }
