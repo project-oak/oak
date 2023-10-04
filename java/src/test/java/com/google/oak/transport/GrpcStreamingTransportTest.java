@@ -51,10 +51,10 @@ import org.mockito.Mockito;
 
 @RunWith(JUnit4.class)
 public class GrpcStreamingTransportTest {
-  private static final byte[] TEST_REQUEST = new byte[] {'R', 'e', 'q', 'u', 'e', 's', 't'};
-  private static final byte[] TEST_RESPONSE = new byte[] {'R', 'e', 's', 'p', 'o', 'n', 's', 'e'};
+  private static final byte[] TEST_REQUEST = new byte[] { 'R', 'e', 'q', 'u', 'e', 's', 't' };
+  private static final byte[] TEST_RESPONSE = new byte[] { 'R', 'e', 's', 'p', 'o', 'n', 's', 'e' };
 
-  private class RequestStreamObserver implements StreamObserver<RequestWrapper> {
+  private static class RequestStreamObserver implements StreamObserver<RequestWrapper> {
     private final StreamObserver<ResponseWrapper> responseObserver;
 
     RequestStreamObserver(StreamObserver<ResponseWrapper> responseObserver) {
@@ -67,18 +67,17 @@ public class GrpcStreamingTransportTest {
       RequestWrapper.RequestCase requestCase = request.getRequestCase();
       switch (requestCase) {
         case GET_PUBLIC_KEY_REQUEST:
-          responseWrapper =
-              ResponseWrapper.newBuilder()
-                  .setGetPublicKeyResponse(GetPublicKeyResponse.newBuilder().setAttestationBundle(
-                      AttestationBundle.getDefaultInstance()))
-                  .build();
+          responseWrapper = ResponseWrapper.newBuilder()
+              .setGetPublicKeyResponse(GetPublicKeyResponse.newBuilder().setAttestationBundle(
+                  AttestationBundle.getDefaultInstance()))
+              .build();
           responseObserver.onNext(responseWrapper);
           break;
         case INVOKE_REQUEST:
           responseWrapper = ResponseWrapper.newBuilder()
-                                .setInvokeResponse(InvokeResponse.newBuilder().setEncryptedBody(
-                                    ByteString.copyFrom(TEST_RESPONSE)))
-                                .build();
+              .setInvokeResponse(InvokeResponse.newBuilder().setEncryptedBody(
+                  ByteString.copyFrom(TEST_RESPONSE)))
+              .build();
           responseObserver.onNext(responseWrapper);
           break;
         case REQUEST_NOT_SET:
@@ -98,23 +97,22 @@ public class GrpcStreamingTransportTest {
     }
   }
 
-  private final StreamingSessionGrpc.StreamingSessionImplBase serviceImpl =
-      mock(StreamingSessionGrpc.StreamingSessionImplBase.class,
-          delegatesTo(new StreamingSessionGrpc.StreamingSessionImplBase() {
-            @Override
-            public StreamObserver<RequestWrapper> stream(
-                StreamObserver<ResponseWrapper> responseObserver) {
-              StreamObserver<RequestWrapper> requestObserver =
-                  new RequestStreamObserver(responseObserver);
-              return requestObserver;
-            }
-          }));
+  private final StreamingSessionGrpc.StreamingSessionImplBase serviceImpl = mock(
+      StreamingSessionGrpc.StreamingSessionImplBase.class,
+      delegatesTo(new StreamingSessionGrpc.StreamingSessionImplBase() {
+        @Override
+        public StreamObserver<RequestWrapper> stream(
+            StreamObserver<ResponseWrapper> responseObserver) {
+          return new RequestStreamObserver(responseObserver);
+        }
+      }));
 
   /**
-   * This rule manages automatic graceful shutdown for the registered servers and channels at the
-   * end of test.
+   * This rule manages automatic graceful shutdown for the registered servers and
+   * channels at the end of test.
    */
-  @Rule public final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
+  @Rule
+  public final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
 
   private StreamingSessionGrpc.StreamingSessionStub client;
 
@@ -123,16 +121,16 @@ public class GrpcStreamingTransportTest {
     // Generate a unique in-process server name.
     String serverName = InProcessServerBuilder.generateName();
 
-    // Create a server, add service, start, and register for automatic graceful shutdown.
+    // Create a server, add service, start, and register for automatic graceful
+    // shutdown.
     grpcCleanup.register(InProcessServerBuilder.forName(serverName)
-                             .directExecutor()
-                             .addService(serviceImpl)
-                             .build()
-                             .start());
+        .directExecutor()
+        .addService(serviceImpl)
+        .build()
+        .start());
 
     // Create a client channel and register for automatic graceful shutdown.
-    ManagedChannel channel =
-        grpcCleanup.register(InProcessChannelBuilder.forName(serverName).directExecutor().build());
+    ManagedChannel channel = grpcCleanup.register(InProcessChannelBuilder.forName(serverName).directExecutor().build());
 
     // Create a client using the in-process channel;
     client = StreamingSessionGrpc.newStub(channel);

@@ -26,11 +26,9 @@ import com.google.oak.example.encrypted.Request;
 import com.google.oak.example.encrypted.Response;
 import com.google.oak.example.encrypted.UnencryptedServiceGrpc;
 import com.google.oak.remote_attestation.InsecureAttestationVerifier;
-import com.google.oak.server.ConnectionAdapter;
-import com.google.oak.server.SecureProxyGrpc;
-import com.google.oak.server.SecureProxyImpl;
 import com.google.oak.transport.GrpcStreamingTransport;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ExtensionRegistryLite;
 import io.grpc.ManagedChannel;
 import io.grpc.Server;
 import io.grpc.inprocess.InProcessChannelBuilder;
@@ -92,7 +90,7 @@ public final class SecureProxyImplTest {
         .unwrap("creating client")) {
       Request request = Request.newBuilder().setData(ByteString.copyFromUtf8(message)).build();
       byte[] bytes = oakClient.invoke(request.toByteArray()).unwrap("invoking client");
-      Response response = Response.parseFrom(bytes);
+      Response response = Response.parseFrom(bytes, ExtensionRegistryLite.getEmptyRegistry());
 
       assertEquals(response.getData().toStringUtf8(), message);
     }
