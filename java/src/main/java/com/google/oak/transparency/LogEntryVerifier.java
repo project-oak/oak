@@ -50,7 +50,7 @@ public class LogEntryVerifier {
     RekorLogEntry logEntry = RekorLogEntry.createFromJson(logEntryBytes);
     Optional<Failure> failure = verify(logEntry, publicKeyBytes, endorsementBytes);
     if (failure.isPresent()) {
-      System.err.println("Verification failed: " + failure.get().getMessage());
+      logger.warning("Verification failed: " + failure.get().getMessage());
       System.exit(1);
     }
   }
