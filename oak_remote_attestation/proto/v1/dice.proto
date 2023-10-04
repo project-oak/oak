@@ -29,9 +29,10 @@ message CertificateAuthority {
   // Represented as a SEC1 encoded point.
   // <https://www.secg.org/sec1-v2.pdf#page=16>
   bytes eca_private_key = 1;
-  // Certificate signing next layer's measurements and the ECA key.
-  //
-  // CBOR/COSE/CWT ECA certificate.
-  // <https://www.rfc-editor.org/rfc/rfc8392.html>
-  bytes eca_certificate = 2;
+}
+
+// Message that is sent between DICE layers.
+message DiceData {
+  Evidence evidence = 1;
+  CertificateAuthority certificate_authority = 2;
 }

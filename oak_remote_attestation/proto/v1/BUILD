@@ -26,8 +26,8 @@ package(
 )
 
 proto_library(
-    name = "certificate_authority_proto",
-    srcs = ["certificate_authority.proto"],
+    name = "dice_proto",
+    srcs = ["dice.proto"],
 )
 
 proto_library(
