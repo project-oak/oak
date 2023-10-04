@@ -17,15 +17,10 @@
 package com.google.oak.client;
 
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.google.oak.crypto.ClientEncryptor;
-import com.google.oak.crypto.Encryptor;
 import com.google.oak.crypto.ServerEncryptor;
 import com.google.oak.crypto.hpke.KeyPair;
-import com.google.oak.crypto.v1.AeadEncryptedMessage;
-import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.remote_attestation.InsecureAttestationVerifier;
 import com.google.oak.session.v1.AttestationBundle;
 import com.google.oak.session.v1.AttestationEndorsement;

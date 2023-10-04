@@ -70,7 +70,7 @@ public final class SecureServiceImplTest {
         .unwrap("creating client")) {
       Request request = Request.newBuilder().setData(ByteString.copyFromUtf8(message)).build();
       byte[] bytes = oakClient.invoke(request.toByteArray()).unwrap("invoking client");
-      Response response = Response.parseFrom(bytes);
+      Response response = Response.parseFrom(bytes, ExtensionRegistryLite.getEmptyRegistry());
 
       assertEquals(response.getData().toStringUtf8(), message);
     }
