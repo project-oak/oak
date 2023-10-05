@@ -15,7 +15,10 @@
 
 use anyhow::anyhow;
 use oak_containers_hello_world_trusted_app::orchestrator_client::OrchestratorClient;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{
+    io::Write,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+};
 use tokio::net::TcpListener;
 
 const TRUSTED_APP_PORT: u16 = 8080;
@@ -33,7 +36,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         client.clone(),
         application_config,
     ));
+    std::process::Command::new("/usr/bin/nc")
+        .args(["-l", "9999"])
+        .spawn()
+        .expect("nc command failed to start");
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    let mut stream =
+        std::net::TcpStream::connect("10.0.2.15:9999").expect("couldn't connect to nc");
+    stream.write(b"test").expect("couldn't write to stream");
     client.notify_app_ready().await?;
+
     join_handle.await??;
     Ok(())
 }

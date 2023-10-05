@@ -71,6 +71,7 @@ async fn hello_world() {
         .expect("couldn't decrypt response");
     let greeting = String::from_utf8(response).expect("couldn't parse response");
 
+    std::thread::sleep(std::time::Duration::from_secs(5));
     untrusted_app.kill().await;
 
     log::info!("Greeting: {}", greeting);
