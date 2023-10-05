@@ -95,7 +95,7 @@ static_assertions::assert_eq_size!([u8; PRIVATE_KEY_SIZE], CertificateAuthority)
 #[derive(AsBytes, FromBytes)]
 #[repr(C, align(4096))]
 pub struct Stage0DiceData {
-    /// The evidence about Stage 0.
+    /// The evidence about Stage 0 and the initial state of the VM.
     pub root_layer_evidence: RootLayerEvidence,
     /// The evidence about the next layer.
     pub layer_1_evidence: LayerEvidence,
@@ -128,10 +128,10 @@ static_assertions::assert_eq_size!([u8; 2176], ApplicationKeys);
 #[derive(AsBytes, FromBytes)]
 #[repr(C)]
 pub struct RestrictedKernelDiceData {
-    /// Evidence about Stage 0.
+    /// Evidence about Stage 0 and the initial state of the VM.
     pub root_layer_evidence: RootLayerEvidence,
     /// The evidence about the Restricted Kernel.
-    pub layer_1_evidence: LayerEvidence,
+    pub restricted_kernel_evidence: LayerEvidence,
     /// Keys (and associated certificates) that can be used by the application for encryption or
     /// signing.
     pub application_keys: ApplicationKeys,
