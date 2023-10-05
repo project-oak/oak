@@ -430,32 +430,23 @@ fn run_shellcheck() -> Step {
 }
 
 fn run_clang_format(mode: FormatMode) -> Step {
-    match mode {
-        FormatMode::Check => Step::Multiple {
-            name: "clang check format".to_string(),
-            steps: source_files()
-                .filter(|p| is_clang_format_file(p))
-                .map(to_string)
-                .map(|entry| Step::Single {
-                    name: entry.clone(),
-                    command: Cmd::new(
+    Step::Multiple {
+        name: "clang format".to_string(),
+        steps: source_files()
+            .filter(|p| is_clang_format_file(p))
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: match mode {
+                    // Uses settings in oak/.clang-format.
+                    FormatMode::Check => Cmd::new(
                         "clang-format",
                         ["--dry-run", "--Werror", "--style=file", &entry],
                     ),
-                })
-                .collect(),
-        },
-        FormatMode::Fix => Step::Multiple {
-            name: "clang format".to_string(),
-            steps: source_files()
-                .filter(|p| is_clang_format_file(p))
-                .map(to_string)
-                .map(|entry| Step::Single {
-                    name: entry.clone(),
-                    command: Cmd::new("clang-format", ["-i", "--style=file", &entry]),
-                })
-                .collect(),
-        },
+                    FormatMode::Fix => Cmd::new("clang-format", ["-i", "--style=file", &entry]),
+                },
+            })
+            .collect(),
     }
 }
 
