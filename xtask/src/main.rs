@@ -431,23 +431,19 @@ fn run_shellcheck() -> Step {
 
 fn run_clang_format(mode: FormatMode) -> Step {
     match mode {
-        FormatMode::Check => Step::Single {
-            name: "clang format".to_string(),
-            command: Cmd::new(
-                "python3",
-                [
-                    "./third_party/run-clang-format/run-clang-format.py",
-                    "--recursive",
-                    "--exclude",
-                    "*/node_modules",
-                    // TODO(#2654): Remove once all crates are part of the same workspace again
-                    "--exclude",
-                    "*/target",
-                    "--exclude",
-                    "third_party",
-                    "oak_functions",
-                ],
-            ),
+        FormatMode::Check => Step::Multiple {
+            name: "clang check format".to_string(),
+            steps: source_files()
+                .filter(|p| is_clang_format_file(p))
+                .map(to_string)
+                .map(|entry| Step::Single {
+                    name: entry.clone(),
+                    command: Cmd::new(
+                        "clang-format",
+                        ["--dry-run", "--Werror", "--style=file", &entry],
+                    ),
+                })
+                .collect(),
         },
         FormatMode::Fix => Step::Multiple {
             name: "clang format".to_string(),
@@ -456,7 +452,7 @@ fn run_clang_format(mode: FormatMode) -> Step {
                 .map(to_string)
                 .map(|entry| Step::Single {
                     name: entry.clone(),
-                    command: Cmd::new("clang-format", ["-i", "-style=file", &entry]),
+                    command: Cmd::new("clang-format", ["-i", "--style=file", &entry]),
                 })
                 .collect(),
         },
