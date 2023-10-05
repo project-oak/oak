@@ -40,10 +40,10 @@ java_proto_library(
 )
 
 build_test(
-   name = "build_test",
-   targets = [
-     ":crypto_proto",
-     ":crypto_cc_proto",
-     ":crypto_java_proto",
-   ],
+    name = "build_test",
+    targets = [
+        ":crypto_proto",
+        ":crypto_cc_proto",
+        ":crypto_java_proto",
+    ],
 )

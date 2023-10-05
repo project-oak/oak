@@ -40,10 +40,10 @@ java_proto_library(
 )
 
 build_test(
-   name = "build_test",
-   targets = [
-     ":verification_proto",
-     ":verification_cc_proto",
-     ":verification_java_proto",
-   ],
+    name = "build_test",
+    targets = [
+        ":verification_proto",
+        ":verification_cc_proto",
+        ":verification_java_proto",
+    ],
 )

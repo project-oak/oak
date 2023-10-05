@@ -118,14 +118,14 @@ java_grpc_library(
 )
 
 build_test(
-   name = "build_test",
-   targets = [
-     ":dice_proto",
-     ":endorsement_proto",
-     ":messages_proto",
-     ":service_streaming_cc_grpc",
-     ":service_streaming_java_grpc",
-     ":service_unary_cc_grpc",
-     ":service_unary_java_grpc",
-   ],
+    name = "build_test",
+    targets = [
+        ":dice_proto",
+        ":endorsement_proto",
+        ":messages_proto",
+        ":service_streaming_cc_grpc",
+        ":service_streaming_java_grpc",
+        ":service_unary_cc_grpc",
+        ":service_unary_java_grpc",
+    ],
 )
