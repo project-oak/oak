@@ -111,3 +111,16 @@ message InvokeResponse {
   // TODO(#3843): Use explicit `oak_crypto` messages.
   bytes encrypted_body = 1;
 }
+
+message GetEncryptionKeyRequest {
+  // Encrypted attestation evidence of the dependent enclave.
+  bytes encrypted_attestation_bundle = 1;
+}
+
+message GetEncryptionKeyResponse {
+  // Attestation evidence and public key.
+  AttestationBundle endorsed_evidence = 1;
+
+  // Encrypted private key of the leader enclave.
+  bytes encrypted_encryption_key = 2;
+}
