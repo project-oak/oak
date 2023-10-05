@@ -28,11 +28,13 @@ package(
 proto_library(
     name = "dice_proto",
     srcs = ["dice.proto"],
+    deps = [":evidence_proto"],
 )
 
 proto_library(
     name = "endorsement_proto",
     srcs = ["endorsement.proto"],
+    deps = [":evidence_proto"],
 )
 
 proto_library(
