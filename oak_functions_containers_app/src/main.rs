@@ -13,10 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use anyhow::anyhow;
+use oak_functions_containers_app::{
+    proto::oak::functions::oak_functions_server::OakFunctionsServer, OakFunctionsContainersService,
+};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::net::TcpListener;
+use tokio_stream::wrappers::TcpListenerStream;
 
 const OAK_FUNCTIONS_CONTAINERS_APP_PORT: u16 = 8080;
+
+// Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
+pub async fn serve(listener: TcpListener) -> Result<(), anyhow::Error> {
+    tonic::transport::Server::builder()
+        .add_service(OakFunctionsServer::new(OakFunctionsContainersService {}))
+        .serve_with_incoming(TcpListenerStream::new(listener))
+        .await
+        .map_err(|error| anyhow!("starting up the service failed with error: {:?}", error))
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -25,9 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         OAK_FUNCTIONS_CONTAINERS_APP_PORT,
     );
     let listener = TcpListener::bind(addr).await?;
-    let server = tokio::spawn(oak_functions_containers_app::create(listener));
-    println!(
-        "Running Oak Functions on Oak Containers at port: {OAK_FUNCTIONS_CONTAINERS_APP_PORT}"
-    );
-    Ok(server.await??)
+    let server_handle = tokio::spawn(serve(listener));
+    eprintln!("Running Oak Functions on Oak Containers at address: {addr}");
+    Ok(server_handle.await??)
 }
