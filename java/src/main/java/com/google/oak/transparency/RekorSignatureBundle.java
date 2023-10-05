@@ -63,6 +63,7 @@ public class RekorSignatureBundle {
     Gson gson = new GsonBuilder().create();
     String canonicalized = gson.toJson(entrySubset);
 
-    return new RekorSignatureBundle(canonicalized, entry.logEntry.verification.signedEntryTimestamp);
+    return new RekorSignatureBundle(
+        canonicalized, entry.logEntry.verification.signedEntryTimestamp);
   }
 }

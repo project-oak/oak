@@ -19,13 +19,13 @@ package com.google.oak.transparency;
 
 /** Signals verification failure and provides a human-readable cause. */
 public class Failure {
-    public Failure(String message) {
-        this.message = message;
-    }
+  public Failure(String message) {
+    this.message = message;
+  }
 
-    public String getMessage() {
-        return message;
-    }
+  public String getMessage() {
+    return message;
+  }
 
-    private final String message;
+  private final String message;
 }

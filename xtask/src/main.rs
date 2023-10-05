@@ -232,6 +232,7 @@ fn check_format(scope: &Scope) -> Step {
             run_check_license(&modified_files),
             run_check_build_licenses(&modified_files),
             run_check_todo(&modified_files),
+            run_clang_format(FormatMode::Check),
             run_buildifier(FormatMode::Check),
             run_prettier(FormatMode::Check),
             run_markdownlint(FormatMode::Check),

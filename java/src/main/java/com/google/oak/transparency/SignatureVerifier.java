@@ -95,10 +95,11 @@ public class SignatureVerifier {
       exception = e;
     }
 
-    return success ? Optional.empty()
+    return success
+        ? Optional.empty()
         : failure(exception != null
-            ? String.format("%s: %s", exception.getClass().getName(), exception.getMessage())
-            : "Signature verification failed");
+                ? String.format("%s: %s", exception.getClass().getName(), exception.getMessage())
+                : "Signature verification failed");
   }
 
   private static final String PEM_HEADER = "-----BEGIN PUBLIC KEY-----";
@@ -112,14 +113,9 @@ public class SignatureVerifier {
 
   /** Converts a public key from PEM (on disk format) to raw binary format. */
   static byte[] convertPemToRaw(String pem) {
-    String trimmed = pem
-        .replace(PEM_HEADER, "")
-        .replace(PEM_FOOTER, "")
-        .replace("\n", "")
-        .trim();
+    String trimmed = pem.replace(PEM_HEADER, "").replace(PEM_FOOTER, "").replace("\n", "").trim();
     return Base64.getDecoder().decode(trimmed);
   }
 
-  private SignatureVerifier() {
-  }
+  private SignatureVerifier() {}
 }

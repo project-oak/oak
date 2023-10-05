@@ -27,49 +27,56 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class SignatureVerifierTest {
-    private static final String SIGNATURE_PATH = "oak_remote_attestation_verification/testdata/endorsement.json.sig";
-    private static final String PUBLIC_KEY_PATH = "oak_remote_attestation_verification/testdata/oak-development.pem";
-    private static final String CONTENT_PATH = "oak_remote_attestation_verification/testdata/endorsement.json";
+  private static final String SIGNATURE_PATH =
+      "oak_remote_attestation_verification/testdata/endorsement.json.sig";
+  private static final String PUBLIC_KEY_PATH =
+      "oak_remote_attestation_verification/testdata/oak-development.pem";
+  private static final String CONTENT_PATH =
+      "oak_remote_attestation_verification/testdata/endorsement.json";
 
-    private byte[] signatureBytes;
-    private byte[] publicKeyBytes;
-    private byte[] contentBytes;
+  private byte[] signatureBytes;
+  private byte[] publicKeyBytes;
+  private byte[] contentBytes;
 
-    @Before
-    public void setUp() throws Exception {
-        signatureBytes = Files.readAllBytes(Path.of(SIGNATURE_PATH));
-        publicKeyBytes = SignatureVerifier.convertPemToRaw(Files.readString(Path.of(PUBLIC_KEY_PATH)));
-        contentBytes = Files.readAllBytes(Path.of(CONTENT_PATH));
-    }
+  @Before
+  public void setUp() throws Exception {
+    signatureBytes = Files.readAllBytes(Path.of(SIGNATURE_PATH));
+    publicKeyBytes = SignatureVerifier.convertPemToRaw(Files.readString(Path.of(PUBLIC_KEY_PATH)));
+    contentBytes = Files.readAllBytes(Path.of(CONTENT_PATH));
+  }
 
-    @Test
-    public void testVerifySucceeds() {
-        Optional<Failure> failure = SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
+  @Test
+  public void testVerifySucceeds() {
+    Optional<Failure> failure =
+        SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
 
-        Assert.assertFalse(failure.isPresent());
-    }
+    Assert.assertFalse(failure.isPresent());
+  }
 
-    @Test
-    public void testVerifyFailsWithManipulatedSignature() {
-        signatureBytes[signatureBytes.length / 2]++;
-        Optional<Failure> failure = SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
+  @Test
+  public void testVerifyFailsWithManipulatedSignature() {
+    signatureBytes[signatureBytes.length / 2]++;
+    Optional<Failure> failure =
+        SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
 
-        Assert.assertTrue(failure.isPresent());
-    }
+    Assert.assertTrue(failure.isPresent());
+  }
 
-    @Test
-    public void testVerifyFailsWithManipulatedPublicKey() {
-        publicKeyBytes[publicKeyBytes.length / 2]++;
-        Optional<Failure> failure = SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
+  @Test
+  public void testVerifyFailsWithManipulatedPublicKey() {
+    publicKeyBytes[publicKeyBytes.length / 2]++;
+    Optional<Failure> failure =
+        SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
 
-        Assert.assertTrue(failure.isPresent());
-    }
+    Assert.assertTrue(failure.isPresent());
+  }
 
-    @Test
-    public void testVerifyFailsWithWrongContent() {
-        contentBytes[contentBytes.length / 2]++;
-        Optional<Failure> failure = SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
+  @Test
+  public void testVerifyFailsWithWrongContent() {
+    contentBytes[contentBytes.length / 2]++;
+    Optional<Failure> failure =
+        SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
 
-        Assert.assertTrue(failure.isPresent());
-    }
+    Assert.assertTrue(failure.isPresent());
+  }
 }

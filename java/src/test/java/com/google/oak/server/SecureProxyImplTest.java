@@ -51,23 +51,23 @@ public final class SecureProxyImplTest {
   public void setUp() throws Exception {
     String innerServerName = InProcessServerBuilder.generateName();
     innerServer = InProcessServerBuilder.forName(innerServerName)
-        .directExecutor()
-        .addService(new UnencryptedServiceImpl())
-        .build()
-        .start();
+                      .directExecutor()
+                      .addService(new UnencryptedServiceImpl())
+                      .build()
+                      .start();
     innerChannel = InProcessChannelBuilder.forName(innerServerName).directExecutor().build();
 
     // Create a ConnectionAdapter wrapping a connection to UnencryptedService.
-    ConnectionAdapter<Request, Response> connectionAdapter = new ConnectionAdapter<>(Request::parseFrom,
-        Response::toByteArray,
-        UnencryptedServiceGrpc.newStub(innerChannel)::connect);
+    ConnectionAdapter<Request, Response> connectionAdapter =
+        new ConnectionAdapter<>(Request::parseFrom, Response::toByteArray,
+            UnencryptedServiceGrpc.newStub(innerChannel)::connect);
 
     String serverName = InProcessServerBuilder.generateName();
     server = InProcessServerBuilder.forName(serverName)
-        .directExecutor()
-        .addService(SecureProxyImpl.create(connectionAdapter).unwrap("creating service"))
-        .build()
-        .start();
+                 .directExecutor()
+                 .addService(SecureProxyImpl.create(connectionAdapter).unwrap("creating service"))
+                 .build()
+                 .start();
     channel = InProcessChannelBuilder.forName(serverName).directExecutor().build();
   }
 
@@ -86,8 +86,9 @@ public final class SecureProxyImplTest {
     SecureProxyGrpc.SecureProxyStub stub = SecureProxyGrpc.newStub(channel);
     GrpcStreamingTransport transport = new GrpcStreamingTransport(stub::encryptedConnect);
 
-    try (OakClient<GrpcStreamingTransport> oakClient = OakClient.create(transport, new InsecureAttestationVerifier())
-        .unwrap("creating client")) {
+    try (OakClient<GrpcStreamingTransport> oakClient =
+             OakClient.create(transport, new InsecureAttestationVerifier())
+                 .unwrap("creating client")) {
       Request request = Request.newBuilder().setData(ByteString.copyFromUtf8(message)).build();
       byte[] bytes = oakClient.invoke(request.toByteArray()).unwrap("invoking client");
       Response response = Response.parseFrom(bytes, ExtensionRegistryLite.getEmptyRegistry());

@@ -126,14 +126,13 @@ public class LogEntryVerifier {
     String digest = sha256Hex(contentBytes);
     if (digest == null || !digest.equals(body.spec.data.hash.value)) {
       return failure(String.format(
-          "SHA2-256 digest of contents (%s) differs from that in Rekor entry body (%s)",
-          digest, body.spec.data.hash.value));
+          "SHA2-256 digest of contents (%s) differs from that in Rekor entry body (%s)", digest,
+          body.spec.data.hash.value));
     }
 
     byte[] signatureBytes = Base64.getDecoder().decode(body.spec.signature.content);
     byte[] publicKeyBytes = SignatureVerifier.convertPemToRaw(new String(
-        Base64.getDecoder().decode(body.spec.signature.publicKey.content),
-        StandardCharsets.UTF_8));
+        Base64.getDecoder().decode(body.spec.signature.publicKey.content), StandardCharsets.UTF_8));
     return SignatureVerifier.verify(signatureBytes, publicKeyBytes, contentBytes);
   }
 
@@ -158,6 +157,5 @@ public class LogEntryVerifier {
     }
   }
 
-  private LogEntryVerifier() {
-  }
+  private LogEntryVerifier() {}
 }
