@@ -21,7 +21,6 @@ package com.google.oak.transparency;
 public class Failure {
   public Failure(String message) {
     this.message = message;
-
   }
 
   public String getMessage() {

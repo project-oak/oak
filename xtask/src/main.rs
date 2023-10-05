@@ -438,7 +438,7 @@ fn run_clang_format(mode: FormatMode) -> Step {
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: match mode {
-                    // Uses settings in oak/.clang-format.
+                    // Uses Google style with minor adaptions from oak/.clang-format.
                     FormatMode::Check => Cmd::new(
                         "clang-format",
                         ["--dry-run", "--Werror", "--style=file", &entry],
