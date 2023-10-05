@@ -118,6 +118,9 @@ message GetEncryptionKeyRequest {
 }
 
 message GetEncryptionKeyResponse {
-  // Encrypted attestation evidence, public key, and private key of the leader enclave.
-  bytes encrypted_encrption_key = 1;
+  // Attestation evidence and public key.
+  AttestationBundle endorsed_evidence = 1;
+
+  // Encrypted private key of the leader enclave.
+  bytes encrypted_encryption_key = 2;
 }
