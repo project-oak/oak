@@ -28,18 +28,17 @@ cc_library(
         "keypair_jni.cc",
     ],
     hdrs = [
-        "com_google_oak_crypto_hpke_Context_RecipientRequestContext.h",
-        "com_google_oak_crypto_hpke_Context_RecipientResponseContext.h",
-        "com_google_oak_crypto_hpke_Context_SenderRequestContext.h",
-        "com_google_oak_crypto_hpke_Context_SenderResponseContext.h",
         "com_google_oak_crypto_hpke_Hpke.h",
         "com_google_oak_crypto_hpke_KeyPair.h",
+        "com_google_oak_crypto_hpke_RecipientContext.h",
+        "com_google_oak_crypto_hpke_SenderContext.h",
         "jni_helper.h",
     ],
     deps = [
         ":jni",
         "//cc/crypto/hpke:recipient_context",
         "//cc/crypto/hpke:sender_context",
+        "@com_google_absl//absl/status:statusor",
     ],
     alwayslink = 1,
 )

@@ -16,12 +16,16 @@
 use crate::proto::oak::{
     containers::{
         launcher_server::{Launcher, LauncherServer},
-        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+        GetApplicationConfigResponse, GetImageResponse, LogEntry, SendAttestationEvidenceRequest,
     },
     session::v1::AttestationEvidence,
 };
 use anyhow::anyhow;
-use futures::{FutureExt, Stream};
+use futures::{FutureExt, Stream, StreamExt};
+use opentelemetry_proto::tonic::collector::metrics::v1::{
+    metrics_service_server::{MetricsService, MetricsServiceServer},
+    ExportMetricsServiceRequest, ExportMetricsServiceResponse,
+};
 use std::{pin::Pin, sync::Mutex};
 use tokio::{
     io::{AsyncReadExt, BufReader},
@@ -170,6 +174,43 @@ impl Launcher for LauncherServerImplementation {
             .map_err(|_err| tonic::Status::internal(format!("couldn't send notification")))?;
         Ok(tonic::Response::new(()))
     }
+
+    async fn log(
+        &self,
+        request: Request<tonic::Streaming<LogEntry>>,
+    ) -> Result<Response<()>, tonic::Status> {
+        let mut stream = request.into_inner();
+        while let Some(message) = stream.next().await {
+            let message = message?;
+
+            let unit = message
+                .fields
+                .get("_SYSTEMD_UNIT")
+                .map_or("", |unit| unit.as_str());
+            let message = message
+                .fields
+                .get("MESSAGE")
+                .map_or("", |message| message.as_str());
+            println!("{}: {}", unit, message);
+        }
+        Ok(tonic::Response::new(()))
+    }
+}
+
+struct LogServer;
+
+#[tonic::async_trait]
+impl MetricsService for LogServer {
+    async fn export(
+        &self,
+        request: Request<ExportMetricsServiceRequest>,
+    ) -> Result<Response<ExportMetricsServiceResponse>, tonic::Status> {
+        let request = request.into_inner();
+        log::debug!("metrics: {:?}", request);
+        Ok(Response::new(ExportMetricsServiceResponse {
+            partial_success: None,
+        }))
+    }
 }
 
 pub async fn new(
@@ -190,6 +231,7 @@ pub async fn new(
     };
     Server::builder()
         .add_service(LauncherServer::new(server_impl))
+        .add_service(MetricsServiceServer::new(LogServer))
         .serve_with_incoming_shutdown(TcpListenerStream::new(listener), shutdown.map(|_| ()))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))

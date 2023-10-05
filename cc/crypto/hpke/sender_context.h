@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
@@ -26,54 +27,50 @@
 
 namespace oak::crypto {
 
-// Context for generating encrypted requests to the recipient.
-class SenderRequestContext {
+// Context for generating encrypted requests to the recipient and for decrypting encrypted responses
+// from the recipient. This is based on bi-directional encryption using AEAD.
+// <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>.
+class SenderContext {
  public:
-  SenderRequestContext(std::unique_ptr<EVP_AEAD_CTX> aead_request_context,
-                       std::vector<uint8_t> request_nonce)
-      : aead_request_context_(std::move(aead_request_context)),
-        request_base_nonce_(request_nonce),
-        sequence_number_(0) {}
+  SenderContext(std::vector<uint8_t> encapsulated_public_key,
+                std::unique_ptr<EVP_AEAD_CTX> request_aead_context,
+                std::vector<uint8_t> request_base_nonce, uint64_t request_sequence_number,
+                std::unique_ptr<EVP_AEAD_CTX> response_aead_context,
+                std::vector<uint8_t> response_base_nonce, uint64_t response_sequence_number)
+      : serialized_encapsulated_public_key_(encapsulated_public_key.begin(),
+                                            encapsulated_public_key.end()),
+        request_aead_context_(std::move(request_aead_context)),
+        request_base_nonce_(request_base_nonce),
+        request_sequence_number_(request_sequence_number),
+        response_aead_context_(std::move(response_aead_context)),
+        response_base_nonce_(response_base_nonce),
+        response_sequence_number_(response_sequence_number) {}
+
+  std::string GetSerializedEncapsulatedPublicKey() const {
+    return serialized_encapsulated_public_key_;
+  }
 
   // Encrypts message with associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
   absl::StatusOr<std::string> Seal(absl::string_view plaintext, absl::string_view associated_data);
-  ~SenderRequestContext();
-
- private:
-  std::unique_ptr<EVP_AEAD_CTX> aead_request_context_;
-  std::vector<uint8_t> request_base_nonce_;
-  uint64_t sequence_number_;
-};
-
-// Context for decrypting encrypted responses from the recipient. This is based on bi-directional
-// encryption using AEAD.
-// <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
-class SenderResponseContext {
- public:
-  SenderResponseContext(std::unique_ptr<EVP_AEAD_CTX> aead_response_context,
-                        std::vector<uint8_t> response_nonce)
-      : aead_response_context_(std::move(aead_response_context)),
-        response_base_nonce_(response_nonce),
-        sequence_number_(0) {}
 
   // Decrypts response message and validates associated data using AEAD as part of
   // bidirectional communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
   absl::StatusOr<std::string> Open(absl::string_view ciphertext, absl::string_view associated_data);
-  ~SenderResponseContext();
+
+  ~SenderContext();
 
  private:
-  std::unique_ptr<EVP_AEAD_CTX> aead_response_context_;
-  std::vector<uint8_t> response_base_nonce_;
-  uint64_t sequence_number_;
-};
+  std::string serialized_encapsulated_public_key_;
 
-// Holds all necessary sender contexts and the encapsulated public key.
-struct SenderContext {
-  std::vector<uint8_t> encap_public_key;
-  std::unique_ptr<SenderRequestContext> sender_request_context;
-  std::unique_ptr<SenderResponseContext> sender_response_context;
+  std::unique_ptr<EVP_AEAD_CTX> request_aead_context_;
+  std::vector<uint8_t> request_base_nonce_;
+  uint64_t request_sequence_number_;
+
+  std::unique_ptr<EVP_AEAD_CTX> response_aead_context_;
+  std::vector<uint8_t> response_base_nonce_;
+  uint64_t response_sequence_number_;
 };
 
 // Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
@@ -83,8 +80,8 @@ struct SenderContext {
 //
 // Encapsulated public key is represented as a NIST P-256 SEC1 encoded point public key.
 // <https://secg.org/sec1-v2.pdf>
-absl::StatusOr<SenderContext> SetupBaseSender(absl::string_view serialized_recipient_public_key,
-                                              absl::string_view info);
+absl::StatusOr<std::unique_ptr<SenderContext>> SetupBaseSender(
+    absl::string_view serialized_recipient_public_key, absl::string_view info);
 
 }  // namespace oak::crypto
 

@@ -26,10 +26,16 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/crypto/hpke/utils.h"
+#include "oak_crypto/proto/v1/crypto.pb.h"
 #include "openssl/hpke.h"
 
 namespace oak::crypto {
+
+const uint64_t kStartingSequenceNumber = 0;
+
 namespace {
+using ::oak::crypto::v1::CryptoContext;
+
 // Validates that the public and private key pairing is valid for HPKE. If the public and private
 // keys are valid, the recipient_keys argument will be an initialized HPKE_KEY.
 absl::Status ValidateKeys(std::vector<uint8_t>& public_key_bytes,
@@ -71,53 +77,86 @@ absl::Status ValidateKeys(std::vector<uint8_t>& public_key_bytes,
 }
 }  // namespace
 
-absl::StatusOr<std::string> RecipientRequestContext::Open(absl::string_view ciphertext,
-                                                          absl::string_view associated_data) {
+absl::StatusOr<std::unique_ptr<RecipientContext>> RecipientContext::Deserialize(
+    CryptoContext serialized_recipient_context) {
+  std::unique_ptr<EVP_AEAD_CTX> request_aead_context(EVP_AEAD_CTX_new(
+      /* aead= */ EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()),
+      /* key= */ (uint8_t*)serialized_recipient_context.request_key().data(),
+      /* key_len= */ serialized_recipient_context.request_key().size(),
+      /* tag_len= */ 0));
+  if (request_aead_context == nullptr) {
+    return absl::AbortedError("Unable to deserialize request AEAD context");
+  }
+
+  std::unique_ptr<EVP_AEAD_CTX> response_aead_context(EVP_AEAD_CTX_new(
+      /* aead= */ EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()),
+      /* key= */ (uint8_t*)serialized_recipient_context.response_key().data(),
+      /* key_len= */ serialized_recipient_context.response_key().size(),
+      /* tag_len= */ 0));
+  if (response_aead_context == nullptr) {
+    return absl::AbortedError("Unable to deserialize response AEAD context");
+  }
+
+  std::vector<uint8_t> request_base_nonce(serialized_recipient_context.request_base_nonce().begin(),
+                                          serialized_recipient_context.request_base_nonce().end());
+
+  std::vector<uint8_t> response_base_nonce(
+      serialized_recipient_context.response_base_nonce().begin(),
+      serialized_recipient_context.response_base_nonce().end());
+
+  return std::make_unique<RecipientContext>(
+      /* request_aead_context= */ std::move(request_aead_context),
+      /* request_base_nonce= */ request_base_nonce,
+      /* request_sequence_number= */ serialized_recipient_context.request_sequence_number(),
+      /* response_aead_context= */ std::move(response_aead_context),
+      /* response_base_nonce= */ response_base_nonce,
+      /* response_sequence_number= */ serialized_recipient_context.response_sequence_number());
+}
+
+absl::StatusOr<std::string> RecipientContext::Open(absl::string_view ciphertext,
+                                                   absl::string_view associated_data) {
   /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
   /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
-  if (sequence_number_ == UINT64_MAX) {
+  if (request_sequence_number_ == UINT64_MAX) {
     return absl::OutOfRangeError("Maximum sequence number reached");
   }
-  std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, sequence_number_);
+  std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, request_sequence_number_);
 
   absl::StatusOr<std::string> plaintext =
-      AeadOpen(aead_request_context_.get(), nonce, ciphertext, associated_data);
+      AeadOpen(request_aead_context_.get(), nonce, ciphertext, associated_data);
   if (!plaintext.ok()) {
     return plaintext.status();
   }
-  sequence_number_ += 1;
+  request_sequence_number_ += 1;
 
   return plaintext;
 }
 
-RecipientRequestContext::~RecipientRequestContext() {
-  EVP_AEAD_CTX_free(aead_request_context_.release());
-}
-
-absl::StatusOr<std::string> RecipientResponseContext::Seal(absl::string_view plaintext,
-                                                           absl::string_view associated_data) {
+absl::StatusOr<std::string> RecipientContext::Seal(absl::string_view plaintext,
+                                                   absl::string_view associated_data) {
   /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
   /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
-  if (sequence_number_ == UINT64_MAX) {
+  if (response_sequence_number_ == UINT64_MAX) {
     return absl::OutOfRangeError("Maximum sequence number reached");
   }
-  std::vector<uint8_t> nonce = CalculateNonce(response_base_nonce_, sequence_number_);
+  std::vector<uint8_t> nonce = CalculateNonce(response_base_nonce_, response_sequence_number_);
 
   absl::StatusOr<std::string> ciphertext =
-      AeadSeal(aead_response_context_.get(), nonce, plaintext, associated_data);
+      AeadSeal(response_aead_context_.get(), nonce, plaintext, associated_data);
   if (!ciphertext.ok()) {
     return ciphertext.status();
   }
-  sequence_number_ += 1;
+  response_sequence_number_ += 1;
 
   return ciphertext;
 }
 
-RecipientResponseContext::~RecipientResponseContext() {
-  EVP_AEAD_CTX_free(aead_response_context_.release());
+RecipientContext::~RecipientContext() {
+  EVP_AEAD_CTX_free(request_aead_context_.release());
+  EVP_AEAD_CTX_free(response_aead_context_.release());
 }
 
-absl::StatusOr<RecipientContext> SetupBaseRecipient(
+absl::StatusOr<std::unique_ptr<RecipientContext>> SetupBaseRecipient(
     absl::string_view serialized_encapsulated_public_key, const KeyPair& recipient_key_pair,
     absl::string_view info) {
   // First verify that the supplied key pairing is valid using the BoringSSL library.
@@ -160,9 +199,9 @@ absl::StatusOr<RecipientContext> SetupBaseRecipient(
   // from the shared secret. This is required to be able to share session keys between the Kernel
   // and the Application via RPC.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
-  auto aead_request_context = GetContext(hpke_recipient_context.get(), "request_key");
-  if (!aead_request_context.ok()) {
-    return aead_request_context.status();
+  auto request_aead_context = GetContext(hpke_recipient_context.get(), "request_key");
+  if (!request_aead_context.ok()) {
+    return request_aead_context.status();
   }
 
   auto request_nonce = GetBaseNonce(hpke_recipient_context.get(), "request_nonce");
@@ -171,9 +210,9 @@ absl::StatusOr<RecipientContext> SetupBaseRecipient(
   }
 
   // Configure recipient response context and nonce.
-  auto aead_response_context = GetContext(hpke_recipient_context.get(), "response_key");
-  if (!aead_response_context.ok()) {
-    return aead_response_context.status();
+  auto response_aead_context = GetContext(hpke_recipient_context.get(), "response_key");
+  if (!response_aead_context.ok()) {
+    return response_aead_context.status();
   }
 
   auto response_nonce = GetBaseNonce(hpke_recipient_context.get(), "response_nonce");
@@ -181,18 +220,14 @@ absl::StatusOr<RecipientContext> SetupBaseRecipient(
     return response_nonce.status();
   }
 
-  // Create recipient request and response contexts.
-  RecipientContext recipient_context;
-
-  std::unique_ptr<RecipientRequestContext>& recipient_request_context =
-      recipient_context.recipient_request_context;
-  recipient_request_context =
-      std::make_unique<RecipientRequestContext>(*std::move(aead_request_context), *request_nonce);
-
-  std::unique_ptr<RecipientResponseContext>& recipient_response_context =
-      recipient_context.recipient_response_context;
-  recipient_response_context = std::make_unique<RecipientResponseContext>(
-      *std::move(aead_response_context), *response_nonce);
+  // Create recipient context.
+  std::unique_ptr<RecipientContext> recipient_context = std::make_unique<RecipientContext>(
+      /* request_aead_context= */ *std::move(request_aead_context),
+      /* request_base_nonce= */ *request_nonce,
+      /* request_sequence_number= */ kStartingSequenceNumber,
+      /* response_aead_context= */ *std::move(response_aead_context),
+      /* response_base_nonce= */ *response_nonce,
+      /* response_sequence_number= */ kStartingSequenceNumber);
 
   EVP_HPKE_CTX_free(hpke_recipient_context.release());
   return recipient_context;

@@ -17,14 +17,17 @@
 package com.google.oak.util;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
+@RunWith(JUnit4.class)
 public class ResultTest {
-  private static String ERR_MSG = "error!";
+  private static final String ERR_MSG = "error!";
 
   @Test
   public void testSuccess() {
@@ -191,11 +194,12 @@ public class ResultTest {
   public void testUnwrapError() {
     Result<Integer, String> error = Result.error(ERR_MSG);
     assertTrue(error.isError());
-    try {
-      error.unwrap("Expecting error");
-    } catch (RuntimeException e) {
-      assertEquals(String.format("Expecting error: %s", ERR_MSG), e.getMessage());
-    }
+    RuntimeException e = assertThrows(
+        RuntimeException.class,
+        () -> {
+          Integer unused = error.unwrap("Expecting error");
+        });
+    assertEquals(String.format("Expecting error: %s", ERR_MSG), e.getMessage());
   }
 
   @Test

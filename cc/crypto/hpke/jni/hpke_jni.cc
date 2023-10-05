@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
+#include <memory>
+
 #include "../recipient_context.h"
 #include "../sender_context.h"
+#include "absl/status/statusor.h"
 #include "com_google_oak_crypto_hpke_Hpke.h"
 #include "jni_helper.h"
 
@@ -29,43 +32,27 @@ JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseSe
       convert_jbytearray_to_string(env, serialized_recipient_public_key);
   std::string info_str = convert_jbytearray_to_string(env, info);
 
-  absl::StatusOr<oak::crypto::SenderContext> native_sender_context =
+  absl::StatusOr<std::unique_ptr<oak::crypto::SenderContext>> native_sender_context =
       oak::crypto::SetupBaseSender(serialized_recipient_public_key_str, info_str);
-
   if (!native_sender_context.ok()) {
     return {};
   }
 
-  int serialized_encapsulated_public_key_len = native_sender_context->encap_public_key.size();
+  int serialized_encapsulated_public_key_len =
+      (*native_sender_context)->GetSerializedEncapsulatedPublicKey().size();
   jbyteArray serialized_encapsulated_public_key =
       env->NewByteArray(serialized_encapsulated_public_key_len);
   env->SetByteArrayRegion(
       serialized_encapsulated_public_key, 0, serialized_encapsulated_public_key_len,
-      reinterpret_cast<const jbyte*>(&(native_sender_context->encap_public_key)[0]));
+      reinterpret_cast<const jbyte*>(
+          (*native_sender_context)->GetSerializedEncapsulatedPublicKey().data()));
 
-  jclass sender_request_context_class =
-      env->FindClass("com/google/oak/crypto/hpke/Context$SenderRequestContext");
-  jmethodID sender_request_context_constructor =
-      env->GetMethodID(sender_request_context_class, "<init>", "(J)V");
-  jobject sender_request_context =
-      env->NewObject(sender_request_context_class, sender_request_context_constructor,
-                     (long)native_sender_context->sender_request_context.release());
+  jclass sender_context_class = env->FindClass("com/google/oak/crypto/hpke/SenderContext");
+  jmethodID sender_context_constructor = env->GetMethodID(sender_context_class, "<init>", "([BJ)V");
+  jobject sender_context =
+      env->NewObject(sender_context_class, sender_context_constructor,
+                     serialized_encapsulated_public_key, (long)native_sender_context->release());
 
-  jclass sender_response_context_class =
-      env->FindClass("com/google/oak/crypto/hpke/Context$SenderResponseContext");
-  jmethodID sender_response_context_constructor =
-      env->GetMethodID(sender_response_context_class, "<init>", "(J)V");
-  jobject sender_response_context =
-      env->NewObject(sender_response_context_class, sender_response_context_constructor,
-                     (long)native_sender_context->sender_response_context.release());
-
-  jclass cls = env->FindClass("com/google/oak/crypto/hpke/Hpke$SenderContext");
-  jmethodID constructor =
-      env->GetMethodID(cls, "<init>",
-                       "([BLcom/google/oak/crypto/hpke/Context$SenderRequestContext;Lcom/google/"
-                       "oak/crypto/hpke/Context$SenderResponseContext;)V");
-  jobject sender_context = env->NewObject(cls, constructor, serialized_encapsulated_public_key,
-                                          sender_request_context, sender_response_context);
   return sender_context;
 }
 
@@ -95,35 +82,17 @@ JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseRe
   key_pair.public_key = public_key_str;
   key_pair.private_key = private_key_str;
 
-  absl::StatusOr<oak::crypto::RecipientContext> native_recipient_context =
+  absl::StatusOr<std::unique_ptr<oak::crypto::RecipientContext>> native_recipient_context =
       oak::crypto::SetupBaseRecipient(serialized_encapsulated_public_key_str, key_pair, info_str);
-
   if (!native_recipient_context.ok()) {
     return {};
   }
 
-  jclass recipient_request_context_class =
-      env->FindClass("com/google/oak/crypto/hpke/Context$RecipientRequestContext");
-  jmethodID recipient_request_context_constructor =
-      env->GetMethodID(recipient_request_context_class, "<init>", "(J)V");
-  jobject recipient_request_context =
-      env->NewObject(recipient_request_context_class, recipient_request_context_constructor,
-                     (long)native_recipient_context->recipient_request_context.release());
+  jclass recipient_context_class = env->FindClass("com/google/oak/crypto/hpke/RecipientContext");
+  jmethodID recipient_context_constructor =
+      env->GetMethodID(recipient_context_class, "<init>", "(J)V");
+  jobject recipient_context = env->NewObject(recipient_context_class, recipient_context_constructor,
+                                             (long)native_recipient_context->release());
 
-  jclass recipient_response_context_class =
-      env->FindClass("com/google/oak/crypto/hpke/Context$RecipientResponseContext");
-  jmethodID recipient_response_context_constructor =
-      env->GetMethodID(recipient_response_context_class, "<init>", "(J)V");
-  jobject recipient_response_context =
-      env->NewObject(recipient_response_context_class, recipient_response_context_constructor,
-                     (long)native_recipient_context->recipient_response_context.release());
-
-  jclass cls = env->FindClass("com/google/oak/crypto/hpke/Hpke$RecipientContext");
-  jmethodID constructor =
-      env->GetMethodID(cls, "<init>",
-                       "(Lcom/google/oak/crypto/hpke/Context$RecipientRequestContext;Lcom/google/"
-                       "oak/crypto/hpke/Context$RecipientResponseContext;)V");
-  jobject recipient_context =
-      env->NewObject(cls, constructor, recipient_request_context, recipient_response_context);
   return recipient_context;
 }

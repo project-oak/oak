@@ -27,18 +27,23 @@ use self::proto::oak::{
     containers::SendAttestationEvidenceRequest, session::v1::AttestationEvidence,
 };
 use anyhow::Context;
-use proto::oak::containers::launcher_client::LauncherClient as GrpcLauncherClient;
+use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
+use proto::oak::containers::{launcher_client::LauncherClient as GrpcLauncherClient, LogEntry};
+use std::collections::HashMap;
+use tokio_stream::{Stream, StreamExt};
 use tonic::transport::Channel;
 
 /// Utility struct used to interface with the launcher
 pub struct LauncherClient {
-    inner: GrpcLauncherClient<tonic::transport::channel::Channel>,
+    addr: tonic::transport::Uri,
+    inner: GrpcLauncherClient<Channel>,
 }
 
 impl LauncherClient {
     pub async fn create(addr: tonic::transport::Uri) -> Result<Self, Box<dyn std::error::Error>> {
-        let inner = GrpcLauncherClient::<Channel>::connect(addr).await?;
-        Ok(Self { inner })
+        let channel = Channel::builder(addr.clone()).connect().await?;
+        let inner = GrpcLauncherClient::new(channel);
+        Ok(Self { addr, inner })
     }
 
     pub async fn get_container_bundle(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -99,5 +104,24 @@ impl LauncherClient {
             .await
             .context("couldn't send notification")?;
         Ok(())
+    }
+
+    pub async fn log<I>(&self, entry: I) -> Result<(), Box<dyn std::error::Error>>
+    where
+        I: Stream<Item = HashMap<String, String>> + Send + 'static,
+    {
+        let request = tonic::Request::new(entry.map(|fields| LogEntry { fields }));
+        self.inner
+            .clone()
+            .log(request)
+            .await
+            .context("couldn't stream log messages")?;
+        Ok(())
+    }
+
+    pub fn openmetrics_builder(&self) -> TonicExporterBuilder {
+        opentelemetry_otlp::new_exporter()
+            .tonic()
+            .with_endpoint(self.addr.clone().to_string())
     }
 }

@@ -51,7 +51,7 @@ jobs:
       - name: Free disk space
         run: |
           df --human-readable
-          sudo apt-get remove --yes '^dotnet-.*' '^llvm-.*' 'php.*' azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell
+          sudo apt-get remove --yes '^dotnet-.*' '^llvm-.*' 'php.*' azure-cli google-cloud-cli hhvm google-chrome-stable firefox powershell
           df --human-readable
           sudo apt-get autoremove --yes
           df --human-readable

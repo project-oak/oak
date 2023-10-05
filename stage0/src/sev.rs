@@ -196,10 +196,12 @@ pub fn share_page(page: Page<Size4KiB>) {
 
 /// Stops sharing a single 4KiB page with the hypervisor when running with AMD SEV-SNP enabled.
 pub fn unshare_page(page: Page<Size4KiB>) {
-    let page_start = page.start_address().as_u64();
-    let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Private)
-        .expect("invalid address for page location");
-    change_snp_page_state(request).expect("couldn't change SNP state for page");
+    if sev_status().contains(SevStatus::SNP_ACTIVE) {
+        let page_start = page.start_address().as_u64();
+        let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Private)
+            .expect("invalid address for page location");
+        change_snp_page_state(request).expect("couldn't change SNP state for page");
+    }
 }
 
 // Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However, `PVALIDATE` can only

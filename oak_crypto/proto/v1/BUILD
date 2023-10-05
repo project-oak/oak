@@ -17,6 +17,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_java//java:defs.bzl", "java_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -36,4 +37,13 @@ cc_proto_library(
 java_proto_library(
     name = "crypto_java_proto",
     deps = [":crypto_proto"],
+)
+
+build_test(
+    name = "build_test",
+    targets = [
+        ":crypto_proto",
+        ":crypto_cc_proto",
+        ":crypto_java_proto",
+    ],
 )

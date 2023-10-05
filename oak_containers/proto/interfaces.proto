@@ -53,6 +53,14 @@ message GetCryptoContextResponse {
   oak.crypto.v1.CryptoContext context = 1;
 }
 
+// One log entry; a key-value map of strings.
+//
+// Log entries should use the (semi-standard) systemd journal field definitions:
+// https://www.freedesktop.org/software/systemd/man/systemd.journal-fields.html
+message LogEntry {
+  map<string, string> fields = 1;
+}
+
 // Defines the service exposed by the launcher, that can be invoked by the stage1 and the
 // orchestrator.
 service Launcher {
@@ -77,6 +85,9 @@ service Launcher {
   // Notifies the launcher that the trusted app is ready to serve requests and listening on the
   // pre-arranged port (8080).
   rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+
+  // Logs a set of log entries from the guest.
+  rpc Log(stream LogEntry) returns (google.protobuf.Empty) {}
 }
 
 // Defines the service exposed by the orchestrator, that can be invoked by the application.

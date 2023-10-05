@@ -16,14 +16,12 @@
 
 #include "../recipient_context.h"
 #include "../sender_context.h"
-#include "com_google_oak_crypto_hpke_Context_RecipientRequestContext.h"
-#include "com_google_oak_crypto_hpke_Context_RecipientResponseContext.h"
-#include "com_google_oak_crypto_hpke_Context_SenderRequestContext.h"
-#include "com_google_oak_crypto_hpke_Context_SenderResponseContext.h"
+#include "absl/status/statusor.h"
+#include "com_google_oak_crypto_hpke_RecipientContext.h"
+#include "com_google_oak_crypto_hpke_SenderContext.h"
 #include "jni_helper.h"
 
-JNIEXPORT jbyteArray JNICALL
-Java_com_google_oak_crypto_hpke_Context_00024SenderRequestContext_nativeSeal(
+JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativeSeal(
     JNIEnv* env, jobject obj, jbyteArray plaintext, jbyteArray associated_data) {
   if (plaintext == NULL || associated_data == NULL) {
     return {};
@@ -32,16 +30,15 @@ Java_com_google_oak_crypto_hpke_Context_00024SenderRequestContext_nativeSeal(
   std::string plaintext_str = convert_jbytearray_to_string(env, plaintext);
   std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
-  jclass sender_request_context_class = env->GetObjectClass(obj);
-  jfieldID fid = env->GetFieldID(sender_request_context_class, "nativePtr", "J");
-  oak::crypto::SenderRequestContext* sender_request_context =
-      (oak::crypto::SenderRequestContext*)(env->GetLongField(obj, fid));
-  if (sender_request_context == NULL) {
+  jclass sender_context_class = env->GetObjectClass(obj);
+  jfieldID fid = env->GetFieldID(sender_context_class, "nativePtr", "J");
+  oak::crypto::SenderContext* sender_context =
+      (oak::crypto::SenderContext*)(env->GetLongField(obj, fid));
+  if (sender_context == NULL) {
     return {};
   }
 
-  absl::StatusOr<std::string> result =
-      sender_request_context->Seal(plaintext_str, associated_data_str);
+  absl::StatusOr<std::string> result = sender_context->Seal(plaintext_str, associated_data_str);
   if (!result.ok()) {
     return {};
   }
@@ -52,8 +49,7 @@ Java_com_google_oak_crypto_hpke_Context_00024SenderRequestContext_nativeSeal(
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL
-Java_com_google_oak_crypto_hpke_Context_00024SenderResponseContext_nativeOpen(
+JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativeOpen(
     JNIEnv* env, jobject obj, jbyteArray ciphertext, jbyteArray associated_data) {
   if (ciphertext == NULL || associated_data == NULL) {
     return {};
@@ -62,16 +58,15 @@ Java_com_google_oak_crypto_hpke_Context_00024SenderResponseContext_nativeOpen(
   std::string ciphertext_str = convert_jbytearray_to_string(env, ciphertext);
   std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
-  jclass sender_response_context_class = env->GetObjectClass(obj);
-  jfieldID fid = env->GetFieldID(sender_response_context_class, "nativePtr", "J");
-  oak::crypto::SenderResponseContext* sender_response_context =
-      (oak::crypto::SenderResponseContext*)(env->GetLongField(obj, fid));
-  if (sender_response_context == NULL) {
+  jclass sender_context_class = env->GetObjectClass(obj);
+  jfieldID fid = env->GetFieldID(sender_context_class, "nativePtr", "J");
+  oak::crypto::SenderContext* sender_context =
+      (oak::crypto::SenderContext*)(env->GetLongField(obj, fid));
+  if (sender_context == NULL) {
     return {};
   }
 
-  absl::StatusOr<std::string> result =
-      sender_response_context->Open(ciphertext_str, associated_data_str);
+  absl::StatusOr<std::string> result = sender_context->Open(ciphertext_str, associated_data_str);
   if (!result.ok()) {
     return {};
   }
@@ -82,8 +77,7 @@ Java_com_google_oak_crypto_hpke_Context_00024SenderResponseContext_nativeOpen(
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL
-Java_com_google_oak_crypto_hpke_Context_00024RecipientRequestContext_nativeOpen(
+JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_nativeOpen(
     JNIEnv* env, jobject obj, jbyteArray ciphertext, jbyteArray associated_data) {
   if (ciphertext == NULL || associated_data == NULL) {
     return {};
@@ -92,16 +86,15 @@ Java_com_google_oak_crypto_hpke_Context_00024RecipientRequestContext_nativeOpen(
   std::string ciphertext_str = convert_jbytearray_to_string(env, ciphertext);
   std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
-  jclass recipient_request_context_class = env->GetObjectClass(obj);
-  jfieldID fid = env->GetFieldID(recipient_request_context_class, "nativePtr", "J");
-  oak::crypto::RecipientRequestContext* recipient_request_context =
-      (oak::crypto::RecipientRequestContext*)(env->GetLongField(obj, fid));
-  if (recipient_request_context == NULL) {
+  jclass recipient_context_class = env->GetObjectClass(obj);
+  jfieldID fid = env->GetFieldID(recipient_context_class, "nativePtr", "J");
+  oak::crypto::RecipientContext* recipient_context =
+      (oak::crypto::RecipientContext*)(env->GetLongField(obj, fid));
+  if (recipient_context == NULL) {
     return {};
   }
 
-  absl::StatusOr<std::string> result =
-      recipient_request_context->Open(ciphertext_str, associated_data_str);
+  absl::StatusOr<std::string> result = recipient_context->Open(ciphertext_str, associated_data_str);
   if (!result.ok()) {
     return {};
   }
@@ -112,8 +105,7 @@ Java_com_google_oak_crypto_hpke_Context_00024RecipientRequestContext_nativeOpen(
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL
-Java_com_google_oak_crypto_hpke_Context_00024RecipientResponseContext_nativeSeal(
+JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_nativeSeal(
     JNIEnv* env, jobject obj, jbyteArray plaintext, jbyteArray associated_data) {
   if (plaintext == NULL || associated_data == NULL) {
     return {};
@@ -122,16 +114,15 @@ Java_com_google_oak_crypto_hpke_Context_00024RecipientResponseContext_nativeSeal
   std::string plaintext_str = convert_jbytearray_to_string(env, plaintext);
   std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
-  jclass recipient_response_context_class = env->GetObjectClass(obj);
-  jfieldID fid = env->GetFieldID(recipient_response_context_class, "nativePtr", "J");
-  oak::crypto::RecipientResponseContext* recipient_response_context =
-      (oak::crypto::RecipientResponseContext*)(env->GetLongField(obj, fid));
-  if (recipient_response_context == NULL) {
+  jclass recipient_context_class = env->GetObjectClass(obj);
+  jfieldID fid = env->GetFieldID(recipient_context_class, "nativePtr", "J");
+  oak::crypto::RecipientContext* recipient_context =
+      (oak::crypto::RecipientContext*)(env->GetLongField(obj, fid));
+  if (recipient_context == NULL) {
     return {};
   }
 
-  absl::StatusOr<std::string> result =
-      recipient_response_context->Seal(plaintext_str, associated_data_str);
+  absl::StatusOr<std::string> result = recipient_context->Seal(plaintext_str, associated_data_str);
   if (!result.ok()) {
     return {};
   }
@@ -142,62 +133,30 @@ Java_com_google_oak_crypto_hpke_Context_00024RecipientResponseContext_nativeSeal
   return ret;
 }
 
-JNIEXPORT void JNICALL
-Java_com_google_oak_crypto_hpke_Context_00024SenderRequestContext_nativeDestroy(JNIEnv* env,
-                                                                                jobject obj) {
-  jclass context_class = env->GetObjectClass(obj);
-  jfieldID fid = env->GetFieldID(context_class, "nativePtr", "J");
-  oak::crypto::SenderRequestContext* sender_request_context =
-      (oak::crypto::SenderRequestContext*)(env->GetLongField(obj, fid));
-  if (sender_request_context == NULL) {
-    return;
-  }
-  delete sender_request_context;
-  // Set nativePtr's value to 0 in the java object after deleting in native.
-  env->SetLongField(obj, fid, 0);
-}
-
-JNIEXPORT void JNICALL
-Java_com_google_oak_crypto_hpke_Context_00024SenderResponseContext_nativeDestroy(JNIEnv* env,
-                                                                                 jobject obj) {
-  jclass context_class = env->GetObjectClass(obj);
-  jfieldID fid = env->GetFieldID(context_class, "nativePtr", "J");
-  oak::crypto::SenderResponseContext* sender_response_context =
-      (oak::crypto::SenderResponseContext*)(env->GetLongField(obj, fid));
-  if (sender_response_context == NULL) {
-    return;
-  }
-  delete sender_response_context;
-  // Set nativePtr's value to 0 in the java object after deleting in native.
-  env->SetLongField(obj, fid, 0);
-}
-
-JNIEXPORT void JNICALL
-Java_com_google_oak_crypto_hpke_Context_00024RecipientRequestContext_nativeDestroy(JNIEnv* env,
+JNIEXPORT void JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativeDestroy(JNIEnv* env,
                                                                                    jobject obj) {
   jclass context_class = env->GetObjectClass(obj);
   jfieldID fid = env->GetFieldID(context_class, "nativePtr", "J");
-  oak::crypto::RecipientRequestContext* recipient_request_context =
-      (oak::crypto::RecipientRequestContext*)(env->GetLongField(obj, fid));
-  if (recipient_request_context == NULL) {
+  oak::crypto::SenderContext* sender_context =
+      (oak::crypto::SenderContext*)(env->GetLongField(obj, fid));
+  if (sender_context == NULL) {
     return;
   }
-  delete recipient_request_context;
+  delete sender_context;
   // Set nativePtr's value to 0 in the java object after deleting in native.
   env->SetLongField(obj, fid, 0);
 }
 
-JNIEXPORT void JNICALL
-Java_com_google_oak_crypto_hpke_Context_00024RecipientResponseContext_nativeDestroy(JNIEnv* env,
-                                                                                    jobject obj) {
+JNIEXPORT void JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_nativeDestroy(JNIEnv* env,
+                                                                                      jobject obj) {
   jclass context_class = env->GetObjectClass(obj);
   jfieldID fid = env->GetFieldID(context_class, "nativePtr", "J");
-  oak::crypto::RecipientResponseContext* recipient_response_context =
-      (oak::crypto::RecipientResponseContext*)(env->GetLongField(obj, fid));
-  if (recipient_response_context == NULL) {
+  oak::crypto::RecipientContext* recipient_context =
+      (oak::crypto::RecipientContext*)(env->GetLongField(obj, fid));
+  if (recipient_context == NULL) {
     return;
   }
-  delete recipient_response_context;
+  delete recipient_context;
   // Set nativePtr's value to 0 in the java object after deleting in native.
   env->SetLongField(obj, fid, 0);
 }

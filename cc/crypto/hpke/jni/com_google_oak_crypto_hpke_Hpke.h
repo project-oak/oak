@@ -10,7 +10,7 @@ extern "C" {
 /*
  * Class:     com_google_oak_crypto_hpke_Hpke
  * Method:    nativeSetupBaseSender
- * Signature: ([B[B)Lcom/google/oak/crypto/hpke/Hpke/SenderContext;
+ * Signature: ([B[B)Lcom/google/oak/crypto/hpke/SenderContext;
  */
 JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseSender
   (JNIEnv *, jclass, jbyteArray, jbyteArray);
@@ -18,7 +18,7 @@ JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseSe
 /*
  * Class:     com_google_oak_crypto_hpke_Hpke
  * Method:    nativeSetupBaseRecipient
- * Signature: ([BLcom/google/oak/crypto/hpke/KeyPair;[B)Lcom/google/oak/crypto/hpke/Hpke/RecipientContext;
+ * Signature: ([BLcom/google/oak/crypto/hpke/KeyPair;[B)Lcom/google/oak/crypto/hpke/RecipientContext;
  */
 JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseRecipient
   (JNIEnv *, jclass, jbyteArray, jobject, jbyteArray);

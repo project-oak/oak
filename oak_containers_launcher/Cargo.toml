@@ -19,7 +19,12 @@ futures = "*"
 log = "*"
 oak_crypto = { workspace = true }
 oak_remote_attestation = { workspace = true }
+opentelemetry-proto = { version = "*", default-features = false, features = [
+  "gen-tonic",
+  "metrics"
+] }
 prost = "*"
+prost-types = "*"
 tokio = { version = "*", features = [
   "rt-multi-thread",
   "macros",

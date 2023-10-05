@@ -8,15 +8,17 @@ readonly SCRIPTS_DIR="$(dirname "$0")"
 source "$SCRIPTS_DIR/common"
 
 print_usage_and_exit() {
-  echo "Usage:"
-  echo "  $0 [options] -c <container-image>
+  echo "Usage:
+  ${0} [-h] \\
+       -c <input-oci-image-tar> \\
+       -o <output-oci-bundle-tar>
 
-  Exports the filesystem in the specified container image as an OCI Runtime Bundle.
+  Deterministically converts a container OCI Image to an OCI Runtime Bundle.
 
 Options:
     -h                    Display this help and exit.
-    -o <output-file>      The target output file for the bundle. If this is not specified
-                          the bundle will be created as <container-image>.tar"
+    -c                    The input tarball of an OCI Image. See: https://github.com/opencontainers/image-spec/blob/main/spec.md
+    -o                    The output tarball of an OCI Runtime Bundle. See: https://github.com/opencontainers/runtime-spec/blob/main/spec.md"
   exit 0
 }
 
@@ -25,62 +27,44 @@ while getopts "hc:o:" opt; do
     h)
       print_usage_and_exit;;
     o)
-      readonly OUTPUT_FILE="${OPTARG}";;
+      readonly OUTPUT_OCI_BUNDLE_TAR="${OPTARG}";;
     c)
-      readonly CONTAINER_IMAGE="${OPTARG}";;
+      readonly INPUT_OCI_IMAGE_TAR="${OPTARG}";;
     *)
       echo "Invalid argument: ${OPTARG}"
       exit 1;;
   esac
 done
 
-if [ -z "${CONTAINER_IMAGE}" ]; then
-  echo "Missing required option: -c <container-image>"
+if [[ -z "${INPUT_OCI_IMAGE_TAR}" ]]; then
+  echo "Missing required option: -c <input-oci-image-tar>"
   exit 1
 fi
 
-if [ -z "${OUTPUT_FILE}" ]; then
-  OUTPUT_FILE="${CONTAINER_IMAGE}.tar"
+if [[ -z "${OUTPUT_OCI_BUNDLE_TAR}" ]]; then
+  echo "Missing required option: -o <output-oci-bundle-tar>"
+  exit 1
 fi
 
 readonly WORK_DIR="$(mktemp --directory)"
-readonly ROOTFS_DIR="${WORK_DIR}/rootfs"
-mkdir "${ROOTFS_DIR}"
 
-echo "[INFO] Exporting the container image"
-docker export "$(docker create "${CONTAINER_IMAGE}")" \
-  | tar --directory="${ROOTFS_DIR}" --extract --file=-
-
-# Extract the container CMD if it is present.
-CONTAINER_CMD=$(docker \
-             inspect \
-             --format='{{json .Config.Cmd}}' \
-             "${CONTAINER_IMAGE}")
-
-if [ -z "${CONTAINER_CMD}" ]; then
-  echo "[INFO] 'CMD' not found in container image. Searching for 'ENTRY_POINT'"
-  CONTAINER_CMD=$(docker \
-               inspect \
-               --format='{{json .Config.Entrypoint}}' \
-               "${CONTAINER_IMAGE}") 
-fi
-
-if [ -z "${CONTAINER_CMD}" ]; then
-  echo "[ERROR] Neither 'CMD' or 'ENTRYPOINT' found in container image."
-  exit 1
-fi
-
-echo "[INFO] Container entry point cmd: \"${CONTAINER_CMD}\""
-
-echo "[INFO] Creating config.json"
-(
-    cd "${WORK_DIR}"
-    runc spec
-    # Replace the entrypoint.
-    jq ".process.args |= ${CONTAINER_CMD}" < config.json > new.json
-    mv --force new.json config.json
-)
+echo "[INFO] Exporting the container as an OCI image"
+readonly OCI_IMAGE_DIR="${WORK_DIR}/image"
+mkdir "${OCI_IMAGE_DIR}"
+tar --extract \
+    --file="${INPUT_OCI_IMAGE_TAR}" \
+    --directory="${OCI_IMAGE_DIR}"
 
 echo "[INFO] Creating runtime bundle"
+readonly OCI_BUNDLE_DIR="${WORK_DIR}/bundle"
+# Deterministically extract the OCI image into an OCI bundle.
+# Note that in addition to this, umoci also creates an mtree spec in the same
+# dir. This mtree is not deterministic. Ref: https://github.com/opencontainers/umoci/blob/main/doc/man/umoci-unpack.1.md
+umoci unpack \
+    --rootless \
+    --image="${OCI_IMAGE_DIR}" \
+    "${OCI_BUNDLE_DIR}"
 
-tar --create --file="${OUTPUT_FILE}" --directory="${WORK_DIR}" ./rootfs ./config.json
+# Bundle just the files and directories that constitute the deterministically
+# generated OCI bundle.
+tar --create --file="${OUTPUT_OCI_BUNDLE_TAR}" --directory="${OCI_BUNDLE_DIR}" ./rootfs ./config.json

@@ -34,9 +34,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
-    let launcher_client = LauncherClient::create(args.launcher_addr.parse()?)
-        .await
-        .map_err(|error| anyhow!("couldn't create client: {:?}", error))?;
+    let launcher_client = Arc::new(
+        LauncherClient::create(args.launcher_addr.parse()?)
+            .await
+            .map_err(|error| anyhow!("couldn't create client: {:?}", error))?,
+    );
 
     let container_bundle = launcher_client
         .get_container_bundle()
@@ -71,6 +73,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let (exit_notification_sender, shutdown_receiver) = channel::<()>();
 
+    let _metrics = oak_containers_orchestrator::metrics::run(launcher_client.clone())?;
+
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
             ipc_path,
@@ -83,7 +87,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         oak_containers_orchestrator::container_runtime::run(
             &container_bundle,
             exit_notification_sender
-        )
+        ),
     )?;
 
     Ok(())

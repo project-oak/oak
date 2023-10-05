@@ -8,13 +8,15 @@ members = [
   "oak_channel",
   "oak_client",
   "oak_containers_stage1",
-  "oak_core",
   "oak_containers_hello_world_trusted_app",
   "oak_containers_hello_world_untrusted_app",
   "oak_containers_orchestrator",
   "oak_containers_orchestrator_client",
   "oak_containers_launcher",
+  "oak_containers_syslogd",
+  "oak_core",
   "oak_crypto",
+  "oak_dice",
   "oak_docker_linux_init",
   "oak_echo_linux_init",
   "oak_enclave_runtime_support",
@@ -67,9 +69,7 @@ exclude = [
   "testing/oak_echo_app",
   "testing/oak_echo_raw_app",
   "testing/sev_snp_hello_world_kernel",
-  "third_party/curve25519-dalek",
   "third_party/rust-hypervisor-firmware-virtio",
-  "third_party/x25519-dalek",
 ]
 
 [workspace.dependencies]
@@ -81,10 +81,11 @@ micro_rpc = { path = "./micro_rpc" }
 micro_rpc_build = { path = "./micro_rpc_build" }
 oak_channel = { path = "./oak_channel" }
 oak_client = { path = "./oak_client" }
-oak_core = { path = "./oak_core" }
-oak_crypto = { path = "./oak_crypto" }
 oak_containers_orchestrator_client = { path = "./oak_containers_orchestrator_client" }
 oak_containers_launcher = { path = "./oak_containers_launcher" }
+oak_core = { path = "./oak_core" }
+oak_crypto = { path = "./oak_crypto" }
+oak_dice = { path = "./oak_dice" }
 oak_enclave_runtime_support = { path = "./oak_enclave_runtime_support" }
 oak_functions_abi = { path = "./oak_functions_abi" }
 oak_functions_client = { path = "./oak_functions_client" }

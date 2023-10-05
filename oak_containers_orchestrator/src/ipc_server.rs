@@ -32,7 +32,7 @@ pub struct ServiceImplementation {
     attester: Attester,
     encryption_key_provider: Arc<EncryptionKeyProvider>,
     application_config: Vec<u8>,
-    launcher_client: LauncherClient,
+    launcher_client: Arc<LauncherClient>,
 }
 
 #[tonic::async_trait]
@@ -92,7 +92,7 @@ pub async fn create<P>(
     encryption_key_provider: Arc<EncryptionKeyProvider>,
     attester: Attester,
     application_config: Vec<u8>,
-    launcher_client: LauncherClient,
+    launcher_client: Arc<LauncherClient>,
     shutdown_receiver: Receiver<()>,
 ) -> Result<(), anyhow::Error>
 where

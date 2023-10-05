@@ -23,8 +23,10 @@ use oak_remote_attestation::proto::oak::session::v1::{
     AttestationEndorsement, AttestationEvidence, BinaryAttestation,
 };
 
-use crate::rekor::{get_rekor_log_entry_body, verify_rekor_log_entry};
+use crate::rekor::{compare_keys, get_rekor_log_entry_body, verify_rekor_log_entry};
+use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
+use core::cmp::Ordering;
 use oak_transparency_claims::claims::{
     parse_endorsement_statement, validate_endorsement, verify_validity_duration,
 };
@@ -165,10 +167,21 @@ fn verify_rekor_public_key(
 ) -> anyhow::Result<()> {
     // TODO(#4231): Currently, we only check that the public keys are the same. Once Rekor starts
     // using rolling keys, the verification logic will have to be updated.
-    if binary_attestation.base64_pem_encoded_rekor_public_key != base64_pem_encoded_rekor_public_key
-    {
-        anyhow::bail!("Rekor public key verification failed: expected {base64_pem_encoded_rekor_public_key}, got {}", 
-        binary_attestation.base64_pem_encoded_rekor_public_key);
+
+    let public_key_from_server = BASE64_STANDARD
+        .decode(&binary_attestation.base64_pem_encoded_rekor_public_key)
+        .context("couldn't base64-decode public key bytes from server")?;
+
+    let public_key_from_client = BASE64_STANDARD
+        .decode(base64_pem_encoded_rekor_public_key)
+        .context("couldn't base64-decode public key bytes from client")?;
+
+    if compare_keys(&public_key_from_server, &public_key_from_client)? != Ordering::Equal {
+        anyhow::bail!(
+            "Rekor public key verification failed: expected {:?} found {:?}",
+            public_key_from_client,
+            public_key_from_server,
+        )
     }
 
     Ok(())
@@ -180,18 +193,25 @@ fn verify_endorser_public_key(
     binary_attestation: &BinaryAttestation,
     base64_pem_encoded_endorser_public_key: &str,
 ) -> anyhow::Result<()> {
-    let body = get_rekor_log_entry_body(&binary_attestation.rekor_log_entry)?;
-
-    let endorser_public_key = body.spec.signature.public_key.content.clone();
-
     // TODO(#4231): Currently, we only check that the public keys are the same. Should be updated to
     // support verifying rolling keys.
-    if endorser_public_key != base64_pem_encoded_endorser_public_key {
+
+    let body = get_rekor_log_entry_body(&binary_attestation.rekor_log_entry)?;
+
+    let public_key_from_server = BASE64_STANDARD
+        .decode(body.spec.signature.public_key.content)
+        .context("couldn't base64-decode public key bytes from server")?;
+
+    let public_key_from_client = BASE64_STANDARD
+        .decode(base64_pem_encoded_endorser_public_key)
+        .context("couldn't base64-decode public key bytes from client")?;
+
+    if compare_keys(&public_key_from_server, &public_key_from_client)? != Ordering::Equal {
         anyhow::bail!(
-            "endorser public key verification failed: expected {}, got {}",
-            base64_pem_encoded_endorser_public_key,
-            endorser_public_key
-        );
+            "endorser public key verification failed: expected {:?} found {:?}",
+            public_key_from_client,
+            public_key_from_server,
+        )
     }
 
     Ok(())
