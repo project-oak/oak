@@ -26,6 +26,7 @@ var sourcesIndex = JSON.parse('{\
 "oak_enclave_runtime_support":["",[],["heap.rs","lib.rs","libm.rs"]],\
 "oak_functions_abi":["",[],["lib.rs"]],\
 "oak_functions_client":["",[],["lib.rs"]],\
+"oak_functions_containers_app":["",[],["lib.rs"]],\
 "oak_functions_launcher":["",[],["lib.rs","lookup.rs","server.rs"]],\
 "oak_functions_load_test":["",[],["main.rs"]],\
 "oak_functions_sdk":["",[],["lib.rs"]],\
