@@ -47,10 +47,10 @@ public final class SecureServiceImplTest {
   public void setUp() throws Exception {
     String serverName = InProcessServerBuilder.generateName();
     server = InProcessServerBuilder.forName(serverName)
-        .directExecutor()
-        .addService(SecureServiceImpl.create().unwrap("creating service"))
-        .build()
-        .start();
+                 .directExecutor()
+                 .addService(SecureServiceImpl.create().unwrap("creating service"))
+                 .build()
+                 .start();
     channel = InProcessChannelBuilder.forName(serverName).directExecutor().build();
   }
 
@@ -66,8 +66,9 @@ public final class SecureServiceImplTest {
     SecureServiceGrpc.SecureServiceStub stub = SecureServiceGrpc.newStub(channel);
     GrpcStreamingTransport transport = new GrpcStreamingTransport(stub::encryptedConnect);
 
-    try (OakClient<GrpcStreamingTransport> oakClient = OakClient.create(transport, new InsecureAttestationVerifier())
-        .unwrap("creating client")) {
+    try (OakClient<GrpcStreamingTransport> oakClient =
+             OakClient.create(transport, new InsecureAttestationVerifier())
+                 .unwrap("creating client")) {
       Request request = Request.newBuilder().setData(ByteString.copyFromUtf8(message)).build();
       byte[] bytes = oakClient.invoke(request.toByteArray()).unwrap("invoking client");
       Response response = Response.parseFrom(bytes, ExtensionRegistryLite.getEmptyRegistry());

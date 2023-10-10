@@ -195,10 +195,7 @@ public class ResultTest {
     Result<Integer, String> error = Result.error(ERR_MSG);
     assertTrue(error.isError());
     RuntimeException e = assertThrows(
-        RuntimeException.class,
-        () -> {
-          Integer unused = error.unwrap("Expecting error");
-        });
+        RuntimeException.class, () -> { Integer unused = error.unwrap("Expecting error"); });
     assertEquals(String.format("Expecting error: %s", ERR_MSG), e.getMessage());
   }
 
