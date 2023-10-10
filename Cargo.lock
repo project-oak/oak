@@ -2158,6 +2158,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_containers_launcher"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "oak_containers_launcher",
+ "oak_grpc_utils",
+ "prost",
+ "tokio",
+ "tonic",
+]
+
+[[package]]
 name = "oak_functions_launcher"
 version = "0.1.0"
 dependencies = [
