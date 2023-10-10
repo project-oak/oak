@@ -32,7 +32,7 @@ service UnarySession {
   // using the Public key provided by the enclave. The response is encrypted
   // using the response key (supplied by the client).
   rpc Invoke(InvokeRequest) returns (InvokeResponse);
-  
+
   // Validates the client enclave's attestation evidence and returns the
   // leader enclave's public key, attestation evidence, and encrypted private
   // key. This method should only be called by a separate (dependent) enclave
