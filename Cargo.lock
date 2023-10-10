@@ -2007,6 +2007,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_containers_app"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "oak_grpc_utils",
+ "prost",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+]
+
+[[package]]
 name = "oak_functions_launcher"
 version = "0.1.0"
 dependencies = [
