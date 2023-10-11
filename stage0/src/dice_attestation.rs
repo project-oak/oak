@@ -98,7 +98,7 @@ fn generate_stage1_certificate(
     stage0_eca_key: SigningKey,
     stage0_cert_issuer: String,
     measurements: &Measurements,
-) -> Result<Vec<u8>, SigningKey, CoseError> {
+) -> Result<Vec<u8>, CoseError> {
     // Generate Stage 1 keys and Signer.
     let stage1_eca_key = generate_ecdsa_keys(INFO_STR);
     let stage1_eca_verifying_key = VerifyingKey::from(&stage1_eca_key.0);
@@ -188,7 +188,7 @@ fn generate_stage1_certificate(
         .payload(claims.clone().to_vec()?)
         .create_signature(aad, |data| stage0_signer.sign(data))
         .build();
-    (sign1.to_vec(), stage1_eca_key.0)
+    sign1.to_vec()
 }
 
 /// Generate signed attestation for the 'measurements' of all Stage 1 components.
