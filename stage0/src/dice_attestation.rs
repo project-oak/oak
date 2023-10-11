@@ -53,7 +53,7 @@ pub const INFO_STR: &str = "ID";
 /// Attestation related functions.
 ///
 /// Returns Signed Stage1 key and measurments.
-struct Signer {
+struct Stage0Signer {
     signing_key: SigningKey,
 }
 /// Measurements of various components in Stage1.
@@ -67,7 +67,7 @@ pub struct Measurements {
 }
 
 /// Signer implementation.
-impl Signer {
+impl Stage0Signer {
     fn sign(&self, data: &[u8]) -> Vec<u8> {
         let signed_stage1_ca_verifying_key: Signature = self.signing_key.sign(data);
         Vec::from(signed_stage1_ca_verifying_key.to_bytes().as_slice())
@@ -102,7 +102,7 @@ fn generate_stage1_certificate(
     // Generate Stage 1 keys and Signer.
     let stage1_eca_key = generate_ecdsa_keys(INFO_STR);
     let stage1_eca_verifying_key = VerifyingKey::from(&stage1_eca_key.0);
-    let stage0_signer = Signer {
+    let stage0_signer = Stage0Signer {
         signing_key: stage0_eca_key,
     };
 
