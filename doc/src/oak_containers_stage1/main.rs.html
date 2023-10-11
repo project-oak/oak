@@ -167,8 +167,8 @@
 <span class="kw">use </span>client::LauncherClient;
 <span class="kw">use </span>futures_util::TryStreamExt;
 <span class="kw">use </span>nix::{
-    mount::{mount, umount2, MntFlags, MsFlags},
-    unistd::chroot,
+    mount::{mount, umount, MsFlags},
+    unistd::{chdir, chroot},
 };
 <span class="kw">use </span>std::{
     error::Error,
@@ -186,7 +186,6 @@
     <span class="attr">#[arg(default_value = <span class="string">&quot;/sbin/init&quot;</span>)]
     </span>init: String,
 }
-
 <span class="attr">#[tokio::main]
 </span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
     <span class="kw">let </span>args = Args::parse();
@@ -218,19 +217,20 @@
         <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;,
     )
     .context(<span class="string">&quot;error mounting ramdrive to /rootfs&quot;</span>)<span class="question-mark">?</span>;
-    umount2(<span class="string">&quot;/dev&quot;</span>, MntFlags::empty()).context(<span class="string">&quot;error unmounting /dev&quot;</span>)<span class="question-mark">?</span>;
 
-    chroot(<span class="string">&quot;/rootfs&quot;</span>).context(<span class="string">&quot;error chrooting to /rootfs&quot;</span>)<span class="question-mark">?</span>;
-    <span class="comment">// musl expects /proc to be mounted, otherwise libc calls such as realpath(2) will fail.
-    </span>create_dir(<span class="string">&quot;/proc&quot;</span>).context(<span class="string">&quot;error creating /proc&quot;</span>)<span class="question-mark">?</span>;
+    <span class="comment">// switch_root(8) magic
+    </span>umount(<span class="string">&quot;/dev&quot;</span>).context(<span class="string">&quot;failed to unmount /dev&quot;</span>)<span class="question-mark">?</span>;
+    chdir(<span class="string">&quot;/rootfs&quot;</span>).context(<span class="string">&quot;failed to chdir to /rootfs&quot;</span>)<span class="question-mark">?</span>;
     mount(
+        <span class="prelude-val">Some</span>(<span class="string">&quot;/rootfs&quot;</span>),
+        <span class="string">&quot;/&quot;</span>,
         <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;,
-        <span class="string">&quot;/proc&quot;</span>,
-        <span class="prelude-val">Some</span>(<span class="string">&quot;proc&quot;</span>),
-        MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV,
+        MsFlags::MS_MOVE,
         <span class="prelude-val">None</span>::&lt;<span class="kw-2">&amp;</span>str&gt;,
     )
-    .context(<span class="string">&quot;error mounting /proc&quot;</span>)<span class="question-mark">?</span>;
+    .context(<span class="string">&quot;failed to move /rootfs to /&quot;</span>)<span class="question-mark">?</span>;
+    chroot(<span class="string">&quot;.&quot;</span>).context(<span class="string">&quot;failed to chroot to .&quot;</span>)<span class="question-mark">?</span>;
+    chdir(<span class="string">&quot;/&quot;</span>).context(<span class="string">&quot;failed to chdir to /&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let </span><span class="kw-2">mut </span>client = LauncherClient::new(args.launcher_addr.parse()<span class="question-mark">?</span>)
         .<span class="kw">await
