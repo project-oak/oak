@@ -347,6 +347,18 @@
 <a href="#347" id="347">347</a>
 <a href="#348" id="348">348</a>
 <a href="#349" id="349">349</a>
+<a href="#350" id="350">350</a>
+<a href="#351" id="351">351</a>
+<a href="#352" id="352">352</a>
+<a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -393,6 +405,7 @@
 <span class="kw">mod </span>allocator;
 <span class="kw">mod </span>apic;
 <span class="kw">mod </span>cmos;
+<span class="kw">mod </span>dice_attestation;
 <span class="kw">mod </span>fw_cfg;
 <span class="kw">mod </span>initramfs;
 <span class="kw">mod </span>kernel;
@@ -643,6 +656,17 @@
     <span class="macro">log::debug!</span>(<span class="string">&quot;Initial RAM disk digest: {:?}&quot;</span>, ram_disk_measurement);
     <span class="macro">log::debug!</span>(<span class="string">&quot;ACPI table generation digest: {:?}&quot;</span>, acpi_measurement);
     <span class="macro">log::debug!</span>(<span class="string">&quot;E820 table digest: {:?}&quot;</span>, memory_map_measurement);
+
+    <span class="kw">let </span>measurements = dice_attestation::Measurements {
+        acpi_measurement,
+        kernel_measurement: kernel_info.measurement,
+        cmdline_measurement,
+        ram_disk_measurement,
+        setup_data_measurement,
+        memory_map_measurement,
+    };
+
+    dice_attestation::generate_stage1_attestation(<span class="kw-2">&amp;</span>measurements);
 
     <span class="macro">log::info!</span>(<span class="string">&quot;jumping to kernel at {:#018x}&quot;</span>, entry.as_u64());
 
