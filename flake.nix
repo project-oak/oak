@@ -158,6 +158,7 @@
                 docker
                 elfutils
                 flex
+                jq
                 libelf
                 perl
                 glibc
