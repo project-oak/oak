@@ -306,12 +306,12 @@ pub fn rust64_start(encrypted: u64) -> ! {
     log::debug!("E820 table digest: {:?}", memory_map_measurement);
 
     let measurements = dice_attestation::Measurements {
-        acpi_measurement: acpi_measurement,
+        acpi_measurement,
         kernel_measurement: kernel_info.measurement,
-        cmdline_measurement: cmdline_measurement,
-        ram_disk_measurement: ram_disk_measurement,
-        setup_data_measurement: setup_data_measurement,
-        memory_map_measurement: memory_map_measurement,
+        cmdline_measurement,
+        ram_disk_measurement,
+        setup_data_measurement,
+        memory_map_measurement,
     };
 
     dice_attestation::generate_stage1_attestation(&measurements);

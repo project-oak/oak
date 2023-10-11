@@ -42,7 +42,8 @@ pub const SETUP_DATA_MEASUREMENT_ID: i64 = -4670557;
 pub const INITRD_MEASUREMENT_ID: i64 = -4670558;
 /// ID for the CWT private claim corresponding to the physical memory map (e820 table).
 pub const MEMORY_MAP_MEASUREMENT_ID: i64 = -4670559;
-/// ID for the CWT private claim corresponding to the hash of the commands for building the ACPI tables.
+/// ID for the CWT private claim corresponding to the hash of the commands for building the ACPI
+/// tables.
 pub const ACPI_MEASUREMENT_ID: i64 = -4670560;
 /// Length of the unique ID for ECDSA keys generated.
 pub const KEY_ID_LENGTH: usize = 20;
@@ -52,7 +53,7 @@ pub const INFO_STR: &str = "ID";
 /// Attestation related functions.
 ///
 /// Returns Signed Stage1 key and measurments.
-struct Stage0Signer {
+struct Signer {
     signing_key: SigningKey,
 }
 /// Measurements of various components in Stage1.
@@ -66,7 +67,7 @@ pub struct Measurements {
 }
 
 /// Signer implementation.
-impl Stage0Signer {
+impl Signer {
     fn sign(&self, data: &[u8]) -> Vec<u8> {
         let signed_stage1_ca_verifying_key: Signature = self.signing_key.sign(data);
         Vec::from(signed_stage1_ca_verifying_key.to_bytes().as_slice())
@@ -91,16 +92,17 @@ fn generate_ecdsa_keys(info: &str) -> (SigningKey, [u8; KEY_ID_LENGTH]) {
     );
     (key, key_id)
 }
-
+///
+/// Generates Stage1 attestation evidence and ECA
 fn generate_stage1_certificate(
     stage0_eca_key: SigningKey,
     stage0_cert_issuer: String,
     measurements: &Measurements,
-) -> Result<Vec<u8>, CoseError> {
+) -> Result<Vec<u8>, SigningKey, CoseError> {
     // Generate Stage 1 keys and Signer.
     let stage1_eca_key = generate_ecdsa_keys(INFO_STR);
     let stage1_eca_verifying_key = VerifyingKey::from(&stage1_eca_key.0);
-    let stage0_signer = Stage0Signer {
+    let stage0_signer = Signer {
         signing_key: stage0_eca_key,
     };
 
@@ -186,7 +188,7 @@ fn generate_stage1_certificate(
         .payload(claims.clone().to_vec()?)
         .create_signature(aad, |data| stage0_signer.sign(data))
         .build();
-    sign1.to_vec()
+    (sign1.to_vec(), stage1_eca_key.0)
 }
 
 /// Generate signed attestation for the 'measurements' of all Stage 1 components.
@@ -207,10 +209,13 @@ pub fn generate_stage1_attestation(measurements: &Measurements) {
     let stage1_eca = generate_stage1_certificate(
         stage0_eca_key.0,
         hex::encode(stage0_eca_key.1),
-        measurements
+        measurements,
     );
     if stage1_eca.is_ok() {
-        // Call code that transmits the serialized cwt to Stage1.
+        // Call code that transmits the following to Stage1.
+        // 1. stage0_eca_verifying_key
+        // 2. stage1_eca.0 (the Stage 1 evidence)
+        // 3. stage1_eca.1 (the Stage 1 ECA private key)
         log::debug!("Signing was successful..");
         return;
     }
