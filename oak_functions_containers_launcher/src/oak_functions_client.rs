@@ -27,7 +27,7 @@ pub struct OakFunctionsClient {
 }
 
 impl OakFunctionsClient {
-    pub async fn create(server_addr: String) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn create(server_addr: String) -> Result<Self, anyhow::Error> {
         let inner: GrpcOakFunctionsClient<tonic::transport::channel::Channel> = {
             let channel = Endpoint::from_shared(server_addr)
                 .context("couldn't form channel")?
