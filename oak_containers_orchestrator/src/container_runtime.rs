@@ -17,27 +17,48 @@
 //! containers in the form of an OCI filesystem bundle. However the runtime
 //! itself is not OCI spec compliant.
 
-use anyhow::Context;
-use tokio::sync::oneshot::Sender;
+use std::path::{Path, PathBuf};
 
-// Directory at which the container OCI filesystem bundle will be unpacked.
-const CONTAINER_DIR: &str = "/oak_container";
+use anyhow::Context;
+use oci_spec::runtime::{Mount, Spec};
+use tokio::sync::oneshot::Sender;
 
 pub async fn run(
     container_bundle: &[u8],
+    container_dir: &Path,
+    container_pid: &Path,
+    ipc_socket_path: &Path,
     exit_notification_sender: Sender<()>,
 ) -> Result<(), anyhow::Error> {
-    tokio::fs::create_dir(CONTAINER_DIR).await?;
+    tokio::fs::create_dir_all(container_dir).await?;
     log::info!("Unpacking container bundle");
-    tar::Archive::new(container_bundle).unpack(CONTAINER_DIR)?;
+    tar::Archive::new(container_bundle).unpack(container_dir)?;
 
     log::info!("Setting up container");
 
+    let spec_path = container_dir.join("config.json");
+    let mut spec = Spec::load(spec_path.clone()).context("error reading OCI spec")?;
+    let mut mounts = spec.mounts().as_ref().map_or(Vec::new(), |v| v.clone());
+    mounts.push({
+        let mut mount = Mount::default();
+        mount.set_source(Some(ipc_socket_path.into()));
+        mount.set_destination(PathBuf::from("/oak_utils/orchestrator_ipc"));
+        mount.set_typ(Some("bind".to_string()));
+        mount.set_options(Some(vec!["rbind".to_string()]));
+        mount
+    });
+    spec.set_mounts(Some(mounts));
+    spec.save(spec_path).context("error writing OCI spec")?;
+
     let mut start_trusted_app_cmd = {
         let mut cmd = tokio::process::Command::new("/bin/systemd-run");
+        let container_pid: &str = container_pid
+            .as_os_str()
+            .try_into()
+            .expect("invalid container PID file path");
         cmd.args([
             "--service-type=forking",
-            "--property=PIDFile=/run/oakc.pid",
+            format!("--property=PIDFile={}", container_pid).as_str(),
             "--wait",
             "--collect",
             "/bin/runc",
@@ -45,9 +66,12 @@ pub async fn run(
             "run",
             "--detach",
             "--pid-file",
-            "/run/oakc.pid",
+            container_pid,
             "--bundle",
-            "/oak_container",
+            container_dir
+                .as_os_str()
+                .try_into()
+                .expect("invalid container path"),
             "oakc",
         ]);
         cmd
