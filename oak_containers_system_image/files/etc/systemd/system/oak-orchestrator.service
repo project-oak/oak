@@ -7,7 +7,9 @@ SuccessAction=poweroff-force
 
 [Service]
 Type=simple
-ExecStart=/bin/oak_containers_orchestrator
+ExecStart=/bin/oak_containers_orchestrator --container-dir ${RUNTIME_DIRECTORY}/oak_container --ipc-socket-path ${RUNTIME_DIRECTORY}/oak_utils/orchestrator_ipc --container-pid ${RUNTIME_DIRECTORY}/oakc.pid
+ProtectSystem=strict
+RuntimeDirectory=oak_containers_orchestrator
 
 [Install]
 WantedBy=multi-user.target

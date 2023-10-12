@@ -28,7 +28,3 @@ pub mod container_runtime;
 pub mod ipc_server;
 pub mod logging;
 pub mod metrics;
-
-// Utility directory that is shared between the orchestrator & container
-pub const UTIL_DIR: &str = "oak_utils";
-pub const IPC_SOCKET_FILE_NAME: &str = "orchestrator_ipc";
