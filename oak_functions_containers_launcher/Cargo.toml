@@ -10,6 +10,7 @@ oak_grpc_utils = { workspace = true }
 [dependencies]
 anyhow = "*"
 clap = { version = "*", features = ["derive"] }
+env_logger = "*"
 prost = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tonic = { workspace = true }

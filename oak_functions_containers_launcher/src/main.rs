@@ -19,6 +19,7 @@ use oak_functions_containers_launcher::proto::oak::functions::InitializeRequest;
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     let args = oak_containers_launcher::Args::parse();
+    env_logger::init();
 
     let mut untrusted_app = oak_functions_containers_launcher::UntrustedApp::create(args)
         .await
