@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["IPC_SOCKET_FILE_NAME","UTIL_DIR"],"mod":["container_runtime","ipc_server","logging","metrics"]};
+window.SIDEBAR_ITEMS = {"mod":["container_runtime","ipc_server","logging","metrics"]};
