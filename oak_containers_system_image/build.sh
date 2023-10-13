@@ -10,6 +10,10 @@ cargo build --package="oak_containers_syslogd" --release -Z unstable-options --o
 # we need to manually patch the binary to set it back to the normal regular location.
 patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 ./target/oak_containers_syslogd
 
+# Fix the file permissions that will be loaded into the system image, as Git doesn't track them.
+# Unfortunately we can't do it in Dockerfile (with `COPY --chown`), as that requires BuildKit.
+chmod --recursive a+rX files/
+
 docker build . --tag oak-containers-system-image
 # We need to actually create a container, otherwise we won't be able to use `docker export` that gives us a filesystem image.
 # (`docker save` creates a tarball which has all the layers separate, which is _not_ what we want.)
