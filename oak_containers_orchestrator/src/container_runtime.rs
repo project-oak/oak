@@ -17,10 +17,7 @@
 //! containers in the form of an OCI filesystem bundle. However the runtime
 //! itself is not OCI spec compliant.
 
-use std::{
-    ffi::OsStr,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 use oci_spec::runtime::{Mount, Spec};
@@ -54,11 +51,17 @@ pub async fn run(
 
     let mut start_trusted_app_cmd = {
         let mut cmd = tokio::process::Command::new("/bin/systemd-run");
+        let container_dir: &str = container_dir
+            .as_os_str()
+            .try_into()
+            .expect("invalid container path");
         cmd.args([
             "--service-type=forking",
             "--property=RuntimeDirectory=oakc",
             // PIDFile is relative to `/run`, but unfortunately can't reference `RuntimeDirectory`.
             "--property=PIDFile=oakc/oakc.pid",
+            "--property=ProtectSystem=strict",
+            format!("--property=ReadWritePaths={}", container_dir).as_str(),
             "--wait",
             "--collect",
             "/bin/runc",
@@ -67,12 +70,7 @@ pub async fn run(
             "run",
             "--detach",
             "--pid-file=${PIDFILE}",
-            format!(
-                "--bundle={}",
-                <&OsStr as TryInto<&str>>::try_into(container_dir.as_os_str())
-                    .expect("invalid container path")
-            )
-            .as_str(),
+            format!("--bundle={}", container_dir).as_str(),
             "oakc",
         ]);
         cmd
