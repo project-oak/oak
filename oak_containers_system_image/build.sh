@@ -17,6 +17,8 @@ readonly NEW_DOCKER_CONTAINER_ID="$(docker create oak-containers-system-image:la
 
 docker export "$NEW_DOCKER_CONTAINER_ID" > target/image.tar
 ls -lah target/image.tar
+# Hack, as Docker doesn't give us a `/etc/hosts` which means `localhost` won't resovle.
+tar --append --file=target/image.tar --directory=files etc/hosts
 xz --force target/image.tar
 
 docker rm "$NEW_DOCKER_CONTAINER_ID"
