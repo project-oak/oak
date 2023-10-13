@@ -31,9 +31,6 @@ struct Args {
 
     #[arg(long, default_value = "/oak_utils/orchestrator_ipc")]
     ipc_socket_path: PathBuf,
-
-    #[arg(long, default_value = "/run/oakc.pid")]
-    container_pid: PathBuf,
 }
 
 #[tokio::main]
@@ -92,7 +89,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         oak_containers_orchestrator::container_runtime::run(
             &container_bundle,
             &args.container_dir,
-            &args.container_pid,
             &args.ipc_socket_path,
             exit_notification_sender
         ),
