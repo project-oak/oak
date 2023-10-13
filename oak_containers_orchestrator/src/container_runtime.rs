@@ -17,7 +17,10 @@
 //! containers in the form of an OCI filesystem bundle. However the runtime
 //! itself is not OCI spec compliant.
 
-use std::path::{Path, PathBuf};
+use std::{
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
 
 use anyhow::Context;
 use oci_spec::runtime::{Mount, Spec};
@@ -26,7 +29,6 @@ use tokio::sync::oneshot::Sender;
 pub async fn run(
     container_bundle: &[u8],
     container_dir: &Path,
-    container_pid: &Path,
     ipc_socket_path: &Path,
     exit_notification_sender: Sender<()>,
 ) -> Result<(), anyhow::Error> {
@@ -52,26 +54,25 @@ pub async fn run(
 
     let mut start_trusted_app_cmd = {
         let mut cmd = tokio::process::Command::new("/bin/systemd-run");
-        let container_pid: &str = container_pid
-            .as_os_str()
-            .try_into()
-            .expect("invalid container PID file path");
         cmd.args([
             "--service-type=forking",
-            format!("--property=PIDFile={}", container_pid).as_str(),
+            "--property=RuntimeDirectory=oakc",
+            // PIDFile is relative to `/run`, but unfortunately can't reference `RuntimeDirectory`.
+            "--property=PIDFile=oakc/oakc.pid",
             "--wait",
             "--collect",
             "/bin/runc",
             "--systemd-cgroup",
+            "--root=${RUNTIME_DIRECTORY}/runc",
             "run",
             "--detach",
-            "--pid-file",
-            container_pid,
-            "--bundle",
-            container_dir
-                .as_os_str()
-                .try_into()
-                .expect("invalid container path"),
+            "--pid-file=${PIDFILE}",
+            format!(
+                "--bundle={}",
+                <&OsStr as TryInto<&str>>::try_into(container_dir.as_os_str())
+                    .expect("invalid container path")
+            )
+            .as_str(),
             "oakc",
         ]);
         cmd
