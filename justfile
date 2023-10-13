@@ -42,6 +42,8 @@ oak_containers_kernel:
 oak_containers_system_image:
     env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 bash build.sh
 
+# Oak Containers Hellow World entry point.
+
 oak_containers_hello_world_container_bundle_tar:
     env --chdir=oak_containers_hello_world_container DOCKER_BUILDKIT=0 bash build_container_bundle
 
@@ -49,6 +51,16 @@ oak_containers_hello_world_untrusted_app:
     env cargo build --release --package='oak_containers_hello_world_untrusted_app'
 
 all_oak_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_containers_hello_world_container_bundle_tar oak_containers_hello_world_untrusted_app
+
+# Oak Functions Containers entry point.
+
+oak_functions_containers_container_bundle_tar:
+    env --chdir=oak_functions_containers_container DOCKER_BUILDKIT=0 bash build_container_bundle
+
+oak_functions_containers_launcher:
+    env cargo build --release --package='oak_functions_containers_launcher'
+
+all_oak_functions_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_functions_containers_container_bundle_tar oak_functions_containers_launcher
 
 # Entry points for Kokoro CI.
 
