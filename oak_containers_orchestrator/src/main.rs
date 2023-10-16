@@ -77,6 +77,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let _metrics = oak_containers_orchestrator::metrics::run(launcher_client.clone())?;
 
+    let user = nix::unistd::User::from_name("oakc")
+        .expect("error resolving user `oakc`")
+        .expect("user `oakc` not found");
+
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
             &args.ipc_socket_path,
@@ -89,6 +93,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         oak_containers_orchestrator::container_runtime::run(
             &container_bundle,
             &args.container_dir,
+            user.uid,
+            user.gid,
             &args.ipc_socket_path,
             exit_notification_sender
         ),
