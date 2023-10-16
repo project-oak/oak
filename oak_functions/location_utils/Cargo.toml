@@ -7,4 +7,4 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
-s2 = "*"
+s2 = { version = "*", default-features = false }

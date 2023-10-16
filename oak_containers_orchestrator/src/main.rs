@@ -15,17 +15,22 @@
 
 use anyhow::anyhow;
 use clap::Parser;
-use oak_containers_orchestrator::{IPC_SOCKET_FILE_NAME, UTIL_DIR};
 use oak_containers_orchestrator_client::LauncherClient;
 use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_remote_attestation::attester::{Attester, EmptyAttestationReportGenerator};
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 use tokio::sync::oneshot::channel;
 
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(default_value = "http://10.0.2.100:8080")]
     launcher_addr: String,
+
+    #[arg(long, default_value = "/oak_container")]
+    container_dir: PathBuf,
+
+    #[arg(long, default_value = "/oak_utils/orchestrator_ipc")]
+    ipc_socket_path: PathBuf,
 }
 
 #[tokio::main]
@@ -34,9 +39,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
-    let launcher_client = LauncherClient::create(args.launcher_addr.parse()?)
-        .await
-        .map_err(|error| anyhow!("couldn't create client: {:?}", error))?;
+    let launcher_client = Arc::new(
+        LauncherClient::create(args.launcher_addr.parse()?)
+            .await
+            .map_err(|error| anyhow!("couldn't create client: {:?}", error))?,
+    );
 
     let container_bundle = launcher_client
         .get_container_bundle()
@@ -62,18 +69,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .map_err(|error| anyhow!("couldn't send attestation evidence: {:?}", error))?;
 
-    let util_dir_absolute_path = std::path::Path::new("/").join(UTIL_DIR);
-    tokio::fs::create_dir_all(&util_dir_absolute_path).await?;
-    let ipc_path = {
-        let mut path = util_dir_absolute_path;
-        path.push(IPC_SOCKET_FILE_NAME);
-        path
-    };
+    if let Some(path) = args.ipc_socket_path.parent() {
+        tokio::fs::create_dir_all(path).await?;
+    }
+
     let (exit_notification_sender, shutdown_receiver) = channel::<()>();
+
+    let _metrics = oak_containers_orchestrator::metrics::run(launcher_client.clone())?;
 
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
-            ipc_path,
+            &args.ipc_socket_path,
             encryption_key_provider,
             attester,
             application_config,
@@ -82,8 +88,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ),
         oak_containers_orchestrator::container_runtime::run(
             &container_bundle,
+            &args.container_dir,
+            &args.ipc_socket_path,
             exit_notification_sender
-        )
+        ),
     )?;
 
     Ok(())

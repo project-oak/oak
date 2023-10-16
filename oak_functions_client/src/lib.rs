@@ -49,12 +49,13 @@ impl OakFunctionsClient {
         })?;
         // An error here is specific to the Oak Functions application (e.g. the Wasm module does not
         // have the correct exported / imported functions).
-        let response = micro_rpc::Response::decode(response_bytes.as_slice()).map_err(|err| {
-            micro_rpc::Status::new_with_message(
-                micro_rpc::StatusCode::Internal,
-                format!("couldn't deserialize response wrapper: {:?}", err),
-            )
-        })?;
+        let response =
+            micro_rpc::ResponseWrapper::decode(response_bytes.as_slice()).map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::Internal,
+                    format!("couldn't deserialize response wrapper: {:?}", err),
+                )
+            })?;
         response.into()
     }
 }

@@ -14,7 +14,14 @@
 // limitations under the License.
 //
 
-use crate::sev_status;
+use core::{
+    alloc::{AllocError, Allocator, Layout},
+    ops::{Deref, DerefMut},
+    ptr::NonNull,
+};
+
+use crate::{sev_status, BootAllocator};
+use alloc::boxed::Box;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 pub use oak_sev_guest::ghcb::Ghcb;
@@ -38,8 +45,100 @@ use x86_64::{
 
 pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
-pub fn init_ghcb(ghcb: &'static mut Ghcb) {
-    let ghcb_addr = VirtAddr::from_ptr(ghcb as *const _);
+/// Allocator that forces allocations to be 4K-aligned (and sized) and marks the pages as shared.
+///
+/// This allocator is inefficient as it will only allocate 4K chunks, potentially wasting memory.
+/// For example, if you allocate two u32-s, although they could well fit on one page, currently
+/// that'd use 8K of memory.
+/// That, however, is an implementation detail, and may change in the future.
+#[repr(transparent)]
+struct SharedAllocator<A: Allocator> {
+    inner: A,
+}
+
+impl<A: Allocator> SharedAllocator<A> {
+    fn new(allocator: A) -> Self {
+        Self { inner: allocator }
+    }
+}
+
+unsafe impl<A: Allocator> Allocator for SharedAllocator<A> {
+    fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+        let layout = layout
+            .align_to(Size4KiB::SIZE as usize)
+            .map_err(|_| AllocError)?
+            .pad_to_align();
+        let allocation = self.inner.allocate(layout)?;
+        if sev_status().contains(SevStatus::SEV_ENABLED) {
+            for offset in (0..allocation.len()).step_by(Size4KiB::SIZE as usize) {
+                // Safety: the allocation has succeeded and the offset won't exceed the size of the
+                // allocation.
+                share_page(Page::containing_address(VirtAddr::from_ptr(unsafe {
+                    allocation.as_non_null_ptr().as_ptr().add(offset)
+                })))
+            }
+        }
+        Ok(allocation)
+    }
+
+    unsafe fn deallocate(&self, ptr: NonNull<u8>, layout: Layout) {
+        let layout = layout
+            .align_to(Size4KiB::SIZE as usize)
+            .map_err(|_| AllocError)
+            .unwrap()
+            .pad_to_align();
+        if sev_status().contains(SevStatus::SEV_ENABLED) {
+            for offset in (0..layout.size()).step_by(Size4KiB::SIZE as usize) {
+                // Safety: the allocation has succeeded and the offset won't exceed the size of the
+                // allocation.
+                unshare_page(Page::containing_address(VirtAddr::from_ptr(unsafe {
+                    ptr.as_ptr().add(offset)
+                })))
+            }
+        }
+        self.inner.deallocate(ptr, layout)
+    }
+}
+
+/// Stores a data structure on a shared page.
+pub struct Shared<T: 'static, A: Allocator> {
+    inner: Box<T, SharedAllocator<A>>,
+}
+
+impl<T, A: Allocator> Shared<T, A> {
+    pub fn new_in(t: T, alloc: A) -> Self
+    where
+        A: 'static,
+    {
+        Self {
+            inner: Box::new_in(t, SharedAllocator::new(alloc)),
+        }
+    }
+}
+
+impl<T, A: Allocator> Deref for Shared<T, A> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<T, A: Allocator> DerefMut for Shared<T, A> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
+impl<T, A: Allocator> AsRef<T> for Shared<T, A> {
+    fn as_ref(&self) -> &T {
+        &self.inner
+    }
+}
+
+pub fn init_ghcb(alloc: &'static BootAllocator) {
+    let ghcb = Box::leak(Box::new_in(Ghcb::default(), alloc));
+    let ghcb_addr = VirtAddr::from_ptr(ghcb);
 
     share_page(Page::containing_address(ghcb_addr));
 
@@ -97,10 +196,12 @@ pub fn share_page(page: Page<Size4KiB>) {
 
 /// Stops sharing a single 4KiB page with the hypervisor when running with AMD SEV-SNP enabled.
 pub fn unshare_page(page: Page<Size4KiB>) {
-    let page_start = page.start_address().as_u64();
-    let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Private)
-        .expect("invalid address for page location");
-    change_snp_page_state(request).expect("couldn't change SNP state for page");
+    if sev_status().contains(SevStatus::SNP_ACTIVE) {
+        let page_start = page.start_address().as_u64();
+        let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Private)
+            .expect("invalid address for page location");
+        change_snp_page_state(request).expect("couldn't change SNP state for page");
+    }
 }
 
 // Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However, `PVALIDATE` can only

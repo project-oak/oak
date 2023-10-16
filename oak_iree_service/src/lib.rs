@@ -131,7 +131,7 @@ impl Iree for IreeService {
         let encryption_key_provider = self.encryption_key_provider.clone();
         let instance = self.get_instance()?;
         EncryptionHandler::create(encryption_key_provider, |r| {
-            let response: micro_rpc::Response = instance.invoke(&r).into();
+            let response: micro_rpc::ResponseWrapper = instance.invoke(&r).into();
             response.encode_to_vec()
         })
         .invoke(&request_message.body)

@@ -44,7 +44,7 @@ message TransparentReleaseEndorsement {
 // <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
 message Endorsement {
   // The platform providing the attestation report.
-  TeePlatform platform = 1;
+  RootLayerEvidence.TeePlatform platform = 1;
 
   // The serialized TEE certificate(s). The details of the format and how the certificate(s) are
   // encoded into this byte array are implementation-specific. In case of AMD-SEV-SNP, as described

@@ -16,16 +16,19 @@ all_enclave_apps: key_xor_test_app oak_echo_enclave_app oak_echo_raw_enclave_app
 
 # Build a single enclave app, given its name.
 build_enclave_app name:
-    env --chdir=enclave_apps/$(name) cargo build --release
+    env --chdir=enclave_apps/{{name}} cargo build --release
 
 oak_functions_insecure_enclave_app:
     env --chdir=enclave_apps/oak_functions_enclave_app cargo build --release --no-default-features --features=allow_sensitive_logging
 
 oak_restricted_kernel_bin:
-    env --chdir=oak_restricted_kernel_bin cargo build --release
+    env --chdir=oak_restricted_kernel_bin cargo build --release --bin=oak_restricted_kernel_bin
 
 oak_restricted_kernel_simple_io_bin:
-    env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel
+    env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel --bin=oak_restricted_kernel_simple_io_bin
+
+oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
+    env --chdir=oak_restricted_kernel_wrapper cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin
 
 stage0_bin:
     env --chdir=stage0_bin cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/stage0_bin

@@ -29,6 +29,8 @@ use zerocopy::{AsBytes, FromBytes};
 /// E820 address range types according to Chapter 15 of the ACPI Specification, Version 6.4.
 /// See <https://uefi.org/specs/ACPI/6.4/15_System_Address_Map_Interfaces/Sys_Address_Map_Interfaces.html> for more details.
 pub enum E820EntryType {
+    /// Uninitialized entry in the table. Don't trust the address or size.
+    INVALID = 0,
     /// Available RAM usable by the operating system.
     RAM = 1,
     /// In use or reserved by the system.
@@ -508,6 +510,7 @@ impl BootE820Entry {
             type_: type_ as u32,
         }
     }
+
     pub fn entry_type(&self) -> Option<E820EntryType> {
         E820EntryType::from_repr(self.type_)
     }
@@ -518,6 +521,13 @@ impl BootE820Entry {
 
     pub fn size(&self) -> usize {
         self.size
+    }
+}
+
+impl Default for BootE820Entry {
+    fn default() -> Self {
+        // Safety: an all-zeroes BootE820Entry struct is valid.
+        unsafe { core::mem::zeroed() }
     }
 }
 
@@ -676,6 +686,11 @@ impl BootParams {
 
     pub fn e820_table(&self) -> &[BootE820Entry] {
         &self.e820_table[..self.e820_entries as usize]
+    }
+
+    pub fn append_e820_entry(&mut self, entry: BootE820Entry) {
+        self.e820_table[self.e820_entries as usize] = entry;
+        self.e820_entries += 1;
     }
 
     pub fn args(&self) -> &CStr {

@@ -1,0 +1,11 @@
+[package]
+name = "oak_dice"
+version = "0.1.0"
+edition = "2021"
+authors = ["Conrad Grobler <grobler@google.com>"]
+license = "Apache-2.0"
+
+[dependencies]
+static_assertions = "*"
+strum = { version = "*", default-features = false, features = ["derive"] }
+zerocopy = "*"

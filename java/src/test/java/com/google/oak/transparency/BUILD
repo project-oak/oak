@@ -26,6 +26,34 @@ java_test(
     data = ["//oak_remote_attestation_verification/testdata:logentry.json"],
     test_class = "com.google.oak.transparency.RekorLogEntryTest",
     deps = [
-        "//java/src/main/java/com/google/oak/transparency:rekor",
+        "//java/src/main/java/com/google/oak/transparency",
+    ],
+)
+
+java_test(
+    name = "log_entry_verifier_test",
+    srcs = ["LogEntryVerifierTest.java"],
+    data = [
+        "//oak_remote_attestation_verification/testdata:endorsement.json",
+        "//oak_remote_attestation_verification/testdata:logentry.json",
+        "//oak_remote_attestation_verification/testdata:rekor_public_key.pem",
+    ],
+    test_class = "com.google.oak.transparency.LogEntryVerifierTest",
+    deps = [
+        "//java/src/main/java/com/google/oak/transparency",
+    ],
+)
+
+java_test(
+    name = "signature_verifier_test",
+    srcs = ["SignatureVerifierTest.java"],
+    data = [
+        "//oak_remote_attestation_verification/testdata:endorsement.json",
+        "//oak_remote_attestation_verification/testdata:endorsement.json.sig",
+        "//oak_remote_attestation_verification/testdata:oak-development.pem",
+    ],
+    test_class = "com.google.oak.transparency.SignatureVerifierTest",
+    deps = [
+        "//java/src/main/java/com/google/oak/transparency",
     ],
 )

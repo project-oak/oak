@@ -17,168 +17,68 @@
 //! containers in the form of an OCI filesystem bundle. However the runtime
 //! itself is not OCI spec compliant.
 
+use std::path::{Path, PathBuf};
+
 use anyhow::Context;
-use std::path::PathBuf;
+use oci_spec::runtime::{Mount, Spec};
 use tokio::sync::oneshot::Sender;
-
-/// Representation of a minimal OCI filesystem bundle config, including just the required fields.
-/// Ref: <https://github.com/opencontainers/runtime-spec/blob/c4ee7d12c742ffe806cd9350b6af3b4b19faed6f/config.md>
-#[derive(serde::Deserialize)]
-struct OciFilesystemBundleConfig {
-    process: OciFilesystemBundleConfigProcess,
-    root: OciFilesystemBundleConfigRoot,
-}
-
-#[derive(serde::Deserialize)]
-struct OciFilesystemBundleConfigProcess {
-    args: Vec<String>,
-    #[serde(default)]
-    cwd: std::path::PathBuf,
-    #[serde(default)]
-    env: Vec<String>,
-    user: OciFilesystemBundleConfigProcessUser,
-}
-
-#[derive(serde::Deserialize)]
-struct OciFilesystemBundleConfigProcessUser {
-    uid: u32,
-    gid: u32,
-}
-
-#[derive(serde::Deserialize)]
-struct OciFilesystemBundleConfigRoot {
-    path: std::path::PathBuf,
-}
-
-// Directory at which the container OCI filesystem bundle will be unpacked.
-const CONTAINER_DIR: &str = "/oak_container";
-
-async fn rmount_dir(source: PathBuf, target: PathBuf) -> Result<(), anyhow::Error> {
-    if target.exists() {
-        tokio::fs::remove_dir_all(&target)
-            .await
-            .context("failed to removing existing directories at the target")?
-    }
-    tokio::fs::create_dir_all(&target)
-        .await
-        .context("failed to create a directory at the target")?;
-
-    tokio::process::Command::new("mount")
-        .current_dir(CONTAINER_DIR)
-        .arg("--rbind")
-        .arg(&source)
-        .arg(&target)
-        .status()
-        .await?;
-
-    Ok(())
-}
 
 pub async fn run(
     container_bundle: &[u8],
+    container_dir: &Path,
+    ipc_socket_path: &Path,
     exit_notification_sender: Sender<()>,
 ) -> Result<(), anyhow::Error> {
-    tokio::fs::create_dir(CONTAINER_DIR).await?;
+    tokio::fs::create_dir_all(container_dir).await?;
     log::info!("Unpacking container bundle");
-    tar::Archive::new(container_bundle).unpack(CONTAINER_DIR)?;
-
-    let oci_filesystem_bundle_config: OciFilesystemBundleConfig = {
-        let file_path = {
-            let mut base = std::path::PathBuf::from(CONTAINER_DIR);
-            base.push("config.json");
-            base
-        };
-        let oci_filesystem_bundle_config_file = tokio::fs::read_to_string(file_path).await?;
-
-        serde_json::from_str(&oci_filesystem_bundle_config_file)?
-    };
+    tar::Archive::new(container_bundle).unpack(container_dir)?;
 
     log::info!("Setting up container");
 
-    let container_rootfs_path = {
-        let mut base = std::path::PathBuf::from(CONTAINER_DIR);
-        base.push(oci_filesystem_bundle_config.root.path);
-        base
-    };
+    let spec_path = container_dir.join("config.json");
+    let mut spec = Spec::load(spec_path.clone()).context("error reading OCI spec")?;
+    let mut mounts = spec.mounts().as_ref().map_or(Vec::new(), |v| v.clone());
+    mounts.push({
+        let mut mount = Mount::default();
+        mount.set_source(Some(ipc_socket_path.into()));
+        mount.set_destination(PathBuf::from("/oak_utils/orchestrator_ipc"));
+        mount.set_typ(Some("bind".to_string()));
+        mount.set_options(Some(vec!["rbind".to_string()]));
+        mount
+    });
+    spec.set_mounts(Some(mounts));
+    spec.save(spec_path).context("error writing OCI spec")?;
 
-    // mount the utility dir (includes the ipc socket) into the container
-    let container_dev_path = {
-        let mut base = container_rootfs_path.clone();
-        base.push(crate::UTIL_DIR);
-        base
-    };
-    rmount_dir(
-        std::path::Path::new("/").join(crate::UTIL_DIR),
-        container_dev_path,
-    )
-    .await?;
-
-    // mount host /dev into the container
-    let container_dev_path = {
-        let mut base = container_rootfs_path.clone();
-        base.push("dev");
-        base
-    };
-    rmount_dir(std::path::PathBuf::from("/dev"), container_dev_path).await?;
-
-    // mount host /sys into the container
-    let container_sys_path = {
-        let mut base = container_rootfs_path.clone();
-        base.push("sys");
-        base
-    };
-    rmount_dir(std::path::PathBuf::from("/sys"), container_sys_path).await?;
-
-    // mount host /proc into the container
-    let container_proc_path = {
-        let mut base = container_rootfs_path.clone();
-        base.push("proc");
-        base
-    };
-    rmount_dir(std::path::PathBuf::from("/proc"), container_proc_path).await?;
-
-    log::debug!(
-        "Startup command: {:?}",
-        oci_filesystem_bundle_config.process.args
-    );
     let mut start_trusted_app_cmd = {
-        let mut cmd =
-            tokio::process::Command::new(oci_filesystem_bundle_config.process.args[0].clone());
-        cmd.args(oci_filesystem_bundle_config.process.args.as_slice()[1..].to_vec())
-            .uid(oci_filesystem_bundle_config.process.user.uid)
-            .gid(oci_filesystem_bundle_config.process.user.gid);
-        for variable in oci_filesystem_bundle_config.process.env.clone() {
-            if let Some((key, value)) = variable.split_once('=') {
-                log::debug!("Setting environment variable: {key}={value}");
-                cmd.env(key, value);
-            }
-        }
+        let mut cmd = tokio::process::Command::new("/bin/systemd-run");
+        let container_dir: &str = container_dir
+            .as_os_str()
+            .try_into()
+            .expect("invalid container path");
+        cmd.args([
+            "--service-type=forking",
+            "--property=RuntimeDirectory=oakc",
+            // PIDFile is relative to `/run`, but unfortunately can't reference `RuntimeDirectory`.
+            "--property=PIDFile=oakc/oakc.pid",
+            "--property=ProtectSystem=strict",
+            format!("--property=ReadWritePaths={}", container_dir).as_str(),
+            "--wait",
+            "--collect",
+            "/bin/runc",
+            "--systemd-cgroup",
+            "--root=${RUNTIME_DIRECTORY}/runc",
+            "run",
+            "--detach",
+            "--pid-file=${PIDFILE}",
+            format!("--bundle={}", container_dir).as_str(),
+            "oakc",
+        ]);
         cmd
     };
 
-    log::debug!(
-        "Setting working directory: {:?}",
-        oci_filesystem_bundle_config.process.cwd
-    );
-
-    let prep_trusted_app_process = move || {
-        // Run the trusted app in a chroot environment of the container.
-        std::os::unix::fs::chroot(container_rootfs_path.clone())?;
-        let cwd = oci_filesystem_bundle_config.process.cwd.clone();
-        if cwd.has_root() {
-            std::env::set_current_dir(cwd)?;
-        }
-        Ok(())
-    };
-    // Safety: this unsafe block exists solely we can call the unsafe `pre_exec`
-    // method, allowing us to use a closure to prep the newly forked child
-    // process. That closure runs in a special environment so it can behave a bit
-    // unexpectedly. For our case that's fine though, since we just use it to
-    // make chdir & chroot syscalls.
-    // Ref: https://docs.rs/tokio/latest/tokio/process/struct.Command.html#safety
-    let status = unsafe { start_trusted_app_cmd.pre_exec(prep_trusted_app_process) }
-        .status()
-        .await?;
+    let status = start_trusted_app_cmd.status().await.context(format!(
+        "failed to run trusted app, cmd: {start_trusted_app_cmd:?}"
+    ))?;
     log::info!("Container exited with status {status:?}");
 
     let _ = exit_notification_sender.send(());

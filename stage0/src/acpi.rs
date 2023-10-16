@@ -402,8 +402,6 @@ pub fn build_acpi_tables(
     fwcfg: &mut FwCfg,
     acpi_digest: &mut Sha256,
 ) -> Result<&'static Rsdp, &'static str> {
-    let mut commands: [RomfileCommand; 32] = Default::default();
-
     let file = fwcfg
         .find(TABLE_LOADER_FILE_NAME)
         .ok_or("Could not find 'etc/table-loader' in fw_cfg")?;
@@ -412,26 +410,21 @@ pub fn build_acpi_tables(
         return Err("length of 'etc/table-loader' is not a multiple of command struct size");
     }
 
-    if file.size() > core::mem::size_of_val(&commands) {
-        return Err("too many commands in 'etc/table-loader'");
-    }
+    let buf = fwcfg.read_file_vec(&file)?;
+    acpi_digest.update(&buf);
 
     // We can't use zerocopy::FromBytes/AsBytes here, as the fields of the structs have padding that
     // zerocopy doesn't support.
     // Safety: we're using `size_of` here to ensure that we don't go over the boundaries of the
     // original array.
-
-    let buf = unsafe {
-        core::slice::from_raw_parts_mut(
-            &mut commands as *mut _ as usize as *mut u8,
-            core::mem::size_of_val(&commands),
+    let commands = unsafe {
+        core::slice::from_raw_parts(
+            buf.as_ptr() as *const _ as *const RomfileCommand,
+            buf.len() / core::mem::size_of::<RomfileCommand>(),
         )
     };
 
-    fwcfg.read_file(&file, buf)?;
-    acpi_digest.update(buf);
-
-    for command in &commands[..(file.size() / core::mem::size_of::<RomfileCommand>())] {
+    for command in commands {
         command.invoke(fwcfg, acpi_digest)?;
     }
 

@@ -17,14 +17,11 @@
 package com.google.oak.crypto;
 
 import com.google.oak.crypto.hpke.KeyPair;
-import com.google.oak.crypto.v1.AeadEncryptedMessage;
 import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.util.Result;
-import com.google.protobuf.ByteString;
-import java.nio.charset.StandardCharsets;
+import com.google.protobuf.ExtensionRegistryLite;
 import java.util.Arrays;
-import java.util.Optional;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -61,7 +58,8 @@ public class EncryptorTest {
       Assert.assertTrue(encryptRequestResult.isSuccess());
       byte[] serializedEncryptedRequest = encryptRequestResult.success().get();
 
-      EncryptedRequest encryptedRequest = EncryptedRequest.parseFrom(serializedEncryptedRequest);
+      EncryptedRequest encryptedRequest = EncryptedRequest.parseFrom(
+          serializedEncryptedRequest, ExtensionRegistryLite.getEmptyRegistry());
       Assert.assertFalse(
           Arrays.equals(encryptedRequest.getEncryptedMessage().getCiphertext().toByteArray(),
               TEST_REQUEST_PLAINTEXT));
@@ -83,8 +81,8 @@ public class EncryptorTest {
       Assert.assertTrue(encryptResponseResult.isSuccess());
       byte[] serializedEncryptedResponse = encryptResponseResult.success().get();
 
-      EncryptedResponse encryptedResponse =
-          EncryptedResponse.parseFrom(serializedEncryptedResponse);
+      EncryptedResponse encryptedResponse = EncryptedResponse.parseFrom(
+          serializedEncryptedResponse, ExtensionRegistryLite.getEmptyRegistry());
       Assert.assertFalse(
           Arrays.equals(encryptedResponse.getEncryptedMessage().getCiphertext().toByteArray(),
               TEST_RESPONSE_PLAINTEXT));

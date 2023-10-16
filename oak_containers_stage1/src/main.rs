@@ -24,8 +24,8 @@ use clap::Parser;
 use client::LauncherClient;
 use futures_util::TryStreamExt;
 use nix::{
-    mount::{mount, umount2, MntFlags, MsFlags},
-    unistd::chroot,
+    mount::{mount, umount, MsFlags},
+    unistd::{chdir, chroot},
 };
 use std::{
     error::Error,
@@ -43,7 +43,6 @@ struct Args {
     #[arg(default_value = "/sbin/init")]
     init: String,
 }
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
@@ -75,19 +74,20 @@ async fn main() -> Result<(), Box<dyn Error>> {
         None::<&str>,
     )
     .context("error mounting ramdrive to /rootfs")?;
-    umount2("/dev", MntFlags::empty()).context("error unmounting /dev")?;
 
-    chroot("/rootfs").context("error chrooting to /rootfs")?;
-    // musl expects /proc to be mounted, otherwise libc calls such as realpath(2) will fail.
-    create_dir("/proc").context("error creating /proc")?;
+    // switch_root(8) magic
+    umount("/dev").context("failed to unmount /dev")?;
+    chdir("/rootfs").context("failed to chdir to /rootfs")?;
     mount(
+        Some("/rootfs"),
+        "/",
         None::<&str>,
-        "/proc",
-        Some("proc"),
-        MsFlags::MS_NOEXEC | MsFlags::MS_NOSUID | MsFlags::MS_NODEV,
+        MsFlags::MS_MOVE,
         None::<&str>,
     )
-    .context("error mounting /proc")?;
+    .context("failed to move /rootfs to /")?;
+    chroot(".").context("failed to chroot to .")?;
+    chdir("/").context("failed to chdir to /")?;
 
     let mut client = LauncherClient::new(args.launcher_addr.parse()?)
         .await

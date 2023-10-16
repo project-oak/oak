@@ -17,6 +17,7 @@
 // TODO(#3703): Remove when fixed.
 #![allow(clippy::extra_unused_type_parameters)]
 
+use alloc::vec::Vec;
 use bitflags::bitflags;
 use core::{cmp::min, ffi::CStr};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
@@ -27,7 +28,7 @@ use x86_64::{
 };
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::io_port_factory;
+use crate::{io_port_factory, sev::Shared, BootAllocator};
 
 // See https://www.qemu.org/docs/master/specs/fw_cfg.html for documentation about the various data structures and constants.
 const FWCFG_PORT_SELECTOR: u16 = 0x510;
@@ -153,8 +154,8 @@ pub struct FwCfg {
     data: PortWrapper<u8>,
     dma_high: PortWrapper<u32>,
     dma_low: PortWrapper<u32>,
-    dma_buf: &'static mut DmaBuffer,
-    dma_access: &'static mut FwCfgDmaAccess,
+    dma_buf: Shared<DmaBuffer, &'static BootAllocator>,
+    dma_access: Shared<FwCfgDmaAccess, &'static BootAllocator>,
     dma_enabled: bool,
 }
 
@@ -167,10 +168,7 @@ impl FwCfg {
     ///
     /// The caller has to guarantee that at least doing the probe will not cause any adverse
     /// effects.
-    pub unsafe fn new(
-        dma_buf: &'static mut DmaBuffer,
-        dma_access: &'static mut FwCfgDmaAccess,
-    ) -> Result<Self, &'static str> {
+    pub unsafe fn new(alloc: &'static BootAllocator) -> Result<Self, &'static str> {
         let mut fwcfg = Self {
             selector: io_port_factory().new_writer(FWCFG_PORT_SELECTOR),
             data: io_port_factory().new_reader(FWCFG_PORT_DATA),
@@ -178,8 +176,8 @@ impl FwCfg {
             // The DMA address must be big-endian encoded, so the low address is 4 bytes further
             // than the high address.
             dma_low: io_port_factory().new_writer(FWCFG_PORT_DMA + 4),
-            dma_buf,
-            dma_access,
+            dma_buf: Shared::new_in(DmaBuffer::default(), alloc),
+            dma_access: Shared::new_in(FwCfgDmaAccess::default(), alloc),
             dma_enabled: false,
         };
 
@@ -287,6 +285,23 @@ impl FwCfg {
             self.read_buf(&mut buf[..len])?;
         }
         Ok(len)
+    }
+
+    /// Reads contents of a file; returns a vector with the bytes read.
+    ///
+    /// See <read_file> for more information.
+    pub fn read_file_vec(&mut self, file: &DirEntry) -> Result<Vec<u8>, &'static str> {
+        self.write_selector(file.selector())?;
+        let mut buf = Vec::new();
+        buf.resize(file.size(), 0);
+
+        if self.dma_enabled {
+            self.read_buf_dma(&mut buf)?;
+        } else {
+            self.read_buf(&mut buf)?;
+        }
+
+        Ok(buf)
     }
 
     /// Reads the size of the kernel command-line.
@@ -411,7 +426,7 @@ impl FwCfg {
         // physical memory to virtual memory.
         let length = chunk.len() as u32;
         *self.dma_access = FwCfgDmaAccess::new(ControlFlags::READ, length, address);
-        let dma_access_address = self.dma_access as *const _ as usize as u64;
+        let dma_access_address = self.dma_access.as_ref() as *const _ as usize as u64;
         let dma_low = (dma_access_address & 0xFFFFFFFF) as u32;
         let dma_high = (dma_access_address >> 32) as u32;
         // The DMA address halves must be written in big endian format, and the high half must be

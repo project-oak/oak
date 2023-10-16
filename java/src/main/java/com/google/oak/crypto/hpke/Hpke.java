@@ -23,22 +23,10 @@ public final class Hpke {
     System.loadLibrary("hpke-jni");
   }
 
-  public static final class SenderContext {
-    public final byte[] serializedEncapsulatedPublicKey;
-    public final Context.SenderRequestContext senderRequestContext;
-    public final Context.SenderResponseContext senderResponseContext;
-
-    SenderContext(final byte[] serializedEncapsulatedPublicKey,
-        Context.SenderRequestContext senderRequestContext,
-        Context.SenderResponseContext senderResponseContext) {
-      this.serializedEncapsulatedPublicKey = serializedEncapsulatedPublicKey;
-      this.senderRequestContext = senderRequestContext;
-      this.senderResponseContext = senderResponseContext;
-    }
-  }
-
   private static native SenderContext nativeSetupBaseSender(
       final byte[] serializedRecipientPublicKey, final byte[] info);
+  private static native RecipientContext nativeSetupBaseRecipient(
+      final byte[] serializedEncapsulatedPublicKey, KeyPair recipientKeyPair, final byte[] info);
 
   /**
    * Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
@@ -57,20 +45,6 @@ public final class Hpke {
     }
     return Result.success(ctx);
   }
-
-  public static final class RecipientContext {
-    public final Context.RecipientRequestContext recipientRequestContext;
-    public final Context.RecipientResponseContext recipientResponseContext;
-
-    RecipientContext(Context.RecipientRequestContext recipientRequestContext,
-        Context.RecipientResponseContext recipientResponseContext) {
-      this.recipientRequestContext = recipientRequestContext;
-      this.recipientResponseContext = recipientResponseContext;
-    }
-  }
-
-  private static native RecipientContext nativeSetupBaseRecipient(
-      final byte[] serializedEncapsulatedPublicKey, KeyPair recipientKeyPair, final byte[] info);
 
   /**
    * Sets up an HPKE recipient by creating a recipient context.

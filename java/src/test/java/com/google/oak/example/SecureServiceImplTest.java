@@ -17,8 +17,8 @@
 package com.google.oak.example;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
-import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.oak.client.OakClient;
 import com.google.oak.example.encrypted.Request;
@@ -71,9 +71,9 @@ public final class SecureServiceImplTest {
                  .unwrap("creating client")) {
       Request request = Request.newBuilder().setData(ByteString.copyFromUtf8(message)).build();
       byte[] bytes = oakClient.invoke(request.toByteArray()).unwrap("invoking client");
-      Response response = Response.parseFrom(bytes);
+      Response response = Response.parseFrom(bytes, ExtensionRegistryLite.getEmptyRegistry());
 
-      assertThat(response.getData().toStringUtf8()).isEqualTo(message);
+      assertEquals(response.getData().toStringUtf8(), message);
     }
   }
 }

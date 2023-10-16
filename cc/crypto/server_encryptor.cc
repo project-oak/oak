@@ -16,6 +16,10 @@
 
 #include "cc/crypto/server_encryptor.h"
 
+#include <memory>
+#include <string>
+#include <utility>
+
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "cc/crypto/common.h"
@@ -37,7 +41,7 @@ absl::StatusOr<DecryptionResult> ServerEncryptor::Decrypt(absl::string_view encr
   }
 
   // Get recipient context.
-  if (!recipient_request_context_) {
+  if (!recipient_context_) {
     absl::Status status = InitializeRecipientContexts(request);
     if (!status.ok()) {
       return status;
@@ -45,7 +49,7 @@ absl::StatusOr<DecryptionResult> ServerEncryptor::Decrypt(absl::string_view encr
   }
 
   // Decrypt request.
-  absl::StatusOr<std::string> plaintext = recipient_request_context_->Open(
+  absl::StatusOr<std::string> plaintext = recipient_context_->Open(
       request.encrypted_message().ciphertext(), request.encrypted_message().associated_data());
   if (!plaintext.ok()) {
     return plaintext.status();
@@ -57,13 +61,12 @@ absl::StatusOr<DecryptionResult> ServerEncryptor::Decrypt(absl::string_view encr
 absl::StatusOr<std::string> ServerEncryptor::Encrypt(absl::string_view plaintext,
                                                      absl::string_view associated_data) {
   // Get recipient context.
-  if (!recipient_response_context_) {
+  if (!recipient_context_) {
     return absl::InternalError("server encryptor is not initialized");
   }
 
   // Encrypt response.
-  absl::StatusOr<std::string> ciphertext =
-      recipient_response_context_->Seal(plaintext, associated_data);
+  absl::StatusOr<std::string> ciphertext = recipient_context_->Seal(plaintext, associated_data);
   if (!ciphertext.ok()) {
     return ciphertext.status();
   }
@@ -90,13 +93,12 @@ absl::Status ServerEncryptor::InitializeRecipientContexts(const EncryptedRequest
   std::string serialized_encapsulated_public_key = request.serialized_encapsulated_public_key();
 
   // Create recipient contexts.
-  absl::StatusOr<RecipientContext> recipient_context =
-      SetupBaseRecipient(serialized_encapsulated_public_key, server_key_pair_, kOakHPKEInfo);
+  absl::StatusOr<std::unique_ptr<RecipientContext>> recipient_context =
+      recipient_context_generator_.GenerateRecipientContext(serialized_encapsulated_public_key);
   if (!recipient_context.ok()) {
     return recipient_context.status();
   }
-  recipient_request_context_ = std::move(recipient_context->recipient_request_context);
-  recipient_response_context_ = std::move(recipient_context->recipient_response_context);
+  recipient_context_ = std::move(*recipient_context);
 
   return absl::OkStatus();
 }

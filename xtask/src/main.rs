@@ -232,6 +232,7 @@ fn check_format(scope: &Scope) -> Step {
             run_check_license(&modified_files),
             run_check_build_licenses(&modified_files),
             run_check_todo(&modified_files),
+            run_clang_format(FormatMode::Check),
             run_buildifier(FormatMode::Check),
             run_prettier(FormatMode::Check),
             run_markdownlint(FormatMode::Check),
@@ -429,36 +430,23 @@ fn run_shellcheck() -> Step {
 }
 
 fn run_clang_format(mode: FormatMode) -> Step {
-    match mode {
-        FormatMode::Check => Step::Single {
-            name: "clang format".to_string(),
-            command: Cmd::new(
-                "python3",
-                [
-                    "./third_party/run-clang-format/run-clang-format.py",
-                    "--recursive",
-                    "--exclude",
-                    "*/node_modules",
-                    // TODO(#2654): Remove once all crates are part of the same workspace again
-                    "--exclude",
-                    "*/target",
-                    "--exclude",
-                    "third_party",
-                    "oak_functions",
-                ],
-            ),
-        },
-        FormatMode::Fix => Step::Multiple {
-            name: "clang format".to_string(),
-            steps: source_files()
-                .filter(|p| is_clang_format_file(p))
-                .map(to_string)
-                .map(|entry| Step::Single {
-                    name: entry.clone(),
-                    command: Cmd::new("clang-format", ["-i", "-style=file", &entry]),
-                })
-                .collect(),
-        },
+    Step::Multiple {
+        name: "clang format".to_string(),
+        steps: source_files()
+            .filter(|p| is_clang_format_file(p))
+            .map(to_string)
+            .map(|entry| Step::Single {
+                name: entry.clone(),
+                command: match mode {
+                    // Uses Google style with minor adaptions from oak/.clang-format.
+                    FormatMode::Check => Cmd::new(
+                        "clang-format",
+                        ["--dry-run", "--Werror", "--style=file", &entry],
+                    ),
+                    FormatMode::Fix => Cmd::new("clang-format", ["-i", "--style=file", &entry]),
+                },
+            })
+            .collect(),
     }
 }
 
@@ -654,7 +642,10 @@ fn run_cargo_udeps(scope: &Scope) -> Step {
         steps: workspace_manifest_files()
             .filter(|path| all_affected_crates.contains_path(path))
             // TODO(#4129): Remove when cargo-udeps supports build-std.
-            .filter(|path| path != Path::new("./stage0_bin/Cargo.toml"))
+            .filter(|path| {
+                path != Path::new("./stage0_bin/Cargo.toml")
+                    && path != Path::new("./oak_restricted_kernel_wrapper/Cargo.toml")
+            })
             .map(|entry| Step::Single {
                 name: entry.to_str().unwrap().to_string(),
                 command: Cmd::new_in_dir(

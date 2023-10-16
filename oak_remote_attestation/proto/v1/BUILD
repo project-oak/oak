@@ -19,6 +19,7 @@ load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_java//java:defs.bzl", "java_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -26,13 +27,15 @@ package(
 )
 
 proto_library(
-    name = "certificate_authority_proto",
-    srcs = ["certificate_authority.proto"],
+    name = "dice_proto",
+    srcs = ["dice.proto"],
+    deps = [":evidence_proto"],
 )
 
 proto_library(
     name = "endorsement_proto",
     srcs = ["endorsement.proto"],
+    deps = [":evidence_proto"],
 )
 
 proto_library(
@@ -46,6 +49,16 @@ proto_library(
     deps = ["//oak_crypto/proto/v1:crypto_proto"],
 )
 
+cc_proto_library(
+    name = "messages_cc_proto",
+    deps = [":messages_proto"],
+)
+
+java_proto_library(
+    name = "messages_java_proto",
+    deps = [":messages_proto"],
+)
+
 proto_library(
     name = "service_streaming_proto",
     srcs = ["service_streaming.proto"],
@@ -55,11 +68,6 @@ proto_library(
 proto_library(
     name = "service_unary_proto",
     srcs = ["service_unary.proto"],
-    deps = [":messages_proto"],
-)
-
-cc_proto_library(
-    name = "messages_cc_proto",
     deps = [":messages_proto"],
 )
 
@@ -88,11 +96,6 @@ cc_grpc_library(
 )
 
 java_proto_library(
-    name = "messages_java_proto",
-    deps = [":messages_proto"],
-)
-
-java_proto_library(
     name = "service_streaming_java_proto",
     deps = [":service_streaming_proto"],
 )
@@ -112,4 +115,17 @@ java_grpc_library(
     name = "service_unary_java_grpc",
     srcs = [":service_unary_proto"],
     deps = [":service_unary_java_proto"],
+)
+
+build_test(
+    name = "build_test",
+    targets = [
+        ":dice_proto",
+        ":endorsement_proto",
+        ":messages_proto",
+        ":service_streaming_cc_grpc",
+        ":service_streaming_java_grpc",
+        ":service_unary_cc_grpc",
+        ":service_unary_java_grpc",
+    ],
 )

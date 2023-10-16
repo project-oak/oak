@@ -16,6 +16,9 @@
 
 #include "cc/crypto/client_encryptor.h"
 
+#include <memory>
+#include <utility>
+
 #include "absl/status/statusor.h"
 #include "cc/crypto/common.h"
 #include "cc/crypto/hpke/sender_context.h"
@@ -30,19 +33,18 @@ using ::oak::crypto::v1::EncryptedResponse;
 
 absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
     absl::string_view serialized_server_public_key) {
-  absl::StatusOr<SenderContext> sender_context =
+  absl::StatusOr<std::unique_ptr<SenderContext>> sender_context =
       SetupBaseSender(serialized_server_public_key, kOakHPKEInfo);
   if (!sender_context.ok()) {
     return sender_context.status();
   }
-  return std::make_unique<ClientEncryptor>(ClientEncryptor(*sender_context));
+  return std::make_unique<ClientEncryptor>(std::move(*sender_context));
 }
 
 absl::StatusOr<std::string> ClientEncryptor::Encrypt(absl::string_view plaintext,
                                                      absl::string_view associated_data) {
   // Encrypt request.
-  absl::StatusOr<std::string> ciphertext =
-      sender_request_context_->Seal(plaintext, associated_data);
+  absl::StatusOr<std::string> ciphertext = sender_context_->Seal(plaintext, associated_data);
   if (!ciphertext.ok()) {
     return ciphertext.status();
   }
@@ -54,7 +56,8 @@ absl::StatusOr<std::string> ClientEncryptor::Encrypt(absl::string_view plaintext
 
   // Encapsulated public key is only sent in the initial request message of the session.
   if (!serialized_encapsulated_public_key_has_been_sent_) {
-    *request.mutable_serialized_encapsulated_public_key() = serialized_encapsulated_public_key_;
+    *request.mutable_serialized_encapsulated_public_key() =
+        sender_context_->GetSerializedEncapsulatedPublicKey();
     serialized_encapsulated_public_key_has_been_sent_ = true;
   }
 
@@ -74,7 +77,7 @@ absl::StatusOr<DecryptionResult> ClientEncryptor::Decrypt(absl::string_view encr
   }
 
   // Decrypt response.
-  absl::StatusOr<std::string> plaintext = sender_response_context_->Open(
+  absl::StatusOr<std::string> plaintext = sender_context_->Open(
       response.encrypted_message().ciphertext(), response.encrypted_message().associated_data());
   if (!plaintext.ok()) {
     return plaintext.status();

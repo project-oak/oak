@@ -45,6 +45,7 @@ cc_test(
     srcs = ["client_test.cc"],
     deps = [
         ":client",
+        "//cc/crypto:encryption_key_provider",
         "//cc/crypto:server_encryptor",
         "//cc/crypto/hpke:recipient_context",
         "//cc/remote_attestation:insecure_attestation_verifier",

@@ -11,6 +11,7 @@ aes-gcm = { version = "*", default-features = false, features = [
   "alloc"
 ] }
 anyhow = { version = "*", default-features = false }
+async-trait = { version = "*", default-features = false }
 bytes = { version = "*", default-features = false }
 hkdf = { version = "*", default-features = false }
 hpke = { version = "*", default-features = false, features = [
@@ -25,3 +26,6 @@ sha2 = { version = "*", default-features = false }
 
 [build-dependencies]
 micro_rpc_build = { workspace = true }
+
+[dev-dependencies]
+tokio = { version = "*", features = ["macros", "rt-multi-thread"] }

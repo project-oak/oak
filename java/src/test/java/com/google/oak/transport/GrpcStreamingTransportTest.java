@@ -54,7 +54,7 @@ public class GrpcStreamingTransportTest {
   private static final byte[] TEST_REQUEST = new byte[] {'R', 'e', 'q', 'u', 'e', 's', 't'};
   private static final byte[] TEST_RESPONSE = new byte[] {'R', 'e', 's', 'p', 'o', 'n', 's', 'e'};
 
-  private class RequestStreamObserver implements StreamObserver<RequestWrapper> {
+  private static class RequestStreamObserver implements StreamObserver<RequestWrapper> {
     private final StreamObserver<ResponseWrapper> responseObserver;
 
     RequestStreamObserver(StreamObserver<ResponseWrapper> responseObserver) {
@@ -104,15 +104,13 @@ public class GrpcStreamingTransportTest {
             @Override
             public StreamObserver<RequestWrapper> stream(
                 StreamObserver<ResponseWrapper> responseObserver) {
-              StreamObserver<RequestWrapper> requestObserver =
-                  new RequestStreamObserver(responseObserver);
-              return requestObserver;
+              return new RequestStreamObserver(responseObserver);
             }
           }));
 
   /**
-   * This rule manages automatic graceful shutdown for the registered servers and channels at the
-   * end of test.
+   * This rule manages automatic graceful shutdown for the registered servers and
+   * channels at the end of test.
    */
   @Rule public final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();
 
@@ -123,7 +121,8 @@ public class GrpcStreamingTransportTest {
     // Generate a unique in-process server name.
     String serverName = InProcessServerBuilder.generateName();
 
-    // Create a server, add service, start, and register for automatic graceful shutdown.
+    // Create a server, add service, start, and register for automatic graceful
+    // shutdown.
     grpcCleanup.register(InProcessServerBuilder.forName(serverName)
                              .directExecutor()
                              .addService(serviceImpl)

@@ -4,19 +4,29 @@
 # that can be executed on Oak Containers. Used for manual testing during
 # development. Down the line we probably want to replace this.
 
-readonly CONTAINER_IMAGE='oak_container_example'
+set -o errexit
+
+readonly OCI_IMAGE_FILE="./target/oak_container_example_oci_image.tar"
 set -e
 rm --recursive --force ./target
 mkdir --parents ./target
 
 cargo build \
-    --package='oak_containers_hello_world_trusted_app' \
-    --target='x86_64-unknown-linux-musl' \
+    --package="oak_containers_hello_world_trusted_app" \
+    --target="x86_64-unknown-linux-musl" \
     -Zunstable-options \
-    --out-dir='./target/'
+    --out-dir="./target/"
 
-docker build --tag="${CONTAINER_IMAGE}" .
+# Export the container as an OCI Image.
+# Ref: https://docs.docker.com/build/exporters/oci-docker/
+readonly BUILDER="$(docker buildx create --driver docker-container)"
+docker buildx \
+    --builder="${BUILDER}" \
+    build \
+    --tag="latest" \
+    --output="type=oci,dest=${OCI_IMAGE_FILE}" \
+    .
 
 ../scripts/export_container_bundle \
-    -c "${CONTAINER_IMAGE}" \
-    -o './target/oak_container_example_oci_filesystem_bundle.tar'
+    -c "${OCI_IMAGE_FILE}" \
+    -o "./target/oak_container_example_oci_filesystem_bundle.tar"
