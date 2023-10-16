@@ -14,7 +14,7 @@ clap = { version = "*", features = ["derive"] }
 futures-util = "*"
 oak_crypto = { workspace = true }
 oak_remote_attestation = { workspace = true }
-nix = "*"
+nix = { version = "*", features = ["fs"] }
 prost = { workspace = true }
 prost-types = "*"
 rtnetlink = "*"

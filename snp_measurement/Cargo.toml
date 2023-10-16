@@ -17,4 +17,4 @@ sha2 = "*"
 static_assertions = "*"
 strum = { version = "*", default-features = false, features = ["derive"] }
 x86_64 = "*"
-zerocopy = "*"
+zerocopy = { version = "*", features = ["derive"] }

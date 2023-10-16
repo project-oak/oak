@@ -46,7 +46,7 @@ uart_16550 = { version = "*", optional = true }
 oak_virtio = { workspace = true, optional = true }
 virtio-drivers = { version = "*", optional = true }
 x86_64 = "*"
-zerocopy = "*"
+zerocopy = { version = "*", features = ["derive"] }
 
 [dev-dependencies]
 assertables = "*"

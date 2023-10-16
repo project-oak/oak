@@ -203,7 +203,7 @@ struct LogServer;
 impl MetricsService for LogServer {
     async fn export(
         &self,
-        request: Request<ExportMetricsServiceRequest>,
+        request: tonic::Request<ExportMetricsServiceRequest>,
     ) -> Result<Response<ExportMetricsServiceResponse>, tonic::Status> {
         let request = request.into_inner();
         log::debug!("metrics: {:?}", request);

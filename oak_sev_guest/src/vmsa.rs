@@ -20,7 +20,7 @@
 // TODO(#3703): Remove when fixed.
 #![allow(clippy::extra_unused_type_parameters)]
 
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 pub const VMSA_PAGE_SIZE: usize = 4096;
 
@@ -30,7 +30,7 @@ pub const VMSA_SIZE: usize = 1992;
 ///
 /// The VMSA for each vCPU is stored in a separate 4KiB page.
 #[repr(C, align(4096))]
-#[derive(Debug, FromBytes, AsBytes)]
+#[derive(Debug, FromBytes, FromZeroes, AsBytes)]
 pub struct VmsaPage {
     pub vmsa: Vmsa,
     _reserved: [u8; VMSA_PAGE_SIZE - VMSA_SIZE],
@@ -62,7 +62,7 @@ impl Default for VmsaPage {
 ///
 /// See table B-4 in <https://www.amd.com/system/files/TechDocs/24593.pdf>
 #[repr(C)]
-#[derive(Debug, FromBytes, AsBytes)]
+#[derive(Debug, FromBytes, FromZeroes, AsBytes)]
 pub struct Vmsa {
     /// The extra segment.
     pub es: SegmentRegister,
@@ -548,7 +548,7 @@ pub fn calculate_rdx_from_fms(family: u8, model: u8, stepping: u8) -> u64 {
 ///
 /// See section 4.5.3 in <https://www.amd.com/system/files/TechDocs/24593.pdf>
 #[repr(C)]
-#[derive(Debug, Default, FromBytes, AsBytes)]
+#[derive(Debug, Default, FromBytes, FromZeroes, AsBytes)]
 pub struct SegmentRegister {
     /// The segment selector.
     pub selector: u16,

@@ -20,7 +20,7 @@
 use crate::guest::{GuestMessage, Message};
 use aes_gcm::{AeadInPlace, Aes256Gcm, KeyInit, Nonce, Tag};
 use core::mem::size_of;
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 /// The size of initialization vector/nonce for AES-GCM
 const IV_SIZE: usize = 12;

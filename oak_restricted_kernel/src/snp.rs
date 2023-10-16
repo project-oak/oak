@@ -30,7 +30,7 @@ use x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
 };
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 /// The exclusive upper limit of the address range where we expect the SNP-specific pages to reside.
 ///
