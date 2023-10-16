@@ -2380,6 +2380,7 @@ dependencies = [
  "log",
  "oak_channel",
  "oak_core",
+ "oak_dice",
  "oak_linux_boot_params",
  "oak_restricted_kernel_interface",
  "oak_sev_guest",
