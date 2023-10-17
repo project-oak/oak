@@ -314,6 +314,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_dice"
+version = "0.1.0"
+dependencies = [
+ "bitflags 2.4.0",
+ "coset",
+ "hex",
+ "hkdf",
+ "p384",
+ "rand_core",
+ "sha2",
+ "static_assertions",
+ "strum",
+ "zerocopy",
+]
+
+[[package]]
 name = "oak_linux_boot_params"
 version = "0.1.0"
 dependencies = [
@@ -349,6 +365,7 @@ dependencies = [
  "linked_list_allocator",
  "log",
  "oak_core",
+ "oak_dice",
  "oak_linux_boot_params",
  "oak_sev_guest",
  "p384",

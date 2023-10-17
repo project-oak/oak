@@ -2051,6 +2051,13 @@ dependencies = [
 name = "oak_dice"
 version = "0.1.0"
 dependencies = [
+ "bitflags 2.3.3",
+ "coset",
+ "hex",
+ "hkdf",
+ "p384",
+ "rand_core 0.6.4",
+ "sha2",
  "static_assertions",
  "strum",
  "zerocopy",
@@ -2453,6 +2460,7 @@ dependencies = [
  "linked_list_allocator",
  "log",
  "oak_core",
+ "oak_dice",
  "oak_linux_boot_params",
  "oak_sev_guest",
  "p384",

@@ -6,6 +6,15 @@ authors = ["Conrad Grobler <grobler@google.com>"]
 license = "Apache-2.0"
 
 [dependencies]
+bitflags = "*"
+coset = { version = "*", default-features = false }
+hex = { version = "*", default-features = false, features = ["alloc"] }
+hkdf = { version = "*", default-features = false }
+p384 = { version = "*", default-features = false, features = ["ecdsa"] }
+rand_core = { version = "*", default-features = false, features = [
+    "getrandom",
+] }
+sha2 = { version = "*", default-features = false }
 static_assertions = "*"
 strum = { version = "*", default-features = false, features = ["derive"] }
 zerocopy = "*"
