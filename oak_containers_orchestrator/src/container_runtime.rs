@@ -13,10 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Minimal implementation of a container runtime using chroot. It accepts an
-//! containers in the form of an OCI filesystem bundle. However the runtime
-//! itself is not OCI spec compliant.
-
 use std::{
     os::unix::fs::lchown,
     path::{Path, PathBuf},
