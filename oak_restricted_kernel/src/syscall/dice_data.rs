@@ -17,16 +17,16 @@
 use super::fd::FileDescriptor;
 use alloc::boxed::Box;
 use core::cmp::min;
-use oak_dice::evidence::Evidence;
-use oak_restricted_kernel_interface::{Errno, ATTESTATION_EVIDENCE_FD};
+use oak_dice::evidence::RestrictedKernelDiceData as DiceData;
+use oak_restricted_kernel_interface::{Errno, DICE_DATA_FD};
 
-struct AttestationEvidenceDescriptor {
-    data: Evidence,
+struct DiceDataDescriptor {
+    data: DiceData,
 }
 
-impl FileDescriptor for AttestationEvidenceDescriptor {
+impl FileDescriptor for DiceDataDescriptor {
     fn read(&mut self, buf: &mut [u8]) -> Result<isize, oak_restricted_kernel_interface::Errno> {
-        let data_as_bytes = <Evidence as zerocopy::AsBytes>::as_bytes(&self.data);
+        let data_as_bytes = <DiceData as zerocopy::AsBytes>::as_bytes(&self.data);
         let length = min(data_as_bytes.len(), buf.len());
         buf.copy_from_slice(&data_as_bytes[..length]);
         Ok(length as isize)
@@ -43,11 +43,8 @@ impl FileDescriptor for AttestationEvidenceDescriptor {
 }
 
 /// Registers a file descriptor for reading dice data
-pub fn register(data: Evidence) {
-    super::fd::register(
-        ATTESTATION_EVIDENCE_FD,
-        Box::new(AttestationEvidenceDescriptor { data }),
-    )
-    .map_err(|_| ()) // throw away the box
-    .expect("AttestationEvidenceDescriptor already registered");
+pub fn register(data: DiceData) {
+    super::fd::register(DICE_DATA_FD, Box::new(DiceDataDescriptor { data }))
+        .map_err(|_| ()) // throw away the box
+        .expect("DiceDataDescriptor already registered");
 }
