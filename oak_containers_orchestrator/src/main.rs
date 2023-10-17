@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use clap::Parser;
 use oak_containers_orchestrator_client::LauncherClient;
 use oak_crypto::encryptor::EncryptionKeyProvider;
@@ -31,6 +31,9 @@ struct Args {
 
     #[arg(long, default_value = "/oak_utils/orchestrator_ipc")]
     ipc_socket_path: PathBuf,
+
+    #[arg(long, default_value = "oakc")]
+    runtime_user: String,
 }
 
 #[tokio::main]
@@ -77,9 +80,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let _metrics = oak_containers_orchestrator::metrics::run(launcher_client.clone())?;
 
-    let user = nix::unistd::User::from_name("oakc")
-        .expect("error resolving user `oakc`")
-        .expect("user `oakc` not found");
+    let user = nix::unistd::User::from_name(&args.runtime_user)
+        .context(format!("error resolving user {}", args.runtime_user))?
+        .context(format!("user `{}` not found", args.runtime_user))?;
 
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
