@@ -124,10 +124,10 @@ pub struct ApplicationKeys {
 
 static_assertions::assert_eq_size!([u8; 2176], ApplicationKeys);
 
-/// Wrapper for passing DICE info from the Restricted Kernel to the application.
+/// Wrapper for passing the attestation evidence from the Restricted Kernel to the application.
 #[derive(AsBytes, FromBytes)]
 #[repr(C)]
-pub struct RestrictedKernelDiceData {
+pub struct Evidence {
     /// Evidence about Stage 0 and the initial state of the VM.
     pub root_layer_evidence: RootLayerEvidence,
     /// The evidence about the Restricted Kernel.
@@ -137,4 +137,4 @@ pub struct RestrictedKernelDiceData {
     pub application_keys: ApplicationKeys,
 }
 
-static_assertions::assert_eq_size!([u8; 5520], RestrictedKernelDiceData);
+static_assertions::assert_eq_size!([u8; 5520], Evidence);
