@@ -120,6 +120,8 @@ pub struct ApplicationKeys {
 static_assertions::assert_eq_size!([u8; 2048], ApplicationKeys);
 
 /// ECDSA private keys that can be used for an application for signing or encryption.
+#[derive(AsBytes, FromBytes)]
+#[repr(C)]
 pub struct ApplicationPrivateKeys {
     /// The RAW bytes representing an ECDSA private key that can be used to sign arbitrary data.
     pub signing_private_key: [u8; PRIVATE_KEY_SIZE],
@@ -142,11 +144,15 @@ pub struct Evidence {
     pub application_keys: ApplicationKeys,
 }
 
+static_assertions::assert_eq_size!([u8; 5392], Evidence);
+
 /// Wrapper for passing the attestation evidence and private keys from the Restricted Kernel to the
 /// application.
+#[derive(AsBytes, FromBytes)]
+#[repr(C)]
 pub struct RestrictedKernelDiceData {
     evidence: Evidence,
     application_private_keys: ApplicationPrivateKeys,
 }
 
-static_assertions::assert_eq_size!([u8; 5392], Evidence);
+static_assertions::assert_eq_size!([u8; 5520], RestrictedKernelDiceData);
