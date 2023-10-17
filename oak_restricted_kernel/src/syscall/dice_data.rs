@@ -22,13 +22,24 @@ use oak_restricted_kernel_interface::{Errno, DICE_DATA_FD};
 
 struct DiceDataDescriptor {
     data: DiceData,
+    index: usize,
+}
+
+impl DiceDataDescriptor {
+    fn new(data: DiceData) -> Self {
+        Self { index: 0, data }
+    }
 }
 
 impl FileDescriptor for DiceDataDescriptor {
     fn read(&mut self, buf: &mut [u8]) -> Result<isize, oak_restricted_kernel_interface::Errno> {
-        let data_as_bytes = <DiceData as zerocopy::AsBytes>::as_bytes(&self.data);
-        let length = min(data_as_bytes.len(), buf.len());
-        buf.copy_from_slice(&data_as_bytes[..length]);
+        let data_as_bytes = <DiceData as zerocopy::AsBytes>::as_bytes_mut(&mut self.data);
+        let length = min(data_as_bytes.len() - self.index, buf.len());
+        let slice_to_read = &mut data_as_bytes[self.index..length];
+        buf.copy_from_slice(slice_to_read);
+        self.index += length;
+        // destroy the data that was read, to ensure that it can only be read once
+        slice_to_read.fill(0);
         Ok(length as isize)
     }
 
@@ -44,7 +55,7 @@ impl FileDescriptor for DiceDataDescriptor {
 
 /// Registers a file descriptor for reading dice data
 pub fn register(data: DiceData) {
-    super::fd::register(DICE_DATA_FD, Box::new(DiceDataDescriptor { data }))
+    super::fd::register(DICE_DATA_FD, Box::new(DiceDataDescriptor::new(data)))
         .map_err(|_| ()) // throw away the box
         .expect("DiceDataDescriptor already registered");
 }
