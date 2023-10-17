@@ -138,6 +138,24 @@
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -245,29 +263,36 @@
 
 <span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">4096</span>], Stage0DiceData);
 
-<span class="doccomment">/// ECDSA keys that can be used for an application for signing or encryption, and their associated
-/// certificates.
+<span class="doccomment">/// Certificates for the ECDSA keys that can be used for an application for signing or encryption.
 </span><span class="attr">#[derive(AsBytes, FromBytes)]
 #[repr(C)]
 </span><span class="kw">pub struct </span>ApplicationKeys {
-    <span class="doccomment">/// The RAW bytes representing an ECDSA private key that can be used to sign arbitrary data.
-    </span><span class="kw">pub </span>signing_private_key: [u8; PRIVATE_KEY_SIZE],
     <span class="doccomment">/// Serialized CWT certificate for the signing private key. The certificate must include
     /// measurements of the application.
-    </span><span class="kw">pub </span>signing_certificate: [u8; CERTIFICATE_SIZE],
-    <span class="doccomment">/// The RAW bytes representing an ECDSA private key that can be used for hybrid encryption.
-    </span><span class="kw">pub </span>encryption_private_key: [u8; PRIVATE_KEY_SIZE],
+    </span><span class="kw">pub </span>signing_public_key_certificate: [u8; CERTIFICATE_SIZE],
     <span class="doccomment">/// Serialized CWT certificate for the encryption private key. The certificate must include
     /// measurements of the application.
-    </span><span class="kw">pub </span>encryption_certificate: [u8; CERTIFICATE_SIZE],
+    </span><span class="kw">pub </span>encryption_public_key_certificate: [u8; CERTIFICATE_SIZE],
 }
 
-<span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">2176</span>], ApplicationKeys);
+<span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">2048</span>], ApplicationKeys);
 
-<span class="doccomment">/// Wrapper for passing DICE info from the Restricted Kernel to the application.
+<span class="doccomment">/// ECDSA private keys that can be used for an application for signing or encryption.
 </span><span class="attr">#[derive(AsBytes, FromBytes)]
 #[repr(C)]
-</span><span class="kw">pub struct </span>RestrictedKernelDiceData {
+</span><span class="kw">pub struct </span>ApplicationPrivateKeys {
+    <span class="doccomment">/// The RAW bytes representing an ECDSA private key that can be used to sign arbitrary data.
+    </span><span class="kw">pub </span>signing_private_key: [u8; PRIVATE_KEY_SIZE],
+    <span class="doccomment">/// The RAW bytes representing an ECDSA private key that can be used for hybrid encryption.
+    </span><span class="kw">pub </span>encryption_private_key: [u8; PRIVATE_KEY_SIZE],
+}
+
+<span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">128</span>], ApplicationPrivateKeys);
+
+<span class="doccomment">/// Wrapper for passing the attestation evidence from the Restricted Kernel to the application.
+</span><span class="attr">#[derive(AsBytes, FromBytes)]
+#[repr(C)]
+</span><span class="kw">pub struct </span>Evidence {
     <span class="doccomment">/// Evidence about Stage 0 and the initial state of the VM.
     </span><span class="kw">pub </span>root_layer_evidence: RootLayerEvidence,
     <span class="doccomment">/// The evidence about the Restricted Kernel.
@@ -275,6 +300,17 @@
     <span class="doccomment">/// Keys (and associated certificates) that can be used by the application for encryption or
     /// signing.
     </span><span class="kw">pub </span>application_keys: ApplicationKeys,
+}
+
+<span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">5392</span>], Evidence);
+
+<span class="doccomment">/// Wrapper for passing the attestation evidence and private keys from the Restricted Kernel to the
+/// application.
+</span><span class="attr">#[derive(AsBytes, FromBytes)]
+#[repr(C)]
+</span><span class="kw">pub struct </span>RestrictedKernelDiceData {
+    evidence: Evidence,
+    application_private_keys: ApplicationPrivateKeys,
 }
 
 <span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">5520</span>], RestrictedKernelDiceData);

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["CERTIFICATE_SIZE","PRIVATE_KEY_SIZE","PUBLIC_KEY_SIZE","REPORT_SIZE"],"enum":["TeePlatform"],"struct":["ApplicationKeys","CertificateAuthority","LayerEvidence","RestrictedKernelDiceData","RootLayerEvidence","Stage0DiceData"]};
+window.SIDEBAR_ITEMS = {"constant":["CERTIFICATE_SIZE","PRIVATE_KEY_SIZE","PUBLIC_KEY_SIZE","REPORT_SIZE"],"enum":["TeePlatform"],"struct":["ApplicationKeys","ApplicationPrivateKeys","CertificateAuthority","Evidence","LayerEvidence","RestrictedKernelDiceData","RootLayerEvidence","Stage0DiceData"]};
