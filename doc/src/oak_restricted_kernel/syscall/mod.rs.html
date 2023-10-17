@@ -245,6 +245,13 @@
 <a href="#245" id="245">245</a>
 <a href="#246" id="246">246</a>
 <a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -262,6 +269,7 @@
 //
 
 </span><span class="kw">mod </span>channel;
+<span class="kw">mod </span>dice_data;
 <span class="kw">mod </span>fd;
 <span class="kw">mod </span>key;
 <span class="kw">pub mod </span>mmap;
@@ -277,6 +285,7 @@
 <span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>core::{arch::asm, ffi::c_void};
 <span class="kw">use </span>oak_channel::Channel;
+<span class="kw">use </span>oak_dice::evidence::RestrictedKernelDiceData <span class="kw">as </span>DiceData;
 <span class="kw">use </span>oak_restricted_kernel_interface::{Errno, Syscall};
 <span class="kw">use </span>x86_64::{
     registers::{
@@ -305,10 +314,15 @@
     </span>user_flags: usize,
 }
 
+<span class="kw">fn </span>mock_dice_data() -&gt; DiceData {
+    &lt;DiceData <span class="kw">as </span>zerocopy::FromBytes&gt;::new_zeroed()
+}
+
 <span class="kw">pub fn </span>enable_syscalls(channel: Box&lt;<span class="kw">dyn </span>Channel&gt;, derived_key: DerivedKey) {
     channel::register(channel);
     stdio::register();
     key::register(derived_key);
+    dice_data::register(mock_dice_data());
 
     <span class="comment">// Allocate a stack for the system call handler.
     </span><span class="kw">let </span>kernel_sp = mm::allocate_stack();
