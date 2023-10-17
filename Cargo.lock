@@ -2019,6 +2019,9 @@ dependencies = [
  "nix 0.26.2",
  "oak_containers_orchestrator_client",
  "oak_grpc_utils",
+ "opentelemetry-otlp",
+ "opentelemetry_api",
+ "opentelemetry_sdk",
  "tokio",
  "tokio-stream",
 ]
