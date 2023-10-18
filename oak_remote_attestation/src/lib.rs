@@ -20,6 +20,7 @@ extern crate alloc;
 
 pub mod proto {
     pub mod oak {
+        pub use oak_crypto::proto::oak::crypto;
         pub mod session {
             pub mod v1 {
                 #![allow(dead_code)]

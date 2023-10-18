@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,14 +14,14 @@
 // limitations under the License.
 //
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    micro_rpc_build::compile(
-        &[&format!(
-            "{}oak_remote_attestation/proto/v1/messages.proto",
-            env!("WORKSPACE_ROOT")
-        )],
-        &[env!("WORKSPACE_ROOT")],
-    );
+package com.google.oak.crypto;
 
-    Ok(())
+public final class DecryptionResult {
+  public final byte[] plaintext;
+  public final byte[] associatedData;
+
+  public DecryptionResult(byte[] plaintext, byte[] associatedData) {
+    this.plaintext = plaintext;
+    this.associatedData = associatedData;
+  }
 }

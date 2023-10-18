@@ -21,6 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
         "../",
         &[
+            "oak_crypto/proto/v1/crypto.proto",
             "oak_remote_attestation/proto/v1/messages.proto",
             "oak_remote_attestation/proto/v1/service_streaming.proto",
         ],
@@ -36,10 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "{}oak_functions_service/proto/oak_functions.proto",
             env!("WORKSPACE_ROOT")
         )],
-        &[format!(
-            "{}oak_functions_service/proto",
-            env!("WORKSPACE_ROOT")
-        )],
+        &[env!("WORKSPACE_ROOT")],
     );
 
     Ok(())

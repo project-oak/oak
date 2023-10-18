@@ -19,6 +19,8 @@ package com.google.oak.transport;
 import static org.mockito.AdditionalAnswers.delegatesTo;
 import static org.mockito.Mockito.mock;
 
+import com.google.oak.crypto.v1.EncryptedRequest;
+import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.session.v1.AttestationBundle;
 import com.google.oak.session.v1.GetPublicKeyRequest;
 import com.google.oak.session.v1.GetPublicKeyResponse;
@@ -76,8 +78,8 @@ public class GrpcStreamingTransportTest {
           break;
         case INVOKE_REQUEST:
           responseWrapper = ResponseWrapper.newBuilder()
-                                .setInvokeResponse(InvokeResponse.newBuilder().setEncryptedBody(
-                                    ByteString.copyFrom(TEST_RESPONSE)))
+                                .setInvokeResponse(InvokeResponse.newBuilder().setEncryptedResponse(
+                                    EncryptedResponse.getDefaultInstance()))
                                 .build();
           responseObserver.onNext(responseWrapper);
           break;
@@ -144,9 +146,11 @@ public class GrpcStreamingTransportTest {
     Result<AttestationBundle, String> getEvidenceResult = transport.getEvidence();
     Assert.assertTrue(getEvidenceResult.isSuccess());
 
-    Result<byte[], String> invokeResult = transport.invoke(TEST_REQUEST);
+    Result<EncryptedResponse, String> invokeResult =
+        transport.invoke(EncryptedRequest.getDefaultInstance());
     Assert.assertTrue(invokeResult.isSuccess());
-    Assert.assertArrayEquals(invokeResult.unwrap("missing result"), TEST_RESPONSE);
+    Assert.assertEquals(
+        invokeResult.unwrap("missing result"), EncryptedResponse.getDefaultInstance());
 
     // The following call may throw a general {@code Exception}.
     // The test succeeds if it doesn't throw an exception.

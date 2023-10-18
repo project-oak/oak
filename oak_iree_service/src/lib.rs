@@ -33,9 +33,9 @@ mod iree;
 use crate::proto::oak::iree::{
     AttestationEvidence, InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, Iree,
 };
-use alloc::{format, sync::Arc, vec::Vec};
+use alloc::{format, sync::Arc, vec, vec::Vec};
 use anyhow::Context;
-use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_crypto::{encryptor::EncryptionKeyProvider, proto::oak::crypto::v1::EncryptedRequest};
 use oak_remote_attestation::{
     attester::{AttestationReportGenerator, Attester},
     handler::EncryptionHandler,
@@ -128,19 +128,42 @@ impl Iree for IreeService {
         &mut self,
         request_message: InvokeRequest,
     ) -> Result<InvokeResponse, micro_rpc::Status> {
+        // Deserialize request.
+        let encrypted_request =
+            EncryptedRequest::decode(request_message.body.as_ref()).map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::InvalidArgument,
+                    format!("couldn't deserialize request: {:?}", err),
+                )
+            })?;
+
         let encryption_key_provider = self.encryption_key_provider.clone();
         let instance = self.get_instance()?;
-        EncryptionHandler::create(encryption_key_provider, |r| {
+        let encrypted_response = EncryptionHandler::create(encryption_key_provider, |r| {
             let response: micro_rpc::ResponseWrapper = instance.invoke(&r).into();
             response.encode_to_vec()
         })
-        .invoke(&request_message.body)
-        .map(|response| InvokeResponse { body: response })
+        .invoke(&encrypted_request)
         .map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
                 format!("couldn't invoke handler: {:?}", err),
             )
+        })?;
+
+        // Serialize response.
+        let mut serialized_response = vec![];
+        encrypted_response
+            .encode(&mut serialized_response)
+            .map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::Internal,
+                    format!("couldn't serialize response: {:?}", err),
+                )
+            })?;
+
+        Ok(InvokeResponse {
+            body: serialized_response,
         })
     }
 }

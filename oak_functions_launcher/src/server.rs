@@ -85,7 +85,7 @@ impl StreamingSession for SessionProxy {
                     }
                     request_wrapper::Request::InvokeRequest(invoke_request) => {
                         let enclave_invoke_request = functions::InvokeRequest {
-                            body: invoke_request.encrypted_body,
+                            encrypted_request: invoke_request.encrypted_request,
                         };
                         let mut enclave_client =
                             functions::OakFunctionsAsyncClient::new(connector_handle.clone());
@@ -97,7 +97,7 @@ impl StreamingSession for SessionProxy {
                                 tonic::Status::internal(format!("error handling client request: {:?}", err))
                             })?;
                         response_wrapper::Response::InvokeResponse(InvokeResponse {
-                            encrypted_body: enclave_invoke_response.body,
+                            encrypted_response: enclave_invoke_response.encrypted_response,
                         })
                     }
                 };

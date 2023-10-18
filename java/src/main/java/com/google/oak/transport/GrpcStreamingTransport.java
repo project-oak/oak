@@ -16,6 +16,8 @@
 
 package com.google.oak.transport;
 
+import com.google.oak.crypto.v1.EncryptedRequest;
+import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.session.v1.AttestationBundle;
 import com.google.oak.session.v1.GetPublicKeyRequest;
 import com.google.oak.session.v1.GetPublicKeyResponse;
@@ -91,18 +93,14 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   /**
    * Sends a request to the enclave and returns a response.
    *
-   * @param requestBytes a serialized {@code oak.crypto.EncryptedRequest} wrapped
-   *                     in a {@code
-   *     Result}
-   * @return a serialized {@code oak.crypto.EncryptedResponse} wrapped in a
-   *         {@code Result}
+   * @param encryptedRequest {@code oak.crypto.EncryptedRequest} proto message
+   * @return {@code oak.crypto.EncryptedResponse} proto message wrapped in a {@code Result}
    */
   @Override
-  public Result<byte[], String> invoke(byte[] requestBytes) {
+  public Result<EncryptedResponse, String> invoke(EncryptedRequest encryptedRequest) {
     RequestWrapper requestWrapper =
         RequestWrapper.newBuilder()
-            .setInvokeRequest(
-                InvokeRequest.newBuilder().setEncryptedBody(ByteString.copyFrom(requestBytes)))
+            .setInvokeRequest(InvokeRequest.newBuilder().setEncryptedRequest(encryptedRequest))
             .build();
     logger.log(Level.INFO, "sending invoke request: " + requestWrapper);
     this.requestObserver.onNext(requestWrapper);
@@ -122,7 +120,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     logger.log(Level.INFO, "received invoke response: " + responseWrapper);
     InvokeResponse response = responseWrapper.getInvokeResponse();
 
-    return Result.success(response.getEncryptedBody().toByteArray());
+    return Result.success(response.getEncryptedResponse());
   }
 
   @Override

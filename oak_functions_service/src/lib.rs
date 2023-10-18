@@ -25,6 +25,7 @@ extern crate std;
 
 pub mod proto {
     pub mod oak {
+        pub use oak_crypto::proto::oak::crypto;
         pub mod functions {
             #![allow(dead_code)]
             use prost::Message;
@@ -38,6 +39,11 @@ pub mod logger;
 pub mod lookup;
 pub mod wasm;
 
+use crate::proto::oak::functions::{
+    AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
+    FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
+    InitializeResponse, InvokeRequest, InvokeResponse, OakFunctions, PublicKeyInfo,
+};
 use alloc::{format, sync::Arc, vec::Vec};
 use instance::OakFunctionsInstance;
 use oak_crypto::encryptor::EncryptionKeyProvider;
@@ -46,11 +52,6 @@ use oak_remote_attestation::{
     handler::EncryptionHandler,
 };
 use prost::Message;
-use proto::oak::functions::{
-    AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
-    FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
-    InitializeResponse, InvokeRequest, InvokeResponse, OakFunctions, PublicKeyInfo,
-};
 
 pub struct OakFunctionsService {
     attestation_report_generator: Arc<dyn AttestationReportGenerator>,
@@ -121,6 +122,12 @@ impl OakFunctions for OakFunctionsService {
         log::debug!("called handle_user_request");
         let encryption_key_provider = self.encryption_key_provider.clone();
         let instance = self.get_instance()?;
+        let encrypted_request = request.encrypted_request.ok_or_else(|| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::InvalidArgument,
+                format!("no encrypted request provided"),
+            )
+        })?;
         EncryptionHandler::create(encryption_key_provider, |r| {
             // Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
@@ -129,8 +136,10 @@ impl OakFunctions for OakFunctionsService {
             let response: micro_rpc::ResponseWrapper = response_result.into();
             response.encode_to_vec()
         })
-        .invoke(&request.body)
-        .map(|response| InvokeResponse { body: response })
+        .invoke(&encrypted_request)
+        .map(|response| InvokeResponse {
+            encrypted_response: Some(response),
+        })
         .map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,

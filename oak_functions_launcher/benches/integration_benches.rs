@@ -19,7 +19,7 @@
 
 extern crate test;
 
-use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedResponse};
+use oak_crypto::encryptor::ClientEncryptor;
 use oak_functions_launcher::{
     proto::oak::functions::{InvokeRequest, OakFunctionsAsyncClient},
     LookupDataConfig,
@@ -115,7 +115,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         .encrypt(&config.request, &[])
         .expect("could not encrypt request");
     let invoke_request = InvokeRequest {
-        body: encrypted_request.encode_to_vec(),
+        encrypted_request: Some(encrypted_request),
     };
 
     // Invoke the function once outside of the benchmark loop to make sure it's ready.
@@ -128,8 +128,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         assert!(response.is_ok());
 
         // Only check this outside of the benchmark loop.
-        let encrypted_response =
-            EncryptedResponse::decode(response.unwrap().body.as_ref()).unwrap();
+        let encrypted_response = response.unwrap().encrypted_response.unwrap();
         let (decrypted_response, _authenticated_data) = client_encryptor
             .decrypt(&encrypted_response)
             .expect("could not decrypt response");

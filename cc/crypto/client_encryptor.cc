@@ -41,8 +41,8 @@ absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
   return std::make_unique<ClientEncryptor>(std::move(*sender_context));
 }
 
-absl::StatusOr<std::string> ClientEncryptor::Encrypt(absl::string_view plaintext,
-                                                     absl::string_view associated_data) {
+absl::StatusOr<EncryptedRequest> ClientEncryptor::Encrypt(absl::string_view plaintext,
+                                                          absl::string_view associated_data) {
   // Encrypt request.
   absl::StatusOr<std::string> ciphertext = sender_context_->Seal(plaintext, associated_data);
   if (!ciphertext.ok()) {
@@ -50,40 +50,30 @@ absl::StatusOr<std::string> ClientEncryptor::Encrypt(absl::string_view plaintext
   }
 
   // Create request message.
-  EncryptedRequest request;
-  *request.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
-  *request.mutable_encrypted_message()->mutable_associated_data() = associated_data;
+  EncryptedRequest encrypted_request;
+  *encrypted_request.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
+  *encrypted_request.mutable_encrypted_message()->mutable_associated_data() = associated_data;
 
   // Encapsulated public key is only sent in the initial request message of the session.
   if (!serialized_encapsulated_public_key_has_been_sent_) {
-    *request.mutable_serialized_encapsulated_public_key() =
+    *encrypted_request.mutable_serialized_encapsulated_public_key() =
         sender_context_->GetSerializedEncapsulatedPublicKey();
     serialized_encapsulated_public_key_has_been_sent_ = true;
   }
 
-  // Serialize request.
-  std::string serialized_request;
-  if (!request.SerializeToString(&serialized_request)) {
-    return absl::InternalError("couldn't serialize request");
-  }
-  return serialized_request;
+  return encrypted_request;
 }
 
-absl::StatusOr<DecryptionResult> ClientEncryptor::Decrypt(absl::string_view encrypted_response) {
-  // Deserialize response.
-  EncryptedResponse response;
-  if (!response.ParseFromString(encrypted_response)) {
-    return absl::InvalidArgumentError("couldn't deserialize response");
-  }
-
+absl::StatusOr<DecryptionResult> ClientEncryptor::Decrypt(EncryptedResponse encrypted_response) {
   // Decrypt response.
-  absl::StatusOr<std::string> plaintext = sender_context_->Open(
-      response.encrypted_message().ciphertext(), response.encrypted_message().associated_data());
+  absl::StatusOr<std::string> plaintext =
+      sender_context_->Open(encrypted_response.encrypted_message().ciphertext(),
+                            encrypted_response.encrypted_message().associated_data());
   if (!plaintext.ok()) {
     return plaintext.status();
   }
 
-  return DecryptionResult{*plaintext, response.encrypted_message().associated_data()};
+  return DecryptionResult{*plaintext, encrypted_response.encrypted_message().associated_data()};
 }
 
 }  // namespace oak::crypto

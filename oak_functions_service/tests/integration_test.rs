@@ -21,7 +21,7 @@ extern crate alloc;
 
 use benchmark::proto::{benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest};
 use core::assert_matches::assert_matches;
-use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedResponse};
+use oak_crypto::encryptor::ClientEncryptor;
 use oak_functions_service::{
     proto::oak::functions::{
         ExtendNextLookupDataRequest, FinishNextLookupDataRequest, InitializeRequest, InvokeRequest,
@@ -53,7 +53,7 @@ fn it_should_not_handle_user_requests_before_initialization() {
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let request = InvokeRequest {
-        body: vec![1, 2, 3],
+        encrypted_request: None,
     };
     let result = client.handle_user_request(&request).into_ok();
 
@@ -92,15 +92,9 @@ fn it_should_handle_user_requests_after_initialization() {
         .encrypt(&[1, 2, 3], EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
-    // Serialize request.
-    let mut serialized_request = vec![];
-    encrypted_request
-        .encode(&mut serialized_request)
-        .expect("couldn't serialize request");
-
     // Send invoke request.
     let invoke_request = InvokeRequest {
-        body: serialized_request,
+        encrypted_request: Some(encrypted_request),
     };
     let result = client.handle_user_request(&invoke_request).into_ok();
     assert!(result.is_ok());
@@ -159,24 +153,14 @@ async fn it_should_error_on_invalid_wasm_module() {
         .encrypt(LOOKUP_TEST_KEY, EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
-    // Serialize request.
-    let mut serialized_request = vec![];
-    encrypted_request
-        .encode(&mut serialized_request)
-        .expect("couldn't serialize request");
-
     // Send invoke request.
     let lookup_response = client
         .handle_user_request(&InvokeRequest {
-            body: serialized_request,
+            encrypted_request: Some(encrypted_request),
         })
         .expect("couldn't receive response");
     assert!(lookup_response.is_ok());
-    let serialized_response = lookup_response.unwrap().body;
-
-    // Deserialize response.
-    let encrypted_response = EncryptedResponse::decode(serialized_response.as_ref())
-        .expect("couldn't deserialize response");
+    let encrypted_response = lookup_response.unwrap().encrypted_response.unwrap();
 
     // Decrypt response.
     let (response_bytes, _) = client_encryptor
@@ -250,24 +234,14 @@ async fn it_should_support_lookup_data() {
         .encrypt(LOOKUP_TEST_KEY, EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
-    // Serialize request.
-    let mut serialized_request = vec![];
-    encrypted_request
-        .encode(&mut serialized_request)
-        .expect("couldn't serialize request");
-
     // Send invoke request.
     let lookup_response = client
         .handle_user_request(&InvokeRequest {
-            body: serialized_request,
+            encrypted_request: Some(encrypted_request),
         })
         .expect("couldn't receive response");
     assert!(lookup_response.is_ok());
-    let serialized_response = lookup_response.unwrap().body;
-
-    // Deserialize response.
-    let encrypted_response = EncryptedResponse::decode(serialized_response.as_ref())
-        .expect("couldn't deserialize response");
+    let encrypted_response = lookup_response.unwrap().encrypted_response.unwrap();
 
     // Decrypt response.
     let (response_bytes, _) = client_encryptor
@@ -326,24 +300,14 @@ async fn it_should_handle_wasm_panic() {
         .encrypt(&request.encode_to_vec(), EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
-    // Serialize request.
-    let mut serialized_request = vec![];
-    encrypted_request
-        .encode(&mut serialized_request)
-        .expect("couldn't serialize request");
-
     // Send invoke request.
     let lookup_response = client
         .handle_user_request(&InvokeRequest {
-            body: serialized_request,
+            encrypted_request: Some(encrypted_request),
         })
         .expect("couldn't receive response");
     assert!(lookup_response.is_ok());
-    let serialized_response = lookup_response.unwrap().body;
-
-    // Deserialize response.
-    let encrypted_response = EncryptedResponse::decode(serialized_response.as_ref())
-        .expect("couldn't deserialize response");
+    let encrypted_response = lookup_response.unwrap().encrypted_response.unwrap();
 
     // Decrypt response.
     let (response_bytes, _) = client_encryptor

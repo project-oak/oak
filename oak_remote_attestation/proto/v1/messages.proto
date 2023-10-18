@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package oak.session.v1;
 
+import "oak_crypto/proto/v1/crypto.proto";
+
 option java_multiple_files = true;
 option java_package = "com.google.oak.session.v1";
 
@@ -97,19 +99,15 @@ message GetPublicKeyResponse {
 }
 
 message InvokeRequest {
-  // Body of the request, encrypted with the enclave public key.
-  // TODO(#3442): Specify encryption format.
-  // TODO(#3442): Also pass client public or symmetric key to use for response encryption. Note that
-  // needs to be at least authenticated by the client, if not encrypted within this field.
-  // TODO(#3843): Use explicit `oak_crypto` messages.
-  bytes encrypted_body = 1;
+  // Body of the request, encrypted using Hybrid Public Key Encryption (HPKE).
+  // <https://www.rfc-editor.org/rfc/rfc9180.html>
+  oak.crypto.v1.EncryptedRequest encrypted_request = 1;
 }
 
 message InvokeResponse {
-  // Body of the request, encrypted with the client public or symmetric key.
-  // TODO(#3442): Specify encryption format.
-  // TODO(#3843): Use explicit `oak_crypto` messages.
-  bytes encrypted_body = 1;
+  // Body of the request, encrypted using Hybrid Public Key Encryption (HPKE).
+  // <https://www.rfc-editor.org/rfc/rfc9180.html>
+  oak.crypto.v1.EncryptedResponse encrypted_response = 1;
 }
 
 message GetEncryptionKeyRequest {

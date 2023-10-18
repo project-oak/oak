@@ -28,6 +28,7 @@ pub mod proto {
             use prost::Message;
             include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
         }
+        pub use oak_crypto::proto::oak::crypto;
         pub mod session {
             pub mod v1 {
                 #![allow(clippy::return_self_not_must_use)]

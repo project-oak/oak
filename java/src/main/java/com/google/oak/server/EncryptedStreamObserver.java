@@ -16,9 +16,10 @@
 
 package com.google.oak.server;
 
-import com.google.oak.crypto.Encryptor;
+import com.google.oak.crypto.DecryptionResult;
 import com.google.oak.crypto.ServerEncryptor;
 import com.google.oak.crypto.hpke.KeyPair;
+import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.session.v1.AttestationBundle;
 import com.google.oak.session.v1.AttestationEndorsement;
 import com.google.oak.session.v1.AttestationEvidence;
@@ -89,7 +90,7 @@ public final class EncryptedStreamObserver<I, O> implements StreamObserver<Reque
     } else if (message.hasInvokeRequest()) {
       logger.log(Level.INFO, "Received InvokeRequest request");
       Result<ResponseWrapper, Exception> result =
-          encryptor.decrypt(message.getInvokeRequest().getEncryptedBody().toByteArray())
+          encryptor.decrypt(message.getInvokeRequest().getEncryptedRequest())
               .andThen(this::processMessage);
       result.ifError(this::onError);
       result.ifSuccess(msg -> {
@@ -128,19 +129,19 @@ public final class EncryptedStreamObserver<I, O> implements StreamObserver<Reque
     return GetPublicKeyResponse.newBuilder().setAttestationBundle(attestationBundle).build();
   }
 
-  private Result<ResponseWrapper, Exception> processMessage(Encryptor.DecryptionResult decrypted) {
+  private Result<ResponseWrapper, Exception> processMessage(DecryptionResult decrypted) {
     try {
       I request = connectionAdapter.parse(decrypted.plaintext);
       this.innerClientStream.onNext(request);
 
       // Wait/block until the response is ready.
       O response = this.innerServerStream.take();
-      Result<byte[], Exception> encryptedResult =
+      Result<EncryptedResponse, Exception> encryptedResult =
           encryptor.encrypt(connectionAdapter.serialize(response), decrypted.associatedData);
 
       return encryptedResult.map(encrypted -> {
         InvokeResponse invokeResponse =
-            InvokeResponse.newBuilder().setEncryptedBody(ByteString.copyFrom(encrypted)).build();
+            InvokeResponse.newBuilder().setEncryptedResponse(encrypted).build();
         return ResponseWrapper.newBuilder().setInvokeResponse(invokeResponse).build();
       });
     } catch (InterruptedException e) {

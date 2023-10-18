@@ -19,7 +19,7 @@ use crate::proto::oak::session::v1::{
     AttestationEvidence, GetPublicKeyRequest, InvokeRequest, RequestWrapper,
 };
 use anyhow::Context;
-pub use micro_rpc::AsyncTransport;
+use oak_crypto::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
 use tonic::transport::Channel;
 
 pub struct GrpcStreamingTransport {
@@ -33,14 +33,24 @@ impl GrpcStreamingTransport {
 }
 
 #[async_trait::async_trait]
-impl micro_rpc::AsyncTransport for GrpcStreamingTransport {
-    type Error = anyhow::Error;
-    async fn invoke(&mut self, request_bytes: &[u8]) -> Result<Vec<u8>, Self::Error> {
+pub trait Transport {
+    async fn invoke(
+        &mut self,
+        encrypted_request: &EncryptedRequest,
+    ) -> anyhow::Result<EncryptedResponse>;
+}
+
+#[async_trait::async_trait]
+impl Transport for GrpcStreamingTransport {
+    async fn invoke(
+        &mut self,
+        encrypted_request: &EncryptedRequest,
+    ) -> anyhow::Result<EncryptedResponse> {
         let mut response_stream = self
             .rpc_client
             .stream(futures_util::stream::iter(vec![RequestWrapper {
                 request: Some(request_wrapper::Request::InvokeRequest(InvokeRequest {
-                    encrypted_body: request_bytes.to_vec(),
+                    encrypted_request: Some(encrypted_request.clone()),
                 })),
             }]))
             .await
@@ -62,17 +72,19 @@ impl micro_rpc::AsyncTransport for GrpcStreamingTransport {
             ));
         };
 
-        Ok(invoke_response.encrypted_body)
+        invoke_response
+            .encrypted_response
+            .context("no encrypted response provided")
     }
 }
 
 #[async_trait::async_trait]
-pub trait AsyncEvidenceProvider {
+pub trait EvidenceProvider {
     async fn get_evidence(&mut self) -> anyhow::Result<AttestationEvidence>;
 }
 
 #[async_trait::async_trait]
-impl AsyncEvidenceProvider for GrpcStreamingTransport {
+impl EvidenceProvider for GrpcStreamingTransport {
     async fn get_evidence(&mut self) -> anyhow::Result<AttestationEvidence> {
         let mut response_stream = self
             .rpc_client
