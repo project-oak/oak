@@ -16,12 +16,12 @@
 use crate::proto::oak::{
     containers::{
         launcher_server::{Launcher, LauncherServer},
-        GetApplicationConfigResponse, GetImageResponse, LogEntry, SendAttestationEvidenceRequest,
+        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
     },
     session::v1::AttestationEvidence,
 };
 use anyhow::anyhow;
-use futures::{FutureExt, Stream, StreamExt};
+use futures::{FutureExt, Stream};
 use opentelemetry_proto::tonic::{
     collector::{
         logs::v1::{
@@ -184,27 +184,6 @@ impl Launcher for LauncherServerImplementation {
             })?
             .send(())
             .map_err(|_err| tonic::Status::internal(format!("couldn't send notification")))?;
-        Ok(tonic::Response::new(()))
-    }
-
-    async fn log(
-        &self,
-        request: Request<tonic::Streaming<LogEntry>>,
-    ) -> Result<Response<()>, tonic::Status> {
-        let mut stream = request.into_inner();
-        while let Some(message) = stream.next().await {
-            let message = message?;
-
-            let unit = message
-                .fields
-                .get("_SYSTEMD_UNIT")
-                .map_or("", |unit| unit.as_str());
-            let message = message
-                .fields
-                .get("MESSAGE")
-                .map_or("", |message| message.as_str());
-            println!("{}: {}", unit, message);
-        }
         Ok(tonic::Response::new(()))
     }
 }
