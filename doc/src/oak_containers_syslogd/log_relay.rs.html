@@ -60,6 +60,49 @@
 <a href="#60" id="60">60</a>
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -79,13 +122,14 @@
 </span><span class="kw">use </span><span class="kw">crate</span>::systemd_journal::{Journal, JournalOpenFlags};
 <span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>oak_containers_orchestrator_client::LauncherClient;
+<span class="kw">use </span>opentelemetry_api::logs::{AnyValue, LogRecord, Logger, Severity};
+<span class="kw">use </span>std::time::{Duration, SystemTime};
 <span class="kw">use </span>tokio::sync::mpsc;
-<span class="kw">use </span>tokio_stream::wrappers::UnboundedReceiverStream;
 
 <span class="kw">pub async fn </span>run(launcher_client: LauncherClient) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// Journal is not Send, because the underlying systemd journal can&#39;t be shared between threads
     // (even with locking). Thus, let&#39;s wrap things in a channel.
-    </span><span class="kw">let </span>(send, recv) = mpsc::unbounded_channel();
+    </span><span class="kw">let </span>(send, <span class="kw-2">mut </span>recv) = mpsc::unbounded_channel();
 
     <span class="kw">let </span>reader = <span class="kw">async move </span>{
         <span class="comment">// Iterating over the journal can block (synchronously), so we need to wrap this in a
@@ -114,12 +158,54 @@
         });
         x.<span class="kw">await</span><span class="question-mark">?
     </span>};
+    <span class="kw">let </span>logger = opentelemetry_otlp::new_pipeline()
+        .logging()
+        .with_exporter(launcher_client.openmetrics_builder())
+        .install_batch(opentelemetry_sdk::runtime::Tokio)
+        .context(<span class="string">&quot;could not create OTLP logger&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>sender = <span class="kw">async </span>{
-        launcher_client
-            .log(UnboundedReceiverStream::new(recv))
-            .<span class="kw">await
-            </span>.map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;error writing logs to launcher: {}&quot;</span>, err))
+        <span class="kw">while let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>msg) = recv.recv().<span class="kw">await </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>builder = LogRecord::builder();
+            <span class="comment">// PRIORITY
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(val) = msg.remove(<span class="string">&quot;PRIORITY&quot;</span>) {
+                builder = builder.with_severity_number(<span class="kw">match </span>val.parse()<span class="question-mark">? </span>{
+                    <span class="comment">// EMERGENCY
+                    </span><span class="number">0 </span>=&gt; Severity::Error4,
+                    <span class="comment">// ALERT
+                    </span><span class="number">1 </span>=&gt; Severity::Error3,
+                    <span class="comment">// CRITICAL
+                    </span><span class="number">2 </span>=&gt; Severity::Error2,
+                    <span class="comment">// ERROR
+                    </span><span class="number">3 </span>=&gt; Severity::Error,
+                    <span class="comment">// WARNING
+                    </span><span class="number">4 </span>=&gt; Severity::Warn,
+                    <span class="comment">// NOTICE
+                    </span><span class="number">5 </span>=&gt; Severity::Info2,
+                    <span class="comment">// INFORMATIONAL
+                    </span><span class="number">6 </span>=&gt; Severity::Info,
+                    <span class="comment">// DEBUG
+                    </span><span class="number">7 </span>=&gt; Severity::Debug,
+                    <span class="comment">// lower priorities
+                    </span><span class="kw">_ </span>=&gt; Severity::Trace,
+                });
+            }
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(val) = msg.remove(<span class="string">&quot;_SOURCE_REALTIME_TIMESTAMP&quot;</span>) {
+                builder = builder
+                    .with_timestamp(SystemTime::UNIX_EPOCH + Duration::from_secs(val.parse()<span class="question-mark">?</span>));
+            }
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(val) = msg.remove(<span class="string">&quot;MESSAGE&quot;</span>) {
+                builder = builder.with_body(AnyValue::String(val.into()));
+            }
+            builder = builder.with_attributes(
+                msg.into_iter()
+                    .map(|(k, v)| (k.into(), AnyValue::String(v.into())))
+                    .collect(),
+            );
+            logger.emit(builder.build());
+        }
+        <span class="prelude-val">Ok</span>(())
     };
+
     <span class="macro">tokio::try_join!</span>(reader, sender).map(|((), ())| ())
 }
 </code></pre></div></section></main></body></html>
