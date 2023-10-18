@@ -35,9 +35,10 @@ impl FileDescriptor for DiceDataDescriptor {
     fn read(&mut self, buf: &mut [u8]) -> Result<isize, oak_restricted_kernel_interface::Errno> {
         let data_as_bytes = <DiceData as zerocopy::AsBytes>::as_bytes_mut(&mut self.data);
         let length = min(data_as_bytes.len() - self.index, buf.len());
-        let slice_to_read = &mut data_as_bytes[self.index..length];
+        let end_index = min(self.index + length, data_as_bytes.len());
+        let slice_to_read = &mut data_as_bytes[self.index..end_index];
         buf.copy_from_slice(slice_to_read);
-        self.index += length;
+        self.index += end_index;
         // destroy the data that was read, to ensure that it can only be read once
         slice_to_read.fill(0);
         Ok(length as isize)
