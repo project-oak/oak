@@ -15,6 +15,7 @@
 
 use anyhow::anyhow;
 use oak_functions_containers_app::{
+    orchestrator_client::OrchestratorClient,
     proto::oak::functions::oak_functions_server::OakFunctionsServer, OakFunctionsContainersService,
 };
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -34,12 +35,20 @@ pub async fn serve(listener: TcpListener) -> Result<(), anyhow::Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut client = OrchestratorClient::create()
+        .await
+        .map_err(|error| anyhow!("couldn't create Orchestrator client: {:?}", error))?;
+    // To be used when connecting trusted app to orchestrator.
+    let _application_config = client.clone().get_application_config().await?;
+
     let addr = SocketAddr::new(
         IpAddr::V4(Ipv4Addr::UNSPECIFIED),
         OAK_FUNCTIONS_CONTAINERS_APP_PORT,
     );
     let listener = TcpListener::bind(addr).await?;
     let server_handle = tokio::spawn(serve(listener));
+
     eprintln!("Running Oak Functions on Oak Containers at address: {addr}");
+    client.notify_app_ready().await?;
     Ok(server_handle.await??)
 }

@@ -9,7 +9,10 @@ oak_grpc_utils = { workspace = true }
 
 [dependencies]
 anyhow = "*"
+oak_crypto = { workspace = true }
+oak_remote_attestation = { workspace = true }
 prost = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tokio-stream = { version = "*", features = ["net"] }
 tonic = { workspace = true }
+tower = "*"
