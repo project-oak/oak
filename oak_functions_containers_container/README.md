@@ -6,5 +6,4 @@
 
 # Hello World Trusted App Container Tools
 
-Tools for packaging the Oak Functions Containers app as an OCI runtime
-bundle.
+Tools for packaging the Oak Functions Containers app as an OCI runtime bundle.
