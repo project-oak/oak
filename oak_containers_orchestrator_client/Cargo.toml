@@ -20,6 +20,5 @@ opentelemetry-otlp = { version = "*", default-features = false, features = [
 prost = "*"
 prost-types = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
-tokio-stream = "*"
 tonic = "*"
 tower = "*"
