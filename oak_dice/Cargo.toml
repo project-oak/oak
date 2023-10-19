@@ -12,7 +12,7 @@ hex = { version = "*", default-features = false, features = ["alloc"] }
 hkdf = { version = "*", default-features = false }
 p384 = { version = "*", default-features = false, features = ["ecdsa"] }
 rand_core = { version = "*", default-features = false, features = [
-    "getrandom",
+  "getrandom",
 ] }
 sha2 = { version = "*", default-features = false }
 static_assertions = "*"
