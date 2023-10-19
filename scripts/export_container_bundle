@@ -65,10 +65,6 @@ umoci unpack \
     --image="${OCI_IMAGE_DIR}" \
     "${OCI_BUNDLE_DIR}"
 
-# Apply transformations which hopefully we can get rid of in the future.
-jq '.process.terminal = false' < "${OCI_BUNDLE_DIR}"/config.json > "${WORK_DIR}"/config.new.json
-mv --force "${WORK_DIR}"/config.new.json "${OCI_BUNDLE_DIR}"/config.json
-
 # Bundle just the files and directories that constitute the deterministically
 # generated OCI bundle.
 tar --create --file="${OUTPUT_OCI_BUNDLE_TAR}" --directory="${OCI_BUNDLE_DIR}" ./rootfs ./config.json
