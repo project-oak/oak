@@ -666,7 +666,7 @@
         memory_map_measurement,
     };
 
-    dice_attestation::generate_stage1_attestation(<span class="kw-2">&amp;</span>measurements);
+    <span class="kw">let </span>_dice_data = dice_attestation::generate_dice_data(<span class="kw-2">&amp;</span>measurements);
 
     <span class="macro">log::info!</span>(<span class="string">&quot;jumping to kernel at {:#018x}&quot;</span>, entry.as_u64());
 

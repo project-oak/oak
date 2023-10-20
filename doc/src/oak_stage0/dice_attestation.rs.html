@@ -105,6 +105,47 @@
 <a href="#105" id="105">105</a>
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -121,14 +162,23 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>alloc::{string::String, vec, vec::Vec};
-<span class="kw">use </span>coset::{cbor::value::Value, cwt::ClaimName, CoseError, CoseSign1};
-<span class="kw">use </span>oak_dice::cert::{
-    derive_public_key_id, generate_eca_certificate, generate_ecdsa_key_pair, ACPI_MEASUREMENT_ID,
-    INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_MEASUREMENT_ID,
-    MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID,
+</span><span class="kw">use </span>alloc::{boxed::Box, string::String, vec, vec::Vec};
+<span class="kw">use </span>coset::{cbor::value::Value, cwt::ClaimName, CborSerializable, CoseSign1};
+<span class="kw">use </span>oak_dice::{
+    cert::{
+        derive_public_key_id, generate_eca_certificate, generate_ecdsa_key_pair,
+        public_key_to_cose_key, ACPI_MEASUREMENT_ID, INITRD_MEASUREMENT_ID,
+        KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
+        SETUP_DATA_MEASUREMENT_ID,
+    },
+    evidence::{Stage0DiceData, TeePlatform},
 };
+<span class="kw">use </span>oak_sev_guest::guest::AttestationReport;
 <span class="kw">use </span>p256::ecdsa::SigningKey;
+<span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
+
+<span class="comment">// The number of custom bytes that can be included in the attestation report.
+</span><span class="kw">const </span>REPORT_DATA_SIZE: usize = <span class="number">64</span>;
 
 <span class="doccomment">/// Measurements of various components in Stage1.
 </span><span class="kw">pub struct </span>Measurements {
@@ -151,65 +201,97 @@
     stage0_eca_key: <span class="kw-2">&amp;</span>SigningKey,
     stage0_cert_issuer: String,
     measurements: <span class="kw-2">&amp;</span>Measurements,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(CoseSign1, SigningKey), CoseError&gt; {
+) -&gt; (CoseSign1, SigningKey) {
     <span class="comment">// Generate additional claims to cover the measurements.
 
     </span><span class="kw">let </span>additional_claims = <span class="macro">vec!</span>[
         (
             ClaimName::PrivateUse(KERNEL_MEASUREMENT_ID),
-            Value::Bytes(Vec::from(measurements.kernel_measurement)),
+            Value::Bytes(measurements.kernel_measurement.into()),
         ),
         (
             ClaimName::PrivateUse(KERNEL_COMMANDLINE_MEASUREMENT_ID),
-            Value::Bytes(Vec::from(measurements.cmdline_measurement)),
+            Value::Bytes(measurements.cmdline_measurement.into()),
         ),
         (
             ClaimName::PrivateUse(SETUP_DATA_MEASUREMENT_ID),
-            Value::Bytes(Vec::from(measurements.setup_data_measurement)),
+            Value::Bytes(measurements.setup_data_measurement.into()),
         ),
         (
             ClaimName::PrivateUse(INITRD_MEASUREMENT_ID),
-            Value::Bytes(Vec::from(measurements.ram_disk_measurement)),
+            Value::Bytes(measurements.ram_disk_measurement.into()),
         ),
         (
             ClaimName::PrivateUse(MEMORY_MAP_MEASUREMENT_ID),
-            Value::Bytes(Vec::from(measurements.memory_map_measurement)),
+            Value::Bytes(measurements.memory_map_measurement.into()),
         ),
         (
             ClaimName::PrivateUse(ACPI_MEASUREMENT_ID),
-            Value::Bytes(Vec::from(measurements.acpi_measurement)),
+            Value::Bytes(measurements.acpi_measurement.into()),
         ),
     ];
     generate_eca_certificate(stage0_eca_key, stage0_cert_issuer, additional_claims)
+        .expect(<span class="string">&quot;couldn&#39;t generate ECA certificate&quot;</span>)
 }
 
-<span class="doccomment">/// Generates signed attestation for the &#39;measurements&#39; of all Stage 1 components.
-</span><span class="kw">pub fn </span>generate_stage1_attestation(measurements: <span class="kw-2">&amp;</span>Measurements) {
-    <span class="comment">// Generate Stage0 keys. This key will be used to sign Stage1
-    // measurement+config and the stage1_ca_key.
+<span class="doccomment">/// Generates attestation evidence for the &#39;measurements&#39; of all Stage 1 components.
+</span><span class="kw">pub fn </span>generate_dice_data(measurements: <span class="kw-2">&amp;</span>Measurements) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Stage0DiceData {
+    <span class="kw">let </span>result = Box::leak(Box::new_in(
+        Stage0DiceData::new_zeroed(),
+        <span class="kw-2">&amp;</span><span class="kw">crate</span>::BOOT_ALLOC,
+    ));
+
+    <span class="comment">// Generate ECA Stage0 key pair. This key will be used to sign Stage1 ECA certificate.
     </span><span class="kw">let </span>(stage0_eca_key, stage0_eca_verifying_key) = generate_ecdsa_key_pair();
 
-    <span class="comment">// Call generate_attestation_report() to get &#39;stage0_ca_verifying_key&#39; added to attestation
-    // report.
-    </span><span class="macro">log::debug!</span>(
-        <span class="string">&quot;Stage0 Verification key: {}&quot;</span>,
-        hex::encode(stage0_eca_verifying_key.to_encoded_point(<span class="bool-val">false</span>).as_bytes())
-    );
-
-    <span class="comment">// Generate Stage1 CWT.
-    </span><span class="kw">let </span>stage1_eca = generate_stage1_certificate(
+    <span class="kw">let </span>(stage1_eca_cert, stage1_eca_signing_key) = generate_stage1_certificate(
         <span class="kw-2">&amp;</span>stage0_eca_key,
         hex::encode(derive_public_key_id(<span class="kw-2">&amp;</span>stage0_eca_verifying_key)),
         measurements,
     );
-    <span class="kw">if </span>stage1_eca.is_ok() {
-        <span class="comment">// Call code that transmits the following to Stage1.
-        // 1. stage0_eca_verifying_key
-        // 2. stage1_eca.0 (the Stage 1 evidence)
-        // 3. stage1_eca.1 (the Stage 1 ECA private key)
-        </span><span class="macro">log::debug!</span>(<span class="string">&quot;Signing was successful..&quot;</span>);
-        <span class="kw">return</span>;
-    }
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Error in signing: {}&quot;</span>, stage1_eca.unwrap_err())
+
+    <span class="kw">let </span>stage0_eca_verifying_key = public_key_to_cose_key(<span class="kw-2">&amp;</span>stage0_eca_verifying_key)
+        .to_vec()
+        .expect(<span class="string">&quot;couldn&#39;t serialize the ECA public key&quot;</span>);
+
+    <span class="kw">let </span>stage1_eca_cert = stage1_eca_cert
+        .to_vec()
+        .expect(<span class="string">&quot;couldn&#39;t serialize stage 1 ECA certificate&quot;</span>);
+
+    <span class="kw">let </span>stage1_eca_signing_key: Vec&lt;u8&gt; = stage1_eca_signing_key.to_bytes().as_slice().into();
+
+    <span class="comment">// Use the SHA2-256 digest of the serialized ECA verifying key as the report data.
+    </span><span class="kw">let </span>eca_measurement = <span class="kw">crate</span>::measure_byte_slice(<span class="kw-2">&amp;</span>stage0_eca_verifying_key);
+    <span class="kw">let </span><span class="kw-2">mut </span>report_data = [<span class="number">0u8</span>; REPORT_DATA_SIZE];
+    report_data[..eca_measurement.len()].copy_from_slice(<span class="kw-2">&amp;</span>eca_measurement[..]);
+
+    <span class="kw">let </span>report = get_attestation(report_data).expect(<span class="string">&quot;couldn&#39;t get attestation report.&quot;</span>);
+    <span class="kw">let </span>report_bytes = report.as_bytes();
+
+    result.root_layer_evidence.tee_platform = TeePlatform::AmdSevSnp <span class="kw">as </span>u64;
+    result.root_layer_evidence.remote_attestation_report[..report_bytes.len()]
+        .copy_from_slice(report_bytes);
+    result.root_layer_evidence.eca_public_key[..stage0_eca_verifying_key.len()]
+        .copy_from_slice(<span class="kw-2">&amp;</span>stage0_eca_verifying_key);
+    result.layer_1_evidence.eca_certificate[..stage1_eca_cert.len()]
+        .copy_from_slice(<span class="kw-2">&amp;</span>stage1_eca_cert);
+    result.layer_1_certificate_authority.eca_private_key[..stage1_eca_signing_key.len()]
+        .copy_from_slice(<span class="kw-2">&amp;</span>stage1_eca_signing_key);
+    result
+}
+
+<span class="doccomment">/// Returns an attestation report.
+///
+/// # Arguments
+///
+/// * `report_data` - The custom data that must be included in the report. This is typically used to
+///   bind information (such as the hash of a public key) to the report.
+</span><span class="kw">pub fn </span>get_attestation(
+    report_data: [u8; REPORT_DATA_SIZE],
+) -&gt; <span class="prelude-ty">Result</span>&lt;AttestationReport, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="comment">// For now we just generate a fake report and set the report data.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>report = AttestationReport::new_zeroed();
+    report.data.report_data = report_data;
+    <span class="prelude-val">Ok</span>(report)
 }
 </code></pre></div></section></main></body></html>

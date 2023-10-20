@@ -735,6 +735,9 @@
 <a href="#735" id="735">735</a>
 <a href="#736" id="736">736</a>
 <a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -782,6 +785,9 @@
     </span>DISABLED = <span class="number">6</span>,
     <span class="doccomment">/// Persistent memory: must be handled distinct from conventional volatile memory.
     </span>PMEM = <span class="number">7</span>,
+    <span class="doccomment">/// Custom implementation-defined value indicating that the memory region is used to pass
+    /// DICE-related information from Stage 0 to the next DICE stage.
+    </span>DiceData = <span class="number">0xFF000001</span>,
 }
 
 <span class="macro">bitflags! </span>{

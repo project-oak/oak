@@ -398,7 +398,7 @@
         <span class="comment">// Construct the &quot;real&quot; E820 table, carving out a chunk of memory out for the ACPI area and
         // reserved memory just below 1 MiB.
         </span><span class="kw">for </span>entry <span class="kw">in </span><span class="kw-2">&amp;</span>e820_table[<span class="number">0</span>..e820_entries] {
-            <span class="kw">if </span>entry.addr() &lt; <span class="number">0x8_0000 </span>&amp;&amp; entry.addr() + entry.size() &gt;= <span class="number">0x10_0000 </span>{
+            <span class="kw">if </span>entry.addr() &lt;= <span class="number">0x8_0000 </span>&amp;&amp; entry.addr() + entry.size() &gt;= <span class="number">0x10_0000 </span>{
                 <span class="comment">// any memory before our hole?
                 </span><span class="kw">let </span>low_size = <span class="kw">if </span>entry.addr() &lt; <span class="number">0x8_0000 </span>{
                     <span class="kw">let </span>size = <span class="number">0x8_0000 </span>- entry.addr();
