@@ -121,11 +121,6 @@
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
 <a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -141,14 +136,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span>std::{
+</span><span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>nix::unistd::{Gid, Uid};
+<span class="kw">use </span>oci_spec::runtime::{LinuxIdMapping, LinuxIdMappingBuilder, Mount, Spec};
+<span class="kw">use </span>std::{
     os::unix::fs::lchown,
     path::{Path, PathBuf},
 };
-
-<span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>nix::unistd::{Gid, Uid};
-<span class="kw">use </span>oci_spec::runtime::{LinuxIdMapping, LinuxIdMappingBuilder, Mount, Spec};
 <span class="kw">use </span>tokio::sync::oneshot::Sender;
 
 <span class="kw">pub async fn </span>run(
@@ -177,7 +171,7 @@
     <span class="macro">log::info!</span>(<span class="string">&quot;Setting up container&quot;</span>);
 
     <span class="kw">let </span>spec_path = container_dir.join(<span class="string">&quot;config.json&quot;</span>);
-    <span class="kw">let </span><span class="kw-2">mut </span>spec = Spec::load(spec_path.clone()).context(<span class="string">&quot;error reading OCI spec&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>spec = Spec::load(<span class="kw-2">&amp;</span>spec_path).context(<span class="string">&quot;error reading OCI spec&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span><span class="kw-2">mut </span>mounts = spec.mounts().as_ref().cloned().unwrap_or_default();
     mounts.push({
         <span class="kw">let </span><span class="kw-2">mut </span>mount = Mount::default();
@@ -225,21 +219,17 @@
             .try_into()
             .expect(<span class="string">&quot;invalid container path&quot;</span>);
         cmd.args([
-            <span class="string">&quot;--service-type=forking&quot;</span>,
             <span class="string">&quot;--property=RuntimeDirectory=oakc&quot;</span>,
-            <span class="comment">// PIDFile is relative to `/run`, but unfortunately can&#39;t reference `RuntimeDirectory`.
-            </span><span class="string">&quot;--property=PIDFile=oakc/oakc.pid&quot;</span>,
             <span class="string">&quot;--property=ProtectSystem=strict&quot;</span>,
             <span class="macro">format!</span>(<span class="string">&quot;--property=ReadWritePaths={}&quot;</span>, container_dir).as_str(),
             <span class="macro">format!</span>(<span class="string">&quot;--uid={}&quot;</span>, runtime_uid).as_str(),
             <span class="macro">format!</span>(<span class="string">&quot;--gid={}&quot;</span>, runtime_gid).as_str(),
+            <span class="string">&quot;--pty&quot;</span>,
             <span class="string">&quot;--wait&quot;</span>,
             <span class="string">&quot;--collect&quot;</span>,
             <span class="string">&quot;/bin/runc&quot;</span>,
             <span class="string">&quot;--root=${RUNTIME_DIRECTORY}/runc&quot;</span>,
             <span class="string">&quot;run&quot;</span>,
-            <span class="string">&quot;--detach&quot;</span>,
-            <span class="string">&quot;--pid-file=${PIDFILE}&quot;</span>,
             <span class="macro">format!</span>(<span class="string">&quot;--bundle={}&quot;</span>, container_dir).as_str(),
             <span class="string">&quot;oakc&quot;</span>,
         ]);
