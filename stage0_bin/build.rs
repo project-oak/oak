@@ -21,8 +21,8 @@ fn main() {
     println!("cargo:rustc-link-arg=--script=layout.ld");
 
     if env::var("PROFILE").unwrap() == "release" {
-        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=384K");
+        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=256K");
     } else {
-        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=512K");
+        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=1024K");
     }
 }
