@@ -32,9 +32,7 @@ pub struct UntrustedApp {
 }
 
 impl UntrustedApp {
-    pub async fn create(
-        launcher_args: oak_containers_launcher::Args,
-    ) -> Result<Self, anyhow::Error> {
+    pub async fn create(launcher_args: oak_containers_launcher::Args) -> Result<Self> {
         let mut launcher = oak_containers_launcher::Launcher::create(launcher_args).await?;
         let trusted_app_address = launcher.get_trusted_app_address().await?;
 

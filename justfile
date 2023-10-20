@@ -42,7 +42,7 @@ oak_containers_kernel:
 oak_containers_system_image:
     env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 bash build.sh
 
-# Oak Containers Hellow World entry point.
+# Oak Containers Hello World entry point.
 
 oak_containers_hello_world_container_bundle_tar:
     env --chdir=oak_containers_hello_world_container DOCKER_BUILDKIT=0 bash build_container_bundle

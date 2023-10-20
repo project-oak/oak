@@ -5,6 +5,9 @@
 # development. Down the line we probably want to replace this.
 
 set -o errexit
+set -o nounset 
+set -o xtrace 
+set -o pipefail
 
 readonly OCI_IMAGE_FILE="./target/oak_container_example_oci_image.tar"
 set -e
@@ -12,7 +15,7 @@ rm --recursive --force ./target
 mkdir --parents ./target
 
 cargo build \
-    --package="oak_functions_containers_app" \
+    --package=oak_functions_containers_app \
     --target="x86_64-unknown-linux-musl" \
     -Zunstable-options \
     --out-dir="./target/"

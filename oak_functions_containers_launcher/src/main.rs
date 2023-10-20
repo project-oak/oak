@@ -18,19 +18,19 @@ use oak_functions_containers_launcher::proto::oak::functions::InitializeRequest;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-    let args = oak_containers_launcher::Args::parse();
     env_logger::init();
+    let args = oak_containers_launcher::Args::parse();
 
     let mut untrusted_app = oak_functions_containers_launcher::UntrustedApp::create(args)
         .await
-        .map_err(|error| anyhow::anyhow!("couldn't create untrusted launcher: {}", error))?;
+        .context("couldn't create untrusted launcher")?;
 
     let initialize_response = untrusted_app
         .initialize_enclave(InitializeRequest::default())
         .await
         .map_err(|error| anyhow::anyhow!("couldn't get encrypted response: {}", error))?;
 
-    eprintln!(
+    log::info!(
         "Received an initialization response: {:?}",
         initialize_response
     );
