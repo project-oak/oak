@@ -17,11 +17,11 @@
 use alloc::{string::String, vec, vec::Vec};
 use coset::{cbor::value::Value, cwt::ClaimName, CoseError, CoseSign1};
 use oak_dice::cert::{
-    derive_public_key_id, generate_eca_certificate, generate_ecdsa_keys, ACPI_MEASUREMENT_ID,
+    derive_public_key_id, generate_eca_certificate, generate_ecdsa_key_pair, ACPI_MEASUREMENT_ID,
     INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_MEASUREMENT_ID,
     MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID,
 };
-use p384::ecdsa::SigningKey;
+use p256::ecdsa::SigningKey;
 
 /// Measurements of various components in Stage1.
 pub struct Measurements {
@@ -80,7 +80,7 @@ fn generate_stage1_certificate(
 pub fn generate_stage1_attestation(measurements: &Measurements) {
     // Generate Stage0 keys. This key will be used to sign Stage1
     // measurement+config and the stage1_ca_key.
-    let (stage0_eca_key, stage0_eca_verifying_key) = generate_ecdsa_keys();
+    let (stage0_eca_key, stage0_eca_verifying_key) = generate_ecdsa_key_pair();
 
     // Call generate_attestation_report() to get 'stage0_ca_verifying_key' added to attestation
     // report.

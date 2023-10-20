@@ -23,7 +23,7 @@ use coset::{
     iana, Algorithm, CborSerializable, CoseError, CoseKey, CoseSign1, KeyOperation, KeyType, Label,
 };
 use hkdf::Hkdf;
-use p384::ecdsa::{signature::Signer, Signature, SigningKey, VerifyingKey};
+use p256::ecdsa::{signature::Signer, Signature, SigningKey, VerifyingKey};
 use rand_core::OsRng;
 use sha2::Sha256;
 
@@ -36,7 +36,7 @@ pub const SUBJECT_PUBLIC_KEY_ID: i64 = -4670552;
 pub const KEY_USAGE_ID: i64 = -4670553;
 /// ID for the CWT private claim ID corresponding to the VM kernel measurement.
 pub const KERNEL_MEASUREMENT_ID: i64 = -4670555;
-/// ID for the CWT private claim ID corresponding to the VM kernel commandline measurement.
+/// ID for the CWT private claim ID corresponding to the VM kernel command-line measurement.
 pub const KERNEL_COMMANDLINE_MEASUREMENT_ID: i64 = -4670556;
 /// ID for the CWT private claim ID corresponding to the VM kernel setup data measurement.
 pub const SETUP_DATA_MEASUREMENT_ID: i64 = -4670557;
@@ -84,7 +84,7 @@ pub fn derive_public_key_id(public_key: &VerifyingKey) -> [u8; KEY_ID_LENGTH] {
 }
 
 /// Generates private/public ECDSA key pair.
-pub fn generate_ecdsa_keys() -> (SigningKey, VerifyingKey) {
+pub fn generate_ecdsa_key_pair() -> (SigningKey, VerifyingKey) {
     let private_key = SigningKey::random(&mut OsRng);
     let public_key = VerifyingKey::from(&private_key);
     (private_key, public_key)
@@ -134,7 +134,7 @@ pub fn generate_eca_certificate(
     issuer_id: String,
     additional_claims: Vec<(ClaimName, Value)>,
 ) -> Result<(CoseSign1, SigningKey), CoseError> {
-    let (signing_key, verifying_key) = generate_ecdsa_keys();
+    let (signing_key, verifying_key) = generate_ecdsa_key_pair();
     let verifying_key_id = hex::encode(derive_public_key_id(&verifying_key));
     let mut claim_builder = ClaimsSetBuilder::new()
         .issuer(issuer_id)

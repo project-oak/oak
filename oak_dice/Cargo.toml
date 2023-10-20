@@ -10,7 +10,7 @@ bitflags = "*"
 coset = { version = "*", default-features = false }
 hex = { version = "*", default-features = false, features = ["alloc"] }
 hkdf = { version = "*", default-features = false }
-p384 = { version = "*", default-features = false, features = ["ecdsa"] }
+p256 = { version = "*", default-features = false, features = ["ecdsa"] }
 rand_core = { version = "*", default-features = false, features = [
   "getrandom",
 ] }
