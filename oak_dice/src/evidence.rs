@@ -99,7 +99,7 @@ pub struct Stage0DiceData {
     pub root_layer_evidence: RootLayerEvidence,
     /// The evidence about the next layer.
     pub layer_1_evidence: LayerEvidence,
-    pub layer_1_certifcate_authority: CertificateAuthority,
+    pub layer_1_certificate_authority: CertificateAuthority,
     _padding: [u8; 688],
 }
 

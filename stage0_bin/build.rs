@@ -23,6 +23,6 @@ fn main() {
     if env::var("PROFILE").unwrap() == "release" {
         println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=256K");
     } else {
-        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=1024K");
+        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=2048K");
     }
 }
