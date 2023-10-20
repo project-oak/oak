@@ -23,14 +23,14 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let mut untrusted_app = oak_functions_containers_launcher::UntrustedApp::create(args)
         .await
-        .context("couldn't create untrusted launcher")?;
+        .map_err(|error| anyhow::anyhow!("couldn't create untrusted launcher: {}", error))?;
 
     let initialize_response = untrusted_app
         .initialize_enclave(InitializeRequest::default())
         .await
         .map_err(|error| anyhow::anyhow!("couldn't get encrypted response: {}", error))?;
 
-    log::info!(
+    eprintln!(
         "Received an initialization response: {:?}",
         initialize_response
     );
