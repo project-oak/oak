@@ -16,7 +16,7 @@ linked_list_allocator = "*"
 oak_core = { path = "../oak_core", default-features = false }
 oak_dice = { workspace = true }
 oak_linux_boot_params = { path = "../linux_boot_params" }
-oak_sev_guest = { path = "../oak_sev_guest", default-features = false }
+oak_sev_guest = { workspace = true }
 p256 = { version = "*", default-features = false, features = ["ecdsa"] }
 rand_core = { version = "*", default-features = false, features = [
   "getrandom",

@@ -132,7 +132,7 @@ impl ZeroPage {
         // Construct the "real" E820 table, carving out a chunk of memory out for the ACPI area and
         // reserved memory just below 1 MiB.
         for entry in &e820_table[0..e820_entries] {
-            if entry.addr() < 0x8_0000 && entry.addr() + entry.size() >= 0x10_0000 {
+            if entry.addr() <= 0x8_0000 && entry.addr() + entry.size() >= 0x10_0000 {
                 // any memory before our hole?
                 let low_size = if entry.addr() < 0x8_0000 {
                     let size = 0x8_0000 - entry.addr();
