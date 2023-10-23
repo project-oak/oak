@@ -38,7 +38,7 @@ impl FileDescriptor for DiceDataDescriptor {
         let end_index = min(self.index + length, data_as_bytes.len());
         let slice_to_read = &mut data_as_bytes[self.index..end_index];
         buf.copy_from_slice(slice_to_read);
-        self.index += end_index;
+        self.index = end_index;
         // destroy the data that was read, to ensure that it can only be read once
         slice_to_read.fill(0);
         Ok(length as isize)
