@@ -22,6 +22,9 @@ pub mod mmap;
 mod process;
 mod stdio;
 
+#[cfg(test)]
+mod tests;
+
 use self::{
     fd::{syscall_fsync, syscall_read, syscall_write},
     mmap::syscall_mmap,

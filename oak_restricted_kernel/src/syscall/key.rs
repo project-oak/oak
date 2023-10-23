@@ -16,20 +16,26 @@
 
 use crate::snp_guest::DerivedKey;
 
-use super::fd::FileDescriptor;
+use super::fd::{copy_max_slice, FileDescriptor};
 use alloc::boxed::Box;
-use core::cmp::min;
 use oak_restricted_kernel_interface::{Errno, DERIVED_KEY_FD};
 
 #[derive(Default)]
 struct DerivedKeyDescriptor {
     key: DerivedKey,
+    index: usize,
+}
+
+impl DerivedKeyDescriptor {
+    fn new(key: DerivedKey) -> Self {
+        Self { index: 0, key }
+    }
 }
 
 impl FileDescriptor for DerivedKeyDescriptor {
     fn read(&mut self, buf: &mut [u8]) -> Result<isize, oak_restricted_kernel_interface::Errno> {
-        let length = min(self.key.len(), buf.len());
-        buf.copy_from_slice(&self.key[..length]);
+        let length = copy_max_slice(&self.key[self.index..], buf);
+        self.index += length;
         Ok(length as isize)
     }
 
@@ -45,7 +51,7 @@ impl FileDescriptor for DerivedKeyDescriptor {
 
 /// Registers a file descriptor for reading a derived key (0x21)
 pub fn register(key: DerivedKey) {
-    super::fd::register(DERIVED_KEY_FD, Box::new(DerivedKeyDescriptor { key }))
+    super::fd::register(DERIVED_KEY_FD, Box::new(DerivedKeyDescriptor::new(key)))
         .map_err(|_| ()) // throw away the box
         .expect("DerivedKeyDescriptor already registered");
 }
