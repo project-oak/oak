@@ -38,8 +38,7 @@ type Fd = c_int;
 /// to a destination buffer.
 pub fn copy_max_slice(src_buf: &[u8], dst_buf: &mut [u8]) -> usize {
     let length: usize = min(src_buf.len(), dst_buf.len());
-    let slice_to_read = &src_buf[..length];
-    dst_buf.copy_from_slice(slice_to_read);
+    dst_buf[..length].copy_from_slice(&src_buf[..length]);
     length
 }
 

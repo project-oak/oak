@@ -30,7 +30,7 @@ fn longer_dst_copy() {
     let src: &[u8; 6] = &[0, 1, 2, 3, 4, 5];
     let dst: &mut [u8; 8] = &mut [0; 8];
     let length = copy_max_slice(src, dst);
-    assert_eq!(length, 5);
+    assert_eq!(length, 6);
     assert_eq!(dst, &[0, 1, 2, 3, 4, 5, 0, 0])
 }
 
