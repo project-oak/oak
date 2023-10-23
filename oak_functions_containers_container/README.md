@@ -4,6 +4,6 @@
 <h1><picture><source media="(prefers-color-scheme: dark)" srcset="/docs/oak-logo/svgs/oak-containers-negative-colour.svg?sanitize=true"><source media="(prefers-color-scheme: light)" srcset="/docs/oak-logo/svgs/oak-containers.svg?sanitize=true"><img alt="Project Oak Containers Logo" src="/docs/oak-logo/svgs/oak-containers.svg?sanitize=true"></picture></h1>
 <!-- Oak Logo End -->
 
-# Hello World Trusted App Container Tools
+# Oak Functions Container Tools
 
 Tools for packaging the Oak Functions Containers app as an OCI runtime bundle.

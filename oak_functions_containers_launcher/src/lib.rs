@@ -21,14 +21,18 @@ pub mod proto {
     }
 }
 
-mod oak_functions_client;
-
-use crate::proto::oak::functions::{InitializeRequest, InitializeResponse};
+use crate::proto::oak::functions::{
+    oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient, InitializeRequest,
+    InitializeResponse,
+};
+use anyhow::Context;
 use oak_containers_launcher::Launcher;
+use tokio::time::Duration;
+use tonic::transport::Endpoint;
 
 pub struct UntrustedApp {
     launcher: Launcher,
-    oak_functions_client: oak_functions_client::OakFunctionsClient,
+    oak_functions_client: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
 }
 
 impl UntrustedApp {
@@ -36,10 +40,16 @@ impl UntrustedApp {
         let mut launcher = oak_containers_launcher::Launcher::create(launcher_args).await?;
         let trusted_app_address = launcher.get_trusted_app_address().await?;
 
-        let oak_functions_client = oak_functions_client::OakFunctionsClient::create(format!(
-            "http://{trusted_app_address}"
-        ))
-        .await?;
+        let oak_functions_client: GrpcOakFunctionsClient<tonic::transport::channel::Channel> = {
+            let channel = Endpoint::from_shared(format!("http://{trusted_app_address}"))
+                .context("couldn't form channel")?
+                .connect_timeout(Duration::from_secs(120))
+                .connect()
+                .await
+                .context("couldn't connect to trusted app")?;
+            GrpcOakFunctionsClient::new(channel)
+        };
+
         Ok(Self {
             launcher,
             oak_functions_client,
@@ -50,9 +60,13 @@ impl UntrustedApp {
         &mut self,
         initialize_request: InitializeRequest,
     ) -> Result<InitializeResponse, Box<dyn std::error::Error>> {
-        self.oak_functions_client
+        let initialize_response = self
+            .oak_functions_client
             .initialize(initialize_request)
             .await
+            .context("couldn't send initialize request")?
+            .into_inner();
+        Ok(initialize_response)
     }
 
     pub async fn kill(&mut self) {
