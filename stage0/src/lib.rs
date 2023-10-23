@@ -305,7 +305,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
         memory_map_measurement,
     };
 
-    dice_attestation::generate_stage1_attestation(&measurements);
+    let _dice_data = dice_attestation::generate_dice_data(&measurements);
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 

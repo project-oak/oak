@@ -13,18 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Minimal implementation of a container runtime using chroot. It accepts an
-//! containers in the form of an OCI filesystem bundle. However the runtime
-//! itself is not OCI spec compliant.
-
+use anyhow::Context;
+use nix::unistd::{Gid, Uid};
+use oci_spec::runtime::{LinuxIdMapping, LinuxIdMappingBuilder, Mount, Spec};
 use std::{
     os::unix::fs::lchown,
     path::{Path, PathBuf},
 };
-
-use anyhow::Context;
-use nix::unistd::{Gid, Uid};
-use oci_spec::runtime::{LinuxIdMapping, LinuxIdMappingBuilder, Mount, Spec};
 use tokio::sync::oneshot::Sender;
 
 pub async fn run(
@@ -53,7 +48,7 @@ pub async fn run(
     log::info!("Setting up container");
 
     let spec_path = container_dir.join("config.json");
-    let mut spec = Spec::load(spec_path.clone()).context("error reading OCI spec")?;
+    let mut spec = Spec::load(&spec_path).context("error reading OCI spec")?;
     let mut mounts = spec.mounts().as_ref().cloned().unwrap_or_default();
     mounts.push({
         let mut mount = Mount::default();
@@ -101,21 +96,17 @@ pub async fn run(
             .try_into()
             .expect("invalid container path");
         cmd.args([
-            "--service-type=forking",
             "--property=RuntimeDirectory=oakc",
-            // PIDFile is relative to `/run`, but unfortunately can't reference `RuntimeDirectory`.
-            "--property=PIDFile=oakc/oakc.pid",
             "--property=ProtectSystem=strict",
             format!("--property=ReadWritePaths={}", container_dir).as_str(),
             format!("--uid={}", runtime_uid).as_str(),
             format!("--gid={}", runtime_gid).as_str(),
+            "--pty",
             "--wait",
             "--collect",
             "/bin/runc",
             "--root=${RUNTIME_DIRECTORY}/runc",
             "run",
-            "--detach",
-            "--pid-file=${PIDFILE}",
             format!("--bundle={}", container_dir).as_str(),
             "oakc",
         ]);

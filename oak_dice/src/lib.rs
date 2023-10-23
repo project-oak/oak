@@ -18,4 +18,7 @@
 
 //! Structs and helpers for implementing DICE-based attestation.
 
+extern crate alloc;
+
+pub mod cert;
 pub mod evidence;

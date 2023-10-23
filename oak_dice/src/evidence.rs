@@ -99,35 +99,42 @@ pub struct Stage0DiceData {
     pub root_layer_evidence: RootLayerEvidence,
     /// The evidence about the next layer.
     pub layer_1_evidence: LayerEvidence,
-    pub layer_1_certifcate_authority: CertificateAuthority,
+    pub layer_1_certificate_authority: CertificateAuthority,
     _padding: [u8; 688],
 }
 
 static_assertions::assert_eq_size!([u8; 4096], Stage0DiceData);
 
-/// ECDSA keys that can be used for an application for signing or encryption, and their associated
-/// certificates.
+/// Certificates for the ECDSA keys that can be used for an application for signing or encryption.
 #[derive(AsBytes, FromBytes)]
 #[repr(C)]
 pub struct ApplicationKeys {
-    /// The RAW bytes representing an ECDSA private key that can be used to sign arbitrary data.
-    pub signing_private_key: [u8; PRIVATE_KEY_SIZE],
     /// Serialized CWT certificate for the signing private key. The certificate must include
     /// measurements of the application.
-    pub signing_certificate: [u8; CERTIFICATE_SIZE],
-    /// The RAW bytes representing an ECDSA private key that can be used for hybrid encryption.
-    pub encryption_private_key: [u8; PRIVATE_KEY_SIZE],
+    pub signing_public_key_certificate: [u8; CERTIFICATE_SIZE],
     /// Serialized CWT certificate for the encryption private key. The certificate must include
     /// measurements of the application.
-    pub encryption_certificate: [u8; CERTIFICATE_SIZE],
+    pub encryption_public_key_certificate: [u8; CERTIFICATE_SIZE],
 }
 
-static_assertions::assert_eq_size!([u8; 2176], ApplicationKeys);
+static_assertions::assert_eq_size!([u8; 2048], ApplicationKeys);
 
-/// Wrapper for passing DICE info from the Restricted Kernel to the application.
+/// ECDSA private keys that can be used for an application for signing or encryption.
 #[derive(AsBytes, FromBytes)]
 #[repr(C)]
-pub struct RestrictedKernelDiceData {
+pub struct ApplicationPrivateKeys {
+    /// The RAW bytes representing an ECDSA private key that can be used to sign arbitrary data.
+    pub signing_private_key: [u8; PRIVATE_KEY_SIZE],
+    /// The RAW bytes representing an ECDSA private key that can be used for hybrid encryption.
+    pub encryption_private_key: [u8; PRIVATE_KEY_SIZE],
+}
+
+static_assertions::assert_eq_size!([u8; 128], ApplicationPrivateKeys);
+
+/// Wrapper for passing the attestation evidence from the Restricted Kernel to the application.
+#[derive(AsBytes, FromBytes)]
+#[repr(C)]
+pub struct Evidence {
     /// Evidence about Stage 0 and the initial state of the VM.
     pub root_layer_evidence: RootLayerEvidence,
     /// The evidence about the Restricted Kernel.
@@ -135,6 +142,17 @@ pub struct RestrictedKernelDiceData {
     /// Keys (and associated certificates) that can be used by the application for encryption or
     /// signing.
     pub application_keys: ApplicationKeys,
+}
+
+static_assertions::assert_eq_size!([u8; 5392], Evidence);
+
+/// Wrapper for passing the attestation evidence and private keys from the Restricted Kernel to the
+/// application.
+#[derive(AsBytes, FromBytes)]
+#[repr(C)]
+pub struct RestrictedKernelDiceData {
+    evidence: Evidence,
+    application_private_keys: ApplicationPrivateKeys,
 }
 
 static_assertions::assert_eq_size!([u8; 5520], RestrictedKernelDiceData);
