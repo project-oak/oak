@@ -15,7 +15,17 @@
 //
 
 use crate::{shutdown, snp::CPUID_PAGE};
-use core::{arch::asm, ops::Deref};
+use bitflags::bitflags;
+use core::{
+    arch::{
+        asm,
+        x86_64::{
+            _MM_EXCEPT_DENORM, _MM_EXCEPT_DIV_ZERO, _MM_EXCEPT_INEXACT, _MM_EXCEPT_INVALID,
+            _MM_EXCEPT_OVERFLOW, _MM_EXCEPT_UNDERFLOW, _MM_GET_EXCEPTION_STATE,
+        },
+    },
+    ops::Deref,
+};
 use log::error;
 use oak_sev_guest::{
     interrupts::{mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame},
@@ -286,12 +296,29 @@ extern "x86-interrupt" fn machine_check_handler(stack_frame: InterruptStackFrame
     shutdown::shutdown();
 }
 
+bitflags! {
+    #[repr(transparent)]
+    #[derive(Debug)]
+    pub struct Mxcsr: u32 {
+        const DE = _MM_EXCEPT_DENORM;
+        const ZE = _MM_EXCEPT_DIV_ZERO;
+        const PE = _MM_EXCEPT_INEXACT;
+        const IE = _MM_EXCEPT_INVALID;
+        const OE = _MM_EXCEPT_OVERFLOW;
+        const UE = _MM_EXCEPT_UNDERFLOW;
+    }
+}
 extern "x86-interrupt" fn simd_fp_handler(stack_frame: InterruptStackFrame) {
     error!("KERNEL PANIC: SIMD FLOATING POINT EXCEPTION!");
     error!(
         "Instruction pointer: {:#016x}",
         stack_frame.deref().instruction_pointer.as_u64()
     );
+    // Safety: (a) we only support CPUs modern enough to have MXCSR, (b) we're fine with whatever
+    // the return value is as we will just print it out for debugging purposes.
+    let mxcsr = Mxcsr::from_bits_retain(unsafe { _MM_GET_EXCEPTION_STATE() });
+    error!("MXCSR: {:?}", mxcsr);
+
     shutdown::shutdown();
 }
 
