@@ -11,14 +11,19 @@ Tools for packaging the Oak Functions Containers app as an OCI runtime bundle.
 In order to bring the launcher up with the Oak Functions Trusted Application on
 Oak Containers, do the following:
 
-Build all the necessary components of Oak Containers. A script in the ```oak_functions_containers_container``` folder can help generate the container image. However, to generate all necessary components, there is also a rule in the just file:
-```
-just all_oak_functions_containers_binaries
+Build all the necessary components of Oak Containers. A script in the
+`oak_functions_containers_container` folder can help generate the container
+image. However, to generate all necessary components, there is also a rule in
+the just file:
+
+```console
+root@hostname:~/project$ just all_oak_functions_containers_binaries
 ```
 
 Bring up the Oak Functions Launcher with the Trusted App:
-```
-cargo run -- \
+
+```console
+root@hostname:~/project/oak_functions_containers_launcher$ cargo run -- \
     --system-image ../oak_containers_system_image/target/image.tar.xz \
     --container-bundle ../oak_functions_containers_container/target/oak_container_example_oci_filesystem_bundle.tar \
     --vmm-binary `which qemu-system-x86_64` \
