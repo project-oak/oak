@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["oak_functions_client"],"struct":["AbortNextLookupDataResponse","Empty","ExtendNextLookupDataRequest","ExtendNextLookupDataResponse","FinishNextLookupDataRequest","FinishNextLookupDataResponse","InitializeRequest","InitializeResponse","InvokeRequest","InvokeResponse","LookupDataChunk","LookupDataEntry","PublicKeyInfo"]};

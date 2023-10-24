@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["proto"],"struct":["OakFunctionsContainersService"]};
+window.SIDEBAR_ITEMS = {"mod":["orchestrator_client","proto"],"struct":["OakFunctionsContainersService"]};
