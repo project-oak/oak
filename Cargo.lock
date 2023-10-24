@@ -2469,6 +2469,7 @@ dependencies = [
  "bitflags 2.3.3",
  "coset",
  "elf",
+ "env_logger",
  "hex",
  "hkdf",
  "linked_list_allocator",
