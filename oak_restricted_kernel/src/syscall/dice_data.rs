@@ -14,9 +14,8 @@
 // limitations under the License.
 //
 
-use super::fd::FileDescriptor;
+use super::fd::{copy_max_slice, FileDescriptor};
 use alloc::boxed::Box;
-use core::cmp::min;
 use oak_dice::evidence::RestrictedKernelDiceData as DiceData;
 use oak_restricted_kernel_interface::{Errno, DICE_DATA_FD};
 
@@ -33,14 +32,14 @@ impl DiceDataDescriptor {
 
 impl FileDescriptor for DiceDataDescriptor {
     fn read(&mut self, buf: &mut [u8]) -> Result<isize, oak_restricted_kernel_interface::Errno> {
-        let data_as_bytes = <DiceData as zerocopy::AsBytes>::as_bytes_mut(&mut self.data);
-        let length = min(data_as_bytes.len() - self.index, buf.len());
-        let end_index = min(self.index + length, data_as_bytes.len());
-        let slice_to_read = &mut data_as_bytes[self.index..end_index];
-        buf.copy_from_slice(slice_to_read);
-        self.index = end_index;
+        let data_as_slice = <DiceData as zerocopy::AsBytes>::as_bytes_mut(&mut self.data);
+        let length = copy_max_slice(&data_as_slice[self.index..], buf);
+
         // destroy the data that was read, to ensure that it can only be read once
+        let slice_to_read = &mut data_as_slice[self.index..(self.index + length)];
         slice_to_read.fill(0);
+
+        self.index += length;
         Ok(length as isize)
     }
 
