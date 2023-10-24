@@ -16,9 +16,9 @@ mkdir --parents ./target
 
 cargo build \
     --package=oak_functions_containers_app \
-    --target="x86_64-unknown-linux-musl" \
+    --target=x86_64-unknown-linux-musl \
     -Zunstable-options \
-    --out-dir="./target/"
+    --out-dir=./target/
 
 # Export the container as an OCI Image.
 # Ref: https://docs.docker.com/build/exporters/oci-docker/
@@ -26,10 +26,10 @@ readonly BUILDER="$(docker buildx create --driver docker-container)"
 docker buildx \
     --builder="${BUILDER}" \
     build \
-    --tag="latest" \
+    --tag=latest \
     --output="type=oci,dest=${OCI_IMAGE_FILE}" \
     .
 
 ../scripts/export_container_bundle \
     -c "${OCI_IMAGE_FILE}" \
-    -o "./target/oak_container_example_oci_filesystem_bundle.tar"
+    -o ./target/oak_container_example_oci_filesystem_bundle.tar

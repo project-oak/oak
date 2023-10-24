@@ -30,7 +30,7 @@ async fn main() -> Result<(), anyhow::Error> {
         .await
         .map_err(|error| anyhow::anyhow!("couldn't get encrypted response: {}", error))?;
 
-    eprintln!(
+    log::info!(
         "Received an initialization response: {:?}",
         initialize_response
     );
