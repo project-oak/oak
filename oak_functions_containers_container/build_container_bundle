@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+# A simple script to create a tarball of an example OCI Runtime Bundle (https://github.com/opencontainers/runtime-spec/blob/4e3b9264a330d094b0386c3703c5f379119711e8/bundle.md)
+# that can be executed on Oak Containers. Used for manual testing during
+# development. Down the line we probably want to replace this.
+
+set -o errexit
+set -o nounset 
+set -o xtrace 
+set -o pipefail
+
+readonly OCI_IMAGE_FILE="./target/oak_container_example_oci_image.tar"
+set -e
+rm --recursive --force ./target
+mkdir --parents ./target
+
+cargo build \
+    --package=oak_functions_containers_app \
+    --target=x86_64-unknown-linux-musl \
+    -Zunstable-options \
+    --out-dir=./target/
+
+# Export the container as an OCI Image.
+# Ref: https://docs.docker.com/build/exporters/oci-docker/
+readonly BUILDER="$(docker buildx create --driver docker-container)"
+docker buildx \
+    --builder="${BUILDER}" \
+    build \
+    --tag=latest \
+    --output="type=oci,dest=${OCI_IMAGE_FILE}" \
+    .
+
+../scripts/export_container_bundle \
+    -c "${OCI_IMAGE_FILE}" \
+    -o ./target/oak_container_example_oci_filesystem_bundle.tar

@@ -56,13 +56,14 @@ dependencies = [
 
 [[package]]
 name = "ahash"
-version = "0.8.3"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c99f64d1e06488f620f932677e24bc6e2897582980441ae90a671415bd7ec2f"
+checksum = "cd7d5a2cecb58716e47d67d5703a249964b14c7be1ec3cad3affc295b2d1c35d"
 dependencies = [
  "cfg-if",
  "once_cell",
  "version_check",
+ "zerocopy 0.7.3",
 ]
 
 [[package]]
@@ -2054,7 +2055,7 @@ dependencies = [
  "sha2",
  "static_assertions",
  "strum",
- "zerocopy",
+ "zerocopy 0.6.1",
 ]
 
 [[package]]
@@ -2138,11 +2139,29 @@ name = "oak_functions_containers_app"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "oak_crypto",
  "oak_grpc_utils",
+ "oak_remote_attestation",
  "prost",
  "tokio",
  "tokio-stream",
  "tonic 0.9.2",
+ "tower",
+]
+
+[[package]]
+name = "oak_functions_containers_launcher"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "env_logger",
+ "log",
+ "oak_containers_launcher",
+ "oak_grpc_utils",
+ "prost",
+ "tokio",
+ "tonic 0.8.3",
 ]
 
 [[package]]
@@ -2328,7 +2347,7 @@ dependencies = [
  "bitflags 2.3.3",
  "static_assertions",
  "strum",
- "zerocopy",
+ "zerocopy 0.6.1",
 ]
 
 [[package]]
@@ -2397,7 +2416,7 @@ dependencies = [
  "uart_16550",
  "virtio-drivers",
  "x86_64",
- "zerocopy",
+ "zerocopy 0.6.1",
 ]
 
 [[package]]
@@ -2432,7 +2451,7 @@ dependencies = [
  "static_assertions",
  "strum",
  "x86_64",
- "zerocopy",
+ "zerocopy 0.6.1",
 ]
 
 [[package]]
@@ -2466,7 +2485,7 @@ dependencies = [
  "static_assertions",
  "strum",
  "x86_64",
- "zerocopy",
+ "zerocopy 0.6.1",
 ]
 
 [[package]]
@@ -3496,7 +3515,7 @@ dependencies = [
  "static_assertions",
  "strum",
  "x86_64",
- "zerocopy",
+ "zerocopy 0.6.1",
 ]
 
 [[package]]
@@ -3874,6 +3893,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f219fad3b929bef19b1f86fbc0358d35daed8f2cac972037ac0dc10bbb8d5fb"
 dependencies = [
  "async-stream",
+ "async-trait",
  "axum",
  "base64 0.13.1",
  "bytes",
@@ -3886,6 +3906,8 @@ dependencies = [
  "hyper-timeout",
  "percent-encoding",
  "pin-project",
+ "prost",
+ "prost-derive",
  "tokio",
  "tokio-stream",
  "tokio-util",
@@ -4143,7 +4165,7 @@ checksum = "721c9c6a36ebc9bbfedb1933130f0fa6153bf1fa7c9272e4baf7f6f48dfff3bd"
 dependencies = [
  "bitflags 2.3.3",
  "log",
- "zerocopy",
+ "zerocopy 0.6.1",
 ]
 
 [[package]]
@@ -4575,7 +4597,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "332f188cc1bcf1fe1064b8c58d150f497e697f49774aa846f2dc949d9a25f236"
 dependencies = [
  "byteorder",
- "zerocopy-derive",
+ "zerocopy-derive 0.3.2",
+]
+
+[[package]]
+name = "zerocopy"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a7af71d8643341260a65f89fa60c0eeaa907f34544d8f6d9b0df72f069b5e74"
+dependencies = [
+ "zerocopy-derive 0.7.3",
 ]
 
 [[package]]
@@ -4587,6 +4618,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.107",
+]
+
+[[package]]
+name = "zerocopy-derive"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9731702e2f0617ad526794ae28fbc6f6ca8849b5ba729666c2a5bc4b6ddee2cd"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.28",
 ]
 
 [[package]]
