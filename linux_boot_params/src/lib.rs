@@ -498,7 +498,7 @@ impl SetupHeader {
 }
 
 #[repr(C, packed)]
-#[derive(Debug, Copy, Clone, FromBytes, AsBytes)]
+#[derive(Debug, Copy, Clone, FromBytes, AsBytes, PartialEq)]
 pub struct BootE820Entry {
     addr: usize,
     size: usize,
@@ -522,8 +522,20 @@ impl BootE820Entry {
         self.addr
     }
 
+    pub fn set_addr(&mut self, addr: usize) {
+        self.addr = addr;
+    }
+
     pub fn size(&self) -> usize {
         self.size
+    }
+
+    pub fn set_size(&mut self, size: usize) {
+        self.size = size;
+    }
+
+    pub fn end(&self) -> usize {
+        self.addr + self.size
     }
 }
 
@@ -694,6 +706,29 @@ impl BootParams {
     pub fn append_e820_entry(&mut self, entry: BootE820Entry) {
         self.e820_table[self.e820_entries as usize] = entry;
         self.e820_entries += 1;
+    }
+
+    pub fn insert_e820_entry(&mut self, entry: BootE820Entry, index: u8) {
+        if index > self.e820_entries {
+            panic!("out of bounds insert");
+        }
+        for i in (index..self.e820_entries).rev() {
+            let i = i as usize;
+            self.e820_table[i + 1] = self.e820_table[i];
+        }
+        self.e820_table[index as usize] = entry;
+        self.e820_entries += 1;
+    }
+
+    pub fn delete_e820_entry(&mut self, index: u8) {
+        if index >= self.e820_entries {
+            panic!("out of bounds delete");
+        }
+        for i in (index + 1)..self.e820_entries {
+            let i = i as usize;
+            self.e820_table[i - 1] = self.e820_table[i];
+        }
+        self.e820_entries -= 1;
     }
 
     pub fn args(&self) -> &CStr {
