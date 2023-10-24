@@ -18,14 +18,14 @@ use crate::acpi::{EBDA, EBDA_SIZE};
 use bitflags::bitflags;
 use core::{mem::size_of, slice};
 use x86_64::VirtAddr;
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 /// ACPI Root System Description Pointer.
 ///
 /// Used to locate either the RSDT or XSDT in memory.
 ///
 /// See Section 5.2.5 in the ACPI specification, Version 6.5 for more details.
-#[derive(FromBytes, AsBytes)]
+#[derive(FromZeroes, FromBytes, AsBytes)]
 #[repr(C, packed)]
 pub struct Rsdp {
     /// Signature: "RSD PTR " (note the trailing space).

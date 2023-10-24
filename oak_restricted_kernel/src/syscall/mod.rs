@@ -64,7 +64,7 @@ struct GsData {
 }
 
 fn mock_dice_data() -> DiceData {
-    <DiceData as zerocopy::FromBytes>::new_zeroed()
+    <DiceData as zerocopy::FromZeroes>::new_zeroed()
 }
 
 pub fn enable_syscalls(channel: Box<dyn Channel>, derived_key: DerivedKey) {

@@ -18,10 +18,13 @@ use crate::systemd_journal::{Journal, JournalOpenFlags};
 use anyhow::{Context, Result};
 use oak_containers_orchestrator_client::LauncherClient;
 use opentelemetry_api::logs::{AnyValue, LogRecord, Logger, Severity};
-use std::time::{Duration, SystemTime};
-use tokio::sync::mpsc;
+use std::{
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
+use tokio::sync::{mpsc, OnceCell};
 
-pub async fn run(launcher_client: LauncherClient) -> Result<()> {
+pub async fn run(launcher_client: LauncherClient, terminate: Arc<OnceCell<()>>) -> Result<()> {
     // Journal is not Send, because the underlying systemd journal can't be shared between threads
     // (even with locking). Thus, let's wrap things in a channel.
     let (send, mut recv) = mpsc::unbounded_channel();
@@ -30,7 +33,7 @@ pub async fn run(launcher_client: LauncherClient) -> Result<()> {
         // Iterating over the journal can block (synchronously), so we need to wrap this in a
         // `spawn_blocking` call so that we don't hog the thread.
         let x = tokio::task::spawn_blocking(move || {
-            let mut journal = Journal::new(JournalOpenFlags::ALL_NAMESPACES)?;
+            let mut journal = Journal::new(JournalOpenFlags::ALL_NAMESPACES, terminate)?;
             journal.seek_head()?;
 
             // `(Journal as Iterator)::next()` will block if there is nothing to read

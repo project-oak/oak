@@ -17,4 +17,4 @@ rand_core = { version = "*", default-features = false, features = [
 sha2 = { version = "*", default-features = false }
 static_assertions = "*"
 strum = { version = "*", default-features = false, features = ["derive"] }
-zerocopy = "*"
+zerocopy = { version = "*", features = ["derive"] }

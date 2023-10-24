@@ -27,7 +27,7 @@ use oak_dice::{
 };
 use oak_sev_guest::guest::AttestationReport;
 use p256::ecdsa::SigningKey;
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{AsBytes, FromZeroes};
 
 // The number of custom bytes that can be included in the attestation report.
 const REPORT_DATA_SIZE: usize = 64;

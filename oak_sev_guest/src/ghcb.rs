@@ -27,7 +27,7 @@ use crate::{
 };
 use bitflags::bitflags;
 use x86_64::{PhysAddr, VirtAddr};
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 /// The size of the GHCB page.
 pub const GHCB_PAGE_SIZE: usize = 4096;
@@ -111,7 +111,7 @@ const MSR_REGISTER_MASK: u64 = 0xffff_ffff;
 ///
 /// See: Table 3 in <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>
 #[repr(C, align(4096))]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, FromZeroes, FromBytes)]
 pub struct Ghcb {
     /// Reserved. Must be 0.
     _reserved_0: [u8; 203],
@@ -215,7 +215,7 @@ impl AsRef<Ghcb> for Ghcb {
 static_assertions::assert_eq_size!(Ghcb, [u8; GHCB_PAGE_SIZE]);
 
 /// Flags indicating which fields in a specific GHCB instance are valid.
-#[derive(Debug, Default, FromBytes)]
+#[derive(Debug, Default, FromZeroes, FromBytes)]
 #[repr(transparent)]
 pub struct ValidBitmap(u128);
 
