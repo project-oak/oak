@@ -26,7 +26,7 @@ use x86_64::{
     structures::paging::{PageSize, Size2MiB, Size4KiB},
     PhysAddr, VirtAddr,
 };
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 use crate::{io_port_factory, sev::Shared, BootAllocator};
 
@@ -91,7 +91,7 @@ enum FwCfgItems {
 
 /// an individual file entry, 64 bytes total
 #[repr(C)]
-#[derive(AsBytes, FromBytes)]
+#[derive(AsBytes, FromZeroes, FromBytes)]
 pub struct DirEntry {
     /// size of referenced fw_cfg item, big-endian
     size: u32,

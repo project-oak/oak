@@ -22,7 +22,7 @@
 use bitflags::bitflags;
 use core::mem::size_of;
 use strum::{EnumIter, FromRepr};
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 /// The size of a guest message, including the header and maximum payload size.
 pub const GUEST_MESSAGE_SIZE: usize = 4096;
@@ -45,7 +45,7 @@ pub const CURRENT_ATTESTATION_VERSION: u8 = 2;
 ///
 /// See section 8.26 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C, align(4096))]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct GuestMessage {
     /// The message header.
     pub header: GuestMessageHeader,
@@ -73,7 +73,7 @@ impl GuestMessage {
 ///
 /// See Table 97 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct AuthenticatedHeader {
     /// The algorithm used to encrypt the payload.
     ///
@@ -105,7 +105,7 @@ static_assertions::assert_eq_size!(AuthenticatedHeader, [u8; 48]);
 ///
 /// See Table 97 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct GuestMessageHeader {
     /// The authentication tag for the payload and additional data.
     pub auth_tag: [u8; 32],
@@ -248,7 +248,7 @@ pub enum MessageType {
 ///
 /// See Table 17 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct KeyRequest {
     /// Selects which key will be used to derive the key.
     ///
@@ -335,7 +335,7 @@ impl Message for KeyRequest {
 ///
 /// See Table 19 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, FromBytes, AsBytes)]
+#[derive(Debug, FromZeroes, FromBytes, AsBytes)]
 pub struct KeyResponse {
     /// The status of the operation.
     ///
@@ -433,7 +433,7 @@ bitflags! {
 ///
 /// See Table 20 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct AttestationRequest {
     /// The custom data to be included in the attestation report.
     pub report_data: [u8; 64],
@@ -467,7 +467,7 @@ impl Message for AttestationRequest {
 ///
 /// See Table 23 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, FromBytes, AsBytes)]
+#[derive(Debug, FromZeroes, FromBytes, AsBytes)]
 pub struct AttestationResponse {
     /// The status of the operation.
     ///
@@ -515,7 +515,7 @@ impl AttestationResponse {
 ///
 /// See Table 21 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct AttestationReport {
     /// The data contained in the report.
     pub data: AttestationReportData,
@@ -537,7 +537,7 @@ impl AttestationReport {
 ///
 /// See Table 21 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct AttestationReportData {
     /// The version of the attestation report format.
     ///
@@ -686,7 +686,7 @@ bitflags! {
 ///
 /// See Table 8 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct GuestPolicy {
     /// The minimum ABI minor version required to launch the guest.
     pub abi_minor: u8,
@@ -724,7 +724,7 @@ impl GuestPolicy {
 ///
 /// See Table 3 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct TcbVersion {
     /// The current security version number (SVN) of the secure processor (PSP) bootloader.
     pub boot_loader: u8,
@@ -791,7 +791,7 @@ pub enum ReportStatus {
 ///
 /// See Table 107 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct EcdsaSignature {
     /// The R component of this signature. The value is zero-extended and little-endian encoded.
     pub r: [u8; 72],

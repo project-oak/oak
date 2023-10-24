@@ -21,6 +21,8 @@ opentelemetry-otlp = { version = "*", default-features = false, features = [
   "logs"
 ] }
 nix = "*"
+signal-hook = "*"
+signal-hook-tokio = { version = "*", features = ["futures-v0_3"] }
 tokio = { version = "*", features = [
   "rt-multi-thread",
   "macros",

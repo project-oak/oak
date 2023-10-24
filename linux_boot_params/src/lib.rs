@@ -22,7 +22,7 @@ use core::{
     mem::size_of,
 };
 use strum::{Display, FromRepr};
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Display, FromRepr)]
 #[repr(u32)]
@@ -148,7 +148,7 @@ impl CCSetupData {
 /// For more details see the Linux kernel docs:
 /// <https://www.kernel.org/doc/html/latest/x86/boot.html#the-real-mode-kernel-header>
 #[repr(C, packed)]
-#[derive(Debug, Copy, Clone, FromBytes, AsBytes)]
+#[derive(Debug, Copy, Clone, FromZeroes, FromBytes, AsBytes)]
 pub struct SetupHeader {
     /// The size of the setup code in 512-byte sectors.
     ///
@@ -498,7 +498,7 @@ impl SetupHeader {
 }
 
 #[repr(C, packed)]
-#[derive(Debug, Copy, Clone, FromBytes, AsBytes, PartialEq)]
+#[derive(Debug, Copy, Clone, FromZeroes, FromBytes, AsBytes, PartialEq)]
 pub struct BootE820Entry {
     addr: usize,
     size: usize,
