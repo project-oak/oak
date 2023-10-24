@@ -96,6 +96,17 @@
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -117,7 +128,10 @@
     collections::{btree_map::Entry, BTreeMap},
     slice,
 };
-<span class="kw">use </span>core::ffi::{c_int, c_size_t, c_ssize_t, c_void};
+<span class="kw">use </span>core::{
+    cmp::min,
+    ffi::{c_int, c_size_t, c_ssize_t, c_void},
+};
 <span class="kw">use </span>oak_restricted_kernel_interface::Errno;
 <span class="kw">use </span>spinning_top::Spinlock;
 
@@ -128,6 +142,14 @@
 }
 
 <span class="kw">type </span>Fd = c_int;
+
+<span class="doccomment">/// Utility function that copies the maximum number of bytes from a source buffer
+/// to a destination buffer.
+</span><span class="kw">pub fn </span>copy_max_slice(src_buf: <span class="kw-2">&amp;</span>[u8], dst_buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; usize {
+    <span class="kw">let </span>length: usize = min(src_buf.len(), dst_buf.len());
+    dst_buf[..length].copy_from_slice(<span class="kw-2">&amp;</span>src_buf[..length]);
+    length
+}
 
 <span class="kw">static </span>FILE_DESCRIPTORS: Spinlock&lt;BTreeMap&lt;Fd, Box&lt;<span class="kw">dyn </span>FileDescriptor&gt;&gt;&gt; =
     Spinlock::new(BTreeMap::new());

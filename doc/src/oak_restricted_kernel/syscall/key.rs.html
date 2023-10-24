@@ -49,6 +49,12 @@
 <a href="#49" id="49">49</a>
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
+<a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -67,20 +73,26 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::snp_guest::DerivedKey;
 
-<span class="kw">use </span><span class="kw">super</span>::fd::FileDescriptor;
+<span class="kw">use </span><span class="kw">super</span>::fd::{copy_max_slice, FileDescriptor};
 <span class="kw">use </span>alloc::boxed::Box;
-<span class="kw">use </span>core::cmp::min;
 <span class="kw">use </span>oak_restricted_kernel_interface::{Errno, DERIVED_KEY_FD};
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">struct </span>DerivedKeyDescriptor {
     key: DerivedKey,
+    index: usize,
+}
+
+<span class="kw">impl </span>DerivedKeyDescriptor {
+    <span class="kw">fn </span>new(key: DerivedKey) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ index: <span class="number">0</span>, key }
+    }
 }
 
 <span class="kw">impl </span>FileDescriptor <span class="kw">for </span>DerivedKeyDescriptor {
     <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;isize, oak_restricted_kernel_interface::Errno&gt; {
-        <span class="kw">let </span>length = min(<span class="self">self</span>.key.len(), buf.len());
-        buf.copy_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.key[..length]);
+        <span class="kw">let </span>length = copy_max_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.key[<span class="self">self</span>.index..], buf);
+        <span class="self">self</span>.index += length;
         <span class="prelude-val">Ok</span>(length <span class="kw">as </span>isize)
     }
 
@@ -96,7 +108,7 @@
 
 <span class="doccomment">/// Registers a file descriptor for reading a derived key (0x21)
 </span><span class="kw">pub fn </span>register(key: DerivedKey) {
-    <span class="kw">super</span>::fd::register(DERIVED_KEY_FD, Box::new(DerivedKeyDescriptor { key }))
+    <span class="kw">super</span>::fd::register(DERIVED_KEY_FD, Box::new(DerivedKeyDescriptor::new(key)))
         .map_err(|<span class="kw">_</span>| ()) <span class="comment">// throw away the box
         </span>.expect(<span class="string">&quot;DerivedKeyDescriptor already registered&quot;</span>);
 }

@@ -59,7 +59,6 @@
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
 <a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -76,9 +75,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">super</span>::fd::FileDescriptor;
+</span><span class="kw">use </span><span class="kw">super</span>::fd::{copy_max_slice, FileDescriptor};
 <span class="kw">use </span>alloc::boxed::Box;
-<span class="kw">use </span>core::cmp::min;
 <span class="kw">use </span>oak_dice::evidence::RestrictedKernelDiceData <span class="kw">as </span>DiceData;
 <span class="kw">use </span>oak_restricted_kernel_interface::{Errno, DICE_DATA_FD};
 
@@ -95,14 +93,14 @@
 
 <span class="kw">impl </span>FileDescriptor <span class="kw">for </span>DiceDataDescriptor {
     <span class="kw">fn </span>read(<span class="kw-2">&amp;mut </span><span class="self">self</span>, buf: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;isize, oak_restricted_kernel_interface::Errno&gt; {
-        <span class="kw">let </span>data_as_bytes = &lt;DiceData <span class="kw">as </span>zerocopy::AsBytes&gt;::as_bytes_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>.data);
-        <span class="kw">let </span>length = min(data_as_bytes.len() - <span class="self">self</span>.index, buf.len());
-        <span class="kw">let </span>end_index = min(<span class="self">self</span>.index + length, data_as_bytes.len());
-        <span class="kw">let </span>slice_to_read = <span class="kw-2">&amp;mut </span>data_as_bytes[<span class="self">self</span>.index..end_index];
-        buf.copy_from_slice(slice_to_read);
-        <span class="self">self</span>.index = end_index;
+        <span class="kw">let </span>data_as_slice = &lt;DiceData <span class="kw">as </span>zerocopy::AsBytes&gt;::as_bytes_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>.data);
+        <span class="kw">let </span>length = copy_max_slice(<span class="kw-2">&amp;</span>data_as_slice[<span class="self">self</span>.index..], buf);
+
         <span class="comment">// destroy the data that was read, to ensure that it can only be read once
-        </span>slice_to_read.fill(<span class="number">0</span>);
+        </span><span class="kw">let </span>slice_to_read = <span class="kw-2">&amp;mut </span>data_as_slice[<span class="self">self</span>.index..(<span class="self">self</span>.index + length)];
+        slice_to_read.fill(<span class="number">0</span>);
+
+        <span class="self">self</span>.index += length;
         <span class="prelude-val">Ok</span>(length <span class="kw">as </span>isize)
     }
 
