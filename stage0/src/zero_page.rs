@@ -102,18 +102,17 @@ impl ZeroPage {
         // Try to load the E820 table from fw_cfg.
         // Safety: BootE820Entry has the same structure as what qemu uses, and we're limiting
         // ourselves to up to 128 entries.
-        let mut e820_table = [oak_linux_boot_params::BootE820Entry::default(); 128];
         let len_bytes = unsafe {
             fw_cfg.read_file_by_name(
                 CStr::from_bytes_with_nul(b"etc/e820\0").unwrap(),
-                &mut e820_table,
+                &mut self.inner.e820_table,
             )
         };
 
         let e820_entries = match len_bytes {
             Ok(len_bytes) => {
                 let e820_entries = len_bytes / size_of::<BootE820Entry>();
-                e820_table[..e820_entries].sort_unstable_by_key(|x| x.addr());
+                self.inner.e820_table[..e820_entries].sort_unstable_by_key(|x| x.addr());
                 e820_entries
             }
             Err(err) => {
@@ -124,7 +123,7 @@ impl ZeroPage {
                     panic!("QEMU_E820_RESERVATION_TABLE was not empty!");
                 }
 
-                build_e820_from_nvram(&mut e820_table).expect("failed to read from CMOS")
+                build_e820_from_nvram(&mut self.inner.e820_table).expect("failed to read from CMOS")
             }
         };
 
@@ -233,7 +232,7 @@ impl ZeroPage {
     fn validate_e820_table(&self) {
         // Check that the table is sorted.
         for i in 0..((self.inner.e820_entries - 1) as usize) {
-            assert!(self.inner.e820_table[i].end() <= self.inner.e820_table[i].addr());
+            assert!(self.inner.e820_table[i].end() <= self.inner.e820_table[i + 1].addr());
         }
         // Check that all of the entry types are valid.
         assert_eq!(
@@ -323,11 +322,10 @@ fn build_e820_from_nvram(e820_table: &mut [BootE820Entry]) -> Result<usize, &'st
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::vec;
 
     #[test]
     pub fn insert_e820_entry_empty_table() {
-        let expected = vec![BootE820Entry::new(0, 100, E820EntryType::RAM)];
+        let expected = [BootE820Entry::new(0, 100, E820EntryType::RAM)];
         let mut zero_page = ZeroPage::new();
 
         zero_page.insert_e820_entry(BootE820Entry::new(0, 100, E820EntryType::RAM));
@@ -337,7 +335,7 @@ mod tests {
 
     #[test]
     pub fn insert_e820_entry_fill_gap() {
-        let expected = vec![BootE820Entry::new(0, 100, E820EntryType::RAM)];
+        let expected = [BootE820Entry::new(0, 100, E820EntryType::RAM)];
         let mut zero_page = ZeroPage::new();
         zero_page
             .inner
@@ -353,7 +351,7 @@ mod tests {
 
     #[test]
     pub fn insert_e820_entry_fill_gap_overlapping() {
-        let expected = vec![BootE820Entry::new(0, 100, E820EntryType::RAM)];
+        let expected = [BootE820Entry::new(0, 100, E820EntryType::RAM)];
         let mut zero_page = ZeroPage::new();
         zero_page
             .inner
@@ -369,7 +367,7 @@ mod tests {
 
     #[test]
     pub fn insert_e820_entry_split() {
-        let expected = vec![
+        let expected = [
             BootE820Entry::new(0, 100, E820EntryType::RAM),
             BootE820Entry::new(100, 100, E820EntryType::RESERVED),
             BootE820Entry::new(200, 100, E820EntryType::RAM),
@@ -386,7 +384,7 @@ mod tests {
 
     #[test]
     pub fn insert_e820_entry_disappear() {
-        let expected = vec![BootE820Entry::new(0, 300, E820EntryType::RAM)];
+        let expected = [BootE820Entry::new(0, 300, E820EntryType::RAM)];
         let mut zero_page = ZeroPage::new();
         zero_page
             .inner
@@ -399,7 +397,7 @@ mod tests {
 
     #[test]
     pub fn insert_e820_entry_trim() {
-        let expected = vec![
+        let expected = [
             BootE820Entry::new(0, 100, E820EntryType::RAM),
             BootE820Entry::new(100, 100, E820EntryType::RESERVED),
             BootE820Entry::new(200, 100, E820EntryType::RAM),
@@ -419,7 +417,7 @@ mod tests {
 
     #[test]
     pub fn insert_e820_entry_cover() {
-        let expected = vec![
+        let expected = [
             BootE820Entry::new(0, 100, E820EntryType::RAM),
             BootE820Entry::new(100, 100, E820EntryType::RESERVED),
             BootE820Entry::new(200, 100, E820EntryType::RAM),
