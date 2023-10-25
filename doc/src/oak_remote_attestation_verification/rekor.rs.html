@@ -309,24 +309,6 @@
 <a href="#309" id="309">309</a>
 <a href="#310" id="310">310</a>
 <a href="#311" id="311">311</a>
-<a href="#312" id="312">312</a>
-<a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
-<a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
-<a href="#322" id="322">322</a>
-<a href="#323" id="323">323</a>
-<a href="#324" id="324">324</a>
-<a href="#325" id="325">325</a>
-<a href="#326" id="326">326</a>
-<a href="#327" id="327">327</a>
-<a href="#328" id="328">328</a>
-<a href="#329" id="329">329</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -353,6 +335,8 @@
 <span class="kw">use </span>ecdsa::{signature::Verifier, Signature};
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>sha2::{Digest, Sha256};
+
+<span class="kw">use </span><span class="kw">crate</span>::verifier::{convert_pem_to_raw, convert_raw_to_pem};
 
 <span class="doccomment">/// Struct representing a Rekor LogEntry.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.&gt;
@@ -446,16 +430,15 @@
 ///
 /// This bundle can be verified using the public key from Rekor. The public key can
 /// be obtained from the `/api/v1/log/publicKey` Rest API. For `sigstore.dev`, it is a PEM-encoded
-/// x509/PKIX public key. The PEM-encoded content can be parsed into a `p256::ecdsa::VerifyingKey`
-/// using `unmarshal_pem_to_p256_public_key`.
+/// x509/PKIX public key.
 </span><span class="kw">pub struct </span>RekorSignatureBundle {
     <span class="doccomment">/// Canonicalized JSON representation, based on RFC 8785 rules, of a subset of a Rekor LogEntry
     /// fields that are signed to generate `signedEntryTimestamp` (also a field in the Rekor
     /// LogEntry). These fields include body, integratedTime, logID and logIndex.
     </span><span class="kw">pub </span>canonicalized: Vec&lt;u8&gt;,
 
-    <span class="doccomment">/// Base64-encoded signature over the canonicalized JSON document.
-    </span><span class="kw">pub </span>base64_signature: Vec&lt;u8&gt;,
+    <span class="doccomment">/// The signature over the canonicalized JSON document.
+    </span><span class="kw">pub </span>signature: Vec&lt;u8&gt;,
 }
 
 <span class="doccomment">/// Converter for creating a RekorSignatureBundle from a Rekor LogEntry as described in
@@ -486,44 +469,42 @@
             .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no verification field in the log entry&quot;</span>))<span class="question-mark">?
             </span>.signed_entry_timestamp
             .clone();
-        <span class="kw">let </span>base64_signature = sig_base64.as_str().as_bytes().to_vec();
+        <span class="kw">let </span>signature = BASE64_STANDARD
+            .decode(sig_base64)
+            .context(<span class="string">&quot;couldn&#39;t decode Base64 signature&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             canonicalized,
-            base64_signature,
+            signature,
         })
     }
 }
 
-<span class="doccomment">/// Verifies a Rekor LogEntry.
+<span class="doccomment">/// Verifies a Rekor LogEntry. This includes verifying:
 ///
-/// The verification involves the following:
-///
-/// 1. verifying the signature in `signedEntryTimestamp`, using Rekor&#39;s public key,
-/// 1. verifying the signature in `body.RekordObj.signature`, using the endorser&#39;s public key,
-/// 1. verifying that the content of the body matches the input `endorsement_bytes`.
-///
-/// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
+/// 1. the signature in `signedEntryTimestamp` using Rekor&#39;s public key,
+/// 1. the signature in `body.RekordObj.signature` using the endorser&#39;s public key,
+/// 1. that the content of the body equals `endorsement`.
 </span><span class="kw">pub fn </span>verify_rekor_log_entry(
-    log_entry_bytes: <span class="kw-2">&amp;</span>[u8],
-    pem_encoded_rekor_public_key_bytes: <span class="kw-2">&amp;</span>[u8],
-    endorsement_bytes: <span class="kw-2">&amp;</span>[u8],
+    log_entry: <span class="kw-2">&amp;</span>[u8],
+    rekor_public_key: <span class="kw-2">&amp;</span>[u8],
+    endorsement: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;()&gt; {
-    verify_rekor_signature(log_entry_bytes, pem_encoded_rekor_public_key_bytes)<span class="question-mark">?</span>;
+    verify_rekor_signature(log_entry, rekor_public_key)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>body = get_rekor_log_entry_body(log_entry_bytes)<span class="question-mark">?</span>;
+    <span class="kw">let </span>body = get_rekor_log_entry_body(log_entry)<span class="question-mark">?</span>;
 
     <span class="comment">// Verify the body in the Rekor LogEntry
-    </span>verify_rekor_body(<span class="kw-2">&amp;</span>body, endorsement_bytes)<span class="question-mark">?</span>;
+    </span>verify_rekor_body(<span class="kw-2">&amp;</span>body, endorsement)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Parses the given bytes into a Rekor `LogEntry` object, and returns its `body` parsed into an
 /// instance of `Body`.
-</span><span class="kw">pub fn </span>get_rekor_log_entry_body(log_entry_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Body&gt; {
-    <span class="kw">let </span>parsed: BTreeMap&lt;String, LogEntry&gt; = serde_json::from_slice(log_entry_bytes)
-        .context(<span class="string">&quot;couldn&#39;t parse bytes into a LogEntry object&quot;</span>)<span class="question-mark">?</span>;
+</span><span class="kw">pub fn </span>get_rekor_log_entry_body(log_entry: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Body&gt; {
+    <span class="kw">let </span>parsed: BTreeMap&lt;String, LogEntry&gt; =
+        serde_json::from_slice(log_entry).context(<span class="string">&quot;couldn&#39;t parse bytes into a LogEntry object&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>entry = parsed.values().next().context(<span class="string">&quot;no entry in the map&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Parse base64-encoded entry.body into an instance of Body.
@@ -534,31 +515,20 @@
     serde_json::from_slice(<span class="kw-2">&amp;</span>body_bytes).context(<span class="string">&quot;couldn&#39;t parse bytes into a Body object&quot;</span>)
 }
 
-<span class="doccomment">/// Parses `log_entry_bytes` into a Rekor LogEntry, and verifies the signature in
-/// signedEntryTimestamp using the public key in `pem_encoded_public_key_bytes`.
-///
-/// `log_entry_bytes`: LogEntry downloaded from Rekor as a byte array.
-/// `pem_encoded_public_key_bytes`: PEM-encoded public key of Rekor as a byte array.
-///
-/// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
-</span><span class="kw">pub fn </span>verify_rekor_signature(
-    log_entry_bytes: <span class="kw-2">&amp;</span>[u8],
-    pem_encoded_rekor_public_key_bytes: <span class="kw-2">&amp;</span>[u8],
-) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">let </span>signature_bundle = rekor_signature_bundle(log_entry_bytes)<span class="question-mark">?</span>;
+<span class="doccomment">/// Parses a blob into a Rekor log entry and verifies the signature in
+/// `signedEntryTimestamp`` using Rekor&#39;s public key.
+</span><span class="kw">pub fn </span>verify_rekor_signature(log_entry: <span class="kw-2">&amp;</span>[u8], rekor_public_key: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>signature_bundle = rekor_signature_bundle(log_entry)<span class="question-mark">?</span>;
 
     verify_signature(
-        <span class="kw-2">&amp;</span>signature_bundle.base64_signature,
+        <span class="kw-2">&amp;</span>signature_bundle.signature,
         <span class="kw-2">&amp;</span>signature_bundle.canonicalized,
-        pem_encoded_rekor_public_key_bytes,
+        rekor_public_key,
     )
     .context(<span class="string">&quot;couldn&#39;t verify signedEntryTimestamp of the Rekor LogEntry&quot;</span>)
 }
 
-<span class="doccomment">/// Verifies the signature in the `body` over the `contents_bytes`, using the public key in
-/// `pem_encoded_public_key_bytes`.
-///
-/// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
+<span class="doccomment">/// Verifies the signature in the body over the contents.
 </span><span class="kw">pub fn </span>verify_rekor_body(body: <span class="kw-2">&amp;</span>Body, contents_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">if </span>body.spec.signature.format != <span class="string">&quot;x509&quot; </span>{
         <span class="macro">anyhow::bail!</span>(
@@ -586,67 +556,61 @@
         )
     }
 
-    <span class="kw">let </span>public_key_bytes: Vec&lt;u8&gt; = BASE64_STANDARD
-        .decode(body.spec.signature.public_key.content.as_bytes())
-        .expect(<span class="string">&quot;couldn&#39;t base64-decode the public key bytes in the Rekor LogEntry body&quot;</span>);
+    <span class="kw">let </span>signature: Vec&lt;u8&gt; = BASE64_STANDARD
+        .decode(body.spec.signature.content.as_str().as_bytes())
+        .expect(<span class="string">&quot;couldn&#39;t decode the signature in the log entry body&quot;</span>);
 
-    verify_signature(
-        body.spec.signature.content.as_str().as_bytes(),
-        contents_bytes,
-        <span class="kw-2">&amp;</span>public_key_bytes,
-    )
-    .context(<span class="string">&quot;couldn&#39;t verify signature over the endorsement file&quot;</span>)
+    <span class="kw">let </span>public_key_pem_vec: Vec&lt;u8&gt; = BASE64_STANDARD
+        .decode(body.spec.signature.public_key.content.as_bytes())
+        .expect(<span class="string">&quot;couldn&#39;t decode the public key in the Rekor LogEntry body&quot;</span>);
+    <span class="kw">let </span>public_key_pem = core::str::from_utf8(<span class="kw-2">&amp;</span>public_key_pem_vec)<span class="question-mark">?</span>;
+    <span class="kw">let </span>public_key = convert_pem_to_raw(public_key_pem)<span class="question-mark">?</span>;
+
+    verify_signature(<span class="kw-2">&amp;</span>signature, contents_bytes, <span class="kw-2">&amp;</span>public_key)
+        .context(<span class="string">&quot;couldn&#39;t verify signature over the endorsement&quot;</span>)
 }
 
-<span class="doccomment">/// Verifies the given base64-encoded signature over the given data bytes, using the given
-/// PEM-encoded public key.
-///
-/// Returns `Ok(())` if the verification succeeds, otherwise returns `Err()`.
+<span class="doccomment">/// Verifies the signature over the contents using the public key.
 </span><span class="kw">pub fn </span>verify_signature(
-    base64_signature_bytes: <span class="kw-2">&amp;</span>[u8],
-    content_bytes: <span class="kw-2">&amp;</span>[u8],
-    pem_encoded_public_key_bytes: <span class="kw-2">&amp;</span>[u8],
+    signature: <span class="kw-2">&amp;</span>[u8],
+    contents: <span class="kw-2">&amp;</span>[u8],
+    public_key: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">let </span>sig: Vec&lt;u8&gt; = BASE64_STANDARD
-        .decode(base64_signature_bytes)
-        .context(<span class="string">&quot;couldn&#39;t decode Base64 signature&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span>signature = Signature::from_der(<span class="kw-2">&amp;</span>sig).context(<span class="string">&quot;invalid ASN.1 signature&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span>key = unmarshal_pem_to_p256_public_key(pem_encoded_public_key_bytes)<span class="question-mark">?</span>;
+    <span class="kw">let </span>signature = Signature::from_der(signature).context(<span class="string">&quot;invalid ASN.1 signature&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>key = raw_to_verifying_key(public_key)<span class="question-mark">?</span>;
 
-    key.verify(content_bytes, <span class="kw-2">&amp;</span>signature)
+    key.verify(contents, <span class="kw-2">&amp;</span>signature)
         .context(<span class="string">&quot;couldn&#39;t verify signature&quot;</span>)
 }
 
-<span class="doccomment">/// Parses a PEM-encoded x509/PKIX public key into a `p256::ecdsa::VerifyingKey`.
-///
-/// `pem_bytes`: A PEM-encoded public key as a byte array.
-</span><span class="kw">pub fn </span>unmarshal_pem_to_p256_public_key(
-    pem_bytes: <span class="kw-2">&amp;</span>[u8],
-) -&gt; anyhow::Result&lt;p256::ecdsa::VerifyingKey&gt; {
-    <span class="kw">let </span>pem_str = core::str::from_utf8(pem_bytes).context(<span class="string">&quot;couldn&#39;t convert bytes to string&quot;</span>)<span class="question-mark">?</span>;
-    p256::ecdsa::VerifyingKey::from_str(pem_str)
+<span class="doccomment">/// Converts a PEM-encoded x509/PKIX public key to a verifying key.
+</span><span class="kw">pub fn </span>pem_to_verifying_key(public_key_pem: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;p256::ecdsa::VerifyingKey&gt; {
+    p256::ecdsa::VerifyingKey::from_str(public_key_pem)
         .context(<span class="string">&quot;couldn&#39;t parse pem as a p256::ecdsa::VerifyingKey&quot;</span>)
 }
 
-<span class="kw">fn </span>rekor_signature_bundle(log_entry_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;RekorSignatureBundle&gt; {
-    <span class="kw">let </span>parsed: BTreeMap&lt;String, LogEntry&gt; = serde_json::from_slice(log_entry_bytes)
-        .context(<span class="string">&quot;couldn&#39;t parse bytes into a LogEntry object&quot;</span>)<span class="question-mark">?</span>;
+<span class="doccomment">/// Converts a raw public key to a verifying key.
+</span><span class="kw">pub fn </span>raw_to_verifying_key(public_key: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;p256::ecdsa::VerifyingKey&gt; {
+    <span class="comment">// Need to figure out how to create a VerifyingKey without the PEM detour.
+    </span><span class="kw">let </span>public_key_pem = convert_raw_to_pem(public_key);
+    pem_to_verifying_key(<span class="kw-2">&amp;</span>public_key_pem)
+}
+
+<span class="kw">fn </span>rekor_signature_bundle(log_entry: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;RekorSignatureBundle&gt; {
+    <span class="kw">let </span>parsed: BTreeMap&lt;String, LogEntry&gt; =
+        serde_json::from_slice(log_entry).context(<span class="string">&quot;couldn&#39;t parse bytes into a LogEntry object&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>entry = parsed.values().next().context(<span class="string">&quot;no entry in the map&quot;</span>)<span class="question-mark">?</span>;
 
     RekorSignatureBundle::try_from(entry)
 }
 
-<span class="doccomment">/// Compares two pem-encoded ECDSA public keys. Instead of comparing the bytes, we parse the bytes
+<span class="doccomment">/// Compares two ECDSA public keys. Instead of comparing the bytes, we parse the bytes
 /// and compare p256 keys. Keys are considered equal if they are the same on the elliptic curve.
 /// This means that the keys could have different bytes, but still be the same key.
-</span><span class="kw">pub fn </span>compare_keys(
-    public_key_bytes_a: <span class="kw-2">&amp;</span>[u8],
-    public_key_bytes_b: <span class="kw-2">&amp;</span>[u8],
-) -&gt; anyhow::Result&lt;Ordering&gt; {
-    <span class="kw">let </span>key_a = unmarshal_pem_to_p256_public_key(public_key_bytes_a)<span class="question-mark">?</span>;
-    <span class="kw">let </span>key_b = unmarshal_pem_to_p256_public_key(public_key_bytes_b)<span class="question-mark">?</span>;
-
-    <span class="prelude-val">Ok</span>(key_a.cmp(<span class="kw-2">&amp;</span>key_b))
+</span><span class="kw">pub fn </span>equal_keys(public_key_a: <span class="kw-2">&amp;</span>[u8], public_key_b: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;bool&gt; {
+    <span class="kw">let </span>key_a = raw_to_verifying_key(public_key_a)<span class="question-mark">?</span>;
+    <span class="kw">let </span>key_b = raw_to_verifying_key(public_key_b)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(key_a.cmp(<span class="kw-2">&amp;</span>key_b) == Ordering::Equal)
 }
 
 <span class="doccomment">/// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
