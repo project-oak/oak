@@ -186,6 +186,26 @@
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -209,7 +229,10 @@
     cmp::Ordering,
     collections::HashMap,
     ffi::{c_int, c_void},
+    sync::Arc,
+    time::Duration,
 };
+<span class="kw">use </span>tokio::sync::OnceCell;
 
 <span class="kw">mod </span>systemd_sys {
     <span class="kw">use </span>core::ffi::c_size_t;
@@ -267,16 +290,17 @@
 <span class="doccomment">/// Simple wrapper around libsystemd for reading entries from the systemd journal.
 </span><span class="kw">pub struct </span>Journal {
     journal: <span class="kw-2">*mut </span>sd_journal,
+    terminate: Arc&lt;OnceCell&lt;()&gt;&gt;,
 }
 
 <span class="kw">impl </span>Journal {
-    <span class="kw">pub fn </span>new(flags: JournalOpenFlags) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Errno&gt; {
+    <span class="kw">pub fn </span>new(flags: JournalOpenFlags, terminate: Arc&lt;OnceCell&lt;()&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Errno&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>journal = std::ptr::null_mut();
         <span class="comment">// Safety: we pass in a valid pointer (to the pointer). The returned journal value is opaque
         // and we never directly access it.
         </span><span class="kw">let </span>ret = <span class="kw">unsafe </span>{ sd_journal_open(<span class="kw-2">&amp;mut </span>journal, flags.bits()) };
         <span class="kw">if </span>ret == <span class="number">0 </span>{
-            <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ journal })
+            <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ journal, terminate })
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(nix::errno::from_i32(ret))
         }
@@ -342,15 +366,29 @@
         }
     }
 
-    <span class="doccomment">/// Blocks until something is added to the
-    </span><span class="kw">pub fn </span>wait(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), Errno&gt; {
+    <span class="doccomment">/// Blocks until something is added to the journal.
+    ///
+    /// Returns false if we&#39;ve been asked to terminate.
+    </span><span class="kw">pub fn </span>wait(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;bool, Errno&gt; {
         <span class="comment">// Safety: `self.journal` must be valid as the only way how to instantiate this is via
         // `Journal::new()`.
-        </span><span class="kw">let </span>ret = <span class="kw">unsafe </span>{ sd_journal_wait(<span class="self">self</span>.journal, <span class="number">0</span>) };
-        <span class="kw">if </span>ret &lt; <span class="number">0 </span>{
-            <span class="kw">return </span><span class="prelude-val">Err</span>(nix::errno::from_i32(ret));
-        };
-        <span class="prelude-val">Ok</span>(())
+        </span><span class="kw">loop </span>{
+            <span class="kw">let </span>ret = <span class="kw">unsafe </span>{
+                sd_journal_wait(
+                    <span class="self">self</span>.journal,
+                    Duration::new(<span class="number">1</span>, <span class="number">0</span>).as_micros().try_into().unwrap(),
+                )
+            };
+            <span class="kw">match </span>ret.cmp(<span class="kw-2">&amp;</span><span class="number">0</span>) {
+                Ordering::Less =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(nix::errno::from_i32(ret)),
+                Ordering::Greater =&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">true</span>),
+                Ordering::Equal =&gt; {
+                    <span class="kw">if </span><span class="self">self</span>.terminate.initialized() {
+                        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -370,7 +408,9 @@
             <span class="kw">if let </span><span class="prelude-val">Some</span>(result) = <span class="self">self</span>.next().transpose() {
                 <span class="kw">return </span><span class="prelude-val">Some</span>(result);
             }
-            <span class="self">self</span>.wait().unwrap();
+            <span class="kw">if </span>!<span class="self">self</span>.wait().unwrap() {
+                <span class="kw">return </span><span class="prelude-val">None</span>;
+            }
         }
     }
 }

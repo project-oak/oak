@@ -797,7 +797,7 @@
     mem::size_of,
 };
 <span class="kw">use </span>strum::{Display, FromRepr};
-<span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
+<span class="kw">use </span>zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 <span class="attr">#[derive(Copy, Clone, Debug, PartialEq, Eq, Display, FromRepr)]
 #[repr(u32)]
@@ -923,7 +923,7 @@
 /// For more details see the Linux kernel docs:
 /// &lt;https://www.kernel.org/doc/html/latest/x86/boot.html#the-real-mode-kernel-header&gt;
 </span><span class="attr">#[repr(C, packed)]
-#[derive(Debug, Copy, Clone, FromBytes, AsBytes)]
+#[derive(Debug, Copy, Clone, FromZeroes, FromBytes, AsBytes)]
 </span><span class="kw">pub struct </span>SetupHeader {
     <span class="doccomment">/// The size of the setup code in 512-byte sectors.
     ///
@@ -1273,7 +1273,7 @@
 }
 
 <span class="attr">#[repr(C, packed)]
-#[derive(Debug, Copy, Clone, FromBytes, AsBytes, PartialEq)]
+#[derive(Debug, Copy, Clone, FromZeroes, FromBytes, AsBytes, PartialEq)]
 </span><span class="kw">pub struct </span>BootE820Entry {
     addr: usize,
     size: usize,

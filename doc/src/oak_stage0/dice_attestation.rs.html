@@ -175,7 +175,7 @@
 };
 <span class="kw">use </span>oak_sev_guest::guest::AttestationReport;
 <span class="kw">use </span>p256::ecdsa::SigningKey;
-<span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
+<span class="kw">use </span>zerocopy::{AsBytes, FromZeroes};
 
 <span class="comment">// The number of custom bytes that can be included in the attestation report.
 </span><span class="kw">const </span>REPORT_DATA_SIZE: usize = <span class="number">64</span>;

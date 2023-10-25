@@ -321,7 +321,7 @@
 }
 
 <span class="kw">fn </span>mock_dice_data() -&gt; DiceData {
-    &lt;DiceData <span class="kw">as </span>zerocopy::FromBytes&gt;::new_zeroed()
+    &lt;DiceData <span class="kw">as </span>zerocopy::FromZeroes&gt;::new_zeroed()
 }
 
 <span class="kw">pub fn </span>enable_syscalls(channel: Box&lt;<span class="kw">dyn </span>Channel&gt;, derived_key: DerivedKey) {

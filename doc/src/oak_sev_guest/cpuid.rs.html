@@ -148,7 +148,7 @@
 //! is provisioned into the VM guest memory during SEV-SNP startup.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::interrupts::MutableInterruptStackFrame;
-<span class="kw">use </span>zerocopy::FromBytes;
+<span class="kw">use </span>zerocopy::{FromBytes, FromZeroes};
 
 <span class="doccomment">/// The maximum number of CPUID functions that can be included in the page.
 </span><span class="kw">pub const </span>CPUID_COUNT_MAX: usize = <span class="number">64</span>;
@@ -159,7 +159,7 @@
 ///
 /// See: Table 14 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>CpuidFunction {
     <span class="doccomment">/// The input values when CPUID was invoked.
     </span><span class="kw">pub </span>input: CpuidInput,
@@ -172,7 +172,7 @@
 
 <span class="doccomment">/// The required input valus for invoking CPUID.
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, FromBytes, PartialEq, Eq)]
+#[derive(Debug, FromZeroes, FromBytes, PartialEq, Eq)]
 </span><span class="kw">pub struct </span>CpuidInput {
     <span class="doccomment">/// The input value of the EAX register, which represents the CPUID leaf.
     </span><span class="kw">pub </span>eax: u32,
@@ -216,7 +216,7 @@
 
 <span class="doccomment">/// The resulting register values after invoking CPUID.
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>CpuidOutput {
     <span class="doccomment">/// The EAX register output from calling CPUID.
     </span><span class="kw">pub </span>eax: u32,
@@ -232,7 +232,7 @@
 ///
 /// See: Table 69 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;
 </span><span class="attr">#[repr(C, align(<span class="number">4096</span>))]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>CpuidPage {
     <span class="doccomment">/// The number of CPUID function results included in the page. Must not be greater than
     /// `CPUID_COUNT_MAX`.

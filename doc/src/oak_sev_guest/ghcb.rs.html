@@ -633,7 +633,7 @@
 };
 <span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
-<span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
+<span class="kw">use </span>zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 <span class="doccomment">/// The size of the GHCB page.
 </span><span class="kw">pub const </span>GHCB_PAGE_SIZE: usize = <span class="number">4096</span>;
@@ -717,7 +717,7 @@
 ///
 /// See: Table 3 in &lt;https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf&gt;
 </span><span class="attr">#[repr(C, align(<span class="number">4096</span>))]
-#[derive(Debug, FromBytes)]
+#[derive(Debug, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>Ghcb {
     <span class="doccomment">/// Reserved. Must be 0.
     </span>_reserved_0: [u8; <span class="number">203</span>],
@@ -821,7 +821,7 @@
 <span class="macro">static_assertions::assert_eq_size!</span>(Ghcb, [u8; GHCB_PAGE_SIZE]);
 
 <span class="doccomment">/// Flags indicating which fields in a specific GHCB instance are valid.
-</span><span class="attr">#[derive(Debug, Default, FromBytes)]
+</span><span class="attr">#[derive(Debug, Default, FromZeroes, FromBytes)]
 #[repr(transparent)]
 </span><span class="kw">pub struct </span>ValidBitmap(u128);
 

@@ -910,7 +910,7 @@
 </span><span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>core::mem::size_of;
 <span class="kw">use </span>strum::{EnumIter, FromRepr};
-<span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
+<span class="kw">use </span>zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 <span class="doccomment">/// The size of a guest message, including the header and maximum payload size.
 </span><span class="kw">pub const </span>GUEST_MESSAGE_SIZE: usize = <span class="number">4096</span>;
@@ -933,7 +933,7 @@
 ///
 /// See section 8.26 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C, align(<span class="number">4096</span>))]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>GuestMessage {
     <span class="doccomment">/// The message header.
     </span><span class="kw">pub </span>header: GuestMessageHeader,
@@ -961,7 +961,7 @@
 ///
 /// See Table 97 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>AuthenticatedHeader {
     <span class="doccomment">/// The algorithm used to encrypt the payload.
     ///
@@ -993,7 +993,7 @@
 ///
 /// See Table 97 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>GuestMessageHeader {
     <span class="doccomment">/// The authentication tag for the payload and additional data.
     </span><span class="kw">pub </span>auth_tag: [u8; <span class="number">32</span>],
@@ -1136,7 +1136,7 @@
 ///
 /// See Table 17 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>KeyRequest {
     <span class="doccomment">/// Selects which key will be used to derive the key.
     ///
@@ -1223,7 +1223,7 @@
 ///
 /// See Table 19 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, FromBytes, AsBytes)]
+#[derive(Debug, FromZeroes, FromBytes, AsBytes)]
 </span><span class="kw">pub struct </span>KeyResponse {
     <span class="doccomment">/// The status of the operation.
     ///
@@ -1321,7 +1321,7 @@
 ///
 /// See Table 20 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>AttestationRequest {
     <span class="doccomment">/// The custom data to be included in the attestation report.
     </span><span class="kw">pub </span>report_data: [u8; <span class="number">64</span>],
@@ -1355,7 +1355,7 @@
 ///
 /// See Table 23 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, FromBytes, AsBytes)]
+#[derive(Debug, FromZeroes, FromBytes, AsBytes)]
 </span><span class="kw">pub struct </span>AttestationResponse {
     <span class="doccomment">/// The status of the operation.
     ///
@@ -1403,7 +1403,7 @@
 ///
 /// See Table 21 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>AttestationReport {
     <span class="doccomment">/// The data contained in the report.
     </span><span class="kw">pub </span>data: AttestationReportData,
@@ -1425,7 +1425,7 @@
 ///
 /// See Table 21 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>AttestationReportData {
     <span class="doccomment">/// The version of the attestation report format.
     ///
@@ -1574,7 +1574,7 @@
 ///
 /// See Table 8 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>GuestPolicy {
     <span class="doccomment">/// The minimum ABI minor version required to launch the guest.
     </span><span class="kw">pub </span>abi_minor: u8,
@@ -1612,7 +1612,7 @@
 ///
 /// See Table 3 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>TcbVersion {
     <span class="doccomment">/// The current security version number (SVN) of the secure processor (PSP) bootloader.
     </span><span class="kw">pub </span>boot_loader: u8,
@@ -1679,7 +1679,7 @@
 ///
 /// See Table 107 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, AsBytes, FromBytes)]
+#[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>EcdsaSignature {
     <span class="doccomment">/// The R component of this signature. The value is zero-extended and little-endian encoded.
     </span><span class="kw">pub </span>r: [u8; <span class="number">72</span>],

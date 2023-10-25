@@ -520,14 +520,14 @@
 <span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>core::{mem::size_of, slice};
 <span class="kw">use </span>x86_64::VirtAddr;
-<span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
+<span class="kw">use </span>zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 <span class="doccomment">/// ACPI Root System Description Pointer.
 ///
 /// Used to locate either the RSDT or XSDT in memory.
 ///
 /// See Section 5.2.5 in the ACPI specification, Version 6.5 for more details.
-</span><span class="attr">#[derive(FromBytes, AsBytes)]
+</span><span class="attr">#[derive(FromZeroes, FromBytes, AsBytes)]
 #[repr(C, packed)]
 </span><span class="kw">pub struct </span>Rsdp {
     <span class="doccomment">/// Signature: &quot;RSD PTR &quot; (note the trailing space).

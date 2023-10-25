@@ -585,7 +585,7 @@
 </span><span class="comment">// TODO(#3703): Remove when fixed.
 </span><span class="attr">#![allow(clippy::extra_unused_type_parameters)]
 
-</span><span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
+</span><span class="kw">use </span>zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 <span class="kw">pub const </span>VMSA_PAGE_SIZE: usize = <span class="number">4096</span>;
 
@@ -595,7 +595,7 @@
 ///
 /// The VMSA for each vCPU is stored in a separate 4KiB page.
 </span><span class="attr">#[repr(C, align(<span class="number">4096</span>))]
-#[derive(Debug, FromBytes, AsBytes)]
+#[derive(Debug, FromZeroes, FromBytes, AsBytes)]
 </span><span class="kw">pub struct </span>VmsaPage {
     <span class="kw">pub </span>vmsa: Vmsa,
     _reserved: [u8; VMSA_PAGE_SIZE - VMSA_SIZE],
@@ -627,7 +627,7 @@
 ///
 /// See table B-4 in &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt;
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, FromBytes, AsBytes)]
+#[derive(Debug, FromZeroes, FromBytes, AsBytes)]
 </span><span class="kw">pub struct </span>Vmsa {
     <span class="doccomment">/// The extra segment.
     </span><span class="kw">pub </span>es: SegmentRegister,
@@ -1113,7 +1113,7 @@
 ///
 /// See section 4.5.3 in &lt;https://www.amd.com/system/files/TechDocs/24593.pdf&gt;
 </span><span class="attr">#[repr(C)]
-#[derive(Debug, Default, FromBytes, AsBytes)]
+#[derive(Debug, Default, FromZeroes, FromBytes, AsBytes)]
 </span><span class="kw">pub struct </span>SegmentRegister {
     <span class="doccomment">/// The segment selector.
     </span><span class="kw">pub </span>selector: u16,

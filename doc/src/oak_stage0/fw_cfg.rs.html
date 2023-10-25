@@ -590,7 +590,7 @@
     structures::paging::{PageSize, Size2MiB, Size4KiB},
     PhysAddr, VirtAddr,
 };
-<span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
+<span class="kw">use </span>zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 <span class="kw">use crate</span>::{io_port_factory, sev::Shared, BootAllocator};
 
@@ -655,7 +655,7 @@
 
 <span class="doccomment">/// an individual file entry, 64 bytes total
 </span><span class="attr">#[repr(C)]
-#[derive(AsBytes, FromBytes)]
+#[derive(AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>DirEntry {
     <span class="doccomment">/// size of referenced fw_cfg item, big-endian
     </span>size: u32,

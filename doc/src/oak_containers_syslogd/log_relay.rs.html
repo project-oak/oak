@@ -103,6 +103,9 @@
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
 <a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -123,10 +126,13 @@
 <span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>oak_containers_orchestrator_client::LauncherClient;
 <span class="kw">use </span>opentelemetry_api::logs::{AnyValue, LogRecord, Logger, Severity};
-<span class="kw">use </span>std::time::{Duration, SystemTime};
-<span class="kw">use </span>tokio::sync::mpsc;
+<span class="kw">use </span>std::{
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
+<span class="kw">use </span>tokio::sync::{mpsc, OnceCell};
 
-<span class="kw">pub async fn </span>run(launcher_client: LauncherClient) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<span class="kw">pub async fn </span>run(launcher_client: LauncherClient, terminate: Arc&lt;OnceCell&lt;()&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// Journal is not Send, because the underlying systemd journal can&#39;t be shared between threads
     // (even with locking). Thus, let&#39;s wrap things in a channel.
     </span><span class="kw">let </span>(send, <span class="kw-2">mut </span>recv) = mpsc::unbounded_channel();
@@ -135,7 +141,7 @@
         <span class="comment">// Iterating over the journal can block (synchronously), so we need to wrap this in a
         // `spawn_blocking` call so that we don&#39;t hog the thread.
         </span><span class="kw">let </span>x = tokio::task::spawn_blocking(<span class="kw">move </span>|| {
-            <span class="kw">let </span><span class="kw-2">mut </span>journal = Journal::new(JournalOpenFlags::ALL_NAMESPACES)<span class="question-mark">?</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>journal = Journal::new(JournalOpenFlags::ALL_NAMESPACES, terminate)<span class="question-mark">?</span>;
             journal.seek_head()<span class="question-mark">?</span>;
 
             <span class="comment">// `(Journal as Iterator)::next()` will block if there is nothing to read
