@@ -27,8 +27,16 @@ pub mod proto {
             #![allow(clippy::return_self_not_must_use)]
             tonic::include_proto!("oak.functions");
         }
+        pub mod containers {
+            #![allow(clippy::return_self_not_must_use)]
+            tonic::include_proto!("oak.containers");
+        }
+        pub use oak_crypto::proto::oak::crypto;
+        pub use oak_remote_attestation::proto::oak::session;
     }
 }
+
+pub mod orchestrator_client;
 
 // Instance of the OakFunctions service for Oak Containers.
 pub struct OakFunctionsContainersService {}

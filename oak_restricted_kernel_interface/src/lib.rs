@@ -27,3 +27,6 @@ pub const OAK_CHANNEL_FD: i32 = 0xa;
 
 /// Predefined file descriptor for reading a derived key.
 pub const DERIVED_KEY_FD: i32 = 0x21;
+
+/// Predefined file descriptor for reading the dice attestation data.
+pub const DICE_DATA_FD: i32 = 0x42;

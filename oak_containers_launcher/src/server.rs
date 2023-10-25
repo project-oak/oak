@@ -16,17 +16,29 @@
 use crate::proto::oak::{
     containers::{
         launcher_server::{Launcher, LauncherServer},
-        GetApplicationConfigResponse, GetImageResponse, LogEntry, SendAttestationEvidenceRequest,
+        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
     },
     session::v1::AttestationEvidence,
 };
 use anyhow::anyhow;
-use futures::{FutureExt, Stream, StreamExt};
-use opentelemetry_proto::tonic::collector::metrics::v1::{
-    metrics_service_server::{MetricsService, MetricsServiceServer},
-    ExportMetricsServiceRequest, ExportMetricsServiceResponse,
+use futures::{FutureExt, Stream};
+use opentelemetry_proto::tonic::{
+    collector::{
+        logs::v1::{
+            logs_service_server::{LogsService, LogsServiceServer},
+            ExportLogsServiceRequest, ExportLogsServiceResponse,
+        },
+        metrics::v1::{
+            metrics_service_server::{MetricsService, MetricsServiceServer},
+            ExportMetricsServiceRequest, ExportMetricsServiceResponse,
+        },
+    },
+    common::v1::any_value::Value,
 };
-use std::{pin::Pin, sync::Mutex};
+use std::{
+    pin::Pin,
+    sync::{Arc, Mutex},
+};
 use tokio::{
     io::{AsyncReadExt, BufReader},
     net::TcpListener,
@@ -174,33 +186,10 @@ impl Launcher for LauncherServerImplementation {
             .map_err(|_err| tonic::Status::internal(format!("couldn't send notification")))?;
         Ok(tonic::Response::new(()))
     }
-
-    async fn log(
-        &self,
-        request: Request<tonic::Streaming<LogEntry>>,
-    ) -> Result<Response<()>, tonic::Status> {
-        let mut stream = request.into_inner();
-        while let Some(message) = stream.next().await {
-            let message = message?;
-
-            let unit = message
-                .fields
-                .get("_SYSTEMD_UNIT")
-                .map_or("", |unit| unit.as_str());
-            let message = message
-                .fields
-                .get("MESSAGE")
-                .map_or("", |message| message.as_str());
-            println!("{}: {}", unit, message);
-        }
-        Ok(tonic::Response::new(()))
-    }
 }
 
-struct LogServer;
-
 #[tonic::async_trait]
-impl MetricsService for LogServer {
+impl MetricsService for LauncherServerImplementation {
     async fn export(
         &self,
         request: Request<ExportMetricsServiceRequest>,
@@ -208,6 +197,52 @@ impl MetricsService for LogServer {
         let request = request.into_inner();
         log::debug!("metrics: {:?}", request);
         Ok(Response::new(ExportMetricsServiceResponse {
+            partial_success: None,
+        }))
+    }
+}
+
+#[tonic::async_trait]
+impl LogsService for LauncherServerImplementation {
+    async fn export(
+        &self,
+        request: Request<ExportLogsServiceRequest>,
+    ) -> Result<Response<ExportLogsServiceResponse>, tonic::Status> {
+        let request = request.into_inner();
+        for resource_log in &request.resource_logs {
+            for scope_log in &resource_log.scope_logs {
+                for log_record in &scope_log.log_records {
+                    let unit = log_record
+                        .attributes
+                        .iter()
+                        .find_map(|x| {
+                            if x.key == "_SYSTEMD_UNIT" {
+                                x.value.as_ref()
+                            } else {
+                                None
+                            }
+                        })
+                        .and_then(|value| value.value.as_ref())
+                        .and_then(|value| match value {
+                            Value::StringValue(x) => Some(x.as_str()),
+                            _ => None,
+                        })
+                        .unwrap_or_default();
+                    let body = log_record
+                        .body
+                        .as_ref()
+                        .and_then(|body| body.value.as_ref())
+                        .and_then(|value| match value {
+                            Value::StringValue(x) => Some(x.as_str()),
+                            _ => None,
+                        })
+                        .unwrap_or_default();
+                    println!("{}: {}", unit, body);
+                }
+            }
+        }
+
+        Ok(Response::new(ExportLogsServiceResponse {
             partial_success: None,
         }))
     }
@@ -222,16 +257,17 @@ pub async fn new(
     app_ready_notifier: Sender<()>,
     shutdown: Receiver<()>,
 ) -> Result<(), anyhow::Error> {
-    let server_impl = LauncherServerImplementation {
+    let server_impl = Arc::new(LauncherServerImplementation {
         system_image,
         container_bundle,
         application_config,
         attestation_evidence_sender: Mutex::new(Some(attestation_evidence_sender)),
         app_ready_notifier: Mutex::new(Some(app_ready_notifier)),
-    };
+    });
     Server::builder()
-        .add_service(LauncherServer::new(server_impl))
-        .add_service(MetricsServiceServer::new(LogServer))
+        .add_service(LauncherServer::from_arc(server_impl.clone()))
+        .add_service(MetricsServiceServer::from_arc(server_impl.clone()))
+        .add_service(LogsServiceServer::from_arc(server_impl))
         .serve_with_incoming_shutdown(TcpListenerStream::new(listener), shutdown.map(|_| ()))
         .await
         .map_err(|error| anyhow!("server error: {:?}", error))

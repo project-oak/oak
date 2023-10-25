@@ -28,9 +28,7 @@ use self::proto::oak::{
 };
 use anyhow::Context;
 use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
-use proto::oak::containers::{launcher_client::LauncherClient as GrpcLauncherClient, LogEntry};
-use std::collections::HashMap;
-use tokio_stream::{Stream, StreamExt};
+use proto::oak::containers::launcher_client::LauncherClient as GrpcLauncherClient;
 use tonic::transport::Channel;
 
 /// Utility struct used to interface with the launcher
@@ -103,19 +101,6 @@ impl LauncherClient {
             .notify_app_ready(request)
             .await
             .context("couldn't send notification")?;
-        Ok(())
-    }
-
-    pub async fn log<I>(&self, entry: I) -> Result<(), Box<dyn std::error::Error>>
-    where
-        I: Stream<Item = HashMap<String, String>> + Send + 'static,
-    {
-        let request = tonic::Request::new(entry.map(|fields| LogEntry { fields }));
-        self.inner
-            .clone()
-            .log(request)
-            .await
-            .context("couldn't stream log messages")?;
         Ok(())
     }
 

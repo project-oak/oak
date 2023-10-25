@@ -102,19 +102,18 @@ impl ZeroPage {
         // Try to load the E820 table from fw_cfg.
         // Safety: BootE820Entry has the same structure as what qemu uses, and we're limiting
         // ourselves to up to 128 entries.
-        let mut e820_table = [oak_linux_boot_params::BootE820Entry::default(); 128];
-        let e820_entries;
         let len_bytes = unsafe {
             fw_cfg.read_file_by_name(
                 CStr::from_bytes_with_nul(b"etc/e820\0").unwrap(),
-                &mut e820_table,
+                &mut self.inner.e820_table,
             )
         };
 
-        match len_bytes {
+        let e820_entries = match len_bytes {
             Ok(len_bytes) => {
-                e820_entries = len_bytes / size_of::<BootE820Entry>();
-                e820_table[..e820_entries].sort_unstable_by_key(|x| x.addr());
+                let e820_entries = len_bytes / size_of::<BootE820Entry>();
+                self.inner.e820_table[..e820_entries].sort_unstable_by_key(|x| x.addr());
+                e820_entries
             }
             Err(err) => {
                 log::warn!("Failed to read 'etc/e820': {}, failing back to CMOS", err);
@@ -124,53 +123,20 @@ impl ZeroPage {
                     panic!("QEMU_E820_RESERVATION_TABLE was not empty!");
                 }
 
-                e820_entries =
-                    build_e820_from_nvram(&mut e820_table).expect("failed to read from CMOS");
+                build_e820_from_nvram(&mut self.inner.e820_table).expect("failed to read from CMOS")
             }
         };
 
-        // Construct the "real" E820 table, carving out a chunk of memory out for the ACPI area and
-        // reserved memory just below 1 MiB.
-        for entry in &e820_table[0..e820_entries] {
-            if entry.addr() < 0x8_0000 && entry.addr() + entry.size() >= 0x10_0000 {
-                // any memory before our hole?
-                let low_size = if entry.addr() < 0x8_0000 {
-                    let size = 0x8_0000 - entry.addr();
-                    self.inner.append_e820_entry(BootE820Entry::new(
-                        entry.addr(),
-                        size,
-                        entry.entry_type().unwrap(),
-                    ));
-                    size
-                } else {
-                    0
-                };
+        self.inner.e820_entries = e820_entries as u8;
+        self.validate_e820_table();
 
-                // ACPI tables
-                self.inner.append_e820_entry(BootE820Entry::new(
-                    0x8_0000,
-                    0x2_0000,
-                    E820EntryType::ACPI,
-                ));
-                // Unused region below 1MiB.
-                self.inner.append_e820_entry(BootE820Entry::new(
-                    0xA_0000,
-                    0x6_0000,
-                    E820EntryType::RESERVED,
-                ));
-
-                // any memory after us?
-                if entry.addr() + entry.size() > 0x10_0000 {
-                    self.inner.append_e820_entry(BootE820Entry::new(
-                        0x10_0000,
-                        entry.size() - 0x8_0000 - low_size,
-                        entry.entry_type().unwrap(),
-                    ));
-                }
-            } else {
-                self.inner.append_e820_entry(*entry);
-            }
-        }
+        // Carve out a chunk of memory out for the ACPI area and reserved memory just below 1 MiB.
+        self.insert_e820_entry(BootE820Entry::new(0x8_0000, 0x2_0000, E820EntryType::ACPI));
+        self.insert_e820_entry(BootE820Entry::new(
+            0xA_0000,
+            0x6_0000,
+            E820EntryType::RESERVED,
+        ));
 
         for entry in self.inner.e820_table() {
             log::debug!(
@@ -186,6 +152,94 @@ impl ZeroPage {
     /// Returns a reference to the E820 table inside the zero page.
     pub fn e820_table(&self) -> &[BootE820Entry] {
         self.inner.e820_table()
+    }
+
+    /// Inserts a new entry into the E820 table in the appropriate position (sorted by start
+    /// address).
+    ///
+    /// If the new entry overlaps with one or more existing entries in the table, the effect depends
+    /// on the entry type:
+    ///
+    /// - If the new entry has the same type as the existing entry the entries will be merged into a
+    ///   single entry. Two adjacent entries of the same type will also be merged.
+    /// - If the new entry has a different type the new entry will be inserted as is and the
+    ///   existing entry will be modified (trimmed or split into two entries) to avoid the overlap.
+    pub fn insert_e820_entry(&mut self, entry: BootE820Entry) {
+        // Find the index where the entry must be inserted.
+        let mut index = (0..(self.inner.e820_entries as usize))
+            .find(|i| entry.addr() <= self.inner.e820_table[*i].addr())
+            .unwrap_or(self.inner.e820_entries as usize);
+        // Check whether the new entry overlaps with the previous entry.
+        if index > 0 && self.inner.e820_table[index - 1].end() >= entry.addr() {
+            let mut overlapping = self.inner.e820_table[index - 1];
+            if overlapping.entry_type() == entry.entry_type() {
+                // Merge the entry with the previous one.
+                if overlapping.end() < entry.end() {
+                    overlapping.set_size(entry.end() - overlapping.addr());
+                    // Copy the modified overlapping entry back.
+                    self.inner.e820_table[index - 1] = overlapping;
+                }
+                index -= 1;
+            } else {
+                if overlapping.end() > entry.end() {
+                    // Split the overlapping range.
+                    self.inner.insert_e820_entry(
+                        BootE820Entry::new(
+                            entry.end(),
+                            overlapping.end() - entry.end(),
+                            overlapping.entry_type().expect("invalid entry type"),
+                        ),
+                        index as u8,
+                    );
+                }
+
+                // Trim the previous one to remove the overlap.
+                overlapping.set_size(entry.addr() - overlapping.addr());
+                self.inner.insert_e820_entry(entry, index as u8);
+                // Copy the modified overlapping entry back.
+                self.inner.e820_table[index - 1] = overlapping;
+            }
+        } else {
+            self.inner.insert_e820_entry(entry, index as u8);
+        }
+
+        // Check whether the new entry overlaps with any existing later entries.
+        let mut entry = self.inner.e820_table[index];
+        let mut current = index + 1;
+        while current < self.inner.e820_entries as usize
+            && entry.end() >= self.inner.e820_table[current].addr()
+        {
+            if entry.end() >= self.inner.e820_table[current].end() {
+                // The new entry completely covers the current one.
+                self.inner.delete_e820_entry(current as u8);
+            } else if entry.entry_type() == self.inner.e820_table[current].entry_type() {
+                // Merge the entries.
+                entry.set_size(self.inner.e820_table[current].end() - entry.addr());
+                self.inner.delete_e820_entry(current as u8);
+            } else {
+                // Move and shrink the next entry.
+                self.inner.e820_table[current]
+                    .set_size(self.inner.e820_table[current].end() - entry.end());
+                self.inner.e820_table[current].set_addr(entry.end());
+                current += 1;
+            }
+        }
+
+        // Copy the modified entry back.
+        self.inner.e820_table[index] = entry;
+    }
+
+    fn validate_e820_table(&self) {
+        // Check that the table is sorted.
+        for i in 0..((self.inner.e820_entries - 1) as usize) {
+            assert!(self.inner.e820_table[i].end() <= self.inner.e820_table[i + 1].addr());
+        }
+        // Check that all of the entry types are valid.
+        assert_eq!(
+            None,
+            (0..(self.inner.e820_entries as usize))
+                .find(|i| self.inner.e820_table[*i].entry_type().is_none())
+        );
     }
 
     /// Updates the physical address of the ACPI RSDP table in the zero page.
@@ -263,4 +317,124 @@ fn build_e820_from_nvram(e820_table: &mut [BootE820Entry]) -> Result<usize, &'st
     }
 
     Ok(e820_entries)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn insert_e820_entry_empty_table() {
+        let expected = [BootE820Entry::new(0, 100, E820EntryType::RAM)];
+        let mut zero_page = ZeroPage::new();
+
+        zero_page.insert_e820_entry(BootE820Entry::new(0, 100, E820EntryType::RAM));
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn insert_e820_entry_fill_gap() {
+        let expected = [BootE820Entry::new(0, 100, E820EntryType::RAM)];
+        let mut zero_page = ZeroPage::new();
+        zero_page
+            .inner
+            .append_e820_entry(BootE820Entry::new(0, 40, E820EntryType::RAM));
+        zero_page
+            .inner
+            .append_e820_entry(BootE820Entry::new(60, 40, E820EntryType::RAM));
+
+        zero_page.insert_e820_entry(BootE820Entry::new(40, 20, E820EntryType::RAM));
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn insert_e820_entry_fill_gap_overlapping() {
+        let expected = [BootE820Entry::new(0, 100, E820EntryType::RAM)];
+        let mut zero_page = ZeroPage::new();
+        zero_page
+            .inner
+            .append_e820_entry(BootE820Entry::new(0, 40, E820EntryType::RAM));
+        zero_page
+            .inner
+            .append_e820_entry(BootE820Entry::new(60, 40, E820EntryType::RAM));
+
+        zero_page.insert_e820_entry(BootE820Entry::new(20, 60, E820EntryType::RAM));
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn insert_e820_entry_split() {
+        let expected = [
+            BootE820Entry::new(0, 100, E820EntryType::RAM),
+            BootE820Entry::new(100, 100, E820EntryType::RESERVED),
+            BootE820Entry::new(200, 100, E820EntryType::RAM),
+        ];
+        let mut zero_page = ZeroPage::new();
+        zero_page
+            .inner
+            .append_e820_entry(BootE820Entry::new(0, 300, E820EntryType::RAM));
+
+        zero_page.insert_e820_entry(BootE820Entry::new(100, 100, E820EntryType::RESERVED));
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn insert_e820_entry_disappear() {
+        let expected = [BootE820Entry::new(0, 300, E820EntryType::RAM)];
+        let mut zero_page = ZeroPage::new();
+        zero_page
+            .inner
+            .append_e820_entry(BootE820Entry::new(0, 300, E820EntryType::RAM));
+
+        zero_page.insert_e820_entry(BootE820Entry::new(100, 100, E820EntryType::RAM));
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn insert_e820_entry_trim() {
+        let expected = [
+            BootE820Entry::new(0, 100, E820EntryType::RAM),
+            BootE820Entry::new(100, 100, E820EntryType::RESERVED),
+            BootE820Entry::new(200, 100, E820EntryType::RAM),
+        ];
+        let mut zero_page = ZeroPage::new();
+        zero_page
+            .inner
+            .append_e820_entry(BootE820Entry::new(0, 150, E820EntryType::RAM));
+        zero_page
+            .inner
+            .append_e820_entry(BootE820Entry::new(150, 150, E820EntryType::RAM));
+
+        zero_page.insert_e820_entry(BootE820Entry::new(100, 100, E820EntryType::RESERVED));
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
+
+    #[test]
+    pub fn insert_e820_entry_cover() {
+        let expected = [
+            BootE820Entry::new(0, 100, E820EntryType::RAM),
+            BootE820Entry::new(100, 100, E820EntryType::RESERVED),
+            BootE820Entry::new(200, 100, E820EntryType::RAM),
+        ];
+        let mut zero_page = ZeroPage::new();
+        zero_page
+            .inner
+            .append_e820_entry(BootE820Entry::new(0, 150, E820EntryType::RAM));
+        zero_page
+            .inner
+            .append_e820_entry(BootE820Entry::new(150, 10, E820EntryType::RAM));
+        zero_page
+            .inner
+            .append_e820_entry(BootE820Entry::new(160, 140, E820EntryType::RAM));
+
+        zero_page.insert_e820_entry(BootE820Entry::new(100, 100, E820EntryType::RESERVED));
+
+        assert_eq!(zero_page.e820_table(), &expected[..]);
+    }
 }

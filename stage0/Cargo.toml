@@ -7,12 +7,20 @@ license = "Apache-2.0"
 
 [dependencies]
 bitflags = "*"
+coset = { version = "*", default-features = false }
 elf = { version = "*", default-features = false }
+hex = { version = "*", default-features = false, features = ["alloc"] }
+hkdf = { version = "*", default-features = false }
 log = "*"
 linked_list_allocator = "*"
 oak_core = { path = "../oak_core", default-features = false }
+oak_dice = { workspace = true }
 oak_linux_boot_params = { path = "../linux_boot_params" }
-oak_sev_guest = { path = "../oak_sev_guest", default-features = false }
+oak_sev_guest = { workspace = true }
+p256 = { version = "*", default-features = false, features = ["ecdsa"] }
+rand_core = { version = "*", default-features = false, features = [
+  "getrandom",
+] }
 sev_serial = { path = "../sev_serial" }
 sha2 = { version = "*", default-features = false, features = ["force-soft"] }
 spinning_top = "*"
@@ -20,6 +28,7 @@ static_assertions = "*"
 strum = { version = "*", default-features = false, features = ["derive"] }
 x86_64 = "*"
 zerocopy = "*"
+<<<<<<< HEAD
 p384 = { version = "*", default-features = false, features = ["ecdsa"] }
 hkdf = { version = "*", default-features = false }
 rand_core = { version = "*", default-features = false, features = [
@@ -28,3 +37,5 @@ rand_core = { version = "*", default-features = false, features = [
 hex = { version = "*", default-features = false, features = ["alloc"] }
 coset = { version = "*", default-features = false }
 oak_dice = { path = "../oak_dice", default-features = false }
+=======
+>>>>>>> 5b81c518019530e1153d864e7650f88af6e2cac6

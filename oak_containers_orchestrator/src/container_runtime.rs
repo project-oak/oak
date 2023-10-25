@@ -13,31 +13,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Minimal implementation of a container runtime using chroot. It accepts an
-//! containers in the form of an OCI filesystem bundle. However the runtime
-//! itself is not OCI spec compliant.
-
-use std::path::{Path, PathBuf};
-
 use anyhow::Context;
-use oci_spec::runtime::{Mount, Spec};
+use nix::unistd::{Gid, Uid};
+use oci_spec::runtime::{LinuxIdMapping, LinuxIdMappingBuilder, Mount, Spec};
+use std::{
+    os::unix::fs::lchown,
+    path::{Path, PathBuf},
+};
 use tokio::sync::oneshot::Sender;
 
 pub async fn run(
     container_bundle: &[u8],
     container_dir: &Path,
+    runtime_uid: Uid,
+    runtime_gid: Gid,
     ipc_socket_path: &Path,
     exit_notification_sender: Sender<()>,
 ) -> Result<(), anyhow::Error> {
     tokio::fs::create_dir_all(container_dir).await?;
     log::info!("Unpacking container bundle");
-    tar::Archive::new(container_bundle).unpack(container_dir)?;
+    let mut archive = tar::Archive::new(container_bundle);
+    archive.unpack(container_dir)?;
+
+    for entry in walkdir::WalkDir::new(container_dir) {
+        let entry = entry?;
+        lchown(
+            entry.path(),
+            Some(runtime_uid.into()),
+            Some(runtime_gid.into()),
+        )
+        .context(format!("failed to chown path {:?}", entry.path()))?;
+    }
 
     log::info!("Setting up container");
 
     let spec_path = container_dir.join("config.json");
-    let mut spec = Spec::load(spec_path.clone()).context("error reading OCI spec")?;
-    let mut mounts = spec.mounts().as_ref().map_or(Vec::new(), |v| v.clone());
+    let mut spec = Spec::load(&spec_path).context("error reading OCI spec")?;
+    let mut mounts = spec.mounts().as_ref().cloned().unwrap_or_default();
     mounts.push({
         let mut mount = Mount::default();
         mount.set_source(Some(ipc_socket_path.into()));
@@ -47,6 +59,34 @@ pub async fn run(
         mount
     });
     spec.set_mounts(Some(mounts));
+    let mut linux = spec.linux().as_ref().cloned().unwrap_or_default();
+    let uid_mappings: Option<Vec<LinuxIdMapping>> = linux.uid_mappings().as_ref().map(|x| {
+        x.iter()
+            .map(|entry| {
+                LinuxIdMappingBuilder::default()
+                    .host_id(runtime_uid)
+                    .container_id(entry.container_id())
+                    .size(entry.size())
+                    .build()
+                    .unwrap()
+            })
+            .collect()
+    });
+    linux.set_uid_mappings(uid_mappings);
+    let gid_mappings: Option<Vec<LinuxIdMapping>> = linux.gid_mappings().as_ref().map(|x| {
+        x.iter()
+            .map(|entry| {
+                LinuxIdMappingBuilder::default()
+                    .host_id(runtime_gid)
+                    .container_id(entry.container_id())
+                    .size(entry.size())
+                    .build()
+                    .unwrap()
+            })
+            .collect()
+    });
+    linux.set_gid_mappings(gid_mappings);
+    spec.set_linux(Some(linux));
     spec.save(spec_path).context("error writing OCI spec")?;
 
     let mut start_trusted_app_cmd = {
@@ -56,20 +96,17 @@ pub async fn run(
             .try_into()
             .expect("invalid container path");
         cmd.args([
-            "--service-type=forking",
             "--property=RuntimeDirectory=oakc",
-            // PIDFile is relative to `/run`, but unfortunately can't reference `RuntimeDirectory`.
-            "--property=PIDFile=oakc/oakc.pid",
             "--property=ProtectSystem=strict",
             format!("--property=ReadWritePaths={}", container_dir).as_str(),
+            format!("--uid={}", runtime_uid).as_str(),
+            format!("--gid={}", runtime_gid).as_str(),
+            "--pty",
             "--wait",
             "--collect",
             "/bin/runc",
-            "--systemd-cgroup",
             "--root=${RUNTIME_DIRECTORY}/runc",
             "run",
-            "--detach",
-            "--pid-file=${PIDFILE}",
             format!("--bundle={}", container_dir).as_str(),
             "oakc",
         ]);

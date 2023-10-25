@@ -14,27 +14,31 @@
 // limitations under the License.
 //
 
-use crate::snp_guest::DerivedKey;
-
 use super::fd::{copy_max_slice, FileDescriptor};
 use alloc::boxed::Box;
-use oak_restricted_kernel_interface::{Errno, DERIVED_KEY_FD};
+use oak_dice::evidence::RestrictedKernelDiceData as DiceData;
+use oak_restricted_kernel_interface::{Errno, DICE_DATA_FD};
 
-#[derive(Default)]
-struct DerivedKeyDescriptor {
-    key: DerivedKey,
+struct DiceDataDescriptor {
+    data: DiceData,
     index: usize,
 }
 
-impl DerivedKeyDescriptor {
-    fn new(key: DerivedKey) -> Self {
-        Self { index: 0, key }
+impl DiceDataDescriptor {
+    fn new(data: DiceData) -> Self {
+        Self { index: 0, data }
     }
 }
 
-impl FileDescriptor for DerivedKeyDescriptor {
+impl FileDescriptor for DiceDataDescriptor {
     fn read(&mut self, buf: &mut [u8]) -> Result<isize, oak_restricted_kernel_interface::Errno> {
-        let length = copy_max_slice(&self.key[self.index..], buf);
+        let data_as_slice = <DiceData as zerocopy::AsBytes>::as_bytes_mut(&mut self.data);
+        let length = copy_max_slice(&data_as_slice[self.index..], buf);
+
+        // destroy the data that was read, to ensure that it can only be read once
+        let slice_to_read = &mut data_as_slice[self.index..(self.index + length)];
+        slice_to_read.fill(0);
+
         self.index += length;
         Ok(length as isize)
     }
@@ -49,9 +53,9 @@ impl FileDescriptor for DerivedKeyDescriptor {
     }
 }
 
-/// Registers a file descriptor for reading a derived key (0x21)
-pub fn register(key: DerivedKey) {
-    super::fd::register(DERIVED_KEY_FD, Box::new(DerivedKeyDescriptor::new(key)))
+/// Registers a file descriptor for reading dice data
+pub fn register(data: DiceData) {
+    super::fd::register(DICE_DATA_FD, Box::new(DiceDataDescriptor::new(data)))
         .map_err(|_| ()) // throw away the box
-        .expect("DerivedKeyDescriptor already registered");
+        .expect("DiceDataDescriptor already registered");
 }

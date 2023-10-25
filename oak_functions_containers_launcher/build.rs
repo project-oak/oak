@@ -14,8 +14,18 @@
 // limitations under the License.
 //
 
+use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    micro_rpc_build::compile(&["proto/v1/verification.proto"], &["proto/v1"]);
+    // Generate gRPC code for exchanging messages with clients.
+    generate_grpc_code(
+        "../",
+        &["oak_functions_service/proto/oak_functions.proto"],
+        CodegenOptions {
+            build_client: true,
+            ..Default::default()
+        },
+    )?;
 
     Ok(())
 }

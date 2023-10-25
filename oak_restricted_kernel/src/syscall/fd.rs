@@ -19,7 +19,10 @@ use alloc::{
     collections::{btree_map::Entry, BTreeMap},
     slice,
 };
-use core::ffi::{c_int, c_size_t, c_ssize_t, c_void};
+use core::{
+    cmp::min,
+    ffi::{c_int, c_size_t, c_ssize_t, c_void},
+};
 use oak_restricted_kernel_interface::Errno;
 use spinning_top::Spinlock;
 
@@ -30,6 +33,14 @@ pub trait FileDescriptor: Send {
 }
 
 type Fd = c_int;
+
+/// Utility function that copies the maximum number of bytes from a source buffer
+/// to a destination buffer.
+pub fn copy_max_slice(src_buf: &[u8], dst_buf: &mut [u8]) -> usize {
+    let length: usize = min(src_buf.len(), dst_buf.len());
+    dst_buf[..length].copy_from_slice(&src_buf[..length]);
+    length
+}
 
 static FILE_DESCRIPTORS: Spinlock<BTreeMap<Fd, Box<dyn FileDescriptor>>> =
     Spinlock::new(BTreeMap::new());

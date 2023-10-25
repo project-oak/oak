@@ -21,7 +21,10 @@ use std::{
     cmp::Ordering,
     collections::HashMap,
     ffi::{c_int, c_void},
+    sync::Arc,
+    time::Duration,
 };
+use tokio::sync::OnceCell;
 
 mod systemd_sys {
     use core::ffi::c_size_t;
@@ -79,16 +82,17 @@ bitflags::bitflags! {
 /// Simple wrapper around libsystemd for reading entries from the systemd journal.
 pub struct Journal {
     journal: *mut sd_journal,
+    terminate: Arc<OnceCell<()>>,
 }
 
 impl Journal {
-    pub fn new(flags: JournalOpenFlags) -> Result<Self, Errno> {
+    pub fn new(flags: JournalOpenFlags, terminate: Arc<OnceCell<()>>) -> Result<Self, Errno> {
         let mut journal = std::ptr::null_mut();
         // Safety: we pass in a valid pointer (to the pointer). The returned journal value is opaque
         // and we never directly access it.
         let ret = unsafe { sd_journal_open(&mut journal, flags.bits()) };
         if ret == 0 {
-            Ok(Self { journal })
+            Ok(Self { journal, terminate })
         } else {
             Err(nix::errno::from_i32(ret))
         }
@@ -154,15 +158,29 @@ impl Journal {
         }
     }
 
-    /// Blocks until something is added to the
-    pub fn wait(&mut self) -> Result<(), Errno> {
+    /// Blocks until something is added to the journal.
+    ///
+    /// Returns false if we've been asked to terminate.
+    pub fn wait(&mut self) -> Result<bool, Errno> {
         // Safety: `self.journal` must be valid as the only way how to instantiate this is via
         // `Journal::new()`.
-        let ret = unsafe { sd_journal_wait(self.journal, 0) };
-        if ret < 0 {
-            return Err(nix::errno::from_i32(ret));
-        };
-        Ok(())
+        loop {
+            let ret = unsafe {
+                sd_journal_wait(
+                    self.journal,
+                    Duration::new(1, 0).as_micros().try_into().unwrap(),
+                )
+            };
+            match ret.cmp(&0) {
+                Ordering::Less => return Err(nix::errno::from_i32(ret)),
+                Ordering::Greater => return Ok(true),
+                Ordering::Equal => {
+                    if self.terminate.initialized() {
+                        return Ok(false);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -182,7 +200,9 @@ impl Iterator for Journal {
             if let Some(result) = self.next().transpose() {
                 return Some(result);
             }
-            self.wait().unwrap();
+            if !self.wait().unwrap() {
+                return None;
+            }
         }
     }
 }

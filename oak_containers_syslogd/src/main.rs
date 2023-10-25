@@ -22,6 +22,11 @@ mod systemd_journal;
 use anyhow::anyhow;
 use clap::Parser;
 use oak_containers_orchestrator_client::LauncherClient;
+use signal_hook::consts::signal::SIGTERM;
+use signal_hook_tokio::Signals;
+use std::sync::Arc;
+use tokio::sync::OnceCell;
+use tokio_stream::StreamExt;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -29,15 +34,35 @@ struct Args {
     launcher_addr: String,
 }
 
+async fn signal_handler(mut signals: Signals, term: Arc<OnceCell<()>>) {
+    while let Some(signal) = signals.next().await {
+        match signal {
+            SIGTERM => {
+                // We don't care if it has already been initialized.
+                let _ = term.set(());
+                return;
+            }
+            _ => unreachable!(),
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
+    let term = Arc::new(OnceCell::new());
     let launcher_client = LauncherClient::create(args.launcher_addr.parse()?)
         .await
         .map_err(|error| anyhow!("couldn't create client: {:?}", error))?;
 
-    tokio::try_join!(log_relay::run(launcher_client))?;
+    let signals = Signals::new([SIGTERM])?;
+    let handle = signals.handle();
+    let signals_task = tokio::spawn(signal_handler(signals, term.clone()));
+
+    tokio::try_join!(log_relay::run(launcher_client, term))?;
+    handle.close();
+    signals_task.await?;
 
     Ok(())
 }

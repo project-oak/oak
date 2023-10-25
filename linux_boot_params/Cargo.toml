@@ -9,4 +9,4 @@ license = "Apache-2.0"
 bitflags = "*"
 static_assertions = "*"
 strum = { version = "*", default-features = false, features = ["derive"] }
-zerocopy = "*"
+zerocopy = { version = "*", features = ["derive"] }

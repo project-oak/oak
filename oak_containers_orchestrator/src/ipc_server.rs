@@ -23,8 +23,8 @@ use futures::FutureExt;
 use oak_containers_orchestrator_client::LauncherClient;
 use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
 use oak_remote_attestation::attester::Attester;
-use std::sync::Arc;
-use tokio::{net::UnixListener, sync::oneshot::Receiver};
+use std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
+use tokio::{fs::set_permissions, net::UnixListener, sync::oneshot::Receiver};
 use tokio_stream::wrappers::UnixListenerStream;
 use tonic::{transport::Server, Request, Response};
 
@@ -96,7 +96,7 @@ pub async fn create<P>(
     shutdown_receiver: Receiver<()>,
 ) -> Result<(), anyhow::Error>
 where
-    P: AsRef<std::path::Path>,
+    P: AsRef<std::path::Path> + Clone,
 {
     let service_instance = ServiceImplementation {
         attester,
@@ -104,9 +104,12 @@ where
         application_config,
         launcher_client,
     };
-    let uds =
-        UnixListener::bind(socket_address).context("could not bind to the supplied address")?;
+    let uds = UnixListener::bind(socket_address.clone())
+        .context("could not bind to the supplied address")?;
     let uds_stream = UnixListenerStream::new(uds);
+    // Change permissions on the socket to be world-RW, as otherwise processes running as `oakc`
+    // can't access it. (Either that, or we should change the owner of the socket to oakc.)
+    set_permissions(socket_address, Permissions::from_mode(0o666)).await?;
 
     Server::builder()
         .add_service(OrchestratorServer::new(service_instance))

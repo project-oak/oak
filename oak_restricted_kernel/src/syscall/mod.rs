@@ -15,11 +15,15 @@
 //
 
 mod channel;
+mod dice_data;
 mod fd;
 mod key;
 pub mod mmap;
 mod process;
 mod stdio;
+
+#[cfg(test)]
+mod tests;
 
 use self::{
     fd::{syscall_fsync, syscall_read, syscall_write},
@@ -30,6 +34,7 @@ use crate::{mm, snp_guest::DerivedKey};
 use alloc::boxed::Box;
 use core::{arch::asm, ffi::c_void};
 use oak_channel::Channel;
+use oak_dice::evidence::RestrictedKernelDiceData as DiceData;
 use oak_restricted_kernel_interface::{Errno, Syscall};
 use x86_64::{
     registers::{
@@ -58,10 +63,15 @@ struct GsData {
     user_flags: usize,
 }
 
+fn mock_dice_data() -> DiceData {
+    <DiceData as zerocopy::FromZeroes>::new_zeroed()
+}
+
 pub fn enable_syscalls(channel: Box<dyn Channel>, derived_key: DerivedKey) {
     channel::register(channel);
     stdio::register();
     key::register(derived_key);
+    dice_data::register(mock_dice_data());
 
     // Allocate a stack for the system call handler.
     let kernel_sp = mm::allocate_stack();

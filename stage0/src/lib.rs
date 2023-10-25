@@ -25,6 +25,7 @@ use crate::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 use alloc::boxed::Box;
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use linked_list_allocator::LockedHeap;
+use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
 use sha2::{Digest, Sha256};
 use x86_64::{
@@ -305,7 +306,13 @@ pub fn rust64_start(encrypted: u64) -> ! {
         memory_map_measurement,
     };
 
-    dice_attestation::generate_stage1_attestation(&measurements);
+    let dice_data = dice_attestation::generate_dice_data(&measurements);
+    // Reserve the memory containing the DICE data.
+    zero_page.insert_e820_entry(BootE820Entry::new(
+        dice_data.as_bytes().as_ptr() as usize,
+        dice_data.as_bytes().len(),
+        E820EntryType::DiceData,
+    ));
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 
