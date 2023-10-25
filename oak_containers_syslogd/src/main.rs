@@ -19,13 +19,12 @@
 mod log_relay;
 mod systemd_journal;
 
-use std::sync::Arc;
-
 use anyhow::anyhow;
 use clap::Parser;
 use oak_containers_orchestrator_client::LauncherClient;
 use signal_hook::consts::signal::SIGTERM;
 use signal_hook_tokio::Signals;
+use std::sync::Arc;
 use tokio::sync::OnceCell;
 use tokio_stream::StreamExt;
 
