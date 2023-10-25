@@ -265,7 +265,7 @@ pub fn verify_signature(
     contents: &[u8],
     public_key: &[u8],
 ) -> anyhow::Result<()> {
-    let signature = Signature::from_der(&signature).context("invalid ASN.1 signature")?;
+    let signature = Signature::from_der(signature).context("invalid ASN.1 signature")?;
     let key = raw_to_verifying_key(public_key)?;
 
     key.verify(contents, &signature)
@@ -282,7 +282,7 @@ pub fn pem_to_verifying_key(public_key_pem: &str) -> anyhow::Result<p256::ecdsa:
 pub fn raw_to_verifying_key(public_key: &[u8]) -> anyhow::Result<p256::ecdsa::VerifyingKey> {
     // Need to figure out how to create a VerifyingKey without the PEM detour.
     let public_key_pem = convert_raw_to_pem(public_key);
-    return pem_to_verifying_key(&public_key_pem);
+    pem_to_verifying_key(&public_key_pem)
 }
 
 fn rekor_signature_bundle(log_entry: &[u8]) -> anyhow::Result<RekorSignatureBundle> {
@@ -299,7 +299,7 @@ fn rekor_signature_bundle(log_entry: &[u8]) -> anyhow::Result<RekorSignatureBund
 pub fn equal_keys(public_key_a: &[u8], public_key_b: &[u8]) -> anyhow::Result<bool> {
     let key_a = raw_to_verifying_key(public_key_a)?;
     let key_b = raw_to_verifying_key(public_key_b)?;
-    return Ok(key_a.cmp(&key_b) == Ordering::Equal);
+    Ok(key_a.cmp(&key_b) == Ordering::Equal)
 }
 
 /// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.

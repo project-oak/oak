@@ -78,7 +78,7 @@ const PEM_FOOTER: &str = "-----END PUBLIC KEY-----";
 /// Makes a plausible guess whether the public key is in PEM format.
 pub fn looks_like_pem(maybe_pem: &str) -> bool {
     let p = maybe_pem.trim();
-    return p.starts_with(PEM_HEADER) && p.ends_with(PEM_FOOTER);
+    p.starts_with(PEM_HEADER) && p.ends_with(PEM_FOOTER)
 }
 
 /// Converts a pem key to raw. Will panic if it does not like like pem.
@@ -105,7 +105,7 @@ pub fn convert_raw_to_pem(public_key: &[u8]) -> String {
     pem.push('\n');
     pem.push_str(PEM_FOOTER);
     pem.push('\n');
-    return pem;
+    pem
 }
 
 /// Verifies the binary endorsement for a given measurement. More precisely:
@@ -131,11 +131,11 @@ pub fn verify_binary_endorsement(
 
     verify_rekor_log_entry(
         &binary_attestation.rekor_log_entry,
-        &rekor_public_key,
+        rekor_public_key,
         &binary_attestation.endorsement_statement,
     )?;
-    verify_endorser_public_key(binary_attestation, &endorser_public_key)?;
-    verify_rekor_public_key(binary_attestation, &rekor_public_key)?;
+    verify_endorser_public_key(binary_attestation, endorser_public_key)?;
+    verify_rekor_public_key(binary_attestation, rekor_public_key)?;
 
     Ok(())
 }
@@ -176,8 +176,7 @@ pub fn verify_endorsement_statement(
     Ok(())
 }
 
-/// Verifies that the Rekor public key in the given attestation is either the same as the
-/// given public key, signed by it, or derived from it.
+/// Verifies that the Rekor public key coincides with the one contained in the attestation.
 pub fn verify_rekor_public_key(
     binary_attestation: &BinaryAttestation,
     rekor_public_key: &[u8],
@@ -191,7 +190,7 @@ pub fn verify_rekor_public_key(
     let actual_pem = core::str::from_utf8(&actual_pem_vec)?;
     let actual = convert_pem_to_raw(actual_pem)?;
 
-    if !equal_keys(&rekor_public_key, &actual)? {
+    if !equal_keys(rekor_public_key, &actual)? {
         anyhow::bail!(
             "Rekor public key mismatch: expected {:?} found {:?}",
             rekor_public_key,
@@ -202,8 +201,7 @@ pub fn verify_rekor_public_key(
     Ok(())
 }
 
-/// Verifies that the endorser's public key in the Rekor log entry in the given attestation is
-/// either the same as the given public key, signed by it, or derived from it.
+/// Verifies that the endorser public key coincides with the one contained in the attestation.
 pub fn verify_endorser_public_key(
     binary_attestation: &BinaryAttestation,
     endorser_public_key: &[u8],
@@ -219,7 +217,7 @@ pub fn verify_endorser_public_key(
     let actual_pem = core::str::from_utf8(&actual_pem_vec)?;
     let actual = convert_pem_to_raw(actual_pem)?;
 
-    if !equal_keys(&endorser_public_key, &actual)? {
+    if !equal_keys(endorser_public_key, &actual)? {
         anyhow::bail!(
             "endorser public key mismatch: expected {:?} found {:?}",
             endorser_public_key,

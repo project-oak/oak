@@ -104,6 +104,8 @@ fn test_looks_like_pem() {
     let testdata = load_testdata();
     assert!(looks_like_pem(&testdata.endorser_public_key_pem));
     assert!(looks_like_pem(&testdata.rekor_public_key_pem));
+    assert!(!looks_like_pem("-----BEGIN PUBLIC KEY-----\n"));
+    assert!(!looks_like_pem("\n-----END PUBLIC KEY-----\n"));
     assert!(!looks_like_pem("whatever"));
 }
 
