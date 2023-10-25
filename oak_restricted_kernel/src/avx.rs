@@ -45,12 +45,12 @@ pub fn enable_avx() {
         asm!("fninit");
         // Mask SIMD floating-point exceptions to enable default behavior.
         let mut mxcsr = read();
-        mxcsr.insert(MxCsr::DENORMAL_MASK);
-        mxcsr.insert(MxCsr::DIVIDE_BY_ZERO_MASK);
-        mxcsr.insert(MxCsr::INVALID_OPERATION_MASK);
-        mxcsr.insert(MxCsr::OVERFLOW_MASK);
-        mxcsr.insert(MxCsr::PRECISION_MASK);
-        mxcsr.insert(MxCsr::UNDERFLOW_MASK);
+        mxcsr |= MxCsr::DENORMAL_MASK
+            | MxCsr::DIVIDE_BY_ZERO_MASK
+            | MxCsr::INVALID_OPERATION_MASK
+            | MxCsr::OVERFLOW_MASK
+            | MxCsr::PRECISION_MASK
+            | MxCsr::UNDERFLOW_MASK;
         write(mxcsr);
     }
 }
