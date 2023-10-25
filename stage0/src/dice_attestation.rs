@@ -22,9 +22,14 @@ use coset::{
     KeyType, Label,
 };
 use hkdf::Hkdf;
+use oak_dice::{
+    self,
+    evidence::{CertificateAuthority, RootLayerEvidence, Stage0DiceData, TeePlatform, LayerEvidence},
+};
 use p384::ecdsa::{signature::Signer, Signature, SigningKey, VerifyingKey};
 use rand_core::OsRng;
 use sha2::Sha256;
+use zerocopy::AsBytes;
 
 /// String to be used as salt for generating Key IDs.
 pub const ID_SALT: &str = "DICE_ID_SALT";
@@ -98,7 +103,7 @@ fn generate_stage1_certificate(
     stage0_eca_key: SigningKey,
     stage0_cert_issuer: String,
     measurements: &Measurements,
-) -> Result<Vec<u8>, CoseError> {
+) -> Result<Stage0DiceData, CoseError> {
     // Generate Stage 1 keys and Signer.
     let stage1_eca_key = generate_ecdsa_keys(INFO_STR);
     let stage1_eca_verifying_key = VerifyingKey::from(&stage1_eca_key.0);
@@ -182,13 +187,34 @@ fn generate_stage1_certificate(
     let unprotected = coset::HeaderBuilder::new()
         .key_id((*b"AsymmetricECDSA384").into())
         .build();
-    let sign1 = coset::CoseSign1Builder::new()
+    let serialized_sign1_certificate = coset::CoseSign1Builder::new()
         .protected(protected)
         .unprotected(unprotected)
         .payload(claims.clone().to_vec()?)
         .create_signature(aad, |data| stage0_signer.sign(data))
-        .build();
-    sign1.to_vec()
+        .build()
+        .to_vec();
+    if serialized_sign1_certificate.is_err() {
+        return Err(serialized_sign1_certificate.err().unwrap());
+    }
+    let returned_data = Stage0DiceData {
+        layer_1_certifcate_authority: CertificateAuthority {
+            eca_private_key: stage1_eca_key.0.to_bytes().as_slice(),
+        },
+        root_layer_evidence: RootLayerEvidence {
+            tee_platform: TeePlatform::AmdSevSnp as u64,
+            eca_public_key: VerifyingKey::from(&stage0_eca_key)
+                .to_encoded_point(false)
+                .as_bytes(),
+            // 'remote_attestation_report' to be added later.
+            ..Default::default()
+        },
+        layer_1_evidence: LayerEvidence {
+            eca_certificate: serialized_sign1_certificate.unwrap().as_bytes(),
+         },
+        ..Default::default()
+    };
+    return Ok(returned_data);
 }
 
 /// Generate signed attestation for the 'measurements' of all Stage 1 components.
@@ -210,6 +236,10 @@ pub fn generate_stage1_attestation(measurements: &Measurements) {
         stage0_eca_key.0,
         hex::encode(stage0_eca_key.1),
         measurements,
+    );
+    log::debug!(
+        "Stage1 certificate: {}",
+        hex::encode(stage1_eca.unwrap().as_bytes())
     );
     if stage1_eca.is_ok() {
         // Call code that transmits the following to Stage1.
