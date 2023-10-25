@@ -14,15 +14,20 @@
 // limitations under the License.
 //
 
+use core::arch::asm;
 use x86_64::registers::{
     control::{Cr0, Cr0Flags, Cr4, Cr4Flags},
+    mxcsr::{read, write, MxCsr},
     xcontrol::{XCr0, XCr0Flags},
 };
 
 /// Enables Streaming SIMD Extensions (SEE) and Advanced Vector Extensions (AVX).
 ///
+/// Also sets the FPU to a known state and masks SIMD floating-point exceptions.
+///
 /// See <https://wiki.osdev.org/SSE> for more information.
 pub fn enable_avx() {
+    // Safety: we only enable and configure the FPU, SSE and AVX.
     unsafe {
         let mut cr0 = Cr0::read();
         cr0 &= !Cr0Flags::EMULATE_COPROCESSOR;
@@ -36,5 +41,16 @@ pub fn enable_avx() {
         let mut xcr0 = XCr0::read();
         xcr0 |= XCr0Flags::X87 | XCr0Flags::SSE | XCr0Flags::AVX;
         XCr0::write(xcr0);
+        // Initialize x87 FPU to a default state.
+        asm!("fninit");
+        // Mask SIMD floating-point exceptions to enable default behavior.
+        let mut mxcsr = read();
+        mxcsr.insert(MxCsr::DENORMAL_MASK);
+        mxcsr.insert(MxCsr::DIVIDE_BY_ZERO_MASK);
+        mxcsr.insert(MxCsr::INVALID_OPERATION_MASK);
+        mxcsr.insert(MxCsr::OVERFLOW_MASK);
+        mxcsr.insert(MxCsr::PRECISION_MASK);
+        mxcsr.insert(MxCsr::UNDERFLOW_MASK);
+        write(mxcsr);
     }
 }
