@@ -36,6 +36,8 @@ namespace {
 using ::oak::crypto::EncryptionKeyProvider;
 using ::oak::crypto::KeyPair;
 using ::oak::crypto::ServerEncryptor;
+using ::oak::crypto::v1::EncryptedRequest;
+using ::oak::crypto::v1::EncryptedResponse;
 using ::oak::remote_attestation::InsecureAttestationVerifier;
 using ::oak::session::v1::AttestationBundle;
 using ::oak::transport::TransportWrapper;
@@ -69,9 +71,9 @@ class TestTransport : public TransportWrapper {
     return endorsed_evidence;
   }
 
-  absl::StatusOr<std::string> Invoke(absl::string_view request_bytes) override {
+  absl::StatusOr<EncryptedResponse> Invoke(const EncryptedRequest& encrypted_request) override {
     ServerEncryptor server_encryptor = ServerEncryptor(encryption_key_provider_);
-    auto decrypted_request = server_encryptor.Decrypt(request_bytes);
+    auto decrypted_request = server_encryptor.Decrypt(encrypted_request);
     if (!decrypted_request.ok()) {
       return decrypted_request.status();
     }
