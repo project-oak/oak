@@ -212,10 +212,7 @@ impl VirtioTransport for TestingTransport {
 
     fn set_queue(&self, queue: u16) {
         let mut config = self.config.lock().unwrap();
-        config
-            .queues
-            .entry(queue)
-            .or_insert_with(QueueInfo::default);
+        config.queues.entry(queue).or_default();
         config.queue_num = queue;
     }
 

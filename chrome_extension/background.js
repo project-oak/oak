@@ -40,7 +40,7 @@ chrome.runtime.onInstalled.addListener(function () {
 async function loadPageInASecureSandbox({ id: tabId }) {
   const src = (
     await new Promise((resolve) =>
-      chrome.tabs.executeScript(tabId, { file: 'getInnerHtml.js' }, resolve)
+      chrome.tabs.executeScript(tabId, { file: 'getInnerHtml.js' }, resolve),
     )
   )?.[0];
 

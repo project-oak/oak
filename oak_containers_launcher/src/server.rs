@@ -165,7 +165,7 @@ impl Launcher for LauncherServerImplementation {
             })?
             .send(request.into_inner().evidence.unwrap_or_default())
             .map_err(|_err| {
-                tonic::Status::internal(format!("couldn't send attestation evidence"))
+                tonic::Status::internal("couldn't send attestation evidence".to_string())
             })?;
         Ok(tonic::Response::new(()))
     }
@@ -183,7 +183,7 @@ impl Launcher for LauncherServerImplementation {
                 tonic::Status::invalid_argument("app has already sent a ready notification")
             })?
             .send(())
-            .map_err(|_err| tonic::Status::internal(format!("couldn't send notification")))?;
+            .map_err(|_err| tonic::Status::internal("couldn't send notification".to_string()))?;
         Ok(tonic::Response::new(()))
     }
 }

@@ -26,7 +26,7 @@ use crate::{
     logger::{OakLogger, StandaloneLogger},
     lookup::LookupDataManager,
 };
-use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
+use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use api::StdWasmApiFactory;
 use byteorder::{ByteOrder, LittleEndian};
 use log::Level;
@@ -263,7 +263,7 @@ where
         instance.get_memory(&store, MEMORY_NAME).ok_or_else(|| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
-                format!("couldn't find Wasm `memory` export"),
+                "couldn't find Wasm `memory` export".to_string(),
             )
         })?;
 

@@ -203,7 +203,7 @@ pub struct Rsdt {
 }
 
 impl Rsdt {
-    const SIGNATURE: &[u8; 4] = b"RSDT";
+    const SIGNATURE: &'static [u8; 4] = b"RSDT";
 
     pub fn new(addr: VirtAddr) -> Result<&'static Rsdt, &'static str> {
         // Safety: we're checking that it's a valid XSDT in `validate()`.
@@ -270,7 +270,7 @@ pub struct Xsdt {
 }
 
 impl Xsdt {
-    const SIGNATURE: &[u8; 4] = b"XSDT";
+    const SIGNATURE: &'static [u8; 4] = b"XSDT";
 
     pub fn new(addr: VirtAddr) -> Result<&'static Xsdt, &'static str> {
         // Safety: we're checking that it's a valid XSDT in `validate()`.
@@ -446,7 +446,7 @@ impl ProcessorLocalX2Apic {
 }
 
 impl Madt {
-    pub const SIGNATURE: &[u8; 4] = b"APIC";
+    pub const SIGNATURE: &'static [u8; 4] = b"APIC";
 
     pub fn new(hdr: &DescriptionHeader) -> Result<&'static Madt, &'static str> {
         // Safety: we're checking that it's a valid XSDT in `validate()`.

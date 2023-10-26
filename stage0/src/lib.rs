@@ -221,8 +221,8 @@ pub fn rust64_start(encrypted: u64) -> ! {
     let cmdline = kernel::try_load_cmdline(&mut fwcfg).unwrap_or_default();
     let cmdline_measurement = measure_byte_slice(cmdline.as_bytes());
 
-    let kernel_info = kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table())
-        .unwrap_or(kernel::KernelInfo::default());
+    let kernel_info =
+        kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table()).unwrap_or_default();
     let mut entry = kernel_info.entry;
 
     // Attempt to parse 64 bytes at the suggested entry point as an ELF header. If it works, extract

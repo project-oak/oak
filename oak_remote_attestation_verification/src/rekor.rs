@@ -246,7 +246,7 @@ pub fn verify_rekor_body(body: &Body, contents_bytes: &[u8]) -> anyhow::Result<(
     }
 
     let signature: Vec<u8> = BASE64_STANDARD
-        .decode(body.spec.signature.content.as_str().as_bytes())
+        .decode(body.spec.signature.content.as_bytes())
         .expect("couldn't decode the signature in the log entry body");
 
     let public_key_pem_vec: Vec<u8> = BASE64_STANDARD

@@ -10,7 +10,6 @@
     rust-overlay.inputs.flake-utils.follows = "flake-utils";
     crane.url = "github:ipetkov/crane";
     crane.inputs.nixpkgs.follows = "nixpkgs";
-    crane.inputs.rust-overlay.follows = "rust-overlay";
   };
   outputs = { self, systems, nixpkgs, flake-utils, rust-overlay, crane }:
     (flake-utils.lib.eachDefaultSystem
@@ -112,6 +111,13 @@
                 python312
               ];
             };
+            # For some reason node does not know how to find the prettier plugin, so we need to
+            # manually specify its fully qualified path.
+            prettier = with pkgs; writeShellScriptBin "prettier" ''
+              ${nodePackages.prettier}/bin/prettier \
+              --plugin "${nodePackages.prettier-plugin-toml}/lib/node_modules/prettier-plugin-toml/lib/api.js" \
+              "$@"
+            '';
             # Minimal shell with only the dependencies needed to run the format and check-format
             # steps.
             lint = with pkgs; mkShell {
@@ -122,13 +128,11 @@
                 hadolint
                 nixpkgs-fmt
                 nodePackages.markdownlint-cli
-                nodePackages.prettier
-                nodePackages.prettier-plugin-toml
                 shellcheck
               ];
-              shellHook = ''
-                export NODE_PATH=${nodePackages.prettier-plugin-toml}/lib/node_modules:$NODE_PATH
-              '';
+              buildInputs = [
+                prettier
+              ];
             };
             # Minimal shell with only the dependencies needed to run the bazel steps.
             bazelShell = with pkgs; mkShell {

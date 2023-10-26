@@ -90,8 +90,8 @@ where
     pub fn new_empty(logger: L) -> Self {
         Self {
             data: Spinlock::new(Arc::new(Data::new())),
-            /// Incrementally builds the backing data that will be used by new `LookupData`
-            /// instances when finished.
+            // Incrementally builds the backing data that will be used by new `LookupData`
+            // instances when finished.
             data_builder: Spinlock::new(DataBuilder::default()),
             logger,
         }

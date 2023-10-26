@@ -157,7 +157,7 @@ fn affected_protos(files: &ModifiedContent) -> Vec<String> {
 
             affected_protos
         })
-        .unwrap_or_else(Vec::new)
+        .unwrap_or_default()
 }
 
 /// Adds `proto_path` to the list of `affected_protos` if `proto_path` or any of its imported protos

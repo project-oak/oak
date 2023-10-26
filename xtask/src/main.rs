@@ -340,7 +340,6 @@ fn run_prettier(mode: FormatMode) -> Step {
         command: Cmd::new(
             "prettier",
             spread![
-                "--plugin=prettier-plugin-toml".to_string(),
                 match mode {
                     FormatMode::Check => "--check".to_string(),
                     FormatMode::Fix => "--write".to_string(),

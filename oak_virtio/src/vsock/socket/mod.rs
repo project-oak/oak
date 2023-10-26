@@ -321,7 +321,9 @@ where
 
         let len = dest.len();
         let mut position = 0;
-        while position < len && let Some(byte) = source.pop_front() {
+        while position < len
+            && let Some(byte) = source.pop_front()
+        {
             dest[position] = byte;
             position += 1;
         }

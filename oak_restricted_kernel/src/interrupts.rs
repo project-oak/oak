@@ -16,6 +16,7 @@
 
 use crate::{shutdown, snp::CPUID_PAGE};
 use bitflags::bitflags;
+#[allow(deprecated)]
 use core::{
     arch::{
         asm,
@@ -316,6 +317,7 @@ extern "x86-interrupt" fn simd_fp_handler(stack_frame: InterruptStackFrame) {
     );
     // Safety: (a) we only support CPUs modern enough to have MXCSR, (b) we're fine with whatever
     // the return value is as we will just print it out for debugging purposes.
+    #[allow(deprecated)]
     let mxcsr = Mxcsr::from_bits_retain(unsafe { _MM_GET_EXCEPTION_STATE() });
     error!("MXCSR: {:?}", mxcsr);
 
