@@ -72,19 +72,19 @@ java_proto_library(
 )
 
 proto_library(
-    name = "reference_values_proto",
-    srcs = ["reference_values.proto"],
+    name = "reference_value_proto",
+    srcs = ["reference_value.proto"],
     deps = ["//proto:digest_proto"],
 )
 
 cc_proto_library(
-    name = "reference_values_cc_proto",
-    deps = [":reference_values_proto"],
+    name = "reference_value_cc_proto",
+    deps = [":reference_value_proto"],
 )
 
 java_proto_library(
-    name = "reference_values_java_proto",
-    deps = [":reference_values_proto"],
+    name = "reference_value_java_proto",
+    deps = [":reference_value_proto"],
 )
 
 build_test(
@@ -99,8 +99,8 @@ build_test(
         ":evidence_proto",
         ":evidence_cc_proto",
         ":evidence_java_proto",
-        ":reference_values_proto",
-        ":reference_values_cc_proto",
-        ":reference_values_java_proto",
+        ":reference_value_proto",
+        ":reference_value_cc_proto",
+        ":reference_value_java_proto",
     ],
 )

@@ -42,7 +42,7 @@ message TransparentReleaseEndorsement {
 //
 // The name is chosen to match the RATS terminology:
 // <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
-message Endorsement {
+message Endorsements {
   // The platform providing the attestation report.
   TeePlatform platform = 1;
 
@@ -63,5 +63,5 @@ message EndorsedEvidence {
   Evidence evidence = 1;
 
   // Supporting evidence required for verifying the integrity of attestation evidence.
-  Endorsement endorsement = 2;
+  Endorsements endorsements = 2;
 }
