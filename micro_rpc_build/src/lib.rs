@@ -22,6 +22,31 @@ use anyhow::Context;
 use prost_build::{Method, Service};
 use std::path::Path;
 
+#[derive(Copy, Clone, Debug, Default)]
+pub enum ReceiverType {
+    /// &mut self
+    #[default]
+    RefMutSelf,
+
+    /// &self
+    RefSelf,
+}
+
+impl ReceiverType {
+    fn value(&self) -> &'static str {
+        match self {
+            ReceiverType::RefMutSelf => "&mut self",
+            ReceiverType::RefSelf => "&self",
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct CompileOptions {
+    /// Specifies the receiver type in generated server code.
+    pub receiver_type: ReceiverType,
+}
+
 /// Compile Rust server code from the services in the provided protobuf file.
 ///
 /// Each method in a service definition must have exactly one comment line of the form `//
@@ -40,7 +65,11 @@ use std::path::Path;
 ///   service. This may be used to directly invoke the underlying handler in order to indirectly
 ///   invoke methods on the corresponding `Server` object on the other side of the handler.
 /// - a struct named `TestNameAsyncClient`, similar to `TestNameClient` but with async support.
-pub fn compile(protos: &[impl AsRef<Path>], includes: &[impl AsRef<Path>]) {
+pub fn compile(
+    protos: &[impl AsRef<Path>],
+    includes: &[impl AsRef<Path>],
+    options: CompileOptions,
+) {
     protos.iter().for_each(|filename| {
         println!(
             "cargo:rerun-if-changed={}",
@@ -48,7 +77,7 @@ pub fn compile(protos: &[impl AsRef<Path>], includes: &[impl AsRef<Path>]) {
         )
     });
     let mut config = prost_build::Config::new();
-    config.service_generator(Box::new(ServiceGenerator {}));
+    config.service_generator(Box::new(ServiceGenerator { options }));
     config
         // Use BTreeMap to allow using this function in no-std crates.
         .btree_map(["."])
@@ -56,12 +85,15 @@ pub fn compile(protos: &[impl AsRef<Path>], includes: &[impl AsRef<Path>]) {
         .expect("couldn't compile protobuffer schema");
 }
 
-struct ServiceGenerator {}
+struct ServiceGenerator {
+    options: CompileOptions,
+}
 
 impl prost_build::ServiceGenerator for ServiceGenerator {
     fn generate(&mut self, service: Service, buf: &mut String) {
         *buf += "\n";
-        *buf += &generate_service(&service).expect("couldn't generate services");
+        *buf += &generate_service(&service, self.options.receiver_type)
+            .expect("couldn't generate services");
         *buf += "\n";
         *buf += &generate_service_client(&service, false).expect("couldn't generate clients");
         *buf += "\n";
@@ -71,7 +103,7 @@ impl prost_build::ServiceGenerator for ServiceGenerator {
 
 /// Generate the Rust objects from the input [`Service`] instance, corresponding to a `service`
 /// entry.
-fn generate_service(service: &Service) -> anyhow::Result<String> {
+fn generate_service(service: &Service, receiver_type: ReceiverType) -> anyhow::Result<String> {
     let server_name = server_name(service);
     let service_name = service_name(service);
     let mut lines = Vec::new();
@@ -125,7 +157,12 @@ fn generate_service(service: &Service) -> anyhow::Result<String> {
         format!(""),
         format!("pub trait {service_name}: Sized {{"),
     ]);
-    lines.extend(service.methods.iter().flat_map(generate_service_method));
+    lines.extend(
+        service
+            .methods
+            .iter()
+            .flat_map(|method| generate_service_method(method, receiver_type)),
+    );
     lines.extend(vec![format!("}}"), format!("")]);
     Ok(lines.into_iter().intersperse("\n".to_string()).collect())
 }
@@ -208,11 +245,12 @@ fn generate_server_handler(method: &Method) -> anyhow::Result<Vec<String>> {
     ])
 }
 
-fn generate_service_method(method: &Method) -> Vec<String> {
+fn generate_service_method(method: &Method, receiver_type: ReceiverType) -> Vec<String> {
     let method_name = method_name(method);
     let request_type = request_type(method);
     let response_type = response_type(method);
-    vec![format!("    fn {method_name}(&mut self, request: {request_type}) -> Result<{response_type}, ::micro_rpc::Status>;")]
+    let self_type = receiver_type.value();
+    vec![format!("    fn {method_name}({self_type}, request: {request_type}) -> Result<{response_type}, ::micro_rpc::Status>;")]
 }
 
 /// Returns the value of the `method_id` comment on the method.

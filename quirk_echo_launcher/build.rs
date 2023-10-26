@@ -24,6 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "{}quirk_echo_service/proto",
             env!("WORKSPACE_ROOT")
         )],
+        Default::default(),
     );
 
     Ok(())

@@ -67,7 +67,7 @@ impl OakFunctionsService {
             instance: OnceCell::new(),
         }
     }
-    fn get_instance(&mut self) -> Result<&OakFunctionsInstance, micro_rpc::Status> {
+    fn get_instance(&self) -> Result<&OakFunctionsInstance, micro_rpc::Status> {
         self.instance.get().ok_or_else(|| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::FailedPrecondition,
@@ -79,14 +79,14 @@ impl OakFunctionsService {
 
 impl OakFunctions for OakFunctionsService {
     fn initialize(
-        &mut self,
+        &self,
         request: InitializeRequest,
     ) -> Result<InitializeResponse, micro_rpc::Status> {
         log::debug!(
             "called initialize (Wasm module size: {} bytes)",
             request.wasm_module.len()
         );
-        match &mut self.instance.get() {
+        match self.instance.get() {
             Some(_) => Err(micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::FailedPrecondition,
                 "already initialized",
@@ -121,7 +121,7 @@ impl OakFunctions for OakFunctionsService {
     }
 
     fn handle_user_request(
-        &mut self,
+        &self,
         request: InvokeRequest,
     ) -> Result<InvokeResponse, micro_rpc::Status> {
         log::debug!("called handle_user_request");
@@ -146,7 +146,7 @@ impl OakFunctions for OakFunctionsService {
     }
 
     fn extend_next_lookup_data(
-        &mut self,
+        &self,
         request: ExtendNextLookupDataRequest,
     ) -> Result<ExtendNextLookupDataResponse, micro_rpc::Status> {
         log::debug!(
@@ -157,7 +157,7 @@ impl OakFunctions for OakFunctionsService {
     }
 
     fn finish_next_lookup_data(
-        &mut self,
+        &self,
         request: FinishNextLookupDataRequest,
     ) -> Result<FinishNextLookupDataResponse, micro_rpc::Status> {
         log::debug!("called finish_next_lookup_data");
@@ -165,7 +165,7 @@ impl OakFunctions for OakFunctionsService {
     }
 
     fn abort_next_lookup_data(
-        &mut self,
+        &self,
         request: Empty,
     ) -> Result<AbortNextLookupDataResponse, micro_rpc::Status> {
         log::debug!("called abort_next_lookup_data");

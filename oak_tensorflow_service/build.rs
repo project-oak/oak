@@ -34,6 +34,7 @@ fn main() {
             "{}oak_tensorflow_service/proto",
             env!("WORKSPACE_ROOT")
         )],
+        Default::default(),
     );
 
     build_tflite();
