@@ -25,6 +25,22 @@ package(
 )
 
 proto_library(
+    name = "dice_proto",
+    srcs = ["dice.proto"],
+    deps = [":evidence_proto"],
+)
+
+cc_proto_library(
+    name = "dice_cc_proto",
+    deps = [":dice_proto"],
+)
+
+java_proto_library(
+    name = "dice_java_proto",
+    deps = [":dice_proto"],
+)
+
+proto_library(
     name = "endorsement_proto",
     srcs = ["endorsement.proto"],
     deps = [":evidence_proto"],
@@ -74,6 +90,9 @@ java_proto_library(
 build_test(
     name = "build_test",
     targets = [
+        ":dice_proto",
+        ":dice_cc_proto",
+        ":dice_java_proto",
         ":endorsement_proto",
         ":endorsement_cc_proto",
         ":endorsement_java_proto",
