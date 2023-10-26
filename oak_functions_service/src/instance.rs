@@ -22,10 +22,10 @@ use crate::{
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
         InitializeRequest, LookupDataChunk,
     },
-    wasm,
+    wasm, Status,
 };
 use alloc::{format, sync::Arc};
-use micro_rpc::{Status, Vec};
+use micro_rpc::Vec;
 use oak_functions_abi::Request;
 
 pub struct OakFunctionsInstance {
@@ -35,17 +35,12 @@ pub struct OakFunctionsInstance {
 
 impl OakFunctionsInstance {
     /// See [`crate::proto::oak::functions::OakFunctions::initialize`].
-    pub fn new(request: &InitializeRequest) -> Result<Self, micro_rpc::Status> {
+    pub fn new(request: &InitializeRequest) -> Result<Self, Status> {
         let lookup_data_manager =
             Arc::new(LookupDataManager::new_empty(StandaloneLogger::default()));
         let wasm_handler =
             wasm::new_wasm_handler(&request.wasm_module, lookup_data_manager.clone()).map_err(
-                |err| {
-                    micro_rpc::Status::new_with_message(
-                        micro_rpc::StatusCode::Internal,
-                        format!("couldn't initialize Wasm handler: {:?}", err),
-                    )
-                },
+                |err| Status::internal(format!("couldn't initialize Wasm handler: {:?}", err)),
             )?;
         Ok(Self {
             lookup_data_manager,
@@ -53,7 +48,7 @@ impl OakFunctionsInstance {
         })
     }
     /// See [`crate::proto::oak::functions::OakFunctions::handle_user_request`].
-    pub fn handle_user_request(&mut self, request: &[u8]) -> Result<Vec<u8>, micro_rpc::Status> {
+    pub fn handle_user_request(&mut self, request: &[u8]) -> Result<Vec<u8>, Status> {
         // TODO(#3442): Implement constant response size policy.
         self.wasm_handler
             .handle_invoke(Request {
@@ -65,7 +60,7 @@ impl OakFunctionsInstance {
     pub fn extend_next_lookup_data(
         &mut self,
         request: ExtendNextLookupDataRequest,
-    ) -> Result<ExtendNextLookupDataResponse, micro_rpc::Status> {
+    ) -> Result<ExtendNextLookupDataResponse, Status> {
         self.lookup_data_manager
             .extend_next_lookup_data(to_data(request.chunk));
         Ok(ExtendNextLookupDataResponse {})
@@ -74,7 +69,7 @@ impl OakFunctionsInstance {
     pub fn finish_next_lookup_data(
         &mut self,
         _request: FinishNextLookupDataRequest,
-    ) -> Result<FinishNextLookupDataResponse, micro_rpc::Status> {
+    ) -> Result<FinishNextLookupDataResponse, Status> {
         self.lookup_data_manager.finish_next_lookup_data();
         Ok(FinishNextLookupDataResponse {})
     }

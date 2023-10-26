@@ -38,7 +38,7 @@ pub mod logger;
 pub mod lookup;
 pub mod wasm;
 
-use alloc::{format, sync::Arc, vec::Vec};
+use alloc::{format, string::String, sync::Arc, vec::Vec};
 use instance::OakFunctionsInstance;
 use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_remote_attestation::{
@@ -51,6 +51,49 @@ use proto::oak::functions::{
     FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
     InitializeResponse, InvokeRequest, InvokeResponse, OakFunctions, PublicKeyInfo,
 };
+
+#[derive(Debug)]
+pub enum StatusCode {
+    FailedPrecondition,
+    Internal,
+}
+
+#[derive(Debug)]
+pub struct Status {
+    pub code: StatusCode,
+    pub message: String,
+}
+
+impl Status {
+    fn failed_precondition(message: impl Into<String>) -> Self {
+        Self {
+            code: StatusCode::FailedPrecondition,
+            message: message.into(),
+        }
+    }
+
+    fn internal(message: impl Into<String>) -> Self {
+        Self {
+            code: StatusCode::Internal,
+            message: message.into(),
+        }
+    }
+}
+
+impl From<StatusCode> for micro_rpc::StatusCode {
+    fn from(value: StatusCode) -> Self {
+        match value {
+            StatusCode::FailedPrecondition => micro_rpc::StatusCode::FailedPrecondition,
+            StatusCode::Internal => micro_rpc::StatusCode::Internal,
+        }
+    }
+}
+
+impl From<Status> for micro_rpc::Status {
+    fn from(value: Status) -> Self {
+        micro_rpc::Status::new_with_message(value.code.into(), value.message)
+    }
+}
 
 pub struct OakFunctionsService {
     attestation_report_generator: Arc<dyn AttestationReportGenerator>,
@@ -66,13 +109,10 @@ impl OakFunctionsService {
             instance: None,
         }
     }
-    fn get_instance(&mut self) -> Result<&mut OakFunctionsInstance, micro_rpc::Status> {
-        self.instance.as_mut().ok_or_else(|| {
-            micro_rpc::Status::new_with_message(
-                micro_rpc::StatusCode::FailedPrecondition,
-                "not initialized",
-            )
-        })
+    fn get_instance(&mut self) -> Result<&mut OakFunctionsInstance, Status> {
+        self.instance
+            .as_mut()
+            .ok_or_else(|| Status::failed_precondition("not initialized"))
     }
 }
 
@@ -125,7 +165,7 @@ impl OakFunctions for OakFunctionsService {
             // Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
             let response_result: Result<Vec<u8>, micro_rpc::Status> =
-                instance.handle_user_request(&r);
+                instance.handle_user_request(&r).map_err(Into::into);
             let response: micro_rpc::ResponseWrapper = response_result.into();
             response.encode_to_vec()
         })
@@ -147,7 +187,9 @@ impl OakFunctions for OakFunctionsService {
             "called extend_next_lookup_data (items: {})",
             request.chunk.as_ref().map(|c| c.items.len()).unwrap_or(0)
         );
-        self.get_instance()?.extend_next_lookup_data(request)
+        self.get_instance()?
+            .extend_next_lookup_data(request)
+            .map_err(Into::into)
     }
 
     fn finish_next_lookup_data(
@@ -155,7 +197,9 @@ impl OakFunctions for OakFunctionsService {
         request: FinishNextLookupDataRequest,
     ) -> Result<FinishNextLookupDataResponse, micro_rpc::Status> {
         log::debug!("called finish_next_lookup_data");
-        self.get_instance()?.finish_next_lookup_data(request)
+        self.get_instance()?
+            .finish_next_lookup_data(request)
+            .map_err(Into::into)
     }
 
     fn abort_next_lookup_data(
@@ -163,6 +207,8 @@ impl OakFunctions for OakFunctionsService {
         request: Empty,
     ) -> Result<AbortNextLookupDataResponse, micro_rpc::Status> {
         log::debug!("called abort_next_lookup_data");
-        self.get_instance()?.abort_next_lookup_data(request)
+        self.get_instance()?
+            .abort_next_lookup_data(request)
+            .map_err(Into::into)
     }
 }
