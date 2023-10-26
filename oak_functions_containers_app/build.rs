@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
+use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate gRPC code for exchanging messages with clients.
@@ -26,6 +26,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ],
         CodegenOptions {
             build_server: true,
+            extern_paths: vec![ExternPath::new(
+                ".oak.functions",
+                "::oak_functions_service::proto::oak::functions",
+            )],
             ..Default::default()
         },
     )?;

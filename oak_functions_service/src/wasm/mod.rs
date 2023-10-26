@@ -421,7 +421,7 @@ where
 #[derive(Clone)]
 pub struct WasmHandler<L: OakLogger> {
     wasm_module: Arc<wasmi::Module>,
-    wasm_api_factory: Arc<dyn WasmApiFactory<L>>,
+    wasm_api_factory: Arc<dyn WasmApiFactory<L> + Send + Sync>,
     logger: L,
 }
 
@@ -451,7 +451,7 @@ where
 {
     pub fn create(
         wasm_module_bytes: &[u8],
-        wasm_api_factory: Arc<dyn WasmApiFactory<L>>,
+        wasm_api_factory: Arc<dyn WasmApiFactory<L> + Send + Sync>,
         logger: L,
     ) -> anyhow::Result<Self> {
         let engine = wasmi::Engine::default();
