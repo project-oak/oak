@@ -1,0 +1,100 @@
+
+//
+// Copyright 2023 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.attestation.v1;
+
+import "proto/digest.proto";
+
+option go_package = "proto/oak/attestation/v1";
+option java_multiple_files = true;
+option java_package = "com.google.oak.attestation.v1";
+
+message ReferenceValues {
+  RootReferenceValues root_layer = 1;        // Layer 0
+  repeated LayerReferenceValues layers = 2;  // Layers 1 through N.
+}
+
+message RootReferenceValues {
+  // Switches between AMD and Intel based on TeePlatform value.
+  VerifyAmdSevAttestationReport amd_sev_attestation_report = 1;
+  VerifyIntelTdxAttestationReport intel_tdx_attestation_report = 2;
+}
+
+message VerifyAmdSevAttestationReport {
+  bytes amd_root_public_key = 1;
+
+  // TBD: Add conditions on all kinds of fields contained in the
+  // attestation report.
+  string firmware_version = 2;
+
+  // If true, will skip the check that the TEE is not in debug mode.
+  bool allow_debug = 3;
+
+  optional VerifyLogEntry stage0_binary = 4;
+}
+
+message VerifyIntelTdxAttestationReport {
+  // TBD
+}
+
+// Verifies the log entry, including signatures and the digest.
+message VerifyLogEntry {
+  // The endorser’s public signing key for signature verification.
+  bytes endorser_public_key = 1;
+
+  // Rekor’s public signing key for signature verification.
+  bytes rekor_public_key = 2;
+}
+
+// Verifies that the field contains at least one of the given digests.
+// No checks are performed if this is empty.
+message Digests {
+  repeated RawDigest digests = 1;
+}
+
+message VerifyLinuxKernelFields {
+  // Each field is in a 1:1 correspondence to a CBOR key.
+  optional VerifyLogEntry kernel_binary = 1;
+  optional VerifyLogEntry kernel_cmd_line = 2;
+  optional VerifyLogEntry acpi = 3;
+}
+
+message VerifyOakRestrictedKernelFields {
+  // TBD, but similar to Linux kernel
+}
+
+// Alternatively, verify the contents of the map explicitly. Checks that the
+// specified entries are contained (subset). Ideally this would never be used
+// if we manage to provide oneof members for all practical layer use cases.
+message VerifyCborFields {
+  map<int32, Digests> cbor_fields = 1;
+}
+
+// Verifies certificate contents for layers 1 through N.
+message LayerReferenceValues {
+  oneof layer_type {
+    VerifyLinuxKernelFields linux_kernel = 1;
+
+    VerifyOakRestrictedKernelFields oak_restricted_kernel = 2;
+
+    VerifyLogEntry generic_binary = 3;
+
+    VerifyCborFields cbor_fields = 4;
+  }
+}
