@@ -35,6 +35,7 @@ fn main() {
             env!("WORKSPACE_ROOT")
         )],
         &[format!("{}oak_iree_service/proto", env!("WORKSPACE_ROOT"))],
+        Default::default(),
     );
 
     build_library();

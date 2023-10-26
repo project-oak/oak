@@ -15,5 +15,5 @@
 //
 
 fn main() {
-    micro_rpc_build::compile(&["proto/quirk_echo.proto"], &["."]);
+    micro_rpc_build::compile(&["proto/quirk_echo.proto"], &["."], Default::default());
 }

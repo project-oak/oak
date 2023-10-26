@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use micro_rpc_build::ReceiverType;
+
 fn main() {
     micro_rpc_build::compile(
         &[format!(
@@ -24,5 +26,8 @@ fn main() {
             "{}oak_functions_service/proto",
             env!("WORKSPACE_ROOT")
         )],
+        micro_rpc_build::CompileOptions {
+            receiver_type: ReceiverType::RefSelf,
+        },
     );
 }

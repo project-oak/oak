@@ -40,6 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "{}oak_functions_service/proto",
             env!("WORKSPACE_ROOT")
         )],
+        Default::default(),
     );
 
     Ok(())
