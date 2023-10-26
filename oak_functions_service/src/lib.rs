@@ -40,6 +40,7 @@ pub mod wasm;
 
 use alloc::{format, sync::Arc, vec::Vec};
 use instance::OakFunctionsInstance;
+use oak_core::sync::OnceCell;
 use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_remote_attestation::{
     attester::{AttestationReportGenerator, Attester},
@@ -55,7 +56,7 @@ use proto::oak::functions::{
 pub struct OakFunctionsService {
     attestation_report_generator: Arc<dyn AttestationReportGenerator>,
     encryption_key_provider: Arc<EncryptionKeyProvider>,
-    instance: Option<OakFunctionsInstance>,
+    instance: OnceCell<OakFunctionsInstance>,
 }
 
 impl OakFunctionsService {
@@ -63,11 +64,11 @@ impl OakFunctionsService {
         Self {
             attestation_report_generator,
             encryption_key_provider: Arc::new(EncryptionKeyProvider::new()),
-            instance: None,
+            instance: OnceCell::new(),
         }
     }
-    fn get_instance(&mut self) -> Result<&mut OakFunctionsInstance, micro_rpc::Status> {
-        self.instance.as_mut().ok_or_else(|| {
+    fn get_instance(&mut self) -> Result<&OakFunctionsInstance, micro_rpc::Status> {
+        self.instance.get().ok_or_else(|| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::FailedPrecondition,
                 "not initialized",
@@ -85,7 +86,7 @@ impl OakFunctions for OakFunctionsService {
             "called initialize (Wasm module size: {} bytes)",
             request.wasm_module.len()
         );
-        match &mut self.instance {
+        match &mut self.instance.get() {
             Some(_) => Err(micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::FailedPrecondition,
                 "already initialized",
@@ -103,7 +104,12 @@ impl OakFunctions for OakFunctionsService {
                             format!("couldn't get attestation evidence: {:?}", err),
                         )
                     })?;
-                self.instance = Some(instance);
+                if self.instance.set(instance).is_err() {
+                    return Err(micro_rpc::Status::new_with_message(
+                        micro_rpc::StatusCode::FailedPrecondition,
+                        "already initialized",
+                    ));
+                }
                 Ok(InitializeResponse {
                     public_key_info: Some(PublicKeyInfo {
                         public_key: attestation_evidence.encryption_public_key,

@@ -2257,6 +2257,7 @@ dependencies = [
  "log",
  "micro_rpc",
  "micro_rpc_build",
+ "oak_core",
  "oak_crypto",
  "oak_functions_abi",
  "oak_functions_sdk",
