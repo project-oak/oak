@@ -88,6 +88,60 @@
 <a href="#88" id="88">88</a>
 <a href="#89" id="89">89</a>
 <a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -104,12 +158,18 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::{
-    oak_functions_server::OakFunctions, AbortNextLookupDataResponse, Empty,
-    ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
-    FinishNextLookupDataResponse, InitializeRequest, InitializeResponse, InvokeRequest,
-    InvokeResponse,
+</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::oak_functions_server::OakFunctions;
+<span class="kw">use </span>oak_functions_service::{
+    proto::oak::functions::{
+        AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
+        ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
+        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse,
+        OakFunctions <span class="kw">as </span>OakFunctionsTrait,
+    },
+    OakFunctionsService,
 };
+<span class="kw">use </span>oak_remote_attestation::attester::AttestationReportGenerator;
+<span class="kw">use </span>std::sync::{Arc, Mutex};
 
 <span class="kw">pub mod </span>proto {
     <span class="kw">pub mod </span>oak {
@@ -129,7 +189,40 @@
 <span class="kw">pub mod </span>orchestrator_client;
 
 <span class="comment">// Instance of the OakFunctions service for Oak Containers.
-</span><span class="kw">pub struct </span>OakFunctionsContainersService {}
+</span><span class="kw">pub struct </span>OakFunctionsContainersService {
+    service: Mutex&lt;OakFunctionsService&gt;,
+}
+
+<span class="kw">impl </span>OakFunctionsContainersService {
+    <span class="kw">pub fn </span>new(attestation_report_generator: Arc&lt;<span class="kw">dyn </span>AttestationReportGenerator&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            service: Mutex::new(OakFunctionsService::new(attestation_report_generator)),
+        }
+    }
+}
+
+<span class="kw">fn </span>map_status(status: micro_rpc::Status) -&gt; tonic::Status {
+    <span class="kw">let </span>code = <span class="kw">match </span>status.code {
+        micro_rpc::StatusCode::Ok =&gt; tonic::Code::Ok,
+        micro_rpc::StatusCode::Cancelled =&gt; tonic::Code::Cancelled,
+        micro_rpc::StatusCode::Unknown =&gt; tonic::Code::Unknown,
+        micro_rpc::StatusCode::InvalidArgument =&gt; tonic::Code::InvalidArgument,
+        micro_rpc::StatusCode::DeadlineExceeded =&gt; tonic::Code::DeadlineExceeded,
+        micro_rpc::StatusCode::NotFound =&gt; tonic::Code::NotFound,
+        micro_rpc::StatusCode::AlreadyExists =&gt; tonic::Code::AlreadyExists,
+        micro_rpc::StatusCode::PermissionDenied =&gt; tonic::Code::PermissionDenied,
+        micro_rpc::StatusCode::ResourceExhausted =&gt; tonic::Code::ResourceExhausted,
+        micro_rpc::StatusCode::FailedPrecondition =&gt; tonic::Code::FailedPrecondition,
+        micro_rpc::StatusCode::Aborted =&gt; tonic::Code::Aborted,
+        micro_rpc::StatusCode::OutOfRange =&gt; tonic::Code::OutOfRange,
+        micro_rpc::StatusCode::Unimplemented =&gt; tonic::Code::Unimplemented,
+        micro_rpc::StatusCode::Internal =&gt; tonic::Code::Internal,
+        micro_rpc::StatusCode::Unavailable =&gt; tonic::Code::Unavailable,
+        micro_rpc::StatusCode::DataLoss =&gt; tonic::Code::DataLoss,
+        micro_rpc::StatusCode::Unauthenticated =&gt; tonic::Code::Unauthenticated,
+    };
+    tonic::Status::new(code, status.message)
+}
 
 <span class="attr">#[tonic::async_trait]
 </span><span class="kw">impl </span>OakFunctions <span class="kw">for </span>OakFunctionsContainersService {
@@ -137,45 +230,60 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;InitializeRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;InitializeResponse&gt;, tonic::Status&gt; {
-        <span class="macro">eprintln!</span>(<span class="string">&quot;Received initialize request: {:?}&quot;</span>, request);
-        <span class="kw">let </span>response = InitializeResponse::default();
-        <span class="prelude-val">Ok</span>(tonic::Response::new(response))
+        <span class="self">self</span>.service
+            .lock()
+            .unwrap()
+            .initialize(request.into_inner())
+            .map(tonic::Response::new)
+            .map_err(map_status)
     }
 
     <span class="kw">async fn </span>handle_user_request(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;InvokeRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;InvokeResponse&gt;, tonic::Status&gt; {
-        <span class="macro">eprintln!</span>(<span class="string">&quot;Received invoke request: {:?}&quot;</span>, request);
-        <span class="kw">let </span>response = InvokeResponse::default();
-        <span class="prelude-val">Ok</span>(tonic::Response::new(response))
+        <span class="self">self</span>.service
+            .lock()
+            .unwrap()
+            .handle_user_request(request.into_inner())
+            .map(tonic::Response::new)
+            .map_err(map_status)
     }
 
     <span class="kw">async fn </span>extend_next_lookup_data(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;ExtendNextLookupDataRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;ExtendNextLookupDataResponse&gt;, tonic::Status&gt; {
-        <span class="macro">eprintln!</span>(<span class="string">&quot;Received extended_next_lookup_data request: {:?}&quot;</span>, request);
-        <span class="kw">let </span>response = ExtendNextLookupDataResponse::default();
-        <span class="prelude-val">Ok</span>(tonic::Response::new(response))
+        <span class="self">self</span>.service
+            .lock()
+            .unwrap()
+            .extend_next_lookup_data(request.into_inner())
+            .map(tonic::Response::new)
+            .map_err(map_status)
     }
 
     <span class="kw">async fn </span>finish_next_lookup_data(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;FinishNextLookupDataRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;FinishNextLookupDataResponse&gt;, tonic::Status&gt; {
-        <span class="macro">eprintln!</span>(<span class="string">&quot;Received finish_next_lookup_data request: {:?}&quot;</span>, request);
-        <span class="kw">let </span>response = FinishNextLookupDataResponse::default();
-        <span class="prelude-val">Ok</span>(tonic::Response::new(response))
+        <span class="self">self</span>.service
+            .lock()
+            .unwrap()
+            .finish_next_lookup_data(request.into_inner())
+            .map(tonic::Response::new)
+            .map_err(map_status)
     }
 
     <span class="kw">async fn </span>abort_next_lookup_data(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;Empty&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;AbortNextLookupDataResponse&gt;, tonic::Status&gt; {
-        <span class="macro">eprintln!</span>(<span class="string">&quot;Received abort_next_lookup_data request: {:?}&quot;</span>, request);
-        <span class="kw">let </span>response = AbortNextLookupDataResponse::default();
-        <span class="prelude-val">Ok</span>(tonic::Response::new(response))
+        <span class="self">self</span>.service
+            .lock()
+            .unwrap()
+            .abort_next_lookup_data(request.into_inner())
+            .map(tonic::Response::new)
+            .map_err(map_status)
     }
 }
 </code></pre></div></section></main></body></html>
