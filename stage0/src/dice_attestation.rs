@@ -23,7 +23,7 @@ use oak_dice::{
         KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
         SETUP_DATA_MEASUREMENT_ID,
     },
-    evidence::{Stage0DiceData, TeePlatform},
+    evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
 };
 use oak_sev_guest::guest::AttestationReport;
 use p256::ecdsa::SigningKey;
@@ -120,6 +120,7 @@ pub fn generate_dice_data(measurements: &Measurements) -> &'static Stage0DiceDat
     let report = get_attestation(report_data).expect("couldn't get attestation report.");
     let report_bytes = report.as_bytes();
 
+    result.magic = STAGE0_MAGIC;
     result.root_layer_evidence.tee_platform = TeePlatform::AmdSevSnp as u64;
     result.root_layer_evidence.remote_attestation_report[..report_bytes.len()]
         .copy_from_slice(report_bytes);

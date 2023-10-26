@@ -32,6 +32,13 @@ pub const PUBLIC_KEY_SIZE: usize = 256;
 /// The maximum size of a serialized CWT certificate.
 pub const CERTIFICATE_SIZE: usize = 1024;
 
+/// The name of the kernel command-line parameter that is used to send the physical address of the
+/// Stage 0 DICE data struct.
+pub const DICE_DATA_CMDLINE_PARAM: &str = "oak-dice";
+
+/// The magic number used to identify the Stage 0 DICE data in memory.
+pub const STAGE0_MAGIC: u64 = u64::from_le_bytes(*b"oak.dice");
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Display, FromRepr)]
 #[repr(u64)]
 /// The hardware platform providing the Trusted Execution Environment.
@@ -95,12 +102,15 @@ static_assertions::assert_eq_size!([u8; PRIVATE_KEY_SIZE], CertificateAuthority)
 #[derive(AsBytes, FromBytes)]
 #[repr(C, align(4096))]
 pub struct Stage0DiceData {
+    /// Magic number that is expected to always be set to the value of `STAGE0_MAGIC`.
+    pub magic: u64,
+    _padding_0: u64,
     /// The evidence about Stage 0 and the initial state of the VM.
     pub root_layer_evidence: RootLayerEvidence,
     /// The evidence about the next layer.
     pub layer_1_evidence: LayerEvidence,
     pub layer_1_certificate_authority: CertificateAuthority,
-    _padding: [u8; 688],
+    _padding_1: [u8; 672],
 }
 
 static_assertions::assert_eq_size!([u8; 4096], Stage0DiceData);
