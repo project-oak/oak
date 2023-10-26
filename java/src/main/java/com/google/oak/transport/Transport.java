@@ -16,6 +16,8 @@
 
 package com.google.oak.transport;
 
+import com.google.oak.crypto.v1.EncryptedRequest;
+import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.util.Result;
 
 /** An interface for sending messages to the enclave. */
@@ -23,9 +25,8 @@ public interface Transport extends AutoCloseable {
   /**
    * Sends a request to the enclave and returns a response.
    *
-   * @param requestBytes a serialized {@code oak.crypto.EncryptedRequest} wrapped in a {@code
-   *     Result}
-   * @return a serialized {@code oak.crypto.EncryptedResponse} wrapped in a {@code Result}
+   * @param encryptedRequest {@code oak.crypto.EncryptedRequest} proto message
+   * @return {@code oak.crypto.EncryptedResponse} proto message wrapped in a {@code Result}
    */
-  abstract Result<byte[], String> invoke(byte[] requestBytes);
+  abstract Result<EncryptedResponse, String> invoke(EncryptedRequest encryptedRequest);
 }

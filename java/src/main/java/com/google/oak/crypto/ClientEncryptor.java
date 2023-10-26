@@ -18,6 +18,7 @@ package com.google.oak.crypto;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.oak.crypto.DecryptionResult;
 import com.google.oak.crypto.hpke.Hpke;
 import com.google.oak.crypto.hpke.SenderContext;
 import com.google.oak.crypto.v1.AeadEncryptedMessage;
@@ -36,7 +37,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * Sequence numbers for requests and responses are incremented separately, meaning that there could
  * be multiple responses per request and multiple requests per response.
  */
-public class ClientEncryptor implements AutoCloseable, Encryptor {
+public class ClientEncryptor implements AutoCloseable {
   // Info string used by Hybrid Public Key Encryption.
   private static final byte[] OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1".getBytes(UTF_8);
 
@@ -78,10 +79,9 @@ public class ClientEncryptor implements AutoCloseable, Encryptor {
    *
    * @param plaintext the input byte array to be encrypted
    * @param associatedData the input byte array with associated data to be authenticated
-   * @return a serialized {@code EncryptedRequest} message wrapped in a {@code Result}
+   * @return {@code EncryptedRequest} proto message wrapped in a {@code Result}
    */
-  @Override
-  public final Result<byte[], Exception> encrypt(
+  public final Result<EncryptedRequest, Exception> encrypt(
       final byte[] plaintext, final byte[] associatedData) {
     // Encrypt request.
     return senderContext.seal(plaintext, associatedData).map(ciphertext -> {
@@ -100,9 +100,7 @@ public class ClientEncryptor implements AutoCloseable, Encryptor {
         serializedEncapsulatedPublicKeyHasBeenSent = true;
       }
 
-      // TODO(#3843): Return unserialized proto messages once we have Java encryption without
-      // JNI.
-      return encryptedRequestBuilder.build().toByteArray();
+      return encryptedRequestBuilder.build();
     });
   }
 
@@ -110,30 +108,17 @@ public class ClientEncryptor implements AutoCloseable, Encryptor {
    * Decrypts a {@code EncryptedResponse} proto message using AEAD.
    * <https://datatracker.ietf.org/doc/html/rfc5116>
    *
-   * @param serializedEncryptedResponse a serialized {@code EncryptedResponse} message
+   * @param serializedEncryptedResponse {@code EncryptedResponse} proto message
    * @return a response message plaintext and associated data wrapped in a {@code Result}
    */
-  @Override
-  public final Result<Encryptor.DecryptionResult, Exception> decrypt(
-      final byte[] serializedEncryptedResponse) {
-    // Deserialize response message.
-    EncryptedResponse encryptedResponse;
-    try {
-      encryptedResponse = EncryptedResponse.parseFrom(
-          serializedEncryptedResponse, ExtensionRegistry.getEmptyRegistry());
-    } catch (InvalidProtocolBufferException e) {
-      return Result.error(e);
-    }
+  public final Result<DecryptionResult, Exception> decrypt(
+      final EncryptedResponse encryptedResponse) {
     AeadEncryptedMessage aeadEncryptedMessage = encryptedResponse.getEncryptedMessage();
     byte[] ciphertext = aeadEncryptedMessage.getCiphertext().toByteArray();
     byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
 
     // Decrypt response.
     return senderContext.open(ciphertext, associatedData)
-        .map(plaintext
-            ->
-            // TODO(#3843): Accept unserialized proto messages once we have Java encryption without
-            // JNI.
-            new DecryptionResult(plaintext, associatedData));
+        .map(plaintext -> new DecryptionResult(plaintext, associatedData));
   }
 }

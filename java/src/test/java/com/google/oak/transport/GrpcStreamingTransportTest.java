@@ -19,6 +19,8 @@ package com.google.oak.transport;
 import static org.mockito.AdditionalAnswers.delegatesTo;
 import static org.mockito.Mockito.mock;
 
+import com.google.oak.crypto.v1.EncryptedRequest;
+import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.session.v1.AttestationBundle;
 import com.google.oak.session.v1.GetPublicKeyRequest;
 import com.google.oak.session.v1.GetPublicKeyResponse;
@@ -75,6 +77,7 @@ public class GrpcStreamingTransportTest {
           responseObserver.onNext(responseWrapper);
           break;
         case INVOKE_REQUEST:
+          // TODO(#4037): Use explicit crypto protos.
           responseWrapper = ResponseWrapper.newBuilder()
                                 .setInvokeResponse(InvokeResponse.newBuilder().setEncryptedBody(
                                     ByteString.copyFrom(TEST_RESPONSE)))
@@ -144,7 +147,8 @@ public class GrpcStreamingTransportTest {
     Result<AttestationBundle, String> getEvidenceResult = transport.getEvidence();
     Assert.assertTrue(getEvidenceResult.isSuccess());
 
-    Result<byte[], String> invokeResult = transport.invoke(TEST_REQUEST);
+    Result<EncryptedResponse, String> invokeResult =
+        transport.invoke(EncryptedRequest.getDefaultInstance());
     Assert.assertTrue(invokeResult.isSuccess());
     Assert.assertArrayEquals(invokeResult.unwrap("missing result"), TEST_RESPONSE);
 
