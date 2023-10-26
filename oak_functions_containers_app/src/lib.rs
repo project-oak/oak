@@ -14,12 +14,18 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::functions::{
-    oak_functions_server::OakFunctions, AbortNextLookupDataResponse, Empty,
-    ExtendNextLookupDataRequest, ExtendNextLookupDataResponse, FinishNextLookupDataRequest,
-    FinishNextLookupDataResponse, InitializeRequest, InitializeResponse, InvokeRequest,
-    InvokeResponse,
+use crate::proto::oak::functions::oak_functions_server::OakFunctions;
+use oak_functions_service::{
+    proto::oak::functions::{
+        AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
+        ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
+        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse,
+        OakFunctions as OakFunctionsTrait,
+    },
+    OakFunctionsService,
 };
+use oak_remote_attestation::attester::AttestationReportGenerator;
+use std::sync::{Arc, Mutex};
 
 pub mod proto {
     pub mod oak {
@@ -39,7 +45,40 @@ pub mod proto {
 pub mod orchestrator_client;
 
 // Instance of the OakFunctions service for Oak Containers.
-pub struct OakFunctionsContainersService {}
+pub struct OakFunctionsContainersService {
+    service: Mutex<OakFunctionsService>,
+}
+
+impl OakFunctionsContainersService {
+    pub fn new(attestation_report_generator: Arc<dyn AttestationReportGenerator>) -> Self {
+        Self {
+            service: Mutex::new(OakFunctionsService::new(attestation_report_generator)),
+        }
+    }
+}
+
+fn map_status(status: micro_rpc::Status) -> tonic::Status {
+    let code = match status.code {
+        micro_rpc::StatusCode::Ok => tonic::Code::Ok,
+        micro_rpc::StatusCode::Cancelled => tonic::Code::Cancelled,
+        micro_rpc::StatusCode::Unknown => tonic::Code::Unknown,
+        micro_rpc::StatusCode::InvalidArgument => tonic::Code::InvalidArgument,
+        micro_rpc::StatusCode::DeadlineExceeded => tonic::Code::DeadlineExceeded,
+        micro_rpc::StatusCode::NotFound => tonic::Code::NotFound,
+        micro_rpc::StatusCode::AlreadyExists => tonic::Code::AlreadyExists,
+        micro_rpc::StatusCode::PermissionDenied => tonic::Code::PermissionDenied,
+        micro_rpc::StatusCode::ResourceExhausted => tonic::Code::ResourceExhausted,
+        micro_rpc::StatusCode::FailedPrecondition => tonic::Code::FailedPrecondition,
+        micro_rpc::StatusCode::Aborted => tonic::Code::Aborted,
+        micro_rpc::StatusCode::OutOfRange => tonic::Code::OutOfRange,
+        micro_rpc::StatusCode::Unimplemented => tonic::Code::Unimplemented,
+        micro_rpc::StatusCode::Internal => tonic::Code::Internal,
+        micro_rpc::StatusCode::Unavailable => tonic::Code::Unavailable,
+        micro_rpc::StatusCode::DataLoss => tonic::Code::DataLoss,
+        micro_rpc::StatusCode::Unauthenticated => tonic::Code::Unauthenticated,
+    };
+    tonic::Status::new(code, status.message)
+}
 
 #[tonic::async_trait]
 impl OakFunctions for OakFunctionsContainersService {
@@ -47,44 +86,59 @@ impl OakFunctions for OakFunctionsContainersService {
         &self,
         request: tonic::Request<InitializeRequest>,
     ) -> Result<tonic::Response<InitializeResponse>, tonic::Status> {
-        eprintln!("Received initialize request: {:?}", request);
-        let response = InitializeResponse::default();
-        Ok(tonic::Response::new(response))
+        self.service
+            .lock()
+            .unwrap()
+            .initialize(request.into_inner())
+            .map(tonic::Response::new)
+            .map_err(map_status)
     }
 
     async fn handle_user_request(
         &self,
         request: tonic::Request<InvokeRequest>,
     ) -> Result<tonic::Response<InvokeResponse>, tonic::Status> {
-        eprintln!("Received invoke request: {:?}", request);
-        let response = InvokeResponse::default();
-        Ok(tonic::Response::new(response))
+        self.service
+            .lock()
+            .unwrap()
+            .handle_user_request(request.into_inner())
+            .map(tonic::Response::new)
+            .map_err(map_status)
     }
 
     async fn extend_next_lookup_data(
         &self,
         request: tonic::Request<ExtendNextLookupDataRequest>,
     ) -> Result<tonic::Response<ExtendNextLookupDataResponse>, tonic::Status> {
-        eprintln!("Received extended_next_lookup_data request: {:?}", request);
-        let response = ExtendNextLookupDataResponse::default();
-        Ok(tonic::Response::new(response))
+        self.service
+            .lock()
+            .unwrap()
+            .extend_next_lookup_data(request.into_inner())
+            .map(tonic::Response::new)
+            .map_err(map_status)
     }
 
     async fn finish_next_lookup_data(
         &self,
         request: tonic::Request<FinishNextLookupDataRequest>,
     ) -> Result<tonic::Response<FinishNextLookupDataResponse>, tonic::Status> {
-        eprintln!("Received finish_next_lookup_data request: {:?}", request);
-        let response = FinishNextLookupDataResponse::default();
-        Ok(tonic::Response::new(response))
+        self.service
+            .lock()
+            .unwrap()
+            .finish_next_lookup_data(request.into_inner())
+            .map(tonic::Response::new)
+            .map_err(map_status)
     }
 
     async fn abort_next_lookup_data(
         &self,
         request: tonic::Request<Empty>,
     ) -> Result<tonic::Response<AbortNextLookupDataResponse>, tonic::Status> {
-        eprintln!("Received abort_next_lookup_data request: {:?}", request);
-        let response = AbortNextLookupDataResponse::default();
-        Ok(tonic::Response::new(response))
+        self.service
+            .lock()
+            .unwrap()
+            .abort_next_lookup_data(request.into_inner())
+            .map(tonic::Response::new)
+            .map_err(map_status)
     }
 }
