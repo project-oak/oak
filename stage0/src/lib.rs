@@ -311,17 +311,17 @@ pub fn rust64_start(encrypted: u64) -> ! {
         E820EntryType::DiceData,
     ));
 
-    let extra = format!(
-        "--{}={:#018x}",
-        DICE_DATA_CMDLINE_PARAM,
-        dice_data.as_bytes().as_ptr() as usize
-    );
+    // Append the DICE data address to the kernel command-line.
+    let extra = format!("--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}");
     let cmdline = if cmdline.is_empty() {
         extra
-    } else {
+    } else if cmdline.contains("--") {
         format!("{} {}", cmdline, extra)
+    } else {
+        format!("{} -- {}", cmdline, extra)
     };
     zero_page.set_cmdline(cmdline);
+
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 
     // Clean-ups we need to do just before we jump to the kernel proper: clean up the early GHCB and
