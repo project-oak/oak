@@ -23,6 +23,7 @@
 #include "absl/strings/string_view.h"
 #include "cc/crypto/client_encryptor.h"
 #include "cc/crypto/common.h"
+#include "oak_crypto/proto/v1/crypto.pb.h"
 #include "oak_remote_attestation/proto/v1/messages.pb.h"
 
 namespace oak::client {
@@ -30,6 +31,8 @@ namespace oak::client {
 namespace {
 using ::oak::crypto::ClientEncryptor;
 using ::oak::crypto::DecryptionResult;
+using ::oak::crypto::v1::EncryptedRequest;
+using ::oak::crypto::v1::EncryptedResponse;
 using ::oak::remote_attestation::AttestationVerifier;
 using ::oak::session::v1::AttestationBundle;
 using ::oak::transport::TransportWrapper;
@@ -63,14 +66,14 @@ absl::StatusOr<std::string> OakClient::Invoke(absl::string_view request_body) {
   }
 
   // Encrypt request.
-  absl::StatusOr<std::string> encrypted_request =
+  absl::StatusOr<EncryptedRequest> encrypted_request =
       (*client_encryptor)->Encrypt(request_body, kEmptyAssociatedData);
   if (!encrypted_request.ok()) {
     return encrypted_request.status();
   }
 
   // Send request.
-  absl::StatusOr<std::string> encrypted_response = transport_->Invoke(*encrypted_request);
+  absl::StatusOr<EncryptedResponse> encrypted_response = transport_->Invoke(*encrypted_request);
   if (!encrypted_response.ok()) {
     return encrypted_response.status();
   }

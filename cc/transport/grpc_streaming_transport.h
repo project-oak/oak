@@ -23,6 +23,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/transport/transport.h"
+#include "oak_crypto/proto/v1/crypto.pb.h"
 #include "oak_remote_attestation/proto/v1/messages.pb.h"
 #include "oak_remote_attestation/proto/v1/service_streaming.grpc.pb.h"
 #include "oak_remote_attestation/proto/v1/service_streaming.pb.h"
@@ -38,7 +39,8 @@ class GrpcStreamingTransport : public TransportWrapper {
       : channel_reader_writer_(std::move(channel_reader_writer)) {}
 
   absl::StatusOr<::oak::session::v1::AttestationBundle> GetEvidence() override;
-  absl::StatusOr<std::string> Invoke(absl::string_view request_bytes) override;
+  absl::StatusOr<oak::crypto::v1::EncryptedResponse> Invoke(
+      const oak::crypto::v1::EncryptedRequest& encrypted_request) override;
 
   ~GrpcStreamingTransport() override;
 
