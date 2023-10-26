@@ -152,7 +152,7 @@
         })
     }
     <span class="doccomment">/// See [`crate::proto::oak::functions::OakFunctions::handle_user_request`].
-    </span><span class="kw">pub fn </span>handle_user_request(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, micro_rpc::Status&gt; {
+    </span><span class="kw">pub fn </span>handle_user_request(<span class="kw-2">&amp;</span><span class="self">self</span>, request: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, micro_rpc::Status&gt; {
         <span class="comment">// TODO(#3442): Implement constant response size policy.
         </span><span class="self">self</span>.wasm_handler
             .handle_invoke(Request {
@@ -162,7 +162,7 @@
     }
     <span class="doccomment">/// See [`crate::proto::oak::functions::OakFunctions::extend_next_lookup_data`].
     </span><span class="kw">pub fn </span>extend_next_lookup_data(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: ExtendNextLookupDataRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ExtendNextLookupDataResponse, micro_rpc::Status&gt; {
         <span class="self">self</span>.lookup_data_manager
@@ -171,7 +171,7 @@
     }
     <span class="doccomment">/// See [`crate::proto::oak::functions::OakFunctions::finish_next_lookup_data`].
     </span><span class="kw">pub fn </span>finish_next_lookup_data(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         _request: FinishNextLookupDataRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;FinishNextLookupDataResponse, micro_rpc::Status&gt; {
         <span class="self">self</span>.lookup_data_manager.finish_next_lookup_data();
@@ -179,7 +179,7 @@
     }
     <span class="doccomment">/// See [`crate::proto::oak::functions::OakFunctions::abort_next_lookup_data`].
     </span><span class="kw">pub fn </span>abort_next_lookup_data(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         _request: Empty,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;AbortNextLookupDataResponse, Status&gt; {
         <span class="self">self</span>.lookup_data_manager.abort_next_lookup_data();
