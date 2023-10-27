@@ -53,12 +53,10 @@ impl OakFunctionsInstance {
         })
     }
     /// See [`crate::proto::oak::functions::OakFunctions::handle_user_request`].
-    pub fn handle_user_request(&self, request: &[u8]) -> Result<Vec<u8>, micro_rpc::Status> {
+    pub fn handle_user_request(&self, request: Vec<u8>) -> Result<Vec<u8>, micro_rpc::Status> {
         // TODO(#3442): Implement constant response size policy.
         self.wasm_handler
-            .handle_invoke(Request {
-                body: request.to_vec(),
-            })
+            .handle_invoke(Request { body: request })
             .map(|response| response.body)
     }
     /// See [`crate::proto::oak::functions::OakFunctions::extend_next_lookup_data`].
