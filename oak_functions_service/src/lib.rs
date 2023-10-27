@@ -131,7 +131,7 @@ impl OakFunctions for OakFunctionsService {
             // Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
             let response_result: Result<Vec<u8>, micro_rpc::Status> =
-                instance.handle_user_request(&r);
+                instance.handle_user_request(r);
             let response: micro_rpc::ResponseWrapper = response_result.into();
             response.encode_to_vec()
         })
