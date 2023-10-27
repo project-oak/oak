@@ -241,7 +241,7 @@
             instance: OnceCell::new(),
         }
     }
-    <span class="kw">fn </span>get_instance(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>OakFunctionsInstance, micro_rpc::Status&gt; {
+    <span class="kw">fn </span>get_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>OakFunctionsInstance, micro_rpc::Status&gt; {
         <span class="self">self</span>.instance.get().ok_or_else(|| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::FailedPrecondition,
@@ -253,14 +253,14 @@
 
 <span class="kw">impl </span>OakFunctions <span class="kw">for </span>OakFunctionsService {
     <span class="kw">fn </span>initialize(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: InitializeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InitializeResponse, micro_rpc::Status&gt; {
         <span class="macro">log::debug!</span>(
             <span class="string">&quot;called initialize (Wasm module size: {} bytes)&quot;</span>,
             request.wasm_module.len()
         );
-        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.instance.get() {
+        <span class="kw">match </span><span class="self">self</span>.instance.get() {
             <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::FailedPrecondition,
                 <span class="string">&quot;already initialized&quot;</span>,
@@ -295,7 +295,7 @@
     }
 
     <span class="kw">fn </span>handle_user_request(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: InvokeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, micro_rpc::Status&gt; {
         <span class="macro">log::debug!</span>(<span class="string">&quot;called handle_user_request&quot;</span>);
@@ -320,7 +320,7 @@
     }
 
     <span class="kw">fn </span>extend_next_lookup_data(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: ExtendNextLookupDataRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ExtendNextLookupDataResponse, micro_rpc::Status&gt; {
         <span class="macro">log::debug!</span>(
@@ -331,7 +331,7 @@
     }
 
     <span class="kw">fn </span>finish_next_lookup_data(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: FinishNextLookupDataRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;FinishNextLookupDataResponse, micro_rpc::Status&gt; {
         <span class="macro">log::debug!</span>(<span class="string">&quot;called finish_next_lookup_data&quot;</span>);
@@ -339,7 +339,7 @@
     }
 
     <span class="kw">fn </span>abort_next_lookup_data(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: Empty,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;AbortNextLookupDataResponse, micro_rpc::Status&gt; {
         <span class="macro">log::debug!</span>(<span class="string">&quot;called abort_next_lookup_data&quot;</span>);

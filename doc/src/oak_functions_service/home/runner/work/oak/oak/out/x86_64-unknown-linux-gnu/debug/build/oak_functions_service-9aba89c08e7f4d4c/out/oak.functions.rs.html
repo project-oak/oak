@@ -468,23 +468,23 @@
 }
 <span class="kw">pub trait </span>OakFunctions: Sized {
     <span class="kw">fn </span>initialize(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: InitializeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InitializeResponse, ::micro_rpc::Status&gt;;
     <span class="kw">fn </span>handle_user_request(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: InvokeRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;InvokeResponse, ::micro_rpc::Status&gt;;
     <span class="kw">fn </span>extend_next_lookup_data(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: ExtendNextLookupDataRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ExtendNextLookupDataResponse, ::micro_rpc::Status&gt;;
     <span class="kw">fn </span>finish_next_lookup_data(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: FinishNextLookupDataRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;FinishNextLookupDataResponse, ::micro_rpc::Status&gt;;
     <span class="kw">fn </span>abort_next_lookup_data(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: Empty,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;AbortNextLookupDataResponse, ::micro_rpc::Status&gt;;
 }
