@@ -37,11 +37,14 @@ use tokio::process::Command;
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[arg(default_value = "http://10.0.2.100:8080")]
+    #[arg(long, default_value = "http://10.0.2.100:8080")]
     launcher_addr: String,
 
-    #[arg(default_value = "/sbin/init")]
+    #[arg(long, default_value = "/sbin/init")]
     init: String,
+
+    #[arg(long = "oak-dice")]
+    dice_addr: String,
 }
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -88,6 +91,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .context("failed to move /rootfs to /")?;
     chroot(".").context("failed to chroot to .")?;
     chdir("/").context("failed to chdir to /")?;
+
+    println!("DICE address: {}", args.dice_addr);
 
     let mut client = LauncherClient::new(args.launcher_addr.parse()?)
         .await

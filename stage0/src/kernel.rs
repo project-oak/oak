@@ -14,11 +14,8 @@
 // limitations under the License.
 //
 
-use crate::{
-    fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg},
-    BOOT_ALLOC,
-};
-use alloc::vec::Vec;
+use crate::fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg};
+use alloc::{ffi::CString, string::String, vec};
 use core::{ffi::CStr, slice};
 use elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
 use oak_linux_boot_params::BootE820Entry;
@@ -69,7 +66,7 @@ impl Default for KernelInfo {
 ///
 /// We first try to read it using the traditional selector. If it is not available there we try to
 /// read it using a custom file path.
-pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<&'static CStr> {
+pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<String> {
     let (cmdline_file, buffer_size) = if let Some(cmdline_file) = fw_cfg.get_cmdline_file() {
         // The provided value is already null-terminated.
         let size = cmdline_file.size();
@@ -83,8 +80,7 @@ pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<&'static CStr> {
     };
     // Safety: len will always be at least 1 byte, and we don't care about alignment. If the
     // allocation fails, we won't try coercing it into a slice.
-    let mut buf = Vec::with_capacity_in(buffer_size, &BOOT_ALLOC);
-    buf.resize(buffer_size, 0u8);
+    let mut buf = vec![0u8; buffer_size];
     let actual_size = fw_cfg
         .read_file(&cmdline_file, &mut buf)
         .expect("could not read cmdline");
@@ -94,11 +90,11 @@ pub fn try_load_cmdline(fw_cfg: &mut FwCfg) -> Option<&'static CStr> {
         "cmdline size did not match expected size"
     );
 
-    let cmdline = CStr::from_bytes_with_nul(buf.leak()).expect("invalid kernel command-line");
-    log::debug!(
-        "Kernel cmdline: {}",
-        cmdline.to_str().expect("invalid kernel commande-line")
-    );
+    let cmdline = CString::from_vec_with_nul(buf)
+        .expect("invalid kernel command-line")
+        .into_string()
+        .expect("invalid kernel command-line");
+    log::debug!("Kernel cmdline: {}", cmdline);
     Some(cmdline)
 }
 

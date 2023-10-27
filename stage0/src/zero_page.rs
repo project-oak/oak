@@ -17,7 +17,9 @@
 use crate::{
     cmos::Cmos,
     fw_cfg::{find_suitable_dma_address, FwCfg},
+    BOOT_ALLOC,
 };
+use alloc::{ffi::CString, vec::Vec};
 use core::{ffi::CStr, mem::size_of, slice};
 use oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
 use x86_64::PhysAddr;
@@ -248,10 +250,18 @@ impl ZeroPage {
     }
 
     /// Updates the pointer to the command line parameter string in the zero page.
-    pub fn set_cmdline(&mut self, cmdline: &'static CStr) {
-        self.inner.hdr.cmd_line_ptr = cmdline.as_ptr() as u32;
-        // As per boot protocol `cmdline_size` does not include the trailing \0.
-        self.inner.hdr.cmdline_size = cmdline.to_bytes().len() as u32;
+    pub fn set_cmdline<T: AsRef<str>>(&mut self, cmdline: T) {
+        let cmdline =
+            CString::new(cmdline.as_ref().as_bytes()).expect("invalid kernel command-line");
+        let source = cmdline.as_bytes_with_nul();
+        // Create and leak a buffer in the boot allocator so that it can outlive Stage 0.
+        let mut buf = Vec::with_capacity_in(source.len(), &BOOT_ALLOC);
+        buf.resize(buf.capacity(), 0u8);
+        buf.copy_from_slice(source);
+        let buf = buf.leak();
+        self.inner.hdr.cmd_line_ptr = buf.as_ptr() as u32;
+        // As per the Linux boot protocol `cmdline_size` does not include the trailing \0.
+        self.inner.hdr.cmdline_size = cmdline.as_bytes().len() as u32;
     }
 
     /// Adds a header to the list of setup headers.
