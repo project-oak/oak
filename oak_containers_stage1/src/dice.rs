@@ -60,13 +60,13 @@ pub fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> 
     let mut dice_reader = OpenOptions::new()
         .read(true)
         .open(PHYS_MEM_PATH)
-        .expect("couldn't open DICE memory device for reading");
+        .context("couldn't open DICE memory device for reading")?;
     dice_reader
         .seek(std::io::SeekFrom::Start(start.as_u64()))
-        .expect("couldn't seek to DICE offset");
+        .context("couldn't seek to DICE offset")?;
     dice_reader
         .read_exact(buffer)
-        .expect("couldn't read DICE data");
+        .context("couldn't read DICE data")?;
 
     if result.magic != STAGE0_MAGIC {
         anyhow::bail!("invalid DICE data");
