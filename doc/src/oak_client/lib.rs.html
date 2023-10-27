@@ -81,23 +81,6 @@
 <a href="#81" id="81">81</a>
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
-<a href="#84" id="84">84</a>
-<a href="#85" id="85">85</a>
-<a href="#86" id="86">86</a>
-<a href="#87" id="87">87</a>
-<a href="#88" id="88">88</a>
-<a href="#89" id="89">89</a>
-<a href="#90" id="90">90</a>
-<a href="#91" id="91">91</a>
-<a href="#92" id="92">92</a>
-<a href="#93" id="93">93</a>
-<a href="#94" id="94">94</a>
-<a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -129,10 +112,9 @@
 <span class="kw">pub mod </span>transport;
 <span class="kw">pub mod </span>verifier;
 
-<span class="kw">use </span><span class="kw">crate</span>::transport::AsyncEvidenceProvider;
+<span class="kw">use </span><span class="kw">crate</span>::transport::{EvidenceProvider, Transport};
 <span class="kw">use </span>anyhow::{anyhow, Context};
-<span class="kw">use </span>oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedResponse};
-<span class="kw">use </span>prost::Message;
+<span class="kw">use </span>oak_crypto::encryptor::ClientEncryptor;
 <span class="kw">use </span>std::vec::Vec;
 
 <span class="kw">const </span>EMPTY_ASSOCIATED_DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;&quot;</span>;
@@ -140,18 +122,12 @@
 <span class="doccomment">/// Client for connecting to Oak.
 /// Represents a Relying Party from the RATS Architecture:
 /// &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-relying-party&gt;
-</span><span class="kw">pub struct </span>OakClient&lt;T&gt;
-<span class="kw">where
-    </span>T: micro_rpc::AsyncTransport&lt;Error = anyhow::Error&gt;,
-{
+</span><span class="kw">pub struct </span>OakClient&lt;T: Transport&gt; {
     transport: T,
     server_encryption_public_key: Vec&lt;u8&gt;,
 }
 
-<span class="kw">impl</span>&lt;T&gt; OakClient&lt;T&gt;
-<span class="kw">where
-    </span>T: micro_rpc::AsyncTransport&lt;Error = anyhow::Error&gt; + AsyncEvidenceProvider,
-{
+<span class="kw">impl</span>&lt;T: Transport + EvidenceProvider&gt; OakClient&lt;T&gt; {
     <span class="kw">pub async fn </span>create(<span class="kw-2">mut </span>transport: T) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="comment">// TODO(#3641): Implement client-side attestation verification.
         </span><span class="kw">let </span>evidence = transport
@@ -172,22 +148,12 @@
             .encrypt(request_body, EMPTY_ASSOCIATED_DATA)
             .context(<span class="string">&quot;couldn&#39;t encrypt request&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Serialize request.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>serialized_request = <span class="macro">vec!</span>[];
-        encrypted_request
-            .encode(<span class="kw-2">&amp;mut </span>serialized_request)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t serialize request: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
-
         <span class="comment">// Send request.
-        </span><span class="kw">let </span>serialized_response = <span class="self">self
+        </span><span class="kw">let </span>encrypted_response = <span class="self">self
             </span>.transport
-            .invoke(<span class="kw-2">&amp;</span>serialized_request)
+            .invoke(<span class="kw-2">&amp;</span>encrypted_request)
             .<span class="kw">await
             </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t send request: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
-
-        <span class="comment">// Deserialize response.
-        </span><span class="kw">let </span>encrypted_response = EncryptedResponse::decode(serialized_response.as_ref())
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialize response: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
 
         <span class="comment">// Decrypt response.
         // Currently we ignore the associated data.

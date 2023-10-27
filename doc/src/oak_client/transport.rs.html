@@ -108,6 +108,27 @@
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -128,8 +149,9 @@
     request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
     AttestationEvidence, GetPublicKeyRequest, InvokeRequest, RequestWrapper,
 };
-<span class="kw">use </span>anyhow::Context;
-<span class="kw">pub use </span>micro_rpc::AsyncTransport;
+<span class="kw">use </span>anyhow::{anyhow, Context};
+<span class="kw">use </span>oak_crypto::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
+<span class="kw">use </span>prost::Message;
 <span class="kw">use </span>tonic::transport::Channel;
 
 <span class="kw">pub struct </span>GrpcStreamingTransport {
@@ -143,14 +165,30 @@
 }
 
 <span class="attr">#[async_trait::async_trait]
-</span><span class="kw">impl </span>micro_rpc::AsyncTransport <span class="kw">for </span>GrpcStreamingTransport {
-    <span class="kw">type </span>Error = anyhow::Error;
-    <span class="kw">async fn </span>invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="self">Self</span>::Error&gt; {
+</span><span class="kw">pub trait </span>Transport {
+    <span class="kw">async fn </span>invoke(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
+    ) -&gt; anyhow::Result&lt;EncryptedResponse&gt;;
+}
+
+<span class="attr">#[async_trait::async_trait]
+</span><span class="kw">impl </span>Transport <span class="kw">for </span>GrpcStreamingTransport {
+    <span class="kw">async fn </span>invoke(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
+    ) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
+        <span class="comment">// TODO(#4037): Use explicit crypto protos.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>serialized_request = <span class="macro">vec!</span>[];
+        encrypted_request
+            .encode(<span class="kw-2">&amp;mut </span>serialized_request)
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t serialize request: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+
         <span class="kw">let </span><span class="kw-2">mut </span>response_stream = <span class="self">self
             </span>.rpc_client
             .stream(futures_util::stream::iter(<span class="macro">vec!</span>[RequestWrapper {
                 request: <span class="prelude-val">Some</span>(request_wrapper::Request::InvokeRequest(InvokeRequest {
-                    encrypted_body: request_bytes.to_vec(),
+                    encrypted_body: serialized_request,
                 })),
             }]))
             .<span class="kw">await
@@ -172,17 +210,21 @@
             </span>));
         };
 
-        <span class="prelude-val">Ok</span>(invoke_response.encrypted_body)
+        <span class="comment">// TODO(#4037): Use explicit crypto protos.
+        </span><span class="kw">let </span>encrypted_response = EncryptedResponse::decode(invoke_response.encrypted_body.as_ref())
+            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialize response: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(encrypted_response)
     }
 }
 
 <span class="attr">#[async_trait::async_trait]
-</span><span class="kw">pub trait </span>AsyncEvidenceProvider {
+</span><span class="kw">pub trait </span>EvidenceProvider {
     <span class="kw">async fn </span>get_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;AttestationEvidence&gt;;
 }
 
 <span class="attr">#[async_trait::async_trait]
-</span><span class="kw">impl </span>AsyncEvidenceProvider <span class="kw">for </span>GrpcStreamingTransport {
+</span><span class="kw">impl </span>EvidenceProvider <span class="kw">for </span>GrpcStreamingTransport {
     <span class="kw">async fn </span>get_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;AttestationEvidence&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>response_stream = <span class="self">self
             </span>.rpc_client
