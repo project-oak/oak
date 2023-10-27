@@ -57,7 +57,7 @@ class ClientEncryptor {
   //
   // Returns an [`oak.crypto.EncryptedRequest`] proto message.
   absl::StatusOr<::oak::crypto::v1::EncryptedRequest> Encrypt(absl::string_view plaintext,
-                                                            absl::string_view associated_data);
+                                                              absl::string_view associated_data);
 
   // Decrypts a [`EncryptedResponse`] proto message using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
