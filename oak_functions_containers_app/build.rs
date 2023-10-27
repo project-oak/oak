@@ -26,11 +26,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ],
         CodegenOptions {
             build_server: true,
+            // The client is only used in the integration test.
+            build_client: true,
             extern_paths: vec![ExternPath::new(
                 ".oak.functions",
                 "::oak_functions_service::proto::oak::functions",
             )],
-            ..Default::default()
         },
     )?;
 

@@ -14,7 +14,8 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::functions::oak_functions_server::OakFunctions;
+use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
+use anyhow::anyhow;
 use oak_functions_service::{
     proto::oak::functions::{
         AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
@@ -26,6 +27,8 @@ use oak_functions_service::{
 };
 use oak_remote_attestation::attester::AttestationReportGenerator;
 use std::sync::Arc;
+use tokio::net::TcpListener;
+use tokio_stream::wrappers::TcpListenerStream;
 
 pub mod proto {
     pub mod oak {
@@ -131,4 +134,18 @@ impl OakFunctions for OakFunctionsContainersService {
             .map(tonic::Response::new)
             .map_err(map_status)
     }
+}
+
+// Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
+pub async fn serve(
+    listener: TcpListener,
+    attestation_report_generator: Arc<dyn AttestationReportGenerator>,
+) -> Result<(), anyhow::Error> {
+    tonic::transport::Server::builder()
+        .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
+            attestation_report_generator,
+        )))
+        .serve_with_incoming(TcpListenerStream::new(listener))
+        .await
+        .map_err(|error| anyhow!("starting up the service failed with error: {:?}", error))
 }
