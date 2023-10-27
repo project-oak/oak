@@ -15,6 +15,7 @@
 //
 
 use crate::{shutdown, snp::CPUID_PAGE};
+use bitflags::bitflags;
 use core::{arch::asm, ops::Deref};
 use log::error;
 use oak_sev_guest::{
@@ -24,7 +25,10 @@ use oak_sev_guest::{
 };
 use spinning_top::Spinlock;
 use x86_64::{
-    registers::{control::Cr2, mxcsr::read},
+    registers::{
+        control::Cr2,
+        mxcsr::{read, MxCsr},
+    },
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
     VirtAddr,
 };
@@ -286,13 +290,25 @@ extern "x86-interrupt" fn machine_check_handler(stack_frame: InterruptStackFrame
     shutdown::shutdown();
 }
 
+bitflags! {
+    #[repr(transparent)]
+    #[derive(Debug)]
+    pub struct Mxcsr: u32 {
+        const DE = MxCsr::DENORMAL.bits();
+        const ZE = MxCsr::DIVIDE_BY_ZERO.bits();
+        const PE = MxCsr::PRECISION.bits();
+        const IE = MxCsr::INVALID_OPERATION.bits();
+        const OE = MxCsr::OVERFLOW.bits();
+        const UE = MxCsr::UNDERFLOW.bits();
+    }
+}
 extern "x86-interrupt" fn simd_fp_handler(stack_frame: InterruptStackFrame) {
     error!("KERNEL PANIC: SIMD FLOATING POINT EXCEPTION!");
     error!(
         "Instruction pointer: {:#016x}",
         stack_frame.deref().instruction_pointer.as_u64()
     );
-    let mxcsr = read();
+    let mxcsr = Mxcsr::from_bits_retain(read().bits());
     error!("MXCSR: {:?}", mxcsr);
 
     shutdown::shutdown();
