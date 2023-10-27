@@ -16,6 +16,7 @@ byteorder = { version = "*", default-features = false }
 hashbrown = "*"
 log = "*"
 micro_rpc = { workspace = true }
+oak_core = { workspace = true }
 oak_crypto = { workspace = true }
 oak_functions_abi = { workspace = true }
 oak_functions_sdk = { workspace = true }
