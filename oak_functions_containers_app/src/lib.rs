@@ -25,7 +25,7 @@ use oak_functions_service::{
     OakFunctionsService,
 };
 use oak_remote_attestation::attester::AttestationReportGenerator;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 pub mod proto {
     pub mod oak {
@@ -46,13 +46,13 @@ pub mod orchestrator_client;
 
 // Instance of the OakFunctions service for Oak Containers.
 pub struct OakFunctionsContainersService {
-    service: Mutex<OakFunctionsService>,
+    service: OakFunctionsService,
 }
 
 impl OakFunctionsContainersService {
     pub fn new(attestation_report_generator: Arc<dyn AttestationReportGenerator>) -> Self {
         Self {
-            service: Mutex::new(OakFunctionsService::new(attestation_report_generator)),
+            service: OakFunctionsService::new(attestation_report_generator),
         }
     }
 }
@@ -87,8 +87,6 @@ impl OakFunctions for OakFunctionsContainersService {
         request: tonic::Request<InitializeRequest>,
     ) -> Result<tonic::Response<InitializeResponse>, tonic::Status> {
         self.service
-            .lock()
-            .unwrap()
             .initialize(request.into_inner())
             .map(tonic::Response::new)
             .map_err(map_status)
@@ -99,8 +97,6 @@ impl OakFunctions for OakFunctionsContainersService {
         request: tonic::Request<InvokeRequest>,
     ) -> Result<tonic::Response<InvokeResponse>, tonic::Status> {
         self.service
-            .lock()
-            .unwrap()
             .handle_user_request(request.into_inner())
             .map(tonic::Response::new)
             .map_err(map_status)
@@ -111,8 +107,6 @@ impl OakFunctions for OakFunctionsContainersService {
         request: tonic::Request<ExtendNextLookupDataRequest>,
     ) -> Result<tonic::Response<ExtendNextLookupDataResponse>, tonic::Status> {
         self.service
-            .lock()
-            .unwrap()
             .extend_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
             .map_err(map_status)
@@ -123,8 +117,6 @@ impl OakFunctions for OakFunctionsContainersService {
         request: tonic::Request<FinishNextLookupDataRequest>,
     ) -> Result<tonic::Response<FinishNextLookupDataResponse>, tonic::Status> {
         self.service
-            .lock()
-            .unwrap()
             .finish_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
             .map_err(map_status)
@@ -135,8 +127,6 @@ impl OakFunctions for OakFunctionsContainersService {
         request: tonic::Request<Empty>,
     ) -> Result<tonic::Response<AbortNextLookupDataResponse>, tonic::Status> {
         self.service
-            .lock()
-            .unwrap()
             .abort_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
             .map_err(map_status)
