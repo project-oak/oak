@@ -36,6 +36,7 @@ java_library(
         "//oak_remote_attestation/proto/v1:service_streaming_java_proto",
         "@com_google_guava_guava",
         "@com_google_protobuf//:protobuf_javalite",
+        "@com_google_protobuf//java/core",
         "@io_grpc_grpc_java//stub",
     ],
 )

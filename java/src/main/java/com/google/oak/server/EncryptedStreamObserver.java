@@ -19,6 +19,7 @@ package com.google.oak.server;
 import com.google.oak.crypto.DecryptionResult;
 import com.google.oak.crypto.ServerEncryptor;
 import com.google.oak.crypto.hpke.KeyPair;
+import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.session.v1.AttestationBundle;
 import com.google.oak.session.v1.AttestationEndorsement;
@@ -30,6 +31,7 @@ import com.google.oak.session.v1.ResponseWrapper;
 import com.google.oak.transport.QueueingStreamObserver;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
@@ -89,14 +91,23 @@ public final class EncryptedStreamObserver<I, O> implements StreamObserver<Reque
       outboundObserver.onNext(response);
     } else if (message.hasInvokeRequest()) {
       logger.log(Level.INFO, "Received InvokeRequest request");
-      Result<ResponseWrapper, Exception> result =
-          encryptor.decrypt(message.getInvokeRequest().getEncryptedRequest())
-              .andThen(this::processMessage);
-      result.ifError(this::onError);
-      result.ifSuccess(msg -> {
-        logger.log(Level.INFO, "Sending Processed response");
-        outboundObserver.onNext(msg);
-      });
+
+      // TODO(#4037): Use explicit crypto protos.
+      EncryptedRequest encryptedRequest;
+      try {
+        encryptedRequest = EncryptedRequest.parseFrom(
+            message.getInvokeRequest().getEncryptedBody(), ExtensionRegistry.getEmptyRegistry());
+
+        Result<ResponseWrapper, Exception> result =
+            encryptor.decrypt(encryptedRequest).andThen(this::processMessage);
+        result.ifError(this::onError);
+        result.ifSuccess(msg -> {
+          logger.log(Level.INFO, "Sending Processed response");
+          outboundObserver.onNext(msg);
+        });
+      } catch (InvalidProtocolBufferException e) {
+        onError(e);
+      }
     } else {
       onError(new InvalidProtocolBufferException(
           "Got unexpected RequestWrapper that is neither an InvokeRequest nor a"
@@ -136,12 +147,15 @@ public final class EncryptedStreamObserver<I, O> implements StreamObserver<Reque
 
       // Wait/block until the response is ready.
       O response = this.innerServerStream.take();
-      Result<EncryptedResponse, Exception> encryptedResult =
+      Result<EncryptedResponse, Exception> encryptedResponse =
           encryptor.encrypt(connectionAdapter.serialize(response), decrypted.associatedData);
 
-      return encryptedResult.map(encrypted -> {
+      // TODO(#4037): Use explicit crypto protos.
+      return encryptedResponse.map(encrypted -> {
         InvokeResponse invokeResponse =
-            InvokeResponse.newBuilder().setEncryptedResponse(encrypted).build();
+            InvokeResponse.newBuilder()
+                .setEncryptedBody(ByteString.copyFrom(encrypted.toByteArray()))
+                .build();
         return ResponseWrapper.newBuilder().setInvokeResponse(invokeResponse).build();
       });
     } catch (InterruptedException e) {
