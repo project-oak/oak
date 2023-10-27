@@ -141,6 +141,11 @@
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -180,11 +185,14 @@
 
 <span class="attr">#[derive(Parser, Debug)]
 </span><span class="kw">struct </span>Args {
-    <span class="attr">#[arg(default_value = <span class="string">&quot;http://10.0.2.100:8080&quot;</span>)]
+    <span class="attr">#[arg(long, default_value = <span class="string">&quot;http://10.0.2.100:8080&quot;</span>)]
     </span>launcher_addr: String,
 
-    <span class="attr">#[arg(default_value = <span class="string">&quot;/sbin/init&quot;</span>)]
+    <span class="attr">#[arg(long, default_value = <span class="string">&quot;/sbin/init&quot;</span>)]
     </span>init: String,
+
+    <span class="attr">#[arg(long = <span class="string">&quot;oak-dice&quot;</span>)]
+    </span>dice_addr: String,
 }
 <span class="attr">#[tokio::main]
 </span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
@@ -231,6 +239,8 @@
     .context(<span class="string">&quot;failed to move /rootfs to /&quot;</span>)<span class="question-mark">?</span>;
     chroot(<span class="string">&quot;.&quot;</span>).context(<span class="string">&quot;failed to chroot to .&quot;</span>)<span class="question-mark">?</span>;
     chdir(<span class="string">&quot;/&quot;</span>).context(<span class="string">&quot;failed to chdir to /&quot;</span>)<span class="question-mark">?</span>;
+
+    <span class="macro">println!</span>(<span class="string">&quot;DICE address: {}&quot;</span>, args.dice_addr);
 
     <span class="kw">let </span><span class="kw-2">mut </span>client = LauncherClient::new(args.launcher_addr.parse()<span class="question-mark">?</span>)
         .<span class="kw">await

@@ -156,6 +156,16 @@
 <a href="#156" id="156">156</a>
 <a href="#157" id="157">157</a>
 <a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -189,6 +199,13 @@
 
 <span class="doccomment">/// The maximum size of a serialized CWT certificate.
 </span><span class="kw">pub const </span>CERTIFICATE_SIZE: usize = <span class="number">1024</span>;
+
+<span class="doccomment">/// The name of the kernel command-line parameter that is used to send the physical address of the
+/// Stage 0 DICE data struct.
+</span><span class="kw">pub const </span>DICE_DATA_CMDLINE_PARAM: <span class="kw-2">&amp;</span>str = <span class="string">&quot;oak-dice&quot;</span>;
+
+<span class="doccomment">/// The magic number used to identify the Stage 0 DICE data in memory.
+</span><span class="kw">pub const </span>STAGE0_MAGIC: u64 = u64::from_le_bytes(<span class="kw-2">*</span><span class="string">b&quot;oak.dice&quot;</span>);
 
 <span class="attr">#[derive(Copy, Clone, Debug, PartialEq, Eq, Display, FromRepr)]
 #[repr(u64)]
@@ -253,12 +270,15 @@
 </span><span class="attr">#[derive(AsBytes, FromZeroes, FromBytes)]
 #[repr(C, align(<span class="number">4096</span>))]
 </span><span class="kw">pub struct </span>Stage0DiceData {
+    <span class="doccomment">/// Magic number that is expected to always be set to the value of `STAGE0_MAGIC`.
+    </span><span class="kw">pub </span>magic: u64,
+    _padding_0: u64,
     <span class="doccomment">/// The evidence about Stage 0 and the initial state of the VM.
     </span><span class="kw">pub </span>root_layer_evidence: RootLayerEvidence,
     <span class="doccomment">/// The evidence about the next layer.
     </span><span class="kw">pub </span>layer_1_evidence: LayerEvidence,
     <span class="kw">pub </span>layer_1_certificate_authority: CertificateAuthority,
-    _padding: [u8; <span class="number">688</span>],
+    _padding_1: [u8; <span class="number">672</span>],
 }
 
 <span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">4096</span>], Stage0DiceData);

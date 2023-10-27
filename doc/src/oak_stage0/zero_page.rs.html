@@ -438,6 +438,16 @@
 <a href="#438" id="438">438</a>
 <a href="#439" id="439">439</a>
 <a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -457,7 +467,9 @@
 </span><span class="kw">use crate</span>::{
     cmos::Cmos,
     fw_cfg::{find_suitable_dma_address, FwCfg},
+    BOOT_ALLOC,
 };
+<span class="kw">use </span>alloc::{ffi::CString, vec::Vec};
 <span class="kw">use </span>core::{ffi::CStr, mem::size_of, slice};
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
 <span class="kw">use </span>x86_64::PhysAddr;
@@ -688,10 +700,18 @@
     }
 
     <span class="doccomment">/// Updates the pointer to the command line parameter string in the zero page.
-    </span><span class="kw">pub fn </span>set_cmdline(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cmdline: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>CStr) {
-        <span class="self">self</span>.inner.hdr.cmd_line_ptr = cmdline.as_ptr() <span class="kw">as </span>u32;
-        <span class="comment">// As per boot protocol `cmdline_size` does not include the trailing \0.
-        </span><span class="self">self</span>.inner.hdr.cmdline_size = cmdline.to_bytes().len() <span class="kw">as </span>u32;
+    </span><span class="kw">pub fn </span>set_cmdline&lt;T: AsRef&lt;str&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, cmdline: T) {
+        <span class="kw">let </span>cmdline =
+            CString::new(cmdline.as_ref().as_bytes()).expect(<span class="string">&quot;invalid kernel command-line&quot;</span>);
+        <span class="kw">let </span>source = cmdline.as_bytes_with_nul();
+        <span class="comment">// Create and leak a buffer in the boot allocator so that it can outlive Stage 0.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>buf = Vec::with_capacity_in(source.len(), <span class="kw-2">&amp;</span>BOOT_ALLOC);
+        buf.resize(buf.capacity(), <span class="number">0u8</span>);
+        buf.copy_from_slice(source);
+        <span class="kw">let </span>buf = buf.leak();
+        <span class="self">self</span>.inner.hdr.cmd_line_ptr = buf.as_ptr() <span class="kw">as </span>u32;
+        <span class="comment">// As per the Linux boot protocol `cmdline_size` does not include the trailing \0.
+        </span><span class="self">self</span>.inner.hdr.cmdline_size = cmdline.as_bytes().len() <span class="kw">as </span>u32;
     }
 
     <span class="doccomment">/// Adds a header to the list of setup headers.

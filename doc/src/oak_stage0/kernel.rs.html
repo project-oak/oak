@@ -227,10 +227,6 @@
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
 <a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -247,11 +243,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{
-    fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg},
-    BOOT_ALLOC,
-};
-<span class="kw">use </span>alloc::vec::Vec;
+</span><span class="kw">use </span><span class="kw">crate</span>::fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg};
+<span class="kw">use </span>alloc::{ffi::CString, string::String, vec};
 <span class="kw">use </span>core::{ffi::CStr, slice};
 <span class="kw">use </span>elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
 <span class="kw">use </span>oak_linux_boot_params::BootE820Entry;
@@ -302,7 +295,7 @@
 ///
 /// We first try to read it using the traditional selector. If it is not available there we try to
 /// read it using a custom file path.
-</span><span class="kw">pub fn </span>try_load_cmdline(fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>CStr&gt; {
+</span><span class="kw">pub fn </span>try_load_cmdline(fw_cfg: <span class="kw-2">&amp;mut </span>FwCfg) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
     <span class="kw">let </span>(cmdline_file, buffer_size) = <span class="kw">if let </span><span class="prelude-val">Some</span>(cmdline_file) = fw_cfg.get_cmdline_file() {
         <span class="comment">// The provided value is already null-terminated.
         </span><span class="kw">let </span>size = cmdline_file.size();
@@ -316,8 +309,7 @@
     };
     <span class="comment">// Safety: len will always be at least 1 byte, and we don&#39;t care about alignment. If the
     // allocation fails, we won&#39;t try coercing it into a slice.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>buf = Vec::with_capacity_in(buffer_size, <span class="kw-2">&amp;</span>BOOT_ALLOC);
-    buf.resize(buffer_size, <span class="number">0u8</span>);
+    </span><span class="kw">let </span><span class="kw-2">mut </span>buf = <span class="macro">vec!</span>[<span class="number">0u8</span>; buffer_size];
     <span class="kw">let </span>actual_size = fw_cfg
         .read_file(<span class="kw-2">&amp;</span>cmdline_file, <span class="kw-2">&amp;mut </span>buf)
         .expect(<span class="string">&quot;could not read cmdline&quot;</span>);
@@ -327,11 +319,11 @@
         <span class="string">&quot;cmdline size did not match expected size&quot;
     </span>);
 
-    <span class="kw">let </span>cmdline = CStr::from_bytes_with_nul(buf.leak()).expect(<span class="string">&quot;invalid kernel command-line&quot;</span>);
-    <span class="macro">log::debug!</span>(
-        <span class="string">&quot;Kernel cmdline: {}&quot;</span>,
-        cmdline.to_str().expect(<span class="string">&quot;invalid kernel commande-line&quot;</span>)
-    );
+    <span class="kw">let </span>cmdline = CString::from_vec_with_nul(buf)
+        .expect(<span class="string">&quot;invalid kernel command-line&quot;</span>)
+        .into_string()
+        .expect(<span class="string">&quot;invalid kernel command-line&quot;</span>);
+    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel cmdline: {}&quot;</span>, cmdline);
     <span class="prelude-val">Some</span>(cmdline)
 }
 

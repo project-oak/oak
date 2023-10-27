@@ -146,6 +146,7 @@
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
 <a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -171,7 +172,7 @@
         KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
         SETUP_DATA_MEASUREMENT_ID,
     },
-    evidence::{Stage0DiceData, TeePlatform},
+    evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
 };
 <span class="kw">use </span>oak_sev_guest::guest::AttestationReport;
 <span class="kw">use </span>p256::ecdsa::SigningKey;
@@ -268,6 +269,7 @@
     <span class="kw">let </span>report = get_attestation(report_data).expect(<span class="string">&quot;couldn&#39;t get attestation report.&quot;</span>);
     <span class="kw">let </span>report_bytes = report.as_bytes();
 
+    result.magic = STAGE0_MAGIC;
     result.root_layer_evidence.tee_platform = TeePlatform::AmdSevSnp <span class="kw">as </span>u64;
     result.root_layer_evidence.remote_attestation_report[..report_bytes.len()]
         .copy_from_slice(report_bytes);

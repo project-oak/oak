@@ -366,6 +366,14 @@
 <a href="#366" id="366">366</a>
 <a href="#367" id="367">367</a>
 <a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -390,9 +398,10 @@
 </span><span class="kw">extern crate </span>alloc;
 
 <span class="kw">use crate</span>::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
-<span class="kw">use </span>alloc::boxed::Box;
+<span class="kw">use </span>alloc::{boxed::Box, format};
 <span class="kw">use </span>core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
+<span class="kw">use </span>oak_dice::evidence::DICE_DATA_CMDLINE_PARAM;
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">use </span>oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
 <span class="kw">use </span>sha2::{Digest, Sha256};
@@ -585,12 +594,8 @@
         zero_page.add_setup_data(setup_data);
     }
 
-    <span class="kw">let </span>cmdline_measurement = kernel::try_load_cmdline(<span class="kw-2">&amp;mut </span>fwcfg)
-        .map(|cmdline| {
-            zero_page.set_cmdline(cmdline);
-            measure_byte_slice(cmdline.to_bytes())
-        })
-        .unwrap_or_default();
+    <span class="kw">let </span>cmdline = kernel::try_load_cmdline(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
+    <span class="kw">let </span>cmdline_measurement = measure_byte_slice(cmdline.as_bytes());
 
     <span class="kw">let </span>kernel_info = kernel::try_load_kernel_image(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table())
         .unwrap_or(kernel::KernelInfo::default());
@@ -681,6 +686,17 @@
         dice_data.as_bytes().len(),
         E820EntryType::DiceData,
     ));
+
+    <span class="comment">// Append the DICE data address to the kernel command-line.
+    </span><span class="kw">let </span>extra = <span class="macro">format!</span>(<span class="string">&quot;--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}&quot;</span>);
+    <span class="kw">let </span>cmdline = <span class="kw">if </span>cmdline.is_empty() {
+        extra
+    } <span class="kw">else if </span>cmdline.contains(<span class="string">&quot;--&quot;</span>) {
+        <span class="macro">format!</span>(<span class="string">&quot;{} {}&quot;</span>, cmdline, extra)
+    } <span class="kw">else </span>{
+        <span class="macro">format!</span>(<span class="string">&quot;{} -- {}&quot;</span>, cmdline, extra)
+    };
+    zero_page.set_cmdline(cmdline);
 
     <span class="macro">log::info!</span>(<span class="string">&quot;jumping to kernel at {:#018x}&quot;</span>, entry.as_u64());
 
