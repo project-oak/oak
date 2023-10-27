@@ -18,3 +18,6 @@ tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tokio-stream = { version = "*", features = ["net"] }
 tonic = { workspace = true }
 tower = "*"
+
+[dev-dependencies]
+oak_functions_test_utils = { workspace = true }
