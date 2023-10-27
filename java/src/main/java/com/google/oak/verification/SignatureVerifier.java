@@ -98,8 +98,8 @@ public class SignatureVerifier {
     return success
         ? Optional.empty()
         : failure(exception != null
-            ? String.format("%s: %s", exception.getClass().getName(), exception.getMessage())
-            : "Signature verification failed");
+                ? String.format("%s: %s", exception.getClass().getName(), exception.getMessage())
+                : "Signature verification failed");
   }
 
   private static final String PEM_HEADER = "-----BEGIN PUBLIC KEY-----";
@@ -117,6 +117,5 @@ public class SignatureVerifier {
     return Base64.getDecoder().decode(trimmed);
   }
 
-  private SignatureVerifier() {
-  }
+  private SignatureVerifier() {}
 }

@@ -157,6 +157,5 @@ public class LogEntryVerifier {
     }
   }
 
-  private LogEntryVerifier() {
-  }
+  private LogEntryVerifier() {}
 }
