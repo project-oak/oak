@@ -15,7 +15,7 @@
 // limitations under the License.
 //
 
-package com.google.oak.transparency;
+package com.google.oak.verification;
 
 /** Signals verification failure and provides a human-readable cause. */
 public class Failure {
