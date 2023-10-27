@@ -305,7 +305,7 @@
             <span class="comment">// Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
             </span><span class="kw">let </span>response_result: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, micro_rpc::Status&gt; =
-                instance.handle_user_request(<span class="kw-2">&amp;</span>r);
+                instance.handle_user_request(r);
             <span class="kw">let </span>response: micro_rpc::ResponseWrapper = response_result.into();
             response.encode_to_vec()
         })
