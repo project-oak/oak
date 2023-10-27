@@ -27,23 +27,6 @@ package(
 )
 
 proto_library(
-    name = "dice_proto",
-    srcs = ["dice.proto"],
-    deps = [":evidence_proto"],
-)
-
-proto_library(
-    name = "endorsement_proto",
-    srcs = ["endorsement.proto"],
-    deps = [":evidence_proto"],
-)
-
-proto_library(
-    name = "evidence_proto",
-    srcs = ["evidence.proto"],
-)
-
-proto_library(
     name = "messages_proto",
     srcs = ["messages.proto"],
     deps = ["//oak_crypto/proto/v1:crypto_proto"],
@@ -120,8 +103,6 @@ java_grpc_library(
 build_test(
     name = "build_test",
     targets = [
-        ":dice_proto",
-        ":endorsement_proto",
         ":messages_proto",
         ":service_streaming_cc_grpc",
         ":service_streaming_java_grpc",

@@ -16,12 +16,13 @@
 
 syntax = "proto3";
 
-package oak.remote_attestation.v1;
+package oak.attestation.v1;
 
-import "oak_remote_attestation/proto/v1/evidence.proto";
+import "proto/attestation/evidence.proto";
 
+option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
-option java_package = "com.google.oak.remote_attestation.v1";
+option java_package = "com.google.oak.attestation.v1";
 
 // Message for passing embedded certificate authoricy information between layers.
 // Will never appear in the evidence that is sent to the client.
