@@ -10,7 +10,6 @@ anyhow = "*"
 async-trait = "*"
 futures-util = "*"
 log = "*"
-micro_rpc = { workspace = true }
 oak_crypto = { workspace = true }
 prost = { workspace = true }
 tonic = { workspace = true }
