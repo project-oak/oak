@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package com.google.oak.transparency;
+package com.google.oak.verification;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

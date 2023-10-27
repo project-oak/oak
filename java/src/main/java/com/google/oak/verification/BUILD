@@ -23,22 +23,22 @@ package(
 
 java_binary(
     name = "log_entry_verifier",
-    main_class = "com.google.oak.transparency.LogEntryVerifier",
+    main_class = "com.google.oak.verification.LogEntryVerifier",
     runtime_deps = [
-        ":transparency",
+        ":verification",
     ],
 )
 
 java_binary(
     name = "signature_verifier",
-    main_class = "com.google.oak.transparency.SignatureVerifier",
+    main_class = "com.google.oak.verification.SignatureVerifier",
     runtime_deps = [
-        ":transparency",
+        ":verification",
     ],
 )
 
 java_library(
-    name = "transparency",
+    name = "verification",
     srcs = glob(["*.java"]),
     deps = [
         "@com_google_code_gson_gson",
