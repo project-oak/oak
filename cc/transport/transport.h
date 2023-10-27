@@ -41,7 +41,7 @@ class Transport {
   virtual ~Transport() = default;
 
   // Sends a request to the enclave and returns a response.
-  virtual absl::StatusOr<oak::crypto::v1::EncryptedResponse> Invoke(
+  virtual absl::StatusOr<::oak::crypto::v1::EncryptedResponse> Invoke(
       const oak::crypto::v1::EncryptedRequest& encrypted_request) = 0;
 };
 

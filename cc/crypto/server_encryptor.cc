@@ -22,6 +22,7 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "cc/crypto/common.h"
 #include "cc/crypto/hpke/recipient_context.h"
 #include "oak_crypto/proto/v1/crypto.pb.h"

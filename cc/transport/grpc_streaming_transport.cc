@@ -16,6 +16,8 @@
 
 #include "cc/transport/grpc_streaming_transport.h"
 
+#include <string>
+
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"

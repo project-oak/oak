@@ -32,7 +32,7 @@ JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseSe
       convert_jbytearray_to_string(env, serialized_recipient_public_key);
   std::string info_str = convert_jbytearray_to_string(env, info);
 
-  absl::StatusOr<std::unique_ptr<oak::crypto::SenderContext>> native_sender_context =
+  absl::StatusOr<std::unique_ptr<::oak::crypto::SenderContext>> native_sender_context =
       oak::crypto::SetupBaseSender(serialized_recipient_public_key_str, info_str);
   if (!native_sender_context.ok()) {
     return {};
@@ -82,7 +82,7 @@ JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseRe
   key_pair.public_key = public_key_str;
   key_pair.private_key = private_key_str;
 
-  absl::StatusOr<std::unique_ptr<oak::crypto::RecipientContext>> native_recipient_context =
+  absl::StatusOr<std::unique_ptr<::oak::crypto::RecipientContext>> native_recipient_context =
       oak::crypto::SetupBaseRecipient(serialized_encapsulated_public_key_str, key_pair, info_str);
   if (!native_recipient_context.ok()) {
     return {};

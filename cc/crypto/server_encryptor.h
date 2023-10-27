@@ -56,8 +56,8 @@ class ServerEncryptor {
   //
   // Returns an [`oak.crypto.EncryptedResponse`] proto message.
   // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
-  absl::StatusOr<oak::crypto::v1::EncryptedResponse> Encrypt(absl::string_view plaintext,
-                                                             absl::string_view associated_data);
+  absl::StatusOr<::oak::crypto::v1::EncryptedResponse> Encrypt(absl::string_view plaintext,
+                                                               absl::string_view associated_data);
 
  private:
   RecipientContextGenerator& recipient_context_generator_;
