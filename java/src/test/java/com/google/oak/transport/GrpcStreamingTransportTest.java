@@ -80,7 +80,7 @@ public class GrpcStreamingTransportTest {
           // TODO(#4037): Use explicit crypto protos.
           responseWrapper = ResponseWrapper.newBuilder()
                                 .setInvokeResponse(InvokeResponse.newBuilder().setEncryptedBody(
-                                    ByteString.copyFrom(TEST_RESPONSE)))
+                                    ""))
                                 .build();
           responseObserver.onNext(responseWrapper);
           break;
@@ -150,7 +150,8 @@ public class GrpcStreamingTransportTest {
     Result<EncryptedResponse, String> invokeResult =
         transport.invoke(EncryptedRequest.getDefaultInstance());
     Assert.assertTrue(invokeResult.isSuccess());
-    Assert.assertArrayEquals(invokeResult.unwrap("missing result"), TEST_RESPONSE);
+    Assert.assertEquals(
+        invokeResult.unwrap("missing result"), EncryptedResponse.getDefaultInstance());
 
     // The following call may throw a general {@code Exception}.
     // The test succeeds if it doesn't throw an exception.
