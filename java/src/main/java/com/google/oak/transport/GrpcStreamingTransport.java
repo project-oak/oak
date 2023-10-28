@@ -17,8 +17,8 @@
 package com.google.oak.transport;
 
 import com.google.oak.session.v1.EndorsedEvidence;
-import com.google.oak.session.v1.GetPublicKeyRequest;
-import com.google.oak.session.v1.GetPublicKeyResponse;
+import com.google.oak.session.v1.GetEndorsedEvidenceRequest;
+import com.google.oak.session.v1.GetEndorsedEvidenceResponse;
 import com.google.oak.session.v1.InvokeRequest;
 import com.google.oak.session.v1.InvokeResponse;
 import com.google.oak.session.v1.RequestWrapper;
@@ -65,7 +65,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   @Override
   public Result<EndorsedEvidence, String> getEvidence() {
     RequestWrapper requestWrapper = RequestWrapper.newBuilder()
-                                        .setGetPublicKeyRequest(GetPublicKeyRequest.newBuilder())
+                                        .setGetEndorsedEvidenceRequest(GetEndorsedEvidenceRequest.newBuilder())
                                         .build();
     logger.log(Level.INFO, "sending get public key request: " + requestWrapper);
     this.requestObserver.onNext(requestWrapper);
@@ -83,7 +83,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     }
 
     logger.log(Level.INFO, "received get public key response: " + responseWrapper);
-    GetPublicKeyResponse response = responseWrapper.getGetPublicKeyResponse();
+    GetEndorsedEvidenceResponse response = responseWrapper.getGetEndorsedEvidenceResponse();
 
     return Result.success(response.getEndorsedEvidence());
   }

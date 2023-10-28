@@ -20,8 +20,8 @@ import static org.mockito.AdditionalAnswers.delegatesTo;
 import static org.mockito.Mockito.mock;
 
 import com.google.oak.session.v1.EndorsedEvidence;
-import com.google.oak.session.v1.GetPublicKeyRequest;
-import com.google.oak.session.v1.GetPublicKeyResponse;
+import com.google.oak.session.v1.GetEndorsedEvidenceRequest;
+import com.google.oak.session.v1.GetEndorsedEvidenceResponse;
 import com.google.oak.session.v1.InvokeRequest;
 import com.google.oak.session.v1.InvokeResponse;
 import com.google.oak.session.v1.RequestWrapper;
@@ -66,10 +66,10 @@ public class GrpcStreamingTransportTest {
       ResponseWrapper responseWrapper;
       RequestWrapper.RequestCase requestCase = request.getRequestCase();
       switch (requestCase) {
-        case GET_PUBLIC_KEY_REQUEST:
+        case GET_ENDORSED_EVIDENCE_REQUEST:
           responseWrapper =
               ResponseWrapper.newBuilder()
-                  .setGetPublicKeyResponse(GetPublicKeyResponse.newBuilder().setEndorsedEvidence(
+                  .setGetEndorsedEvidenceResponse(GetEndorsedEvidenceResponse.newBuilder().setEndorsedEvidence(
                       EndorsedEvidence.getDefaultInstance()))
                   .build();
           responseObserver.onNext(responseWrapper);

@@ -16,7 +16,7 @@
 
 use crate::proto::oak::session::v1::{
     request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
-    AttestationEvidence, GetPublicKeyRequest, InvokeRequest, RequestWrapper,
+    AttestationEvidence, GetEndorsedEvidenceRequest, InvokeRequest, RequestWrapper,
 };
 use anyhow::{anyhow, Context};
 use oak_crypto::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
@@ -99,8 +99,8 @@ impl EvidenceProvider for GrpcStreamingTransport {
             .rpc_client
             .stream(futures_util::stream::iter(vec![RequestWrapper {
                 // TODO(#3641): Rename the corresponding message to `GetEvidence`.
-                request: Some(request_wrapper::Request::GetPublicKeyRequest(
-                    GetPublicKeyRequest {},
+                request: Some(request_wrapper::Request::GetEndorsedEvidenceRequest(
+                    GetEndorsedEvidenceRequest {},
                 )),
             }]))
             .await
@@ -114,7 +114,7 @@ impl EvidenceProvider for GrpcStreamingTransport {
             .context("gRPC server error when requesting attestation evidence")?
             .context("received empty response stream")?;
 
-        let Some(response_wrapper::Response::GetPublicKeyResponse(get_evidence_response)) =
+        let Some(response_wrapper::Response::GetEndorsedEvidenceResponse(get_evidence_response)) =
             response_wrapper.response
         else {
             return Err(anyhow::anyhow!(

@@ -35,7 +35,7 @@ namespace {
 using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
 using ::oak::session::v1::EndorsedEvidence;
-using ::oak::session::v1::GetPublicKeyRequest;
+using ::oak::session::v1::GetEndorsedEvidenceRequest;
 using ::oak::session::v1::InvokeRequest;
 using ::oak::session::v1::RequestWrapper;
 using ::oak::session::v1::ResponseWrapper;
@@ -44,8 +44,8 @@ using ::oak::session::v1::ResponseWrapper;
 absl::StatusOr<EndorsedEvidence> GrpcStreamingTransport::GetEvidence() {
   // Create request.
   RequestWrapper request;
-  GetPublicKeyRequest get_public_key_request;
-  *request.mutable_get_public_key_request() = get_public_key_request;
+  GetEndorsedEvidenceRequest get_endorsed_evidence_request;
+  *request.mutable_get_endorsed_evidence_request() = get_endorsed_evidence_request;
 
   // Send request.
   auto response = Send(request);
@@ -55,10 +55,10 @@ absl::StatusOr<EndorsedEvidence> GrpcStreamingTransport::GetEvidence() {
 
   // Process response.
   switch (response->response_case()) {
-    case ResponseWrapper::kGetPublicKeyResponseFieldNumber:
-      return response->get_public_key_response().attestation_bundle();
+    case ResponseWrapper::kGetEndorsedEvidenceResponseFieldNumber:
+      return response->get_endorsed_evidence_response().attestation_bundle();
     case ResponseWrapper::kInvokeResponseFieldNumber:
-      return absl::InternalError("received InvokeResponse instead of GetPublicKeyResponse");
+      return absl::InternalError("received InvokeResponse instead of GetEndorsedEvidenceResponse");
     case ResponseWrapper::RESPONSE_NOT_SET:
     default:
       return absl::InternalError("received unsupported response: " + response->DebugString());
@@ -84,8 +84,8 @@ absl::StatusOr<EncryptedResponse> GrpcStreamingTransport::Invoke(
 
   // Process response.
   switch (response->response_case()) {
-    case ResponseWrapper::kGetPublicKeyResponseFieldNumber:
-      return absl::InternalError("received GetPublicKeyResponse instead of InvokeResponse");
+    case ResponseWrapper::kGetEndorsedEvidenceResponseFieldNumber:
+      return absl::InternalError("received GetEndorsedEvidenceResponse instead of InvokeResponse");
     case ResponseWrapper::kInvokeResponseFieldNumber: {
       // TODO(#4037): Use explicit crypto protos.
       EncryptedResponse encrypted_response;

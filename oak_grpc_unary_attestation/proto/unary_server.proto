@@ -70,5 +70,5 @@ service UnarySession {
 
   // Gets the public key and the attestation report that binds the public key to a specific instance
   // of the code running in a TEE.
-  rpc GetPublicKeyInfo(google.protobuf.Empty) returns (PublicKeyInfo);
+  rpc GetEndorsedEvidenceInfo(google.protobuf.Empty) returns (PublicKeyInfo);
 }

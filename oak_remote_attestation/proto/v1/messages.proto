@@ -89,9 +89,9 @@ message ApplicationData {
   bytes config = 2;
 }
 
-message GetPublicKeyRequest {}
+message GetEndorsedEvidenceRequest {}
 
-message GetPublicKeyResponse {
+message GetEndorsedEvidenceResponse {
   // The enclave's signing and encryption public keys and attestation evidence about them.
   EndorsedEvidence attestation_bundle = 1;
 }

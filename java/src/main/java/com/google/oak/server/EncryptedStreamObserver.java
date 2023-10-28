@@ -22,7 +22,7 @@ import com.google.oak.crypto.hpke.KeyPair;
 import com.google.oak.session.v1.EndorsedEvidence;
 import com.google.oak.session.v1.AttestationEndorsement;
 import com.google.oak.session.v1.AttestationEvidence;
-import com.google.oak.session.v1.GetPublicKeyResponse;
+import com.google.oak.session.v1.GetEndorsedEvidenceResponse;
 import com.google.oak.session.v1.InvokeResponse;
 import com.google.oak.session.v1.RequestWrapper;
 import com.google.oak.session.v1.ResponseWrapper;
@@ -80,11 +80,11 @@ public final class EncryptedStreamObserver<I, O> implements StreamObserver<Reque
 
   @Override
   public void onNext(RequestWrapper message) {
-    if (message.hasGetPublicKeyRequest()) {
-      logger.log(Level.INFO, "Received GetPublicKeyRequest request");
+    if (message.hasGetEndorsedEvidenceRequest()) {
+      logger.log(Level.INFO, "Received GetEndorsedEvidenceRequest request");
       ResponseWrapper response =
-          ResponseWrapper.newBuilder().setGetPublicKeyResponse(createPublicKeyResponse()).build();
-      logger.log(Level.INFO, "Sending GetPublicKeyResponse response");
+          ResponseWrapper.newBuilder().setGetEndorsedEvidenceResponse(createPublicKeyResponse()).build();
+      logger.log(Level.INFO, "Sending GetEndorsedEvidenceResponse response");
       outboundObserver.onNext(response);
     } else if (message.hasInvokeRequest()) {
       logger.log(Level.INFO, "Received InvokeRequest request");
@@ -99,7 +99,7 @@ public final class EncryptedStreamObserver<I, O> implements StreamObserver<Reque
     } else {
       onError(new InvalidProtocolBufferException(
           "Got unexpected RequestWrapper that is neither an InvokeRequest nor a"
-          + " GetPublicKeyRequest."));
+          + " GetEndorsedEvidenceRequest."));
     }
   }
 
@@ -114,7 +114,7 @@ public final class EncryptedStreamObserver<I, O> implements StreamObserver<Reque
     outboundObserver.onCompleted();
   }
 
-  private GetPublicKeyResponse createPublicKeyResponse() {
+  private GetEndorsedEvidenceResponse createPublicKeyResponse() {
     AttestationEvidence attestationEvidence =
         AttestationEvidence.newBuilder()
             .setEncryptionPublicKey(ByteString.copyFrom(this.publicKey))
@@ -125,7 +125,7 @@ public final class EncryptedStreamObserver<I, O> implements StreamObserver<Reque
                                               .setAttestationEvidence(attestationEvidence)
                                               .setAttestationEndorsement(attestationEndorsement)
                                               .build();
-    return GetPublicKeyResponse.newBuilder().setEndorsedEvidence(EndorsedEvidence).build();
+    return GetEndorsedEvidenceResponse.newBuilder().setEndorsedEvidence(EndorsedEvidence).build();
   }
 
   private Result<ResponseWrapper, Exception> processMessage(Encryptor.DecryptionResult decrypted) {

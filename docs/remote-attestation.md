@@ -44,9 +44,9 @@ deactivate T
 
 Note over C,P: Fetch Enclave Public Key
 
-C->>U: GetPublicKeyRequest
+C->>U: GetEndorsedEvidenceRequest
 activate U
-U->>C: GetPublicKeyResponse<br>With Additional Evidence<br>EPK,AR,Ev
+U->>C: GetEndorsedEvidenceResponse<br>With Additional Evidence<br>EPK,AR,Ev
 deactivate U
 C-->>C: Verify AttestationReport and Enclave Public Key<br>With Additional Evidence
 

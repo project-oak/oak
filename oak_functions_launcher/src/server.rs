@@ -21,7 +21,7 @@ use crate::{
         session::v1::{
             request_wrapper, response_wrapper,
             streaming_session_server::{StreamingSession, StreamingSessionServer},
-            EndorsedEvidence, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
+            EndorsedEvidence, AttestationEndorsement, AttestationEvidence, GetEndorsedEvidenceResponse,
             InvokeResponse, RequestWrapper, ResponseWrapper,
         },
     },
@@ -77,9 +77,9 @@ impl StreamingSession for SessionProxy {
                     .ok_or_else(|| tonic::Status::invalid_argument("empty request message"))?;
 
                 let response = match request {
-                    request_wrapper::Request::GetPublicKeyRequest(_) => {
+                    request_wrapper::Request::GetEndorsedEvidenceRequest(_) => {
 
-                        response_wrapper::Response::GetPublicKeyResponse(GetPublicKeyResponse {
+                        response_wrapper::Response::GetEndorsedEvidenceResponse(GetEndorsedEvidenceResponse {
                             attestation_bundle: Some(attestation_bundle.clone()),
                         })
                     }
