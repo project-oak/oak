@@ -19,7 +19,7 @@ package com.google.oak.server;
 import com.google.oak.crypto.Encryptor;
 import com.google.oak.crypto.ServerEncryptor;
 import com.google.oak.crypto.hpke.KeyPair;
-import com.google.oak.session.v1.AttestationBundle;
+import com.google.oak.session.v1.EndorsedEvidence;
 import com.google.oak.session.v1.AttestationEndorsement;
 import com.google.oak.session.v1.AttestationEvidence;
 import com.google.oak.session.v1.GetPublicKeyResponse;
@@ -121,11 +121,11 @@ public final class EncryptedStreamObserver<I, O> implements StreamObserver<Reque
             .build();
     // TODO(#3640): Fill out the details of the attestation.
     AttestationEndorsement attestationEndorsement = AttestationEndorsement.getDefaultInstance();
-    AttestationBundle attestationBundle = AttestationBundle.newBuilder()
+    EndorsedEvidence EndorsedEvidence = EndorsedEvidence.newBuilder()
                                               .setAttestationEvidence(attestationEvidence)
                                               .setAttestationEndorsement(attestationEndorsement)
                                               .build();
-    return GetPublicKeyResponse.newBuilder().setAttestationBundle(attestationBundle).build();
+    return GetPublicKeyResponse.newBuilder().setEndorsedEvidence(EndorsedEvidence).build();
   }
 
   private Result<ResponseWrapper, Exception> processMessage(Encryptor.DecryptionResult decrypted) {

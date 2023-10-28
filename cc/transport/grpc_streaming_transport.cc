@@ -34,14 +34,14 @@ namespace oak::transport {
 namespace {
 using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
-using ::oak::session::v1::AttestationBundle;
+using ::oak::session::v1::EndorsedEvidence;
 using ::oak::session::v1::GetPublicKeyRequest;
 using ::oak::session::v1::InvokeRequest;
 using ::oak::session::v1::RequestWrapper;
 using ::oak::session::v1::ResponseWrapper;
 }  // namespace
 
-absl::StatusOr<AttestationBundle> GrpcStreamingTransport::GetEvidence() {
+absl::StatusOr<EndorsedEvidence> GrpcStreamingTransport::GetEvidence() {
   // Create request.
   RequestWrapper request;
   GetPublicKeyRequest get_public_key_request;

@@ -43,9 +43,9 @@ message AttestationEvidence {
   bytes signed_application_data = 4;
 }
 
-// AttestationBundle contains the information that the untrusted launcher provides to the client
+// EndorsedEvidence contains the information that the untrusted launcher provides to the client
 // in response to its request for the enclave's public key(s).
-message AttestationBundle {
+message EndorsedEvidence {
   // Attestation evidence from the enclave.
   AttestationEvidence attestation_evidence = 1;
 
@@ -93,7 +93,7 @@ message GetPublicKeyRequest {}
 
 message GetPublicKeyResponse {
   // The enclave's signing and encryption public keys and attestation evidence about them.
-  AttestationBundle attestation_bundle = 1;
+  EndorsedEvidence attestation_bundle = 1;
 }
 
 message InvokeRequest {
@@ -119,7 +119,7 @@ message GetEncryptionKeyRequest {
 
 message GetEncryptionKeyResponse {
   // Attestation evidence and public key.
-  AttestationBundle endorsed_evidence = 1;
+  EndorsedEvidence endorsed_evidence = 1;
 
   // Encrypted private key of the leader enclave.
   bytes encrypted_encryption_key = 2;

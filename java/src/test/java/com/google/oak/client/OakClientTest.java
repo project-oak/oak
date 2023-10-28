@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 import com.google.oak.crypto.ServerEncryptor;
 import com.google.oak.crypto.hpke.KeyPair;
 import com.google.oak.remote_attestation.InsecureAttestationVerifier;
-import com.google.oak.session.v1.AttestationBundle;
+import com.google.oak.session.v1.EndorsedEvidence;
 import com.google.oak.session.v1.AttestationEndorsement;
 import com.google.oak.session.v1.AttestationEvidence;
 import com.google.oak.transport.EvidenceProvider;
@@ -55,18 +55,18 @@ public class OakClientTest {
     }
 
     @Override
-    public Result<AttestationBundle, String> getEvidence() {
+    public Result<EndorsedEvidence, String> getEvidence() {
       AttestationEvidence attestationEvidence =
           AttestationEvidence.newBuilder()
               .setEncryptionPublicKey(ByteString.copyFrom(keyPair.publicKey))
               .build();
       AttestationEndorsement attestationEndorsement = AttestationEndorsement.getDefaultInstance();
-      AttestationBundle attestationBundle = AttestationBundle.newBuilder()
+      EndorsedEvidence EndorsedEvidence = EndorsedEvidence.newBuilder()
                                                 .setAttestationEvidence(attestationEvidence)
                                                 .setAttestationEndorsement(attestationEndorsement)
                                                 .build();
 
-      return Result.success(attestationBundle);
+      return Result.success(EndorsedEvidence);
     }
 
     @Override

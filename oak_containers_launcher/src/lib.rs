@@ -28,7 +28,7 @@ mod qemu;
 mod server;
 
 use crate::proto::oak::session::v1::{
-    AttestationBundle, AttestationEndorsement, AttestationEvidence, BinaryAttestation,
+    EndorsedEvidence, AttestationEndorsement, AttestationEvidence, BinaryAttestation,
 };
 use anyhow::Context;
 use clap::Parser;
@@ -103,7 +103,7 @@ pub struct Launcher {
     attestation_endorsement: AttestationEndorsement,
     // Endorsed Attestation Evidence consists of Attestation Evidence (initialized by the
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
-    endorsed_attestation_evidence: Option<AttestationBundle>,
+    endorsed_attestation_evidence: Option<EndorsedEvidence>,
     // Receiver that is used to get the Attestation Evidence from the server implementation.
     attestation_evidence_receiver: Option<Receiver<AttestationEvidence>>,
     app_ready_notifier: Option<Receiver<()>>,
@@ -188,7 +188,7 @@ impl Launcher {
 
     /// Gets the endorsed attestation evidence that the untrusted application can send to remote
     /// clients, which will verify it before connecting.
-    pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<AttestationBundle> {
+    pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence> {
         // If we haven't received an attestation evidence, wait for it.
         if let Some(receiver) = self.attestation_evidence_receiver.take() {
             // Set a timeout since we don't want to wait forever if the VM didn't start properly.
@@ -196,7 +196,7 @@ impl Launcher {
                 .await
                 .context("couldn't get attestation evidence before timeout")?
                 .context("no attestation evidence available")?;
-            let endorsed_attestation_evidence = AttestationBundle {
+            let endorsed_attestation_evidence = EndorsedEvidence {
                 attestation_evidence: Some(evidence),
                 attestation_endorsement: Some(self.attestation_endorsement.clone()),
             };

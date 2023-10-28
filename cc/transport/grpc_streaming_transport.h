@@ -38,7 +38,7 @@ class GrpcStreamingTransport : public TransportWrapper {
           channel_reader_writer)
       : channel_reader_writer_(std::move(channel_reader_writer)) {}
 
-  absl::StatusOr<::oak::session::v1::AttestationBundle> GetEvidence() override;
+  absl::StatusOr<::oak::session::v1::EndorsedEvidence> GetEvidence() override;
   absl::StatusOr<::oak::crypto::v1::EncryptedResponse> Invoke(
       const oak::crypto::v1::EncryptedRequest& encrypted_request) override;
 

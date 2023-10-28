@@ -27,7 +27,7 @@ mod proto {
 mod app_client;
 
 use crate::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
-use oak_containers_launcher::{proto::oak::session::v1::AttestationBundle, Launcher};
+use oak_containers_launcher::{proto::oak::session::v1::EndorsedEvidence, Launcher};
 
 pub struct UntrustedApp {
     launcher: Launcher,
@@ -49,7 +49,7 @@ impl UntrustedApp {
         })
     }
 
-    pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<AttestationBundle> {
+    pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence> {
         self.launcher.get_endorsed_evidence().await
     }
 

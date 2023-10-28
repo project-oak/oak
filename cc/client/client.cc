@@ -34,7 +34,7 @@ using ::oak::crypto::DecryptionResult;
 using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
 using ::oak::remote_attestation::AttestationVerifier;
-using ::oak::session::v1::AttestationBundle;
+using ::oak::session::v1::EndorsedEvidence;
 using ::oak::transport::TransportWrapper;
 }  // namespace
 
@@ -42,7 +42,7 @@ constexpr absl::string_view kEmptyAssociatedData = "";
 
 absl::StatusOr<std::unique_ptr<OakClient>> OakClient::Create(
     std::unique_ptr<TransportWrapper> transport, AttestationVerifier& verifier) {
-  absl::StatusOr<AttestationBundle> endorsed_evidence = transport->GetEvidence();
+  absl::StatusOr<EndorsedEvidence> endorsed_evidence = transport->GetEvidence();
   if (!endorsed_evidence.ok()) {
     return endorsed_evidence.status();
   }

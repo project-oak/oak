@@ -16,7 +16,7 @@
 
 package com.google.oak.transport;
 
-import com.google.oak.session.v1.AttestationBundle;
+import com.google.oak.session.v1.EndorsedEvidence;
 import com.google.oak.session.v1.GetPublicKeyRequest;
 import com.google.oak.session.v1.GetPublicKeyResponse;
 import com.google.oak.session.v1.InvokeRequest;
@@ -60,10 +60,10 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   /**
    * Returns evidence about the trustworthiness of a remote server.
    *
-   * @return {@code AttestationBundle} wrapped in a {@code Result}
+   * @return {@code EndorsedEvidence} wrapped in a {@code Result}
    */
   @Override
-  public Result<AttestationBundle, String> getEvidence() {
+  public Result<EndorsedEvidence, String> getEvidence() {
     RequestWrapper requestWrapper = RequestWrapper.newBuilder()
                                         .setGetPublicKeyRequest(GetPublicKeyRequest.newBuilder())
                                         .build();
@@ -85,7 +85,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     logger.log(Level.INFO, "received get public key response: " + responseWrapper);
     GetPublicKeyResponse response = responseWrapper.getGetPublicKeyResponse();
 
-    return Result.success(response.getAttestationBundle());
+    return Result.success(response.getEndorsedEvidence());
   }
 
   /**

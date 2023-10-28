@@ -39,7 +39,7 @@ using ::oak::crypto::ServerEncryptor;
 using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
 using ::oak::remote_attestation::InsecureAttestationVerifier;
-using ::oak::session::v1::AttestationBundle;
+using ::oak::session::v1::EndorsedEvidence;
 using ::oak::transport::TransportWrapper;
 using ::testing::StrEq;
 
@@ -64,8 +64,8 @@ class TestTransport : public TransportWrapper {
   explicit TestTransport(EncryptionKeyProvider encryption_key_provider)
       : encryption_key_provider_(encryption_key_provider) {}
 
-  absl::StatusOr<AttestationBundle> GetEvidence() override {
-    AttestationBundle endorsed_evidence;
+  absl::StatusOr<EndorsedEvidence> GetEvidence() override {
+    EndorsedEvidence endorsed_evidence;
     endorsed_evidence.mutable_attestation_evidence()->set_encryption_public_key(
         encryption_key_provider_.GetSerializedPublicKey());
     return endorsed_evidence;

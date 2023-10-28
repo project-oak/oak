@@ -19,7 +19,7 @@ package com.google.oak.transport;
 import static org.mockito.AdditionalAnswers.delegatesTo;
 import static org.mockito.Mockito.mock;
 
-import com.google.oak.session.v1.AttestationBundle;
+import com.google.oak.session.v1.EndorsedEvidence;
 import com.google.oak.session.v1.GetPublicKeyRequest;
 import com.google.oak.session.v1.GetPublicKeyResponse;
 import com.google.oak.session.v1.InvokeRequest;
@@ -69,8 +69,8 @@ public class GrpcStreamingTransportTest {
         case GET_PUBLIC_KEY_REQUEST:
           responseWrapper =
               ResponseWrapper.newBuilder()
-                  .setGetPublicKeyResponse(GetPublicKeyResponse.newBuilder().setAttestationBundle(
-                      AttestationBundle.getDefaultInstance()))
+                  .setGetPublicKeyResponse(GetPublicKeyResponse.newBuilder().setEndorsedEvidence(
+                      EndorsedEvidence.getDefaultInstance()))
                   .build();
           responseObserver.onNext(responseWrapper);
           break;
@@ -141,7 +141,7 @@ public class GrpcStreamingTransportTest {
   public void testGrpcStreamingTransport() throws Exception {
     GrpcStreamingTransport transport = new GrpcStreamingTransport(client::stream);
 
-    Result<AttestationBundle, String> getEvidenceResult = transport.getEvidence();
+    Result<EndorsedEvidence, String> getEvidenceResult = transport.getEvidence();
     Assert.assertTrue(getEvidenceResult.isSuccess());
 
     Result<byte[], String> invokeResult = transport.invoke(TEST_REQUEST);

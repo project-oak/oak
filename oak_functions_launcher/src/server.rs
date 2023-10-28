@@ -21,7 +21,7 @@ use crate::{
         session::v1::{
             request_wrapper, response_wrapper,
             streaming_session_server::{StreamingSession, StreamingSessionServer},
-            AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
+            EndorsedEvidence, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
             InvokeResponse, RequestWrapper, ResponseWrapper,
         },
     },
@@ -60,7 +60,7 @@ impl StreamingSession for SessionProxy {
             binary_attestation: None,
             application_data: None,
         };
-        let attestation_bundle = AttestationBundle {
+        let attestation_bundle = EndorsedEvidence {
             attestation_evidence: Some(attestation_evidence),
             attestation_endorsement: Some(attestation_endorsement),
         };

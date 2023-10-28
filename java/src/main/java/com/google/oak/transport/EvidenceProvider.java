@@ -16,7 +16,7 @@
 
 package com.google.oak.transport;
 
-import com.google.oak.session.v1.AttestationBundle;
+import com.google.oak.session.v1.EndorsedEvidence;
 import com.google.oak.util.Result;
 
 /** An interface for providing an enclave evidence. */
@@ -24,7 +24,7 @@ public interface EvidenceProvider {
   /**
    * Returns evidence about the trustworthiness of a remote server.
    *
-   * @return {@code AttestationBundle} wrapped in a {@code Result}
+   * @return {@code EndorsedEvidence} wrapped in a {@code Result}
    */
-  abstract Result<AttestationBundle, String> getEvidence();
+  abstract Result<EndorsedEvidence, String> getEvidence();
 }
