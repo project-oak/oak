@@ -1,4 +1,4 @@
-var sourcesIndex = JSON.parse('{\
+var srcIndex = JSON.parse('{\
 "benchmark":["",[],["lib.rs"]],\
 "echo":["",[],["lib.rs"]],\
 "invalid_module":["",[],["lib.rs"]],\
@@ -59,4 +59,4 @@ var sourcesIndex = JSON.parse('{\
 "weather_lookup":["",[],["lib.rs"]],\
 "xtask":["",[],["check_build_licenses.rs","check_license.rs","check_todo.rs","diffs.rs","examples.rs","files.rs","internal.rs","launcher.rs","lib.rs","testing.rs"]]\
 }');
-createSourceSidebar();
+createSrcSidebar();
