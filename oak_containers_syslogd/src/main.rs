@@ -34,6 +34,7 @@ struct Args {
     launcher_addr: String,
 }
 
+#[allow(clippy::never_loop)]
 async fn signal_handler(mut signals: Signals, term: Arc<OnceCell<()>>) {
     while let Some(signal) = signals.next().await {
         match signal {

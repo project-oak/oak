@@ -15,12 +15,12 @@
 #
 
 load(
-    "//cc/tflite_micro:build_defs.bzl",
-    "oak_copts",
-)
-load(
     "//cc:build_defs.bzl",
     "cc_static_library",
+)
+load(
+    "//cc/tflite_micro:build_defs.bzl",
+    "oak_copts",
 )
 
 package(
