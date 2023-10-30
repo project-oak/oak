@@ -26,7 +26,7 @@ java_test(
     test_class = "com.google.oak.crypto.EncryptorTest",
     deps = [
         "//java/src/main/java/com/google/oak/crypto:client_encryptor",
-        "//java/src/main/java/com/google/oak/crypto:encryptor",
+        "//java/src/main/java/com/google/oak/crypto:decryption_result",
         "//java/src/main/java/com/google/oak/crypto:server_encryptor",
         "//java/src/main/java/com/google/oak/crypto/hpke",
         "//java/src/main/java/com/google/oak/util",

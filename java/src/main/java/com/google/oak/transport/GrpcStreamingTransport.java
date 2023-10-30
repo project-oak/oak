@@ -16,6 +16,8 @@
 
 package com.google.oak.transport;
 
+import com.google.oak.crypto.v1.EncryptedRequest;
+import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.session.v1.AttestationBundle;
 import com.google.oak.session.v1.GetPublicKeyRequest;
 import com.google.oak.session.v1.GetPublicKeyResponse;
@@ -25,6 +27,8 @@ import com.google.oak.session.v1.RequestWrapper;
 import com.google.oak.session.v1.ResponseWrapper;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ExtensionRegistry;
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
 import java.util.function.Function;
@@ -91,18 +95,16 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   /**
    * Sends a request to the enclave and returns a response.
    *
-   * @param requestBytes a serialized {@code oak.crypto.EncryptedRequest} wrapped
-   *                     in a {@code
-   *     Result}
-   * @return a serialized {@code oak.crypto.EncryptedResponse} wrapped in a
-   *         {@code Result}
+   * @param encryptedRequest {@code oak.crypto.EncryptedRequest} proto message
+   * @return {@code oak.crypto.EncryptedResponse} proto message wrapped in a {@code Result}
    */
   @Override
-  public Result<byte[], String> invoke(byte[] requestBytes) {
+  public Result<EncryptedResponse, String> invoke(EncryptedRequest encryptedRequest) {
+    // TODO(#4037): Use explicit crypto protos.
     RequestWrapper requestWrapper =
         RequestWrapper.newBuilder()
-            .setInvokeRequest(
-                InvokeRequest.newBuilder().setEncryptedBody(ByteString.copyFrom(requestBytes)))
+            .setInvokeRequest(InvokeRequest.newBuilder().setEncryptedBody(
+                ByteString.copyFrom(encryptedRequest.toByteArray())))
             .build();
     logger.log(Level.INFO, "sending invoke request: " + requestWrapper);
     this.requestObserver.onNext(requestWrapper);
@@ -122,7 +124,15 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     logger.log(Level.INFO, "received invoke response: " + responseWrapper);
     InvokeResponse response = responseWrapper.getInvokeResponse();
 
-    return Result.success(response.getEncryptedBody().toByteArray());
+    // TODO(#4037): Use explicit crypto protos.
+    EncryptedResponse encryptedResponse;
+    try {
+      encryptedResponse = EncryptedResponse.parseFrom(
+          response.getEncryptedBody(), ExtensionRegistry.getEmptyRegistry());
+    } catch (InvalidProtocolBufferException e) {
+      return Result.error(e.toString());
+    }
+    return Result.success(encryptedResponse);
   }
 
   @Override
