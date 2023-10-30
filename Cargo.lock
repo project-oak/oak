@@ -2324,21 +2324,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_iree_service"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "hashbrown 0.13.2",
- "log",
- "micro_rpc",
- "micro_rpc_build",
- "oak_crypto",
- "oak_remote_attestation",
- "prost",
-]
-
-[[package]]
 name = "oak_launcher_utils"
 version = "0.1.0"
 dependencies = [
@@ -2511,21 +2496,6 @@ dependencies = [
  "bitflags 2.3.3",
  "strum",
  "x86_64",
-]
-
-[[package]]
-name = "oak_tensorflow_service"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "hashbrown 0.13.2",
- "log",
- "micro_rpc",
- "micro_rpc_build",
- "oak_restricted_kernel_api",
- "oak_restricted_kernel_interface",
- "prost",
 ]
 
 [[package]]
