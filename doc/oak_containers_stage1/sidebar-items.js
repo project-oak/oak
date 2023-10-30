@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["main"],"mod":["client","image"],"struct":["Args"]};
+window.SIDEBAR_ITEMS = {"fn":["main","try_parse_phys_addr"],"mod":["client","dice","image"],"struct":["Args"]};

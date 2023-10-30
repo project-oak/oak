@@ -15,7 +15,7 @@ var srcIndex = JSON.parse('{\
 "oak_containers_launcher":["",[],["lib.rs","qemu.rs","server.rs"]],\
 "oak_containers_orchestrator":["",[],["container_runtime.rs","ipc_server.rs","lib.rs","logging.rs","metrics.rs"]],\
 "oak_containers_orchestrator_client":["",[],["lib.rs"]],\
-"oak_containers_stage1":["",[],["client.rs","image.rs","main.rs"]],\
+"oak_containers_stage1":["",[],["client.rs","dice.rs","image.rs","main.rs"]],\
 "oak_containers_syslogd":["",[],["log_relay.rs","main.rs","systemd_journal.rs"]],\
 "oak_core":["",[],["lib.rs","samplestore.rs","sync.rs","timer.rs"]],\
 "oak_crypto":["",[["hpke",[],["aead.rs","mod.rs"]]],["encryptor.rs","lib.rs","signer.rs","util.rs"]],\

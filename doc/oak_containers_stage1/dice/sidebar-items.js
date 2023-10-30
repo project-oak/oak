@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["EXPECTED_E820_TYPE","MEMMAP_PATH","PHYS_MEM_PATH"],"fn":["read_memory_ranges","read_stage0_dice_data"],"struct":["MemoryRange"]};
