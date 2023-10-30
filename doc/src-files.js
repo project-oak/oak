@@ -37,7 +37,6 @@ var srcIndex = JSON.parse('{\
 "oak_functions_test_utils":["",[],["lib.rs"]],\
 "oak_grpc_utils":["",[],["lib.rs"]],\
 "oak_hello_world_linux_init":["",[],["init.rs","main.rs"]],\
-"oak_iree_service":["",[],["iree.rs","lib.rs"]],\
 "oak_launcher_utils":["",[],["channel.rs","launcher.rs","lib.rs"]],\
 "oak_linux_boot_params":["",[],["lib.rs"]],\
 "oak_remote_attestation":["",[],["attester.rs","handler.rs","lib.rs"]],\
@@ -49,7 +48,6 @@ var srcIndex = JSON.parse('{\
 "oak_simple_io":["",[],["lib.rs"]],\
 "oak_stage0":["",[],["acpi.rs","acpi_tables.rs","allocator.rs","apic.rs","cmos.rs","dice_attestation.rs","fw_cfg.rs","initramfs.rs","kernel.rs","lib.rs","logging.rs","msr.rs","paging.rs","pic.rs","sev.rs","smp.rs","zero_page.rs"]],\
 "oak_tdx_guest":["",[],["lib.rs","tdcall.rs","vmcall.rs"]],\
-"oak_tensorflow_service":["",[],["lib.rs","tflite.rs"]],\
 "oak_transparency_claims":["",[],["claims.rs","intoto.rs","lib.rs"]],\
 "oak_virtio":["",[["console",[],["mod.rs"]],["queue",[],["mod.rs","virtq.rs"]],["vsock",[["socket",[],["mod.rs"]]],["mod.rs","packet.rs"]]],["lib.rs"]],\
 "quirk_echo_launcher":["",[],["lib.rs"]],\

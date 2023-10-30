@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["InitializeRequest","InitializeResponse","InvokeRequest","InvokeResponse","SessionId","TensorflowAsyncClient","TensorflowClient","TensorflowServer"],"trait":["Tensorflow"]};
