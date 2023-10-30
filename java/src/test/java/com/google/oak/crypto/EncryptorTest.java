@@ -21,7 +21,6 @@ import com.google.oak.crypto.hpke.KeyPair;
 import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.util.Result;
-import com.google.protobuf.ExtensionRegistryLite;
 import java.util.Arrays;
 import org.junit.Assert;
 import org.junit.Test;

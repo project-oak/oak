@@ -31,6 +31,5 @@ java_test(
         "//java/src/main/java/com/google/oak/crypto/hpke",
         "//java/src/main/java/com/google/oak/util",
         "//oak_crypto/proto/v1:crypto_java_proto",
-        "@com_google_protobuf//:protobuf_javalite",
     ],
 )

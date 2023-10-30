@@ -26,8 +26,6 @@ import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.ExtensionRegistry;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Encryptor class for encrypting client requests that will be sent to the server and decrypting
@@ -108,7 +106,7 @@ public class ClientEncryptor implements AutoCloseable {
    * Decrypts a {@code EncryptedResponse} proto message using AEAD.
    * <https://datatracker.ietf.org/doc/html/rfc5116>
    *
-   * @param serializedEncryptedResponse {@code EncryptedResponse} proto message
+   * @param encryptedResponse {@code EncryptedResponse} proto message
    * @return a response message plaintext and associated data wrapped in a {@code Result}
    */
   public final Result<DecryptionResult, Exception> decrypt(
