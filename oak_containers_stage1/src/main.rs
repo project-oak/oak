@@ -14,9 +14,11 @@
 // limitations under the License.
 //
 
+#![feature(iterator_try_collect)]
 #![feature(never_type)]
 
 mod client;
+mod dice;
 mod image;
 
 use anyhow::Context;
@@ -32,8 +34,10 @@ use std::{
     fs::{self, create_dir},
     io::ErrorKind,
     path::Path,
+    str::FromStr,
 };
 use tokio::process::Command;
+use x86_64::PhysAddr;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -43,9 +47,10 @@ struct Args {
     #[arg(long, default_value = "/sbin/init")]
     init: String,
 
-    #[arg(long = "oak-dice")]
-    dice_addr: String,
+    #[arg(long = "oak-dice", value_parser = try_parse_phys_addr)]
+    dice_addr: PhysAddr,
 }
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
@@ -78,8 +83,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .context("error mounting ramdrive to /rootfs")?;
 
-    // switch_root(8) magic
+    // Mount /sys so that we can read the memory map.
+    if !Path::new("/sys").try_exists()? {
+        create_dir("/sys").context("error creating /sys")?;
+    }
+    mount(
+        None::<&str>,
+        "/sys",
+        Some("sysfs"),
+        MsFlags::empty(),
+        None::<&str>,
+    )
+    .context("error mounting /sys")?;
+
+    let dice_data = dice::read_stage0_dice_data(args.dice_addr)?;
+    println!(
+        "DICE magic: {:?}",
+        String::from_utf8_lossy(&dice_data.magic.to_le_bytes())
+    );
+
+    // Unmount /sys and /dev as they are no longer needed.
+    umount("/sys").context("failed to unmount /sys")?;
     umount("/dev").context("failed to unmount /dev")?;
+
+    // switch_root(8) magic
     chdir("/rootfs").context("failed to chdir to /rootfs")?;
     mount(
         Some("/rootfs"),
@@ -91,8 +118,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .context("failed to move /rootfs to /")?;
     chroot(".").context("failed to chroot to .")?;
     chdir("/").context("failed to chdir to /")?;
-
-    println!("DICE address: {}", args.dice_addr);
 
     let mut client = LauncherClient::new(args.launcher_addr.parse()?)
         .await
@@ -145,4 +170,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .context("error removing `/.dockerenv`")?;
 
     image::switch(&args.init).context("error switching to the system image")?
+}
+
+/// Tries to parse a string slice as an address.
+///
+/// Assumes that the address is a hexadecimal representation if it starts with "0x", or decimal
+/// otherwise.
+fn try_parse_phys_addr(arg: &str) -> anyhow::Result<PhysAddr> {
+    let address = if arg.starts_with("0x") {
+        u64::from_str_radix(arg.strip_prefix("0x").unwrap(), 16)
+            .context("couldn't parse address as a hex number")?
+    } else {
+        u64::from_str(arg).context("couldn't parse address as a decimal number")?
+    };
+    PhysAddr::try_new(address).map_err(|err| anyhow::anyhow!("invalid physical address: {}", err.0))
 }
