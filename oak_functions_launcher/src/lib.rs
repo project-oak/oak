@@ -43,12 +43,47 @@ use crate::proto::oak::functions::{
     InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
 };
 use anyhow::Context;
+use clap::Parser;
 use oak_launcher_utils::{
     channel::{self, ConnectorHandle},
     launcher,
 };
 use std::{fs, path::PathBuf, time::Duration};
 use ubyte::ByteUnit;
+
+#[derive(Parser, Debug)]
+#[group(skip)]
+pub struct Args {
+    /// Consistent response size that the enclave should apply
+    #[arg(long, default_value = "1024")]
+    pub constant_response_size: u32,
+
+    #[arg(long, default_value = "8080")]
+    pub port: u16,
+
+    /// Path to a Wasm file to be loaded into the enclave and executed by it per invocation. See the documentation for details on its ABI. Ref: <https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md>
+    #[arg(
+            long,
+            value_parser = path_exists,
+        )]
+    pub wasm: PathBuf,
+
+    /// Path to a file containing key / value entries in protobuf binary format for lookup.
+    #[arg(
+            long,
+            value_parser = path_exists,
+        )]
+    pub lookup_data: PathBuf,
+}
+
+fn path_exists(s: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(s);
+    if !fs::metadata(s).map_err(|err| err.to_string())?.is_file() {
+        Err(String::from("path does not represent a file"))
+    } else {
+        Ok(path)
+    }
+}
 
 pub struct LookupDataConfig {
     pub lookup_data_path: PathBuf,

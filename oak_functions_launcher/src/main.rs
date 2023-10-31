@@ -20,48 +20,18 @@
 
 use clap::Parser;
 use oak_functions_launcher::LookupDataConfig;
-use std::{
-    fs,
-    net::{Ipv6Addr, SocketAddr},
-    path::PathBuf,
-};
+use std::net::{Ipv6Addr, SocketAddr};
 use tokio::signal;
 use ubyte::ByteUnit;
 
 #[derive(Parser, Debug)]
-struct Args {
+pub struct Args {
     /// launcher params.
     #[clap(flatten)]
     launcher_params: oak_launcher_utils::launcher::Params,
-    /// Consistent response size that the enclave should apply
-    #[arg(long, default_value = "1024")]
-    constant_response_size: u32,
 
-    #[arg(long, default_value = "8080")]
-    port: u16,
-
-    /// Path to a Wasm file to be loaded into the enclave and executed by it per invocation. See the documentation for details on its ABI. Ref: <https://github.com/project-oak/oak/blob/main/docs/oak_functions_abi.md>
-    #[arg(
-        long,
-        value_parser = path_exists,
-    )]
-    wasm: PathBuf,
-
-    /// Path to a file containing key / value entries in protobuf binary format for lookup.
-    #[arg(
-        long,
-        value_parser = path_exists,
-    )]
-    lookup_data: PathBuf,
-}
-
-fn path_exists(s: &str) -> Result<PathBuf, String> {
-    let path = PathBuf::from(s);
-    if !fs::metadata(s).map_err(|err| err.to_string())?.is_file() {
-        Err(String::from("path does not represent a file"))
-    } else {
-        Ok(path)
-    }
+    #[clap(flatten)]
+    functions_params: oak_functions_launcher::Args,
 }
 
 #[tokio::main]
@@ -71,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("Oak Functions Launcher args: {:?}", cli);
 
     let lookup_data_config = LookupDataConfig {
-        lookup_data_path: cli.lookup_data,
+        lookup_data_path: cli.functions_params.lookup_data,
         // Hard-coded because we are not sure whether we want to configure the update interval.
         update_interval: Some(std::time::Duration::from_millis(1000 * 60 * 10)),
         // Fix the maximum size of a chunk to the proto limit size of 2 GiB.
@@ -82,8 +52,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         oak_functions_launcher::create(
             cli.launcher_params,
             lookup_data_config,
-            cli.wasm,
-            cli.constant_response_size,
+            cli.functions_params.wasm,
+            cli.functions_params.constant_response_size,
         )
         .await?;
 
@@ -96,7 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let server_future = oak_functions_launcher::server::new(
-        SocketAddr::from((Ipv6Addr::UNSPECIFIED, cli.port)),
+        SocketAddr::from((Ipv6Addr::UNSPECIFIED, cli.functions_params.port)),
         connector_handle,
         public_key_info.public_key,
         public_key_info.attestation,

@@ -53,6 +53,7 @@ const PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
 const VM_START_TIMEOUT: u64 = 300;
 
 #[derive(Parser, Debug)]
+#[group(skip)]
 pub struct Args {
     #[arg(long, required = true, value_parser = path_exists,)]
     system_image: std::path::PathBuf,
