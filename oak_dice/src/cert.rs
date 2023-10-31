@@ -19,7 +19,7 @@
 use alloc::{string::String, vec, vec::Vec};
 use coset::{
     cbor::value::Value,
-    cwt::{ClaimName, ClaimsSetBuilder},
+    cwt::{ClaimName, ClaimsSet, ClaimsSetBuilder},
     iana, Algorithm, CborSerializable, CoseError, CoseKey, CoseSign1, KeyOperation, KeyType, Label,
 };
 use hkdf::Hkdf;
@@ -47,6 +47,9 @@ pub const MEMORY_MAP_MEASUREMENT_ID: i64 = -4670559;
 /// ID for the CWT private claim ID corresponding to the hash of the commands for building the ACPI
 /// tables.
 pub const ACPI_MEASUREMENT_ID: i64 = -4670560;
+/// ID for the CWT private claim label corresponding to the hash of the binary for the layer in the
+/// case where a single binary is measured for a layer..
+pub const CODE_DIGEST_ID: i64 = -4670545;
 
 /// String to be used as salt for generating Key IDs.
 const ID_SALT: &[u8] = b"DICE_ID_SALT";
@@ -174,4 +177,11 @@ pub fn generate_eca_certificate(
             .build(),
         signing_key,
     ))
+}
+
+/// Parses a bytes slice as a CWT certificate and extracts the payload as a set of claims.
+pub fn get_claims_set_from_certifcate_bytes(bytes: &[u8]) -> Result<ClaimsSet, CoseError> {
+    let cwt = CoseSign1::from_slice(bytes)?;
+    let payload = cwt.payload.unwrap_or_default();
+    ClaimsSet::from_slice(&payload)
 }

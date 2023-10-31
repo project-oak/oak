@@ -29,6 +29,7 @@ use nix::{
     mount::{mount, umount, MsFlags},
     unistd::{chdir, chroot},
 };
+use prost::Message;
 use std::{
     error::Error,
     fs::{self, create_dir},
@@ -96,11 +97,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .context("error mounting /sys")?;
 
-    let dice_data = dice::read_stage0_dice_data(args.dice_addr)?;
-    println!(
-        "DICE magic: {:?}",
-        String::from_utf8_lossy(&dice_data.magic.to_le_bytes())
-    );
+    let mut dice_builder = dice::extract_stage0_evidence_and_key(args.dice_addr)?;
 
     // Unmount /sys and /dev as they are no longer needed.
     umount("/sys").context("failed to unmount /sys")?;
@@ -123,7 +120,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .await
         .context("error creating the launcher client")?;
 
-    image::load(&mut client, Path::new("/"))
+    let buf = client
+        .get_oak_system_image()
+        .await
+        .context("error fetching system image")?;
+
+    dice_builder.measure_system_image(&buf)?;
+
+    // For safety we generate the DICE data for the next layer before processing the compressed
+    // system image. This consumes the `DiceBuilder` which also clears the ECA private key provided
+    // by Stage 0.
+    let dice_data = dice_builder.build()?;
+
+    image::extract(&buf, Path::new("/"))
         .await
         .context("error loading the system image")?;
 
@@ -133,6 +142,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if !Path::new("/etc/machine-id").exists() {
         fs::write("/etc/machine-id", []).context("error writing placeholder /etc/machine-id")?;
     }
+
+    // Write the DICE data to a well-known location as a length-delimited protobuf file.
+    create_dir("/oak").context("error creating `oak` directory")?;
+    fs::write("/oak/dice", dice_data.encode_length_delimited_to_vec())
+        .context("error writing placeholder /etc/machine-id")?;
 
     // Configure eth0 down, as systemd will want to manage it itself and gets confused if it already
     // has an IP address.
