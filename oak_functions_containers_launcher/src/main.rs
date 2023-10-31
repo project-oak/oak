@@ -15,15 +15,35 @@
 
 use clap::Parser;
 use oak_functions_containers_launcher::proto::oak::functions::InitializeRequest;
+use oak_functions_launcher::LookupDataConfig;
+use ubyte::ByteUnit;
+
+#[derive(Parser, Debug)]
+struct Args {
+    #[clap(flatten)]
+    containers_args: oak_containers_launcher::Args,
+
+    #[clap(flatten)]
+    functions_args: oak_functions_launcher::Args,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     env_logger::init();
-    let args = oak_containers_launcher::Args::parse();
+    let args = Args::parse();
 
-    let mut untrusted_app = oak_functions_containers_launcher::UntrustedApp::create(args)
-        .await
-        .map_err(|error| anyhow::anyhow!("couldn't create untrusted launcher: {}", error))?;
+    let _lookup_data_config = LookupDataConfig {
+        lookup_data_path: args.functions_args.lookup_data,
+        // Hard-coded because we are not sure whether we want to configure the update interval.
+        update_interval: Some(std::time::Duration::from_secs(60 * 10)),
+        // Fix the maximum size of a chunk to the proto limit size of 2 GiB.
+        max_chunk_size: ByteUnit::Gibibyte(2),
+    };
+
+    let mut untrusted_app =
+        oak_functions_containers_launcher::UntrustedApp::create(args.containers_args)
+            .await
+            .map_err(|error| anyhow::anyhow!("couldn't create untrusted launcher: {}", error))?;
 
     let initialize_response = untrusted_app
         .initialize_enclave(InitializeRequest::default())
