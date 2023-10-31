@@ -16,3 +16,4 @@ prost = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tonic = { workspace = true }
 oak_containers_launcher = { workspace = true }
+oak_crypto = { workspace = true }

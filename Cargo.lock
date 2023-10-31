@@ -2173,6 +2173,7 @@ dependencies = [
  "env_logger",
  "log",
  "oak_containers_launcher",
+ "oak_crypto",
  "oak_grpc_utils",
  "prost",
  "tokio",

@@ -22,10 +22,7 @@ fn main() {
             "{}oak_functions_service/proto/oak_functions.proto",
             env!("WORKSPACE_ROOT")
         )],
-        &[format!(
-            "{}oak_functions_service/proto",
-            env!("WORKSPACE_ROOT")
-        )],
+        &[env!("WORKSPACE_ROOT")],
         micro_rpc_build::CompileOptions {
             receiver_type: ReceiverType::RefSelf,
         },
