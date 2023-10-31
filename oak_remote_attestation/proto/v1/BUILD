@@ -14,33 +14,16 @@
 # limitations under the License.
 #
 
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_java//java:defs.bzl", "java_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@bazel_skylib//rules:build_test.bzl", "build_test")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
-)
-
-proto_library(
-    name = "dice_proto",
-    srcs = ["dice.proto"],
-    deps = [":evidence_proto"],
-)
-
-proto_library(
-    name = "endorsement_proto",
-    srcs = ["endorsement.proto"],
-    deps = [":evidence_proto"],
-)
-
-proto_library(
-    name = "evidence_proto",
-    srcs = ["evidence.proto"],
 )
 
 proto_library(
@@ -120,8 +103,6 @@ java_grpc_library(
 build_test(
     name = "build_test",
     targets = [
-        ":dice_proto",
-        ":endorsement_proto",
         ":messages_proto",
         ":service_streaming_cc_grpc",
         ":service_streaming_java_grpc",

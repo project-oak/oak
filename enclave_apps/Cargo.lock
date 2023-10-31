@@ -646,6 +646,7 @@ dependencies = [
  "log",
  "micro_rpc",
  "micro_rpc_build",
+ "oak_core",
  "oak_crypto",
  "oak_functions_abi",
  "oak_functions_sdk",
@@ -653,35 +654,6 @@ dependencies = [
  "prost",
  "spinning_top",
  "wasmi",
-]
-
-[[package]]
-name = "oak_iree_enclave_app"
-version = "0.1.0"
-dependencies = [
- "log",
- "micro_rpc",
- "oak_channel",
- "oak_core",
- "oak_enclave_runtime_support",
- "oak_iree_service",
- "oak_remote_attestation",
- "oak_restricted_kernel_api",
- "static_assertions",
-]
-
-[[package]]
-name = "oak_iree_service"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "hashbrown 0.14.2",
- "log",
- "micro_rpc",
- "micro_rpc_build",
- "oak_crypto",
- "oak_remote_attestation",
- "prost",
 ]
 
 [[package]]
@@ -712,34 +684,6 @@ version = "0.1.0"
 dependencies = [
  "bitflags 2.4.0",
  "strum",
-]
-
-[[package]]
-name = "oak_tensorflow_enclave_app"
-version = "0.1.0"
-dependencies = [
- "log",
- "micro_rpc",
- "oak_channel",
- "oak_core",
- "oak_enclave_runtime_support",
- "oak_restricted_kernel_api",
- "oak_tensorflow_service",
- "static_assertions",
-]
-
-[[package]]
-name = "oak_tensorflow_service"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "hashbrown 0.14.2",
- "log",
- "micro_rpc",
- "micro_rpc_build",
- "oak_restricted_kernel_api",
- "oak_restricted_kernel_interface",
- "prost",
 ]
 
 [[package]]

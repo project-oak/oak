@@ -25,6 +25,7 @@
 #include "absl/strings/string_view.h"
 #include "cc/crypto/common.h"
 #include "cc/crypto/hpke/sender_context.h"
+#include "oak_crypto/proto/v1/crypto.pb.h"
 
 namespace oak::crypto {
 
@@ -54,18 +55,15 @@ class ClientEncryptor {
   // Encrypts `plaintext` and authenticates `associated_data` using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
-  // Returns a serialized [`oak.crypto.EncryptedRequest`] message.
-  // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
-  absl::StatusOr<std::string> Encrypt(absl::string_view plaintext,
-                                      absl::string_view associated_data);
+  // Returns an [`oak.crypto.EncryptedRequest`] proto message.
+  absl::StatusOr<::oak::crypto::v1::EncryptedRequest> Encrypt(absl::string_view plaintext,
+                                                              absl::string_view associated_data);
 
   // Decrypts a [`EncryptedResponse`] proto message using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
-  // `encrypted_response` must be a serialized [`oak.crypto.EncryptedResponse`] message.
   // Returns a response message plaintext and associated data.
-  // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
-  absl::StatusOr<DecryptionResult> Decrypt(absl::string_view encrypted_response);
+  absl::StatusOr<DecryptionResult> Decrypt(oak::crypto::v1::EncryptedResponse encrypted_response);
 
  private:
   // Encapsulated public key needed to establish a symmetric session key.

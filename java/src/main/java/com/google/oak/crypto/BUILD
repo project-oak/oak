@@ -22,12 +22,9 @@ package(
 )
 
 java_library(
-    name = "encryptor",
+    name = "decryption_result",
     srcs = [
-        "Encryptor.java",
-    ],
-    deps = [
-        "//java/src/main/java/com/google/oak/util",
+        "DecryptionResult.java",
     ],
 )
 
@@ -37,11 +34,10 @@ java_library(
         "ClientEncryptor.java",
     ],
     deps = [
-        ":encryptor",
+        ":decryption_result",
         "//java/src/main/java/com/google/oak/crypto/hpke",
         "//java/src/main/java/com/google/oak/util",
         "//oak_crypto/proto/v1:crypto_java_proto",
-        "@com_google_protobuf//:protobuf_javalite",
         "@com_google_protobuf//java/core",
     ],
 )
@@ -52,11 +48,10 @@ java_library(
         "ServerEncryptor.java",
     ],
     deps = [
-        ":encryptor",
+        ":decryption_result",
         "//java/src/main/java/com/google/oak/crypto/hpke",
         "//java/src/main/java/com/google/oak/util",
         "//oak_crypto/proto/v1:crypto_java_proto",
-        "@com_google_protobuf//:protobuf_javalite",
         "@com_google_protobuf//java/core",
     ],
 )

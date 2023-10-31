@@ -15,11 +15,12 @@
  */
 
 #include "../recipient_context.h"
+#include "absl/status/statusor.h"
 #include "com_google_oak_crypto_hpke_KeyPair.h"
 
 JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_KeyPair_nativeGenerate(JNIEnv* env,
                                                                                  jclass obj) {
-  absl::StatusOr<oak::crypto::KeyPair> kp_status = oak::crypto::KeyPair::Generate();
+  absl::StatusOr<::oak::crypto::KeyPair> kp_status = oak::crypto::KeyPair::Generate();
   if (!kp_status.ok()) {
     return {};
   }

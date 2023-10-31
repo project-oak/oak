@@ -16,11 +16,11 @@
 
 package com.google.oak.crypto;
 
+import com.google.oak.crypto.DecryptionResult;
 import com.google.oak.crypto.hpke.KeyPair;
 import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.util.Result;
-import com.google.protobuf.ExtensionRegistryLite;
 import java.util.Arrays;
 import org.junit.Assert;
 import org.junit.Test;
@@ -53,13 +53,11 @@ public class EncryptorTest {
 
     for (int i = 0; i < TEST_SESSION_SIZE; i++) {
       // Test request encryption/decryption.
-      Result<byte[], Exception> encryptRequestResult =
+      Result<EncryptedRequest, Exception> encryptRequestResult =
           clientEncryptor.encrypt(TEST_REQUEST_PLAINTEXT, TEST_REQUEST_ASSOCIATED_DATA);
       Assert.assertTrue(encryptRequestResult.isSuccess());
-      byte[] serializedEncryptedRequest = encryptRequestResult.success().get();
+      EncryptedRequest encryptedRequest = encryptRequestResult.success().get();
 
-      EncryptedRequest encryptedRequest = EncryptedRequest.parseFrom(
-          serializedEncryptedRequest, ExtensionRegistryLite.getEmptyRegistry());
       Assert.assertFalse(
           Arrays.equals(encryptedRequest.getEncryptedMessage().getCiphertext().toByteArray(),
               TEST_REQUEST_PLAINTEXT));
@@ -67,8 +65,8 @@ public class EncryptorTest {
           encryptedRequest.getEncryptedMessage().getAssociatedData().toByteArray(),
           TEST_REQUEST_ASSOCIATED_DATA);
 
-      Result<Encryptor.DecryptionResult, Exception> decryptRequestResult =
-          serverEncryptor.decrypt(encryptedRequest.toByteArray());
+      Result<DecryptionResult, Exception> decryptRequestResult =
+          serverEncryptor.decrypt(encryptedRequest);
       Assert.assertTrue(decryptRequestResult.isSuccess());
       Assert.assertArrayEquals(
           decryptRequestResult.success().get().plaintext, TEST_REQUEST_PLAINTEXT);
@@ -76,13 +74,11 @@ public class EncryptorTest {
           decryptRequestResult.success().get().associatedData, TEST_REQUEST_ASSOCIATED_DATA);
 
       // Test response encryption/decryption.
-      Result<byte[], Exception> encryptResponseResult =
+      Result<EncryptedResponse, Exception> encryptResponseResult =
           serverEncryptor.encrypt(TEST_RESPONSE_PLAINTEXT, TEST_RESPONSE_ASSOCIATED_DATA);
       Assert.assertTrue(encryptResponseResult.isSuccess());
-      byte[] serializedEncryptedResponse = encryptResponseResult.success().get();
+      EncryptedResponse encryptedResponse = encryptResponseResult.success().get();
 
-      EncryptedResponse encryptedResponse = EncryptedResponse.parseFrom(
-          serializedEncryptedResponse, ExtensionRegistryLite.getEmptyRegistry());
       Assert.assertFalse(
           Arrays.equals(encryptedResponse.getEncryptedMessage().getCiphertext().toByteArray(),
               TEST_RESPONSE_PLAINTEXT));
@@ -90,8 +86,8 @@ public class EncryptorTest {
           encryptedResponse.getEncryptedMessage().getAssociatedData().toByteArray(),
           TEST_RESPONSE_ASSOCIATED_DATA);
 
-      Result<Encryptor.DecryptionResult, Exception> decryptResponseResult =
-          clientEncryptor.decrypt(encryptedResponse.toByteArray());
+      Result<DecryptionResult, Exception> decryptResponseResult =
+          clientEncryptor.decrypt(encryptedResponse);
       Assert.assertTrue(decryptResponseResult.isSuccess());
       Assert.assertArrayEquals(
           decryptResponseResult.success().get().plaintext, TEST_RESPONSE_PLAINTEXT);

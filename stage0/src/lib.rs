@@ -22,9 +22,10 @@
 extern crate alloc;
 
 use crate::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
-use alloc::boxed::Box;
+use alloc::{boxed::Box, format};
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use linked_list_allocator::LockedHeap;
+use oak_dice::evidence::DICE_DATA_CMDLINE_PARAM;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
 use sha2::{Digest, Sha256};
@@ -217,15 +218,11 @@ pub fn rust64_start(encrypted: u64) -> ! {
         zero_page.add_setup_data(setup_data);
     }
 
-    let cmdline_measurement = kernel::try_load_cmdline(&mut fwcfg)
-        .map(|cmdline| {
-            zero_page.set_cmdline(cmdline);
-            measure_byte_slice(cmdline.to_bytes())
-        })
-        .unwrap_or_default();
+    let cmdline = kernel::try_load_cmdline(&mut fwcfg).unwrap_or_default();
+    let cmdline_measurement = measure_byte_slice(cmdline.as_bytes());
 
-    let kernel_info = kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table())
-        .unwrap_or(kernel::KernelInfo::default());
+    let kernel_info =
+        kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table()).unwrap_or_default();
     let mut entry = kernel_info.entry;
 
     // Attempt to parse 64 bytes at the suggested entry point as an ELF header. If it works, extract
@@ -313,6 +310,17 @@ pub fn rust64_start(encrypted: u64) -> ! {
         dice_data.as_bytes().len(),
         E820EntryType::DiceData,
     ));
+
+    // Append the DICE data address to the kernel command-line.
+    let extra = format!("--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}");
+    let cmdline = if cmdline.is_empty() {
+        extra
+    } else if cmdline.contains("--") {
+        format!("{} {}", cmdline, extra)
+    } else {
+        format!("{} -- {}", cmdline, extra)
+    };
+    zero_page.set_cmdline(cmdline);
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 

@@ -21,5 +21,6 @@ fn main() {
             env!("WORKSPACE_ROOT")
         )],
         &[format!("{}micro_rpc_tests/proto", env!("WORKSPACE_ROOT"))],
+        Default::default(),
     );
 }

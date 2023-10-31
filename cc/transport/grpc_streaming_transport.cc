@@ -16,6 +16,8 @@
 
 #include "cc/transport/grpc_streaming_transport.h"
 
+#include <string>
+
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -24,10 +26,14 @@
 #include "grpcpp/client_context.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/grpcpp.h"
+#include "oak_crypto/proto/v1/crypto.pb.h"
+#include "oak_remote_attestation/proto/v1/messages.pb.h"
 
 namespace oak::transport {
 
 namespace {
+using ::oak::crypto::v1::EncryptedRequest;
+using ::oak::crypto::v1::EncryptedResponse;
 using ::oak::session::v1::AttestationBundle;
 using ::oak::session::v1::GetPublicKeyRequest;
 using ::oak::session::v1::InvokeRequest;
@@ -59,11 +65,16 @@ absl::StatusOr<AttestationBundle> GrpcStreamingTransport::GetEvidence() {
   }
 }
 
-absl::StatusOr<std::string> GrpcStreamingTransport::Invoke(absl::string_view request_bytes) {
+absl::StatusOr<EncryptedResponse> GrpcStreamingTransport::Invoke(
+    const EncryptedRequest& encrypted_request) {
   // Create request.
   RequestWrapper request;
-  InvokeRequest* invoke_request = request.mutable_invoke_request();
-  invoke_request->set_encrypted_body(request_bytes);
+  // TODO(#4037): Use explicit crypto protos.
+  std::string encrypted_body;
+  if (!encrypted_request.SerializeToString(&encrypted_body)) {
+    return absl::InternalError("couldn't serialize encrypted request");
+  }
+  *request.mutable_invoke_request()->mutable_encrypted_body() = encrypted_body;
 
   // Send request.
   auto response = Send(request);
@@ -75,8 +86,14 @@ absl::StatusOr<std::string> GrpcStreamingTransport::Invoke(absl::string_view req
   switch (response->response_case()) {
     case ResponseWrapper::kGetPublicKeyResponseFieldNumber:
       return absl::InternalError("received GetPublicKeyResponse instead of InvokeResponse");
-    case ResponseWrapper::kInvokeResponseFieldNumber:
-      return response->invoke_response().encrypted_body();
+    case ResponseWrapper::kInvokeResponseFieldNumber: {
+      // TODO(#4037): Use explicit crypto protos.
+      EncryptedResponse encrypted_response;
+      if (!encrypted_response.ParseFromString(response->invoke_response().encrypted_body())) {
+        return absl::InvalidArgumentError("couldn't deserialize response");
+      }
+      return encrypted_response;
+    }
     case ResponseWrapper::RESPONSE_NOT_SET:
     default:
       return absl::InternalError("received unsupported response: " + response->DebugString());

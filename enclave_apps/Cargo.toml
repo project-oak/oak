@@ -4,9 +4,7 @@ members = [
   "key_xor_test_app",
   "oak_echo_enclave_app",
   "oak_functions_enclave_app",
-  "oak_iree_enclave_app",
   "oak_echo_raw_enclave_app",
-  "oak_tensorflow_enclave_app",
   "quirk_echo_enclave_app",
 ]
 

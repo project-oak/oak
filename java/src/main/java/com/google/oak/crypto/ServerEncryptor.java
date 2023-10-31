@@ -18,6 +18,7 @@ package com.google.oak.crypto;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.oak.crypto.DecryptionResult;
 import com.google.oak.crypto.hpke.Hpke;
 import com.google.oak.crypto.hpke.KeyPair;
 import com.google.oak.crypto.hpke.RecipientContext;
@@ -26,8 +27,6 @@ import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.ExtensionRegistry;
-import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.Optional;
 
 /**
@@ -38,7 +37,7 @@ import java.util.Optional;
  * Sequence numbers for requests and responses are incremented separately, meaning that there could
  * be multiple responses per request and multiple requests per response.
  */
-public class ServerEncryptor implements AutoCloseable, Encryptor {
+public class ServerEncryptor implements AutoCloseable {
   // Info string used by Hybrid Public Key Encryption.
   private static final byte[] OAK_HPKE_INFO = "Oak Hybrid Public Key Encryption v1".getBytes(UTF_8);
 
@@ -73,21 +72,11 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
    * Decrypts a {@code com.google.oak.crypto.v1.EncryptedRequest} proto message using AEAD.
    * <https://datatracker.ietf.org/doc/html/rfc5116>
    *
-   * @param serializedEncryptedRequest a serialized {@code
-   *     com.google.oak.crypto.v1.EncryptedRequest} message
+   * @param encryptedRequest {@code EncryptedRequest} proto message
    * @return a response message plaintext and associated data wrapped in a {@code Result}
    */
-  @Override
-  public final Result<Encryptor.DecryptionResult, Exception> decrypt(
-      final byte[] serializedEncryptedRequest) {
-    // Deserialize request message.
-    EncryptedRequest encryptedRequest;
-    try {
-      encryptedRequest = EncryptedRequest.parseFrom(
-          serializedEncryptedRequest, ExtensionRegistry.getEmptyRegistry());
-    } catch (InvalidProtocolBufferException e) {
-      return Result.error(e);
-    }
+  public final Result<DecryptionResult, Exception> decrypt(
+      final EncryptedRequest encryptedRequest) {
     AeadEncryptedMessage aeadEncryptedMessage = encryptedRequest.getEncryptedMessage();
     byte[] ciphertext = aeadEncryptedMessage.getCiphertext().toByteArray();
     byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
@@ -112,11 +101,7 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
     // Decrypt request.
     return recipientContext.get()
         .open(ciphertext, associatedData)
-        .map(plaintext
-            ->
-            // TODO(#3843): Accept unserialized proto messages once we have Java encryption
-            // without JNI.
-            new Encryptor.DecryptionResult(plaintext, associatedData));
+        .map(plaintext -> new DecryptionResult(plaintext, associatedData));
   }
 
   /**
@@ -125,11 +110,9 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
    *
    * @param plaintext the input byte array to be encrypted
    * @param associatedData the input byte array with associated data to be authenticated
-   * @return a serialized {@code com.google.oak.crypto.v1.EncryptedResponse} message wrapped in a
-   *     {@code Result}
+   * @return {@code EncryptedResponse} proto message wrapped in a {@code Result}
    */
-  @Override
-  public final Result<byte[], Exception> encrypt(
+  public final Result<EncryptedResponse, Exception> encrypt(
       final byte[] plaintext, final byte[] associatedData) {
     // Get recipient context.
     if (recipientContext.isEmpty()) {
@@ -146,7 +129,6 @@ public class ServerEncryptor implements AutoCloseable, Encryptor {
                                             .setCiphertext(ByteString.copyFrom(ciphertext))
                                             .setAssociatedData(ByteString.copyFrom(associatedData))
                                             .build())
-                   .build()
-                   .toByteArray());
+                   .build());
   }
 }

@@ -21,5 +21,6 @@ fn main() {
             env!("WORKSPACE_ROOT")
         )],
         &[format!("{}oak_functions_sdk/proto", env!("WORKSPACE_ROOT"))],
+        Default::default(),
     );
 }

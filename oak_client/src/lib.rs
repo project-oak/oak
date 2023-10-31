@@ -29,10 +29,9 @@ pub mod proto {
 pub mod transport;
 pub mod verifier;
 
-use crate::transport::AsyncEvidenceProvider;
+use crate::transport::{EvidenceProvider, Transport};
 use anyhow::{anyhow, Context};
-use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedResponse};
-use prost::Message;
+use oak_crypto::encryptor::ClientEncryptor;
 use std::vec::Vec;
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
@@ -40,18 +39,12 @@ const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 /// Client for connecting to Oak.
 /// Represents a Relying Party from the RATS Architecture:
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-relying-party>
-pub struct OakClient<T>
-where
-    T: micro_rpc::AsyncTransport<Error = anyhow::Error>,
-{
+pub struct OakClient<T: Transport> {
     transport: T,
     server_encryption_public_key: Vec<u8>,
 }
 
-impl<T> OakClient<T>
-where
-    T: micro_rpc::AsyncTransport<Error = anyhow::Error> + AsyncEvidenceProvider,
-{
+impl<T: Transport + EvidenceProvider> OakClient<T> {
     pub async fn create(mut transport: T) -> anyhow::Result<Self> {
         // TODO(#3641): Implement client-side attestation verification.
         let evidence = transport
@@ -72,22 +65,12 @@ where
             .encrypt(request_body, EMPTY_ASSOCIATED_DATA)
             .context("couldn't encrypt request")?;
 
-        // Serialize request.
-        let mut serialized_request = vec![];
-        encrypted_request
-            .encode(&mut serialized_request)
-            .map_err(|error| anyhow!("couldn't serialize request: {:?}", error))?;
-
         // Send request.
-        let serialized_response = self
+        let encrypted_response = self
             .transport
-            .invoke(&serialized_request)
+            .invoke(&encrypted_request)
             .await
             .map_err(|error| anyhow!("couldn't send request: {:?}", error))?;
-
-        // Deserialize response.
-        let encrypted_response = EncryptedResponse::decode(serialized_response.as_ref())
-            .map_err(|error| anyhow!("couldn't deserialize response: {:?}", error))?;
 
         // Decrypt response.
         // Currently we ignore the associated data.

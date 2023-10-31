@@ -1,6 +1,0 @@
-#!/bin/bash
- 
-NAME=$(basename "$0")
-TOOLCHAIN_BINDIR=external/x86_64-unknown-oak/bin
- 
-exec "${TOOLCHAIN_BINDIR}"/"${NAME}" "$@"

@@ -124,7 +124,7 @@ impl ClientEncryptor {
                 ciphertext,
                 associated_data: associated_data.to_vec(),
             }),
-            /// Encapsulated public key is only sent in the initial request message of the session.
+            // Encapsulated public key is only sent in the initial request message of the session.
             serialized_encapsulated_public_key: self.serialized_encapsulated_public_key.take(),
         };
         Ok(request)

@@ -23,6 +23,7 @@ cc_library(
     name = "transport",
     hdrs = ["transport.h"],
     deps = [
+        "//oak_crypto/proto/v1:crypto_cc_proto",
         "//oak_remote_attestation/proto/v1:messages_cc_proto",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -35,6 +36,7 @@ cc_library(
     hdrs = ["grpc_streaming_transport.h"],
     deps = [
         ":transport",
+        "//oak_crypto/proto/v1:crypto_cc_proto",
         "//oak_remote_attestation/proto/v1:messages_cc_proto",
         "//oak_remote_attestation/proto/v1:service_streaming_cc_grpc",
         "//oak_remote_attestation/proto/v1:service_streaming_cc_proto",

@@ -22,6 +22,7 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/string_view.h"
 #include "cc/crypto/common.h"
 #include "cc/crypto/hpke/recipient_context.h"
 #include "oak_crypto/proto/v1/crypto.pb.h"
@@ -33,33 +34,28 @@ using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
 }  // namespace
 
-absl::StatusOr<DecryptionResult> ServerEncryptor::Decrypt(absl::string_view encrypted_request) {
-  // Deserialize request.
-  EncryptedRequest request;
-  if (!request.ParseFromString(encrypted_request)) {
-    return absl::InvalidArgumentError("couldn't deserialize request");
-  }
-
+absl::StatusOr<DecryptionResult> ServerEncryptor::Decrypt(EncryptedRequest encrypted_request) {
   // Get recipient context.
   if (!recipient_context_) {
-    absl::Status status = InitializeRecipientContexts(request);
+    absl::Status status = InitializeRecipientContexts(encrypted_request);
     if (!status.ok()) {
       return status;
     }
   }
 
   // Decrypt request.
-  absl::StatusOr<std::string> plaintext = recipient_context_->Open(
-      request.encrypted_message().ciphertext(), request.encrypted_message().associated_data());
+  absl::StatusOr<std::string> plaintext =
+      recipient_context_->Open(encrypted_request.encrypted_message().ciphertext(),
+                               encrypted_request.encrypted_message().associated_data());
   if (!plaintext.ok()) {
     return plaintext.status();
   }
 
-  return DecryptionResult{*plaintext, request.encrypted_message().associated_data()};
+  return DecryptionResult{*plaintext, encrypted_request.encrypted_message().associated_data()};
 }
 
-absl::StatusOr<std::string> ServerEncryptor::Encrypt(absl::string_view plaintext,
-                                                     absl::string_view associated_data) {
+absl::StatusOr<EncryptedResponse> ServerEncryptor::Encrypt(absl::string_view plaintext,
+                                                           absl::string_view associated_data) {
   // Get recipient context.
   if (!recipient_context_) {
     return absl::InternalError("server encryptor is not initialized");
@@ -72,16 +68,11 @@ absl::StatusOr<std::string> ServerEncryptor::Encrypt(absl::string_view plaintext
   }
 
   // Create response message.
-  EncryptedResponse response;
-  *response.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
-  *response.mutable_encrypted_message()->mutable_associated_data() = associated_data;
+  EncryptedResponse encrypted_response;
+  *encrypted_response.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
+  *encrypted_response.mutable_encrypted_message()->mutable_associated_data() = associated_data;
 
-  // Serialize response.
-  std::string serialized_response;
-  if (!response.SerializeToString(&serialized_response)) {
-    return absl::InternalError("couldn't serialize response");
-  }
-  return serialized_response;
+  return encrypted_response;
 }
 
 absl::Status ServerEncryptor::InitializeRecipientContexts(const EncryptedRequest& request) {

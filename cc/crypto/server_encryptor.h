@@ -48,18 +48,16 @@ class ServerEncryptor {
   // Decrypts a [`EncryptedRequest`] proto message using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
-  // `encrypted_request` must be a serialized [`oak.crypto.EncryptedRequest`] message.
   // Returns a response message plaintext and associated data.
-  // TODO(#3843): Accept unserialized proto messages once we have Java encryption without JNI.
-  absl::StatusOr<DecryptionResult> Decrypt(absl::string_view encrypted_request);
+  absl::StatusOr<DecryptionResult> Decrypt(oak::crypto::v1::EncryptedRequest encrypted_request);
 
   // Encrypts `plaintext` and authenticates `associated_data` using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
-  // Returns a serialized [`oak.crypto.EncryptedResponse`] message.
+  // Returns an [`oak.crypto.EncryptedResponse`] proto message.
   // TODO(#3843): Return unserialized proto messages once we have Java encryption without JNI.
-  absl::StatusOr<std::string> Encrypt(absl::string_view plaintext,
-                                      absl::string_view associated_data);
+  absl::StatusOr<::oak::crypto::v1::EncryptedResponse> Encrypt(absl::string_view plaintext,
+                                                               absl::string_view associated_data);
 
  private:
   RecipientContextGenerator& recipient_context_generator_;

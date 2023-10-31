@@ -53,17 +53,15 @@ impl OakFunctionsInstance {
         })
     }
     /// See [`crate::proto::oak::functions::OakFunctions::handle_user_request`].
-    pub fn handle_user_request(&mut self, request: &[u8]) -> Result<Vec<u8>, micro_rpc::Status> {
+    pub fn handle_user_request(&self, request: Vec<u8>) -> Result<Vec<u8>, micro_rpc::Status> {
         // TODO(#3442): Implement constant response size policy.
         self.wasm_handler
-            .handle_invoke(Request {
-                body: request.to_vec(),
-            })
+            .handle_invoke(Request { body: request })
             .map(|response| response.body)
     }
     /// See [`crate::proto::oak::functions::OakFunctions::extend_next_lookup_data`].
     pub fn extend_next_lookup_data(
-        &mut self,
+        &self,
         request: ExtendNextLookupDataRequest,
     ) -> Result<ExtendNextLookupDataResponse, micro_rpc::Status> {
         self.lookup_data_manager
@@ -72,7 +70,7 @@ impl OakFunctionsInstance {
     }
     /// See [`crate::proto::oak::functions::OakFunctions::finish_next_lookup_data`].
     pub fn finish_next_lookup_data(
-        &mut self,
+        &self,
         _request: FinishNextLookupDataRequest,
     ) -> Result<FinishNextLookupDataResponse, micro_rpc::Status> {
         self.lookup_data_manager.finish_next_lookup_data();
@@ -80,7 +78,7 @@ impl OakFunctionsInstance {
     }
     /// See [`crate::proto::oak::functions::OakFunctions::abort_next_lookup_data`].
     pub fn abort_next_lookup_data(
-        &mut self,
+        &self,
         _request: Empty,
     ) -> Result<AbortNextLookupDataResponse, Status> {
         self.lookup_data_manager.abort_next_lookup_data();

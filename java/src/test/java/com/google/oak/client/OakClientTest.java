@@ -21,6 +21,8 @@ import static org.junit.Assert.assertTrue;
 
 import com.google.oak.crypto.ServerEncryptor;
 import com.google.oak.crypto.hpke.KeyPair;
+import com.google.oak.crypto.v1.EncryptedRequest;
+import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.remote_attestation.InsecureAttestationVerifier;
 import com.google.oak.session.v1.AttestationBundle;
 import com.google.oak.session.v1.AttestationEndorsement;
@@ -70,8 +72,8 @@ public class OakClientTest {
     }
 
     @Override
-    public Result<byte[], String> invoke(byte[] requestBytes) {
-      return serverEncryptor.decrypt(requestBytes)
+    public Result<EncryptedResponse, String> invoke(EncryptedRequest encryptedRequest) {
+      return serverEncryptor.decrypt(encryptedRequest)
           .mapError(err -> "couldn't decrypt request: " + err)
           .andThen(decryptedRequest -> {
             if (!Arrays.equals(decryptedRequest.plaintext, TEST_REQUEST)

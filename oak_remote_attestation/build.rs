@@ -15,7 +15,11 @@
 //
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    micro_rpc_build::compile(&["proto/v1/messages.proto"], &["proto/v1"]);
+    micro_rpc_build::compile(
+        &["proto/v1/messages.proto"],
+        &["proto/v1"],
+        Default::default(),
+    );
 
     Ok(())
 }

@@ -15,5 +15,5 @@
 //
 
 fn main() {
-    micro_rpc_build::compile(&["proto/messages.proto"], &["proto"]);
+    micro_rpc_build::compile(&["proto/messages.proto"], &["proto"], Default::default());
 }

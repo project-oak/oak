@@ -1,0 +1,67 @@
+//
+// Copyright 2023 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.attestation.v1;
+
+import "proto/attestation/evidence.proto";
+
+option go_package = "proto/oak/attestation/v1";
+option java_multiple_files = true;
+option java_package = "com.google.oak.attestation.v1";
+
+// Endorsement for binaries from the Transparent Release process.
+// <https://github.com/project-oak/oak/blob/main/docs/release.md>
+message TransparentReleaseEndorsement {
+  // The endorsement statement for the underlying binary.
+  bytes endorsement = 1;
+
+  // The endorser’s signature over the endorsement statement.
+  bytes endorsement_signature = 2;
+
+  // The log entry as proof of inclusion of the endorsement statement in Rekor.
+  bytes rekor_log_entry = 3;
+}
+
+// Endorsement contains statements that some entity (e.g., a hardware provider) vouches for the
+// integrity of claims about the TEE or the software running on it.
+//
+// The name is chosen to match the RATS terminology:
+// <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
+message Endorsements {
+  // The platform providing the attestation report.
+  TeePlatform platform = 1;
+
+  // The serialized TEE certificate(s). The details of the format and how the certificate(s) are
+  // encoded into this byte array are implementation-specific. In case of AMD-SEV-SNP, as described
+  // in https://www.amd.com/system/files/TechDocs/57230.pdf, there are three different certificates
+  // packaged in two different files.
+  bytes tee_certificates = 2;
+
+  // Transparent Release endorsement.
+  repeated TransparentReleaseEndorsement transparent_release_endorsement = 3;
+}
+
+// EndorsedEvidence contains the information that the untrusted launcher provides to the client
+// in response to its request for the enclave's public key(s).
+message EndorsedEvidence {
+  // Attestation evidence from the enclave.
+  Evidence evidence = 1;
+
+  // Supporting evidence required for verifying the integrity of attestation evidence.
+  Endorsements endorsements = 2;
+}
