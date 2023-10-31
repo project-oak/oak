@@ -26,7 +26,6 @@ java_test(
     test_class = "com.google.oak.client.OakClientTest",
     deps = [
         "//java/src/main/java/com/google/oak/client",
-        "//java/src/main/java/com/google/oak/crypto:client_encryptor",
         "//java/src/main/java/com/google/oak/crypto:server_encryptor",
         "//java/src/main/java/com/google/oak/crypto/hpke",
         "//java/src/main/java/com/google/oak/remote_attestation:insecure_attestation_verifier",

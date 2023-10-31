@@ -22,9 +22,7 @@ import static org.mockito.Mockito.mock;
 import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.session.v1.AttestationBundle;
-import com.google.oak.session.v1.GetPublicKeyRequest;
 import com.google.oak.session.v1.GetPublicKeyResponse;
-import com.google.oak.session.v1.InvokeRequest;
 import com.google.oak.session.v1.InvokeResponse;
 import com.google.oak.session.v1.RequestWrapper;
 import com.google.oak.session.v1.ResponseWrapper;
@@ -38,24 +36,15 @@ import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.stub.StreamObserver;
 import io.grpc.testing.GrpcCleanupRule;
 import java.lang.IllegalArgumentException;
-import java.nio.charset.StandardCharsets;
-import java.util.Optional;
-import java.util.function.Function;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.mockito.Matchers;
-import org.mockito.Mock;
-import org.mockito.Mockito;
 
 @RunWith(JUnit4.class)
 public class GrpcStreamingTransportTest {
-  private static final byte[] TEST_REQUEST = new byte[] {'R', 'e', 'q', 'u', 'e', 's', 't'};
-  private static final byte[] TEST_RESPONSE = new byte[] {'R', 'e', 's', 'p', 'o', 'n', 's', 'e'};
-
   private static class RequestStreamObserver implements StreamObserver<RequestWrapper> {
     private final StreamObserver<ResponseWrapper> responseObserver;
 

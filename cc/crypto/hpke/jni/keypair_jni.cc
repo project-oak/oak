@@ -15,6 +15,7 @@
  */
 
 #include "../recipient_context.h"
+#include "absl/status/statusor.h"
 #include "com_google_oak_crypto_hpke_KeyPair.h"
 
 JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_KeyPair_nativeGenerate(JNIEnv* env,
