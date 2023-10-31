@@ -33,7 +33,7 @@ option java_package = "com.google.oak.attestation.v1";
 // <https://trustedcomputinggroup.org/wp-content/uploads/TCG_DICE_Attestation_Architecture_r22_02dec2020.pdf>
 // <https://trustedcomputinggroup.org/wp-content/uploads/DICE-Layering-Architecture-r19_pub.pdf>
 enum TeePlatform {
-  UNSPECIFIED = 0;
+  TEE_PLATFORM_UNSPECIFIED = 0;
   AMD_SEV_SNP = 1;
   INTEL_TDX = 2;
 }
