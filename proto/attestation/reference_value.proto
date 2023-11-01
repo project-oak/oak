@@ -64,18 +64,18 @@ message VerifyLogEntry {
 
 // Verifies that the field contains at least one of the given digests.
 // No checks are performed if this is empty.
-message Digests {
+message Measurements {
   repeated RawDigest digests = 1;
 }
 
-message VerifyLinuxKernelFields {
+message VerifyLinuxKernel {
   // Each field is in a 1:1 correspondence to a CBOR key.
   optional VerifyLogEntry kernel_binary = 1;
   optional VerifyLogEntry kernel_cmd_line = 2;
   optional VerifyLogEntry acpi = 3;
 }
 
-message VerifyOakRestrictedKernelFields {
+message VerifyOakRestrictedKernel {
   // TBD, but similar to Linux kernel
 }
 
@@ -83,15 +83,15 @@ message VerifyOakRestrictedKernelFields {
 // specified entries are contained (subset). Ideally this would never be used
 // if we manage to provide oneof members for all practical layer use cases.
 message VerifyCborFields {
-  map<int32, Digests> cbor_fields = 1;
+  map<int32, Measurements> cbor_fields = 1;
 }
 
 // Verifies certificate contents for layers 1 through N.
 message LayerReferenceValues {
   oneof layer_type {
-    VerifyLinuxKernelFields linux_kernel = 1;
+    VerifyLinuxKernel linux_kernel = 1;
 
-    VerifyOakRestrictedKernelFields oak_restricted_kernel = 2;
+    VerifyOakRestrictedKernel oak_restricted_kernel = 2;
 
     VerifyLogEntry generic_binary = 3;
 

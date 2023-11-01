@@ -92,10 +92,10 @@ message ApplicationKeys {
 // <https://datatracker.ietf.org/doc/html/rfc9334#name-evidence>
 message Evidence {
   // Layer0 attestation evidence.
-  RootLayerEvidence root_layer_evidence = 1;
+  RootLayerEvidence root_layer = 1;
 
   // Layer1..LayerN-1 attestation evidence.
-  repeated LayerEvidence layer_evidence = 2;
+  repeated LayerEvidence layers = 2;
 
   // Application keys signed by the penultimate layer’s ECA key.
   //
