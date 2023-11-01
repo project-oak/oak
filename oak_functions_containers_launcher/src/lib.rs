@@ -15,6 +15,7 @@
 
 pub mod proto {
     pub mod oak {
+        pub use oak_crypto::proto::oak::crypto;
         pub mod functions {
             tonic::include_proto!("oak.functions");
         }

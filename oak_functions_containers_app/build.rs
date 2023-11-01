@@ -21,8 +21,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
         "../",
         &[
-            "oak_functions_service/proto/oak_functions.proto",
             "oak_crypto/proto/v1/crypto.proto",
+            "oak_functions_service/proto/oak_functions.proto",
         ],
         CodegenOptions {
             build_server: true,
