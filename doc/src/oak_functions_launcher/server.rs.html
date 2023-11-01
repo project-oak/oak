@@ -129,6 +129,12 @@
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -216,7 +222,10 @@
                     }
                     request_wrapper::Request::InvokeRequest(invoke_request) =&gt; {
                         <span class="kw">let </span>enclave_invoke_request = functions::InvokeRequest {
-                            body: invoke_request.encrypted_body,
+                            <span class="comment">// TODO(#4037): Remove once explicit protos are used end-to-end.
+                            </span>body: invoke_request.encrypted_body,
+                            <span class="comment">// TODO(#4037): Use explicit crypto protos.
+                            </span>encrypted_request: <span class="prelude-val">None</span>,
                         };
                         <span class="kw">let </span><span class="kw-2">mut </span>enclave_client =
                             functions::OakFunctionsAsyncClient::new(connector_handle.clone());
@@ -228,7 +237,10 @@
                                 tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;error handling client request: {:?}&quot;</span>, err))
                             })<span class="question-mark">?</span>;
                         response_wrapper::Response::InvokeResponse(InvokeResponse {
-                            encrypted_body: enclave_invoke_response.body,
+                            <span class="comment">// TODO(#4037): Remove once explicit protos are used end-to-end.
+                            </span>encrypted_body: enclave_invoke_response.body,
+                            <span class="comment">// TODO(#4037): Use explicit crypto protos.
+                            </span>encrypted_response: <span class="prelude-val">None</span>,
                         })
                     }
                 };

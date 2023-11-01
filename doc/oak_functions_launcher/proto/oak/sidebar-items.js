@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["functions","session"]};
+window.SIDEBAR_ITEMS = {"mod":["crypto","functions","session"]};

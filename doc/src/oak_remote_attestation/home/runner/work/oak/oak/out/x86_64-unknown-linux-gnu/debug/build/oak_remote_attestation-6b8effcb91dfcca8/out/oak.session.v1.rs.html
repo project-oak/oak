@@ -125,6 +125,18 @@
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// AttestationEvidence contains all the information that originates in the TEE and can serve as
 /// claims about the Target Environment. The name is chosen to match the RATS terminology
 /// (see &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence&gt;).
@@ -225,6 +237,12 @@
     /// TODO(#3843): Use explicit `oak_crypto` messages.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>encrypted_body: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// Body of the request, encrypted using Hybrid Public Key Encryption (HPKE).
+    /// &lt;&lt;https://www.rfc-editor.org/rfc/rfc9180.html&gt;&gt;
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>encrypted_request: ::core::option::Option&lt;
+        <span class="kw">super</span>::<span class="kw">super</span>::crypto::v1::EncryptedRequest,
+    &gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -234,6 +252,12 @@
     /// TODO(#3843): Use explicit `oak_crypto` messages.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>encrypted_body: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// Body of the request, encrypted using Hybrid Public Key Encryption (HPKE).
+    /// &lt;&lt;https://www.rfc-editor.org/rfc/rfc9180.html&gt;&gt;
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>encrypted_response: ::core::option::Option&lt;
+        <span class="kw">super</span>::<span class="kw">super</span>::crypto::v1::EncryptedResponse,
+    &gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

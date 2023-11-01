@@ -81,6 +81,7 @@
 <a href="#81" id="81">81</a>
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -99,6 +100,7 @@
 
 </span><span class="kw">pub mod </span>proto {
     <span class="kw">pub mod </span>oak {
+        <span class="kw">pub use </span>oak_crypto::proto::oak::crypto;
         <span class="kw">pub mod </span>session {
             <span class="kw">pub mod </span>v1 {
                 <span class="attr">#![allow(clippy::return_self_not_must_use)]

@@ -129,6 +129,9 @@
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -188,7 +191,10 @@
             </span>.rpc_client
             .stream(futures_util::stream::iter(<span class="macro">vec!</span>[RequestWrapper {
                 request: <span class="prelude-val">Some</span>(request_wrapper::Request::InvokeRequest(InvokeRequest {
-                    encrypted_body: serialized_request,
+                    <span class="comment">// TODO(#4037): Remove once explicit protos are used end-to-end.
+                    </span>encrypted_body: serialized_request,
+                    <span class="comment">// TODO(#4037): Use explicit crypto protos.
+                    </span>encrypted_request: <span class="prelude-val">None</span>,
                 })),
             }]))
             .<span class="kw">await

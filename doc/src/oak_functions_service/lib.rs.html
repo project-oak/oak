@@ -172,6 +172,11 @@
 <a href="#172" id="172">172</a>
 <a href="#173" id="173">173</a>
 <a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -199,6 +204,7 @@
 
 <span class="kw">pub mod </span>proto {
     <span class="kw">pub mod </span>oak {
+        <span class="kw">pub use </span>oak_crypto::proto::oak::crypto;
         <span class="kw">pub mod </span>functions {
             <span class="attr">#![allow(dead_code)]
             </span><span class="kw">use </span>prost::Message;
@@ -310,7 +316,11 @@
             response.encode_to_vec()
         })
         .invoke(<span class="kw-2">&amp;</span>request.body)
-        .map(|response| InvokeResponse { body: response })
+        <span class="comment">// TODO(#4037): Use explicit crypto protos.
+        </span>.map(|response| InvokeResponse {
+            body: response,
+            encrypted_response: <span class="prelude-val">None</span>,
+        })
         .map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
