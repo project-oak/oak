@@ -49,6 +49,7 @@ java_library(
     name = "verification",
     srcs = glob(["*.java"]),
     deps = [
+        "//proto:digest_java_proto",
         "//proto/attestation:endorsement_java_proto",
         "//proto/attestation:evidence_java_proto",
         "//proto/attestation:reference_value_java_proto",

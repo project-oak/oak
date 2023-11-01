@@ -28,11 +28,8 @@ message TransparentReleaseEndorsement {
   // The endorsement statement for the underlying binary.
   bytes endorsement = 1;
 
-  // The endorser’s signature over the endorsement statement.
-  bytes endorsement_signature = 2;
-
   // The log entry as proof of inclusion of the endorsement statement in Rekor.
-  bytes rekor_log_entry = 3;
+  bytes rekor_log_entry = 2;
 }
 
 message RootLayerEndorsements {
@@ -58,7 +55,7 @@ message OakRestrictedKernelEndorsement {
 
 message CborFieldsEndorsement {
   // Map from an OpenDICE binary label to a Transparent Release endorsement.
-  map<int32, TransparentReleaseEndorsement> transparent_release_endorsements = 1;
+  map<int32, TransparentReleaseEndorsement> endorsements = 1;
 }
 
 message LayerEndorsements {

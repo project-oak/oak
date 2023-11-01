@@ -49,6 +49,7 @@ java_test(
         "//proto/attestation:endorsement_java_proto",
         "//proto/attestation:evidence_java_proto",
         "//proto/attestation:reference_value_java_proto",
+        "@com_google_protobuf//java/core",
     ],
 )
 

@@ -26,11 +26,11 @@ option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
 
 message ReferenceValues {
-  RootReferenceValues root_layer = 1;        // Layer 0
+  RootLayerReferenceValues root_layer = 1;   // Layer 0
   repeated LayerReferenceValues layers = 2;  // Layers 1 through N.
 }
 
-message RootReferenceValues {
+message RootLayerReferenceValues {
   // Switches between AMD and Intel based on TeePlatform value.
   VerifyAmdSevAttestationReport amd_sev_attestation_report = 1;
   VerifyIntelTdxAttestationReport intel_tdx_attestation_report = 2;
@@ -80,8 +80,10 @@ message VerifyOakRestrictedKernel {
 }
 
 // Alternatively, verify the contents of the map explicitly. Checks that the
-// specified entries are contained (subset). Ideally this would never be used
-// if we manage to provide oneof members for all practical layer use cases.
+// specified entries are contained in the endorsement (subset). Additional
+// fields stated in the endorsement are ignored. Ideally this would never be
+// used if we manage to provide oneof members for all practical layer use
+// cases.
 message VerifyCborFields {
   map<int32, Measurements> cbor_fields = 1;
 }

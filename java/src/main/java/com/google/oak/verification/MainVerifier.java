@@ -23,7 +23,7 @@ import com.google.oak.attestation.v1.LayerEvidence;
 import com.google.oak.attestation.v1.LayerReferenceValues;
 import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.attestation.v1.RootLayerEvidence;
-import com.google.oak.attestation.v1.RootReferenceValues;
+import com.google.oak.attestation.v1.RootLayerReferenceValues;
 import java.util.Optional;
 
 import javax.swing.text.html.Option;
@@ -55,7 +55,7 @@ public class MainVerifier {
     return initFailure;
   }
 
-  public Optional<Failure> verifyRoot(RootReferenceValues values) {
+  public Optional<Failure> verifyRoot(RootLayerReferenceValues values) {
     // Needs implementation
     return Optional.empty();
   }
@@ -71,7 +71,8 @@ public class MainVerifier {
     }
     ListIterator<LayerVerifier> it = layerVerifiers.listIterator();
     while (it.hasNext()) {
-      r = it.next().verify(values.getLayers(it.nextIndex()));
+      int layerIndex = it.nextIndex();
+      r = it.next().verify(values.getLayers(layerIndex));
       if (r.isPresent()) {
         return r;
       }
@@ -82,6 +83,6 @@ public class MainVerifier {
 
   private final Evidence evidence;
   private final Endorsements endorsements;
-  Optional<Failure> initFailure;
+  private final Optional<Failure> initFailure;
   private final List<LayerVerifier> layerVerifiers = new ArrayList<>();
 }

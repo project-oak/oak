@@ -20,9 +20,13 @@ import com.google.oak.attestation.v1.LayerEvidence;
 import com.google.oak.attestation.v1.LayerEndorsements;
 import com.google.oak.attestation.v1.LayerReferenceValues;
 import com.google.oak.attestation.v1.LinuxKernelEndorsement;
+import com.google.oak.attestation.v1.Measurements;
 import com.google.oak.attestation.v1.TransparentReleaseEndorsement;
 import com.google.oak.attestation.v1.VerifyLogEntry;
 import com.google.oak.attestation.v1.VerifyLinuxKernel;
+import com.google.oak.RawDigest;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 class LayerVerifier {
@@ -43,28 +47,27 @@ class LayerVerifier {
       if (r.isPresent()) {
         return r;
       }
-      r = verifyLogEntry(end.getAcpi(), ref.getAcpi());
-      if (r.isPresent()) {
-        return r;
-      }
+      return verifyLogEntry(end.getAcpi(), ref.getAcpi());
     } else if (endorsements.hasOakRestrictedKernel() && values.hasOakRestrictedKernel()) {
-      // TBD
+      return Optional.of(new Failure("Not yet implemented"));
     } else if (endorsements.hasGenericBinary() && values.hasGenericBinary()) {
-      Optional<Failure> r = verifyLogEntry(endorsements.getGenericBinary(), values.getGenericBinary());
-      if (r.isPresent()) {
-        return r;
-      }
-    } else if (endorsements.hasCborFields() && values.hasCborFields()) {
-      // NYI
+      return verifyLogEntry(endorsements.getGenericBinary(), values.getGenericBinary());
+    } else if (values.hasCborFields()) {
+      return Optional.of(new Failure("Not yet implemented"));
     }
 
-    return Optional.of(new Failure("Mismatch in endorsenent and reference values"));
+    return Optional.of(new Failure("Mismatch in endorsement and reference values"));
   }
 
   private static Optional<Failure> verifyLogEntry(TransparentReleaseEndorsement end, VerifyLogEntry ref) {
-    RekorLogEntry logEntry = RekorLogEntry.createFromJson(end.getRekorLogEntry().toString());
-    return LogEntryVerifier.verify(logEntry, ref.getRekorPublicKey().toByteArray(),
-        end.getEndorsement().toByteArray());
+    RekorLogEntry logEntry;
+    try {
+      logEntry = RekorLogEntry.createFromJson(end.getRekorLogEntry().toStringUtf8());
+    } catch (IllegalArgumentException e) {
+      return Optional.of(new Failure(String.format("%s: %s", e.getClass().getName(), e.getMessage())));
+    }
+    return LogEntryVerifier.verify(
+        logEntry, ref.getRekorPublicKey().toByteArray(), end.getEndorsement().toByteArray());
   }
 
   private final LayerEvidence evidence;
