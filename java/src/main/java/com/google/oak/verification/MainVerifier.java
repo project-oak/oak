@@ -16,21 +16,19 @@
 
 package com.google.oak.verification;
 
-import com.google.oak.attestation.v1.Evidence;
 import com.google.oak.attestation.v1.Endorsements;
+import com.google.oak.attestation.v1.Evidence;
 import com.google.oak.attestation.v1.LayerEndorsements;
 import com.google.oak.attestation.v1.LayerEvidence;
 import com.google.oak.attestation.v1.LayerReferenceValues;
 import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.attestation.v1.RootLayerEvidence;
 import com.google.oak.attestation.v1.RootLayerReferenceValues;
-import java.util.Optional;
-
-import javax.swing.text.html.Option;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Optional;
+import javax.swing.text.html.Option;
 
 public class MainVerifier {
   public static void main(String[] args) throws Exception {

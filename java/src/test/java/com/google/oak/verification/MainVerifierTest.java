@@ -41,10 +41,14 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class MainVerifierTest {
-  private static final String LOG_ENTRY_PATH = "oak_remote_attestation_verification/testdata/logentry.json";
-  private static final String ENDORSER_PUBLIC_KEY_PATH = "oak_remote_attestation_verification/testdata/oak-development.pem";
-  private static final String REKOR_PUBLIC_KEY_PATH = "oak_remote_attestation_verification/testdata/rekor_public_key.pem";
-  private static final String ENDORSEMENT_PATH = "oak_remote_attestation_verification/testdata/endorsement.json";
+  private static final String LOG_ENTRY_PATH =
+      "oak_remote_attestation_verification/testdata/logentry.json";
+  private static final String ENDORSER_PUBLIC_KEY_PATH =
+      "oak_remote_attestation_verification/testdata/oak-development.pem";
+  private static final String REKOR_PUBLIC_KEY_PATH =
+      "oak_remote_attestation_verification/testdata/rekor_public_key.pem";
+  private static final String ENDORSEMENT_PATH =
+      "oak_remote_attestation_verification/testdata/endorsement.json";
 
   private byte[] logEntryBytes;
   private byte[] endorserPublicKeyBytes;
@@ -54,28 +58,36 @@ public class MainVerifierTest {
   @Before
   public void setUp() throws Exception {
     logEntryBytes = Files.readAllBytes(Path.of(LOG_ENTRY_PATH));
-    endorserPublicKeyBytes = SignatureVerifier.convertPemToRaw(Files.readString(Path.of(ENDORSER_PUBLIC_KEY_PATH)));
-    rekorPublicKeyBytes = SignatureVerifier.convertPemToRaw(Files.readString(Path.of(REKOR_PUBLIC_KEY_PATH)));
+    endorserPublicKeyBytes =
+        SignatureVerifier.convertPemToRaw(Files.readString(Path.of(ENDORSER_PUBLIC_KEY_PATH)));
+    rekorPublicKeyBytes =
+        SignatureVerifier.convertPemToRaw(Files.readString(Path.of(REKOR_PUBLIC_KEY_PATH)));
     endorsementBytes = Files.readAllBytes(Path.of(ENDORSEMENT_PATH));
   }
 
   private TransparentReleaseEndorsement createTREndorsement() {
     ByteString endorsement = ByteString.copyFrom(endorsementBytes);
     ByteString logEntry = ByteString.copyFrom(logEntryBytes);
-    return TransparentReleaseEndorsement.newBuilder().setEndorsement(endorsement).setRekorLogEntry(logEntry).build();
+    return TransparentReleaseEndorsement.newBuilder()
+        .setEndorsement(endorsement)
+        .setRekorLogEntry(logEntry)
+        .build();
   }
 
   private static Evidence createEvidence() {
     return Evidence.newBuilder()
-        .setRootLayer(RootLayerEvidence.newBuilder().setPlatform(TeePlatform.AMD_SEV_SNP)
-            .setRemoteAttestationReport(ByteString.copyFromUtf8("whatever")))
-        .addLayers(LayerEvidence.newBuilder().setEcaCertificate(ByteString.copyFromUtf8("whatever")))
+        .setRootLayer(RootLayerEvidence.newBuilder()
+                          .setPlatform(TeePlatform.AMD_SEV_SNP)
+                          .setRemoteAttestationReport(ByteString.copyFromUtf8("whatever")))
+        .addLayers(
+            LayerEvidence.newBuilder().setEcaCertificate(ByteString.copyFromUtf8("whatever")))
         .build();
   }
 
   private Endorsements createEndorsements() {
     return Endorsements.newBuilder()
-        .setRootLayer(RootLayerEndorsements.newBuilder().setStage0Endorsement(createTREndorsement()))
+        .setRootLayer(
+            RootLayerEndorsements.newBuilder().setStage0Endorsement(createTREndorsement()))
         .addLayers(LayerEndorsements.newBuilder().setGenericBinary(createTREndorsement()))
         .build();
   }
@@ -86,9 +98,10 @@ public class MainVerifierTest {
 
     return ReferenceValues.newBuilder()
         .setRootLayer(RootLayerReferenceValues.newBuilder())
-        .addLayers(LayerReferenceValues.newBuilder()
-            .setGenericBinary(
-                VerifyLogEntry.newBuilder().setEndorserPublicKey(endorserPublicKey).setRekorPublicKey(rekorPublicKey)))
+        .addLayers(LayerReferenceValues.newBuilder().setGenericBinary(
+            VerifyLogEntry.newBuilder()
+                .setEndorserPublicKey(endorserPublicKey)
+                .setRekorPublicKey(rekorPublicKey)))
         .build();
   }
 

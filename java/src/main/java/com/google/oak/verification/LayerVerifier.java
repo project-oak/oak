@@ -16,15 +16,15 @@
 
 package com.google.oak.verification;
 
-import com.google.oak.attestation.v1.LayerEvidence;
+import com.google.oak.RawDigest;
 import com.google.oak.attestation.v1.LayerEndorsements;
+import com.google.oak.attestation.v1.LayerEvidence;
 import com.google.oak.attestation.v1.LayerReferenceValues;
 import com.google.oak.attestation.v1.LinuxKernelEndorsement;
 import com.google.oak.attestation.v1.Measurements;
 import com.google.oak.attestation.v1.TransparentReleaseEndorsement;
-import com.google.oak.attestation.v1.VerifyLogEntry;
 import com.google.oak.attestation.v1.VerifyLinuxKernel;
-import com.google.oak.RawDigest;
+import com.google.oak.attestation.v1.VerifyLogEntry;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -59,12 +59,14 @@ class LayerVerifier {
     return Optional.of(new Failure("Mismatch in endorsement and reference values"));
   }
 
-  private static Optional<Failure> verifyLogEntry(TransparentReleaseEndorsement end, VerifyLogEntry ref) {
+  private static Optional<Failure> verifyLogEntry(
+      TransparentReleaseEndorsement end, VerifyLogEntry ref) {
     RekorLogEntry logEntry;
     try {
       logEntry = RekorLogEntry.createFromJson(end.getRekorLogEntry().toStringUtf8());
     } catch (IllegalArgumentException e) {
-      return Optional.of(new Failure(String.format("%s: %s", e.getClass().getName(), e.getMessage())));
+      return Optional.of(
+          new Failure(String.format("%s: %s", e.getClass().getName(), e.getMessage())));
     }
     return LogEntryVerifier.verify(
         logEntry, ref.getRekorPublicKey().toByteArray(), end.getEndorsement().toByteArray());

@@ -96,9 +96,7 @@ public final class RekorLogEntry {
    * Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.>
    */
-  static class Data {
-    Hash hash;
-  }
+  static class Data { Hash hash; }
 
   /**
    * Represents a hash digest.
@@ -170,15 +168,14 @@ public final class RekorLogEntry {
     Gson gson = new GsonBuilder().create();
     Map<String, Object> entryMap;
     try {
-      entryMap = gson.fromJson(json, new TypeToken<Map<String, Object>>() {
-      }.getType());
+      entryMap = gson.fromJson(json, new TypeToken<Map<String, Object>>() {}.getType());
     } catch (JsonSyntaxException e) {
       throw new IllegalArgumentException(e);
     }
     if (entryMap.size() != 1) {
       throw new IllegalArgumentException(
           "Expected exactly one entry in the json-formatted Rekor log entry, found "
-              + entryMap.size());
+          + entryMap.size());
     }
 
     String entryStr = gson.toJson(entryMap.values().iterator().next());
