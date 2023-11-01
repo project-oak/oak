@@ -221,6 +221,7 @@
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
 <a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -276,6 +277,7 @@
 </span><span class="kw">const </span>VM_START_TIMEOUT: u64 = <span class="number">300</span>;
 
 <span class="attr">#[derive(Parser, Debug)]
+#[group(skip)]
 </span><span class="kw">pub struct </span>Args {
     <span class="attr">#[arg(long, required = <span class="bool-val">true</span>, value_parser = path_exists,)]
     </span>system_image: std::path::PathBuf,
