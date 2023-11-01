@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use anyhow::Context;
 use clap::Parser;
 use oak_functions_containers_launcher::proto::oak::functions::InitializeRequest;
 use oak_functions_launcher::LookupDataConfig;
@@ -45,10 +46,26 @@ async fn main() -> Result<(), anyhow::Error> {
             .await
             .map_err(|error| anyhow::anyhow!("couldn't create untrusted launcher: {}", error))?;
 
-    let initialize_response = untrusted_app
-        .initialize_enclave(InitializeRequest::default())
+    let wasm_bytes = tokio::fs::read(&args.functions_args.wasm)
         .await
-        .map_err(|error| anyhow::anyhow!("couldn't get encrypted response: {}", error))?;
+        .with_context(|| {
+            format!(
+                "couldn't read Wasm file {}",
+                args.functions_args.wasm.display()
+            )
+        })
+        .unwrap();
+
+    let initialize_response = untrusted_app
+        .initialize_enclave(InitializeRequest {
+            wasm_module: wasm_bytes,
+            constant_response_size: args.functions_args.constant_response_size,
+        })
+        .await
+        .map_err(|error| {
+            eprintln!("initialize response error: {}", error);
+            anyhow::anyhow!("couldn't get encrypted response: {}", error)
+        })?;
 
     log::info!(
         "Received an initialization response: {:?}",
