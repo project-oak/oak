@@ -99,7 +99,7 @@ impl Qemu {
     pub fn start(params: Params, launcher_service_port: u16, host_proxy_port: u16) -> Result<Self> {
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
         let (guest_socket, host_socket) = UnixStream::pair()?;
-
+        cmd.kill_on_drop(true);
         cmd.stderr(Stdio::inherit());
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::inherit());
