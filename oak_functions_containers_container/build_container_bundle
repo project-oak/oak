@@ -9,7 +9,7 @@ set -o nounset
 set -o xtrace 
 set -o pipefail
 
-readonly OCI_IMAGE_FILE="./target/oak_container_example_oci_image.tar"
+readonly OCI_IMAGE_FILE="./target/oak_functions_container_oci_image.tar"
 set -e
 rm --recursive --force ./target
 mkdir --parents ./target
@@ -32,4 +32,4 @@ docker buildx \
 
 ../scripts/export_container_bundle \
     -c "${OCI_IMAGE_FILE}" \
-    -o ./target/oak_container_example_oci_filesystem_bundle.tar
+    -o ./target/oak_functions_container_oci_filesystem_bundle.tar
