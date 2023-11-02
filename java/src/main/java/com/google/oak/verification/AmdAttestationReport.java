@@ -1,0 +1,107 @@
+//
+// Copyright 2023 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+package com.google.oak.verification;
+
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+
+class TcbVersion {
+  public static final int SERIALIZED_SIZE = 8;
+
+  TcbVersion(byte[] serialized) {
+    bootLoader = serialized[0];
+    tee = serialized[1];
+    snp = serialized[6];
+    microcode = serialized[7];
+  }
+
+  public int bootLoader;
+  public int tee;
+  public int snp;
+  public int microcode;
+}
+
+/**
+ * Provides read-access to AMD attestation report.
+ *
+ * For specification see Table 22 in
+ * https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/56860.pdf
+ */
+public class AmdAttestationReport {
+  public AmdAttestationReport() {
+    this.bytes = new byte[0x4a0];
+  }
+
+  public AmdAttestationReport(byte[] bytes) {
+    this.bytes = bytes;
+  }
+
+  public int getVersion() {
+    return getInt32(0x000);
+  }
+
+  public int getGuestSvn() {
+    return getInt32(0x004);
+  }
+
+  public byte[] getFamilyId() {
+    return getSlice(0x010, 8);
+  }
+
+  public TcbVersion getCurrentTcb() {
+    return new TcbVersion(getSlice(0x038, TcbVersion.SERIALIZED_SIZE));
+  }
+
+  public byte[] getReportData() {
+    return getSlice(0x050, 64);
+  }
+
+  public byte[] getMeasurement() {
+    return getSlice(0x090, 48);
+  }
+
+  public int getCurrentMinor() {
+    return getUInt8(0x1e9);
+  }
+
+  public int getCurrentMajor() {
+    return getUInt8(0x1ea);
+  }
+
+  public TcbVersion getLaunchTcb() {
+    return new TcbVersion(getSlice(0x1f0, TcbVersion.SERIALIZED_SIZE));
+  }
+
+  public byte[] getSignature() {
+    return new byte[0];
+  }
+
+  private int getUInt8(int offset) {
+    return (int) bytes[offset];
+  }
+
+  private int getInt32(int offset) {
+    ByteBuffer buffer = ByteBuffer.wrap(bytes, offset, 4);
+    return buffer.getInt();
+  }
+
+  private byte[] getSlice(int offset, int length) {
+    return Arrays.copyOfRange(bytes, offset, offset + length);
+  }
+
+  private final byte[] bytes;
+}

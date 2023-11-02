@@ -21,6 +21,15 @@ package(
 )
 
 java_test(
+    name = "amd_attestation_report_test",
+    srcs = ["AmdAttestationReportTest.java"],
+    test_class = "com.google.oak.verification.AmdAttestationReportTest",
+    deps = [
+        "//java/src/main/java/com/google/oak/verification",
+    ],
+)
+
+java_test(
     name = "log_entry_verifier_test",
     srcs = ["LogEntryVerifierTest.java"],
     data = [
