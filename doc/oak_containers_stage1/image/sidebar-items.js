@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load","switch"]};
+window.SIDEBAR_ITEMS = {"fn":["extract","switch"]};

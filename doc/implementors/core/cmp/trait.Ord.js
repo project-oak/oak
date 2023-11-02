@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"oak_containers_stage1":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/cmp/trait.Ord.html\" title=\"trait core::cmp::Ord\">Ord</a> for <a class=\"enum\" href=\"oak_containers_stage1/dice/proto/oak/attestation/v1/enum.TeePlatform.html\" title=\"enum oak_containers_stage1::dice::proto::oak::attestation::v1::TeePlatform\">TeePlatform</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

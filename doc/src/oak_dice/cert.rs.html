@@ -175,6 +175,16 @@
 <a href="#175" id="175">175</a>
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -196,7 +206,7 @@
 </span><span class="kw">use </span>alloc::{string::String, vec, vec::Vec};
 <span class="kw">use </span>coset::{
     cbor::value::Value,
-    cwt::{ClaimName, ClaimsSetBuilder},
+    cwt::{ClaimName, ClaimsSet, ClaimsSetBuilder},
     iana, Algorithm, CborSerializable, CoseError, CoseKey, CoseSign1, KeyOperation, KeyType, Label,
 };
 <span class="kw">use </span>hkdf::Hkdf;
@@ -224,6 +234,9 @@
 <span class="doccomment">/// ID for the CWT private claim ID corresponding to the hash of the commands for building the ACPI
 /// tables.
 </span><span class="kw">pub const </span>ACPI_MEASUREMENT_ID: i64 = -<span class="number">4670560</span>;
+<span class="doccomment">/// ID for the CWT private claim label corresponding to the hash of the binary for the layer in the
+/// case where a single binary is measured for a layer..
+</span><span class="kw">pub const </span>CODE_DIGEST_ID: i64 = -<span class="number">4670545</span>;
 
 <span class="doccomment">/// String to be used as salt for generating Key IDs.
 </span><span class="kw">const </span>ID_SALT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;DICE_ID_SALT&quot;</span>;
@@ -351,5 +364,12 @@
             .build(),
         signing_key,
     ))
+}
+
+<span class="doccomment">/// Parses a bytes slice as a CWT certificate and extracts the payload as a set of claims.
+</span><span class="kw">pub fn </span>get_claims_set_from_certifcate_bytes(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;ClaimsSet, CoseError&gt; {
+    <span class="kw">let </span>cwt = CoseSign1::from_slice(bytes)<span class="question-mark">?</span>;
+    <span class="kw">let </span>payload = cwt.payload.unwrap_or_default();
+    ClaimsSet::from_slice(<span class="kw-2">&amp;</span>payload)
 }
 </code></pre></div></section></main></body></html>
