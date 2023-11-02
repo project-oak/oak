@@ -14,10 +14,14 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::session::v1::AttestationEvidence;
-use alloc::{sync::Arc, vec::Vec};
+use crate::proto::oak::{
+    attestation::v1::{ApplicationKeys, CertificateAuthority, DiceData, Evidence, LayerEvidence},
+    session::v1::AttestationEvidence,
+};
+use alloc::{string::ToString, sync::Arc, vec, vec::Vec};
 use anyhow::Context;
 use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_dice::cert::generate_ecdsa_key_pair;
 
 /// A trait implementing the functionality of generating a remote attestation report.
 ///
@@ -74,6 +78,71 @@ impl Attester {
             signing_public_key: Vec::new(),
             // TODO(#3640): Sign application data.
             signed_application_data: Vec::new(),
+        })
+    }
+}
+
+struct ApplicationPublicKeys {
+    encryption_public_key: Option<Vec<u8>>,
+    signing_public_key: Option<Vec<u8>>,
+}
+
+// TODO(#4074): Rename to `Attester` and replace the existing `Attester`once
+// DICE attestation is implemented.
+/// DICE attester implementation.
+/// <https://www.rfc-editor.org/rfc/rfc9334.html#name-attester>
+struct DiceAttester {
+    /// DICE attestation evidence that includes current layer's evidence.
+    evidence: Evidence,
+    /// Certificate authority for the current layer.
+    certificate_authority: CertificateAuthority,
+}
+
+impl DiceAttester {
+    fn create(
+        dice_data: DiceData,
+        _application_public_keys: Option<ApplicationPublicKeys>,
+    ) -> anyhow::Result<Self> {
+        let mut evidence = dice_data
+            .evidence
+            .context("no evidence provided in DICE data")?;
+
+        // Add next layer evidence.
+        let next_layer_evidence = LayerEvidence {
+            layer_name: "".to_string(),
+            // TODO(#4074): Measure the next layer and generate certificates.
+            eca_certificate: vec![],
+        };
+        if let Some(_application_public_keys) = _application_public_keys {
+            let application_keys_certificates = ApplicationKeys {
+                encryption_public_key_certificate: Some(vec![]),
+                signing_public_key_certificate: Some(vec![]),
+            };
+            evidence.application_keys = Some(application_keys_certificates);
+        }
+        evidence.layer_evidence.push(next_layer_evidence);
+
+        Ok(DiceAttester {
+            evidence: evidence,
+            certificate_authority: dice_data
+                .certificate_authority
+                .context("no certificate authority provided in DICE data")?,
+        })
+    }
+
+    fn get_evidence(&self) -> Evidence {
+        self.evidence.clone()
+    }
+
+    fn generate_dice_data(self) -> anyhow::Result<DiceData> {
+        let (eca_private_key, _) = generate_ecdsa_key_pair();
+        let next_layer_certificate_authority = CertificateAuthority {
+            // TODO(#4074): Create next layer certificate authoruty.
+            eca_private_key: eca_private_key.to_bytes().as_slice().into(),
+        };
+        Ok(DiceData {
+            evidence: Some(self.get_evidence()),
+            certificate_authority: Some(next_layer_certificate_authority),
         })
     }
 }
