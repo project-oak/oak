@@ -119,4 +119,18 @@ public class MainVerifierTest {
     }
     Assert.assertFalse(failure.isPresent());
   }
+
+  @Test
+  public void testVerifyFailsBadRekorKey() {
+    rekorPublicKeyBytes[rekorPublicKeyBytes.length / 2]++;
+
+    Evidence evidence = createEvidence();
+    Endorsements endorsements = createEndorsements();
+    ReferenceValues referenceValues = createReferenceValues();
+
+    MainVerifier verifier = new MainVerifier(evidence, endorsements);
+    Optional<Failure> failure = verifier.verify(referenceValues);
+
+    Assert.assertTrue(failure.isPresent());
+  }
 }
