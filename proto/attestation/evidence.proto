@@ -59,14 +59,11 @@ message RootLayerEvidence {
 
 // DICE layer evidence containing a certificate signed by the previous layer.
 message LayerEvidence {
-  // Layer name is unique per enclave application, but it’s not a globally unique identifier.
-  string layer_name = 1;
-
   // Certificate signing current layer's measurements and the ECA key.
   //
   // Represented as a CBOR/COSE/CWT ECA certificate.
   // <https://www.rfc-editor.org/rfc/rfc8392.html>
-  bytes eca_certificate = 2;
+  bytes eca_certificate = 1;
 }
 
 // Keys used by the application to derive encryption session keys and to sign arbitrary data.
@@ -92,10 +89,10 @@ message ApplicationKeys {
 // <https://datatracker.ietf.org/doc/html/rfc9334#name-evidence>
 message Evidence {
   // Layer0 attestation evidence.
-  RootLayerEvidence root_layer_evidence = 1;
+  RootLayerEvidence root_layer = 1;
 
   // Layer1..LayerN-1 attestation evidence.
-  repeated LayerEvidence layer_evidence = 2;
+  repeated LayerEvidence layers = 2;
 
   // Application keys signed by the penultimate layer’s ECA key.
   //
