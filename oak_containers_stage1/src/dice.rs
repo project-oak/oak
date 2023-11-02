@@ -102,12 +102,7 @@ impl DiceDataBuilder {
         // signing key we received from the previous stage. Since we generated it we are sure there
         // will be exactly one entry.
         let claims_set = get_claims_set_from_certifcate_bytes(
-            &self
-                .evidence
-                .layer_evidence
-                .first()
-                .unwrap()
-                .eca_certificate,
+            &self.evidence.layers.first().unwrap().eca_certificate,
         )
         .context("couldn't get claims set")?;
         // The issuer for the next layer is the subject of the current layer.
@@ -126,8 +121,7 @@ impl DiceDataBuilder {
             generate_eca_certificate(&self.signing_key, issuer_id, additional_claims)
                 .context("couldn't generate ECA certificate for the system image")?;
 
-        evidence.layer_evidence.push(LayerEvidence {
-            layer_name: "System Image".to_owned(),
+        evidence.layers.push(LayerEvidence {
             eca_certificate: eca_certificate.to_vec()?,
         });
 
@@ -249,23 +243,19 @@ fn dice_data_to_proto(dice_data: &Stage0DiceData) -> anyhow::Result<Evidence> {
     let platform = platform.try_into()?;
     let eca_public_key =
         cbor_encoded_bytes_to_vec(&dice_data.root_layer_evidence.eca_public_key[..])?;
-    let root_layer_evidence = Some(RootLayerEvidence {
+    let root_layer = Some(RootLayerEvidence {
         platform,
         remote_attestation_report,
         eca_public_key,
     });
-    let mut layer_evidence = Vec::new();
-    let layer_name = "Stage1".to_owned();
+    let mut layers = Vec::new();
     let eca_certificate =
         cbor_encoded_bytes_to_vec(&dice_data.layer_1_evidence.eca_certificate[..])?;
-    layer_evidence.push(LayerEvidence {
-        layer_name,
-        eca_certificate,
-    });
+    layers.push(LayerEvidence { eca_certificate });
     let application_keys = None;
     Ok(Evidence {
-        root_layer_evidence,
-        layer_evidence,
+        root_layer,
+        layers,
         application_keys,
     })
 }
