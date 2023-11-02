@@ -17,7 +17,7 @@
 use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Generate gRPC code for exchanging messages with clients.
+    // Generate gRPC code for loading the system image.
     generate_grpc_code(
         "../",
         &[
@@ -27,6 +27,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ],
         CodegenOptions {
             build_client: true,
+            ..Default::default()
+        },
+    )?;
+
+    // Generate protos for DICE data.
+    generate_grpc_code(
+        "../",
+        &[
+            "proto/attestation/dice.proto",
+            "proto/attestation/evidence.proto",
+        ],
+        CodegenOptions {
             ..Default::default()
         },
     )?;
