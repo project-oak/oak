@@ -332,7 +332,7 @@
     <span class="kw">pub fn </span>start(params: Params, launcher_service_port: u16, host_proxy_port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>cmd = tokio::process::Command::new(params.vmm_binary);
         <span class="kw">let </span>(guest_socket, host_socket) = UnixStream::pair()<span class="question-mark">?</span>;
-
+        cmd.kill_on_drop(<span class="bool-val">true</span>);
         cmd.stderr(Stdio::inherit());
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::inherit());

@@ -67,6 +67,9 @@
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -91,6 +94,7 @@
 <span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>oak_containers_orchestrator_client::LauncherClient;
+<span class="kw">use </span>opentelemetry_api::global::set_error_handler;
 <span class="kw">use </span>signal_hook::consts::signal::SIGTERM;
 <span class="kw">use </span>signal_hook_tokio::Signals;
 <span class="kw">use </span>std::sync::Arc;
@@ -120,6 +124,8 @@
 <span class="attr">#[tokio::main]
 </span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
     <span class="kw">let </span>args = Args::parse();
+
+    set_error_handler(|err| <span class="macro">eprintln!</span>(<span class="string">&quot;oak-syslogd: OTLP error: {}&quot;</span>, err))<span class="question-mark">?</span>;
 
     <span class="kw">let </span>term = Arc::new(OnceCell::new());
     <span class="kw">let </span>launcher_client = LauncherClient::create(args.launcher_addr.parse()<span class="question-mark">?</span>)

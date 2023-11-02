@@ -108,8 +108,8 @@
 <span class="kw">use </span>tonic::transport::Endpoint;
 
 <span class="kw">pub struct </span>UntrustedApp {
-    launcher: Launcher,
     oak_functions_client: GrpcOakFunctionsClient&lt;tonic::transport::channel::Channel&gt;,
+    launcher: Launcher,
 }
 
 <span class="kw">impl </span>UntrustedApp {
