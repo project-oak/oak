@@ -25,6 +25,7 @@ extern crate std;
 
 pub mod proto {
     pub mod oak {
+        pub use oak_crypto::proto::oak::crypto;
         pub mod functions {
             #![allow(dead_code)]
             use prost::Message;
@@ -136,7 +137,11 @@ impl OakFunctions for OakFunctionsService {
             response.encode_to_vec()
         })
         .invoke(&request.body)
-        .map(|response| InvokeResponse { body: response })
+        // TODO(#4037): Use explicit crypto protos.
+        .map(|response| InvokeResponse {
+            body: response,
+            encrypted_response: None,
+        })
         .map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,

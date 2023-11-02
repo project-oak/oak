@@ -2174,10 +2174,13 @@ dependencies = [
  "env_logger",
  "log",
  "oak_containers_launcher",
+ "oak_crypto",
+ "oak_functions_launcher",
  "oak_grpc_utils",
  "prost",
  "tokio",
  "tonic",
+ "ubyte",
 ]
 
 [[package]]

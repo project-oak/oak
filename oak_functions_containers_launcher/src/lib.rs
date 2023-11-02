@@ -15,6 +15,7 @@
 
 pub mod proto {
     pub mod oak {
+        pub use oak_crypto::proto::oak::crypto;
         pub mod functions {
             tonic::include_proto!("oak.functions");
         }
@@ -31,8 +32,8 @@ use tokio::time::Duration;
 use tonic::transport::Endpoint;
 
 pub struct UntrustedApp {
-    launcher: Launcher,
     oak_functions_client: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    launcher: Launcher,
 }
 
 impl UntrustedApp {

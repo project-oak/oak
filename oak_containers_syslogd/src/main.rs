@@ -22,6 +22,7 @@ mod systemd_journal;
 use anyhow::anyhow;
 use clap::Parser;
 use oak_containers_orchestrator_client::LauncherClient;
+use opentelemetry_api::global::set_error_handler;
 use signal_hook::consts::signal::SIGTERM;
 use signal_hook_tokio::Signals;
 use std::sync::Arc;
@@ -51,6 +52,8 @@ async fn signal_handler(mut signals: Signals, term: Arc<OnceCell<()>>) {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
+
+    set_error_handler(|err| eprintln!("oak-syslogd: OTLP error: {}", err))?;
 
     let term = Arc::new(OnceCell::new());
     let launcher_client = LauncherClient::create(args.launcher_addr.parse()?)

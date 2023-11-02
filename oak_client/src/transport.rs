@@ -57,7 +57,10 @@ impl Transport for GrpcStreamingTransport {
             .rpc_client
             .stream(futures_util::stream::iter(vec![RequestWrapper {
                 request: Some(request_wrapper::Request::InvokeRequest(InvokeRequest {
+                    // TODO(#4037): Remove once explicit protos are used end-to-end.
                     encrypted_body: serialized_request,
+                    // TODO(#4037): Use explicit crypto protos.
+                    encrypted_request: None,
                 })),
             }]))
             .await
