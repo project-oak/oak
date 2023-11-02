@@ -43,6 +43,24 @@ message GetAttestationEvidenceResponse {
   oak.session.v1.AttestationEvidence evidence = 1;
 }
 
+message GetEncryptionKeyRequest {
+  // Endorsed evidence of the enclave that requests a new encryption key using Key Provisioning.
+  // TODO(#4074): Replace with `oak.attestation.v1.EndorsedEvidence` once DICE is implemented.
+  oak.session.v1.AttestationBundle endorsed_evidence = 1;
+}
+
+message GetEncryptionKeyResponse {
+  // Encryption private key that was encrypted with HPKE using the encryption public key provided
+  // in the endorsed evidence.
+  bytes encrypted_encryption_key = 1;
+}
+
+message SendEncryptionKeyRequest {
+  // New encryption private key that was encrypted with HPKE using enclave's old encryption key.
+  // The new encryption key will replace the old one.
+  bytes encrypted_encryption_key = 1;
+}
+
 message GetCryptoContextRequest {
   // Ephemeral Diffie-Hellman client public key that is needed to derive a session key.
   bytes serialized_encapsulated_public_key = 1;
@@ -77,6 +95,15 @@ service Launcher {
   // Notifies the launcher that the trusted app is ready to serve requests and listening on the
   // pre-arranged port (8080).
   rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+}
+
+// Defines the service exposed by the orchestrator, that can be invoked by the application.
+service ControlPlane {
+  // Request a new enclave encryption key as part of Key Provisioning.
+  rpc GetEncryptionKey(GetEncryptionKeyRequest) returns (GetEncryptionKeyResponse) {}
+
+  // Replace old enclave encryption key with a new one as part of Key Provisioning.
+  rpc SendEncryptionKey(SendEncryptionKeyRequest) returns (google.protobuf.Empty) {}
 }
 
 // Defines the service exposed by the orchestrator, that can be invoked by the application.
