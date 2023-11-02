@@ -33,7 +33,7 @@ async fn main() -> Result<(), anyhow::Error> {
     env_logger::init();
     let args = Args::parse();
 
-    let _lookup_data_config = LookupDataConfig {
+    let lookup_data_config = LookupDataConfig {
         lookup_data_path: args.functions_args.lookup_data,
         // Hard-coded because we are not sure whether we want to configure the update interval.
         update_interval: Some(std::time::Duration::from_secs(60 * 10)),
@@ -66,6 +66,17 @@ async fn main() -> Result<(), anyhow::Error> {
             eprintln!("initialize response error: {}", error);
             anyhow::anyhow!("couldn't get encrypted response: {}", error)
         })?;
+
+    let public_key_info = initialize_response
+        .public_key_info
+        .as_ref()
+        .expect("no public key info returned");
+    log::info!(
+        "obtained public key ({} bytes)",
+        public_key_info.public_key.len()
+    );
+
+    untrusted_app.setup_lookup_data(lookup_data_config).await?;
 
     log::info!(
         "Received an initialization response: {:?}",
