@@ -114,6 +114,7 @@ impl DiceAttester {
             eca_certificate: vec![],
         };
         if let Some(_application_public_keys) = _application_public_keys {
+            // TODO(#4074): Generate application keys certificates.
             let application_keys_certificates = ApplicationKeys {
                 encryption_public_key_certificate: Some(vec![]),
                 signing_public_key_certificate: Some(vec![]),
