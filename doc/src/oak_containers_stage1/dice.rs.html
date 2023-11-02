@@ -268,16 +268,6 @@
 <a href="#268" id="268">268</a>
 <a href="#269" id="269">269</a>
 <a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -382,12 +372,7 @@
         // signing key we received from the previous stage. Since we generated it we are sure there
         // will be exactly one entry.
         </span><span class="kw">let </span>claims_set = get_claims_set_from_certifcate_bytes(
-            <span class="kw-2">&amp;</span><span class="self">self
-                </span>.evidence
-                .layer_evidence
-                .first()
-                .unwrap()
-                .eca_certificate,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.evidence.layers.first().unwrap().eca_certificate,
         )
         .context(<span class="string">&quot;couldn&#39;t get claims set&quot;</span>)<span class="question-mark">?</span>;
         <span class="comment">// The issuer for the next layer is the subject of the current layer.
@@ -406,8 +391,7 @@
             generate_eca_certificate(<span class="kw-2">&amp;</span><span class="self">self</span>.signing_key, issuer_id, additional_claims)
                 .context(<span class="string">&quot;couldn&#39;t generate ECA certificate for the system image&quot;</span>)<span class="question-mark">?</span>;
 
-        evidence.layer_evidence.push(LayerEvidence {
-            layer_name: <span class="string">&quot;System Image&quot;</span>.to_owned(),
+        evidence.layers.push(LayerEvidence {
             eca_certificate: eca_certificate.to_vec()<span class="question-mark">?</span>,
         });
 
@@ -529,23 +513,19 @@
     <span class="kw">let </span>platform = platform.try_into()<span class="question-mark">?</span>;
     <span class="kw">let </span>eca_public_key =
         cbor_encoded_bytes_to_vec(<span class="kw-2">&amp;</span>dice_data.root_layer_evidence.eca_public_key[..])<span class="question-mark">?</span>;
-    <span class="kw">let </span>root_layer_evidence = <span class="prelude-val">Some</span>(RootLayerEvidence {
+    <span class="kw">let </span>root_layer = <span class="prelude-val">Some</span>(RootLayerEvidence {
         platform,
         remote_attestation_report,
         eca_public_key,
     });
-    <span class="kw">let </span><span class="kw-2">mut </span>layer_evidence = Vec::new();
-    <span class="kw">let </span>layer_name = <span class="string">&quot;Stage1&quot;</span>.to_owned();
+    <span class="kw">let </span><span class="kw-2">mut </span>layers = Vec::new();
     <span class="kw">let </span>eca_certificate =
         cbor_encoded_bytes_to_vec(<span class="kw-2">&amp;</span>dice_data.layer_1_evidence.eca_certificate[..])<span class="question-mark">?</span>;
-    layer_evidence.push(LayerEvidence {
-        layer_name,
-        eca_certificate,
-    });
+    layers.push(LayerEvidence { eca_certificate });
     <span class="kw">let </span>application_keys = <span class="prelude-val">None</span>;
     <span class="prelude-val">Ok</span>(Evidence {
-        root_layer_evidence,
-        layer_evidence,
+        root_layer,
+        layers,
         application_keys,
     })
 }
