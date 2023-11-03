@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::net::{Ipv6Addr, SocketAddr};
+
 use anyhow::Context;
 use clap::Parser;
 use oak_functions_containers_launcher::proto::oak::functions::InitializeRequest;
@@ -78,10 +80,27 @@ async fn main() -> Result<(), anyhow::Error> {
 
     untrusted_app.setup_lookup_data(lookup_data_config).await?;
 
-    log::info!(
-        "Received an initialization response: {:?}",
-        initialize_response
+    let server_future = oak_functions_containers_launcher::server::new(
+        SocketAddr::from((Ipv6Addr::UNSPECIFIED, args.functions_args.port)),
+        untrusted_app.oak_functions_client.clone(),
+        public_key_info.public_key.clone(),
+        public_key_info.attestation.clone(),
     );
+
+    // Wait until something dies or we get a signal to terminate.
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {
+            log::info!("Ctrl-C received, terminating VMM");
+            untrusted_app.launcher.kill().await;
+        },
+        _ = server_future => {
+            log::info!("server terminated, terminating VMM");
+            untrusted_app.launcher.kill().await;
+        },
+        val = untrusted_app.launcher.wait() => {
+            log::error!("Unexpected VMM exit, status: {:?}", val);
+        },
+    }
 
     Ok(())
 }

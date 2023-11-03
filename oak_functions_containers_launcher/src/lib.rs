@@ -23,6 +23,7 @@ pub mod proto {
 }
 
 mod lookup;
+pub mod server;
 
 use crate::proto::oak::functions::{
     oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient, InitializeRequest,
@@ -35,8 +36,8 @@ use tokio::time::Duration;
 use tonic::transport::Endpoint;
 
 pub struct UntrustedApp {
-    oak_functions_client: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
-    launcher: Launcher,
+    pub oak_functions_client: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    pub launcher: Launcher,
 }
 
 impl UntrustedApp {
