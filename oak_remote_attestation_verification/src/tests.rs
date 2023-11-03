@@ -15,9 +15,8 @@
 //
 
 use crate::{rekor::*, verifier::*};
-use std::fs;
-
 use alloc::vec::Vec;
+use std::fs;
 
 use crate::verifier::{convert_pem_to_raw, convert_raw_to_pem, verify_binary_endorsement};
 
