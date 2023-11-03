@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["convert_pem_to_raw","convert_raw_to_pem","looks_like_pem","verify_binary_endorsement","verify_endorsement_statement","verify_endorser_public_key","verify_rekor_public_key"],"struct":["InsecureAttestationVerifier","ReferenceValue"],"trait":["AttestationVerifier"]};
+window.SIDEBAR_ITEMS = {"fn":["convert_pem_to_raw","convert_raw_to_pem","looks_like_pem","verify_binary_endorsement","verify_endorsement_statement","verify_endorser_public_key"],"struct":["ReferenceValue"]};
