@@ -65,7 +65,7 @@ message AttestationEndorsement {
   // packaged in two different files.
   bytes tee_certificates = 1;
 
-  reserved 2; // BinaryAttestation was removed.
+  reserved 2;  // BinaryAttestation was removed.
 
   // The optional application-specific data.
   optional ApplicationData application_data = 3;
