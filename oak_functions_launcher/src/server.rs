@@ -57,7 +57,6 @@ impl StreamingSession for SessionProxy {
         };
         let attestation_endorsement = AttestationEndorsement {
             tee_certificates: vec![],
-            binary_attestation: None,
             application_data: None,
         };
         let attestation_bundle = AttestationBundle {
