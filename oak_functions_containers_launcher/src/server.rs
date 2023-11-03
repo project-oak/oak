@@ -14,24 +14,24 @@
 // limitations under the License.
 //
 
-use crate::{
-    channel::ConnectorHandle,
-    proto::oak::{
-        functions,
-        session::v1::{
-            request_wrapper, response_wrapper,
-            streaming_session_server::{StreamingSession, StreamingSessionServer},
-            AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
-            InvokeResponse, RequestWrapper, ResponseWrapper,
-        },
-    },
+// TODO(#4409): this duplicates `oak_functions_launcher/src/server.rs`. Refactor these to share
+// code.
+
+use crate::proto::oak::functions::{
+    oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient, InvokeRequest,
 };
 use futures::{Future, Stream, StreamExt};
+use oak_functions_launcher::proto::oak::session::v1::{
+    request_wrapper, response_wrapper,
+    streaming_session_server::{StreamingSession, StreamingSessionServer},
+    AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
+    InvokeResponse, RequestWrapper, ResponseWrapper,
+};
 use std::{net::SocketAddr, pin::Pin};
 use tonic::{transport::Server, Request, Response, Status, Streaming};
 
 pub struct SessionProxy {
-    connector_handle: ConnectorHandle,
+    connector_handle: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
     encryption_public_key: Vec<u8>,
     attestation: Vec<u8>,
 }
@@ -57,6 +57,7 @@ impl StreamingSession for SessionProxy {
         };
         let attestation_endorsement = AttestationEndorsement {
             tee_certificates: vec![],
+            binary_attestation: None,
             application_data: None,
         };
         let attestation_bundle = AttestationBundle {
@@ -64,7 +65,7 @@ impl StreamingSession for SessionProxy {
             attestation_endorsement: Some(attestation_endorsement),
         };
 
-        let connector_handle = self.connector_handle.clone();
+        let mut connector_handle = self.connector_handle.clone();
 
         let response_stream = async_stream::try_stream! {
             while let Some(request) = request_stream.next().await {
@@ -83,21 +84,18 @@ impl StreamingSession for SessionProxy {
                         })
                     }
                     request_wrapper::Request::InvokeRequest(invoke_request) => {
-                        let enclave_invoke_request = functions::InvokeRequest {
+                        let enclave_invoke_request = InvokeRequest {
                             // TODO(#4037): Remove once explicit protos are used end-to-end.
                             body: invoke_request.encrypted_body,
                             // TODO(#4037): Use explicit crypto protos.
                             encrypted_request: None,
                         };
-                        let mut enclave_client =
-                            functions::OakFunctionsAsyncClient::new(connector_handle.clone());
-                        let enclave_invoke_response = enclave_client
-                            .handle_user_request(&enclave_invoke_request)
+                        let enclave_invoke_response = connector_handle
+                            .handle_user_request(enclave_invoke_request)
                             .await
-                            .flatten()
-                            .map_err(|err| {
-                                tonic::Status::internal(format!("error handling client request: {:?}", err))
-                            })?;
+                            .map_err(|err| tonic::Status::internal(format!("error handling client request: {:?}", err)))?
+                            .into_inner();
+
                         response_wrapper::Response::InvokeResponse(InvokeResponse {
                             // TODO(#4037): Remove once explicit protos are used end-to-end.
                             encrypted_body: enclave_invoke_response.body,
@@ -120,7 +118,7 @@ impl StreamingSession for SessionProxy {
 
 pub fn new(
     addr: SocketAddr,
-    connector_handle: ConnectorHandle,
+    connector_handle: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
     encryption_public_key: Vec<u8>,
     attestation: Vec<u8>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {

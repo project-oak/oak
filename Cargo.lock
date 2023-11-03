@@ -2175,8 +2175,10 @@ name = "oak_functions_containers_launcher"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-stream",
  "clap",
  "env_logger",
+ "futures",
  "log",
  "oak_containers_launcher",
  "oak_crypto",
@@ -2381,11 +2383,8 @@ dependencies = [
  "ecdsa",
  "hex",
  "micro_rpc_build",
- "oak_crypto",
- "oak_remote_attestation",
  "oak_transparency_claims",
  "p256",
- "prost",
  "serde",
  "serde_jcs",
  "serde_json",

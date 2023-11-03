@@ -15,32 +15,12 @@
 //
 
 use crate::{rekor::*, verifier::*};
+use alloc::vec::Vec;
 use std::fs;
 
-use alloc::{sync::Arc, vec, vec::Vec};
-use base64::{prelude::BASE64_STANDARD, Engine as _};
-use oak_crypto::encryptor::EncryptionKeyProvider;
-use oak_remote_attestation::{
-    attester::{Attester, EmptyAttestationReportGenerator},
-    proto::oak::session::v1::{AttestationEndorsement, BinaryAttestation},
-};
-
-use crate::verifier::{
-    convert_pem_to_raw, convert_raw_to_pem, verify_binary_endorsement, AttestationVerifier,
-    InsecureAttestationVerifier, ReferenceValue,
-};
-
-const TEST_ATTESTATION_ENDORSEMENT: AttestationEndorsement = AttestationEndorsement {
-    tee_certificates: vec![],
-    binary_attestation: None,
-    application_data: None,
-};
-const TEST_REFERENCE_VALUE: ReferenceValue = ReferenceValue {
-    binary_hash: vec![],
-};
+use crate::verifier::{convert_pem_to_raw, convert_raw_to_pem, verify_binary_endorsement};
 
 const BINARY_DIGEST: &str = "39051983bbb600bbfb91bd22ee4c976420f8f0c6a895fd083dcb0d153ddd5fd6";
-
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
 const ENDORSEMENT_SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
 
@@ -179,26 +159,6 @@ fn test_verify_rekor_log_entry() {
 }
 
 #[test]
-fn test_empty_attestation() {
-    let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
-    let encryption_key_provider = Arc::new(EncryptionKeyProvider::new());
-    let attester = Arc::new(Attester::new(
-        attestation_report_generator,
-        encryption_key_provider,
-    ));
-    let attestation_evidence = attester
-        .generate_attestation_evidence()
-        .expect("couldn't generate attestation evidence");
-
-    let verify_result = InsecureAttestationVerifier::verify(
-        &attestation_evidence,
-        &TEST_ATTESTATION_ENDORSEMENT,
-        &TEST_REFERENCE_VALUE,
-    );
-    assert!(verify_result.is_ok());
-}
-
-#[test]
 fn test_verify_endorsement_statement() {
     let testdata = load_testdata();
     let result =
@@ -210,27 +170,7 @@ fn test_verify_endorsement_statement() {
 fn test_verify_endorser_public_key() {
     let testdata = load_testdata();
 
-    let binary_attestation = BinaryAttestation {
-        endorsement_statement: testdata.endorsement,
-        rekor_log_entry: testdata.log_entry,
-        base64_pem_encoded_rekor_public_key: BASE64_STANDARD.encode(&testdata.rekor_public_key_pem),
-    };
-
-    let result = verify_endorser_public_key(&binary_attestation, &testdata.endorser_public_key);
-    assert!(result.is_ok(), "{:?}", result);
-}
-
-#[test]
-fn test_verify_rekor_public_key() {
-    let testdata = load_testdata();
-
-    let binary_attestation = BinaryAttestation {
-        endorsement_statement: testdata.endorsement,
-        rekor_log_entry: testdata.log_entry,
-        base64_pem_encoded_rekor_public_key: BASE64_STANDARD.encode(&testdata.rekor_public_key_pem),
-    };
-
-    let result = verify_rekor_public_key(&binary_attestation, &testdata.rekor_public_key);
+    let result = verify_endorser_public_key(&testdata.log_entry, &testdata.endorser_public_key);
     assert!(result.is_ok(), "{:?}", result);
 }
 
@@ -238,16 +178,11 @@ fn test_verify_rekor_public_key() {
 fn test_verify_binary_endorsement() {
     let testdata = load_testdata();
 
-    let binary_attestation = BinaryAttestation {
-        endorsement_statement: testdata.endorsement,
-        rekor_log_entry: testdata.log_entry,
-        base64_pem_encoded_rekor_public_key: BASE64_STANDARD.encode(&testdata.rekor_public_key_pem),
-    };
-
     let result = verify_binary_endorsement(
+        &testdata.endorsement,
+        &testdata.log_entry,
         BINARY_DIGEST.as_bytes(),
         "sha256",
-        &binary_attestation,
         &testdata.endorser_public_key,
         &testdata.rekor_public_key,
     );
@@ -258,16 +193,11 @@ fn test_verify_binary_endorsement() {
 fn test_verify_binary_endorsement_fails_when_missing_digest() {
     let testdata = load_testdata();
 
-    let binary_attestation = BinaryAttestation {
-        endorsement_statement: testdata.endorsement,
-        rekor_log_entry: testdata.log_entry,
-        base64_pem_encoded_rekor_public_key: BASE64_STANDARD.encode(&testdata.rekor_public_key_pem),
-    };
-
     let result = verify_binary_endorsement(
+        &testdata.endorsement,
+        &testdata.log_entry,
         BINARY_DIGEST.as_bytes(),
         "sha2-384",
-        &binary_attestation,
         &testdata.endorser_public_key,
         &testdata.rekor_public_key,
     );
@@ -282,44 +212,29 @@ fn test_verify_binary_endorsement_fails_when_missing_digest() {
 fn test_verify_binary_endorsement_fails_with_invalid_rekor_public_key() {
     let testdata = load_testdata();
 
-    let binary_attestation = BinaryAttestation {
-        endorsement_statement: testdata.endorsement,
-        rekor_log_entry: testdata.log_entry,
-        // NB: We use the wrong key deliberately.
-        base64_pem_encoded_rekor_public_key: BASE64_STANDARD
-            .encode(&testdata.endorser_public_key_pem),
-    };
-
     let result = verify_binary_endorsement(
+        &testdata.endorsement,
+        &testdata.log_entry,
         BINARY_DIGEST.as_bytes(),
         "sha256",
-        &binary_attestation,
         &testdata.endorser_public_key,
-        &testdata.rekor_public_key,
+        // NB: We use the wrong key deliberately.
+        &testdata.endorser_public_key,
     );
     assert!(result.is_err(), "{:?}", result);
-    assert!(result
-        .map_err(|err| format!("{err}"))
-        .unwrap_err()
-        .contains("Rekor public key mismatch"));
 }
 
 #[test]
 fn test_verify_binary_endorsement_fails_when_missing_rekor_entry() {
     let testdata = load_testdata();
 
-    let binary_attestation = BinaryAttestation {
-        endorsement_statement: testdata.endorsement,
-        rekor_log_entry: Vec::new(),
-        base64_pem_encoded_rekor_public_key: "".to_string(),
-    };
-
     let result = verify_binary_endorsement(
+        &testdata.endorsement,
+        &Vec::new(),
         BINARY_DIGEST.as_bytes(),
         "sha256",
-        &binary_attestation,
         &testdata.endorser_public_key,
-        &testdata.rekor_public_key,
+        &Vec::new(),
     );
     assert!(result.is_err(), "{:?}", result);
 }
