@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["container_runtime","ipc_server","logging","metrics"]};
+window.SIDEBAR_ITEMS = {"mod":["container_runtime","ipc_server","key_provisioning","logging","metrics"]};
