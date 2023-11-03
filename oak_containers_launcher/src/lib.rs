@@ -28,7 +28,7 @@ mod qemu;
 mod server;
 
 use crate::proto::oak::session::v1::{
-    AttestationBundle, AttestationEndorsement, AttestationEvidence, BinaryAttestation,
+    AttestationBundle, AttestationEndorsement, AttestationEvidence,
 };
 use anyhow::Context;
 use clap::Parser;
@@ -53,6 +53,7 @@ const PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
 const VM_START_TIMEOUT: u64 = 300;
 
 #[derive(Parser, Debug)]
+#[group(skip)]
 pub struct Args {
     #[arg(long, required = true, value_parser = path_exists,)]
     system_image: std::path::PathBuf,
@@ -146,11 +147,6 @@ impl Launcher {
             // TODO(#3640): Provide hardware manufacturer's certificates.
             attestation_endorsement: AttestationEndorsement {
                 tee_certificates: vec![],
-                binary_attestation: Some(BinaryAttestation {
-                    endorsement_statement: vec![],
-                    rekor_log_entry: vec![],
-                    base64_pem_encoded_rekor_public_key: "".to_string(),
-                }),
                 application_data: None,
             },
             // Attestation Evidence will be sent by the Orchestrator once generated.

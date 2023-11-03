@@ -15,11 +15,15 @@
 
 pub mod proto {
     pub mod oak {
+        pub use oak_crypto::proto::oak::crypto;
         pub mod functions {
             tonic::include_proto!("oak.functions");
         }
     }
 }
+
+mod lookup;
+pub mod server;
 
 use crate::proto::oak::functions::{
     oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient, InitializeRequest,
@@ -27,12 +31,13 @@ use crate::proto::oak::functions::{
 };
 use anyhow::Context;
 use oak_containers_launcher::Launcher;
+use oak_functions_launcher::LookupDataConfig;
 use tokio::time::Duration;
 use tonic::transport::Endpoint;
 
 pub struct UntrustedApp {
-    launcher: Launcher,
-    oak_functions_client: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    pub oak_functions_client: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    pub launcher: Launcher,
 }
 
 impl UntrustedApp {
@@ -72,4 +77,41 @@ impl UntrustedApp {
     pub async fn kill(&mut self) {
         self.launcher.kill().await;
     }
+
+    pub async fn setup_lookup_data(&mut self, config: LookupDataConfig) -> anyhow::Result<()> {
+        log::info!("setting up lookup data");
+        update_lookup_data(&mut self.oak_functions_client, &config).await?;
+
+        // Spawn task to periodically refresh lookup data.
+        if config.update_interval.is_some() {
+            tokio::spawn(setup_periodic_update(
+                self.oak_functions_client.clone(),
+                config,
+            ));
+        }
+        Ok(())
+    }
+}
+
+async fn setup_periodic_update(
+    mut client: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    config: LookupDataConfig,
+) {
+    // Only set periodic update if an interval is given.
+    let mut interval =
+        tokio::time::interval(config.update_interval.expect("No update interval given."));
+    loop {
+        // Wait before updating because we just loaded the lookup data.
+        interval.tick().await;
+        let _ = update_lookup_data(&mut client, &config).await;
+        // Ignore errors in updates of lookup data after the initial update.
+    }
+}
+
+async fn update_lookup_data(
+    client: &mut GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    config: &LookupDataConfig,
+) -> anyhow::Result<()> {
+    log::info!("updating lookup data");
+    lookup::update_lookup_data(client, &config.lookup_data_path, config.max_chunk_size).await
 }

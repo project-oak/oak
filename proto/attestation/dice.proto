@@ -24,13 +24,10 @@ option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
 
-// Message for passing embedded certificate authoricy information between layers.
+// Message for passing embedded certificate authority information between layers.
 // Will never appear in the evidence that is sent to the client.
 message CertificateAuthority {
   // ECA private key that will be used by a layer to sign a certificate for the next layer.
-  //
-  // Represented as a SEC1 encoded point.
-  // <https://www.secg.org/sec1-v2.pdf#page=16>
   bytes eca_private_key = 1;
 }
 

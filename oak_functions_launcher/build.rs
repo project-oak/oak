@@ -36,10 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "{}oak_functions_service/proto/oak_functions.proto",
             env!("WORKSPACE_ROOT")
         )],
-        &[format!(
-            "{}oak_functions_service/proto",
-            env!("WORKSPACE_ROOT")
-        )],
+        &[env!("WORKSPACE_ROOT")],
         Default::default(),
     );
 

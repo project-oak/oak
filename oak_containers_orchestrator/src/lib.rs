@@ -26,5 +26,6 @@ mod proto {
 
 pub mod container_runtime;
 pub mod ipc_server;
+pub mod key_provisioning;
 pub mod logging;
 pub mod metrics;

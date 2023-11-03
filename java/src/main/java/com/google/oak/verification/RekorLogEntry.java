@@ -18,6 +18,7 @@ package com.google.oak.verification;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -165,9 +166,12 @@ public final class RekorLogEntry {
   public static RekorLogEntry createFromJson(String json) {
     // Use a default Gson instance to parse JSON strings into Java objects.
     Gson gson = new GsonBuilder().create();
-    Map<String, Object> entryMap =
-        gson.fromJson(json, new TypeToken<Map<String, Object>>() {}.getType());
-
+    Map<String, Object> entryMap;
+    try {
+      entryMap = gson.fromJson(json, new TypeToken<Map<String, Object>>() {}.getType());
+    } catch (JsonSyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
     if (entryMap.size() != 1) {
       throw new IllegalArgumentException(
           "Expected exactly one entry in the json-formatted Rekor log entry, found "

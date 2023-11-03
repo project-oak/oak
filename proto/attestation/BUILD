@@ -43,7 +43,6 @@ java_proto_library(
 proto_library(
     name = "endorsement_proto",
     srcs = ["endorsement.proto"],
-    deps = [":evidence_proto"],
 )
 
 cc_proto_library(
