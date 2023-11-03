@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["proto"],"struct":["UntrustedApp"]};
+window.SIDEBAR_ITEMS = {"mod":["proto","server"],"struct":["UntrustedApp"]};
