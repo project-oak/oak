@@ -14,6 +14,7 @@ env_logger = "*"
 log = "*"
 oak_containers_launcher = { workspace = true }
 oak_crypto = { workspace = true }
+oak_functions_abi = { workspace = true }
 oak_functions_launcher = { workspace = true }
 prost = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
