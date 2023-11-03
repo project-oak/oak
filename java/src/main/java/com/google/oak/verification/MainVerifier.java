@@ -43,7 +43,8 @@ public class MainVerifier {
       this.initFailure = Optional.empty();
       int layerCount = endorsements.getCustomLayersCount();
       for (int i = 0; i < layerCount; ++i) {
-        customLayerVerifiers.add(new LayerVerifier(evidence.getLayers(i + 1), endorsements.getCustomLayers(i)));
+        customLayerVerifiers.add(
+            new LayerVerifier(evidence.getLayers(i + 1), endorsements.getCustomLayers(i)));
       }
     } else {
       this.initFailure = Optional.of(new Failure("Layer count mismatch"));

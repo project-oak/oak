@@ -92,8 +92,7 @@ public class MainVerifierTest {
     return Endorsements.newBuilder()
         .setRootLayer(
             RootLayerEndorsements.newBuilder().setStage0Endorsement(createTREndorsement()))
-        .setKernelLayer(
-            KernelLayerEndorsements.newBuilder().setLinuxKernel(createTREndorsement()))
+        .setKernelLayer(KernelLayerEndorsements.newBuilder().setLinuxKernel(createTREndorsement()))
         .addCustomLayers(CustomLayerEndorsements.newBuilder().setBinary(createTREndorsement()))
         .build();
   }

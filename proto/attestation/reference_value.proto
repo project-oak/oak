@@ -26,8 +26,8 @@ option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
 
 message ReferenceValues {
-  RootLayerReferenceValues root_layer = 1;  // Layer 0
-  KernelLayerReferenceValues kernel_layer = 2;  // Layer 1
+  RootLayerReferenceValues root_layer = 1;                // Layer 0
+  KernelLayerReferenceValues kernel_layer = 2;            // Layer 1
   repeated CustomLayerReferenceValues custom_layers = 3;  // Layers 2 through N.
 }
 
@@ -41,7 +41,7 @@ message AmdSevReferenceValues {
   bytes amd_root_public_key = 1;
 
   // TBD: Add conditions on all kinds of fields contained in the
-  // attestation report. 
+  // attestation report.
   string firmware_version = 2;
 
   // If true, will skip the check that the TEE is not in debug mode.
@@ -76,6 +76,6 @@ message KernelLayerReferenceValues {
 
 message CustomLayerReferenceValues {
   optional LogEntryVerification log_entry = 1;
-  optional RawDigest code = 2;  // codeMeasurements
+  optional RawDigest code = 2;           // codeMeasurements
   optional RawDigest configuration = 3;  // configurationMeasurements
 }

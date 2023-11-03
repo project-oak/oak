@@ -17,11 +17,11 @@
 package com.google.oak.verification;
 
 import com.google.oak.RawDigest;
-import com.google.oak.attestation.v1.LayerEvidence;
-import com.google.oak.attestation.v1.CustomLayerReferenceValues;
 import com.google.oak.attestation.v1.CustomLayerEndorsements;
-import com.google.oak.attestation.v1.TransparentReleaseEndorsement;
+import com.google.oak.attestation.v1.CustomLayerReferenceValues;
+import com.google.oak.attestation.v1.LayerEvidence;
 import com.google.oak.attestation.v1.LogEntryVerification;
+import com.google.oak.attestation.v1.TransparentReleaseEndorsement;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
