@@ -113,6 +113,11 @@ public class AmdAttestationReportTest {
   }
 
   @Test
+  public void testGuestSvn() {
+    Assert.assertEquals(0, amdAttestationReport.getGuestSvn());
+  }
+
+  @Test
   public void testReportData() {
     byte[] reportData = amdAttestationReport.getReportData();
     Assert.assertEquals(64, reportData.length);

@@ -59,7 +59,11 @@ public class AmdAttestationReport {
   }
 
   public byte[] getFamilyId() {
-    return getSlice(0x010, 8);
+    return getSlice(0x010, 16);
+  }
+
+  public byte[] getImageId() {
+    return getSlice(0x020, 16);
   }
 
   public TcbVersion getCurrentTcb() {
@@ -67,11 +71,47 @@ public class AmdAttestationReport {
   }
 
   public byte[] getReportData() {
-    return getSlice(0x050, 64);
+    return getSlice(0x050, 0x040);
   }
 
   public byte[] getMeasurement() {
-    return getSlice(0x090, 48);
+    return getSlice(0x090, 0x030);
+  }
+
+  public byte[] getHostData() {
+    return getSlice(0x0c0, 0x020);
+  }
+
+  public byte[] getIdKeyDigest() {
+    return getSlice(0x0e0, 0x030);
+  }
+
+  public byte[] getAuthorKeyDigest() {
+    return getSlice(0x110, 0x030);
+  }
+
+  public byte[] getReportId() {
+    return getSlice(0x140, 0x020);
+  }
+
+  public byte[] getReportIdMa() {
+    return getSlice(0x160, 0x020);
+  }
+
+  public TcbVersion getReportedTcb() {
+    return new TcbVersion(getSlice(0x0180, TcbVersion.SERIALIZED_SIZE));
+  }
+
+  public byte[] getChipId() {
+    return getSlice(0x01a0, 0x040);
+  }
+
+  public TcbVersion getCommittedTcb() {
+    return new TcbVersion(getSlice(0x01e0, TcbVersion.SERIALIZED_SIZE));
+  }
+
+  public int getCurrentBuild() {
+    return getUInt8(0x1e8);
   }
 
   public int getCurrentMinor() {
@@ -82,12 +122,24 @@ public class AmdAttestationReport {
     return getUInt8(0x1ea);
   }
 
+  public int getCommittedBuild() {
+    return getUInt8(0x1ec);
+  }
+
+  public int getCommittedMinor() {
+    return getUInt8(0x1ed);
+  }
+
+  public int getCommittedMajor() {
+    return getUInt8(0x1ee);
+  }
+
   public TcbVersion getLaunchTcb() {
     return new TcbVersion(getSlice(0x1f0, TcbVersion.SERIALIZED_SIZE));
   }
 
   public byte[] getSignature() {
-    return new byte[0];
+    return getSlice(0x02a0, 0x200);
   }
 
   private int getUInt8(int offset) {
