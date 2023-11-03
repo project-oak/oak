@@ -39,10 +39,11 @@ pub mod logger;
 pub mod lookup;
 pub mod wasm;
 
-use alloc::{format, sync::Arc, vec::Vec};
+use alloc::{format, sync::Arc, vec, vec::Vec};
+use anyhow::anyhow;
 use instance::OakFunctionsInstance;
 use oak_core::sync::OnceCell;
-use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_crypto::{encryptor::EncryptionKeyProvider, proto::oak::crypto::v1::EncryptedRequest};
 use oak_remote_attestation::{
     attester::{AttestationReportGenerator, Attester},
     handler::EncryptionHandler,
@@ -128,7 +129,17 @@ impl OakFunctions for OakFunctionsService {
         log::debug!("called handle_user_request");
         let encryption_key_provider = self.encryption_key_provider.clone();
         let instance = self.get_instance()?;
-        EncryptionHandler::create(encryption_key_provider, |r| {
+
+        // TODO(#4037): Remove once explicit crypto protos are implemented.
+        // Deserialize request.
+        let encrypted_request = EncryptedRequest::decode(request.body.as_ref()).map_err(|err| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::Internal,
+                format!("couldn't deserialize request: {:?}", err),
+            )
+        })?;
+
+        let mut result = EncryptionHandler::create(encryption_key_provider, |r| {
             // Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
             let response_result: Result<Vec<u8>, micro_rpc::Status> =
@@ -136,18 +147,45 @@ impl OakFunctions for OakFunctionsService {
             let response: micro_rpc::ResponseWrapper = response_result.into();
             response.encode_to_vec()
         })
-        .invoke(&request.body)
-        // TODO(#4037): Use explicit crypto protos.
-        .map(|response| InvokeResponse {
-            body: response,
-            encrypted_response: None,
+        .invoke(&encrypted_request)
+        .map(|encrypted_response| {
+            InvokeResponse {
+                // TODO(#4037): Remove once explicit crypto protos are implemented.
+                body: vec![],
+                encrypted_response: Some(encrypted_response),
+            }
         })
         .map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
                 format!("couldn't call handle_user_request handler: {:?}", err),
             )
-        })
+        });
+
+        // TODO(#4037): Remove once explicit crypto protos are implemented.
+        if let Ok(ref mut result) = result {
+            // Serialize response.
+            let mut serialized_response = vec![];
+            result
+                .encrypted_response
+                .clone()
+                .ok_or(anyhow!("no encrypted response provided"))
+                .map_err(|err| {
+                    micro_rpc::Status::new_with_message(
+                        micro_rpc::StatusCode::Internal,
+                        format!("{:?}", err),
+                    )
+                })?
+                .encode(&mut serialized_response)
+                .map_err(|err| {
+                    micro_rpc::Status::new_with_message(
+                        micro_rpc::StatusCode::Internal,
+                        format!("couldn't serialize response: {:?}", err),
+                    )
+                })?;
+            result.body = serialized_response;
+        }
+        result
     }
 
     fn extend_next_lookup_data(

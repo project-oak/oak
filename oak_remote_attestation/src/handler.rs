@@ -14,13 +14,12 @@
 // limitations under the License.
 //
 
-use alloc::{sync::Arc, vec, vec::Vec};
+use alloc::{sync::Arc, vec::Vec};
 use anyhow::{anyhow, Context};
 use oak_crypto::{
     encryptor::{EncryptionKeyProvider, ServerEncryptor},
-    proto::oak::crypto::v1::EncryptedRequest,
+    proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
 };
-use prost::Message;
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
@@ -52,11 +51,7 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
 }
 
 impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
-    pub fn invoke(self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
-        // Deserialize request.
-        let encrypted_request = EncryptedRequest::decode(request_body)
-            .map_err(|error| anyhow!("couldn't deserialize request: {:?}", error))?;
-
+    pub fn invoke(self, encrypted_request: &EncryptedRequest) -> anyhow::Result<EncryptedResponse> {
         // Initialize server encryptor.
         let serialized_encapsulated_public_key = encrypted_request
             .serialized_encapsulated_public_key
@@ -70,7 +65,7 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
 
         // Decrypt request.
         let (request, _) = server_encryptor
-            .decrypt(&encrypted_request)
+            .decrypt(encrypted_request)
             .context("couldn't decrypt request")?;
 
         // Handle request.
@@ -80,14 +75,8 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
         // Encrypt and serialize response.
         // The resulting decryptor for consequent requests is discarded because we don't expect
         // another message from the stream.
-        let encrypted_response = server_encryptor
+        server_encryptor
             .encrypt(&response, EMPTY_ASSOCIATED_DATA)
-            .context("couldn't encrypt response")?;
-        let mut serialized_response = vec![];
-        encrypted_response
-            .encode(&mut serialized_response)
-            .map_err(|error| anyhow!("couldn't serialize response: {:?}", error))?;
-
-        Ok(serialized_response)
+            .context("couldn't encrypt response")
     }
 }
