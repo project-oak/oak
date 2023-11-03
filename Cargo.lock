@@ -2175,8 +2175,10 @@ name = "oak_functions_containers_launcher"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-stream",
  "clap",
  "env_logger",
+ "futures",
  "log",
  "oak_containers_launcher",
  "oak_crypto",
