@@ -16,11 +16,12 @@
 
 package com.google.oak.verification;
 
+import com.google.oak.attestation.v1.CustomLayerEndorsements;
+import com.google.oak.attestation.v1.CustomLayerReferenceValues;
 import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
-import com.google.oak.attestation.v1.LayerEndorsements;
+import com.google.oak.attestation.v1.KernelLayerReferenceValues;
 import com.google.oak.attestation.v1.LayerEvidence;
-import com.google.oak.attestation.v1.LayerReferenceValues;
 import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.attestation.v1.RootLayerEvidence;
 import com.google.oak.attestation.v1.RootLayerReferenceValues;
@@ -38,11 +39,11 @@ public class MainVerifier {
   public MainVerifier(Evidence evidence, Endorsements endorsements) {
     this.evidence = evidence;
     this.endorsements = endorsements;
-    if (evidence.getLayersCount() == endorsements.getLayersCount()) {
+    if (evidence.getLayersCount() - 1 == endorsements.getCustomLayersCount()) {
       this.initFailure = Optional.empty();
-      int layerCount = evidence.getLayersCount();
+      int layerCount = endorsements.getCustomLayersCount();
       for (int i = 0; i < layerCount; ++i) {
-        layerVerifiers.add(new LayerVerifier(evidence.getLayers(i), endorsements.getLayers(i)));
+        customLayerVerifiers.add(new LayerVerifier(evidence.getLayers(i + 1), endorsements.getCustomLayers(i)));
       }
     } else {
       this.initFailure = Optional.of(new Failure("Layer count mismatch"));
@@ -58,6 +59,11 @@ public class MainVerifier {
     return Optional.empty();
   }
 
+  public Optional<Failure> verifyKernel(KernelLayerReferenceValues values) {
+    // Needs implementation
+    return Optional.empty();
+  }
+
   public Optional<Failure> verify(ReferenceValues values) {
     if (initFailure.isPresent()) {
       return initFailure;
@@ -67,10 +73,14 @@ public class MainVerifier {
     if (r.isPresent()) {
       return r;
     }
-    ListIterator<LayerVerifier> it = layerVerifiers.listIterator();
+    r = verifyKernel(values.getKernelLayer());
+    if (r.isPresent()) {
+      return r;
+    }
+    ListIterator<LayerVerifier> it = customLayerVerifiers.listIterator();
     while (it.hasNext()) {
       int layerIndex = it.nextIndex();
-      r = it.next().verify(values.getLayers(layerIndex));
+      r = it.next().verify(values.getCustomLayers(layerIndex));
       if (r.isPresent()) {
         return r;
       }
@@ -82,5 +92,5 @@ public class MainVerifier {
   private final Evidence evidence;
   private final Endorsements endorsements;
   private final Optional<Failure> initFailure;
-  private final List<LayerVerifier> layerVerifiers = new ArrayList<>();
+  private final List<LayerVerifier> customLayerVerifiers = new ArrayList<>();
 }
