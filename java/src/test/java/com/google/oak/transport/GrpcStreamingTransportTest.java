@@ -66,11 +66,15 @@ public class GrpcStreamingTransportTest {
           responseObserver.onNext(responseWrapper);
           break;
         case INVOKE_REQUEST:
-          // TODO(#4037): Use explicit crypto protos.
-          responseWrapper = ResponseWrapper.newBuilder()
-                                .setInvokeResponse(InvokeResponse.newBuilder().setEncryptedBody(
-                                    ByteString.copyFrom(new byte[0])))
-                                .build();
+          responseWrapper =
+              ResponseWrapper.newBuilder()
+                  .setInvokeResponse(
+                      InvokeResponse
+                          .newBuilder()
+                          // TODO(#4037): Remove once explicit crypto protos are implemented.
+                          .setEncryptedBody(ByteString.copyFrom(new byte[0]))
+                          .setEncryptedResponse(EncryptedResponse.getDefaultInstance()))
+                  .build();
           responseObserver.onNext(responseWrapper);
           break;
         case REQUEST_NOT_SET:

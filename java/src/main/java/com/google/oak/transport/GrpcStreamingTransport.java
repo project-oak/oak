@@ -100,11 +100,14 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
    */
   @Override
   public Result<EncryptedResponse, String> invoke(EncryptedRequest encryptedRequest) {
-    // TODO(#4037): Use explicit crypto protos.
     RequestWrapper requestWrapper =
         RequestWrapper.newBuilder()
-            .setInvokeRequest(InvokeRequest.newBuilder().setEncryptedBody(
-                ByteString.copyFrom(encryptedRequest.toByteArray())))
+            .setInvokeRequest(
+                InvokeRequest
+                    .newBuilder()
+                    // TODO(#4037): Remove once explicit crypto protos are implemented.
+                    .setEncryptedBody(ByteString.copyFrom(encryptedRequest.toByteArray()))
+                    .setEncryptedRequest(encryptedRequest))
             .build();
     logger.log(Level.INFO, "sending invoke request: " + requestWrapper);
     this.requestObserver.onNext(requestWrapper);
