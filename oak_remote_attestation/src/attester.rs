@@ -18,7 +18,7 @@ use crate::proto::oak::{
     attestation::v1::{ApplicationKeys, CertificateAuthority, DiceData, Evidence, LayerEvidence},
     session::v1::AttestationEvidence,
 };
-use alloc::{string::ToString, sync::Arc, vec, vec::Vec};
+use alloc::{sync::Arc, vec, vec::Vec};
 use anyhow::Context;
 use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_dice::cert::generate_ecdsa_key_pair;
@@ -82,7 +82,7 @@ impl Attester {
     }
 }
 
-struct ApplicationPublicKeys {
+struct _ApplicationPublicKeys {
     encryption_public_key: Option<Vec<u8>>,
     signing_public_key: Option<Vec<u8>>,
 }
@@ -91,17 +91,17 @@ struct ApplicationPublicKeys {
 // DICE attestation is implemented.
 /// DICE attester implementation.
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-attester>
-struct DiceAttester {
+struct _DiceAttester {
     /// DICE attestation evidence that includes current layer's evidence.
     evidence: Evidence,
     /// Certificate authority for the current layer.
     certificate_authority: CertificateAuthority,
 }
 
-impl DiceAttester {
-    fn create(
+impl _DiceAttester {
+    fn _create(
         dice_data: DiceData,
-        _application_public_keys: Option<ApplicationPublicKeys>,
+        _application_public_keys: Option<_ApplicationPublicKeys>,
     ) -> anyhow::Result<Self> {
         let mut evidence = dice_data
             .evidence
@@ -109,7 +109,6 @@ impl DiceAttester {
 
         // Add next layer evidence.
         let next_layer_evidence = LayerEvidence {
-            layer_name: "".to_string(),
             // TODO(#4074): Measure the next layer and generate certificates.
             eca_certificate: vec![],
         };
@@ -121,28 +120,28 @@ impl DiceAttester {
             };
             evidence.application_keys = Some(application_keys_certificates);
         }
-        evidence.layer_evidence.push(next_layer_evidence);
+        evidence.layers.push(next_layer_evidence);
 
-        Ok(DiceAttester {
-            evidence: evidence,
+        Ok(_DiceAttester {
+            evidence,
             certificate_authority: dice_data
                 .certificate_authority
                 .context("no certificate authority provided in DICE data")?,
         })
     }
 
-    fn get_evidence(&self) -> Evidence {
+    fn _get_evidence(&self) -> Evidence {
         self.evidence.clone()
     }
 
-    fn generate_dice_data(self) -> anyhow::Result<DiceData> {
+    fn _generate_dice_data(self) -> anyhow::Result<DiceData> {
         let (eca_private_key, _) = generate_ecdsa_key_pair();
         let next_layer_certificate_authority = CertificateAuthority {
             // TODO(#4074): Create next layer certificate authoruty.
             eca_private_key: eca_private_key.to_bytes().as_slice().into(),
         };
         Ok(DiceData {
-            evidence: Some(self.get_evidence()),
+            evidence: Some(self._get_evidence()),
             certificate_authority: Some(next_layer_certificate_authority),
         })
     }
