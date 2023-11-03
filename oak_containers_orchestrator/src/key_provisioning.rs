@@ -14,27 +14,27 @@
 // limitations under the License.
 
 use crate::proto::oak::containers::{
-    control_plane_server::ControlPlane, GetEncryptionKeyRequest, GetEncryptionKeyResponse,
-    SendEncryptionKeyRequest,
+    key_provisioning_server::KeyProvisioning, GetProvisionSecretsRequest,
+    GetProvisionSecretsResponse, SendProvisionSecretsRequest,
 };
 use tonic::{Request, Response};
 
-struct ControlPlaneImplementation {}
+struct KeyProvisioningService {}
 
 #[tonic::async_trait]
-impl ControlPlane for ControlPlaneImplementation {
-    async fn get_encryption_key(
+impl KeyProvisioning for KeyProvisioningService {
+    async fn get_provision_secrets(
         &self,
-        _request: Request<GetEncryptionKeyRequest>,
-    ) -> Result<Response<GetEncryptionKeyResponse>, tonic::Status> {
-        Ok(tonic::Response::new(GetEncryptionKeyResponse {
-            encrypted_encryption_key: vec![],
+        _request: Request<GetProvisionSecretsRequest>,
+    ) -> Result<Response<GetProvisionSecretsResponse>, tonic::Status> {
+        Ok(tonic::Response::new(GetProvisionSecretsResponse {
+            encrypted_encryption_key: None,
         }))
     }
 
-    async fn send_encryption_key(
+    async fn send_provision_secrets(
         &self,
-        _request: Request<SendEncryptionKeyRequest>,
+        _request: Request<SendProvisionSecretsRequest>,
     ) -> Result<Response<()>, tonic::Status> {
         Ok(tonic::Response::new(()))
     }
