@@ -117,8 +117,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
     let invoke_request = InvokeRequest {
         // TODO(#4037): Remove once explicit protos are used end-to-end.
         body: encrypted_request.encode_to_vec(),
-        // TODO(#4037): Use explicit crypto protos.
-        encrypted_request: None,
+        encrypted_request,
     };
 
     // Invoke the function once outside of the benchmark loop to make sure it's ready.
