@@ -15,6 +15,7 @@
 //
 
 #![feature(const_fmt_arguments_new)]
+#![feature(async_closure)]
 
 use once_cell::sync::Lazy;
 use std::{path::PathBuf, sync::Mutex};
@@ -22,6 +23,7 @@ use std::{path::PathBuf, sync::Mutex};
 pub mod check_build_licenses;
 pub mod check_license;
 pub mod check_todo;
+pub mod containers;
 pub mod diffs;
 pub mod examples;
 pub mod files;
