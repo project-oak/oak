@@ -43,34 +43,16 @@ message RootLayerEndorsements {
   TransparentReleaseEndorsement stage0_endorsement = 2;
 };
 
-message LinuxKernelEndorsement {
-  TransparentReleaseEndorsement kernel_binary = 1;
-  TransparentReleaseEndorsement kernel_cmd_line = 2;
-  TransparentReleaseEndorsement acpi = 3;
-}
-
-message OakRestrictedKernelEndorsement {
-  TransparentReleaseEndorsement oak_restricted_kernel = 1;
-}
-
-message CborFieldsEndorsement {
-  // Map from an OpenDICE binary label to a Transparent Release endorsement.
-  map<int32, TransparentReleaseEndorsement> endorsements = 1;
-}
-
-message LayerEndorsements {
-  oneof layer_type {
-    LinuxKernelEndorsement linux_kernel = 1;
-
-    OakRestrictedKernelEndorsement oak_restricted_kernel = 2;
-
-    TransparentReleaseEndorsement generic_binary = 3;
-
-    // Ideally, we would only use the concrete endorsements and make this
-    // obsolete. But it should remain here so no one is blocked.
-    CborFieldsEndorsement cbor_fields = 4;
+message KernelLayerEndorsements {
+  oneof type {
+    TransparentReleaseEndorsement linux_kernel = 1;
+    TransparentReleaseEndorsement oak_restricted_kernel = 2;
   }
-};
+}
+
+message CustomLayerEndorsements {
+  TransparentReleaseEndorsement binary = 1;
+}
 
 // Endorsement contains statements that some entity (e.g. a hardware provider)
 // vouches for the integrity of claims about the TEE or the software running
@@ -79,6 +61,7 @@ message LayerEndorsements {
 // The name is chosen to match the RATS terminology:
 // <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
 message Endorsements {
-  RootLayerEndorsements root_layer = 1;
-  repeated LayerEndorsements layers = 2;
+  RootLayerEndorsements root_layer = 1;                // Layer 0
+  KernelLayerEndorsements kernel_layer = 2;            // Layer 1
+  repeated CustomLayerEndorsements custom_layers = 3;  // Layers 2 through N
 };

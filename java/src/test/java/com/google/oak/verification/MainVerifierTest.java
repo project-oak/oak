@@ -16,18 +16,20 @@
 
 package com.google.oak.verification;
 
+import com.google.oak.attestation.v1.CustomLayerEndorsements;
+import com.google.oak.attestation.v1.CustomLayerReferenceValues;
 import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
-import com.google.oak.attestation.v1.LayerEndorsements;
+import com.google.oak.attestation.v1.KernelLayerEndorsements;
+import com.google.oak.attestation.v1.KernelLayerReferenceValues;
 import com.google.oak.attestation.v1.LayerEvidence;
-import com.google.oak.attestation.v1.LayerReferenceValues;
+import com.google.oak.attestation.v1.LogEntryVerification;
 import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.attestation.v1.RootLayerEndorsements;
 import com.google.oak.attestation.v1.RootLayerEvidence;
 import com.google.oak.attestation.v1.RootLayerReferenceValues;
 import com.google.oak.attestation.v1.TeePlatform;
 import com.google.oak.attestation.v1.TransparentReleaseEndorsement;
-import com.google.oak.attestation.v1.VerifyLogEntry;
 import com.google.protobuf.ByteString;
 import java.lang.ref.Reference;
 import java.nio.file.Files;
@@ -81,6 +83,8 @@ public class MainVerifierTest {
                           .setRemoteAttestationReport(ByteString.copyFromUtf8("whatever")))
         .addLayers(
             LayerEvidence.newBuilder().setEcaCertificate(ByteString.copyFromUtf8("whatever")))
+        .addLayers(
+            LayerEvidence.newBuilder().setEcaCertificate(ByteString.copyFromUtf8("whatever")))
         .build();
   }
 
@@ -88,7 +92,8 @@ public class MainVerifierTest {
     return Endorsements.newBuilder()
         .setRootLayer(
             RootLayerEndorsements.newBuilder().setStage0Endorsement(createTREndorsement()))
-        .addLayers(LayerEndorsements.newBuilder().setGenericBinary(createTREndorsement()))
+        .setKernelLayer(KernelLayerEndorsements.newBuilder().setLinuxKernel(createTREndorsement()))
+        .addCustomLayers(CustomLayerEndorsements.newBuilder().setBinary(createTREndorsement()))
         .build();
   }
 
@@ -98,8 +103,9 @@ public class MainVerifierTest {
 
     return ReferenceValues.newBuilder()
         .setRootLayer(RootLayerReferenceValues.newBuilder())
-        .addLayers(LayerReferenceValues.newBuilder().setGenericBinary(
-            VerifyLogEntry.newBuilder()
+        .setKernelLayer(KernelLayerReferenceValues.newBuilder())
+        .addCustomLayers(CustomLayerReferenceValues.newBuilder().setLogEntry(
+            LogEntryVerification.newBuilder()
                 .setEndorserPublicKey(endorserPublicKey)
                 .setRekorPublicKey(rekorPublicKey)))
         .build();
