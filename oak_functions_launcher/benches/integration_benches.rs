@@ -19,7 +19,7 @@
 
 extern crate test;
 
-use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedResponse};
+use oak_crypto::encryptor::ClientEncryptor;
 use oak_functions_launcher::{
     proto::oak::functions::{InvokeRequest, OakFunctionsAsyncClient},
     LookupDataConfig,
