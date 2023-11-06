@@ -130,8 +130,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         assert!(response.is_ok());
 
         // Only check this outside of the benchmark loop.
-        let encrypted_response =
-            EncryptedResponse::decode(response.unwrap().body.as_ref()).unwrap();
+        let encrypted_response = response.unwrap().encrypted_response.unwrap();
         let (decrypted_response, _authenticated_data) = client_encryptor
             .decrypt(&encrypted_response)
             .expect("could not decrypt response");
