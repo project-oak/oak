@@ -28,8 +28,8 @@ option java_package = "com.google.oak";
 // The wire numbers are the codec IDs in
 // https://github.com/multiformats/multicodec/blob/master/table.csv
 message RawDigest {
-  bytes identity = 1;
-  reserved 2 to 16;
+  reserved 1 to 15;
+  bytes psha2 = 16;
   bytes sha1 = 17;
   bytes sha2_256 = 18;
   bytes sha2_512 = 19;
@@ -49,8 +49,8 @@ message RawDigest {
 // For example, the field sha2_256 could contain
 // "82aac1adbfe3ada1244c1f54b7c949519e1f048067d0c3b236b7ae048fc7e227".
 message HexDigest {
-  string identity = 1;
-  reserved 2 to 16;
+  reserved 2 to 15;
+  bytes psha2 = 16;
   string sha1 = 17;
   string sha2_256 = 18;
   string sha2_512 = 19;

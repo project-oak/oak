@@ -17,50 +17,31 @@
 package com.google.oak.verification;
 
 import com.google.oak.RawDigest;
-import com.google.oak.attestation.v1.LayerEndorsements;
+import com.google.oak.attestation.v1.CustomLayerEndorsements;
+import com.google.oak.attestation.v1.CustomLayerReferenceValues;
 import com.google.oak.attestation.v1.LayerEvidence;
-import com.google.oak.attestation.v1.LayerReferenceValues;
-import com.google.oak.attestation.v1.LinuxKernelEndorsement;
-import com.google.oak.attestation.v1.Measurements;
+import com.google.oak.attestation.v1.LogEntryVerification;
 import com.google.oak.attestation.v1.TransparentReleaseEndorsement;
-import com.google.oak.attestation.v1.VerifyLinuxKernel;
-import com.google.oak.attestation.v1.VerifyLogEntry;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 class LayerVerifier {
-  public LayerVerifier(LayerEvidence evidence, LayerEndorsements endorsements) {
+  public LayerVerifier(LayerEvidence evidence, CustomLayerEndorsements endorsements) {
     this.evidence = evidence;
     this.endorsements = endorsements;
   }
 
-  public Optional<Failure> verify(LayerReferenceValues values) {
-    if (endorsements.hasLinuxKernel() && values.hasLinuxKernel()) {
-      LinuxKernelEndorsement end = endorsements.getLinuxKernel();
-      VerifyLinuxKernel ref = values.getLinuxKernel();
-      Optional<Failure> r = verifyLogEntry(end.getKernelBinary(), ref.getKernelBinary());
-      if (r.isPresent()) {
-        return r;
-      }
-      r = verifyLogEntry(end.getKernelCmdLine(), ref.getKernelCmdLine());
-      if (r.isPresent()) {
-        return r;
-      }
-      return verifyLogEntry(end.getAcpi(), ref.getAcpi());
-    } else if (endorsements.hasOakRestrictedKernel() && values.hasOakRestrictedKernel()) {
-      return Optional.of(new Failure("Not yet implemented"));
-    } else if (endorsements.hasGenericBinary() && values.hasGenericBinary()) {
-      return verifyLogEntry(endorsements.getGenericBinary(), values.getGenericBinary());
-    } else if (values.hasCborFields()) {
-      return Optional.of(new Failure("Not yet implemented"));
+  public Optional<Failure> verify(CustomLayerReferenceValues values) {
+    if (endorsements.hasBinary() && values.hasLogEntry()) {
+      return verifyLogEntry(endorsements.getBinary(), values.getLogEntry());
     }
 
     return Optional.of(new Failure("Mismatch in endorsement and reference values"));
   }
 
-  private static Optional<Failure> verifyLogEntry(
-      TransparentReleaseEndorsement end, VerifyLogEntry ref) {
+  static Optional<Failure> verifyLogEntry(
+      TransparentReleaseEndorsement end, LogEntryVerification ref) {
     RekorLogEntry logEntry;
     try {
       logEntry = RekorLogEntry.createFromJson(end.getRekorLogEntry().toStringUtf8());
@@ -73,6 +54,6 @@ class LayerVerifier {
   }
 
   private final LayerEvidence evidence;
-  private final LayerEndorsements endorsements;
+  private final CustomLayerEndorsements endorsements;
   Optional<Failure> initFailure;
 }

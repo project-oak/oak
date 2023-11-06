@@ -26,17 +26,18 @@ option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
 
 message ReferenceValues {
-  RootLayerReferenceValues root_layer = 1;   // Layer 0
-  repeated LayerReferenceValues layers = 2;  // Layers 1 through N.
+  RootLayerReferenceValues root_layer = 1;                // Layer 0
+  KernelLayerReferenceValues kernel_layer = 2;            // Layer 1
+  repeated CustomLayerReferenceValues custom_layers = 3;  // Layers 2 through N
 }
 
 message RootLayerReferenceValues {
   // Switches between AMD and Intel based on TeePlatform value.
-  VerifyAmdSevAttestationReport amd_sev_attestation_report = 1;
-  VerifyIntelTdxAttestationReport intel_tdx_attestation_report = 2;
+  AmdSevReferenceValues amd_sev = 1;
+  IntelTdxReferenceValues intel_tdx = 2;
 }
 
-message VerifyAmdSevAttestationReport {
+message AmdSevReferenceValues {
   bytes amd_root_public_key = 1;
 
   // TBD: Add conditions on all kinds of fields contained in the
@@ -46,15 +47,15 @@ message VerifyAmdSevAttestationReport {
   // If true, will skip the check that the TEE is not in debug mode.
   bool allow_debug = 3;
 
-  optional VerifyLogEntry stage0_binary = 4;
+  optional LogEntryVerification stage0_log_entry = 4;
 }
 
-message VerifyIntelTdxAttestationReport {
+message IntelTdxReferenceValues {
   // TBD
 }
 
 // Verifies the log entry, including signatures and the digest.
-message VerifyLogEntry {
+message LogEntryVerification {
   // The endorser’s public signing key for signature verification.
   bytes endorser_public_key = 1;
 
@@ -64,39 +65,41 @@ message VerifyLogEntry {
 
 // Verifies that the field contains at least one of the given digests.
 // No checks are performed if this is empty.
-message Measurements {
+message Digests {
   repeated RawDigest digests = 1;
 }
 
-message VerifyLinuxKernel {
-  // Each field is in a 1:1 correspondence to a CBOR key.
-  optional VerifyLogEntry kernel_binary = 1;
-  optional VerifyLogEntry kernel_cmd_line = 2;
-  optional VerifyLogEntry acpi = 3;
+// Reference values of the kernel layer, as measured by stage0.
+message KernelLayerReferenceValues {
+  // Verifies the kernel binary based on endorsement.
+  optional LogEntryVerification log_entry = 1;
+
+  // Explicitly verifies digests in addition to log entry verification.
+  // Note that endorsement-based digest verification is implicitly contained
+  // in the log entry verification.
+  optional Digests code = 2;
+
+  // Verifies that the command line is equivalent to a specified one (e.g. up
+  // to certain permutations).
+  repeated string kernel_cmd_line = 3;
+
+  optional Digests kernel_setup_data = 4;
+
+  optional Digests init_ram_fs = 5;
+
+  repeated Digests memory_map = 6;
+
+  optional Digests acpi = 7;
 }
 
-message VerifyOakRestrictedKernel {
-  // TBD, but similar to Linux kernel
-}
+message CustomLayerReferenceValues {
+  // Verifies the layer binary based on endorsement.
+  optional LogEntryVerification log_entry = 1;
 
-// Alternatively, verify the contents of the map explicitly. Checks that the
-// specified entries are contained in the endorsement (subset). Additional
-// fields stated in the endorsement are ignored. Ideally this would never be
-// used if we manage to provide oneof members for all practical layer use
-// cases.
-message VerifyCborFields {
-  map<int32, Measurements> cbor_fields = 1;
-}
+  // Explicitly verifies digests in addition to log entry verification.
+  // Note that endorsement-based digest verification is implicitly contained
+  // in the log entry verification.
+  optional Digests code = 2;
 
-// Verifies certificate contents for layers 1 through N.
-message LayerReferenceValues {
-  oneof layer_type {
-    VerifyLinuxKernel linux_kernel = 1;
-
-    VerifyOakRestrictedKernel oak_restricted_kernel = 2;
-
-    VerifyLogEntry generic_binary = 3;
-
-    VerifyCborFields cbor_fields = 4;
-  }
+  optional Digests configuration = 3;
 }
