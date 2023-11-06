@@ -39,6 +39,7 @@ public class MainVerifier {
   public MainVerifier(Evidence evidence, Endorsements endorsements) {
     this.evidence = evidence;
     this.endorsements = endorsements;
+    // Need to adjust layer numbering since Evidence doesn't have the distinguished kernel layer.
     if (evidence.getLayersCount() - 1 == endorsements.getCustomLayersCount()) {
       this.initFailure = Optional.empty();
       int layerCount = endorsements.getCustomLayersCount();

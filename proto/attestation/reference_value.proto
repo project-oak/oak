@@ -28,7 +28,7 @@ option java_package = "com.google.oak.attestation.v1";
 message ReferenceValues {
   RootLayerReferenceValues root_layer = 1;                // Layer 0
   KernelLayerReferenceValues kernel_layer = 2;            // Layer 1
-  repeated CustomLayerReferenceValues custom_layers = 3;  // Layers 2 through N.
+  repeated CustomLayerReferenceValues custom_layers = 3;  // Layers 2 through N
 }
 
 message RootLayerReferenceValues {
@@ -63,19 +63,43 @@ message LogEntryVerification {
   bytes rekor_public_key = 2;
 }
 
-// As measured by stage0
+// Verifies that the field contains at least one of the given digests.
+// No checks are performed if this is empty.
+message Digests {
+  repeated RawDigest digests = 1;
+}
+
+// Reference values of the kernel layer, as measured by stage0.
 message KernelLayerReferenceValues {
+  // Verifies the kernel binary based on endorsement.
   optional LogEntryVerification log_entry = 1;
-  optional RawDigest kernel = 2;
-  optional string kernel_cmd_line = 3;
-  optional RawDigest kernel_setup_data = 4;
-  optional RawDigest init_ram_fs = 5;
-  optional RawDigest memory_map = 6;
-  optional RawDigest acpi = 7;
+
+  // Explicitly verifies digests in addition to log entry verification.
+  // Note that endorsement-based digest verification is implicitly contained
+  // in the log entry verification.
+  optional Digests code = 2;
+
+  // Verifies that the command line is equivalent to a specified one (e.g. up
+  // to certain permutations).
+  repeated string kernel_cmd_line = 3;
+
+  optional Digests kernel_setup_data = 4;
+
+  optional Digests init_ram_fs = 5;
+
+  repeated Digests memory_map = 6;
+
+  optional Digests acpi = 7;
 }
 
 message CustomLayerReferenceValues {
+  // Verifies the layer binary based on endorsement.
   optional LogEntryVerification log_entry = 1;
-  optional RawDigest code = 2;           // codeMeasurements
-  optional RawDigest configuration = 3;  // configurationMeasurements
+
+  // Explicitly verifies digests in addition to log entry verification.
+  // Note that endorsement-based digest verification is implicitly contained
+  // in the log entry verification.
+  optional Digests code = 2;
+
+  optional Digests configuration = 3;
 }

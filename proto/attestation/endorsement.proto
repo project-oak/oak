@@ -61,7 +61,7 @@ message CustomLayerEndorsements {
 // The name is chosen to match the RATS terminology:
 // <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
 message Endorsements {
-  RootLayerEndorsements root_layer = 1;
-  KernelLayerEndorsements kernel_layer = 2;
-  repeated CustomLayerEndorsements custom_layers = 3;
+  RootLayerEndorsements root_layer = 1;                // Layer 0
+  KernelLayerEndorsements kernel_layer = 2;            // Layer 1
+  repeated CustomLayerEndorsements custom_layers = 3;  // Layers 2 through N
 };
