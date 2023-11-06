@@ -39,8 +39,8 @@ async fn main() -> Result<(), anyhow::Error> {
         lookup_data_path: args.functions_args.lookup_data,
         // Hard-coded because we are not sure whether we want to configure the update interval.
         update_interval: Some(std::time::Duration::from_secs(60 * 10)),
-        // Fix the maximum size of a chunk to the proto limit size of 2 GiB.
-        max_chunk_size: ByteUnit::Gibibyte(2),
+        // gRPC messages are limited to 4 MiB.
+        max_chunk_size: ByteUnit::Mebibyte(4),
     };
 
     let mut untrusted_app =
