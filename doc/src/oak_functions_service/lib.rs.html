@@ -177,6 +177,44 @@
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
 <a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -218,10 +256,11 @@
 <span class="kw">pub mod </span>lookup;
 <span class="kw">pub mod </span>wasm;
 
-<span class="kw">use </span>alloc::{format, sync::Arc, vec::Vec};
+<span class="kw">use </span>alloc::{format, sync::Arc, vec, vec::Vec};
+<span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>instance::OakFunctionsInstance;
 <span class="kw">use </span>oak_core::sync::OnceCell;
-<span class="kw">use </span>oak_crypto::encryptor::EncryptionKeyProvider;
+<span class="kw">use </span>oak_crypto::{encryptor::EncryptionKeyProvider, proto::oak::crypto::v1::EncryptedRequest};
 <span class="kw">use </span>oak_remote_attestation::{
     attester::{AttestationReportGenerator, Attester},
     handler::EncryptionHandler,
@@ -307,7 +346,17 @@
         <span class="macro">log::debug!</span>(<span class="string">&quot;called handle_user_request&quot;</span>);
         <span class="kw">let </span>encryption_key_provider = <span class="self">self</span>.encryption_key_provider.clone();
         <span class="kw">let </span>instance = <span class="self">self</span>.get_instance()<span class="question-mark">?</span>;
-        EncryptionHandler::create(encryption_key_provider, |r| {
+
+        <span class="comment">// TODO(#4037): Remove once explicit crypto protos are implemented.
+        // Deserialize request.
+        </span><span class="kw">let </span>encrypted_request = EncryptedRequest::decode(request.body.as_ref()).map_err(|err| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::Internal,
+                <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t deserialize request: {:?}&quot;</span>, err),
+            )
+        })<span class="question-mark">?</span>;
+
+        <span class="kw">let </span><span class="kw-2">mut </span>result = EncryptionHandler::create(encryption_key_provider, |r| {
             <span class="comment">// Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
             </span><span class="kw">let </span>response_result: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, micro_rpc::Status&gt; =
@@ -315,18 +364,45 @@
             <span class="kw">let </span>response: micro_rpc::ResponseWrapper = response_result.into();
             response.encode_to_vec()
         })
-        .invoke(<span class="kw-2">&amp;</span>request.body)
-        <span class="comment">// TODO(#4037): Use explicit crypto protos.
-        </span>.map(|response| InvokeResponse {
-            body: response,
-            encrypted_response: <span class="prelude-val">None</span>,
+        .invoke(<span class="kw-2">&amp;</span>encrypted_request)
+        .map(|encrypted_response| {
+            InvokeResponse {
+                <span class="comment">// TODO(#4037): Remove once explicit crypto protos are implemented.
+                </span>body: <span class="macro">vec!</span>[],
+                encrypted_response: <span class="prelude-val">Some</span>(encrypted_response),
+            }
         })
         .map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
                 <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t call handle_user_request handler: {:?}&quot;</span>, err),
             )
-        })
+        });
+
+        <span class="comment">// TODO(#4037): Remove once explicit crypto protos are implemented.
+        </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="kw-2">ref mut </span>result) = result {
+            <span class="comment">// Serialize response.
+            </span><span class="kw">let </span><span class="kw-2">mut </span>serialized_response = <span class="macro">vec!</span>[];
+            result
+                .encrypted_response
+                .clone()
+                .ok_or(<span class="macro">anyhow!</span>(<span class="string">&quot;no encrypted response provided&quot;</span>))
+                .map_err(|err| {
+                    micro_rpc::Status::new_with_message(
+                        micro_rpc::StatusCode::Internal,
+                        <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, err),
+                    )
+                })<span class="question-mark">?
+                </span>.encode(<span class="kw-2">&amp;mut </span>serialized_response)
+                .map_err(|err| {
+                    micro_rpc::Status::new_with_message(
+                        micro_rpc::StatusCode::Internal,
+                        <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t serialize response: {:?}&quot;</span>, err),
+                    )
+                })<span class="question-mark">?</span>;
+            result.body = serialized_response;
+        }
+        result
     }
 
     <span class="kw">fn </span>extend_next_lookup_data(

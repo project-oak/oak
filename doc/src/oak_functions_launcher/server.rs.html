@@ -132,8 +132,6 @@
 <a href="#132" id="132">132</a>
 <a href="#133" id="133">133</a>
 <a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -222,8 +220,7 @@
                         <span class="kw">let </span>enclave_invoke_request = functions::InvokeRequest {
                             <span class="comment">// TODO(#4037): Remove once explicit protos are used end-to-end.
                             </span>body: invoke_request.encrypted_body,
-                            <span class="comment">// TODO(#4037): Use explicit crypto protos.
-                            </span>encrypted_request: <span class="prelude-val">None</span>,
+                            encrypted_request: invoke_request.encrypted_request,
                         };
                         <span class="kw">let </span><span class="kw-2">mut </span>enclave_client =
                             functions::OakFunctionsAsyncClient::new(connector_handle.clone());
@@ -237,8 +234,7 @@
                         response_wrapper::Response::InvokeResponse(InvokeResponse {
                             <span class="comment">// TODO(#4037): Remove once explicit protos are used end-to-end.
                             </span>encrypted_body: enclave_invoke_response.body,
-                            <span class="comment">// TODO(#4037): Use explicit crypto protos.
-                            </span>encrypted_response: <span class="prelude-val">None</span>,
+                            encrypted_response: enclave_invoke_response.encrypted_response,
                         })
                     }
                 };

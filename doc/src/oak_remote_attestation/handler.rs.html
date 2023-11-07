@@ -80,17 +80,6 @@
 <a href="#80" id="80">80</a>
 <a href="#81" id="81">81</a>
 <a href="#82" id="82">82</a>
-<a href="#83" id="83">83</a>
-<a href="#84" id="84">84</a>
-<a href="#85" id="85">85</a>
-<a href="#86" id="86">86</a>
-<a href="#87" id="87">87</a>
-<a href="#88" id="88">88</a>
-<a href="#89" id="89">89</a>
-<a href="#90" id="90">90</a>
-<a href="#91" id="91">91</a>
-<a href="#92" id="92">92</a>
-<a href="#93" id="93">93</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -107,13 +96,12 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>alloc::{sync::Arc, vec, vec::Vec};
+</span><span class="kw">use </span>alloc::{sync::Arc, vec::Vec};
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>oak_crypto::{
     encryptor::{EncryptionKeyProvider, ServerEncryptor},
-    proto::oak::crypto::v1::EncryptedRequest,
+    proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
 };
-<span class="kw">use </span>prost::Message;
 
 <span class="kw">const </span>EMPTY_ASSOCIATED_DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;&quot;</span>;
 
@@ -145,11 +133,7 @@
 }
 
 <span class="kw">impl</span>&lt;H: FnOnce(Vec&lt;u8&gt;) -&gt; Vec&lt;u8&gt;&gt; EncryptionHandler&lt;H&gt; {
-    <span class="kw">pub fn </span>invoke(<span class="self">self</span>, request_body: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-        <span class="comment">// Deserialize request.
-        </span><span class="kw">let </span>encrypted_request = EncryptedRequest::decode(request_body)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialize request: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
-
+    <span class="kw">pub fn </span>invoke(<span class="self">self</span>, encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
         <span class="comment">// Initialize server encryptor.
         </span><span class="kw">let </span>serialized_encapsulated_public_key = encrypted_request
             .serialized_encapsulated_public_key
@@ -163,7 +147,7 @@
 
         <span class="comment">// Decrypt request.
         </span><span class="kw">let </span>(request, <span class="kw">_</span>) = server_encryptor
-            .decrypt(<span class="kw-2">&amp;</span>encrypted_request)
+            .decrypt(encrypted_request)
             .context(<span class="string">&quot;couldn&#39;t decrypt request&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Handle request.
@@ -173,15 +157,9 @@
         <span class="comment">// Encrypt and serialize response.
         // The resulting decryptor for consequent requests is discarded because we don&#39;t expect
         // another message from the stream.
-        </span><span class="kw">let </span>encrypted_response = server_encryptor
+        </span>server_encryptor
             .encrypt(<span class="kw-2">&amp;</span>response, EMPTY_ASSOCIATED_DATA)
-            .context(<span class="string">&quot;couldn&#39;t encrypt response&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>serialized_response = <span class="macro">vec!</span>[];
-        encrypted_response
-            .encode(<span class="kw-2">&amp;mut </span>serialized_response)
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t serialize response: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
-
-        <span class="prelude-val">Ok</span>(serialized_response)
+            .context(<span class="string">&quot;couldn&#39;t encrypt response&quot;</span>)
     }
 }
 </code></pre></div></section></main></body></html>
