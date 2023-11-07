@@ -19,7 +19,7 @@ use anyhow::Context;
 use ciborium::Value;
 use coset::cwt::ClaimName;
 use oak_dice::{
-    cert::CODE_DIGEST_ID,
+    cert::LAYER_2_CODE_MEASUREMENT_ID,
     evidence::{Stage0DiceData, STAGE0_MAGIC},
 };
 use oak_remote_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
@@ -45,14 +45,14 @@ const MEMMAP_PATH: &str = "/sys/firmware/memmap";
 const PHYS_MEM_PATH: &str = "/dev/mem";
 
 /// Measures the downloaded system image bytes and returns it as a vector of additional CWT claims.
-pub fn measure_system_image(system_image_bytes: &[u8]) -> anyhow::Result<Vec<(ClaimName, Value)>> {
+pub fn measure_system_image(system_image_bytes: &[u8]) -> Vec<(ClaimName, Value)> {
     let mut digest = Sha256::default();
     digest.update(system_image_bytes);
     let digest = digest.finalize();
-    Ok(vec![(
-        ClaimName::PrivateUse(CODE_DIGEST_ID),
+    vec![(
+        ClaimName::PrivateUse(LAYER_2_CODE_MEASUREMENT_ID),
         Value::Bytes(digest[..].to_vec()),
-    )])
+    )]
 }
 
 #[derive(Debug)]

@@ -15,7 +15,8 @@
 //
 
 use crate::proto::oak::attestation::v1::{
-    CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence, TeePlatform,
+    ApplicationKeys, CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
+    TeePlatform,
 };
 use alloc::vec::Vec;
 use anyhow::{anyhow, Context};
@@ -25,10 +26,13 @@ use coset::{
     CborSerializable,
 };
 use oak_dice::{
-    cert::{generate_eca_certificate, get_claims_set_from_certificate_bytes},
+    cert::{
+        generate_ecdsa_key_pair, generate_kem_certificate, generate_signing_certificate,
+        get_claims_set_from_certificate_bytes,
+    },
     evidence::Stage0DiceData,
 };
-use p256::ecdsa::SigningKey;
+use p256::ecdsa::{SigningKey, VerifyingKey};
 
 /// The actual size used when encoding a Nist P256 private key.
 const P256_PRIVATE_KEY_SIZE: usize = 32;
@@ -68,10 +72,16 @@ impl DiceBuilder {
             .ok_or_else(|| anyhow!("no subject in certificate"))?;
 
         let evidence = &mut self.evidence;
-        let (eca_certificate, signing_key) =
-            generate_eca_certificate(&self.signing_key, issuer_id, additional_claims)
-                .map_err(anyhow::Error::msg)
-                .context("couldn't generate ECA certificate for the next layer")?;
+        let (signing_key, verifying_key) = generate_ecdsa_key_pair();
+
+        let eca_certificate = generate_signing_certificate(
+            &self.signing_key,
+            issuer_id,
+            &verifying_key,
+            additional_claims,
+        )
+        .map_err(anyhow::Error::msg)
+        .context("couldn't generate ECA certificate for the next layer")?;
         evidence.layers.push(LayerEvidence {
             eca_certificate: eca_certificate.to_vec().map_err(anyhow::Error::msg)?,
         });
@@ -79,6 +89,62 @@ impl DiceBuilder {
         // zero out its memory.
         self.signing_key = signing_key;
         Ok(())
+    }
+
+    /// Adds the CWT certificates application keys to the DICE data.
+    ///
+    /// Since no additional evidence can be added after the application keys are added, this
+    /// consumes DICE data, discards the signing key and returns the finalized evidence.
+    pub fn add_application_keys(
+        self,
+        additional_claims: Vec<(ClaimName, Value)>,
+        kem_public_key: &[u8],
+        verifying_key: &VerifyingKey,
+    ) -> anyhow::Result<Evidence> {
+        // The last evidence layer contains the certificate for the current signing key. Since the
+        // builder contains an existing signing key there must be at least one layer of evidence
+        // that contains the certificate.
+        let claims_set = self
+            .evidence
+            .layers
+            .last()
+            .ok_or_else(|| anyhow::anyhow!("no evidence layers found"))?
+            .get_claims()
+            .context("couldn't get layer claims set")?;
+        // The issuer for the application keys is the subject of the final layer.
+        let issuer_id = claims_set
+            .subject
+            .ok_or_else(|| anyhow!("no subject in certificate"))?;
+
+        let mut evidence = self.evidence;
+
+        let encryption_public_key_certificate = generate_kem_certificate(
+            &self.signing_key,
+            issuer_id.clone(),
+            kem_public_key,
+            additional_claims.clone(),
+        )
+        .map_err(anyhow::Error::msg)
+        .context("couldn't generate encryption public key certificate")?
+        .to_vec()
+        .map_err(anyhow::Error::msg)?;
+        let signing_public_key_certificate = generate_signing_certificate(
+            &self.signing_key,
+            issuer_id,
+            verifying_key,
+            additional_claims,
+        )
+        .map_err(anyhow::Error::msg)
+        .context("couldn't generate signing public key certificate")?
+        .to_vec()
+        .map_err(anyhow::Error::msg)?;
+
+        evidence.application_keys = Some(ApplicationKeys {
+            encryption_public_key_certificate: Some(encryption_public_key_certificate),
+            signing_public_key_certificate: Some(signing_public_key_certificate),
+        });
+
+        Ok(evidence)
     }
 }
 
