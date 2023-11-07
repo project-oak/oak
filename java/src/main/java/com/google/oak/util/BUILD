@@ -25,3 +25,9 @@ java_library(
     name = "util",
     srcs = glob(["*.java"]),
 )
+
+java_library(
+    name = "util_android",
+    srcs = glob(["*.java"]),
+    constraints = ["android"],
+)

@@ -33,3 +33,18 @@ java_library(
         "//java/src/main/java/com/google/oak/util",
     ],
 )
+
+# Android-friendly flavor of OakClient.
+java_library(
+    name = "client_android",
+    srcs = [
+        "OakClient.java",
+    ],
+    constraints = ["android"],
+    deps = [
+        "//third_party/oak/java/src/main/java/com/google/oak/crypto:client_encryptor_android",
+        "//third_party/oak/java/src/main/java/com/google/oak/remote_attestation:attestation_verifier_android",
+        "//third_party/oak/java/src/main/java/com/google/oak/transport:transport_android",
+        "//third_party/oak/java/src/main/java/com/google/oak/util:util_android",
+    ],
+)

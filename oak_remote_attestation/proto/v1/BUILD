@@ -18,7 +18,7 @@ load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
-load("@rules_java//java:defs.bzl", "java_proto_library")
+load("@rules_java//java:defs.bzl", "java_lite_proto_library", "java_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
@@ -45,6 +45,11 @@ java_proto_library(
 proto_library(
     name = "service_streaming_proto",
     srcs = ["service_streaming.proto"],
+    deps = [":messages_proto"],
+)
+
+java_lite_proto_library(
+    name = "messages_java_proto_lite",
     deps = [":messages_proto"],
 )
 
@@ -83,10 +88,23 @@ java_proto_library(
     deps = [":service_streaming_proto"],
 )
 
+java_lite_proto_library(
+    name = "service_streaming_java_proto_lite",
+    deps = [":service_streaming_proto"],
+)
+
 java_grpc_library(
     name = "service_streaming_java_grpc",
     srcs = [":service_streaming_proto"],
     deps = [":service_streaming_java_proto"],
+)
+
+java_grpc_library(
+    name = "service_streaming_java_grpc_lite",
+    srcs = [":service_streaming_proto"],
+    constraints = ["android"],
+    flavor = "lite",
+    deps = [":service_streaming_java_proto_lite"],
 )
 
 java_proto_library(

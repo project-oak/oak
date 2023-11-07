@@ -31,6 +31,16 @@ java_library(
 )
 
 java_library(
+    name = "attestation_verifier_android",
+    srcs = ["AttestationVerifier.java"],
+    constraints = ["android"],
+    deps = [
+        "//java/src/main/java/com/google/oak/util:util_android",
+        "//oak_remote_attestation/proto/v1:messages_java_proto_lite",
+    ],
+)
+
+java_library(
     name = "amd_attestation_verifier",
     srcs = ["AmdAttestationVerifier.java"],
     deps = [
@@ -47,5 +57,16 @@ java_library(
         ":attestation_verifier",
         "//java/src/main/java/com/google/oak/util",
         "//oak_remote_attestation/proto/v1:messages_java_proto",
+    ],
+)
+
+java_library(
+    name = "insecure_attestation_verifier_android",
+    srcs = ["InsecureAttestationVerifier.java"],
+    constraints = ["android"],
+    deps = [
+        ":attestation_verifier_android",
+        "//java/src/main/java/com/google/oak/util:util_android",
+        "//oak_remote_attestation/proto/v1:messages_java_proto_lite",
     ],
 )

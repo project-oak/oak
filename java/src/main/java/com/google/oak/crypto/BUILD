@@ -29,6 +29,14 @@ java_library(
 )
 
 java_library(
+    name = "decryption_result_android",
+    srcs = [
+        "DecryptionResult.java",
+    ],
+    constraints = ["android"],
+)
+
+java_library(
     name = "client_encryptor",
     srcs = [
         "ClientEncryptor.java",
@@ -39,6 +47,20 @@ java_library(
         "//java/src/main/java/com/google/oak/util",
         "//oak_crypto/proto/v1:crypto_java_proto",
         "@com_google_protobuf//java/core",
+    ],
+)
+
+java_library(
+    name = "client_encryptor_android",
+    srcs = [
+        "ClientEncryptor.java",
+    ],
+    deps = [
+        ":decryption_result_android",
+        "//java/src/main/java/com/google/oak/crypto/hpke:hpke_android",
+        "//java/src/main/java/com/google/oak/util:util_android",
+        "//oak_crypto/proto/v1:crypto_java_proto_lite",
+        "@com_google_protobuf//java/lite",
     ],
 )
 

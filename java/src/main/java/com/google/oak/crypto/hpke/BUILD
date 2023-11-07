@@ -36,3 +36,20 @@ java_library(
         "//java/src/main/java/com/google/oak/util",
     ],
 )
+
+java_library(
+    name = "hpke_android",
+    srcs = [
+        "Hpke.java",
+        "KeyPair.java",
+        "RecipientContext.java",
+        "SenderContext.java",
+    ],
+    constraints = ["android"],
+    runtime_deps = [
+        "//cc/crypto/hpke/jni:libhpke-jni.so",
+    ],
+    deps = [
+        "//java/src/main/java/com/google/oak/util:util_android",
+    ],
+)
