@@ -86,8 +86,7 @@ impl StreamingSession for SessionProxy {
                         let enclave_invoke_request = functions::InvokeRequest {
                             // TODO(#4037): Remove once explicit protos are used end-to-end.
                             body: invoke_request.encrypted_body,
-                            // TODO(#4037): Use explicit crypto protos.
-                            encrypted_request: None,
+                            encrypted_request: invoke_request.encrypted_request,
                         };
                         let mut enclave_client =
                             functions::OakFunctionsAsyncClient::new(connector_handle.clone());
@@ -101,8 +100,7 @@ impl StreamingSession for SessionProxy {
                         response_wrapper::Response::InvokeResponse(InvokeResponse {
                             // TODO(#4037): Remove once explicit protos are used end-to-end.
                             encrypted_body: enclave_invoke_response.body,
-                            // TODO(#4037): Use explicit crypto protos.
-                            encrypted_response: None,
+                            encrypted_response: enclave_invoke_response.encrypted_response,
                         })
                     }
                 };
