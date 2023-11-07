@@ -47,7 +47,7 @@ impl Transport for GrpcStreamingTransport {
         &mut self,
         encrypted_request: &EncryptedRequest,
     ) -> anyhow::Result<EncryptedResponse> {
-        // TODO(#4037): Use explicit crypto protos.
+        // TODO(#4037): Remove once explicit crypto protos are implemented.
         let mut serialized_request = vec![];
         encrypted_request
             .encode(&mut serialized_request)
@@ -57,10 +57,9 @@ impl Transport for GrpcStreamingTransport {
             .rpc_client
             .stream(futures_util::stream::iter(vec![RequestWrapper {
                 request: Some(request_wrapper::Request::InvokeRequest(InvokeRequest {
-                    // TODO(#4037): Remove once explicit protos are used end-to-end.
+                    // TODO(#4037): Remove once explicit crypto protos are implemented.
                     encrypted_body: serialized_request,
-                    // TODO(#4037): Use explicit crypto protos.
-                    encrypted_request: None,
+                    encrypted_request: Some(encrypted_request.clone()),
                 })),
             }]))
             .await

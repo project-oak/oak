@@ -150,11 +150,13 @@ public final class EncryptedStreamObserver<I, O> implements StreamObserver<Reque
       Result<EncryptedResponse, Exception> encryptedResponse =
           encryptor.encrypt(connectionAdapter.serialize(response), decrypted.associatedData);
 
-      // TODO(#4037): Use explicit crypto protos.
       return encryptedResponse.map(encrypted -> {
         InvokeResponse invokeResponse =
-            InvokeResponse.newBuilder()
+            InvokeResponse
+                .newBuilder()
+                // TODO(#4037): Remove once explicit crypto protos are implemented.
                 .setEncryptedBody(ByteString.copyFrom(encrypted.toByteArray()))
+                .setEncryptedResponse(encrypted)
                 .build();
         return ResponseWrapper.newBuilder().setInvokeResponse(invokeResponse).build();
       });
