@@ -131,7 +131,6 @@
 <a href="#131" id="131">131</a>
 <a href="#132" id="132">132</a>
 <a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -181,7 +180,7 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
     ) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
-        <span class="comment">// TODO(#4037): Use explicit crypto protos.
+        <span class="comment">// TODO(#4037): Remove once explicit crypto protos are implemented.
         </span><span class="kw">let </span><span class="kw-2">mut </span>serialized_request = <span class="macro">vec!</span>[];
         encrypted_request
             .encode(<span class="kw-2">&amp;mut </span>serialized_request)
@@ -191,10 +190,9 @@
             </span>.rpc_client
             .stream(futures_util::stream::iter(<span class="macro">vec!</span>[RequestWrapper {
                 request: <span class="prelude-val">Some</span>(request_wrapper::Request::InvokeRequest(InvokeRequest {
-                    <span class="comment">// TODO(#4037): Remove once explicit protos are used end-to-end.
+                    <span class="comment">// TODO(#4037): Remove once explicit crypto protos are implemented.
                     </span>encrypted_body: serialized_request,
-                    <span class="comment">// TODO(#4037): Use explicit crypto protos.
-                    </span>encrypted_request: <span class="prelude-val">None</span>,
+                    encrypted_request: <span class="prelude-val">Some</span>(encrypted_request.clone()),
                 })),
             }]))
             .<span class="kw">await
