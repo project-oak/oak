@@ -2368,10 +2368,16 @@ name = "oak_remote_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ciborium",
+ "coset",
  "log",
  "micro_rpc_build",
  "oak_crypto",
+ "oak_dice",
+ "p256",
  "prost",
+ "rand_core",
+ "sha2",
 ]
 
 [[package]]

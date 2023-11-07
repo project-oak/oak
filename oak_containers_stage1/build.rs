@@ -30,18 +30,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ..Default::default()
         },
     )?;
-
-    // Generate protos for DICE data.
-    generate_grpc_code(
-        "../",
-        &[
-            "proto/attestation/dice.proto",
-            "proto/attestation/evidence.proto",
-        ],
-        CodegenOptions {
-            ..Default::default()
-        },
-    )?;
-
     Ok(())
 }
