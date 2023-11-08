@@ -50,5 +50,6 @@ build_test(
         ":crypto_proto",
         ":crypto_cc_proto",
         ":crypto_java_proto",
+        ":crypto_java_proto_lite",
     ],
 )

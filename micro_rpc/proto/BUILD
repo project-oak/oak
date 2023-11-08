@@ -34,5 +34,5 @@ java_proto_library(
 
 java_lite_proto_library(
     name = "messages_java_proto_lite",
-    deps = [":messages_proto",],
+    deps = [":messages_proto"],
 )
