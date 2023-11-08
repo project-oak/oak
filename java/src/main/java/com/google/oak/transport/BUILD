@@ -98,6 +98,6 @@ android_library(
     name = "api_key_interceptor_android",
     srcs = ["ApiKeyInterceptor.java"],
     deps = [
-        "//third_party/java/grpc:core_android",
+        "@io_grpc_grpc_java//api",
     ],
 )
