@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["workspace_path"],"macro":["spread"],"mod":["check_build_licenses","check_license","check_todo","diffs","examples","files","internal","launcher","testing"],"static":["PROCESSES"]};
+window.SIDEBAR_ITEMS = {"fn":["workspace_path"],"macro":["spread"],"mod":["check_build_licenses","check_license","check_todo","containers","diffs","examples","files","internal","launcher","testing"],"static":["PROCESSES"]};
