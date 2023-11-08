@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@build_bazel_rules_android//android:rules.bzl", "android_library")
 load("@rules_java//java:defs.bzl", "java_library")
 
 package(
@@ -37,14 +38,13 @@ java_library(
     ],
 )
 
-java_library(
+android_library(
     name = "transport_android",
     srcs = [
         "EvidenceProvider.java",
         "QueueingStreamObserver.java",
         "Transport.java",
     ],
-    constraints = ["android"],
     deps = [
         "//java/src/main/java/com/google/oak/util:util_android",
         "//oak_crypto/proto/v1:crypto_java_proto_lite",
@@ -70,12 +70,11 @@ java_library(
     ],
 )
 
-java_library(
+android_library(
     name = "grpc_streaming_transport_android",
     srcs = [
         "GrpcStreamingTransport.java",
     ],
-    constraints = ["android"],
     deps = [
         ":transport_android",
         "//java/src/main/java/com/google/oak/util:util_android",
@@ -95,12 +94,10 @@ java_library(
     ],
 )
 
-java_library(
+android_library(
     name = "api_key_interceptor_android",
     srcs = ["ApiKeyInterceptor.java"],
-    constraints = ["android"],
     deps = [
         "//third_party/java/grpc:core_android",
     ],
 )
-

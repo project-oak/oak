@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@build_bazel_rules_android//android:rules.bzl", "android_library")
 load("@rules_java//java:defs.bzl", "java_library")
 
 package(
@@ -37,7 +38,7 @@ java_library(
     ],
 )
 
-java_library(
+android_library(
     name = "hpke_android",
     srcs = [
         "Hpke.java",
@@ -45,11 +46,8 @@ java_library(
         "RecipientContext.java",
         "SenderContext.java",
     ],
-    constraints = ["android"],
-    runtime_deps = [
-        "//cc/crypto/hpke/jni:libhpke-jni.so",
-    ],
     deps = [
+        "//cc/crypto/hpke/jni:libhpke-jni.so",
         "//java/src/main/java/com/google/oak/util:util_android",
     ],
 )

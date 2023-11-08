@@ -102,7 +102,6 @@ java_grpc_library(
 java_grpc_library(
     name = "service_streaming_java_grpc_lite",
     srcs = [":service_streaming_proto"],
-    constraints = ["android"],
     flavor = "lite",
     deps = [":service_streaming_java_proto_lite"],
 )

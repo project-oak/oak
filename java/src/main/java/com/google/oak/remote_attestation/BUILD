@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+load("@build_bazel_rules_android//android:rules.bzl", "android_library")
 load("@rules_java//java:defs.bzl", "java_library")
 
 package(
@@ -30,10 +31,9 @@ java_library(
     ],
 )
 
-java_library(
+android_library(
     name = "attestation_verifier_android",
     srcs = ["AttestationVerifier.java"],
-    constraints = ["android"],
     deps = [
         "//java/src/main/java/com/google/oak/util:util_android",
         "//oak_remote_attestation/proto/v1:messages_java_proto_lite",
@@ -60,10 +60,9 @@ java_library(
     ],
 )
 
-java_library(
+android_library(
     name = "insecure_attestation_verifier_android",
     srcs = ["InsecureAttestationVerifier.java"],
-    constraints = ["android"],
     deps = [
         ":attestation_verifier_android",
         "//java/src/main/java/com/google/oak/util:util_android",
