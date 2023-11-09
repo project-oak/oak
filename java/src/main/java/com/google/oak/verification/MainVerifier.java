@@ -27,8 +27,8 @@ import com.google.oak.attestation.v1.InitReferenceValues;
 import com.google.oak.attestation.v1.KernelEndorsements;
 import com.google.oak.attestation.v1.KernelReferenceValues;
 import com.google.oak.attestation.v1.LayerEvidence;
-import com.google.oak.attestation.v1.OakContainerEndorsements;
-import com.google.oak.attestation.v1.OakContainerReferenceValues;
+import com.google.oak.attestation.v1.OakContainersEndorsements;
+import com.google.oak.attestation.v1.OakContainersReferenceValues;
 import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.attestation.v1.RootEndorsements;
 import com.google.oak.attestation.v1.RootLayerEvidence;
@@ -83,8 +83,8 @@ public class MainVerifier {
       return Optional.of(new Failure("chain mismatch or unimplemented"));
     }
 
-    OakContainerEndorsements endorsements = endorsementsArg.getOakContainers();
-    OakContainerReferenceValues values = valuesArg.getOakContainers();
+    OakContainersEndorsements endorsements = endorsementsArg.getOakContainers();
+    OakContainersReferenceValues values = valuesArg.getOakContainers();
 
     Optional<Failure> r;
     r = verifyRootLayer(endorsements.getRootLayer(), values.getRootLayer());

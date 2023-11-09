@@ -68,14 +68,14 @@ message OakRestrictedKernelEndorsements {
   ApplicationEndorsements application_layer = 3;
 }
 
-message OakContainerEndorsements {
+message OakContainersEndorsements {
   RootEndorsements root_layer = 1;
   KernelEndorsements kernel_layer = 2;
   InitEndorsements init_layer = 3;
   ContainerEndorsements container_layer = 4;
 }
 
-message ConfidentialBorgEndorsements {
+message CBEndorsements {
   // Serialized X.509 TEE certificate.
   bytes tee_certificate = 1;
 }
@@ -89,7 +89,7 @@ message ConfidentialBorgEndorsements {
 message Endorsements {
   oneof type {
     OakRestrictedKernelEndorsements oak_restricted_kernel = 1;
-    OakContainerEndorsements oak_containers = 2;
-    ConfidentialBorgEndorsements confidential_borg = 3;
+    OakContainersEndorsements oak_containers = 2;
+    CBEndorsements cb = 3;
   }
 };

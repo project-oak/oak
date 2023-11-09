@@ -27,8 +27,8 @@ import com.google.oak.attestation.v1.InitReferenceValues;
 import com.google.oak.attestation.v1.KernelEndorsements;
 import com.google.oak.attestation.v1.KernelReferenceValues;
 import com.google.oak.attestation.v1.LayerEvidence;
-import com.google.oak.attestation.v1.OakContainerEndorsements;
-import com.google.oak.attestation.v1.OakContainerReferenceValues;
+import com.google.oak.attestation.v1.OakContainersEndorsements;
+import com.google.oak.attestation.v1.OakContainersReferenceValues;
 import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.attestation.v1.RootEndorsements;
 import com.google.oak.attestation.v1.RootLayerEvidence;
@@ -48,14 +48,10 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class MainVerifierTest {
-  private static final String LOG_ENTRY_PATH =
-      "oak_remote_attestation_verification/testdata/logentry.json";
-  private static final String ENDORSER_PUBLIC_KEY_PATH =
-      "oak_remote_attestation_verification/testdata/oak-development.pem";
-  private static final String REKOR_PUBLIC_KEY_PATH =
-      "oak_remote_attestation_verification/testdata/rekor_public_key.pem";
-  private static final String ENDORSEMENT_PATH =
-      "oak_remote_attestation_verification/testdata/endorsement.json";
+  private static final String LOG_ENTRY_PATH = "oak_remote_attestation_verification/testdata/logentry.json";
+  private static final String ENDORSER_PUBLIC_KEY_PATH = "oak_remote_attestation_verification/testdata/oak-development.pem";
+  private static final String REKOR_PUBLIC_KEY_PATH = "oak_remote_attestation_verification/testdata/rekor_public_key.pem";
+  private static final String ENDORSEMENT_PATH = "oak_remote_attestation_verification/testdata/endorsement.json";
 
   private byte[] logEntryBytes;
   private byte[] endorserPublicKeyBytes;
@@ -65,10 +61,8 @@ public class MainVerifierTest {
   @Before
   public void setUp() throws Exception {
     logEntryBytes = Files.readAllBytes(Path.of(LOG_ENTRY_PATH));
-    endorserPublicKeyBytes =
-        SignatureVerifier.convertPemToRaw(Files.readString(Path.of(ENDORSER_PUBLIC_KEY_PATH)));
-    rekorPublicKeyBytes =
-        SignatureVerifier.convertPemToRaw(Files.readString(Path.of(REKOR_PUBLIC_KEY_PATH)));
+    endorserPublicKeyBytes = SignatureVerifier.convertPemToRaw(Files.readString(Path.of(ENDORSER_PUBLIC_KEY_PATH)));
+    rekorPublicKeyBytes = SignatureVerifier.convertPemToRaw(Files.readString(Path.of(REKOR_PUBLIC_KEY_PATH)));
     endorsementBytes = Files.readAllBytes(Path.of(ENDORSEMENT_PATH));
   }
 
@@ -84,8 +78,8 @@ public class MainVerifierTest {
   private static Evidence createEvidence() {
     return Evidence.newBuilder()
         .setRootLayer(RootLayerEvidence.newBuilder()
-                          .setPlatform(TeePlatform.AMD_SEV_SNP)
-                          .setRemoteAttestationReport(ByteString.copyFromUtf8("whatever")))
+            .setPlatform(TeePlatform.AMD_SEV_SNP)
+            .setRemoteAttestationReport(ByteString.copyFromUtf8("whatever")))
         .addLayers(
             LayerEvidence.newBuilder().setEcaCertificate(ByteString.copyFromUtf8("whatever")))
         .addLayers(
@@ -96,7 +90,7 @@ public class MainVerifierTest {
   private Endorsements createEndorsements() {
     return Endorsements.newBuilder()
         .setOakContainers(
-            OakContainerEndorsements.newBuilder()
+            OakContainersEndorsements.newBuilder()
                 .setRootLayer(RootEndorsements.newBuilder().setStage0(createTREndorsement()))
                 .setKernelLayer(
                     KernelEndorsements.newBuilder().setKernelImage(createTREndorsement()))
@@ -111,19 +105,19 @@ public class MainVerifierTest {
     ByteString rekorPublicKey = ByteString.copyFrom(rekorPublicKeyBytes);
 
     return ReferenceValues.newBuilder()
-        .setOakContainers(OakContainerReferenceValues.newBuilder()
-                              .setRootLayer(RootReferenceValues.newBuilder())
-                              .setKernelLayer(KernelReferenceValues.newBuilder())
-                              .setInitLayer(InitReferenceValues.newBuilder().setBinary(
-                                  BinaryReferenceValue.newBuilder().setEndorsement(
-                                      EndorsementReferenceValue.newBuilder()
-                                          .setEndorserPublicKey(endorserPublicKey)
-                                          .setRekorPublicKey(rekorPublicKey))))
-                              .setContainerLayer(ContainerReferenceValues.newBuilder().setBinary(
-                                  BinaryReferenceValue.newBuilder().setEndorsement(
-                                      EndorsementReferenceValue.newBuilder()
-                                          .setEndorserPublicKey(endorserPublicKey)
-                                          .setRekorPublicKey(rekorPublicKey)))))
+        .setOakContainers(OakContainersReferenceValues.newBuilder()
+            .setRootLayer(RootReferenceValues.newBuilder())
+            .setKernelLayer(KernelReferenceValues.newBuilder())
+            .setInitLayer(InitReferenceValues.newBuilder().setBinary(
+                BinaryReferenceValue.newBuilder().setEndorsement(
+                    EndorsementReferenceValue.newBuilder()
+                        .setEndorserPublicKey(endorserPublicKey)
+                        .setRekorPublicKey(rekorPublicKey))))
+            .setContainerLayer(ContainerReferenceValues.newBuilder().setBinary(
+                BinaryReferenceValue.newBuilder().setEndorsement(
+                    EndorsementReferenceValue.newBuilder()
+                        .setEndorserPublicKey(endorserPublicKey)
+                        .setRekorPublicKey(rekorPublicKey)))))
         .build();
   }
 

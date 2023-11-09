@@ -36,13 +36,11 @@ message EndorsementReferenceValue {
 
 message BinaryReferenceValue {
   oneof type {
+    // Verifies the endorsement of the underlying binary.
     EndorsementReferenceValue endorsement = 1;
 
-    // Verifies digests by means of provenance.
-    Digests provenance = 2;
-
     // Explicitly verifies digests if the client has them.
-    Digests digests = 3;
+    Digests digests = 2;
   }
 }
 
@@ -140,18 +138,18 @@ message OakRestrictedKernelReferenceValues {
   ApplicationReferenceValues application_layer = 3;
 }
 
-message OakContainerReferenceValues {
+message OakContainersReferenceValues {
   RootReferenceValues root_layer = 1;
   KernelReferenceValues kernel_layer = 2;
   InitReferenceValues init_layer = 3;
   ContainerReferenceValues container_layer = 4;
 }
 
-message ConfidentialBorgReferenceValues {
-  repeated ConfidentialBorgReferenceValue layers = 1;
+message CBReferenceValues {
+  repeated CBReferenceValue layers = 1;
 }
 
-message ConfidentialBorgReferenceValue {
+message CBReferenceValue {
   string layer_name = 1;
   repeated FileReferenceValue files = 2;
   StringReferenceValue configs = 3;
@@ -161,7 +159,7 @@ message ConfidentialBorgReferenceValue {
 message ReferenceValues {
   oneof type {
     OakRestrictedKernelReferenceValues oak_restricted_kernel = 1;
-    OakContainerReferenceValues oak_containers = 2;
-    ConfidentialBorgReferenceValues confidential_borg = 3;
+    OakContainersReferenceValues oak_containers = 2;
+    CBReferenceValues cb = 3;
   }
 }
