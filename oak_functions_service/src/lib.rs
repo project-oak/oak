@@ -40,7 +40,6 @@ pub mod lookup;
 pub mod wasm;
 
 use alloc::{format, sync::Arc, vec, vec::Vec};
-use anyhow::anyhow;
 use instance::OakFunctionsInstance;
 use oak_core::sync::OnceCell;
 use oak_crypto::{encryptor::EncryptionKeyProvider, proto::oak::crypto::v1::EncryptedRequest};
@@ -165,24 +164,16 @@ impl OakFunctions for OakFunctionsService {
         // TODO(#4037): Remove once explicit crypto protos are implemented.
         if let Ok(ref mut result) = result {
             // Serialize response.
-            let mut serialized_response = vec![];
-            result
+            let serialized_response = result
                 .encrypted_response
-                .clone()
-                .ok_or(anyhow!("no encrypted response provided"))
-                .map_err(|err| {
+                .as_ref()
+                .ok_or_else(|| {
                     micro_rpc::Status::new_with_message(
                         micro_rpc::StatusCode::Internal,
-                        format!("{:?}", err),
+                        "no encrypted response provided",
                     )
                 })?
-                .encode(&mut serialized_response)
-                .map_err(|err| {
-                    micro_rpc::Status::new_with_message(
-                        micro_rpc::StatusCode::Internal,
-                        format!("couldn't serialize response: {:?}", err),
-                    )
-                })?;
+                .encode_to_vec();
             result.body = serialized_response;
         }
         result
