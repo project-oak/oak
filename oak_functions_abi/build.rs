@@ -18,8 +18,8 @@ extern crate prost_build;
 
 fn main() {
     let file_paths = [
-        "oak_functions/proto/abi.proto",
-        "oak_functions/proto/lookup_data.proto",
+        "proto/functions/abi.proto",
+        "proto/functions/lookup_data.proto",
     ];
     prost_build::compile_protos(&file_paths, &[env!("WORKSPACE_ROOT")])
         .expect("proto compilation failed");
