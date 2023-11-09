@@ -199,6 +199,8 @@
 <a href="#199" id="199">199</a>
 <a href="#200" id="200">200</a>
 <a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -230,6 +232,7 @@
     mount::{mount, umount, MsFlags},
     unistd::{chdir, chroot},
 };
+<span class="kw">use </span>oak_remote_attestation::proto::oak::attestation::v1::DiceData;
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>std::{
     error::Error,
@@ -298,7 +301,7 @@
     )
     .context(<span class="string">&quot;error mounting /sys&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span><span class="kw-2">mut </span>dice_builder = dice::extract_stage0_evidence_and_key(args.dice_addr)<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>dice_builder = dice::extract_stage0_dice_data(args.dice_addr)<span class="question-mark">?</span>;
 
     <span class="comment">// Unmount /sys and /dev as they are no longer needed.
     </span>umount(<span class="string">&quot;/sys&quot;</span>).context(<span class="string">&quot;failed to unmount /sys&quot;</span>)<span class="question-mark">?</span>;
@@ -326,12 +329,13 @@
         .<span class="kw">await
         </span>.context(<span class="string">&quot;error fetching system image&quot;</span>)<span class="question-mark">?</span>;
 
-    dice_builder.measure_system_image(<span class="kw-2">&amp;</span>buf)<span class="question-mark">?</span>;
+    <span class="kw">let </span>system_image_claims = dice::measure_system_image(<span class="kw-2">&amp;</span>buf)<span class="question-mark">?</span>;
 
     <span class="comment">// For safety we generate the DICE data for the next layer before processing the compressed
     // system image. This consumes the `DiceBuilder` which also clears the ECA private key provided
     // by Stage 0.
-    </span><span class="kw">let </span>dice_data = dice_builder.build()<span class="question-mark">?</span>;
+    </span>dice_builder.add_layer(system_image_claims)<span class="question-mark">?</span>;
+    <span class="kw">let </span>dice_data: DiceData = dice_builder.into();
 
     image::extract(<span class="kw-2">&amp;</span>buf, Path::new(<span class="string">&quot;/&quot;</span>))
         .<span class="kw">await
@@ -347,7 +351,7 @@
     <span class="comment">// Write the DICE data to a well-known location as a length-delimited protobuf file.
     </span>create_dir(<span class="string">&quot;/oak&quot;</span>).context(<span class="string">&quot;error creating `oak` directory&quot;</span>)<span class="question-mark">?</span>;
     fs::write(<span class="string">&quot;/oak/dice&quot;</span>, dice_data.encode_length_delimited_to_vec())
-        .context(<span class="string">&quot;error writing placeholder /etc/machine-id&quot;</span>)<span class="question-mark">?</span>;
+        .context(<span class="string">&quot;error writing DICE data&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Configure eth0 down, as systemd will want to manage it itself and gets confused if it already
     // has an IP address.

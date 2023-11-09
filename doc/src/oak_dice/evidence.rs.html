@@ -166,6 +166,13 @@
 <a href="#166" id="166">166</a>
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -265,6 +272,13 @@
 }
 
 <span class="macro">static_assertions::assert_eq_size!</span>([u8; PRIVATE_KEY_SIZE], CertificateAuthority);
+
+<span class="kw">impl </span>Drop <span class="kw">for </span>CertificateAuthority {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="comment">// Zero out the ECA private key.
+        </span><span class="self">self</span>.eca_private_key.fill(<span class="number">0</span>);
+    }
+}
 
 <span class="doccomment">/// Wrapper for passing DICE info from Stage0 to the next layer (Stage 1 or the Restricted Kernel).
 </span><span class="attr">#[derive(AsBytes, FromZeroes, FromBytes)]

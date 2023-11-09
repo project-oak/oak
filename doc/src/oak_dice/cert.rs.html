@@ -367,7 +367,7 @@
 }
 
 <span class="doccomment">/// Parses a bytes slice as a CWT certificate and extracts the payload as a set of claims.
-</span><span class="kw">pub fn </span>get_claims_set_from_certifcate_bytes(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;ClaimsSet, CoseError&gt; {
+</span><span class="kw">pub fn </span>get_claims_set_from_certificate_bytes(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;ClaimsSet, CoseError&gt; {
     <span class="kw">let </span>cwt = CoseSign1::from_slice(bytes)<span class="question-mark">?</span>;
     <span class="kw">let </span>payload = cwt.payload.unwrap_or_default();
     ClaimsSet::from_slice(<span class="kw-2">&amp;</span>payload)

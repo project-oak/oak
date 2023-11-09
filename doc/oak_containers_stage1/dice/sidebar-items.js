@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["AMD_SEV_SNP_ATTESTATION_REPORT_SIZE","EMPTY_KEY","EXPECTED_E820_TYPE","MEMMAP_PATH","P256_PRIVATE_KEY_SIZE","PHYS_MEM_PATH"],"fn":["cbor_encoded_bytes_to_vec","dice_data_to_proto","extract_stage0_evidence_and_key","read_memory_ranges","read_stage0_dice_data"],"mod":["proto"],"struct":["DiceDataBuilder","MemoryRange"]};
+window.SIDEBAR_ITEMS = {"constant":["EXPECTED_E820_TYPE","MEMMAP_PATH","PHYS_MEM_PATH"],"fn":["extract_stage0_dice_data","measure_system_image","read_memory_ranges","read_stage0_dice_data"],"struct":["MemoryRange"]};
