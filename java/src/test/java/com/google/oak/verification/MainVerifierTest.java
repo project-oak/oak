@@ -16,18 +16,23 @@
 
 package com.google.oak.verification;
 
-import com.google.oak.attestation.v1.CustomLayerEndorsements;
-import com.google.oak.attestation.v1.CustomLayerReferenceValues;
+import com.google.oak.attestation.v1.BinaryReferenceValue;
+import com.google.oak.attestation.v1.ContainerEndorsements;
+import com.google.oak.attestation.v1.ContainerReferenceValues;
+import com.google.oak.attestation.v1.EndorsementReferenceValue;
 import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
-import com.google.oak.attestation.v1.KernelLayerEndorsements;
-import com.google.oak.attestation.v1.KernelLayerReferenceValues;
+import com.google.oak.attestation.v1.InitEndorsements;
+import com.google.oak.attestation.v1.InitReferenceValues;
+import com.google.oak.attestation.v1.KernelEndorsements;
+import com.google.oak.attestation.v1.KernelReferenceValues;
 import com.google.oak.attestation.v1.LayerEvidence;
-import com.google.oak.attestation.v1.LogEntryVerification;
+import com.google.oak.attestation.v1.OakContainerEndorsements;
+import com.google.oak.attestation.v1.OakContainerReferenceValues;
 import com.google.oak.attestation.v1.ReferenceValues;
-import com.google.oak.attestation.v1.RootLayerEndorsements;
+import com.google.oak.attestation.v1.RootEndorsements;
 import com.google.oak.attestation.v1.RootLayerEvidence;
-import com.google.oak.attestation.v1.RootLayerReferenceValues;
+import com.google.oak.attestation.v1.RootReferenceValues;
 import com.google.oak.attestation.v1.TeePlatform;
 import com.google.oak.attestation.v1.TransparentReleaseEndorsement;
 import com.google.protobuf.ByteString;
@@ -90,10 +95,14 @@ public class MainVerifierTest {
 
   private Endorsements createEndorsements() {
     return Endorsements.newBuilder()
-        .setRootLayer(
-            RootLayerEndorsements.newBuilder().setStage0Endorsement(createTREndorsement()))
-        .setKernelLayer(KernelLayerEndorsements.newBuilder().setLinuxKernel(createTREndorsement()))
-        .addCustomLayers(CustomLayerEndorsements.newBuilder().setBinary(createTREndorsement()))
+        .setOakContainers(
+            OakContainerEndorsements.newBuilder()
+                .setRootLayer(RootEndorsements.newBuilder().setStage0(createTREndorsement()))
+                .setKernelLayer(
+                    KernelEndorsements.newBuilder().setKernelImage(createTREndorsement()))
+                .setInitLayer(InitEndorsements.newBuilder().setBinary(createTREndorsement()))
+                .setContainerLayer(
+                    ContainerEndorsements.newBuilder().setBinary(createTREndorsement())))
         .build();
   }
 
@@ -102,12 +111,19 @@ public class MainVerifierTest {
     ByteString rekorPublicKey = ByteString.copyFrom(rekorPublicKeyBytes);
 
     return ReferenceValues.newBuilder()
-        .setRootLayer(RootLayerReferenceValues.newBuilder())
-        .setKernelLayer(KernelLayerReferenceValues.newBuilder())
-        .addCustomLayers(CustomLayerReferenceValues.newBuilder().setLogEntry(
-            LogEntryVerification.newBuilder()
-                .setEndorserPublicKey(endorserPublicKey)
-                .setRekorPublicKey(rekorPublicKey)))
+        .setOakContainers(OakContainerReferenceValues.newBuilder()
+                              .setRootLayer(RootReferenceValues.newBuilder())
+                              .setKernelLayer(KernelReferenceValues.newBuilder())
+                              .setInitLayer(InitReferenceValues.newBuilder().setBinary(
+                                  BinaryReferenceValue.newBuilder().setEndorsement(
+                                      EndorsementReferenceValue.newBuilder()
+                                          .setEndorserPublicKey(endorserPublicKey)
+                                          .setRekorPublicKey(rekorPublicKey))))
+                              .setContainerLayer(ContainerReferenceValues.newBuilder().setBinary(
+                                  BinaryReferenceValue.newBuilder().setEndorsement(
+                                      EndorsementReferenceValue.newBuilder()
+                                          .setEndorserPublicKey(endorserPublicKey)
+                                          .setRekorPublicKey(rekorPublicKey)))))
         .build();
   }
 
@@ -117,8 +133,8 @@ public class MainVerifierTest {
     Endorsements endorsements = createEndorsements();
     ReferenceValues referenceValues = createReferenceValues();
 
-    MainVerifier verifier = new MainVerifier(evidence, endorsements);
-    Optional<Failure> failure = verifier.verify(referenceValues);
+    MainVerifier verifier = new MainVerifier(evidence);
+    Optional<Failure> failure = verifier.verify(endorsements, referenceValues);
 
     if (failure.isPresent()) {
       System.out.println(failure.get().getMessage());
@@ -134,8 +150,8 @@ public class MainVerifierTest {
     Endorsements endorsements = createEndorsements();
     ReferenceValues referenceValues = createReferenceValues();
 
-    MainVerifier verifier = new MainVerifier(evidence, endorsements);
-    Optional<Failure> failure = verifier.verify(referenceValues);
+    MainVerifier verifier = new MainVerifier(evidence);
+    Optional<Failure> failure = verifier.verify(endorsements, referenceValues);
 
     Assert.assertTrue(failure.isPresent());
   }
