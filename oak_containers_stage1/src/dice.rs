@@ -22,7 +22,7 @@ use oak_dice::{
     cert::CODE_DIGEST_ID,
     evidence::{Stage0DiceData, STAGE0_MAGIC},
 };
-use oak_remote_attestation::{dice::DiceDataBuilder, proto::oak::attestation::v1::DiceData};
+use oak_remote_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
 use sha2::{Digest, Sha256};
 use std::{
     fs::{read_dir, read_to_string, OpenOptions},
@@ -64,7 +64,7 @@ struct MemoryRange {
 
 /// Extracts the DICE evidence and ECA key from the Stage 0 DICE data located at the given physical
 /// address.
-pub fn extract_stage0_dice_data_builder(start: PhysAddr) -> anyhow::Result<DiceDataBuilder> {
+pub fn extract_stage0_dice_data(start: PhysAddr) -> anyhow::Result<DiceBuilder> {
     let stage0_dice_data = read_stage0_dice_data(start)?;
     let dice_data: DiceData = stage0_dice_data.try_into()?;
     dice_data.try_into()

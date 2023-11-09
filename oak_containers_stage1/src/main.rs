@@ -98,7 +98,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .context("error mounting /sys")?;
 
-    let mut dice_builder = dice::extract_stage0_dice_data_builder(args.dice_addr)?;
+    let mut dice_builder = dice::extract_stage0_dice_data(args.dice_addr)?;
 
     // Unmount /sys and /dev as they are no longer needed.
     umount("/sys").context("failed to unmount /sys")?;

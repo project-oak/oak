@@ -39,12 +39,12 @@ const P256_PRIVATE_KEY_SIZE: usize = 32;
 const AMD_SEV_SNP_ATTESTATION_REPORT_SIZE: usize = 1184;
 
 /// Builds the DICE evidence and certificate authority for the next DICE layer.
-pub struct DiceDataBuilder {
+pub struct DiceBuilder {
     evidence: Evidence,
     signing_key: SigningKey,
 }
 
-impl DiceDataBuilder {
+impl DiceBuilder {
     /// Adds an additional layer of evidence to the DICE data.
     ///
     /// The evidence is in the form of a CWT certificate that contains the `additional_claims`
@@ -91,8 +91,8 @@ impl Drop for DiceData {
     }
 }
 
-impl From<DiceDataBuilder> for DiceData {
-    fn from(value: DiceDataBuilder) -> Self {
+impl From<DiceBuilder> for DiceData {
+    fn from(value: DiceBuilder) -> Self {
         DiceData {
             evidence: Some(value.evidence),
             certificate_authority: Some(CertificateAuthority {
@@ -102,7 +102,7 @@ impl From<DiceDataBuilder> for DiceData {
     }
 }
 
-impl TryFrom<DiceData> for DiceDataBuilder {
+impl TryFrom<DiceData> for DiceBuilder {
     type Error = anyhow::Error;
     fn try_from(value: DiceData) -> anyhow::Result<Self> {
         let evidence = value
@@ -116,7 +116,7 @@ impl TryFrom<DiceData> for DiceDataBuilder {
             .eca_private_key;
         let signing_key = SigningKey::from_slice(eca_private_key).map_err(anyhow::Error::msg)?;
 
-        Ok(DiceDataBuilder {
+        Ok(DiceBuilder {
             evidence: evidence.clone(),
             signing_key: signing_key.clone(),
         })
