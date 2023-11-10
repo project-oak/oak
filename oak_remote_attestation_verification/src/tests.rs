@@ -43,6 +43,9 @@ const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
 // https://rekor.sigstore.dev/api/v1/log/publicKey.
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 
+// Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
+const NOW_UTC_MILLIS: i64 = 1698829200;
+
 struct TestData {
     endorsement: Vec<u8>,
     endorsement_signature: Vec<u8>,
@@ -161,8 +164,12 @@ fn test_verify_rekor_log_entry() {
 #[test]
 fn test_verify_endorsement_statement() {
     let testdata = load_testdata();
-    let result =
-        verify_endorsement_statement(&testdata.endorsement, BINARY_DIGEST.as_bytes(), "sha256");
+    let result = verify_endorsement_statement(
+        NOW_UTC_MILLIS,
+        &testdata.endorsement,
+        BINARY_DIGEST.as_bytes(),
+        "sha256",
+    );
     assert!(result.is_ok(), "{:?}", result);
 }
 
@@ -179,6 +186,7 @@ fn test_verify_binary_endorsement() {
     let testdata = load_testdata();
 
     let result = verify_binary_endorsement(
+        NOW_UTC_MILLIS,
         &testdata.endorsement,
         &testdata.log_entry,
         BINARY_DIGEST.as_bytes(),
@@ -194,6 +202,7 @@ fn test_verify_binary_endorsement_fails_when_missing_digest() {
     let testdata = load_testdata();
 
     let result = verify_binary_endorsement(
+        NOW_UTC_MILLIS,
         &testdata.endorsement,
         &testdata.log_entry,
         BINARY_DIGEST.as_bytes(),
@@ -213,6 +222,7 @@ fn test_verify_binary_endorsement_fails_with_invalid_rekor_public_key() {
     let testdata = load_testdata();
 
     let result = verify_binary_endorsement(
+        NOW_UTC_MILLIS,
         &testdata.endorsement,
         &testdata.log_entry,
         BINARY_DIGEST.as_bytes(),
@@ -229,6 +239,7 @@ fn test_verify_binary_endorsement_fails_when_missing_rekor_entry() {
     let testdata = load_testdata();
 
     let result = verify_binary_endorsement(
+        NOW_UTC_MILLIS,
         &testdata.endorsement,
         &Vec::new(),
         BINARY_DIGEST.as_bytes(),

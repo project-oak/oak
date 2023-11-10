@@ -130,15 +130,16 @@ pub fn validate_claim<T>(claim: &Statement<ClaimPredicate<T>>) -> Result<(), Inv
 }
 
 /// Check that the input claim has a validity duration, and that the validity is not expired.
-pub fn verify_validity_duration<T>(claim: &Statement<ClaimPredicate<T>>) -> anyhow::Result<()> {
+pub fn verify_validity_duration<T>(
+    now_utc_millis: i64,
+    claim: &Statement<ClaimPredicate<T>>,
+) -> anyhow::Result<()> {
     match &claim.predicate.validity {
         Some(validity) => {
-            // We only compare the day, not the exact time.
-            let today = OffsetDateTime::now_utc().to_julian_day();
-            if validity.not_before.to_julian_day() > today {
-                anyhow::bail!("the claim is not yet applicable")
+            if validity.not_before.unix_timestamp_nanos() / 1000000000 > now_utc_millis.into() {
+                anyhow::bail!(validity.not_before.unix_timestamp_nanos())
             }
-            if validity.not_after.to_julian_day() < today {
+            if validity.not_after.unix_timestamp_nanos() / 1000000000 < now_utc_millis.into() {
                 anyhow::bail!("the claim is no longer applicable")
             }
             Ok(())
