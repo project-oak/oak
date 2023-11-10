@@ -67,6 +67,7 @@ pub fn convert_raw_to_pem(public_key: &[u8]) -> String {
 
 /// Verifies the binary endorsement for a given measurement.
 pub fn verify_binary_endorsement(
+    now_utc_millis: i64,
     endorsement: &[u8],
     log_entry: &[u8],
     binary_digest: &[u8],
@@ -74,7 +75,12 @@ pub fn verify_binary_endorsement(
     endorser_public_key: &[u8],
     rekor_public_key: &[u8],
 ) -> anyhow::Result<()> {
-    verify_endorsement_statement(endorsement, binary_digest, binary_digest_alg)?;
+    verify_endorsement_statement(
+        now_utc_millis,
+        endorsement,
+        binary_digest,
+        binary_digest_alg,
+    )?;
     verify_rekor_log_entry(log_entry, rekor_public_key, endorsement)?;
     verify_endorser_public_key(log_entry, endorser_public_key)?;
 
@@ -83,6 +89,7 @@ pub fn verify_binary_endorsement(
 
 /// Verifies endorsement against the given reference values.
 pub fn verify_endorsement_statement(
+    now_utc_millis: i64,
     endorsement: &[u8],
     binary_digest: &[u8],
     binary_digest_alg: &str,
@@ -91,7 +98,7 @@ pub fn verify_endorsement_statement(
     if let Err(err) = validate_endorsement(&claim) {
         anyhow::bail!("validating endorsement: {err:?}");
     }
-    verify_validity_duration(&claim)?;
+    verify_validity_duration(now_utc_millis, &claim)?;
     if claim.subject.len() != 1 {
         anyhow::bail!(
             "expected 1 subject in the endorsement, found {}",
