@@ -16,8 +16,6 @@
 
 package com.google.oak.verification;
 
-import java.util.Optional;
-
 import com.google.oak.attestation.v1.BinaryReferenceValue;
 import com.google.oak.attestation.v1.ContainerLayerEndorsements;
 import com.google.oak.attestation.v1.ContainerLayerReferenceValues;
@@ -34,6 +32,7 @@ import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.attestation.v1.RootLayerEndorsements;
 import com.google.oak.attestation.v1.RootLayerReferenceValues;
 import com.google.oak.attestation.v1.TransparentReleaseEndorsement;
+import java.util.Optional;
 
 /** Demo implementation which assumes an Oak Container chain. */
 public class MainVerifier {
@@ -45,20 +44,20 @@ public class MainVerifier {
     this.evidence = evidence;
   }
 
-  Optional<Failure> verifyRootLayer(RootLayerEndorsements endorsements,
-      RootLayerReferenceValues values) {
+  Optional<Failure> verifyRootLayer(
+      RootLayerEndorsements endorsements, RootLayerReferenceValues values) {
     // Needs implementation
     return Optional.empty();
   }
 
-  Optional<Failure> verifyKernelLayer(KernelLayerEndorsements endorsements,
-      KernelLayerReferenceValues values) {
+  Optional<Failure> verifyKernelLayer(
+      KernelLayerEndorsements endorsements, KernelLayerReferenceValues values) {
     // Needs implementation
     return Optional.empty();
   }
 
-  Optional<Failure> verifyInitLayer(InitLayerEndorsements endorsements,
-      InitLayerReferenceValues values) {
+  Optional<Failure> verifyInitLayer(
+      InitLayerEndorsements endorsements, InitLayerReferenceValues values) {
     BinaryReferenceValue binaryValue = values.getBinary();
     if (binaryValue.hasEndorsement()) {
       Optional<Failure> r = verifyLogEntry(endorsements.getBinary(), binaryValue.getEndorsement());
@@ -69,8 +68,8 @@ public class MainVerifier {
     return Optional.empty();
   }
 
-  Optional<Failure> verifyContainerLayer(ContainerLayerEndorsements endorsements,
-      ContainerLayerReferenceValues values) {
+  Optional<Failure> verifyContainerLayer(
+      ContainerLayerEndorsements endorsements, ContainerLayerReferenceValues values) {
     // Needs implementation
     return Optional.empty();
   }
@@ -104,17 +103,17 @@ public class MainVerifier {
     return Optional.empty();
   }
 
-  static Optional<Failure> verifyLogEntry(TransparentReleaseEndorsement end,
-      EndorsementReferenceValue ref) {
+  static Optional<Failure> verifyLogEntry(
+      TransparentReleaseEndorsement end, EndorsementReferenceValue ref) {
     RekorLogEntry logEntry;
     try {
       logEntry = RekorLogEntry.createFromJson(end.getRekorLogEntry().toStringUtf8());
     } catch (IllegalArgumentException e) {
-      return Optional
-          .of(new Failure(String.format("%s: %s", e.getClass().getName(), e.getMessage())));
+      return Optional.of(
+          new Failure(String.format("%s: %s", e.getClass().getName(), e.getMessage())));
     }
-    return LogEntryVerifier.verify(logEntry, ref.getRekorPublicKey().toByteArray(),
-        end.getEndorsement().toByteArray());
+    return LogEntryVerifier.verify(
+        logEntry, ref.getRekorPublicKey().toByteArray(), end.getEndorsement().toByteArray());
   }
 
   private final Evidence evidence;
