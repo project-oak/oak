@@ -22,6 +22,7 @@ oak_functions_abi = { workspace = true }
 oak_functions_sdk = { workspace = true }
 oak_remote_attestation = { workspace = true }
 prost = { workspace = true }
+proto = { workspace = true }
 spinning_top = "*"
 wasmi = { version = "*", default-features = false }
 
