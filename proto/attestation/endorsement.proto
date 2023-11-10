@@ -32,7 +32,7 @@ message TransparentReleaseEndorsement {
   bytes rekor_log_entry = 2;
 }
 
-message RootEndorsements {
+message RootLayerEndorsements {
   // The serialized TEE certificate(s). The details of the format and how the
   // certificate(s) are encoded into this byte array are implementation
   // specific. In case of AMD-SEV-SNP, as described in
@@ -44,35 +44,35 @@ message RootEndorsements {
   TransparentReleaseEndorsement stage0 = 2;
 }
 
-message KernelEndorsements {
+message KernelLayerEndorsements {
   TransparentReleaseEndorsement kernel_image = 1;
   TransparentReleaseEndorsement kernel_setup_data = 2;
   TransparentReleaseEndorsement init_ram_fs = 3;
 }
 
-message InitEndorsements {
+message InitLayerEndorsements {
   TransparentReleaseEndorsement binary = 1;
 }
 
-message ApplicationEndorsements {
+message ApplicationLayerEndorsements {
   TransparentReleaseEndorsement binary = 1;
 }
 
-message ContainerEndorsements {
+message ContainerLayerEndorsements {
   TransparentReleaseEndorsement binary = 1;
 }
 
 message OakRestrictedKernelEndorsements {
-  RootEndorsements root_layer = 1;
-  KernelEndorsements kernel_layer = 2;
-  ApplicationEndorsements application_layer = 3;
+  RootLayerEndorsements root_layer = 1;
+  KernelLayerEndorsements kernel_layer = 2;
+  ApplicationLayerEndorsements application_layer = 3;
 }
 
 message OakContainersEndorsements {
-  RootEndorsements root_layer = 1;
-  KernelEndorsements kernel_layer = 2;
-  InitEndorsements init_layer = 3;
-  ContainerEndorsements container_layer = 4;
+  RootLayerEndorsements root_layer = 1;
+  KernelLayerEndorsements kernel_layer = 2;
+  InitLayerEndorsements init_layer = 3;
+  ContainerLayerEndorsements container_layer = 4;
 }
 
 message CBEndorsements {

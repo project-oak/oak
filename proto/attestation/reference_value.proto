@@ -60,7 +60,7 @@ message StringReferenceValue {
   repeated string values = 1;
 }
 
-message RootReferenceValues {
+message RootLayerReferenceValues {
   // Switches between AMD and Intel based on TeePlatform value.
   AmdSevReferenceValues amd_sev = 1;
   IntelTdxReferenceValues intel_tdx = 2;
@@ -91,7 +91,7 @@ message Digests {
 }
 
 // Reference values of the kernel layer, as measured by stage0.
-message KernelReferenceValues {
+message KernelLayerReferenceValues {
   // Verifies the kernel binary based on endorsement.
   BinaryReferenceValue kernel_image = 1;
 
@@ -107,7 +107,7 @@ message KernelReferenceValues {
   BinaryReferenceValue acpi = 6;
 }
 
-message InitReferenceValues {
+message InitLayerReferenceValues {
   // Verifies the binary based on endorsement.
   BinaryReferenceValue binary = 1;
 
@@ -116,7 +116,7 @@ message InitReferenceValues {
 }
 
 // Represents an application running under Oak Restricted Kernel.
-message ApplicationReferenceValues {
+message ApplicationLayerReferenceValues {
   // Verifies the binary based on endorsement.
   BinaryReferenceValue binary = 1;
 
@@ -124,7 +124,7 @@ message ApplicationReferenceValues {
   BinaryReferenceValue configuration = 2;
 }
 
-message ContainerReferenceValues {
+message ContainerLayerReferenceValues {
   // Verifies the binary based on endorsement.
   BinaryReferenceValue binary = 1;
 
@@ -133,27 +133,27 @@ message ContainerReferenceValues {
 }
 
 message OakRestrictedKernelReferenceValues {
-  RootReferenceValues root_layer = 1;
-  KernelReferenceValues kernel_layer = 2;
-  ApplicationReferenceValues application_layer = 3;
+  RootLayerReferenceValues root_layer = 1;
+  KernelLayerReferenceValues kernel_layer = 2;
+  ApplicationLayerReferenceValues application_layer = 3;
 }
 
 message OakContainersReferenceValues {
-  RootReferenceValues root_layer = 1;
-  KernelReferenceValues kernel_layer = 2;
-  InitReferenceValues init_layer = 3;
-  ContainerReferenceValues container_layer = 4;
+  RootLayerReferenceValues root_layer = 1;
+  KernelLayerReferenceValues kernel_layer = 2;
+  InitLayerReferenceValues init_layer = 3;
+  ContainerLayerReferenceValues container_layer = 4;
 }
 
-message CBReferenceValues {
-  repeated CBReferenceValue layers = 1;
-}
-
-message CBReferenceValue {
+message CBLayerReferenceValues {
   string layer_name = 1;
   repeated FileReferenceValue files = 2;
   StringReferenceValue config = 3;
   StringReferenceValue command_line = 4;
+}
+
+message CBReferenceValues {
+  repeated CBLayerReferenceValues layers = 1;
 }
 
 message ReferenceValues {
