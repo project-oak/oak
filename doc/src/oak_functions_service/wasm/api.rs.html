@@ -158,7 +158,7 @@
 </span><span class="kw">use super</span>::{WasmApi, WasmApiFactory};
 <span class="kw">use crate</span>::{
     logger::{OakLogger, StandaloneLogger},
-    lookup::{format_bytes, LookupData, LookupDataManager},
+    lookup::{format_bytes, limit, LookupData, LookupDataManager},
 };
 <span class="kw">use </span>alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 <span class="kw">use </span>log::Level;
@@ -241,25 +241,25 @@
             .log_sensitive(Level::Debug, <span class="string">&quot;invoked lookup_data&quot;</span>);
         <span class="comment">// The request is the key to lookup.
         </span><span class="kw">let </span>key = request.key;
-        <span class="kw">let </span>key_to_log = key.iter().take(<span class="number">512</span>).cloned().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+        <span class="kw">let </span>key_to_log = limit(<span class="kw-2">&amp;</span>key, <span class="number">512</span>);
         <span class="self">self</span>.logger.log_sensitive(
             Level::Debug,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;storage_get_item(): key: {}&quot;</span>, format_bytes(<span class="kw-2">&amp;</span>key_to_log)),
+            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;storage_get_item(): key: {}&quot;</span>, format_bytes(key_to_log)),
         );
         <span class="kw">let </span>value = <span class="self">self</span>.lookup_data.get(<span class="kw-2">&amp;</span>key);
 
         <span class="comment">// Log found value.
-        </span>value.clone().map_or_else(
+        </span>value.as_ref().map_or_else(
             || {
                 <span class="self">self</span>.logger
                     .log_sensitive(Level::Debug, <span class="string">&quot;storage_get_item(): value not found&quot;</span>);
             },
             |value| {
                 <span class="comment">// Truncate value for logging.
-                </span><span class="kw">let </span>value_to_log = value.into_iter().take(<span class="number">512</span>).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+                </span><span class="kw">let </span>value_to_log = limit(value, <span class="number">512</span>);
                 <span class="self">self</span>.logger.log_sensitive(
                     Level::Debug,
-                    <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;storage_get_item(): value: {}&quot;</span>, format_bytes(<span class="kw-2">&amp;</span>value_to_log)),
+                    <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;storage_get_item(): value: {}&quot;</span>, format_bytes(value_to_log)),
                 );
             },
         );

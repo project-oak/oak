@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["format_bytes"],"struct":["LookupData","LookupDataManager"],"type":["Data"]};
+window.SIDEBAR_ITEMS = {"fn":["format_bytes","limit"],"struct":["LookupData","LookupDataManager"],"type":["Data"]};

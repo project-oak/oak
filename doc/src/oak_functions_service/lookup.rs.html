@@ -321,6 +321,11 @@
 <a href="#321" id="321">321</a>
 <a href="#322" id="322">322</a>
 <a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -446,8 +451,8 @@
             <span class="kw">let </span>next_data = data_builder.build();
             next_data_len = next_data.len();
             <span class="kw">let </span><span class="kw-2">mut </span>data = <span class="self">self</span>.data.lock();
-            <span class="kw-2">*</span>data = Arc::new(next_data);
             data_len = data.len();
+            <span class="kw-2">*</span>data = Arc::new(next_data);
         }
         <span class="macro">info!</span>(
             <span class="string">&quot;Finished replacing lookup data with len {} by next lookup data with len {}&quot;</span>,
@@ -521,6 +526,11 @@
     </span><span class="kw">pub fn </span>log_debug(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>str) {
         <span class="self">self</span>.logger.log_sensitive(Level::Debug, message)
     }
+}
+
+<span class="doccomment">/// Returns a slice covering up to the first `limit` elements of the given slice.
+</span><span class="kw">pub fn </span>limit&lt;T&gt;(slice: <span class="kw-2">&amp;</span>[T], limit: usize) -&gt; <span class="kw-2">&amp;</span>[T] {
+    <span class="kw-2">&amp;</span>slice[..limit.min(slice.len())]
 }
 
 <span class="doccomment">/// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric
