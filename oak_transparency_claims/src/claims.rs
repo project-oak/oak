@@ -136,10 +136,10 @@ pub fn verify_validity_duration<T>(
 ) -> anyhow::Result<()> {
     match &claim.predicate.validity {
         Some(validity) => {
-            if validity.not_before.unix_timestamp_nanos() / 1000000000 > now_utc_millis.into() {
+            if validity.not_before.unix_timestamp_nanos() / 1000000 > now_utc_millis.into() {
                 anyhow::bail!(validity.not_before.unix_timestamp_nanos())
             }
-            if validity.not_after.unix_timestamp_nanos() / 1000000000 < now_utc_millis.into() {
+            if validity.not_after.unix_timestamp_nanos() / 1000000 < now_utc_millis.into() {
                 anyhow::bail!("the claim is no longer applicable")
             }
             Ok(())

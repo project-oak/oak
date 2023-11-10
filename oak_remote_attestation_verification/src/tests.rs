@@ -44,7 +44,7 @@ const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
-const NOW_UTC_MILLIS: i64 = 1698829200;
+const NOW_UTC_MILLIS: i64 = 1698829200000;
 
 struct TestData {
     endorsement: Vec<u8>,
