@@ -54,7 +54,7 @@ impl DataBuilder {
     ///
     /// Note, if new data contains a key already present in the existing data, calling extend
     /// overwrites the value.
-    fn extend(&mut self, new_data: Data) {
+    fn extend<T: IntoIterator<Item = (Vec<u8>, Vec<u8>)>>(&mut self, new_data: T) {
         self.state = BuilderState::Extending;
         self.data.extend(new_data);
     }
@@ -104,7 +104,7 @@ where
         test_manager
     }
 
-    pub fn extend_next_lookup_data(&self, new_data: Data) {
+    pub fn extend_next_lookup_data<T: IntoIterator<Item = (Vec<u8>, Vec<u8>)>>(&self, new_data: T) {
         info!("Start extending next lookup data");
         {
             let mut data_builder = self.data_builder.lock();
