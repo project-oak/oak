@@ -17,7 +17,7 @@
 use super::{WasmApi, WasmApiFactory};
 use crate::{
     logger::{OakLogger, StandaloneLogger},
-    lookup::{format_bytes, LookupData, LookupDataManager},
+    lookup::{format_bytes, limit, LookupData, LookupDataManager},
 };
 use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
 use log::Level;
@@ -100,25 +100,25 @@ impl StdWasmApi for StdWasmApiImpl {
             .log_sensitive(Level::Debug, "invoked lookup_data");
         // The request is the key to lookup.
         let key = request.key;
-        let key_to_log = key.iter().take(512).cloned().collect::<Vec<_>>();
+        let key_to_log = limit(&key, 512);
         self.logger.log_sensitive(
             Level::Debug,
-            &format!("storage_get_item(): key: {}", format_bytes(&key_to_log)),
+            &format!("storage_get_item(): key: {}", format_bytes(key_to_log)),
         );
         let value = self.lookup_data.get(&key);
 
         // Log found value.
-        value.clone().map_or_else(
+        value.as_ref().map_or_else(
             || {
                 self.logger
                     .log_sensitive(Level::Debug, "storage_get_item(): value not found");
             },
             |value| {
                 // Truncate value for logging.
-                let value_to_log = value.into_iter().take(512).collect::<Vec<_>>();
+                let value_to_log = limit(value, 512);
                 self.logger.log_sensitive(
                     Level::Debug,
-                    &format!("storage_get_item(): value: {}", format_bytes(&value_to_log)),
+                    &format!("storage_get_item(): value: {}", format_bytes(value_to_log)),
                 );
             },
         );
