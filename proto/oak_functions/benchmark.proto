@@ -14,16 +14,26 @@
 // limitations under the License.
 //
 
-extern crate prost_build;
+syntax = "proto3";
 
-fn main() {
-    let file_paths = ["proto/oak_functions/benchmark.proto"];
-    prost_build::compile_protos(&file_paths, &["../../../../"]).expect("proto compilation failed");
+package oak.functions.benchmark;
 
-    // Tell cargo to rerun this build script if the proto file has changed.
-    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
-    for proto_path in file_paths.iter() {
-        let file_path = std::path::Path::new(proto_path);
-        println!("cargo:rerun-if-changed=../../../../{}", file_path.display());
-    }
+// A request to execute a benchmark action a specified number of times.
+message BenchmarkRequest {
+  uint32 iterations = 1;
+  // TODO(#4294): Use micro RPC instead of this oneof.
+  oneof action {
+    LookupTest lookup = 2;
+    EchoAndPanicTest echo_and_panic = 3;
+  }
+}
+
+// Container for the key to use when doing a benchmark lookup.
+message LookupTest {
+  bytes key = 1;
+}
+
+// Echo the bytes back, and then causes the benchmark to panic.
+message EchoAndPanicTest {
+  bytes data = 1;
 }

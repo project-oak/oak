@@ -17,7 +17,7 @@ Oak Functions WebAssembly modules will typically use more convenient (and safer)
 wrappers from the higher-level [Oak Functions SDK](/oak_functions_sdk/).
 
 For a description of the API, see the
-[protobuf definition](/oak_functions_sdk/proto/oak_functions_wasm.proto).
+[protobuf definition](/proto/oak_functions/sdk/oak_functions_wasm.proto).
 
 ## Exported Functions
 
