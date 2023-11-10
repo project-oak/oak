@@ -143,6 +143,13 @@
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -212,6 +219,7 @@
 
 <span class="doccomment">/// Verifies the binary endorsement for a given measurement.
 </span><span class="kw">pub fn </span>verify_binary_endorsement(
+    now_utc_millis: i64,
     endorsement: <span class="kw-2">&amp;</span>[u8],
     log_entry: <span class="kw-2">&amp;</span>[u8],
     binary_digest: <span class="kw-2">&amp;</span>[u8],
@@ -219,7 +227,12 @@
     endorser_public_key: <span class="kw-2">&amp;</span>[u8],
     rekor_public_key: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;()&gt; {
-    verify_endorsement_statement(endorsement, binary_digest, binary_digest_alg)<span class="question-mark">?</span>;
+    verify_endorsement_statement(
+        now_utc_millis,
+        endorsement,
+        binary_digest,
+        binary_digest_alg,
+    )<span class="question-mark">?</span>;
     verify_rekor_log_entry(log_entry, rekor_public_key, endorsement)<span class="question-mark">?</span>;
     verify_endorser_public_key(log_entry, endorser_public_key)<span class="question-mark">?</span>;
 
@@ -228,6 +241,7 @@
 
 <span class="doccomment">/// Verifies endorsement against the given reference values.
 </span><span class="kw">pub fn </span>verify_endorsement_statement(
+    now_utc_millis: i64,
     endorsement: <span class="kw-2">&amp;</span>[u8],
     binary_digest: <span class="kw-2">&amp;</span>[u8],
     binary_digest_alg: <span class="kw-2">&amp;</span>str,
@@ -236,7 +250,7 @@
     <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = validate_endorsement(<span class="kw-2">&amp;</span>claim) {
         <span class="macro">anyhow::bail!</span>(<span class="string">&quot;validating endorsement: {err:?}&quot;</span>);
     }
-    verify_validity_duration(<span class="kw-2">&amp;</span>claim)<span class="question-mark">?</span>;
+    verify_validity_duration(now_utc_millis, <span class="kw-2">&amp;</span>claim)<span class="question-mark">?</span>;
     <span class="kw">if </span>claim.subject.len() != <span class="number">1 </span>{
         <span class="macro">anyhow::bail!</span>(
             <span class="string">&quot;expected 1 subject in the endorsement, found {}&quot;</span>,

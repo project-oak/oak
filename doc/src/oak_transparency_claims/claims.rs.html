@@ -173,6 +173,7 @@
 <a href="#173" id="173">173</a>
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -305,15 +306,16 @@
 }
 
 <span class="doccomment">/// Check that the input claim has a validity duration, and that the validity is not expired.
-</span><span class="kw">pub fn </span>verify_validity_duration&lt;T&gt;(claim: <span class="kw-2">&amp;</span>Statement&lt;ClaimPredicate&lt;T&gt;&gt;) -&gt; anyhow::Result&lt;()&gt; {
+</span><span class="kw">pub fn </span>verify_validity_duration&lt;T&gt;(
+    now_utc_millis: i64,
+    claim: <span class="kw-2">&amp;</span>Statement&lt;ClaimPredicate&lt;T&gt;&gt;,
+) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">match </span><span class="kw-2">&amp;</span>claim.predicate.validity {
         <span class="prelude-val">Some</span>(validity) =&gt; {
-            <span class="comment">// We only compare the day, not the exact time.
-            </span><span class="kw">let </span>today = OffsetDateTime::now_utc().to_julian_day();
-            <span class="kw">if </span>validity.not_before.to_julian_day() &gt; today {
+            <span class="kw">if </span>validity.not_before.unix_timestamp_nanos() / <span class="number">1000000 </span>&gt; now_utc_millis.into() {
                 <span class="macro">anyhow::bail!</span>(<span class="string">&quot;the claim is not yet applicable&quot;</span>)
             }
-            <span class="kw">if </span>validity.not_after.to_julian_day() &lt; today {
+            <span class="kw">if </span>validity.not_after.unix_timestamp_nanos() / <span class="number">1000000 </span>&lt; now_utc_millis.into() {
                 <span class="macro">anyhow::bail!</span>(<span class="string">&quot;the claim is no longer applicable&quot;</span>)
             }
             <span class="prelude-val">Ok</span>(())

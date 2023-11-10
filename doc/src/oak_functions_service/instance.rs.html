@@ -95,6 +95,9 @@
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -113,7 +116,7 @@
 
 </span><span class="kw">use crate</span>::{
     logger::StandaloneLogger,
-    lookup::{Data, LookupDataManager},
+    lookup::LookupDataManager,
     proto::oak::functions::{
         AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
@@ -162,7 +165,12 @@
         request: ExtendNextLookupDataRequest,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ExtendNextLookupDataResponse, micro_rpc::Status&gt; {
         <span class="self">self</span>.lookup_data_manager
-            .extend_next_lookup_data(to_data(request.chunk));
+            .extend_next_lookup_data(to_data(request.chunk.ok_or(
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::InvalidArgument,
+                    <span class="string">&quot;no chunk in extend request&quot;</span>,
+                ),
+            )<span class="question-mark">?</span>));
         <span class="prelude-val">Ok</span>(ExtendNextLookupDataResponse {})
     }
     <span class="doccomment">/// See [`crate::proto::oak::functions::OakFunctions::finish_next_lookup_data`].
@@ -184,12 +192,10 @@
 }
 
 <span class="comment">// Helper function to convert [`LookupDataChunk`] to [`Data`].
-</span><span class="kw">fn </span>to_data(chunk: <span class="prelude-ty">Option</span>&lt;LookupDataChunk&gt;) -&gt; Data {
+</span><span class="kw">fn </span>to_data(chunk: LookupDataChunk) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
     chunk
-        .unwrap()
         .items
         .into_iter()
         .map(|entry| (entry.key, entry.value))
-        .collect()
 }
 </code></pre></div></section></main></body></html>
