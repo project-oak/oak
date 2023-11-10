@@ -180,7 +180,7 @@ pub fn generate_eca_certificate(
 }
 
 /// Parses a bytes slice as a CWT certificate and extracts the payload as a set of claims.
-pub fn get_claims_set_from_certifcate_bytes(bytes: &[u8]) -> Result<ClaimsSet, CoseError> {
+pub fn get_claims_set_from_certificate_bytes(bytes: &[u8]) -> Result<ClaimsSet, CoseError> {
     let cwt = CoseSign1::from_slice(bytes)?;
     let payload = cwt.payload.unwrap_or_default();
     ClaimsSet::from_slice(&payload)

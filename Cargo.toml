@@ -7,7 +7,6 @@ members = [
   "micro_rpc_tests",
   "oak_channel",
   "oak_client",
-  "oak_containers_stage1",
   "oak_containers_hello_world_trusted_app",
   "oak_containers_hello_world_untrusted_app",
   "oak_containers_launcher",
