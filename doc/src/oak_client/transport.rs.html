@@ -129,8 +129,6 @@
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -214,11 +212,9 @@
             </span>));
         };
 
-        <span class="comment">// TODO(#4037): Use explicit crypto protos.
-        </span><span class="kw">let </span>encrypted_response = EncryptedResponse::decode(invoke_response.encrypted_body.as_ref())
-            .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialize response: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
-
-        <span class="prelude-val">Ok</span>(encrypted_response)
+        invoke_response
+            .encrypted_response
+            .context(<span class="string">&quot;InvokeResponse does not include an encrypted message&quot;</span>)
     }
 }
 
