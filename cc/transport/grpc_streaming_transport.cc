@@ -87,14 +87,8 @@ absl::StatusOr<EncryptedResponse> GrpcStreamingTransport::Invoke(
   switch (response->response_case()) {
     case ResponseWrapper::kGetPublicKeyResponseFieldNumber:
       return absl::InternalError("received GetPublicKeyResponse instead of InvokeResponse");
-    case ResponseWrapper::kInvokeResponseFieldNumber: {
-      // TODO(#4037): Use explicit crypto protos.
-      EncryptedResponse encrypted_response;
-      if (!encrypted_response.ParseFromString(response->invoke_response().encrypted_body())) {
-        return absl::InvalidArgumentError("couldn't deserialize response");
-      }
-      return encrypted_response;
-    }
+    case ResponseWrapper::kInvokeResponseFieldNumber:
+      return response->invoke_response().encrypted_response();
     case ResponseWrapper::RESPONSE_NOT_SET:
     default:
       return absl::InternalError("received unsupported response: " + response->DebugString());

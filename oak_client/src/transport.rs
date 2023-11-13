@@ -81,11 +81,9 @@ impl Transport for GrpcStreamingTransport {
             ));
         };
 
-        // TODO(#4037): Use explicit crypto protos.
-        let encrypted_response = EncryptedResponse::decode(invoke_response.encrypted_body.as_ref())
-            .map_err(|error| anyhow!("couldn't deserialize response: {:?}", error))?;
-
-        Ok(encrypted_response)
+        invoke_response
+            .encrypted_response
+            .context("InvokeResponse does not include an encrypted message")
     }
 }
 
