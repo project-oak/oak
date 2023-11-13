@@ -125,16 +125,8 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     }
 
     logger.log(Level.INFO, "received invoke response: " + responseWrapper);
-    InvokeResponse response = responseWrapper.getInvokeResponse();
-
-    // TODO(#4037): Use explicit crypto protos.
-    EncryptedResponse encryptedResponse;
-    try {
-      encryptedResponse = EncryptedResponse.parseFrom(
-          response.getEncryptedBody(), ExtensionRegistry.getEmptyRegistry());
-    } catch (InvalidProtocolBufferException e) {
-      return Result.error(e.toString());
-    }
+    EncryptedResponse encryptedResponse =
+        responseWrapper.getInvokeResponse().getEncryptedResponse();
     return Result.success(encryptedResponse);
   }
 
