@@ -116,7 +116,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         .expect("could not encrypt request");
     let invoke_request = InvokeRequest {
         // TODO(#4037): Remove once explicit protos are used end-to-end.
-        body: encrypted_request.encode_to_vec(),
+        body: vec![],
         encrypted_request: Some(encrypted_request),
     };
 
