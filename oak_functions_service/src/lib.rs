@@ -129,14 +129,12 @@ impl OakFunctions for OakFunctionsService {
         let encryption_key_provider = self.encryption_key_provider.clone();
         let instance = self.get_instance()?;
 
-        let encrypted_request = request
-            .encrypted_request
-            .ok_or_else(|| {
-                micro_rpc::Status::new_with_message(
-                    micro_rpc::StatusCode::InvalidArgument,
-                    "InvokeRequest doesn't contain an encrypted request".to_string(),
-                )
-            })?;
+        let encrypted_request = request.encrypted_request.ok_or_else(|| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::InvalidArgument,
+                "InvokeRequest doesn't contain an encrypted request".to_string(),
+            )
+        })?;
 
         EncryptionHandler::create(encryption_key_provider, |r| {
             // Wrap the invocation result (which may be an Error) into a micro RPC Response
