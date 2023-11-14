@@ -176,8 +176,8 @@ static_assertions::assert_eq_size!([u8; 5392], Evidence);
 #[derive(AsBytes, FromZeroes, FromBytes)]
 #[repr(C)]
 pub struct RestrictedKernelDiceData {
-    evidence: Evidence,
-    application_private_keys: ApplicationPrivateKeys,
+    pub evidence: Evidence,
+    pub application_private_keys: ApplicationPrivateKeys,
 }
 
 static_assertions::assert_eq_size!([u8; 5520], RestrictedKernelDiceData);

@@ -41,6 +41,7 @@ mod args;
 mod avx;
 mod boot;
 mod descriptors;
+mod dice_attestation;
 mod elf;
 mod ghcb;
 mod interrupts;
@@ -183,7 +184,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
             .unwrap()
     };
 
-    let _stage0_dice_data = {
+    let stage0_dice_data = {
         let dice_memory_slice = {
             let e820_dice_data_entry = info
                 .e820_table()
@@ -327,6 +328,9 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let application = payload::Application::load_raw(&mut *channel)
         .expect("failed to load application binary from channel");
 
+    let restricted_kernel_dice_data =
+        dice_attestation::generate_dice_data(stage0_dice_data, application.digest());
+
     let derived_key = if sev_snp_enabled {
         snp_guest::get_derived_key().expect("couldn't derive key")
     } else {
@@ -339,7 +343,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
     extraction.input_ikm(application.digest());
     let (derived_key, _) = extraction.finalize();
 
-    syscall::enable_syscalls(channel, derived_key.into());
+    syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key.into());
 
     // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
     // under the kernel's control.
