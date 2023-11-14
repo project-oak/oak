@@ -25,8 +25,6 @@ fn generate_application_certificate(
     application_verifying_key: &p256::ecdsa::VerifyingKey,
     app_digest: &[u8],
 ) -> coset::CoseSign1 {
-    // Generate additional claims to cover the measurements.
-
     let additional_claims = alloc::vec![(
         coset::cwt::ClaimName::PrivateUse(oak_dice::cert::LAYER_2_CODE_MEASUREMENT_ID),
         coset::cbor::value::Value::Bytes(app_digest.into()),
