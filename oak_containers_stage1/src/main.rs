@@ -126,7 +126,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .await
         .context("error fetching system image")?;
 
-    let system_image_claims = dice::measure_system_image(&buf)?;
+    let system_image_claims = dice::measure_system_image(&buf);
 
     // For safety we generate the DICE data for the next layer before processing the compressed
     // system image. This consumes the `DiceBuilder` which also clears the ECA private key provided

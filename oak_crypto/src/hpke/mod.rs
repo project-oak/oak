@@ -33,7 +33,7 @@ type Aead = AesGcm256;
 type Kdf = HkdfSha256;
 type Kem = X25519HkdfSha256;
 pub(crate) type PrivateKey = <Kem as KemTrait>::PrivateKey;
-pub(crate) type PublicKey = <Kem as KemTrait>::PublicKey;
+pub type PublicKey = <Kem as KemTrait>::PublicKey;
 pub(crate) type EncappedKey = <Kem as KemTrait>::EncappedKey;
 
 /// Maximum sequence number which can fit in [`AEAD_NONCE_SIZE_BYTES`] bytes.

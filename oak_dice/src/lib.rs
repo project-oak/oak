@@ -15,6 +15,7 @@
 //
 
 #![no_std]
+#![feature(let_chains)]
 
 //! Structs and helpers for implementing DICE-based attestation.
 

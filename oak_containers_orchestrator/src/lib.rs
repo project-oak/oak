@@ -20,11 +20,12 @@ mod proto {
             tonic::include_proto!("oak.containers");
         }
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::session;
+        pub use oak_remote_attestation::proto::oak::{attestation, session};
     }
 }
 
 pub mod container_runtime;
+pub mod dice;
 pub mod ipc_server;
 pub mod key_provisioning;
 pub mod logging;

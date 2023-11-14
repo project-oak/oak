@@ -148,6 +148,14 @@ pub struct ApplicationPrivateKeys {
 
 static_assertions::assert_eq_size!([u8; 128], ApplicationPrivateKeys);
 
+impl Drop for ApplicationPrivateKeys {
+    fn drop(&mut self) {
+        // Zero out the private keys.
+        self.signing_private_key.fill(0);
+        self.encryption_private_key.fill(0);
+    }
+}
+
 /// Wrapper for passing the attestation evidence from the Restricted Kernel to the application.
 #[derive(AsBytes, FromZeroes, FromBytes)]
 #[repr(C)]

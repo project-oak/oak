@@ -11,6 +11,7 @@ ExecStart=/bin/oak_containers_orchestrator --container-dir ${RUNTIME_DIRECTORY}/
 ExecStopPost=/usr/bin/journalctl --sync --flush
 ProtectSystem=strict
 RuntimeDirectory=oak_containers_orchestrator
+ReadWritePaths=/oak
 
 [Install]
 WantedBy=multi-user.target
