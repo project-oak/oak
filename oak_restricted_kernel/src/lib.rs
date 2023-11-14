@@ -90,7 +90,7 @@ use x86_64::{
     structures::paging::{Page, Size2MiB},
     PhysAddr, VirtAddr,
 };
-use zerocopy::{AsBytes, FromZeroes};
+use zerocopy::FromBytes;
 
 /// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 512 GiB of memory, for now.
@@ -211,9 +211,10 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 )
             }
         };
-        let mut dice_data: oak_dice::evidence::Stage0DiceData =
-            oak_dice::evidence::Stage0DiceData::new_zeroed();
-        dice_data.as_bytes_mut().clone_from_slice(dice_memory_slice);
+
+        let dice_data: oak_dice::evidence::Stage0DiceData =
+            oak_dice::evidence::Stage0DiceData::read_from(dice_memory_slice)
+                .expect("failed to read dice data");
 
         // Overwrite the dice data provided by stage0 after reading.
         dice_memory_slice.fill(0);
