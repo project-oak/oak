@@ -82,7 +82,7 @@ android_library(
         "//oak_crypto/proto/v1:crypto_java_proto_lite",
         "//oak_remote_attestation/proto/v1:messages_java_proto_lite",
         "//oak_remote_attestation/proto/v1:service_streaming_java_proto_lite",
-        "@com_google_protobuf//:protobuf_javalite",
+        "@com_google_protobuf//java/lite",
         "@io_grpc_grpc_java//stub",
     ],
 )
