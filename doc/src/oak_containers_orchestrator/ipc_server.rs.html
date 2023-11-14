@@ -100,24 +100,6 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -135,21 +117,18 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::containers::{
     orchestrator_server::{Orchestrator, OrchestratorServer},
-    GetApplicationConfigResponse, GetAttestationEvidenceResponse, GetCryptoContextRequest,
-    GetCryptoContextResponse,
+    GetApplicationConfigResponse, GetCryptoContextRequest, GetCryptoContextResponse,
 };
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>futures::FutureExt;
 <span class="kw">use </span>oak_containers_orchestrator_client::LauncherClient;
 <span class="kw">use </span>oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
-<span class="kw">use </span>oak_remote_attestation::attester::Attester;
 <span class="kw">use </span>std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
 <span class="kw">use </span>tokio::{fs::set_permissions, net::UnixListener, sync::oneshot::Receiver};
 <span class="kw">use </span>tokio_stream::wrappers::UnixListenerStream;
 <span class="kw">use </span>tonic::{transport::Server, Request, Response};
 
 <span class="kw">pub struct </span>ServiceImplementation {
-    attester: Attester,
     encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;,
     application_config: Vec&lt;u8&gt;,
     launcher_client: Arc&lt;LauncherClient&gt;,
@@ -172,19 +151,6 @@
             .<span class="kw">await
             </span>.map_err(|err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t send notification: {err}&quot;</span>)))<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(tonic::Response::new(()))
-    }
-
-    <span class="kw">async fn </span>get_attestation_evidence(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _request: Request&lt;()&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;GetAttestationEvidenceResponse&gt;, tonic::Status&gt; {
-        <span class="kw">let </span>evidence = <span class="self">self
-            </span>.attester
-            .generate_attestation_evidence()
-            .map_err(|err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t generate evidence: {err}&quot;</span>)))<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(tonic::Response::new(GetAttestationEvidenceResponse {
-            evidence: <span class="prelude-val">Some</span>(evidence),
-        }))
     }
 
     <span class="kw">async fn </span>get_crypto_context(
@@ -210,7 +176,6 @@
 <span class="kw">pub async fn </span>create&lt;P&gt;(
     socket_address: P,
     encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;,
-    attester: Attester,
     application_config: Vec&lt;u8&gt;,
     launcher_client: Arc&lt;LauncherClient&gt;,
     shutdown_receiver: Receiver&lt;()&gt;,
@@ -219,7 +184,6 @@
     </span>P: AsRef&lt;std::path::Path&gt; + Clone,
 {
     <span class="kw">let </span>service_instance = ServiceImplementation {
-        attester,
         encryption_key_provider,
         application_config,
         launcher_client,

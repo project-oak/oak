@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["RecipientContext","SenderContext"]};
+window.SIDEBAR_ITEMS = {"struct":["RecipientContext","SenderContext"],"type":["PublicKey"]};

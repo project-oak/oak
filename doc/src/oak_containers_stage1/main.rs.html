@@ -329,7 +329,7 @@
         .<span class="kw">await
         </span>.context(<span class="string">&quot;error fetching system image&quot;</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let </span>system_image_claims = dice::measure_system_image(<span class="kw-2">&amp;</span>buf)<span class="question-mark">?</span>;
+    <span class="kw">let </span>system_image_claims = dice::measure_system_image(<span class="kw-2">&amp;</span>buf);
 
     <span class="comment">// For safety we generate the DICE data for the next layer before processing the compressed
     // system image. This consumes the `DiceBuilder` which also clears the ECA private key provided

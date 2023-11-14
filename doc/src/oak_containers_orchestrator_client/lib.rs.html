@@ -110,6 +110,9 @@
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
 <a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -131,12 +134,13 @@
             <span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.containers&quot;</span>);
         }
         <span class="kw">pub use </span>oak_crypto::proto::oak::crypto;
-        <span class="kw">pub use </span>oak_remote_attestation::proto::oak::session;
+        <span class="kw">pub use </span>oak_remote_attestation::proto::oak::{attestation, session};
     }
 }
 
 <span class="kw">use </span><span class="self">self</span>::proto::oak::{
-    containers::SendAttestationEvidenceRequest, session::v1::AttestationEvidence,
+    attestation::v1::Evidence, containers::SendAttestationEvidenceRequest,
+    session::v1::AttestationEvidence,
 };
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
@@ -193,9 +197,11 @@
     <span class="kw">pub async fn </span>send_attestation_evidence(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         evidence: AttestationEvidence,
+        dice_evidence: Evidence,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
         <span class="kw">let </span>request = tonic::Request::new(SendAttestationEvidenceRequest {
             evidence: <span class="prelude-val">Some</span>(evidence),
+            dice_evidence: <span class="prelude-val">Some</span>(dice_evidence),
         });
         <span class="self">self</span>.inner
             .clone()

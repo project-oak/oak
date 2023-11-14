@@ -29,6 +29,7 @@
 <a href="#29" id="29">29</a>
 <a href="#30" id="30">30</a>
 <a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -51,11 +52,12 @@
             </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.containers&quot;</span>);
         }
         <span class="kw">pub use </span>oak_crypto::proto::oak::crypto;
-        <span class="kw">pub use </span>oak_remote_attestation::proto::oak::session;
+        <span class="kw">pub use </span>oak_remote_attestation::proto::oak::{attestation, session};
     }
 }
 
 <span class="kw">pub mod </span>container_runtime;
+<span class="kw">pub mod </span>dice;
 <span class="kw">pub mod </span>ipc_server;
 <span class="kw">pub mod </span>key_provisioning;
 <span class="kw">pub mod </span>logging;

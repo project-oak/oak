@@ -173,6 +173,14 @@
 <a href="#173" id="173">173</a>
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -322,6 +330,14 @@
 }
 
 <span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">128</span>], ApplicationPrivateKeys);
+
+<span class="kw">impl </span>Drop <span class="kw">for </span>ApplicationPrivateKeys {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="comment">// Zero out the private keys.
+        </span><span class="self">self</span>.signing_private_key.fill(<span class="number">0</span>);
+        <span class="self">self</span>.encryption_private_key.fill(<span class="number">0</span>);
+    }
+}
 
 <span class="doccomment">/// Wrapper for passing the attestation evidence from the Restricted Kernel to the application.
 </span><span class="attr">#[derive(AsBytes, FromZeroes, FromBytes)]

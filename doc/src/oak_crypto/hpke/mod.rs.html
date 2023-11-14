@@ -388,7 +388,7 @@
 <span class="kw">type </span>Kdf = HkdfSha256;
 <span class="kw">type </span>Kem = X25519HkdfSha256;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>PrivateKey = &lt;Kem <span class="kw">as </span>KemTrait&gt;::PrivateKey;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>PublicKey = &lt;Kem <span class="kw">as </span>KemTrait&gt;::PublicKey;
+<span class="kw">pub type </span>PublicKey = &lt;Kem <span class="kw">as </span>KemTrait&gt;::PublicKey;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>EncappedKey = &lt;Kem <span class="kw">as </span>KemTrait&gt;::EncappedKey;
 
 <span class="doccomment">/// Maximum sequence number which can fit in [`AEAD_NONCE_SIZE_BYTES`] bytes.

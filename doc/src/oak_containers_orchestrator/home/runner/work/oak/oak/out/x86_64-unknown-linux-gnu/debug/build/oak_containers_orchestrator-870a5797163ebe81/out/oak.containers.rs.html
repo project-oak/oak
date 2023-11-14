@@ -833,53 +833,6 @@
 <a href="#833" id="833">833</a>
 <a href="#834" id="834">834</a>
 <a href="#835" id="835">835</a>
-<a href="#836" id="836">836</a>
-<a href="#837" id="837">837</a>
-<a href="#838" id="838">838</a>
-<a href="#839" id="839">839</a>
-<a href="#840" id="840">840</a>
-<a href="#841" id="841">841</a>
-<a href="#842" id="842">842</a>
-<a href="#843" id="843">843</a>
-<a href="#844" id="844">844</a>
-<a href="#845" id="845">845</a>
-<a href="#846" id="846">846</a>
-<a href="#847" id="847">847</a>
-<a href="#848" id="848">848</a>
-<a href="#849" id="849">849</a>
-<a href="#850" id="850">850</a>
-<a href="#851" id="851">851</a>
-<a href="#852" id="852">852</a>
-<a href="#853" id="853">853</a>
-<a href="#854" id="854">854</a>
-<a href="#855" id="855">855</a>
-<a href="#856" id="856">856</a>
-<a href="#857" id="857">857</a>
-<a href="#858" id="858">858</a>
-<a href="#859" id="859">859</a>
-<a href="#860" id="860">860</a>
-<a href="#861" id="861">861</a>
-<a href="#862" id="862">862</a>
-<a href="#863" id="863">863</a>
-<a href="#864" id="864">864</a>
-<a href="#865" id="865">865</a>
-<a href="#866" id="866">866</a>
-<a href="#867" id="867">867</a>
-<a href="#868" id="868">868</a>
-<a href="#869" id="869">869</a>
-<a href="#870" id="870">870</a>
-<a href="#871" id="871">871</a>
-<a href="#872" id="872">872</a>
-<a href="#873" id="873">873</a>
-<a href="#874" id="874">874</a>
-<a href="#875" id="875">875</a>
-<a href="#876" id="876">876</a>
-<a href="#877" id="877">877</a>
-<a href="#878" id="878">878</a>
-<a href="#879" id="879">879</a>
-<a href="#880" id="880">880</a>
-<a href="#881" id="881">881</a>
-<a href="#882" id="882">882</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// As images can be large (hundreds of megabytes), the launcher chunks up the response into smaller
 /// pieces to respect proto/gRPC limits. The image needs to be reassembled in the stage1 or the
 /// orchestrator.
@@ -902,12 +855,8 @@
 </span><span class="kw">pub struct </span>SendAttestationEvidenceRequest {
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>evidence: ::core::option::Option&lt;<span class="kw">super</span>::session::v1::AttestationEvidence&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>GetAttestationEvidenceResponse {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>evidence: ::core::option::Option&lt;<span class="kw">super</span>::session::v1::AttestationEvidence&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>dice_evidence: ::core::option::Option&lt;<span class="kw">super</span>::attestation::v1::Evidence&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -1503,14 +1452,6 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>,
             request: tonic::Request&lt;()&gt;,
         ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;()&gt;, tonic::Status&gt;;
-        <span class="doccomment">/// Returns Attestation Evidence containing the Attestation Report with corresponding measurements.
-        </span><span class="kw">async fn </span>get_attestation_evidence(
-            <span class="kw-2">&amp;</span><span class="self">self</span>,
-            request: tonic::Request&lt;()&gt;,
-        ) -&gt; <span class="prelude-ty">Result</span>&lt;
-            tonic::Response&lt;<span class="kw">super</span>::GetAttestationEvidenceResponse&gt;,
-            tonic::Status,
-        &gt;;
         <span class="doccomment">/// Returns crypto context for decrypting client requests and encrypting enclave responses.
         /// TODO(#3841): Store private key in the Orchestrator and generate session keys for each session.
         </span><span class="kw">async fn </span>get_crypto_context(
@@ -1637,41 +1578,6 @@
                     <span class="kw">let </span>fut = <span class="kw">async move </span>{
                         <span class="kw">let </span>inner = inner.<span class="number">0</span>;
                         <span class="kw">let </span>method = NotifyAppReadySvc(inner);
-                        <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
-                        <span class="kw">let </span><span class="kw-2">mut </span>grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            );
-                        <span class="kw">let </span>res = grpc.unary(method, req).<span class="kw">await</span>;
-                        <span class="prelude-val">Ok</span>(res)
-                    };
-                    Box::pin(fut)
-                }
-                <span class="string">&quot;/oak.containers.Orchestrator/GetAttestationEvidence&quot; </span>=&gt; {
-                    <span class="attr">#[allow(non_camel_case_types)]
-                    </span><span class="kw">struct </span>GetAttestationEvidenceSvc&lt;T: Orchestrator&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
-                    <span class="kw">impl</span>&lt;T: Orchestrator&gt; tonic::server::UnaryService&lt;()&gt;
-                    <span class="kw">for </span>GetAttestationEvidenceSvc&lt;T&gt; {
-                        <span class="kw">type </span>Response = <span class="kw">super</span>::GetAttestationEvidenceResponse;
-                        <span class="kw">type </span>Future = BoxFuture&lt;
-                            tonic::Response&lt;<span class="self">Self</span>::Response&gt;,
-                            tonic::Status,
-                        &gt;;
-                        <span class="kw">fn </span>call(<span class="kw-2">&amp;mut </span><span class="self">self</span>, request: tonic::Request&lt;()&gt;) -&gt; <span class="self">Self</span>::Future {
-                            <span class="kw">let </span>inner = <span class="self">self</span>.<span class="number">0</span>.clone();
-                            <span class="kw">let </span>fut = <span class="kw">async move </span>{
-                                (<span class="kw-2">*</span>inner).get_attestation_evidence(request).<span class="kw">await
-                            </span>};
-                            Box::pin(fut)
-                        }
-                    }
-                    <span class="kw">let </span>accept_compression_encodings = <span class="self">self</span>.accept_compression_encodings;
-                    <span class="kw">let </span>send_compression_encodings = <span class="self">self</span>.send_compression_encodings;
-                    <span class="kw">let </span>inner = <span class="self">self</span>.inner.clone();
-                    <span class="kw">let </span>fut = <span class="kw">async move </span>{
-                        <span class="kw">let </span>inner = inner.<span class="number">0</span>;
-                        <span class="kw">let </span>method = GetAttestationEvidenceSvc(inner);
                         <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
                         <span class="kw">let </span><span class="kw-2">mut </span>grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

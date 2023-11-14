@@ -154,7 +154,7 @@
 <span class="kw">use </span>ciborium::Value;
 <span class="kw">use </span>coset::cwt::ClaimName;
 <span class="kw">use </span>oak_dice::{
-    cert::CODE_DIGEST_ID,
+    cert::LAYER_2_CODE_MEASUREMENT_ID,
     evidence::{Stage0DiceData, STAGE0_MAGIC},
 };
 <span class="kw">use </span>oak_remote_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
@@ -180,14 +180,14 @@
 </span><span class="kw">const </span>PHYS_MEM_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;/dev/mem&quot;</span>;
 
 <span class="doccomment">/// Measures the downloaded system image bytes and returns it as a vector of additional CWT claims.
-</span><span class="kw">pub fn </span>measure_system_image(system_image_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;(ClaimName, Value)&gt;&gt; {
+</span><span class="kw">pub fn </span>measure_system_image(system_image_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;(ClaimName, Value)&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha256::default();
     digest.update(system_image_bytes);
     <span class="kw">let </span>digest = digest.finalize();
-    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[(
-        ClaimName::PrivateUse(CODE_DIGEST_ID),
+    <span class="macro">vec!</span>[(
+        ClaimName::PrivateUse(LAYER_2_CODE_MEASUREMENT_ID),
         Value::Bytes(digest[..].to_vec()),
-    )])
+    )]
 }
 
 <span class="attr">#[derive(Debug)]
