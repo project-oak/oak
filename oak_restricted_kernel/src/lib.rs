@@ -212,9 +212,8 @@ pub fn start_kernel(info: &BootParams) -> ! {
             }
         };
 
-        let dice_data: oak_dice::evidence::Stage0DiceData =
-            oak_dice::evidence::Stage0DiceData::read_from(dice_memory_slice)
-                .expect("failed to read dice data");
+        let dice_data = oak_dice::evidence::Stage0DiceData::read_from(dice_memory_slice)
+            .expect("failed to read dice data");
 
         // Overwrite the dice data provided by stage0 after reading.
         dice_memory_slice.fill(0);
