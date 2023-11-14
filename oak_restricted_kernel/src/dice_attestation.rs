@@ -14,23 +14,30 @@
 // limitations under the License.
 //
 
+use crate::alloc::string::ToString;
 use coset::CborSerializable;
 use zerocopy::FromZeroes;
 
 /// Generates an ECA certificate for use by the application.
 fn generate_application_certificate(
-    kernel_eca_key: &p256::ecdsa::SigningKey,
+    kernel_signing_key: &p256::ecdsa::SigningKey,
     kernel_cert_issuer: alloc::string::String,
+    application_verifying_key: &p256::ecdsa::VerifyingKey,
     app_digest: &[u8],
-) -> (coset::CoseSign1, p256::ecdsa::SigningKey) {
+) -> coset::CoseSign1 {
     // Generate additional claims to cover the measurements.
 
     let additional_claims = alloc::vec![(
-        coset::cwt::ClaimName::PrivateUse(oak_dice::cert::CODE_DIGEST_ID),
+        coset::cwt::ClaimName::PrivateUse(oak_dice::cert::LAYER_2_CODE_MEASUREMENT_ID),
         coset::cbor::value::Value::Bytes(app_digest.into()),
     )];
-    oak_dice::cert::generate_eca_certificate(kernel_eca_key, kernel_cert_issuer, additional_claims)
-        .expect("couldn't generate ECA certificate")
+    oak_dice::cert::generate_signing_certificate(
+        kernel_signing_key,
+        kernel_cert_issuer,
+        application_verifying_key,
+        additional_claims,
+    )
+    .expect("couldn't generate signing certificate")
 }
 
 /// Generates attestation evidence for the 'measurement' of the application.
@@ -38,33 +45,42 @@ pub fn generate_dice_data(
     stage0_dice_data: oak_dice::evidence::Stage0DiceData,
     app_digest: &[u8],
 ) -> oak_dice::evidence::RestrictedKernelDiceData {
-    // Generate ECA Stage0 key pair. This key will be used to sign Stage1 ECA certificate.
-    let (kernel_eca_key, kernel_eca_verifying_key) = oak_dice::cert::generate_ecdsa_key_pair();
+    let (application_signing_key, application_verifying_key) =
+        oak_dice::cert::generate_ecdsa_key_pair();
 
-    let (application_signing_public_key_certificate, application_signing_private_key) =
-        generate_application_certificate(
-            &kernel_eca_key,
-            hex::encode(oak_dice::cert::derive_public_key_id(
-                &kernel_eca_verifying_key,
-            )),
-            app_digest,
-        );
+    let kernel_signing_key = p256::ecdsa::SigningKey::from_slice(
+        &stage0_dice_data
+            .layer_1_certificate_authority
+            .eca_private_key,
+    )
+    .expect("failed to parse the layer1 ECDSA private key bytes");
+
+    let application_eca_cert = generate_application_certificate(
+        &kernel_signing_key,
+        // TODO(#4074): Pass the correct cert issuer by parsing the stage0_dice_data and retrieving
+        // it.
+        "Mock Cert issuer.".to_string(),
+        &application_verifying_key,
+        app_digest,
+    );
 
     let application_keys = {
         let mut keys = oak_dice::evidence::ApplicationKeys::new_zeroed();
-        let signing_public_key_certificate_vec = application_signing_public_key_certificate
+        let application_eca_cert_vec = application_eca_cert
             .to_vec()
             .expect("couldn't serialize application signing 1 ECA certificate");
-        keys.signing_public_key_certificate[..signing_public_key_certificate_vec.len()]
-            .copy_from_slice(&signing_public_key_certificate_vec);
+        keys.signing_public_key_certificate[..application_eca_cert_vec.len()]
+            .copy_from_slice(&application_eca_cert_vec);
+        // TODO(#4074): Implement the encryption key.
         keys
     };
 
     let application_private_keys: oak_dice::evidence::ApplicationPrivateKeys = {
-        let signing_private_key_bytes = application_signing_private_key.to_bytes();
+        let signing_private_key_bytes = application_signing_key.to_bytes();
         let mut keys = oak_dice::evidence::ApplicationPrivateKeys::new_zeroed();
         keys.signing_private_key[..signing_private_key_bytes.as_slice().len()]
             .copy_from_slice(signing_private_key_bytes.as_slice());
+        // TODO(#4074): Implement the encryption key.
         keys
     };
 
