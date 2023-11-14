@@ -165,10 +165,20 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 .find(|e| e.entry_type() == Some(oak_linux_boot_params::E820EntryType::DiceData))
                 .expect("failed to find dice data");
 
+            let start_addr = {
+                let phys_addr = PhysAddr::new(
+                    e820_dice_data_entry
+                        .addr()
+                        .try_into()
+                        .expect("couldn't convert usize to u64"),
+                );
+                VirtAddr::new(phys_addr.as_u64() + mm::KERNEL_OFFSET)
+            };
+
             // Safety: the E820 table indicated that this is the corrct memory segment.
             unsafe {
                 core::slice::from_raw_parts_mut::<u8>(
-                    e820_dice_data_entry.addr() as *mut u8,
+                    start_addr.as_mut_ptr(),
                     e820_dice_data_entry.size(),
                 )
             }
