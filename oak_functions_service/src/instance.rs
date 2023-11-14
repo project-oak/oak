@@ -16,7 +16,7 @@
 
 use crate::{
     logger::StandaloneLogger,
-    lookup::{Data, LookupDataManager},
+    lookup::LookupDataManager,
     proto::oak::functions::{
         AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
@@ -65,7 +65,12 @@ impl OakFunctionsInstance {
         request: ExtendNextLookupDataRequest,
     ) -> Result<ExtendNextLookupDataResponse, micro_rpc::Status> {
         self.lookup_data_manager
-            .extend_next_lookup_data(to_data(request.chunk));
+            .extend_next_lookup_data(to_data(request.chunk.ok_or(
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::InvalidArgument,
+                    "no chunk in extend request",
+                ),
+            )?));
         Ok(ExtendNextLookupDataResponse {})
     }
     /// See [`crate::proto::oak::functions::OakFunctions::finish_next_lookup_data`].
@@ -87,11 +92,9 @@ impl OakFunctionsInstance {
 }
 
 // Helper function to convert [`LookupDataChunk`] to [`Data`].
-fn to_data(chunk: Option<LookupDataChunk>) -> Data {
+fn to_data(chunk: LookupDataChunk) -> impl Iterator<Item = (Vec<u8>, Vec<u8>)> {
     chunk
-        .unwrap()
         .items
         .into_iter()
         .map(|entry| (entry.key, entry.value))
-        .collect()
 }

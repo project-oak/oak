@@ -15,21 +15,18 @@
 
 use crate::proto::oak::containers::{
     orchestrator_server::{Orchestrator, OrchestratorServer},
-    GetApplicationConfigResponse, GetAttestationEvidenceResponse, GetCryptoContextRequest,
-    GetCryptoContextResponse,
+    GetApplicationConfigResponse, GetCryptoContextRequest, GetCryptoContextResponse,
 };
 use anyhow::Context;
 use futures::FutureExt;
 use oak_containers_orchestrator_client::LauncherClient;
 use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
-use oak_remote_attestation::attester::Attester;
 use std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
 use tokio::{fs::set_permissions, net::UnixListener, sync::oneshot::Receiver};
 use tokio_stream::wrappers::UnixListenerStream;
 use tonic::{transport::Server, Request, Response};
 
 pub struct ServiceImplementation {
-    attester: Attester,
     encryption_key_provider: Arc<EncryptionKeyProvider>,
     application_config: Vec<u8>,
     launcher_client: Arc<LauncherClient>,
@@ -52,19 +49,6 @@ impl Orchestrator for ServiceImplementation {
             .await
             .map_err(|err| tonic::Status::internal(format!("couldn't send notification: {err}")))?;
         Ok(tonic::Response::new(()))
-    }
-
-    async fn get_attestation_evidence(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<GetAttestationEvidenceResponse>, tonic::Status> {
-        let evidence = self
-            .attester
-            .generate_attestation_evidence()
-            .map_err(|err| tonic::Status::internal(format!("couldn't generate evidence: {err}")))?;
-        Ok(tonic::Response::new(GetAttestationEvidenceResponse {
-            evidence: Some(evidence),
-        }))
     }
 
     async fn get_crypto_context(
@@ -90,7 +74,6 @@ impl Orchestrator for ServiceImplementation {
 pub async fn create<P>(
     socket_address: P,
     encryption_key_provider: Arc<EncryptionKeyProvider>,
-    attester: Attester,
     application_config: Vec<u8>,
     launcher_client: Arc<LauncherClient>,
     shutdown_receiver: Receiver<()>,
@@ -99,7 +82,6 @@ where
     P: AsRef<std::path::Path> + Clone,
 {
     let service_instance = ServiceImplementation {
-        attester,
         encryption_key_provider,
         application_config,
         launcher_client,

@@ -27,8 +27,6 @@ import com.google.oak.session.v1.RequestWrapper;
 import com.google.oak.session.v1.ResponseWrapper;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.ExtensionRegistryLite;
-import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
 import java.util.function.Function;
@@ -125,16 +123,8 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
     }
 
     logger.log(Level.INFO, "received invoke response: " + responseWrapper);
-    InvokeResponse response = responseWrapper.getInvokeResponse();
-
-    // TODO(#4037): Use explicit crypto protos.
-    EncryptedResponse encryptedResponse;
-    try {
-      encryptedResponse = EncryptedResponse.parseFrom(
-          response.getEncryptedBody(), ExtensionRegistryLite.getEmptyRegistry());
-    } catch (InvalidProtocolBufferException e) {
-      return Result.error(e.toString());
-    }
+    EncryptedResponse encryptedResponse =
+        responseWrapper.getInvokeResponse().getEncryptedResponse();
     return Result.success(encryptedResponse);
   }
 

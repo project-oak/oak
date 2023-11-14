@@ -18,8 +18,8 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 use coset::{cbor::value::Value, cwt::ClaimName, CborSerializable, CoseSign1};
 use oak_dice::{
     cert::{
-        derive_public_key_id, generate_eca_certificate, generate_ecdsa_key_pair,
-        public_key_to_cose_key, ACPI_MEASUREMENT_ID, INITRD_MEASUREMENT_ID,
+        derive_verifying_key_id, generate_ecdsa_key_pair, generate_signing_certificate,
+        verifying_key_to_cose_key, ACPI_MEASUREMENT_ID, INITRD_MEASUREMENT_ID,
         KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
         SETUP_DATA_MEASUREMENT_ID,
     },
@@ -82,8 +82,18 @@ fn generate_stage1_certificate(
             Value::Bytes(measurements.acpi_measurement.into()),
         ),
     ];
-    generate_eca_certificate(stage0_eca_key, stage0_cert_issuer, additional_claims)
-        .expect("couldn't generate ECA certificate")
+
+    let (signing_key, verifying_key) = generate_ecdsa_key_pair();
+    (
+        generate_signing_certificate(
+            stage0_eca_key,
+            stage0_cert_issuer,
+            &verifying_key,
+            additional_claims,
+        )
+        .expect("couldn't generate ECA certificate"),
+        signing_key,
+    )
 }
 
 /// Generates attestation evidence for the 'measurements' of all Stage 1 components.
@@ -98,11 +108,11 @@ pub fn generate_dice_data(measurements: &Measurements) -> &'static Stage0DiceDat
 
     let (stage1_eca_cert, stage1_eca_signing_key) = generate_stage1_certificate(
         &stage0_eca_key,
-        hex::encode(derive_public_key_id(&stage0_eca_verifying_key)),
+        hex::encode(derive_verifying_key_id(&stage0_eca_verifying_key)),
         measurements,
     );
 
-    let stage0_eca_verifying_key = public_key_to_cose_key(&stage0_eca_verifying_key)
+    let stage0_eca_verifying_key = verifying_key_to_cose_key(&stage0_eca_verifying_key)
         .to_vec()
         .expect("couldn't serialize the ECA public key");
 

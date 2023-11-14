@@ -73,7 +73,7 @@ pub fn compile_rust_wasm(manifest_path: &str, release: bool) -> anyhow::Result<V
 }
 
 /// Serializes the provided map as a contiguous buffer of length-delimited protobuf messages of type
-/// [`Entry`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/lookup_data.proto).
+/// [`Entry`](https://github.com/project-oak/oak/blob/main/proto/oak_functions/lookup_data.proto).
 pub fn serialize_entries(entries: HashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
     let mut buf = Vec::new();
     for (key, value) in entries.into_iter() {

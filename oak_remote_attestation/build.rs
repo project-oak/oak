@@ -16,10 +16,14 @@
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     micro_rpc_build::compile(
-        &[&format!(
-            "{}oak_remote_attestation/proto/v1/messages.proto",
-            env!("WORKSPACE_ROOT")
-        )],
+        &[
+            &format!(
+                "{}oak_remote_attestation/proto/v1/messages.proto",
+                env!("WORKSPACE_ROOT")
+            ),
+            &format!("{}proto/attestation/dice.proto", env!("WORKSPACE_ROOT")),
+            &format!("{}proto/attestation/evidence.proto", env!("WORKSPACE_ROOT")),
+        ],
         &[env!("WORKSPACE_ROOT")],
         Default::default(),
     );

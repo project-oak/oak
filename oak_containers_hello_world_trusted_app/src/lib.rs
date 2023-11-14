@@ -23,7 +23,7 @@ mod proto {
             }
         }
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::session;
+        pub use oak_remote_attestation::proto::oak::{attestation, session};
     }
 }
 

@@ -25,10 +25,39 @@ option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
 
-message ReferenceValues {
-  RootLayerReferenceValues root_layer = 1;                // Layer 0
-  KernelLayerReferenceValues kernel_layer = 2;            // Layer 1
-  repeated CustomLayerReferenceValues custom_layers = 3;  // Layers 2 through N
+// Verifies the transparency log entry, including signatures and the digest.
+message EndorsementReferenceValue {
+  // The endorser's public signing key for signature verification.
+  bytes endorser_public_key = 1;
+
+  // Rekor's public signing key for signature verification.
+  bytes rekor_public_key = 2;
+}
+
+message BinaryReferenceValue {
+  oneof type {
+    // Verifies the endorsement of the underlying binary.
+    EndorsementReferenceValue endorsement = 1;
+
+    // Explicitly verifies digests if the client has them.
+    Digests digests = 2;
+  }
+}
+
+// Reference value for a file including its digests.
+message FileReferenceValue {
+  // Allowable digests for the file.
+  Digests digests = 1;
+
+  // Absolute path to the file in question, or just the file name. Relative paths are
+  // not supported.
+  string path = 2;
+}
+
+// Verifies that a particular string is equal to at least one of the specified ones.
+// No checks are performed if this is empty.
+message StringReferenceValue {
+  repeated string values = 1;
 }
 
 message RootLayerReferenceValues {
@@ -39,7 +68,6 @@ message RootLayerReferenceValues {
 
 message AmdSevReferenceValues {
   bytes amd_root_public_key = 1;
-
   // TBD: Add conditions on all kinds of fields contained in the
   // attestation report.
   string firmware_version = 2;
@@ -47,24 +75,17 @@ message AmdSevReferenceValues {
   // If true, will skip the check that the TEE is not in debug mode.
   bool allow_debug = 3;
 
-  optional LogEntryVerification stage0_log_entry = 4;
+  // Verifies the stage0 binary implicitly contained in the root layer.
+  BinaryReferenceValue stage0 = 4;
 }
 
 message IntelTdxReferenceValues {
   // TBD
 }
 
-// Verifies the log entry, including signatures and the digest.
-message LogEntryVerification {
-  // The endorser’s public signing key for signature verification.
-  bytes endorser_public_key = 1;
-
-  // Rekor’s public signing key for signature verification.
-  bytes rekor_public_key = 2;
-}
-
 // Verifies that the field contains at least one of the given digests.
-// No checks are performed if this is empty.
+// No checks are performed if this is empty. A match in at least one
+// digest is considered a success.
 message Digests {
   repeated RawDigest digests = 1;
 }
@@ -72,34 +93,73 @@ message Digests {
 // Reference values of the kernel layer, as measured by stage0.
 message KernelLayerReferenceValues {
   // Verifies the kernel binary based on endorsement.
-  optional LogEntryVerification log_entry = 1;
+  BinaryReferenceValue kernel_image = 1;
 
-  // Explicitly verifies digests in addition to log entry verification.
-  // Note that endorsement-based digest verification is implicitly contained
-  // in the log entry verification.
-  optional Digests code = 2;
+  // Compare command line as string until further notice.
+  StringReferenceValue kernel_cmd_line = 2;
 
-  // Verifies that the command line is equivalent to a specified one (e.g. up
-  // to certain permutations).
-  repeated string kernel_cmd_line = 3;
+  BinaryReferenceValue kernel_setup_data = 3;
 
-  optional Digests kernel_setup_data = 4;
+  BinaryReferenceValue init_ram_fs = 4;
 
-  optional Digests init_ram_fs = 5;
+  BinaryReferenceValue memory_map = 5;
 
-  repeated Digests memory_map = 6;
-
-  optional Digests acpi = 7;
+  BinaryReferenceValue acpi = 6;
 }
 
-message CustomLayerReferenceValues {
-  // Verifies the layer binary based on endorsement.
-  optional LogEntryVerification log_entry = 1;
+message InitLayerReferenceValues {
+  // Verifies the binary based on endorsement.
+  BinaryReferenceValue binary = 1;
 
-  // Explicitly verifies digests in addition to log entry verification.
-  // Note that endorsement-based digest verification is implicitly contained
-  // in the log entry verification.
-  optional Digests code = 2;
+  // Configuration measurements.
+  BinaryReferenceValue configuration = 2;
+}
 
-  optional Digests configuration = 3;
+// Represents an application running under Oak Restricted Kernel.
+message ApplicationLayerReferenceValues {
+  // Verifies the binary based on endorsement.
+  BinaryReferenceValue binary = 1;
+
+  // Configuration measurements.
+  BinaryReferenceValue configuration = 2;
+}
+
+message ContainerLayerReferenceValues {
+  // Verifies the binary based on endorsement.
+  BinaryReferenceValue binary = 1;
+
+  // Configuration measurements.
+  BinaryReferenceValue configuration = 2;
+}
+
+message OakRestrictedKernelReferenceValues {
+  RootLayerReferenceValues root_layer = 1;
+  KernelLayerReferenceValues kernel_layer = 2;
+  ApplicationLayerReferenceValues application_layer = 3;
+}
+
+message OakContainersReferenceValues {
+  RootLayerReferenceValues root_layer = 1;
+  KernelLayerReferenceValues kernel_layer = 2;
+  InitLayerReferenceValues init_layer = 3;
+  ContainerLayerReferenceValues container_layer = 4;
+}
+
+message CBLayerReferenceValues {
+  string layer_name = 1;
+  repeated FileReferenceValue files = 2;
+  StringReferenceValue config = 3;
+  StringReferenceValue command_line = 4;
+}
+
+message CBReferenceValues {
+  repeated CBLayerReferenceValues layers = 1;
+}
+
+message ReferenceValues {
+  oneof type {
+    OakRestrictedKernelReferenceValues oak_restricted_kernel = 1;
+    OakContainersReferenceValues oak_containers = 2;
+    CBReferenceValues cb = 3;
+  }
 }

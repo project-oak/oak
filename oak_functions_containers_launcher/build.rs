@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../",
         &[
             "oak_crypto/proto/v1/crypto.proto",
-            "oak_functions_service/proto/oak_functions.proto",
+            "proto/oak_functions/service/oak_functions.proto",
         ],
         CodegenOptions {
             build_client: true,

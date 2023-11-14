@@ -98,6 +98,13 @@ pub struct CertificateAuthority {
 
 static_assertions::assert_eq_size!([u8; PRIVATE_KEY_SIZE], CertificateAuthority);
 
+impl Drop for CertificateAuthority {
+    fn drop(&mut self) {
+        // Zero out the ECA private key.
+        self.eca_private_key.fill(0);
+    }
+}
+
 /// Wrapper for passing DICE info from Stage0 to the next layer (Stage 1 or the Restricted Kernel).
 #[derive(AsBytes, FromZeroes, FromBytes)]
 #[repr(C, align(4096))]
@@ -140,6 +147,14 @@ pub struct ApplicationPrivateKeys {
 }
 
 static_assertions::assert_eq_size!([u8; 128], ApplicationPrivateKeys);
+
+impl Drop for ApplicationPrivateKeys {
+    fn drop(&mut self) {
+        // Zero out the private keys.
+        self.signing_private_key.fill(0);
+        self.encryption_private_key.fill(0);
+    }
+}
 
 /// Wrapper for passing the attestation evidence from the Restricted Kernel to the application.
 #[derive(AsBytes, FromZeroes, FromBytes)]

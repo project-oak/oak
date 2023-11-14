@@ -19,7 +19,7 @@ use micro_rpc_build::ReceiverType;
 fn main() {
     micro_rpc_build::compile(
         &[format!(
-            "{}oak_functions_service/proto/oak_functions.proto",
+            "{}proto/oak_functions/service/oak_functions.proto",
             env!("WORKSPACE_ROOT")
         )],
         &[env!("WORKSPACE_ROOT")],
