@@ -327,10 +327,10 @@ fn generate_certificate(
     }
 
     let protected = coset::HeaderBuilder::new()
-        .algorithm(iana::Algorithm::ES384)
+        .algorithm(iana::Algorithm::ES256K)
         .build();
     let unprotected = coset::HeaderBuilder::new()
-        .key_id((*b"AsymmetricECDSA384").into())
+        .key_id((*b"AsymmetricECDSA256").into())
         .build();
     Ok(coset::CoseSign1Builder::new()
         .protected(protected)

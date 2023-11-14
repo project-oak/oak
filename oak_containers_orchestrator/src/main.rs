@@ -73,6 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &encryption_key_provider.get_serialized_public_key(),
         &verifying_key,
     )?;
+    // TODO(#4074): Remove once DICE attestation is fully implemented.
     let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
     let attester = Attester::new(
         attestation_report_generator,
