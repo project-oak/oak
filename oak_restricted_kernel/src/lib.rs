@@ -90,6 +90,7 @@ use x86_64::{
     structures::paging::{Page, Size2MiB},
     PhysAddr, VirtAddr,
 };
+use zerocopy::{AsBytes, FromZeroes};
 
 /// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 512 GiB of memory, for now.
@@ -164,7 +165,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 .find(|e| e.entry_type() == Some(oak_linux_boot_params::E820EntryType::DiceData))
                 .expect("failed to find dice data");
 
-            // safety: the E820 table indicated that this is the corrct memory segment
+            // Safety: the E820 table indicated that this is the corrct memory segment.
             unsafe {
                 core::slice::from_raw_parts_mut::<u8>(
                     e820_dice_data_entry.addr() as *mut u8,
@@ -173,11 +174,10 @@ pub fn start_kernel(info: &BootParams) -> ! {
             }
         };
         let mut dice_data: oak_dice::evidence::Stage0DiceData =
-            <oak_dice::evidence::Stage0DiceData as zerocopy::FromZeroes>::new_zeroed();
-        <oak_dice::evidence::Stage0DiceData as zerocopy::AsBytes>::as_bytes_mut(&mut dice_data)
-            .clone_from_slice(dice_memory_slice);
+            oak_dice::evidence::Stage0DiceData::new_zeroed();
+        dice_data.as_bytes_mut().clone_from_slice(dice_memory_slice);
 
-        // overwrite the dice data provided by stage0 after reading
+        // Overwrite the dice data provided by stage0 after reading.
         dice_memory_slice.fill(0);
 
         if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
