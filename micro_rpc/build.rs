@@ -21,5 +21,6 @@ fn main() {
             env!("WORKSPACE_ROOT")
         )],
         &[env!("WORKSPACE_ROOT")],
-        Default::default());
+        Default::default(),
+    );
 }
