@@ -297,6 +297,22 @@ pub fn start_kernel(info: &BootParams) -> ! {
                     .expect("couldn't convert usize to u64"),
             );
 
+            // Validate that the dice data mem address matches the kernel args if present
+            if let Some(arg) = kernel_args.get(&alloc::format!(
+                "--{}",
+                oak_dice::evidence::DICE_DATA_CMDLINE_PARAM
+            )) {
+                let parsed_arg = u64::from_str_radix(
+                    arg.strip_prefix("0x")
+                        .expect("failed stripping the hex prefix"),
+                    16,
+                )
+                .expect("couldn't parse address as a hex number");
+                if parsed_arg != phys_start_addr.as_u64() {
+                    panic!("inconsistent dice data addresses supplied in the E820 table and kernel args")
+                }
+            }
+
             let virt_start_addr = {
                 let pt = PAGE_TABLES.get().expect("failed to get page tables");
                 pt.translate_physical(phys_start_addr)
