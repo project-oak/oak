@@ -42,6 +42,7 @@ pub struct OrchestratorClient {
     inner: GrpcOrchestratorClient<tonic::transport::channel::Channel>,
 }
 
+// TODO(#4478): Reuse Orchestrator client in all Oak Containers examples.
 impl OrchestratorClient {
     pub async fn create() -> Result<Self, Box<dyn std::error::Error>> {
         let inner: GrpcOrchestratorClient<tonic::transport::channel::Channel> = {
@@ -74,6 +75,7 @@ impl OrchestratorClient {
     ) -> Result<CryptoContext, Box<dyn std::error::Error>> {
         let context = self
             .inner
+            // TODO(#4477): Remove unnecessary copies of the Orchestrator client.
             .clone()
             .get_crypto_context(GetCryptoContextRequest {
                 serialized_encapsulated_public_key: serialized_encapsulated_public_key.to_vec(),

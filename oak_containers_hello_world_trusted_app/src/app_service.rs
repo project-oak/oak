@@ -21,7 +21,7 @@ use crate::{
     },
 };
 use anyhow::anyhow;
-use oak_crypto::{encryptor::AsyncServerEncryptor, hpke::RecipientContext};
+use oak_crypto::encryptor::AsyncServerEncryptor;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 
@@ -52,7 +52,9 @@ impl TrustedApplication for TrustedApplicationImplementation {
             .encrypted_request
             .ok_or(tonic::Status::internal("encrypted request wasn't provided"))?;
 
-        let mut server_encryptor = AsyncServerEncryptor::new(&self.orchestrator_client);
+        // TODO(#4477): Remove unnecessary copies of the Orchestrator client.
+        let orchestrator_client = self.orchestrator_client.clone();
+        let mut server_encryptor = AsyncServerEncryptor::new(&orchestrator_client);
 
         // Associated data is ignored.
         let (name_bytes, _) = server_encryptor

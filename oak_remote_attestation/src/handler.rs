@@ -88,13 +88,13 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
 /// `AsyncEncryptionHandler` can be used when the `AsyncRecipientContextGenerator` is needed.
 pub struct AsyncEncryptionHandler<H: FnOnce(Vec<u8>) -> Vec<u8>> {
     // TODO(#3442): Use attester to attest to the public key.
-    recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator>,
+    recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator + Send + Sync>,
     request_handler: H,
 }
 
 impl<H: FnOnce(Vec<u8>) -> Vec<u8>> AsyncEncryptionHandler<H> {
     pub fn create(
-        recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator>,
+        recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator + Send + Sync>,
         request_handler: H,
     ) -> Self {
         Self {
