@@ -46,21 +46,29 @@ pub fn generate_dice_data(
     let (application_signing_key, application_verifying_key) =
         oak_dice::cert::generate_ecdsa_key_pair();
 
-    let kernel_signing_key = p256::ecdsa::SigningKey::from_slice(
-        &stage0_dice_data
-            .layer_1_certificate_authority
-            .eca_private_key[..oak_dice::evidence::P256_PRIVATE_KEY_SIZE],
-    )
-    .expect("failed to parse the layer1 ECDSA private key bytes");
+    let application_eca_cert = {
+        let kernel_signing_key = p256::ecdsa::SigningKey::from_slice(
+            &stage0_dice_data
+                .layer_1_certificate_authority
+                .eca_private_key[..oak_dice::evidence::P256_PRIVATE_KEY_SIZE],
+        )
+        .expect("failed to parse the layer1 ECDSA private key bytes");
 
-    let application_eca_cert = generate_application_certificate(
-        &kernel_signing_key,
-        // TODO(#4074): Pass the correct cert issuer by parsing the stage0_dice_data and retrieving
-        // it.
-        "Mock Cert issuer.".to_string(),
-        &application_verifying_key,
-        app_digest,
-    );
+        let kernel_cert_issuer = stage0_dice_data
+            .layer_1_evidence
+            .claims()
+            .expect("failed to get stage0 claims")
+            // The kernel was the subject of layer 1.
+            .subject
+            .expect("expected to find the subject");
+
+        generate_application_certificate(
+            &kernel_signing_key,
+            kernel_cert_issuer,
+            &application_verifying_key,
+            app_digest,
+        )
+    };
 
     let application_keys = {
         let mut keys = oak_dice::evidence::ApplicationKeys::new_zeroed();

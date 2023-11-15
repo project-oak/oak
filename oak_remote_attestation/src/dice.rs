@@ -201,8 +201,10 @@ impl TryFrom<Stage0DiceData> for DiceData {
                 (TeePlatform::Unspecified as u64, Vec::new())
             };
         let platform = platform.try_into().map_err(anyhow::Error::msg)?;
-        let eca_public_key =
-            cbor_encoded_bytes_to_vec(&value.root_layer_evidence.eca_public_key[..])?;
+        let eca_public_key = oak_dice::utils::cbor_encoded_bytes_to_vec(
+            &value.root_layer_evidence.eca_public_key[..],
+        )
+        .map_err(anyhow::Error::msg)?;
         let root_layer = Some(RootLayerEvidence {
             platform,
             remote_attestation_report,
@@ -210,7 +212,8 @@ impl TryFrom<Stage0DiceData> for DiceData {
         });
         let mut layers = Vec::new();
         let eca_certificate =
-            cbor_encoded_bytes_to_vec(&value.layer_1_evidence.eca_certificate[..])?;
+            oak_dice::utils::cbor_encoded_bytes_to_vec(&value.layer_1_evidence.eca_certificate[..])
+                .map_err(anyhow::Error::msg)?;
         layers.push(LayerEvidence { eca_certificate });
         let application_keys = None;
         let evidence = Some(Evidence {
@@ -236,13 +239,4 @@ impl LayerEvidence {
     pub fn get_claims(&self) -> anyhow::Result<ClaimsSet> {
         get_claims_set_from_certificate_bytes(&self.eca_certificate).map_err(anyhow::Error::msg)
     }
-}
-
-/// Extracts the bytes used to encode a CBOR object from a slice that might include unused bytes by
-/// deserializing and re-serializing the encoded CBOR object.
-fn cbor_encoded_bytes_to_vec(bytes: &[u8]) -> anyhow::Result<Vec<u8>> {
-    let mut result = Vec::new();
-    let value: Value = from_reader(bytes).map_err(anyhow::Error::msg)?;
-    into_writer(&value, &mut result).map_err(anyhow::Error::msg)?;
-    Ok(result)
 }

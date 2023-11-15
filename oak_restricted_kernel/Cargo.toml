@@ -33,6 +33,7 @@ log = "*"
 libm = "*"
 oak_channel = { workspace = true }
 oak_core = { workspace = true }
+oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
 oak_simple_io = { workspace = true, optional = true }
 oak_linux_boot_params = { workspace = true }
