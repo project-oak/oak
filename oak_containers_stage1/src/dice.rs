@@ -18,6 +18,7 @@ use crate::try_parse_phys_addr;
 use anyhow::Context;
 use ciborium::Value;
 use coset::cwt::ClaimName;
+use nix::sys::mman::{mmap, munmap, MapFlags, ProtFlags};
 use oak_dice::{
     cert::LAYER_2_CODE_MEASUREMENT_ID,
     evidence::{Stage0DiceData, STAGE0_MAGIC},
@@ -26,10 +27,10 @@ use oak_remote_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::Dic
 use sha2::{Digest, Sha256};
 use std::{
     fs::{read_dir, read_to_string, OpenOptions},
-    io::{Read, Seek, Write},
+    os::fd::AsRawFd,
 };
 use x86_64::PhysAddr;
-use zerocopy::{AsBytes, FromZeroes};
+use zerocopy::FromBytes;
 
 /// The expected string representation of the custom type for the reserved memory range that
 /// contains the DICE data.
@@ -74,10 +75,9 @@ pub fn extract_stage0_dice_data(start: PhysAddr) -> anyhow::Result<DiceBuilder> 
 ///
 /// Zeroes out the source physical memory after copying it.
 fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
-    let mut result = Stage0DiceData::new_zeroed();
-    let buffer = result.as_bytes_mut();
+    let length = std::mem::size_of::<Stage0DiceData>();
     // Linux presents an inclusive end address.
-    let end = start + (buffer.len() as u64 - 1);
+    let end = start + (length as u64 - 1);
     // Ensure that the exact memory range is marked as reserved.
     if !read_memory_ranges()?.iter().any(|range| {
         range.start == start && range.end == end && range.type_description == EXPECTED_E820_TYPE
@@ -85,32 +85,44 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
         anyhow::bail!("DICE data range is not reserved");
     }
 
-    // Read the DICE data from physical memory.
-    let mut dice_reader = OpenOptions::new()
+    // Open a file representing the physical memory.
+    let dice_file = OpenOptions::new()
         .read(true)
+        .write(true)
         .open(PHYS_MEM_PATH)
         .context("couldn't open DICE memory device for reading")?;
-    dice_reader
-        .seek(std::io::SeekFrom::Start(start.as_u64()))
-        .context("couldn't seek to DICE offset")?;
-    dice_reader
-        .read_exact(buffer)
-        .context("couldn't read DICE data")?;
+
+    // Safety: we have checked that the exact memory range is marked as reserved so the Linux kernel
+    // will not use it for anything else.
+    let start_ptr = unsafe {
+        mmap(
+            None,
+            length.try_into()?,
+            ProtFlags::PROT_READ | ProtFlags::PROT_WRITE,
+            MapFlags::MAP_SHARED,
+            dice_file.as_raw_fd(),
+            start.as_u64().try_into()?,
+        )?
+    };
+
+    let result = {
+        // Safety: we have checked the length, know it is backed by physical memory and is reserved.
+        let source = unsafe { std::slice::from_raw_parts_mut(start_ptr as *mut u8, length) };
+
+        let result = Stage0DiceData::read_from(source)
+            .ok_or_else(|| anyhow::anyhow!("size mismatch while reading DICE data"))?;
+
+        // Zero out the source memory.
+        source.fill(0);
+        result
+    };
 
     if result.magic != STAGE0_MAGIC {
         anyhow::bail!("invalid DICE data");
     }
 
-    // Clear the physical memory.
-    let mut dice_clear = OpenOptions::new()
-        .write(true)
-        .open(PHYS_MEM_PATH)
-        .context("couldn't open DICE memory device for writing")?;
-    dice_clear
-        .seek(std::io::SeekFrom::Start(start.as_u64()))
-        .context("couldn't seek to DICE offset")?;
-    dice_clear.write_all(&vec![0u8; result.as_bytes().len()])?;
-
+    // Safety: we have just mapped this memory, and the slice over it has been dropped.
+    unsafe { munmap(start_ptr, length)? };
     Ok(result)
 }
 
