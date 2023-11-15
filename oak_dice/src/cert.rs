@@ -23,7 +23,10 @@ use coset::{
     iana, Algorithm, CborSerializable, CoseError, CoseKey, CoseSign1, KeyOperation, KeyType, Label,
 };
 use hkdf::Hkdf;
-use p256::ecdsa::{signature::Signer, Signature, SigningKey, VerifyingKey};
+use p256::{
+    ecdsa::{signature::Signer, Signature, SigningKey, VerifyingKey},
+    EncodedPoint, FieldBytes,
+};
 use rand_core::OsRng;
 use sha2::Sha256;
 
@@ -47,9 +50,12 @@ pub const MEMORY_MAP_MEASUREMENT_ID: i64 = -4670559;
 /// ID for the CWT private claim ID corresponding to the hash of the commands for building the ACPI
 /// tables.
 pub const ACPI_MEASUREMENT_ID: i64 = -4670560;
-/// ID for the CWT private claim label corresponding to the hash of the binary for the layer in the
-/// case where a single binary is measured for a layer..
-pub const CODE_DIGEST_ID: i64 = -4670545;
+/// ID for the CWT private claim label corresponding to the hash of the binary for Layer 2.
+pub const LAYER_2_CODE_MEASUREMENT_ID: i64 = -4670567;
+/// ID for the CWT private claim label corresponding to the hash of the binary for Layer 3.
+pub const LAYER_3_CODE_MEASUREMENT_ID: i64 = -4670569;
+/// ID for the CWT private claim label corresponding to the hash of the configuration for Layer 3.
+pub const LAYER_3_CONFIG_MEASUREMENT_ID: i64 = -4670570;
 
 /// String to be used as salt for generating Key IDs.
 const ID_SALT: &[u8] = b"DICE_ID_SALT";
@@ -76,10 +82,19 @@ bitflags::bitflags! {
     }
 }
 
-/// Derives an ID from a public key.
-pub fn derive_public_key_id(public_key: &VerifyingKey) -> [u8; KEY_ID_LENGTH] {
+/// Derives an ID from a verifying key.
+pub fn derive_verifying_key_id(public_key: &VerifyingKey) -> [u8; KEY_ID_LENGTH] {
     let ikm = public_key.to_encoded_point(false);
     let hkdf = Hkdf::<Sha256>::new(Some(ID_SALT), ikm.as_bytes());
+    let mut result = [0u8; KEY_ID_LENGTH];
+    hkdf.expand(INFO_STR, &mut result)
+        .expect("invalid length for HKDF output");
+    result
+}
+
+/// Derives an ID from an HPKE KEM public key.
+pub fn derive_kem_public_key_id(public_key_bytes: &[u8]) -> [u8; KEY_ID_LENGTH] {
+    let hkdf = Hkdf::<Sha256>::new(Some(ID_SALT), public_key_bytes);
     let mut result = [0u8; KEY_ID_LENGTH];
     hkdf.expand(INFO_STR, &mut result)
         .expect("invalid length for HKDF output");
@@ -93,20 +108,133 @@ pub fn generate_ecdsa_key_pair() -> (SigningKey, VerifyingKey) {
     (private_key, public_key)
 }
 
+/// Converts a COSE_Key to a serialized HPKE KEM public key.
+pub fn cose_key_to_hpke_public_key(cose_key: CoseKey) -> Result<Vec<u8>, &'static str> {
+    if cose_key.kty != KeyType::Assigned(iana::KeyType::OKP) {
+        return Err("invalid key type");
+    }
+    if cose_key.alg != Some(Algorithm::Assigned(iana::Algorithm::ECDH_ES_A256KW)) {
+        return Err("invalid algorithm");
+    }
+    if !cose_key
+        .key_ops
+        .contains(&KeyOperation::Assigned(iana::KeyOperation::WrapKey))
+    {
+        return Err("invalid key operations");
+    }
+    if !cose_key.params.iter().any(|(label, value)| {
+        label == &Label::Int(iana::OkpKeyParameter::Crv as i64)
+            && value == &Value::from(iana::EllipticCurve::X25519 as u64)
+    }) {
+        return Err("invalid elliptic curve");
+    }
+    cose_key
+        .params
+        .into_iter()
+        .find_map(|(label, value)| {
+            if let Value::Bytes(bytes) = value
+                && label == Label::Int(iana::OkpKeyParameter::X as i64)
+            {
+                Some(bytes)
+            } else {
+                None
+            }
+        })
+        .ok_or("public key not found")
+}
+
+/// Converts a serialized HPKE KEM public key to a COSE_Key representation
+pub fn hpke_public_key_to_cose_key(public_key: &[u8]) -> CoseKey {
+    CoseKey {
+        kty: KeyType::Assigned(iana::KeyType::OKP),
+        key_id: Vec::from(derive_kem_public_key_id(public_key)),
+        alg: Some(Algorithm::Assigned(iana::Algorithm::ECDH_ES_A256KW)),
+        key_ops: vec![KeyOperation::Assigned(iana::KeyOperation::WrapKey)]
+            .into_iter()
+            .collect(),
+        params: vec![
+            (
+                Label::Int(iana::OkpKeyParameter::Crv as i64),
+                Value::from(iana::EllipticCurve::X25519 as u64),
+            ),
+            (
+                Label::Int(iana::OkpKeyParameter::X as i64),
+                Value::Bytes(public_key.to_vec()),
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Converts a COSE_Key to a ECDSA verifying key.
+pub fn cose_key_to_verifying_key(cose_key: CoseKey) -> Result<VerifyingKey, &'static str> {
+    if cose_key.kty != KeyType::Assigned(iana::KeyType::EC2) {
+        return Err("invalid key type");
+    }
+    if cose_key.alg != Some(Algorithm::Assigned(iana::Algorithm::ES256K)) {
+        return Err("invalid algorithm");
+    }
+    if !cose_key
+        .key_ops
+        .contains(&KeyOperation::Assigned(iana::KeyOperation::Verify))
+    {
+        return Err("invalid key operations");
+    }
+    if !cose_key.params.iter().any(|(label, value)| {
+        label == &Label::Int(iana::Ec2KeyParameter::Crv as i64)
+            && value == &Value::from(iana::EllipticCurve::P_256 as u64)
+    }) {
+        return Err("invalid elliptic curve");
+    }
+    let x = cose_key
+        .params
+        .iter()
+        .find_map(|(label, value)| {
+            if let Value::Bytes(bytes) = value
+                && label == &Label::Int(iana::Ec2KeyParameter::X as i64)
+            {
+                Some(bytes.clone())
+            } else {
+                None
+            }
+        })
+        .ok_or("x component of public key not found")?;
+    let y = cose_key
+        .params
+        .iter()
+        .find_map(|(label, value)| {
+            if let Value::Bytes(bytes) = value
+                && label == &Label::Int(iana::Ec2KeyParameter::Y as i64)
+            {
+                Some(bytes.clone())
+            } else {
+                None
+            }
+        })
+        .ok_or("x component of public key not found")?;
+    let encoded_point = EncodedPoint::from_affine_coordinates(
+        FieldBytes::from_slice(&x),
+        FieldBytes::from_slice(&y),
+        false,
+    );
+    VerifyingKey::from_encoded_point(&encoded_point)
+        .map_err(|_err| "invalid public key coordinates")
+}
+
 /// Converts an ECDSA verifying key to a COSE_Key representation.
-pub fn public_key_to_cose_key(public_key: &VerifyingKey) -> CoseKey {
+pub fn verifying_key_to_cose_key(public_key: &VerifyingKey) -> CoseKey {
     let encoded_point = public_key.to_encoded_point(false);
     CoseKey {
         kty: KeyType::Assigned(iana::KeyType::EC2),
-        key_id: Vec::from(derive_public_key_id(public_key)),
-        alg: Some(Algorithm::Assigned(iana::Algorithm::ES384)),
+        key_id: Vec::from(derive_verifying_key_id(public_key)),
+        alg: Some(Algorithm::Assigned(iana::Algorithm::ES256K)),
         key_ops: vec![KeyOperation::Assigned(iana::KeyOperation::Verify)]
             .into_iter()
             .collect(),
         params: vec![
             (
                 Label::Int(iana::Ec2KeyParameter::Crv as i64),
-                Value::from(iana::EllipticCurve::P_384 as u64),
+                Value::from(iana::EllipticCurve::P_256 as u64),
             ),
             (
                 Label::Int(iana::Ec2KeyParameter::X as i64),
@@ -121,31 +249,70 @@ pub fn public_key_to_cose_key(public_key: &VerifyingKey) -> CoseKey {
     }
 }
 
-/// Generates a CWT certificate representing an embedded certificate authority (ECA) with its
-/// private key.
+/// Generates a CWT certificate representing an ECDSA signing key, such as an embedded certificate
+/// authority (ECA), and returns the certificate and its associated private key.
 ///
-///  # Arguments
+/// # Arguments
 ///
 /// * `issuer_eca_key` - The private key that the issuer uses to sign issued certificates.
 /// * `issuer_id` - A string identifying the key used by the issuer. This would typically be the hex
-///   encoding of the output from calling `derive_public_key_id` using the issuer's public key.
+///   encoding of the output from calling `derive_verifying_key_id` using the issuer's public key.
 /// * `additional_claims` - Any additional claims that must be included in the certificate. This is
 ///   typically used to provide measurements of the components in the layer associated with th
 ///   certificate.
-pub fn generate_eca_certificate(
+pub fn generate_signing_certificate(
     issuer_eca_key: &SigningKey,
     issuer_id: String,
+    verifying_key: &VerifyingKey,
     additional_claims: Vec<(ClaimName, Value)>,
-) -> Result<(CoseSign1, SigningKey), CoseError> {
-    let (signing_key, verifying_key) = generate_ecdsa_key_pair();
-    let verifying_key_id = hex::encode(derive_public_key_id(&verifying_key));
+) -> Result<CoseSign1, CoseError> {
+    generate_certificate(
+        issuer_eca_key,
+        issuer_id,
+        verifying_key_to_cose_key(verifying_key),
+        hex::encode(derive_verifying_key_id(verifying_key)),
+        additional_claims,
+    )
+}
+
+/// Generates a CWT certificate representing a Key Encapsulation Mechanism (KEM) for Hybrid
+/// Public-Key Encryption (HPKE) from a serialized public key.
+///
+/// # Arguments
+///
+/// * `issuer_eca_key` - The private key that the issuer uses to sign issued certificates.
+/// * `issuer_id` - A string identifying the key used by the issuer. This would typically be the hex
+///   encoding of the output from calling `derive_kem_public_key_id` using the issuer's public key.
+/// * `kem_public_key` - The serialized HPKE KEM public key.
+/// * `additional_claims` - Any additional claims that must be included in the certificate. This is
+///   typically used to provide measurements of the components in the layer associated with th
+///   certificate.
+pub fn generate_kem_certificate(
+    issuer_eca_key: &SigningKey,
+    issuer_id: String,
+    kem_public_key: &[u8],
+    additional_claims: Vec<(ClaimName, Value)>,
+) -> Result<CoseSign1, CoseError> {
+    generate_certificate(
+        issuer_eca_key,
+        issuer_id,
+        hpke_public_key_to_cose_key(kem_public_key),
+        hex::encode(derive_kem_public_key_id(kem_public_key)),
+        additional_claims,
+    )
+}
+
+fn generate_certificate(
+    issuer_eca_key: &SigningKey,
+    issuer_id: String,
+    public_key: CoseKey,
+    public_key_id: String,
+    additional_claims: Vec<(ClaimName, Value)>,
+) -> Result<CoseSign1, CoseError> {
     let mut claim_builder = ClaimsSetBuilder::new()
         .issuer(issuer_id)
-        .subject(verifying_key_id)
-        .private_claim(
-            SUBJECT_PUBLIC_KEY_ID,
-            Value::Bytes(public_key_to_cose_key(&verifying_key).to_vec().unwrap()),
-        )
+        .subject(public_key_id)
+        .private_claim(SUBJECT_PUBLIC_KEY_ID, Value::Bytes(public_key.to_vec()?))
         .private_claim(
             KEY_USAGE_ID,
             Value::Bytes(KeyUsage::KEY_CERT_SIGN.bits().to_le_bytes().into()),
@@ -160,23 +327,20 @@ pub fn generate_eca_certificate(
     }
 
     let protected = coset::HeaderBuilder::new()
-        .algorithm(iana::Algorithm::ES384)
+        .algorithm(iana::Algorithm::ES256K)
         .build();
     let unprotected = coset::HeaderBuilder::new()
-        .key_id((*b"AsymmetricECDSA384").into())
+        .key_id((*b"AsymmetricECDSA256").into())
         .build();
-    Ok((
-        coset::CoseSign1Builder::new()
-            .protected(protected)
-            .unprotected(unprotected)
-            .payload(claim_builder.build().to_vec()?)
-            .create_signature(EMPTY_ADDITIONAL_DATA, |data| {
-                let signature: Signature = issuer_eca_key.sign(data);
-                signature.to_bytes().as_slice().into()
-            })
-            .build(),
-        signing_key,
-    ))
+    Ok(coset::CoseSign1Builder::new()
+        .protected(protected)
+        .unprotected(unprotected)
+        .payload(claim_builder.build().to_vec()?)
+        .create_signature(EMPTY_ADDITIONAL_DATA, |data| {
+            let signature: Signature = issuer_eca_key.sign(data);
+            signature.to_bytes().as_slice().into()
+        })
+        .build())
 }
 
 /// Parses a bytes slice as a CWT certificate and extracts the payload as a set of claims.
