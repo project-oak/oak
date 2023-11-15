@@ -395,6 +395,10 @@
 <a href="#395" id="395">395</a>
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -438,6 +442,7 @@
 <span class="kw">mod </span>avx;
 <span class="kw">mod </span>boot;
 <span class="kw">mod </span>descriptors;
+<span class="kw">mod </span>dice_attestation;
 <span class="kw">mod </span>elf;
 <span class="kw">mod </span>ghcb;
 <span class="kw">mod </span>interrupts;
@@ -580,7 +585,7 @@
             .unwrap()
     };
 
-    <span class="kw">let </span>_stage0_dice_data = {
+    <span class="kw">let </span>stage0_dice_data = {
         <span class="kw">let </span>dice_memory_slice = {
             <span class="kw">let </span>e820_dice_data_entry = info
                 .e820_table()
@@ -724,6 +729,9 @@
     <span class="kw">let </span>application = payload::Application::load_raw(<span class="kw-2">&amp;mut *</span>channel)
         .expect(<span class="string">&quot;failed to load application binary from channel&quot;</span>);
 
+    <span class="kw">let </span>restricted_kernel_dice_data =
+        dice_attestation::generate_dice_data(stage0_dice_data, application.digest());
+
     <span class="kw">let </span>derived_key = <span class="kw">if </span>sev_snp_enabled {
         snp_guest::get_derived_key().expect(<span class="string">&quot;couldn&#39;t derive key&quot;</span>)
     } <span class="kw">else </span>{
@@ -736,7 +744,7 @@
     extraction.input_ikm(application.digest());
     <span class="kw">let </span>(derived_key, <span class="kw">_</span>) = extraction.finalize();
 
-    syscall::enable_syscalls(channel, derived_key.into());
+    syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key.into());
 
     <span class="comment">// Safety: we&#39;ve loaded the Restricted Application. Whether that&#39;s valid or not is no longer
     // under the kernel&#39;s control.
