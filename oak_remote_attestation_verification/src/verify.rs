@@ -37,13 +37,13 @@ pub fn verify(
         (
             Some(endorsements::Type::OakRestrictedKernel(ends)),
             Some(reference_values::Type::OakRestrictedKernel(rvs)),
-        ) => verify_oak_restricted_kernel(evidence, &ends, &rvs),
+        ) => verify_oak_restricted_kernel(evidence, ends, rvs),
         (
             Some(endorsements::Type::OakContainers(ends)),
             Some(reference_values::Type::OakContainers(rvs)),
-        ) => verify_oak_containers(evidence, &ends, &rvs),
+        ) => verify_oak_containers(evidence, ends, rvs),
         (Some(endorsements::Type::Cb(ends)), Some(reference_values::Type::Cb(rvs))) => {
-            verify_cb(evidence, &ends, &rvs)
+            verify_cb(evidence, ends, rvs)
         }
         (None, None) => anyhow::bail!("Endorsements and reference values both empty"),
         (None, Some(_)) => anyhow::bail!("Endorsements are empty"),
