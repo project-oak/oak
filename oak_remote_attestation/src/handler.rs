@@ -17,7 +17,10 @@
 use alloc::{sync::Arc, vec::Vec};
 use anyhow::{anyhow, Context};
 use oak_crypto::{
-    encryptor::{AsyncServerEncryptor, EncryptionKeyProvider, RecipientContextGenerator, AsyncRecipientContextGenerator, ServerEncryptor},
+    encryptor::{
+        AsyncRecipientContextGenerator, AsyncServerEncryptor, EncryptionKeyProvider,
+        ServerEncryptor,
+    },
     proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
 };
 
@@ -90,7 +93,10 @@ pub struct AsyncEncryptionHandler<H: FnOnce(Vec<u8>) -> Vec<u8>> {
 }
 
 impl<H: FnOnce(Vec<u8>) -> Vec<u8>> AsyncEncryptionHandler<H> {
-    pub fn create(recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator>, request_handler: H) -> Self {
+    pub fn create(
+        recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator>,
+        request_handler: H,
+    ) -> Self {
         Self {
             recipient_context_generator,
             request_handler,
@@ -99,11 +105,13 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> AsyncEncryptionHandler<H> {
 }
 
 impl<H: FnOnce(Vec<u8>) -> Vec<u8>> AsyncEncryptionHandler<H> {
-    pub async fn invoke(self, encrypted_request: &EncryptedRequest) -> anyhow::Result<EncryptedResponse> {
+    pub async fn invoke(
+        self,
+        encrypted_request: &EncryptedRequest,
+    ) -> anyhow::Result<EncryptedResponse> {
         // Initialize server encryptor.
-        let mut server_encryptor = AsyncServerEncryptor::new(
-            self.recipient_context_generator.clone(),
-        );
+        let mut server_encryptor =
+            AsyncServerEncryptor::new(self.recipient_context_generator.as_ref());
 
         // Decrypt request.
         let (request, _) = server_encryptor

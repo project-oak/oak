@@ -17,9 +17,9 @@ use crate::proto::oak::containers::{
     orchestrator_client::OrchestratorClient as GrpcOrchestratorClient, GetCryptoContextRequest,
 };
 use anyhow::Context;
+use async_trait::async_trait;
 use oak_crypto::{
-    encryptor::AsyncRecipientContextGenerator,
-    hpke::RecipientContext,
+    encryptor::AsyncRecipientContextGenerator, hpke::RecipientContext,
     proto::oak::crypto::v1::CryptoContext,
 };
 use tonic::transport::{Endpoint, Uri};
@@ -92,10 +92,13 @@ impl OrchestratorClient {
     }
 }
 
+#[async_trait]
 impl AsyncRecipientContextGenerator for OrchestratorClient {
-    async fn generate_recipient_context(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<RecipientContext> {
+    async fn generate_recipient_context(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<RecipientContext> {
         let serialized_crypto_context = self
-            .clone()
             .get_crypto_context(encapsulated_public_key)
             .await
             .map_err(|error| {
