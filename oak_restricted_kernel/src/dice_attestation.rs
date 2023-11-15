@@ -49,7 +49,7 @@ pub fn generate_dice_data(
     let kernel_signing_key = p256::ecdsa::SigningKey::from_slice(
         &stage0_dice_data
             .layer_1_certificate_authority
-            .eca_private_key,
+            .eca_private_key[..oak_dice::evidence::P256_PRIVATE_KEY_SIZE],
     )
     .expect("failed to parse the layer1 ECDSA private key bytes");
 
