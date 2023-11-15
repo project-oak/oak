@@ -93,8 +93,9 @@ impl OrchestratorClient {
 }
 
 impl AsyncRecipientContextGenerator for OrchestratorClient {
-    async fn generate_recipient_context(&mut self, encapsulated_public_key: &[u8]) -> anyhow::Result<RecipientContext> {
+    async fn generate_recipient_context(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<RecipientContext> {
         let serialized_crypto_context = self
+            .clone()
             .get_crypto_context(encapsulated_public_key)
             .await
             .map_err(|error| {
