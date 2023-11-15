@@ -25,10 +25,10 @@ option java_package = "com.google.oak.attestation.v1";
 // Represents a verification result. Can be extended to return certain
 // measurements and other detail to the client for further processing.
 message VerificationResult {
-    // Indicates whether or not the verification passed.
-    bool success = 1;
+  // Indicates whether or not the verification passed.
+  bool success = 1;
 
-    // When success is false, provides the reason why verification did not
-    // pass.
-    string reason = 2;
+  // When success is false, provides the reason why verification did not
+  // pass.
+  string reason = 2;
 }
