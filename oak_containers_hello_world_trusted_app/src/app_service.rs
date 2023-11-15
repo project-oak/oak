@@ -22,6 +22,7 @@ use crate::{
 };
 use anyhow::anyhow;
 use oak_crypto::{encryptor::ServerEncryptor, hpke::RecipientContext};
+use oak_remote_attestation::handler::AsyncEncryptionHandler;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 

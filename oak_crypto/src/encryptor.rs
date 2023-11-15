@@ -75,7 +75,7 @@ impl RecipientContextGenerator for EncryptionKeyProvider {
 #[async_trait]
 pub trait AsyncRecipientContextGenerator {
     async fn generate_recipient_context(
-        &self,
+        &mut self,
         encapsulated_public_key: &[u8],
     ) -> anyhow::Result<RecipientContext>;
 }
