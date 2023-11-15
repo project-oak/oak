@@ -21,7 +21,7 @@ use crate::{
     },
 };
 use anyhow::anyhow;
-use oak_crypto::{encryptor::ServerEncryptor, hpke::RecipientContext};
+use oak_crypto::{encryptor::AsyncServerEncryptor, hpke::RecipientContext};
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 
@@ -52,32 +52,12 @@ impl TrustedApplication for TrustedApplicationImplementation {
             .encrypted_request
             .ok_or(tonic::Status::internal("encrypted request wasn't provided"))?;
 
-        // Initialize server encryptor.
-        let serialized_encapsulated_public_key = encrypted_request
-            .serialized_encapsulated_public_key
-            .as_ref()
-            .ok_or(tonic::Status::invalid_argument(
-                "initial request message doesn't contain encapsulated public key",
-            ))?;
-        let serialized_crypto_context = self
-            .orchestrator_client
-            .get_crypto_context(serialized_encapsulated_public_key)
-            .await
-            .map_err(|error| {
-                tonic::Status::internal(format!(
-                    "couldn't get crypto context from the Orchestrator: {:?}",
-                    error
-                ))
-            })?;
-        let crypto_context =
-            RecipientContext::deserialize(serialized_crypto_context).map_err(|error| {
-                tonic::Status::internal(format!("couldn't deserialize crypto context: {:?}", error))
-            })?;
-        let mut server_encryptor = ServerEncryptor::new(crypto_context);
+        let mut server_encryptor = AsyncServerEncryptor::new(&self.orchestrator_client);
 
         // Associated data is ignored.
         let (name_bytes, _) = server_encryptor
             .decrypt(&encrypted_request)
+            .await
             .map_err(|error| {
                 tonic::Status::internal(format!("couldn't decrypt request: {:?}", error))
             })?;
