@@ -14,11 +14,11 @@
 // limitations under the License.
 //
 
-use crate::{rekor::*, verifier::*};
+use crate::{endorsement::*, rekor::*};
 use alloc::vec::Vec;
 use std::fs;
 
-use crate::verifier::{convert_pem_to_raw, convert_raw_to_pem, verify_binary_endorsement};
+use crate::endorsement::{convert_pem_to_raw, convert_raw_to_pem, verify_binary_endorsement};
 
 const BINARY_DIGEST: &str = "39051983bbb600bbfb91bd22ee4c976420f8f0c6a895fd083dcb0d153ddd5fd6";
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";

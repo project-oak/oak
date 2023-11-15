@@ -25,7 +25,7 @@ use ecdsa::{signature::Verifier, Signature};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::verifier::{convert_pem_to_raw, convert_raw_to_pem};
+use crate::endorsement::{convert_pem_to_raw, convert_raw_to_pem};
 
 /// Struct representing a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.>

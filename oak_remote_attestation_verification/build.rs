@@ -14,27 +14,22 @@
 // limitations under the License.
 //
 
-#![cfg_attr(not(test), no_std)]
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    micro_rpc_build::compile(
+        &[
+            &format!(
+                "{}proto/attestation/endorsement.proto",
+                env!("WORKSPACE_ROOT")
+            ),
+            &format!("{}proto/attestation/evidence.proto", env!("WORKSPACE_ROOT")),
+            &format!(
+                "{}proto/attestation/reference_value.proto",
+                env!("WORKSPACE_ROOT")
+            ),
+        ],
+        &[env!("WORKSPACE_ROOT")],
+        Default::default(),
+    );
 
-extern crate alloc;
-
-pub mod proto {
-    pub mod oak {
-        tonic::include_proto!("oak");
-        pub mod attestation {
-            pub mod v1 {
-                tonic::include_proto!("oak.attestation.v1");
-            }
-        }
-    }
+    Ok(())
 }
-
-pub mod endorsement;
-pub mod rekor;
-pub mod verify;
-
-#[cfg(test)]
-mod endorsement_tests;
-
-#[cfg(test)]
-mod verify_tests;

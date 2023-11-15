@@ -14,27 +14,18 @@
 // limitations under the License.
 //
 
-#![cfg_attr(not(test), no_std)]
+use crate::{
+    proto::oak::attestation::v1::{Endorsements, Evidence, ReferenceValues},
+    verify::verify,
+};
 
-extern crate alloc;
+#[test]
+fn verify_fails_with_empty_args() {
+    let evidence = Evidence::default();
+    let endorsements = Endorsements::default();
+    let reference_values = ReferenceValues::default();
 
-pub mod proto {
-    pub mod oak {
-        tonic::include_proto!("oak");
-        pub mod attestation {
-            pub mod v1 {
-                tonic::include_proto!("oak.attestation.v1");
-            }
-        }
-    }
+    let r = verify(&evidence, &endorsements, &reference_values);
+
+    assert!(r.is_err());
 }
-
-pub mod endorsement;
-pub mod rekor;
-pub mod verify;
-
-#[cfg(test)]
-mod endorsement_tests;
-
-#[cfg(test)]
-mod verify_tests;

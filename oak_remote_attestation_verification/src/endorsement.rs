@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Verifies binary endorsements as coming from Transparent Release.
+
 use alloc::{string::String, vec::Vec};
 
 use crate::rekor::{equal_keys, get_rekor_log_entry_body, verify_rekor_log_entry};
