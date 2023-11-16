@@ -93,15 +93,15 @@ java_proto_library(
     deps = [":service_streaming_proto"],
 )
 
-java_lite_proto_library(
-    name = "service_streaming_java_proto_lite",
-    deps = [":service_streaming_proto"],
-)
-
 java_grpc_library(
     name = "service_streaming_java_grpc",
     srcs = [":service_streaming_proto"],
     deps = [":service_streaming_java_proto"],
+)
+
+java_lite_proto_library(
+    name = "service_streaming_java_proto_lite",
+    deps = [":service_streaming_proto"],
 )
 
 java_grpc_library(
