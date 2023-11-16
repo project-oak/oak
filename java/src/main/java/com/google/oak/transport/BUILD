@@ -69,22 +69,6 @@ java_library(
     ],
 )
 
-android_library(
-    name = "grpc_streaming_transport_android",
-    srcs = [
-        "GrpcStreamingTransport.java",
-    ],
-    deps = [
-        ":transport_android",
-        "//java/src/main/java/com/google/oak/util:util_android",
-        "//oak_crypto/proto/v1:crypto_java_proto_lite",
-        "//oak_remote_attestation/proto/v1:messages_java_proto_lite",
-        "//oak_remote_attestation/proto/v1:service_streaming_java_proto_lite",
-        "@com_google_protobuf//java/lite",
-        "@io_grpc_grpc_java//stub",
-    ],
-)
-
 java_library(
     name = "api_key_interceptor",
     srcs = ["ApiKeyInterceptor.java"],
