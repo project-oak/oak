@@ -16,7 +16,11 @@
 
 //! Utilities to handle encoded keys and certificates
 
-use alloc::{format, string::String, vec::Vec};
+use alloc::{
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 use core::result::Result;
 
 /// Extracts the bytes used to encode a CBOR object from a slice that might include unused bytes by
@@ -28,4 +32,17 @@ pub fn cbor_encoded_bytes_to_vec(bytes: &[u8]) -> Result<Vec<u8>, String> {
     ciborium::into_writer(&value, &mut result)
         .map_err(|err| format!("failed to write bytes: {:?}", err))?;
     Ok(result)
+}
+
+/// Like the slice `copy_from_slice` method but does not panic if slices are not
+/// the same length. In the case of a shorter source slice, only overwrites
+/// the beginning of the destination slice. In the case of a longer source slice
+/// it throws an error.
+pub(crate) fn padded_copy_from_slice(dst: &mut [u8], src: &[u8]) -> Result<(), String> {
+    if dst.len() < src.len() {
+        dst[..src.len()].copy_from_slice(src);
+        Ok(())
+    } else {
+        Err("destination slice shorter than source slice".to_string())
+    }
 }
