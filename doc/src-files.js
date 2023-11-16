@@ -19,7 +19,7 @@ var srcIndex = JSON.parse('{\
 "oak_containers_syslogd":["",[],["log_relay.rs","main.rs","systemd_journal.rs"]],\
 "oak_core":["",[],["lib.rs","samplestore.rs","sync.rs","timer.rs"]],\
 "oak_crypto":["",[["hpke",[],["aead.rs","mod.rs"]]],["encryptor.rs","lib.rs","signer.rs","util.rs"]],\
-"oak_dice":["",[],["cert.rs","evidence.rs","lib.rs"]],\
+"oak_dice":["",[],["cert.rs","evidence.rs","lib.rs","utils.rs"]],\
 "oak_docker_linux_init":["",[],["init.rs","main.rs"]],\
 "oak_echo_linux_init":["",[],["init.rs","main.rs"]],\
 "oak_echo_service":["",[],["lib.rs"]],\

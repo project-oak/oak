@@ -93,6 +93,13 @@
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -109,8 +116,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::alloc::string::ToString;
-<span class="kw">use </span>coset::CborSerializable;
+</span><span class="kw">use </span>coset::CborSerializable;
 <span class="kw">use </span>zerocopy::FromZeroes;
 
 <span class="doccomment">/// Generates an ECA certificate for use by the application.
@@ -141,21 +147,29 @@
     <span class="kw">let </span>(application_signing_key, application_verifying_key) =
         oak_dice::cert::generate_ecdsa_key_pair();
 
-    <span class="kw">let </span>kernel_signing_key = p256::ecdsa::SigningKey::from_slice(
-        <span class="kw-2">&amp;</span>stage0_dice_data
-            .layer_1_certificate_authority
-            .eca_private_key[..oak_dice::evidence::P256_PRIVATE_KEY_SIZE],
-    )
-    .expect(<span class="string">&quot;failed to parse the layer1 ECDSA private key bytes&quot;</span>);
+    <span class="kw">let </span>application_eca_cert = {
+        <span class="kw">let </span>kernel_signing_key = p256::ecdsa::SigningKey::from_slice(
+            <span class="kw-2">&amp;</span>stage0_dice_data
+                .layer_1_certificate_authority
+                .eca_private_key[..oak_dice::evidence::P256_PRIVATE_KEY_SIZE],
+        )
+        .expect(<span class="string">&quot;failed to parse the layer1 ECDSA private key bytes&quot;</span>);
 
-    <span class="kw">let </span>application_eca_cert = generate_application_certificate(
-        <span class="kw-2">&amp;</span>kernel_signing_key,
-        <span class="comment">// TODO(#4074): Pass the correct cert issuer by parsing the stage0_dice_data and retrieving
-        // it.
-        </span><span class="string">&quot;Mock Cert issuer.&quot;</span>.to_string(),
-        <span class="kw-2">&amp;</span>application_verifying_key,
-        app_digest,
-    );
+        <span class="kw">let </span>kernel_cert_issuer = stage0_dice_data
+            .layer_1_evidence
+            .claims()
+            .expect(<span class="string">&quot;failed to get stage0 claims&quot;</span>)
+            <span class="comment">// The kernel was the subject of layer 1.
+            </span>.subject
+            .expect(<span class="string">&quot;expected to find the subject&quot;</span>);
+
+        generate_application_certificate(
+            <span class="kw-2">&amp;</span>kernel_signing_key,
+            kernel_cert_issuer,
+            <span class="kw-2">&amp;</span>application_verifying_key,
+            app_digest,
+        )
+    };
 
     <span class="kw">let </span>application_keys = {
         <span class="kw">let </span><span class="kw-2">mut </span>keys = oak_dice::evidence::ApplicationKeys::new_zeroed();

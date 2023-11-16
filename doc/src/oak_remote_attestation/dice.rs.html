@@ -242,10 +242,6 @@
 <a href="#242" id="242">242</a>
 <a href="#243" id="243">243</a>
 <a href="#244" id="244">244</a>
-<a href="#245" id="245">245</a>
-<a href="#246" id="246">246</a>
-<a href="#247" id="247">247</a>
-<a href="#248" id="248">248</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -268,7 +264,6 @@
 };
 <span class="kw">use </span>alloc::vec::Vec;
 <span class="kw">use </span>anyhow::{anyhow, Context};
-<span class="kw">use </span>ciborium::{from_reader, into_writer, Value};
 <span class="kw">use </span>coset::{
     cwt::{ClaimName, ClaimsSet},
     CborSerializable,
@@ -300,7 +295,10 @@
     /// provided. Adding a layer generates a new ECA private key for the layer and uses it to
     /// replace the existing signing key. The CWT certificate contains the public key for this new
     /// signing key.
-    </span><span class="kw">pub fn </span>add_layer(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional_claims: Vec&lt;(ClaimName, Value)&gt;) -&gt; anyhow::Result&lt;()&gt; {
+    </span><span class="kw">pub fn </span>add_layer(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        additional_claims: Vec&lt;(ClaimName, ciborium::Value)&gt;,
+    ) -&gt; anyhow::Result&lt;()&gt; {
         <span class="comment">// The last evidence layer contains the certificate for the current signing key. Since the
         // builder contains an existing signing key there must be at least one layer of evidence
         // that contains the certificate.
@@ -342,7 +340,7 @@
     /// consumes DICE data, discards the signing key and returns the finalized evidence.
     </span><span class="kw">pub fn </span>add_application_keys(
         <span class="self">self</span>,
-        additional_claims: Vec&lt;(ClaimName, Value)&gt;,
+        additional_claims: Vec&lt;(ClaimName, ciborium::Value)&gt;,
         kem_public_key: <span class="kw-2">&amp;</span>[u8],
         verifying_key: <span class="kw-2">&amp;</span>VerifyingKey,
     ) -&gt; anyhow::Result&lt;Evidence&gt; {
@@ -449,8 +447,10 @@
                 (TeePlatform::Unspecified <span class="kw">as </span>u64, Vec::new())
             };
         <span class="kw">let </span>platform = platform.try_into().map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-        <span class="kw">let </span>eca_public_key =
-            cbor_encoded_bytes_to_vec(<span class="kw-2">&amp;</span>value.root_layer_evidence.eca_public_key[..])<span class="question-mark">?</span>;
+        <span class="kw">let </span>eca_public_key = oak_dice::utils::cbor_encoded_bytes_to_vec(
+            <span class="kw-2">&amp;</span>value.root_layer_evidence.eca_public_key[..],
+        )
+        .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
         <span class="kw">let </span>root_layer = <span class="prelude-val">Some</span>(RootLayerEvidence {
             platform,
             remote_attestation_report,
@@ -458,7 +458,8 @@
         });
         <span class="kw">let </span><span class="kw-2">mut </span>layers = Vec::new();
         <span class="kw">let </span>eca_certificate =
-            cbor_encoded_bytes_to_vec(<span class="kw-2">&amp;</span>value.layer_1_evidence.eca_certificate[..])<span class="question-mark">?</span>;
+            oak_dice::utils::cbor_encoded_bytes_to_vec(<span class="kw-2">&amp;</span>value.layer_1_evidence.eca_certificate[..])
+                .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
         layers.push(LayerEvidence { eca_certificate });
         <span class="kw">let </span>application_keys = <span class="prelude-val">None</span>;
         <span class="kw">let </span>evidence = <span class="prelude-val">Some</span>(Evidence {
@@ -484,14 +485,5 @@
     </span><span class="kw">pub fn </span>get_claims(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;ClaimsSet&gt; {
         get_claims_set_from_certificate_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>.eca_certificate).map_err(anyhow::Error::msg)
     }
-}
-
-<span class="doccomment">/// Extracts the bytes used to encode a CBOR object from a slice that might include unused bytes by
-/// deserializing and re-serializing the encoded CBOR object.
-</span><span class="kw">fn </span>cbor_encoded_bytes_to_vec(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>result = Vec::new();
-    <span class="kw">let </span>value: Value = from_reader(bytes).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-    into_writer(<span class="kw-2">&amp;</span>value, <span class="kw-2">&amp;mut </span>result).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(result)
 }
 </code></pre></div></section></main></body></html>

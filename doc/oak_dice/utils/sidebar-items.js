@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["cbor_encoded_bytes_to_vec"]};
