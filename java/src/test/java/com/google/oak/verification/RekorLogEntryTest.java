@@ -25,8 +25,7 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class RekorLogEntryTest {
-  private static final String LOG_ENTRY_PATH =
-      "oak_remote_attestation_verification/testdata/logentry.json";
+  private static final String LOG_ENTRY_PATH = "oak_attestation_verification/testdata/logentry.json";
 
   @Test
   public void testCreate() throws Exception {

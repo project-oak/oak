@@ -27,12 +27,9 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class LogEntryVerifierTest {
-  private static final String LOG_ENTRY_PATH =
-      "oak_remote_attestation_verification/testdata/logentry.json";
-  private static final String REKOR_PUBLIC_KEY_PATH =
-      "oak_remote_attestation_verification/testdata/rekor_public_key.pem";
-  private static final String ENDORSEMENT_PATH =
-      "oak_remote_attestation_verification/testdata/endorsement.json";
+  private static final String LOG_ENTRY_PATH = "oak_attestation_verification/testdata/logentry.json";
+  private static final String REKOR_PUBLIC_KEY_PATH = "oak_attestation_verification/testdata/rekor_public_key.pem";
+  private static final String ENDORSEMENT_PATH = "oak_attestation_verification/testdata/endorsement.json";
 
   private RekorLogEntry logEntry;
   private byte[] publicKeyBytes;
@@ -42,8 +39,7 @@ public class LogEntryVerifierTest {
   public void setUp() throws Exception {
     byte[] logEntryBytes = Files.readAllBytes(Path.of(LOG_ENTRY_PATH));
     logEntry = RekorLogEntry.createFromJson(logEntryBytes);
-    publicKeyBytes =
-        SignatureVerifier.convertPemToRaw(Files.readString(Path.of(REKOR_PUBLIC_KEY_PATH)));
+    publicKeyBytes = SignatureVerifier.convertPemToRaw(Files.readString(Path.of(REKOR_PUBLIC_KEY_PATH)));
     endorsementBytes = Files.readAllBytes(Path.of(ENDORSEMENT_PATH));
   }
 

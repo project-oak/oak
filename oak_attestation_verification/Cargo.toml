@@ -1,5 +1,5 @@
 [package]
-name = "oak_remote_attestation_verification"
+name = "oak_attestation_verification"
 version = "0.1.0"
 authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2021"
