@@ -1888,6 +1888,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-stream",
+ "async-trait",
  "bytes",
  "oak_crypto",
  "oak_grpc_utils",
@@ -2165,6 +2166,7 @@ name = "oak_functions_containers_app"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "micro_rpc",
  "oak_crypto",
  "oak_functions_service",

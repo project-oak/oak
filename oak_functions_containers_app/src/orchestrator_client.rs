@@ -13,8 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::proto::oak::containers::orchestrator_client::OrchestratorClient as GrpcOrchestratorClient;
+use crate::proto::oak::containers::{
+    orchestrator_client::OrchestratorClient as GrpcOrchestratorClient, GetCryptoContextRequest,
+};
 use anyhow::Context;
+use async_trait::async_trait;
+use oak_crypto::{
+    encryptor::AsyncRecipientContextGenerator, hpke::RecipientContext,
+    proto::oak::crypto::v1::CryptoContext,
+};
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
 
@@ -35,6 +42,7 @@ pub struct OrchestratorClient {
     inner: GrpcOrchestratorClient<tonic::transport::channel::Channel>,
 }
 
+// TODO(#4478): Reuse Orchestrator client in all Oak Containers examples.
 impl OrchestratorClient {
     pub async fn create() -> Result<Self, Box<dyn std::error::Error>> {
         let inner: GrpcOrchestratorClient<tonic::transport::channel::Channel> = {
@@ -61,8 +69,50 @@ impl OrchestratorClient {
         Ok(config)
     }
 
+    pub async fn get_crypto_context(
+        &self,
+        serialized_encapsulated_public_key: &[u8],
+    ) -> Result<CryptoContext, Box<dyn std::error::Error>> {
+        let context = self
+            .inner
+            // TODO(#4477): Remove unnecessary copies of the Orchestrator client.
+            .clone()
+            .get_crypto_context(GetCryptoContextRequest {
+                serialized_encapsulated_public_key: serialized_encapsulated_public_key.to_vec(),
+            })
+            .await?
+            .into_inner()
+            // Crypto context.
+            .context
+            .context("crypto context wasn't provided")?;
+        Ok(context)
+    }
+
     pub async fn notify_app_ready(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         self.inner.notify_app_ready(tonic::Request::new(())).await?;
         Ok(())
+    }
+}
+
+#[async_trait]
+impl AsyncRecipientContextGenerator for OrchestratorClient {
+    async fn generate_recipient_context(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<RecipientContext> {
+        let serialized_crypto_context = self
+            .get_crypto_context(encapsulated_public_key)
+            .await
+            .map_err(|error| {
+                tonic::Status::internal(format!(
+                    "couldn't get crypto context from the Orchestrator: {:?}",
+                    error
+                ))
+            })?;
+        let crypto_context =
+            RecipientContext::deserialize(serialized_crypto_context).map_err(|error| {
+                tonic::Status::internal(format!("couldn't deserialize crypto context: {:?}", error))
+            })?;
+        Ok(crypto_context)
     }
 }
