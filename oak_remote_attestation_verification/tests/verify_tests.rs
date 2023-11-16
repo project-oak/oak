@@ -29,5 +29,5 @@ fn verify_fails_with_empty_args() {
 
     let r = verify(&evidence, &endorsements, &reference_values);
 
-    assert!(r.status == Status::GenericFailure as i32);
+    assert!(Status::from_i32(r.status) == Some(Status::GenericFailure));
 }

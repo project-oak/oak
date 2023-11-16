@@ -30,7 +30,7 @@ pub fn looks_like_pem(maybe_pem: &str) -> bool {
     p.starts_with(PEM_HEADER) && p.ends_with(PEM_FOOTER)
 }
 
-/// Converts a pem key to raw. Will panic if it does not like like pem.
+/// Converts a PEM key to raw. Will panic if it does not look like PEM.
 pub fn convert_pem_to_raw(public_key_pem: &str) -> anyhow::Result<Vec<u8>> {
     let stripped = public_key_pem
         .trim()
@@ -43,6 +43,7 @@ pub fn convert_pem_to_raw(public_key_pem: &str) -> anyhow::Result<Vec<u8>> {
     Ok(BASE64_STANDARD.decode(remove_newlines)?)
 }
 
+/// Converts a raw public key to PEM format.
 pub fn convert_raw_to_pem(public_key: &[u8]) -> String {
     let mut pem = String::from(PEM_HEADER);
     for (i, c) in BASE64_STANDARD.encode(public_key).chars().enumerate() {
