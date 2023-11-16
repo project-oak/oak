@@ -39,7 +39,7 @@ pub mod logger;
 pub mod lookup;
 pub mod wasm;
 
-use alloc::{format, string::ToString, sync::Arc, vec, vec::Vec};
+use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 use instance::OakFunctionsInstance;
 use oak_core::sync::OnceCell;
 use oak_crypto::encryptor::EncryptionKeyProvider;
@@ -147,9 +147,8 @@ impl OakFunctions for OakFunctionsService {
         .invoke(&encrypted_request)
         .map(|encrypted_response| {
             InvokeResponse {
-                // TODO(#4037): Remove once explicit crypto protos are implemented.
-                body: vec![],
                 encrypted_response: Some(encrypted_response),
+                ..Default::default()
             }
         })
         .map_err(|err| {
