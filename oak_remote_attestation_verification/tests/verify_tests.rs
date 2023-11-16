@@ -14,8 +14,10 @@
 // limitations under the License.
 //
 
-use crate::{
-    proto::oak::attestation::v1::{Endorsements, Evidence, ReferenceValues},
+use oak_remote_attestation_verification::{
+    proto::oak::attestation::v1::{
+        attestation_results::Status, Endorsements, Evidence, ReferenceValues,
+    },
     verify::verify,
 };
 
@@ -27,5 +29,5 @@ fn verify_fails_with_empty_args() {
 
     let r = verify(&evidence, &endorsements, &reference_values);
 
-    assert!(r.is_err());
+    assert!(r.status == Status::GenericFailure as i32);
 }

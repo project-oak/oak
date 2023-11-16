@@ -26,6 +26,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "{}proto/attestation/reference_value.proto",
                 env!("WORKSPACE_ROOT")
             ),
+            &format!(
+                "{}proto/attestation/verification.proto",
+                env!("WORKSPACE_ROOT")
+            ),
         ],
         &[env!("WORKSPACE_ROOT")],
         Default::default(),

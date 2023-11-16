@@ -16,14 +16,35 @@
 
 //! Provides top-level verification based on evidence, endorsments and reference values.
 
+use crate::alloc::string::ToString;
+
 use crate::proto::oak::attestation::v1::{
-    endorsements, reference_values, CbEndorsements, CbReferenceValues, Endorsements, Evidence,
-    OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+    attestation_results::Status, endorsements, reference_values, AttestationResults,
+    CbEndorsements, CbReferenceValues, Endorsements, Evidence, OakContainersEndorsements,
+    OakContainersReferenceValues, OakRestrictedKernelEndorsements,
     OakRestrictedKernelReferenceValues, ReferenceValues,
 };
 
 /// Verifies entire setup by forwarding to individual setup types.
 pub fn verify(
+    evidence: &Evidence,
+    endorsements: &Endorsements,
+    reference_values: &ReferenceValues,
+) -> AttestationResults {
+    match verify_internal(evidence, endorsements, reference_values).err() {
+        Some(_err) => AttestationResults {
+            status: Status::GenericFailure.into(),
+            reason: "".to_string(), // TODO: Use err here
+        },
+        None => AttestationResults {
+            status: Status::Success.into(),
+            reason: "".to_string(),
+        },
+    }
+}
+
+/// Same as verify(), but with Rust-internal return value.
+pub fn verify_internal(
     evidence: &Evidence,
     endorsements: &Endorsements,
     reference_values: &ReferenceValues,
@@ -53,7 +74,7 @@ pub fn verify(
 }
 
 fn verify_certificate_chain(_evidence: &Evidence) -> anyhow::Result<()> {
-    Ok(())
+    anyhow::bail!("Needs implementation")
 }
 
 fn verify_oak_restricted_kernel(
@@ -61,7 +82,7 @@ fn verify_oak_restricted_kernel(
     _endorsements: &OakRestrictedKernelEndorsements,
     _reference_values: &OakRestrictedKernelReferenceValues,
 ) -> anyhow::Result<()> {
-    Ok(())
+    anyhow::bail!("Needs implementation")
 }
 
 fn verify_oak_containers(
@@ -69,7 +90,7 @@ fn verify_oak_containers(
     _endorsements: &OakContainersEndorsements,
     _reference_values: &OakContainersReferenceValues,
 ) -> anyhow::Result<()> {
-    Ok(())
+    anyhow::bail!("Needs implementation")
 }
 
 fn verify_cb(
@@ -77,5 +98,5 @@ fn verify_cb(
     _endorsements: &CbEndorsements,
     _reference_values: &CbReferenceValues,
 ) -> anyhow::Result<()> {
-    todo!()
+    anyhow::bail!("Needs implementation")
 }

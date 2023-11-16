@@ -31,10 +31,5 @@ pub mod proto {
 
 pub mod endorsement;
 pub mod rekor;
+pub mod util;
 pub mod verify;
-
-#[cfg(test)]
-mod endorsement_tests;
-
-#[cfg(test)]
-mod verify_tests;
