@@ -20,11 +20,13 @@ arrayvec = { version = "*", default-features = false }
 atomic_refcell = "*"
 bitflags = "*"
 bitvec = { version = "*", default-features = false }
+coset = { version = "*", default-features = false }
 goblin = { version = "*", default-features = false, features = [
   "elf32",
   "elf64",
   "endian_fd",
 ] }
+hex = { version = "*", default-features = false, features = ["alloc"] }
 hkdf = "*"
 linked_list_allocator = { version = "*", features = ["alloc_ref"] }
 log = "*"
@@ -37,6 +39,7 @@ oak_linux_boot_params = { workspace = true }
 oak_restricted_kernel_interface = { workspace = true }
 rust-hypervisor-firmware-virtio = { path = "../third_party/rust-hypervisor-firmware-virtio" }
 oak_sev_guest = { workspace = true, features = ["rust-crypto"] }
+p256 = { version = "*", default-features = false, features = ["ecdsa"] }
 self_cell = "*"
 sev_serial = { workspace = true }
 sha2 = { version = "*", default-features = false }

@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +14,20 @@
 // limitations under the License.
 //
 
-fn main() {
-    micro_rpc_build::compile(
-        &[format!(
-            "{}proto/micro_rpc/messages.proto",
-            env!("WORKSPACE_ROOT")
-        )],
-        &[env!("WORKSPACE_ROOT")],
-        Default::default(),
-    );
+use oak_remote_attestation_verification::{
+    proto::oak::attestation::v1::{
+        attestation_results::Status, Endorsements, Evidence, ReferenceValues,
+    },
+    verifier::verify,
+};
+
+#[test]
+fn verify_fails_with_empty_args() {
+    let evidence = Evidence::default();
+    let endorsements = Endorsements::default();
+    let reference_values = ReferenceValues::default();
+
+    let r = verify(&evidence, &endorsements, &reference_values);
+
+    assert!(Status::from_i32(r.status) == Some(Status::GenericFailure));
 }

@@ -18,8 +18,18 @@
 
 extern crate alloc;
 
-pub mod rekor;
-pub mod verifier;
+pub mod proto {
+    pub mod oak {
+        tonic::include_proto!("oak");
+        pub mod attestation {
+            pub mod v1 {
+                tonic::include_proto!("oak.attestation.v1");
+            }
+        }
+    }
+}
 
-#[cfg(test)]
-mod tests;
+pub mod endorsement;
+pub mod rekor;
+pub mod util;
+pub mod verifier;

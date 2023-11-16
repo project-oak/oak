@@ -14,15 +14,21 @@
 // limitations under the License.
 //
 
-use crate::{rekor::*, verifier::*};
+extern crate alloc;
+
 use alloc::vec::Vec;
 use std::fs;
 
-use crate::verifier::{convert_pem_to_raw, convert_raw_to_pem, verify_binary_endorsement};
+use oak_remote_attestation_verification::{
+    endorsement::{
+        verify_binary_endorsement, verify_endorsement_statement, verify_endorser_public_key,
+    },
+    rekor::{verify_rekor_log_entry, verify_rekor_signature},
+    util::convert_pem_to_raw,
+};
 
 const BINARY_DIGEST: &str = "39051983bbb600bbfb91bd22ee4c976420f8f0c6a895fd083dcb0d153ddd5fd6";
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
-const ENDORSEMENT_SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
 
 // Public key fetched from Google Cloud KMS, associated with the signing key that was used for
 // signing the endorsement statement.
@@ -48,18 +54,13 @@ const NOW_UTC_MILLIS: i64 = 1698829200000;
 
 struct TestData {
     endorsement: Vec<u8>,
-    endorsement_signature: Vec<u8>,
     log_entry: Vec<u8>,
-    endorser_public_key_pem: String,
-    rekor_public_key_pem: String,
     endorser_public_key: Vec<u8>,
     rekor_public_key: Vec<u8>,
 }
 
 fn load_testdata() -> TestData {
     let endorsement = fs::read(ENDORSEMENT_PATH).expect("couldn't read endorsement");
-    let endorsement_signature =
-        fs::read(ENDORSEMENT_SIGNATURE_PATH).expect("couldn't read endorsement");
     let log_entry = fs::read(LOG_ENTRY_PATH).expect("couldn't read log entry");
     let endorser_public_key_pem =
         fs::read_to_string(ENDORSER_PUBLIC_KEY_PATH).expect("couldn't read endorser public key");
@@ -73,73 +74,10 @@ fn load_testdata() -> TestData {
 
     TestData {
         endorsement,
-        endorsement_signature,
         log_entry,
-        endorser_public_key_pem,
-        rekor_public_key_pem,
         endorser_public_key,
         rekor_public_key,
     }
-}
-
-#[test]
-fn test_looks_like_pem() {
-    let testdata = load_testdata();
-    assert!(looks_like_pem(&testdata.endorser_public_key_pem));
-    assert!(looks_like_pem(&testdata.rekor_public_key_pem));
-    assert!(!looks_like_pem("-----BEGIN PUBLIC KEY-----\n"));
-    assert!(!looks_like_pem("\n-----END PUBLIC KEY-----\n"));
-    assert!(!looks_like_pem("whatever"));
-}
-
-#[test]
-fn test_convert_from_pem() {
-    let testdata = load_testdata();
-    let key = pem_to_verifying_key(&testdata.rekor_public_key_pem);
-    assert!(key.is_ok());
-}
-
-#[test]
-fn test_convert_from_raw() {
-    let testdata = load_testdata();
-    let key = raw_to_verifying_key(&testdata.rekor_public_key);
-    assert!(key.is_ok());
-}
-
-#[test]
-fn test_convert_inverse_left() {
-    let testdata = load_testdata();
-    let pem = convert_raw_to_pem(&testdata.rekor_public_key);
-    let actual = convert_pem_to_raw(&pem).expect("could not convert key");
-    assert!(
-        equal_keys(&testdata.rekor_public_key, &actual).expect("could not compare keys"),
-        "{:?}",
-        pem
-    );
-}
-
-#[test]
-fn test_convert_inverse_right() {
-    let testdata = load_testdata();
-    let raw = convert_pem_to_raw(&testdata.rekor_public_key_pem).expect("could not convert key");
-    let actual = convert_raw_to_pem(&raw);
-    assert!(
-        actual.eq(&testdata.rekor_public_key_pem),
-        "expected: {:?} actual: {:?}",
-        &testdata.rekor_public_key_pem,
-        actual
-    );
-}
-
-#[test]
-fn test_verify_signature() {
-    let testdata = load_testdata();
-    let result = verify_signature(
-        &testdata.endorsement_signature,
-        &testdata.endorsement,
-        &testdata.endorser_public_key,
-    );
-    assert!(result.is_ok());
 }
 
 #[test]

@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +14,26 @@
 // limitations under the License.
 //
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     micro_rpc_build::compile(
-        &[format!(
-            "{}proto/micro_rpc/messages.proto",
-            env!("WORKSPACE_ROOT")
-        )],
+        &[
+            &format!(
+                "{}proto/attestation/endorsement.proto",
+                env!("WORKSPACE_ROOT")
+            ),
+            &format!("{}proto/attestation/evidence.proto", env!("WORKSPACE_ROOT")),
+            &format!(
+                "{}proto/attestation/reference_value.proto",
+                env!("WORKSPACE_ROOT")
+            ),
+            &format!(
+                "{}proto/attestation/verification.proto",
+                env!("WORKSPACE_ROOT")
+            ),
+        ],
         &[env!("WORKSPACE_ROOT")],
         Default::default(),
     );
+
+    Ok(())
 }
