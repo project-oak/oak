@@ -42,14 +42,14 @@ java_proto_library(
     deps = [":messages_proto"],
 )
 
-proto_library(
-    name = "service_streaming_proto",
-    srcs = ["service_streaming.proto"],
+java_lite_proto_library(
+    name = "messages_java_proto_lite",
     deps = [":messages_proto"],
 )
 
-java_lite_proto_library(
-    name = "messages_java_proto_lite",
+proto_library(
+    name = "service_streaming_proto",
+    srcs = ["service_streaming.proto"],
     deps = [":messages_proto"],
 )
 
