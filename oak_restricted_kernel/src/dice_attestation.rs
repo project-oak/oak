@@ -15,10 +15,9 @@
 //
 
 use coset::CborSerializable;
+use oak_crypto::hpke::Serializable;
 
-fn certificate_to_owned_slice(
-    cert: coset::CoseSign1,
-) -> [u8; oak_dice::evidence::CERTIFICATE_SIZE] {
+fn certificate_to_byte_array(cert: coset::CoseSign1) -> [u8; oak_dice::evidence::CERTIFICATE_SIZE] {
     let vec = cert.to_vec().expect("couldn't serialize certificate");
     let mut slice = [0; oak_dice::evidence::CERTIFICATE_SIZE];
     slice[..vec.len()].copy_from_slice(&vec);
@@ -66,29 +65,23 @@ pub fn generate_dice_data(
             )
             .expect("couldn't generate signing certificate");
 
-        let (application_encryption_private_key, application_encryption_public_key) = {
-            let application_encryption_key_provider =
-                oak_crypto::encryptor::EncryptionKeyProvider::new();
-            (
-                application_encryption_key_provider.get_serialized_private_key(),
-                application_encryption_key_provider.get_serialized_public_key(),
-            )
-        };
+        let (application_encryption_private_key, application_encryption_public_key) =
+            oak_crypto::hpke::gen_kem_keypair();
 
         let application_encryption_public_key_certificate =
             oak_dice::cert::generate_kem_certificate(
                 &kernel_signing_key,
                 kernel_cert_issuer,
-                &application_encryption_public_key,
+                application_encryption_public_key.to_bytes().as_slice(),
                 additional_claims,
             )
             .expect("couldn't generate encryption public certificate");
 
         let application_keys = oak_dice::evidence::ApplicationKeys {
-            signing_public_key_certificate: certificate_to_owned_slice(
+            signing_public_key_certificate: certificate_to_byte_array(
                 application_signing_public_key_certificate,
             ),
-            encryption_public_key_certificate: certificate_to_owned_slice(
+            encryption_public_key_certificate: certificate_to_byte_array(
                 application_encryption_public_key_certificate,
             ),
         };
@@ -103,8 +96,8 @@ pub fn generate_dice_data(
 
             let encryption_private_key = {
                 let mut slice = [0; oak_dice::evidence::PRIVATE_KEY_SIZE];
-                slice[..application_encryption_private_key.len()]
-                    .copy_from_slice(&application_encryption_private_key);
+                slice[..application_encryption_private_key.to_bytes().len()]
+                    .copy_from_slice(&application_encryption_private_key.to_bytes());
                 slice
             };
 

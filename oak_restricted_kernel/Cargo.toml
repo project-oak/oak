@@ -34,6 +34,7 @@ libm = "*"
 oak_channel = { workspace = true }
 oak_core = { workspace = true }
 oak_crypto = { workspace = true }
+hpke = { version = "*", default-features = false, features = ["alloc"] }
 oak_dice = { workspace = true }
 oak_simple_io = { workspace = true, optional = true }
 oak_linux_boot_params = { workspace = true }

@@ -757,6 +757,7 @@ dependencies = [
  "goblin",
  "hex",
  "hkdf",
+ "hpke",
  "libm",
  "linked_list_allocator",
  "log",

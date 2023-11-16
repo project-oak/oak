@@ -23,9 +23,10 @@ use crate::{
 };
 use alloc::vec::Vec;
 use anyhow::{anyhow, Context};
+pub use hpke::Serializable;
 use hpke::{
     aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Deserializable, Kem as KemTrait,
-    OpModeR, OpModeS, Serializable,
+    OpModeR, OpModeS,
 };
 use rand_core::OsRng;
 
@@ -40,15 +41,19 @@ pub(crate) type EncappedKey = <Kem as KemTrait>::EncappedKey;
 /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
 const MAX_SEQUENCE_NUMBER: u128 = (1 << (8 * AEAD_NONCE_SIZE_BYTES)) - 1;
 
-pub(crate) struct KeyPair {
+pub fn gen_kem_keypair() -> (PrivateKey, PublicKey) {
+    Kem::gen_keypair(&mut OsRng)
+}
+
+pub struct KeyPair {
     pub(crate) private_key: PrivateKey,
     pub(crate) public_key: PublicKey,
 }
 
 impl KeyPair {
     /// Randomly generates a key pair.
-    pub(crate) fn generate() -> Self {
-        let (private_key, public_key) = Kem::gen_keypair(&mut OsRng);
+    pub fn generate() -> Self {
+        let (private_key, public_key) = gen_kem_keypair();
         Self {
             private_key,
             public_key,
@@ -59,12 +64,6 @@ impl KeyPair {
     /// <https://secg.org/sec1-v2.pdf>
     pub fn get_serialized_public_key(&self) -> Vec<u8> {
         self.public_key.to_bytes().to_vec()
-    }
-
-    /// Returns a NIST P-256 SEC1 encoded point private key.
-    /// <https://secg.org/sec1-v2.pdf>
-    pub fn get_serialized_private_key(&self) -> Vec<u8> {
-        self.private_key.to_bytes().to_vec()
     }
 }
 /// Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
