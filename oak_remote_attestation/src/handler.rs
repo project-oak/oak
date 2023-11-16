@@ -86,25 +86,28 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
 /// Wraps a closure to an underlying function with request encryption and response decryption logic,
 /// based on the provided encryption key.
 /// [`AsyncEncryptionHandler`] can be used when an [`AsyncRecipientContextGenerator`] is needed.
-pub struct AsyncEncryptionHandler<H: FnOnce(Vec<u8>) -> Vec<u8>> {
+pub struct AsyncEncryptionHandler<G, H>
+where
+    G: AsyncRecipientContextGenerator + Send + Sync,
+    H: FnOnce(Vec<u8>) -> Vec<u8>,
+{
     // TODO(#3442): Use attester to attest to the public key.
-    recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator + Send + Sync>,
+    recipient_context_generator: Arc<G>,
     request_handler: H,
 }
 
-impl<H: FnOnce(Vec<u8>) -> Vec<u8>> AsyncEncryptionHandler<H> {
-    pub fn create(
-        recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator + Send + Sync>,
-        request_handler: H,
-    ) -> Self {
+impl<G, H> AsyncEncryptionHandler<G, H>
+where
+    G: AsyncRecipientContextGenerator + Send + Sync,
+    H: FnOnce(Vec<u8>) -> Vec<u8>,
+{
+    pub fn create(recipient_context_generator: Arc<G>, request_handler: H) -> Self {
         Self {
             recipient_context_generator,
             request_handler,
         }
     }
-}
 
-impl<H: FnOnce(Vec<u8>) -> Vec<u8>> AsyncEncryptionHandler<H> {
     pub async fn invoke(
         self,
         encrypted_request: &EncryptedRequest,
