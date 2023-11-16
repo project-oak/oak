@@ -66,11 +66,11 @@ message PublicKeyInfo {
 }
 
 message InvokeRequest {
-  oak.crypto.v1.EncryptedRequest encrypted_request = 1;
+  oak.crypto.v1.EncryptedRequest encrypted_request = 2;
 }
 
 message InvokeResponse {
-  oak.crypto.v1.EncryptedResponse encrypted_response = 1;
+  oak.crypto.v1.EncryptedResponse encrypted_response = 2;
 }
 
 message LookupDataEntry {
