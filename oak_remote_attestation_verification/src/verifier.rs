@@ -14,139 +14,89 @@
 // limitations under the License.
 //
 
-use alloc::{string::String, vec::Vec};
+//! Provides top-level verification based on evidence, endorsments and reference values.
 
-use crate::rekor::{equal_keys, get_rekor_log_entry_body, verify_rekor_log_entry};
-use anyhow::Context;
-use base64::{prelude::BASE64_STANDARD, Engine as _};
-use oak_transparency_claims::claims::{
-    parse_endorsement_statement, validate_endorsement, verify_validity_duration,
+use crate::alloc::string::ToString;
+
+use crate::proto::oak::attestation::v1::{
+    attestation_results::Status, endorsements, reference_values, AttestationResults,
+    CbEndorsements, CbReferenceValues, Endorsements, Evidence, OakContainersEndorsements,
+    OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+    OakRestrictedKernelReferenceValues, ReferenceValues,
 };
 
-/// Reference values used by the verifier to appraise the attestation evidence.
-/// <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
-pub struct ReferenceValue {
-    pub binary_hash: Vec<u8>,
+/// Verifies entire setup by forwarding to individual setup types.
+pub fn verify(
+    evidence: &Evidence,
+    endorsements: &Endorsements,
+    reference_values: &ReferenceValues,
+) -> AttestationResults {
+    match verify_internal(evidence, endorsements, reference_values).err() {
+        Some(err) => AttestationResults {
+            status: Status::GenericFailure.into(),
+            reason: err.to_string(),
+        },
+        None => AttestationResults {
+            status: Status::Success.into(),
+            reason: "".to_string(),
+        },
+    }
 }
 
-const PEM_HEADER: &str = "-----BEGIN PUBLIC KEY-----";
-const PEM_FOOTER: &str = "-----END PUBLIC KEY-----";
+/// Same as verify(), but with Rust-internal return value.
+pub fn verify_internal(
+    evidence: &Evidence,
+    endorsements: &Endorsements,
+    reference_values: &ReferenceValues,
+) -> anyhow::Result<()> {
+    verify_certificate_chain(evidence)?;
 
-/// Makes a plausible guess whether the public key is in PEM format.
-pub fn looks_like_pem(maybe_pem: &str) -> bool {
-    let p = maybe_pem.trim();
-    p.starts_with(PEM_HEADER) && p.ends_with(PEM_FOOTER)
-}
-
-/// Converts a pem key to raw. Will panic if it does not like like pem.
-pub fn convert_pem_to_raw(public_key_pem: &str) -> anyhow::Result<Vec<u8>> {
-    let stripped = public_key_pem
-        .trim()
-        .strip_prefix(PEM_HEADER)
-        .expect("could not find expected header")
-        .strip_suffix(PEM_FOOTER)
-        .expect("could not find expected footer");
-    let remove_newlines = stripped.replace('\n', "");
-
-    Ok(BASE64_STANDARD.decode(remove_newlines)?)
-}
-
-pub fn convert_raw_to_pem(public_key: &[u8]) -> String {
-    let mut pem = String::from(PEM_HEADER);
-    for (i, c) in BASE64_STANDARD.encode(public_key).chars().enumerate() {
-        if i % 64 == 0 {
-            pem.push('\n');
+    match (
+        endorsements.r#type.as_ref(),
+        reference_values.r#type.as_ref(),
+    ) {
+        (
+            Some(endorsements::Type::OakRestrictedKernel(ends)),
+            Some(reference_values::Type::OakRestrictedKernel(rvs)),
+        ) => verify_oak_restricted_kernel(evidence, ends, rvs),
+        (
+            Some(endorsements::Type::OakContainers(ends)),
+            Some(reference_values::Type::OakContainers(rvs)),
+        ) => verify_oak_containers(evidence, ends, rvs),
+        (Some(endorsements::Type::Cb(ends)), Some(reference_values::Type::Cb(rvs))) => {
+            verify_cb(evidence, ends, rvs)
         }
-        pem.push(c);
+        (None, None) => anyhow::bail!("Endorsements and reference values both empty"),
+        (None, Some(_)) => anyhow::bail!("Endorsements are empty"),
+        (Some(_), None) => anyhow::bail!("Reference values are empty"),
+        (Some(_), Some(_)) => anyhow::bail!("Mismatch between endorsements and reference values"),
     }
-    pem.push('\n');
-    pem.push_str(PEM_FOOTER);
-    pem.push('\n');
-    pem
 }
 
-/// Verifies the binary endorsement for a given measurement.
-pub fn verify_binary_endorsement(
-    now_utc_millis: i64,
-    endorsement: &[u8],
-    log_entry: &[u8],
-    binary_digest: &[u8],
-    binary_digest_alg: &str,
-    endorser_public_key: &[u8],
-    rekor_public_key: &[u8],
-) -> anyhow::Result<()> {
-    verify_endorsement_statement(
-        now_utc_millis,
-        endorsement,
-        binary_digest,
-        binary_digest_alg,
-    )?;
-    verify_rekor_log_entry(log_entry, rekor_public_key, endorsement)?;
-    verify_endorser_public_key(log_entry, endorser_public_key)?;
-
-    Ok(())
+fn verify_certificate_chain(_evidence: &Evidence) -> anyhow::Result<()> {
+    anyhow::bail!("Needs implementation")
 }
 
-/// Verifies endorsement against the given reference values.
-pub fn verify_endorsement_statement(
-    now_utc_millis: i64,
-    endorsement: &[u8],
-    binary_digest: &[u8],
-    binary_digest_alg: &str,
+fn verify_oak_restricted_kernel(
+    _evidence: &Evidence,
+    _endorsements: &OakRestrictedKernelEndorsements,
+    _reference_values: &OakRestrictedKernelReferenceValues,
 ) -> anyhow::Result<()> {
-    let claim = parse_endorsement_statement(endorsement)?;
-    if let Err(err) = validate_endorsement(&claim) {
-        anyhow::bail!("validating endorsement: {err:?}");
-    }
-    verify_validity_duration(now_utc_millis, &claim)?;
-    if claim.subject.len() != 1 {
-        anyhow::bail!(
-            "expected 1 subject in the endorsement, found {}",
-            claim.subject.len()
-        );
-    }
-
-    let binary_digest = core::str::from_utf8(binary_digest)?;
-    match claim.subject[0].digest.get(binary_digest_alg) {
-        Some(found_digest) => {
-            if found_digest != binary_digest {
-                anyhow::bail!(
-                    "unexpected binary {} digest: expected {}, got {}",
-                    binary_digest_alg,
-                    binary_digest,
-                    found_digest
-                )
-            }
-        }
-        None => anyhow::bail!("missing {binary_digest_alg} digest in the endorsement statement"),
-    }
-
-    Ok(())
+    anyhow::bail!("Needs implementation")
 }
 
-/// Verifies that the endorser public key coincides with the one contained in the attestation.
-pub fn verify_endorser_public_key(
-    log_entry: &[u8],
-    endorser_public_key: &[u8],
+fn verify_oak_containers(
+    _evidence: &Evidence,
+    _endorsements: &OakContainersEndorsements,
+    _reference_values: &OakContainersReferenceValues,
 ) -> anyhow::Result<()> {
-    // TODO(#4231): Currently, we only check that the public keys are the same. Should be updated to
-    // support verifying rolling keys.
+    anyhow::bail!("Needs implementation")
+}
 
-    let body = get_rekor_log_entry_body(log_entry)?;
-
-    let actual_pem_vec = BASE64_STANDARD
-        .decode(body.spec.signature.public_key.content)
-        .context("couldn't base64-decode public key bytes from server")?;
-    let actual_pem = core::str::from_utf8(&actual_pem_vec)?;
-    let actual = convert_pem_to_raw(actual_pem)?;
-
-    if !equal_keys(endorser_public_key, &actual)? {
-        anyhow::bail!(
-            "endorser public key mismatch: expected {:?} found {:?}",
-            endorser_public_key,
-            actual,
-        )
-    }
-
-    Ok(())
+fn verify_cb(
+    _evidence: &Evidence,
+    _endorsements: &CbEndorsements,
+    _reference_values: &CbReferenceValues,
+) -> anyhow::Result<()> {
+    anyhow::bail!("Needs implementation")
 }

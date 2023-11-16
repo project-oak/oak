@@ -2402,10 +2402,12 @@ dependencies = [
  "micro_rpc_build",
  "oak_transparency_claims",
  "p256",
+ "prost",
  "serde",
  "serde_jcs",
  "serde_json",
  "sha2",
+ "tonic",
 ]
 
 [[package]]
