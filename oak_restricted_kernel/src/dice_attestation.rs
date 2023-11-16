@@ -15,24 +15,13 @@
 //
 
 use coset::CborSerializable;
-use oak_dice::evidence::ApplicationKeys;
-use zerocopy::FromZeroes;
 
 fn certificate_to_owned_slice(
-    cert: coset::sign::CoseSign1,
+    cert: coset::CoseSign1,
 ) -> [u8; oak_dice::evidence::CERTIFICATE_SIZE] {
     let vec = cert.to_vec().expect("couldn't serialize certificate");
-    let slice = [u8; oak_dice::evidence::CERTIFICATE_SIZE];
+    let mut slice = [0; oak_dice::evidence::CERTIFICATE_SIZE];
     slice[..vec.len()].copy_from_slice(&vec);
-    slice
-}
-
-fn private_key_to_owned_slice(
-    key: SigningKey<NistP256>,
-) -> [u8; oak_dice::evidence::PRIVATE_KEY_SIZE] {
-    let bytes = key.to_bytes();
-    let slice = [u8; oak_dice::evidence::PRIVATE_KEY_SIZE];
-    slice[..bytes.as_slice().len()].copy_from_slice(bytes.as_slice());
     slice
 }
 
@@ -45,8 +34,12 @@ pub fn generate_dice_data(
         oak_dice::evidence::ApplicationKeys,
         oak_dice::evidence::ApplicationPrivateKeys,
     ) = {
-        let (application_private_signing_key, application_public_verifying_key) =
-            oak_dice::cert::generate_ecdsa_key_pair();
+        let kernel_signing_key = p256::ecdsa::SigningKey::from_slice(
+            &stage0_dice_data
+                .layer_1_certificate_authority
+                .eca_private_key[..oak_dice::evidence::P256_PRIVATE_KEY_SIZE],
+        )
+        .expect("failed to parse the layer1 ECDSA private key bytes");
 
         let kernel_cert_issuer = stage0_dice_data
             .layer_1_evidence
@@ -55,6 +48,9 @@ pub fn generate_dice_data(
             // The kernel was the subject of layer 1.
             .subject
             .expect("expected to find the subject");
+
+        let (application_private_signing_key, application_public_verifying_key) =
+            oak_dice::cert::generate_ecdsa_key_pair();
 
         let additional_claims = alloc::vec![(
             coset::cwt::ClaimName::PrivateUse(oak_dice::cert::LAYER_2_CODE_MEASUREMENT_ID),
@@ -97,9 +93,25 @@ pub fn generate_dice_data(
             ),
         };
 
-        let application_private_keys = oak_dice::evidence::ApplicationPrivateKeys {
-            signing_private_key: private_key_to_owned_slice(application_encryption_private_key),
-            encryption_private_key: private_key_to_owned_slice(application_private_signing_key),
+        let application_private_keys = {
+            let signing_private_key = {
+                let bytes = application_private_signing_key.to_bytes();
+                let mut slice = [0; oak_dice::evidence::PRIVATE_KEY_SIZE];
+                slice[..bytes.as_slice().len()].copy_from_slice(bytes.as_slice());
+                slice
+            };
+
+            let encryption_private_key = {
+                let mut slice = [0; oak_dice::evidence::PRIVATE_KEY_SIZE];
+                slice[..application_encryption_private_key.len()]
+                    .copy_from_slice(&application_encryption_private_key);
+                slice
+            };
+
+            oak_dice::evidence::ApplicationPrivateKeys {
+                encryption_private_key,
+                signing_private_key,
+            }
         };
 
         (application_keys, application_private_keys)
