@@ -53,9 +53,8 @@ fn it_should_not_handle_user_requests_before_initialization() {
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let request = InvokeRequest {
-        // TODO(#4037): Remove once explicit protos are used end-to-end.
-        body: vec![],
         encrypted_request: Some(EncryptedRequest::default()),
+        ..Default::default()
     };
     let result = client.handle_user_request(&request).into_ok();
 
@@ -96,9 +95,8 @@ fn it_should_handle_user_requests_after_initialization() {
 
     // Send invoke request.
     let invoke_request = InvokeRequest {
-        // TODO(#4037): Remove once explicit protos are used end-to-end.
-        body: vec![],
         encrypted_request: Some(encrypted_request),
+        ..Default::default()
     };
     let result = client.handle_user_request(&invoke_request).into_ok();
     assert!(result.is_ok());
@@ -160,9 +158,8 @@ async fn it_should_error_on_invalid_wasm_module() {
     // Send invoke request.
     let lookup_response = client
         .handle_user_request(&InvokeRequest {
-            // TODO(#4037): Remove once explicit protos are used end-to-end.
-            body: vec![],
             encrypted_request: Some(encrypted_request),
+            ..Default::default()
         })
         .expect("couldn't receive response");
     assert!(lookup_response.is_ok());
@@ -246,9 +243,8 @@ async fn it_should_support_lookup_data() {
     // Send invoke request.
     let lookup_response = client
         .handle_user_request(&InvokeRequest {
-            // TODO(#4037): Remove once explicit protos are used end-to-end.
-            body: vec![],
             encrypted_request: Some(encrypted_request),
+            ..Default::default()
         })
         .expect("couldn't receive response");
     assert!(lookup_response.is_ok());
@@ -317,9 +313,8 @@ async fn it_should_handle_wasm_panic() {
     // Send invoke request.
     let lookup_response = client
         .handle_user_request(&InvokeRequest {
-            // TODO(#4037): Remove once explicit protos are used end-to-end.
-            body: vec![],
             encrypted_request: Some(encrypted_request),
+            ..Default::default()
         })
         .expect("couldn't receive response");
     assert!(lookup_response.is_ok());
