@@ -2072,6 +2072,7 @@ name = "oak_dice"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.3.3",
+ "ciborium",
  "coset",
  "hex",
  "hkdf",
@@ -2419,7 +2420,9 @@ dependencies = [
  "atomic_refcell",
  "bitflags 2.3.3",
  "bitvec",
+ "coset",
  "goblin",
+ "hex",
  "hkdf",
  "libm",
  "linked_list_allocator",
@@ -2432,6 +2435,7 @@ dependencies = [
  "oak_sev_guest",
  "oak_simple_io",
  "oak_virtio",
+ "p256",
  "rust-hypervisor-firmware-virtio",
  "self_cell",
  "sev_serial",

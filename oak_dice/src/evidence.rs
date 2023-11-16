@@ -17,6 +17,7 @@
 //! C-like structs for representing DICE data in environments where we don't have protocol buffer
 //! support.
 
+use alloc::{format, string::String};
 use strum::{Display, FromRepr};
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
@@ -25,6 +26,9 @@ pub const REPORT_SIZE: usize = 2048;
 
 /// The maximum size of an ECDSA private key.
 pub const PRIVATE_KEY_SIZE: usize = 64;
+
+/// The actual size used when encoding a Nist P256 private key.
+pub const P256_PRIVATE_KEY_SIZE: usize = 32;
 
 /// The maximum size of a serialized COSE Key object representing an ECDSA public key.
 pub const PUBLIC_KEY_SIZE: usize = 256;
@@ -84,6 +88,14 @@ pub struct LayerEvidence {
     /// Serialized CWT certificate for the ECA private key owned by the corresponding layer. The
     /// certificate must include measurements of the layer that owns the private key.
     pub eca_certificate: [u8; CERTIFICATE_SIZE],
+}
+
+impl LayerEvidence {
+    pub fn claims(&self) -> Result<coset::cwt::ClaimsSet, String> {
+        let decoded = crate::utils::cbor_encoded_bytes_to_vec(&self.eca_certificate[..])?;
+        crate::cert::get_claims_set_from_certificate_bytes(&decoded)
+            .map_err(|err| format!("failed get claims: {:?}", err))
+    }
 }
 
 static_assertions::assert_eq_size!([u8; CERTIFICATE_SIZE], LayerEvidence);
@@ -176,8 +188,8 @@ static_assertions::assert_eq_size!([u8; 5392], Evidence);
 #[derive(AsBytes, FromZeroes, FromBytes)]
 #[repr(C)]
 pub struct RestrictedKernelDiceData {
-    evidence: Evidence,
-    application_private_keys: ApplicationPrivateKeys,
+    pub evidence: Evidence,
+    pub application_private_keys: ApplicationPrivateKeys,
 }
 
 static_assertions::assert_eq_size!([u8; 5520], RestrictedKernelDiceData);
