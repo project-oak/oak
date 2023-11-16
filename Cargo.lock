@@ -2072,6 +2072,7 @@ name = "oak_dice"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.3.3",
+ "ciborium",
  "coset",
  "hex",
  "hkdf",

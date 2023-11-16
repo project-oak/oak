@@ -17,6 +17,7 @@
 //! C-like structs for representing DICE data in environments where we don't have protocol buffer
 //! support.
 
+use alloc::{format, string::String};
 use strum::{Display, FromRepr};
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
@@ -87,6 +88,14 @@ pub struct LayerEvidence {
     /// Serialized CWT certificate for the ECA private key owned by the corresponding layer. The
     /// certificate must include measurements of the layer that owns the private key.
     pub eca_certificate: [u8; CERTIFICATE_SIZE],
+}
+
+impl LayerEvidence {
+    pub fn claims(&self) -> Result<coset::cwt::ClaimsSet, String> {
+        let decoded = crate::utils::cbor_encoded_bytes_to_vec(&self.eca_certificate[..])?;
+        crate::cert::get_claims_set_from_certificate_bytes(&decoded)
+            .map_err(|err| format!("failed get claims: {:?}", err))
+    }
 }
 
 static_assertions::assert_eq_size!([u8; CERTIFICATE_SIZE], LayerEvidence);
