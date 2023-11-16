@@ -32,9 +32,9 @@ pub fn verify(
     reference_values: &ReferenceValues,
 ) -> AttestationResults {
     match verify_internal(evidence, endorsements, reference_values).err() {
-        Some(_err) => AttestationResults {
+        Some(err) => AttestationResults {
             status: Status::GenericFailure.into(),
-            reason: "".to_string(), // TODO: Use err here
+            reason: err.to_string(),
         },
         None => AttestationResults {
             status: Status::Success.into(),
