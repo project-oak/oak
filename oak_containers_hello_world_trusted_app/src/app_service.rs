@@ -57,12 +57,13 @@ impl TrustedApplication for TrustedApplicationImplementation {
         let mut server_encryptor = AsyncServerEncryptor::new(&orchestrator_client);
 
         // Associated data is ignored.
-        let (name_bytes, _) = server_encryptor
-            .decrypt(&encrypted_request)
-            .await
-            .map_err(|error| {
-                tonic::Status::internal(format!("couldn't decrypt request: {:?}", error))
-            })?;
+        let (name_bytes, _) =
+            server_encryptor
+                .decrypt(&encrypted_request)
+                .await
+                .map_err(|error| {
+                    tonic::Status::internal(format!("couldn't decrypt request: {:?}", error))
+                })?;
 
         let name = String::from_utf8(name_bytes)
             .map_err(|error| tonic::Status::internal(format!("name is not UTF-8: {:?}", error)))?;

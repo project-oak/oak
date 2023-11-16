@@ -231,12 +231,14 @@ impl ServerEncryptor {
 // TODO(#4311): Merge `AsyncServerEncryptor` and `ServerEncryptor` once there is `async` support in
 // the Restricted Kernel.
 pub struct AsyncServerEncryptor<'a> {
-    recipient_context_generator: &'a(dyn AsyncRecipientContextGenerator + Send + Sync),
+    recipient_context_generator: &'a (dyn AsyncRecipientContextGenerator + Send + Sync),
     inner: Option<ServerEncryptor>,
 }
 
 impl<'a> AsyncServerEncryptor<'a> {
-    pub fn new(recipient_context_generator: &'a(dyn AsyncRecipientContextGenerator + Send + Sync)) -> Self {
+    pub fn new(
+        recipient_context_generator: &'a (dyn AsyncRecipientContextGenerator + Send + Sync),
+    ) -> Self {
         Self {
             recipient_context_generator,
             inner: None,
