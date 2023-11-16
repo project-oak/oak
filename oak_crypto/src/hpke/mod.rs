@@ -60,6 +60,12 @@ impl KeyPair {
     pub fn get_serialized_public_key(&self) -> Vec<u8> {
         self.public_key.to_bytes().to_vec()
     }
+
+    /// Returns a NIST P-256 SEC1 encoded point private key.
+    /// <https://secg.org/sec1-v2.pdf>
+    pub fn get_serialized_private_key(&self) -> Vec<u8> {
+        self.private_key.to_bytes().to_vec()
+    }
 }
 /// Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
 /// public key) and creating a sender context.
