@@ -75,7 +75,7 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
         let response = (self.request_handler)(request);
 
         // Encrypt and serialize response.
-        // The resulting decryptor for consequent requests is discarded because we don't expect
+        // The resulting decryptor for subsequent requests is discarded because we don't expect
         // another message from the stream.
         server_encryptor
             .encrypt(&response, EMPTY_ASSOCIATED_DATA)
@@ -85,7 +85,7 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
 
 /// Wraps a closure to an underlying function with request encryption and response decryption logic,
 /// based on the provided encryption key.
-/// `AsyncEncryptionHandler` can be used when the `AsyncRecipientContextGenerator` is needed.
+/// [`AsyncEncryptionHandler`] can be used when an [`AsyncRecipientContextGenerator`] is needed.
 pub struct AsyncEncryptionHandler<H: FnOnce(Vec<u8>) -> Vec<u8>> {
     // TODO(#3442): Use attester to attest to the public key.
     recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator + Send + Sync>,
@@ -114,7 +114,7 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> AsyncEncryptionHandler<H> {
             AsyncServerEncryptor::new(self.recipient_context_generator.as_ref());
 
         // Decrypt request.
-        let (request, _) = server_encryptor
+        let (request, _associated_data) = server_encryptor
             .decrypt(encrypted_request)
             .await
             .context("couldn't decrypt request")?;
