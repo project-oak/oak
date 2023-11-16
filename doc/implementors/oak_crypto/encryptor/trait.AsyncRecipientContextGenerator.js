@@ -1,0 +1,4 @@
+(function() {var implementors = {
+"oak_containers_hello_world_trusted_app":[["impl AsyncRecipientContextGenerator for <a class=\"struct\" href=\"oak_containers_hello_world_trusted_app/orchestrator_client/struct.OrchestratorClient.html\" title=\"struct oak_containers_hello_world_trusted_app::orchestrator_client::OrchestratorClient\">OrchestratorClient</a>"]],
+"oak_functions_containers_app":[["impl AsyncRecipientContextGenerator for <a class=\"struct\" href=\"oak_functions_containers_app/orchestrator_client/struct.OrchestratorClient.html\" title=\"struct oak_functions_containers_app::orchestrator_client::OrchestratorClient\">OrchestratorClient</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

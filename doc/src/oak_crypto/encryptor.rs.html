@@ -286,6 +286,12 @@
 <a href="#286" id="286">286</a>
 <a href="#287" id="287">287</a>
 <a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -518,13 +524,19 @@
 /// be multiple responses per request and multiple requests per response.
 </span><span class="comment">// TODO(#4311): Merge `AsyncServerEncryptor` and `ServerEncryptor` once there is `async` support in
 // the Restricted Kernel.
-</span><span class="kw">pub struct </span>AsyncServerEncryptor {
-    recipient_context_generator: Arc&lt;<span class="kw">dyn </span>AsyncRecipientContextGenerator&gt;,
+</span><span class="kw">pub struct </span>AsyncServerEncryptor&lt;<span class="lifetime">&#39;a</span>, G&gt;
+<span class="kw">where
+    </span>G: AsyncRecipientContextGenerator + Send + Sync,
+{
+    recipient_context_generator: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>G,
     inner: <span class="prelude-ty">Option</span>&lt;ServerEncryptor&gt;,
 }
 
-<span class="kw">impl </span>AsyncServerEncryptor {
-    <span class="kw">pub fn </span>new(recipient_context_generator: Arc&lt;<span class="kw">dyn </span>AsyncRecipientContextGenerator&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, G&gt; AsyncServerEncryptor&lt;<span class="lifetime">&#39;a</span>, G&gt;
+<span class="kw">where
+    </span>G: AsyncRecipientContextGenerator + Send + Sync,
+{
+    <span class="kw">pub fn </span>new(recipient_context_generator: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>G) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             recipient_context_generator,
             inner: <span class="prelude-val">None</span>,

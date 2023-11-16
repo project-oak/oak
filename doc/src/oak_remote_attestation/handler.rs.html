@@ -80,6 +80,59 @@
 <a href="#80" id="80">80</a>
 <a href="#81" id="81">81</a>
 <a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -99,7 +152,10 @@
 </span><span class="kw">use </span>alloc::{sync::Arc, vec::Vec};
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>oak_crypto::{
-    encryptor::{EncryptionKeyProvider, ServerEncryptor},
+    encryptor::{
+        AsyncRecipientContextGenerator, AsyncServerEncryptor, EncryptionKeyProvider,
+        ServerEncryptor,
+    },
     proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
 };
 
@@ -152,7 +208,57 @@
 
         <span class="comment">// Handle request.
         </span><span class="kw">let </span>response = (<span class="self">self</span>.request_handler)(request);
-        <span class="macro">log::info!</span>(<span class="string">&quot;plaintext response: {:?}&quot;</span>, response);
+
+        <span class="comment">// Encrypt and serialize response.
+        // The resulting decryptor for subsequent requests is discarded because we don&#39;t expect
+        // another message from the stream.
+        </span>server_encryptor
+            .encrypt(<span class="kw-2">&amp;</span>response, EMPTY_ASSOCIATED_DATA)
+            .context(<span class="string">&quot;couldn&#39;t encrypt response&quot;</span>)
+    }
+}
+
+<span class="doccomment">/// Wraps a closure to an underlying function with request encryption and response decryption logic,
+/// based on the provided encryption key.
+/// [`AsyncEncryptionHandler`] can be used when an [`AsyncRecipientContextGenerator`] is needed.
+</span><span class="kw">pub struct </span>AsyncEncryptionHandler&lt;G, H&gt;
+<span class="kw">where
+    </span>G: AsyncRecipientContextGenerator + Send + Sync,
+    H: FnOnce(Vec&lt;u8&gt;) -&gt; Vec&lt;u8&gt;,
+{
+    <span class="comment">// TODO(#3442): Use attester to attest to the public key.
+    </span>recipient_context_generator: Arc&lt;G&gt;,
+    request_handler: H,
+}
+
+<span class="kw">impl</span>&lt;G, H&gt; AsyncEncryptionHandler&lt;G, H&gt;
+<span class="kw">where
+    </span>G: AsyncRecipientContextGenerator + Send + Sync,
+    H: FnOnce(Vec&lt;u8&gt;) -&gt; Vec&lt;u8&gt;,
+{
+    <span class="kw">pub fn </span>create(recipient_context_generator: Arc&lt;G&gt;, request_handler: H) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            recipient_context_generator,
+            request_handler,
+        }
+    }
+
+    <span class="kw">pub async fn </span>invoke(
+        <span class="self">self</span>,
+        encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
+    ) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
+        <span class="comment">// Initialize server encryptor.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>server_encryptor =
+            AsyncServerEncryptor::new(<span class="self">self</span>.recipient_context_generator.as_ref());
+
+        <span class="comment">// Decrypt request.
+        </span><span class="kw">let </span>(request, _associated_data) = server_encryptor
+            .decrypt(encrypted_request)
+            .<span class="kw">await
+            </span>.context(<span class="string">&quot;couldn&#39;t decrypt request&quot;</span>)<span class="question-mark">?</span>;
+
+        <span class="comment">// Handle request.
+        </span><span class="kw">let </span>response = (<span class="self">self</span>.request_handler)(request);
 
         <span class="comment">// Encrypt and serialize response.
         // The resulting decryptor for consequent requests is discarded because we don&#39;t expect

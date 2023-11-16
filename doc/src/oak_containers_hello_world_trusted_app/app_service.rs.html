@@ -93,23 +93,6 @@
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
-<a href="#96" id="96">96</a>
-<a href="#97" id="97">97</a>
-<a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
-<a href="#100" id="100">100</a>
-<a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -133,7 +116,7 @@
     },
 };
 <span class="kw">use </span>anyhow::anyhow;
-<span class="kw">use </span>oak_crypto::{encryptor::ServerEncryptor, hpke::RecipientContext};
+<span class="kw">use </span>oak_crypto::encryptor::AsyncServerEncryptor;
 <span class="kw">use </span>tokio::net::TcpListener;
 <span class="kw">use </span>tokio_stream::wrappers::TcpListenerStream;
 
@@ -164,35 +147,18 @@
             .encrypted_request
             .ok_or(tonic::Status::internal(<span class="string">&quot;encrypted request wasn&#39;t provided&quot;</span>))<span class="question-mark">?</span>;
 
-        <span class="comment">// Initialize server encryptor.
-        </span><span class="kw">let </span>serialized_encapsulated_public_key = encrypted_request
-            .serialized_encapsulated_public_key
-            .as_ref()
-            .ok_or(tonic::Status::invalid_argument(
-                <span class="string">&quot;initial request message doesn&#39;t contain encapsulated public key&quot;</span>,
-            ))<span class="question-mark">?</span>;
-        <span class="kw">let </span>serialized_crypto_context = <span class="self">self
-            </span>.orchestrator_client
-            .get_crypto_context(serialized_encapsulated_public_key)
-            .<span class="kw">await
-            </span>.map_err(|error| {
-                tonic::Status::internal(<span class="macro">format!</span>(
-                    <span class="string">&quot;couldn&#39;t get crypto context from the Orchestrator: {:?}&quot;</span>,
-                    error
-                ))
-            })<span class="question-mark">?</span>;
-        <span class="kw">let </span>crypto_context =
-            RecipientContext::deserialize(serialized_crypto_context).map_err(|error| {
-                tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t deserialize crypto context: {:?}&quot;</span>, error))
-            })<span class="question-mark">?</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>server_encryptor = ServerEncryptor::new(crypto_context);
+        <span class="comment">// TODO(#4477): Remove unnecessary copies of the Orchestrator client.
+        </span><span class="kw">let </span>orchestrator_client = <span class="self">self</span>.orchestrator_client.clone();
+        <span class="kw">let </span><span class="kw-2">mut </span>server_encryptor = AsyncServerEncryptor::new(<span class="kw-2">&amp;</span>orchestrator_client);
 
         <span class="comment">// Associated data is ignored.
-        </span><span class="kw">let </span>(name_bytes, <span class="kw">_</span>) = server_encryptor
-            .decrypt(<span class="kw-2">&amp;</span>encrypted_request)
-            .map_err(|error| {
-                tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t decrypt request: {:?}&quot;</span>, error))
-            })<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>(name_bytes, <span class="kw">_</span>) =
+            server_encryptor
+                .decrypt(<span class="kw-2">&amp;</span>encrypted_request)
+                .<span class="kw">await
+                </span>.map_err(|error| {
+                    tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t decrypt request: {:?}&quot;</span>, error))
+                })<span class="question-mark">?</span>;
 
         <span class="kw">let </span>name = String::from_utf8(name_bytes)
             .map_err(|error| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;name is not UTF-8: {:?}&quot;</span>, error)))<span class="question-mark">?</span>;
