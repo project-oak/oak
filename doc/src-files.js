@@ -40,7 +40,7 @@ var srcIndex = JSON.parse('{\
 "oak_launcher_utils":["",[],["channel.rs","launcher.rs","lib.rs"]],\
 "oak_linux_boot_params":["",[],["lib.rs"]],\
 "oak_remote_attestation":["",[],["attester.rs","dice.rs","handler.rs","lib.rs"]],\
-"oak_remote_attestation_verification":["",[],["lib.rs","rekor.rs","verifier.rs"]],\
+"oak_remote_attestation_verification":["",[],["endorsement.rs","lib.rs","rekor.rs","util.rs","verifier.rs"]],\
 "oak_restricted_kernel":["",[["boot",[],["mod.rs"]],["mm",[],["bitmap_frame_allocator.rs","encrypted_mapper.rs","frame_allocator.rs","mod.rs","page_tables.rs","virtual_address_allocator.rs"]],["syscall",[],["channel.rs","dice_data.rs","fd.rs","key.rs","mmap.rs","mod.rs","process.rs","stdio.rs"]]],["acpi.rs","args.rs","avx.rs","descriptors.rs","dice_attestation.rs","elf.rs","ghcb.rs","interrupts.rs","lib.rs","libm.rs","logging.rs","memory.rs","payload.rs","shutdown.rs","snp.rs","snp_guest.rs","virtio.rs"]],\
 "oak_restricted_kernel_api":["",[],["channel.rs","lib.rs","logging.rs","raw_syscall.rs","syscall.rs"]],\
 "oak_restricted_kernel_interface":["",[],["errno.rs","lib.rs","syscalls.rs"]],\

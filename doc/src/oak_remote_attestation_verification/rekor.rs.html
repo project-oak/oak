@@ -263,52 +263,6 @@
 <a href="#263" id="263">263</a>
 <a href="#264" id="264">264</a>
 <a href="#265" id="265">265</a>
-<a href="#266" id="266">266</a>
-<a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
-<a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a>
-<a href="#285" id="285">285</a>
-<a href="#286" id="286">286</a>
-<a href="#287" id="287">287</a>
-<a href="#288" id="288">288</a>
-<a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
-<a href="#306" id="306">306</a>
-<a href="#307" id="307">307</a>
-<a href="#308" id="308">308</a>
-<a href="#309" id="309">309</a>
-<a href="#310" id="310">310</a>
-<a href="#311" id="311">311</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -331,12 +285,9 @@
 </span><span class="kw">use </span>alloc::{collections::BTreeMap, string::String, vec::Vec};
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
-<span class="kw">use </span>core::{cmp::Ordering, str::FromStr};
-<span class="kw">use </span>ecdsa::{signature::Verifier, Signature};
 <span class="kw">use </span>serde::{Deserialize, Serialize};
-<span class="kw">use </span>sha2::{Digest, Sha256};
 
-<span class="kw">use </span><span class="kw">crate</span>::verifier::{convert_pem_to_raw, convert_raw_to_pem};
+<span class="kw">use </span><span class="kw">crate</span>::util::{convert_pem_to_raw, hash_sha2_256, verify_signature};
 
 <span class="doccomment">/// Struct representing a Rekor LogEntry.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.&gt;
@@ -546,7 +497,7 @@
     }
 
     <span class="comment">// Check that hash of the endorsement statement matches the hash of the data in the Body.
-    </span><span class="kw">let </span>contents_hash = get_sha256(contents_bytes);
+    </span><span class="kw">let </span>contents_hash = hash_sha2_256(contents_bytes);
     <span class="kw">let </span>contents_hash_hex = hex::encode(contents_hash);
     <span class="kw">if </span>contents_hash_hex != body.spec.data.hash.value {
         <span class="macro">anyhow::bail!</span>(
@@ -570,54 +521,11 @@
         .context(<span class="string">&quot;couldn&#39;t verify signature over the endorsement&quot;</span>)
 }
 
-<span class="doccomment">/// Verifies the signature over the contents using the public key.
-</span><span class="kw">pub fn </span>verify_signature(
-    signature: <span class="kw-2">&amp;</span>[u8],
-    contents: <span class="kw-2">&amp;</span>[u8],
-    public_key: <span class="kw-2">&amp;</span>[u8],
-) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">let </span>signature = Signature::from_der(signature).context(<span class="string">&quot;invalid ASN.1 signature&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span>key = raw_to_verifying_key(public_key)<span class="question-mark">?</span>;
-
-    key.verify(contents, <span class="kw-2">&amp;</span>signature)
-        .context(<span class="string">&quot;couldn&#39;t verify signature&quot;</span>)
-}
-
-<span class="doccomment">/// Converts a PEM-encoded x509/PKIX public key to a verifying key.
-</span><span class="kw">pub fn </span>pem_to_verifying_key(public_key_pem: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;p256::ecdsa::VerifyingKey&gt; {
-    p256::ecdsa::VerifyingKey::from_str(public_key_pem)
-        .context(<span class="string">&quot;couldn&#39;t parse pem as a p256::ecdsa::VerifyingKey&quot;</span>)
-}
-
-<span class="doccomment">/// Converts a raw public key to a verifying key.
-</span><span class="kw">pub fn </span>raw_to_verifying_key(public_key: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;p256::ecdsa::VerifyingKey&gt; {
-    <span class="comment">// Need to figure out how to create a VerifyingKey without the PEM detour.
-    </span><span class="kw">let </span>public_key_pem = convert_raw_to_pem(public_key);
-    pem_to_verifying_key(<span class="kw-2">&amp;</span>public_key_pem)
-}
-
 <span class="kw">fn </span>rekor_signature_bundle(log_entry: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;RekorSignatureBundle&gt; {
     <span class="kw">let </span>parsed: BTreeMap&lt;String, LogEntry&gt; =
         serde_json::from_slice(log_entry).context(<span class="string">&quot;couldn&#39;t parse bytes into a LogEntry object&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>entry = parsed.values().next().context(<span class="string">&quot;no entry in the map&quot;</span>)<span class="question-mark">?</span>;
 
     RekorSignatureBundle::try_from(entry)
-}
-
-<span class="doccomment">/// Compares two ECDSA public keys. Instead of comparing the bytes, we parse the bytes
-/// and compare p256 keys. Keys are considered equal if they are the same on the elliptic curve.
-/// This means that the keys could have different bytes, but still be the same key.
-</span><span class="kw">pub fn </span>equal_keys(public_key_a: <span class="kw-2">&amp;</span>[u8], public_key_b: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;bool&gt; {
-    <span class="kw">let </span>key_a = raw_to_verifying_key(public_key_a)<span class="question-mark">?</span>;
-    <span class="kw">let </span>key_b = raw_to_verifying_key(public_key_b)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(key_a.cmp(<span class="kw-2">&amp;</span>key_b) == Ordering::Equal)
-}
-
-<span class="doccomment">/// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
-/// Returns the hash as a 32-bytes array.
-</span><span class="kw">pub fn </span>get_sha256(input: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">32</span>] {
-    <span class="kw">let </span><span class="kw-2">mut </span>hasher = Sha256::new();
-    hasher.update(input);
-    hasher.finalize().into()
 }
 </code></pre></div></section></main></body></html>

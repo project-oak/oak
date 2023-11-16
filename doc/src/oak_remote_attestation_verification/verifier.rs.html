@@ -100,56 +100,6 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
-<a href="#105" id="105">105</a>
-<a href="#106" id="106">106</a>
-<a href="#107" id="107">107</a>
-<a href="#108" id="108">108</a>
-<a href="#109" id="109">109</a>
-<a href="#110" id="110">110</a>
-<a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -166,140 +116,90 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>alloc::{string::String, vec::Vec};
+</span><span class="doccomment">//! Provides top-level verification based on evidence, endorsments and reference values.
 
-<span class="kw">use </span><span class="kw">crate</span>::rekor::{equal_keys, get_rekor_log_entry_body, verify_rekor_log_entry};
-<span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
-<span class="kw">use </span>oak_transparency_claims::claims::{
-    parse_endorsement_statement, validate_endorsement, verify_validity_duration,
+</span><span class="kw">use </span><span class="kw">crate</span>::alloc::string::ToString;
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::attestation::v1::{
+    attestation_results::Status, endorsements, reference_values, AttestationResults,
+    CbEndorsements, CbReferenceValues, Endorsements, Evidence, OakContainersEndorsements,
+    OakContainersReferenceValues, OakRestrictedKernelEndorsements,
+    OakRestrictedKernelReferenceValues, ReferenceValues,
 };
 
-<span class="doccomment">/// Reference values used by the verifier to appraise the attestation evidence.
-/// &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values&gt;
-</span><span class="kw">pub struct </span>ReferenceValue {
-    <span class="kw">pub </span>binary_hash: Vec&lt;u8&gt;,
+<span class="doccomment">/// Verifies entire setup by forwarding to individual setup types.
+</span><span class="kw">pub fn </span>verify(
+    evidence: <span class="kw-2">&amp;</span>Evidence,
+    endorsements: <span class="kw-2">&amp;</span>Endorsements,
+    reference_values: <span class="kw-2">&amp;</span>ReferenceValues,
+) -&gt; AttestationResults {
+    <span class="kw">match </span>verify_internal(evidence, endorsements, reference_values).err() {
+        <span class="prelude-val">Some</span>(err) =&gt; AttestationResults {
+            status: Status::GenericFailure.into(),
+            reason: err.to_string(),
+        },
+        <span class="prelude-val">None </span>=&gt; AttestationResults {
+            status: Status::Success.into(),
+            reason: <span class="string">&quot;&quot;</span>.to_string(),
+        },
+    }
 }
 
-<span class="kw">const </span>PEM_HEADER: <span class="kw-2">&amp;</span>str = <span class="string">&quot;-----BEGIN PUBLIC KEY-----&quot;</span>;
-<span class="kw">const </span>PEM_FOOTER: <span class="kw-2">&amp;</span>str = <span class="string">&quot;-----END PUBLIC KEY-----&quot;</span>;
+<span class="doccomment">/// Same as verify(), but with Rust-internal return value.
+</span><span class="kw">pub fn </span>verify_internal(
+    evidence: <span class="kw-2">&amp;</span>Evidence,
+    endorsements: <span class="kw-2">&amp;</span>Endorsements,
+    reference_values: <span class="kw-2">&amp;</span>ReferenceValues,
+) -&gt; anyhow::Result&lt;()&gt; {
+    verify_certificate_chain(evidence)<span class="question-mark">?</span>;
 
-<span class="doccomment">/// Makes a plausible guess whether the public key is in PEM format.
-</span><span class="kw">pub fn </span>looks_like_pem(maybe_pem: <span class="kw-2">&amp;</span>str) -&gt; bool {
-    <span class="kw">let </span>p = maybe_pem.trim();
-    p.starts_with(PEM_HEADER) &amp;&amp; p.ends_with(PEM_FOOTER)
-}
-
-<span class="doccomment">/// Converts a pem key to raw. Will panic if it does not like like pem.
-</span><span class="kw">pub fn </span>convert_pem_to_raw(public_key_pem: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-    <span class="kw">let </span>stripped = public_key_pem
-        .trim()
-        .strip_prefix(PEM_HEADER)
-        .expect(<span class="string">&quot;could not find expected header&quot;</span>)
-        .strip_suffix(PEM_FOOTER)
-        .expect(<span class="string">&quot;could not find expected footer&quot;</span>);
-    <span class="kw">let </span>remove_newlines = stripped.replace(<span class="string">&#39;\n&#39;</span>, <span class="string">&quot;&quot;</span>);
-
-    <span class="prelude-val">Ok</span>(BASE64_STANDARD.decode(remove_newlines)<span class="question-mark">?</span>)
-}
-
-<span class="kw">pub fn </span>convert_raw_to_pem(public_key: <span class="kw-2">&amp;</span>[u8]) -&gt; String {
-    <span class="kw">let </span><span class="kw-2">mut </span>pem = String::from(PEM_HEADER);
-    <span class="kw">for </span>(i, c) <span class="kw">in </span>BASE64_STANDARD.encode(public_key).chars().enumerate() {
-        <span class="kw">if </span>i % <span class="number">64 </span>== <span class="number">0 </span>{
-            pem.push(<span class="string">&#39;\n&#39;</span>);
+    <span class="kw">match </span>(
+        endorsements.r#type.as_ref(),
+        reference_values.r#type.as_ref(),
+    ) {
+        (
+            <span class="prelude-val">Some</span>(endorsements::Type::OakRestrictedKernel(ends)),
+            <span class="prelude-val">Some</span>(reference_values::Type::OakRestrictedKernel(rvs)),
+        ) =&gt; verify_oak_restricted_kernel(evidence, ends, rvs),
+        (
+            <span class="prelude-val">Some</span>(endorsements::Type::OakContainers(ends)),
+            <span class="prelude-val">Some</span>(reference_values::Type::OakContainers(rvs)),
+        ) =&gt; verify_oak_containers(evidence, ends, rvs),
+        (<span class="prelude-val">Some</span>(endorsements::Type::Cb(ends)), <span class="prelude-val">Some</span>(reference_values::Type::Cb(rvs))) =&gt; {
+            verify_cb(evidence, ends, rvs)
         }
-        pem.push(c);
+        (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>) =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Endorsements and reference values both empty&quot;</span>),
+        (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="kw">_</span>)) =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Endorsements are empty&quot;</span>),
+        (<span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="prelude-val">None</span>) =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Reference values are empty&quot;</span>),
+        (<span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="prelude-val">Some</span>(<span class="kw">_</span>)) =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Mismatch between endorsements and reference values&quot;</span>),
     }
-    pem.push(<span class="string">&#39;\n&#39;</span>);
-    pem.push_str(PEM_FOOTER);
-    pem.push(<span class="string">&#39;\n&#39;</span>);
-    pem
 }
 
-<span class="doccomment">/// Verifies the binary endorsement for a given measurement.
-</span><span class="kw">pub fn </span>verify_binary_endorsement(
-    now_utc_millis: i64,
-    endorsement: <span class="kw-2">&amp;</span>[u8],
-    log_entry: <span class="kw-2">&amp;</span>[u8],
-    binary_digest: <span class="kw-2">&amp;</span>[u8],
-    binary_digest_alg: <span class="kw-2">&amp;</span>str,
-    endorser_public_key: <span class="kw-2">&amp;</span>[u8],
-    rekor_public_key: <span class="kw-2">&amp;</span>[u8],
-) -&gt; anyhow::Result&lt;()&gt; {
-    verify_endorsement_statement(
-        now_utc_millis,
-        endorsement,
-        binary_digest,
-        binary_digest_alg,
-    )<span class="question-mark">?</span>;
-    verify_rekor_log_entry(log_entry, rekor_public_key, endorsement)<span class="question-mark">?</span>;
-    verify_endorser_public_key(log_entry, endorser_public_key)<span class="question-mark">?</span>;
-
-    <span class="prelude-val">Ok</span>(())
+<span class="kw">fn </span>verify_certificate_chain(_evidence: <span class="kw-2">&amp;</span>Evidence) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Needs implementation&quot;</span>)
 }
 
-<span class="doccomment">/// Verifies endorsement against the given reference values.
-</span><span class="kw">pub fn </span>verify_endorsement_statement(
-    now_utc_millis: i64,
-    endorsement: <span class="kw-2">&amp;</span>[u8],
-    binary_digest: <span class="kw-2">&amp;</span>[u8],
-    binary_digest_alg: <span class="kw-2">&amp;</span>str,
+<span class="kw">fn </span>verify_oak_restricted_kernel(
+    _evidence: <span class="kw-2">&amp;</span>Evidence,
+    _endorsements: <span class="kw-2">&amp;</span>OakRestrictedKernelEndorsements,
+    _reference_values: <span class="kw-2">&amp;</span>OakRestrictedKernelReferenceValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">let </span>claim = parse_endorsement_statement(endorsement)<span class="question-mark">?</span>;
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = validate_endorsement(<span class="kw-2">&amp;</span>claim) {
-        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;validating endorsement: {err:?}&quot;</span>);
-    }
-    verify_validity_duration(now_utc_millis, <span class="kw-2">&amp;</span>claim)<span class="question-mark">?</span>;
-    <span class="kw">if </span>claim.subject.len() != <span class="number">1 </span>{
-        <span class="macro">anyhow::bail!</span>(
-            <span class="string">&quot;expected 1 subject in the endorsement, found {}&quot;</span>,
-            claim.subject.len()
-        );
-    }
-
-    <span class="kw">let </span>binary_digest = core::str::from_utf8(binary_digest)<span class="question-mark">?</span>;
-    <span class="kw">match </span>claim.subject[<span class="number">0</span>].digest.get(binary_digest_alg) {
-        <span class="prelude-val">Some</span>(found_digest) =&gt; {
-            <span class="kw">if </span>found_digest != binary_digest {
-                <span class="macro">anyhow::bail!</span>(
-                    <span class="string">&quot;unexpected binary {} digest: expected {}, got {}&quot;</span>,
-                    binary_digest_alg,
-                    binary_digest,
-                    found_digest
-                )
-            }
-        }
-        <span class="prelude-val">None </span>=&gt; <span class="macro">anyhow::bail!</span>(<span class="string">&quot;missing {binary_digest_alg} digest in the endorsement statement&quot;</span>),
-    }
-
-    <span class="prelude-val">Ok</span>(())
+    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Needs implementation&quot;</span>)
 }
 
-<span class="doccomment">/// Verifies that the endorser public key coincides with the one contained in the attestation.
-</span><span class="kw">pub fn </span>verify_endorser_public_key(
-    log_entry: <span class="kw-2">&amp;</span>[u8],
-    endorser_public_key: <span class="kw-2">&amp;</span>[u8],
+<span class="kw">fn </span>verify_oak_containers(
+    _evidence: <span class="kw-2">&amp;</span>Evidence,
+    _endorsements: <span class="kw-2">&amp;</span>OakContainersEndorsements,
+    _reference_values: <span class="kw-2">&amp;</span>OakContainersReferenceValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="comment">// TODO(#4231): Currently, we only check that the public keys are the same. Should be updated to
-    // support verifying rolling keys.
+    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Needs implementation&quot;</span>)
+}
 
-    </span><span class="kw">let </span>body = get_rekor_log_entry_body(log_entry)<span class="question-mark">?</span>;
-
-    <span class="kw">let </span>actual_pem_vec = BASE64_STANDARD
-        .decode(body.spec.signature.public_key.content)
-        .context(<span class="string">&quot;couldn&#39;t base64-decode public key bytes from server&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span>actual_pem = core::str::from_utf8(<span class="kw-2">&amp;</span>actual_pem_vec)<span class="question-mark">?</span>;
-    <span class="kw">let </span>actual = convert_pem_to_raw(actual_pem)<span class="question-mark">?</span>;
-
-    <span class="kw">if </span>!equal_keys(endorser_public_key, <span class="kw-2">&amp;</span>actual)<span class="question-mark">? </span>{
-        <span class="macro">anyhow::bail!</span>(
-            <span class="string">&quot;endorser public key mismatch: expected {:?} found {:?}&quot;</span>,
-            endorser_public_key,
-            actual,
-        )
-    }
-
-    <span class="prelude-val">Ok</span>(())
+<span class="kw">fn </span>verify_cb(
+    _evidence: <span class="kw-2">&amp;</span>Evidence,
+    _endorsements: <span class="kw-2">&amp;</span>CbEndorsements,
+    _reference_values: <span class="kw-2">&amp;</span>CbReferenceValues,
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Needs implementation&quot;</span>)
 }
 </code></pre></div></section></main></body></html>
