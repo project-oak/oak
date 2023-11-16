@@ -27,8 +27,9 @@ option java_package = "com.google.oak.attestation.v1";
 // Nomenclature follows RFC 9334.
 message AttestationResults {
   enum Status {
-   SUCCESS = 0;
-   FAILURE = 1; 
+   UNDEFINED = 0;
+   SUCCESS = 1;
+   GENERIC_FAILURE = 2; 
   }
 
   // Indicates whether the verification passed and perhaps more.
