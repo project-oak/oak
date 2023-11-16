@@ -63,15 +63,11 @@ struct GsData {
     user_flags: usize,
 }
 
-fn mock_dice_data() -> DiceData {
-    <DiceData as zerocopy::FromZeroes>::new_zeroed()
-}
-
-pub fn enable_syscalls(channel: Box<dyn Channel>, derived_key: DerivedKey) {
+pub fn enable_syscalls(channel: Box<dyn Channel>, dice_data: DiceData, derived_key: DerivedKey) {
     channel::register(channel);
     stdio::register();
     key::register(derived_key);
-    dice_data::register(mock_dice_data());
+    dice_data::register(dice_data);
 
     // Allocate a stack for the system call handler.
     let kernel_sp = mm::allocate_stack();
