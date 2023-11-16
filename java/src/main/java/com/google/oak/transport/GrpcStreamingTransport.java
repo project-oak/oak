@@ -99,10 +99,7 @@ public class GrpcStreamingTransport implements EvidenceProvider, Transport {
   public Result<EncryptedResponse, String> invoke(EncryptedRequest encryptedRequest) {
     RequestWrapper requestWrapper =
         RequestWrapper.newBuilder()
-            .setInvokeRequest(
-                InvokeRequest
-                    .newBuilder()
-                    .setEncryptedRequest(encryptedRequest))
+            .setInvokeRequest(InvokeRequest.newBuilder().setEncryptedRequest(encryptedRequest))
             .build();
     logger.log(Level.INFO, "sending invoke request: " + requestWrapper);
     this.requestObserver.onNext(requestWrapper);
