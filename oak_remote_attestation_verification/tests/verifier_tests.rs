@@ -18,7 +18,7 @@ use oak_remote_attestation_verification::{
     proto::oak::attestation::v1::{
         attestation_results::Status, Endorsements, Evidence, ReferenceValues,
     },
-    verify::verify,
+    verifier::verify,
 };
 
 #[test]

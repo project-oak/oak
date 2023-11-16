@@ -32,4 +32,4 @@ pub mod proto {
 pub mod endorsement;
 pub mod rekor;
 pub mod util;
-pub mod verify;
+pub mod verifier;
