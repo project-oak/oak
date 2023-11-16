@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-use crate::alloc::string::ToString;
 use coset::CborSerializable;
 use zerocopy::FromZeroes;
 

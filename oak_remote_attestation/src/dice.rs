@@ -20,7 +20,6 @@ use crate::proto::oak::attestation::v1::{
 };
 use alloc::vec::Vec;
 use anyhow::{anyhow, Context};
-use ciborium::{from_reader, into_writer, Value};
 use coset::{
     cwt::{ClaimName, ClaimsSet},
     CborSerializable,
@@ -52,7 +51,10 @@ impl DiceBuilder {
     /// provided. Adding a layer generates a new ECA private key for the layer and uses it to
     /// replace the existing signing key. The CWT certificate contains the public key for this new
     /// signing key.
-    pub fn add_layer(&mut self, additional_claims: Vec<(ClaimName, Value)>) -> anyhow::Result<()> {
+    pub fn add_layer(
+        &mut self,
+        additional_claims: Vec<(ClaimName, ciborium::Value)>,
+    ) -> anyhow::Result<()> {
         // The last evidence layer contains the certificate for the current signing key. Since the
         // builder contains an existing signing key there must be at least one layer of evidence
         // that contains the certificate.
@@ -94,7 +96,7 @@ impl DiceBuilder {
     /// consumes DICE data, discards the signing key and returns the finalized evidence.
     pub fn add_application_keys(
         self,
-        additional_claims: Vec<(ClaimName, Value)>,
+        additional_claims: Vec<(ClaimName, ciborium::Value)>,
         kem_public_key: &[u8],
         verifying_key: &VerifyingKey,
     ) -> anyhow::Result<Evidence> {
