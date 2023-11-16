@@ -94,17 +94,10 @@ fn it_should_handle_user_requests_after_initialization() {
         .encrypt(&[1, 2, 3], EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
-    // TODO(#4037): Remove once explicit protos are used end-to-end.
-    // Serialize request.
-    let mut serialized_request = vec![];
-    encrypted_request
-        .encode(&mut serialized_request)
-        .expect("couldn't serialize request");
-
     // Send invoke request.
     let invoke_request = InvokeRequest {
         // TODO(#4037): Remove once explicit protos are used end-to-end.
-        body: serialized_request,
+        body: vec![],
         encrypted_request: Some(encrypted_request),
     };
     let result = client.handle_user_request(&invoke_request).into_ok();
@@ -164,18 +157,11 @@ async fn it_should_error_on_invalid_wasm_module() {
         .encrypt(LOOKUP_TEST_KEY, EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
-    // TODO(#4037): Remove once explicit protos are used end-to-end.
-    // Serialize request.
-    let mut serialized_request = vec![];
-    encrypted_request
-        .encode(&mut serialized_request)
-        .expect("couldn't serialize request");
-
     // Send invoke request.
     let lookup_response = client
         .handle_user_request(&InvokeRequest {
             // TODO(#4037): Remove once explicit protos are used end-to-end.
-            body: serialized_request,
+            body: vec![],
             encrypted_request: Some(encrypted_request),
         })
         .expect("couldn't receive response");
@@ -257,18 +243,11 @@ async fn it_should_support_lookup_data() {
         .encrypt(LOOKUP_TEST_KEY, EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
-    // TODO(#4037): Remove once explicit protos are used end-to-end.
-    // Serialize request.
-    let mut serialized_request = vec![];
-    encrypted_request
-        .encode(&mut serialized_request)
-        .expect("couldn't serialize request");
-
     // Send invoke request.
     let lookup_response = client
         .handle_user_request(&InvokeRequest {
             // TODO(#4037): Remove once explicit protos are used end-to-end.
-            body: serialized_request,
+            body: vec![],
             encrypted_request: Some(encrypted_request),
         })
         .expect("couldn't receive response");
@@ -335,18 +314,11 @@ async fn it_should_handle_wasm_panic() {
         .encrypt(&request.encode_to_vec(), EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");
 
-    // TODO(#4037): Remove once explicit protos are used end-to-end.
-    // Serialize request.
-    let mut serialized_request = vec![];
-    encrypted_request
-        .encode(&mut serialized_request)
-        .expect("couldn't serialize request");
-
     // Send invoke request.
     let lookup_response = client
         .handle_user_request(&InvokeRequest {
             // TODO(#4037): Remove once explicit protos are used end-to-end.
-            body: serialized_request,
+            body: vec![],
             encrypted_request: Some(encrypted_request),
         })
         .expect("couldn't receive response");
