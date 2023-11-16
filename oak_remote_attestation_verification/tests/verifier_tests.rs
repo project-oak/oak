@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,22 +14,20 @@
 // limitations under the License.
 //
 
-#![cfg_attr(not(test), no_std)]
+use oak_remote_attestation_verification::{
+    proto::oak::attestation::v1::{
+        attestation_results::Status, Endorsements, Evidence, ReferenceValues,
+    },
+    verifier::verify,
+};
 
-extern crate alloc;
+#[test]
+fn verify_fails_with_empty_args() {
+    let evidence = Evidence::default();
+    let endorsements = Endorsements::default();
+    let reference_values = ReferenceValues::default();
 
-pub mod proto {
-    pub mod oak {
-        tonic::include_proto!("oak");
-        pub mod attestation {
-            pub mod v1 {
-                tonic::include_proto!("oak.attestation.v1");
-            }
-        }
-    }
+    let r = verify(&evidence, &endorsements, &reference_values);
+
+    assert!(Status::from_i32(r.status) == Some(Status::GenericFailure));
 }
-
-pub mod endorsement;
-pub mod rekor;
-pub mod util;
-pub mod verifier;

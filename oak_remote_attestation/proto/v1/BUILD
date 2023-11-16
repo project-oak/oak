@@ -42,6 +42,11 @@ java_proto_library(
     deps = [":messages_proto"],
 )
 
+java_lite_proto_library(
+    name = "messages_java_proto_lite",
+    deps = [":messages_proto"],
+)
+
 proto_library(
     name = "service_streaming_proto",
     srcs = ["service_streaming.proto"],
@@ -121,8 +126,10 @@ build_test(
     name = "build_test",
     targets = [
         ":messages_proto",
+        ":messages_java_proto_lite",
         ":service_streaming_cc_grpc",
         ":service_streaming_java_grpc",
+        ":service_streaming_java_grpc_lite",
         ":service_unary_cc_grpc",
         ":service_unary_java_grpc",
     ],
