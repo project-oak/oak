@@ -121,6 +121,7 @@
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
 <a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -237,7 +238,8 @@
             </span>));
         };
 
-        get_evidence_response
+        <span class="attr">#[allow(deprecated)]
+        </span>get_evidence_response
             .attestation_bundle
             .context(<span class="string">&quot;get_evidence_response message doesn&#39;t contain an attestation bundle&quot;</span>)<span class="question-mark">?
             </span>.attestation_evidence

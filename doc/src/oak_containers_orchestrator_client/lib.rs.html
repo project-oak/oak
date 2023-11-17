@@ -113,6 +113,7 @@
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -199,7 +200,8 @@
         evidence: AttestationEvidence,
         dice_evidence: Evidence,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
-        <span class="kw">let </span>request = tonic::Request::new(SendAttestationEvidenceRequest {
+        <span class="attr">#[allow(deprecated)]
+        </span><span class="kw">let </span>request = tonic::Request::new(SendAttestationEvidenceRequest {
             evidence: <span class="prelude-val">Some</span>(evidence),
             dice_evidence: <span class="prelude-val">Some</span>(dice_evidence),
         });

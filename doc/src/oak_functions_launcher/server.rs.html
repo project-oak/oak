@@ -130,6 +130,8 @@
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
 <a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -191,9 +193,11 @@
             tee_certificates: <span class="macro">vec!</span>[],
             application_data: <span class="prelude-val">None</span>,
         };
-        <span class="kw">let </span>attestation_bundle = AttestationBundle {
+        <span class="attr">#[allow(deprecated)]
+        </span><span class="kw">let </span>attestation_bundle = AttestationBundle {
             attestation_evidence: <span class="prelude-val">Some</span>(attestation_evidence),
             attestation_endorsement: <span class="prelude-val">Some</span>(attestation_endorsement),
+            dice_evidence: <span class="prelude-val">None</span>,
         };
 
         <span class="kw">let </span>connector_handle = <span class="self">self</span>.connector_handle.clone();

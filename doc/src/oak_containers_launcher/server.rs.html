@@ -272,6 +272,7 @@
 <a href="#272" id="272">272</a>
 <a href="#273" id="273">273</a>
 <a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -426,7 +427,8 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: Request&lt;SendAttestationEvidenceRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;()&gt;, tonic::Status&gt; {
-        <span class="self">self</span>.attestation_evidence_sender
+        <span class="attr">#[allow(deprecated)]
+        </span><span class="self">self</span>.attestation_evidence_sender
             .lock()
             .map_err(|err| {
                 tonic::Status::internal(<span class="macro">format!</span>(
