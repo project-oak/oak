@@ -34,10 +34,10 @@ pub fn cbor_encoded_bytes_to_vec(bytes: &[u8]) -> Result<Vec<u8>, String> {
     Ok(result)
 }
 
-/// Like the slice `copy_from_slice` method but does not panic if slices are not
+/// Like [`slice::copy_from_slice`] but does not panic if slices are not
 /// the same length. In the case of a shorter source slice, only overwrites
 /// the beginning of the destination slice. In the case of a longer source slice
-/// it throws an error.
+/// it returns an error.
 pub(crate) fn padded_copy_from_slice(dst: &mut [u8], src: &[u8]) -> Result<(), String> {
     if dst.len() < src.len() {
         dst[..src.len()].copy_from_slice(src);
