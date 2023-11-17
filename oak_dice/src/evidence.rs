@@ -17,11 +17,8 @@
 //! C-like structs for representing DICE data in environments where we don't have protocol buffer
 //! support.
 
-use alloc::{
-    format,
-    string::{String, ToString},
-    vec::Vec,
-};
+use crate::utils::PaddedCopyFromSlice;
+use alloc::{format, string::String, vec::Vec};
 use strum::{Display, FromRepr};
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
@@ -32,6 +29,8 @@ pub const REPORT_SIZE: usize = 2048;
 ///
 /// See Table 21 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 const AMD_SEV_SNP_ATTESTATION_REPORT_SIZE: usize = 1184;
+
+static_assertions::const_assert!(REPORT_SIZE >= AMD_SEV_SNP_ATTESTATION_REPORT_SIZE);
 
 /// The maximum size of an ECDSA private key.
 pub const PRIVATE_KEY_SIZE: usize = 64;
@@ -83,35 +82,29 @@ pub struct RootLayerEvidence {
 }
 
 impl RootLayerEvidence {
-    pub fn get_tee_platform(&self) -> Result<TeePlatform, String> {
-        TeePlatform::from_repr(self.tee_platform).ok_or("invalid TEE Platform value".to_string())
+    pub fn get_tee_platform(&self) -> Result<TeePlatform, &'static str> {
+        TeePlatform::from_repr(self.tee_platform).ok_or("invalid TEE Platform value")
     }
 
-    pub fn get_remote_attestation_report(&self) -> Result<&[u8], String> {
+    pub fn get_remote_attestation_report(&self) -> Result<&[u8], &'static str> {
         match self.get_tee_platform()? {
             TeePlatform::AmdSevSnp => {
-                if self.remote_attestation_report.len() < AMD_SEV_SNP_ATTESTATION_REPORT_SIZE {
-                    Err("attestation report smaller than expected".to_string())
-                } else {
-                    Ok(&self.remote_attestation_report[..AMD_SEV_SNP_ATTESTATION_REPORT_SIZE])
-                }
+                Ok(&self.remote_attestation_report[..AMD_SEV_SNP_ATTESTATION_REPORT_SIZE])
             }
             _ => Ok(&self.remote_attestation_report),
         }
     }
 
-    pub fn set_remote_attestation_report(&mut self, src: &[u8]) -> Result<(), String> {
-        crate::utils::padded_copy_from_slice(&mut self.remote_attestation_report, src)?;
-        Ok(())
+    pub fn set_remote_attestation_report(&mut self, src: &[u8]) -> Result<(), &'static str> {
+        self.remote_attestation_report.padded_copy_from_slice(src)
     }
 
     pub fn get_eca_public_key(&self) -> Result<Vec<u8>, String> {
         crate::utils::cbor_encoded_bytes_to_vec(&self.eca_public_key)
     }
 
-    pub fn set_eca_public_key(&mut self, src: &[u8]) -> Result<(), String> {
-        crate::utils::padded_copy_from_slice(&mut self.eca_public_key, src)?;
-        Ok(())
+    pub fn set_eca_public_key(&mut self, src: &[u8]) -> Result<(), &'static str> {
+        self.eca_public_key.padded_copy_from_slice(src)
     }
 }
 

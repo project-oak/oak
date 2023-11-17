@@ -16,11 +16,7 @@
 
 //! Utilities to handle encoded keys and certificates
 
-use alloc::{
-    format,
-    string::{String, ToString},
-    vec::Vec,
-};
+use alloc::{format, string::String, vec::Vec};
 use core::result::Result;
 
 /// Extracts the bytes used to encode a CBOR object from a slice that might include unused bytes by
@@ -34,15 +30,21 @@ pub fn cbor_encoded_bytes_to_vec(bytes: &[u8]) -> Result<Vec<u8>, String> {
     Ok(result)
 }
 
-/// Like [`slice::copy_from_slice`] but does not panic if slices are not
-/// the same length. In the case of a shorter source slice, only overwrites
-/// the beginning of the destination slice. In the case of a longer source slice
-/// it returns an error.
-pub(crate) fn padded_copy_from_slice(dst: &mut [u8], src: &[u8]) -> Result<(), String> {
-    if dst.len() < src.len() {
-        dst[..src.len()].copy_from_slice(src);
-        Ok(())
-    } else {
-        Err("destination slice shorter than source slice".to_string())
+pub(crate) trait PaddedCopyFromSlice {
+    /// Like [`slice::copy_from_slice`] but does not panic if slices are not
+    /// the same length. In the case of a shorter source slice, pads the remaining
+    /// bytes with zeroes. In the case of a longer source slice it returns an error.
+    fn padded_copy_from_slice(&mut self, src: &[u8]) -> Result<(), &'static str>;
+}
+
+impl PaddedCopyFromSlice for [u8] {
+    fn padded_copy_from_slice(&mut self, src: &[u8]) -> Result<(), &'static str> {
+        if self.len() < src.len() {
+            Err("destination slice length shorter than source slice length")
+        } else {
+            self[..src.len()].copy_from_slice(src);
+            self[src.len()..].fill(0);
+            Ok(())
+        }
     }
 }
