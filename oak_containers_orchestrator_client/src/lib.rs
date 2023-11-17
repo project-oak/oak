@@ -84,6 +84,7 @@ impl LauncherClient {
         evidence: AttestationEvidence,
         dice_evidence: Evidence,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        #[allow(deprecated)]
         let request = tonic::Request::new(SendAttestationEvidenceRequest {
             evidence: Some(evidence),
             dice_evidence: Some(dice_evidence),

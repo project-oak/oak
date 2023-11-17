@@ -152,6 +152,7 @@ impl Launcher for LauncherServerImplementation {
         &self,
         request: Request<SendAttestationEvidenceRequest>,
     ) -> Result<Response<()>, tonic::Status> {
+        #[allow(deprecated)]
         self.attestation_evidence_sender
             .lock()
             .map_err(|err| {
