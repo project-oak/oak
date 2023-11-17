@@ -47,4 +47,3 @@ java_library(
         "//java/src/main/java/com/google/oak/util",
     ],
 )
-
