@@ -51,7 +51,6 @@ message AttestationEvidence {
 // in response to its request for the enclave's public key(s).
 message AttestationBundle {
   // Attestation evidence from the enclave.
-  // TODO(#4488): Remove once this is no longer used.
   AttestationEvidence attestation_evidence = 1 [deprecated = true];
 
   // Supporting evidence required for verifying the integrity of attestation evidence.

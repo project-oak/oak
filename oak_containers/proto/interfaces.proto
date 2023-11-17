@@ -37,7 +37,6 @@ message GetApplicationConfigResponse {
 }
 
 message SendAttestationEvidenceRequest {
-  // TODO(#4488): Remove once this is no longer used.
   oak.session.v1.AttestationEvidence evidence = 1 [deprecated = true];
   oak.attestation.v1.Evidence dice_evidence = 2;
 }
