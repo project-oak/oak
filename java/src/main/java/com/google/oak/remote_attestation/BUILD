@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-load("@build_bazel_rules_android//android:rules.bzl", "android_library")
 load("@rules_java//java:defs.bzl", "java_library")
 
 package(
@@ -27,15 +26,6 @@ java_library(
     srcs = ["AttestationVerifier.java"],
     deps = [
         "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation/proto/v1:messages_java_proto",
-    ],
-)
-
-android_library(
-    name = "attestation_verifier_android",
-    srcs = ["AttestationVerifier.java"],
-    deps = [
-        "//java/src/main/java/com/google/oak/util:util_android",
         "//oak_remote_attestation/proto/v1:messages_java_proto_lite",
     ],
 )
@@ -46,7 +36,7 @@ java_library(
     deps = [
         ":attestation_verifier",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation/proto/v1:messages_java_proto",
+        "//oak_remote_attestation/proto/v1:messages_java_proto_lite",
     ],
 )
 
@@ -56,16 +46,6 @@ java_library(
     deps = [
         ":attestation_verifier",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation/proto/v1:messages_java_proto",
-    ],
-)
-
-android_library(
-    name = "insecure_attestation_verifier_android",
-    srcs = ["InsecureAttestationVerifier.java"],
-    deps = [
-        ":attestation_verifier_android",
-        "//java/src/main/java/com/google/oak/util:util_android",
         "//oak_remote_attestation/proto/v1:messages_java_proto_lite",
     ],
 )
