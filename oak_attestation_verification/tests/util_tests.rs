@@ -19,7 +19,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use std::fs;
 
-use oak_remote_attestation_verification::util::{
+use oak_attestation_verification::util::{
     convert_pem_to_raw, convert_pem_to_verifying_key, convert_raw_to_pem,
     convert_raw_to_verifying_key, equal_keys, looks_like_pem, verify_signature,
 };

@@ -1856,6 +1856,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_attestation_verification"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.21.0",
+ "ecdsa",
+ "hex",
+ "micro_rpc_build",
+ "oak_transparency_claims",
+ "p256",
+ "prost",
+ "serde",
+ "serde_jcs",
+ "serde_json",
+ "sha2",
+ "tonic",
+]
+
+[[package]]
 name = "oak_channel"
 version = "0.1.0"
 dependencies = [
@@ -2393,25 +2412,6 @@ dependencies = [
  "prost",
  "rand_core",
  "sha2",
-]
-
-[[package]]
-name = "oak_remote_attestation_verification"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64 0.21.0",
- "ecdsa",
- "hex",
- "micro_rpc_build",
- "oak_transparency_claims",
- "p256",
- "prost",
- "serde",
- "serde_jcs",
- "serde_json",
- "sha2",
- "tonic",
 ]
 
 [[package]]

@@ -28,11 +28,11 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class LogEntryVerifierTest {
   private static final String LOG_ENTRY_PATH =
-      "oak_remote_attestation_verification/testdata/logentry.json";
+      "oak_attestation_verification/testdata/logentry.json";
   private static final String REKOR_PUBLIC_KEY_PATH =
-      "oak_remote_attestation_verification/testdata/rekor_public_key.pem";
+      "oak_attestation_verification/testdata/rekor_public_key.pem";
   private static final String ENDORSEMENT_PATH =
-      "oak_remote_attestation_verification/testdata/endorsement.json";
+      "oak_attestation_verification/testdata/endorsement.json";
 
   private RekorLogEntry logEntry;
   private byte[] publicKeyBytes;

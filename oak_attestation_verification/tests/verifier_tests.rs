@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use oak_remote_attestation_verification::{
+use oak_attestation_verification::{
     proto::oak::attestation::v1::{
         attestation_results::Status, Endorsements, Evidence, ReferenceValues,
     },
