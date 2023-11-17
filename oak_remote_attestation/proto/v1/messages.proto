@@ -58,7 +58,7 @@ message AttestationBundle {
   AttestationEndorsement attestation_endorsement = 2;
 
   // The DICE attestation evidence.
-  oak.attestation.v1.Evidence dice_evidence = 3;  
+  oak.attestation.v1.Evidence dice_evidence = 3;
 }
 
 // AttestationEndorsement contains statements that some entity (e.g., a hardware provider) vouches
