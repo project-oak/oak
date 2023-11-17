@@ -85,6 +85,7 @@ impl StreamingSession for SessionProxy {
                         })
                     }
                     request_wrapper::Request::InvokeRequest(invoke_request) => {
+                        #[allow(clippy::needless_update)]
                         let enclave_invoke_request = InvokeRequest {
                             encrypted_request: invoke_request.encrypted_request,
                             ..Default::default()
@@ -95,6 +96,7 @@ impl StreamingSession for SessionProxy {
                             .map_err(|err| tonic::Status::internal(format!("error handling client request: {:?}", err)))?
                             .into_inner();
 
+                        #[allow(clippy::needless_update)]
                         response_wrapper::Response::InvokeResponse(InvokeResponse {
                             encrypted_response: enclave_invoke_response.encrypted_response,
                             ..Default::default()

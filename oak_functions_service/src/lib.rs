@@ -145,10 +145,13 @@ impl OakFunctions for OakFunctionsService {
             response.encode_to_vec()
         })
         .invoke(&encrypted_request)
-        .map(|encrypted_response| InvokeResponse {
-            encrypted_response: Some(encrypted_response),
-            ..Default::default()
-        })
+        .map(
+            #[allow(clippy::needless_update)]
+            |encrypted_response| InvokeResponse {
+                encrypted_response: Some(encrypted_response),
+                ..Default::default()
+            },
+        )
         .map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,
