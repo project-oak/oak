@@ -18,9 +18,8 @@ use crate::proto::oak::session::v1::{
     request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
     AttestationEvidence, GetPublicKeyRequest, InvokeRequest, RequestWrapper,
 };
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use oak_crypto::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
-use prost::Message;
 use tonic::transport::Channel;
 
 pub struct GrpcStreamingTransport {
@@ -47,19 +46,12 @@ impl Transport for GrpcStreamingTransport {
         &mut self,
         encrypted_request: &EncryptedRequest,
     ) -> anyhow::Result<EncryptedResponse> {
-        // TODO(#4037): Remove once explicit crypto protos are implemented.
-        let mut serialized_request = vec![];
-        encrypted_request
-            .encode(&mut serialized_request)
-            .map_err(|error| anyhow!("couldn't serialize request: {:?}", error))?;
-
         let mut response_stream = self
             .rpc_client
             .stream(futures_util::stream::iter(vec![RequestWrapper {
                 request: Some(request_wrapper::Request::InvokeRequest(InvokeRequest {
-                    // TODO(#4037): Remove once explicit crypto protos are implemented.
-                    encrypted_body: serialized_request,
                     encrypted_request: Some(encrypted_request.clone()),
+                    ..Default::default()
                 })),
             }]))
             .await
@@ -122,6 +114,7 @@ impl EvidenceProvider for GrpcStreamingTransport {
             ));
         };
 
+        #[allow(deprecated)]
         get_evidence_response
             .attestation_bundle
             .context("get_evidence_response message doesn't contain an attestation bundle")?

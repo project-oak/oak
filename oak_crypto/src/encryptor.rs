@@ -230,13 +230,19 @@ impl ServerEncryptor {
 /// be multiple responses per request and multiple requests per response.
 // TODO(#4311): Merge `AsyncServerEncryptor` and `ServerEncryptor` once there is `async` support in
 // the Restricted Kernel.
-pub struct AsyncServerEncryptor {
-    recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator>,
+pub struct AsyncServerEncryptor<'a, G>
+where
+    G: AsyncRecipientContextGenerator + Send + Sync,
+{
+    recipient_context_generator: &'a G,
     inner: Option<ServerEncryptor>,
 }
 
-impl AsyncServerEncryptor {
-    pub fn new(recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator>) -> Self {
+impl<'a, G> AsyncServerEncryptor<'a, G>
+where
+    G: AsyncRecipientContextGenerator + Send + Sync,
+{
+    pub fn new(recipient_context_generator: &'a G) -> Self {
         Self {
             recipient_context_generator,
             inner: None,

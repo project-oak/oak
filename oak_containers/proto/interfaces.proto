@@ -37,7 +37,7 @@ message GetApplicationConfigResponse {
 }
 
 message SendAttestationEvidenceRequest {
-  oak.session.v1.AttestationEvidence evidence = 1;
+  oak.session.v1.AttestationEvidence evidence = 1 [deprecated = true];
   oak.attestation.v1.Evidence dice_evidence = 2;
 }
 
