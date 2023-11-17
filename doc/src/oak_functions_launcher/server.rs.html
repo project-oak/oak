@@ -132,6 +132,8 @@
 <a href="#132" id="132">132</a>
 <a href="#133" id="133">133</a>
 <a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -219,7 +221,8 @@
                         })
                     }
                     request_wrapper::Request::InvokeRequest(invoke_request) =&gt; {
-                        <span class="kw">let </span>enclave_invoke_request = functions::InvokeRequest {
+                        <span class="attr">#[allow(clippy::needless_update)]
+                        </span><span class="kw">let </span>enclave_invoke_request = functions::InvokeRequest {
                             encrypted_request: invoke_request.encrypted_request,
                             ..Default::default()
                         };
@@ -232,7 +235,8 @@
                             .map_err(|err| {
                                 tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;error handling client request: {:?}&quot;</span>, err))
                             })<span class="question-mark">?</span>;
-                        response_wrapper::Response::InvokeResponse(InvokeResponse {
+                        <span class="attr">#[allow(clippy::needless_update)]
+                        </span>response_wrapper::Response::InvokeResponse(InvokeResponse {
                             encrypted_response: enclave_invoke_response.encrypted_response,
                             ..Default::default()
                         })

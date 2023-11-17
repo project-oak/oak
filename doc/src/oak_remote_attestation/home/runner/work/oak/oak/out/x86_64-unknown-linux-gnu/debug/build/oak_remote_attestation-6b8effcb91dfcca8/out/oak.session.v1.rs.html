@@ -112,18 +112,6 @@
 <a href="#112" id="112">112</a>
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// AttestationEvidence contains all the information that originates in the TEE and can serve as
 /// claims about the Target Environment. The name is chosen to match the RATS terminology
 /// (see &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence&gt;).
@@ -204,13 +192,6 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InvokeRequest {
-    <span class="doccomment">/// Body of the request, encrypted with the enclave public key.
-    /// TODO(#3442): Specify encryption format.
-    /// TODO(#3442): Also pass client public or symmetric key to use for response encryption. Note that
-    /// needs to be at least authenticated by the client, if not encrypted within this field.
-    /// TODO(#3843): Use explicit `oak_crypto` messages.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>encrypted_body: ::prost::alloc::vec::Vec&lt;u8&gt;,
     <span class="doccomment">/// Body of the request, encrypted using Hybrid Public Key Encryption (HPKE).
     /// &lt;&lt;https://www.rfc-editor.org/rfc/rfc9180.html&gt;&gt;
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
@@ -221,11 +202,6 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InvokeResponse {
-    <span class="doccomment">/// Body of the request, encrypted with the client public or symmetric key.
-    /// TODO(#3442): Specify encryption format.
-    /// TODO(#3843): Use explicit `oak_crypto` messages.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>encrypted_body: ::prost::alloc::vec::Vec&lt;u8&gt;,
     <span class="doccomment">/// Body of the request, encrypted using Hybrid Public Key Encryption (HPKE).
     /// &lt;&lt;https://www.rfc-editor.org/rfc/rfc9180.html&gt;&gt;
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
