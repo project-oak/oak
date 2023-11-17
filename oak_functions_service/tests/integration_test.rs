@@ -52,6 +52,7 @@ fn it_should_not_handle_user_requests_before_initialization() {
     let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
+    #[allow(clippy::needless_update)]
     let request = InvokeRequest {
         encrypted_request: Some(EncryptedRequest::default()),
         ..Default::default()
@@ -94,6 +95,7 @@ fn it_should_handle_user_requests_after_initialization() {
         .expect("couldn't encrypt request");
 
     // Send invoke request.
+    #[allow(clippy::needless_update)]
     let invoke_request = InvokeRequest {
         encrypted_request: Some(encrypted_request),
         ..Default::default()
@@ -157,10 +159,13 @@ async fn it_should_error_on_invalid_wasm_module() {
 
     // Send invoke request.
     let lookup_response = client
-        .handle_user_request(&InvokeRequest {
-            encrypted_request: Some(encrypted_request),
-            ..Default::default()
-        })
+        .handle_user_request(
+            #[allow(clippy::needless_update)]
+            &InvokeRequest {
+                encrypted_request: Some(encrypted_request),
+                ..Default::default()
+            },
+        )
         .expect("couldn't receive response");
     assert!(lookup_response.is_ok());
     let encrypted_response = lookup_response
@@ -242,10 +247,13 @@ async fn it_should_support_lookup_data() {
 
     // Send invoke request.
     let lookup_response = client
-        .handle_user_request(&InvokeRequest {
-            encrypted_request: Some(encrypted_request),
-            ..Default::default()
-        })
+        .handle_user_request(
+            #[allow(clippy::needless_update)]
+            &InvokeRequest {
+                encrypted_request: Some(encrypted_request),
+                ..Default::default()
+            },
+        )
         .expect("couldn't receive response");
     assert!(lookup_response.is_ok());
     let encrypted_response = lookup_response
@@ -312,10 +320,13 @@ async fn it_should_handle_wasm_panic() {
 
     // Send invoke request.
     let lookup_response = client
-        .handle_user_request(&InvokeRequest {
-            encrypted_request: Some(encrypted_request),
-            ..Default::default()
-        })
+        .handle_user_request(
+            #[allow(clippy::needless_update)]
+            &InvokeRequest {
+                encrypted_request: Some(encrypted_request),
+                ..Default::default()
+            },
+        )
         .expect("couldn't receive response");
     assert!(lookup_response.is_ok());
     let encrypted_response = lookup_response

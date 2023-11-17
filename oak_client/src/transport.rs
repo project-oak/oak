@@ -49,6 +49,7 @@ impl Transport for GrpcStreamingTransport {
         let mut response_stream = self
             .rpc_client
             .stream(futures_util::stream::iter(vec![RequestWrapper {
+                #[allow(clippy::needless_update)]
                 request: Some(request_wrapper::Request::InvokeRequest(InvokeRequest {
                     encrypted_request: Some(encrypted_request.clone()),
                     ..Default::default()

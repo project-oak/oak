@@ -114,6 +114,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
     let encrypted_request = client_encryptor
         .encrypt(&config.request, &[])
         .expect("could not encrypt request");
+    #[allow(clippy::needless_update)]
     let invoke_request = InvokeRequest {
         encrypted_request: Some(encrypted_request),
         ..Default::default()
