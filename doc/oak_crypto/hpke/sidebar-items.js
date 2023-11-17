@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["RecipientContext","SenderContext"],"type":["PublicKey"]};
+window.SIDEBAR_ITEMS = {"fn":["gen_kem_keypair"],"struct":["KeyPair","RecipientContext","SenderContext"],"trait":["Serializable"],"type":["PublicKey"]};

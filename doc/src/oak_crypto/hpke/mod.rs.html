@@ -353,6 +353,11 @@
 <a href="#353" id="353">353</a>
 <a href="#354" id="354">354</a>
 <a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -378,9 +383,10 @@
 };
 <span class="kw">use </span>alloc::vec::Vec;
 <span class="kw">use </span>anyhow::{anyhow, Context};
+<span class="kw">pub use </span>hpke::Serializable;
 <span class="kw">use </span>hpke::{
     aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Deserializable, Kem <span class="kw">as </span>KemTrait,
-    OpModeR, OpModeS, Serializable,
+    OpModeR, OpModeS,
 };
 <span class="kw">use </span>rand_core::OsRng;
 
@@ -395,15 +401,19 @@
 /// &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption&gt;
 </span><span class="kw">const </span>MAX_SEQUENCE_NUMBER: u128 = (<span class="number">1 </span>&lt;&lt; (<span class="number">8 </span>* AEAD_NONCE_SIZE_BYTES)) - <span class="number">1</span>;
 
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>KeyPair {
+<span class="kw">pub fn </span>gen_kem_keypair() -&gt; (PrivateKey, PublicKey) {
+    Kem::gen_keypair(<span class="kw-2">&amp;mut </span>OsRng)
+}
+
+<span class="kw">pub struct </span>KeyPair {
     <span class="kw">pub</span>(<span class="kw">crate</span>) private_key: PrivateKey,
     <span class="kw">pub</span>(<span class="kw">crate</span>) public_key: PublicKey,
 }
 
 <span class="kw">impl </span>KeyPair {
     <span class="doccomment">/// Randomly generates a key pair.
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>generate() -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>(private_key, public_key) = Kem::gen_keypair(<span class="kw-2">&amp;mut </span>OsRng);
+    </span><span class="kw">pub fn </span>generate() -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>(private_key, public_key) = gen_kem_keypair();
         <span class="self">Self </span>{
             private_key,
             public_key,

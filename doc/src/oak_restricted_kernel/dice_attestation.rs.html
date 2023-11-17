@@ -100,6 +100,27 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -117,26 +138,13 @@
 //
 
 </span><span class="kw">use </span>coset::CborSerializable;
-<span class="kw">use </span>zerocopy::FromZeroes;
+<span class="kw">use </span>oak_crypto::hpke::Serializable;
 
-<span class="doccomment">/// Generates an ECA certificate for use by the application.
-</span><span class="kw">fn </span>generate_application_certificate(
-    kernel_signing_key: <span class="kw-2">&amp;</span>p256::ecdsa::SigningKey,
-    kernel_cert_issuer: alloc::string::String,
-    application_verifying_key: <span class="kw-2">&amp;</span>p256::ecdsa::VerifyingKey,
-    app_digest: <span class="kw-2">&amp;</span>[u8],
-) -&gt; coset::CoseSign1 {
-    <span class="kw">let </span>additional_claims = <span class="macro">alloc::vec!</span>[(
-        coset::cwt::ClaimName::PrivateUse(oak_dice::cert::LAYER_2_CODE_MEASUREMENT_ID),
-        coset::cbor::value::Value::Bytes(app_digest.into()),
-    )];
-    oak_dice::cert::generate_signing_certificate(
-        kernel_signing_key,
-        kernel_cert_issuer,
-        application_verifying_key,
-        additional_claims,
-    )
-    .expect(<span class="string">&quot;couldn&#39;t generate signing certificate&quot;</span>)
+<span class="kw">fn </span>certificate_to_byte_array(cert: coset::CoseSign1) -&gt; [u8; oak_dice::evidence::CERTIFICATE_SIZE] {
+    <span class="kw">let </span>vec = cert.to_vec().expect(<span class="string">&quot;couldn&#39;t serialize certificate&quot;</span>);
+    <span class="kw">let </span><span class="kw-2">mut </span>slice = [<span class="number">0</span>; oak_dice::evidence::CERTIFICATE_SIZE];
+    slice[..vec.len()].copy_from_slice(<span class="kw-2">&amp;</span>vec);
+    slice
 }
 
 <span class="doccomment">/// Generates attestation evidence for the &#39;measurement&#39; of the application.
@@ -144,10 +152,10 @@
     stage0_dice_data: oak_dice::evidence::Stage0DiceData,
     app_digest: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; oak_dice::evidence::RestrictedKernelDiceData {
-    <span class="kw">let </span>(application_signing_key, application_verifying_key) =
-        oak_dice::cert::generate_ecdsa_key_pair();
-
-    <span class="kw">let </span>application_eca_cert = {
+    <span class="kw">let </span>(application_keys, application_private_keys): (
+        oak_dice::evidence::ApplicationKeys,
+        oak_dice::evidence::ApplicationPrivateKeys,
+    ) = {
         <span class="kw">let </span>kernel_signing_key = p256::ecdsa::SigningKey::from_slice(
             <span class="kw-2">&amp;</span>stage0_dice_data
                 .layer_1_certificate_authority
@@ -163,32 +171,66 @@
             </span>.subject
             .expect(<span class="string">&quot;expected to find the subject&quot;</span>);
 
-        generate_application_certificate(
-            <span class="kw-2">&amp;</span>kernel_signing_key,
-            kernel_cert_issuer,
-            <span class="kw-2">&amp;</span>application_verifying_key,
-            app_digest,
-        )
-    };
+        <span class="kw">let </span>(application_private_signing_key, application_public_verifying_key) =
+            oak_dice::cert::generate_ecdsa_key_pair();
 
-    <span class="kw">let </span>application_keys = {
-        <span class="kw">let </span><span class="kw-2">mut </span>keys = oak_dice::evidence::ApplicationKeys::new_zeroed();
-        <span class="kw">let </span>application_eca_cert_vec = application_eca_cert
-            .to_vec()
-            .expect(<span class="string">&quot;couldn&#39;t serialize application signing 1 ECA certificate&quot;</span>);
-        keys.signing_public_key_certificate[..application_eca_cert_vec.len()]
-            .copy_from_slice(<span class="kw-2">&amp;</span>application_eca_cert_vec);
-        <span class="comment">// TODO(#4074): Implement the encryption key.
-        </span>keys
-    };
+        <span class="kw">let </span>additional_claims = <span class="macro">alloc::vec!</span>[(
+            coset::cwt::ClaimName::PrivateUse(oak_dice::cert::LAYER_2_CODE_MEASUREMENT_ID),
+            coset::cbor::value::Value::Bytes(app_digest.into()),
+        )];
 
-    <span class="kw">let </span>application_private_keys: oak_dice::evidence::ApplicationPrivateKeys = {
-        <span class="kw">let </span>signing_private_key_bytes = application_signing_key.to_bytes();
-        <span class="kw">let </span><span class="kw-2">mut </span>keys = oak_dice::evidence::ApplicationPrivateKeys::new_zeroed();
-        keys.signing_private_key[..signing_private_key_bytes.as_slice().len()]
-            .copy_from_slice(signing_private_key_bytes.as_slice());
-        <span class="comment">// TODO(#4074): Implement the encryption key.
-        </span>keys
+        <span class="kw">let </span>application_signing_public_key_certificate =
+            oak_dice::cert::generate_signing_certificate(
+                <span class="kw-2">&amp;</span>kernel_signing_key,
+                kernel_cert_issuer.clone(),
+                <span class="kw-2">&amp;</span>application_public_verifying_key,
+                additional_claims.clone(),
+            )
+            .expect(<span class="string">&quot;couldn&#39;t generate signing certificate&quot;</span>);
+
+        <span class="kw">let </span>(application_encryption_private_key, application_encryption_public_key) =
+            oak_crypto::hpke::gen_kem_keypair();
+
+        <span class="kw">let </span>application_encryption_public_key_certificate =
+            oak_dice::cert::generate_kem_certificate(
+                <span class="kw-2">&amp;</span>kernel_signing_key,
+                kernel_cert_issuer,
+                application_encryption_public_key.to_bytes().as_slice(),
+                additional_claims,
+            )
+            .expect(<span class="string">&quot;couldn&#39;t generate encryption public certificate&quot;</span>);
+
+        <span class="kw">let </span>application_keys = oak_dice::evidence::ApplicationKeys {
+            signing_public_key_certificate: certificate_to_byte_array(
+                application_signing_public_key_certificate,
+            ),
+            encryption_public_key_certificate: certificate_to_byte_array(
+                application_encryption_public_key_certificate,
+            ),
+        };
+
+        <span class="kw">let </span>application_private_keys = {
+            <span class="kw">let </span>signing_private_key = {
+                <span class="kw">let </span>bytes = application_private_signing_key.to_bytes();
+                <span class="kw">let </span><span class="kw-2">mut </span>slice = [<span class="number">0</span>; oak_dice::evidence::PRIVATE_KEY_SIZE];
+                slice[..bytes.as_slice().len()].copy_from_slice(bytes.as_slice());
+                slice
+            };
+
+            <span class="kw">let </span>encryption_private_key = {
+                <span class="kw">let </span><span class="kw-2">mut </span>slice = [<span class="number">0</span>; oak_dice::evidence::PRIVATE_KEY_SIZE];
+                slice[..application_encryption_private_key.to_bytes().len()]
+                    .copy_from_slice(<span class="kw-2">&amp;</span>application_encryption_private_key.to_bytes());
+                slice
+            };
+
+            oak_dice::evidence::ApplicationPrivateKeys {
+                encryption_private_key,
+                signing_private_key,
+            }
+        };
+
+        (application_keys, application_private_keys)
     };
 
     <span class="kw">let </span>evidence = oak_dice::evidence::Evidence {
