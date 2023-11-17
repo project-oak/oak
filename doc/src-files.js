@@ -8,6 +8,7 @@ var srcIndex = JSON.parse('{\
 "lookup_data_generator":["",[],["data.rs","lib.rs"]],\
 "micro_rpc":["",[],["lib.rs","status.rs"]],\
 "micro_rpc_build":["",[],["lib.rs"]],\
+"oak_attestation_verification":["",[],["endorsement.rs","lib.rs","rekor.rs","util.rs","verifier.rs"]],\
 "oak_channel":["",[],["client.rs","frame.rs","lib.rs","message.rs","server.rs"]],\
 "oak_client":["",[],["lib.rs","transport.rs","verifier.rs"]],\
 "oak_containers_hello_world_trusted_app":["",[],["app_service.rs","lib.rs","orchestrator_client.rs"]],\
@@ -40,7 +41,6 @@ var srcIndex = JSON.parse('{\
 "oak_launcher_utils":["",[],["channel.rs","launcher.rs","lib.rs"]],\
 "oak_linux_boot_params":["",[],["lib.rs"]],\
 "oak_remote_attestation":["",[],["attester.rs","dice.rs","handler.rs","lib.rs"]],\
-"oak_remote_attestation_verification":["",[],["endorsement.rs","lib.rs","rekor.rs","util.rs","verifier.rs"]],\
 "oak_restricted_kernel":["",[["boot",[],["mod.rs"]],["mm",[],["bitmap_frame_allocator.rs","encrypted_mapper.rs","frame_allocator.rs","mod.rs","page_tables.rs","virtual_address_allocator.rs"]],["syscall",[],["channel.rs","dice_data.rs","fd.rs","key.rs","mmap.rs","mod.rs","process.rs","stdio.rs"]]],["acpi.rs","args.rs","avx.rs","descriptors.rs","dice_attestation.rs","elf.rs","ghcb.rs","interrupts.rs","lib.rs","libm.rs","logging.rs","memory.rs","payload.rs","shutdown.rs","snp.rs","snp_guest.rs","virtio.rs"]],\
 "oak_restricted_kernel_api":["",[],["channel.rs","lib.rs","logging.rs","raw_syscall.rs","syscall.rs"]],\
 "oak_restricted_kernel_interface":["",[],["errno.rs","lib.rs","syscalls.rs"]],\
