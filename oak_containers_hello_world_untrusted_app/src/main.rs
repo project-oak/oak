@@ -32,6 +32,7 @@ async fn main() -> Result<(), anyhow::Error> {
         .get_endorsed_evidence()
         .await
         .map_err(|error| anyhow::anyhow!("couldn't get endorsed evidence: {}", error))?;
+    #[allow(deprecated)]
     let encryption_public_key = endorsed_evidence
         .attestation_evidence
         .context("no attestation evidence provided")?

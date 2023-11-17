@@ -59,9 +59,11 @@ impl StreamingSession for SessionProxy {
             tee_certificates: vec![],
             application_data: None,
         };
+        #[allow(deprecated)]
         let attestation_bundle = AttestationBundle {
             attestation_evidence: Some(attestation_evidence),
             attestation_endorsement: Some(attestation_endorsement),
+            dice_evidence: None,
         };
 
         let mut connector_handle = self.connector_handle.clone();

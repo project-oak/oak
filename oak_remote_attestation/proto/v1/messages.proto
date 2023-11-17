@@ -19,6 +19,7 @@ syntax = "proto3";
 package oak.session.v1;
 
 import "oak_crypto/proto/v1/crypto.proto";
+import "proto/attestation/evidence.proto";
 
 option java_multiple_files = true;
 option java_package = "com.google.oak.session.v1";
@@ -27,6 +28,7 @@ option java_package = "com.google.oak.session.v1";
 // claims about the Target Environment. The name is chosen to match the RATS terminology
 // (see https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence).
 message AttestationEvidence {
+  option deprecated = true;
   // The serialized public key part of the enclave encryption key.
   // TODO(#3442): Specify key format.
   bytes encryption_public_key = 1;
@@ -49,10 +51,13 @@ message AttestationEvidence {
 // in response to its request for the enclave's public key(s).
 message AttestationBundle {
   // Attestation evidence from the enclave.
-  AttestationEvidence attestation_evidence = 1;
+  AttestationEvidence attestation_evidence = 1 [deprecated = true];
 
   // Supporting evidence required for verifying the integrity of attestation evidence.
   AttestationEndorsement attestation_endorsement = 2;
+
+  // The DICE attestation evidence.
+  oak.attestation.v1.Evidence dice_evidence = 3;
 }
 
 // AttestationEndorsement contains statements that some entity (e.g., a hardware provider) vouches

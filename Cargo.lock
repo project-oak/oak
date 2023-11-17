@@ -1878,6 +1878,7 @@ dependencies = [
  "log",
  "oak_crypto",
  "oak_grpc_utils",
+ "oak_remote_attestation",
  "prost",
  "tonic",
 ]
@@ -2227,6 +2228,7 @@ dependencies = [
  "oak_functions_test_utils",
  "oak_grpc_utils",
  "oak_launcher_utils",
+ "oak_remote_attestation",
  "prost",
  "rand",
  "serde",

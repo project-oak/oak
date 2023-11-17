@@ -114,6 +114,7 @@ impl EvidenceProvider for GrpcStreamingTransport {
             ));
         };
 
+        #[allow(deprecated)]
         get_evidence_response
             .attestation_bundle
             .context("get_evidence_response message doesn't contain an attestation bundle")?
