@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-load("@build_bazel_rules_android//android:rules.bzl", "android_library")
 load("@rules_java//java:defs.bzl", "java_library")
 
 package(
@@ -24,10 +23,5 @@ package(
 
 java_library(
     name = "util",
-    srcs = glob(["*.java"]),
-)
-
-android_library(
-    name = "util_android",
     srcs = glob(["*.java"]),
 )

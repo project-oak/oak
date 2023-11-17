@@ -14,7 +14,6 @@
 # limitations under the License.
 #
 
-load("@build_bazel_rules_android//android:rules.bzl", "android_library")
 load("@rules_java//java:defs.bzl", "java_library")
 
 package(
@@ -35,16 +34,17 @@ java_library(
     ],
 )
 
-# Android-friendly flavor of OakClient.
-android_library(
+# Clients are responsible for bundling in "libhpke-jni.so".
+java_library(
     name = "client_android",
     srcs = [
         "OakClient.java",
     ],
     deps = [
         "//java/src/main/java/com/google/oak/crypto:client_encryptor_android",
-        "//java/src/main/java/com/google/oak/remote_attestation:attestation_verifier_android",
+        "//java/src/main/java/com/google/oak/remote_attestation:attestation_verifier",
         "//java/src/main/java/com/google/oak/transport:transport_android",
-        "//java/src/main/java/com/google/oak/util:util_android",
+        "//java/src/main/java/com/google/oak/util",
     ],
 )
+
