@@ -52,7 +52,7 @@ java_library(
         ":decryption_result",
         "//java/src/main/java/com/google/oak/crypto/hpke:hpke_android",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_crypto/proto/v1:crypto_java_proto_lite",
+        "//oak_crypto/proto/v1:crypto_java_proto",
         "@com_google_protobuf//java/lite",
     ],
 )
