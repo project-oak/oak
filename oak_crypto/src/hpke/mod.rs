@@ -23,17 +23,16 @@ use crate::{
 };
 use alloc::vec::Vec;
 use anyhow::{anyhow, Context};
-pub use hpke::Serializable;
 use hpke::{
-    aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Deserializable, Kem as KemTrait,
-    OpModeR, OpModeS,
+    aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Kem as KemTrait, OpModeR, OpModeS,
 };
+pub use hpke::{Deserializable, Serializable};
 use rand_core::OsRng;
 
 type Aead = AesGcm256;
 type Kdf = HkdfSha256;
 type Kem = X25519HkdfSha256;
-pub(crate) type PrivateKey = <Kem as KemTrait>::PrivateKey;
+pub type PrivateKey = <Kem as KemTrait>::PrivateKey;
 pub type PublicKey = <Kem as KemTrait>::PublicKey;
 pub(crate) type EncappedKey = <Kem as KemTrait>::EncappedKey;
 
@@ -54,6 +53,13 @@ impl KeyPair {
     /// Randomly generates a key pair.
     pub fn generate() -> Self {
         let (private_key, public_key) = gen_kem_keypair();
+        Self {
+            private_key,
+            public_key,
+        }
+    }
+
+    pub fn new(private_key: PrivateKey, public_key: PublicKey) -> Self {
         Self {
             private_key,
             public_key,

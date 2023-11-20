@@ -28,7 +28,7 @@ opentelemetry_sdk = { version = "*", default-features = false, features = [
 opentelemetry-otlp = { version = "*", default-features = false, features = [
   "metrics",
 ] }
-p256 = { version = "*", features = ["ecdh"] }
+p256 = { version = "*", features = ["ecdsa"] }
 prost = "*"
 prost-types = "*"
 procfs = "*"

@@ -19,7 +19,10 @@
 //! <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
 
 use crate::{
-    hpke::{setup_base_recipient, setup_base_sender, KeyPair, RecipientContext, SenderContext},
+    hpke::{
+        setup_base_recipient, setup_base_sender, KeyPair, PrivateKey, PublicKey, RecipientContext,
+        SenderContext,
+    },
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
@@ -44,6 +47,12 @@ impl EncryptionKeyProvider {
     pub fn new() -> Self {
         Self {
             key_pair: KeyPair::generate(),
+        }
+    }
+
+    pub fn new_from_keys(private_key: PrivateKey, public_key: PublicKey) -> Self {
+        Self {
+            key_pair: KeyPair::new(private_key, public_key),
         }
     }
 
