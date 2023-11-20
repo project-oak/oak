@@ -36,3 +36,17 @@ java_library(
         "//java/src/main/java/com/google/oak/util",
     ],
 )
+
+# Clients are responsible for bundling in "libhpke-jni.so".
+java_library(
+    name = "hpke_android",
+    srcs = [
+        "Hpke.java",
+        "KeyPair.java",
+        "RecipientContext.java",
+        "SenderContext.java",
+    ],
+    deps = [
+        "//java/src/main/java/com/google/oak/util",
+    ],
+)
