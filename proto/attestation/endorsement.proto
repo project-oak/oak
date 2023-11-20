@@ -30,6 +30,9 @@ message TransparentReleaseEndorsement {
 
   // The log entry as proof of inclusion of the endorsement statement in Rekor.
   bytes rekor_log_entry = 2;
+
+  // The signature for the endorsement.
+  bytes endorsement_signature = 3;
 }
 
 message RootLayerEndorsements {
