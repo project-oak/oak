@@ -25,14 +25,16 @@ option java_package = "com.google.oak.attestation.v1";
 // Endorsement for binaries from the Transparent Release process.
 // <https://github.com/project-oak/oak/blob/main/docs/release.md>
 message TransparentReleaseEndorsement {
-  // The endorsement statement for the underlying binary.
+  // JSON string comtaining the endorsement statement for the underlying binary.
+  // The format is described here:
+  // https://github.com/project-oak/transparent-release/blob/main/docs/claim-transparency.md#the-claim-format
   bytes endorsement = 1;
 
-  // The log entry as proof of inclusion of the endorsement statement in Rekor.
-  bytes rekor_log_entry = 2;
-
   // The signature for the endorsement.
-  bytes endorsement_signature = 3;
+  bytes endorsement_signature = 2;
+
+  // The log entry as proof of inclusion of the endorsement statement in Rekor.
+  bytes rekor_log_entry = 3;
 }
 
 message RootLayerEndorsements {
