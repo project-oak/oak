@@ -43,7 +43,7 @@ readonly binary_names=(
     oak_containers_hello_world_container # TBD
     oak_containers_functions # TBD
 )
-for i in ${!binary_names[@]}; do
+for i in "${!binary_names[@]}"; do
     cp --preserve=timestamps \
         "${generated_binaries[$i]}" \
         "${KOKORO_ARTIFACTS_DIR}/binaries/${binary_names[$i]}"
