@@ -292,6 +292,15 @@
 <a href="#292" id="292">292</a>
 <a href="#293" id="293">293</a>
 <a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -313,7 +322,10 @@
 //! &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption&gt;
 
 </span><span class="kw">use crate</span>::{
-    hpke::{setup_base_recipient, setup_base_sender, KeyPair, RecipientContext, SenderContext},
+    hpke::{
+        setup_base_recipient, setup_base_sender, KeyPair, PrivateKey, PublicKey, RecipientContext,
+        SenderContext,
+    },
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
 <span class="kw">use </span>alloc::{boxed::Box, sync::Arc, vec::Vec};
@@ -329,15 +341,21 @@
 
 <span class="kw">impl </span>Default <span class="kw">for </span>EncryptionKeyProvider {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>::new()
+        <span class="self">Self</span>::generate()
     }
 }
 
 <span class="kw">impl </span>EncryptionKeyProvider {
     <span class="doccomment">/// Creates a crypto provider with a newly generated key pair.
-    </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>generate() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             key_pair: KeyPair::generate(),
+        }
+    }
+
+    <span class="kw">pub fn </span>new(private_key: PrivateKey, public_key: PublicKey) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            key_pair: KeyPair::new(private_key, public_key),
         }
     }
 

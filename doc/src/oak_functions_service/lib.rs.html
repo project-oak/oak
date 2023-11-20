@@ -253,7 +253,7 @@
     <span class="kw">pub fn </span>new(attestation_report_generator: Arc&lt;<span class="kw">dyn </span>AttestationReportGenerator&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             attestation_report_generator,
-            encryption_key_provider: Arc::new(EncryptionKeyProvider::new()),
+            encryption_key_provider: Arc::new(EncryptionKeyProvider::generate()),
             instance: OnceCell::new(),
         }
     }

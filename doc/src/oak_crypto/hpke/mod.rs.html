@@ -358,6 +358,12 @@
 <a href="#358" id="358">358</a>
 <a href="#359" id="359">359</a>
 <a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -383,17 +389,16 @@
 };
 <span class="kw">use </span>alloc::vec::Vec;
 <span class="kw">use </span>anyhow::{anyhow, Context};
-<span class="kw">pub use </span>hpke::Serializable;
 <span class="kw">use </span>hpke::{
-    aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Deserializable, Kem <span class="kw">as </span>KemTrait,
-    OpModeR, OpModeS,
+    aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Kem <span class="kw">as </span>KemTrait, OpModeR, OpModeS,
 };
+<span class="kw">pub use </span>hpke::{Deserializable, Serializable};
 <span class="kw">use </span>rand_core::OsRng;
 
 <span class="kw">type </span>Aead = AesGcm256;
 <span class="kw">type </span>Kdf = HkdfSha256;
 <span class="kw">type </span>Kem = X25519HkdfSha256;
-<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>PrivateKey = &lt;Kem <span class="kw">as </span>KemTrait&gt;::PrivateKey;
+<span class="kw">pub type </span>PrivateKey = &lt;Kem <span class="kw">as </span>KemTrait&gt;::PrivateKey;
 <span class="kw">pub type </span>PublicKey = &lt;Kem <span class="kw">as </span>KemTrait&gt;::PublicKey;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>EncappedKey = &lt;Kem <span class="kw">as </span>KemTrait&gt;::EncappedKey;
 
@@ -414,6 +419,13 @@
     <span class="doccomment">/// Randomly generates a key pair.
     </span><span class="kw">pub fn </span>generate() -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>(private_key, public_key) = gen_kem_keypair();
+        <span class="self">Self </span>{
+            private_key,
+            public_key,
+        }
+    }
+
+    <span class="kw">pub fn </span>new(private_key: PrivateKey, public_key: PublicKey) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             private_key,
             public_key,
