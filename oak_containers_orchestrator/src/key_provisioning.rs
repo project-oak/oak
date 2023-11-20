@@ -14,12 +14,25 @@
 // limitations under the License.
 
 use crate::proto::oak::containers::{
-    key_provisioning_server::KeyProvisioning, GetProvisionSecretsRequest,
-    GetProvisionSecretsResponse, SendProvisionSecretsRequest,
+    orchestrator_key_provisioning_server::OrchestratorKeyProvisioning, SendProvisionSecretsRequest,
+};
+use oak_key_provisioning::proto::oak::oak_key_provisioning::{
+    key_provisioning_server::KeyProvisioning,
+    GetProvisionSecretsRequest, GetProvisionSecretsResponse,
 };
 use tonic::{Request, Response};
 
 struct KeyProvisioningService {}
+
+#[tonic::async_trait]
+impl OrchestratorKeyProvisioning for KeyProvisioningService {
+    async fn send_provision_secrets(
+        &self,
+        _request: Request<SendProvisionSecretsRequest>,
+    ) -> Result<Response<()>, tonic::Status> {
+        Ok(tonic::Response::new(()))
+    }
+}
 
 #[tonic::async_trait]
 impl KeyProvisioning for KeyProvisioningService {
@@ -30,12 +43,5 @@ impl KeyProvisioning for KeyProvisioningService {
         Ok(tonic::Response::new(GetProvisionSecretsResponse {
             encrypted_encryption_key: None,
         }))
-    }
-
-    async fn send_provision_secrets(
-        &self,
-        _request: Request<SendProvisionSecretsRequest>,
-    ) -> Result<Response<()>, tonic::Status> {
-        Ok(tonic::Response::new(()))
     }
 }

@@ -16,6 +16,7 @@ nix = "*"
 oak_containers_orchestrator_client = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
+oak_key_provisioning = { workspace = true }
 oak_remote_attestation = { workspace = true }
 oci-spec = "*"
 opentelemetry_api = { version = "*", default-features = false, features = [

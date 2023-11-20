@@ -41,18 +41,6 @@ message SendAttestationEvidenceRequest {
   oak.attestation.v1.Evidence dice_evidence = 2;
 }
 
-message GetProvisionSecretsRequest {
-  // Endorsed evidence of the enclave that requests a new encryption key using Key Provisioning.
-  // TODO(#4074): Replace with `oak.attestation.v1.EndorsedEvidence` once DICE is implemented.
-  oak.session.v1.AttestationBundle endorsed_evidence = 1;
-}
-
-message GetProvisionSecretsResponse {
-  // Encryption private key that was encrypted with HPKE using the encryption public key provided
-  // in the endorsed evidence.
-  oak.crypto.v1.EncryptedRequest encrypted_encryption_key = 1;
-}
-
 message SendProvisionSecretsRequest {
   // Enclave group encryption private key that was encrypted with HPKE using enclave's encryption
   // key.
@@ -96,10 +84,7 @@ service Launcher {
 }
 
 // Defines the service exposed by the orchestrator, that can be invoked by the application.
-service KeyProvisioning {
-  // Request provision secrets from for other enclaves as part of Key Provisioning.
-  rpc GetProvisionSecrets(GetProvisionSecretsRequest) returns (GetProvisionSecretsResponse) {}
-
+service OrchestratorKeyProvisioning {
   // Send provision secrets to the enclave as part of Key Provisioning.
   rpc SendProvisionSecrets(SendProvisionSecretsRequest) returns (google.protobuf.Empty) {}
 }
