@@ -132,10 +132,14 @@ pub fn generate_dice_data(measurements: &Measurements) -> &'static Stage0DiceDat
 
     result.magic = STAGE0_MAGIC;
     result.root_layer_evidence.tee_platform = TeePlatform::AmdSevSnp as u64;
-    result.root_layer_evidence.remote_attestation_report[..report_bytes.len()]
-        .copy_from_slice(report_bytes);
-    result.root_layer_evidence.eca_public_key[..stage0_eca_verifying_key.len()]
-        .copy_from_slice(&stage0_eca_verifying_key);
+    result
+        .root_layer_evidence
+        .set_remote_attestation_report(report_bytes)
+        .expect("failed to set remote attestation report");
+    result
+        .root_layer_evidence
+        .set_eca_public_key(&stage0_eca_verifying_key)
+        .expect("failed to set eca public key");
     result.layer_1_evidence.eca_certificate[..stage1_eca_cert.len()]
         .copy_from_slice(&stage1_eca_cert);
     result.layer_1_certificate_authority.eca_private_key[..stage1_eca_signing_key.len()]
