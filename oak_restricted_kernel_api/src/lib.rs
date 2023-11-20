@@ -20,6 +20,7 @@
 extern crate alloc;
 
 mod channel;
+pub mod dice;
 mod logging;
 mod raw_syscall;
 pub mod syscall;

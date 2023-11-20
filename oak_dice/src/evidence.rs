@@ -38,6 +38,9 @@ pub const PRIVATE_KEY_SIZE: usize = 64;
 /// The actual size used when encoding a Nist P256 private key.
 pub const P256_PRIVATE_KEY_SIZE: usize = 32;
 
+/// The actual size used when encoding a X25519 private key.
+pub const X25519_PRIVATE_KEY_SIZE: usize = 32;
+
 /// The maximum size of a serialized COSE Key object representing an ECDSA public key.
 pub const PUBLIC_KEY_SIZE: usize = 256;
 
