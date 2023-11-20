@@ -20,8 +20,8 @@ use oak_dice::{
     cert::{
         derive_verifying_key_id, generate_ecdsa_key_pair, generate_signing_certificate,
         verifying_key_to_cose_key, ACPI_MEASUREMENT_ID, INITRD_MEASUREMENT_ID,
-        KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID,
-        SETUP_DATA_MEASUREMENT_ID,
+        KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
+        MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
     },
     evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
 };
@@ -56,32 +56,53 @@ fn generate_stage1_certificate(
 ) -> (CoseSign1, SigningKey) {
     // Generate additional claims to cover the measurements.
 
-    let additional_claims = vec![
-        (
-            ClaimName::PrivateUse(KERNEL_MEASUREMENT_ID),
-            Value::Bytes(measurements.kernel_measurement.into()),
-        ),
-        (
-            ClaimName::PrivateUse(KERNEL_COMMANDLINE_MEASUREMENT_ID),
-            Value::Bytes(measurements.cmdline_measurement.into()),
-        ),
-        (
-            ClaimName::PrivateUse(SETUP_DATA_MEASUREMENT_ID),
-            Value::Bytes(measurements.setup_data_measurement.into()),
-        ),
-        (
-            ClaimName::PrivateUse(INITRD_MEASUREMENT_ID),
-            Value::Bytes(measurements.ram_disk_measurement.into()),
-        ),
-        (
-            ClaimName::PrivateUse(MEMORY_MAP_MEASUREMENT_ID),
-            Value::Bytes(measurements.memory_map_measurement.into()),
-        ),
-        (
-            ClaimName::PrivateUse(ACPI_MEASUREMENT_ID),
-            Value::Bytes(measurements.acpi_measurement.into()),
-        ),
-    ];
+    let additional_claims = vec![(
+        ClaimName::PrivateUse(KERNEL_LAYER_ID),
+        Value::Map(vec![
+            (
+                Value::Integer(KERNEL_MEASUREMENT_ID.into()),
+                Value::Map(alloc::vec![(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(measurements.kernel_measurement.into()),
+                )]),
+            ),
+            (
+                Value::Integer(KERNEL_COMMANDLINE_MEASUREMENT_ID.into()),
+                Value::Map(alloc::vec![(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(measurements.cmdline_measurement.into()),
+                )]),
+            ),
+            (
+                Value::Integer(SETUP_DATA_MEASUREMENT_ID.into()),
+                Value::Map(alloc::vec![(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(measurements.setup_data_measurement.into()),
+                )]),
+            ),
+            (
+                Value::Integer(INITRD_MEASUREMENT_ID.into()),
+                Value::Map(alloc::vec![(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(measurements.ram_disk_measurement.into()),
+                )]),
+            ),
+            (
+                Value::Integer(MEMORY_MAP_MEASUREMENT_ID.into()),
+                Value::Map(alloc::vec![(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(measurements.memory_map_measurement.into()),
+                )]),
+            ),
+            (
+                Value::Integer(ACPI_MEASUREMENT_ID.into()),
+                Value::Map(alloc::vec![(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(measurements.acpi_measurement.into()),
+                )]),
+            ),
+        ]),
+    )];
 
     let (signing_key, verifying_key) = generate_ecdsa_key_pair();
     (

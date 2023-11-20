@@ -37,25 +37,34 @@ pub const SUBJECT_PUBLIC_KEY_ID: i64 = -4670552;
 /// ID for the bitstring used to describe the intended usage for the key represented by the
 /// certificate.
 pub const KEY_USAGE_ID: i64 = -4670553;
-/// ID for the CWT private claim ID corresponding to the VM kernel measurement.
-pub const KERNEL_MEASUREMENT_ID: i64 = -4670555;
-/// ID for the CWT private claim ID corresponding to the VM kernel command-line measurement.
-pub const KERNEL_COMMANDLINE_MEASUREMENT_ID: i64 = -4670556;
-/// ID for the CWT private claim ID corresponding to the VM kernel setup data measurement.
-pub const SETUP_DATA_MEASUREMENT_ID: i64 = -4670557;
-/// ID for the CWT private claim ID corresponding to the initial RAM disk measurement.
-pub const INITRD_MEASUREMENT_ID: i64 = -4670558;
-/// ID for the CWT private claim ID corresponding to the physical memory map (e820 table).
-pub const MEMORY_MAP_MEASUREMENT_ID: i64 = -4670559;
-/// ID for the CWT private claim ID corresponding to the hash of the commands for building the ACPI
-/// tables.
-pub const ACPI_MEASUREMENT_ID: i64 = -4670560;
-/// ID for the CWT private claim label corresponding to the hash of the binary for Layer 2.
+/// The CWT private claim ID for the Kernel layer.
+pub const KERNEL_LAYER_ID: i64 = -4670555;
+/// The CWT private claim ID for an enclave application layer.
+pub const ENCLAVE_APPLICATION_LAYER_ID: i64 = -4670556;
+/// The CWT private claim ID for the Oak Containers system image.
+pub const SYSTEM_IMAGE_LAYER_ID: i64 = -4670557;
+/// The CWT private claim ID for the container image.
+pub const CONTAINER_IMAGE_ID: i64 = -4670559;
+/// The CWT private claim ID for the kernel measurement.
+pub const KERNEL_MEASUREMENT_ID: i64 = -4670561;
+/// The CWT private claim ID for the kernel command-line measurement.
+pub const KERNEL_COMMANDLINE_MEASUREMENT_ID: i64 = -4670562;
+/// The CWT private claim ID for the kernel setup data measurement.
+pub const SETUP_DATA_MEASUREMENT_ID: i64 = -4670563;
+/// The CWT private claim ID for the initial RAM file system measurement.
+pub const INITRD_MEASUREMENT_ID: i64 = -4670564;
+/// The CWT private claim ID for the physical memory map (e820 table).
+pub const MEMORY_MAP_MEASUREMENT_ID: i64 = -4670565;
+/// The CWT private claim ID for the concatenated hash of the commands for building the ACPI tables.
+pub const ACPI_MEASUREMENT_ID: i64 = -4670566;
+/// The CWT private claim ID for the measurement of the layer 2 binary.
 pub const LAYER_2_CODE_MEASUREMENT_ID: i64 = -4670567;
-/// ID for the CWT private claim label corresponding to the hash of the binary for Layer 3.
+/// The CWT private claim ID for the measurement of the layer 3 binary.
 pub const LAYER_3_CODE_MEASUREMENT_ID: i64 = -4670569;
-/// ID for the CWT private claim label corresponding to the hash of the configuration for Layer 3.
+/// The CWT private claim ID for the measurement of the layer 3 config.
 pub const LAYER_3_CONFIG_MEASUREMENT_ID: i64 = -4670570;
+/// The CWT private claim ID for SHA2_256 digests.
+pub const SHA2_256_ID: i64 = -4670572;
 
 /// String to be used as salt for generating Key IDs.
 const ID_SALT: &[u8] = b"DICE_ID_SALT";
