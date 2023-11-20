@@ -157,6 +157,10 @@
 <a href="#157" id="157">157</a>
 <a href="#158" id="158">158</a>
 <a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -291,10 +295,14 @@
 
     result.magic = STAGE0_MAGIC;
     result.root_layer_evidence.tee_platform = TeePlatform::AmdSevSnp <span class="kw">as </span>u64;
-    result.root_layer_evidence.remote_attestation_report[..report_bytes.len()]
-        .copy_from_slice(report_bytes);
-    result.root_layer_evidence.eca_public_key[..stage0_eca_verifying_key.len()]
-        .copy_from_slice(<span class="kw-2">&amp;</span>stage0_eca_verifying_key);
+    result
+        .root_layer_evidence
+        .set_remote_attestation_report(report_bytes)
+        .expect(<span class="string">&quot;failed to set remote attestation report&quot;</span>);
+    result
+        .root_layer_evidence
+        .set_eca_public_key(<span class="kw-2">&amp;</span>stage0_eca_verifying_key)
+        .expect(<span class="string">&quot;failed to set eca public key&quot;</span>);
     result.layer_1_evidence.eca_certificate[..stage1_eca_cert.len()]
         .copy_from_slice(<span class="kw-2">&amp;</span>stage1_eca_cert);
     result.layer_1_certificate_authority.eca_private_key[..stage1_eca_signing_key.len()]
