@@ -38,19 +38,19 @@ pub struct EncryptionKeyProvider {
 
 impl Default for EncryptionKeyProvider {
     fn default() -> Self {
-        Self::new()
+        Self::generate()
     }
 }
 
 impl EncryptionKeyProvider {
     /// Creates a crypto provider with a newly generated key pair.
-    pub fn new() -> Self {
+    pub fn generate() -> Self {
         Self {
             key_pair: KeyPair::generate(),
         }
     }
 
-    pub fn new_from_keys(private_key: PrivateKey, public_key: PublicKey) -> Self {
+    pub fn new(private_key: PrivateKey, public_key: PublicKey) -> Self {
         Self {
             key_pair: KeyPair::new(private_key, public_key),
         }

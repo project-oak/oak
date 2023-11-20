@@ -48,7 +48,7 @@ pub fn get_dice_evidence_and_keys() -> anyhow::Result<DiceWrapper> {
         .ok_or_else(|| anyhow::anyhow!("no application keys"))?;
     let public_key = PublicKey::from_bytes(application_keys.encryption_public_key_certificate())
         .map_err(|error| anyhow::anyhow!("couldn't deserialize public key: {}", error))?;
-    let encryption_key = EncryptionKeyProvider::new_from_keys(private_key, public_key);
+    let encryption_key = EncryptionKeyProvider::new(private_key, public_key);
     let signing_key = SigningKey::from_slice(
         &dice_data.application_private_keys.signing_private_key[..P256_PRIVATE_KEY_SIZE],
     )

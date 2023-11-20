@@ -64,7 +64,7 @@ impl OakFunctionsService {
     pub fn new(attestation_report_generator: Arc<dyn AttestationReportGenerator>) -> Self {
         Self {
             attestation_report_generator,
-            encryption_key_provider: Arc::new(EncryptionKeyProvider::new()),
+            encryption_key_provider: Arc::new(EncryptionKeyProvider::generate()),
             instance: OnceCell::new(),
         }
     }
