@@ -36,7 +36,7 @@ java_library(
     deps = [
         ":attestation_verifier",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation/proto/v1:messages_java_proto_lite",
+        "//oak_remote_attestation/proto/v1:messages_java_proto",
     ],
 )
 
