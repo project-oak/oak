@@ -1,0 +1,12 @@
+[package]
+name = "key_provisioning"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = { version = "*", default-features = false }
+
+[build-dependencies]
+oak_grpc_utils = { workspace = true }
