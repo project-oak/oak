@@ -42,7 +42,7 @@ java_library(
     ],
     deps = [
         "//java/src/main/java/com/google/oak/crypto:client_encryptor_android",
-        "//java/src/main/java/com/google/oak/remote_attestation:attestation_verifier",
+        "//java/src/main/java/com/google/oak/remote_attestation:attestation_verifier_android",
         "//java/src/main/java/com/google/oak/transport:transport_android",
         "//java/src/main/java/com/google/oak/util",
     ],

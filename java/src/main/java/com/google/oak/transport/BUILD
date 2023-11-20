@@ -46,8 +46,8 @@ java_library(
     ],
     deps = [
         "//java/src/main/java/com/google/oak/util",
-        "//oak_crypto/proto/v1:crypto_java_proto",
-        "//oak_remote_attestation/proto/v1:messages_java_proto",
+        "//oak_crypto/proto/v1:crypto_java_proto_lite",
+        "//oak_remote_attestation/proto/v1:messages_java_proto_lite",
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//stub",
     ],
@@ -76,9 +76,9 @@ java_library(
     deps = [
         ":transport_android",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_crypto/proto/v1:crypto_java_proto",
-        "//oak_remote_attestation/proto/v1:messages_java_proto",
-        "//oak_remote_attestation/proto/v1:service_streaming_java_proto",
+        "//oak_crypto/proto/v1:crypto_java_proto_lite",
+        "//oak_remote_attestation/proto/v1:messages_java_proto_lite",
+        "//oak_remote_attestation/proto/v1:service_streaming_java_proto_lite",
         "@io_grpc_grpc_java//stub",
     ],
 )
