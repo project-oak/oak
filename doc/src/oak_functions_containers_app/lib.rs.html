@@ -149,6 +149,72 @@
 <a href="#149" id="149">149</a>
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -167,17 +233,21 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
 <span class="kw">use </span>anyhow::anyhow;
+<span class="kw">use </span>oak_crypto::encryptor::EncryptionKeyProvider;
 <span class="kw">use </span>oak_functions_service::{
+    instance::OakFunctionsInstance,
     proto::oak::functions::{
         AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
-        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse,
-        OakFunctions <span class="kw">as </span>OakFunctionsTrait,
+        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, PublicKeyInfo,
     },
-    OakFunctionsService,
 };
-<span class="kw">use </span>oak_remote_attestation::attester::AttestationReportGenerator;
-<span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>oak_remote_attestation::{
+    attester::{AttestationReportGenerator, Attester},
+    handler::EncryptionHandler,
+};
+<span class="kw">use </span>prost::Message;
+<span class="kw">use </span>std::sync::{Arc, OnceLock};
 <span class="kw">use </span>tokio::net::TcpListener;
 <span class="kw">use </span>tokio_stream::wrappers::TcpListenerStream;
 
@@ -200,14 +270,24 @@
 
 <span class="comment">// Instance of the OakFunctions service for Oak Containers.
 </span><span class="kw">pub struct </span>OakFunctionsContainersService {
-    service: OakFunctionsService,
+    attestation_report_generator: Arc&lt;<span class="kw">dyn </span>AttestationReportGenerator&gt;,
+    encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;,
+    instance: OnceLock&lt;OakFunctionsInstance&gt;,
 }
 
 <span class="kw">impl </span>OakFunctionsContainersService {
     <span class="kw">pub fn </span>new(attestation_report_generator: Arc&lt;<span class="kw">dyn </span>AttestationReportGenerator&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            service: OakFunctionsService::new(attestation_report_generator),
+            attestation_report_generator,
+            encryption_key_provider: Arc::new(EncryptionKeyProvider::generate()),
+            instance: OnceLock::new(),
         }
+    }
+
+    <span class="kw">fn </span>get_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>OakFunctionsInstance, tonic::Status&gt; {
+        <span class="self">self</span>.instance
+            .get()
+            .ok_or_else(|| tonic::Status::failed_precondition(<span class="string">&quot;not initialized&quot;</span>))
     }
 }
 
@@ -240,28 +320,80 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;InitializeRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;InitializeResponse&gt;, tonic::Status&gt; {
-        <span class="self">self</span>.service
-            .initialize(request.into_inner())
-            .map(tonic::Response::new)
-            .map_err(map_status)
+        <span class="kw">let </span>request = request.into_inner();
+        <span class="kw">match </span><span class="self">self</span>.instance.get() {
+            <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(tonic::Status::failed_precondition(<span class="string">&quot;already initialized&quot;</span>)),
+            <span class="prelude-val">None </span>=&gt; {
+                <span class="kw">let </span>instance = OakFunctionsInstance::new(<span class="kw-2">&amp;</span>request).map_err(map_status)<span class="question-mark">?</span>;
+                <span class="kw">let </span>attester = Attester::new(
+                    <span class="self">self</span>.attestation_report_generator.clone(),
+                    <span class="self">self</span>.encryption_key_provider.clone(),
+                );
+                <span class="kw">let </span>attestation_evidence =
+                    attester.generate_attestation_evidence().map_err(|err| {
+                        tonic::Status::internal(<span class="macro">format!</span>(
+                            <span class="string">&quot;couldn&#39;t get attestation evidence: {:?}&quot;</span>,
+                            err
+                        ))
+                    })<span class="question-mark">?</span>;
+                <span class="kw">if </span><span class="self">self</span>.instance.set(instance).is_err() {
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(tonic::Status::failed_precondition(<span class="string">&quot;already initialized&quot;</span>));
+                }
+                <span class="prelude-val">Ok</span>(tonic::Response::new(InitializeResponse {
+                    public_key_info: <span class="prelude-val">Some</span>(PublicKeyInfo {
+                        public_key: attestation_evidence.encryption_public_key,
+                        attestation: attestation_evidence.attestation,
+                    }),
+                }))
+            }
+        }
     }
 
     <span class="kw">async fn </span>handle_user_request(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;InvokeRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;InvokeResponse&gt;, tonic::Status&gt; {
-        <span class="self">self</span>.service
-            .handle_user_request(request.into_inner())
-            .map(tonic::Response::new)
-            .map_err(map_status)
+        <span class="kw">let </span>encryption_key_provider = <span class="self">self</span>.encryption_key_provider.clone();
+        <span class="kw">let </span>instance = <span class="self">self</span>.get_instance()<span class="question-mark">?</span>;
+
+        <span class="kw">let </span>encrypted_request = request.into_inner().encrypted_request.ok_or_else(|| {
+            tonic::Status::invalid_argument(
+                <span class="string">&quot;InvokeRequest doesn&#39;t contain an encrypted request&quot;</span>.to_string(),
+            )
+        })<span class="question-mark">?</span>;
+
+        EncryptionHandler::create(encryption_key_provider, |r| {
+            <span class="comment">// Wrap the invocation result (which may be an Error) into a micro RPC Response
+            // wrapper protobuf, and encode that as bytes.
+            </span><span class="kw">let </span>response_result: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, micro_rpc::Status&gt; =
+                instance.handle_user_request(r);
+            <span class="kw">let </span>response: micro_rpc::ResponseWrapper = response_result.into();
+            response.encode_to_vec()
+        })
+        .invoke(<span class="kw-2">&amp;</span>encrypted_request)
+        .map(
+            <span class="attr">#[allow(clippy::needless_update)]
+            </span>|encrypted_response| {
+                tonic::Response::new(InvokeResponse {
+                    encrypted_response: <span class="prelude-val">Some</span>(encrypted_response),
+                    ..Default::default()
+                })
+            },
+        )
+        .map_err(|err| {
+            tonic::Status::internal(<span class="macro">format!</span>(
+                <span class="string">&quot;couldn&#39;t call handle_user_request handler: {:?}&quot;</span>,
+                err
+            ))
+        })
     }
 
     <span class="kw">async fn </span>extend_next_lookup_data(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;ExtendNextLookupDataRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;ExtendNextLookupDataResponse&gt;, tonic::Status&gt; {
-        <span class="self">self</span>.service
-            .extend_next_lookup_data(request.into_inner())
+        <span class="self">self</span>.get_instance()<span class="question-mark">?
+            </span>.extend_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
             .map_err(map_status)
     }
@@ -270,8 +402,8 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;FinishNextLookupDataRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;FinishNextLookupDataResponse&gt;, tonic::Status&gt; {
-        <span class="self">self</span>.service
-            .finish_next_lookup_data(request.into_inner())
+        <span class="self">self</span>.get_instance()<span class="question-mark">?
+            </span>.finish_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
             .map_err(map_status)
     }
@@ -280,8 +412,8 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;Empty&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;AbortNextLookupDataResponse&gt;, tonic::Status&gt; {
-        <span class="self">self</span>.service
-            .abort_next_lookup_data(request.into_inner())
+        <span class="self">self</span>.get_instance()<span class="question-mark">?
+            </span>.abort_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
             .map_err(map_status)
     }
