@@ -16,7 +16,9 @@
 use anyhow::Context;
 use ciborium::Value;
 use coset::cwt::ClaimName;
-use oak_dice::cert::{LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID};
+use oak_dice::cert::{
+    CONTAINER_IMAGE_ID, LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID, SHA2_256_ID,
+};
 use oak_remote_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
 use prost::Message;
 use sha2::{Digest, Sha256};
@@ -63,14 +65,23 @@ pub fn measure_container_and_config(
     let mut config_digest = Sha256::default();
     config_digest.update(config_bytes);
     let config_digest = config_digest.finalize();
-    vec![
-        (
-            ClaimName::PrivateUse(LAYER_3_CODE_MEASUREMENT_ID),
-            Value::Bytes(container_digest[..].to_vec()),
-        ),
-        (
-            ClaimName::PrivateUse(LAYER_3_CONFIG_MEASUREMENT_ID),
-            Value::Bytes(config_digest[..].to_vec()),
-        ),
-    ]
+    vec![(
+        ClaimName::PrivateUse(CONTAINER_IMAGE_ID),
+        Value::Map(vec![
+            (
+                Value::Integer(LAYER_3_CODE_MEASUREMENT_ID.into()),
+                Value::Map(vec![(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(container_digest[..].to_vec()),
+                )]),
+            ),
+            (
+                Value::Integer(LAYER_3_CONFIG_MEASUREMENT_ID.into()),
+                Value::Map(vec![(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(config_digest[..].to_vec()),
+                )]),
+            ),
+        ]),
+    )]
 }

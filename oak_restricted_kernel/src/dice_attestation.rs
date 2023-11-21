@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
-use coset::CborSerializable;
+use coset::{cbor::Value, cwt::ClaimName, CborSerializable};
 use oak_crypto::hpke::Serializable;
+use oak_dice::cert::{ENCLAVE_APPLICATION_LAYER_ID, LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID};
 
 fn certificate_to_byte_array(cert: coset::CoseSign1) -> [u8; oak_dice::evidence::CERTIFICATE_SIZE] {
     let vec = cert.to_vec().expect("couldn't serialize certificate");
@@ -52,8 +53,14 @@ pub fn generate_dice_data(
             oak_dice::cert::generate_ecdsa_key_pair();
 
         let additional_claims = alloc::vec![(
-            coset::cwt::ClaimName::PrivateUse(oak_dice::cert::LAYER_2_CODE_MEASUREMENT_ID),
-            coset::cbor::value::Value::Bytes(app_digest.into()),
+            ClaimName::PrivateUse(ENCLAVE_APPLICATION_LAYER_ID),
+            Value::Map(alloc::vec![(
+                Value::Integer(LAYER_2_CODE_MEASUREMENT_ID.into()),
+                Value::Map(alloc::vec![(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(app_digest.into()),
+                )]),
+            ),]),
         )];
 
         let application_signing_public_key_certificate =

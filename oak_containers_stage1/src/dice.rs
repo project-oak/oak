@@ -20,7 +20,7 @@ use ciborium::Value;
 use coset::cwt::ClaimName;
 use nix::sys::mman::{mmap, munmap, MapFlags, ProtFlags};
 use oak_dice::{
-    cert::LAYER_2_CODE_MEASUREMENT_ID,
+    cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID},
     evidence::{Stage0DiceData, STAGE0_MAGIC},
 };
 use oak_remote_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
@@ -51,8 +51,14 @@ pub fn measure_system_image(system_image_bytes: &[u8]) -> Vec<(ClaimName, Value)
     digest.update(system_image_bytes);
     let digest = digest.finalize();
     vec![(
-        ClaimName::PrivateUse(LAYER_2_CODE_MEASUREMENT_ID),
-        Value::Bytes(digest[..].to_vec()),
+        ClaimName::PrivateUse(SYSTEM_IMAGE_LAYER_ID),
+        Value::Map(vec![(
+            Value::Integer(LAYER_2_CODE_MEASUREMENT_ID.into()),
+            Value::Map(vec![(
+                Value::Integer(SHA2_256_ID.into()),
+                Value::Bytes(digest[..].to_vec()),
+            )]),
+        )]),
     )]
 }
 
