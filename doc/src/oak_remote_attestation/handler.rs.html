@@ -133,6 +133,9 @@
 <a href="#133" id="133">133</a>
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -153,7 +156,7 @@
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>oak_crypto::{
     encryptor::{
-        AsyncRecipientContextGenerator, AsyncServerEncryptor, EncryptionKeyProvider,
+        AsyncRecipientContextGenerator, AsyncServerEncryptor, RecipientContextGenerator,
         ServerEncryptor,
     },
     proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
@@ -175,12 +178,15 @@
 /// based on the provided encryption key.
 </span><span class="kw">pub struct </span>EncryptionHandler&lt;H: FnOnce(Vec&lt;u8&gt;) -&gt; Vec&lt;u8&gt;&gt; {
     <span class="comment">// TODO(#3442): Use attester to attest to the public key.
-    </span>encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;,
+    </span>encryption_key_provider: Arc&lt;<span class="kw">dyn </span>RecipientContextGenerator&gt;,
     request_handler: H,
 }
 
 <span class="kw">impl</span>&lt;H: FnOnce(Vec&lt;u8&gt;) -&gt; Vec&lt;u8&gt;&gt; EncryptionHandler&lt;H&gt; {
-    <span class="kw">pub fn </span>create(encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;, request_handler: H) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>create(
+        encryption_key_provider: Arc&lt;<span class="kw">dyn </span>RecipientContextGenerator&gt;,
+        request_handler: H,
+    ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             encryption_key_provider,
             request_handler,

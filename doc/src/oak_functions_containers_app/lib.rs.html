@@ -215,6 +215,17 @@
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
 <a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -233,7 +244,7 @@
 
 </span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
 <span class="kw">use </span>anyhow::anyhow;
-<span class="kw">use </span>oak_crypto::encryptor::EncryptionKeyProvider;
+<span class="kw">use </span>oak_crypto::encryptor::{AsyncRecipientContextGenerator, EncryptionKeyProvider};
 <span class="kw">use </span>oak_functions_service::{
     instance::OakFunctionsInstance,
     proto::oak::functions::{
@@ -244,7 +255,7 @@
 };
 <span class="kw">use </span>oak_remote_attestation::{
     attester::{AttestationReportGenerator, Attester},
-    handler::EncryptionHandler,
+    handler::AsyncEncryptionHandler,
 };
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>std::sync::{Arc, OnceLock};
@@ -269,24 +280,30 @@
 <span class="kw">pub mod </span>orchestrator_client;
 
 <span class="comment">// Instance of the OakFunctions service for Oak Containers.
-</span><span class="kw">pub struct </span>OakFunctionsContainersService {
+</span><span class="kw">pub struct </span>OakFunctionsContainersService&lt;G: AsyncRecipientContextGenerator + Send + Sync&gt; {
     attestation_report_generator: Arc&lt;<span class="kw">dyn </span>AttestationReportGenerator&gt;,
     encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;,
-    instance: OnceLock&lt;OakFunctionsInstance&gt;,
+    instance: OnceLock&lt;Arc&lt;OakFunctionsInstance&gt;&gt;,
+    orchestrator_client: Arc&lt;G&gt;,
 }
 
-<span class="kw">impl </span>OakFunctionsContainersService {
-    <span class="kw">pub fn </span>new(attestation_report_generator: Arc&lt;<span class="kw">dyn </span>AttestationReportGenerator&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;G: AsyncRecipientContextGenerator + Send + Sync&gt; OakFunctionsContainersService&lt;G&gt; {
+    <span class="kw">pub fn </span>new(
+        attestation_report_generator: Arc&lt;<span class="kw">dyn </span>AttestationReportGenerator&gt;,
+        orchestrator_client: Arc&lt;G&gt;,
+    ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             attestation_report_generator,
             encryption_key_provider: Arc::new(EncryptionKeyProvider::generate()),
             instance: OnceLock::new(),
+            orchestrator_client,
         }
     }
 
-    <span class="kw">fn </span>get_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>OakFunctionsInstance, tonic::Status&gt; {
+    <span class="kw">fn </span>get_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Arc&lt;OakFunctionsInstance&gt;, tonic::Status&gt; {
         <span class="self">self</span>.instance
             .get()
+            .cloned()
             .ok_or_else(|| tonic::Status::failed_precondition(<span class="string">&quot;not initialized&quot;</span>))
     }
 }
@@ -315,7 +332,9 @@
 }
 
 <span class="attr">#[tonic::async_trait]
-</span><span class="kw">impl </span>OakFunctions <span class="kw">for </span>OakFunctionsContainersService {
+</span><span class="kw">impl</span>&lt;G: AsyncRecipientContextGenerator + Send + Sync + <span class="lifetime">&#39;static</span>&gt; OakFunctions
+    <span class="kw">for </span>OakFunctionsContainersService&lt;G&gt;
+{
     <span class="kw">async fn </span>initialize(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;InitializeRequest&gt;,
@@ -324,7 +343,7 @@
         <span class="kw">match </span><span class="self">self</span>.instance.get() {
             <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(tonic::Status::failed_precondition(<span class="string">&quot;already initialized&quot;</span>)),
             <span class="prelude-val">None </span>=&gt; {
-                <span class="kw">let </span>instance = OakFunctionsInstance::new(<span class="kw-2">&amp;</span>request).map_err(map_status)<span class="question-mark">?</span>;
+                <span class="kw">let </span>instance = Arc::new(OakFunctionsInstance::new(<span class="kw-2">&amp;</span>request).map_err(map_status)<span class="question-mark">?</span>);
                 <span class="kw">let </span>attester = Attester::new(
                     <span class="self">self</span>.attestation_report_generator.clone(),
                     <span class="self">self</span>.encryption_key_provider.clone(),
@@ -353,7 +372,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;InvokeRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;InvokeResponse&gt;, tonic::Status&gt; {
-        <span class="kw">let </span>encryption_key_provider = <span class="self">self</span>.encryption_key_provider.clone();
+        <span class="kw">let </span>encryption_key_provider = <span class="self">self</span>.orchestrator_client.clone();
         <span class="kw">let </span>instance = <span class="self">self</span>.get_instance()<span class="question-mark">?</span>;
 
         <span class="kw">let </span>encrypted_request = request.into_inner().encrypted_request.ok_or_else(|| {
@@ -362,7 +381,7 @@
             )
         })<span class="question-mark">?</span>;
 
-        EncryptionHandler::create(encryption_key_provider, |r| {
+        AsyncEncryptionHandler::create(encryption_key_provider, |r| {
             <span class="comment">// Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
             </span><span class="kw">let </span>response_result: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, micro_rpc::Status&gt; =
@@ -371,7 +390,8 @@
             response.encode_to_vec()
         })
         .invoke(<span class="kw-2">&amp;</span>encrypted_request)
-        .map(
+        .<span class="kw">await
+        </span>.map(
             <span class="attr">#[allow(clippy::needless_update)]
             </span>|encrypted_response| {
                 tonic::Response::new(InvokeResponse {
@@ -420,13 +440,15 @@
 }
 
 <span class="comment">// Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-</span><span class="kw">pub async fn </span>serve(
+</span><span class="kw">pub async fn </span>serve&lt;G: AsyncRecipientContextGenerator + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(
     listener: TcpListener,
     attestation_report_generator: Arc&lt;<span class="kw">dyn </span>AttestationReportGenerator&gt;,
+    orchestrator_client: Arc&lt;G&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
     tonic::transport::Server::builder()
         .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
             attestation_report_generator,
+            orchestrator_client,
         )))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .<span class="kw">await

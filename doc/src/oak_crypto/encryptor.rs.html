@@ -301,6 +301,16 @@
 <a href="#301" id="301">301</a>
 <a href="#302" id="302">302</a>
 <a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -390,6 +400,16 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         encapsulated_public_key: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; anyhow::Result&lt;RecipientContext&gt;;
+}
+
+<span class="attr">#[async_trait]
+</span><span class="kw">impl </span>AsyncRecipientContextGenerator <span class="kw">for </span>EncryptionKeyProvider {
+    <span class="kw">async fn </span>generate_recipient_context(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        encapsulated_public_key: <span class="kw-2">&amp;</span>[u8],
+    ) -&gt; anyhow::Result&lt;RecipientContext&gt; {
+        (<span class="self">self </span><span class="kw">as </span><span class="kw-2">&amp;</span><span class="kw">dyn </span>RecipientContextGenerator).generate_recipient_context(encapsulated_public_key)
+    }
 }
 
 <span class="doccomment">/// Encryptor object for encrypting client requests that will be sent to the server and decrypting
