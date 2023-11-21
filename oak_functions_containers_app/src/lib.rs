@@ -16,17 +16,21 @@
 
 use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
 use anyhow::anyhow;
+use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_functions_service::{
+    instance::OakFunctionsInstance,
     proto::oak::functions::{
         AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
-        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse,
-        OakFunctions as OakFunctionsTrait,
+        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, PublicKeyInfo,
     },
-    OakFunctionsService,
 };
-use oak_remote_attestation::attester::AttestationReportGenerator;
-use std::sync::Arc;
+use oak_remote_attestation::{
+    attester::{AttestationReportGenerator, Attester},
+    handler::EncryptionHandler,
+};
+use prost::Message;
+use std::sync::{Arc, OnceLock};
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 
@@ -49,14 +53,24 @@ pub mod orchestrator_client;
 
 // Instance of the OakFunctions service for Oak Containers.
 pub struct OakFunctionsContainersService {
-    service: OakFunctionsService,
+    attestation_report_generator: Arc<dyn AttestationReportGenerator>,
+    encryption_key_provider: Arc<EncryptionKeyProvider>,
+    instance: OnceLock<OakFunctionsInstance>,
 }
 
 impl OakFunctionsContainersService {
     pub fn new(attestation_report_generator: Arc<dyn AttestationReportGenerator>) -> Self {
         Self {
-            service: OakFunctionsService::new(attestation_report_generator),
+            attestation_report_generator,
+            encryption_key_provider: Arc::new(EncryptionKeyProvider::generate()),
+            instance: OnceLock::new(),
         }
+    }
+
+    fn get_instance(&self) -> Result<&OakFunctionsInstance, tonic::Status> {
+        self.instance
+            .get()
+            .ok_or_else(|| tonic::Status::failed_precondition("not initialized"))
     }
 }
 
@@ -89,27 +103,79 @@ impl OakFunctions for OakFunctionsContainersService {
         &self,
         request: tonic::Request<InitializeRequest>,
     ) -> Result<tonic::Response<InitializeResponse>, tonic::Status> {
-        self.service
-            .initialize(request.into_inner())
-            .map(tonic::Response::new)
-            .map_err(map_status)
+        let request = request.into_inner();
+        match self.instance.get() {
+            Some(_) => Err(tonic::Status::failed_precondition("already initialized")),
+            None => {
+                let instance = OakFunctionsInstance::new(&request).map_err(map_status)?;
+                let attester = Attester::new(
+                    self.attestation_report_generator.clone(),
+                    self.encryption_key_provider.clone(),
+                );
+                let attestation_evidence =
+                    attester.generate_attestation_evidence().map_err(|err| {
+                        tonic::Status::internal(format!(
+                            "couldn't get attestation evidence: {:?}",
+                            err
+                        ))
+                    })?;
+                if self.instance.set(instance).is_err() {
+                    return Err(tonic::Status::failed_precondition("already initialized"));
+                }
+                Ok(tonic::Response::new(InitializeResponse {
+                    public_key_info: Some(PublicKeyInfo {
+                        public_key: attestation_evidence.encryption_public_key,
+                        attestation: attestation_evidence.attestation,
+                    }),
+                }))
+            }
+        }
     }
 
     async fn handle_user_request(
         &self,
         request: tonic::Request<InvokeRequest>,
     ) -> Result<tonic::Response<InvokeResponse>, tonic::Status> {
-        self.service
-            .handle_user_request(request.into_inner())
-            .map(tonic::Response::new)
-            .map_err(map_status)
+        let encryption_key_provider = self.encryption_key_provider.clone();
+        let instance = self.get_instance()?;
+
+        let encrypted_request = request.into_inner().encrypted_request.ok_or_else(|| {
+            tonic::Status::invalid_argument(
+                "InvokeRequest doesn't contain an encrypted request".to_string(),
+            )
+        })?;
+
+        EncryptionHandler::create(encryption_key_provider, |r| {
+            // Wrap the invocation result (which may be an Error) into a micro RPC Response
+            // wrapper protobuf, and encode that as bytes.
+            let response_result: Result<Vec<u8>, micro_rpc::Status> =
+                instance.handle_user_request(r);
+            let response: micro_rpc::ResponseWrapper = response_result.into();
+            response.encode_to_vec()
+        })
+        .invoke(&encrypted_request)
+        .map(
+            #[allow(clippy::needless_update)]
+            |encrypted_response| {
+                tonic::Response::new(InvokeResponse {
+                    encrypted_response: Some(encrypted_response),
+                    ..Default::default()
+                })
+            },
+        )
+        .map_err(|err| {
+            tonic::Status::internal(format!(
+                "couldn't call handle_user_request handler: {:?}",
+                err
+            ))
+        })
     }
 
     async fn extend_next_lookup_data(
         &self,
         request: tonic::Request<ExtendNextLookupDataRequest>,
     ) -> Result<tonic::Response<ExtendNextLookupDataResponse>, tonic::Status> {
-        self.service
+        self.get_instance()?
             .extend_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
             .map_err(map_status)
@@ -119,7 +185,7 @@ impl OakFunctions for OakFunctionsContainersService {
         &self,
         request: tonic::Request<FinishNextLookupDataRequest>,
     ) -> Result<tonic::Response<FinishNextLookupDataResponse>, tonic::Status> {
-        self.service
+        self.get_instance()?
             .finish_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
             .map_err(map_status)
@@ -129,7 +195,7 @@ impl OakFunctions for OakFunctionsContainersService {
         &self,
         request: tonic::Request<Empty>,
     ) -> Result<tonic::Response<AbortNextLookupDataResponse>, tonic::Status> {
-        self.service
+        self.get_instance()?
             .abort_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
             .map_err(map_status)
