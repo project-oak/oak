@@ -74,6 +74,17 @@
 <a href="#74" id="74">74</a>
 <a href="#75" id="75">75</a>
 <a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -92,7 +103,9 @@
 </span><span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>ciborium::Value;
 <span class="kw">use </span>coset::cwt::ClaimName;
-<span class="kw">use </span>oak_dice::cert::{LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID};
+<span class="kw">use </span>oak_dice::cert::{
+    CONTAINER_IMAGE_ID, LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID, SHA2_256_ID,
+};
 <span class="kw">use </span>oak_remote_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>sha2::{Digest, Sha256};
@@ -139,15 +152,24 @@
     <span class="kw">let </span><span class="kw-2">mut </span>config_digest = Sha256::default();
     config_digest.update(config_bytes);
     <span class="kw">let </span>config_digest = config_digest.finalize();
-    <span class="macro">vec!</span>[
-        (
-            ClaimName::PrivateUse(LAYER_3_CODE_MEASUREMENT_ID),
-            Value::Bytes(container_digest[..].to_vec()),
-        ),
-        (
-            ClaimName::PrivateUse(LAYER_3_CONFIG_MEASUREMENT_ID),
-            Value::Bytes(config_digest[..].to_vec()),
-        ),
-    ]
+    <span class="macro">vec!</span>[(
+        ClaimName::PrivateUse(CONTAINER_IMAGE_ID),
+        Value::Map(<span class="macro">vec!</span>[
+            (
+                Value::Integer(LAYER_3_CODE_MEASUREMENT_ID.into()),
+                Value::Map(<span class="macro">vec!</span>[(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(container_digest[..].to_vec()),
+                )]),
+            ),
+            (
+                Value::Integer(LAYER_3_CONFIG_MEASUREMENT_ID.into()),
+                Value::Map(<span class="macro">vec!</span>[(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(config_digest[..].to_vec()),
+                )]),
+            ),
+        ]),
+    )]
 }
 </code></pre></div></section></main></body></html>

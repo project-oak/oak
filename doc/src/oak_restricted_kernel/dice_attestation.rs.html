@@ -121,6 +121,13 @@
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
 <a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -137,8 +144,9 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>coset::CborSerializable;
+</span><span class="kw">use </span>coset::{cbor::Value, cwt::ClaimName, CborSerializable};
 <span class="kw">use </span>oak_crypto::hpke::Serializable;
+<span class="kw">use </span>oak_dice::cert::{ENCLAVE_APPLICATION_LAYER_ID, LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID};
 
 <span class="kw">fn </span>certificate_to_byte_array(cert: coset::CoseSign1) -&gt; [u8; oak_dice::evidence::CERTIFICATE_SIZE] {
     <span class="kw">let </span>vec = cert.to_vec().expect(<span class="string">&quot;couldn&#39;t serialize certificate&quot;</span>);
@@ -175,8 +183,14 @@
             oak_dice::cert::generate_ecdsa_key_pair();
 
         <span class="kw">let </span>additional_claims = <span class="macro">alloc::vec!</span>[(
-            coset::cwt::ClaimName::PrivateUse(oak_dice::cert::LAYER_2_CODE_MEASUREMENT_ID),
-            coset::cbor::value::Value::Bytes(app_digest.into()),
+            ClaimName::PrivateUse(ENCLAVE_APPLICATION_LAYER_ID),
+            Value::Map(<span class="macro">alloc::vec!</span>[(
+                Value::Integer(LAYER_2_CODE_MEASUREMENT_ID.into()),
+                Value::Map(<span class="macro">alloc::vec!</span>[(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(app_digest.into()),
+                )]),
+            ),]),
         )];
 
         <span class="kw">let </span>application_signing_public_key_certificate =
