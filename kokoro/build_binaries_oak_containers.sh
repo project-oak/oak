@@ -40,8 +40,8 @@ readonly binary_names=(
     oak_containers_stage1
     oak_containers_kernel
     oak_containers_system_image
-    oak_containers_hello_world
-    oak_containers_functions
+    oak_containers_hello_world_container
+    oak_functions_container
 )
 for i in "${!binary_names[@]}"; do
     cp --preserve=timestamps \
