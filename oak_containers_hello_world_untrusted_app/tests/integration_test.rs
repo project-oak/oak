@@ -50,6 +50,7 @@ async fn hello_world() {
     let get_endorsed_evidence_result = untrusted_app.get_endorsed_evidence().await;
     assert!(get_endorsed_evidence_result.is_ok());
     let endorsed_evidence = get_endorsed_evidence_result.unwrap();
+    #[allow(deprecated)]
     let encryption_public_key = endorsed_evidence
         .attestation_evidence
         .expect("no attestation evidence provided")

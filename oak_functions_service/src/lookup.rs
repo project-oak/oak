@@ -54,7 +54,7 @@ impl DataBuilder {
     ///
     /// Note, if new data contains a key already present in the existing data, calling extend
     /// overwrites the value.
-    fn extend(&mut self, new_data: Data) {
+    fn extend<T: IntoIterator<Item = (Vec<u8>, Vec<u8>)>>(&mut self, new_data: T) {
         self.state = BuilderState::Extending;
         self.data.extend(new_data);
     }
@@ -104,7 +104,7 @@ where
         test_manager
     }
 
-    pub fn extend_next_lookup_data(&self, new_data: Data) {
+    pub fn extend_next_lookup_data<T: IntoIterator<Item = (Vec<u8>, Vec<u8>)>>(&self, new_data: T) {
         info!("Start extending next lookup data");
         {
             let mut data_builder = self.data_builder.lock();
@@ -123,8 +123,8 @@ where
             let next_data = data_builder.build();
             next_data_len = next_data.len();
             let mut data = self.data.lock();
-            *data = Arc::new(next_data);
             data_len = data.len();
+            *data = Arc::new(next_data);
         }
         info!(
             "Finished replacing lookup data with len {} by next lookup data with len {}",
@@ -198,6 +198,11 @@ where
     pub fn log_debug(&self, message: &str) {
         self.logger.log_sensitive(Level::Debug, message)
     }
+}
+
+/// Returns a slice covering up to the first `limit` elements of the given slice.
+pub fn limit<T>(slice: &[T], limit: usize) -> &[T] {
+    &slice[..limit.min(slice.len())]
 }
 
 /// Converts a binary sequence to a string if it is a valid UTF-8 string, or formats it as a numeric

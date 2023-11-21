@@ -17,6 +17,7 @@ use anyhow::{anyhow, Context};
 use clap::Parser;
 use oak_containers_orchestrator_client::LauncherClient;
 use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_dice::cert::generate_ecdsa_key_pair;
 use oak_remote_attestation::attester::{Attester, EmptyAttestationReportGenerator};
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::oneshot::channel;
@@ -58,8 +59,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .map_err(|error| anyhow!("couldn't get application config: {:?}", error))?;
 
+    let dice_builder = oak_containers_orchestrator::dice::load_stage1_dice_data()?;
+    let additional_claims = oak_containers_orchestrator::dice::measure_container_and_config(
+        &container_bundle,
+        &application_config,
+    );
+    let encryption_key_provider = Arc::new(EncryptionKeyProvider::generate());
+    // Ignore the signing key for now.
+    let (_signing_key, verifying_key) = generate_ecdsa_key_pair();
+
+    let dice_evidence = dice_builder.add_application_keys(
+        additional_claims,
+        &encryption_key_provider.get_serialized_public_key(),
+        &verifying_key,
+    )?;
+    // TODO(#4074): Remove once DICE attestation is fully implemented.
     let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
-    let encryption_key_provider = Arc::new(EncryptionKeyProvider::new());
     let attester = Attester::new(
         attestation_report_generator,
         encryption_key_provider.clone(),
@@ -68,7 +83,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .generate_attestation_evidence()
         .map_err(|error| anyhow!("couldn't generate attestation evidence: {:?}", error))?;
     launcher_client
-        .send_attestation_evidence(evidence)
+        .send_attestation_evidence(evidence, dice_evidence)
         .await
         .map_err(|error| anyhow!("couldn't send attestation evidence: {:?}", error))?;
 
@@ -88,7 +103,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         oak_containers_orchestrator::ipc_server::create(
             &args.ipc_socket_path,
             encryption_key_provider,
-            attester,
             application_config,
             launcher_client,
             shutdown_receiver

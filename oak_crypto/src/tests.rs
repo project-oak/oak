@@ -114,7 +114,7 @@ fn test_hpke() {
 
 #[test]
 fn test_encryptor() {
-    let key_provider = Arc::new(EncryptionKeyProvider::new());
+    let key_provider = Arc::new(EncryptionKeyProvider::generate());
     let serialized_server_public_key = key_provider.get_serialized_public_key();
 
     let mut client_encryptor = ClientEncryptor::create(&serialized_server_public_key)
@@ -217,12 +217,12 @@ impl AsyncRecipientContextGenerator for TestEncryptionKeyProvider {
 
 #[tokio::test]
 async fn test_async_encryptor() {
-    let key_provider = Arc::new(TestEncryptionKeyProvider::new());
+    let key_provider = TestEncryptionKeyProvider::new();
     let serialized_server_public_key = key_provider.get_serialized_public_key();
 
     let mut client_encryptor = ClientEncryptor::create(&serialized_server_public_key)
         .expect("couldn't create client encryptor");
-    let mut server_encryptor = AsyncServerEncryptor::new(key_provider);
+    let mut server_encryptor = AsyncServerEncryptor::new(&key_provider);
 
     for i in 0..TEST_SESSION_SIZE {
         let test_request_message = [TEST_REQUEST_MESSAGE, &[i as u8]].concat();

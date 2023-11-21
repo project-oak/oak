@@ -20,12 +20,9 @@
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use core::{cmp::Ordering, str::FromStr};
-use ecdsa::{signature::Verifier, Signature};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 
-use crate::verifier::{convert_pem_to_raw, convert_raw_to_pem};
+use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature};
 
 /// Struct representing a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.>
@@ -235,7 +232,7 @@ pub fn verify_rekor_body(body: &Body, contents_bytes: &[u8]) -> anyhow::Result<(
     }
 
     // Check that hash of the endorsement statement matches the hash of the data in the Body.
-    let contents_hash = get_sha256(contents_bytes);
+    let contents_hash = hash_sha2_256(contents_bytes);
     let contents_hash_hex = hex::encode(contents_hash);
     if contents_hash_hex != body.spec.data.hash.value {
         anyhow::bail!(
@@ -259,53 +256,10 @@ pub fn verify_rekor_body(body: &Body, contents_bytes: &[u8]) -> anyhow::Result<(
         .context("couldn't verify signature over the endorsement")
 }
 
-/// Verifies the signature over the contents using the public key.
-pub fn verify_signature(
-    signature: &[u8],
-    contents: &[u8],
-    public_key: &[u8],
-) -> anyhow::Result<()> {
-    let signature = Signature::from_der(signature).context("invalid ASN.1 signature")?;
-    let key = raw_to_verifying_key(public_key)?;
-
-    key.verify(contents, &signature)
-        .context("couldn't verify signature")
-}
-
-/// Converts a PEM-encoded x509/PKIX public key to a verifying key.
-pub fn pem_to_verifying_key(public_key_pem: &str) -> anyhow::Result<p256::ecdsa::VerifyingKey> {
-    p256::ecdsa::VerifyingKey::from_str(public_key_pem)
-        .context("couldn't parse pem as a p256::ecdsa::VerifyingKey")
-}
-
-/// Converts a raw public key to a verifying key.
-pub fn raw_to_verifying_key(public_key: &[u8]) -> anyhow::Result<p256::ecdsa::VerifyingKey> {
-    // Need to figure out how to create a VerifyingKey without the PEM detour.
-    let public_key_pem = convert_raw_to_pem(public_key);
-    pem_to_verifying_key(&public_key_pem)
-}
-
 fn rekor_signature_bundle(log_entry: &[u8]) -> anyhow::Result<RekorSignatureBundle> {
     let parsed: BTreeMap<String, LogEntry> =
         serde_json::from_slice(log_entry).context("couldn't parse bytes into a LogEntry object")?;
     let entry = parsed.values().next().context("no entry in the map")?;
 
     RekorSignatureBundle::try_from(entry)
-}
-
-/// Compares two ECDSA public keys. Instead of comparing the bytes, we parse the bytes
-/// and compare p256 keys. Keys are considered equal if they are the same on the elliptic curve.
-/// This means that the keys could have different bytes, but still be the same key.
-pub fn equal_keys(public_key_a: &[u8], public_key_b: &[u8]) -> anyhow::Result<bool> {
-    let key_a = raw_to_verifying_key(public_key_a)?;
-    let key_b = raw_to_verifying_key(public_key_b)?;
-    Ok(key_a.cmp(&key_b) == Ordering::Equal)
-}
-
-/// Computes a SHA-256 digest of `input` and returns it in a form of raw bytes.
-/// Returns the hash as a 32-bytes array.
-pub fn get_sha256(input: &[u8]) -> [u8; 32] {
-    let mut hasher = Sha256::new();
-    hasher.update(input);
-    hasher.finalize().into()
 }

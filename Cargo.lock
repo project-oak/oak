@@ -971,7 +971,7 @@ checksum = "5cbc844cecaee9d4443931972e1289c8ff485cb4cc2767cb03ca139ed6885153"
 dependencies = [
  "cfg-if",
  "libc",
- "redox_syscall",
+ "redox_syscall 0.2.16",
  "windows-sys 0.48.0",
 ]
 
@@ -1855,6 +1855,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_attestation_verification"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.21.0",
+ "ecdsa",
+ "hex",
+ "micro_rpc_build",
+ "oak_transparency_claims",
+ "p256",
+ "prost",
+ "serde",
+ "serde_jcs",
+ "serde_json",
+ "sha2",
+ "tonic",
+]
+
+[[package]]
 name = "oak_channel"
 version = "0.1.0"
 dependencies = [
@@ -1877,6 +1896,7 @@ dependencies = [
  "log",
  "oak_crypto",
  "oak_grpc_utils",
+ "oak_remote_attestation",
  "prost",
  "tonic",
 ]
@@ -1887,6 +1907,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-stream",
+ "async-trait",
  "bytes",
  "oak_crypto",
  "oak_grpc_utils",
@@ -1947,21 +1968,27 @@ name = "oak_containers_orchestrator"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ciborium",
  "clap",
+ "coset",
  "futures",
  "log",
  "nix 0.26.2",
  "oak_containers_orchestrator_client",
  "oak_crypto",
+ "oak_dice",
  "oak_grpc_utils",
  "oak_remote_attestation",
  "oci-spec",
  "opentelemetry-otlp",
  "opentelemetry_api",
  "opentelemetry_sdk",
+ "p256",
  "procfs",
  "prost",
  "prost-types",
+ "rand_core",
+ "sha2",
  "syslog",
  "tar",
  "tokio",
@@ -2065,6 +2092,7 @@ name = "oak_dice"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.3.3",
+ "ciborium",
  "coset",
  "hex",
  "hkdf",
@@ -2157,6 +2185,7 @@ name = "oak_functions_containers_app"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "micro_rpc",
  "oak_crypto",
  "oak_functions_service",
@@ -2183,12 +2212,15 @@ dependencies = [
  "oak_containers_launcher",
  "oak_crypto",
  "oak_functions_abi",
+ "oak_functions_client",
  "oak_functions_launcher",
+ "oak_functions_test_utils",
  "oak_grpc_utils",
  "prost",
  "tokio",
  "tonic",
  "ubyte",
+ "xtask",
 ]
 
 [[package]]
@@ -2214,6 +2246,7 @@ dependencies = [
  "oak_functions_test_utils",
  "oak_grpc_utils",
  "oak_launcher_utils",
+ "oak_remote_attestation",
  "prost",
  "rand",
  "serde",
@@ -2368,26 +2401,15 @@ name = "oak_remote_attestation"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ciborium",
+ "coset",
  "log",
  "micro_rpc_build",
  "oak_crypto",
- "prost",
-]
-
-[[package]]
-name = "oak_remote_attestation_verification"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64 0.21.0",
- "ecdsa",
- "hex",
- "micro_rpc_build",
- "oak_transparency_claims",
+ "oak_dice",
  "p256",
- "serde",
- "serde_jcs",
- "serde_json",
+ "prost",
+ "rand_core",
  "sha2",
 ]
 
@@ -2403,19 +2425,24 @@ dependencies = [
  "atomic_refcell",
  "bitflags 2.3.3",
  "bitvec",
+ "coset",
  "goblin",
+ "hex",
  "hkdf",
+ "hpke",
  "libm",
  "linked_list_allocator",
  "log",
  "oak_channel",
  "oak_core",
+ "oak_crypto",
  "oak_dice",
  "oak_linux_boot_params",
  "oak_restricted_kernel_interface",
  "oak_sev_guest",
  "oak_simple_io",
  "oak_virtio",
+ "p256",
  "rust-hypervisor-firmware-virtio",
  "self_cell",
  "sev_serial",
@@ -2436,9 +2463,14 @@ dependencies = [
  "anyhow",
  "log",
  "oak_channel",
+ "oak_crypto",
+ "oak_dice",
+ "oak_remote_attestation",
  "oak_restricted_kernel_interface",
  "os_pipe",
+ "p256",
  "strum",
+ "zerocopy 0.7.3",
 ]
 
 [[package]]
@@ -2685,6 +2717,29 @@ dependencies = [
  "elliptic-curve",
  "primeorder",
  "sha2",
+]
+
+[[package]]
+name = "parking_lot"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3742b2c103b9f06bc9fff0a37ff4912935851bee6d36f3c02bcc755bcfec228f"
+dependencies = [
+ "lock_api",
+ "parking_lot_core",
+]
+
+[[package]]
+name = "parking_lot_core"
+version = "0.9.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c42a9226546d68acdd9c0a280d17ce19bfe27a46bf68784e4066115788d008e"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "redox_syscall 0.4.1",
+ "smallvec",
+ "windows-targets 0.48.0",
 ]
 
 [[package]]
@@ -3033,6 +3088,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "redox_syscall"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4722d768eff46b75989dd134e5c353f0d6296e5aaa3132e776cbdb56be7731aa"
+dependencies = [
+ "bitflags 1.3.2",
+]
+
+[[package]]
 name = "regex"
 version = "1.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3330,9 +3394,9 @@ dependencies = [
 
 [[package]]
 name = "self_cell"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c309e515543e67811222dbc9e3dd7e1056279b782e1dacffe4242b718734fb6"
+checksum = "e388332cd64eb80cd595a00941baf513caffae8dce9cfd0467fc9c66397dade6"
 
 [[package]]
 name = "semver"
@@ -3739,7 +3803,7 @@ checksum = "af18f7ae1acd354b992402e9ec5864359d693cd8a79dcbef59f76891701c1e95"
 dependencies = [
  "cfg-if",
  "fastrand",
- "redox_syscall",
+ "redox_syscall 0.2.16",
  "rustix",
  "windows-sys 0.42.0",
 ]
@@ -3815,6 +3879,7 @@ dependencies = [
  "memchr",
  "mio",
  "num_cpus",
+ "parking_lot",
  "pin-project-lite",
  "signal-hook-registry",
  "socket2",

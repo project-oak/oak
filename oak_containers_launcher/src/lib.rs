@@ -20,7 +20,7 @@ pub mod proto {
             tonic::include_proto!("oak.containers");
         }
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::session;
+        pub use oak_remote_attestation::proto::oak::{attestation, session};
     }
 }
 
@@ -186,15 +186,18 @@ impl Launcher {
     /// clients, which will verify it before connecting.
     pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<AttestationBundle> {
         // If we haven't received an attestation evidence, wait for it.
+        #[allow(deprecated)]
         if let Some(receiver) = self.attestation_evidence_receiver.take() {
             // Set a timeout since we don't want to wait forever if the VM didn't start properly.
             let evidence = timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
                 .await
                 .context("couldn't get attestation evidence before timeout")?
                 .context("no attestation evidence available")?;
+            #[allow(deprecated)]
             let endorsed_attestation_evidence = AttestationBundle {
                 attestation_evidence: Some(evidence),
                 attestation_endorsement: Some(self.attestation_endorsement.clone()),
+                dice_evidence: None,
             };
             self.endorsed_attestation_evidence
                 .replace(endorsed_attestation_evidence);

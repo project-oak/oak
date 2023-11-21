@@ -50,7 +50,7 @@ message RawDigest {
 // "82aac1adbfe3ada1244c1f54b7c949519e1f048067d0c3b236b7ae048fc7e227".
 message HexDigest {
   reserved 2 to 15;
-  bytes psha2 = 16;
+  string psha2 = 16;
   string sha1 = 17;
   string sha2_256 = 18;
   string sha2_512 = 19;

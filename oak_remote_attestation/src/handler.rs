@@ -14,13 +14,15 @@
 // limitations under the License.
 //
 
-use alloc::{sync::Arc, vec, vec::Vec};
+use alloc::{sync::Arc, vec::Vec};
 use anyhow::{anyhow, Context};
 use oak_crypto::{
-    encryptor::{EncryptionKeyProvider, ServerEncryptor},
-    proto::oak::crypto::v1::EncryptedRequest,
+    encryptor::{
+        AsyncRecipientContextGenerator, AsyncServerEncryptor, EncryptionKeyProvider,
+        ServerEncryptor,
+    },
+    proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
 };
-use prost::Message;
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
@@ -52,11 +54,7 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
 }
 
 impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
-    pub fn invoke(self, request_body: &[u8]) -> anyhow::Result<Vec<u8>> {
-        // Deserialize request.
-        let encrypted_request = EncryptedRequest::decode(request_body)
-            .map_err(|error| anyhow!("couldn't deserialize request: {:?}", error))?;
-
+    pub fn invoke(self, encrypted_request: &EncryptedRequest) -> anyhow::Result<EncryptedResponse> {
         // Initialize server encryptor.
         let serialized_encapsulated_public_key = encrypted_request
             .serialized_encapsulated_public_key
@@ -70,24 +68,68 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
 
         // Decrypt request.
         let (request, _) = server_encryptor
-            .decrypt(&encrypted_request)
+            .decrypt(encrypted_request)
             .context("couldn't decrypt request")?;
 
         // Handle request.
         let response = (self.request_handler)(request);
-        log::info!("plaintext response: {:?}", response);
+
+        // Encrypt and serialize response.
+        // The resulting decryptor for subsequent requests is discarded because we don't expect
+        // another message from the stream.
+        server_encryptor
+            .encrypt(&response, EMPTY_ASSOCIATED_DATA)
+            .context("couldn't encrypt response")
+    }
+}
+
+/// Wraps a closure to an underlying function with request encryption and response decryption logic,
+/// based on the provided encryption key.
+/// [`AsyncEncryptionHandler`] can be used when an [`AsyncRecipientContextGenerator`] is needed.
+pub struct AsyncEncryptionHandler<G, H>
+where
+    G: AsyncRecipientContextGenerator + Send + Sync,
+    H: FnOnce(Vec<u8>) -> Vec<u8>,
+{
+    // TODO(#3442): Use attester to attest to the public key.
+    recipient_context_generator: Arc<G>,
+    request_handler: H,
+}
+
+impl<G, H> AsyncEncryptionHandler<G, H>
+where
+    G: AsyncRecipientContextGenerator + Send + Sync,
+    H: FnOnce(Vec<u8>) -> Vec<u8>,
+{
+    pub fn create(recipient_context_generator: Arc<G>, request_handler: H) -> Self {
+        Self {
+            recipient_context_generator,
+            request_handler,
+        }
+    }
+
+    pub async fn invoke(
+        self,
+        encrypted_request: &EncryptedRequest,
+    ) -> anyhow::Result<EncryptedResponse> {
+        // Initialize server encryptor.
+        let mut server_encryptor =
+            AsyncServerEncryptor::new(self.recipient_context_generator.as_ref());
+
+        // Decrypt request.
+        let (request, _associated_data) = server_encryptor
+            .decrypt(encrypted_request)
+            .await
+            .context("couldn't decrypt request")?;
+
+        // Handle request.
+        let response = (self.request_handler)(request);
 
         // Encrypt and serialize response.
         // The resulting decryptor for consequent requests is discarded because we don't expect
         // another message from the stream.
-        let encrypted_response = server_encryptor
+        server_encryptor
             .encrypt(&response, EMPTY_ASSOCIATED_DATA)
-            .context("couldn't encrypt response")?;
-        let mut serialized_response = vec![];
-        encrypted_response
-            .encode(&mut serialized_response)
-            .map_err(|error| anyhow!("couldn't serialize response: {:?}", error))?;
-
-        Ok(serialized_response)
+            .context("couldn't encrypt response")
     }
 }

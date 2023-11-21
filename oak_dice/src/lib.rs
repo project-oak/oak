@@ -15,6 +15,7 @@
 //
 
 #![no_std]
+#![feature(let_chains)]
 
 //! Structs and helpers for implementing DICE-based attestation.
 
@@ -22,3 +23,4 @@ extern crate alloc;
 
 pub mod cert;
 pub mod evidence;
+pub mod utils;

@@ -19,12 +19,13 @@ pub mod proto {
             tonic::include_proto!("oak.containers");
         }
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::session;
+        pub use oak_remote_attestation::proto::oak::{attestation, session};
     }
 }
 
 use self::proto::oak::{
-    containers::SendAttestationEvidenceRequest, session::v1::AttestationEvidence,
+    attestation::v1::Evidence, containers::SendAttestationEvidenceRequest,
+    session::v1::AttestationEvidence,
 };
 use anyhow::Context;
 use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
@@ -81,9 +82,12 @@ impl LauncherClient {
     pub async fn send_attestation_evidence(
         &self,
         evidence: AttestationEvidence,
+        dice_evidence: Evidence,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        #[allow(deprecated)]
         let request = tonic::Request::new(SendAttestationEvidenceRequest {
             evidence: Some(evidence),
+            dice_evidence: Some(dice_evidence),
         });
         self.inner
             .clone()

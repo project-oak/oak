@@ -7,27 +7,35 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "*"
+ciborium = { version = "*", default-features = false }
 clap = { version = "*", features = ["derive"] }
+coset = { version = "*", features = ["std"] }
 futures = "*"
 log = "*"
 nix = "*"
 oak_containers_orchestrator_client = { workspace = true }
 oak_crypto = { workspace = true }
+oak_dice = { workspace = true }
 oak_remote_attestation = { workspace = true }
 oci-spec = "*"
 opentelemetry_api = { version = "*", default-features = false, features = [
-  "metrics"
+  "metrics",
 ] }
 opentelemetry_sdk = { version = "*", default-features = false, features = [
   "metrics",
-  "rt-tokio"
+  "rt-tokio",
 ] }
 opentelemetry-otlp = { version = "*", default-features = false, features = [
-  "metrics"
+  "metrics",
 ] }
+p256 = { version = "*", features = ["ecdsa"] }
 prost = "*"
 prost-types = "*"
 procfs = "*"
+rand_core = { version = "*", default-features = false, features = [
+  "getrandom",
+] }
+sha2 = { version = "*", default-features = false }
 syslog = "*"
 tar = "*"
 tokio = { version = "*", features = [

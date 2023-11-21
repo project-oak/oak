@@ -1,5 +1,5 @@
 [package]
-name = "oak_remote_attestation_verification"
+name = "oak_attestation_verification"
 version = "0.1.0"
 authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2021"
@@ -12,11 +12,14 @@ base64 = "*"
 ecdsa = { version = "*", features = ["pkcs8", "pem"] }
 hex = "*"
 oak_transparency_claims = { workspace = true }
+prost = { workspace = true }
 p256 = { version = "*", features = ["ecdsa-core", "ecdsa", "pem"] }
 serde = { version = "*", features = ["derive"] }
 serde_jcs = "*"
 serde_json = "*"
 sha2 = { version = "*", default-features = false }
+tonic = { workspace = true }
 
 [build-dependencies]
 micro_rpc_build = { workspace = true }
+base64 = "*"

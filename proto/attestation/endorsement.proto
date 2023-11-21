@@ -25,11 +25,16 @@ option java_package = "com.google.oak.attestation.v1";
 // Endorsement for binaries from the Transparent Release process.
 // <https://github.com/project-oak/oak/blob/main/docs/release.md>
 message TransparentReleaseEndorsement {
-  // The endorsement statement for the underlying binary.
+  // JSON string comtaining the endorsement statement for the underlying binary.
+  // The format is described here:
+  // https://github.com/project-oak/transparent-release/blob/main/docs/claim-transparency.md#the-claim-format
   bytes endorsement = 1;
 
+  // The signature for the endorsement.
+  bytes endorsement_signature = 2;
+
   // The log entry as proof of inclusion of the endorsement statement in Rekor.
-  bytes rekor_log_entry = 2;
+  bytes rekor_log_entry = 3;
 }
 
 message RootLayerEndorsements {
@@ -40,18 +45,44 @@ message RootLayerEndorsements {
   // different certificates packaged in two different files.
   bytes tee_certificate = 1;
 
-  TransparentReleaseEndorsement stage0_endorsement = 2;
-};
-
-message KernelLayerEndorsements {
-  oneof type {
-    TransparentReleaseEndorsement linux_kernel = 1;
-    TransparentReleaseEndorsement oak_restricted_kernel = 2;
-  }
+  // Endorsement of the Stage0 binary.
+  TransparentReleaseEndorsement stage0 = 2;
 }
 
-message CustomLayerEndorsements {
+message KernelLayerEndorsements {
+  TransparentReleaseEndorsement kernel_image = 1;
+  TransparentReleaseEndorsement kernel_setup_data = 2;
+  TransparentReleaseEndorsement init_ram_fs = 3;
+}
+
+message InitLayerEndorsements {
   TransparentReleaseEndorsement binary = 1;
+}
+
+message ApplicationLayerEndorsements {
+  TransparentReleaseEndorsement binary = 1;
+}
+
+message ContainerLayerEndorsements {
+  TransparentReleaseEndorsement binary = 1;
+}
+
+message OakRestrictedKernelEndorsements {
+  RootLayerEndorsements root_layer = 1;
+  KernelLayerEndorsements kernel_layer = 2;
+  ApplicationLayerEndorsements application_layer = 3;
+}
+
+message OakContainersEndorsements {
+  RootLayerEndorsements root_layer = 1;
+  KernelLayerEndorsements kernel_layer = 2;
+  InitLayerEndorsements init_layer = 3;
+  ContainerLayerEndorsements container_layer = 4;
+}
+
+message CBEndorsements {
+  // Serialized X.509 TEE certificate.
+  bytes tee_certificate = 1;
 }
 
 // Endorsement contains statements that some entity (e.g. a hardware provider)
@@ -61,7 +92,9 @@ message CustomLayerEndorsements {
 // The name is chosen to match the RATS terminology:
 // <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
 message Endorsements {
-  RootLayerEndorsements root_layer = 1;                // Layer 0
-  KernelLayerEndorsements kernel_layer = 2;            // Layer 1
-  repeated CustomLayerEndorsements custom_layers = 3;  // Layers 2 through N
+  oneof type {
+    OakRestrictedKernelEndorsements oak_restricted_kernel = 1;
+    OakContainersEndorsements oak_containers = 2;
+    CBEndorsements cb = 3;
+  }
 };

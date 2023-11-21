@@ -39,7 +39,7 @@ pub mod logger;
 pub mod lookup;
 pub mod wasm;
 
-use alloc::{format, sync::Arc, vec::Vec};
+use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 use instance::OakFunctionsInstance;
 use oak_core::sync::OnceCell;
 use oak_crypto::encryptor::EncryptionKeyProvider;
@@ -64,7 +64,7 @@ impl OakFunctionsService {
     pub fn new(attestation_report_generator: Arc<dyn AttestationReportGenerator>) -> Self {
         Self {
             attestation_report_generator,
-            encryption_key_provider: Arc::new(EncryptionKeyProvider::new()),
+            encryption_key_provider: Arc::new(EncryptionKeyProvider::generate()),
             instance: OnceCell::new(),
         }
     }
@@ -128,6 +128,14 @@ impl OakFunctions for OakFunctionsService {
         log::debug!("called handle_user_request");
         let encryption_key_provider = self.encryption_key_provider.clone();
         let instance = self.get_instance()?;
+
+        let encrypted_request = request.encrypted_request.ok_or_else(|| {
+            micro_rpc::Status::new_with_message(
+                micro_rpc::StatusCode::InvalidArgument,
+                "InvokeRequest doesn't contain an encrypted request".to_string(),
+            )
+        })?;
+
         EncryptionHandler::create(encryption_key_provider, |r| {
             // Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
@@ -136,12 +144,14 @@ impl OakFunctions for OakFunctionsService {
             let response: micro_rpc::ResponseWrapper = response_result.into();
             response.encode_to_vec()
         })
-        .invoke(&request.body)
-        // TODO(#4037): Use explicit crypto protos.
-        .map(|response| InvokeResponse {
-            body: response,
-            encrypted_response: None,
-        })
+        .invoke(&encrypted_request)
+        .map(
+            #[allow(clippy::needless_update)]
+            |encrypted_response| InvokeResponse {
+                encrypted_response: Some(encrypted_response),
+                ..Default::default()
+            },
+        )
         .map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,

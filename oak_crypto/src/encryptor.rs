@@ -19,7 +19,10 @@
 //! <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
 
 use crate::{
-    hpke::{setup_base_recipient, setup_base_sender, KeyPair, RecipientContext, SenderContext},
+    hpke::{
+        setup_base_recipient, setup_base_sender, KeyPair, PrivateKey, PublicKey, RecipientContext,
+        SenderContext,
+    },
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
@@ -35,15 +38,21 @@ pub struct EncryptionKeyProvider {
 
 impl Default for EncryptionKeyProvider {
     fn default() -> Self {
-        Self::new()
+        Self::generate()
     }
 }
 
 impl EncryptionKeyProvider {
     /// Creates a crypto provider with a newly generated key pair.
-    pub fn new() -> Self {
+    pub fn generate() -> Self {
         Self {
             key_pair: KeyPair::generate(),
+        }
+    }
+
+    pub fn new(private_key: PrivateKey, public_key: PublicKey) -> Self {
+        Self {
+            key_pair: KeyPair::new(private_key, public_key),
         }
     }
 
@@ -230,13 +239,19 @@ impl ServerEncryptor {
 /// be multiple responses per request and multiple requests per response.
 // TODO(#4311): Merge `AsyncServerEncryptor` and `ServerEncryptor` once there is `async` support in
 // the Restricted Kernel.
-pub struct AsyncServerEncryptor {
-    recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator>,
+pub struct AsyncServerEncryptor<'a, G>
+where
+    G: AsyncRecipientContextGenerator + Send + Sync,
+{
+    recipient_context_generator: &'a G,
     inner: Option<ServerEncryptor>,
 }
 
-impl AsyncServerEncryptor {
-    pub fn new(recipient_context_generator: Arc<dyn AsyncRecipientContextGenerator>) -> Self {
+impl<'a, G> AsyncServerEncryptor<'a, G>
+where
+    G: AsyncRecipientContextGenerator + Send + Sync,
+{
+    pub fn new(recipient_context_generator: &'a G) -> Self {
         Self {
             recipient_context_generator,
             inner: None,

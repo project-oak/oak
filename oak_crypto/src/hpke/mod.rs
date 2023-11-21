@@ -24,31 +24,42 @@ use crate::{
 use alloc::vec::Vec;
 use anyhow::{anyhow, Context};
 use hpke::{
-    aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Deserializable, Kem as KemTrait,
-    OpModeR, OpModeS, Serializable,
+    aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Kem as KemTrait, OpModeR, OpModeS,
 };
+pub use hpke::{Deserializable, Serializable};
 use rand_core::OsRng;
 
 type Aead = AesGcm256;
 type Kdf = HkdfSha256;
 type Kem = X25519HkdfSha256;
-pub(crate) type PrivateKey = <Kem as KemTrait>::PrivateKey;
-pub(crate) type PublicKey = <Kem as KemTrait>::PublicKey;
+pub type PrivateKey = <Kem as KemTrait>::PrivateKey;
+pub type PublicKey = <Kem as KemTrait>::PublicKey;
 pub(crate) type EncappedKey = <Kem as KemTrait>::EncappedKey;
 
 /// Maximum sequence number which can fit in [`AEAD_NONCE_SIZE_BYTES`] bytes.
 /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
 const MAX_SEQUENCE_NUMBER: u128 = (1 << (8 * AEAD_NONCE_SIZE_BYTES)) - 1;
 
-pub(crate) struct KeyPair {
+pub fn gen_kem_keypair() -> (PrivateKey, PublicKey) {
+    Kem::gen_keypair(&mut OsRng)
+}
+
+pub struct KeyPair {
     pub(crate) private_key: PrivateKey,
     pub(crate) public_key: PublicKey,
 }
 
 impl KeyPair {
     /// Randomly generates a key pair.
-    pub(crate) fn generate() -> Self {
-        let (private_key, public_key) = Kem::gen_keypair(&mut OsRng);
+    pub fn generate() -> Self {
+        let (private_key, public_key) = gen_kem_keypair();
+        Self {
+            private_key,
+            public_key,
+        }
+    }
+
+    pub fn new(private_key: PrivateKey, public_key: PublicKey) -> Self {
         Self {
             private_key,
             public_key,

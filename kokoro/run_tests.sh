@@ -6,7 +6,6 @@ set -o xtrace
 set -o pipefail
 
 export CI=kokoro
-
 export RUST_BACKTRACE=1
 export RUST_LOG=debug
 export XDG_RUNTIME_DIR=/var/run
@@ -15,7 +14,9 @@ export XDG_RUNTIME_DIR=/var/run
 cd "$(dirname "$0")/.."
 
 ./scripts/docker_pull
-./scripts/docker_run nix develop .#ci --command just kokoro_run_tests
+./scripts/docker_run nix develop .#default --command just kokoro_run_tests
 
-mkdir -p "$KOKORO_ARTIFACTS_DIR/test_logs/"
-cp ./target/nextest/default/*.xml "$KOKORO_ARTIFACTS_DIR/test_logs/" || true
+mkdir -p "${KOKORO_ARTIFACTS_DIR}/test_logs/"
+cp --preserve=timestamps \
+    ./target/nextest/default/*.xml \
+    "${KOKORO_ARTIFACTS_DIR}/test_logs/" || true

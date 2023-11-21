@@ -24,6 +24,7 @@ pub mod server;
 pub mod proto {
     pub mod oak {
         pub use oak_crypto::proto::oak::crypto;
+        pub use oak_remote_attestation::proto::oak::attestation;
         pub mod functions {
             #![allow(dead_code)]
             use prost::Message;

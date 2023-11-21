@@ -11,6 +11,7 @@ async-trait = "*"
 futures-util = "*"
 log = "*"
 oak_crypto = { workspace = true }
+oak_remote_attestation = { workspace = true }
 prost = { workspace = true }
 tonic = { workspace = true }
 

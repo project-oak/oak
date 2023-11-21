@@ -18,9 +18,8 @@ use crate::proto::oak::session::v1::{
     request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
     AttestationEvidence, GetPublicKeyRequest, InvokeRequest, RequestWrapper,
 };
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use oak_crypto::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
-use prost::Message;
 use tonic::transport::Channel;
 
 pub struct GrpcStreamingTransport {
@@ -47,20 +46,13 @@ impl Transport for GrpcStreamingTransport {
         &mut self,
         encrypted_request: &EncryptedRequest,
     ) -> anyhow::Result<EncryptedResponse> {
-        // TODO(#4037): Use explicit crypto protos.
-        let mut serialized_request = vec![];
-        encrypted_request
-            .encode(&mut serialized_request)
-            .map_err(|error| anyhow!("couldn't serialize request: {:?}", error))?;
-
         let mut response_stream = self
             .rpc_client
             .stream(futures_util::stream::iter(vec![RequestWrapper {
+                #[allow(clippy::needless_update)]
                 request: Some(request_wrapper::Request::InvokeRequest(InvokeRequest {
-                    // TODO(#4037): Remove once explicit protos are used end-to-end.
-                    encrypted_body: serialized_request,
-                    // TODO(#4037): Use explicit crypto protos.
-                    encrypted_request: None,
+                    encrypted_request: Some(encrypted_request.clone()),
+                    ..Default::default()
                 })),
             }]))
             .await
@@ -82,11 +74,9 @@ impl Transport for GrpcStreamingTransport {
             ));
         };
 
-        // TODO(#4037): Use explicit crypto protos.
-        let encrypted_response = EncryptedResponse::decode(invoke_response.encrypted_body.as_ref())
-            .map_err(|error| anyhow!("couldn't deserialize response: {:?}", error))?;
-
-        Ok(encrypted_response)
+        invoke_response
+            .encrypted_response
+            .context("InvokeResponse does not include an encrypted message")
     }
 }
 
@@ -125,6 +115,7 @@ impl EvidenceProvider for GrpcStreamingTransport {
             ));
         };
 
+        #[allow(deprecated)]
         get_evidence_response
             .attestation_bundle
             .context("get_evidence_response message doesn't contain an attestation bundle")?

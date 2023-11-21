@@ -69,12 +69,7 @@ absl::StatusOr<EncryptedResponse> GrpcStreamingTransport::Invoke(
     const EncryptedRequest& encrypted_request) {
   // Create request.
   RequestWrapper request;
-  // TODO(#4037): Use explicit crypto protos.
-  std::string encrypted_body;
-  if (!encrypted_request.SerializeToString(&encrypted_body)) {
-    return absl::InternalError("couldn't serialize encrypted request");
-  }
-  *request.mutable_invoke_request()->mutable_encrypted_body() = encrypted_body;
+  *request.mutable_invoke_request()->mutable_encrypted_request() = encrypted_request;
 
   // Send request.
   auto response = Send(request);
@@ -86,14 +81,8 @@ absl::StatusOr<EncryptedResponse> GrpcStreamingTransport::Invoke(
   switch (response->response_case()) {
     case ResponseWrapper::kGetPublicKeyResponseFieldNumber:
       return absl::InternalError("received GetPublicKeyResponse instead of InvokeResponse");
-    case ResponseWrapper::kInvokeResponseFieldNumber: {
-      // TODO(#4037): Use explicit crypto protos.
-      EncryptedResponse encrypted_response;
-      if (!encrypted_response.ParseFromString(response->invoke_response().encrypted_body())) {
-        return absl::InvalidArgumentError("couldn't deserialize response");
-      }
-      return encrypted_response;
-    }
+    case ResponseWrapper::kInvokeResponseFieldNumber:
+      return response->invoke_response().encrypted_response();
     case ResponseWrapper::RESPONSE_NOT_SET:
     default:
       return absl::InternalError("received unsupported response: " + response->DebugString());

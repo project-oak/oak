@@ -41,6 +41,7 @@ mod args;
 mod avx;
 mod boot;
 mod descriptors;
+mod dice_attestation;
 mod elf;
 mod ghcb;
 mod interrupts;
@@ -90,6 +91,7 @@ use x86_64::{
     structures::paging::{Page, Size2MiB},
     PhysAddr, VirtAddr,
 };
+use zerocopy::FromBytes;
 
 /// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 512 GiB of memory, for now.
@@ -180,6 +182,47 @@ pub fn start_kernel(info: &BootParams) -> ! {
             .as_ptr() as *const BootParams)
             .as_ref()
             .unwrap()
+    };
+
+    let stage0_dice_data = {
+        let dice_memory_slice = {
+            let e820_dice_data_entry = info
+                .e820_table()
+                .iter()
+                .find(|e| e.entry_type() == Some(oak_linux_boot_params::E820EntryType::DiceData))
+                .expect("failed to find dice data");
+
+            let start_addr = {
+                let phys_addr = PhysAddr::new_truncate(
+                    e820_dice_data_entry
+                        .addr()
+                        .try_into()
+                        .expect("couldn't convert usize to u64"),
+                );
+                let pt = PAGE_TABLES.get().expect("failed to get page tables");
+                pt.translate_physical(phys_addr)
+                    .expect("failed to translate physical dice address")
+            };
+
+            // Safety: the E820 table indicated that this is the corrct memory segment.
+            unsafe {
+                core::slice::from_raw_parts_mut::<u8>(
+                    start_addr.as_mut_ptr(),
+                    e820_dice_data_entry.size(),
+                )
+            }
+        };
+
+        let dice_data = oak_dice::evidence::Stage0DiceData::read_from(dice_memory_slice)
+            .expect("failed to read dice data");
+
+        // Overwrite the dice data provided by stage0 after reading.
+        dice_memory_slice.fill(0);
+
+        if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
+            panic!("dice data loaded from stage0 failed validation");
+        }
+        dice_data
     };
 
     if sev_es_enabled {
@@ -285,6 +328,9 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let application = payload::Application::load_raw(&mut *channel)
         .expect("failed to load application binary from channel");
 
+    let restricted_kernel_dice_data =
+        dice_attestation::generate_dice_data(stage0_dice_data, application.digest());
+
     let derived_key = if sev_snp_enabled {
         snp_guest::get_derived_key().expect("couldn't derive key")
     } else {
@@ -297,7 +343,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
     extraction.input_ikm(application.digest());
     let (derived_key, _) = extraction.finalize();
 
-    syscall::enable_syscalls(channel, derived_key.into());
+    syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key.into());
 
     // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
     // under the kernel's control.

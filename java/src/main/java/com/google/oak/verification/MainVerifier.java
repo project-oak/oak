@@ -16,83 +16,105 @@
 
 package com.google.oak.verification;
 
-import com.google.oak.attestation.v1.CustomLayerEndorsements;
-import com.google.oak.attestation.v1.CustomLayerReferenceValues;
+import com.google.oak.attestation.v1.BinaryReferenceValue;
+import com.google.oak.attestation.v1.ContainerLayerEndorsements;
+import com.google.oak.attestation.v1.ContainerLayerReferenceValues;
+import com.google.oak.attestation.v1.EndorsementReferenceValue;
 import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
+import com.google.oak.attestation.v1.InitLayerEndorsements;
+import com.google.oak.attestation.v1.InitLayerReferenceValues;
+import com.google.oak.attestation.v1.KernelLayerEndorsements;
 import com.google.oak.attestation.v1.KernelLayerReferenceValues;
-import com.google.oak.attestation.v1.LayerEvidence;
+import com.google.oak.attestation.v1.OakContainersEndorsements;
+import com.google.oak.attestation.v1.OakContainersReferenceValues;
 import com.google.oak.attestation.v1.ReferenceValues;
-import com.google.oak.attestation.v1.RootLayerEvidence;
+import com.google.oak.attestation.v1.RootLayerEndorsements;
 import com.google.oak.attestation.v1.RootLayerReferenceValues;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ListIterator;
+import com.google.oak.attestation.v1.TransparentReleaseEndorsement;
 import java.util.Optional;
-import javax.swing.text.html.Option;
 
+/** Demo implementation which assumes an Oak Container chain. */
 public class MainVerifier {
   public static void main(String[] args) throws Exception {
     System.exit(2); // unimplemented
   }
 
-  public MainVerifier(Evidence evidence, Endorsements endorsements) {
+  public MainVerifier(Evidence evidence) {
     this.evidence = evidence;
-    this.endorsements = endorsements;
-    // Need to adjust layer numbering since Evidence doesn't have the distinguished kernel layer.
-    if (evidence.getLayersCount() - 1 == endorsements.getCustomLayersCount()) {
-      this.initFailure = Optional.empty();
-      int layerCount = endorsements.getCustomLayersCount();
-      for (int i = 0; i < layerCount; ++i) {
-        customLayerVerifiers.add(
-            new LayerVerifier(evidence.getLayers(i + 1), endorsements.getCustomLayers(i)));
-      }
-    } else {
-      this.initFailure = Optional.of(new Failure("Layer count mismatch"));
-    }
   }
 
-  public Optional<Failure> getInitFailure() {
-    return initFailure;
-  }
-
-  public Optional<Failure> verifyRoot(RootLayerReferenceValues values) {
+  Optional<Failure> verifyRootLayer(
+      RootLayerEndorsements endorsements, RootLayerReferenceValues values) {
     // Needs implementation
     return Optional.empty();
   }
 
-  public Optional<Failure> verifyKernel(KernelLayerReferenceValues values) {
+  Optional<Failure> verifyKernelLayer(
+      KernelLayerEndorsements endorsements, KernelLayerReferenceValues values) {
     // Needs implementation
     return Optional.empty();
   }
 
-  public Optional<Failure> verify(ReferenceValues values) {
-    if (initFailure.isPresent()) {
-      return initFailure;
-    }
-
-    Optional<Failure> r = verifyRoot(values.getRootLayer());
-    if (r.isPresent()) {
-      return r;
-    }
-    r = verifyKernel(values.getKernelLayer());
-    if (r.isPresent()) {
-      return r;
-    }
-    ListIterator<LayerVerifier> it = customLayerVerifiers.listIterator();
-    while (it.hasNext()) {
-      int layerIndex = it.nextIndex();
-      r = it.next().verify(values.getCustomLayers(layerIndex));
+  Optional<Failure> verifyInitLayer(
+      InitLayerEndorsements endorsements, InitLayerReferenceValues values) {
+    BinaryReferenceValue binaryValue = values.getBinary();
+    if (binaryValue.hasEndorsement()) {
+      Optional<Failure> r = verifyLogEntry(endorsements.getBinary(), binaryValue.getEndorsement());
       if (r.isPresent()) {
         return r;
       }
     }
+    return Optional.empty();
+  }
+
+  Optional<Failure> verifyContainerLayer(
+      ContainerLayerEndorsements endorsements, ContainerLayerReferenceValues values) {
+    // Needs implementation
+    return Optional.empty();
+  }
+
+  public Optional<Failure> verify(Endorsements endorsementsArg, ReferenceValues valuesArg) {
+    if (!endorsementsArg.hasOakContainers() || !valuesArg.hasOakContainers()) {
+      return Optional.of(new Failure("chain mismatch or unimplemented"));
+    }
+
+    OakContainersEndorsements endorsements = endorsementsArg.getOakContainers();
+    OakContainersReferenceValues values = valuesArg.getOakContainers();
+
+    Optional<Failure> r;
+    r = verifyRootLayer(endorsements.getRootLayer(), values.getRootLayer());
+    if (r.isPresent()) {
+      return r;
+    }
+    r = verifyKernelLayer(endorsements.getKernelLayer(), values.getKernelLayer());
+    if (r.isPresent()) {
+      return r;
+    }
+    r = verifyInitLayer(endorsements.getInitLayer(), values.getInitLayer());
+    if (r.isPresent()) {
+      return r;
+    }
+    r = verifyContainerLayer(endorsements.getContainerLayer(), values.getContainerLayer());
+    if (r.isPresent()) {
+      return r;
+    }
 
     return Optional.empty();
   }
 
+  static Optional<Failure> verifyLogEntry(
+      TransparentReleaseEndorsement end, EndorsementReferenceValue ref) {
+    RekorLogEntry logEntry;
+    try {
+      logEntry = RekorLogEntry.createFromJson(end.getRekorLogEntry().toStringUtf8());
+    } catch (IllegalArgumentException e) {
+      return Optional.of(
+          new Failure(String.format("%s: %s", e.getClass().getName(), e.getMessage())));
+    }
+    return LogEntryVerifier.verify(
+        logEntry, ref.getRekorPublicKey().toByteArray(), end.getEndorsement().toByteArray());
+  }
+
   private final Evidence evidence;
-  private final Endorsements endorsements;
-  private final Optional<Failure> initFailure;
-  private final List<LayerVerifier> customLayerVerifiers = new ArrayList<>();
 }
