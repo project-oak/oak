@@ -475,16 +475,26 @@
 <a href="#475" id="475">475</a>
 <a href="#476" id="476">476</a>
 <a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Endorsement for binaries from the Transparent Release process.
 /// &lt;&lt;https://github.com/project-oak/oak/blob/main/docs/release.md&gt;&gt;
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>TransparentReleaseEndorsement {
-    <span class="doccomment">/// The endorsement statement for the underlying binary.
+    <span class="doccomment">/// JSON string comtaining the endorsement statement for the underlying binary.
+    /// The format is described here:
+    /// &lt;https://github.com/project-oak/transparent-release/blob/main/docs/claim-transparency.md#the-claim-format&gt;
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>endorsement: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// The log entry as proof of inclusion of the endorsement statement in Rekor.
+    <span class="doccomment">/// The signature for the endorsement.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>endorsement_signature: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="doccomment">/// The log entry as proof of inclusion of the endorsement statement in Rekor.
+    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;3&quot;</span>)]
     </span><span class="kw">pub </span>rekor_log_entry: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
