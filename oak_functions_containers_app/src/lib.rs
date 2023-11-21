@@ -16,7 +16,7 @@
 
 use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
 use anyhow::anyhow;
-use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_crypto::encryptor::{AsyncRecipientContextGenerator, EncryptionKeyProvider};
 use oak_functions_service::{
     instance::OakFunctionsInstance,
     proto::oak::functions::{
@@ -27,7 +27,7 @@ use oak_functions_service::{
 };
 use oak_remote_attestation::{
     attester::{AttestationReportGenerator, Attester},
-    handler::EncryptionHandler,
+    handler::AsyncEncryptionHandler,
 };
 use prost::Message;
 use std::sync::{Arc, OnceLock};
@@ -52,24 +52,30 @@ pub mod proto {
 pub mod orchestrator_client;
 
 // Instance of the OakFunctions service for Oak Containers.
-pub struct OakFunctionsContainersService {
+pub struct OakFunctionsContainersService<G: AsyncRecipientContextGenerator + Send + Sync> {
     attestation_report_generator: Arc<dyn AttestationReportGenerator>,
     encryption_key_provider: Arc<EncryptionKeyProvider>,
-    instance: OnceLock<OakFunctionsInstance>,
+    instance: OnceLock<Arc<OakFunctionsInstance>>,
+    orchestrator_client: Arc<G>,
 }
 
-impl OakFunctionsContainersService {
-    pub fn new(attestation_report_generator: Arc<dyn AttestationReportGenerator>) -> Self {
+impl<G: AsyncRecipientContextGenerator + Send + Sync> OakFunctionsContainersService<G> {
+    pub fn new(
+        attestation_report_generator: Arc<dyn AttestationReportGenerator>,
+        orchestrator_client: Arc<G>,
+    ) -> Self {
         Self {
             attestation_report_generator,
             encryption_key_provider: Arc::new(EncryptionKeyProvider::generate()),
             instance: OnceLock::new(),
+            orchestrator_client,
         }
     }
 
-    fn get_instance(&self) -> Result<&OakFunctionsInstance, tonic::Status> {
+    fn get_instance(&self) -> Result<Arc<OakFunctionsInstance>, tonic::Status> {
         self.instance
             .get()
+            .cloned()
             .ok_or_else(|| tonic::Status::failed_precondition("not initialized"))
     }
 }
@@ -98,7 +104,9 @@ fn map_status(status: micro_rpc::Status) -> tonic::Status {
 }
 
 #[tonic::async_trait]
-impl OakFunctions for OakFunctionsContainersService {
+impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
+    for OakFunctionsContainersService<G>
+{
     async fn initialize(
         &self,
         request: tonic::Request<InitializeRequest>,
@@ -107,7 +115,7 @@ impl OakFunctions for OakFunctionsContainersService {
         match self.instance.get() {
             Some(_) => Err(tonic::Status::failed_precondition("already initialized")),
             None => {
-                let instance = OakFunctionsInstance::new(&request).map_err(map_status)?;
+                let instance = Arc::new(OakFunctionsInstance::new(&request).map_err(map_status)?);
                 let attester = Attester::new(
                     self.attestation_report_generator.clone(),
                     self.encryption_key_provider.clone(),
@@ -136,7 +144,7 @@ impl OakFunctions for OakFunctionsContainersService {
         &self,
         request: tonic::Request<InvokeRequest>,
     ) -> Result<tonic::Response<InvokeResponse>, tonic::Status> {
-        let encryption_key_provider = self.encryption_key_provider.clone();
+        let encryption_key_provider = self.orchestrator_client.clone();
         let instance = self.get_instance()?;
 
         let encrypted_request = request.into_inner().encrypted_request.ok_or_else(|| {
@@ -145,7 +153,7 @@ impl OakFunctions for OakFunctionsContainersService {
             )
         })?;
 
-        EncryptionHandler::create(encryption_key_provider, |r| {
+        AsyncEncryptionHandler::create(encryption_key_provider, |r| {
             // Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
             let response_result: Result<Vec<u8>, micro_rpc::Status> =
@@ -154,6 +162,7 @@ impl OakFunctions for OakFunctionsContainersService {
             response.encode_to_vec()
         })
         .invoke(&encrypted_request)
+        .await
         .map(
             #[allow(clippy::needless_update)]
             |encrypted_response| {
@@ -203,13 +212,15 @@ impl OakFunctions for OakFunctionsContainersService {
 }
 
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-pub async fn serve(
+pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static>(
     listener: TcpListener,
     attestation_report_generator: Arc<dyn AttestationReportGenerator>,
+    orchestrator_client: Arc<G>,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
             attestation_report_generator,
+            orchestrator_client,
         )))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
