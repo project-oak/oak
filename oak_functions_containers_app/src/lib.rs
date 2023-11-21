@@ -16,19 +16,16 @@
 
 use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
 use anyhow::anyhow;
-use oak_crypto::encryptor::{AsyncRecipientContextGenerator, EncryptionKeyProvider};
+use oak_crypto::encryptor::AsyncRecipientContextGenerator;
 use oak_functions_service::{
     instance::OakFunctionsInstance,
     proto::oak::functions::{
         AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
-        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, PublicKeyInfo,
+        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse,
     },
 };
-use oak_remote_attestation::{
-    attester::{AttestationReportGenerator, Attester},
-    handler::AsyncEncryptionHandler,
-};
+use oak_remote_attestation::handler::AsyncEncryptionHandler;
 use prost::Message;
 use std::sync::{Arc, OnceLock};
 use tokio::net::TcpListener;
@@ -53,29 +50,21 @@ pub mod orchestrator_client;
 
 // Instance of the OakFunctions service for Oak Containers.
 pub struct OakFunctionsContainersService<G: AsyncRecipientContextGenerator + Send + Sync> {
-    attestation_report_generator: Arc<dyn AttestationReportGenerator>,
-    encryption_key_provider: Arc<EncryptionKeyProvider>,
-    instance: OnceLock<Arc<OakFunctionsInstance>>,
-    orchestrator_client: Arc<G>,
+    instance: OnceLock<OakFunctionsInstance>,
+    encryption_context: Arc<G>,
 }
 
 impl<G: AsyncRecipientContextGenerator + Send + Sync> OakFunctionsContainersService<G> {
-    pub fn new(
-        attestation_report_generator: Arc<dyn AttestationReportGenerator>,
-        orchestrator_client: Arc<G>,
-    ) -> Self {
+    pub fn new(encryption_context: Arc<G>) -> Self {
         Self {
-            attestation_report_generator,
-            encryption_key_provider: Arc::new(EncryptionKeyProvider::generate()),
             instance: OnceLock::new(),
-            orchestrator_client,
+            encryption_context,
         }
     }
 
-    fn get_instance(&self) -> Result<Arc<OakFunctionsInstance>, tonic::Status> {
+    fn get_instance(&self) -> Result<&OakFunctionsInstance, tonic::Status> {
         self.instance
             .get()
-            .cloned()
             .ok_or_else(|| tonic::Status::failed_precondition("not initialized"))
     }
 }
@@ -115,27 +104,11 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
         match self.instance.get() {
             Some(_) => Err(tonic::Status::failed_precondition("already initialized")),
             None => {
-                let instance = Arc::new(OakFunctionsInstance::new(&request).map_err(map_status)?);
-                let attester = Attester::new(
-                    self.attestation_report_generator.clone(),
-                    self.encryption_key_provider.clone(),
-                );
-                let attestation_evidence =
-                    attester.generate_attestation_evidence().map_err(|err| {
-                        tonic::Status::internal(format!(
-                            "couldn't get attestation evidence: {:?}",
-                            err
-                        ))
-                    })?;
+                let instance = OakFunctionsInstance::new(&request).map_err(map_status)?;
                 if self.instance.set(instance).is_err() {
                     return Err(tonic::Status::failed_precondition("already initialized"));
                 }
-                Ok(tonic::Response::new(InitializeResponse {
-                    public_key_info: Some(PublicKeyInfo {
-                        public_key: attestation_evidence.encryption_public_key,
-                        attestation: attestation_evidence.attestation,
-                    }),
-                }))
+                Ok(tonic::Response::new(InitializeResponse::default()))
             }
         }
     }
@@ -144,7 +117,7 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
         &self,
         request: tonic::Request<InvokeRequest>,
     ) -> Result<tonic::Response<InvokeResponse>, tonic::Status> {
-        let encryption_key_provider = self.orchestrator_client.clone();
+        let encryption_key_provider = self.encryption_context.clone();
         let instance = self.get_instance()?;
 
         let encrypted_request = request.into_inner().encrypted_request.ok_or_else(|| {
@@ -214,13 +187,11 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
 pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static>(
     listener: TcpListener,
-    attestation_report_generator: Arc<dyn AttestationReportGenerator>,
-    orchestrator_client: Arc<G>,
+    encryption_context: Arc<G>,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
-            attestation_report_generator,
-            orchestrator_client,
+            encryption_context,
         )))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
