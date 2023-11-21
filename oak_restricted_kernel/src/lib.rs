@@ -306,15 +306,6 @@ pub fn start_kernel(info: &BootParams) -> ! {
         }
     };
 
-    if sev_snp_enabled {
-        // For now we just generate a sample attestation report and log the value.
-        // TODO(#2842): Use attestation report in attestation behaviour.
-        let report =
-            snp_guest::get_attestation([42; 64]).expect("couldn't generate attestation report");
-        info!("Attestation: {:?}", report);
-        report.validate().expect("attestation report is invalid");
-    }
-
     let mut channel = get_channel(
         &kernel_args,
         GUEST_HOST_HEAP.get().unwrap(),
