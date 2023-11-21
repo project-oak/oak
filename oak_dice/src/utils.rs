@@ -29,3 +29,22 @@ pub fn cbor_encoded_bytes_to_vec(bytes: &[u8]) -> Result<Vec<u8>, String> {
         .map_err(|err| format!("failed to write bytes: {:?}", err))?;
     Ok(result)
 }
+
+pub(crate) trait PaddedCopyFromSlice {
+    /// Like [`slice::copy_from_slice`] but does not panic if slices are not
+    /// the same length. In the case of a shorter source slice, pads the remaining
+    /// bytes with zeroes. In the case of a longer source slice it returns an error.
+    fn padded_copy_from_slice(&mut self, src: &[u8]) -> Result<(), &'static str>;
+}
+
+impl PaddedCopyFromSlice for [u8] {
+    fn padded_copy_from_slice(&mut self, src: &[u8]) -> Result<(), &'static str> {
+        if self.len() < src.len() {
+            Err("destination slice length shorter than source slice length")
+        } else {
+            self[..src.len()].copy_from_slice(src);
+            self[src.len()..].fill(0);
+            Ok(())
+        }
+    }
+}

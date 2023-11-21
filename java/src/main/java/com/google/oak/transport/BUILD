@@ -38,6 +38,22 @@ java_library(
 )
 
 java_library(
+    name = "transport_android",
+    srcs = [
+        "EvidenceProvider.java",
+        "QueueingStreamObserver.java",
+        "Transport.java",
+    ],
+    deps = [
+        "//java/src/main/java/com/google/oak/util",
+        "//oak_crypto/proto/v1:crypto_java_proto",
+        "//oak_remote_attestation/proto/v1:messages_java_proto",
+        "@io_grpc_grpc_java//api",
+        "@io_grpc_grpc_java//stub",
+    ],
+)
+
+java_library(
     name = "grpc_streaming_transport",
     srcs = [
         "GrpcStreamingTransport.java",
@@ -53,7 +69,30 @@ java_library(
 )
 
 java_library(
+    name = "grpc_streaming_transport_android",
+    srcs = [
+        "GrpcStreamingTransport.java",
+    ],
+    deps = [
+        ":transport_android",
+        "//java/src/main/java/com/google/oak/util",
+        "//oak_crypto/proto/v1:crypto_java_proto",
+        "//oak_remote_attestation/proto/v1:messages_java_proto",
+        "//oak_remote_attestation/proto/v1:service_streaming_java_proto",
+        "@io_grpc_grpc_java//stub",
+    ],
+)
+
+java_library(
     name = "api_key_interceptor",
+    srcs = ["ApiKeyInterceptor.java"],
+    deps = [
+        "@io_grpc_grpc_java//api",
+    ],
+)
+
+java_library(
+    name = "api_key_interceptor_android",
     srcs = ["ApiKeyInterceptor.java"],
     deps = [
         "@io_grpc_grpc_java//api",

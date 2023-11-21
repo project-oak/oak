@@ -42,6 +42,21 @@ java_library(
     ],
 )
 
+# Clients are responsible for bundling in "libhpke-jni.so".
+java_library(
+    name = "client_encryptor_android",
+    srcs = [
+        "ClientEncryptor.java",
+    ],
+    deps = [
+        ":decryption_result",
+        "//java/src/main/java/com/google/oak/crypto/hpke:hpke_android",
+        "//java/src/main/java/com/google/oak/util",
+        "//oak_crypto/proto/v1:crypto_java_proto",
+        "@com_google_protobuf//java/lite",
+    ],
+)
+
 java_library(
     name = "server_encryptor",
     srcs = [
