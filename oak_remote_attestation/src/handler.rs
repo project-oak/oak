@@ -18,7 +18,7 @@ use alloc::{sync::Arc, vec::Vec};
 use anyhow::{anyhow, Context};
 use oak_crypto::{
     encryptor::{
-        AsyncRecipientContextGenerator, AsyncServerEncryptor, EncryptionKeyProvider,
+        AsyncRecipientContextGenerator, AsyncServerEncryptor, RecipientContextGenerator,
         ServerEncryptor,
     },
     proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
@@ -40,12 +40,15 @@ pub struct PublicKeyInfo {
 /// based on the provided encryption key.
 pub struct EncryptionHandler<H: FnOnce(Vec<u8>) -> Vec<u8>> {
     // TODO(#3442): Use attester to attest to the public key.
-    encryption_key_provider: Arc<EncryptionKeyProvider>,
+    encryption_key_provider: Arc<dyn RecipientContextGenerator>,
     request_handler: H,
 }
 
 impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
-    pub fn create(encryption_key_provider: Arc<EncryptionKeyProvider>, request_handler: H) -> Self {
+    pub fn create(
+        encryption_key_provider: Arc<dyn RecipientContextGenerator>,
+        request_handler: H,
+    ) -> Self {
         Self {
             encryption_key_provider,
             request_handler,

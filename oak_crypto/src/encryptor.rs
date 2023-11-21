@@ -89,6 +89,16 @@ pub trait AsyncRecipientContextGenerator {
     ) -> anyhow::Result<RecipientContext>;
 }
 
+#[async_trait]
+impl AsyncRecipientContextGenerator for EncryptionKeyProvider {
+    async fn generate_recipient_context(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<RecipientContext> {
+        (self as &dyn RecipientContextGenerator).generate_recipient_context(encapsulated_public_key)
+    }
+}
+
 /// Encryptor object for encrypting client requests that will be sent to the server and decrypting
 /// server responses that are received by the client. Each Encryptor object corresponds to a single
 /// crypto session between the client and the server.

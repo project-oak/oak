@@ -38,7 +38,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         OAK_FUNCTIONS_CONTAINERS_APP_PORT,
     );
     let listener = TcpListener::bind(addr).await?;
-    let server_handle = tokio::spawn(serve(listener, attestation_report_generator));
+    let server_handle = tokio::spawn(serve(
+        listener,
+        attestation_report_generator,
+        Arc::new(client.clone()),
+    ));
 
     eprintln!("Running Oak Functions on Oak Containers at address: {addr}");
     client.notify_app_ready().await?;
