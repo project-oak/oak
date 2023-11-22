@@ -242,7 +242,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let heap_page_range = VMA_ALLOCATOR.lock().allocate(1 << 19).unwrap();
     memory::init_kernel_heap(heap_page_range).unwrap();
 
-    let _stage0_dice_data = {
+    let stage0_dice_data = {
         let dice_memory_slice = {
             let e820_dice_data_entry = info
                 .e820_table()
