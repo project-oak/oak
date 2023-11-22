@@ -15,7 +15,7 @@
 //
 
 use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
-use anyhow::anyhow;
+use anyhow::Context;
 use oak_crypto::encryptor::AsyncRecipientContextGenerator;
 use oak_functions_service::{
     instance::OakFunctionsInstance,
@@ -62,7 +62,7 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync> OakFunctionsContainersServ
         }
     }
 
-    fn get_instance(&self) -> Result<&OakFunctionsInstance, tonic::Status> {
+    fn get_instance(&self) -> tonic::Result<&OakFunctionsInstance> {
         self.instance
             .get()
             .ok_or_else(|| tonic::Status::failed_precondition("not initialized"))
@@ -99,7 +99,7 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
     async fn initialize(
         &self,
         request: tonic::Request<InitializeRequest>,
-    ) -> Result<tonic::Response<InitializeResponse>, tonic::Status> {
+    ) -> tonic::Result<tonic::Response<InitializeResponse>> {
         let request = request.into_inner();
         match self.instance.get() {
             Some(_) => Err(tonic::Status::failed_precondition("already initialized")),
@@ -116,7 +116,7 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
     async fn handle_user_request(
         &self,
         request: tonic::Request<InvokeRequest>,
-    ) -> Result<tonic::Response<InvokeResponse>, tonic::Status> {
+    ) -> tonic::Result<tonic::Response<InvokeResponse>> {
         let encryption_key_provider = self.encryption_context.clone();
         let instance = self.get_instance()?;
 
@@ -156,7 +156,7 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
     async fn extend_next_lookup_data(
         &self,
         request: tonic::Request<ExtendNextLookupDataRequest>,
-    ) -> Result<tonic::Response<ExtendNextLookupDataResponse>, tonic::Status> {
+    ) -> tonic::Result<tonic::Response<ExtendNextLookupDataResponse>> {
         self.get_instance()?
             .extend_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
@@ -166,7 +166,7 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
     async fn finish_next_lookup_data(
         &self,
         request: tonic::Request<FinishNextLookupDataRequest>,
-    ) -> Result<tonic::Response<FinishNextLookupDataResponse>, tonic::Status> {
+    ) -> tonic::Result<tonic::Response<FinishNextLookupDataResponse>> {
         self.get_instance()?
             .finish_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
@@ -176,7 +176,7 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
     async fn abort_next_lookup_data(
         &self,
         request: tonic::Request<Empty>,
-    ) -> Result<tonic::Response<AbortNextLookupDataResponse>, tonic::Status> {
+    ) -> tonic::Result<tonic::Response<AbortNextLookupDataResponse>> {
         self.get_instance()?
             .abort_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
@@ -188,12 +188,12 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
 pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static>(
     listener: TcpListener,
     encryption_context: Arc<G>,
-) -> Result<(), anyhow::Error> {
+) -> anyhow::Result<()> {
     tonic::transport::Server::builder()
         .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
             encryption_context,
         )))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
-        .map_err(|error| anyhow!("starting up the service failed with error: {:?}", error))
+        .context("failed to start up the service")
 }
