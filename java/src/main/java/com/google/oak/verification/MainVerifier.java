@@ -29,8 +29,8 @@ import com.google.oak.attestation.v1.OakContainersReferenceValues;
 import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.attestation.v1.RootLayerEndorsements;
 import com.google.oak.attestation.v1.RootLayerReferenceValues;
-import com.google.oak.attestation.v1.SystemLayerReferenceValues;
 import com.google.oak.attestation.v1.SystemLayerEndorsements;
+import com.google.oak.attestation.v1.SystemLayerReferenceValues;
 import com.google.oak.attestation.v1.TransparentReleaseEndorsement;
 import java.util.Optional;
 
@@ -60,7 +60,8 @@ public class MainVerifier {
       SystemLayerEndorsements endorsements, SystemLayerReferenceValues values) {
     BinaryReferenceValue systemImageValue = values.getSystemImage();
     if (systemImageValue.hasEndorsement()) {
-      Optional<Failure> r = verifyLogEntry(endorsements.getSystemImage(), systemImageValue.getEndorsement());
+      Optional<Failure> r =
+          verifyLogEntry(endorsements.getSystemImage(), systemImageValue.getEndorsement());
       if (r.isPresent()) {
         return r;
       }
