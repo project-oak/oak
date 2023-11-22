@@ -163,9 +163,12 @@ pub fn init_guest_message_encryptor() {
         .get()
         .expect("secrets page is not initialized")
         .vmpck_0[..];
-    GUEST_MESSAGE_ENCRYPTOR
-        .lock()
-        .replace(GuestMessageEncryptor::new(key).expect("couldn't create guest message encryptor"));
+    // Stage 0 will have generated an attestation report and this would have consumed 2 sequence
+    // numbers (1 for the request, 1 for the response).
+    GUEST_MESSAGE_ENCRYPTOR.lock().replace(
+        GuestMessageEncryptor::new_with_sequence_number(key, 2)
+            .expect("couldn't create guest message encryptor"),
+    );
 }
 
 pub fn send_guest_message_request<
