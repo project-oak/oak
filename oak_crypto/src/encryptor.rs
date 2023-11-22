@@ -19,7 +19,10 @@
 //! <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
 
 use crate::{
-    hpke::{setup_base_recipient, setup_base_sender, KeyPair, RecipientContext, SenderContext},
+    hpke::{
+        setup_base_recipient, setup_base_sender, KeyPair, PrivateKey, PublicKey, RecipientContext,
+        SenderContext,
+    },
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
@@ -35,15 +38,21 @@ pub struct EncryptionKeyProvider {
 
 impl Default for EncryptionKeyProvider {
     fn default() -> Self {
-        Self::new()
+        Self::generate()
     }
 }
 
 impl EncryptionKeyProvider {
     /// Creates a crypto provider with a newly generated key pair.
-    pub fn new() -> Self {
+    pub fn generate() -> Self {
         Self {
             key_pair: KeyPair::generate(),
+        }
+    }
+
+    pub fn new(private_key: PrivateKey, public_key: PublicKey) -> Self {
+        Self {
+            key_pair: KeyPair::new(private_key, public_key),
         }
     }
 
@@ -78,6 +87,16 @@ pub trait AsyncRecipientContextGenerator {
         &self,
         encapsulated_public_key: &[u8],
     ) -> anyhow::Result<RecipientContext>;
+}
+
+#[async_trait]
+impl AsyncRecipientContextGenerator for EncryptionKeyProvider {
+    async fn generate_recipient_context(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<RecipientContext> {
+        (self as &dyn RecipientContextGenerator).generate_recipient_context(encapsulated_public_key)
+    }
 }
 
 /// Encryptor object for encrypting client requests that will be sent to the server and decrypting

@@ -898,7 +898,6 @@ dependencies = [
  "ff",
  "generic-array",
  "group",
- "hkdf",
  "pem-rfc7468",
  "pkcs8",
  "rand_core",
@@ -1856,6 +1855,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_attestation_verification"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.21.0",
+ "ecdsa",
+ "hex",
+ "micro_rpc_build",
+ "oak_transparency_claims",
+ "p256",
+ "prost",
+ "serde",
+ "serde_jcs",
+ "serde_json",
+ "sha2",
+ "tonic",
+]
+
+[[package]]
 name = "oak_channel"
 version = "0.1.0"
 dependencies = [
@@ -1878,6 +1896,7 @@ dependencies = [
  "log",
  "oak_crypto",
  "oak_grpc_utils",
+ "oak_remote_attestation",
  "prost",
  "tonic",
 ]
@@ -2227,6 +2246,7 @@ dependencies = [
  "oak_functions_test_utils",
  "oak_grpc_utils",
  "oak_launcher_utils",
+ "oak_remote_attestation",
  "prost",
  "rand",
  "serde",
@@ -2394,25 +2414,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_remote_attestation_verification"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "base64 0.21.0",
- "ecdsa",
- "hex",
- "micro_rpc_build",
- "oak_transparency_claims",
- "p256",
- "prost",
- "serde",
- "serde_jcs",
- "serde_json",
- "sha2",
- "tonic",
-]
-
-[[package]]
 name = "oak_restricted_kernel"
 version = "0.1.0"
 dependencies = [
@@ -2428,11 +2429,13 @@ dependencies = [
  "goblin",
  "hex",
  "hkdf",
+ "hpke",
  "libm",
  "linked_list_allocator",
  "log",
  "oak_channel",
  "oak_core",
+ "oak_crypto",
  "oak_dice",
  "oak_linux_boot_params",
  "oak_restricted_kernel_interface",
@@ -2460,9 +2463,14 @@ dependencies = [
  "anyhow",
  "log",
  "oak_channel",
+ "oak_crypto",
+ "oak_dice",
+ "oak_remote_attestation",
  "oak_restricted_kernel_interface",
  "os_pipe",
+ "p256",
  "strum",
+ "zerocopy 0.7.3",
 ]
 
 [[package]]

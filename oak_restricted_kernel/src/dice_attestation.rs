@@ -14,27 +14,15 @@
 // limitations under the License.
 //
 
-use coset::CborSerializable;
-use zerocopy::FromZeroes;
+use coset::{cbor::Value, cwt::ClaimName, CborSerializable};
+use oak_crypto::hpke::Serializable;
+use oak_dice::cert::{ENCLAVE_APPLICATION_LAYER_ID, LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID};
 
-/// Generates an ECA certificate for use by the application.
-fn generate_application_certificate(
-    kernel_signing_key: &p256::ecdsa::SigningKey,
-    kernel_cert_issuer: alloc::string::String,
-    application_verifying_key: &p256::ecdsa::VerifyingKey,
-    app_digest: &[u8],
-) -> coset::CoseSign1 {
-    let additional_claims = alloc::vec![(
-        coset::cwt::ClaimName::PrivateUse(oak_dice::cert::LAYER_2_CODE_MEASUREMENT_ID),
-        coset::cbor::value::Value::Bytes(app_digest.into()),
-    )];
-    oak_dice::cert::generate_signing_certificate(
-        kernel_signing_key,
-        kernel_cert_issuer,
-        application_verifying_key,
-        additional_claims,
-    )
-    .expect("couldn't generate signing certificate")
+fn certificate_to_byte_array(cert: coset::CoseSign1) -> [u8; oak_dice::evidence::CERTIFICATE_SIZE] {
+    let vec = cert.to_vec().expect("couldn't serialize certificate");
+    let mut slice = [0; oak_dice::evidence::CERTIFICATE_SIZE];
+    slice[..vec.len()].copy_from_slice(&vec);
+    slice
 }
 
 /// Generates attestation evidence for the 'measurement' of the application.
@@ -42,10 +30,10 @@ pub fn generate_dice_data(
     stage0_dice_data: oak_dice::evidence::Stage0DiceData,
     app_digest: &[u8],
 ) -> oak_dice::evidence::RestrictedKernelDiceData {
-    let (application_signing_key, application_verifying_key) =
-        oak_dice::cert::generate_ecdsa_key_pair();
-
-    let application_eca_cert = {
+    let (application_keys, application_private_keys): (
+        oak_dice::evidence::ApplicationKeys,
+        oak_dice::evidence::ApplicationPrivateKeys,
+    ) = {
         let kernel_signing_key = p256::ecdsa::SigningKey::from_slice(
             &stage0_dice_data
                 .layer_1_certificate_authority
@@ -61,32 +49,72 @@ pub fn generate_dice_data(
             .subject
             .expect("expected to find the subject");
 
-        generate_application_certificate(
-            &kernel_signing_key,
-            kernel_cert_issuer,
-            &application_verifying_key,
-            app_digest,
-        )
-    };
+        let (application_private_signing_key, application_public_verifying_key) =
+            oak_dice::cert::generate_ecdsa_key_pair();
 
-    let application_keys = {
-        let mut keys = oak_dice::evidence::ApplicationKeys::new_zeroed();
-        let application_eca_cert_vec = application_eca_cert
-            .to_vec()
-            .expect("couldn't serialize application signing 1 ECA certificate");
-        keys.signing_public_key_certificate[..application_eca_cert_vec.len()]
-            .copy_from_slice(&application_eca_cert_vec);
-        // TODO(#4074): Implement the encryption key.
-        keys
-    };
+        let additional_claims = alloc::vec![(
+            ClaimName::PrivateUse(ENCLAVE_APPLICATION_LAYER_ID),
+            Value::Map(alloc::vec![(
+                Value::Integer(LAYER_2_CODE_MEASUREMENT_ID.into()),
+                Value::Map(alloc::vec![(
+                    Value::Integer(SHA2_256_ID.into()),
+                    Value::Bytes(app_digest.into()),
+                )]),
+            ),]),
+        )];
 
-    let application_private_keys: oak_dice::evidence::ApplicationPrivateKeys = {
-        let signing_private_key_bytes = application_signing_key.to_bytes();
-        let mut keys = oak_dice::evidence::ApplicationPrivateKeys::new_zeroed();
-        keys.signing_private_key[..signing_private_key_bytes.as_slice().len()]
-            .copy_from_slice(signing_private_key_bytes.as_slice());
-        // TODO(#4074): Implement the encryption key.
-        keys
+        let application_signing_public_key_certificate =
+            oak_dice::cert::generate_signing_certificate(
+                &kernel_signing_key,
+                kernel_cert_issuer.clone(),
+                &application_public_verifying_key,
+                additional_claims.clone(),
+            )
+            .expect("couldn't generate signing certificate");
+
+        let (application_encryption_private_key, application_encryption_public_key) =
+            oak_crypto::hpke::gen_kem_keypair();
+
+        let application_encryption_public_key_certificate =
+            oak_dice::cert::generate_kem_certificate(
+                &kernel_signing_key,
+                kernel_cert_issuer,
+                application_encryption_public_key.to_bytes().as_slice(),
+                additional_claims,
+            )
+            .expect("couldn't generate encryption public certificate");
+
+        let application_keys = oak_dice::evidence::ApplicationKeys {
+            signing_public_key_certificate: certificate_to_byte_array(
+                application_signing_public_key_certificate,
+            ),
+            encryption_public_key_certificate: certificate_to_byte_array(
+                application_encryption_public_key_certificate,
+            ),
+        };
+
+        let application_private_keys = {
+            let signing_private_key = {
+                let bytes = application_private_signing_key.to_bytes();
+                let mut slice = [0; oak_dice::evidence::PRIVATE_KEY_SIZE];
+                slice[..bytes.as_slice().len()].copy_from_slice(bytes.as_slice());
+                slice
+            };
+
+            let encryption_private_key = {
+                let mut slice = [0; oak_dice::evidence::PRIVATE_KEY_SIZE];
+                slice[..application_encryption_private_key.to_bytes().len()]
+                    .copy_from_slice(&application_encryption_private_key.to_bytes());
+                slice
+            };
+
+            oak_dice::evidence::ApplicationPrivateKeys {
+                encryption_private_key,
+                signing_private_key,
+            }
+        };
+
+        (application_keys, application_private_keys)
     };
 
     let evidence = oak_dice::evidence::Evidence {

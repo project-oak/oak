@@ -24,9 +24,9 @@ java_test(
     name = "log_entry_verifier_test",
     srcs = ["LogEntryVerifierTest.java"],
     data = [
-        "//oak_remote_attestation_verification/testdata:endorsement.json",
-        "//oak_remote_attestation_verification/testdata:logentry.json",
-        "//oak_remote_attestation_verification/testdata:rekor_public_key.pem",
+        "//oak_attestation_verification/testdata:endorsement.json",
+        "//oak_attestation_verification/testdata:logentry.json",
+        "//oak_attestation_verification/testdata:rekor_public_key.pem",
     ],
     test_class = "com.google.oak.verification.LogEntryVerifierTest",
     deps = [
@@ -38,10 +38,10 @@ java_test(
     name = "main_verifier_test",
     srcs = ["MainVerifierTest.java"],
     data = [
-        "//oak_remote_attestation_verification/testdata:endorsement.json",
-        "//oak_remote_attestation_verification/testdata:logentry.json",
-        "//oak_remote_attestation_verification/testdata:oak-development.pem",
-        "//oak_remote_attestation_verification/testdata:rekor_public_key.pem",
+        "//oak_attestation_verification/testdata:endorsement.json",
+        "//oak_attestation_verification/testdata:logentry.json",
+        "//oak_attestation_verification/testdata:oak-development.pem",
+        "//oak_attestation_verification/testdata:rekor_public_key.pem",
     ],
     test_class = "com.google.oak.verification.MainVerifierTest",
     deps = [
@@ -56,7 +56,7 @@ java_test(
 java_test(
     name = "rekor_log_entry_test",
     srcs = ["RekorLogEntryTest.java"],
-    data = ["//oak_remote_attestation_verification/testdata:logentry.json"],
+    data = ["//oak_attestation_verification/testdata:logentry.json"],
     test_class = "com.google.oak.verification.RekorLogEntryTest",
     deps = [
         "//java/src/main/java/com/google/oak/verification",
@@ -67,9 +67,9 @@ java_test(
     name = "signature_verifier_test",
     srcs = ["SignatureVerifierTest.java"],
     data = [
-        "//oak_remote_attestation_verification/testdata:endorsement.json",
-        "//oak_remote_attestation_verification/testdata:endorsement.json.sig",
-        "//oak_remote_attestation_verification/testdata:oak-development.pem",
+        "//oak_attestation_verification/testdata:endorsement.json",
+        "//oak_attestation_verification/testdata:endorsement.json.sig",
+        "//oak_attestation_verification/testdata:oak-development.pem",
     ],
     test_class = "com.google.oak.verification.SignatureVerifierTest",
     deps = [

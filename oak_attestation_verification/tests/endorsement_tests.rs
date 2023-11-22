@@ -19,7 +19,7 @@ extern crate alloc;
 use alloc::vec::Vec;
 use std::fs;
 
-use oak_remote_attestation_verification::{
+use oak_attestation_verification::{
     endorsement::{
         verify_binary_endorsement, verify_endorsement_statement, verify_endorser_public_key,
     },

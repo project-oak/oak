@@ -59,9 +59,11 @@ impl StreamingSession for SessionProxy {
             tee_certificates: vec![],
             application_data: None,
         };
+        #[allow(deprecated)]
         let attestation_bundle = AttestationBundle {
             attestation_evidence: Some(attestation_evidence),
             attestation_endorsement: Some(attestation_endorsement),
+            dice_evidence: None,
         };
 
         let connector_handle = self.connector_handle.clone();
@@ -83,10 +85,10 @@ impl StreamingSession for SessionProxy {
                         })
                     }
                     request_wrapper::Request::InvokeRequest(invoke_request) => {
+                        #[allow(clippy::needless_update)]
                         let enclave_invoke_request = functions::InvokeRequest {
-                            // TODO(#4037): Remove once explicit protos are used end-to-end.
-                            body: invoke_request.encrypted_body,
                             encrypted_request: invoke_request.encrypted_request,
+                            ..Default::default()
                         };
                         let mut enclave_client =
                             functions::OakFunctionsAsyncClient::new(connector_handle.clone());
@@ -97,10 +99,10 @@ impl StreamingSession for SessionProxy {
                             .map_err(|err| {
                                 tonic::Status::internal(format!("error handling client request: {:?}", err))
                             })?;
+                        #[allow(clippy::needless_update)]
                         response_wrapper::Response::InvokeResponse(InvokeResponse {
-                            // TODO(#4037): Remove once explicit protos are used end-to-end.
-                            encrypted_body: enclave_invoke_response.body,
                             encrypted_response: enclave_invoke_response.encrypted_response,
+                            ..Default::default()
                         })
                     }
                 };

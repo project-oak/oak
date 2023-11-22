@@ -39,7 +39,7 @@ pub mod logger;
 pub mod lookup;
 pub mod wasm;
 
-use alloc::{format, string::ToString, sync::Arc, vec, vec::Vec};
+use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 use instance::OakFunctionsInstance;
 use oak_core::sync::OnceCell;
 use oak_crypto::encryptor::EncryptionKeyProvider;
@@ -64,7 +64,7 @@ impl OakFunctionsService {
     pub fn new(attestation_report_generator: Arc<dyn AttestationReportGenerator>) -> Self {
         Self {
             attestation_report_generator,
-            encryption_key_provider: Arc::new(EncryptionKeyProvider::new()),
+            encryption_key_provider: Arc::new(EncryptionKeyProvider::generate()),
             instance: OnceCell::new(),
         }
     }
@@ -145,13 +145,13 @@ impl OakFunctions for OakFunctionsService {
             response.encode_to_vec()
         })
         .invoke(&encrypted_request)
-        .map(|encrypted_response| {
-            InvokeResponse {
-                // TODO(#4037): Remove once explicit crypto protos are implemented.
-                body: vec![],
+        .map(
+            #[allow(clippy::needless_update)]
+            |encrypted_response| InvokeResponse {
                 encrypted_response: Some(encrypted_response),
-            }
-        })
+                ..Default::default()
+            },
+        )
         .map_err(|err| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::Internal,

@@ -834,8 +834,13 @@ dependencies = [
  "anyhow",
  "log",
  "oak_channel",
+ "oak_crypto",
+ "oak_dice",
+ "oak_remote_attestation",
  "oak_restricted_kernel_interface",
+ "p256",
  "strum",
+ "zerocopy",
 ]
 
 [[package]]

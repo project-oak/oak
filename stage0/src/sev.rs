@@ -26,7 +26,9 @@ use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 pub use oak_sev_guest::ghcb::Ghcb;
 use oak_sev_guest::{
+    crypto::GuestMessageEncryptor,
     ghcb::GhcbProtocol,
+    guest::{GuestMessage, Message},
     instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
     msr::{
         change_snp_page_state, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
@@ -42,6 +44,7 @@ use x86_64::{
     },
     PhysAddr, VirtAddr,
 };
+use zerocopy::{AsBytes, FromBytes};
 
 pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
@@ -133,6 +136,12 @@ impl<T, A: Allocator> DerefMut for Shared<T, A> {
 impl<T, A: Allocator> AsRef<T> for Shared<T, A> {
     fn as_ref(&self) -> &T {
         &self.inner
+    }
+}
+
+impl<T, A: Allocator> AsMut<T> for Shared<T, A> {
+    fn as_mut(&mut self) -> &mut T {
+        &mut self.inner
     }
 }
 
@@ -471,4 +480,39 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
     page_tables.pdpt[1].set_unused();
     tlb::flush_all();
     log::info!("SEV-SNP memory validation complete.");
+}
+
+pub fn init_guest_message_encryptor() -> Result<GuestMessageEncryptor, &'static str> {
+    // Safety: `SecretsPage` implements `FromBytes` which ensures that it has no requirements on the
+    // underlying bytes.
+    let key = &unsafe { crate::SEV_SECRETS.assume_init_ref() }.vmpck_0[..];
+    GuestMessageEncryptor::new(key)
+}
+
+/// Sends a request to the Secure Processor using the Guest Message Protocol.
+pub fn send_guest_message_request<
+    Request: AsBytes + FromBytes + Message,
+    Response: AsBytes + FromBytes + Message,
+>(
+    encryptor: &mut GuestMessageEncryptor,
+    request: Request,
+) -> Result<Response, &'static str> {
+    let alloc = &crate::SHORT_TERM_ALLOC;
+    let mut request_message = Shared::new_in(GuestMessage::new(), alloc);
+    encryptor.encrypt_message(request, request_message.as_mut())?;
+    let response_message = Shared::new_in(GuestMessage::new(), alloc);
+
+    let request_address =
+        PhysAddr::new(VirtAddr::from_ptr(request_message.as_ref() as *const GuestMessage).as_u64());
+    let response_address = PhysAddr::new(
+        VirtAddr::from_ptr(response_message.as_ref() as *const GuestMessage).as_u64(),
+    );
+
+    GHCB_WRAPPER
+        .get()
+        .expect("ghcb not initialized")
+        .lock()
+        .do_guest_message_request(request_address, response_address)?;
+    response_message.validate()?;
+    encryptor.decrypt_message::<Response>(response_message.as_ref())
 }

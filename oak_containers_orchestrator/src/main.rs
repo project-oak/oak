@@ -64,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &container_bundle,
         &application_config,
     );
-    let encryption_key_provider = Arc::new(EncryptionKeyProvider::new());
+    let encryption_key_provider = Arc::new(EncryptionKeyProvider::generate());
     // Ignore the signing key for now.
     let (_signing_key, verifying_key) = generate_ecdsa_key_pair();
 

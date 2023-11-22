@@ -114,7 +114,7 @@ fn test_hpke() {
 
 #[test]
 fn test_encryptor() {
-    let key_provider = Arc::new(EncryptionKeyProvider::new());
+    let key_provider = Arc::new(EncryptionKeyProvider::generate());
     let serialized_server_public_key = key_provider.get_serialized_public_key();
 
     let mut client_encryptor = ClientEncryptor::create(&serialized_server_public_key)

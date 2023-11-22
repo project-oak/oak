@@ -70,12 +70,6 @@ absl::StatusOr<EncryptedResponse> GrpcStreamingTransport::Invoke(
   // Create request.
   RequestWrapper request;
   *request.mutable_invoke_request()->mutable_encrypted_request() = encrypted_request;
-  // TODO(#4037): Remove once explicit crypto protos are implemented.
-  std::string encrypted_body;
-  if (!encrypted_request.SerializeToString(&encrypted_body)) {
-    return absl::InternalError("couldn't serialize encrypted request");
-  }
-  *request.mutable_invoke_request()->mutable_encrypted_body() = encrypted_body;
 
   // Send request.
   auto response = Send(request);

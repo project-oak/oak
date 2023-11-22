@@ -5,6 +5,7 @@ members = [
   "micro_rpc",
   "micro_rpc_build",
   "micro_rpc_tests",
+  "oak_attestation_verification",
   "oak_channel",
   "oak_client",
   "oak_containers_hello_world_trusted_app",
@@ -42,7 +43,6 @@ members = [
   "oak_hello_world_linux_init",
   "oak_launcher_utils",
   "oak_remote_attestation",
-  "oak_remote_attestation_verification",
   "oak_restricted_kernel",
   "oak_restricted_kernel_api",
   "oak_restricted_kernel_interface",
@@ -79,6 +79,7 @@ benchmark = { path = "./oak_functions/examples/benchmark/module" }
 location_utils = { path = "./oak_functions/location_utils" }
 micro_rpc = { path = "./micro_rpc" }
 micro_rpc_build = { path = "./micro_rpc_build" }
+oak_attestation_verification = { path = "./oak_attestation_verification" }
 oak_channel = { path = "./oak_channel" }
 oak_client = { path = "./oak_client" }
 oak_containers_orchestrator_client = { path = "./oak_containers_orchestrator_client" }
@@ -100,7 +101,6 @@ oak_launcher_utils = { path = "./oak_launcher_utils" }
 oak_linux_boot_params = { path = "./linux_boot_params" }
 oak_logger = { path = "./oak_functions/logger" }
 oak_remote_attestation = { path = "./oak_remote_attestation" }
-oak_remote_attestation_verification = { path = "./oak_remote_attestation_verification" }
 oak_restricted_kernel_api = { path = "./oak_restricted_kernel_api" }
 oak_restricted_kernel_interface = { path = "./oak_restricted_kernel_interface" }
 oak_sev_guest = { path = "./oak_sev_guest", default-features = false }
