@@ -390,15 +390,6 @@
 <a href="#390" id="390">390</a>
 <a href="#391" id="391">391</a>
 <a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
-<a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
-<a href="#401" id="401">401</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -706,15 +697,6 @@
             <span class="prelude-val">Some</span>(acpi)
         }
     };
-
-    <span class="kw">if </span>sev_snp_enabled {
-        <span class="comment">// For now we just generate a sample attestation report and log the value.
-        // TODO(#2842): Use attestation report in attestation behaviour.
-        </span><span class="kw">let </span>report =
-            snp_guest::get_attestation([<span class="number">42</span>; <span class="number">64</span>]).expect(<span class="string">&quot;couldn&#39;t generate attestation report&quot;</span>);
-        <span class="macro">info!</span>(<span class="string">&quot;Attestation: {:?}&quot;</span>, report);
-        report.validate().expect(<span class="string">&quot;attestation report is invalid&quot;</span>);
-    }
 
     <span class="kw">let </span><span class="kw-2">mut </span>channel = get_channel(
         <span class="kw-2">&amp;</span>kernel_args,

@@ -472,6 +472,50 @@
 <a href="#472" id="472">472</a>
 <a href="#473" id="473">473</a>
 <a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
+<a href="#504" id="504">504</a>
+<a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -500,7 +544,9 @@
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">pub use </span>oak_sev_guest::ghcb::Ghcb;
 <span class="kw">use </span>oak_sev_guest::{
+    crypto::GuestMessageEncryptor,
     ghcb::GhcbProtocol,
+    guest::{GuestMessage, Message},
     instructions::{pvalidate, InstructionError, PageSize <span class="kw">as </span>SevPageSize, Validation},
     msr::{
         change_snp_page_state, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
@@ -516,6 +562,7 @@
     },
     PhysAddr, VirtAddr,
 };
+<span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
 
 <span class="kw">pub static </span>GHCB_WRAPPER: OnceCell&lt;Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;&gt;&gt; = OnceCell::new();
 
@@ -607,6 +654,12 @@
 <span class="kw">impl</span>&lt;T, A: Allocator&gt; AsRef&lt;T&gt; <span class="kw">for </span>Shared&lt;T, A&gt; {
     <span class="kw">fn </span>as_ref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>T {
         <span class="kw-2">&amp;</span><span class="self">self</span>.inner
+    }
+}
+
+<span class="kw">impl</span>&lt;T, A: Allocator&gt; AsMut&lt;T&gt; <span class="kw">for </span>Shared&lt;T, A&gt; {
+    <span class="kw">fn </span>as_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>T {
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.inner
     }
 }
 
@@ -945,5 +998,40 @@
     page_tables.pdpt[<span class="number">1</span>].set_unused();
     tlb::flush_all();
     <span class="macro">log::info!</span>(<span class="string">&quot;SEV-SNP memory validation complete.&quot;</span>);
+}
+
+<span class="kw">pub fn </span>init_guest_message_encryptor() -&gt; <span class="prelude-ty">Result</span>&lt;GuestMessageEncryptor, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="comment">// Safety: `SecretsPage` implements `FromBytes` which ensures that it has no requirements on the
+    // underlying bytes.
+    </span><span class="kw">let </span>key = <span class="kw-2">&amp;</span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::SEV_SECRETS.assume_init_ref() }.vmpck_0[..];
+    GuestMessageEncryptor::new(key)
+}
+
+<span class="doccomment">/// Sends a request to the Secure Processor using the Guest Message Protocol.
+</span><span class="kw">pub fn </span>send_guest_message_request&lt;
+    Request: AsBytes + FromBytes + Message,
+    Response: AsBytes + FromBytes + Message,
+&gt;(
+    encryptor: <span class="kw-2">&amp;mut </span>GuestMessageEncryptor,
+    request: Request,
+) -&gt; <span class="prelude-ty">Result</span>&lt;Response, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">let </span>alloc = <span class="kw-2">&amp;</span><span class="kw">crate</span>::SHORT_TERM_ALLOC;
+    <span class="kw">let </span><span class="kw-2">mut </span>request_message = Shared::new_in(GuestMessage::new(), alloc);
+    encryptor.encrypt_message(request, request_message.as_mut())<span class="question-mark">?</span>;
+    <span class="kw">let </span>response_message = Shared::new_in(GuestMessage::new(), alloc);
+
+    <span class="kw">let </span>request_address =
+        PhysAddr::new(VirtAddr::from_ptr(request_message.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>GuestMessage).as_u64());
+    <span class="kw">let </span>response_address = PhysAddr::new(
+        VirtAddr::from_ptr(response_message.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>GuestMessage).as_u64(),
+    );
+
+    GHCB_WRAPPER
+        .get()
+        .expect(<span class="string">&quot;ghcb not initialized&quot;</span>)
+        .lock()
+        .do_guest_message_request(request_address, response_address)<span class="question-mark">?</span>;
+    response_message.validate()<span class="question-mark">?</span>;
+    encryptor.decrypt_message::&lt;Response&gt;(response_message.as_ref())
 }
 </code></pre></div></section></main></body></html>

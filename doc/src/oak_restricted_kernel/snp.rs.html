@@ -245,6 +245,9 @@
 <a href="#245" id="245">245</a>
 <a href="#246" id="246">246</a>
 <a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -410,9 +413,12 @@
         .get()
         .expect(<span class="string">&quot;secrets page is not initialized&quot;</span>)
         .vmpck_0[..];
-    GUEST_MESSAGE_ENCRYPTOR
-        .lock()
-        .replace(GuestMessageEncryptor::new(key).expect(<span class="string">&quot;couldn&#39;t create guest message encryptor&quot;</span>));
+    <span class="comment">// Stage 0 will have generated an attestation report and this would have consumed 2 sequence
+    // numbers (1 for the request, 1 for the response).
+    </span>GUEST_MESSAGE_ENCRYPTOR.lock().replace(
+        GuestMessageEncryptor::new_with_sequence_number(key, <span class="number">2</span>)
+            .expect(<span class="string">&quot;couldn&#39;t create guest message encryptor&quot;</span>),
+    );
 }
 
 <span class="kw">pub fn </span>send_guest_message_request&lt;
