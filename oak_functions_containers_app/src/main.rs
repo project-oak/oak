@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::anyhow;
+use anyhow::Context;
 use oak_functions_containers_app::{orchestrator_client::OrchestratorClient, serve};
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -27,7 +27,8 @@ const OAK_FUNCTIONS_CONTAINERS_APP_PORT: u16 = 8080;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = OrchestratorClient::create()
         .await
-        .map_err(|error| anyhow!("couldn't create Orchestrator client: {:?}", error))?;
+        .context("couldn't create Orchestrator client")?;
+
     // To be used when connecting trusted app to orchestrator.
     let _application_config = client.get_application_config().await?;
 

@@ -15,7 +15,7 @@
 //
 
 use alloc::{sync::Arc, vec::Vec};
-use anyhow::{anyhow, Context};
+use anyhow::Context;
 use oak_crypto::{
     encryptor::{
         AsyncRecipientContextGenerator, AsyncServerEncryptor, RecipientContextGenerator,
@@ -62,12 +62,12 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
         let serialized_encapsulated_public_key = encrypted_request
             .serialized_encapsulated_public_key
             .as_ref()
-            .expect("initial request message doesn't contain encapsulated public key");
+            .context("initial request message doesn't contain encapsulated public key")?;
         let mut server_encryptor = ServerEncryptor::create(
             serialized_encapsulated_public_key,
             self.encryption_key_provider.clone(),
         )
-        .map_err(|error| anyhow!("couldn't create server encryptor: {:?}", error))?;
+        .context("couldn't create server encryptor")?;
 
         // Decrypt request.
         let (request, _) = server_encryptor
