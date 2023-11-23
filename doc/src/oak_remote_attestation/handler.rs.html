@@ -153,7 +153,7 @@
 //
 
 </span><span class="kw">use </span>alloc::{sync::Arc, vec::Vec};
-<span class="kw">use </span>anyhow::{anyhow, Context};
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_crypto::{
     encryptor::{
         AsyncRecipientContextGenerator, AsyncServerEncryptor, RecipientContextGenerator,
@@ -200,12 +200,12 @@
         </span><span class="kw">let </span>serialized_encapsulated_public_key = encrypted_request
             .serialized_encapsulated_public_key
             .as_ref()
-            .expect(<span class="string">&quot;initial request message doesn&#39;t contain encapsulated public key&quot;</span>);
+            .context(<span class="string">&quot;initial request message doesn&#39;t contain encapsulated public key&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>server_encryptor = ServerEncryptor::create(
             serialized_encapsulated_public_key,
             <span class="self">self</span>.encryption_key_provider.clone(),
         )
-        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t create server encryptor: {:?}&quot;</span>, error))<span class="question-mark">?</span>;
+        .context(<span class="string">&quot;couldn&#39;t create server encryptor&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Decrypt request.
         </span><span class="kw">let </span>(request, <span class="kw">_</span>) = server_encryptor

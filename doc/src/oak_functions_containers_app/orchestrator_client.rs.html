@@ -109,13 +109,6 @@
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
-<a href="#115" id="115">115</a>
-<a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -134,7 +127,7 @@
 </span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::containers::{
     orchestrator_client::OrchestratorClient <span class="kw">as </span>GrpcOrchestratorClient, GetCryptoContextRequest,
 };
-<span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>oak_crypto::{
     encryptor::AsyncRecipientContextGenerator, hpke::RecipientContext,
@@ -162,7 +155,7 @@
 
 <span class="comment">// TODO(#4478): Reuse Orchestrator client in all Oak Containers examples.
 </span><span class="kw">impl </span>OrchestratorClient {
-    <span class="kw">pub async fn </span>create() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="kw">pub async fn </span>create() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>inner: GrpcOrchestratorClient&lt;tonic::transport::channel::Channel&gt; = {
             <span class="kw">let </span>channel = Endpoint::try_from(IGNORED_ENDPOINT_URI)
                 .context(<span class="string">&quot;couldn&#39;t form endpoint&quot;</span>)<span class="question-mark">?
@@ -177,7 +170,7 @@
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ inner })
     }
 
-    <span class="kw">pub async fn </span>get_application_config(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="kw">pub async fn </span>get_application_config(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;&gt; {
         <span class="kw">let </span>config = <span class="self">self
             </span>.inner
             .get_application_config(())
@@ -190,7 +183,7 @@
     <span class="kw">pub async fn </span>get_crypto_context(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         serialized_encapsulated_public_key: <span class="kw-2">&amp;</span>[u8],
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;CryptoContext, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;CryptoContext&gt; {
         <span class="kw">let </span>context = <span class="self">self
             </span>.inner
             <span class="comment">// TODO(#4477): Remove unnecessary copies of the Orchestrator client.
@@ -206,7 +199,7 @@
         <span class="prelude-val">Ok</span>(context)
     }
 
-    <span class="kw">pub async fn </span>notify_app_ready(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="kw">pub async fn </span>notify_app_ready(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="self">self</span>.inner.notify_app_ready(tonic::Request::new(())).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
@@ -217,20 +210,13 @@
     <span class="kw">async fn </span>generate_recipient_context(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         encapsulated_public_key: <span class="kw-2">&amp;</span>[u8],
-    ) -&gt; anyhow::Result&lt;RecipientContext&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RecipientContext&gt; {
         <span class="kw">let </span>serialized_crypto_context = <span class="self">self
             </span>.get_crypto_context(encapsulated_public_key)
             .<span class="kw">await
-            </span>.map_err(|error| {
-                tonic::Status::internal(<span class="macro">format!</span>(
-                    <span class="string">&quot;couldn&#39;t get crypto context from the Orchestrator: {:?}&quot;</span>,
-                    error
-                ))
-            })<span class="question-mark">?</span>;
-        <span class="kw">let </span>crypto_context =
-            RecipientContext::deserialize(serialized_crypto_context).map_err(|error| {
-                tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t deserialize crypto context: {:?}&quot;</span>, error))
-            })<span class="question-mark">?</span>;
+            </span>.context(<span class="string">&quot;couldn&#39;t get crypto context from the Orchestrator&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>crypto_context = RecipientContext::deserialize(serialized_crypto_context)
+            .context(<span class="string">&quot;couldn&#39;t deserialize crypto context&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(crypto_context)
     }
 }

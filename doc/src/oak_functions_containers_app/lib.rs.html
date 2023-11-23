@@ -214,7 +214,7 @@
 //
 
 </span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
-<span class="kw">use </span>anyhow::anyhow;
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_crypto::encryptor::AsyncRecipientContextGenerator;
 <span class="kw">use </span>oak_functions_service::{
     instance::OakFunctionsInstance,
@@ -261,7 +261,7 @@
         }
     }
 
-    <span class="kw">fn </span>get_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>OakFunctionsInstance, tonic::Status&gt; {
+    <span class="kw">fn </span>get_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; tonic::Result&lt;<span class="kw-2">&amp;</span>OakFunctionsInstance&gt; {
         <span class="self">self</span>.instance
             .get()
             .ok_or_else(|| tonic::Status::failed_precondition(<span class="string">&quot;not initialized&quot;</span>))
@@ -298,7 +298,7 @@
     <span class="kw">async fn </span>initialize(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;InitializeRequest&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;InitializeResponse&gt;, tonic::Status&gt; {
+    ) -&gt; tonic::Result&lt;tonic::Response&lt;InitializeResponse&gt;&gt; {
         <span class="kw">let </span>request = request.into_inner();
         <span class="kw">match </span><span class="self">self</span>.instance.get() {
             <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(tonic::Status::failed_precondition(<span class="string">&quot;already initialized&quot;</span>)),
@@ -315,7 +315,7 @@
     <span class="kw">async fn </span>handle_user_request(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;InvokeRequest&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;InvokeResponse&gt;, tonic::Status&gt; {
+    ) -&gt; tonic::Result&lt;tonic::Response&lt;InvokeResponse&gt;&gt; {
         <span class="kw">let </span>encryption_key_provider = <span class="self">self</span>.encryption_context.clone();
         <span class="kw">let </span>instance = <span class="self">self</span>.get_instance()<span class="question-mark">?</span>;
 
@@ -355,7 +355,7 @@
     <span class="kw">async fn </span>extend_next_lookup_data(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;ExtendNextLookupDataRequest&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;ExtendNextLookupDataResponse&gt;, tonic::Status&gt; {
+    ) -&gt; tonic::Result&lt;tonic::Response&lt;ExtendNextLookupDataResponse&gt;&gt; {
         <span class="self">self</span>.get_instance()<span class="question-mark">?
             </span>.extend_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
@@ -365,7 +365,7 @@
     <span class="kw">async fn </span>finish_next_lookup_data(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;FinishNextLookupDataRequest&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;FinishNextLookupDataResponse&gt;, tonic::Status&gt; {
+    ) -&gt; tonic::Result&lt;tonic::Response&lt;FinishNextLookupDataResponse&gt;&gt; {
         <span class="self">self</span>.get_instance()<span class="question-mark">?
             </span>.finish_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
@@ -375,7 +375,7 @@
     <span class="kw">async fn </span>abort_next_lookup_data(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;Empty&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;AbortNextLookupDataResponse&gt;, tonic::Status&gt; {
+    ) -&gt; tonic::Result&lt;tonic::Response&lt;AbortNextLookupDataResponse&gt;&gt; {
         <span class="self">self</span>.get_instance()<span class="question-mark">?
             </span>.abort_next_lookup_data(request.into_inner())
             .map(tonic::Response::new)
@@ -387,13 +387,13 @@
 </span><span class="kw">pub async fn </span>serve&lt;G: AsyncRecipientContextGenerator + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(
     listener: TcpListener,
     encryption_context: Arc&lt;G&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
+) -&gt; anyhow::Result&lt;()&gt; {
     tonic::transport::Server::builder()
         .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
             encryption_context,
         )))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .<span class="kw">await
-        </span>.map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;starting up the service failed with error: {:?}&quot;</span>, error))
+        </span>.context(<span class="string">&quot;failed to start up the service&quot;</span>)
 }
 </code></pre></div></section></main></body></html>
