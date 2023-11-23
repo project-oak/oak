@@ -35,8 +35,6 @@ struct Args {
 
     #[arg(long, default_value = "oakc")]
     runtime_user: String,
-    // #[arg(default_value = false)]
-    // key_provisioning_leader: bool,
 }
 
 #[tokio::main]
