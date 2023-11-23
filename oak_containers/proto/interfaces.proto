@@ -91,19 +91,3 @@ service Orchestrator {
   // TODO(#3841): Store private key in the Orchestrator and generate session keys for each session.
   rpc GetCryptoContext(GetCryptoContextRequest) returns (GetCryptoContextResponse) {}
 }
-
-service Crypto {
-  // Returns instance session keys for decrypting client requests and encrypting enclave responses.
-  rpc GetInstanceSessionKeys(GetCryptoContextRequest) returns (GetCryptoContextResponse) {}
-
-  // Returns group session keys for decrypting client requests and encrypting enclave responses.
-  rpc GetGroupSessionKeys(GetCryptoContextRequest) returns (GetCryptoContextResponse) {}
-
-  // Sign arbitrary data with the instance signing key.
-  // TODO(#4504): Implement data signing.
-  rpc GetInstanceSignature(GetCryptoContextRequest) returns (GetCryptoContextResponse) {}
-
-  // Sign arbitrary data with the group signing key.
-  // TODO(#4504): Implement data signing.
-  rpc GetGroupSignature(GetCryptoContextRequest) returns (GetCryptoContextResponse) {}
-}
