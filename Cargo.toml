@@ -41,7 +41,6 @@ members = [
   "oak_functions_service",
   "oak_functions_test_utils",
   "oak_hello_world_linux_init",
-  "oak_key_provisioning",
   "oak_launcher_utils",
   "oak_remote_attestation",
   "oak_restricted_kernel",
@@ -98,7 +97,6 @@ oak_functions_service = { path = "./oak_functions_service", default-features = f
 oak_functions_test_utils = { path = "./oak_functions_test_utils" }
 oak_functions_wasm = { path = "./oak_functions/wasm" }
 oak_grpc_utils = { path = "./oak_grpc_utils" }
-oak_key_provisioning = { path = "./oak_key_provisioning" }
 oak_launcher_utils = { path = "./oak_launcher_utils" }
 oak_linux_boot_params = { path = "./linux_boot_params" }
 oak_logger = { path = "./oak_functions/logger" }

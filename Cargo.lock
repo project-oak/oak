@@ -2370,17 +2370,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_key_provisioning"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "oak_grpc_utils",
- "oak_remote_attestation",
- "prost",
- "tonic",
-]
-
-[[package]]
 name = "oak_launcher_utils"
 version = "0.1.0"
 dependencies = [
