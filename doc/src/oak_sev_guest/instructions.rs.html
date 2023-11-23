@@ -309,7 +309,7 @@
 }
 
 <span class="doccomment">/// The potential errors when calling the PVALIDATE or RMPADJUST instructions.
-</span><span class="attr">#[derive(Debug, FromRepr)]
+</span><span class="attr">#[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 </span><span class="kw">pub enum </span>InstructionError {
     <span class="doccomment">/// The input parameters were invalid.

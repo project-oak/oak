@@ -516,6 +516,23 @@
 <a href="#516" id="516">516</a>
 <a href="#517" id="517">517</a>
 <a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -705,8 +722,7 @@
     </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>page_tables = <span class="kw">crate</span>::paging::PAGE_TABLE_REFS.get().unwrap().lock();
         <span class="kw">let </span>pt = <span class="kw-2">&amp;mut </span>page_tables.pt_0;
-        <span class="kw">let </span>idx = (page_start / Size4KiB::SIZE) <span class="kw">as </span>usize;
-        pt[idx].set_addr(
+        pt[page.p1_index()].set_addr(
             PhysAddr::new(page_start),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
         );
@@ -723,11 +739,29 @@
 
 <span class="doccomment">/// Stops sharing a single 4KiB page with the hypervisor when running with AMD SEV-SNP enabled.
 </span><span class="kw">pub fn </span>unshare_page(page: Page&lt;Size4KiB&gt;) {
+    <span class="kw">let </span>page_start = page.start_address().as_u64();
+    <span class="comment">// Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that range.
+    </span><span class="macro">assert!</span>(page_start &lt; Size2MiB::SIZE);
     <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
-        <span class="kw">let </span>page_start = page.start_address().as_u64();
         <span class="kw">let </span>request = SnpPageStateChangeRequest::new(page_start <span class="kw">as </span>usize, PageAssignment::Private)
             .expect(<span class="string">&quot;invalid address for page location&quot;</span>);
         change_snp_page_state(request).expect(<span class="string">&quot;couldn&#39;t change SNP state for page&quot;</span>);
+    }
+    <span class="comment">// Mark the page as encrypted.
+    </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>page_tables = <span class="kw">crate</span>::paging::PAGE_TABLE_REFS.get().unwrap().lock();
+        <span class="kw">let </span>pt = <span class="kw-2">&amp;mut </span>page_tables.pt_0;
+        pt[page.p1_index()].set_addr(
+            PhysAddr::new(page_start | <span class="kw">crate</span>::ENCRYPTED.get().unwrap_or(<span class="kw-2">&amp;</span><span class="number">0</span>)),
+            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+        );
+    }
+    tlb::flush_all();
+    <span class="comment">// We have to revalidate the page again after un-sharing it.
+    </span><span class="kw">if let </span><span class="prelude-val">Err</span>(err) = page.pvalidate() {
+        <span class="kw">if </span>err != InstructionError::ValidationStatusNotUpdated {
+            <span class="macro">panic!</span>(<span class="string">&quot;shared page revalidation failed&quot;</span>);
+        }
     }
 }
 

@@ -374,6 +374,13 @@
 <a href="#374" id="374">374</a>
 <a href="#375" id="375">375</a>
 <a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -401,6 +408,7 @@
 <span class="kw">use </span>alloc::{boxed::Box, format};
 <span class="kw">use </span>core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
+<span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_dice::evidence::DICE_DATA_CMDLINE_PARAM;
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">use </span>oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
@@ -453,6 +461,8 @@
 
 <span class="doccomment">/// We create an identity map for the first 1GiB of memory.
 </span><span class="kw">const </span>TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
+
+<span class="kw">static </span>ENCRYPTED: OnceCell&lt;u64&gt; = OnceCell::new();
 
 <span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
     <span class="attr">#[link_name = <span class="string">&quot;stack_start&quot;</span>]
@@ -521,6 +531,10 @@
     logging::init_logging();
     <span class="macro">log::info!</span>(<span class="string">&quot;starting...&quot;</span>);
     <span class="macro">log::info!</span>(<span class="string">&quot;Enabled SEV features: {:?}&quot;</span>, sev_status());
+
+    ENCRYPTED
+        .set(encrypted)
+        .expect(<span class="string">&quot;encrypted bit already initialized&quot;</span>);
 
     <span class="kw">if </span>sev_status().contains(SevStatus::SEV_ENABLED) {
         <span class="comment">// Safety: This is safe for SEV-ES and SNP because we&#39;re using an originally supported mode
