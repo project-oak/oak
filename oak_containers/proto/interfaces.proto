@@ -41,7 +41,7 @@ message SendAttestationEvidenceRequest {
   oak.attestation.v1.Evidence dice_evidence = 2;
 }
 
-message SendProvisionSecretsRequest {
+message SendGroupKeysRequest {
   // Enclave group encryption private key that was encrypted with HPKE using enclave's encryption
   // key.
   oak.crypto.v1.EncryptedRequest encrypted_encryption_key = 1;
@@ -85,8 +85,8 @@ service Launcher {
 
 // Defines the service exposed by the orchestrator, that can be invoked by the application.
 service OrchestratorKeyProvisioning {
-  // Send provision secrets to the enclave as part of Key Provisioning.
-  rpc SendProvisionSecrets(SendProvisionSecretsRequest) returns (google.protobuf.Empty) {}
+  // Send enclave group keys to the enclave as part of Key Provisioning.
+  rpc SendGroupKeys(SendGroupKeysRequest) returns (google.protobuf.Empty) {}
 }
 
 // Defines the service exposed by the orchestrator, that can be invoked by the application.

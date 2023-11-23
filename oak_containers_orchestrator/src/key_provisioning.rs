@@ -15,12 +15,10 @@
 
 use crate::proto::oak::{
     containers::{
-        orchestrator_key_provisioning_server::OrchestratorKeyProvisioning,
-        SendProvisionSecretsRequest,
+        orchestrator_key_provisioning_server::OrchestratorKeyProvisioning, SendGroupKeysRequest,
     },
     key_provisioning::v1::{
-        key_provisioning_server::KeyProvisioning, GetProvisionSecretsRequest,
-        GetProvisionSecretsResponse,
+        key_provisioning_server::KeyProvisioning, GetGroupKeysRequest, GetGroupKeysResponse,
     },
 };
 use tonic::{Request, Response};
@@ -29,24 +27,26 @@ struct KeyProvisioningService {}
 
 #[tonic::async_trait]
 impl OrchestratorKeyProvisioning for KeyProvisioningService {
-    async fn send_provision_secrets(
+    async fn send_group_keys(
         &self,
-        _request: Request<SendProvisionSecretsRequest>,
+        _request: Request<SendGroupKeysRequest>,
     ) -> Result<Response<()>, tonic::Status> {
         // TODO(#4442): Implement replacing group encryption key.
-        Ok(tonic::Response::new(()))
+        Err(tonic::Status::unimplemented(
+            "Key Provisioning is not implemented",
+        ))
     }
 }
 
 #[tonic::async_trait]
 impl KeyProvisioning for KeyProvisioningService {
-    async fn get_provision_secrets(
+    async fn get_group_keys(
         &self,
-        _request: Request<GetProvisionSecretsRequest>,
-    ) -> Result<Response<GetProvisionSecretsResponse>, tonic::Status> {
+        _request: Request<GetGroupKeysRequest>,
+    ) -> Result<Response<GetGroupKeysResponse>, tonic::Status> {
         // TODO(#4442): Implement generating group encryption key.
-        Ok(tonic::Response::new(GetProvisionSecretsResponse {
-            encrypted_encryption_key: None,
-        }))
+        Err(tonic::Status::unimplemented(
+            "Key Provisioning is not implemented",
+        ))
     }
 }
