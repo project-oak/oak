@@ -46,6 +46,7 @@ message EncryptedResponse {
 message AeadEncryptedMessage {
   bytes ciphertext = 1;
   bytes associated_data = 2;
+  bytes nonce = 3;
 }
 
 // Envelope containing session keys required to encrypt/decrypt messages within a secure session.

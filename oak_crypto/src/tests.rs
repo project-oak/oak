@@ -85,13 +85,24 @@ fn test_hpke() {
     .expect("couldn't setup base recipient");
 
     for i in 0..TEST_SESSION_SIZE {
+        let test_request_nonce = sender_context
+            .generate_nonce()
+            .expect("couldn't generate nonce");
         let test_request_message = [TEST_REQUEST_MESSAGE, &[i as u8]].concat();
         let test_request_associated_data = [TEST_REQUEST_ASSOCIATED_DATA, &[i as u8]].concat();
+
+        let test_response_nonce = recipient_context
+            .generate_nonce()
+            .expect("couldn't generate nonce");
         let test_response_message = [TEST_RESPONSE_MESSAGE, &[i as u8]].concat();
         let test_response_associated_data = [TEST_RESPONSE_ASSOCIATED_DATA, &[i as u8]].concat();
 
         let encrypted_request = sender_context
-            .seal(&test_request_message, &test_request_associated_data)
+            .seal(
+                &test_request_nonce,
+                &test_request_message,
+                &test_request_associated_data,
+            )
             .expect("sender context couldn't seal request");
         // Check that the message was encrypted.
         assert_ne!(test_request_message, encrypted_request);
@@ -101,7 +112,11 @@ fn test_hpke() {
         assert_eq!(test_request_message, decrypted_request);
 
         let encrypted_response = recipient_context
-            .seal(&test_response_message, &test_response_associated_data)
+            .seal(
+                &test_response_nonce,
+                &test_response_message,
+                &test_response_associated_data,
+            )
             .expect("recipient context couldn't seal response");
         // Check that the message was encrypted.
         assert_ne!(test_response_message, encrypted_response);
