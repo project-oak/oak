@@ -773,67 +773,6 @@
 <a href="#773" id="773">773</a>
 <a href="#774" id="774">774</a>
 <a href="#775" id="775">775</a>
-<a href="#776" id="776">776</a>
-<a href="#777" id="777">777</a>
-<a href="#778" id="778">778</a>
-<a href="#779" id="779">779</a>
-<a href="#780" id="780">780</a>
-<a href="#781" id="781">781</a>
-<a href="#782" id="782">782</a>
-<a href="#783" id="783">783</a>
-<a href="#784" id="784">784</a>
-<a href="#785" id="785">785</a>
-<a href="#786" id="786">786</a>
-<a href="#787" id="787">787</a>
-<a href="#788" id="788">788</a>
-<a href="#789" id="789">789</a>
-<a href="#790" id="790">790</a>
-<a href="#791" id="791">791</a>
-<a href="#792" id="792">792</a>
-<a href="#793" id="793">793</a>
-<a href="#794" id="794">794</a>
-<a href="#795" id="795">795</a>
-<a href="#796" id="796">796</a>
-<a href="#797" id="797">797</a>
-<a href="#798" id="798">798</a>
-<a href="#799" id="799">799</a>
-<a href="#800" id="800">800</a>
-<a href="#801" id="801">801</a>
-<a href="#802" id="802">802</a>
-<a href="#803" id="803">803</a>
-<a href="#804" id="804">804</a>
-<a href="#805" id="805">805</a>
-<a href="#806" id="806">806</a>
-<a href="#807" id="807">807</a>
-<a href="#808" id="808">808</a>
-<a href="#809" id="809">809</a>
-<a href="#810" id="810">810</a>
-<a href="#811" id="811">811</a>
-<a href="#812" id="812">812</a>
-<a href="#813" id="813">813</a>
-<a href="#814" id="814">814</a>
-<a href="#815" id="815">815</a>
-<a href="#816" id="816">816</a>
-<a href="#817" id="817">817</a>
-<a href="#818" id="818">818</a>
-<a href="#819" id="819">819</a>
-<a href="#820" id="820">820</a>
-<a href="#821" id="821">821</a>
-<a href="#822" id="822">822</a>
-<a href="#823" id="823">823</a>
-<a href="#824" id="824">824</a>
-<a href="#825" id="825">825</a>
-<a href="#826" id="826">826</a>
-<a href="#827" id="827">827</a>
-<a href="#828" id="828">828</a>
-<a href="#829" id="829">829</a>
-<a href="#830" id="830">830</a>
-<a href="#831" id="831">831</a>
-<a href="#832" id="832">832</a>
-<a href="#833" id="833">833</a>
-<a href="#834" id="834">834</a>
-<a href="#835" id="835">835</a>
-<a href="#836" id="836">836</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// As images can be large (hundreds of megabytes), the launcher chunks up the response into smaller
 /// pieces to respect proto/gRPC limits. The image needs to be reassembled in the stage1 or the
 /// orchestrator.
@@ -862,25 +801,7 @@
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>GetProvisionSecretsRequest {
-    <span class="doccomment">/// Endorsed evidence of the enclave that requests a new encryption key using Key Provisioning.
-    /// TODO(#4074): Replace with `oak.attestation.v1.EndorsedEvidence` once DICE is implemented.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>endorsed_evidence: ::core::option::Option&lt;<span class="kw">super</span>::session::v1::AttestationBundle&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>GetProvisionSecretsResponse {
-    <span class="doccomment">/// Encryption private key that was encrypted with HPKE using the encryption public key provided
-    /// in the endorsed evidence.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>encrypted_encryption_key: ::core::option::Option&lt;
-        <span class="kw">super</span>::crypto::v1::EncryptedRequest,
-    &gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>SendProvisionSecretsRequest {
+</span><span class="kw">pub struct </span>SendGroupKeysRequest {
     <span class="doccomment">/// Enclave group encryption private key that was encrypted with HPKE using enclave&#39;s encryption
     /// key.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
@@ -1239,32 +1160,27 @@
     }
 }
 <span class="doccomment">/// Generated server implementations.
-</span><span class="kw">pub mod </span>key_provisioning_server {
+</span><span class="kw">pub mod </span>orchestrator_key_provisioning_server {
     <span class="attr">#![allow(unused_variables, dead_code, missing_docs, clippy::let_unit_value)]
     </span><span class="kw">use </span>tonic::codegen::<span class="kw-2">*</span>;
-    <span class="doccomment">/// Generated trait containing gRPC methods that should be implemented for use with KeyProvisioningServer.
+    <span class="doccomment">/// Generated trait containing gRPC methods that should be implemented for use with OrchestratorKeyProvisioningServer.
     </span><span class="attr">#[async_trait]
-    </span><span class="kw">pub trait </span>KeyProvisioning: Send + Sync + <span class="lifetime">&#39;static </span>{
-        <span class="doccomment">/// Request provision secrets from for other enclaves as part of Key Provisioning.
-        </span><span class="kw">async fn </span>get_provision_secrets(
+    </span><span class="kw">pub trait </span>OrchestratorKeyProvisioning: Send + Sync + <span class="lifetime">&#39;static </span>{
+        <span class="doccomment">/// Send enclave group keys to the enclave as part of Key Provisioning.
+        </span><span class="kw">async fn </span>send_group_keys(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
-            request: tonic::Request&lt;<span class="kw">super</span>::GetProvisionSecretsRequest&gt;,
-        ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;<span class="kw">super</span>::GetProvisionSecretsResponse&gt;, tonic::Status&gt;;
-        <span class="doccomment">/// Send provision secrets to the enclave as part of Key Provisioning.
-        </span><span class="kw">async fn </span>send_provision_secrets(
-            <span class="kw-2">&amp;</span><span class="self">self</span>,
-            request: tonic::Request&lt;<span class="kw">super</span>::SendProvisionSecretsRequest&gt;,
+            request: tonic::Request&lt;<span class="kw">super</span>::SendGroupKeysRequest&gt;,
         ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;()&gt;, tonic::Status&gt;;
     }
     <span class="doccomment">/// Defines the service exposed by the orchestrator, that can be invoked by the application.
     </span><span class="attr">#[derive(Debug)]
-    </span><span class="kw">pub struct </span>KeyProvisioningServer&lt;T: KeyProvisioning&gt; {
+    </span><span class="kw">pub struct </span>OrchestratorKeyProvisioningServer&lt;T: OrchestratorKeyProvisioning&gt; {
         inner: _Inner&lt;T&gt;,
         accept_compression_encodings: EnabledCompressionEncodings,
         send_compression_encodings: EnabledCompressionEncodings,
     }
     <span class="kw">struct </span>_Inner&lt;T&gt;(Arc&lt;T&gt;);
-    <span class="kw">impl</span>&lt;T: KeyProvisioning&gt; KeyProvisioningServer&lt;T&gt; {
+    <span class="kw">impl</span>&lt;T: OrchestratorKeyProvisioning&gt; OrchestratorKeyProvisioningServer&lt;T&gt; {
         <span class="kw">pub fn </span>new(inner: T) -&gt; <span class="self">Self </span>{
             <span class="self">Self</span>::from_arc(Arc::new(inner))
         }
@@ -1298,9 +1214,10 @@
             <span class="self">self
         </span>}
     }
-    <span class="kw">impl</span>&lt;T, B&gt; tonic::codegen::Service&lt;http::Request&lt;B&gt;&gt; <span class="kw">for </span>KeyProvisioningServer&lt;T&gt;
+    <span class="kw">impl</span>&lt;T, B&gt; tonic::codegen::Service&lt;http::Request&lt;B&gt;&gt;
+    <span class="kw">for </span>OrchestratorKeyProvisioningServer&lt;T&gt;
     <span class="kw">where
-        </span>T: KeyProvisioning,
+        </span>T: OrchestratorKeyProvisioning,
         B: Body + Send + <span class="lifetime">&#39;static</span>,
         B::Error: Into&lt;StdError&gt; + Send + <span class="lifetime">&#39;static</span>,
     {
@@ -1316,53 +1233,13 @@
         <span class="kw">fn </span>call(<span class="kw-2">&amp;mut </span><span class="self">self</span>, req: http::Request&lt;B&gt;) -&gt; <span class="self">Self</span>::Future {
             <span class="kw">let </span>inner = <span class="self">self</span>.inner.clone();
             <span class="kw">match </span>req.uri().path() {
-                <span class="string">&quot;/oak.containers.KeyProvisioning/GetProvisionSecrets&quot; </span>=&gt; {
+                <span class="string">&quot;/oak.containers.OrchestratorKeyProvisioning/SendGroupKeys&quot; </span>=&gt; {
                     <span class="attr">#[allow(non_camel_case_types)]
-                    </span><span class="kw">struct </span>GetProvisionSecretsSvc&lt;T: KeyProvisioning&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
+                    </span><span class="kw">struct </span>SendGroupKeysSvc&lt;T: OrchestratorKeyProvisioning&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
                     <span class="kw">impl</span>&lt;
-                        T: KeyProvisioning,
-                    &gt; tonic::server::UnaryService&lt;<span class="kw">super</span>::GetProvisionSecretsRequest&gt;
-                    <span class="kw">for </span>GetProvisionSecretsSvc&lt;T&gt; {
-                        <span class="kw">type </span>Response = <span class="kw">super</span>::GetProvisionSecretsResponse;
-                        <span class="kw">type </span>Future = BoxFuture&lt;
-                            tonic::Response&lt;<span class="self">Self</span>::Response&gt;,
-                            tonic::Status,
-                        &gt;;
-                        <span class="kw">fn </span>call(
-                            <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-                            request: tonic::Request&lt;<span class="kw">super</span>::GetProvisionSecretsRequest&gt;,
-                        ) -&gt; <span class="self">Self</span>::Future {
-                            <span class="kw">let </span>inner = <span class="self">self</span>.<span class="number">0</span>.clone();
-                            <span class="kw">let </span>fut = <span class="kw">async move </span>{
-                                (<span class="kw-2">*</span>inner).get_provision_secrets(request).<span class="kw">await
-                            </span>};
-                            Box::pin(fut)
-                        }
-                    }
-                    <span class="kw">let </span>accept_compression_encodings = <span class="self">self</span>.accept_compression_encodings;
-                    <span class="kw">let </span>send_compression_encodings = <span class="self">self</span>.send_compression_encodings;
-                    <span class="kw">let </span>inner = <span class="self">self</span>.inner.clone();
-                    <span class="kw">let </span>fut = <span class="kw">async move </span>{
-                        <span class="kw">let </span>inner = inner.<span class="number">0</span>;
-                        <span class="kw">let </span>method = GetProvisionSecretsSvc(inner);
-                        <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
-                        <span class="kw">let </span><span class="kw-2">mut </span>grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            );
-                        <span class="kw">let </span>res = grpc.unary(method, req).<span class="kw">await</span>;
-                        <span class="prelude-val">Ok</span>(res)
-                    };
-                    Box::pin(fut)
-                }
-                <span class="string">&quot;/oak.containers.KeyProvisioning/SendProvisionSecrets&quot; </span>=&gt; {
-                    <span class="attr">#[allow(non_camel_case_types)]
-                    </span><span class="kw">struct </span>SendProvisionSecretsSvc&lt;T: KeyProvisioning&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
-                    <span class="kw">impl</span>&lt;
-                        T: KeyProvisioning,
-                    &gt; tonic::server::UnaryService&lt;<span class="kw">super</span>::SendProvisionSecretsRequest&gt;
-                    <span class="kw">for </span>SendProvisionSecretsSvc&lt;T&gt; {
+                        T: OrchestratorKeyProvisioning,
+                    &gt; tonic::server::UnaryService&lt;<span class="kw">super</span>::SendGroupKeysRequest&gt;
+                    <span class="kw">for </span>SendGroupKeysSvc&lt;T&gt; {
                         <span class="kw">type </span>Response = ();
                         <span class="kw">type </span>Future = BoxFuture&lt;
                             tonic::Response&lt;<span class="self">Self</span>::Response&gt;,
@@ -1370,11 +1247,11 @@
                         &gt;;
                         <span class="kw">fn </span>call(
                             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-                            request: tonic::Request&lt;<span class="kw">super</span>::SendProvisionSecretsRequest&gt;,
+                            request: tonic::Request&lt;<span class="kw">super</span>::SendGroupKeysRequest&gt;,
                         ) -&gt; <span class="self">Self</span>::Future {
                             <span class="kw">let </span>inner = <span class="self">self</span>.<span class="number">0</span>.clone();
                             <span class="kw">let </span>fut = <span class="kw">async move </span>{
-                                (<span class="kw-2">*</span>inner).send_provision_secrets(request).<span class="kw">await
+                                (<span class="kw-2">*</span>inner).send_group_keys(request).<span class="kw">await
                             </span>};
                             Box::pin(fut)
                         }
@@ -1384,7 +1261,7 @@
                     <span class="kw">let </span>inner = <span class="self">self</span>.inner.clone();
                     <span class="kw">let </span>fut = <span class="kw">async move </span>{
                         <span class="kw">let </span>inner = inner.<span class="number">0</span>;
-                        <span class="kw">let </span>method = SendProvisionSecretsSvc(inner);
+                        <span class="kw">let </span>method = SendGroupKeysSvc(inner);
                         <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
                         <span class="kw">let </span><span class="kw-2">mut </span>grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
@@ -1411,7 +1288,7 @@
             }
         }
     }
-    <span class="kw">impl</span>&lt;T: KeyProvisioning&gt; Clone <span class="kw">for </span>KeyProvisioningServer&lt;T&gt; {
+    <span class="kw">impl</span>&lt;T: OrchestratorKeyProvisioning&gt; Clone <span class="kw">for </span>OrchestratorKeyProvisioningServer&lt;T&gt; {
         <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
             <span class="kw">let </span>inner = <span class="self">self</span>.inner.clone();
             <span class="self">Self </span>{
@@ -1421,7 +1298,7 @@
             }
         }
     }
-    <span class="kw">impl</span>&lt;T: KeyProvisioning&gt; Clone <span class="kw">for </span>_Inner&lt;T&gt; {
+    <span class="kw">impl</span>&lt;T: OrchestratorKeyProvisioning&gt; Clone <span class="kw">for </span>_Inner&lt;T&gt; {
         <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
             <span class="self">Self</span>(<span class="self">self</span>.<span class="number">0</span>.clone())
         }
@@ -1431,8 +1308,9 @@
             <span class="macro">write!</span>(f, <span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>)
         }
     }
-    <span class="kw">impl</span>&lt;T: KeyProvisioning&gt; tonic::server::NamedService <span class="kw">for </span>KeyProvisioningServer&lt;T&gt; {
-        <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;oak.containers.KeyProvisioning&quot;</span>;
+    <span class="kw">impl</span>&lt;T: OrchestratorKeyProvisioning&gt; tonic::server::NamedService
+    <span class="kw">for </span>OrchestratorKeyProvisioningServer&lt;T&gt; {
+        <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;oak.containers.OrchestratorKeyProvisioning&quot;</span>;
     }
 }
 <span class="doccomment">/// Generated server implementations.
