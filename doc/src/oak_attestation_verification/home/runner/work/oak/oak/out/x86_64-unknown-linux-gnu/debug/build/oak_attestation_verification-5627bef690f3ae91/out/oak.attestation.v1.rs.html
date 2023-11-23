@@ -523,9 +523,9 @@
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>InitLayerEndorsements {
+</span><span class="kw">pub struct </span>SystemLayerEndorsements {
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>binary: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    </span><span class="kw">pub </span>system_image: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -557,7 +557,7 @@
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;KernelLayerEndorsements&gt;,
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
-    </span><span class="kw">pub </span>init_layer: ::core::option::Option&lt;InitLayerEndorsements&gt;,
+    </span><span class="kw">pub </span>system_layer: ::core::option::Option&lt;SystemLayerEndorsements&gt;,
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
     </span><span class="kw">pub </span>container_layer: ::core::option::Option&lt;ContainerLayerEndorsements&gt;,
 }
@@ -819,10 +819,10 @@
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>InitLayerReferenceValues {
-    <span class="doccomment">/// Verifies the binary based on endorsement.
+</span><span class="kw">pub struct </span>SystemLayerReferenceValues {
+    <span class="doccomment">/// Verifies the system image binary based on endorsement.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>binary: ::core::option::Option&lt;BinaryReferenceValue&gt;,
+    </span><span class="kw">pub </span>system_image: ::core::option::Option&lt;BinaryReferenceValue&gt;,
     <span class="doccomment">/// Configuration measurements.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>configuration: ::core::option::Option&lt;BinaryReferenceValue&gt;,
@@ -866,7 +866,7 @@
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>kernel_layer: ::core::option::Option&lt;KernelLayerReferenceValues&gt;,
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
-    </span><span class="kw">pub </span>init_layer: ::core::option::Option&lt;InitLayerReferenceValues&gt;,
+    </span><span class="kw">pub </span>system_layer: ::core::option::Option&lt;SystemLayerReferenceValues&gt;,
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
     </span><span class="kw">pub </span>container_layer: ::core::option::Option&lt;ContainerLayerReferenceValues&gt;,
 }
