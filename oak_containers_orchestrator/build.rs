@@ -21,9 +21,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../",
         &[
             "oak_containers/proto/interfaces.proto",
+            "proto/key_provisioning/key_provisioning.proto",
             "proto/oak_containers/orchestrator_crypto.proto",
             "proto/oak_containers/orchestrator_key_provisioning.proto",
-            "proto/key_provisioning/key_provisioning.proto",
         ],
         CodegenOptions {
             build_server: true,
