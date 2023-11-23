@@ -497,7 +497,7 @@ pub fn send_guest_message_request<
     encryptor: &mut GuestMessageEncryptor,
     request: Request,
 ) -> Result<Response, &'static str> {
-    let alloc = &crate::SHORT_TERM_ALLOC;
+    let alloc = &crate::BOOT_ALLOC;
     let mut request_message = Shared::new_in(GuestMessage::new(), alloc);
     encryptor.encrypt_message(request, request_message.as_mut())?;
     let response_message = Shared::new_in(GuestMessage::new(), alloc);
