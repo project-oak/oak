@@ -41,12 +41,6 @@ message SendAttestationEvidenceRequest {
   oak.attestation.v1.Evidence dice_evidence = 2;
 }
 
-message SendGroupKeysRequest {
-  // Enclave group encryption private key that was encrypted with HPKE using enclave's encryption
-  // key.
-  oak.crypto.v1.EncryptedRequest encrypted_encryption_key = 1;
-}
-
 message GetCryptoContextRequest {
   // Ephemeral Diffie-Hellman client public key that is needed to derive a session key.
   bytes serialized_encapsulated_public_key = 1;
@@ -84,12 +78,6 @@ service Launcher {
 }
 
 // Defines the service exposed by the orchestrator, that can be invoked by the application.
-service OrchestratorKeyProvisioning {
-  // Send enclave group keys to the enclave as part of Key Provisioning.
-  rpc SendGroupKeys(SendGroupKeysRequest) returns (google.protobuf.Empty) {}
-}
-
-// Defines the service exposed by the orchestrator, that can be invoked by the application.
 service Orchestrator {
   // Exposes the previously loaded trusted application config to the application,
   // which may choose to retrieve it.
@@ -102,4 +90,20 @@ service Orchestrator {
   // Returns crypto context for decrypting client requests and encrypting enclave responses.
   // TODO(#3841): Store private key in the Orchestrator and generate session keys for each session.
   rpc GetCryptoContext(GetCryptoContextRequest) returns (GetCryptoContextResponse) {}
+}
+
+service Crypto {
+  // Returns instance session keys for decrypting client requests and encrypting enclave responses.
+  rpc GetInstanceSessionKeys(GetCryptoContextRequest) returns (GetCryptoContextResponse) {}
+
+  // Returns group session keys for decrypting client requests and encrypting enclave responses.
+  rpc GetGroupSessionKeys(GetCryptoContextRequest) returns (GetCryptoContextResponse) {}
+
+  // Sign arbitrary data with the instance signing key.
+  // TODO(#4504): Implement data signing.
+  rpc GetInstanceSignature(GetCryptoContextRequest) returns (GetCryptoContextResponse) {}
+
+  // Sign arbitrary data with the group signing key.
+  // TODO(#4504): Implement data signing.
+  rpc GetGroupSignature(GetCryptoContextRequest) returns (GetCryptoContextResponse) {}
 }

@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use crate::proto::oak::{
-    containers::{
+    containers::v1::{
         orchestrator_key_provisioning_server::OrchestratorKeyProvisioning, SendGroupKeysRequest,
     },
     key_provisioning::v1::{
