@@ -25,6 +25,7 @@ use crate::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 use alloc::{boxed::Box, format};
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use linked_list_allocator::LockedHeap;
+use oak_core::sync::OnceCell;
 use oak_dice::evidence::DICE_DATA_CMDLINE_PARAM;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
@@ -77,6 +78,8 @@ static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::un
 
 /// We create an identity map for the first 1GiB of memory.
 const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
+
+static ENCRYPTED: OnceCell<u64> = OnceCell::new();
 
 extern "C" {
     #[link_name = "stack_start"]
@@ -145,6 +148,10 @@ pub fn rust64_start(encrypted: u64) -> ! {
     logging::init_logging();
     log::info!("starting...");
     log::info!("Enabled SEV features: {:?}", sev_status());
+
+    ENCRYPTED
+        .set(encrypted)
+        .expect("encrypted bit already initialized");
 
     if sev_status().contains(SevStatus::SEV_ENABLED) {
         // Safety: This is safe for SEV-ES and SNP because we're using an originally supported mode

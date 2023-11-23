@@ -41,7 +41,7 @@ pub enum PageSize {
 }
 
 /// The potential errors when calling the PVALIDATE or RMPADJUST instructions.
-#[derive(Debug, FromRepr)]
+#[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 pub enum InstructionError {
     /// The input parameters were invalid.
