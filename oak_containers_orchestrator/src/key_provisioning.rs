@@ -15,10 +15,12 @@
 
 use crate::proto::oak::{
     containers::{
-        orchestrator_key_provisioning_server::OrchestratorKeyProvisioning, SendProvisionSecretsRequest,
+        orchestrator_key_provisioning_server::OrchestratorKeyProvisioning,
+        SendProvisionSecretsRequest,
     },
     key_provisioning::v1::{
-        key_provisioning_server::KeyProvisioning, GetProvisionSecretsRequest, GetProvisionSecretsResponse,
+        key_provisioning_server::KeyProvisioning, GetProvisionSecretsRequest,
+        GetProvisionSecretsResponse,
     },
 };
 use tonic::{Request, Response};

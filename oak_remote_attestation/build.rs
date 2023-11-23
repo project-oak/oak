@@ -23,6 +23,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ),
             &format!("{}proto/attestation/dice.proto", env!("WORKSPACE_ROOT")),
             &format!("{}proto/attestation/evidence.proto", env!("WORKSPACE_ROOT")),
+            &format!(
+                "{}proto/attestation/endorsement.proto",
+                env!("WORKSPACE_ROOT")
+            ),
         ],
         &[env!("WORKSPACE_ROOT")],
         Default::default(),

@@ -20,15 +20,3 @@ extern crate alloc;
 
 #[cfg(test)]
 extern crate std;
-
-pub mod proto {
-    pub mod oak {
-        pub mod key_provisioning {
-            #![allow(dead_code)]
-            include!(concat!(env!("OUT_DIR"), "/oak.key_provisioning.v1.rs"));
-        }
-        pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::{attestation, session};
-        pub use oak_remote_attestation::proto::oak::{attestation, session};
-    }
-}

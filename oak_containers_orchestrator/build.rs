@@ -16,7 +16,7 @@
 use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Generate gRPC code for connecting to the launcher.
+    // Generate gRPC code for Orchestrator services.
     generate_grpc_code(
         "../",
         &[
