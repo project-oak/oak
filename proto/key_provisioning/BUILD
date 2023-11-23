@@ -25,25 +25,16 @@ package(
 proto_library(
     name = "key_provisioning_proto",
     srcs = ["key_provisioning.proto"],
+    deps = [
+        "//oak_crypto/proto/v1:crypto_proto",
+        "//proto/attestation:evidence_proto",
+        "//proto/attestation:endorsement_proto",
+    ],
 )
 
 build_test(
     name = "build_test",
     targets = [
-        ":dice_proto",
-        ":dice_cc_proto",
-        ":dice_java_proto",
-        ":endorsement_proto",
-        ":endorsement_cc_proto",
-        ":endorsement_java_proto",
-        ":evidence_proto",
-        ":evidence_cc_proto",
-        ":evidence_java_proto",
-        ":reference_value_proto",
-        ":reference_value_cc_proto",
-        ":reference_value_java_proto",
-        ":verification_proto",
-        ":verification_cc_proto",
-        ":verification_java_proto",
+        ":key_provisioning_proto",
     ],
 )

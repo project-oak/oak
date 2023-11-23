@@ -21,7 +21,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
         "../",
         &[
-            "oak_containers/proto/interfaces.proto",
+            // "oak_crypto/proto/v1/crypto.proto",
+            // "proto/attestation/evidence.proto",
+            // "proto/attestation/endorsement.proto",
             "proto/key_provisioning/key_provisioning.proto",
         ],
         CodegenOptions {

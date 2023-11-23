@@ -13,12 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::proto::oak::containers::{
-    orchestrator_key_provisioning_server::OrchestratorKeyProvisioning, SendProvisionSecretsRequest,
-};
-use oak_key_provisioning::proto::oak::oak_key_provisioning::{
-    key_provisioning_server::KeyProvisioning,
-    GetProvisionSecretsRequest, GetProvisionSecretsResponse,
+use crate::proto::oak::{
+    containers::{
+        orchestrator_key_provisioning_server::OrchestratorKeyProvisioning, SendProvisionSecretsRequest,
+    },
+    key_provisioning::v1::{
+        key_provisioning_server::KeyProvisioning, GetProvisionSecretsRequest, GetProvisionSecretsResponse,
+    },
 };
 use tonic::{Request, Response};
 
@@ -30,6 +31,7 @@ impl OrchestratorKeyProvisioning for KeyProvisioningService {
         &self,
         _request: Request<SendProvisionSecretsRequest>,
     ) -> Result<Response<()>, tonic::Status> {
+        // TODO(#4442): Implement replacing group encryption key.
         Ok(tonic::Response::new(()))
     }
 }
@@ -40,6 +42,7 @@ impl KeyProvisioning for KeyProvisioningService {
         &self,
         _request: Request<GetProvisionSecretsRequest>,
     ) -> Result<Response<GetProvisionSecretsResponse>, tonic::Status> {
+        // TODO(#4442): Implement generating group encryption key.
         Ok(tonic::Response::new(GetProvisionSecretsResponse {
             encrypted_encryption_key: None,
         }))
