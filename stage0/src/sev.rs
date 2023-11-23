@@ -187,8 +187,7 @@ pub fn share_page(page: Page<Size4KiB>) {
     {
         let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
         let pt = &mut page_tables.pt_0;
-        let idx = (page_start / Size4KiB::SIZE) as usize;
-        pt[idx].set_addr(
+        pt[page.p1_index()].set_addr(
             PhysAddr::new(page_start),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
         );
@@ -209,7 +208,6 @@ pub fn unshare_page(page: Page<Size4KiB>) {
     // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that range.
     assert!(page_start < Size2MiB::SIZE);
     if sev_status().contains(SevStatus::SNP_ACTIVE) {
-        let page_start = page.start_address().as_u64();
         let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Private)
             .expect("invalid address for page location");
         change_snp_page_state(request).expect("couldn't change SNP state for page");
@@ -218,8 +216,7 @@ pub fn unshare_page(page: Page<Size4KiB>) {
     {
         let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
         let pt = &mut page_tables.pt_0;
-        let idx = (page_start / Size4KiB::SIZE) as usize;
-        pt[idx].set_addr(
+        pt[page.p1_index()].set_addr(
             PhysAddr::new(page_start | crate::ENCRYPTED.get().unwrap_or(&0)),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
         );
