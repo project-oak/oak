@@ -46,6 +46,9 @@ message EncryptedResponse {
 message AeadEncryptedMessage {
   bytes ciphertext = 1;
   bytes associated_data = 2;
+  // TODO(#4507): Nonce is currently not used by the crypto library. We need to make a non-breaking
+  // change, where we first make the library send and use deterministic nonces in the Proto, and
+  // then replace it with a rendom nonce.
   bytes nonce = 3;
 }
 
