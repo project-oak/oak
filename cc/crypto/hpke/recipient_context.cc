@@ -113,6 +113,11 @@ absl::StatusOr<std::unique_ptr<RecipientContext>> RecipientContext::Deserialize(
       /* response_sequence_number= */ serialized_recipient_context.response_sequence_number());
 }
 
+std::vector<uint8_t> RecipientContext::GenerateNonce() {
+  std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, request_sequence_number_);
+  return nonce;
+}
+
 absl::StatusOr<std::string> RecipientContext::Open(absl::string_view ciphertext,
                                                    absl::string_view associated_data) {
   /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.

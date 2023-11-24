@@ -62,6 +62,7 @@ absl::StatusOr<EncryptedResponse> ServerEncryptor::Encrypt(absl::string_view pla
   }
 
   // Encrypt response.
+  std::vector<uint8_t> nonce = recipient_context_->GenerateNonce();
   absl::StatusOr<std::string> ciphertext = recipient_context_->Seal(plaintext, associated_data);
   if (!ciphertext.ok()) {
     return ciphertext.status();
@@ -69,6 +70,7 @@ absl::StatusOr<EncryptedResponse> ServerEncryptor::Encrypt(absl::string_view pla
 
   // Create response message.
   EncryptedResponse encrypted_response;
+  *encrypted_response.mutable_encrypted_message()->mutable_nonce() = std::string(nonce.begin(), nonce.end());
   *encrypted_response.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
   *encrypted_response.mutable_encrypted_message()->mutable_associated_data() = associated_data;
 

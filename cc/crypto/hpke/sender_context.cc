@@ -32,6 +32,11 @@ namespace oak::crypto {
 
 const uint64_t kStartingSequenceNumber = 0;
 
+std::vector<uint8_t> SenderContext::GenerateNonce() {
+  std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, request_sequence_number_);
+  return nonce;
+}
+
 absl::StatusOr<std::string> SenderContext::Seal(absl::string_view plaintext,
                                                 absl::string_view associated_data) {
   /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
