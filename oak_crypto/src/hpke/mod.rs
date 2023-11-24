@@ -294,8 +294,6 @@ impl RecipientContext {
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        // let nonce = compute_nonce(self.response_sequence_number, &self.response_base_nonce)
-        //     .context("couldn't compute nonce")?;
         let ciphertext =
             crate::hpke::aead::encrypt(&self.response_key, nonce, plaintext, associated_data)
                 .context("couldn't encrypt response message")?;
