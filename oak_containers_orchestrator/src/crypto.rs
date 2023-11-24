@@ -21,13 +21,13 @@ use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
 use std::sync::Arc;
 use tonic::{Request, Response};
 
-pub(crate) struct KeyStore {
+pub struct KeyStore {
     instance_encryption_key: EncryptionKeyProvider,
     group_encryption_key: EncryptionKeyProvider,
 }
 
 impl KeyStore {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         let instance_encryption_key = EncryptionKeyProvider::generate();
         let group_encryption_key = instance_encryption_key.clone();
         Self {
@@ -36,14 +36,32 @@ impl KeyStore {
         }
     }
 
-    pub(crate) fn mutable_group_encryption_key<'a>(&'a mut self) -> &'a mut EncryptionKeyProvider {
-        &mut self.group_encryption_key
+    // TODO(#4442): Currently we have to give the encryption key provider to the `ipc_server`.
+    // Once we move all enclave apps to the new crypto service - this function should be removed.
+    pub fn instance_encryption_key(&self) -> EncryptionKeyProvider {
+        self.instance_encryption_key.clone()
+    }
+
+    pub fn instance_encryption_public_key(&self) -> Vec<u8> {
+        self.instance_encryption_key.get_serialized_public_key()
+    }
+}
+
+impl Default for KeyStore {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
 // TODO(#4442): Create CryptoService after group key was provisioned.
-struct CryptoService {
+pub(crate) struct CryptoService {
     key_store: Arc<KeyStore>,
+}
+
+impl CryptoService {
+    pub(crate) fn new(key_store: Arc<KeyStore>) -> Self {
+        Self { key_store }
+    }
 }
 
 #[tonic::async_trait]

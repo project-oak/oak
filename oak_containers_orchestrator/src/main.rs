@@ -15,8 +15,8 @@
 
 use anyhow::{anyhow, Context};
 use clap::Parser;
+use oak_containers_orchestrator::crypto::KeyStore;
 use oak_containers_orchestrator_client::LauncherClient;
-use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_dice::cert::generate_ecdsa_key_pair;
 use oak_remote_attestation::attester::{Attester, EmptyAttestationReportGenerator};
 use std::{path::PathBuf, sync::Arc};
@@ -64,20 +64,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &container_bundle,
         &application_config,
     );
-    let encryption_key_provider = Arc::new(EncryptionKeyProvider::generate());
+    let key_store = Arc::new(KeyStore::new());
     // Ignore the signing key for now.
     let (_signing_key, verifying_key) = generate_ecdsa_key_pair();
 
     let dice_evidence = dice_builder.add_application_keys(
         additional_claims,
-        &encryption_key_provider.get_serialized_public_key(),
+        &key_store.instance_encryption_public_key(),
         &verifying_key,
     )?;
     // TODO(#4074): Remove once DICE attestation is fully implemented.
     let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
     let attester = Attester::new(
         attestation_report_generator,
-        encryption_key_provider.clone(),
+        Arc::new(key_store.instance_encryption_key()),
     );
     let evidence = attester
         .generate_attestation_evidence()
@@ -102,7 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
             &args.ipc_socket_path,
-            encryption_key_provider,
+            key_store,
             application_config,
             launcher_client,
             shutdown_receiver

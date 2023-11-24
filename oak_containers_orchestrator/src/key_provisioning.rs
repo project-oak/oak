@@ -28,7 +28,7 @@ use std::sync::{Arc, OnceLock};
 use tonic::{Request, Response};
 
 struct KeyProvisioningService {
-    key_store: OnceLock<Arc<KeyStore>>,
+    _key_store: OnceLock<Arc<KeyStore>>,
 }
 
 #[tonic::async_trait]
@@ -45,7 +45,7 @@ impl OrchestratorKeyProvisioning for KeyProvisioningService {
 }
 
 struct KeyProvisioningLeaderService {
-    key_store: Arc<KeyStore>,
+    _key_store: Arc<KeyStore>,
 }
 
 #[tonic::async_trait]
