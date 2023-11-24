@@ -18,12 +18,32 @@ use crate::proto::oak::containers::v1::{
     GetSignatureRequest, GetSignatureResponse, KeyOrigin,
 };
 use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
+use std::sync::Arc;
 use tonic::{Request, Response};
+
+pub(crate) struct KeyStore {
+    instance_encryption_key: EncryptionKeyProvider,
+    group_encryption_key: EncryptionKeyProvider,
+}
+
+impl KeyStore {
+    pub(crate) fn new() -> Self {
+        let instance_encryption_key = EncryptionKeyProvider::generate();
+        let group_encryption_key = instance_encryption_key.clone();
+        Self {
+            instance_encryption_key,
+            group_encryption_key,
+        }
+    }
+
+    pub(crate) fn mutable_group_encryption_key<'a>(&'a mut self) -> &'a mut EncryptionKeyProvider {
+        &mut self.group_encryption_key
+    }
+}
 
 // TODO(#4442): Create CryptoService after group key was provisioned.
 struct CryptoService {
-    instance_encryption_key: EncryptionKeyProvider,
-    group_encryption_key: EncryptionKeyProvider,
+    key_store: Arc<KeyStore>,
 }
 
 #[tonic::async_trait]
@@ -35,8 +55,8 @@ impl OrchestratorCrypto for CryptoService {
         let request = request.into_inner();
 
         let encryption_key = match request.key_origin() {
-            KeyOrigin::Instance => &self.instance_encryption_key,
-            KeyOrigin::Group => &self.group_encryption_key,
+            KeyOrigin::Instance => &self.key_store.instance_encryption_key,
+            KeyOrigin::Group => &self.key_store.group_encryption_key,
         };
 
         let context = encryption_key

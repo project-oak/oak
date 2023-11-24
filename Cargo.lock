@@ -1974,6 +1974,7 @@ dependencies = [
  "futures",
  "log",
  "nix 0.26.2",
+ "oak_attestation_verification",
  "oak_containers_orchestrator_client",
  "oak_crypto",
  "oak_dice",

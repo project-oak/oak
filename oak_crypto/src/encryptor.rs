@@ -32,6 +32,7 @@ use async_trait::async_trait;
 /// Info string used by Hybrid Public Key Encryption;
 pub(crate) const OAK_HPKE_INFO: &[u8] = b"Oak Hybrid Public Key Encryption v1";
 
+#[derive(Clone)]
 pub struct EncryptionKeyProvider {
     key_pair: KeyPair,
 }

@@ -44,6 +44,7 @@ pub fn gen_kem_keypair() -> (PrivateKey, PublicKey) {
     Kem::gen_keypair(&mut OsRng)
 }
 
+#[derive(Clone)]
 pub struct KeyPair {
     pub(crate) private_key: PrivateKey,
     pub(crate) public_key: PublicKey,
