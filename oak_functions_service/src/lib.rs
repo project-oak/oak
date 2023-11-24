@@ -26,6 +26,7 @@ extern crate std;
 pub mod proto {
     pub mod oak {
         pub use oak_crypto::proto::oak::crypto;
+        pub use oak_remote_attestation::proto::oak::attestation;
         pub mod functions {
             #![allow(dead_code)]
             use prost::Message;
@@ -43,10 +44,7 @@ use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 use instance::OakFunctionsInstance;
 use oak_core::sync::OnceCell;
 use oak_crypto::encryptor::EncryptionKeyProvider;
-use oak_remote_attestation::{
-    attester::{AttestationReportGenerator, Attester},
-    handler::EncryptionHandler,
-};
+use oak_remote_attestation::{handler::EncryptionHandler, proto::oak::attestation::v1::Evidence};
 use prost::Message;
 use proto::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
@@ -55,16 +53,16 @@ use proto::oak::functions::{
 };
 
 pub struct OakFunctionsService {
-    attestation_report_generator: Arc<dyn AttestationReportGenerator>,
+    evidence: Evidence,
     encryption_key_provider: Arc<EncryptionKeyProvider>,
     instance: OnceCell<OakFunctionsInstance>,
 }
 
 impl OakFunctionsService {
-    pub fn new(attestation_report_generator: Arc<dyn AttestationReportGenerator>) -> Self {
+    pub fn new(evidence: Evidence, encryption_key_provider: Arc<EncryptionKeyProvider>) -> Self {
         Self {
-            attestation_report_generator,
-            encryption_key_provider: Arc::new(EncryptionKeyProvider::generate()),
+            evidence,
+            encryption_key_provider,
             instance: OnceCell::new(),
         }
     }
@@ -94,28 +92,19 @@ impl OakFunctions for OakFunctionsService {
             )),
             None => {
                 let instance = OakFunctionsInstance::new(&request)?;
-                let attester = Attester::new(
-                    self.attestation_report_generator.clone(),
-                    self.encryption_key_provider.clone(),
-                );
-                let attestation_evidence =
-                    attester.generate_attestation_evidence().map_err(|err| {
-                        micro_rpc::Status::new_with_message(
-                            micro_rpc::StatusCode::Internal,
-                            format!("couldn't get attestation evidence: {:?}", err),
-                        )
-                    })?;
                 if self.instance.set(instance).is_err() {
                     return Err(micro_rpc::Status::new_with_message(
                         micro_rpc::StatusCode::FailedPrecondition,
                         "already initialized",
                     ));
                 }
+                #[allow(deprecated)]
                 Ok(InitializeResponse {
                     public_key_info: Some(PublicKeyInfo {
-                        public_key: attestation_evidence.encryption_public_key,
-                        attestation: attestation_evidence.attestation,
+                        public_key: self.encryption_key_provider.get_serialized_public_key(),
+                        attestation: Vec::new(),
                     }),
+                    evidence: Some(self.evidence.clone()),
                 })
             }
         }

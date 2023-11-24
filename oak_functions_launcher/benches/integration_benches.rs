@@ -102,6 +102,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         .expect("Failed to create launcher");
     log::info!("created launcher instance");
 
+    #[allow(deprecated)]
     let serialized_server_public_key = initialize_response
         .public_key_info
         .expect("initialize response doesn't have public key info")

@@ -2216,6 +2216,7 @@ dependencies = [
  "oak_functions_launcher",
  "oak_functions_test_utils",
  "oak_grpc_utils",
+ "oak_remote_attestation",
  "prost",
  "tokio",
  "tonic",

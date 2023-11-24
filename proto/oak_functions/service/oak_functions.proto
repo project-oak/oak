@@ -19,6 +19,7 @@ syntax = "proto3";
 package oak.functions;
 
 import "oak_crypto/proto/v1/crypto.proto";
+import "proto/attestation/evidence.proto";
 
 service OakFunctions {
   // Initializes the service and remote attestation keys.
@@ -57,10 +58,12 @@ message InitializeRequest {
 }
 
 message InitializeResponse {
-  PublicKeyInfo public_key_info = 1;
+  PublicKeyInfo public_key_info = 1 [deprecated = true];
+  oak.attestation.v1.Evidence evidence = 2;
 }
 
 message PublicKeyInfo {
+  option deprecated = true;
   bytes public_key = 1;
   bytes attestation = 2;
 }
