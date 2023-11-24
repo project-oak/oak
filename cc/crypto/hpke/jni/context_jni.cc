@@ -21,8 +21,8 @@
 #include "com_google_oak_crypto_hpke_SenderContext.h"
 #include "jni_helper.h"
 
-JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativeGenerateNonce(
-    JNIEnv* env, jobject obj) {
+JNIEXPORT jbyteArray JNICALL
+Java_com_google_oak_crypto_hpke_SenderContext_nativeGenerateNonce(JNIEnv* env, jobject obj) {
   jclass sender_context_class = env->GetObjectClass(obj);
   jfieldID fid = env->GetFieldID(sender_context_class, "nativePtr", "J");
   oak::crypto::SenderContext* sender_context =
@@ -34,8 +34,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativ
   std::vector<uint8_t> nonce = sender_context->GenerateNonce();
 
   jbyteArray ret = env->NewByteArray(nonce.size());
-  env->SetByteArrayRegion(ret, 0, nonce.size(),
-                          reinterpret_cast<const jbyte*>(&nonce.front()));
+  env->SetByteArrayRegion(ret, 0, nonce.size(), reinterpret_cast<const jbyte*>(&nonce.front()));
   return ret;
 }
 
@@ -95,8 +94,8 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativ
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_nativeGenerateNonce(
-    JNIEnv* env, jobject obj) {
+JNIEXPORT jbyteArray JNICALL
+Java_com_google_oak_crypto_hpke_RecipientContext_nativeGenerateNonce(JNIEnv* env, jobject obj) {
   jclass recipient_context_class = env->GetObjectClass(obj);
   jfieldID fid = env->GetFieldID(recipient_context_class, "nativePtr", "J");
   oak::crypto::RecipientContext* recipient_context =
@@ -108,8 +107,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_na
   std::vector<uint8_t> nonce = recipient_context->GenerateNonce();
 
   jbyteArray ret = env->NewByteArray(nonce.size());
-  env->SetByteArrayRegion(ret, 0, nonce.size(),
-                          reinterpret_cast<const jbyte*>(&nonce.front()));
+  env->SetByteArrayRegion(ret, 0, nonce.size(), reinterpret_cast<const jbyte*>(&nonce.front()));
   return ret;
 }
 

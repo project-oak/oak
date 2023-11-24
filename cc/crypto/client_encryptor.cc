@@ -52,7 +52,8 @@ absl::StatusOr<EncryptedRequest> ClientEncryptor::Encrypt(absl::string_view plai
 
   // Create request message.
   EncryptedRequest encrypted_request;
-  *encrypted_request.mutable_encrypted_message()->mutable_nonce() = std::string(nonce.begin(), nonce.end());
+  *encrypted_request.mutable_encrypted_message()->mutable_nonce() =
+      std::string(nonce.begin(), nonce.end());
   *encrypted_request.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
   *encrypted_request.mutable_encrypted_message()->mutable_associated_data() = associated_data;
 

@@ -82,46 +82,26 @@ public class ClientEncryptor implements AutoCloseable {
   public final Result<EncryptedRequest, Exception> encrypt(
       final byte[] plaintext, final byte[] associatedData) {
     // Encrypt request.
-    return senderContext.generateNonce().map(nonce
-        -> senderContext.seal(plaintext, associatedData).map(ciphertext -> {
-            // Create request message.
-            EncryptedRequest.Builder encryptedRequestBuilder =
-                EncryptedRequest.newBuilder().setEncryptedMessage(
-                    AeadEncryptedMessage.newBuilder()
-                        .setNonce(ByteString.copyFrom(nonce))
-                        .setCiphertext(ByteString.copyFrom(ciphertext))
-                        .setAssociatedData(ByteString.copyFrom(associatedData))
-                        .build());
+    return senderContext.generateNonce().map(
+        nonce -> senderContext.seal(plaintext, associatedData).map(ciphertext -> {
+          // Create request message.
+          EncryptedRequest.Builder encryptedRequestBuilder =
+              EncryptedRequest.newBuilder().setEncryptedMessage(
+                  AeadEncryptedMessage.newBuilder()
+                      .setNonce(ByteString.copyFrom(nonce))
+                      .setCiphertext(ByteString.copyFrom(ciphertext))
+                      .setAssociatedData(ByteString.copyFrom(associatedData))
+                      .build());
 
-            // Encapsulated public key is only sent in the initial request message of the session.
-            if (!serializedEncapsulatedPublicKeyHasBeenSent) {
-              encryptedRequestBuilder.setSerializedEncapsulatedPublicKey(
-                  ByteString.copyFrom(senderContext.getSerializedEncapsulatedPublicKey()));
-              serializedEncapsulatedPublicKeyHasBeenSent = true;
-            }
+          // Encapsulated public key is only sent in the initial request message of the session.
+          if (!serializedEncapsulatedPublicKeyHasBeenSent) {
+            encryptedRequestBuilder.setSerializedEncapsulatedPublicKey(
+                ByteString.copyFrom(senderContext.getSerializedEncapsulatedPublicKey()));
+            serializedEncapsulatedPublicKeyHasBeenSent = true;
+          }
 
-            return encryptedRequestBuilder.build();
-          })
-    );
-
-    // return senderContext.seal(plaintext, associatedData).map(ciphertext -> {
-    //   // Create request message.
-    //   EncryptedRequest.Builder encryptedRequestBuilder =
-    //       EncryptedRequest.newBuilder().setEncryptedMessage(
-    //           AeadEncryptedMessage.newBuilder()
-    //               .setCiphertext(ByteString.copyFrom(ciphertext))
-    //               .setAssociatedData(ByteString.copyFrom(associatedData))
-    //               .build());
-
-    //   // Encapsulated public key is only sent in the initial request message of the session.
-    //   if (!serializedEncapsulatedPublicKeyHasBeenSent) {
-    //     encryptedRequestBuilder.setSerializedEncapsulatedPublicKey(
-    //         ByteString.copyFrom(senderContext.getSerializedEncapsulatedPublicKey()));
-    //     serializedEncapsulatedPublicKeyHasBeenSent = true;
-    //   }
-
-    //   return encryptedRequestBuilder.build();
-    // });
+          return encryptedRequestBuilder.build();
+        }));
   }
 
   /**

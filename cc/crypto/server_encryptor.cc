@@ -70,7 +70,8 @@ absl::StatusOr<EncryptedResponse> ServerEncryptor::Encrypt(absl::string_view pla
 
   // Create response message.
   EncryptedResponse encrypted_response;
-  *encrypted_response.mutable_encrypted_message()->mutable_nonce() = std::string(nonce.begin(), nonce.end());
+  *encrypted_response.mutable_encrypted_message()->mutable_nonce() =
+      std::string(nonce.begin(), nonce.end());
   *encrypted_response.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
   *encrypted_response.mutable_encrypted_message()->mutable_associated_data() = associated_data;
 
