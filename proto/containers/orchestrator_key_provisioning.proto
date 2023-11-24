@@ -1,0 +1,33 @@
+//
+// Copyright 2023 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.containers.v1;
+
+import "google/protobuf/empty.proto";
+import "oak_crypto/proto/v1/crypto.proto";
+
+message SendGroupKeysRequest {
+  // Group encryption private key that was encrypted with HPKE using instance encryption key.
+  oak.crypto.v1.EncryptedRequest encrypted_encryption_key = 1;
+}
+
+// Defines the service exposed by the orchestrator, that can be invoked by the application.
+service OrchestratorKeyProvisioning {
+  // Send enclave group keys to the enclave as part of Key Provisioning.
+  rpc SendGroupKeys(SendGroupKeysRequest) returns (google.protobuf.Empty) {}
+}
