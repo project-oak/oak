@@ -9,6 +9,14 @@ extern "C" {
 #endif
 /*
  * Class:     com_google_oak_crypto_hpke_RecipientContext
+ * Method:    nativeGenerateNonce
+ * Signature: ()[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_nativeGenerateNonce
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     com_google_oak_crypto_hpke_RecipientContext
  * Method:    nativeOpen
  * Signature: ([B[B)[B
  */
