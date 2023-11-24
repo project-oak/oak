@@ -364,6 +364,17 @@
 <a href="#364" id="364">364</a>
 <a href="#365" id="365">365</a>
 <a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -438,6 +449,7 @@
         <span class="self">self</span>.public_key.to_bytes().to_vec()
     }
 }
+
 <span class="doccomment">/// Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
 /// public key) and creating a sender context.
 /// &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key&gt;
@@ -571,17 +583,22 @@
 }
 
 <span class="kw">impl </span>SenderContext {
+    <span class="comment">// TODO(#4507): Use random nonces for Hybrid Encryption.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>generate_nonce(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;AeadNonce&gt; {
+        compute_nonce(<span class="self">self</span>.request_sequence_number, <span class="kw-2">&amp;</span><span class="self">self</span>.request_base_nonce)
+            .context(<span class="string">&quot;couldn&#39;t compute nonce&quot;</span>)
+    }
+
     <span class="doccomment">/// Encrypts request message with associated data using AEAD.
     /// &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption&gt;
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>seal(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        nonce: <span class="kw-2">&amp;</span>AeadNonce,
         plaintext: <span class="kw-2">&amp;</span>[u8],
         associated_data: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-        <span class="kw">let </span>nonce = compute_nonce(<span class="self">self</span>.request_sequence_number, <span class="kw-2">&amp;</span><span class="self">self</span>.request_base_nonce)
-            .context(<span class="string">&quot;couldn&#39;t compute nonce&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>ciphertext =
-            <span class="kw">crate</span>::hpke::aead::encrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.request_key, <span class="kw-2">&amp;</span>nonce, plaintext, associated_data)
+            <span class="kw">crate</span>::hpke::aead::encrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.request_key, nonce, plaintext, associated_data)
                 .context(<span class="string">&quot;couldn&#39;t encrypt request message&quot;</span>)<span class="question-mark">?</span>;
         increment_sequence_number(<span class="kw-2">&amp;mut </span><span class="self">self</span>.request_sequence_number)
             .context(<span class="string">&quot;couldn&#39;t increment sequence number&quot;</span>)<span class="question-mark">?</span>;
@@ -622,6 +639,12 @@
 }
 
 <span class="kw">impl </span>RecipientContext {
+    <span class="comment">// TODO(#4507): Use random nonces for Hybrid Encryption.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>generate_nonce(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;AeadNonce&gt; {
+        compute_nonce(<span class="self">self</span>.response_sequence_number, <span class="kw-2">&amp;</span><span class="self">self</span>.response_base_nonce)
+            .context(<span class="string">&quot;couldn&#39;t compute nonce&quot;</span>)
+    }
+
     <span class="doccomment">/// Decrypts request message and validates associated data using AEAD.
     /// &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption&gt;
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>open(
@@ -644,13 +667,12 @@
     /// &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption&gt;
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>seal(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        nonce: <span class="kw-2">&amp;</span>AeadNonce,
         plaintext: <span class="kw-2">&amp;</span>[u8],
         associated_data: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-        <span class="kw">let </span>nonce = compute_nonce(<span class="self">self</span>.response_sequence_number, <span class="kw-2">&amp;</span><span class="self">self</span>.response_base_nonce)
-            .context(<span class="string">&quot;couldn&#39;t compute nonce&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>ciphertext =
-            <span class="kw">crate</span>::hpke::aead::encrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.response_key, <span class="kw-2">&amp;</span>nonce, plaintext, associated_data)
+            <span class="kw">crate</span>::hpke::aead::encrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.response_key, nonce, plaintext, associated_data)
                 .context(<span class="string">&quot;couldn&#39;t encrypt response message&quot;</span>)<span class="question-mark">?</span>;
         increment_sequence_number(<span class="kw-2">&amp;mut </span><span class="self">self</span>.response_sequence_number)
             .context(<span class="string">&quot;couldn&#39;t increment sequence number&quot;</span>)<span class="question-mark">?</span>;

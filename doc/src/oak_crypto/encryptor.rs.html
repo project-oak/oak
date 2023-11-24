@@ -311,6 +311,17 @@
 <a href="#311" id="311">311</a>
 <a href="#312" id="312">312</a>
 <a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -447,19 +458,24 @@
         plaintext: <span class="kw-2">&amp;</span>[u8],
         associated_data: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; anyhow::Result&lt;EncryptedRequest&gt; {
+        <span class="kw">let </span>nonce = <span class="self">self
+            </span>.sender_context
+            .generate_nonce()
+            .context(<span class="string">&quot;couldn&#39;t generate nonce&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>ciphertext = <span class="self">self
             </span>.sender_context
-            .seal(plaintext, associated_data)
+            .seal(<span class="kw-2">&amp;</span>nonce, plaintext, associated_data)
             .context(<span class="string">&quot;couldn&#39;t encrypt request&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>request = EncryptedRequest {
+
+        <span class="prelude-val">Ok</span>(EncryptedRequest {
             encrypted_message: <span class="prelude-val">Some</span>(AeadEncryptedMessage {
+                nonce: nonce.to_vec(),
                 ciphertext,
                 associated_data: associated_data.to_vec(),
             }),
             <span class="comment">// Encapsulated public key is only sent in the initial request message of the session.
             </span>serialized_encapsulated_public_key: <span class="self">self</span>.serialized_encapsulated_public_key.take(),
-        };
-        <span class="prelude-val">Ok</span>(request)
+        })
     }
 
     <span class="doccomment">/// Decrypts a [`EncryptedResponse`] proto message using AEAD.
@@ -473,6 +489,7 @@
             .encrypted_message
             .as_ref()
             .context(<span class="string">&quot;response doesn&#39;t contain encrypted message&quot;</span>)<span class="question-mark">?</span>;
+
         <span class="kw">let </span>plaintext = <span class="self">self
             </span>.sender_context
             .open(
@@ -538,17 +555,22 @@
         plaintext: <span class="kw-2">&amp;</span>[u8],
         associated_data: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
+        <span class="kw">let </span>nonce = <span class="self">self
+            </span>.recipient_context
+            .generate_nonce()
+            .context(<span class="string">&quot;couldn&#39;t generate nonce&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>ciphertext = <span class="self">self
             </span>.recipient_context
-            .seal(plaintext, associated_data)
+            .seal(<span class="kw-2">&amp;</span>nonce, plaintext, associated_data)
             .context(<span class="string">&quot;couldn&#39;t encrypt response&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>response = EncryptedResponse {
+
+        <span class="prelude-val">Ok</span>(EncryptedResponse {
             encrypted_message: <span class="prelude-val">Some</span>(AeadEncryptedMessage {
+                nonce: nonce.to_vec(),
                 ciphertext,
                 associated_data: associated_data.to_vec(),
             }),
-        };
-        <span class="prelude-val">Ok</span>(response)
+        })
     }
 }
 
