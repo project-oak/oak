@@ -13,7 +13,6 @@ coset = { version = "*", features = ["std"] }
 futures = "*"
 log = "*"
 nix = "*"
-oak_attestation_verification = { workspace = true }
 oak_containers_orchestrator_client = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
