@@ -176,17 +176,6 @@
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -215,6 +204,7 @@
 <span class="kw">pub mod </span>proto {
     <span class="kw">pub mod </span>oak {
         <span class="kw">pub use </span>oak_crypto::proto::oak::crypto;
+        <span class="kw">pub use </span>oak_remote_attestation::proto::oak::attestation;
         <span class="kw">pub mod </span>functions {
             <span class="attr">#![allow(dead_code)]
             </span><span class="kw">use </span>prost::Message;
@@ -232,10 +222,7 @@
 <span class="kw">use </span>instance::OakFunctionsInstance;
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_crypto::encryptor::EncryptionKeyProvider;
-<span class="kw">use </span>oak_remote_attestation::{
-    attester::{AttestationReportGenerator, Attester},
-    handler::EncryptionHandler,
-};
+<span class="kw">use </span>oak_remote_attestation::{handler::EncryptionHandler, proto::oak::attestation::v1::Evidence};
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>proto::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
@@ -244,16 +231,16 @@
 };
 
 <span class="kw">pub struct </span>OakFunctionsService {
-    attestation_report_generator: Arc&lt;<span class="kw">dyn </span>AttestationReportGenerator&gt;,
+    evidence: Evidence,
     encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;,
     instance: OnceCell&lt;OakFunctionsInstance&gt;,
 }
 
 <span class="kw">impl </span>OakFunctionsService {
-    <span class="kw">pub fn </span>new(attestation_report_generator: Arc&lt;<span class="kw">dyn </span>AttestationReportGenerator&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(evidence: Evidence, encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            attestation_report_generator,
-            encryption_key_provider: Arc::new(EncryptionKeyProvider::generate()),
+            evidence,
+            encryption_key_provider,
             instance: OnceCell::new(),
         }
     }
@@ -283,28 +270,19 @@
             )),
             <span class="prelude-val">None </span>=&gt; {
                 <span class="kw">let </span>instance = OakFunctionsInstance::new(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
-                <span class="kw">let </span>attester = Attester::new(
-                    <span class="self">self</span>.attestation_report_generator.clone(),
-                    <span class="self">self</span>.encryption_key_provider.clone(),
-                );
-                <span class="kw">let </span>attestation_evidence =
-                    attester.generate_attestation_evidence().map_err(|err| {
-                        micro_rpc::Status::new_with_message(
-                            micro_rpc::StatusCode::Internal,
-                            <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t get attestation evidence: {:?}&quot;</span>, err),
-                        )
-                    })<span class="question-mark">?</span>;
                 <span class="kw">if </span><span class="self">self</span>.instance.set(instance).is_err() {
                     <span class="kw">return </span><span class="prelude-val">Err</span>(micro_rpc::Status::new_with_message(
                         micro_rpc::StatusCode::FailedPrecondition,
                         <span class="string">&quot;already initialized&quot;</span>,
                     ));
                 }
-                <span class="prelude-val">Ok</span>(InitializeResponse {
+                <span class="attr">#[allow(deprecated)]
+                </span><span class="prelude-val">Ok</span>(InitializeResponse {
                     public_key_info: <span class="prelude-val">Some</span>(PublicKeyInfo {
-                        public_key: attestation_evidence.encryption_public_key,
-                        attestation: attestation_evidence.attestation,
+                        public_key: <span class="self">self</span>.encryption_key_provider.get_serialized_public_key(),
+                        attestation: Vec::new(),
                     }),
+                    evidence: <span class="prelude-val">Some</span>(<span class="self">self</span>.evidence.clone()),
                 })
             }
         }

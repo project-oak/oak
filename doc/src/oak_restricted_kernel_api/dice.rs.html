@@ -69,6 +69,21 @@
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
 <a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -90,8 +105,12 @@
     encryptor::EncryptionKeyProvider,
     hpke::{Deserializable, PrivateKey, PublicKey},
 };
-<span class="kw">use </span>oak_dice::evidence::{
-    RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE, X25519_PRIVATE_KEY_SIZE,
+<span class="kw">use </span>oak_dice::{
+    cert::{
+        cose_key_to_hpke_public_key, get_claims_set_from_certificate_bytes,
+        get_public_key_from_claims_set,
+    },
+    evidence::{RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE, X25519_PRIVATE_KEY_SIZE},
 };
 <span class="kw">use </span>oak_remote_attestation::proto::oak::attestation::v1::Evidence;
 <span class="kw">use </span>oak_restricted_kernel_interface::DICE_DATA_FD;
@@ -117,9 +136,20 @@
         .application_keys
         .as_ref()
         .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no application keys&quot;</span>))<span class="question-mark">?</span>;
-    <span class="kw">let </span>public_key = PublicKey::from_bytes(application_keys.encryption_public_key_certificate())
-        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialize public key: {}&quot;</span>, error))<span class="question-mark">?</span>;
-    <span class="kw">let </span>encryption_key = EncryptionKeyProvider::new(private_key, public_key);
+    <span class="kw">let </span>claims =
+        get_claims_set_from_certificate_bytes(application_keys.encryption_public_key_certificate())
+            .map_err(|err| {
+                <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t parse encryption public key certificate: {err}&quot;</span>)
+            })<span class="question-mark">?</span>;
+    <span class="kw">let </span>public_key = get_public_key_from_claims_set(<span class="kw-2">&amp;</span>claims)
+        .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t get public key from certificate: {err}&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">let </span>public_key = cose_key_to_hpke_public_key(<span class="kw-2">&amp;</span>public_key)
+        .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t extract public key: {err}&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">let </span>encryption_key = EncryptionKeyProvider::new(
+        private_key,
+        PublicKey::from_bytes(<span class="kw-2">&amp;</span>public_key)
+            .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t decode public key: {err}&quot;</span>))<span class="question-mark">?</span>,
+    );
     <span class="kw">let </span>signing_key = SigningKey::from_slice(
         <span class="kw-2">&amp;</span>dice_data.application_private_keys.signing_private_key[..P256_PRIVATE_KEY_SIZE],
     )

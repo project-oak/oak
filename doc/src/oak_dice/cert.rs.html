@@ -358,6 +358,25 @@
 <a href="#358" id="358">358</a>
 <a href="#359" id="359">359</a>
 <a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -381,6 +400,7 @@
     cbor::value::Value,
     cwt::{ClaimName, ClaimsSet, ClaimsSetBuilder},
     iana, Algorithm, CborSerializable, CoseError, CoseKey, CoseSign1, KeyOperation, KeyType, Label,
+    RegisteredLabelWithPrivate,
 };
 <span class="kw">use </span>hkdf::Hkdf;
 <span class="kw">use </span>p256::{
@@ -478,7 +498,7 @@
 }
 
 <span class="doccomment">/// Converts a COSE_Key to a serialized HPKE KEM public key.
-</span><span class="kw">pub fn </span>cose_key_to_hpke_public_key(cose_key: CoseKey) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>cose_key_to_hpke_public_key(cose_key: <span class="kw-2">&amp;</span>CoseKey) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="kw">if </span>cose_key.kty != KeyType::Assigned(iana::KeyType::OKP) {
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid key type&quot;</span>);
     }
@@ -499,12 +519,12 @@
     }
     cose_key
         .params
-        .into_iter()
+        .iter()
         .find_map(|(label, value)| {
             <span class="kw">if let </span>Value::Bytes(bytes) = value
-                &amp;&amp; label == Label::Int(iana::OkpKeyParameter::X <span class="kw">as </span>i64)
+                &amp;&amp; label == <span class="kw-2">&amp;</span>Label::Int(iana::OkpKeyParameter::X <span class="kw">as </span>i64)
             {
-                <span class="prelude-val">Some</span>(bytes)
+                <span class="prelude-val">Some</span>(bytes.to_vec())
             } <span class="kw">else </span>{
                 <span class="prelude-val">None
             </span>}
@@ -536,7 +556,7 @@
 }
 
 <span class="doccomment">/// Converts a COSE_Key to a ECDSA verifying key.
-</span><span class="kw">pub fn </span>cose_key_to_verifying_key(cose_key: CoseKey) -&gt; <span class="prelude-ty">Result</span>&lt;VerifyingKey, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>cose_key_to_verifying_key(cose_key: <span class="kw-2">&amp;</span>CoseKey) -&gt; <span class="prelude-ty">Result</span>&lt;VerifyingKey, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="kw">if </span>cose_key.kty != KeyType::Assigned(iana::KeyType::EC2) {
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid key type&quot;</span>);
     }
@@ -717,5 +737,23 @@
     <span class="kw">let </span>cwt = CoseSign1::from_slice(bytes)<span class="question-mark">?</span>;
     <span class="kw">let </span>payload = cwt.payload.unwrap_or_default();
     ClaimsSet::from_slice(<span class="kw-2">&amp;</span>payload)
+}
+
+<span class="doccomment">/// Extracts the certified public key from the claims set of a certificate.
+</span><span class="kw">pub fn </span>get_public_key_from_claims_set(claims: <span class="kw-2">&amp;</span>ClaimsSet) -&gt; <span class="prelude-ty">Result</span>&lt;CoseKey, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">let </span>public_key_bytes = claims
+        .rest
+        .iter()
+        .find_map(|(label, value)| {
+            <span class="kw">if let </span>Value::Bytes(bytes) = value
+                &amp;&amp; label == <span class="kw-2">&amp;</span>RegisteredLabelWithPrivate::PrivateUse(SUBJECT_PUBLIC_KEY_ID)
+            {
+                <span class="prelude-val">Some</span>(bytes)
+            } <span class="kw">else </span>{
+                <span class="prelude-val">None
+            </span>}
+        })
+        .ok_or(<span class="string">&quot;public key not found&quot;</span>)<span class="question-mark">?</span>;
+    CoseKey::from_slice(public_key_bytes).map_err(|_cose_err| <span class="string">&quot;couldn&#39;t deserialize public key&quot;</span>)
 }
 </code></pre></div></section></main></body></html>

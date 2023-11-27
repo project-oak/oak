@@ -279,6 +279,9 @@
 <a href="#279" id="279">279</a>
 <a href="#280" id="280">280</a>
 <a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
 </pre></div><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InitializeRequest {
@@ -290,8 +293,11 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InitializeResponse {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[deprecated]
+    #[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>public_key_info: ::core::option::Option&lt;PublicKeyInfo&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>evidence: ::core::option::Option&lt;<span class="kw">super</span>::attestation::v1::Evidence&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
