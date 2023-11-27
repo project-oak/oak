@@ -44,7 +44,6 @@ pub fn gen_kem_keypair() -> (PrivateKey, PublicKey) {
     Kem::gen_keypair(&mut OsRng)
 }
 
-#[derive(Clone)]
 pub struct KeyPair {
     pub(crate) private_key: PrivateKey,
     pub(crate) public_key: PublicKey,
@@ -65,6 +64,10 @@ impl KeyPair {
             private_key,
             public_key,
         }
+    }
+
+    pub fn get_private_key(&self) -> Vec<u8> {
+        self.private_key.to_bytes().to_vec()
     }
 
     /// Returns a NIST P-256 SEC1 encoded point public key.

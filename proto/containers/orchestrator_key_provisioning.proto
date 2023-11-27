@@ -26,7 +26,8 @@ message SendGroupKeysRequest {
   oak.crypto.v1.EncryptedRequest encrypted_encryption_key = 1;
 }
 
-// Defines the service exposed by the orchestrator, that can be invoked by the application.
+// Defines the service exposed to the Hostlib and is used to distribute encryption keys within the
+// enclave group as part of Key Provisioning.
 service OrchestratorKeyProvisioning {
   // Send enclave group keys to the enclave as part of Key Provisioning.
   rpc SendGroupKeys(SendGroupKeysRequest) returns (google.protobuf.Empty) {}

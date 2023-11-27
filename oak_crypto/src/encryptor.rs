@@ -32,7 +32,6 @@ use async_trait::async_trait;
 /// Info string used by Hybrid Public Key Encryption;
 pub(crate) const OAK_HPKE_INFO: &[u8] = b"Oak Hybrid Public Key Encryption v1";
 
-#[derive(Clone)]
 pub struct EncryptionKeyProvider {
     key_pair: KeyPair,
 }
@@ -55,6 +54,10 @@ impl EncryptionKeyProvider {
         Self {
             key_pair: KeyPair::new(private_key, public_key),
         }
+    }
+
+    pub fn get_private_key(&self) -> Vec<u8> {
+        self.key_pair.get_private_key()
     }
 
     /// Returns a NIST P-256 SEC1 encoded point public key.

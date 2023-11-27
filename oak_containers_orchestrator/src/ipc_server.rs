@@ -88,7 +88,7 @@ where
 {
     let service_instance = ServiceImplementation {
         // TODO(#4442): Remove once apps use the new crypto service.
-        encryption_key_provider: Arc::new(key_store.instance_encryption_key()),
+        encryption_key_provider: key_store.instance_encryption_key(),
         application_config,
         launcher_client,
     };

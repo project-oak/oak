@@ -14,21 +14,28 @@
 // limitations under the License.
 
 use crate::proto::oak::containers::v1::{
-    orchestrator_crypto_server::OrchestratorCrypto, GetSessionKeysRequest, GetSessionKeysResponse,
-    GetSignatureRequest, GetSignatureResponse, KeyOrigin,
+    orchestrator_crypto_server::OrchestratorCrypto, DeriveSessionKeysRequest,
+    DeriveSessionKeysResponse, KeyOrigin,
 };
 use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
 use std::sync::Arc;
 use tonic::{Request, Response};
 
 pub struct KeyStore {
-    instance_encryption_key: EncryptionKeyProvider,
-    group_encryption_key: EncryptionKeyProvider,
+    // TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
+    instance_encryption_key: Arc<EncryptionKeyProvider>,
+    group_encryption_key: Arc<EncryptionKeyProvider>,
+}
+
+impl Default for KeyStore {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl KeyStore {
     pub fn new() -> Self {
-        let instance_encryption_key = EncryptionKeyProvider::generate();
+        let instance_encryption_key = Arc::new(EncryptionKeyProvider::generate());
         let group_encryption_key = instance_encryption_key.clone();
         Self {
             instance_encryption_key,
@@ -36,20 +43,15 @@ impl KeyStore {
         }
     }
 
-    // TODO(#4442): Currently we have to give the encryption key provider to the `ipc_server`.
-    // Once we move all enclave apps to the new crypto service - this function should be removed.
-    pub fn instance_encryption_key(&self) -> EncryptionKeyProvider {
+    pub fn instance_encryption_key(&self) -> Arc<EncryptionKeyProvider> {
+        // TODO(#4442): Currently we have to give the encryption key provider to the `ipc_server`.
+        // Once we move all enclave apps to the new crypto service and update the `Attester` to not
+        // have the private key - this function should be removed.
         self.instance_encryption_key.clone()
     }
 
     pub fn instance_encryption_public_key(&self) -> Vec<u8> {
         self.instance_encryption_key.get_serialized_public_key()
-    }
-}
-
-impl Default for KeyStore {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -66,36 +68,29 @@ impl CryptoService {
 
 #[tonic::async_trait]
 impl OrchestratorCrypto for CryptoService {
-    async fn get_session_keys(
+    async fn derive_session_keys(
         &self,
-        request: Request<GetSessionKeysRequest>,
-    ) -> Result<Response<GetSessionKeysResponse>, tonic::Status> {
+        request: Request<DeriveSessionKeysRequest>,
+    ) -> Result<Response<DeriveSessionKeysResponse>, tonic::Status> {
         let request = request.into_inner();
 
         let encryption_key = match request.key_origin() {
+            KeyOrigin::Unspecified => {
+                Err(tonic::Status::invalid_argument("unspecified key origin"))?
+            }
             KeyOrigin::Instance => &self.key_store.instance_encryption_key,
             KeyOrigin::Group => &self.key_store.group_encryption_key,
         };
 
         let context = encryption_key
             .generate_recipient_context(&request.serialized_encapsulated_public_key)
-            .map_err(|err| {
-                tonic::Status::internal(format!("couldn't generate crypto context: {err}"))
-            })?
+            .map_err(|err| tonic::Status::internal(format!("couldn't derive session keys: {err}")))?
             .serialize()
             .map_err(|err| {
-                tonic::Status::internal(format!("couldn't serialize crypto context: {err}"))
+                tonic::Status::internal(format!("couldn't serialize session keys: {err}"))
             })?;
-        Ok(tonic::Response::new(GetSessionKeysResponse {
+        Ok(tonic::Response::new(DeriveSessionKeysResponse {
             context: Some(context),
         }))
-    }
-
-    async fn get_signature(
-        &self,
-        _request: Request<GetSignatureRequest>,
-    ) -> Result<Response<GetSignatureResponse>, tonic::Status> {
-        // TODO(#4504): Implement data signing.
-        Err(tonic::Status::unimplemented("Signing is not implemented"))
     }
 }

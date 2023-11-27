@@ -77,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
     let attester = Attester::new(
         attestation_report_generator,
-        Arc::new(key_store.instance_encryption_key()),
+        key_store.instance_encryption_key(),
     );
     let evidence = attester
         .generate_attestation_evidence()
