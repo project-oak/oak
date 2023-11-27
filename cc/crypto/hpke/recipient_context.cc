@@ -137,7 +137,7 @@ absl::StatusOr<std::string> RecipientContext::Open(absl::string_view ciphertext,
   return plaintext;
 }
 
-absl::StatusOr<std::string> RecipientContext::Seal(const std::vector<uint8_t>& nonce,
+absl::StatusOr<std::string> RecipientContext::Seal(const std::vector<uint8_t>& _nonce,
                                                    absl::string_view plaintext,
                                                    absl::string_view associated_data) {
   /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
@@ -145,6 +145,7 @@ absl::StatusOr<std::string> RecipientContext::Seal(const std::vector<uint8_t>& n
   if (response_sequence_number_ == UINT64_MAX) {
     return absl::OutOfRangeError("Maximum sequence number reached");
   }
+  std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, request_sequence_number_);
 
   absl::StatusOr<std::string> ciphertext =
       AeadSeal(response_aead_context_.get(), nonce, plaintext, associated_data);

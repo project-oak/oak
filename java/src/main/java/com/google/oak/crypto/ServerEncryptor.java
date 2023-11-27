@@ -122,7 +122,7 @@ public class ServerEncryptor implements AutoCloseable {
     // Encrypt response.
     return recipientContext.get().generateNonce().andThen(nonce
         -> recipientContext.get()
-               .seal(plaintext, associatedData)
+               .seal(nonce, plaintext, associatedData)
                // Create response message.
                .map(ciphertext
                    -> EncryptedResponse.newBuilder()
