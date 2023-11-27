@@ -45,7 +45,8 @@ absl::StatusOr<EncryptedRequest> ClientEncryptor::Encrypt(absl::string_view plai
                                                           absl::string_view associated_data) {
   // Encrypt request.
   std::vector<uint8_t> nonce = sender_context_->GenerateNonce();
-  absl::StatusOr<std::string> ciphertext = sender_context_->Seal(plaintext, associated_data);
+  absl::StatusOr<std::string> ciphertext =
+      sender_context_->Seal(&nonce, plaintext, associated_data);
   if (!ciphertext.ok()) {
     return ciphertext.status();
   }
