@@ -21,7 +21,10 @@ extern crate alloc;
 
 use benchmark::proto::{benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest};
 use core::assert_matches::assert_matches;
-use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedRequest};
+use oak_crypto::{
+    encryptor::{ClientEncryptor, EncryptionKeyProvider},
+    proto::oak::crypto::v1::EncryptedRequest,
+};
 use oak_functions_service::{
     proto::oak::functions::{
         ExtendNextLookupDataRequest, FinishNextLookupDataRequest, InitializeRequest, InvokeRequest,
@@ -29,7 +32,7 @@ use oak_functions_service::{
     },
     OakFunctionsService,
 };
-use oak_remote_attestation::attester::EmptyAttestationReportGenerator;
+use oak_remote_attestation::proto::oak::attestation::v1::Evidence;
 use prost::Message;
 use std::sync::Arc;
 
@@ -46,10 +49,17 @@ fn init() {
         .try_init();
 }
 
+fn new_service_for_testing() -> OakFunctionsService {
+    OakFunctionsService::new(
+        Evidence::default(),
+        Arc::new(EncryptionKeyProvider::generate()),
+    )
+}
+
 #[test]
 fn it_should_not_handle_user_requests_before_initialization() {
     init();
-    let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
+    let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     #[allow(clippy::needless_update)]
@@ -71,7 +81,7 @@ fn it_should_not_handle_user_requests_before_initialization() {
 #[test]
 fn it_should_handle_user_requests_after_initialization() {
     init();
-    let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
+    let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
@@ -82,6 +92,7 @@ fn it_should_handle_user_requests_after_initialization() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
+    #[allow(deprecated)]
     let server_encryption_public_key = initialize_response
         .public_key_info
         .expect("no public key info returned")
@@ -107,7 +118,7 @@ fn it_should_handle_user_requests_after_initialization() {
 #[test]
 fn it_should_only_initialize_once() {
     init();
-    let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
+    let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
@@ -132,7 +143,7 @@ fn it_should_only_initialize_once() {
 #[tokio::test]
 async fn it_should_error_on_invalid_wasm_module() {
     init();
-    let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
+    let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("invalid_module").unwrap();
@@ -143,6 +154,7 @@ async fn it_should_error_on_invalid_wasm_module() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
+    #[allow(deprecated)]
     let server_encryption_public_key = initialize_response
         .public_key_info
         .expect("no public key info returned")
@@ -205,7 +217,7 @@ async fn it_should_error_on_invalid_wasm_module() {
 #[tokio::test]
 async fn it_should_support_lookup_data() {
     init();
-    let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
+    let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup").unwrap();
@@ -216,6 +228,7 @@ async fn it_should_support_lookup_data() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
+    #[allow(deprecated)]
     let server_encryption_public_key = initialize_response
         .public_key_info
         .expect("no public key info returned")
@@ -284,7 +297,7 @@ async fn it_should_support_lookup_data() {
 #[tokio::test]
 async fn it_should_handle_wasm_panic() {
     init();
-    let service = OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
+    let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
 
     // Use the benchmark Wasm module, which contains a function that panics.
@@ -296,6 +309,7 @@ async fn it_should_handle_wasm_panic() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
+    #[allow(deprecated)]
     let server_encryption_public_key = initialize_response
         .public_key_info
         .expect("no public key info returned")

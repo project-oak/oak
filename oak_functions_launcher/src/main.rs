@@ -57,6 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .await?;
 
+    #[allow(deprecated)]
     let public_key_info = initialize_response
         .public_key_info
         .expect("no public key info returned");

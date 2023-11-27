@@ -21,6 +21,7 @@ use coset::{
     cbor::value::Value,
     cwt::{ClaimName, ClaimsSet, ClaimsSetBuilder},
     iana, Algorithm, CborSerializable, CoseError, CoseKey, CoseSign1, KeyOperation, KeyType, Label,
+    RegisteredLabelWithPrivate,
 };
 use hkdf::Hkdf;
 use p256::{
@@ -118,7 +119,7 @@ pub fn generate_ecdsa_key_pair() -> (SigningKey, VerifyingKey) {
 }
 
 /// Converts a COSE_Key to a serialized HPKE KEM public key.
-pub fn cose_key_to_hpke_public_key(cose_key: CoseKey) -> Result<Vec<u8>, &'static str> {
+pub fn cose_key_to_hpke_public_key(cose_key: &CoseKey) -> Result<Vec<u8>, &'static str> {
     if cose_key.kty != KeyType::Assigned(iana::KeyType::OKP) {
         return Err("invalid key type");
     }
@@ -139,12 +140,12 @@ pub fn cose_key_to_hpke_public_key(cose_key: CoseKey) -> Result<Vec<u8>, &'stati
     }
     cose_key
         .params
-        .into_iter()
+        .iter()
         .find_map(|(label, value)| {
             if let Value::Bytes(bytes) = value
-                && label == Label::Int(iana::OkpKeyParameter::X as i64)
+                && label == &Label::Int(iana::OkpKeyParameter::X as i64)
             {
-                Some(bytes)
+                Some(bytes.to_vec())
             } else {
                 None
             }
@@ -176,7 +177,7 @@ pub fn hpke_public_key_to_cose_key(public_key: &[u8]) -> CoseKey {
 }
 
 /// Converts a COSE_Key to a ECDSA verifying key.
-pub fn cose_key_to_verifying_key(cose_key: CoseKey) -> Result<VerifyingKey, &'static str> {
+pub fn cose_key_to_verifying_key(cose_key: &CoseKey) -> Result<VerifyingKey, &'static str> {
     if cose_key.kty != KeyType::Assigned(iana::KeyType::EC2) {
         return Err("invalid key type");
     }
@@ -357,4 +358,22 @@ pub fn get_claims_set_from_certificate_bytes(bytes: &[u8]) -> Result<ClaimsSet, 
     let cwt = CoseSign1::from_slice(bytes)?;
     let payload = cwt.payload.unwrap_or_default();
     ClaimsSet::from_slice(&payload)
+}
+
+/// Extracts the certified public key from the claims set of a certificate.
+pub fn get_public_key_from_claims_set(claims: &ClaimsSet) -> Result<CoseKey, &'static str> {
+    let public_key_bytes = claims
+        .rest
+        .iter()
+        .find_map(|(label, value)| {
+            if let Value::Bytes(bytes) = value
+                && label == &RegisteredLabelWithPrivate::PrivateUse(SUBJECT_PUBLIC_KEY_ID)
+            {
+                Some(bytes)
+            } else {
+                None
+            }
+        })
+        .ok_or("public key not found")?;
+    CoseKey::from_slice(public_key_bytes).map_err(|_cose_err| "couldn't deserialize public key")
 }
