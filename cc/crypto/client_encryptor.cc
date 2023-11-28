@@ -44,13 +44,16 @@ absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
 absl::StatusOr<EncryptedRequest> ClientEncryptor::Encrypt(absl::string_view plaintext,
                                                           absl::string_view associated_data) {
   // Encrypt request.
-  absl::StatusOr<std::string> ciphertext = sender_context_->Seal(plaintext, associated_data);
+  const std::vector<uint8_t> nonce = sender_context_->GenerateNonce();
+  absl::StatusOr<std::string> ciphertext = sender_context_->Seal(nonce, plaintext, associated_data);
   if (!ciphertext.ok()) {
     return ciphertext.status();
   }
 
   // Create request message.
   EncryptedRequest encrypted_request;
+  *encrypted_request.mutable_encrypted_message()->mutable_nonce() =
+      std::string(nonce.begin(), nonce.end());
   *encrypted_request.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
   *encrypted_request.mutable_encrypted_message()->mutable_associated_data() = associated_data;
 

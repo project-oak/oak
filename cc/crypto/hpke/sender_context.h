@@ -50,9 +50,12 @@ class SenderContext {
     return serialized_encapsulated_public_key_;
   }
 
+  std::vector<uint8_t> GenerateNonce();
+
   // Encrypts message with associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
-  absl::StatusOr<std::string> Seal(absl::string_view plaintext, absl::string_view associated_data);
+  absl::StatusOr<std::string> Seal(const std::vector<uint8_t>& nonce, absl::string_view plaintext,
+                                   absl::string_view associated_data);
 
   // Decrypts response message and validates associated data using AEAD as part of
   // bidirectional communication.
