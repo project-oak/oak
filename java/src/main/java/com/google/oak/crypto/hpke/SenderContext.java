@@ -31,7 +31,8 @@ public final class SenderContext implements AutoCloseable {
   }
 
   private native byte[] nativeGenerateNonce();
-  private native byte[] nativeSeal(final byte[] nonce, final byte[] plaintext, final byte[] associatedData);
+  private native byte[] nativeSeal(
+      final byte[] nonce, final byte[] plaintext, final byte[] associatedData);
   private native byte[] nativeOpen(final byte[] ciphertext, final byte[] associatedData);
   private native void nativeDestroy();
 
@@ -55,7 +56,8 @@ public final class SenderContext implements AutoCloseable {
    * Encrypts message with associated data using AEAD.
    * <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
    */
-  public final Result<byte[], Exception> seal(final byte[] nonce, final byte[] plaintext, final byte[] associatedData) {
+  public final Result<byte[], Exception> seal(
+      final byte[] nonce, final byte[] plaintext, final byte[] associatedData) {
     byte[] nativeResult = nativeSeal(nonce, plaintext, associatedData);
     if (nativeResult == null) {
       return Result.error(new Exception("SenderContext seal failed"));

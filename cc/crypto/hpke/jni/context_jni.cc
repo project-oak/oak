@@ -44,7 +44,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativ
     return {};
   }
 
-  std::string nonce_str = convert_jbytearray_to_string(env, plaintext);
+  std::string nonce_str = convert_jbytearray_to_string(env, nonce);
   std::string plaintext_str = convert_jbytearray_to_string(env, plaintext);
   std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
@@ -57,7 +57,8 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativ
   }
 
   const std::vector<uint8_t> nonce_bytes(nonce_str.begin(), nonce_str.end());
-  absl::StatusOr<std::string> result = sender_context->Seal(nonce_bytes, plaintext_str, associated_data_str);
+  absl::StatusOr<std::string> result =
+      sender_context->Seal(nonce_bytes, plaintext_str, associated_data_str);
   if (!result.ok()) {
     return {};
   }
@@ -147,11 +148,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_na
     return {};
   }
 
-  // std::vector<uint8_t> nonce_array(env->GetArrayLength(nonce));
-  // env->SetByteArrayRegion(nonce_array, 0, env->GetArrayLength(nonce),
-  //                         &nonce[0]);
-
-  std::string nonce_str = convert_jbytearray_to_string(env, plaintext);
+  std::string nonce_str = convert_jbytearray_to_string(env, nonce);
   std::string plaintext_str = convert_jbytearray_to_string(env, plaintext);
   std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
@@ -164,7 +161,8 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_na
   }
 
   const std::vector<uint8_t> nonce_bytes(nonce_str.begin(), nonce_str.end());
-  absl::StatusOr<std::string> result = recipient_context->Seal(nonce_bytes, plaintext_str, associated_data_str);
+  absl::StatusOr<std::string> result =
+      recipient_context->Seal(nonce_bytes, plaintext_str, associated_data_str);
   if (!result.ok()) {
     return {};
   }

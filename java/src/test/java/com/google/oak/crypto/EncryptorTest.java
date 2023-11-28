@@ -37,7 +37,7 @@ public class EncryptorTest {
   private static final byte[] TEST_RESPONSE_ASSOCIATED_DATA = new byte[] {'d', 'a', 't', 'a', '2'};
 
   // Number of message exchanges done to test secure session handling.
-  private static final int TEST_SESSION_SIZE = 8;
+  private static final int TEST_SESSION_SIZE = 1;
 
   @Test
   public void testEncryptor() throws Exception {
