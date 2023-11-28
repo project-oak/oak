@@ -100,6 +100,15 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -115,9 +124,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::containers::{
-    orchestrator_server::{Orchestrator, OrchestratorServer},
-    GetApplicationConfigResponse, GetCryptoContextRequest, GetCryptoContextResponse,
+</span><span class="kw">use crate</span>::{
+    crypto::{CryptoService, KeyStore},
+    proto::oak::containers::{
+        orchestrator_server::{Orchestrator, OrchestratorServer},
+        v1::orchestrator_crypto_server::OrchestratorCryptoServer,
+        GetApplicationConfigResponse, GetCryptoContextRequest, GetCryptoContextResponse,
+    },
 };
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>futures::FutureExt;
@@ -153,7 +166,8 @@
         <span class="prelude-val">Ok</span>(tonic::Response::new(()))
     }
 
-    <span class="kw">async fn </span>get_crypto_context(
+    <span class="comment">// TODO(#4442): Move generating session keys to a separate service.
+    </span><span class="kw">async fn </span>get_crypto_context(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: Request&lt;GetCryptoContextRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;GetCryptoContextResponse&gt;, tonic::Status&gt; {
@@ -175,7 +189,7 @@
 
 <span class="kw">pub async fn </span>create&lt;P&gt;(
     socket_address: P,
-    encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;,
+    key_store: Arc&lt;KeyStore&gt;,
     application_config: Vec&lt;u8&gt;,
     launcher_client: Arc&lt;LauncherClient&gt;,
     shutdown_receiver: Receiver&lt;()&gt;,
@@ -184,10 +198,13 @@
     </span>P: AsRef&lt;std::path::Path&gt; + Clone,
 {
     <span class="kw">let </span>service_instance = ServiceImplementation {
-        encryption_key_provider,
+        <span class="comment">// TODO(#4442): Remove once apps use the new crypto service.
+        </span>encryption_key_provider: key_store.instance_encryption_key(),
         application_config,
         launcher_client,
     };
+    <span class="kw">let </span>crypto_service_instance = CryptoService::new(key_store);
+
     <span class="kw">let </span>uds = UnixListener::bind(socket_address.clone())
         .context(<span class="string">&quot;could not bind to the supplied address&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>uds_stream = UnixListenerStream::new(uds);
@@ -197,6 +214,7 @@
 
     Server::builder()
         .add_service(OrchestratorServer::new(service_instance))
+        .add_service(OrchestratorCryptoServer::new(crypto_service_instance))
         .serve_with_incoming_shutdown(uds_stream, shutdown_receiver.map(|<span class="kw">_</span>| ()))
         .<span class="kw">await</span><span class="question-mark">?</span>;
 

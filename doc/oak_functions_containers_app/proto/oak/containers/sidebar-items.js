@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["launcher_client","orchestrator_client","orchestrator_key_provisioning_client"],"struct":["GetApplicationConfigResponse","GetCryptoContextRequest","GetCryptoContextResponse","GetImageResponse","SendAttestationEvidenceRequest","SendGroupKeysRequest"]};
+window.SIDEBAR_ITEMS = {"mod":["launcher_client","orchestrator_client"],"struct":["GetApplicationConfigResponse","GetCryptoContextRequest","GetCryptoContextResponse","GetImageResponse","SendAttestationEvidenceRequest"]};

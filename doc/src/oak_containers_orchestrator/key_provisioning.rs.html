@@ -50,6 +50,16 @@
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
 <a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -65,17 +75,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
-    containers::{
-        orchestrator_key_provisioning_server::OrchestratorKeyProvisioning, SendGroupKeysRequest,
-    },
-    key_provisioning::v1::{
-        key_provisioning_server::KeyProvisioning, GetGroupKeysRequest, GetGroupKeysResponse,
+</span><span class="kw">use crate</span>::{
+    crypto::KeyStore,
+    proto::oak::{
+        containers::v1::{
+            orchestrator_key_provisioning_server::OrchestratorKeyProvisioning, SendGroupKeysRequest,
+        },
+        key_provisioning::v1::{
+            key_provisioning_server::KeyProvisioning, GetGroupKeysRequest, GetGroupKeysResponse,
+        },
     },
 };
+<span class="kw">use </span>std::sync::{Arc, OnceLock};
 <span class="kw">use </span>tonic::{Request, Response};
 
-<span class="kw">struct </span>KeyProvisioningService {}
+<span class="kw">struct </span>KeyProvisioningService {
+    _key_store: OnceLock&lt;Arc&lt;KeyStore&gt;&gt;,
+}
 
 <span class="attr">#[tonic::async_trait]
 </span><span class="kw">impl </span>OrchestratorKeyProvisioning <span class="kw">for </span>KeyProvisioningService {
@@ -90,8 +106,12 @@
     }
 }
 
+<span class="kw">struct </span>KeyProvisioningLeaderService {
+    _key_store: Arc&lt;KeyStore&gt;,
+}
+
 <span class="attr">#[tonic::async_trait]
-</span><span class="kw">impl </span>KeyProvisioning <span class="kw">for </span>KeyProvisioningService {
+</span><span class="kw">impl </span>KeyProvisioning <span class="kw">for </span>KeyProvisioningLeaderService {
     <span class="kw">async fn </span>get_group_keys(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         _request: Request&lt;GetGroupKeysRequest&gt;,
