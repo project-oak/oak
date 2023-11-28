@@ -114,8 +114,9 @@ absl::StatusOr<std::unique_ptr<RecipientContext>> RecipientContext::Deserialize(
 }
 
 std::vector<uint8_t> RecipientContext::GenerateNonce() {
-  std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, request_sequence_number_);
-  return nonce;
+  // std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, request_sequence_number_);
+  // return nonce;
+  return std::vector<uint8_t>();
 }
 
 absl::StatusOr<std::string> RecipientContext::Open(absl::string_view ciphertext,

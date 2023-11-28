@@ -33,8 +33,9 @@ namespace oak::crypto {
 const uint64_t kStartingSequenceNumber = 0;
 
 std::vector<uint8_t> SenderContext::GenerateNonce() {
-  std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, request_sequence_number_);
-  return nonce;
+  // std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, request_sequence_number_);
+  // return nonce;
+  return std::vector<uint8_t>();
 }
 
 absl::StatusOr<std::string> SenderContext::Seal(const std::vector<uint8_t>& _nonce,
