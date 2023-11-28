@@ -33,12 +33,11 @@ namespace oak::crypto {
 const uint64_t kStartingSequenceNumber = 0;
 
 std::vector<uint8_t> SenderContext::GenerateNonce() {
-  // std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, request_sequence_number_);
-  // return nonce;
-  return std::vector<uint8_t>();
+  std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, request_sequence_number_);
+  return nonce;
 }
 
-absl::StatusOr<std::string> SenderContext::Seal(const std::vector<uint8_t>& _nonce,
+absl::StatusOr<std::string> SenderContext::Seal(const std::vector<uint8_t>& nonce,
                                                 absl::string_view plaintext,
                                                 absl::string_view associated_data) {
   /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
@@ -46,7 +45,6 @@ absl::StatusOr<std::string> SenderContext::Seal(const std::vector<uint8_t>& _non
   if (request_sequence_number_ == UINT64_MAX) {
     return absl::OutOfRangeError("Maximum sequence number reached");
   }
-  std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, request_sequence_number_);
 
   absl::StatusOr<std::string> ciphertext =
       AeadSeal(request_aead_context_.get(), nonce, plaintext, associated_data);
