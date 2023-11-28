@@ -13,17 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::proto::oak::{
-    containers::{
-        orchestrator_key_provisioning_server::OrchestratorKeyProvisioning, SendGroupKeysRequest,
-    },
-    key_provisioning::v1::{
-        key_provisioning_server::KeyProvisioning, GetGroupKeysRequest, GetGroupKeysResponse,
+use crate::{
+    crypto::KeyStore,
+    proto::oak::{
+        containers::v1::{
+            orchestrator_key_provisioning_server::OrchestratorKeyProvisioning, SendGroupKeysRequest,
+        },
+        key_provisioning::v1::{
+            key_provisioning_server::KeyProvisioning, GetGroupKeysRequest, GetGroupKeysResponse,
+        },
     },
 };
+use std::sync::{Arc, OnceLock};
 use tonic::{Request, Response};
 
-struct KeyProvisioningService {}
+struct KeyProvisioningService {
+    _key_store: OnceLock<Arc<KeyStore>>,
+}
 
 #[tonic::async_trait]
 impl OrchestratorKeyProvisioning for KeyProvisioningService {
@@ -38,8 +44,12 @@ impl OrchestratorKeyProvisioning for KeyProvisioningService {
     }
 }
 
+struct KeyProvisioningLeaderService {
+    _key_store: Arc<KeyStore>,
+}
+
 #[tonic::async_trait]
-impl KeyProvisioning for KeyProvisioningService {
+impl KeyProvisioning for KeyProvisioningLeaderService {
     async fn get_group_keys(
         &self,
         _request: Request<GetGroupKeysRequest>,

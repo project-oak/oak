@@ -18,6 +18,10 @@ mod proto {
         pub mod containers {
             #![allow(clippy::return_self_not_must_use)]
             tonic::include_proto!("oak.containers");
+            pub mod v1 {
+                #![allow(clippy::return_self_not_must_use)]
+                tonic::include_proto!("oak.containers.v1");
+            }
         }
         pub use oak_crypto::proto::oak::crypto;
         pub use oak_remote_attestation::proto::oak::{attestation, session};
@@ -31,6 +35,7 @@ mod proto {
 }
 
 pub mod container_runtime;
+pub mod crypto;
 pub mod dice;
 pub mod ipc_server;
 pub mod key_provisioning;

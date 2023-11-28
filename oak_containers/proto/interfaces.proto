@@ -41,12 +41,6 @@ message SendAttestationEvidenceRequest {
   oak.attestation.v1.Evidence dice_evidence = 2;
 }
 
-message SendGroupKeysRequest {
-  // Enclave group encryption private key that was encrypted with HPKE using enclave's encryption
-  // key.
-  oak.crypto.v1.EncryptedRequest encrypted_encryption_key = 1;
-}
-
 message GetCryptoContextRequest {
   // Ephemeral Diffie-Hellman client public key that is needed to derive a session key.
   bytes serialized_encapsulated_public_key = 1;
@@ -81,12 +75,6 @@ service Launcher {
   // Notifies the launcher that the trusted app is ready to serve requests and listening on the
   // pre-arranged port (8080).
   rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-}
-
-// Defines the service exposed by the orchestrator, that can be invoked by the application.
-service OrchestratorKeyProvisioning {
-  // Send enclave group keys to the enclave as part of Key Provisioning.
-  rpc SendGroupKeys(SendGroupKeysRequest) returns (google.protobuf.Empty) {}
 }
 
 // Defines the service exposed by the orchestrator, that can be invoked by the application.

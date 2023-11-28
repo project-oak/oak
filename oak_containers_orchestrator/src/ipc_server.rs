@@ -13,9 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::proto::oak::containers::{
-    orchestrator_server::{Orchestrator, OrchestratorServer},
-    GetApplicationConfigResponse, GetCryptoContextRequest, GetCryptoContextResponse,
+use crate::{
+    crypto::{CryptoService, KeyStore},
+    proto::oak::containers::{
+        orchestrator_server::{Orchestrator, OrchestratorServer},
+        v1::orchestrator_crypto_server::OrchestratorCryptoServer,
+        GetApplicationConfigResponse, GetCryptoContextRequest, GetCryptoContextResponse,
+    },
 };
 use anyhow::Context;
 use futures::FutureExt;
@@ -51,6 +55,7 @@ impl Orchestrator for ServiceImplementation {
         Ok(tonic::Response::new(()))
     }
 
+    // TODO(#4442): Move generating session keys to a separate service.
     async fn get_crypto_context(
         &self,
         request: Request<GetCryptoContextRequest>,
@@ -73,7 +78,7 @@ impl Orchestrator for ServiceImplementation {
 
 pub async fn create<P>(
     socket_address: P,
-    encryption_key_provider: Arc<EncryptionKeyProvider>,
+    key_store: Arc<KeyStore>,
     application_config: Vec<u8>,
     launcher_client: Arc<LauncherClient>,
     shutdown_receiver: Receiver<()>,
@@ -82,10 +87,13 @@ where
     P: AsRef<std::path::Path> + Clone,
 {
     let service_instance = ServiceImplementation {
-        encryption_key_provider,
+        // TODO(#4442): Remove once apps use the new crypto service.
+        encryption_key_provider: key_store.instance_encryption_key(),
         application_config,
         launcher_client,
     };
+    let crypto_service_instance = CryptoService::new(key_store);
+
     let uds = UnixListener::bind(socket_address.clone())
         .context("could not bind to the supplied address")?;
     let uds_stream = UnixListenerStream::new(uds);
@@ -95,6 +103,7 @@ where
 
     Server::builder()
         .add_service(OrchestratorServer::new(service_instance))
+        .add_service(OrchestratorCryptoServer::new(crypto_service_instance))
         .serve_with_incoming_shutdown(uds_stream, shutdown_receiver.map(|_| ()))
         .await?;
 

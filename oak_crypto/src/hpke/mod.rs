@@ -66,6 +66,10 @@ impl KeyPair {
         }
     }
 
+    pub fn get_private_key(&self) -> Vec<u8> {
+        self.private_key.to_bytes().to_vec()
+    }
+
     /// Returns a NIST P-256 SEC1 encoded point public key.
     /// <https://secg.org/sec1-v2.pdf>
     pub fn get_serialized_public_key(&self) -> Vec<u8> {

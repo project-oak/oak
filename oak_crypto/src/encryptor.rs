@@ -56,6 +56,10 @@ impl EncryptionKeyProvider {
         }
     }
 
+    pub fn get_private_key(&self) -> Vec<u8> {
+        self.key_pair.get_private_key()
+    }
+
     /// Returns a NIST P-256 SEC1 encoded point public key.
     /// <https://secg.org/sec1-v2.pdf>
     pub fn get_serialized_public_key(&self) -> Vec<u8> {
