@@ -66,6 +66,20 @@ impl KeyPair {
         }
     }
 
+    pub fn from_private_key(mut private_key_bytes: Vec<u8>) -> anyhow::Result<Self> {
+        // TODO(#4513): Remove the public key and only store the private key.
+        let private_key = PrivateKey::from_bytes(&private_key_bytes)
+            .map_err(|err| anyhow!("couldn't deserialize private key: {:?}", err))?;
+        let public_key = Kem::sk_to_pk(&private_key);
+
+        // Zero out the memory of the input argument.
+        private_key_bytes.fill(0);
+        Ok(Self {
+            private_key,
+            public_key,
+        })
+    }
+
     pub fn get_private_key(&self) -> Vec<u8> {
         self.private_key.to_bytes().to_vec()
     }

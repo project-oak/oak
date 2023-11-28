@@ -118,6 +118,10 @@ pub async fn run(
     ))?;
     log::info!("Container exited with status {status:?}");
 
+<<<<<<< HEAD
+=======
+    // let _ = exit_notification_sender.send(());
+>>>>>>> e8776114f (Add basic Key Provisioning implementation)
     cancellation_token.cancel();
     Ok(())
 }

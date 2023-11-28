@@ -15,8 +15,12 @@
 
 use anyhow::{anyhow, Context};
 use clap::Parser;
-use oak_containers_orchestrator::crypto::KeyStore;
+use oak_containers_orchestrator::{
+    crypto::KeyStore,
+    key_provisioning::{KeyProvisioningService, KeyProvisioningLeaderService},
+};
 use oak_containers_orchestrator_client::LauncherClient;
+use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_dice::cert::generate_ecdsa_key_pair;
 use oak_remote_attestation::attester::{Attester, EmptyAttestationReportGenerator};
 use std::{path::PathBuf, sync::Arc};
@@ -27,6 +31,9 @@ struct Args {
     #[arg(default_value = "http://10.0.2.100:8080")]
     launcher_addr: String,
 
+    #[arg(default_value = "127.0.0.1:4000")]
+    orchestrator_addr: String,
+
     #[arg(long, default_value = "/oak_container")]
     container_dir: PathBuf,
 
@@ -35,6 +42,9 @@ struct Args {
 
     #[arg(long, default_value = "oakc")]
     runtime_user: String,
+
+    #[arg(long)]
+    key_provisioning_leader: bool,
 }
 
 #[tokio::main]
@@ -48,6 +58,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await
             .map_err(|error| anyhow!("couldn't create client: {:?}", error))?,
     );
+    let orchestrator_address = args
+        .orchestrator_addr
+        .parse()
+        .context("couldn't parse Orchestrator address")?;
 
     let container_bundle = launcher_client
         .get_container_bundle()
@@ -97,13 +111,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .context(format!("error resolving user {}", args.runtime_user))?
         .context(format!("user `{}` not found", args.runtime_user))?;
 
+    if args.key_provisioning_leader {
+        // Generate new group keys if this instance is a Key Provisioning leader.
+        let group_encryption_key = EncryptionKeyProvider::generate();
+        key_store
+            .mutable_group_encryption_key()
+            .set(group_encryption_key)
+            .map_err(|_| {
+                tonic::Status::internal("group encryption key was already initialized".to_string())
+            })?;
+    } else {
+        // Receive group keys from the Key Provisioning leader.
+        KeyProvisioningService::start(
+            orchestrator_address,
+            key_store.clone(),
+        );
+    }
+    
     let cancellation_token = CancellationToken::new();
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
             &args.ipc_socket_path,
-            key_store,
+            key_store.clone(),
             application_config,
             launcher_client,
+            cancellation_token.clone(),
+        ),
+        KeyProvisioningLeaderService::start(
+            orchestrator_address,
+            key_store.clone(),
             cancellation_token.clone(),
         ),
         oak_containers_orchestrator::container_runtime::run(

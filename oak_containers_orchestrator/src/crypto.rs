@@ -18,13 +18,13 @@ use crate::proto::oak::containers::v1::{
     DeriveSessionKeysResponse, KeyOrigin,
 };
 use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use tonic::{Request, Response};
 
 pub struct KeyStore {
     // TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
     instance_encryption_key: Arc<EncryptionKeyProvider>,
-    group_encryption_key: Arc<EncryptionKeyProvider>,
+    group_encryption_key: OnceLock<EncryptionKeyProvider>,
 }
 
 impl Default for KeyStore {
@@ -35,11 +35,9 @@ impl Default for KeyStore {
 
 impl KeyStore {
     pub fn new() -> Self {
-        let instance_encryption_key = Arc::new(EncryptionKeyProvider::generate());
-        let group_encryption_key = instance_encryption_key.clone();
         Self {
-            instance_encryption_key,
-            group_encryption_key,
+            instance_encryption_key: Arc::new(EncryptionKeyProvider::generate()),
+            group_encryption_key: OnceLock::new(),
         }
     }
 
@@ -52,6 +50,11 @@ impl KeyStore {
 
     pub fn instance_encryption_public_key(&self) -> Vec<u8> {
         self.instance_encryption_key.get_serialized_public_key()
+    }
+
+    pub fn mutable_group_encryption_key(&self) -> &OnceLock<EncryptionKeyProvider> {
+        // TODO(#4513): Implement Rust protections for the private key.
+        &self.group_encryption_key
     }
 }
 
@@ -79,7 +82,14 @@ impl OrchestratorCrypto for CryptoService {
                 Err(tonic::Status::invalid_argument("unspecified key origin"))?
             }
             KeyOrigin::Instance => &self.key_store.instance_encryption_key,
-            KeyOrigin::Group => &self.key_store.group_encryption_key,
+            KeyOrigin::Group => {
+                self.key_store
+                    .group_encryption_key
+                    .get()
+                    .ok_or(tonic::Status::internal(
+                        "group encryption key wasn't initialized",
+                    ))?
+            }
         };
 
         let context = encryption_key

@@ -56,7 +56,15 @@ impl EncryptionKeyProvider {
         }
     }
 
+    pub fn from_private_key(private_key_bytes: Vec<u8>) -> anyhow::Result<Self> {
+        // TODO(#4513): Merge `EncryptionKeyProvider` and `hpke::KeyPair`.
+        Ok(Self {
+            key_pair: KeyPair::from_private_key(private_key_bytes)?,
+        })
+    }
+
     pub fn get_private_key(&self) -> Vec<u8> {
+        // TODO(#4513): Implement Rust protections for the private key.
         self.key_pair.get_private_key()
     }
 

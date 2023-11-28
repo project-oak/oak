@@ -17,44 +17,138 @@ use crate::{
     crypto::KeyStore,
     proto::oak::{
         containers::v1::{
-            orchestrator_key_provisioning_server::OrchestratorKeyProvisioning, SendGroupKeysRequest,
+            orchestrator_key_provisioning_server::{
+                OrchestratorKeyProvisioning, OrchestratorKeyProvisioningServer,
+            },
+            UpdateGroupPrivateKeysRequest,
         },
         key_provisioning::v1::{
-            key_provisioning_server::KeyProvisioning, GetGroupKeysRequest, GetGroupKeysResponse,
+            key_provisioning_server::{KeyProvisioning, KeyProvisioningServer},
+            GetGroupPrivateKeysRequest, GetGroupPrivateKeysResponse,
         },
     },
 };
-use std::sync::{Arc, OnceLock};
-use tonic::{Request, Response};
+use oak_crypto::encryptor::{EncryptionKeyProvider, ServerEncryptor};
+use std::{sync::Arc, net::SocketAddr};
+use tokio_util::sync::CancellationToken;
+use tonic::{transport::Server, Request, Response};
 
-struct KeyProvisioningService {
-    _key_store: OnceLock<Arc<KeyStore>>,
+pub struct KeyProvisioningService {
+    key_store: Arc<KeyStore>,
+    // Cancellation token to tell the Key Provisioning gRPC service to stop after receiving group
+    // keys. This sender will be used inside the gRPC service handler.
+    cancellation_token: CancellationToken,
+}
+
+impl KeyProvisioningService {
+    pub async fn start(
+        listen_address: SocketAddr,
+        key_store: Arc<KeyStore>,
+    ) -> Result<(), anyhow::Error> {
+        let cancellation_token = CancellationToken::new();
+        let key_provisioning_service_instance = KeyProvisioningService {
+            key_store,
+            cancellation_token: cancellation_token.clone(),
+        };
+
+        Server::builder()
+            .add_service(OrchestratorKeyProvisioningServer::new(
+                key_provisioning_service_instance,
+            ))
+            .serve_with_shutdown(listen_address, cancellation_token.cancelled())
+            .await?;
+
+        Ok(())
+    }
 }
 
 #[tonic::async_trait]
 impl OrchestratorKeyProvisioning for KeyProvisioningService {
-    async fn send_group_keys(
+    async fn update_group_private_keys(
         &self,
-        _request: Request<SendGroupKeysRequest>,
+        request: Request<UpdateGroupPrivateKeysRequest>,
     ) -> Result<Response<()>, tonic::Status> {
-        // TODO(#4442): Implement replacing group encryption key.
-        Err(tonic::Status::unimplemented(
-            "Key Provisioning is not implemented",
-        ))
+        let request = request.into_inner();
+
+        // Create server encryptor for decrypting the group keys received from the leader enclave.
+        let encrypted_encryption_private_key =
+            request
+                .encrypted_encryption_private_key
+                .ok_or(tonic::Status::invalid_argument(
+                    "encrypted encryption key wasn't provided",
+                ))?;
+        let encapsulated_public_key = encrypted_encryption_private_key
+            .serialized_encapsulated_public_key
+            .as_ref()
+            .ok_or(tonic::Status::invalid_argument(
+                "encapsulated public key wasn't provided",
+            ))?;
+        let mut server_encryptor = ServerEncryptor::create(
+            encapsulated_public_key,
+            self.key_store.instance_encryption_key(),
+        )
+        .map_err(|err| {
+            tonic::Status::internal(format!("couldn't create server encryptor: {err}"))
+        })?;
+
+        // Decrypt group keys.
+        let (decrypted_encryption_private_key, _) = server_encryptor
+            .decrypt(&encrypted_encryption_private_key)
+            .map_err(|err| {
+                tonic::Status::internal(format!(
+                    "couldn't decrypt the encryption private key: {err}"
+                ))
+            })?;
+        let group_encryption_key =
+            EncryptionKeyProvider::from_private_key(decrypted_encryption_private_key).map_err(
+                |err| tonic::Status::internal(format!("couldn't deserialize private key: {err}")),
+            )?;
+
+        // Add group keys to the Orchestrator key store.
+        self.key_store
+            .mutable_group_encryption_key()
+            .set(group_encryption_key)
+            .map_err(|_| {
+                tonic::Status::internal("group encryption key was already initialized".to_string())
+            })?;
+
+        self.cancellation_token.cancel();
+        Ok(tonic::Response::new(()))
     }
 }
 
-struct KeyProvisioningLeaderService {
-    _key_store: Arc<KeyStore>,
+pub struct KeyProvisioningLeaderService {
+    key_store: Arc<KeyStore>,
+}
+
+impl KeyProvisioningLeaderService {
+    pub async fn start(
+        listen_address: SocketAddr,
+        key_store: Arc<KeyStore>,
+        cancellation_token: CancellationToken,
+    ) -> Result<(), anyhow::Error> {
+        let key_provisioning_leader_service_instance = KeyProvisioningLeaderService {
+            key_store,
+        };
+
+        Server::builder()
+            .add_service(KeyProvisioningServer::new(
+                key_provisioning_leader_service_instance,
+            ))
+            .serve_with_shutdown(listen_address, cancellation_token.cancelled())
+            .await?;
+
+        Ok(())
+    }
 }
 
 #[tonic::async_trait]
 impl KeyProvisioning for KeyProvisioningLeaderService {
-    async fn get_group_keys(
+    async fn get_group_private_keys(
         &self,
-        _request: Request<GetGroupKeysRequest>,
-    ) -> Result<Response<GetGroupKeysResponse>, tonic::Status> {
-        // TODO(#4442): Implement generating group encryption key.
+        _request: Request<GetGroupPrivateKeysRequest>,
+    ) -> Result<Response<GetGroupPrivateKeysResponse>, tonic::Status> {
+        // TODO(#4442): Provide actual Reference Values for Key Provisioning and verify attestation.
         Err(tonic::Status::unimplemented(
             "Key Provisioning is not implemented",
         ))
