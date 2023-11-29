@@ -19,9 +19,8 @@ extern crate alloc;
 use alloc::{collections::BTreeMap, string::String};
 use anyhow::Result;
 use log::warn;
-use oak_attestation_verification::{
-    claims::{ClaimPredicate, CLAIM_V1},
-    intoto::{Statement, Subject, STATEMENT_INTOTO_V01},
+use oak_attestation_verification::claims::{
+    ClaimPredicate, Statement, Subject, CLAIM_V1, STATEMENT_INTOTO_V01,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{self, Value};
