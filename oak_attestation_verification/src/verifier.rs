@@ -36,7 +36,7 @@ use ecdsa::{signature::Verifier, Signature};
 const ADDITIONAL_DATA: &[u8] = b"";
 
 /// ID for the CWT private claim corresponding to the Subject of the CWT.
-/// COPIED FROM oak_dice
+/// NB: Copied from oak_dice crate.
 const SUBJECT_PUBLIC_KEY_ID: i64 = -4670552;
 
 /// Verifies entire setup by forwarding to individual setup types.
@@ -138,7 +138,7 @@ fn verify_cb(
 }
 
 /// Extracts the certified public key from the claims set of a certificate.
-/// MB: Copied from oak_dice crate.
+/// NB: Copied from oak_dice crate.
 fn get_public_key_from_claims_set(claims: &ClaimsSet) -> anyhow::Result<CoseKey> {
     let public_key_bytes = claims
         .rest

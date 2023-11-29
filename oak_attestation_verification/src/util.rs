@@ -105,22 +105,22 @@ pub fn hash_sha2_256(input: &[u8]) -> [u8; 32] {
 /// Converts a COSE_Key to a ECDSA verifying key. NB: Copied from oak_dice crate.
 pub fn cose_key_to_verifying_key(cose_key: &CoseKey) -> anyhow::Result<VerifyingKey> {
     if cose_key.kty != KeyType::Assigned(iana::KeyType::EC2) {
-        return Err(anyhow::Error::msg("invalid key type"));
+        anyhow::bail!("invalid key type");
     }
     if cose_key.alg != Some(Algorithm::Assigned(iana::Algorithm::ES256K)) {
-        return Err(anyhow::Error::msg("invalid algorithm"));
+        anyhow::bail!("invalid algorithm");
     }
     if !cose_key
         .key_ops
         .contains(&KeyOperation::Assigned(iana::KeyOperation::Verify))
     {
-        return Err(anyhow::Error::msg("invalid key operations"));
+        anyhow::bail!("invalid key operations");
     }
     if !cose_key.params.iter().any(|(label, value)| {
         label == &Label::Int(iana::Ec2KeyParameter::Crv as i64)
             && value == &Value::from(iana::EllipticCurve::P_256 as u64)
     }) {
-        return Err(anyhow::Error::msg("invalid elliptic curve"));
+        anyhow::bail!("invalid elliptic curve");
     }
     let x = cose_key
         .params
@@ -154,5 +154,5 @@ pub fn cose_key_to_verifying_key(cose_key: &CoseKey) -> anyhow::Result<Verifying
         false,
     );
     VerifyingKey::from_encoded_point(&encoded_point)
-        .map_err(|_err| anyhow::Error::msg("invalid public key coordinates"))
+        .map_err(|_err| anyhow::anyhow!("invalid public key coordinates"))
 }
