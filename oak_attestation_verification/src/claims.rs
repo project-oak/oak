@@ -14,14 +14,14 @@
 // limitations under the License.
 //
 
-//! This module contains structs for specifying claims about software artifacts. The structs in
-//! this module must be kept in sync with the structs defined in
-//! <https://github.com/project-oak/transparent-release/blob/main/pkg/claims/claim.go>.
+//! Contains structs for specifying in-toto statements and claims about
+//! software artifacts. See also
+//! <https://github.com/project-oak/transparent-release/blob/main/pkg/claims/claim.go>,
+//! <https://github.com/project-oak/transparent-release/blob/main/pkg/intoto/intoto.go>.
 
 extern crate alloc;
 
-use crate::intoto::{DigestSet, Statement, STATEMENT_INTOTO_V01};
-use alloc::{string::String, vec::Vec};
+use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
@@ -33,6 +33,31 @@ pub const CLAIM_V1: &str = "https://github.com/project-oak/transparent-release/c
 /// type in an in-toto statement.
 pub const ENDORSEMENT_V2: &str =
     "https://github.com/project-oak/transparent-release/endorsement/v2";
+
+/// URI representing in-toto v01 statements. This is constant for all predicate
+/// types.
+pub const STATEMENT_INTOTO_V01: &str = "https://in-toto.io/Statement/v0.1";
+
+// A map from algorithm name to lowercase hex-encoded value.
+pub type DigestSet = BTreeMap<String, String>;
+
+/// A software artifact identified by its name and a set of artifacts.
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct Subject {
+    pub name: String,
+    pub digest: DigestSet,
+}
+
+/// This struct represents a generic statement that binds a predicate to a
+/// particular subject.
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+pub struct Statement<P> {
+    pub _type: String,
+    #[serde(rename = "predicateType")]
+    pub predicate_type: String,
+    pub subject: Vec<Subject>,
+    pub predicate: P,
+}
 
 #[derive(Debug)]
 pub enum InvalidClaimData {

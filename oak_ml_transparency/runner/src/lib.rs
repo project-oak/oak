@@ -19,7 +19,7 @@ extern crate alloc;
 use alloc::{collections::BTreeMap, string::String};
 use anyhow::Result;
 use log::warn;
-use oak_transparency_claims::{
+use oak_attestation_verification::{
     claims::{ClaimPredicate, CLAIM_V1},
     intoto::{Statement, Subject, STATEMENT_INTOTO_V01},
 };
@@ -121,7 +121,7 @@ pub fn get_sha256_hex(input: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use oak_transparency_claims::claims::validate_claim;
+    use oak_attestation_verification::claims::validate_claim;
 
     #[test]
     fn generate_claim_is_valid_json() {
