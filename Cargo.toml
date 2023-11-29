@@ -55,8 +55,6 @@ members = [
   "snp_measurement",
   "stage0",
   "testing/oak_echo_service",
-  "quirk_echo_launcher",
-  "quirk_echo_service",
   "xtask",
 ]
 exclude = [
