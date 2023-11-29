@@ -25,7 +25,6 @@ use oak_attestation_verification::{
     verifier::verify,
 };
 
-// Real-world evidence for testing from https://paste.googleplex.com/5812067269869568
 const EVIDENCE_PATH: &str = "testdata/evidence.binarypb";
 
 // Creates a valid evidence instance.
