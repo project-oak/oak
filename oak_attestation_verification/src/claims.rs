@@ -26,11 +26,11 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
-/// URI representing the PredicateType of a V1 Claim. To be used in in-toto statements.
+/// PredicateType which identifies a V1 Claim, for in-toto statements.
 pub const CLAIM_V1: &str = "https://github.com/project-oak/transparent-release/claim/v1";
 
-/// ClaimType for Endorsements. This is expected to be used together with `ClaimV1` as the predicate
-/// type in an in-toto statement.
+/// ClaimType for endorsements. Expected to be used together with `ClaimV1` as
+/// the predicate type in an in-toto statement.
 pub const ENDORSEMENT_V2: &str =
     "https://github.com/project-oak/transparent-release/endorsement/v2";
 
@@ -121,7 +121,7 @@ pub struct ClaimEvidence {
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct EndorsementStatement {}
 
-/// Convert the given byte array into an endorsement statement, or return an error.
+/// Convert the given byte array into an endorsement statement.
 pub fn parse_endorsement_statement(
     bytes: &[u8],
 ) -> anyhow::Result<Statement<ClaimPredicate<EndorsementStatement>>> {
@@ -189,10 +189,11 @@ mod tests {
     use crate::claims::{parse_endorsement_statement, validate_endorsement};
     use std::fs;
 
+    const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
+
     #[test]
     fn test_parse_endorsement_statement() {
-        let endorsement_path = "testdata/endorsement.json";
-        let endorsement_bytes = fs::read(endorsement_path).expect("couldn't read endorsement file");
+        let endorsement_bytes = fs::read(ENDORSEMENT_PATH).expect("couldn't read endorsement file");
         let claim = parse_endorsement_statement(&endorsement_bytes)
             .expect("couldn't parse bytes into a claim");
 
