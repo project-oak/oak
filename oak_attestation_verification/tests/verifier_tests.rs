@@ -14,12 +14,82 @@
 // limitations under the License.
 //
 
+use prost::Message;
+use std::fs;
+
 use oak_attestation_verification::{
     proto::oak::attestation::v1::{
-        attestation_results::Status, Endorsements, Evidence, ReferenceValues,
+        attestation_results::Status, Endorsements, Evidence, OakContainersEndorsements,
+        OakContainersReferenceValues, ReferenceValues, RootLayerReferenceValues,
     },
     verifier::verify,
 };
+
+// Real-world evidence for testing from https://paste.googleplex.com/5812067269869568
+const EVIDENCE_PATH: &str = "testdata/evidence.binarypb";
+
+// Creates a valid evidence instance.
+fn create_evidence() -> Evidence {
+    let serialized = fs::read(EVIDENCE_PATH).expect("could not read evidence");
+    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
+}
+
+// Creates valid endorsements for an Oak Containers chain.
+fn create_endorsements() -> Endorsements {
+    let ends = OakContainersEndorsements {
+        root_layer: None,
+        kernel_layer: None,
+        system_layer: None,
+        container_layer: None,
+    };
+    Endorsements {
+        r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::endorsements::Type::OakContainers(ends)),
+    }
+}
+
+// Creates valid reference values for an Oak Containers chain.
+fn create_reference_values() -> ReferenceValues {
+    let root_layer = RootLayerReferenceValues {
+        amd_sev: None,
+        intel_tdx: None,
+    };
+
+    let vs = OakContainersReferenceValues {
+        root_layer: Some(root_layer),
+        kernel_layer: None,
+        system_layer: None,
+        container_layer: None,
+    };
+    ReferenceValues {
+        r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::reference_values::Type::OakContainers(vs)),
+    }
+}
+
+#[test]
+fn verify_succeeds() {
+    let evidence = create_evidence();
+    let endorsements = create_endorsements();
+    let reference_values = create_reference_values();
+
+    let r = verify(&evidence, &endorsements, &reference_values);
+
+    assert!(r.status() == Status::Success);
+}
+
+#[test]
+fn verify_fails_with_manipulated_root_public_key() {
+    let mut evidence = create_evidence();
+    evidence.root_layer.as_mut().unwrap().eca_public_key[0] += 1;
+    let endorsements = create_endorsements();
+    let reference_values = create_reference_values();
+
+    let r = verify(&evidence, &endorsements, &reference_values);
+
+    println!("======================================");
+    println!("code={} reason={}", r.status as i32, r.reason);
+    println!("======================================");
+    assert!(r.status() == Status::GenericFailure);
+}
 
 #[test]
 fn verify_fails_with_empty_args() {
@@ -29,5 +99,5 @@ fn verify_fails_with_empty_args() {
 
     let r = verify(&evidence, &endorsements, &reference_values);
 
-    assert!(Status::from_i32(r.status) == Some(Status::GenericFailure));
+    assert!(r.status() == Status::GenericFailure);
 }

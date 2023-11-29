@@ -22,7 +22,7 @@ use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};
 
-use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature};
+use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_raw};
 
 /// Struct representing a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.>
@@ -206,7 +206,7 @@ pub fn get_rekor_log_entry_body(log_entry: &[u8]) -> anyhow::Result<Body> {
 pub fn verify_rekor_signature(log_entry: &[u8], rekor_public_key: &[u8]) -> anyhow::Result<()> {
     let signature_bundle = rekor_signature_bundle(log_entry)?;
 
-    verify_signature(
+    verify_signature_raw(
         &signature_bundle.signature,
         &signature_bundle.canonicalized,
         rekor_public_key,
@@ -252,7 +252,7 @@ pub fn verify_rekor_body(body: &Body, contents_bytes: &[u8]) -> anyhow::Result<(
     let public_key_pem = core::str::from_utf8(&public_key_pem_vec)?;
     let public_key = convert_pem_to_raw(public_key_pem)?;
 
-    verify_signature(&signature, contents_bytes, &public_key)
+    verify_signature_raw(&signature, contents_bytes, &public_key)
         .context("couldn't verify signature over the endorsement")
 }
 

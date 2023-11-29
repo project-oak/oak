@@ -18,7 +18,9 @@ use alloc::{string::String, vec::Vec};
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use core::{cmp::Ordering, str::FromStr};
+use coset::{cbor::value::Value, iana, Algorithm, CoseKey, KeyOperation, KeyType, Label};
 use ecdsa::{signature::Verifier, Signature};
+use p256::{ecdsa::VerifyingKey, EncodedPoint, FieldBytes};
 use sha2::{Digest, Sha256};
 
 const PEM_HEADER: &str = "-----BEGIN PUBLIC KEY-----";
@@ -59,17 +61,13 @@ pub fn convert_raw_to_pem(public_key: &[u8]) -> String {
 }
 
 /// Converts a PEM-encoded x509/PKIX public key to a verifying key.
-pub fn convert_pem_to_verifying_key(
-    public_key_pem: &str,
-) -> anyhow::Result<p256::ecdsa::VerifyingKey> {
-    p256::ecdsa::VerifyingKey::from_str(public_key_pem)
+pub fn convert_pem_to_verifying_key(public_key_pem: &str) -> anyhow::Result<VerifyingKey> {
+    VerifyingKey::from_str(public_key_pem)
         .context("couldn't parse pem as a p256::ecdsa::VerifyingKey")
 }
 
 /// Converts a raw public key to a verifying key.
-pub fn convert_raw_to_verifying_key(
-    public_key: &[u8],
-) -> anyhow::Result<p256::ecdsa::VerifyingKey> {
+pub fn convert_raw_to_verifying_key(public_key: &[u8]) -> anyhow::Result<VerifyingKey> {
     // Need to figure out how to create a VerifyingKey without the PEM detour.
     let public_key_pem = convert_raw_to_pem(public_key);
     convert_pem_to_verifying_key(&public_key_pem)
@@ -85,15 +83,15 @@ pub fn equal_keys(public_key_a: &[u8], public_key_b: &[u8]) -> anyhow::Result<bo
 }
 
 /// Verifies the signature over the contents using the public key.
-pub fn verify_signature(
+pub fn verify_signature_raw(
     signature: &[u8],
     contents: &[u8],
     public_key: &[u8],
 ) -> anyhow::Result<()> {
-    let signature = Signature::from_der(signature).context("invalid ASN.1 signature")?;
+    let sig = Signature::from_der(signature).context("invalid ASN.1 signature")?;
     let key = convert_raw_to_verifying_key(public_key)?;
 
-    key.verify(contents, &signature)
+    key.verify(contents, &sig)
         .context("couldn't verify signature")
 }
 
@@ -102,4 +100,59 @@ pub fn hash_sha2_256(input: &[u8]) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(input);
     hasher.finalize().into()
+}
+
+/// Converts a COSE_Key to a ECDSA verifying key. NB: Copied from oak_dice crate.
+pub fn cose_key_to_verifying_key(cose_key: &CoseKey) -> anyhow::Result<VerifyingKey> {
+    if cose_key.kty != KeyType::Assigned(iana::KeyType::EC2) {
+        return Err(anyhow::Error::msg("invalid key type"));
+    }
+    if cose_key.alg != Some(Algorithm::Assigned(iana::Algorithm::ES256K)) {
+        return Err(anyhow::Error::msg("invalid algorithm"));
+    }
+    if !cose_key
+        .key_ops
+        .contains(&KeyOperation::Assigned(iana::KeyOperation::Verify))
+    {
+        return Err(anyhow::Error::msg("invalid key operations"));
+    }
+    if !cose_key.params.iter().any(|(label, value)| {
+        label == &Label::Int(iana::Ec2KeyParameter::Crv as i64)
+            && value == &Value::from(iana::EllipticCurve::P_256 as u64)
+    }) {
+        return Err(anyhow::Error::msg("invalid elliptic curve"));
+    }
+    let x = cose_key
+        .params
+        .iter()
+        .find_map(|(label, value)| {
+            if let Value::Bytes(bytes) = value
+                && label == &Label::Int(iana::Ec2KeyParameter::X as i64)
+            {
+                Some(bytes.clone())
+            } else {
+                None
+            }
+        })
+        .ok_or(anyhow::anyhow!("x component of public key not found"))?;
+    let y = cose_key
+        .params
+        .iter()
+        .find_map(|(label, value)| {
+            if let Value::Bytes(bytes) = value
+                && label == &Label::Int(iana::Ec2KeyParameter::Y as i64)
+            {
+                Some(bytes.clone())
+            } else {
+                None
+            }
+        })
+        .ok_or(anyhow::anyhow!("x component of public key not found"))?;
+    let encoded_point = EncodedPoint::from_affine_coordinates(
+        FieldBytes::from_slice(&x),
+        FieldBytes::from_slice(&y),
+        false,
+    );
+    VerifyingKey::from_encoded_point(&encoded_point)
+        .map_err(|_err| anyhow::Error::msg("invalid public key coordinates"))
 }

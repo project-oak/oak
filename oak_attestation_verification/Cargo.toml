@@ -9,6 +9,7 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 base64 = "*"
+coset = { version = "*", default-features = false }
 ecdsa = { version = "*", features = ["pkcs8", "pem"] }
 hex = "*"
 oak_transparency_claims = { workspace = true }
