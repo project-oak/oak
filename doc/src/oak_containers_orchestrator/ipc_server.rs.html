@@ -133,12 +133,12 @@
     },
 };
 <span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>futures::FutureExt;
 <span class="kw">use </span>oak_containers_orchestrator_client::LauncherClient;
 <span class="kw">use </span>oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
 <span class="kw">use </span>std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
-<span class="kw">use </span>tokio::{fs::set_permissions, net::UnixListener, sync::oneshot::Receiver};
+<span class="kw">use </span>tokio::{fs::set_permissions, net::UnixListener};
 <span class="kw">use </span>tokio_stream::wrappers::UnixListenerStream;
+<span class="kw">use </span>tokio_util::sync::CancellationToken;
 <span class="kw">use </span>tonic::{transport::Server, Request, Response};
 
 <span class="kw">pub struct </span>ServiceImplementation {
@@ -192,7 +192,7 @@
     key_store: Arc&lt;KeyStore&gt;,
     application_config: Vec&lt;u8&gt;,
     launcher_client: Arc&lt;LauncherClient&gt;,
-    shutdown_receiver: Receiver&lt;()&gt;,
+    cancellation_token: CancellationToken,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt;
 <span class="kw">where
     </span>P: AsRef&lt;std::path::Path&gt; + Clone,
@@ -215,7 +215,7 @@
     Server::builder()
         .add_service(OrchestratorServer::new(service_instance))
         .add_service(OrchestratorCryptoServer::new(crypto_service_instance))
-        .serve_with_incoming_shutdown(uds_stream, shutdown_receiver.map(|<span class="kw">_</span>| ()))
+        .serve_with_incoming_shutdown(uds_stream, cancellation_token.cancelled())
         .<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())
