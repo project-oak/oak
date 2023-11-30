@@ -56,7 +56,7 @@ pub fn verify_internal(
     endorsements: &Endorsements,
     reference_values: &ReferenceValues,
 ) -> anyhow::Result<()> {
-    verify_certificate_chain(evidence)?;
+    verify_dice_chain(evidence)?;
 
     match (
         endorsements.r#type.as_ref(),
@@ -80,7 +80,8 @@ pub fn verify_internal(
     }
 }
 
-fn verify_certificate_chain(evidence: &Evidence) -> anyhow::Result<()> {
+/// Verifies signatures along the certificate chain induced by DICE layers.
+fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<()> {
     let root_layer = evidence
         .root_layer
         .as_ref()
@@ -121,7 +122,7 @@ fn verify_oak_containers(
     _endorsements: &OakContainersEndorsements,
     _reference_values: &OakContainersReferenceValues,
 ) -> anyhow::Result<()> {
-    Ok(()) // Work in progress
+    Ok(()) // TODO(#4074): Needs implementation, work in progress.
 }
 
 fn verify_cb(
