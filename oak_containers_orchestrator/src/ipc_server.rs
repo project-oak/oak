@@ -22,12 +22,12 @@ use crate::{
     },
 };
 use anyhow::Context;
-use futures::FutureExt;
 use oak_containers_orchestrator_client::LauncherClient;
 use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
 use std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
-use tokio::{fs::set_permissions, net::UnixListener, sync::oneshot::Receiver};
+use tokio::{fs::set_permissions, net::UnixListener};
 use tokio_stream::wrappers::UnixListenerStream;
+use tokio_util::sync::CancellationToken;
 use tonic::{transport::Server, Request, Response};
 
 pub struct ServiceImplementation {
@@ -81,7 +81,7 @@ pub async fn create<P>(
     key_store: Arc<KeyStore>,
     application_config: Vec<u8>,
     launcher_client: Arc<LauncherClient>,
-    shutdown_receiver: Receiver<()>,
+    cancellation_token: CancellationToken,
 ) -> Result<(), anyhow::Error>
 where
     P: AsRef<std::path::Path> + Clone,
@@ -104,7 +104,7 @@ where
     Server::builder()
         .add_service(OrchestratorServer::new(service_instance))
         .add_service(OrchestratorCryptoServer::new(crypto_service_instance))
-        .serve_with_incoming_shutdown(uds_stream, shutdown_receiver.map(|_| ()))
+        .serve_with_incoming_shutdown(uds_stream, cancellation_token.cancelled())
         .await?;
 
     Ok(())
