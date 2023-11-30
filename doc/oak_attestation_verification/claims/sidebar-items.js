@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CLAIM_V1","ENDORSEMENT_V2","STATEMENT_INTOTO_V01"],"enum":["InvalidClaimData"],"fn":["parse_endorsement_statement","validate_claim","validate_endorsement","verify_validity_duration"],"struct":["ClaimEvidence","ClaimPredicate","ClaimValidity","EndorsementStatement","Statement","Subject"],"type":["DigestSet"]};

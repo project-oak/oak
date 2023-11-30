@@ -109,9 +109,6 @@
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
-<a href="#112" id="112">112</a>
-<a href="#113" id="113">113</a>
-<a href="#114" id="114">114</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -130,16 +127,13 @@
 
 </span><span class="doccomment">//! Verifies binary endorsements as coming from Transparent Release.
 
-</span><span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
-<span class="kw">use </span>oak_transparency_claims::claims::{
-    parse_endorsement_statement, validate_endorsement, verify_validity_duration,
-};
-
-<span class="kw">use crate</span>::{
+</span><span class="kw">use crate</span>::{
+    claims::{parse_endorsement_statement, validate_endorsement, verify_validity_duration},
     rekor::{get_rekor_log_entry_body, verify_rekor_log_entry},
     util::{convert_pem_to_raw, equal_keys},
 };
+<span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
 
 <span class="doccomment">/// Verifies the binary endorsement for a given measurement.
 </span><span class="kw">pub fn </span>verify_binary_endorsement(

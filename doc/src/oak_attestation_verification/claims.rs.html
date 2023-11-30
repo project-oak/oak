@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_transparency_claims/src/claims.rs`."><title>claims.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_transparency_claims" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (df871fbf0 2023-10-24)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `oak_attestation_verification/src/claims.rs`."><title>claims.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_attestation_verification" data-themes="" data-resource-suffix="" data-rustdoc-version="1.75.0-nightly (df871fbf0 2023-10-24)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-5f34af1a0ee6bacd.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -174,6 +174,33 @@
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
 <a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -190,25 +217,49 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! This module contains structs for specifying claims about software artifacts. The structs in
-//! this module must be kept in sync with the structs defined in
-//! &lt;https://github.com/project-oak/transparent-release/blob/main/pkg/claims/claim.go&gt;.
+</span><span class="doccomment">//! Contains structs for specifying in-toto statements and claims about
+//! software artifacts. See also
+//! &lt;https://github.com/project-oak/transparent-release/blob/main/pkg/claims/claim.go&gt;,
+//! &lt;https://github.com/project-oak/transparent-release/blob/main/pkg/intoto/intoto.go&gt;.
 
 </span><span class="kw">extern crate </span>alloc;
 
-<span class="kw">use </span><span class="kw">crate</span>::intoto::{DigestSet, Statement, STATEMENT_INTOTO_V01};
-<span class="kw">use </span>alloc::{string::String, vec::Vec};
+<span class="kw">use </span>alloc::{collections::BTreeMap, string::String, vec::Vec};
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>time::OffsetDateTime;
 
-<span class="doccomment">/// URI representing the PredicateType of a V1 Claim. To be used in in-toto statements.
+<span class="doccomment">/// PredicateType which identifies a V1 Claim, for in-toto statements.
 </span><span class="kw">pub const </span>CLAIM_V1: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://github.com/project-oak/transparent-release/claim/v1&quot;</span>;
 
-<span class="doccomment">/// ClaimType for Endorsements. This is expected to be used together with `ClaimV1` as the predicate
-/// type in an in-toto statement.
+<span class="doccomment">/// ClaimType for endorsements. Expected to be used together with `ClaimV1` as
+/// the predicate type in an in-toto statement.
 </span><span class="kw">pub const </span>ENDORSEMENT_V2: <span class="kw-2">&amp;</span>str =
     <span class="string">&quot;https://github.com/project-oak/transparent-release/endorsement/v2&quot;</span>;
+
+<span class="doccomment">/// URI representing in-toto v01 statements. This is constant for all predicate
+/// types.
+</span><span class="kw">pub const </span>STATEMENT_INTOTO_V01: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://in-toto.io/Statement/v0.1&quot;</span>;
+
+<span class="comment">// A map from algorithm name to lowercase hex-encoded value.
+</span><span class="kw">pub type </span>DigestSet = BTreeMap&lt;String, String&gt;;
+
+<span class="doccomment">/// A software artifact identified by its name and a set of artifacts.
+</span><span class="attr">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="kw">pub struct </span>Subject {
+    <span class="kw">pub </span>name: String,
+    <span class="kw">pub </span>digest: DigestSet,
+}
+
+<span class="doccomment">/// Represents a generic statement that binds a predicate to a subject.
+</span><span class="attr">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="kw">pub struct </span>Statement&lt;P&gt; {
+    <span class="kw">pub </span>_type: String,
+    <span class="attr">#[serde(rename = <span class="string">&quot;predicateType&quot;</span>)]
+    </span><span class="kw">pub </span>predicate_type: String,
+    <span class="kw">pub </span>subject: Vec&lt;Subject&gt;,
+    <span class="kw">pub </span>predicate: P,
+}
 
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">pub enum </span>InvalidClaimData {
@@ -272,14 +323,14 @@
 <span class="attr">#[derive(Debug, Deserialize, PartialEq, Serialize)]
 </span><span class="kw">pub struct </span>EndorsementStatement {}
 
-<span class="doccomment">/// Convert the given byte array into an endorsement statement, or return an error.
+<span class="doccomment">/// Converts the given byte array into an endorsement statement.
 </span><span class="kw">pub fn </span>parse_endorsement_statement(
     bytes: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;Statement&lt;ClaimPredicate&lt;EndorsementStatement&gt;&gt;&gt; {
     serde_json::from_slice(bytes).context(<span class="string">&quot;parsing endorsement bytes&quot;</span>)
 }
 
-<span class="doccomment">/// Check that the given statement is a valid claim:
+<span class="doccomment">/// Checks that the given statement is a valid claim:
 /// - has valid Statement and Predicate types, and
 /// - has a valid validity duration.
 </span><span class="kw">pub fn </span>validate_claim&lt;T&gt;(claim: <span class="kw-2">&amp;</span>Statement&lt;ClaimPredicate&lt;T&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), InvalidClaimData&gt; {
@@ -305,7 +356,8 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Check that the input claim has a validity duration, and that the validity is not expired.
+<span class="doccomment">/// Checks that the input claim has a validity duration, and that the specified
+/// time is inside the validity period.
 </span><span class="kw">pub fn </span>verify_validity_duration&lt;T&gt;(
     now_utc_millis: i64,
     claim: <span class="kw-2">&amp;</span>Statement&lt;ClaimPredicate&lt;T&gt;&gt;,
@@ -324,7 +376,8 @@
     }
 }
 
-<span class="doccomment">/// Check that the given endorsement statement, is a valid claim, and had the correct claim type.
+<span class="doccomment">/// Checks that the given endorsement statement is a valid and has the correct
+/// claim type.
 </span><span class="kw">pub fn </span>validate_endorsement(
     claim: <span class="kw-2">&amp;</span>Statement&lt;ClaimPredicate&lt;EndorsementStatement&gt;&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), InvalidClaimData&gt; {
@@ -340,10 +393,11 @@
     <span class="kw">use </span><span class="kw">crate</span>::claims::{parse_endorsement_statement, validate_endorsement};
     <span class="kw">use </span>std::fs;
 
+    <span class="kw">const </span>ENDORSEMENT_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;testdata/endorsement.json&quot;</span>;
+
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_parse_endorsement_statement() {
-        <span class="kw">let </span>endorsement_path = <span class="string">&quot;testdata/endorsement.json&quot;</span>;
-        <span class="kw">let </span>endorsement_bytes = fs::read(endorsement_path).expect(<span class="string">&quot;couldn&#39;t read endorsement file&quot;</span>);
+        <span class="kw">let </span>endorsement_bytes = fs::read(ENDORSEMENT_PATH).expect(<span class="string">&quot;couldn&#39;t read endorsement file&quot;</span>);
         <span class="kw">let </span>claim = parse_endorsement_statement(<span class="kw-2">&amp;</span>endorsement_bytes)
             .expect(<span class="string">&quot;couldn&#39;t parse bytes into a claim&quot;</span>);
 
