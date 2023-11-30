@@ -1864,14 +1864,13 @@ dependencies = [
  "ecdsa",
  "hex",
  "micro_rpc_build",
- "oak_transparency_claims",
  "p256",
  "prost",
  "serde",
  "serde_jcs",
  "serde_json",
  "sha2",
- "tonic",
+ "time",
 ]
 
 [[package]]
@@ -2539,16 +2538,6 @@ dependencies = [
  "bitflags 2.3.3",
  "strum",
  "x86_64",
-]
-
-[[package]]
-name = "oak_transparency_claims"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "serde",
- "serde_json",
- "time",
 ]
 
 [[package]]
