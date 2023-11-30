@@ -48,8 +48,7 @@ pub struct Subject {
     pub digest: DigestSet,
 }
 
-/// This struct represents a generic statement that binds a predicate to a
-/// particular subject.
+/// Represents a generic statement that binds a predicate to a subject.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Statement<P> {
     pub _type: String,
@@ -121,14 +120,14 @@ pub struct ClaimEvidence {
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct EndorsementStatement {}
 
-/// Convert the given byte array into an endorsement statement.
+/// Converts the given byte array into an endorsement statement.
 pub fn parse_endorsement_statement(
     bytes: &[u8],
 ) -> anyhow::Result<Statement<ClaimPredicate<EndorsementStatement>>> {
     serde_json::from_slice(bytes).context("parsing endorsement bytes")
 }
 
-/// Check that the given statement is a valid claim:
+/// Checks that the given statement is a valid claim:
 /// - has valid Statement and Predicate types, and
 /// - has a valid validity duration.
 pub fn validate_claim<T>(claim: &Statement<ClaimPredicate<T>>) -> Result<(), InvalidClaimData> {
@@ -154,7 +153,8 @@ pub fn validate_claim<T>(claim: &Statement<ClaimPredicate<T>>) -> Result<(), Inv
     Ok(())
 }
 
-/// Check that the input claim has a validity duration, and that the validity is not expired.
+/// Checks that the input claim has a validity duration, and that the specified
+/// time is inside the validity period.
 pub fn verify_validity_duration<T>(
     now_utc_millis: i64,
     claim: &Statement<ClaimPredicate<T>>,
@@ -173,7 +173,8 @@ pub fn verify_validity_duration<T>(
     }
 }
 
-/// Check that the given endorsement statement, is a valid claim, and had the correct claim type.
+/// Checks that the given endorsement statement is a valid and has the correct
+/// claim type.
 pub fn validate_endorsement(
     claim: &Statement<ClaimPredicate<EndorsementStatement>>,
 ) -> Result<(), InvalidClaimData> {
