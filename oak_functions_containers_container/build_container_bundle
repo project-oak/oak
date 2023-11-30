@@ -17,6 +17,7 @@ mkdir --parents ./target
 cargo build \
     --package=oak_functions_containers_app \
     --target=x86_64-unknown-linux-musl \
+    --release \
     -Zunstable-options \
     --out-dir=./target/
 
