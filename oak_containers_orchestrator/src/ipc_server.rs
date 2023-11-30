@@ -22,11 +22,10 @@ use crate::{
     },
 };
 use anyhow::Context;
-use futures::FutureExt;
 use oak_containers_orchestrator_client::LauncherClient;
 use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
 use std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
-use tokio::{fs::set_permissions, net::UnixListener, sync::oneshot::Receiver};
+use tokio::{fs::set_permissions, net::UnixListener};
 use tokio_stream::wrappers::UnixListenerStream;
 use tokio_util::sync::CancellationToken;
 use tonic::{transport::Server, Request, Response};
@@ -82,7 +81,6 @@ pub async fn create<P>(
     key_store: Arc<KeyStore>,
     application_config: Vec<u8>,
     launcher_client: Arc<LauncherClient>,
-    shutdown_receiver: Receiver<()>,
     cancellation_token: CancellationToken,
 ) -> Result<(), anyhow::Error>
 where
