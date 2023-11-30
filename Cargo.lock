@@ -1864,6 +1864,7 @@ dependencies = [
  "ecdsa",
  "hex",
  "micro_rpc_build",
+ "oak_dice",
  "oak_transparency_claims",
  "p256",
  "prost",

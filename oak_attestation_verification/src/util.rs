@@ -18,9 +18,8 @@ use alloc::{string::String, vec::Vec};
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use core::{cmp::Ordering, str::FromStr};
-use coset::{cbor::value::Value, iana, Algorithm, CoseKey, KeyOperation, KeyType, Label};
 use ecdsa::{signature::Verifier, Signature};
-use p256::{ecdsa::VerifyingKey, EncodedPoint, FieldBytes};
+use p256::ecdsa::VerifyingKey;
 use sha2::{Digest, Sha256};
 
 const PEM_HEADER: &str = "-----BEGIN PUBLIC KEY-----";
@@ -100,59 +99,4 @@ pub fn hash_sha2_256(input: &[u8]) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(input);
     hasher.finalize().into()
-}
-
-/// Converts a COSE_Key to a ECDSA verifying key. NB: Copied from oak_dice crate.
-pub fn cose_key_to_verifying_key(cose_key: &CoseKey) -> anyhow::Result<VerifyingKey> {
-    if cose_key.kty != KeyType::Assigned(iana::KeyType::EC2) {
-        anyhow::bail!("invalid key type");
-    }
-    if cose_key.alg != Some(Algorithm::Assigned(iana::Algorithm::ES256K)) {
-        anyhow::bail!("invalid algorithm");
-    }
-    if !cose_key
-        .key_ops
-        .contains(&KeyOperation::Assigned(iana::KeyOperation::Verify))
-    {
-        anyhow::bail!("invalid key operations");
-    }
-    if !cose_key.params.iter().any(|(label, value)| {
-        label == &Label::Int(iana::Ec2KeyParameter::Crv as i64)
-            && value == &Value::from(iana::EllipticCurve::P_256 as u64)
-    }) {
-        anyhow::bail!("invalid elliptic curve");
-    }
-    let x = cose_key
-        .params
-        .iter()
-        .find_map(|(label, value)| {
-            if let Value::Bytes(bytes) = value
-                && label == &Label::Int(iana::Ec2KeyParameter::X as i64)
-            {
-                Some(bytes.clone())
-            } else {
-                None
-            }
-        })
-        .ok_or(anyhow::anyhow!("x component of public key not found"))?;
-    let y = cose_key
-        .params
-        .iter()
-        .find_map(|(label, value)| {
-            if let Value::Bytes(bytes) = value
-                && label == &Label::Int(iana::Ec2KeyParameter::Y as i64)
-            {
-                Some(bytes.clone())
-            } else {
-                None
-            }
-        })
-        .ok_or(anyhow::anyhow!("x component of public key not found"))?;
-    let encoded_point = EncodedPoint::from_affine_coordinates(
-        FieldBytes::from_slice(&x),
-        FieldBytes::from_slice(&y),
-        false,
-    );
-    VerifyingKey::from_encoded_point(&encoded_point)
-        .map_err(|_err| anyhow::anyhow!("invalid public key coordinates"))
 }
