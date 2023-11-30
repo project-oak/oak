@@ -19,6 +19,7 @@ use crate::proto::oak::containers::v1::{
 };
 use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
 use std::sync::Arc;
+use tokio_util::sync::CancellationToken;
 use tonic::{Request, Response};
 
 pub struct KeyStore {

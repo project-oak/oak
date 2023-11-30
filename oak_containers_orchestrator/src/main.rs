@@ -21,6 +21,7 @@ use oak_dice::cert::generate_ecdsa_key_pair;
 use oak_remote_attestation::attester::{Attester, EmptyAttestationReportGenerator};
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::oneshot::channel;
+use tokio_util::sync::CancellationToken;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -99,13 +100,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .context(format!("error resolving user {}", args.runtime_user))?
         .context(format!("user `{}` not found", args.runtime_user))?;
 
+    let cancellation_token = CancellationToken::new();
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
             &args.ipc_socket_path,
             key_store,
             application_config,
             launcher_client,
-            shutdown_receiver
+            shutdown_receiver,
+            cancellation_token.clone(),
         ),
         oak_containers_orchestrator::container_runtime::run(
             &container_bundle,
@@ -113,7 +116,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             user.uid,
             user.gid,
             &args.ipc_socket_path,
-            exit_notification_sender
+            exit_notification_sender,
+            cancellation_token,
         ),
     )?;
 

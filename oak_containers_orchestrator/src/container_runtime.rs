@@ -21,6 +21,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tokio::sync::oneshot::Sender;
+use tokio_util::sync::CancellationToken;
 
 pub async fn run(
     container_bundle: &[u8],
@@ -29,6 +30,7 @@ pub async fn run(
     runtime_gid: Gid,
     ipc_socket_path: &Path,
     exit_notification_sender: Sender<()>,
+    cancellation_token: CancellationToken,
 ) -> Result<(), anyhow::Error> {
     tokio::fs::create_dir_all(container_dir).await?;
     log::info!("Unpacking container bundle");
@@ -118,6 +120,7 @@ pub async fn run(
     ))?;
     log::info!("Container exited with status {status:?}");
 
-    let _ = exit_notification_sender.send(());
+    // let _ = exit_notification_sender.send(());
+    cancellation_token.cancel();
     Ok(())
 }

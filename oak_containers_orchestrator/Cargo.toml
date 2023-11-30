@@ -47,6 +47,7 @@ tokio = { version = "*", features = [
   "net",
 ] }
 tokio-stream = { version = "*", features = ["net"] }
+tokio-util = { version = "*", default-features = false }
 tonic = { workspace = true }
 walkdir = "*"
 
