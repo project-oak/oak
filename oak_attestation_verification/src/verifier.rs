@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Provides top-level verification based on evidence, endorsments and reference values.
+//! Provides verification based on evidence, endorsements and reference values.
 
 use crate::alloc::string::ToString;
 
@@ -85,7 +85,7 @@ fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<()> {
     let root_layer = evidence
         .root_layer
         .as_ref()
-        .ok_or(anyhow::anyhow!("no root layer evidence"))?;
+        .ok_or_else(|| anyhow::anyhow!("no root layer evidence"))?;
     let cose_key = CoseKey::from_slice(&root_layer.eca_public_key)
         .map_err(|_cose_err| anyhow::anyhow!("couldn't deserialize root layer public key"))?;
     let mut verifying_key =
@@ -98,7 +98,9 @@ fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<()> {
             let sig = Signature::from_slice(signature)?;
             verifying_key.verify(contents, &sig)
         })?;
-        let payload = cert.payload.ok_or(anyhow::anyhow!("no cert payload"))?;
+        let payload = cert
+            .payload
+            .ok_or_else(|| anyhow::anyhow!("no cert payload"))?;
         let claims = ClaimsSet::from_slice(&payload)
             .map_err(|_cose_err| anyhow::anyhow!("could not parse claims set"))?;
         let cose_key =
