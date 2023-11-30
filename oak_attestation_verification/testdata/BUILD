@@ -22,6 +22,8 @@ package(
 exports_files([
     "endorsement.json",
     "endorsement.json.sig",
+    "evidence.binarypb",
+    "evidence.textproto",
     "logentry.json",
     "oak-development.pem",
     "rekor_public_key.pem",

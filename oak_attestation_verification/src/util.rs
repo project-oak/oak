@@ -19,6 +19,7 @@ use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use core::{cmp::Ordering, str::FromStr};
 use ecdsa::{signature::Verifier, Signature};
+use p256::ecdsa::VerifyingKey;
 use sha2::{Digest, Sha256};
 
 const PEM_HEADER: &str = "-----BEGIN PUBLIC KEY-----";
@@ -59,17 +60,13 @@ pub fn convert_raw_to_pem(public_key: &[u8]) -> String {
 }
 
 /// Converts a PEM-encoded x509/PKIX public key to a verifying key.
-pub fn convert_pem_to_verifying_key(
-    public_key_pem: &str,
-) -> anyhow::Result<p256::ecdsa::VerifyingKey> {
-    p256::ecdsa::VerifyingKey::from_str(public_key_pem)
+pub fn convert_pem_to_verifying_key(public_key_pem: &str) -> anyhow::Result<VerifyingKey> {
+    VerifyingKey::from_str(public_key_pem)
         .context("couldn't parse pem as a p256::ecdsa::VerifyingKey")
 }
 
 /// Converts a raw public key to a verifying key.
-pub fn convert_raw_to_verifying_key(
-    public_key: &[u8],
-) -> anyhow::Result<p256::ecdsa::VerifyingKey> {
+pub fn convert_raw_to_verifying_key(public_key: &[u8]) -> anyhow::Result<VerifyingKey> {
     // Need to figure out how to create a VerifyingKey without the PEM detour.
     let public_key_pem = convert_raw_to_pem(public_key);
     convert_pem_to_verifying_key(&public_key_pem)
@@ -85,15 +82,15 @@ pub fn equal_keys(public_key_a: &[u8], public_key_b: &[u8]) -> anyhow::Result<bo
 }
 
 /// Verifies the signature over the contents using the public key.
-pub fn verify_signature(
+pub fn verify_signature_raw(
     signature: &[u8],
     contents: &[u8],
     public_key: &[u8],
 ) -> anyhow::Result<()> {
-    let signature = Signature::from_der(signature).context("invalid ASN.1 signature")?;
+    let sig = Signature::from_der(signature).context("invalid ASN.1 signature")?;
     let key = convert_raw_to_verifying_key(public_key)?;
 
-    key.verify(contents, &signature)
+    key.verify(contents, &sig)
         .context("couldn't verify signature")
 }
 
