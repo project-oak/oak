@@ -287,7 +287,7 @@
 <span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 
-<span class="kw">use </span><span class="kw">crate</span>::util::{convert_pem_to_raw, hash_sha2_256, verify_signature};
+<span class="kw">use </span><span class="kw">crate</span>::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_raw};
 
 <span class="doccomment">/// Struct representing a Rekor LogEntry.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.&gt;
@@ -471,7 +471,7 @@
 </span><span class="kw">pub fn </span>verify_rekor_signature(log_entry: <span class="kw-2">&amp;</span>[u8], rekor_public_key: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">let </span>signature_bundle = rekor_signature_bundle(log_entry)<span class="question-mark">?</span>;
 
-    verify_signature(
+    verify_signature_raw(
         <span class="kw-2">&amp;</span>signature_bundle.signature,
         <span class="kw-2">&amp;</span>signature_bundle.canonicalized,
         rekor_public_key,
@@ -517,7 +517,7 @@
     <span class="kw">let </span>public_key_pem = core::str::from_utf8(<span class="kw-2">&amp;</span>public_key_pem_vec)<span class="question-mark">?</span>;
     <span class="kw">let </span>public_key = convert_pem_to_raw(public_key_pem)<span class="question-mark">?</span>;
 
-    verify_signature(<span class="kw-2">&amp;</span>signature, contents_bytes, <span class="kw-2">&amp;</span>public_key)
+    verify_signature_raw(<span class="kw-2">&amp;</span>signature, contents_bytes, <span class="kw-2">&amp;</span>public_key)
         .context(<span class="string">&quot;couldn&#39;t verify signature over the endorsement&quot;</span>)
 }
 

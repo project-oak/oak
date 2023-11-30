@@ -100,6 +100,40 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -116,7 +150,7 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">//! Provides top-level verification based on evidence, endorsments and reference values.
+</span><span class="doccomment">//! Provides verification based on evidence, endorsements and reference values.
 
 </span><span class="kw">use </span><span class="kw">crate</span>::alloc::string::ToString;
 
@@ -126,6 +160,13 @@
     OakContainersReferenceValues, OakRestrictedKernelEndorsements,
     OakRestrictedKernelReferenceValues, ReferenceValues,
 };
+
+<span class="kw">use </span>coset::{cwt::ClaimsSet, CborSerializable, CoseKey};
+<span class="kw">use </span>ecdsa::{signature::Verifier, Signature};
+<span class="kw">use </span>oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
+
+<span class="comment">// We don&#39;t use additional authenticated data.
+</span><span class="kw">const </span>ADDITIONAL_DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;&quot;</span>;
 
 <span class="doccomment">/// Verifies entire setup by forwarding to individual setup types.
 </span><span class="kw">pub fn </span>verify(
@@ -151,7 +192,7 @@
     endorsements: <span class="kw-2">&amp;</span>Endorsements,
     reference_values: <span class="kw-2">&amp;</span>ReferenceValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    verify_certificate_chain(evidence)<span class="question-mark">?</span>;
+    verify_dice_chain(evidence)<span class="question-mark">?</span>;
 
     <span class="kw">match </span>(
         endorsements.r#type.as_ref(),
@@ -175,8 +216,35 @@
     }
 }
 
-<span class="kw">fn </span>verify_certificate_chain(_evidence: <span class="kw-2">&amp;</span>Evidence) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Needs implementation&quot;</span>)
+<span class="doccomment">/// Verifies signatures along the certificate chain induced by DICE layers.
+</span><span class="kw">fn </span>verify_dice_chain(evidence: <span class="kw-2">&amp;</span>Evidence) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>root_layer = evidence
+        .root_layer
+        .as_ref()
+        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no root layer evidence&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">let </span>cose_key = CoseKey::from_slice(<span class="kw-2">&amp;</span>root_layer.eca_public_key)
+        .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialize root layer public key&quot;</span>))<span class="question-mark">?</span>;
+    <span class="kw">let </span><span class="kw-2">mut </span>verifying_key =
+        cose_key_to_verifying_key(<span class="kw-2">&amp;</span>cose_key).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
+
+    <span class="kw">for </span>layer <span class="kw">in </span>evidence.layers.iter() {
+        <span class="kw">let </span>cert = coset::CoseSign1::from_slice(<span class="kw-2">&amp;</span>layer.eca_certificate)
+            .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse certificate&quot;</span>))<span class="question-mark">?</span>;
+        cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
+            <span class="kw">let </span>sig = Signature::from_slice(signature)<span class="question-mark">?</span>;
+            verifying_key.verify(contents, <span class="kw-2">&amp;</span>sig)
+        })<span class="question-mark">?</span>;
+        <span class="kw">let </span>payload = cert
+            .payload
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no cert payload&quot;</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>claims = ClaimsSet::from_slice(<span class="kw-2">&amp;</span>payload)
+            .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse claims set&quot;</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>cose_key =
+            get_public_key_from_claims_set(<span class="kw-2">&amp;</span>claims).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
+        verifying_key = cose_key_to_verifying_key(<span class="kw-2">&amp;</span>cose_key).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
+    }
+
+    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="kw">fn </span>verify_oak_restricted_kernel(
@@ -192,8 +260,8 @@
     _endorsements: <span class="kw-2">&amp;</span>OakContainersEndorsements,
     _reference_values: <span class="kw-2">&amp;</span>OakContainersReferenceValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Needs implementation&quot;</span>)
-}
+    <span class="prelude-val">Ok</span>(()) <span class="comment">// TODO(#4074): Needs implementation, work in progress.
+</span>}
 
 <span class="kw">fn </span>verify_cb(
     _evidence: <span class="kw-2">&amp;</span>Evidence,
