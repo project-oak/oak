@@ -18,6 +18,7 @@
 
 extern crate alloc;
 
+// Inlined from tonic::include_proto in order to cut dependency on tonic.
 macro_rules! include_proto {
     ($package: tt) => {
         include!(concat!(env!("OUT_DIR"), concat!("/", $package, ".rs")));
