@@ -1971,7 +1971,6 @@ dependencies = [
  "ciborium",
  "clap",
  "coset",
- "futures",
  "log",
  "nix 0.26.2",
  "oak_containers_orchestrator_client",

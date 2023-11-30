@@ -10,7 +10,6 @@ anyhow = "*"
 ciborium = { version = "*", default-features = false }
 clap = { version = "*", features = ["derive"] }
 coset = { version = "*", features = ["std"] }
-futures = "*"
 log = "*"
 nix = "*"
 oak_containers_orchestrator_client = { workspace = true }
