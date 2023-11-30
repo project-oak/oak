@@ -49,7 +49,6 @@ members = [
   "oak_sev_guest",
   "oak_simple_io",
   "oak_tdx_guest",
-  "oak_transparency_claims",
   "oak_virtio",
   "sev_serial",
   "snp_measurement",
@@ -106,7 +105,6 @@ oak_restricted_kernel_interface = { path = "./oak_restricted_kernel_interface" }
 oak_sev_guest = { path = "./oak_sev_guest", default-features = false }
 oak_simple_io = { path = "./oak_simple_io" }
 oak_tdx_guest = { path = "./oak_tdx_guest" }
-oak_transparency_claims = { path = "./oak_transparency_claims" }
 oak_virtio = { path = "./oak_virtio" }
 sev_serial = { path = "./sev_serial" }
 xtask = { path = "./xtask" }

@@ -18,17 +18,25 @@
 
 extern crate alloc;
 
+// Inlined from tonic::include_proto in order to cut dependency on tonic.
+macro_rules! include_proto {
+    ($package: tt) => {
+        include!(concat!(env!("OUT_DIR"), concat!("/", $package, ".rs")));
+    };
+}
+
 pub mod proto {
     pub mod oak {
-        tonic::include_proto!("oak");
+        include_proto!("oak");
         pub mod attestation {
             pub mod v1 {
-                tonic::include_proto!("oak.attestation.v1");
+                include_proto!("oak.attestation.v1");
             }
         }
     }
 }
 
+pub mod claims;
 pub mod endorsement;
 pub mod rekor;
 pub mod util;

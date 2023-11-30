@@ -13,15 +13,13 @@ coset = { version = "*", default-features = false }
 ecdsa = { version = "*", features = ["pkcs8", "pem"] }
 hex = "*"
 oak_dice = { workspace = true }
-oak_transparency_claims = { workspace = true }
 prost = { workspace = true }
 p256 = { version = "*", features = ["ecdsa-core", "ecdsa", "pem"] }
 serde = { version = "*", features = ["derive"] }
 serde_jcs = "*"
 serde_json = "*"
 sha2 = { version = "*", default-features = false }
-tonic = { workspace = true }
+time = { version = "0.3.28", features = ["serde", "parsing", "formatting"] }
 
 [build-dependencies]
 micro_rpc_build = { workspace = true }
-base64 = "*"
