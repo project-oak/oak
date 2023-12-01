@@ -236,8 +236,8 @@ async fn it_should_support_lookup_data() {
 
     let chunk = LookupDataChunk {
         items: vec![LookupDataEntry {
-            key: LOOKUP_TEST_KEY.to_vec(),
-            value: LOOKUP_TEST_VALUE.to_vec(),
+            key: LOOKUP_TEST_KEY.into(),
+            value: LOOKUP_TEST_VALUE.into(),
         }],
     };
 

@@ -2313,6 +2313,7 @@ dependencies = [
  "async-trait",
  "benchmark",
  "byteorder",
+ "bytes",
  "env_logger",
  "hashbrown 0.13.2",
  "log",

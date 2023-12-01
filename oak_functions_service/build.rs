@@ -25,6 +25,7 @@ fn main() {
         &[env!("WORKSPACE_ROOT")],
         micro_rpc_build::CompileOptions {
             receiver_type: ReceiverType::RefSelf,
+            bytes: vec![".oak.functions.LookupDataEntry".to_string()],
         },
     );
 }
