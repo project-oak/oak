@@ -326,6 +326,7 @@
 <a href="#326" id="326">326</a>
 <a href="#327" id="327">327</a>
 <a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -349,13 +350,14 @@
     sync::Arc,
     vec::Vec,
 };
+<span class="kw">use </span>bytes::Bytes;
 <span class="kw">use </span>hashbrown::HashMap;
 <span class="kw">use </span>log::{info, Level};
 <span class="kw">use </span>spinning_top::Spinlock;
 
 <span class="comment">// Data maintains the invariant on lookup data to have [at most one
 // value](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md#invariant-at-most-one-value)
-</span><span class="kw">pub type </span>Data = HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;;
+</span><span class="kw">pub type </span>Data = HashMap&lt;Bytes, Bytes&gt;;
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">enum </span>BuilderState {
@@ -382,7 +384,7 @@
     ///
     /// Note, if new data contains a key already present in the existing data, calling extend
     /// overwrites the value.
-    </span><span class="kw">fn </span>extend&lt;T: IntoIterator&lt;Item = (Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new_data: T) {
+    </span><span class="kw">fn </span>extend&lt;T: IntoIterator&lt;Item = (Bytes, Bytes)&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new_data: T) {
         <span class="self">self</span>.state = BuilderState::Extending;
         <span class="self">self</span>.data.extend(new_data);
     }
@@ -432,7 +434,7 @@
         test_manager
     }
 
-    <span class="kw">pub fn </span>extend_next_lookup_data&lt;T: IntoIterator&lt;Item = (Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, new_data: T) {
+    <span class="kw">pub fn </span>extend_next_lookup_data&lt;T: IntoIterator&lt;Item = (Bytes, Bytes)&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, new_data: T) {
         <span class="macro">info!</span>(<span class="string">&quot;Start extending next lookup data&quot;</span>);
         {
             <span class="kw">let </span><span class="kw-2">mut </span>data_builder = <span class="self">self</span>.data_builder.lock();
@@ -500,7 +502,7 @@
 
     <span class="doccomment">/// Gets an individual entry from the backing data.
     </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
-        <span class="self">self</span>.data.get(key).cloned()
+        <span class="self">self</span>.data.get(key).cloned().map(Into::into)
     }
 
     <span class="doccomment">/// Gets the number of entries in the backing data.
@@ -648,8 +650,8 @@
     </span><span class="kw">fn </span>create_test_data(start: i32, end: i32) -&gt; Data {
         HashMap::from_iter((start..end).map(|i| {
             (
-                <span class="macro">format!</span>(<span class="string">&quot;key{}&quot;</span>, i).into_bytes(),
-                <span class="macro">format!</span>(<span class="string">&quot;value{}&quot;</span>, i).into_bytes(),
+                <span class="macro">format!</span>(<span class="string">&quot;key{}&quot;</span>, i).into_bytes().into(),
+                <span class="macro">format!</span>(<span class="string">&quot;value{}&quot;</span>, i).into_bytes().into(),
             )
         }))
     }

@@ -263,6 +263,35 @@
 <a href="#263" id="263">263</a>
 <a href="#264" id="264">264</a>
 <a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
 </pre></div><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InitializeRequest {
@@ -525,6 +554,35 @@
                 <span class="string">&quot;/oak.functions.OakFunctions/AbortNextLookupData&quot;</span>,
             );
             <span class="self">self</span>.inner.unary(request.into_request(), path, codec).<span class="kw">await
+        </span>}
+        <span class="doccomment">/// Streaming version combining `ExtendNextLookupData` and `FinishNextLookupData`.
+        ///
+        /// This is mainly for use with gRPC, as microRPC doesn&#39;t support streaming.
+        ///
+        /// method_id: 5
+        </span><span class="kw">pub async fn </span>stream_lookup_data(
+            <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+            request: <span class="kw">impl </span>tonic::IntoStreamingRequest&lt;Message = <span class="kw">super</span>::LookupDataChunk&gt;,
+        ) -&gt; <span class="prelude-ty">Result</span>&lt;
+            tonic::Response&lt;<span class="kw">super</span>::FinishNextLookupDataResponse&gt;,
+            tonic::Status,
+        &gt; {
+            <span class="self">self</span>.inner
+                .ready()
+                .<span class="kw">await
+                </span>.map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        <span class="macro">format!</span>(<span class="string">&quot;Service was not ready: {}&quot;</span>, e.into()),
+                    )
+                })<span class="question-mark">?</span>;
+            <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
+            <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
+                <span class="string">&quot;/oak.functions.OakFunctions/StreamLookupData&quot;</span>,
+            );
+            <span class="self">self</span>.inner
+                .client_streaming(request.into_streaming_request(), path, codec)
+                .<span class="kw">await
         </span>}
     }
 }

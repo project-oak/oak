@@ -197,6 +197,22 @@
 <a href="#197" id="197">197</a>
 <a href="#198" id="198">198</a>
 <a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -221,14 +237,14 @@
     proto::oak::functions::{
         AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
-        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse,
+        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
     },
 };
 <span class="kw">use </span>oak_remote_attestation::handler::AsyncEncryptionHandler;
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>std::sync::{Arc, OnceLock};
 <span class="kw">use </span>tokio::net::TcpListener;
-<span class="kw">use </span>tokio_stream::wrappers::TcpListenerStream;
+<span class="kw">use </span>tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 
 <span class="kw">pub mod </span>proto {
     <span class="kw">pub mod </span>oak {
@@ -378,6 +394,22 @@
     ) -&gt; tonic::Result&lt;tonic::Response&lt;AbortNextLookupDataResponse&gt;&gt; {
         <span class="self">self</span>.get_instance()<span class="question-mark">?
             </span>.abort_next_lookup_data(request.into_inner())
+            .map(tonic::Response::new)
+            .map_err(map_status)
+    }
+
+    <span class="kw">async fn </span>stream_lookup_data(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        request: tonic::Request&lt;tonic::Streaming&lt;LookupDataChunk&gt;&gt;,
+    ) -&gt; tonic::Result&lt;tonic::Response&lt;FinishNextLookupDataResponse&gt;&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>request = request.into_inner();
+
+        <span class="kw">let </span>instance = <span class="self">self</span>.get_instance()<span class="question-mark">?</span>;
+        <span class="kw">while let </span><span class="prelude-val">Some</span>(chunk) = request.next().<span class="kw">await </span>{
+            instance.extend_lookup_data_chunk(chunk<span class="question-mark">?</span>);
+        }
+        instance
+            .finish_next_lookup_data(FinishNextLookupDataRequest {})
             .map(tonic::Response::new)
             .map_err(map_status)
     }

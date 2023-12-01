@@ -282,6 +282,36 @@
 <a href="#282" id="282">282</a>
 <a href="#283" id="283">283</a>
 <a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
 </pre></div><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InitializeRequest {
@@ -322,10 +352,10 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>LookupDataEntry {
-    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>key: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
-    </span><span class="kw">pub </span>value: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="attr">#[prost(bytes = <span class="string">&quot;bytes&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>key: ::prost::bytes::Bytes,
+    <span class="attr">#[prost(bytes = <span class="string">&quot;bytes&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>value: ::prost::bytes::Bytes,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -464,6 +494,20 @@
                 <span class="kw">let </span>response_body = response.encode_to_vec();
                 <span class="prelude-val">Ok</span>(response_body)
             }
+            <span class="number">5 </span>=&gt; {
+                <span class="kw">let </span>request = &lt;LookupDataChunk&gt;::decode(request.body.as_ref())
+                    .map_err(|err| {
+                        ::micro_rpc::Status::new_with_message(
+                            ::micro_rpc::StatusCode::Internal,
+                            <span class="macro">::micro_rpc::format!</span>(
+                                <span class="string">&quot;Service failed to deserialize the request: {:?}&quot;</span>, err
+                            ),
+                        )
+                    })<span class="question-mark">?</span>;
+                <span class="kw">let </span>response = <span class="self">self</span>.service.stream_lookup_data(request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>response_body = response.encode_to_vec();
+                <span class="prelude-val">Ok</span>(response_body)
+            }
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(::micro_rpc::Status::new(::micro_rpc::StatusCode::Unimplemented)),
         }
     }
@@ -489,6 +533,10 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: Empty,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;AbortNextLookupDataResponse, ::micro_rpc::Status&gt;;
+    <span class="kw">fn </span>stream_lookup_data(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        request: LookupDataChunk,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;FinishNextLookupDataResponse, ::micro_rpc::Status&gt;;
 }
 <span class="kw">pub struct </span>OakFunctionsClient&lt;T: ::micro_rpc::Transport&gt; {
     transport: T,
@@ -527,6 +575,12 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;AbortNextLookupDataResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
         ::micro_rpc::client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">4</span>, request)
     }
+    <span class="kw">pub fn </span>stream_lookup_data(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request: <span class="kw-2">&amp;</span>LookupDataChunk,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;FinishNextLookupDataResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
+        ::micro_rpc::client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">5</span>, request)
+    }
 }
 <span class="kw">pub struct </span>OakFunctionsAsyncClient&lt;T: ::micro_rpc::AsyncTransport&gt; {
     transport: T,
@@ -564,6 +618,12 @@
         request: <span class="kw-2">&amp;</span>Empty,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;AbortNextLookupDataResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
         ::micro_rpc::async_client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">4</span>, request).<span class="kw">await
+    </span>}
+    <span class="kw">pub async fn </span>stream_lookup_data(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request: <span class="kw-2">&amp;</span>LookupDataChunk,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;FinishNextLookupDataResponse, ::micro_rpc::Status&gt;, T::Error&gt; {
+        ::micro_rpc::async_client_invoke(<span class="kw-2">&amp;mut </span><span class="self">self</span>.transport, <span class="number">5</span>, request).<span class="kw">await
     </span>}
 }
 </code></pre></div></section></main></body></html>

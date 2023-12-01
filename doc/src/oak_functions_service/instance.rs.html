@@ -98,6 +98,13 @@
 <a href="#98" id="98">98</a>
 <a href="#99" id="99">99</a>
 <a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -125,6 +132,7 @@
     wasm,
 };
 <span class="kw">use </span>alloc::{format, sync::Arc};
+<span class="kw">use </span>bytes::Bytes;
 <span class="kw">use </span>micro_rpc::{Status, Vec};
 <span class="kw">use </span>oak_functions_abi::Request;
 
@@ -173,6 +181,12 @@
             )<span class="question-mark">?</span>));
         <span class="prelude-val">Ok</span>(ExtendNextLookupDataResponse {})
     }
+
+    <span class="kw">pub fn </span>extend_lookup_data_chunk(<span class="kw-2">&amp;</span><span class="self">self</span>, chunk: LookupDataChunk) {
+        <span class="self">self</span>.lookup_data_manager
+            .extend_next_lookup_data(to_data(chunk))
+    }
+
     <span class="doccomment">/// See [`crate::proto::oak::functions::OakFunctions::finish_next_lookup_data`].
     </span><span class="kw">pub fn </span>finish_next_lookup_data(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -192,7 +206,7 @@
 }
 
 <span class="comment">// Helper function to convert [`LookupDataChunk`] to [`Data`].
-</span><span class="kw">fn </span>to_data(chunk: LookupDataChunk) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
+</span><span class="kw">fn </span>to_data(chunk: LookupDataChunk) -&gt; <span class="kw">impl </span>Iterator&lt;Item = (Bytes, Bytes)&gt; {
     chunk
         .items
         .into_iter()

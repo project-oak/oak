@@ -310,6 +310,12 @@
 <a href="#310" id="310">310</a>
 <a href="#311" id="311">311</a>
 <a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -353,10 +359,13 @@
     }
 }
 
-<span class="attr">#[derive(Default)]
+<span class="attr">#[derive(Default, Clone)]
 </span><span class="kw">pub struct </span>CompileOptions {
     <span class="doccomment">/// Specifies the receiver type in generated server code.
     </span><span class="kw">pub </span>receiver_type: ReceiverType,
+
+    <span class="doccomment">/// List of `bytes` fields that will use `bytes::Bytes` instead of `Vec&lt;u8&gt;`
+    </span><span class="kw">pub </span>bytes: Vec&lt;String&gt;,
 }
 
 <span class="doccomment">/// Compile Rust server code from the services in the provided protobuf file.
@@ -389,10 +398,13 @@
         )
     });
     <span class="kw">let </span><span class="kw-2">mut </span>config = prost_build::Config::new();
-    config.service_generator(Box::new(ServiceGenerator { options }));
+    config.service_generator(Box::new(ServiceGenerator {
+        options: options.clone(),
+    }));
     config
         <span class="comment">// Use BTreeMap to allow using this function in no-std crates.
         </span>.btree_map([<span class="string">&quot;.&quot;</span>])
+        .bytes(options.bytes)
         .compile_protos(protos, includes)
         .expect(<span class="string">&quot;couldn&#39;t compile protobuffer schema&quot;</span>);
 }
