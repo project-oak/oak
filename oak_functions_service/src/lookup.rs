@@ -21,13 +21,14 @@ use alloc::{
     sync::Arc,
     vec::Vec,
 };
+use bytes::Bytes;
 use hashbrown::HashMap;
 use log::{info, Level};
 use spinning_top::Spinlock;
 
 // Data maintains the invariant on lookup data to have [at most one
 // value](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md#invariant-at-most-one-value)
-pub type Data = HashMap<Vec<u8>, Vec<u8>>;
+pub type Data = HashMap<Bytes, Bytes>;
 
 #[derive(Default)]
 enum BuilderState {
@@ -54,7 +55,7 @@ impl DataBuilder {
     ///
     /// Note, if new data contains a key already present in the existing data, calling extend
     /// overwrites the value.
-    fn extend<T: IntoIterator<Item = (Vec<u8>, Vec<u8>)>>(&mut self, new_data: T) {
+    fn extend<T: IntoIterator<Item = (Bytes, Bytes)>>(&mut self, new_data: T) {
         self.state = BuilderState::Extending;
         self.data.extend(new_data);
     }
@@ -104,7 +105,7 @@ where
         test_manager
     }
 
-    pub fn extend_next_lookup_data<T: IntoIterator<Item = (Vec<u8>, Vec<u8>)>>(&self, new_data: T) {
+    pub fn extend_next_lookup_data<T: IntoIterator<Item = (Bytes, Bytes)>>(&self, new_data: T) {
         info!("Start extending next lookup data");
         {
             let mut data_builder = self.data_builder.lock();
@@ -172,7 +173,7 @@ where
 
     /// Gets an individual entry from the backing data.
     pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        self.data.get(key).cloned()
+        self.data.get(key).cloned().map(Into::into)
     }
 
     /// Gets the number of entries in the backing data.
@@ -320,8 +321,8 @@ mod tests {
     fn create_test_data(start: i32, end: i32) -> Data {
         HashMap::from_iter((start..end).map(|i| {
             (
-                format!("key{}", i).into_bytes(),
-                format!("value{}", i).into_bytes(),
+                format!("key{}", i).into_bytes().into(),
+                format!("value{}", i).into_bytes().into(),
             )
         }))
     }

@@ -25,6 +25,7 @@ use crate::{
     wasm,
 };
 use alloc::{format, sync::Arc};
+use bytes::Bytes;
 use micro_rpc::{Status, Vec};
 use oak_functions_abi::Request;
 
@@ -92,7 +93,7 @@ impl OakFunctionsInstance {
 }
 
 // Helper function to convert [`LookupDataChunk`] to [`Data`].
-fn to_data(chunk: LookupDataChunk) -> impl Iterator<Item = (Vec<u8>, Vec<u8>)> {
+fn to_data(chunk: LookupDataChunk) -> impl Iterator<Item = (Bytes, Bytes)> {
     chunk
         .items
         .into_iter()

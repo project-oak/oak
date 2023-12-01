@@ -125,7 +125,10 @@ async fn test_write_log() {
 
 #[tokio::test]
 async fn test_storage_get_item() {
-    let entries = HashMap::from_iter([(b"StorageGet".to_vec(), b"StorageGetResponse".to_vec())]);
+    let entries = HashMap::from_iter([(
+        b"StorageGet".to_vec().into(),
+        b"StorageGetResponse".to_vec().into(),
+    )]);
 
     let logger = StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
@@ -170,7 +173,7 @@ async fn test_storage_get_item_not_found() {
 #[ignore]
 async fn test_storage_get_item_huge_key() {
     let bytes: Vec<u8> = vec![42u8; 1 << 20];
-    let entries = HashMap::from_iter([(bytes.clone(), bytes.clone())]);
+    let entries = HashMap::from_iter([(bytes.clone().into(), bytes.clone().into())]);
 
     let logger = StandaloneLogger {};
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
