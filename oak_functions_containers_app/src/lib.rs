@@ -22,14 +22,14 @@ use oak_functions_service::{
     proto::oak::functions::{
         AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
-        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse,
+        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
     },
 };
 use oak_remote_attestation::handler::AsyncEncryptionHandler;
 use prost::Message;
 use std::sync::{Arc, OnceLock};
 use tokio::net::TcpListener;
-use tokio_stream::wrappers::TcpListenerStream;
+use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 
 pub mod proto {
     pub mod oak {
@@ -179,6 +179,22 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
     ) -> tonic::Result<tonic::Response<AbortNextLookupDataResponse>> {
         self.get_instance()?
             .abort_next_lookup_data(request.into_inner())
+            .map(tonic::Response::new)
+            .map_err(map_status)
+    }
+
+    async fn stream_lookup_data(
+        &self,
+        request: tonic::Request<tonic::Streaming<LookupDataChunk>>,
+    ) -> tonic::Result<tonic::Response<FinishNextLookupDataResponse>> {
+        let mut request = request.into_inner();
+
+        let instance = self.get_instance()?;
+        while let Some(chunk) = request.next().await {
+            instance.extend_lookup_data_chunk(chunk?);
+        }
+        instance
+            .finish_next_lookup_data(FinishNextLookupDataRequest {})
             .map(tonic::Response::new)
             .map_err(map_status)
     }

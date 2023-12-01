@@ -49,7 +49,8 @@ use prost::Message;
 use proto::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
     FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
-    InitializeResponse, InvokeRequest, InvokeResponse, OakFunctions, PublicKeyInfo,
+    InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk, OakFunctions,
+    PublicKeyInfo,
 };
 
 pub struct OakFunctionsService {
@@ -174,5 +175,14 @@ impl OakFunctions for OakFunctionsService {
     ) -> Result<AbortNextLookupDataResponse, micro_rpc::Status> {
         log::debug!("called abort_next_lookup_data");
         self.get_instance()?.abort_next_lookup_data(request)
+    }
+
+    fn stream_lookup_data(
+        &self,
+        request: LookupDataChunk,
+    ) -> Result<FinishNextLookupDataResponse, micro_rpc::Status> {
+        let instance = self.get_instance()?;
+        instance.extend_lookup_data_chunk(request);
+        instance.finish_next_lookup_data(FinishNextLookupDataRequest {})
     }
 }
