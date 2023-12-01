@@ -74,6 +74,12 @@ impl OakFunctionsInstance {
             )?));
         Ok(ExtendNextLookupDataResponse {})
     }
+
+    pub fn extend_lookup_data_chunk(&self, chunk: LookupDataChunk) {
+        self.lookup_data_manager
+            .extend_next_lookup_data(to_data(chunk))
+    }
+
     /// See [`crate::proto::oak::functions::OakFunctions::finish_next_lookup_data`].
     pub fn finish_next_lookup_data(
         &self,
