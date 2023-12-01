@@ -22,8 +22,6 @@ import com.google.oak.attestation.v1.ContainerLayerReferenceValues;
 import com.google.oak.attestation.v1.EndorsementReferenceValue;
 import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
-import com.google.oak.attestation.v1.InitLayerEndorsements;
-import com.google.oak.attestation.v1.InitLayerReferenceValues;
 import com.google.oak.attestation.v1.KernelLayerEndorsements;
 import com.google.oak.attestation.v1.KernelLayerReferenceValues;
 import com.google.oak.attestation.v1.LayerEvidence;
@@ -33,6 +31,8 @@ import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.attestation.v1.RootLayerEndorsements;
 import com.google.oak.attestation.v1.RootLayerEvidence;
 import com.google.oak.attestation.v1.RootLayerReferenceValues;
+import com.google.oak.attestation.v1.SystemLayerEndorsements;
+import com.google.oak.attestation.v1.SystemLayerReferenceValues;
 import com.google.oak.attestation.v1.TeePlatform;
 import com.google.oak.attestation.v1.TransparentReleaseEndorsement;
 import com.google.protobuf.ByteString;
@@ -99,7 +99,8 @@ public class MainVerifierTest {
                 .setRootLayer(RootLayerEndorsements.newBuilder().setStage0(createTREndorsement()))
                 .setKernelLayer(
                     KernelLayerEndorsements.newBuilder().setKernelImage(createTREndorsement()))
-                .setInitLayer(InitLayerEndorsements.newBuilder().setBinary(createTREndorsement()))
+                .setSystemLayer(
+                    SystemLayerEndorsements.newBuilder().setSystemImage(createTREndorsement()))
                 .setContainerLayer(
                     ContainerLayerEndorsements.newBuilder().setBinary(createTREndorsement())))
         .build();
@@ -114,7 +115,7 @@ public class MainVerifierTest {
             OakContainersReferenceValues.newBuilder()
                 .setRootLayer(RootLayerReferenceValues.newBuilder())
                 .setKernelLayer(KernelLayerReferenceValues.newBuilder())
-                .setInitLayer(InitLayerReferenceValues.newBuilder().setBinary(
+                .setSystemLayer(SystemLayerReferenceValues.newBuilder().setSystemImage(
                     BinaryReferenceValue.newBuilder().setEndorsement(
                         EndorsementReferenceValue.newBuilder()
                             .setEndorserPublicKey(endorserPublicKey)

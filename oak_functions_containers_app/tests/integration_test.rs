@@ -23,9 +23,9 @@ pub mod proto {
 }
 
 use crate::proto::oak::functions::oak_functions_client::OakFunctionsClient;
+use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_functions_containers_app::serve;
 use oak_functions_service::proto::oak::functions::InitializeRequest;
-use oak_remote_attestation::attester::EmptyAttestationReportGenerator;
 use std::{
     fs,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -40,12 +40,11 @@ async fn test_lookup() {
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
         .expect("Failed to build Wasm module");
 
-    let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
     let listener = TcpListener::bind(addr).await.unwrap();
     let addr = listener.local_addr().unwrap();
 
-    let server_handle = tokio::spawn(serve(listener, attestation_report_generator));
+    let server_handle = tokio::spawn(serve(listener, Arc::new(EncryptionKeyProvider::generate())));
 
     let mut oak_functions_client: OakFunctionsClient<tonic::transport::channel::Channel> = {
         let channel = Endpoint::from_shared(format!("http://{addr}"))

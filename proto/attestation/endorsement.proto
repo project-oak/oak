@@ -55,8 +55,8 @@ message KernelLayerEndorsements {
   TransparentReleaseEndorsement init_ram_fs = 3;
 }
 
-message InitLayerEndorsements {
-  TransparentReleaseEndorsement binary = 1;
+message SystemLayerEndorsements {
+  TransparentReleaseEndorsement system_image = 1;
 }
 
 message ApplicationLayerEndorsements {
@@ -76,7 +76,7 @@ message OakRestrictedKernelEndorsements {
 message OakContainersEndorsements {
   RootLayerEndorsements root_layer = 1;
   KernelLayerEndorsements kernel_layer = 2;
-  InitLayerEndorsements init_layer = 3;
+  SystemLayerEndorsements system_layer = 3;
   ContainerLayerEndorsements container_layer = 4;
 }
 

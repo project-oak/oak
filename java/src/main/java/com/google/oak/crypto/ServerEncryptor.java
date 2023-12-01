@@ -120,15 +120,18 @@ public class ServerEncryptor implements AutoCloseable {
     }
 
     // Encrypt response.
-    return recipientContext.get()
-        .seal(plaintext, associatedData)
-        // Create response message.
-        .map(ciphertext
-            -> EncryptedResponse.newBuilder()
-                   .setEncryptedMessage(AeadEncryptedMessage.newBuilder()
-                                            .setCiphertext(ByteString.copyFrom(ciphertext))
-                                            .setAssociatedData(ByteString.copyFrom(associatedData))
-                                            .build())
-                   .build());
+    return recipientContext.get().generateNonce().andThen(nonce
+        -> recipientContext.get()
+               .seal(nonce, plaintext, associatedData)
+               // Create response message.
+               .map(ciphertext
+                   -> EncryptedResponse.newBuilder()
+                          .setEncryptedMessage(
+                              AeadEncryptedMessage.newBuilder()
+                                  .setNonce(ByteString.copyFrom(nonce))
+                                  .setCiphertext(ByteString.copyFrom(ciphertext))
+                                  .setAssociatedData(ByteString.copyFrom(associatedData))
+                                  .build())
+                          .build()));
   }
 }

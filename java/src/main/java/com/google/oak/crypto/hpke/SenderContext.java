@@ -30,7 +30,9 @@ public final class SenderContext implements AutoCloseable {
     this.nativePtr = nativePtr;
   }
 
-  private native byte[] nativeSeal(final byte[] plaintext, final byte[] associatedData);
+  private native byte[] nativeGenerateNonce();
+  private native byte[] nativeSeal(
+      final byte[] nonce, final byte[] plaintext, final byte[] associatedData);
   private native byte[] nativeOpen(final byte[] ciphertext, final byte[] associatedData);
   private native void nativeDestroy();
 
@@ -39,11 +41,24 @@ public final class SenderContext implements AutoCloseable {
   }
 
   /**
+   * Generates an AEAD nonce used by AEAD encryption scheme.
+   * <https://datatracker.ietf.org/doc/html/rfc5116>
+   */
+  public final Result<byte[], Exception> generateNonce() {
+    byte[] nativeResult = nativeGenerateNonce();
+    if (nativeResult == null) {
+      return Result.error(new Exception("SenderContext generateNonce failed"));
+    }
+    return Result.success(nativeResult);
+  }
+
+  /**
    * Encrypts message with associated data using AEAD.
    * <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
    */
-  public final Result<byte[], Exception> seal(final byte[] plaintext, final byte[] associatedData) {
-    byte[] nativeResult = nativeSeal(plaintext, associatedData);
+  public final Result<byte[], Exception> seal(
+      final byte[] nonce, final byte[] plaintext, final byte[] associatedData) {
+    byte[] nativeResult = nativeSeal(nonce, plaintext, associatedData);
     if (nativeResult == null) {
       return Result.error(new Exception("SenderContext seal failed"));
     }

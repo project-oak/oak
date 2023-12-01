@@ -66,12 +66,17 @@ impl KeyPair {
         }
     }
 
+    pub fn get_private_key(&self) -> Vec<u8> {
+        self.private_key.to_bytes().to_vec()
+    }
+
     /// Returns a NIST P-256 SEC1 encoded point public key.
     /// <https://secg.org/sec1-v2.pdf>
     pub fn get_serialized_public_key(&self) -> Vec<u8> {
         self.public_key.to_bytes().to_vec()
     }
 }
+
 /// Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
 /// public key) and creating a sender context.
 /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
@@ -205,17 +210,22 @@ pub struct SenderContext {
 }
 
 impl SenderContext {
+    // TODO(#4507): Use random nonces for Hybrid Encryption.
+    pub(crate) fn generate_nonce(&mut self) -> anyhow::Result<AeadNonce> {
+        compute_nonce(self.request_sequence_number, &self.request_base_nonce)
+            .context("couldn't compute nonce")
+    }
+
     /// Encrypts request message with associated data using AEAD.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
     pub(crate) fn seal(
         &mut self,
+        nonce: &AeadNonce,
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        let nonce = compute_nonce(self.request_sequence_number, &self.request_base_nonce)
-            .context("couldn't compute nonce")?;
         let ciphertext =
-            crate::hpke::aead::encrypt(&self.request_key, &nonce, plaintext, associated_data)
+            crate::hpke::aead::encrypt(&self.request_key, nonce, plaintext, associated_data)
                 .context("couldn't encrypt request message")?;
         increment_sequence_number(&mut self.request_sequence_number)
             .context("couldn't increment sequence number")?;
@@ -256,6 +266,12 @@ pub struct RecipientContext {
 }
 
 impl RecipientContext {
+    // TODO(#4507): Use random nonces for Hybrid Encryption.
+    pub(crate) fn generate_nonce(&mut self) -> anyhow::Result<AeadNonce> {
+        compute_nonce(self.response_sequence_number, &self.response_base_nonce)
+            .context("couldn't compute nonce")
+    }
+
     /// Decrypts request message and validates associated data using AEAD.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
     pub(crate) fn open(
@@ -278,13 +294,12 @@ impl RecipientContext {
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
     pub(crate) fn seal(
         &mut self,
+        nonce: &AeadNonce,
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        let nonce = compute_nonce(self.response_sequence_number, &self.response_base_nonce)
-            .context("couldn't compute nonce")?;
         let ciphertext =
-            crate::hpke::aead::encrypt(&self.response_key, &nonce, plaintext, associated_data)
+            crate::hpke::aead::encrypt(&self.response_key, nonce, plaintext, associated_data)
                 .context("couldn't encrypt response message")?;
         increment_sequence_number(&mut self.response_sequence_number)
             .context("couldn't increment sequence number")?;

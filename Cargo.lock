@@ -1860,17 +1860,18 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "base64 0.21.0",
+ "coset",
  "ecdsa",
  "hex",
  "micro_rpc_build",
- "oak_transparency_claims",
+ "oak_dice",
  "p256",
  "prost",
  "serde",
  "serde_jcs",
  "serde_json",
  "sha2",
- "tonic",
+ "time",
 ]
 
 [[package]]
@@ -1971,7 +1972,6 @@ dependencies = [
  "ciborium",
  "clap",
  "coset",
- "futures",
  "log",
  "nix 0.26.2",
  "oak_containers_orchestrator_client",
@@ -1993,6 +1993,7 @@ dependencies = [
  "tar",
  "tokio",
  "tokio-stream",
+ "tokio-util",
  "tonic",
  "walkdir",
 ]
@@ -2216,6 +2217,7 @@ dependencies = [
  "oak_functions_launcher",
  "oak_functions_test_utils",
  "oak_grpc_utils",
+ "oak_remote_attestation",
  "prost",
  "tokio",
  "tonic",
@@ -2537,16 +2539,6 @@ dependencies = [
  "bitflags 2.3.3",
  "strum",
  "x86_64",
-]
-
-[[package]]
-name = "oak_transparency_claims"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "serde",
- "serde_json",
- "time",
 ]
 
 [[package]]

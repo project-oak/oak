@@ -91,8 +91,9 @@ TEST_F(SenderContextTest, SenderSealsMessageSuccess) {
 
   std::string plaintext = "Hello World";
 
+  const std::vector<uint8_t> nonce = (*sender_context)->GenerateNonce();
   absl::StatusOr<std::string> encrypted_request =
-      (*sender_context)->Seal(plaintext, associated_data_request_);
+      (*sender_context)->Seal(nonce, plaintext, associated_data_request_);
   EXPECT_TRUE(encrypted_request.ok());
   EXPECT_THAT(*encrypted_request, StrNe(plaintext));
 }

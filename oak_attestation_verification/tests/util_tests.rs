@@ -21,7 +21,7 @@ use std::fs;
 
 use oak_attestation_verification::util::{
     convert_pem_to_raw, convert_pem_to_verifying_key, convert_raw_to_pem,
-    convert_raw_to_verifying_key, equal_keys, looks_like_pem, verify_signature,
+    convert_raw_to_verifying_key, equal_keys, looks_like_pem, verify_signature_raw,
 };
 
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
@@ -114,7 +114,7 @@ fn test_convert_inverse_right() {
 #[test]
 fn test_verify_signature() {
     let testdata = load_testdata();
-    let result = verify_signature(
+    let result = verify_signature_raw(
         &testdata.endorsement_signature,
         &testdata.endorsement,
         &testdata.endorser_public_key,

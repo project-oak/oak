@@ -1,5 +1,5 @@
 #
-# Copyright 2022 The Project Oak Authors
+# Copyright 2023 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,17 +14,27 @@
 # limitations under the License.
 #
 
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-exports_files([
-    "endorsement.json",
-    "endorsement.json.sig",
-    "evidence.binarypb",
-    "evidence.textproto",
-    "logentry.json",
-    "oak-development.pem",
-    "rekor_public_key.pem",
-])
+proto_library(
+    name = "key_provisioning_proto",
+    srcs = ["key_provisioning.proto"],
+    deps = [
+        "//oak_crypto/proto/v1:crypto_proto",
+        "//proto/attestation:endorsement_proto",
+        "//proto/attestation:evidence_proto",
+    ],
+)
+
+build_test(
+    name = "build_test",
+    targets = [
+        ":key_provisioning_proto",
+    ],
+)

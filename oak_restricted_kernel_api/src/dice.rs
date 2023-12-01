@@ -19,8 +19,12 @@ use oak_crypto::{
     encryptor::EncryptionKeyProvider,
     hpke::{Deserializable, PrivateKey, PublicKey},
 };
-use oak_dice::evidence::{
-    RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE, X25519_PRIVATE_KEY_SIZE,
+use oak_dice::{
+    cert::{
+        cose_key_to_hpke_public_key, get_claims_set_from_certificate_bytes,
+        get_public_key_from_claims_set,
+    },
+    evidence::{RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE, X25519_PRIVATE_KEY_SIZE},
 };
 use oak_remote_attestation::proto::oak::attestation::v1::Evidence;
 use oak_restricted_kernel_interface::DICE_DATA_FD;
@@ -46,9 +50,20 @@ pub fn get_dice_evidence_and_keys() -> anyhow::Result<DiceWrapper> {
         .application_keys
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no application keys"))?;
-    let public_key = PublicKey::from_bytes(application_keys.encryption_public_key_certificate())
-        .map_err(|error| anyhow::anyhow!("couldn't deserialize public key: {}", error))?;
-    let encryption_key = EncryptionKeyProvider::new(private_key, public_key);
+    let claims =
+        get_claims_set_from_certificate_bytes(application_keys.encryption_public_key_certificate())
+            .map_err(|err| {
+                anyhow::anyhow!("couldn't parse encryption public key certificate: {err}")
+            })?;
+    let public_key = get_public_key_from_claims_set(&claims)
+        .map_err(|err| anyhow::anyhow!("couldn't get public key from certificate: {err}"))?;
+    let public_key = cose_key_to_hpke_public_key(&public_key)
+        .map_err(|err| anyhow::anyhow!("couldn't extract public key: {err}"))?;
+    let encryption_key = EncryptionKeyProvider::new(
+        private_key,
+        PublicKey::from_bytes(&public_key)
+            .map_err(|err| anyhow::anyhow!("couldn't decode public key: {err}"))?,
+    );
     let signing_key = SigningKey::from_slice(
         &dice_data.application_private_keys.signing_private_key[..P256_PRIVATE_KEY_SIZE],
     )

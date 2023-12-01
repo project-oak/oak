@@ -107,9 +107,9 @@ message KernelLayerReferenceValues {
   BinaryReferenceValue acpi = 6;
 }
 
-message InitLayerReferenceValues {
-  // Verifies the binary based on endorsement.
-  BinaryReferenceValue binary = 1;
+message SystemLayerReferenceValues {
+  // Verifies the system image binary based on endorsement.
+  BinaryReferenceValue system_image = 1;
 
   // Configuration measurements.
   BinaryReferenceValue configuration = 2;
@@ -141,7 +141,7 @@ message OakRestrictedKernelReferenceValues {
 message OakContainersReferenceValues {
   RootLayerReferenceValues root_layer = 1;
   KernelLayerReferenceValues kernel_layer = 2;
-  InitLayerReferenceValues init_layer = 3;
+  SystemLayerReferenceValues system_layer = 3;
   ContainerLayerReferenceValues container_layer = 4;
 }
 

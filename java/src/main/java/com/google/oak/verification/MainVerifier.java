@@ -22,8 +22,6 @@ import com.google.oak.attestation.v1.ContainerLayerReferenceValues;
 import com.google.oak.attestation.v1.EndorsementReferenceValue;
 import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
-import com.google.oak.attestation.v1.InitLayerEndorsements;
-import com.google.oak.attestation.v1.InitLayerReferenceValues;
 import com.google.oak.attestation.v1.KernelLayerEndorsements;
 import com.google.oak.attestation.v1.KernelLayerReferenceValues;
 import com.google.oak.attestation.v1.OakContainersEndorsements;
@@ -31,6 +29,8 @@ import com.google.oak.attestation.v1.OakContainersReferenceValues;
 import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.attestation.v1.RootLayerEndorsements;
 import com.google.oak.attestation.v1.RootLayerReferenceValues;
+import com.google.oak.attestation.v1.SystemLayerEndorsements;
+import com.google.oak.attestation.v1.SystemLayerReferenceValues;
 import com.google.oak.attestation.v1.TransparentReleaseEndorsement;
 import java.util.Optional;
 
@@ -56,11 +56,12 @@ public class MainVerifier {
     return Optional.empty();
   }
 
-  Optional<Failure> verifyInitLayer(
-      InitLayerEndorsements endorsements, InitLayerReferenceValues values) {
-    BinaryReferenceValue binaryValue = values.getBinary();
-    if (binaryValue.hasEndorsement()) {
-      Optional<Failure> r = verifyLogEntry(endorsements.getBinary(), binaryValue.getEndorsement());
+  Optional<Failure> verifySystemLayer(
+      SystemLayerEndorsements endorsements, SystemLayerReferenceValues values) {
+    BinaryReferenceValue systemImageValue = values.getSystemImage();
+    if (systemImageValue.hasEndorsement()) {
+      Optional<Failure> r =
+          verifyLogEntry(endorsements.getSystemImage(), systemImageValue.getEndorsement());
       if (r.isPresent()) {
         return r;
       }
@@ -91,7 +92,7 @@ public class MainVerifier {
     if (r.isPresent()) {
       return r;
     }
-    r = verifyInitLayer(endorsements.getInitLayer(), values.getInitLayer());
+    r = verifySystemLayer(endorsements.getSystemLayer(), values.getSystemLayer());
     if (r.isPresent()) {
       return r;
     }

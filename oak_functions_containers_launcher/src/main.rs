@@ -58,7 +58,7 @@ async fn main() -> Result<(), anyhow::Error> {
         })
         .unwrap();
 
-    let initialize_response = untrusted_app
+    let _ = untrusted_app
         .initialize_enclave(InitializeRequest {
             wasm_module: wasm_bytes,
             constant_response_size: args.functions_args.constant_response_size,
@@ -69,13 +69,17 @@ async fn main() -> Result<(), anyhow::Error> {
             anyhow::anyhow!("couldn't get encrypted response: {}", error)
         })?;
 
-    let public_key_info = initialize_response
-        .public_key_info
-        .as_ref()
-        .expect("no public key info returned");
+    #[allow(deprecated)]
+    let evidence = untrusted_app
+        .launcher
+        .get_endorsed_evidence()
+        .await?
+        .attestation_evidence
+        .unwrap();
+
     log::info!(
         "obtained public key ({} bytes)",
-        public_key_info.public_key.len()
+        evidence.encryption_public_key.len()
     );
 
     untrusted_app.setup_lookup_data(lookup_data_config).await?;
@@ -83,8 +87,8 @@ async fn main() -> Result<(), anyhow::Error> {
     let server_future = oak_functions_containers_launcher::server::new(
         SocketAddr::from((Ipv6Addr::UNSPECIFIED, args.functions_args.port)),
         untrusted_app.oak_functions_client.clone(),
-        public_key_info.public_key.clone(),
-        public_key_info.attestation.clone(),
+        evidence.encryption_public_key.clone(),
+        evidence.attestation.clone(),
     );
 
     // Wait until something dies or we get a signal to terminate.

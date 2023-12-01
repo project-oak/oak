@@ -24,7 +24,6 @@ use alloc::{boxed::Box, sync::Arc};
 use core::panic::PanicInfo;
 use log::info;
 use oak_core::samplestore::StaticSampleStore;
-use oak_remote_attestation::attester::EmptyAttestationReportGenerator;
 use oak_restricted_kernel_api::{FileDescriptorChannel, StderrLogger};
 
 static LOGGER: StderrLogger = StderrLogger {};
@@ -46,8 +45,12 @@ fn main() -> ! {
         log::set_max_level(log::LevelFilter::Warn);
     }
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
-    let service =
-        oak_functions_service::OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
+    let dice_data = oak_restricted_kernel_api::dice::get_dice_evidence_and_keys()
+        .expect("couldn't get DICE data");
+    let service = oak_functions_service::OakFunctionsService::new(
+        dice_data.evidence,
+        Arc::new(dice_data.encryption_key),
+    );
     let server = oak_functions_service::proto::oak::functions::OakFunctionsServer::new(service);
     oak_channel::server::start_blocking_server(
         Box::<FileDescriptorChannel>::default(),

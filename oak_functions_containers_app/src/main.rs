@@ -13,9 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::anyhow;
+use anyhow::Context;
 use oak_functions_containers_app::{orchestrator_client::OrchestratorClient, serve};
-use oak_remote_attestation::attester::EmptyAttestationReportGenerator;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
@@ -28,17 +27,17 @@ const OAK_FUNCTIONS_CONTAINERS_APP_PORT: u16 = 8080;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = OrchestratorClient::create()
         .await
-        .map_err(|error| anyhow!("couldn't create Orchestrator client: {:?}", error))?;
+        .context("couldn't create Orchestrator client")?;
+
     // To be used when connecting trusted app to orchestrator.
-    let _application_config = client.clone().get_application_config().await?;
-    let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
+    let _application_config = client.get_application_config().await?;
 
     let addr = SocketAddr::new(
         IpAddr::V4(Ipv4Addr::UNSPECIFIED),
         OAK_FUNCTIONS_CONTAINERS_APP_PORT,
     );
     let listener = TcpListener::bind(addr).await?;
-    let server_handle = tokio::spawn(serve(listener, attestation_report_generator));
+    let server_handle = tokio::spawn(serve(listener, Arc::new(client.clone())));
 
     eprintln!("Running Oak Functions on Oak Containers at address: {addr}");
     client.notify_app_ready().await?;

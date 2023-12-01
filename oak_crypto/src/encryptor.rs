@@ -56,6 +56,10 @@ impl EncryptionKeyProvider {
         }
     }
 
+    pub fn get_private_key(&self) -> Vec<u8> {
+        self.key_pair.get_private_key()
+    }
+
     /// Returns a NIST P-256 SEC1 encoded point public key.
     /// <https://secg.org/sec1-v2.pdf>
     pub fn get_serialized_public_key(&self) -> Vec<u8> {
@@ -87,6 +91,16 @@ pub trait AsyncRecipientContextGenerator {
         &self,
         encapsulated_public_key: &[u8],
     ) -> anyhow::Result<RecipientContext>;
+}
+
+#[async_trait]
+impl AsyncRecipientContextGenerator for EncryptionKeyProvider {
+    async fn generate_recipient_context(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<RecipientContext> {
+        (self as &dyn RecipientContextGenerator).generate_recipient_context(encapsulated_public_key)
+    }
 }
 
 /// Encryptor object for encrypting client requests that will be sent to the server and decrypting
@@ -124,19 +138,24 @@ impl ClientEncryptor {
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<EncryptedRequest> {
+        let nonce = self
+            .sender_context
+            .generate_nonce()
+            .context("couldn't generate nonce")?;
         let ciphertext = self
             .sender_context
-            .seal(plaintext, associated_data)
+            .seal(&nonce, plaintext, associated_data)
             .context("couldn't encrypt request")?;
-        let request = EncryptedRequest {
+
+        Ok(EncryptedRequest {
             encrypted_message: Some(AeadEncryptedMessage {
+                nonce: nonce.to_vec(),
                 ciphertext,
                 associated_data: associated_data.to_vec(),
             }),
             // Encapsulated public key is only sent in the initial request message of the session.
             serialized_encapsulated_public_key: self.serialized_encapsulated_public_key.take(),
-        };
-        Ok(request)
+        })
     }
 
     /// Decrypts a [`EncryptedResponse`] proto message using AEAD.
@@ -150,6 +169,7 @@ impl ClientEncryptor {
             .encrypted_message
             .as_ref()
             .context("response doesn't contain encrypted message")?;
+
         let plaintext = self
             .sender_context
             .open(
@@ -215,17 +235,22 @@ impl ServerEncryptor {
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<EncryptedResponse> {
+        let nonce = self
+            .recipient_context
+            .generate_nonce()
+            .context("couldn't generate nonce")?;
         let ciphertext = self
             .recipient_context
-            .seal(plaintext, associated_data)
+            .seal(&nonce, plaintext, associated_data)
             .context("couldn't encrypt response")?;
-        let response = EncryptedResponse {
+
+        Ok(EncryptedResponse {
             encrypted_message: Some(AeadEncryptedMessage {
+                nonce: nonce.to_vec(),
                 ciphertext,
                 associated_data: associated_data.to_vec(),
             }),
-        };
-        Ok(response)
+        })
     }
 }
 

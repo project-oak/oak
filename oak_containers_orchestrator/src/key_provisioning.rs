@@ -13,29 +13,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::proto::oak::containers::{
-    key_provisioning_server::KeyProvisioning, GetProvisionSecretsRequest,
-    GetProvisionSecretsResponse, SendProvisionSecretsRequest,
+use crate::{
+    crypto::KeyStore,
+    proto::oak::{
+        containers::v1::{
+            orchestrator_key_provisioning_server::OrchestratorKeyProvisioning, SendGroupKeysRequest,
+        },
+        key_provisioning::v1::{
+            key_provisioning_server::KeyProvisioning, GetGroupKeysRequest, GetGroupKeysResponse,
+        },
+    },
 };
+use std::sync::{Arc, OnceLock};
 use tonic::{Request, Response};
 
-struct KeyProvisioningService {}
+struct KeyProvisioningService {
+    _key_store: OnceLock<Arc<KeyStore>>,
+}
 
 #[tonic::async_trait]
-impl KeyProvisioning for KeyProvisioningService {
-    async fn get_provision_secrets(
+impl OrchestratorKeyProvisioning for KeyProvisioningService {
+    async fn send_group_keys(
         &self,
-        _request: Request<GetProvisionSecretsRequest>,
-    ) -> Result<Response<GetProvisionSecretsResponse>, tonic::Status> {
-        Ok(tonic::Response::new(GetProvisionSecretsResponse {
-            encrypted_encryption_key: None,
-        }))
-    }
-
-    async fn send_provision_secrets(
-        &self,
-        _request: Request<SendProvisionSecretsRequest>,
+        _request: Request<SendGroupKeysRequest>,
     ) -> Result<Response<()>, tonic::Status> {
-        Ok(tonic::Response::new(()))
+        // TODO(#4442): Implement replacing group encryption key.
+        Err(tonic::Status::unimplemented(
+            "Key Provisioning is not implemented",
+        ))
+    }
+}
+
+struct KeyProvisioningLeaderService {
+    _key_store: Arc<KeyStore>,
+}
+
+#[tonic::async_trait]
+impl KeyProvisioning for KeyProvisioningLeaderService {
+    async fn get_group_keys(
+        &self,
+        _request: Request<GetGroupKeysRequest>,
+    ) -> Result<Response<GetGroupKeysResponse>, tonic::Status> {
+        // TODO(#4442): Implement generating group encryption key.
+        Err(tonic::Status::unimplemented(
+            "Key Provisioning is not implemented",
+        ))
     }
 }
