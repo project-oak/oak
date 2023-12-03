@@ -156,7 +156,7 @@ jobs:
         id: ent_upload_provenance
         working-directory: downloads
         # The output on any trigger other than "pull_request" has an additional
-        # ".sigstore" suffix. However, that suffix appears to be "builder.slsa".
+        # ".sigstore" suffix. However, that suffix appears to be ".build.slsa".
         # See https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/docker#workflow-outputs
         run: |
           set -o errexit
@@ -165,7 +165,7 @@ jobs:
           set -o pipefail
           file="${{ needs.get_inputs.outputs.provenance-name }}"
           if [[ "${{ github.event_name }}" != "pull_request" ]]; then
-            file="${file}.builder.slsa"
+            file="${file}.build.slsa"
           fi
           digest="$(ent put --digest-format=human --porcelain "${file}")"
           echo "provenance_digest=${digest}" >> $GITHUB_OUTPUT
