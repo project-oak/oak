@@ -1,5 +1,5 @@
-# Uses the Docker-based SLSA3 generator to build the binary and its provenance.
-# Then uploads the binary and its provenance to Ent.
+# Uses the container-based SLSA3 generator to build the binary and its
+# provenance. Then uploads binary and provenance to Ent.
 name: Build SLSA3 Provenance
 
 on:
