@@ -37,18 +37,30 @@ jobs:
       - name: Get artifact path
         id: artifact-path
         run: |
+          set -o errexit
+          set -o nounset
+          set -o xtrace
+          set -o pipefail
           name="$(tail -1 ${{ inputs.build-config-path }} | grep -oP 'artifact_path = \K(.*)')"
           echo "name=${name}" >> $GITHUB_OUTPUT
 
       - name: Get provenance name
         id: provenance-name
         run: |
+          set -o errexit
+          set -o nounset
+          set -o xtrace
+          set -o pipefail
           name="$(basename ${{ steps.artifact-path.outputs.name }}).intoto"
           echo "name=${name}" >> $GITHUB_OUTPUT
 
       - name: Get builder image info
         id: builder-digest
         run: |
+          set -o errexit
+          set -o nounset
+          set -o xtrace
+          set -o pipefail
           source ./scripts/common
           digest="$(echo "${DOCKER_IMAGE_REPO_DIGEST}" | cut -d'@' -f2)"
           echo "builder-digest=${digest}" >> $GITHUB_OUTPUT
