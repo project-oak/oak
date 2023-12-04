@@ -34,7 +34,7 @@ pub fn setup() -> Result<(), Box<dyn std::error::Error>> {
         syslog::unix(formatter).map_err(|e| format!("impossible to connect to syslog: {:?}", e))?;
 
     log::set_boxed_logger(Box::new(BasicLogger::new(logger)))
-        .map(|()| log::set_max_level(LevelFilter::Trace))
+        .map(|()| log::set_max_level(LevelFilter::Debug))
         .map_err(|e| format!("failed to set logger: {:?}", e))?;
 
     Ok(())
