@@ -20,7 +20,7 @@ use crate::{
     proto::oak::functions::{
         AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
-        InitializeRequest, LookupDataChunk,
+        InitializeRequest, LookupDataChunk, ReserveRequest, ReserveResponse,
     },
     wasm,
 };
@@ -95,6 +95,18 @@ impl OakFunctionsInstance {
     ) -> Result<AbortNextLookupDataResponse, Status> {
         self.lookup_data_manager.abort_next_lookup_data();
         Ok(AbortNextLookupDataResponse {})
+    }
+
+    pub fn reserve(&self, request: ReserveRequest) -> Result<ReserveResponse, Status> {
+        self.lookup_data_manager
+            .reserve(request.additional_entries)
+            .map(|()| ReserveResponse {})
+            .map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::ResourceExhausted,
+                    format!("failed to reserve memory: {:?}", err),
+                )
+            })
     }
 }
 

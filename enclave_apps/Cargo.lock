@@ -796,6 +796,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "byteorder",
+ "bytes",
  "hashbrown 0.14.2",
  "log",
  "micro_rpc",
