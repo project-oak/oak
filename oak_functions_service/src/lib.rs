@@ -50,7 +50,7 @@ use proto::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
     FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
     InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk, OakFunctions,
-    PublicKeyInfo,
+    PublicKeyInfo, ReserveRequest, ReserveResponse,
 };
 
 pub struct OakFunctionsService {
@@ -184,5 +184,9 @@ impl OakFunctions for OakFunctionsService {
         let instance = self.get_instance()?;
         instance.extend_lookup_data_chunk(request);
         instance.finish_next_lookup_data(FinishNextLookupDataRequest {})
+    }
+
+    fn reserve(&self, request: ReserveRequest) -> Result<ReserveResponse, micro_rpc::Status> {
+        self.get_instance()?.reserve(request)
     }
 }

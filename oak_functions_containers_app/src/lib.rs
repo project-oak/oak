@@ -23,6 +23,7 @@ use oak_functions_service::{
         AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
         InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
+        ReserveRequest, ReserveResponse,
     },
 };
 use oak_remote_attestation::handler::AsyncEncryptionHandler;
@@ -195,6 +196,17 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
         }
         instance
             .finish_next_lookup_data(FinishNextLookupDataRequest {})
+            .map(tonic::Response::new)
+            .map_err(map_status)
+    }
+
+    async fn reserve(
+        &self,
+        request: tonic::Request<ReserveRequest>,
+    ) -> tonic::Result<tonic::Response<ReserveResponse>> {
+        let request = request.into_inner();
+        self.get_instance()?
+            .reserve(request)
             .map(tonic::Response::new)
             .map_err(map_status)
     }
