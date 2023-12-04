@@ -31,6 +31,14 @@ static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
         "oak_functions_launcher",
     ])
 });
+pub static QUIRK_ECHO_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
+    workspace_path(&[
+        "target",
+        "x86_64-unknown-linux-gnu",
+        "debug",
+        "quirk_echo_launcher",
+    ])
+});
 
 use crate::{internal::*, workspace_path};
 use once_cell::sync::Lazy;

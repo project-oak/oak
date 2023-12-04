@@ -1,0 +1,35 @@
+[package]
+name = "quirk_echo_launcher"
+version = "0.1.0"
+authors = ["Dzmitry Huba <huba@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+async-trait = "*"
+bmrng = "*"
+clap = { version = "*", features = ["derive"] }
+command-fds = { version = "*", features = ["tokio"] }
+log = "*"
+env_logger = "*"
+prost = { workspace = true }
+tokio = { version = "*", features = [
+  "rt-multi-thread",
+  "macros",
+  "net",
+  "process",
+  "signal",
+  "sync",
+] }
+micro_rpc = { path = "../micro_rpc" }
+oak_channel = { path = "../oak_channel", features = ["client"] }
+oak_launcher_utils = { path = "../oak_launcher_utils" }
+hashbrown = "*"
+
+[build-dependencies]
+micro_rpc_build = { path = "../micro_rpc_build" }
+
+[dev-dependencies]
+lazy_static = "*"
+xtask = { workspace = true }

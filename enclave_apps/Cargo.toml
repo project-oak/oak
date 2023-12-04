@@ -5,6 +5,7 @@ members = [
   "oak_echo_enclave_app",
   "oak_functions_enclave_app",
   "oak_echo_raw_enclave_app",
+  "quirk_echo_enclave_app",
 ]
 
 [workspace.dependencies]

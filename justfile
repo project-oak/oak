@@ -9,8 +9,9 @@ key_xor_test_app: (build_enclave_app "key_xor_test_app")
 oak_echo_enclave_app: (build_enclave_app "oak_echo_enclave_app")
 oak_echo_raw_enclave_app: (build_enclave_app "oak_echo_raw_enclave_app")
 oak_functions_enclave_app: (build_enclave_app "oak_functions_enclave_app")
+quirk_echo_enclave_app: (build_enclave_app "quirk_echo_enclave_app")
 
-all_enclave_apps: key_xor_test_app oak_echo_enclave_app oak_echo_raw_enclave_app oak_functions_enclave_app oak_functions_insecure_enclave_app
+all_enclave_apps: key_xor_test_app oak_echo_enclave_app oak_echo_raw_enclave_app oak_functions_enclave_app oak_functions_insecure_enclave_app quirk_echo_enclave_app
 
 # Build a single enclave app, given its name.
 build_enclave_app name:

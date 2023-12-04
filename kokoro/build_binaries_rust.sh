@@ -38,6 +38,7 @@ readonly generated_binaries=(
     ./enclave_apps/target/x86_64-unknown-none/release/oak_echo_raw_enclave_app
     ./enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app
     ./enclave_apps/target/x86_64-unknown-none/release/oak_functions_insecure_enclave_app
+    ./enclave_apps/target/x86_64-unknown-none/release/quirk_echo_enclave_app
 )
 cp --preserve=timestamps \
     "${generated_binaries[@]}" \
