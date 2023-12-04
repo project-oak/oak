@@ -26,6 +26,8 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
+use crate::{alloc::borrow::ToOwned, proto::oak::HexDigest};
+
 /// PredicateType which identifies a V1 Claim, for in-toto statements.
 pub const CLAIM_V1: &str = "https://github.com/project-oak/transparent-release/claim/v1";
 
@@ -118,12 +120,12 @@ pub struct ClaimEvidence {
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct EndorsementStatement {}
+pub struct Inner {}
+
+pub type EndorsementStatement = Statement<ClaimPredicate<Inner>>;
 
 /// Converts the given byte array into an endorsement statement.
-pub fn parse_endorsement_statement(
-    bytes: &[u8],
-) -> anyhow::Result<Statement<ClaimPredicate<EndorsementStatement>>> {
+pub fn parse_endorsement_statement(bytes: &[u8]) -> anyhow::Result<EndorsementStatement> {
     serde_json::from_slice(bytes).context("parsing endorsement bytes")
 }
 
@@ -175,14 +177,101 @@ pub fn verify_validity_duration<T>(
 
 /// Checks that the given endorsement statement is a valid and has the correct
 /// claim type.
-pub fn validate_endorsement(
-    claim: &Statement<ClaimPredicate<EndorsementStatement>>,
-) -> Result<(), InvalidClaimData> {
+pub fn validate_endorsement(claim: &EndorsementStatement) -> Result<(), InvalidClaimData> {
     validate_claim(claim)?;
     if claim.predicate.claim_type != ENDORSEMENT_V2 {
         return Err(InvalidClaimData::ClaimType);
     }
     Ok(())
+}
+
+/// Assembles digests found in endorsement statement into a protocol buffer.
+pub fn get_digest(claim: &EndorsementStatement) -> anyhow::Result<HexDigest> {
+    if claim.subject.len() != 1 {
+        anyhow::bail!(
+            "expected a single endorsement subject, found {}",
+            claim.subject.len()
+        );
+    }
+
+    let mut digest = HexDigest {
+        psha2: "".to_owned(),
+        sha1: "".to_owned(),
+        sha2_256: "".to_owned(),
+        sha2_512: "".to_owned(),
+        sha3_512: "".to_owned(),
+        sha3_384: "".to_owned(),
+        sha3_256: "".to_owned(),
+        sha3_224: "".to_owned(),
+        sha2_384: "".to_owned(),
+    };
+    for (key, value) in &claim.subject[0].digest {
+        match key.as_str() {
+            "psha2" => {
+                if !digest.psha2.is_empty() {
+                    anyhow::bail!("duplicate key {}", key);
+                }
+                digest.psha2.push_str(value);
+            }
+            "sha1" => {
+                if !digest.sha1.is_empty() {
+                    anyhow::bail!("duplicate key {}", key);
+                }
+                digest.sha1.push_str(value);
+            }
+            "sha256" => {
+                if !digest.sha2_256.is_empty() {
+                    anyhow::bail!("duplicate key {}", key);
+                }
+                digest.sha2_256.push_str(value);
+            }
+            "sha2_256" => {
+                if !digest.sha2_256.is_empty() {
+                    anyhow::bail!("duplicate key {}", key);
+                }
+                digest.sha2_256.push_str(value);
+            }
+            "sha2_512" => {
+                if !digest.sha2_512.is_empty() {
+                    anyhow::bail!("duplicate key {}", key);
+                }
+                digest.sha2_512.push_str(value);
+            }
+            "sha3_512" => {
+                if !digest.sha3_512.is_empty() {
+                    anyhow::bail!("duplicate key {}", key);
+                }
+                digest.sha3_512.push_str(value);
+            }
+            "sha3_384" => {
+                if !digest.sha3_384.is_empty() {
+                    anyhow::bail!("duplicate key {}", key);
+                }
+                digest.sha3_384.push_str(value);
+            }
+            "sha3_256" => {
+                if !digest.sha3_256.is_empty() {
+                    anyhow::bail!("duplicate key {}", key);
+                }
+                digest.sha3_256.push_str(value);
+            }
+            "sha3_224" => {
+                if !digest.sha3_224.is_empty() {
+                    anyhow::bail!("duplicate key {}", key);
+                }
+                digest.sha3_224.push_str(value);
+            }
+            "sha2_384" => {
+                if !digest.sha2_384.is_empty() {
+                    anyhow::bail!("duplicate key {}", key);
+                }
+                digest.sha2_384.push_str(value);
+            }
+            _ => anyhow::bail!("unknown digest key in endorsement statement"),
+        }
+    }
+
+    Ok(digest)
 }
 
 #[cfg(test)]

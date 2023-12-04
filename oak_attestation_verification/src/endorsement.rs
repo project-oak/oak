@@ -17,29 +17,38 @@
 //! Verifies binary endorsements as coming from Transparent Release.
 
 use crate::{
-    claims::{parse_endorsement_statement, validate_endorsement, verify_validity_duration},
+    claims::{
+        get_digest, parse_endorsement_statement, validate_endorsement, verify_validity_duration,
+        EndorsementStatement,
+    },
+    proto::oak::HexDigest,
     rekor::{get_rekor_log_entry_body, verify_rekor_log_entry},
-    util::{convert_pem_to_raw, equal_keys},
+    util::{convert_pem_to_raw, equal_keys, is_hex_digest_match, MatchResult},
 };
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
+
+/// Compares the digest contained in the endorsement against the given one.
+pub fn verify_binary_digest(
+    endorsement: &[u8],
+    expected: &HexDigest,
+) -> anyhow::Result<MatchResult> {
+    let statement = parse_endorsement_statement(endorsement)?;
+    let actual = get_digest(&statement)?;
+    Ok(is_hex_digest_match(&actual, &expected))
+}
 
 /// Verifies the binary endorsement for a given measurement.
 pub fn verify_binary_endorsement(
     now_utc_millis: i64,
     endorsement: &[u8],
     log_entry: &[u8],
-    binary_digest: &[u8],
-    binary_digest_alg: &str,
     endorser_public_key: &[u8],
     rekor_public_key: &[u8],
 ) -> anyhow::Result<()> {
-    verify_endorsement_statement(
-        now_utc_millis,
-        endorsement,
-        binary_digest,
-        binary_digest_alg,
-    )?;
+    let statement = parse_endorsement_statement(endorsement)?;
+
+    verify_endorsement_statement(now_utc_millis, &statement)?;
     verify_rekor_log_entry(log_entry, rekor_public_key, endorsement)?;
     verify_endorser_public_key(log_entry, endorser_public_key)?;
 
@@ -49,36 +58,12 @@ pub fn verify_binary_endorsement(
 /// Verifies endorsement against the given reference values.
 pub fn verify_endorsement_statement(
     now_utc_millis: i64,
-    endorsement: &[u8],
-    binary_digest: &[u8],
-    binary_digest_alg: &str,
+    statement: &EndorsementStatement,
 ) -> anyhow::Result<()> {
-    let claim = parse_endorsement_statement(endorsement)?;
-    if let Err(err) = validate_endorsement(&claim) {
+    if let Err(err) = validate_endorsement(&statement) {
         anyhow::bail!("validating endorsement: {err:?}");
     }
-    verify_validity_duration(now_utc_millis, &claim)?;
-    if claim.subject.len() != 1 {
-        anyhow::bail!(
-            "expected 1 subject in the endorsement, found {}",
-            claim.subject.len()
-        );
-    }
-
-    let binary_digest = core::str::from_utf8(binary_digest)?;
-    match claim.subject[0].digest.get(binary_digest_alg) {
-        Some(found_digest) => {
-            if found_digest != binary_digest {
-                anyhow::bail!(
-                    "unexpected binary {} digest: expected {}, got {}",
-                    binary_digest_alg,
-                    binary_digest,
-                    found_digest
-                )
-            }
-        }
-        None => anyhow::bail!("missing {binary_digest_alg} digest in the endorsement statement"),
-    }
+    verify_validity_duration(now_utc_millis, &statement)?;
 
     Ok(())
 }

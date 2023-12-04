@@ -18,11 +18,17 @@
 
 use crate::alloc::string::ToString;
 
-use crate::proto::oak::attestation::v1::{
-    attestation_results::Status, endorsements, reference_values, AttestationResults,
-    CbEndorsements, CbReferenceValues, Endorsements, Evidence, OakContainersEndorsements,
-    OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-    OakRestrictedKernelReferenceValues, ReferenceValues,
+use crate::{
+    claims::{get_digest, parse_endorsement_statement},
+    endorsement::verify_binary_endorsement,
+    proto::oak::attestation::v1::{
+        attestation_results::Status, binary_reference_value, endorsements, reference_values,
+        AttestationResults, BinaryReferenceValue, CbEndorsements, CbReferenceValues, Endorsements,
+        Evidence, OakContainersEndorsements, OakContainersReferenceValues,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        TransparentReleaseEndorsement,
+    },
+    util::{is_hex_digest_match, raw_to_hex_digest, MatchResult},
 };
 
 use coset::{cwt::ClaimsSet, CborSerializable, CoseKey};
@@ -34,11 +40,12 @@ const ADDITIONAL_DATA: &[u8] = b"";
 
 /// Verifies entire setup by forwarding to individual setup types.
 pub fn verify(
+    now_utc_millis: i64,
     evidence: &Evidence,
     endorsements: &Endorsements,
     reference_values: &ReferenceValues,
 ) -> AttestationResults {
-    match verify_internal(evidence, endorsements, reference_values).err() {
+    match verify_internal(now_utc_millis, evidence, endorsements, reference_values).err() {
         Some(err) => AttestationResults {
             status: Status::GenericFailure.into(),
             reason: err.to_string(),
@@ -52,6 +59,7 @@ pub fn verify(
 
 /// Same as verify(), but with Rust-internal return value.
 pub fn verify_internal(
+    now_utc_millis: i64,
     evidence: &Evidence,
     endorsements: &Endorsements,
     reference_values: &ReferenceValues,
@@ -69,7 +77,7 @@ pub fn verify_internal(
         (
             Some(endorsements::Type::OakContainers(ends)),
             Some(reference_values::Type::OakContainers(rvs)),
-        ) => verify_oak_containers(evidence, ends, rvs),
+        ) => verify_oak_containers(now_utc_millis, evidence, ends, rvs),
         (Some(endorsements::Type::Cb(ends)), Some(reference_values::Type::Cb(rvs))) => {
             verify_cb(evidence, ends, rvs)
         }
@@ -120,11 +128,35 @@ fn verify_oak_restricted_kernel(
 }
 
 fn verify_oak_containers(
+    now_utc_millis: i64,
     _evidence: &Evidence,
-    _endorsements: &OakContainersEndorsements,
-    _reference_values: &OakContainersReferenceValues,
+    endorsements: &OakContainersEndorsements,
+    reference_values: &OakContainersReferenceValues,
 ) -> anyhow::Result<()> {
-    Ok(()) // TODO(#4074): Needs implementation, work in progress.
+    let ends_layer = endorsements
+        .root_layer
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no root layer endorsements"))?;
+
+    let ref_layer = reference_values
+        .root_layer
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no root layer reference values"))?;
+
+    let stage0_end = ends_layer
+        .stage0
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no stage0 endorsement"))?;
+
+    let stage0_ref = ref_layer
+        .amd_sev
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no amd_sev in root reference values"))?
+        .stage0
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no stage0 reference value"))?;
+
+    verify_transparent_release_endorsement(now_utc_millis, stage0_end, stage0_ref)
 }
 
 fn verify_cb(
@@ -133,4 +165,37 @@ fn verify_cb(
     _reference_values: &CbReferenceValues,
 ) -> anyhow::Result<()> {
     anyhow::bail!("Needs implementation")
+}
+
+fn verify_transparent_release_endorsement(
+    now_utc_millis: i64,
+    endorsement: &TransparentReleaseEndorsement,
+    reference_value: &BinaryReferenceValue,
+) -> anyhow::Result<()> {
+    let statement = parse_endorsement_statement(&endorsement.endorsement)?;
+    let actual = get_digest(&statement)?;
+
+    match reference_value.r#type.as_ref() {
+        Some(binary_reference_value::Type::Endorsement(erv)) => verify_binary_endorsement(
+            now_utc_millis,
+            &endorsement.endorsement,
+            &endorsement.rekor_log_entry,
+            &erv.endorser_public_key,
+            &erv.rekor_public_key,
+        ),
+        Some(binary_reference_value::Type::Digests(ds)) => {
+            for raw in ds.digests.iter() {
+                let expected = raw_to_hex_digest(&raw);
+                let match_result = is_hex_digest_match(&actual, &expected);
+                if match_result == MatchResult::SAME {
+                    return Ok(());
+                }
+                if match_result == MatchResult::DIFFERENT {
+                    anyhow::bail!("found digest deviation");
+                }
+            }
+            anyhow::bail!("undecidable digest matching");
+        }
+        None => anyhow::bail!("empty binary reference value"),
+    }
 }
