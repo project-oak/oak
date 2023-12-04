@@ -75,7 +75,7 @@
         syslog::unix(formatter).map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;impossible to connect to syslog: {:?}&quot;</span>, e))<span class="question-mark">?</span>;
 
     log::set_boxed_logger(Box::new(BasicLogger::new(logger)))
-        .map(|()| log::set_max_level(LevelFilter::Trace))
+        .map(|()| log::set_max_level(LevelFilter::Debug))
         .map_err(|e| <span class="macro">format!</span>(<span class="string">&quot;failed to set logger: {:?}&quot;</span>, e))<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(())
