@@ -213,6 +213,18 @@
 <a href="#213" id="213">213</a>
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -238,6 +250,7 @@
         AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
         InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
+        ReserveRequest, ReserveResponse,
     },
 };
 <span class="kw">use </span>oak_remote_attestation::handler::AsyncEncryptionHandler;
@@ -410,6 +423,17 @@
         }
         instance
             .finish_next_lookup_data(FinishNextLookupDataRequest {})
+            .map(tonic::Response::new)
+            .map_err(map_status)
+    }
+
+    <span class="kw">async fn </span>reserve(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        request: tonic::Request&lt;ReserveRequest&gt;,
+    ) -&gt; tonic::Result&lt;tonic::Response&lt;ReserveResponse&gt;&gt; {
+        <span class="kw">let </span>request = request.into_inner();
+        <span class="self">self</span>.get_instance()<span class="question-mark">?
+            </span>.reserve(request)
             .map(tonic::Response::new)
             .map_err(map_status)
     }

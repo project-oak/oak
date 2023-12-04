@@ -186,6 +186,10 @@
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -238,7 +242,7 @@
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
     FinishNextLookupDataRequest, FinishNextLookupDataResponse, InitializeRequest,
     InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk, OakFunctions,
-    PublicKeyInfo,
+    PublicKeyInfo, ReserveRequest, ReserveResponse,
 };
 
 <span class="kw">pub struct </span>OakFunctionsService {
@@ -372,6 +376,10 @@
         <span class="kw">let </span>instance = <span class="self">self</span>.get_instance()<span class="question-mark">?</span>;
         instance.extend_lookup_data_chunk(request);
         instance.finish_next_lookup_data(FinishNextLookupDataRequest {})
+    }
+
+    <span class="kw">fn </span>reserve(<span class="kw-2">&amp;</span><span class="self">self</span>, request: ReserveRequest) -&gt; <span class="prelude-ty">Result</span>&lt;ReserveResponse, micro_rpc::Status&gt; {
+        <span class="self">self</span>.get_instance()<span class="question-mark">?</span>.reserve(request)
     }
 }
 </code></pre></div></section></main></body></html>
