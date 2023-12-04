@@ -49,8 +49,6 @@ var srcIndex = JSON.parse('{\
 "oak_stage0":["",[],["acpi.rs","acpi_tables.rs","allocator.rs","apic.rs","cmos.rs","dice_attestation.rs","fw_cfg.rs","initramfs.rs","kernel.rs","lib.rs","logging.rs","msr.rs","paging.rs","pic.rs","sev.rs","smp.rs","zero_page.rs"]],\
 "oak_tdx_guest":["",[],["lib.rs","tdcall.rs","vmcall.rs"]],\
 "oak_virtio":["",[["console",[],["mod.rs"]],["queue",[],["mod.rs","virtq.rs"]],["vsock",[["socket",[],["mod.rs"]]],["mod.rs","packet.rs"]]],["lib.rs"]],\
-"quirk_echo_launcher":["",[],["lib.rs"]],\
-"quirk_echo_service":["",[],["lib.rs"]],\
 "sev_serial":["",[],["lib.rs"]],\
 "snp_measurement":["",[],["elf.rs","main.rs","page.rs","stage0.rs","vmsa.rs"]],\
 "weather_lookup":["",[],["lib.rs"]],\
