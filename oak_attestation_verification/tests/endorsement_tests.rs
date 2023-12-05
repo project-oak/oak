@@ -119,6 +119,7 @@ fn test_verify_binary_digest_different() {
 #[test]
 fn test_verify_binary_digest_undecidable() {
     let testdata = load_testdata();
+    // Fill all hashes with something (whatever) but leave sha2_256 empty.
     let expected = HexDigest {
         psha2: BINARY_DIGEST.to_owned(),
         sha1: BINARY_DIGEST.to_owned(),

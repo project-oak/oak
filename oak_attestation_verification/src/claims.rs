@@ -118,6 +118,7 @@ pub struct ClaimEvidence {
     pub digest: DigestSet,
 }
 
+/// Inner type for a simple claim with no further fields.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct Claimless {}
 
@@ -185,76 +186,75 @@ pub fn validate_endorsement(claim: &EndorsementStatement) -> Result<(), InvalidC
 }
 
 fn set_digest_field_from_map_entry(
-    digest: &HexDigest,
+    digest: &mut HexDigest,
     key: &str,
     value: &str,
-) -> anyhow::Result<HexDigest> {
-    let mut d = digest.clone();
+) -> anyhow::Result<()> {
     match key {
         "psha2" => {
-            if !d.psha2.is_empty() {
+            if !digest.psha2.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
             }
-            d.psha2.push_str(value);
+            digest.psha2.push_str(value);
         }
         "sha1" => {
-            if !d.sha1.is_empty() {
+            if !digest.sha1.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
             }
-            d.sha1.push_str(value);
+            digest.sha1.push_str(value);
         }
         "sha256" => {
-            if !d.sha2_256.is_empty() {
+            if !digest.sha2_256.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
             }
-            d.sha2_256.push_str(value);
+            digest.sha2_256.push_str(value);
         }
         "sha2_256" => {
-            if !d.sha2_256.is_empty() {
+            if !digest.sha2_256.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
             }
-            d.sha2_256.push_str(value);
+            digest.sha2_256.push_str(value);
         }
         "sha2_512" => {
-            if !d.sha2_512.is_empty() {
+            if !digest.sha2_512.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
             }
-            d.sha2_512.push_str(value);
+            digest.sha2_512.push_str(value);
         }
         "sha3_512" => {
-            if !d.sha3_512.is_empty() {
+            if !digest.sha3_512.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
             }
-            d.sha3_512.push_str(value);
+            digest.sha3_512.push_str(value);
         }
         "sha3_384" => {
-            if !d.sha3_384.is_empty() {
+            if !digest.sha3_384.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
             }
-            d.sha3_384.push_str(value);
+            digest.sha3_384.push_str(value);
         }
         "sha3_256" => {
-            if !d.sha3_256.is_empty() {
+            if !digest.sha3_256.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
             }
-            d.sha3_256.push_str(value);
+            digest.sha3_256.push_str(value);
         }
         "sha3_224" => {
-            if !d.sha3_224.is_empty() {
+            if !digest.sha3_224.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
             }
-            d.sha3_224.push_str(value);
+            digest.sha3_224.push_str(value);
         }
         "sha2_384" => {
-            if !d.sha2_384.is_empty() {
+            if !digest.sha2_384.is_empty() {
                 anyhow::bail!("duplicate key {}", key);
             }
-            d.sha2_384.push_str(value);
+            digest.sha2_384.push_str(value);
         }
         _ => anyhow::bail!("unknown digest key in endorsement statement"),
     }
 
-    Ok(d)
+    Ok(())
 }
 
 /// Assembles digests found in endorsement statement into a protocol buffer.
@@ -266,11 +266,13 @@ pub fn get_digest(claim: &EndorsementStatement) -> anyhow::Result<HexDigest> {
         );
     }
 
-    let digest = claim.subject[0]
+    let mut digest = HexDigest::default();
+    claim.subject[0]
         .digest
         .iter()
-        .try_fold(HexDigest::default(), |acc, (key, value)| {
-            set_digest_field_from_map_entry(&acc, key.as_str(), value.as_str())
+        .try_fold(&mut digest, |acc, (key, value)| {
+            set_digest_field_from_map_entry(acc, key.as_str(), value.as_str())?;
+            Ok::<&mut HexDigest, anyhow::Error>(acc)
         })?;
 
     Ok(digest)
@@ -278,10 +280,9 @@ pub fn get_digest(claim: &EndorsementStatement) -> anyhow::Result<HexDigest> {
 
 #[cfg(test)]
 mod tests {
+    use super::get_digest;
     use crate::claims::{parse_endorsement_statement, validate_endorsement};
     use std::fs;
-
-    use super::get_digest;
 
     const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
 
