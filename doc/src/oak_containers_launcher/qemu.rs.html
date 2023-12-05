@@ -231,6 +231,13 @@
 <a href="#231" id="231">231</a>
 <a href="#232" id="232">232</a>
 <a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -329,7 +336,12 @@
 }
 
 <span class="kw">impl </span>Qemu {
-    <span class="kw">pub fn </span>start(params: Params, launcher_service_port: u16, host_proxy_port: u16) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+    <span class="kw">pub fn </span>start(
+        params: Params,
+        launcher_service_port: u16,
+        host_proxy_port: u16,
+        host_orchestrator_proxy_port: u16,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>cmd = tokio::process::Command::new(params.vmm_binary);
         <span class="kw">let </span>(guest_socket, host_socket) = UnixStream::pair()<span class="question-mark">?</span>;
         cmd.kill_on_drop(<span class="bool-val">true</span>);
@@ -374,6 +386,7 @@
         // `efi-virtio.rom` file, as we&#39;re not using EFI anyway.
         </span><span class="kw">let </span>vm_address = <span class="kw">crate</span>::VM_LOCAL_ADDRESS;
         <span class="kw">let </span>vm_port = <span class="kw">crate</span>::VM_LOCAL_PORT;
+        <span class="kw">let </span>vm_orchestrator_port = <span class="kw">crate</span>::VM_ORCHESTRATOR_LOCAL_PORT;
         <span class="kw">let </span>host_address = Ipv4Addr::LOCALHOST;
         cmd.args([
             <span class="string">&quot;-netdev&quot;</span>,
@@ -384,6 +397,7 @@
                     <span class="string">&quot;guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}&quot;
                 </span>),
                 <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}&quot;</span>),
+                <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}&quot;</span>),
             ]
             .join(<span class="string">&quot;,&quot;</span>)
             .as_str(),

@@ -220,6 +220,21 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -267,6 +282,9 @@
 
 <span class="doccomment">/// The local port that the VM guest should be listening on.
 </span><span class="kw">const </span>VM_LOCAL_PORT: u16 = <span class="number">8080</span>;
+
+<span class="doccomment">/// The local port that the Orchestrator should be listening on.
+</span><span class="kw">const </span>VM_ORCHESTRATOR_LOCAL_PORT: u16 = <span class="number">4000</span>;
 
 <span class="doccomment">/// The local address that will be forwarded by the VMM to the guest&#39;s IP adress.
 </span><span class="kw">const </span>PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
@@ -338,6 +356,7 @@
     <span class="kw">pub async fn </span>create(args: Args) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, anyhow::Error&gt; {
         <span class="comment">// Let the OS assign an open port for the launcher service.
         </span><span class="kw">let </span>sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), <span class="number">0</span>);
+        <span class="kw">let </span>orchestrator_sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), <span class="number">0</span>);
         <span class="kw">let </span>listener = TcpListener::bind(sockaddr).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>port = listener.local_addr()<span class="question-mark">?</span>.port();
         <span class="macro">log::info!</span>(<span class="string">&quot;Launcher service listening on port {port}&quot;</span>);
@@ -360,7 +379,18 @@
         // There is a small window for a race condition, but since the assigned port will be random
         // the probability of another process grabbing the port before QEMU can should be very low.
         </span><span class="kw">let </span>host_proxy_port = { TcpListener::bind(sockaddr).<span class="kw">await</span><span class="question-mark">?</span>.local_addr()<span class="question-mark">?</span>.port() };
-        <span class="kw">let </span>vmm = qemu::Qemu::start(args.qemu_params, port, host_proxy_port)<span class="question-mark">?</span>;
+        <span class="kw">let </span>host_orchestrator_proxy_port = {
+            TcpListener::bind(orchestrator_sockaddr)
+                .<span class="kw">await</span><span class="question-mark">?
+                </span>.local_addr()<span class="question-mark">?
+                </span>.port()
+        };
+        <span class="kw">let </span>vmm = qemu::Qemu::start(
+            args.qemu_params,
+            port,
+            host_proxy_port,
+            host_orchestrator_proxy_port,
+        )<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             vmm,
