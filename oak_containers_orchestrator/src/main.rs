@@ -27,6 +27,9 @@ struct Args {
     #[arg(default_value = "http://10.0.2.100:8080")]
     launcher_addr: String,
 
+    #[arg(default_value = "127.0.0.1:4000")]
+    orchestrator_addr: String,
+
     #[arg(long, default_value = "/oak_container")]
     container_dir: PathBuf,
 

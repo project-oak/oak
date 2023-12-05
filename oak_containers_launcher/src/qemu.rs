@@ -96,7 +96,12 @@ pub struct Qemu {
 }
 
 impl Qemu {
-    pub fn start(params: Params, launcher_service_port: u16, host_proxy_port: u16) -> Result<Self> {
+    pub fn start(
+        params: Params,
+        launcher_service_port: u16,
+        host_proxy_port: u16,
+        host_orchestrator_proxy_port: u16,
+    ) -> Result<Self> {
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
         let (guest_socket, host_socket) = UnixStream::pair()?;
         cmd.kill_on_drop(true);
@@ -141,6 +146,7 @@ impl Qemu {
         // `efi-virtio.rom` file, as we're not using EFI anyway.
         let vm_address = crate::VM_LOCAL_ADDRESS;
         let vm_port = crate::VM_LOCAL_PORT;
+        let vm_orchestrator_port = crate::VM_ORCHESTRATOR_LOCAL_PORT;
         let host_address = Ipv4Addr::LOCALHOST;
         cmd.args([
             "-netdev",
@@ -151,6 +157,7 @@ impl Qemu {
                     "guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}"
                 ),
                 &format!("hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}"),
+                &format!("hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"),
             ]
             .join(",")
             .as_str(),
