@@ -2187,6 +2187,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "http",
  "micro_rpc",
  "oak_crypto",
  "oak_functions_service",
@@ -2198,6 +2199,8 @@ dependencies = [
  "tokio-stream",
  "tonic",
  "tower",
+ "tower-http",
+ "tracing",
 ]
 
 [[package]]
@@ -4037,6 +4040,7 @@ dependencies = [
  "pin-project-lite",
  "tower-layer",
  "tower-service",
+ "tracing",
 ]
 
 [[package]]
