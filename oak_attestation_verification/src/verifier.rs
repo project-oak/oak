@@ -189,7 +189,7 @@ fn verify_transparent_release_endorsement(
             if ds
                 .digests
                 .iter()
-                .any(|actual| is_raw_digest_match(&actual, &expected) == MatchResult::SAME)
+                .any(|actual| is_raw_digest_match(actual, &expected) == MatchResult::SAME)
             {
                 return Ok(());
             }
