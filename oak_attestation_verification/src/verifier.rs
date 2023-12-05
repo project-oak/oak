@@ -39,7 +39,7 @@ use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
 const ADDITIONAL_DATA: &[u8] = b"";
 
 /// Verifies entire setup by forwarding to individual setup types.
-/// The `now_utc_millis` parameter will be changed to a time type as work progresses.
+/// The `now_utc_millis` argument will be changed to a time type as work progresses.
 pub fn verify(
     now_utc_millis: i64,
     evidence: &Evidence,
