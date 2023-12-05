@@ -44,7 +44,7 @@ struct Args {
     runtime_user: String,
 
     #[arg(long)]
-    key_provisioning_leader: bool,
+    wait_for_key_provisioning: bool,
 }
 
 #[tokio::main]
@@ -111,8 +111,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .context(format!("error resolving user {}", args.runtime_user))?
         .context(format!("user `{}` not found", args.runtime_user))?;
 
-    if args.key_provisioning_leader {
-        // Generate new group keys if this instance is a Key Provisioning leader.
+    if args.wait_for_key_provisioning {
+        // Receive group keys from the Key Provisioning leader.
+        tokio::try_join!(KeyProvisioningService::start(
+            orchestrator_address,
+            key_store.clone(),
+        ))?;
+    } else {
+        // Generate new group keys.
         let group_encryption_key = EncryptionKeyProvider::generate();
         key_store
             .mutable_group_encryption_key()
@@ -120,12 +126,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map_err(|_| {
                 tonic::Status::internal("group encryption key was already initialized".to_string())
             })?;
-    } else {
-        // Receive group keys from the Key Provisioning leader.
-        tokio::try_join!(KeyProvisioningService::start(
-            orchestrator_address,
-            key_store.clone(),
-        ))?;
     }
 
     let cancellation_token = CancellationToken::new();
