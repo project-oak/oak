@@ -570,7 +570,7 @@ dependencies = [
  "micro_rpc",
  "oak_channel",
  "oak_enclave_runtime_support",
- "oak_restricted_kernel_api",
+ "oak_restricted_kernel_sdk",
  "oak_restricted_kernel_interface",
  "static_assertions",
 ]
@@ -715,7 +715,7 @@ dependencies = [
  "oak_core",
  "oak_echo_service",
  "oak_enclave_runtime_support",
- "oak_restricted_kernel_api",
+ "oak_restricted_kernel_sdk",
  "static_assertions",
 ]
 
@@ -727,7 +727,7 @@ dependencies = [
  "micro_rpc",
  "oak_channel",
  "oak_enclave_runtime_support",
- "oak_restricted_kernel_api",
+ "oak_restricted_kernel_sdk",
  "static_assertions",
 ]
 
@@ -748,7 +748,7 @@ version = "0.1.0"
 dependencies = [
  "libm",
  "log",
- "oak_restricted_kernel_api",
+ "oak_restricted_kernel_sdk",
  "oak_restricted_kernel_interface",
  "rlsf",
  "spinning_top",
@@ -776,7 +776,7 @@ dependencies = [
  "oak_enclave_runtime_support",
  "oak_functions_service",
  "oak_remote_attestation",
- "oak_restricted_kernel_api",
+ "oak_restricted_kernel_sdk",
  "static_assertions",
 ]
 
@@ -829,7 +829,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_restricted_kernel_api"
+name = "oak_restricted_kernel_sdk"
 version = "0.1.0"
 dependencies = [
  "anyhow",

@@ -44,7 +44,7 @@ members = [
   "oak_launcher_utils",
   "oak_remote_attestation",
   "oak_restricted_kernel",
-  "oak_restricted_kernel_api",
+  "oak_restricted_kernel_sdk",
   "oak_restricted_kernel_interface",
   "oak_sev_guest",
   "oak_simple_io",
@@ -98,7 +98,7 @@ oak_launcher_utils = { path = "./oak_launcher_utils" }
 oak_linux_boot_params = { path = "./linux_boot_params" }
 oak_logger = { path = "./oak_functions/logger" }
 oak_remote_attestation = { path = "./oak_remote_attestation" }
-oak_restricted_kernel_api = { path = "./oak_restricted_kernel_api" }
+oak_restricted_kernel_sdk = { path = "./oak_restricted_kernel_sdk" }
 oak_restricted_kernel_interface = { path = "./oak_restricted_kernel_interface" }
 oak_sev_guest = { path = "./oak_sev_guest", default-features = false }
 oak_simple_io = { path = "./oak_simple_io" }
