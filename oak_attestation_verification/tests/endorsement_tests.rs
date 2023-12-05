@@ -64,15 +64,8 @@ struct TestData {
 
 fn create_hex_digest() -> HexDigest {
     HexDigest {
-        psha2: "".to_owned(),
-        sha1: "".to_owned(),
         sha2_256: BINARY_DIGEST.to_owned(),
-        sha2_512: "".to_owned(),
-        sha3_512: "".to_owned(),
-        sha3_384: "".to_owned(),
-        sha3_256: "".to_owned(),
-        sha3_224: "".to_owned(),
-        sha2_384: "".to_owned(),
+        ..Default::default()
     }
 }
 

@@ -122,9 +122,9 @@ fn verify_succeeds() {
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
 
-    println!("======================================");
-    println!("code={} reason={}", r.status as i32, r.reason);
-    println!("======================================");
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", r.status as i32, r.reason);
+    eprintln!("======================================");
     assert!(r.status() == Status::Success);
 }
 
@@ -137,9 +137,9 @@ fn verify_fails_with_manipulated_root_public_key() {
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
 
-    println!("======================================");
-    println!("code={} reason={}", r.status as i32, r.reason);
-    println!("======================================");
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", r.status as i32, r.reason);
+    eprintln!("======================================");
     assert!(r.status() == Status::GenericFailure);
 }
 

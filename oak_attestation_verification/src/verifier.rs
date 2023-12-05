@@ -173,7 +173,7 @@ fn verify_transparent_release_endorsement(
     reference_value: &BinaryReferenceValue,
 ) -> anyhow::Result<()> {
     let statement = parse_endorsement_statement(&endorsement.endorsement)?;
-    let actual = get_digest(&statement)?;
+    let expected = get_digest(&statement)?;
 
     match reference_value.r#type.as_ref() {
         Some(binary_reference_value::Type::Endorsement(erv)) => verify_binary_endorsement(
@@ -185,7 +185,7 @@ fn verify_transparent_release_endorsement(
         ),
         Some(binary_reference_value::Type::Digests(ds)) => {
             for raw in ds.digests.iter() {
-                let expected = raw_to_hex_digest(&raw);
+                let actual = raw_to_hex_digest(&raw);
                 let match_result = is_hex_digest_match(&actual, &expected);
                 if match_result == MatchResult::SAME {
                     return Ok(());

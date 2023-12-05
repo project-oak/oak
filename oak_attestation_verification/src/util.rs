@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use crate::proto::oak::{HexDigest, RawDigest};
 use alloc::{string::String, vec::Vec};
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
@@ -21,8 +22,6 @@ use core::{cmp::Ordering, str::FromStr};
 use ecdsa::{signature::Verifier, Signature};
 use p256::ecdsa::VerifyingKey;
 use sha2::{Digest, Sha256, Sha384, Sha512};
-
-use crate::proto::oak::{HexDigest, RawDigest};
 
 const PEM_HEADER: &str = "-----BEGIN PUBLIC KEY-----";
 const PEM_FOOTER: &str = "-----END PUBLIC KEY-----";
@@ -118,15 +117,10 @@ fn hash_sha2_384(input: &[u8]) -> [u8; 48] {
 /// The empty arrays need to be filled, when we depend on SHA{1,3} hashers.
 pub fn raw_digest_from_contents(contents: &[u8]) -> RawDigest {
     RawDigest {
-        psha2: b"".to_vec(),
-        sha1: b"".to_vec(),
         sha2_256: hash_sha2_256(contents).to_vec(),
         sha2_512: hash_sha2_512(contents).to_vec(),
-        sha3_512: b"".to_vec(),
-        sha3_384: b"".to_vec(),
-        sha3_256: b"".to_vec(),
-        sha3_224: b"".to_vec(),
         sha2_384: hash_sha2_384(contents).to_vec(),
+        ..Default::default()
     }
 }
 
