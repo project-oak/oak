@@ -20,11 +20,11 @@ use crate::{
             orchestrator_key_provisioning_server::{
                 OrchestratorKeyProvisioning, OrchestratorKeyProvisioningServer,
             },
-            UpdateGroupPrivateKeysRequest,
+            UpdateGroupKeysRequest,
         },
         key_provisioning::v1::{
             key_provisioning_server::{KeyProvisioning, KeyProvisioningServer},
-            GetGroupPrivateKeysRequest, GetGroupPrivateKeysResponse,
+            GetGroupKeysRequest, GetGroupKeysResponse,
         },
     },
 };
@@ -33,27 +33,27 @@ use std::{net::SocketAddr, sync::Arc};
 use tokio_util::sync::CancellationToken;
 use tonic::{transport::Server, Request, Response};
 
-pub struct KeyProvisioningService {
+pub struct KeyProvisioningDependantService {
     key_store: Arc<KeyStore>,
     // Cancellation token to tell the Key Provisioning gRPC service to stop after receiving group
     // keys. This sender will be used inside the gRPC service handler.
     cancellation_token: CancellationToken,
 }
 
-impl KeyProvisioningService {
+impl KeyProvisioningDependantService {
     pub async fn start(
         listen_address: SocketAddr,
         key_store: Arc<KeyStore>,
     ) -> Result<(), anyhow::Error> {
         let cancellation_token = CancellationToken::new();
-        let key_provisioning_service_instance = KeyProvisioningService {
+        let key_provisioning_dependant_service_instance = KeyProvisioningDependantService {
             key_store,
             cancellation_token: cancellation_token.clone(),
         };
 
         Server::builder()
             .add_service(OrchestratorKeyProvisioningServer::new(
-                key_provisioning_service_instance,
+                key_provisioning_dependant_service_instance,
             ))
             .serve_with_shutdown(listen_address, cancellation_token.cancelled())
             .await?;
@@ -63,10 +63,10 @@ impl KeyProvisioningService {
 }
 
 #[tonic::async_trait]
-impl OrchestratorKeyProvisioning for KeyProvisioningService {
-    async fn update_group_private_keys(
+impl OrchestratorKeyProvisioning for KeyProvisioningDependantService {
+    async fn update_group_keys(
         &self,
-        request: Request<UpdateGroupPrivateKeysRequest>,
+        request: Request<UpdateGroupKeysRequest>,
     ) -> Result<Response<()>, tonic::Status> {
         let request = request.into_inner();
 
@@ -117,23 +117,23 @@ impl OrchestratorKeyProvisioning for KeyProvisioningService {
     }
 }
 
-pub struct KeyProvisioningLeaderService {
+pub struct KeyProvisioningService {
     _key_store: Arc<KeyStore>,
 }
 
-impl KeyProvisioningLeaderService {
+impl KeyProvisioningService {
     pub async fn start(
         listen_address: SocketAddr,
         key_store: Arc<KeyStore>,
         cancellation_token: CancellationToken,
     ) -> Result<(), anyhow::Error> {
-        let key_provisioning_leader_service_instance = KeyProvisioningLeaderService {
+        let key_provisioning_service_instance = KeyProvisioningService {
             _key_store: key_store,
         };
 
         Server::builder()
             .add_service(KeyProvisioningServer::new(
-                key_provisioning_leader_service_instance,
+                key_provisioning_service_instance,
             ))
             .serve_with_shutdown(listen_address, cancellation_token.cancelled())
             .await?;
@@ -143,11 +143,11 @@ impl KeyProvisioningLeaderService {
 }
 
 #[tonic::async_trait]
-impl KeyProvisioning for KeyProvisioningLeaderService {
-    async fn get_group_private_keys(
+impl KeyProvisioning for KeyProvisioningService {
+    async fn get_group_keys(
         &self,
-        _request: Request<GetGroupPrivateKeysRequest>,
-    ) -> Result<Response<GetGroupPrivateKeysResponse>, tonic::Status> {
+        _request: Request<GetGroupKeysRequest>,
+    ) -> Result<Response<GetGroupKeysResponse>, tonic::Status> {
         // TODO(#4442): Provide actual Reference Values for Key Provisioning and verify attestation.
         Err(tonic::Status::unimplemented(
             "Key Provisioning is not implemented",

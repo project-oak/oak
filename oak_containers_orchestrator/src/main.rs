@@ -17,7 +17,7 @@ use anyhow::{anyhow, Context};
 use clap::Parser;
 use oak_containers_orchestrator::{
     crypto::KeyStore,
-    key_provisioning::{KeyProvisioningLeaderService, KeyProvisioningService},
+    key_provisioning::{KeyProvisioningDependantService, KeyProvisioningService},
 };
 use oak_containers_orchestrator_client::LauncherClient;
 use oak_crypto::encryptor::EncryptionKeyProvider;
@@ -113,7 +113,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if args.wait_for_key_provisioning {
         // Receive group keys from the Key Provisioning leader.
-        tokio::try_join!(KeyProvisioningService::start(
+        tokio::try_join!(KeyProvisioningDependantService::start(
             orchestrator_address,
             key_store.clone(),
         ))?;
@@ -137,7 +137,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             launcher_client,
             cancellation_token.clone(),
         ),
-        KeyProvisioningLeaderService::start(
+        KeyProvisioningService::start(
             orchestrator_address,
             key_store.clone(),
             cancellation_token.clone(),

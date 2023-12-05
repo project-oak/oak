@@ -22,19 +22,19 @@ import "oak_crypto/proto/v1/crypto.proto";
 import "proto/attestation/evidence.proto";
 import "proto/attestation/endorsement.proto";
 
-message GetGroupPrivateKeysRequest {
+message GetGroupKeysRequest {
   oak.attestation.v1.Evidence evidence = 1;
   oak.attestation.v1.Endorsements endorsements = 2;
 }
 
-message GetGroupPrivateKeysResponse {
+message GetGroupKeysResponse {
   // Encryption private key that was encrypted with HPKE using the encryption public key provided
   // in the endorsed evidence.
-  oak.crypto.v1.EncryptedRequest encrypted_encryption_key = 1;
+  oak.crypto.v1.EncryptedRequest encrypted_encryption_private_key = 1;
 }
 
 // Defines the Key Provisioning Service that distributes keys between enclaves.
 service KeyProvisioning {
   // Request enclave group keys from for other enclaves as part of Key Provisioning.
-  rpc GetGroupPrivateKeys(GetGroupPrivateKeysRequest) returns (GetGroupPrivateKeysResponse) {}
+  rpc GetGroupKeys(GetGroupKeysRequest) returns (GetGroupKeysResponse) {}
 }

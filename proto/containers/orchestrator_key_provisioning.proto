@@ -21,7 +21,7 @@ package oak.containers.v1;
 import "google/protobuf/empty.proto";
 import "oak_crypto/proto/v1/crypto.proto";
 
-message UpdateGroupPrivateKeysRequest {
+message UpdateGroupKeysRequest {
   // Group encryption private key that was encrypted with HPKE using instance encryption key.
   oak.crypto.v1.EncryptedRequest encrypted_encryption_private_key = 1;
 }
@@ -30,5 +30,5 @@ message UpdateGroupPrivateKeysRequest {
 // enclave group as part of Key Provisioning.
 service OrchestratorKeyProvisioning {
   // Update enclave group keys to the enclave as part of Key Provisioning.
-  rpc UpdateGroupPrivateKeys(UpdateGroupPrivateKeysRequest) returns (google.protobuf.Empty) {}
+  rpc UpdateGroupKeys(UpdateGroupKeysRequest) returns (google.protobuf.Empty) {}
 }
