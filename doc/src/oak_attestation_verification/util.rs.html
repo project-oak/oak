@@ -100,6 +100,116 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -116,13 +226,14 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>alloc::{string::String, vec::Vec};
+</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::{HexDigest, RawDigest};
+<span class="kw">use </span>alloc::{string::String, vec::Vec};
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
 <span class="kw">use </span>core::{cmp::Ordering, str::FromStr};
 <span class="kw">use </span>ecdsa::{signature::Verifier, Signature};
 <span class="kw">use </span>p256::ecdsa::VerifyingKey;
-<span class="kw">use </span>sha2::{Digest, Sha256};
+<span class="kw">use </span>sha2::{Digest, Sha256, Sha384, Sha512};
 
 <span class="kw">const </span>PEM_HEADER: <span class="kw-2">&amp;</span>str = <span class="string">&quot;-----BEGIN PUBLIC KEY-----&quot;</span>;
 <span class="kw">const </span>PEM_FOOTER: <span class="kw-2">&amp;</span>str = <span class="string">&quot;-----END PUBLIC KEY-----&quot;</span>;
@@ -196,10 +307,119 @@
         .context(<span class="string">&quot;couldn&#39;t verify signature&quot;</span>)
 }
 
-<span class="doccomment">/// Computes a SHA2-256 digest of `input` and returns it as raw bytes.
-</span><span class="kw">pub fn </span>hash_sha2_256(input: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">32</span>] {
+<span class="kw">pub fn </span>hash_sha2_256(input: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">32</span>] {
     <span class="kw">let </span><span class="kw-2">mut </span>hasher = Sha256::new();
     hasher.update(input);
     hasher.finalize().into()
+}
+
+<span class="kw">fn </span>hash_sha2_512(input: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">64</span>] {
+    <span class="kw">let </span><span class="kw-2">mut </span>hasher = Sha512::new();
+    hasher.update(input);
+    hasher.finalize().into()
+}
+
+<span class="kw">fn </span>hash_sha2_384(input: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">48</span>] {
+    <span class="kw">let </span><span class="kw-2">mut </span>hasher = Sha384::new();
+    hasher.update(input);
+    hasher.finalize().into()
+}
+
+<span class="doccomment">/// Computes various digest formats of a binary array.
+/// The empty arrays need to be filled, when we depend on SHA{1,3} hashers.
+</span><span class="kw">pub fn </span>raw_digest_from_contents(contents: <span class="kw-2">&amp;</span>[u8]) -&gt; RawDigest {
+    RawDigest {
+        sha2_256: hash_sha2_256(contents).to_vec(),
+        sha2_512: hash_sha2_512(contents).to_vec(),
+        sha2_384: hash_sha2_384(contents).to_vec(),
+        ..Default::default()
+    }
+}
+
+<span class="attr">#[derive(PartialEq)]
+</span><span class="kw">pub enum </span>MatchResult {
+    SAME = <span class="number">0</span>,
+    DIFFERENT = <span class="number">1</span>,
+    UNDECIDABLE = <span class="number">2</span>,
+}
+
+<span class="doccomment">/// Compares two binary arrays byte per byte.
+</span><span class="kw">fn </span>match_strings(a: <span class="kw-2">&amp;</span>str, b: <span class="kw-2">&amp;</span>str) -&gt; MatchResult {
+    <span class="kw">if </span>a != b {
+        <span class="kw">return </span>MatchResult::DIFFERENT;
+    }
+    MatchResult::SAME
+}
+
+<span class="doccomment">/// Compares two hex digests.
+</span><span class="kw">pub fn </span>is_hex_digest_match(a: <span class="kw-2">&amp;</span>HexDigest, b: <span class="kw-2">&amp;</span>HexDigest) -&gt; MatchResult {
+    <span class="kw">if </span>!a.psha2.is_empty() &amp;&amp; !b.psha2.is_empty() {
+        <span class="kw">return </span>match_strings(<span class="kw-2">&amp;</span>a.psha2, <span class="kw-2">&amp;</span>b.psha2);
+    }
+    <span class="kw">if </span>!a.sha2_256.is_empty() &amp;&amp; !b.sha2_256.is_empty() {
+        <span class="kw">return </span>match_strings(<span class="kw-2">&amp;</span>a.sha2_256, <span class="kw-2">&amp;</span>b.sha2_256);
+    }
+    <span class="kw">if </span>!a.sha2_512.is_empty() &amp;&amp; !b.sha2_512.is_empty() {
+        <span class="kw">return </span>match_strings(<span class="kw-2">&amp;</span>a.sha2_512, <span class="kw-2">&amp;</span>b.sha2_512);
+    }
+    <span class="kw">if </span>!a.sha3_512.is_empty() &amp;&amp; !b.sha3_512.is_empty() {
+        <span class="kw">return </span>match_strings(<span class="kw-2">&amp;</span>a.sha3_512, <span class="kw-2">&amp;</span>b.sha3_512);
+    }
+    <span class="kw">if </span>!a.sha3_384.is_empty() &amp;&amp; !b.sha3_384.is_empty() {
+        <span class="kw">return </span>match_strings(<span class="kw-2">&amp;</span>a.sha3_384, <span class="kw-2">&amp;</span>b.sha3_384);
+    }
+    <span class="kw">if </span>!a.sha3_256.is_empty() &amp;&amp; !b.sha3_256.is_empty() {
+        <span class="kw">return </span>match_strings(<span class="kw-2">&amp;</span>a.sha3_256, <span class="kw-2">&amp;</span>b.sha3_256);
+    }
+    <span class="kw">if </span>!a.sha3_224.is_empty() &amp;&amp; !b.sha3_224.is_empty() {
+        <span class="kw">return </span>match_strings(<span class="kw-2">&amp;</span>a.sha3_224, <span class="kw-2">&amp;</span>b.sha3_224);
+    }
+    <span class="kw">if </span>!a.sha2_384.is_empty() &amp;&amp; !b.sha2_384.is_empty() {
+        <span class="kw">return </span>match_strings(<span class="kw-2">&amp;</span>a.sha2_384, <span class="kw-2">&amp;</span>b.sha2_384);
+    }
+
+    <span class="comment">// Nit: Put the weak hash to the end of comparisons.
+    </span><span class="kw">if </span>!a.sha1.is_empty() &amp;&amp; !b.sha1.is_empty() {
+        <span class="kw">return </span>match_strings(<span class="kw-2">&amp;</span>a.sha1, <span class="kw-2">&amp;</span>b.sha1);
+    }
+
+    MatchResult::UNDECIDABLE
+}
+
+<span class="doccomment">/// Compares two raw digests.
+</span><span class="kw">pub fn </span>is_raw_digest_match(a: <span class="kw-2">&amp;</span>RawDigest, b: <span class="kw-2">&amp;</span>RawDigest) -&gt; MatchResult {
+    is_hex_digest_match(<span class="kw-2">&amp;</span>raw_to_hex_digest(a), <span class="kw-2">&amp;</span>raw_to_hex_digest(b))
+}
+
+<span class="doccomment">/// Converts raw digest to hex digest.
+</span><span class="kw">pub fn </span>raw_to_hex_digest(r: <span class="kw-2">&amp;</span>RawDigest) -&gt; HexDigest {
+    HexDigest {
+        psha2: hex::encode(<span class="kw-2">&amp;</span>r.psha2),
+        sha1: hex::encode(<span class="kw-2">&amp;</span>r.sha1),
+        sha2_256: hex::encode(<span class="kw-2">&amp;</span>r.sha2_256),
+        sha2_512: hex::encode(<span class="kw-2">&amp;</span>r.sha2_512),
+        sha3_512: hex::encode(<span class="kw-2">&amp;</span>r.sha3_512),
+        sha3_384: hex::encode(<span class="kw-2">&amp;</span>r.sha3_384),
+        sha3_256: hex::encode(<span class="kw-2">&amp;</span>r.sha3_256),
+        sha3_224: hex::encode(<span class="kw-2">&amp;</span>r.sha3_224),
+        sha2_384: hex::encode(<span class="kw-2">&amp;</span>r.sha2_384),
+    }
+}
+
+<span class="doccomment">/// Converts hex digest to raw digest.
+</span><span class="kw">pub fn </span>hex_to_raw_digest(h: <span class="kw-2">&amp;</span>HexDigest) -&gt; anyhow::Result&lt;RawDigest&gt; {
+    <span class="kw">let </span>raw = RawDigest {
+        psha2: hex::decode(<span class="kw-2">&amp;</span>h.psha2).context(<span class="string">&quot;could not decode field psha2&quot;</span>)<span class="question-mark">?</span>,
+        sha1: hex::decode(<span class="kw-2">&amp;</span>h.sha1).context(<span class="string">&quot;could not decode field sha1&quot;</span>)<span class="question-mark">?</span>,
+        sha2_256: hex::decode(<span class="kw-2">&amp;</span>h.sha2_256).context(<span class="string">&quot;could not decode field sha2_256&quot;</span>)<span class="question-mark">?</span>,
+        sha2_512: hex::decode(<span class="kw-2">&amp;</span>h.sha2_512).context(<span class="string">&quot;could not decode field sha2_512&quot;</span>)<span class="question-mark">?</span>,
+        sha3_512: hex::decode(<span class="kw-2">&amp;</span>h.sha3_512).context(<span class="string">&quot;could not decode field sha3_512&quot;</span>)<span class="question-mark">?</span>,
+        sha3_384: hex::decode(<span class="kw-2">&amp;</span>h.sha3_384).context(<span class="string">&quot;could not decode field sha3_384&quot;</span>)<span class="question-mark">?</span>,
+        sha3_256: hex::decode(<span class="kw-2">&amp;</span>h.sha3_256).context(<span class="string">&quot;could not decode field sha3_256&quot;</span>)<span class="question-mark">?</span>,
+        sha3_224: hex::decode(<span class="kw-2">&amp;</span>h.sha3_224).context(<span class="string">&quot;could not decode field sha3_224&quot;</span>)<span class="question-mark">?</span>,
+        sha2_384: hex::decode(<span class="kw-2">&amp;</span>h.sha2_384).context(<span class="string">&quot;could not decode field sha2_384&quot;</span>)<span class="question-mark">?</span>,
+    };
+
+    <span class="prelude-val">Ok</span>(raw)
 }
 </code></pre></div></section></main></body></html>
