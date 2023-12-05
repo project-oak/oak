@@ -796,6 +796,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "byteorder",
+ "bytes",
  "hashbrown 0.14.2",
  "log",
  "micro_rpc",
@@ -982,31 +983,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4dfaa718ad76a44b3415e6c4d53b17c8f99160dcb3a99b10470fce8ad43f6e3e"
 dependencies = [
  "bytes",
- "prost",
-]
-
-[[package]]
-name = "quirk_echo_enclave_app"
-version = "0.1.0"
-dependencies = [
- "log",
- "micro_rpc",
- "oak_channel",
- "oak_core",
- "oak_enclave_runtime_support",
- "oak_restricted_kernel_api",
- "quirk_echo_service",
- "static_assertions",
-]
-
-[[package]]
-name = "quirk_echo_service"
-version = "0.1.0"
-dependencies = [
- "hashbrown 0.14.2",
- "log",
- "micro_rpc",
- "micro_rpc_build",
  "prost",
 ]
 
