@@ -191,7 +191,7 @@ fn verify_transparent_release_endorsement(
                 .iter()
                 .any(|actual| is_raw_digest_match(actual, &expected) == MatchResult::SAME)
             {
-                return Ok(());
+                Ok(())
             } else {
                 anyhow::bail!("digests do not match");
             }
