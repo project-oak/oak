@@ -197,15 +197,15 @@ pub fn raw_to_hex_digest(r: &RawDigest) -> HexDigest {
 /// Converts hex digest to raw digest.
 pub fn hex_to_raw_digest(h: &HexDigest) -> anyhow::Result<RawDigest> {
     let raw = RawDigest {
-        psha2: hex::decode(&h.psha2)?,
-        sha1: hex::decode(&h.sha1)?,
-        sha2_256: hex::decode(&h.sha2_256)?,
-        sha2_512: hex::decode(&h.sha2_512)?,
-        sha3_512: hex::decode(&h.sha3_512)?,
-        sha3_384: hex::decode(&h.sha3_384)?,
-        sha3_256: hex::decode(&h.sha3_256)?,
-        sha3_224: hex::decode(&h.sha3_224)?,
-        sha2_384: hex::decode(&h.sha2_384)?,
+        psha2: hex::decode(&h.psha2).context("could not decode field psha2")?,
+        sha1: hex::decode(&h.sha1).context("could not decode field sha1")?,
+        sha2_256: hex::decode(&h.sha2_256).context("could not decode field sha2_256")?,
+        sha2_512: hex::decode(&h.sha2_512).context("could not decode field sha2_512")?,
+        sha3_512: hex::decode(&h.sha3_512).context("could not decode field sha3_512")?,
+        sha3_384: hex::decode(&h.sha3_384).context("could not decode field sha3_384")?,
+        sha3_256: hex::decode(&h.sha3_256).context("could not decode field sha3_256")?,
+        sha3_224: hex::decode(&h.sha3_224).context("could not decode field sha3_224")?,
+        sha2_384: hex::decode(&h.sha2_384).context("could not decode field sha2_384")?,
     };
 
     Ok(raw)
