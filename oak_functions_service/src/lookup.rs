@@ -59,6 +59,12 @@ impl DataBuilder {
         self.state = BuilderState::Extending;
         self.data.extend(new_data);
     }
+
+    fn reserve(&mut self, additional: usize) -> anyhow::Result<()> {
+        self.data
+            .try_reserve(additional)
+            .map_err(|err| anyhow::anyhow!("failed to reserve memory: {:?}", err))
+    }
 }
 
 /// Utility for managing lookup data.
@@ -103,6 +109,15 @@ where
         let test_manager = Self::new_empty(logger);
         *test_manager.data.lock() = Arc::new(data);
         test_manager
+    }
+
+    pub fn reserve(&self, additional: u64) -> anyhow::Result<()> {
+        let mut data_builder = self.data_builder.lock();
+        data_builder.reserve(
+            additional
+                .try_into()
+                .map_err(|err| anyhow::anyhow!("error converting integer: {:?}", err))?,
+        )
     }
 
     pub fn extend_next_lookup_data<T: IntoIterator<Item = (Bytes, Bytes)>>(&self, new_data: T) {

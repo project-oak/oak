@@ -31,7 +31,6 @@ jobs:
           - buildconfigs/oak_restricted_kernel_simple_io_bin.toml
           - buildconfigs/oak_functions_enclave_app.toml
           - buildconfigs/oak_functions_insecure_enclave_app.toml
-          - buildconfigs/quirk_echo_enclave_app.toml
           - buildconfigs/stage0_bin.toml
 
     permissions:
