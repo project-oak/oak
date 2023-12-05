@@ -29,7 +29,7 @@ use crate::{
     },
 };
 use oak_crypto::encryptor::{EncryptionKeyProvider, ServerEncryptor};
-use std::{sync::Arc, net::SocketAddr};
+use std::{net::SocketAddr, sync::Arc};
 use tokio_util::sync::CancellationToken;
 use tonic::{transport::Server, Request, Response};
 
@@ -118,7 +118,7 @@ impl OrchestratorKeyProvisioning for KeyProvisioningService {
 }
 
 pub struct KeyProvisioningLeaderService {
-    key_store: Arc<KeyStore>,
+    _key_store: Arc<KeyStore>,
 }
 
 impl KeyProvisioningLeaderService {
@@ -128,7 +128,7 @@ impl KeyProvisioningLeaderService {
         cancellation_token: CancellationToken,
     ) -> Result<(), anyhow::Error> {
         let key_provisioning_leader_service_instance = KeyProvisioningLeaderService {
-            key_store,
+            _key_store: key_store,
         };
 
         Server::builder()
