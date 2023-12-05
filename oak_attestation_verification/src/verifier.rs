@@ -192,8 +192,9 @@ fn verify_transparent_release_endorsement(
                 .any(|actual| is_raw_digest_match(actual, &expected) == MatchResult::SAME)
             {
                 return Ok(());
+            } else {
+                anyhow::bail!("digests do not match");
             }
-            anyhow::bail!("digests do not match");
         }
         None => anyhow::bail!("empty binary reference value"),
     }
