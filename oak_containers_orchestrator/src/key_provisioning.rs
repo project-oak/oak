@@ -44,12 +44,12 @@ impl OrchestratorKeyProvisioning for KeyProvisioningService {
     }
 }
 
-struct KeyProvisioningLeaderService {
+struct KeyProvisioningService {
     _key_store: Arc<KeyStore>,
 }
 
 #[tonic::async_trait]
-impl KeyProvisioning for KeyProvisioningLeaderService {
+impl KeyProvisioning for KeyProvisioningService {
     async fn get_group_keys(
         &self,
         _request: Request<GetGroupKeysRequest>,
