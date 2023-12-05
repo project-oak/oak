@@ -28,7 +28,7 @@ use crate::{
         OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
         TransparentReleaseEndorsement,
     },
-    util::{is_hex_digest_match, raw_to_hex_digest, MatchResult},
+    util::{hex_to_raw_digest, is_raw_digest_match, MatchResult},
 };
 
 use coset::{cwt::ClaimsSet, CborSerializable, CoseKey};
@@ -39,6 +39,7 @@ use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
 const ADDITIONAL_DATA: &[u8] = b"";
 
 /// Verifies entire setup by forwarding to individual setup types.
+/// The `now_utc_millis` parameter will be changed to a time type as work progresses.
 pub fn verify(
     now_utc_millis: i64,
     evidence: &Evidence,
@@ -173,7 +174,8 @@ fn verify_transparent_release_endorsement(
     reference_value: &BinaryReferenceValue,
 ) -> anyhow::Result<()> {
     let statement = parse_endorsement_statement(&endorsement.endorsement)?;
-    let expected = get_digest(&statement)?;
+    let hex_digest = get_digest(&statement)?;
+    let expected = hex_to_raw_digest(&hex_digest)?;
 
     match reference_value.r#type.as_ref() {
         Some(binary_reference_value::Type::Endorsement(erv)) => verify_binary_endorsement(
@@ -184,17 +186,14 @@ fn verify_transparent_release_endorsement(
             &erv.rekor_public_key,
         ),
         Some(binary_reference_value::Type::Digests(ds)) => {
-            for raw in ds.digests.iter() {
-                let actual = raw_to_hex_digest(raw);
-                let match_result = is_hex_digest_match(&actual, &expected);
-                if match_result == MatchResult::SAME {
-                    return Ok(());
-                }
-                if match_result == MatchResult::DIFFERENT {
-                    anyhow::bail!("found digest deviation");
-                }
+            if ds
+                .digests
+                .iter()
+                .any(|actual| is_raw_digest_match(&actual, &expected) == MatchResult::SAME)
+            {
+                return Ok(());
             }
-            anyhow::bail!("undecidable digest matching");
+            anyhow::bail!("digests do not match");
         }
         None => anyhow::bail!("empty binary reference value"),
     }
