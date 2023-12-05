@@ -51,7 +51,7 @@ fn create_endorsements() -> Endorsements {
     let log_entry = fs::read(LOG_ENTRY_PATH).expect("couldn't read log entry");
 
     let stage0 = TransparentReleaseEndorsement {
-        endorsement: endorsement,
+        endorsement,
         endorsement_signature: signature,
         rekor_log_entry: log_entry,
     };
@@ -84,8 +84,8 @@ fn create_reference_values() -> ReferenceValues {
         convert_pem_to_raw(&rekor_public_key_pem).expect("failed to convert Rekor key");
 
     let erv = EndorsementReferenceValue {
-        endorser_public_key: endorser_public_key,
-        rekor_public_key: rekor_public_key,
+        endorser_public_key,
+        rekor_public_key,
     };
     let stage0 = BinaryReferenceValue {
         r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::binary_reference_value::Type::Endorsement(erv)),

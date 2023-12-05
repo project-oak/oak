@@ -185,7 +185,7 @@ fn verify_transparent_release_endorsement(
         ),
         Some(binary_reference_value::Type::Digests(ds)) => {
             for raw in ds.digests.iter() {
-                let actual = raw_to_hex_digest(&raw);
+                let actual = raw_to_hex_digest(raw);
                 let match_result = is_hex_digest_match(&actual, &expected);
                 if match_result == MatchResult::SAME {
                     return Ok(());

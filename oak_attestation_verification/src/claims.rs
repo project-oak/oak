@@ -184,7 +184,7 @@ pub fn validate_endorsement(claim: &EndorsementStatement) -> Result<(), InvalidC
     Ok(())
 }
 
-fn set_digest_field_from_map_entry<'a>(
+fn set_digest_field_from_map_entry(
     digest: &HexDigest,
     key: &str,
     value: &str,

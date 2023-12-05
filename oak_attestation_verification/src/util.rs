@@ -136,7 +136,7 @@ fn match_strings(a: &str, b: &str) -> MatchResult {
     if a != b {
         return MatchResult::DIFFERENT;
     }
-    return MatchResult::SAME;
+    MatchResult::SAME
 }
 
 /// Compares two hex digests.
@@ -171,12 +171,12 @@ pub fn is_hex_digest_match(a: &HexDigest, b: &HexDigest) -> MatchResult {
         return match_strings(&a.sha1, &b.sha1);
     }
 
-    return MatchResult::UNDECIDABLE;
+    MatchResult::UNDECIDABLE
 }
 
 /// Compares two raw digests.
 pub fn is_raw_digest_match(a: &RawDigest, b: &RawDigest) -> MatchResult {
-    return is_hex_digest_match(&raw_to_hex_digest(a), &raw_to_hex_digest(b));
+    is_hex_digest_match(&raw_to_hex_digest(a), &raw_to_hex_digest(b))
 }
 
 /// Converts raw digest to hex digest.

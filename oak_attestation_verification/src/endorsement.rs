@@ -35,7 +35,7 @@ pub fn verify_binary_digest(
 ) -> anyhow::Result<MatchResult> {
     let statement = parse_endorsement_statement(endorsement)?;
     let actual = get_digest(&statement)?;
-    Ok(is_hex_digest_match(&actual, &expected))
+    Ok(is_hex_digest_match(&actual, expected))
 }
 
 /// Verifies the binary endorsement for a given measurement.
@@ -60,10 +60,10 @@ pub fn verify_endorsement_statement(
     now_utc_millis: i64,
     statement: &EndorsementStatement,
 ) -> anyhow::Result<()> {
-    if let Err(err) = validate_endorsement(&statement) {
+    if let Err(err) = validate_endorsement(statement) {
         anyhow::bail!("validating endorsement: {err:?}");
     }
-    verify_validity_duration(now_utc_millis, &statement)?;
+    verify_validity_duration(now_utc_millis, statement)?;
 
     Ok(())
 }
