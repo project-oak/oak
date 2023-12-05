@@ -19,16 +19,15 @@ syntax = "proto3";
 package oak.containers.v1;
 
 import "google/protobuf/empty.proto";
-import "oak_crypto/proto/v1/crypto.proto";
+import "proto/key_provisioning/key_provisioning.proto";
 
-message SendGroupKeysRequest {
-  // Group encryption private key that was encrypted with HPKE using instance encryption key.
-  oak.crypto.v1.EncryptedRequest encrypted_encryption_key = 1;
+message UpdateGroupKeysRequest {
+  oak.key_provisioning.v1.GroupKeys group_keys = 1;
 }
 
 // Defines the service exposed to the Hostlib and is used to distribute encryption keys within the
 // enclave group as part of Key Provisioning.
 service OrchestratorKeyProvisioning {
-  // Send enclave group keys to the enclave as part of Key Provisioning.
-  rpc SendGroupKeys(SendGroupKeysRequest) returns (google.protobuf.Empty) {}
+  // Update enclave group keys to the enclave as part of Key Provisioning.
+  rpc UpdateGroupKeys(UpdateGroupKeysRequest) returns (google.protobuf.Empty) {}
 }

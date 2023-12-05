@@ -34,7 +34,7 @@ proto_library(
     name = "orchestrator_key_provisioning_proto",
     srcs = ["orchestrator_key_provisioning.proto"],
     deps = [
-        "//oak_crypto/proto/v1:crypto_proto",
+        "//proto/key_provisioning:key_provisioning_proto",
     ],
 )
 
