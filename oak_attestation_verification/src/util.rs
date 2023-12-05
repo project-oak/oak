@@ -14,13 +14,14 @@
 // limitations under the License.
 //
 
+use crate::proto::oak::{HexDigest, RawDigest};
 use alloc::{string::String, vec::Vec};
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use core::{cmp::Ordering, str::FromStr};
 use ecdsa::{signature::Verifier, Signature};
 use p256::ecdsa::VerifyingKey;
-use sha2::{Digest, Sha256};
+use sha2::{Digest, Sha256, Sha384, Sha512};
 
 const PEM_HEADER: &str = "-----BEGIN PUBLIC KEY-----";
 const PEM_FOOTER: &str = "-----END PUBLIC KEY-----";
@@ -94,9 +95,118 @@ pub fn verify_signature_raw(
         .context("couldn't verify signature")
 }
 
-/// Computes a SHA2-256 digest of `input` and returns it as raw bytes.
 pub fn hash_sha2_256(input: &[u8]) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(input);
     hasher.finalize().into()
+}
+
+fn hash_sha2_512(input: &[u8]) -> [u8; 64] {
+    let mut hasher = Sha512::new();
+    hasher.update(input);
+    hasher.finalize().into()
+}
+
+fn hash_sha2_384(input: &[u8]) -> [u8; 48] {
+    let mut hasher = Sha384::new();
+    hasher.update(input);
+    hasher.finalize().into()
+}
+
+/// Computes various digest formats of a binary array.
+/// The empty arrays need to be filled, when we depend on SHA{1,3} hashers.
+pub fn raw_digest_from_contents(contents: &[u8]) -> RawDigest {
+    RawDigest {
+        sha2_256: hash_sha2_256(contents).to_vec(),
+        sha2_512: hash_sha2_512(contents).to_vec(),
+        sha2_384: hash_sha2_384(contents).to_vec(),
+        ..Default::default()
+    }
+}
+
+#[derive(PartialEq)]
+pub enum MatchResult {
+    SAME = 0,
+    DIFFERENT = 1,
+    UNDECIDABLE = 2,
+}
+
+/// Compares two binary arrays byte per byte.
+fn match_strings(a: &str, b: &str) -> MatchResult {
+    if a != b {
+        return MatchResult::DIFFERENT;
+    }
+    MatchResult::SAME
+}
+
+/// Compares two hex digests.
+pub fn is_hex_digest_match(a: &HexDigest, b: &HexDigest) -> MatchResult {
+    if !a.psha2.is_empty() && !b.psha2.is_empty() {
+        return match_strings(&a.psha2, &b.psha2);
+    }
+    if !a.sha2_256.is_empty() && !b.sha2_256.is_empty() {
+        return match_strings(&a.sha2_256, &b.sha2_256);
+    }
+    if !a.sha2_512.is_empty() && !b.sha2_512.is_empty() {
+        return match_strings(&a.sha2_512, &b.sha2_512);
+    }
+    if !a.sha3_512.is_empty() && !b.sha3_512.is_empty() {
+        return match_strings(&a.sha3_512, &b.sha3_512);
+    }
+    if !a.sha3_384.is_empty() && !b.sha3_384.is_empty() {
+        return match_strings(&a.sha3_384, &b.sha3_384);
+    }
+    if !a.sha3_256.is_empty() && !b.sha3_256.is_empty() {
+        return match_strings(&a.sha3_256, &b.sha3_256);
+    }
+    if !a.sha3_224.is_empty() && !b.sha3_224.is_empty() {
+        return match_strings(&a.sha3_224, &b.sha3_224);
+    }
+    if !a.sha2_384.is_empty() && !b.sha2_384.is_empty() {
+        return match_strings(&a.sha2_384, &b.sha2_384);
+    }
+
+    // Nit: Put the weak hash to the end of comparisons.
+    if !a.sha1.is_empty() && !b.sha1.is_empty() {
+        return match_strings(&a.sha1, &b.sha1);
+    }
+
+    MatchResult::UNDECIDABLE
+}
+
+/// Compares two raw digests.
+pub fn is_raw_digest_match(a: &RawDigest, b: &RawDigest) -> MatchResult {
+    is_hex_digest_match(&raw_to_hex_digest(a), &raw_to_hex_digest(b))
+}
+
+/// Converts raw digest to hex digest.
+pub fn raw_to_hex_digest(r: &RawDigest) -> HexDigest {
+    HexDigest {
+        psha2: hex::encode(&r.psha2),
+        sha1: hex::encode(&r.sha1),
+        sha2_256: hex::encode(&r.sha2_256),
+        sha2_512: hex::encode(&r.sha2_512),
+        sha3_512: hex::encode(&r.sha3_512),
+        sha3_384: hex::encode(&r.sha3_384),
+        sha3_256: hex::encode(&r.sha3_256),
+        sha3_224: hex::encode(&r.sha3_224),
+        sha2_384: hex::encode(&r.sha2_384),
+    }
+}
+
+/// Converts hex digest to raw digest.
+pub fn hex_to_raw_digest(h: &HexDigest) -> anyhow::Result<RawDigest> {
+    let raw = RawDigest {
+        psha2: hex::decode(&h.psha2).context("could not decode field psha2")?,
+        sha1: hex::decode(&h.sha1).context("could not decode field sha1")?,
+        sha2_256: hex::decode(&h.sha2_256).context("could not decode field sha2_256")?,
+        sha2_512: hex::decode(&h.sha2_512).context("could not decode field sha2_512")?,
+        sha3_512: hex::decode(&h.sha3_512).context("could not decode field sha3_512")?,
+        sha3_384: hex::decode(&h.sha3_384).context("could not decode field sha3_384")?,
+        sha3_256: hex::decode(&h.sha3_256).context("could not decode field sha3_256")?,
+        sha3_224: hex::decode(&h.sha3_224).context("could not decode field sha3_224")?,
+        sha2_384: hex::decode(&h.sha2_384).context("could not decode field sha2_384")?,
+    };
+
+    Ok(raw)
 }

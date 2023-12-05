@@ -19,13 +19,24 @@ use std::fs;
 
 use oak_attestation_verification::{
     proto::oak::attestation::v1::{
-        attestation_results::Status, Endorsements, Evidence, OakContainersEndorsements,
-        OakContainersReferenceValues, ReferenceValues, RootLayerReferenceValues,
+        attestation_results::Status, AmdSevReferenceValues, BinaryReferenceValue,
+        EndorsementReferenceValue, Endorsements, Evidence, OakContainersEndorsements,
+        OakContainersReferenceValues, ReferenceValues, RootLayerEndorsements,
+        RootLayerReferenceValues, TransparentReleaseEndorsement,
     },
+    util::convert_pem_to_raw,
     verifier::verify,
 };
 
+const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
+const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
+const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
+const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
+const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 const EVIDENCE_PATH: &str = "testdata/evidence.binarypb";
+
+// Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
+const NOW_UTC_MILLIS: i64 = 1698829200000;
 
 // Creates a valid evidence instance.
 fn create_evidence() -> Evidence {
@@ -35,8 +46,22 @@ fn create_evidence() -> Evidence {
 
 // Creates valid endorsements for an Oak Containers chain.
 fn create_endorsements() -> Endorsements {
+    let endorsement = fs::read(ENDORSEMENT_PATH).expect("couldn't read endorsement");
+    let signature = fs::read(SIGNATURE_PATH).expect("couldn't read signature");
+    let log_entry = fs::read(LOG_ENTRY_PATH).expect("couldn't read log entry");
+
+    let stage0 = TransparentReleaseEndorsement {
+        endorsement,
+        endorsement_signature: signature,
+        rekor_log_entry: log_entry,
+    };
+    let root_layer = RootLayerEndorsements {
+        tee_certificate: b"T O D O".to_vec(),
+        stage0: Some(stage0),
+    };
+
     let ends = OakContainersEndorsements {
-        root_layer: None,
+        root_layer: Some(root_layer),
         kernel_layer: None,
         system_layer: None,
         container_layer: None,
@@ -48,8 +73,33 @@ fn create_endorsements() -> Endorsements {
 
 // Creates valid reference values for an Oak Containers chain.
 fn create_reference_values() -> ReferenceValues {
+    let endorser_public_key_pem =
+        fs::read_to_string(ENDORSER_PUBLIC_KEY_PATH).expect("couldn't read endorser public key");
+    let rekor_public_key_pem =
+        fs::read_to_string(REKOR_PUBLIC_KEY_PATH).expect("couldn't read rekor public key");
+
+    let endorser_public_key = convert_pem_to_raw(endorser_public_key_pem.as_str())
+        .expect("failed to convert endorser key");
+    let rekor_public_key =
+        convert_pem_to_raw(&rekor_public_key_pem).expect("failed to convert Rekor key");
+
+    let erv = EndorsementReferenceValue {
+        endorser_public_key,
+        rekor_public_key,
+    };
+    let stage0 = BinaryReferenceValue {
+        r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::binary_reference_value::Type::Endorsement(erv)),
+    };
+
+    let amd_sev = AmdSevReferenceValues {
+        amd_root_public_key: b"".to_vec(),
+        firmware_version: "1.0.0".to_owned(),
+        allow_debug: false,
+        stage0: Some(stage0),
+    };
+
     let root_layer = RootLayerReferenceValues {
-        amd_sev: None,
+        amd_sev: Some(amd_sev),
         intel_tdx: None,
     };
 
@@ -70,8 +120,11 @@ fn verify_succeeds() {
     let endorsements = create_endorsements();
     let reference_values = create_reference_values();
 
-    let r = verify(&evidence, &endorsements, &reference_values);
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
 
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", r.status as i32, r.reason);
+    eprintln!("======================================");
     assert!(r.status() == Status::Success);
 }
 
@@ -82,11 +135,11 @@ fn verify_fails_with_manipulated_root_public_key() {
     let endorsements = create_endorsements();
     let reference_values = create_reference_values();
 
-    let r = verify(&evidence, &endorsements, &reference_values);
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
 
-    println!("======================================");
-    println!("code={} reason={}", r.status as i32, r.reason);
-    println!("======================================");
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", r.status as i32, r.reason);
+    eprintln!("======================================");
     assert!(r.status() == Status::GenericFailure);
 }
 
@@ -96,7 +149,7 @@ fn verify_fails_with_empty_args() {
     let endorsements = Endorsements::default();
     let reference_values = ReferenceValues::default();
 
-    let r = verify(&evidence, &endorsements, &reference_values);
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
 
     assert!(r.status() == Status::GenericFailure);
 }

@@ -21,6 +21,7 @@
 
 extern crate alloc;
 
+use crate::proto::oak::HexDigest;
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
@@ -117,13 +118,14 @@ pub struct ClaimEvidence {
     pub digest: DigestSet,
 }
 
+/// Inner type for a simple claim with no further fields.
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct EndorsementStatement {}
+pub struct Claimless {}
+
+pub type EndorsementStatement = Statement<ClaimPredicate<Claimless>>;
 
 /// Converts the given byte array into an endorsement statement.
-pub fn parse_endorsement_statement(
-    bytes: &[u8],
-) -> anyhow::Result<Statement<ClaimPredicate<EndorsementStatement>>> {
+pub fn parse_endorsement_statement(bytes: &[u8]) -> anyhow::Result<EndorsementStatement> {
     serde_json::from_slice(bytes).context("parsing endorsement bytes")
 }
 
@@ -175,9 +177,7 @@ pub fn verify_validity_duration<T>(
 
 /// Checks that the given endorsement statement is a valid and has the correct
 /// claim type.
-pub fn validate_endorsement(
-    claim: &Statement<ClaimPredicate<EndorsementStatement>>,
-) -> Result<(), InvalidClaimData> {
+pub fn validate_endorsement(claim: &EndorsementStatement) -> Result<(), InvalidClaimData> {
     validate_claim(claim)?;
     if claim.predicate.claim_type != ENDORSEMENT_V2 {
         return Err(InvalidClaimData::ClaimType);
@@ -185,8 +185,102 @@ pub fn validate_endorsement(
     Ok(())
 }
 
+fn set_digest_field_from_map_entry(
+    digest: &mut HexDigest,
+    key: &str,
+    value: &str,
+) -> anyhow::Result<()> {
+    match key {
+        "psha2" => {
+            if !digest.psha2.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.psha2.push_str(value);
+        }
+        "sha1" => {
+            if !digest.sha1.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha1.push_str(value);
+        }
+        "sha256" => {
+            if !digest.sha2_256.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha2_256.push_str(value);
+        }
+        "sha2_256" => {
+            if !digest.sha2_256.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha2_256.push_str(value);
+        }
+        "sha2_512" => {
+            if !digest.sha2_512.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha2_512.push_str(value);
+        }
+        "sha3_512" => {
+            if !digest.sha3_512.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha3_512.push_str(value);
+        }
+        "sha3_384" => {
+            if !digest.sha3_384.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha3_384.push_str(value);
+        }
+        "sha3_256" => {
+            if !digest.sha3_256.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha3_256.push_str(value);
+        }
+        "sha3_224" => {
+            if !digest.sha3_224.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha3_224.push_str(value);
+        }
+        "sha2_384" => {
+            if !digest.sha2_384.is_empty() {
+                anyhow::bail!("duplicate key {}", key);
+            }
+            digest.sha2_384.push_str(value);
+        }
+        _ => anyhow::bail!("unknown digest key in endorsement statement"),
+    }
+
+    Ok(())
+}
+
+/// Assembles digests found in endorsement statement into a protocol buffer.
+pub fn get_digest(claim: &EndorsementStatement) -> anyhow::Result<HexDigest> {
+    if claim.subject.len() != 1 {
+        anyhow::bail!(
+            "expected a single endorsement subject, found {}",
+            claim.subject.len()
+        );
+    }
+
+    let mut digest = HexDigest::default();
+    claim.subject[0]
+        .digest
+        .iter()
+        .try_fold(&mut digest, |acc, (key, value)| {
+            set_digest_field_from_map_entry(acc, key.as_str(), value.as_str())?;
+            Ok::<&mut HexDigest, anyhow::Error>(acc)
+        })?;
+
+    Ok(digest)
+}
+
 #[cfg(test)]
 mod tests {
+    use super::get_digest;
     use crate::claims::{parse_endorsement_statement, validate_endorsement};
     use std::fs;
 
@@ -199,5 +293,18 @@ mod tests {
             .expect("couldn't parse bytes into a claim");
 
         assert!(validate_endorsement(&claim).is_ok())
+    }
+
+    #[test]
+    fn test_get_claims() {
+        let endorsement_bytes = fs::read(ENDORSEMENT_PATH).expect("couldn't read endorsement file");
+        let claim = parse_endorsement_statement(&endorsement_bytes)
+            .expect("couldn't parse bytes into a claim");
+        let digest = get_digest(&claim).expect("failed to get digest from claim");
+
+        assert_eq!(
+            digest.sha2_256,
+            "39051983bbb600bbfb91bd22ee4c976420f8f0c6a895fd083dcb0d153ddd5fd6"
+        );
     }
 }
