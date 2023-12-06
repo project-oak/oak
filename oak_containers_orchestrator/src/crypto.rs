@@ -35,9 +35,11 @@ impl Default for KeyStore {
 
 impl KeyStore {
     pub fn new() -> Self {
+        let instance_encryption_key = Arc::new(EncryptionKeyProvider::generate());
+        let group_encryption_key = instance_encryption_key.clone();
         Self {
-            instance_encryption_key: Arc::new(EncryptionKeyProvider::generate()),
-            group_encryption_key: OnceLock::new(),
+            instance_encryption_key,
+            group_encryption_key,
         }
     }
 
@@ -50,11 +52,6 @@ impl KeyStore {
 
     pub fn instance_encryption_public_key(&self) -> Vec<u8> {
         self.instance_encryption_key.get_serialized_public_key()
-    }
-
-    pub fn mutable_group_encryption_key(&self) -> &OnceLock<EncryptionKeyProvider> {
-        // TODO(#4513): Implement Rust protections for the private key.
-        &self.group_encryption_key
     }
 }
 
