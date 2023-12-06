@@ -164,7 +164,7 @@
             min_size
         };
 
-        oak_restricted_kernel_api::syscall::mmap(
+        oak_restricted_kernel_sdk::syscall::mmap(
             <span class="comment">// TODO(#3864): One we start compiling C++ applications internally using the Oak
             // Toolchain, we won&#39;t need to manually separate Rust and C++ heaps.
             </span><span class="prelude-val">Some</span>(<span class="number">0x100_0000_0000 </span><span class="kw">as </span><span class="kw-2">*const </span>core::ffi::c_void),
