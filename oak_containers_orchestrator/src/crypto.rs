@@ -17,7 +17,7 @@ use crate::proto::oak::containers::v1::{
     orchestrator_crypto_server::OrchestratorCrypto, DeriveSessionKeysRequest,
     DeriveSessionKeysResponse, KeyOrigin,
 };
-use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
 use std::sync::Arc;
 use tonic::{Request, Response};
 

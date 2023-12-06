@@ -15,18 +15,14 @@
 
 use crate::{
     crypto::KeyStore,
-    proto::oak::{
-        containers::v1::{
-            orchestrator_key_provisioning_server::OrchestratorKeyProvisioning,
-        },
-        key_provisioning::v1::{
-            key_provisioning_server::KeyProvisioning, GetGroupKeysRequest, GetGroupKeysResponse,
-        },
+    proto::oak::key_provisioning::v1::{
+        key_provisioning_server::KeyProvisioning, GetGroupKeysRequest, GetGroupKeysResponse,
     },
 };
 use std::sync::{Arc, OnceLock};
 use tonic::{Request, Response};
 
+#[allow(dead_code)]
 struct KeyProvisioningDependant {
     _key_store: OnceLock<Arc<KeyStore>>,
 }
