@@ -580,8 +580,8 @@ dependencies = [
  "micro_rpc",
  "oak_channel",
  "oak_enclave_runtime_support",
- "oak_restricted_kernel_sdk",
  "oak_restricted_kernel_interface",
+ "oak_restricted_kernel_sdk",
  "static_assertions",
 ]
 
@@ -758,8 +758,8 @@ version = "0.1.0"
 dependencies = [
  "libm",
  "log",
- "oak_restricted_kernel_sdk",
  "oak_restricted_kernel_interface",
+ "oak_restricted_kernel_sdk",
  "rlsf",
  "spinning_top",
 ]
@@ -839,6 +839,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_restricted_kernel_interface"
+version = "0.1.0"
+dependencies = [
+ "bitflags 2.4.0",
+ "strum",
+]
+
+[[package]]
 name = "oak_restricted_kernel_sdk"
 version = "0.1.0"
 dependencies = [
@@ -852,14 +860,6 @@ dependencies = [
  "p256",
  "strum",
  "zerocopy",
-]
-
-[[package]]
-name = "oak_restricted_kernel_interface"
-version = "0.1.0"
-dependencies = [
- "bitflags 2.4.0",
- "strum",
 ]
 
 [[package]]

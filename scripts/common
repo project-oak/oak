@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034  # Unused variables OK as this script is `source`d.
 
+set -o xtrace
 set -o errexit
 set -o nounset
-set -o xtrace
 set -o pipefail
 
 # Set the default Rust log level to info if unset.
