@@ -170,10 +170,32 @@
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
 </pre></div><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>GroupKeys {
+    <span class="doccomment">/// Encryption private key that was encrypted with HPKE using the encryption public key provided
+    /// in the endorsed evidence.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>encrypted_encryption_private_key: ::core::option::Option&lt;
+        <span class="kw">super</span>::<span class="kw">super</span>::crypto::v1::EncryptedRequest,
+    &gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>GetGroupKeysRequest {
-    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="doccomment">/// Evidence contains the encryption public key for encrypting the group encryption key with
+    /// Hybrid Encryption.
+    /// &lt;&lt;https://datatracker.ietf.org/doc/rfc9180/&gt;&gt;
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>evidence: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::attestation::v1::Evidence&gt;,
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>endorsements: ::core::option::Option&lt;
@@ -183,12 +205,8 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>GetGroupKeysResponse {
-    <span class="doccomment">/// Encryption private key that was encrypted with HPKE using the encryption public key provided
-    /// in the endorsed evidence.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>encrypted_encryption_key: ::core::option::Option&lt;
-        <span class="kw">super</span>::<span class="kw">super</span>::crypto::v1::EncryptedRequest,
-    &gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>group_keys: ::core::option::Option&lt;GroupKeys&gt;,
 }
 <span class="doccomment">/// Generated server implementations.
 </span><span class="kw">pub mod </span>key_provisioning_server {
