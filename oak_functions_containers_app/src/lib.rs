@@ -27,8 +27,17 @@ use oak_functions_service::{
     },
 };
 use oak_remote_attestation::handler::AsyncEncryptionHandler;
+use opentelemetry_api::{
+    metrics::{Histogram, Meter, MeterProvider, Unit},
+    KeyValue,
+};
 use prost::Message;
-use std::sync::{Arc, OnceLock};
+use std::{
+    future::Future,
+    pin::Pin,
+    sync::{Arc, OnceLock},
+    time::Instant,
+};
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 use tracing::Span;
@@ -213,6 +222,88 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
     }
 }
 
+#[derive(Clone)]
+struct MonitoringLayer {
+    meter: Meter,
+}
+
+impl MonitoringLayer {
+    fn new<M: MeterProvider>(provider: M) -> Self {
+        Self {
+            meter: provider.meter("oak_functions_container_app"),
+        }
+    }
+}
+
+impl<S> tower::Layer<S> for MonitoringLayer {
+    type Service = MonitoringService<S>;
+
+    fn layer(&self, inner: S) -> Self::Service {
+        MonitoringService {
+            inner,
+            latencies: self
+                .meter
+                .u64_histogram("rpc/server/server_latency")
+                .with_unit(Unit::new("milliseconds"))
+                .with_description("Distribution of server-side RPC latency")
+                .init(),
+        }
+    }
+}
+
+#[derive(Clone)]
+struct MonitoringService<S> {
+    inner: S,
+    latencies: Histogram<u64>,
+}
+
+impl<S, T> tower::Service<http::Request<T>> for MonitoringService<S>
+where
+    S: tower::Service<http::Request<T>> + Clone + Send + 'static,
+    <S as tower::Service<http::Request<T>>>::Future: Send,
+    T: Send + 'static,
+{
+    type Response = S::Response;
+    type Error = S::Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+
+    fn poll_ready(
+        &mut self,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, req: http::Request<T>) -> Self::Future {
+        // `[...]/Service/Method`, but we count from right, so method is last
+        let mut attributes = Vec::new();
+        let mut parts = req.uri().path().rsplitn(3, '/');
+        if let Some(method) = parts.next() {
+            attributes.push(KeyValue::new("method", method.to_string()));
+        }
+        if let Some(service) = parts.next() {
+            attributes.push(KeyValue::new("service", service.to_string()));
+        }
+
+        // copied from the example in `tower::Service` to guarantee that `poll_ready` has been
+        // called on the proper instance (and not the clone!)
+        let clone = self.inner.clone();
+        let mut inner = std::mem::replace(&mut self.inner, clone);
+
+        let latencies = self.latencies.clone();
+
+        Box::pin(async move {
+            let now = Instant::now();
+            let resp = inner.call(req).await;
+            latencies.record(
+                now.elapsed().as_micros().try_into().unwrap_or(u64::MAX),
+                &attributes,
+            );
+            resp
+        })
+    }
+}
+
 /// Creates a `trace::Span` for the currently active gRPC request.
 ///
 /// The fields of the Span are filled out according to the OpenTelemetry specifications, if
@@ -247,9 +338,10 @@ static GRPC_SUCCESS: http::header::HeaderValue = http::header::HeaderValue::from
 const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static>(
+pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static, P: MeterProvider>(
     listener: TcpListener,
     encryption_context: Arc<G>,
+    provider: P,
 ) -> anyhow::Result<()> {
     tonic::transport::Server::builder()
         .layer(
@@ -267,6 +359,7 @@ pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static>(
                     span.record("rpc.grpc.status_code", code);
                 }),
         )
+        .layer(MonitoringLayer::new(provider))
         .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
             encryption_context,
         )))
