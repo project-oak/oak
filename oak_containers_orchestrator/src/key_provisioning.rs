@@ -23,6 +23,8 @@ use std::sync::{Arc, OnceLock};
 use tonic::{Request, Response};
 
 #[allow(dead_code)]
+/// Dependant is a Key Provisioning role that requests group keys from the
+/// Key Provisioning Leader.
 struct KeyProvisioningDependant {
     _key_store: OnceLock<Arc<KeyStore>>,
 }

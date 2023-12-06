@@ -29,6 +29,9 @@ message GroupKeys {
 }
 
 message GetGroupKeysRequest {
+  // Evidence contains the encryption public key for encrypting the group encryption key with
+  // Hybrid Encryption.
+  // <https://datatracker.ietf.org/doc/rfc9180/>
   oak.attestation.v1.Evidence evidence = 1;
   oak.attestation.v1.Endorsements endorsements = 2;
 }
