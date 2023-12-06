@@ -30,7 +30,6 @@ opentelemetry-otlp = { version = "*", default-features = false, features = [
   "metrics",
   "trace",
 ] }
-
 prost = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tokio-stream = { version = "*", features = ["net"] }
