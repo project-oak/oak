@@ -41,7 +41,7 @@ service HostlibKeyProvisioning {
   // Could be one of the following:
   //   - Leader that generates group keys and distributes them.
   //   - Dependant that requests group keys from the leader.
-  rpc GetKeyProvisioningRole(google.protobuf.Empty) returns (GetGroupKeysResponse) {}
+  rpc GetKeyProvisioningRole(google.protobuf.Empty) returns (GetKeyProvisioningRoleResponse) {}
 
   // Get enclave group keys to the enclave as part of Key Provisioning.
   // This method is only called by the Dependant Orchestrator.
