@@ -24,7 +24,7 @@ use alloc::{vec, vec::Vec};
 use core::panic::PanicInfo;
 use log::info;
 use oak_channel::{Read, Write};
-use oak_restricted_kernel_api::{FileDescriptorChannel, StderrLogger};
+use oak_restricted_kernel_sdk::{FileDescriptorChannel, StderrLogger};
 
 const MESSAGE_SIZE: usize = 1;
 
@@ -65,5 +65,5 @@ fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     log::error!("PANIC: {}", info);
-    oak_restricted_kernel_api::syscall::exit(-1);
+    oak_restricted_kernel_sdk::syscall::exit(-1);
 }

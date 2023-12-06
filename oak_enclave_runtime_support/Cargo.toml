@@ -10,6 +10,6 @@ license = "Apache-2.0"
 libm = "*"
 rlsf = "*"
 log = "*"
-oak_restricted_kernel_api = { workspace = true }
+oak_restricted_kernel_sdk = { workspace = true }
 oak_restricted_kernel_interface = { workspace = true }
 spinning_top = "*"
