@@ -10,6 +10,10 @@ anyhow = "*"
 ciborium = { version = "*", default-features = false }
 clap = { version = "*", features = ["derive"] }
 coset = { version = "*", features = ["std"] }
+hpke = { version = "*", default-features = false, features = [
+  "alloc",
+  "x25519"
+] }
 log = "*"
 nix = "*"
 oak_containers_orchestrator_client = { workspace = true }

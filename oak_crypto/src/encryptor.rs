@@ -77,6 +77,7 @@ impl TryFrom<&oak_dice::evidence::RestrictedKernelDiceData> for EncryptionKeyPro
     }
 }
 
+// TODO(#4513): Merge `EncryptionKeyProvider` and `hpke::KeyPair` into `EncryptionKey`.
 impl EncryptionKeyProvider {
     /// Creates a crypto provider with a newly generated key pair.
     pub fn generate() -> Self {
@@ -92,6 +93,7 @@ impl EncryptionKeyProvider {
     }
 
     pub fn get_private_key(&self) -> Vec<u8> {
+        // TODO(#4513): Implement Rust protections for the private key.
         self.key_pair.get_private_key()
     }
 
