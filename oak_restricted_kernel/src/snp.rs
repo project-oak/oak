@@ -25,7 +25,7 @@ use oak_sev_guest::{
     guest::{GuestMessage, Message},
     secrets::SecretsPage,
 };
-use spinning_top::{const_spinlock, Spinlock};
+use spinning_top::Spinlock;
 use x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
@@ -46,7 +46,7 @@ pub static SECRETS_PAGE: OnceCell<SecretsPage> = OnceCell::new();
 pub static CPUID_PAGE: OnceCell<CpuidPage> = OnceCell::new();
 
 /// Cryptographic helper to encrypt and decrypt messages for the GHCB guest message protocol.
-pub static GUEST_MESSAGE_ENCRYPTOR: Spinlock<Option<GuestMessageEncryptor>> = const_spinlock(None);
+pub static GUEST_MESSAGE_ENCRYPTOR: Spinlock<Option<GuestMessageEncryptor>> = Spinlock::new(None);
 
 /// Wrapper for the guest-physical addresses of the secrets page and the CPUID page.
 pub struct SnpPageAddresses {

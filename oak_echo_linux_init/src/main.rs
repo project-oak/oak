@@ -21,7 +21,7 @@ use nix::sys::termios::{cfmakeraw, tcgetattr, tcsetattr, SetArg};
 use std::{
     fs::OpenOptions,
     io::{Read, Write},
-    os::fd::{AsRawFd, RawFd},
+    os::fd::AsFd,
 };
 
 mod init;
@@ -44,7 +44,7 @@ fn main() -> ! {
         .expect("couldn't open virtio console port for reading");
 
     // Enable raw mode so that Linux does not also echo back the values.
-    set_console_to_raw_mode(reader.as_raw_fd());
+    set_console_to_raw_mode(&reader);
 
     let mut writer = OpenOptions::new()
         .write(true)
@@ -63,8 +63,8 @@ fn main() -> ! {
     }
 }
 
-fn set_console_to_raw_mode(fd: RawFd) {
-    let mut attributes = tcgetattr(fd).expect("file descriptor does not represent a console");
+fn set_console_to_raw_mode<Fd: AsFd>(fd: Fd) {
+    let mut attributes = tcgetattr(&fd).expect("file descriptor does not represent a console");
     cfmakeraw(&mut attributes);
     tcsetattr(fd, SetArg::TCSANOW, &attributes).expect("couldn't set raw mode on console");
 }
