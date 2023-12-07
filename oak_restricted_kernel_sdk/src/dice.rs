@@ -35,11 +35,17 @@ use zerocopy::{AsBytes, FromZeroes};
 pub struct DiceWrapper {
     pub evidence: Evidence,
     pub encryption_key: EncryptionKeyProvider,
-    pub signing_key: SigningKey,
+    pub signer: SignerStruct,
+}
+
+impl DiceWrapper {
+    pub fn try_create() -> anyhow::Result<Self> {
+        get_dice_evidence_and_keys()
+    }
 }
 
 /// Get the DICE evidence and application private keys from the Restricted Kernel
-pub fn get_dice_evidence_and_keys() -> anyhow::Result<DiceWrapper> {
+fn get_dice_evidence_and_keys() -> anyhow::Result<DiceWrapper> {
     let dice_data = get_restricted_kernel_dice_data()?;
     let evidence: Evidence = dice_data.evidence.try_into()?;
     let private_key = PrivateKey::from_bytes(
@@ -64,14 +70,18 @@ pub fn get_dice_evidence_and_keys() -> anyhow::Result<DiceWrapper> {
         PublicKey::from_bytes(&public_key)
             .map_err(|err| anyhow::anyhow!("couldn't decode public key: {err}"))?,
     );
-    let signing_key = SigningKey::from_slice(
-        &dice_data.application_private_keys.signing_private_key[..P256_PRIVATE_KEY_SIZE],
-    )
-    .map_err(|error| anyhow::anyhow!("couldn't deserialize signing key: {}", error))?;
+    let signer = {
+        let key = SigningKey::from_slice(
+            &dice_data.application_private_keys.signing_private_key[..P256_PRIVATE_KEY_SIZE],
+        )
+        .map_err(|error| anyhow::anyhow!("couldn't deserialize signing key: {}", error))?;
+        SignerStruct { key }
+    };
+
     Ok(DiceWrapper {
         evidence,
         encryption_key,
-        signing_key,
+        signer,
     })
 }
 
@@ -83,4 +93,17 @@ fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData>
         anyhow::bail!("invalid dice data size");
     }
     Ok(result)
+}
+
+pub struct SignerStruct {
+    key: SigningKey,
+}
+
+impl oak_crypto::signer::Signer<oak_crypto::signer::Signature> for SignerStruct {
+    fn try_sign(
+        &self,
+        message: &[u8],
+    ) -> Result<oak_crypto::signer::Signature, p256::ecdsa::signature::Error> {
+        self.key.try_sign(message)
+    }
 }

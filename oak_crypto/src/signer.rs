@@ -14,5 +14,16 @@
 // limitations under the License.
 //
 
-// TODO(#3836): Implement signature generation and verification.
-pub struct Signer {}
+pub use crate::proto::oak::crypto::v1::Signature;
+pub use p256::ecdsa::signature::{Error, Signer};
+
+// TODO(#3836): Implement signature verification.
+
+impl Signer<Signature> for p256::ecdsa::SigningKey {
+    fn try_sign(&self, message: &[u8]) -> Result<Signature, Error> {
+        let signature =
+            <p256::ecdsa::SigningKey as Signer<p256::ecdsa::Signature>>::try_sign(self, message)?
+                .to_vec();
+        Ok(Signature { signature })
+    }
+}

@@ -2082,6 +2082,7 @@ dependencies = [
  "hkdf",
  "hpke",
  "micro_rpc_build",
+ "p256",
  "prost",
  "rand_core",
  "sha2",
