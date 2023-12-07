@@ -35,7 +35,7 @@ use zerocopy::{AsBytes, FromZeroes};
 pub struct DiceWrapper {
     pub evidence: Evidence,
     pub encryption_key: EncryptionKeyProvider,
-    pub signer: SignerStruct,
+    pub signer: SigningOracle,
 }
 
 impl DiceWrapper {
@@ -75,7 +75,7 @@ fn get_dice_evidence_and_keys() -> anyhow::Result<DiceWrapper> {
             &dice_data.application_private_keys.signing_private_key[..P256_PRIVATE_KEY_SIZE],
         )
         .map_err(|error| anyhow::anyhow!("couldn't deserialize signing key: {}", error))?;
-        SignerStruct { key }
+        SigningOracle { key }
     };
 
     Ok(DiceWrapper {
@@ -95,11 +95,11 @@ fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData>
     Ok(result)
 }
 
-pub struct SignerStruct {
+pub struct SigningOracle {
     key: SigningKey,
 }
 
-impl oak_crypto::signer::Signer<oak_crypto::signer::Signature> for SignerStruct {
+impl oak_crypto::signer::Signer<oak_crypto::signer::Signature> for SigningOracle {
     fn try_sign(
         &self,
         message: &[u8],
