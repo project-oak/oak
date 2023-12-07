@@ -41,7 +41,7 @@ proto_library(
 build_test(
     name = "build_test",
     targets = [
+        ":hostlib_key_provisioning_proto",
         ":orchestrator_crypto_proto",
-        ":orchestrator_key_provisioning_proto",
     ],
 )
