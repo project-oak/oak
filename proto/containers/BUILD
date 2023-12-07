@@ -42,6 +42,6 @@ build_test(
     name = "build_test",
     targets = [
         ":orchestrator_crypto_proto",
-        ":orchestrator_key_provisioning_proto",
+        ":hostlib_key_provisioning_proto",
     ],
 )
