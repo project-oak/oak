@@ -69,4 +69,3 @@ message CryptoContext {
 message Signature {
   bytes signature = 1;
 }
-
