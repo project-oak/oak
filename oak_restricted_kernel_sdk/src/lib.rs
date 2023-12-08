@@ -26,5 +26,5 @@ mod raw_syscall;
 pub mod syscall;
 
 pub use channel::FileDescriptorChannel;
-pub use dice::{DiceWrapper, Signer};
+pub use dice::Signer;
 pub use logging::StderrLogger;
