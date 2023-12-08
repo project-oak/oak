@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"macro":["syscall"],"mod":["dice","syscall"],"struct":["FileDescriptorChannel","StderrLogger"]};
+window.SIDEBAR_ITEMS = {"macro":["syscall"],"mod":["syscall"],"struct":["DiceWrapper","FileDescriptorChannel","Signer","StderrLogger"]};

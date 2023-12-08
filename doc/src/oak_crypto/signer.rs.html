@@ -16,6 +16,21 @@
 <a href="#16" id="16">16</a>
 <a href="#17" id="17">17</a>
 <a href="#18" id="18">18</a>
+<a href="#19" id="19">19</a>
+<a href="#20" id="20">20</a>
+<a href="#21" id="21">21</a>
+<a href="#22" id="22">22</a>
+<a href="#23" id="23">23</a>
+<a href="#24" id="24">24</a>
+<a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
+<a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -32,6 +47,21 @@
 // limitations under the License.
 //
 
-// TODO(#3836): Implement signature generation and verification.
-</span><span class="kw">pub struct </span>Signer {}
+</span><span class="kw">pub use </span><span class="kw">crate</span>::proto::oak::crypto::v1::Signature;
+
+<span class="comment">// TODO(#3836): Implement signature verification.
+
+</span><span class="kw">pub trait </span>Signer {
+    <span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; Signature;
+}
+
+<span class="kw">impl </span>Signer <span class="kw">for </span>p256::ecdsa::SigningKey {
+    <span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; Signature {
+        <span class="kw">let </span>signature = &lt;p256::ecdsa::SigningKey <span class="kw">as </span>p256::ecdsa::signature::Signer&lt;
+            p256::ecdsa::Signature,
+        &gt;&gt;::sign(<span class="self">self</span>, message)
+        .to_vec();
+        Signature { signature }
+    }
+}
 </code></pre></div></section></main></body></html>

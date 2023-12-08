@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["get_dice_evidence_and_keys"],"struct":["DiceWrapper"]};
