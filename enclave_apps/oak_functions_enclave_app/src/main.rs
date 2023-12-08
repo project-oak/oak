@@ -46,7 +46,7 @@ fn main() -> ! {
     }
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
     let dice_data =
-        oak_restricted_kernel_sdk::dice::DiceWrapper::try_create().expect("couldn't get DICE data");
+        oak_restricted_kernel_sdk::DiceWrapper::try_create().expect("couldn't get DICE data");
     let service = oak_functions_service::OakFunctionsService::new(
         dice_data.evidence,
         Arc::new(dice_data.encryption_key),
