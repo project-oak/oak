@@ -20,11 +20,12 @@ use crate::{
     proto::oak::functions::{
         AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
-        InitializeRequest, LookupDataChunk,
+        InitializeRequest, LookupDataChunk, ReserveRequest, ReserveResponse,
     },
     wasm,
 };
 use alloc::{format, sync::Arc};
+use bytes::Bytes;
 use micro_rpc::{Status, Vec};
 use oak_functions_abi::Request;
 
@@ -73,6 +74,12 @@ impl OakFunctionsInstance {
             )?));
         Ok(ExtendNextLookupDataResponse {})
     }
+
+    pub fn extend_lookup_data_chunk(&self, chunk: LookupDataChunk) {
+        self.lookup_data_manager
+            .extend_next_lookup_data(to_data(chunk))
+    }
+
     /// See [`crate::proto::oak::functions::OakFunctions::finish_next_lookup_data`].
     pub fn finish_next_lookup_data(
         &self,
@@ -89,10 +96,22 @@ impl OakFunctionsInstance {
         self.lookup_data_manager.abort_next_lookup_data();
         Ok(AbortNextLookupDataResponse {})
     }
+
+    pub fn reserve(&self, request: ReserveRequest) -> Result<ReserveResponse, Status> {
+        self.lookup_data_manager
+            .reserve(request.additional_entries)
+            .map(|()| ReserveResponse {})
+            .map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::ResourceExhausted,
+                    format!("failed to reserve memory: {:?}", err),
+                )
+            })
+    }
 }
 
 // Helper function to convert [`LookupDataChunk`] to [`Data`].
-fn to_data(chunk: LookupDataChunk) -> impl Iterator<Item = (Vec<u8>, Vec<u8>)> {
+fn to_data(chunk: LookupDataChunk) -> impl Iterator<Item = (Bytes, Bytes)> {
     chunk
         .items
         .into_iter()

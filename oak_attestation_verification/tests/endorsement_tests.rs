@@ -20,11 +20,14 @@ use alloc::vec::Vec;
 use std::fs;
 
 use oak_attestation_verification::{
+    claims::parse_endorsement_statement,
     endorsement::{
-        verify_binary_endorsement, verify_endorsement_statement, verify_endorser_public_key,
+        verify_binary_digest, verify_binary_endorsement, verify_endorsement_statement,
+        verify_endorser_public_key,
     },
+    proto::oak::HexDigest,
     rekor::{verify_rekor_log_entry, verify_rekor_signature},
-    util::convert_pem_to_raw,
+    util::{convert_pem_to_raw, MatchResult},
 };
 
 const BINARY_DIGEST: &str = "39051983bbb600bbfb91bd22ee4c976420f8f0c6a895fd083dcb0d153ddd5fd6";
@@ -59,6 +62,13 @@ struct TestData {
     rekor_public_key: Vec<u8>,
 }
 
+fn create_hex_digest() -> HexDigest {
+    HexDigest {
+        sha2_256: BINARY_DIGEST.to_owned(),
+        ..Default::default()
+    }
+}
+
 fn load_testdata() -> TestData {
     let endorsement = fs::read(ENDORSEMENT_PATH).expect("couldn't read endorsement");
     let log_entry = fs::read(LOG_ENTRY_PATH).expect("couldn't read log entry");
@@ -78,6 +88,51 @@ fn load_testdata() -> TestData {
         endorser_public_key,
         rekor_public_key,
     }
+}
+
+#[test]
+fn test_verify_binary_digest_same() {
+    let testdata = load_testdata();
+    let expected = create_hex_digest();
+    let result = verify_binary_digest(&testdata.endorsement, &expected);
+    assert!(result.is_ok_and(|m| m == MatchResult::SAME));
+}
+
+#[test]
+fn test_verify_binary_digest_different() {
+    let testdata = load_testdata();
+    let expected = HexDigest {
+        psha2: BINARY_DIGEST.to_owned(),
+        sha1: BINARY_DIGEST.to_owned(),
+        sha2_256: "00000bad000digestb91bd22ee4c976420f8f0c6a895fd083dcb0d0000000000".to_owned(),
+        sha2_512: BINARY_DIGEST.to_owned(),
+        sha3_512: BINARY_DIGEST.to_owned(),
+        sha3_384: BINARY_DIGEST.to_owned(),
+        sha3_256: BINARY_DIGEST.to_owned(),
+        sha3_224: BINARY_DIGEST.to_owned(),
+        sha2_384: BINARY_DIGEST.to_owned(),
+    };
+    let result = verify_binary_digest(&testdata.endorsement, &expected);
+    assert!(result.is_ok_and(|m| m == MatchResult::DIFFERENT));
+}
+
+#[test]
+fn test_verify_binary_digest_undecidable() {
+    let testdata = load_testdata();
+    // Fill all hashes with something (whatever) but leave sha2_256 empty.
+    let expected = HexDigest {
+        psha2: BINARY_DIGEST.to_owned(),
+        sha1: BINARY_DIGEST.to_owned(),
+        sha2_256: "".to_owned(),
+        sha2_512: BINARY_DIGEST.to_owned(),
+        sha3_512: BINARY_DIGEST.to_owned(),
+        sha3_384: BINARY_DIGEST.to_owned(),
+        sha3_256: BINARY_DIGEST.to_owned(),
+        sha3_224: BINARY_DIGEST.to_owned(),
+        sha2_384: BINARY_DIGEST.to_owned(),
+    };
+    let result = verify_binary_digest(&testdata.endorsement, &expected);
+    assert!(result.is_ok_and(|m| m == MatchResult::UNDECIDABLE));
 }
 
 #[test]
@@ -102,12 +157,9 @@ fn test_verify_rekor_log_entry() {
 #[test]
 fn test_verify_endorsement_statement() {
     let testdata = load_testdata();
-    let result = verify_endorsement_statement(
-        NOW_UTC_MILLIS,
-        &testdata.endorsement,
-        BINARY_DIGEST.as_bytes(),
-        "sha256",
-    );
+    let statement = parse_endorsement_statement(&testdata.endorsement)
+        .expect("could not parse endorsement statement");
+    let result = verify_endorsement_statement(NOW_UTC_MILLIS, &statement);
     assert!(result.is_ok(), "{:?}", result);
 }
 
@@ -127,32 +179,10 @@ fn test_verify_binary_endorsement() {
         NOW_UTC_MILLIS,
         &testdata.endorsement,
         &testdata.log_entry,
-        BINARY_DIGEST.as_bytes(),
-        "sha256",
         &testdata.endorser_public_key,
         &testdata.rekor_public_key,
     );
     assert!(result.is_ok(), "{:?}", result);
-}
-
-#[test]
-fn test_verify_binary_endorsement_fails_when_missing_digest() {
-    let testdata = load_testdata();
-
-    let result = verify_binary_endorsement(
-        NOW_UTC_MILLIS,
-        &testdata.endorsement,
-        &testdata.log_entry,
-        BINARY_DIGEST.as_bytes(),
-        "sha2-384",
-        &testdata.endorser_public_key,
-        &testdata.rekor_public_key,
-    );
-    assert!(result.is_err(), "{:?}", result);
-    assert!(result
-        .map_err(|err| format!("{err}"))
-        .unwrap_err()
-        .contains("missing sha2-384 digest"));
 }
 
 #[test]
@@ -163,8 +193,6 @@ fn test_verify_binary_endorsement_fails_with_invalid_rekor_public_key() {
         NOW_UTC_MILLIS,
         &testdata.endorsement,
         &testdata.log_entry,
-        BINARY_DIGEST.as_bytes(),
-        "sha256",
         &testdata.endorser_public_key,
         // NB: We use the wrong key deliberately.
         &testdata.endorser_public_key,
@@ -180,8 +208,6 @@ fn test_verify_binary_endorsement_fails_when_missing_rekor_entry() {
         NOW_UTC_MILLIS,
         &testdata.endorsement,
         &Vec::new(),
-        BINARY_DIGEST.as_bytes(),
-        "sha256",
         &testdata.endorser_public_key,
         &Vec::new(),
     );

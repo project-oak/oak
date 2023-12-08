@@ -15,41 +15,26 @@
 
 use crate::{
     crypto::KeyStore,
-    proto::oak::{
-        containers::v1::{
-            orchestrator_key_provisioning_server::OrchestratorKeyProvisioning, SendGroupKeysRequest,
-        },
-        key_provisioning::v1::{
-            key_provisioning_server::KeyProvisioning, GetGroupKeysRequest, GetGroupKeysResponse,
-        },
+    proto::oak::key_provisioning::v1::{
+        key_provisioning_server::KeyProvisioning, GetGroupKeysRequest, GetGroupKeysResponse,
     },
 };
 use std::sync::{Arc, OnceLock};
 use tonic::{Request, Response};
 
-struct KeyProvisioningService {
+#[allow(dead_code)]
+/// Dependant is a Key Provisioning role that requests group keys from the
+/// Key Provisioning Leader.
+struct KeyProvisioningDependant {
     _key_store: OnceLock<Arc<KeyStore>>,
 }
 
-#[tonic::async_trait]
-impl OrchestratorKeyProvisioning for KeyProvisioningService {
-    async fn send_group_keys(
-        &self,
-        _request: Request<SendGroupKeysRequest>,
-    ) -> Result<Response<()>, tonic::Status> {
-        // TODO(#4442): Implement replacing group encryption key.
-        Err(tonic::Status::unimplemented(
-            "Key Provisioning is not implemented",
-        ))
-    }
-}
-
-struct KeyProvisioningLeaderService {
+struct KeyProvisioningService {
     _key_store: Arc<KeyStore>,
 }
 
 #[tonic::async_trait]
-impl KeyProvisioning for KeyProvisioningLeaderService {
+impl KeyProvisioning for KeyProvisioningService {
     async fn get_group_keys(
         &self,
         _request: Request<GetGroupKeysRequest>,

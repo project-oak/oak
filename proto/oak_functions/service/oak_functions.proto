@@ -50,6 +50,21 @@ service OakFunctions {
   //
   // method_id: 4
   rpc AbortNextLookupData(Empty) returns (AbortNextLookupDataResponse);
+
+  // Streaming version combining `ExtendNextLookupData` and `FinishNextLookupData`.
+  //
+  // This is mainly for use with gRPC, as microRPC doesn't support streaming.
+  //
+  // method_id: 5
+  rpc StreamLookupData(stream LookupDataChunk) returns (FinishNextLookupDataResponse);
+
+  // Reserves additional capacity for entries in the lookup table.
+  //
+  // It should be called before `ExtendNextLookupData`/`StreamLookupData` to reduce the
+  // number of memory allocations, but it's not mandatory to call this RPC.
+  //
+  // method_id: 6
+  rpc Reserve(ReserveRequest) returns (ReserveResponse);
 }
 
 message InitializeRequest {
@@ -100,3 +115,9 @@ message FinishNextLookupDataResponse {}
 message AbortNextLookupDataResponse {}
 
 message Empty {}
+
+message ReserveRequest {
+  uint64 additional_entries = 1;
+}
+
+message ReserveResponse {}

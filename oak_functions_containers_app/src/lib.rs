@@ -22,14 +22,25 @@ use oak_functions_service::{
     proto::oak::functions::{
         AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
-        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse,
+        InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
+        ReserveRequest, ReserveResponse,
     },
 };
 use oak_remote_attestation::handler::AsyncEncryptionHandler;
+use opentelemetry_api::{
+    metrics::{Histogram, Meter, MeterProvider, Unit},
+    KeyValue,
+};
 use prost::Message;
-use std::sync::{Arc, OnceLock};
+use std::{
+    future::Future,
+    pin::Pin,
+    sync::{Arc, OnceLock},
+    time::Instant,
+};
 use tokio::net::TcpListener;
-use tokio_stream::wrappers::TcpListenerStream;
+use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
+use tracing::Span;
 
 pub mod proto {
     pub mod oak {
@@ -182,14 +193,173 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
             .map(tonic::Response::new)
             .map_err(map_status)
     }
+
+    async fn stream_lookup_data(
+        &self,
+        request: tonic::Request<tonic::Streaming<LookupDataChunk>>,
+    ) -> tonic::Result<tonic::Response<FinishNextLookupDataResponse>> {
+        let mut request = request.into_inner();
+
+        let instance = self.get_instance()?;
+        while let Some(chunk) = request.next().await {
+            instance.extend_lookup_data_chunk(chunk?);
+        }
+        instance
+            .finish_next_lookup_data(FinishNextLookupDataRequest {})
+            .map(tonic::Response::new)
+            .map_err(map_status)
+    }
+
+    async fn reserve(
+        &self,
+        request: tonic::Request<ReserveRequest>,
+    ) -> tonic::Result<tonic::Response<ReserveResponse>> {
+        let request = request.into_inner();
+        self.get_instance()?
+            .reserve(request)
+            .map(tonic::Response::new)
+            .map_err(map_status)
+    }
 }
 
+#[derive(Clone)]
+struct MonitoringLayer {
+    meter: Meter,
+}
+
+impl MonitoringLayer {
+    fn new<M: MeterProvider>(provider: M) -> Self {
+        Self {
+            meter: provider.meter("oak_functions_container_app"),
+        }
+    }
+}
+
+impl<S> tower::Layer<S> for MonitoringLayer {
+    type Service = MonitoringService<S>;
+
+    fn layer(&self, inner: S) -> Self::Service {
+        MonitoringService {
+            inner,
+            latencies: self
+                .meter
+                .u64_histogram("rpc/server/server_latency")
+                .with_unit(Unit::new("milliseconds"))
+                .with_description("Distribution of server-side RPC latency")
+                .init(),
+        }
+    }
+}
+
+#[derive(Clone)]
+struct MonitoringService<S> {
+    inner: S,
+    latencies: Histogram<u64>,
+}
+
+impl<S, T> tower::Service<http::Request<T>> for MonitoringService<S>
+where
+    S: tower::Service<http::Request<T>> + Clone + Send + 'static,
+    <S as tower::Service<http::Request<T>>>::Future: Send,
+    T: Send + 'static,
+{
+    type Response = S::Response;
+    type Error = S::Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+
+    fn poll_ready(
+        &mut self,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
+        self.inner.poll_ready(cx)
+    }
+
+    fn call(&mut self, req: http::Request<T>) -> Self::Future {
+        // `[...]/Service/Method`, but we count from right, so method is last
+        let mut attributes = Vec::new();
+        let mut parts = req.uri().path().rsplitn(3, '/');
+        if let Some(method) = parts.next() {
+            attributes.push(KeyValue::new("method", method.to_string()));
+        }
+        if let Some(service) = parts.next() {
+            attributes.push(KeyValue::new("service", service.to_string()));
+        }
+
+        // copied from the example in `tower::Service` to guarantee that `poll_ready` has been
+        // called on the proper instance (and not the clone!)
+        let clone = self.inner.clone();
+        let mut inner = std::mem::replace(&mut self.inner, clone);
+
+        let latencies = self.latencies.clone();
+
+        Box::pin(async move {
+            let now = Instant::now();
+            let resp = inner.call(req).await;
+            latencies.record(
+                now.elapsed().as_micros().try_into().unwrap_or(u64::MAX),
+                &attributes,
+            );
+            resp
+        })
+    }
+}
+
+/// Creates a `trace::Span` for the currently active gRPC request.
+///
+/// The fields of the Span are filled out according to the OpenTelemetry specifications, if
+/// possible.
+fn create_trace<Body>(request: &http::Request<Body>) -> Span {
+    let uri = request.uri();
+    // The general format of a gRPC URI is `http://[::1]:1234/Foo/Bar``, where `Foo` is the service, and `Bar` is the method.
+    let mut parts = uri.path().rsplitn(3, '/');
+    let method = parts.next();
+    let service = parts.next();
+
+    // See https://opentelemetry.io/docs/specs/semconv/rpc/rpc-spans/ and
+    // https://opentelemetry.io/docs/specs/semconv/rpc/grpc/ for specifications on what OpenTelemetry
+    // expects the traces to look like. Unfortunately the OTel conventions say that the span name
+    // must be the full RPC method name, but Rust tracing wants the name to be static, so we'll
+    // need to figure something out in the future.
+    tracing::info_span!(
+        "request",
+        rpc.method = method,
+        rpc.service = service,
+        rpc.system = "grpc",
+        rpc.grpc.status_code = tracing::field::Empty,
+        server.address = uri.host(),
+        server.port = uri.port_u16()
+    )
+}
+
+// Equivalent to `tonic::Code::Ok`.
+static GRPC_SUCCESS: http::header::HeaderValue = http::header::HeaderValue::from_static("0");
+
+// Equivalent to `tonic::status::GRPC_STATUS_HEADER_CODE`.
+const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
+
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static>(
+pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static, P: MeterProvider>(
     listener: TcpListener,
     encryption_context: Arc<G>,
+    provider: P,
 ) -> anyhow::Result<()> {
     tonic::transport::Server::builder()
+        .layer(
+            tower_http::trace::TraceLayer::new_for_grpc()
+                .make_span_with(create_trace)
+                .on_response(|response: &http::Response<_>, _latency, span: &Span| {
+                    // If the request is successful, there's no `grpc-status` header, thus we assume
+                    // the request was successful.
+                    let code = response
+                        .headers()
+                        .get(GRPC_STATUS_HEADER_CODE)
+                        .unwrap_or(&GRPC_SUCCESS)
+                        .to_str()
+                        .ok();
+                    span.record("rpc.grpc.status_code", code);
+                }),
+        )
+        .layer(MonitoringLayer::new(provider))
         .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
             encryption_context,
         )))

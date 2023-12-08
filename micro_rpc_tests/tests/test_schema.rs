@@ -79,7 +79,7 @@ impl test_schema::TestService for TestServiceImpl {
         &mut self,
         _request: ::prost_types::Timestamp,
     ) -> Result<::prost_types::Timestamp, ::micro_rpc::Status> {
-        Ok(std::time::SystemTime::UNIX_EPOCH.try_into().unwrap())
+        Ok(std::time::SystemTime::UNIX_EPOCH.into())
     }
     fn any(
         &mut self,

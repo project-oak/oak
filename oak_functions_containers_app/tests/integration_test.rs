@@ -26,6 +26,7 @@ use crate::proto::oak::functions::oak_functions_client::OakFunctionsClient;
 use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_functions_containers_app::serve;
 use oak_functions_service::proto::oak::functions::InitializeRequest;
+use opentelemetry_api::metrics::noop::NoopMeterProvider;
 use std::{
     fs,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -44,7 +45,11 @@ async fn test_lookup() {
     let listener = TcpListener::bind(addr).await.unwrap();
     let addr = listener.local_addr().unwrap();
 
-    let server_handle = tokio::spawn(serve(listener, Arc::new(EncryptionKeyProvider::generate())));
+    let server_handle = tokio::spawn(serve(
+        listener,
+        Arc::new(EncryptionKeyProvider::generate()),
+        NoopMeterProvider::new(),
+    ));
 
     let mut oak_functions_client: OakFunctionsClient<tonic::transport::channel::Channel> = {
         let channel = Endpoint::from_shared(format!("http://{addr}"))

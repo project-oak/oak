@@ -12,7 +12,7 @@ micro_rpc = { workspace = true }
 oak_enclave_runtime_support = { workspace = true }
 oak_channel = { workspace = true }
 oak_core = { workspace = true }
-oak_restricted_kernel_api = { workspace = true }
+oak_restricted_kernel_sdk = { workspace = true }
 static_assertions = "*"
 
 [[bin]]

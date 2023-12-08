@@ -16,33 +16,55 @@
 pub mod proto {
     pub mod oak {
         pub mod containers {
+            #![allow(clippy::return_self_not_must_use)]
             tonic::include_proto!("oak.containers");
+            pub mod v1 {
+                #![allow(clippy::return_self_not_must_use)]
+                tonic::include_proto!("oak.containers.v1");
+            }
         }
         pub use oak_crypto::proto::oak::crypto;
         pub use oak_remote_attestation::proto::oak::{attestation, session};
+        pub mod key_provisioning {
+            pub mod v1 {
+                #![allow(clippy::return_self_not_must_use)]
+                tonic::include_proto!("oak.key_provisioning.v1");
+            }
+        }
     }
 }
 
 use self::proto::oak::{
-    attestation::v1::Evidence, containers::SendAttestationEvidenceRequest,
+    attestation::v1::Evidence,
+    containers::{
+        launcher_client::LauncherClient as GrpcLauncherClient,
+        v1::{hostlib_key_provisioning_client::HostlibKeyProvisioningClient, KeyProvisioningRole},
+        SendAttestationEvidenceRequest,
+    },
+    key_provisioning::v1::GroupKeys,
     session::v1::AttestationEvidence,
 };
 use anyhow::Context;
 use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
-use proto::oak::containers::launcher_client::LauncherClient as GrpcLauncherClient;
 use tonic::transport::Channel;
 
 /// Utility struct used to interface with the launcher
 pub struct LauncherClient {
     addr: tonic::transport::Uri,
     inner: GrpcLauncherClient<Channel>,
+    hostlib_key_provisioning_client: HostlibKeyProvisioningClient<Channel>,
 }
 
 impl LauncherClient {
     pub async fn create(addr: tonic::transport::Uri) -> Result<Self, Box<dyn std::error::Error>> {
         let channel = Channel::builder(addr.clone()).connect().await?;
-        let inner = GrpcLauncherClient::new(channel);
-        Ok(Self { addr, inner })
+        let inner = GrpcLauncherClient::new(channel.clone());
+        let hostlib_key_provisioning_client = HostlibKeyProvisioningClient::new(channel);
+        Ok(Self {
+            addr,
+            inner,
+            hostlib_key_provisioning_client,
+        })
     }
 
     pub async fn get_container_bundle(&self) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -106,6 +128,30 @@ impl LauncherClient {
             .await
             .context("couldn't send notification")?;
         Ok(())
+    }
+
+    pub async fn get_key_provisioning_role(&self) -> anyhow::Result<KeyProvisioningRole> {
+        let key_provisioning_role = self
+            .hostlib_key_provisioning_client
+            .clone()
+            .get_key_provisioning_role(tonic::Request::new(()))
+            .await
+            .context("couldn't get key provisioning role")?
+            .into_inner()
+            .role;
+        KeyProvisioningRole::from_i32(key_provisioning_role)
+            .context("unknown key provisioning role")
+    }
+
+    pub async fn get_group_keys(&self) -> anyhow::Result<GroupKeys> {
+        self.hostlib_key_provisioning_client
+            .clone()
+            .get_group_keys(tonic::Request::new(()))
+            .await
+            .context("couldn't get group keys")?
+            .into_inner()
+            .group_keys
+            .context("get group keys weren't provided")
     }
 
     pub fn openmetrics_builder(&self) -> TonicExporterBuilder {

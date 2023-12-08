@@ -46,6 +46,9 @@ const VM_LOCAL_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(10, 0, 2, 15));
 /// The local port that the VM guest should be listening on.
 const VM_LOCAL_PORT: u16 = 8080;
 
+/// The local port that the Orchestrator should be listening on.
+const VM_ORCHESTRATOR_LOCAL_PORT: u16 = 4000;
+
 /// The local address that will be forwarded by the VMM to the guest's IP adress.
 const PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
 
@@ -116,6 +119,7 @@ impl Launcher {
     pub async fn create(args: Args) -> Result<Self, anyhow::Error> {
         // Let the OS assign an open port for the launcher service.
         let sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
+        let orchestrator_sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
         let listener = TcpListener::bind(sockaddr).await?;
         let port = listener.local_addr()?.port();
         log::info!("Launcher service listening on port {port}");
@@ -138,7 +142,18 @@ impl Launcher {
         // There is a small window for a race condition, but since the assigned port will be random
         // the probability of another process grabbing the port before QEMU can should be very low.
         let host_proxy_port = { TcpListener::bind(sockaddr).await?.local_addr()?.port() };
-        let vmm = qemu::Qemu::start(args.qemu_params, port, host_proxy_port)?;
+        let host_orchestrator_proxy_port = {
+            TcpListener::bind(orchestrator_sockaddr)
+                .await?
+                .local_addr()?
+                .port()
+        };
+        let vmm = qemu::Qemu::start(
+            args.qemu_params,
+            port,
+            host_proxy_port,
+            host_orchestrator_proxy_port,
+        )?;
 
         Ok(Self {
             vmm,

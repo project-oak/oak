@@ -41,10 +41,13 @@ impl ReceiverType {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct CompileOptions {
     /// Specifies the receiver type in generated server code.
     pub receiver_type: ReceiverType,
+
+    /// List of `bytes` fields that will use `bytes::Bytes` instead of `Vec<u8>`
+    pub bytes: Vec<String>,
 }
 
 /// Compile Rust server code from the services in the provided protobuf file.
@@ -77,10 +80,13 @@ pub fn compile(
         )
     });
     let mut config = prost_build::Config::new();
-    config.service_generator(Box::new(ServiceGenerator { options }));
+    config.service_generator(Box::new(ServiceGenerator {
+        options: options.clone(),
+    }));
     config
         // Use BTreeMap to allow using this function in no-std crates.
         .btree_map(["."])
+        .bytes(options.bytes)
         .compile_protos(protos, includes)
         .expect("couldn't compile protobuffer schema");
 }

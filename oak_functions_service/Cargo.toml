@@ -13,6 +13,7 @@ deny_sensitive_logging = []
 [dependencies]
 anyhow = { version = "*", default-features = false }
 byteorder = { version = "*", default-features = false }
+bytes = { version = "*", default-features = false }
 hashbrown = "*"
 log = "*"
 micro_rpc = { workspace = true }

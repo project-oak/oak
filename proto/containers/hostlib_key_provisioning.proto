@@ -1,0 +1,52 @@
+//
+// Copyright 2023 The Project Oak Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+syntax = "proto3";
+
+package oak.containers.v1;
+
+import "google/protobuf/empty.proto";
+import "proto/key_provisioning/key_provisioning.proto";
+
+enum KeyProvisioningRole {
+  KEY_PROVISIONING_ROLE_UNSPECIFIED = 0;
+  LEADER = 1;
+  DEPENDANT = 2;
+}
+
+message GetKeyProvisioningRoleResponse {
+  KeyProvisioningRole role = 1;
+}
+
+message GetGroupKeysResponse {
+  oak.key_provisioning.v1.GroupKeys group_keys = 1;
+}
+
+// Defines the service exposed by the Hostlib that is used provide the Orchestrator with group keys.
+service HostlibKeyProvisioning {
+  // Get the enclave role for Key Provisioning.
+  // Could be one of the following:
+  //   - Leader that generates group keys and distributes them.
+  //   - Dependant that requests group keys from the leader.
+  rpc GetKeyProvisioningRole(google.protobuf.Empty) returns (GetKeyProvisioningRoleResponse) {}
+
+  // Get enclave group keys to the enclave as part of Key Provisioning.
+  // This method is only called by the Dependant Orchestrator.
+  //
+  // This method must be called after `oak.containers.Launcher.SendAttestationEvidence`, because
+  // Hostlib needs to have the Attestation Evidence in order to request group keys from the leader.
+  rpc GetGroupKeys(google.protobuf.Empty) returns (GetGroupKeysResponse) {}
+}
