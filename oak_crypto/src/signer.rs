@@ -15,15 +15,19 @@
 //
 
 pub use crate::proto::oak::crypto::v1::Signature;
-pub use p256::ecdsa::signature::{Error, Signer};
 
 // TODO(#3836): Implement signature verification.
 
-impl Signer<Signature> for p256::ecdsa::SigningKey {
-    fn try_sign(&self, message: &[u8]) -> Result<Signature, Error> {
-        let signature =
-            <p256::ecdsa::SigningKey as Signer<p256::ecdsa::Signature>>::try_sign(self, message)?
-                .to_vec();
-        Ok(Signature { signature })
+pub trait Signer {
+    fn sign(&self, message: &[u8]) -> Signature;
+}
+
+impl Signer for p256::ecdsa::SigningKey {
+    fn sign(&self, message: &[u8]) -> Signature {
+        let signature = <p256::ecdsa::SigningKey as p256::ecdsa::signature::Signer<
+            p256::ecdsa::Signature,
+        >>::sign(self, message)
+        .to_vec();
+        Signature { signature }
     }
 }
