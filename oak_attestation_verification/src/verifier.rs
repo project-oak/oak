@@ -23,11 +23,13 @@ use crate::{
     endorsement::verify_binary_endorsement,
     proto::oak::attestation::v1::{
         attestation_results::Status, binary_reference_value, endorsements, reference_values,
-        AttestationResults, BinaryReferenceValue, CbEndorsements, CbReferenceValues, Endorsements,
-        Evidence, KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersEndorsements,
-        OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-        OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
-        RootLayerReferenceValues, StringReferenceValue, TransparentReleaseEndorsement,
+        ApplicationLayerEndorsements, ApplicationLayerReferenceValues, AttestationResults,
+        BinaryReferenceValue, CbEndorsements, CbReferenceValues, ContainerLayerEndorsements,
+        ContainerLayerReferenceValues, Endorsements, Evidence, KernelLayerEndorsements,
+        KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        RootLayerEndorsements, RootLayerReferenceValues, StringReferenceValue,
+        SystemLayerEndorsements, SystemLayerReferenceValues, TransparentReleaseEndorsement,
     },
     util::{hex_to_raw_digest, is_raw_digest_match, MatchResult},
 };
@@ -126,65 +128,38 @@ fn verify_oak_restricted_kernel(
     endorsements: &OakRestrictedKernelEndorsements,
     reference_values: &OakRestrictedKernelReferenceValues,
 ) -> anyhow::Result<()> {
-    // Bind references to layers to variables, for both endorsements and
-    // reference values. The presence of all fields is necessary for
-    // verification success - there are no exceptions.
-    let e0 = endorsements
+    let e_root = endorsements
         .root_layer
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no root layer endorsements"))?;
-    let e1 = endorsements
-        .kernel_layer
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no kernel layer endorsements"))?;
-    let e2 = endorsements
-        .application_layer
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no application layer endorsements"))?;
-
-    let r0 = reference_values
+    let r_root = reference_values
         .root_layer
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no root layer reference values"))?;
-    let r1 = reference_values
+
+    verify_root_layer_endorsements(now_utc_millis, e_root, r_root)?;
+
+    let e_kernel = endorsements
         .kernel_layer
         .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no root layer reference values"))?;
-    let r2 = reference_values
+        .ok_or_else(|| anyhow::anyhow!("no kernel layer endorsements"))?;
+    let r_kernel = reference_values
+        .kernel_layer
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no kernel layer reference values"))?;
+
+    verify_kernel_layer_endorsements(now_utc_millis, e_kernel, r_kernel)?;
+
+    let e_appl = endorsements
         .application_layer
         .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no root layer reference values"))?;
-
-    // Verify Transparent Release endorsements in root layer.
-    verify_root_layer_endorsements(now_utc_millis, e0, r0)?;
-
-    // Verify Transparent Release endorsements in kernel layer.
-    verify_kernel_layer_endorsements(now_utc_millis, e1, r1)?;
-
-    // Verify Transparent Release endorsements in application layer.
-    let e20 = e2
-        .binary
+        .ok_or_else(|| anyhow::anyhow!("no application layer endorsements"))?;
+    let r_appl = reference_values
+        .application_layer
         .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no binary endorsement"))?;
+        .ok_or_else(|| anyhow::anyhow!("no application layer reference values"))?;
 
-    let r20 = r2
-        .binary
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no binary reference value"))?;
-
-    verify_transparent_release_endorsement(now_utc_millis, e20, r20)?;
-
-    let e21 = e2
-        .configuration
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no configuration endorsement"))?;
-
-    let r21 = r2
-        .configuration
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no configuration reference value"))?;
-
-    verify_transparent_release_endorsement(now_utc_millis, e21, r21)
+    verify_application_layer_endorsements(now_utc_millis, e_appl, r_appl)
 }
 
 fn verify_oak_containers(
@@ -192,96 +167,49 @@ fn verify_oak_containers(
     endorsements: &OakContainersEndorsements,
     reference_values: &OakContainersReferenceValues,
 ) -> anyhow::Result<()> {
-    // Bind references to layers to variables.
-    let e0 = endorsements
+    let e_root = endorsements
         .root_layer
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no root layer endorsements"))?;
-    let e1 = endorsements
-        .kernel_layer
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no kernel layer endorsements"))?;
-    let e2 = endorsements
-        .system_layer
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no system layer endorsements"))?;
-    let e3 = endorsements
-        .container_layer
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no container layer endorsements"))?;
-
-    let r0 = reference_values
+    let r_root = reference_values
         .root_layer
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no root layer reference values"))?;
-    let r1 = reference_values
+
+    verify_root_layer_endorsements(now_utc_millis, e_root, r_root)?;
+
+    let e_kernel = endorsements
         .kernel_layer
         .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no root layer reference values"))?;
-    let r2 = reference_values
+        .ok_or_else(|| anyhow::anyhow!("no kernel layer endorsements"))?;
+    let r_kernel = reference_values
+        .kernel_layer
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no kernel layer reference values"))?;
+
+    verify_kernel_layer_endorsements(now_utc_millis, e_kernel, r_kernel)?;
+
+    let e_system = endorsements
         .system_layer
         .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no root layer reference values"))?;
-    let r3 = reference_values
+        .ok_or_else(|| anyhow::anyhow!("no system layer endorsements"))?;
+    let r_system = reference_values
+        .system_layer
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no system layer reference values"))?;
+
+    verify_system_layer_endorsements(now_utc_millis, e_system, r_system)?;
+
+    let e_container = endorsements
         .container_layer
         .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no root layer reference values"))?;
-
-    // Verify Transparent Release endorsements in root layer.
-    verify_root_layer_endorsements(now_utc_millis, e0, r0)?;
-
-    // Verify Transparent Release endorsements in kernel layer.
-    verify_kernel_layer_endorsements(now_utc_millis, e1, r1)?;
-
-    // Verify Transparent Release endorsements in system layer.
-    let e20 = e2
-        .system_image
+        .ok_or_else(|| anyhow::anyhow!("no container layer endorsements"))?;
+    let r_container = reference_values
+        .container_layer
         .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no system image endorsement"))?;
+        .ok_or_else(|| anyhow::anyhow!("no container layer reference values"))?;
 
-    let r20 = r2
-        .system_image
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no system image reference value"))?;
-
-    verify_transparent_release_endorsement(now_utc_millis, e20, r20)?;
-
-    let e21 = e2
-        .configuration
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no configuration endorsement"))?;
-
-    let r21 = r2
-        .configuration
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no configuration reference value"))?;
-
-    verify_transparent_release_endorsement(now_utc_millis, e21, r21)?;
-
-    // Verify Transparent Release endorsements in container layer.
-    let e30 = e3
-        .binary
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no binary endorsement"))?;
-
-    let r30 = r3
-        .binary
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no binary reference value"))?;
-
-    verify_transparent_release_endorsement(now_utc_millis, e30, r30)?;
-
-    let e31 = e3
-        .configuration
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no binary endorsement"))?;
-
-    let r31 = r3
-        .configuration
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no binary reference value"))?;
-
-    verify_transparent_release_endorsement(now_utc_millis, e31, r31)
+    verify_container_layer_endorsements(now_utc_millis, e_container, r_container)
 }
 
 fn verify_cb(
@@ -290,6 +218,183 @@ fn verify_cb(
     _reference_values: &CbReferenceValues,
 ) -> anyhow::Result<()> {
     anyhow::bail!("Needs implementation")
+}
+
+/// Verifies all ingredients of the kernel layer, which is common to both
+/// Oak Restricted Kernel and Oak Containers setups.
+fn verify_root_layer_endorsements(
+    now_utc_millis: i64,
+    e: &RootLayerEndorsements,
+    r: &RootLayerReferenceValues,
+) -> anyhow::Result<()> {
+    let e_stage0 = e
+        .stage0
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no stage0 endorsement"))?;
+
+    let r_stage0 = r
+        .amd_sev
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no amd_sev in root reference values"))?
+        .stage0
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no stage0 reference value"))?;
+
+    verify_transparent_release_endorsement(now_utc_millis, e_stage0, r_stage0)
+}
+
+/// Verifies all ingredients of the kernel layer, which is common to both
+/// Oak Restricted Kernel and Oak Containers setups.
+fn verify_kernel_layer_endorsements(
+    now_utc_millis: i64,
+    e: &KernelLayerEndorsements,
+    r: &KernelLayerReferenceValues,
+) -> anyhow::Result<()> {
+    let e_kernel_image = e
+        .kernel_image
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no kernel endorsement"))?;
+
+    let r_kernel_image = r
+        .kernel_image
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no kernel reference value"))?;
+
+    verify_transparent_release_endorsement(now_utc_millis, e_kernel_image, r_kernel_image)?;
+
+    let e_kernel_cmd_line = e
+        .kernel_cmd_line
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no kernel setup data endorsement"))?;
+
+    let r_kernel_cmd_line = r
+        .kernel_cmd_line
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no kernel setup data reference value"))?;
+
+    verify_string_value_endorsement(now_utc_millis, e_kernel_cmd_line, r_kernel_cmd_line)?;
+
+    let e_kernel_setup_data = e
+        .kernel_setup_data
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no kernel setup data endorsement"))?;
+
+    let r_kernel_setup_data = r
+        .kernel_setup_data
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no kernel setup data reference value"))?;
+
+    verify_transparent_release_endorsement(
+        now_utc_millis,
+        e_kernel_setup_data,
+        r_kernel_setup_data,
+    )?;
+
+    let e_init_ram_fs = e
+        .init_ram_fs
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no kernel init ram fs endorsement"))?;
+
+    let r_init_ram_fs = r
+        .init_ram_fs
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no kernel init ram fs reference value"))?;
+
+    verify_transparent_release_endorsement(now_utc_millis, e_init_ram_fs, r_init_ram_fs)
+}
+
+/// Verifies all ingredients of the system image layer for Oak Containers.
+fn verify_system_layer_endorsements(
+    now_utc_millis: i64,
+    e: &SystemLayerEndorsements,
+    r: &SystemLayerReferenceValues,
+) -> anyhow::Result<()> {
+    let e_system_image = e
+        .system_image
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no system image endorsement"))?;
+
+    let r_system_image = r
+        .system_image
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no system image reference value"))?;
+
+    verify_transparent_release_endorsement(now_utc_millis, e_system_image, r_system_image)?;
+
+    let e_config = e
+        .configuration
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no configuration endorsement"))?;
+
+    let r_config = r
+        .configuration
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no configuration reference value"))?;
+
+    verify_transparent_release_endorsement(now_utc_millis, e_config, r_config)
+}
+
+/// Verifies all ingredients of the application layer for Oak Restricted Kernel.
+fn verify_application_layer_endorsements(
+    now_utc_millis: i64,
+    e: &ApplicationLayerEndorsements,
+    r: &ApplicationLayerReferenceValues,
+) -> anyhow::Result<()> {
+    // Verify Transparent Release endorsements in application layer.
+    let e_binary = e
+        .binary
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no binary endorsement"))?;
+
+    let r_binary = r
+        .binary
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no binary reference value"))?;
+
+    verify_transparent_release_endorsement(now_utc_millis, e_binary, r_binary)?;
+
+    let e_config = e
+        .configuration
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no configuration endorsement"))?;
+
+    let r_config = r
+        .configuration
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no configuration reference value"))?;
+
+    verify_transparent_release_endorsement(now_utc_millis, e_config, r_config)
+}
+
+/// Verifies all ingredients of the container layer for Oak Containers.
+fn verify_container_layer_endorsements(
+    now_utc_millis: i64,
+    e: &ContainerLayerEndorsements,
+    r: &ContainerLayerReferenceValues,
+) -> anyhow::Result<()> {
+    let e30 = e
+        .binary
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no binary endorsement"))?;
+
+    let r30 = r
+        .binary
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no binary reference value"))?;
+
+    verify_transparent_release_endorsement(now_utc_millis, e30, r30)?;
+
+    let e31 = e
+        .configuration
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no binary endorsement"))?;
+
+    let r31 = r
+        .configuration
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no binary reference value"))?;
+
+    verify_transparent_release_endorsement(now_utc_millis, e31, r31)
 }
 
 fn verify_transparent_release_endorsement(
@@ -322,87 +427,6 @@ fn verify_transparent_release_endorsement(
         }
         None => anyhow::bail!("empty binary reference value"),
     }
-}
-
-/// Verifies all ingredients of the kernel layer, which is common to both
-/// Oak Restricted Kernel and Oak Containers setups.
-fn verify_root_layer_endorsements(
-    now_utc_millis: i64,
-    e0: &RootLayerEndorsements,
-    r0: &RootLayerReferenceValues,
-) -> anyhow::Result<()> {
-    let e00 = e0
-        .stage0
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no stage0 endorsement"))?;
-
-    let r00 = r0
-        .amd_sev
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no amd_sev in root reference values"))?
-        .stage0
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no stage0 reference value"))?;
-
-    verify_transparent_release_endorsement(now_utc_millis, e00, r00)
-}
-
-/// Verifies all ingredients of the kernel layer, which is common to both
-/// Oak Restricted Kernel and Oak Containers setups.
-fn verify_kernel_layer_endorsements(
-    now_utc_millis: i64,
-    e1: &KernelLayerEndorsements,
-    r1: &KernelLayerReferenceValues,
-) -> anyhow::Result<()> {
-    let e10 = e1
-        .kernel_image
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no kernel endorsement"))?;
-
-    let r10 = r1
-        .kernel_image
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no kernel reference value"))?;
-
-    verify_transparent_release_endorsement(now_utc_millis, e10, r10)?;
-
-    let e11 = e1
-        .kernel_cmd_line
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no kernel setup data endorsement"))?;
-
-    let r11 = r1
-        .kernel_cmd_line
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no kernel setup data reference value"))?;
-
-    verify_string_value_endorsement(now_utc_millis, e11, r11)?;
-
-    let e12 = e1
-        .kernel_setup_data
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no kernel setup data endorsement"))?;
-
-    let r12 = r1
-        .kernel_setup_data
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no kernel setup data reference value"))?;
-
-    verify_transparent_release_endorsement(now_utc_millis, e12, r12)?;
-
-    let e13 = e1
-        .init_ram_fs
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no kernel init ram fs endorsement"))?;
-
-    let r13 = r1
-        .init_ram_fs
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no kernel init ram fs reference value"))?;
-
-    verify_transparent_release_endorsement(now_utc_millis, e13, r13)?;
-
-    Ok(())
 }
 
 fn verify_string_value_endorsement(
