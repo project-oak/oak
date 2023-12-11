@@ -480,6 +480,18 @@
 <a href="#480" id="480">480</a>
 <a href="#481" id="481">481</a>
 <a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Endorsement for binaries from the Transparent Release process.
 /// &lt;&lt;https://github.com/project-oak/oak/blob/main/docs/release.md&gt;&gt;
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -517,27 +529,39 @@
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>kernel_image: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
-    </span><span class="kw">pub </span>kernel_setup_data: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    </span><span class="kw">pub </span>kernel_cmd_line: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
+    </span><span class="kw">pub </span>kernel_setup_data: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
     </span><span class="kw">pub </span>init_ram_fs: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;5&quot;</span>)]
+    </span><span class="kw">pub </span>memory_map: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;6&quot;</span>)]
+    </span><span class="kw">pub </span>acpi: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>SystemLayerEndorsements {
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>system_image: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>configuration: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ApplicationLayerEndorsements {
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>binary: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>configuration: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ContainerLayerEndorsements {
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>binary: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>configuration: ::core::option::Option&lt;TransparentReleaseEndorsement&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
