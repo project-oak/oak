@@ -65,3 +65,7 @@ message CryptoContext {
   bytes response_base_nonce = 5;
   uint64 response_sequence_number = 6;
 }
+
+message Signature {
+  bytes signature = 1;
+}

@@ -45,8 +45,8 @@ fn main() -> ! {
         log::set_max_level(log::LevelFilter::Warn);
     }
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
-    let dice_data = oak_restricted_kernel_sdk::dice::get_dice_evidence_and_keys()
-        .expect("couldn't get DICE data");
+    let dice_data =
+        oak_restricted_kernel_sdk::DiceWrapper::try_create().expect("couldn't get DICE data");
     let service = oak_functions_service::OakFunctionsService::new(
         dice_data.evidence,
         Arc::new(dice_data.encryption_key),
