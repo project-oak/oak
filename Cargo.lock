@@ -2147,7 +2147,6 @@ dependencies = [
  "libm",
  "log",
  "oak_restricted_kernel_interface",
- "oak_restricted_kernel_sdk",
  "rlsf",
  "spinning_top",
 ]
