@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
+use crate::Syscall;
 use core::arch::asm;
-use oak_restricted_kernel_interface::Syscall;
 
 /// Invoke system calls based on the Linux calling convention using `SYSCALL`.
 ///

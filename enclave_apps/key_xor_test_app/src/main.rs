@@ -23,8 +23,8 @@ extern crate alloc;
 use core::panic::PanicInfo;
 use log::info;
 use oak_channel::{Read, Write};
-use oak_restricted_kernel_interface::DERIVED_KEY_FD;
-use oak_restricted_kernel_sdk::{syscall::read, FileDescriptorChannel, StderrLogger};
+use oak_restricted_kernel_interface::{syscall::read, DERIVED_KEY_FD};
+use oak_restricted_kernel_sdk::{FileDescriptorChannel, StderrLogger};
 
 static LOGGER: StderrLogger = StderrLogger {};
 
@@ -66,5 +66,5 @@ fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     log::error!("PANIC: {}", info);
-    oak_restricted_kernel_sdk::syscall::exit(-1);
+    oak_restricted_kernel_interface::syscall::exit(-1);
 }

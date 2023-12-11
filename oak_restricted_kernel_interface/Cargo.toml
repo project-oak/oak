@@ -8,3 +8,6 @@ license = "Apache-2.0"
 [dependencies]
 bitflags = "*"
 strum = { version = "*", default-features = false, features = ["derive"] }
+
+[dev-dependencies]
+os_pipe = "*"

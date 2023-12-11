@@ -63,5 +63,5 @@ fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     log::error!("PANIC: {}", info);
-    oak_restricted_kernel_sdk::syscall::exit(-1);
+    oak_restricted_kernel_interface::syscall::exit(-1);
 }
