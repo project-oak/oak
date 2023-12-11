@@ -22,9 +22,13 @@ pub mod api;
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "std")]
+use std::time::Instant;
+
 use crate::{
     logger::{OakLogger, StandaloneLogger},
     lookup::LookupDataManager,
+    Observer,
 };
 use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use api::StdWasmApiFactory;
@@ -423,6 +427,8 @@ pub struct WasmHandler<L: OakLogger> {
     wasm_module: Arc<wasmi::Module>,
     wasm_api_factory: Arc<dyn WasmApiFactory<L> + Send + Sync>,
     logger: L,
+    #[cfg_attr(not(feature = "std"), allow(dead_code))]
+    observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
 /// A trait for creating Wasm APIs that can be called from Wasm modules.
@@ -453,6 +459,7 @@ where
         wasm_module_bytes: &[u8],
         wasm_api_factory: Arc<dyn WasmApiFactory<L> + Send + Sync>,
         logger: L,
+        observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> anyhow::Result<Self> {
         let engine = wasmi::Engine::default();
         let module = wasmi::Module::new(&engine, wasm_module_bytes)
@@ -462,12 +469,15 @@ where
             wasm_module: Arc::new(module),
             wasm_api_factory,
             logger,
+            observer,
         })
     }
 
     /// Handles a call to invoke by getting the raw request bytes from the body of the request to
     /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
     pub fn handle_invoke(&self, invoke_request: Request) -> Result<Response, micro_rpc::Status> {
+        #[cfg(feature = "std")]
+        let now = Instant::now();
         let module = self.wasm_module.clone();
 
         let request = invoke_request.body;
@@ -492,7 +502,22 @@ where
         let main = instance
             .get_typed_func::<(), ()>(&store, MAIN_FUNCTION_NAME)
             .expect("couldn't get `main` export");
+
+        #[cfg(feature = "std")]
+        if let Some(ref observer) = self.observer {
+            observer.wasm_initialization(now.elapsed());
+        }
+
+        // Warning: if we implement constant-time execution policies, this metric can leak the real
+        // execution time, so be sure that any time padding is included in the metric.
+        #[cfg(feature = "std")]
+        let now = Instant::now();
         let result = main.call(&mut store, ());
+        #[cfg(feature = "std")]
+        if let Some(ref observer) = self.observer {
+            observer.wasm_invocation(now.elapsed());
+        }
+
         store.data().logger.log_sensitive(
             Level::Info,
             &format!("running Wasm module completed with result: {:?}", result),
@@ -521,10 +546,16 @@ fn from_status_code(result: Result<(), StatusCode>) -> Result<i32, wasmi::core::
 pub fn new_wasm_handler(
     wasm_module_bytes: &[u8],
     lookup_data_manager: Arc<LookupDataManager<StandaloneLogger>>,
+    observer: Option<Arc<dyn Observer + Send + Sync>>,
 ) -> anyhow::Result<WasmHandler<StandaloneLogger>> {
     let logger = StandaloneLogger::default();
     let wasm_api_factory = StdWasmApiFactory {
         lookup_data_manager,
     };
-    WasmHandler::create(wasm_module_bytes, Arc::new(wasm_api_factory), logger)
+    WasmHandler::create(
+        wasm_module_bytes,
+        Arc::new(wasm_api_factory),
+        logger,
+        observer,
+    )
 }

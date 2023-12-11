@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![feature(never_type)]
 #![feature(unwrap_infallible)]
 
@@ -53,18 +53,29 @@ use proto::oak::functions::{
     PublicKeyInfo, ReserveRequest, ReserveResponse,
 };
 
+pub trait Observer {
+    fn wasm_initialization(&self, duration: core::time::Duration);
+    fn wasm_invocation(&self, duration: core::time::Duration);
+}
+
 pub struct OakFunctionsService {
     evidence: Evidence,
     encryption_key_provider: Arc<EncryptionKeyProvider>,
     instance: OnceCell<OakFunctionsInstance>,
+    observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
 impl OakFunctionsService {
-    pub fn new(evidence: Evidence, encryption_key_provider: Arc<EncryptionKeyProvider>) -> Self {
+    pub fn new(
+        evidence: Evidence,
+        encryption_key_provider: Arc<EncryptionKeyProvider>,
+        observer: Option<Arc<dyn Observer + Send + Sync>>,
+    ) -> Self {
         Self {
             evidence,
             encryption_key_provider,
             instance: OnceCell::new(),
+            observer,
         }
     }
     fn get_instance(&self) -> Result<&OakFunctionsInstance, micro_rpc::Status> {
@@ -92,7 +103,7 @@ impl OakFunctions for OakFunctionsService {
                 "already initialized",
             )),
             None => {
-                let instance = OakFunctionsInstance::new(&request)?;
+                let instance = OakFunctionsInstance::new(&request, self.observer.clone())?;
                 if self.instance.set(instance).is_err() {
                     return Err(micro_rpc::Status::new_with_message(
                         micro_rpc::StatusCode::FailedPrecondition,

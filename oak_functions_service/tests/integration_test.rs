@@ -53,6 +53,7 @@ fn new_service_for_testing() -> OakFunctionsService {
     OakFunctionsService::new(
         Evidence::default(),
         Arc::new(EncryptionKeyProvider::generate()),
+        None,
     )
 }
 

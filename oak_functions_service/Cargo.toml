@@ -9,6 +9,7 @@ license = "Apache-2.0"
 default = ["deny_sensitive_logging"]
 # Disable sensitive logging.
 deny_sensitive_logging = []
+std = ["anyhow/std", "wasmi/std"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }

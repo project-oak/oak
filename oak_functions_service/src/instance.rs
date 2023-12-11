@@ -22,7 +22,7 @@ use crate::{
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
         InitializeRequest, LookupDataChunk, ReserveRequest, ReserveResponse,
     },
-    wasm,
+    wasm, Observer,
 };
 use alloc::{format, sync::Arc};
 use bytes::Bytes;
@@ -36,18 +36,20 @@ pub struct OakFunctionsInstance {
 
 impl OakFunctionsInstance {
     /// See [`crate::proto::oak::functions::OakFunctions::initialize`].
-    pub fn new(request: &InitializeRequest) -> Result<Self, micro_rpc::Status> {
+    pub fn new(
+        request: &InitializeRequest,
+        observer: Option<Arc<dyn Observer + Send + Sync>>,
+    ) -> Result<Self, micro_rpc::Status> {
         let lookup_data_manager =
             Arc::new(LookupDataManager::new_empty(StandaloneLogger::default()));
         let wasm_handler =
-            wasm::new_wasm_handler(&request.wasm_module, lookup_data_manager.clone()).map_err(
-                |err| {
+            wasm::new_wasm_handler(&request.wasm_module, lookup_data_manager.clone(), observer)
+                .map_err(|err| {
                     micro_rpc::Status::new_with_message(
                         micro_rpc::StatusCode::Internal,
                         format!("couldn't initialize Wasm handler: {:?}", err),
                     )
-                },
-            )?;
+                })?;
         Ok(Self {
             lookup_data_manager,
             wasm_handler,
