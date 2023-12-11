@@ -20,9 +20,11 @@ use std::fs;
 use oak_attestation_verification::{
     proto::oak::attestation::v1::{
         attestation_results::Status, AmdSevReferenceValues, BinaryReferenceValue,
-        EndorsementReferenceValue, Endorsements, Evidence, OakContainersEndorsements,
-        OakContainersReferenceValues, ReferenceValues, RootLayerEndorsements,
-        RootLayerReferenceValues, TransparentReleaseEndorsement,
+        ContainerLayerEndorsements, ContainerLayerReferenceValues, EndorsementReferenceValue,
+        Endorsements, Evidence, KernelLayerEndorsements, KernelLayerReferenceValues,
+        OakContainersEndorsements, OakContainersReferenceValues, ReferenceValues,
+        RootLayerEndorsements, RootLayerReferenceValues, StringReferenceValue,
+        SystemLayerEndorsements, SystemLayerReferenceValues, TransparentReleaseEndorsement,
     },
     util::convert_pem_to_raw,
     verifier::verify,
@@ -34,6 +36,8 @@ const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
 const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 const EVIDENCE_PATH: &str = "testdata/evidence.binarypb";
+
+const KERNEL_CMD_LINE: &str = "rm -rf";
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
@@ -50,21 +54,39 @@ fn create_endorsements() -> Endorsements {
     let signature = fs::read(SIGNATURE_PATH).expect("couldn't read signature");
     let log_entry = fs::read(LOG_ENTRY_PATH).expect("couldn't read log entry");
 
-    let stage0 = TransparentReleaseEndorsement {
+    // Use this for all binaries.
+    let tre = TransparentReleaseEndorsement {
         endorsement,
         endorsement_signature: signature,
         rekor_log_entry: log_entry,
     };
+
     let root_layer = RootLayerEndorsements {
         tee_certificate: b"T O D O".to_vec(),
-        stage0: Some(stage0),
+        stage0: Some(tre.clone()),
+    };
+    let kernel_layer = KernelLayerEndorsements {
+        kernel_image: Some(tre.clone()),
+        kernel_cmd_line: Some(tre.clone()),
+        kernel_setup_data: Some(tre.clone()),
+        init_ram_fs: Some(tre.clone()),
+        memory_map: Some(tre.clone()),
+        acpi: Some(tre.clone()),
+    };
+    let system_layer = SystemLayerEndorsements {
+        system_image: Some(tre.clone()),
+        configuration: Some(tre.clone()),
+    };
+    let container_layer = ContainerLayerEndorsements {
+        binary: Some(tre.clone()),
+        configuration: Some(tre.clone()),
     };
 
     let ends = OakContainersEndorsements {
         root_layer: Some(root_layer),
-        kernel_layer: None,
-        system_layer: None,
-        container_layer: None,
+        kernel_layer: Some(kernel_layer),
+        system_layer: Some(system_layer),
+        container_layer: Some(container_layer),
     };
     Endorsements {
         r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::endorsements::Type::OakContainers(ends)),
@@ -87,27 +109,45 @@ fn create_reference_values() -> ReferenceValues {
         endorser_public_key,
         rekor_public_key,
     };
-    let stage0 = BinaryReferenceValue {
+    let brv = BinaryReferenceValue {
         r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::binary_reference_value::Type::Endorsement(erv)),
+    };
+    let srv = StringReferenceValue {
+        values: [KERNEL_CMD_LINE.to_owned()].to_vec(),
     };
 
     let amd_sev = AmdSevReferenceValues {
         amd_root_public_key: b"".to_vec(),
         firmware_version: "1.0.0".to_owned(),
         allow_debug: false,
-        stage0: Some(stage0),
+        stage0: Some(brv.clone()),
     };
 
     let root_layer = RootLayerReferenceValues {
         amd_sev: Some(amd_sev),
         intel_tdx: None,
     };
-
+    let kernel_layer = KernelLayerReferenceValues {
+        kernel_image: Some(brv.clone()),
+        kernel_cmd_line: Some(srv.clone()),
+        kernel_setup_data: Some(brv.clone()),
+        init_ram_fs: Some(brv.clone()),
+        memory_map: Some(brv.clone()),
+        acpi: Some(brv.clone()),
+    };
+    let system_layer = SystemLayerReferenceValues {
+        system_image: Some(brv.clone()),
+        configuration: Some(brv.clone()),
+    };
+    let container_layer = ContainerLayerReferenceValues {
+        binary: Some(brv.clone()),
+        configuration: Some(brv.clone()),
+    };
     let vs = OakContainersReferenceValues {
         root_layer: Some(root_layer),
-        kernel_layer: None,
-        system_layer: None,
-        container_layer: None,
+        kernel_layer: Some(kernel_layer),
+        system_layer: Some(system_layer),
+        container_layer: Some(container_layer),
     };
     ReferenceValues {
         r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::reference_values::Type::OakContainers(vs)),
