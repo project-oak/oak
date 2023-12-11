@@ -55,9 +55,13 @@ async fn test_read_write() {
         lookup_data_manager,
     };
 
-    let wasm_handler =
-        WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
-            .expect("couldn't instantiate WasmHandler");
+    let wasm_handler = WasmHandler::create(
+        &LOOKUP_WASM_MODULE_BYTES,
+        Arc::new(api_factory),
+        logger,
+        None,
+    )
+    .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"ReadWrite".to_vec(),
@@ -74,9 +78,13 @@ async fn test_double_read() {
         lookup_data_manager,
     };
 
-    let wasm_handler =
-        WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
-            .expect("couldn't instantiate WasmHandler");
+    let wasm_handler = WasmHandler::create(
+        &LOOKUP_WASM_MODULE_BYTES,
+        Arc::new(api_factory),
+        logger,
+        None,
+    )
+    .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"DoubleRead".to_vec(),
@@ -93,9 +101,13 @@ async fn test_double_write() {
         lookup_data_manager,
     };
 
-    let wasm_handler =
-        WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
-            .expect("couldn't instantiate WasmHandler");
+    let wasm_handler = WasmHandler::create(
+        &LOOKUP_WASM_MODULE_BYTES,
+        Arc::new(api_factory),
+        logger,
+        None,
+    )
+    .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"DoubleWrite".to_vec(),
@@ -112,9 +124,13 @@ async fn test_write_log() {
         lookup_data_manager,
     };
 
-    let wasm_handler =
-        WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
-            .expect("couldn't instantiate WasmHandler");
+    let wasm_handler = WasmHandler::create(
+        &LOOKUP_WASM_MODULE_BYTES,
+        Arc::new(api_factory),
+        logger,
+        None,
+    )
+    .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"WriteLog".to_vec(),
@@ -136,9 +152,13 @@ async fn test_storage_get_item() {
         lookup_data_manager,
     };
 
-    let wasm_handler =
-        WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
-            .expect("couldn't instantiate WasmHandler");
+    let wasm_handler = WasmHandler::create(
+        &LOOKUP_WASM_MODULE_BYTES,
+        Arc::new(api_factory),
+        logger,
+        None,
+    )
+    .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"StorageGet".to_vec(),
@@ -158,9 +178,13 @@ async fn test_storage_get_item_not_found() {
         lookup_data_manager,
     };
 
-    let wasm_handler =
-        WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
-            .expect("couldn't instantiate WasmHandler");
+    let wasm_handler = WasmHandler::create(
+        &LOOKUP_WASM_MODULE_BYTES,
+        Arc::new(api_factory),
+        logger,
+        None,
+    )
+    .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"StorageGetItemNotFound".to_vec(),
@@ -181,9 +205,13 @@ async fn test_storage_get_item_huge_key() {
         lookup_data_manager,
     };
 
-    let wasm_handler =
-        WasmHandler::create(&LOOKUP_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
-            .expect("couldn't instantiate WasmHandler");
+    let wasm_handler = WasmHandler::create(
+        &LOOKUP_WASM_MODULE_BYTES,
+        Arc::new(api_factory),
+        logger,
+        None,
+    )
+    .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: b"LargeKey".to_vec(),
@@ -204,9 +232,13 @@ async fn test_echo() {
         lookup_data_manager,
     };
 
-    let wasm_handler =
-        WasmHandler::create(&TESTING_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
-            .expect("couldn't instantiate WasmHandler");
+    let wasm_handler = WasmHandler::create(
+        &TESTING_WASM_MODULE_BYTES,
+        Arc::new(api_factory),
+        logger,
+        None,
+    )
+    .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: message_to_echo.as_bytes().to_vec(),
@@ -230,9 +262,13 @@ async fn test_blackhole() {
         lookup_data_manager,
     };
 
-    let wasm_handler =
-        WasmHandler::create(&TESTING_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
-            .expect("couldn't instantiate WasmHandler");
+    let wasm_handler = WasmHandler::create(
+        &TESTING_WASM_MODULE_BYTES,
+        Arc::new(api_factory),
+        logger,
+        None,
+    )
+    .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: message_to_blackhole.as_bytes().to_vec(),
@@ -256,9 +292,13 @@ async fn test_huge_response() {
         lookup_data_manager,
     };
 
-    let wasm_handler =
-        WasmHandler::create(&TESTING_WASM_MODULE_BYTES, Arc::new(api_factory), logger)
-            .expect("couldn't instantiate WasmHandler");
+    let wasm_handler = WasmHandler::create(
+        &TESTING_WASM_MODULE_BYTES,
+        Arc::new(api_factory),
+        logger,
+        None,
+    )
+    .expect("couldn't instantiate WasmHandler");
 
     let request = Request {
         body: "HUGE_RESPONSE".as_bytes().to_vec(),

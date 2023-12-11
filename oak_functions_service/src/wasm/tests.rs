@@ -139,8 +139,13 @@ fn create_test_state() -> TestState {
     let wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
     let wasm_module_bytes = std::fs::read(wasm_module_path).unwrap();
 
-    let wasm_handler = WasmHandler::create(&wasm_module_bytes, api_factory.clone(), logger.clone())
-        .expect("couldn't create WasmHandler");
+    let wasm_handler = WasmHandler::create(
+        &wasm_module_bytes,
+        api_factory.clone(),
+        logger.clone(),
+        None,
+    )
+    .expect("couldn't create WasmHandler");
 
     let request = Vec::new();
     let response = Arc::new(Spinlock::new(Vec::new()));

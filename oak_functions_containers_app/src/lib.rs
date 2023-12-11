@@ -25,6 +25,7 @@ use oak_functions_service::{
         InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
         ReserveRequest, ReserveResponse,
     },
+    Observer,
 };
 use oak_remote_attestation::handler::AsyncEncryptionHandler;
 use opentelemetry_api::{
@@ -63,13 +64,18 @@ pub mod orchestrator_client;
 pub struct OakFunctionsContainersService<G: AsyncRecipientContextGenerator + Send + Sync> {
     instance: OnceLock<OakFunctionsInstance>,
     encryption_context: Arc<G>,
+    observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
 impl<G: AsyncRecipientContextGenerator + Send + Sync> OakFunctionsContainersService<G> {
-    pub fn new(encryption_context: Arc<G>) -> Self {
+    pub fn new(
+        encryption_context: Arc<G>,
+        observer: Option<Arc<dyn Observer + Send + Sync>>,
+    ) -> Self {
         Self {
             instance: OnceLock::new(),
             encryption_context,
+            observer,
         }
     }
 
@@ -115,7 +121,8 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
         match self.instance.get() {
             Some(_) => Err(tonic::Status::failed_precondition("already initialized")),
             None => {
-                let instance = OakFunctionsInstance::new(&request).map_err(map_status)?;
+                let instance = OakFunctionsInstance::new(&request, self.observer.clone())
+                    .map_err(map_status)?;
                 if self.instance.set(instance).is_err() {
                     return Err(tonic::Status::failed_precondition("already initialized"));
                 }
@@ -228,10 +235,8 @@ struct MonitoringLayer {
 }
 
 impl MonitoringLayer {
-    fn new<M: MeterProvider>(provider: M) -> Self {
-        Self {
-            meter: provider.meter("oak_functions_container_app"),
-        }
+    fn new(meter: Meter) -> Self {
+        Self { meter }
     }
 }
 
@@ -331,6 +336,39 @@ fn create_trace<Body>(request: &http::Request<Body>) -> Span {
     )
 }
 
+struct OtelObserver {
+    wasm_initialization: Histogram<u64>,
+    wasm_invocation: Histogram<u64>,
+}
+
+impl OtelObserver {
+    pub fn new(meter: Meter) -> Self {
+        Self {
+            wasm_initialization: meter
+                .u64_histogram("wasm_initialization")
+                .with_unit(Unit::new("milliseconds"))
+                .with_description("Time spent setting up wasm sandbox for invocation")
+                .init(),
+            wasm_invocation: meter
+                .u64_histogram("wasm_invocation")
+                .with_unit(Unit::new("milliseconds"))
+                .with_description("Time spent on calling `main` in wasm sandbox")
+                .init(),
+        }
+    }
+}
+impl Observer for OtelObserver {
+    fn wasm_initialization(&self, duration: core::time::Duration) {
+        self.wasm_initialization
+            .record(duration.as_millis().try_into().unwrap_or(u64::MAX), &[])
+    }
+
+    fn wasm_invocation(&self, duration: core::time::Duration) {
+        self.wasm_invocation
+            .record(duration.as_millis().try_into().unwrap_or(u64::MAX), &[])
+    }
+}
+
 // Equivalent to `tonic::Code::Ok`.
 static GRPC_SUCCESS: http::header::HeaderValue = http::header::HeaderValue::from_static("0");
 
@@ -343,6 +381,7 @@ pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static, P:
     encryption_context: Arc<G>,
     provider: P,
 ) -> anyhow::Result<()> {
+    let meter = provider.meter("oak_functions_containers_app");
     tonic::transport::Server::builder()
         .layer(
             tower_http::trace::TraceLayer::new_for_grpc()
@@ -359,9 +398,10 @@ pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static, P:
                     span.record("rpc.grpc.status_code", code);
                 }),
         )
-        .layer(MonitoringLayer::new(provider))
+        .layer(MonitoringLayer::new(meter.clone()))
         .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
             encryption_context,
+            Some(Arc::new(OtelObserver::new(meter))),
         )))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await

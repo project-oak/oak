@@ -68,7 +68,7 @@ fn main() -> ! {
     )
     .expect("couldn't get evidence");
     let service =
-        oak_functions_service::OakFunctionsService::new(evidence, Arc::new(encryption_key));
+        oak_functions_service::OakFunctionsService::new(evidence, Arc::new(encryption_key), None);
     let server = oak_functions_service::proto::oak::functions::OakFunctionsServer::new(service);
     oak_channel::server::start_blocking_server(
         Box::<FileDescriptorChannel>::default(),
