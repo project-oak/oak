@@ -51,6 +51,35 @@ impl<T> OnceCell<T> {
         Some(unsafe { (*self.value.get()).assume_init_ref() })
     }
 
+    /// Gets the contents of the cell, initializing it with `f` if
+    /// the cell was empty. If the cell was empty and `f` failed, an
+    /// error is returned.
+    ///
+    /// Based off the method of the same name in [`core::cell::OnceCell`].
+    ///
+    /// # Panics
+    ///
+    /// If `f` panics, the panic is propagated to the caller, and the cell
+    /// remains uninitialized.
+    ///
+    /// It is an error to reentrantly initialize the cell from `f`. Doing
+    /// so results in a panic.
+    pub fn get_or_init<F>(&self, f: F) -> &T
+    where
+        F: FnOnce() -> T,
+    {
+        if let Some(val) = self.get() {
+            return val;
+        }
+        let val = f();
+        // Note that *some* forms of reentrant initialization might lead to
+        // UB (see `reentrant_init` test). I believe that just removing this
+        // `assert`, while keeping `set/get` would be sound, but it seems
+        // better to panic, rather than to silently use an old value.
+        assert!(self.set(val).is_ok(), "reentrant init");
+        unsafe { self.get().unwrap_unchecked() }
+    }
+
     /// Sets the inner value of the cell if it has not been initialized.
     ///
     /// If it has been initialized the inner value is not updated and the passed-in value is
