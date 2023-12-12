@@ -37,8 +37,6 @@ const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 const EVIDENCE_PATH: &str = "testdata/evidence.binarypb";
 
-const KERNEL_CMD_LINE: &str = "rm -rf";
-
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
 
@@ -75,7 +73,6 @@ fn create_endorsements() -> Endorsements {
     };
     let system_layer = SystemLayerEndorsements {
         system_image: Some(tre.clone()),
-        configuration: Some(tre.clone()),
     };
     let container_layer = ContainerLayerEndorsements {
         binary: Some(tre.clone()),
@@ -113,12 +110,12 @@ fn create_reference_values() -> ReferenceValues {
         r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::binary_reference_value::Type::Endorsement(erv)),
     };
     let srv = StringReferenceValue {
-        values: [KERNEL_CMD_LINE.to_owned()].to_vec(),
+        values: ["whatever".to_owned()].to_vec(),
     };
 
     let amd_sev = AmdSevReferenceValues {
         amd_root_public_key: b"".to_vec(),
-        firmware_version: "1.0.0".to_owned(),
+        firmware_version: Some(srv.clone()),
         allow_debug: false,
         stage0: Some(brv.clone()),
     };
@@ -129,7 +126,7 @@ fn create_reference_values() -> ReferenceValues {
     };
     let kernel_layer = KernelLayerReferenceValues {
         kernel_image: Some(brv.clone()),
-        kernel_cmd_line: Some(srv.clone()),
+        kernel_cmd_line: Some(brv.clone()),
         kernel_setup_data: Some(brv.clone()),
         init_ram_fs: Some(brv.clone()),
         memory_map: Some(brv.clone()),
@@ -137,7 +134,6 @@ fn create_reference_values() -> ReferenceValues {
     };
     let system_layer = SystemLayerReferenceValues {
         system_image: Some(brv.clone()),
-        configuration: Some(brv.clone()),
     };
     let container_layer = ContainerLayerReferenceValues {
         binary: Some(brv.clone()),

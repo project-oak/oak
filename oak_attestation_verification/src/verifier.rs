@@ -28,18 +28,36 @@ use crate::{
         ContainerLayerReferenceValues, Endorsements, Evidence, KernelLayerEndorsements,
         KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
         OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-        RootLayerEndorsements, RootLayerReferenceValues, StringReferenceValue,
-        SystemLayerEndorsements, SystemLayerReferenceValues, TransparentReleaseEndorsement,
+        RootLayerEndorsements, RootLayerReferenceValues, SystemLayerEndorsements,
+        SystemLayerReferenceValues, TransparentReleaseEndorsement,
     },
     util::{hex_to_raw_digest, is_raw_digest_match, MatchResult},
 };
 
+use alloc::vec::Vec;
 use coset::{cwt::ClaimsSet, CborSerializable, CoseKey};
 use ecdsa::{signature::Verifier, Signature};
 use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
 
 // We don't use additional authenticated data.
 const ADDITIONAL_DATA: &[u8] = b"";
+
+fn failure(err: anyhow::Error) -> AttestationResults {
+    AttestationResults {
+        status: Status::GenericFailure.into(),
+        reason: err.to_string(),
+        ..Default::default()
+    }
+}
+
+fn success(encryption_public_key: Vec<u8>, signing_public_key: Vec<u8>) -> AttestationResults {
+    AttestationResults {
+        status: Status::Success.into(),
+        encryption_public_key,
+        signing_public_key,
+        ..Default::default()
+    }
+}
 
 /// Verifies entire setup by forwarding to individual setup types.
 /// The `now_utc_millis` argument will be changed to a time type as work progresses.
@@ -49,28 +67,12 @@ pub fn verify(
     endorsements: &Endorsements,
     reference_values: &ReferenceValues,
 ) -> AttestationResults {
-    match verify_internal(now_utc_millis, evidence, endorsements, reference_values).err() {
-        Some(err) => AttestationResults {
-            status: Status::GenericFailure.into(),
-            reason: err.to_string(),
-        },
-        None => AttestationResults {
-            status: Status::Success.into(),
-            reason: "".to_string(),
-        },
+    let chain_result = verify_dice_chain(evidence);
+    if chain_result.is_err() {
+        return failure(chain_result.err().unwrap());
     }
-}
 
-/// Same as verify(), but with Rust-internal return value.
-pub fn verify_internal(
-    now_utc_millis: i64,
-    evidence: &Evidence,
-    endorsements: &Endorsements,
-    reference_values: &ReferenceValues,
-) -> anyhow::Result<()> {
-    verify_dice_chain(evidence)?;
-
-    match (
+    let per_setup_result = match (
         endorsements.r#type.as_ref(),
         reference_values.r#type.as_ref(),
     ) {
@@ -85,15 +87,42 @@ pub fn verify_internal(
         (Some(endorsements::Type::Cb(ends)), Some(reference_values::Type::Cb(rvs))) => {
             verify_cb(evidence, ends, rvs)
         }
-        (None, None) => anyhow::bail!("Endorsements and reference values both empty"),
-        (None, Some(_)) => anyhow::bail!("Endorsements are empty"),
-        (Some(_), None) => anyhow::bail!("Reference values are empty"),
-        (Some(_), Some(_)) => anyhow::bail!("Mismatch between endorsements and reference values"),
+        (None, None) => Err(anyhow::Error::msg(
+            "endorsements and reference values both empty",
+        )),
+        (None, Some(_)) => Err(anyhow::Error::msg("endorsements are empty")),
+        (Some(_), None) => Err(anyhow::Error::msg("reference values are empty")),
+        (Some(_), Some(_)) => Err(anyhow::Error::msg(
+            "mismatch between endorsements and reference values",
+        )),
+    };
+    if per_setup_result.is_err() {
+        return failure(per_setup_result.err().unwrap());
     }
+
+    let pkeys = chain_result.unwrap();
+    let encryption_cose_key = pkeys.get(0).unwrap();
+    let encryption_public_key = encryption_cose_key
+        .clone()
+        .to_vec()
+        .map_err(|_cose_err| anyhow::anyhow!("could not serialize encryption public key"));
+    if encryption_public_key.is_err() {
+        return failure(encryption_public_key.err().unwrap());
+    }
+    let signing_cose_key = pkeys.get(1).unwrap();
+    let signing_public_key = signing_cose_key
+        .clone()
+        .to_vec()
+        .map_err(|_cose_err| anyhow::anyhow!("could not serialize signing public key"));
+    if signing_public_key.is_err() {
+        return failure(signing_public_key.err().unwrap());
+    }
+
+    success(encryption_public_key.unwrap(), signing_public_key.unwrap())
 }
 
 /// Verifies signatures along the certificate chain induced by DICE layers.
-fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<()> {
+fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<[CoseKey; 2]> {
     let root_layer = evidence
         .root_layer
         .as_ref()
@@ -120,7 +149,43 @@ fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<()> {
         verifying_key = cose_key_to_verifying_key(&cose_key).map_err(|msg| anyhow::anyhow!(msg))?;
     }
 
-    Ok(())
+    // Verify application keys in evidence and extract public keys. The verifying key comes from the
+    // last DICE layer.
+    let appl_keys = evidence
+        .application_keys
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no application fields in evidence"))?;
+
+    // Process encryption certificate.
+    let ecert = coset::CoseSign1::from_slice(&appl_keys.encryption_public_key_certificate)
+        .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
+    ecert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
+        let sig = Signature::from_slice(signature)?;
+        verifying_key.verify(contents, &sig)
+    })?;
+    let epayload = ecert
+        .payload
+        .ok_or_else(|| anyhow::anyhow!("no encryption cert payload"))?;
+    let eclaims = ClaimsSet::from_slice(&epayload)
+        .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption claims set"))?;
+    let ecose_key = get_public_key_from_claims_set(&eclaims).map_err(|msg| anyhow::anyhow!(msg))?;
+
+    // Process signing certificate.
+    let scert = coset::CoseSign1::from_slice(&appl_keys.signing_public_key_certificate)
+        .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
+    scert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
+        let sig = Signature::from_slice(signature)?;
+        verifying_key.verify(contents, &sig)
+    })?;
+    let spayload = scert
+        .payload
+        .ok_or_else(|| anyhow::anyhow!("no signing cert payload"))?;
+    let sclaims = ClaimsSet::from_slice(&spayload)
+        .map_err(|_cose_err| anyhow::anyhow!("could not parse signing claims set"))?;
+    let scose_key: CoseKey =
+        get_public_key_from_claims_set(&sclaims).map_err(|msg| anyhow::anyhow!(msg))?;
+
+    Ok([ecose_key, scose_key])
 }
 
 fn verify_oak_restricted_kernel(
@@ -272,7 +337,7 @@ fn verify_kernel_layer_endorsements(
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no kernel setup data reference value"))?;
 
-    verify_string_value_endorsement(now_utc_millis, e_kernel_cmd_line, r_kernel_cmd_line)?;
+    verify_transparent_release_endorsement(now_utc_millis, e_kernel_cmd_line, r_kernel_cmd_line)?;
 
     let e_kernel_setup_data = e
         .kernel_setup_data
@@ -319,19 +384,7 @@ fn verify_system_layer_endorsements(
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no system image reference value"))?;
 
-    verify_transparent_release_endorsement(now_utc_millis, e_system_image, r_system_image)?;
-
-    let e_config = e
-        .configuration
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no configuration endorsement"))?;
-
-    let r_config = r
-        .configuration
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no configuration reference value"))?;
-
-    verify_transparent_release_endorsement(now_utc_millis, e_config, r_config)
+    verify_transparent_release_endorsement(now_utc_millis, e_system_image, r_system_image)
 }
 
 /// Verifies all ingredients of the application layer for Oak Restricted Kernel.
@@ -427,12 +480,4 @@ fn verify_transparent_release_endorsement(
         }
         None => anyhow::bail!("empty binary reference value"),
     }
-}
-
-fn verify_string_value_endorsement(
-    _now_utc_millis: i64,
-    _end: &TransparentReleaseEndorsement,
-    _rv: &StringReferenceValue,
-) -> anyhow::Result<()> {
-    Ok(()) // Needs implementation
 }
