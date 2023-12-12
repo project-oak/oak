@@ -48,15 +48,13 @@ impl TryFrom<&oak_dice::evidence::RestrictedKernelDiceData> for EncryptionKeyPro
     fn try_from(
         dice_data: &oak_dice::evidence::RestrictedKernelDiceData,
     ) -> Result<Self, Self::Error> {
-        let claims = oak_dice::cert::get_claims_set_from_certificate_bytes(
-            &dice_data
-                .evidence
-                .application_keys
-                .encryption_public_key_certificate,
-        )
-        .map_err(|err| {
-            anyhow::anyhow!("couldn't parse encryption public key certificate: {err}")
-        })?;
+        let claims = dice_data
+            .evidence
+            .application_keys
+            .claims()
+            .map_err(|err| {
+                anyhow::anyhow!("couldn't parse encryption public key certificate: {err}")
+            })?;
         let private_key = PrivateKey::from_bytes(
             &dice_data.application_private_keys.encryption_private_key
                 [..oak_dice::evidence::X25519_PRIVATE_KEY_SIZE],
