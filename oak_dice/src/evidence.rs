@@ -178,6 +178,15 @@ pub struct ApplicationKeys {
     pub encryption_public_key_certificate: [u8; CERTIFICATE_SIZE],
 }
 
+impl ApplicationKeys {
+    pub fn claims(&self) -> Result<coset::cwt::ClaimsSet, String> {
+        let decoded =
+            crate::utils::cbor_encoded_bytes_to_vec(&self.encryption_public_key_certificate[..])?;
+        crate::cert::get_claims_set_from_certificate_bytes(&decoded)
+            .map_err(|err| format!("failed get claims: {:?}", err))
+    }
+}
+
 static_assertions::assert_eq_size!([u8; 2048], ApplicationKeys);
 
 /// ECDSA private keys that can be used for an application for signing or encryption.
