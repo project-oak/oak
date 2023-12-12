@@ -184,47 +184,6 @@ pub fn start_kernel(info: &BootParams) -> ! {
             .unwrap()
     };
 
-    let stage0_dice_data = {
-        let dice_memory_slice = {
-            let e820_dice_data_entry = info
-                .e820_table()
-                .iter()
-                .find(|e| e.entry_type() == Some(oak_linux_boot_params::E820EntryType::DiceData))
-                .expect("failed to find dice data");
-
-            let start_addr = {
-                let phys_addr = PhysAddr::new_truncate(
-                    e820_dice_data_entry
-                        .addr()
-                        .try_into()
-                        .expect("couldn't convert usize to u64"),
-                );
-                let pt = PAGE_TABLES.get().expect("failed to get page tables");
-                pt.translate_physical(phys_addr)
-                    .expect("failed to translate physical dice address")
-            };
-
-            // Safety: the E820 table indicated that this is the corrct memory segment.
-            unsafe {
-                core::slice::from_raw_parts_mut::<u8>(
-                    start_addr.as_mut_ptr(),
-                    e820_dice_data_entry.size(),
-                )
-            }
-        };
-
-        let dice_data = oak_dice::evidence::Stage0DiceData::read_from(dice_memory_slice)
-            .expect("failed to read dice data");
-
-        // Overwrite the dice data provided by stage0 after reading.
-        dice_memory_slice.fill(0);
-
-        if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
-            panic!("dice data loaded from stage0 failed validation");
-        }
-        dice_data
-    };
-
     if sev_es_enabled {
         let mapper = PAGE_TABLES.get().unwrap();
         // Now that the page tables have been updated, we have to re-share the GHCB with the
@@ -282,6 +241,64 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // We'll let the heap to grow to 1 TB (1 << 19 * 2 MiB pages), max.
     let heap_page_range = VMA_ALLOCATOR.lock().allocate(1 << 19).unwrap();
     memory::init_kernel_heap(heap_page_range).unwrap();
+
+    let stage0_dice_data = {
+        let dice_memory_slice = {
+            let e820_dice_data_entry = info
+                .e820_table()
+                .iter()
+                .find(|e| e.entry_type() == Some(oak_linux_boot_params::E820EntryType::DiceData))
+                .expect("failed to find dice data");
+
+            let phys_start_addr = PhysAddr::new_truncate(
+                e820_dice_data_entry
+                    .addr()
+                    .try_into()
+                    .expect("couldn't convert usize to u64"),
+            );
+
+            // Validate that the dice data mem address matches the kernel args if present
+            if let Some(arg) = kernel_args.get(&alloc::format!(
+                "--{}",
+                oak_dice::evidence::DICE_DATA_CMDLINE_PARAM
+            )) {
+                let parsed_arg = u64::from_str_radix(
+                    arg.strip_prefix("0x")
+                        .expect("failed stripping the hex prefix"),
+                    16,
+                )
+                .expect("couldn't parse address as a hex number");
+                if parsed_arg != phys_start_addr.as_u64() {
+                    panic!("inconsistent dice data addresses supplied in the E820 table and kernel args")
+                }
+            }
+
+            let virt_start_addr = {
+                let pt = PAGE_TABLES.get().expect("failed to get page tables");
+                pt.translate_physical(phys_start_addr)
+                    .expect("failed to translate physical dice address")
+            };
+
+            // Safety: the E820 table indicated that this is the corrct memory segment.
+            unsafe {
+                core::slice::from_raw_parts_mut::<u8>(
+                    virt_start_addr.as_mut_ptr(),
+                    e820_dice_data_entry.size(),
+                )
+            }
+        };
+
+        let dice_data = oak_dice::evidence::Stage0DiceData::read_from(dice_memory_slice)
+            .expect("failed to read dice data");
+
+        // Overwrite the dice data provided by stage0 after reading.
+        dice_memory_slice.fill(0);
+
+        if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
+            panic!("dice data loaded from stage0 failed validation");
+        }
+        dice_data
+    };
 
     // Okay. We've got page tables and a heap. Set up the "late" IDT, this time with descriptors for
     // user mode.
