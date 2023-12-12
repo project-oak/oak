@@ -28,7 +28,6 @@ use crate::{
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
 use anyhow::{anyhow, Context};
 use async_trait::async_trait;
-use hpke::Deserializable;
 
 /// Info string used by Hybrid Public Key Encryption;
 pub(crate) const OAK_HPKE_INFO: &[u8] = b"Oak Hybrid Public Key Encryption v1";
@@ -40,42 +39,6 @@ pub struct EncryptionKeyProvider {
 impl Default for EncryptionKeyProvider {
     fn default() -> Self {
         Self::generate()
-    }
-}
-
-impl TryFrom<&oak_dice::evidence::RestrictedKernelDiceData> for EncryptionKeyProvider {
-    type Error = anyhow::Error;
-    fn try_from(
-        dice_data: &oak_dice::evidence::RestrictedKernelDiceData,
-    ) -> Result<Self, Self::Error> {
-        let claims = oak_dice::cert::get_claims_set_from_certificate_bytes(
-            &dice_data
-                .evidence
-                .application_keys
-                .encryption_public_key_certificate,
-        )
-        .map_err(|err| {
-            anyhow::anyhow!("couldn't parse encryption public key certificate: {err}")
-        })?;
-        let private_key = PrivateKey::from_bytes(
-            &dice_data.application_private_keys.encryption_private_key
-                [..oak_dice::evidence::X25519_PRIVATE_KEY_SIZE],
-        )
-        .map_err(|error| anyhow::anyhow!("couldn't deserialize private key: {}", error))?;
-        let public_key = {
-            let cose_key =
-                oak_dice::cert::get_public_key_from_claims_set(&claims).map_err(|err| {
-                    anyhow::anyhow!("couldn't get public key from certificate: {err}")
-                })?;
-            oak_dice::cert::cose_key_to_hpke_public_key(&cose_key)
-                .map_err(|err| anyhow::anyhow!("couldn't extract public key: {err}"))?
-        };
-        let encryption_key_provider = EncryptionKeyProvider::new(
-            private_key,
-            PublicKey::from_bytes(&public_key)
-                .map_err(|err| anyhow::anyhow!("couldn't decode public key: {err}"))?,
-        );
-        Ok(encryption_key_provider)
     }
 }
 

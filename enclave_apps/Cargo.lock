@@ -701,7 +701,6 @@ dependencies = [
  "hkdf",
  "hpke",
  "micro_rpc_build",
- "oak_dice",
  "p256",
  "prost",
  "rand_core",
@@ -794,15 +793,12 @@ dependencies = [
  "micro_rpc",
  "oak_channel",
  "oak_core",
- "oak_crypto",
- "oak_dice",
  "oak_enclave_runtime_support",
  "oak_functions_service",
  "oak_remote_attestation",
  "oak_restricted_kernel_interface",
  "oak_restricted_kernel_sdk",
  "static_assertions",
- "zerocopy",
 ]
 
 [[package]]
@@ -870,6 +866,7 @@ dependencies = [
  "oak_channel",
  "oak_crypto",
  "oak_dice",
+ "oak_remote_attestation",
  "oak_restricted_kernel_interface",
  "p256",
  "strum",
