@@ -68,6 +68,11 @@
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -113,8 +118,11 @@
         <span class="kw">let </span><span class="kw-2">mut </span>remaining = data.len();
 
         <span class="kw">while </span>remaining &gt; <span class="number">0 </span>{
-            remaining -= <span class="kw">crate</span>::syscall::read(<span class="self">self</span>.fd, <span class="kw-2">&amp;mut </span>data[len - remaining..])
-                .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;read failure: {}&quot;</span>, err))<span class="question-mark">?</span>;
+            remaining -= oak_restricted_kernel_interface::syscall::read(
+                <span class="self">self</span>.fd,
+                <span class="kw-2">&amp;mut </span>data[len - remaining..],
+            )
+            .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;read failure: {}&quot;</span>, err))<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())
@@ -127,15 +135,17 @@
         <span class="kw">let </span><span class="kw-2">mut </span>remaining = data.len();
 
         <span class="kw">while </span>remaining &gt; <span class="number">0 </span>{
-            remaining -= <span class="kw">crate</span>::syscall::write(<span class="self">self</span>.fd, <span class="kw-2">&amp;</span>data[len - remaining..])
-                .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;write failure: {}&quot;</span>, err))<span class="question-mark">?</span>;
+            remaining -=
+                oak_restricted_kernel_interface::syscall::write(<span class="self">self</span>.fd, <span class="kw-2">&amp;</span>data[len - remaining..])
+                    .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;write failure: {}&quot;</span>, err))<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">fn </span>flush(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="kw">crate</span>::syscall::fsync(<span class="self">self</span>.fd).map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;sync failure: {}&quot;</span>, err))
+        oak_restricted_kernel_interface::syscall::fsync(<span class="self">self</span>.fd)
+            .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;sync failure: {}&quot;</span>, err))
     }
 }
 </code></pre></div></section></main></body></html>
