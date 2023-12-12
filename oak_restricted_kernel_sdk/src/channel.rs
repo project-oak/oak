@@ -43,8 +43,11 @@ impl Read for FileDescriptorChannel {
         let mut remaining = data.len();
 
         while remaining > 0 {
-            remaining -= crate::syscall::read(self.fd, &mut data[len - remaining..])
-                .map_err(|err| anyhow!("read failure: {}", err))?;
+            remaining -= oak_restricted_kernel_interface::syscall::read(
+                self.fd,
+                &mut data[len - remaining..],
+            )
+            .map_err(|err| anyhow!("read failure: {}", err))?;
         }
 
         Ok(())
@@ -57,14 +60,16 @@ impl Write for FileDescriptorChannel {
         let mut remaining = data.len();
 
         while remaining > 0 {
-            remaining -= crate::syscall::write(self.fd, &data[len - remaining..])
-                .map_err(|err| anyhow!("write failure: {}", err))?;
+            remaining -=
+                oak_restricted_kernel_interface::syscall::write(self.fd, &data[len - remaining..])
+                    .map_err(|err| anyhow!("write failure: {}", err))?;
         }
 
         Ok(())
     }
 
     fn flush(&mut self) -> anyhow::Result<()> {
-        crate::syscall::fsync(self.fd).map_err(|err| anyhow!("sync failure: {}", err))
+        oak_restricted_kernel_interface::syscall::fsync(self.fd)
+            .map_err(|err| anyhow!("sync failure: {}", err))
     }
 }
