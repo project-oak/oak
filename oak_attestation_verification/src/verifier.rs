@@ -39,7 +39,6 @@ use ecdsa::{signature::Verifier, Signature};
 use oak_dice::cert::{
     cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
 };
-use p256::pkcs8::EncodePublicKey;
 
 // We don't use additional authenticated data.
 const ADDITIONAL_DATA: &[u8] = b"";
@@ -170,7 +169,7 @@ fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<DiceChainResult> {
         get_public_key_from_claims_set(&signing_claims).map_err(|msg| anyhow::anyhow!(msg))?;
     let signing_verifying_key =
         cose_key_to_verifying_key(&signing_cose_key).map_err(|msg| anyhow::anyhow!(msg))?;
-    let signing_public_key = signing_verifying_key.to_public_key_der()?.into_vec();
+    let signing_public_key = signing_verifying_key.to_sec1_bytes().to_vec();
 
     Ok(DiceChainResult {
         encryption_public_key,
