@@ -190,6 +190,17 @@
 <a href="#190" id="190">190</a>
 <a href="#191" id="191">191</a>
 <a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -206,7 +217,7 @@
 // limitations under the License.
 //
 
-</span><span class="attr">#![no_std]
+</span><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 #![feature(never_type)]
 #![feature(unwrap_infallible)]
 
@@ -245,18 +256,29 @@
     PublicKeyInfo, ReserveRequest, ReserveResponse,
 };
 
+<span class="kw">pub trait </span>Observer {
+    <span class="kw">fn </span>wasm_initialization(<span class="kw-2">&amp;</span><span class="self">self</span>, duration: core::time::Duration);
+    <span class="kw">fn </span>wasm_invocation(<span class="kw-2">&amp;</span><span class="self">self</span>, duration: core::time::Duration);
+}
+
 <span class="kw">pub struct </span>OakFunctionsService {
     evidence: Evidence,
     encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;,
     instance: OnceCell&lt;OakFunctionsInstance&gt;,
+    observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
 }
 
 <span class="kw">impl </span>OakFunctionsService {
-    <span class="kw">pub fn </span>new(evidence: Evidence, encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(
+        evidence: Evidence,
+        encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;,
+        observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
+    ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             evidence,
             encryption_key_provider,
             instance: OnceCell::new(),
+            observer,
         }
     }
     <span class="kw">fn </span>get_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>OakFunctionsInstance, micro_rpc::Status&gt; {
@@ -284,7 +306,7 @@
                 <span class="string">&quot;already initialized&quot;</span>,
             )),
             <span class="prelude-val">None </span>=&gt; {
-                <span class="kw">let </span>instance = OakFunctionsInstance::new(<span class="kw-2">&amp;</span>request)<span class="question-mark">?</span>;
+                <span class="kw">let </span>instance = OakFunctionsInstance::new(<span class="kw-2">&amp;</span>request, <span class="self">self</span>.observer.clone())<span class="question-mark">?</span>;
                 <span class="kw">if </span><span class="self">self</span>.instance.set(instance).is_err() {
                     <span class="kw">return </span><span class="prelude-val">Err</span>(micro_rpc::Status::new_with_message(
                         micro_rpc::StatusCode::FailedPrecondition,

@@ -367,6 +367,46 @@
 <a href="#367" id="367">367</a>
 <a href="#368" id="368">368</a>
 <a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -394,6 +434,7 @@
         InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
         ReserveRequest, ReserveResponse,
     },
+    Observer,
 };
 <span class="kw">use </span>oak_remote_attestation::handler::AsyncEncryptionHandler;
 <span class="kw">use </span>opentelemetry_api::{
@@ -432,13 +473,18 @@
 </span><span class="kw">pub struct </span>OakFunctionsContainersService&lt;G: AsyncRecipientContextGenerator + Send + Sync&gt; {
     instance: OnceLock&lt;OakFunctionsInstance&gt;,
     encryption_context: Arc&lt;G&gt;,
+    observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
 }
 
 <span class="kw">impl</span>&lt;G: AsyncRecipientContextGenerator + Send + Sync&gt; OakFunctionsContainersService&lt;G&gt; {
-    <span class="kw">pub fn </span>new(encryption_context: Arc&lt;G&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(
+        encryption_context: Arc&lt;G&gt;,
+        observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
+    ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             instance: OnceLock::new(),
             encryption_context,
+            observer,
         }
     }
 
@@ -484,7 +530,8 @@
         <span class="kw">match </span><span class="self">self</span>.instance.get() {
             <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(tonic::Status::failed_precondition(<span class="string">&quot;already initialized&quot;</span>)),
             <span class="prelude-val">None </span>=&gt; {
-                <span class="kw">let </span>instance = OakFunctionsInstance::new(<span class="kw-2">&amp;</span>request).map_err(map_status)<span class="question-mark">?</span>;
+                <span class="kw">let </span>instance = OakFunctionsInstance::new(<span class="kw-2">&amp;</span>request, <span class="self">self</span>.observer.clone())
+                    .map_err(map_status)<span class="question-mark">?</span>;
                 <span class="kw">if </span><span class="self">self</span>.instance.set(instance).is_err() {
                     <span class="kw">return </span><span class="prelude-val">Err</span>(tonic::Status::failed_precondition(<span class="string">&quot;already initialized&quot;</span>));
                 }
@@ -597,10 +644,8 @@
 }
 
 <span class="kw">impl </span>MonitoringLayer {
-    <span class="kw">fn </span>new&lt;M: MeterProvider&gt;(provider: M) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            meter: provider.meter(<span class="string">&quot;oak_functions_container_app&quot;</span>),
-        }
+    <span class="kw">fn </span>new(meter: Meter) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ meter }
     }
 }
 
@@ -700,6 +745,39 @@
     )
 }
 
+<span class="kw">struct </span>OtelObserver {
+    wasm_initialization: Histogram&lt;u64&gt;,
+    wasm_invocation: Histogram&lt;u64&gt;,
+}
+
+<span class="kw">impl </span>OtelObserver {
+    <span class="kw">pub fn </span>new(meter: Meter) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            wasm_initialization: meter
+                .u64_histogram(<span class="string">&quot;wasm_initialization&quot;</span>)
+                .with_unit(Unit::new(<span class="string">&quot;milliseconds&quot;</span>))
+                .with_description(<span class="string">&quot;Time spent setting up wasm sandbox for invocation&quot;</span>)
+                .init(),
+            wasm_invocation: meter
+                .u64_histogram(<span class="string">&quot;wasm_invocation&quot;</span>)
+                .with_unit(Unit::new(<span class="string">&quot;milliseconds&quot;</span>))
+                .with_description(<span class="string">&quot;Time spent on calling `main` in wasm sandbox&quot;</span>)
+                .init(),
+        }
+    }
+}
+<span class="kw">impl </span>Observer <span class="kw">for </span>OtelObserver {
+    <span class="kw">fn </span>wasm_initialization(<span class="kw-2">&amp;</span><span class="self">self</span>, duration: core::time::Duration) {
+        <span class="self">self</span>.wasm_initialization
+            .record(duration.as_millis().try_into().unwrap_or(u64::MAX), <span class="kw-2">&amp;</span>[])
+    }
+
+    <span class="kw">fn </span>wasm_invocation(<span class="kw-2">&amp;</span><span class="self">self</span>, duration: core::time::Duration) {
+        <span class="self">self</span>.wasm_invocation
+            .record(duration.as_millis().try_into().unwrap_or(u64::MAX), <span class="kw-2">&amp;</span>[])
+    }
+}
+
 <span class="comment">// Equivalent to `tonic::Code::Ok`.
 </span><span class="kw">static </span>GRPC_SUCCESS: http::header::HeaderValue = http::header::HeaderValue::from_static(<span class="string">&quot;0&quot;</span>);
 
@@ -712,6 +790,7 @@
     encryption_context: Arc&lt;G&gt;,
     provider: P,
 ) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>meter = provider.meter(<span class="string">&quot;oak_functions_containers_app&quot;</span>);
     tonic::transport::Server::builder()
         .layer(
             tower_http::trace::TraceLayer::new_for_grpc()
@@ -728,9 +807,10 @@
                     span.record(<span class="string">&quot;rpc.grpc.status_code&quot;</span>, code);
                 }),
         )
-        .layer(MonitoringLayer::new(provider))
+        .layer(MonitoringLayer::new(meter.clone()))
         .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
             encryption_context,
+            <span class="prelude-val">Some</span>(Arc::new(OtelObserver::new(meter))),
         )))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .<span class="kw">await

@@ -528,6 +528,37 @@
 <a href="#528" id="528">528</a>
 <a href="#529" id="529">529</a>
 <a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -552,9 +583,13 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests;
 
+<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+</span><span class="kw">use </span>std::time::Instant;
+
 <span class="kw">use crate</span>::{
     logger::{OakLogger, StandaloneLogger},
     lookup::LookupDataManager,
+    Observer,
 };
 <span class="kw">use </span>alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 <span class="kw">use </span>api::StdWasmApiFactory;
@@ -953,6 +988,8 @@
     wasm_module: Arc&lt;wasmi::Module&gt;,
     wasm_api_factory: Arc&lt;<span class="kw">dyn </span>WasmApiFactory&lt;L&gt; + Send + Sync&gt;,
     logger: L,
+    <span class="attr">#[cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), allow(dead_code))]
+    </span>observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
 }
 
 <span class="doccomment">/// A trait for creating Wasm APIs that can be called from Wasm modules.
@@ -983,6 +1020,7 @@
         wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
         wasm_api_factory: Arc&lt;<span class="kw">dyn </span>WasmApiFactory&lt;L&gt; + Send + Sync&gt;,
         logger: L,
+        observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>engine = wasmi::Engine::default();
         <span class="kw">let </span>module = wasmi::Module::new(<span class="kw-2">&amp;</span>engine, wasm_module_bytes)
@@ -992,12 +1030,15 @@
             wasm_module: Arc::new(module),
             wasm_api_factory,
             logger,
+            observer,
         })
     }
 
     <span class="doccomment">/// Handles a call to invoke by getting the raw request bytes from the body of the request to
     /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
     </span><span class="kw">pub fn </span>handle_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, invoke_request: Request) -&gt; <span class="prelude-ty">Result</span>&lt;Response, micro_rpc::Status&gt; {
+        <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+        </span><span class="kw">let </span>now = Instant::now();
         <span class="kw">let </span>module = <span class="self">self</span>.wasm_module.clone();
 
         <span class="kw">let </span>request = invoke_request.body;
@@ -1022,7 +1063,22 @@
         </span><span class="kw">let </span>main = instance
             .get_typed_func::&lt;(), ()&gt;(<span class="kw-2">&amp;</span>store, MAIN_FUNCTION_NAME)
             .expect(<span class="string">&quot;couldn&#39;t get `main` export&quot;</span>);
+
+        <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>observer) = <span class="self">self</span>.observer {
+            observer.wasm_initialization(now.elapsed());
+        }
+
+        <span class="comment">// Warning: if we implement constant-time execution policies, this metric can leak the real
+        // execution time, so be sure that any time padding is included in the metric.
+        </span><span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+        </span><span class="kw">let </span>now = Instant::now();
         <span class="kw">let </span>result = main.call(<span class="kw-2">&amp;mut </span>store, ());
+        <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>observer) = <span class="self">self</span>.observer {
+            observer.wasm_invocation(now.elapsed());
+        }
+
         store.data().logger.log_sensitive(
             Level::Info,
             <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;running Wasm module completed with result: {:?}&quot;</span>, result),
@@ -1051,11 +1107,17 @@
 </span><span class="kw">pub fn </span>new_wasm_handler(
     wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
     lookup_data_manager: Arc&lt;LookupDataManager&lt;StandaloneLogger&gt;&gt;,
+    observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
 ) -&gt; anyhow::Result&lt;WasmHandler&lt;StandaloneLogger&gt;&gt; {
     <span class="kw">let </span>logger = StandaloneLogger::default();
     <span class="kw">let </span>wasm_api_factory = StdWasmApiFactory {
         lookup_data_manager,
     };
-    WasmHandler::create(wasm_module_bytes, Arc::new(wasm_api_factory), logger)
+    WasmHandler::create(
+        wasm_module_bytes,
+        Arc::new(wasm_api_factory),
+        logger,
+        observer,
+    )
 }
 </code></pre></div></section></main></body></html>
