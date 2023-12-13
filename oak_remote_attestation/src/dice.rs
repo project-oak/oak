@@ -122,6 +122,7 @@ impl DiceBuilder {
         .context("couldn't generate encryption public key certificate")?
         .to_vec()
         .map_err(anyhow::Error::msg)?;
+
         let signing_public_key_certificate = generate_signing_certificate(
             &self.signing_key,
             issuer_id,
@@ -134,8 +135,8 @@ impl DiceBuilder {
         .map_err(anyhow::Error::msg)?;
 
         evidence.application_keys = Some(ApplicationKeys {
-            encryption_public_key_certificate: Some(encryption_public_key_certificate),
-            signing_public_key_certificate: Some(signing_public_key_certificate),
+            encryption_public_key_certificate,
+            signing_public_key_certificate,
         });
 
         Ok(evidence)
@@ -266,16 +267,13 @@ impl TryFrom<oak_dice::evidence::LayerEvidence> for LayerEvidence {
 impl TryFrom<oak_dice::evidence::ApplicationKeys> for ApplicationKeys {
     type Error = anyhow::Error;
     fn try_from(value: oak_dice::evidence::ApplicationKeys) -> anyhow::Result<Self> {
-        let encryption_public_key_certificate = Some(
-            oak_dice::utils::cbor_encoded_bytes_to_vec(
-                &value.encryption_public_key_certificate[..],
-            )
-            .map_err(anyhow::Error::msg)?,
-        );
-        let signing_public_key_certificate = Some(
+        let encryption_public_key_certificate = oak_dice::utils::cbor_encoded_bytes_to_vec(
+            &value.encryption_public_key_certificate[..],
+        )
+        .map_err(anyhow::Error::msg)?;
+        let signing_public_key_certificate =
             oak_dice::utils::cbor_encoded_bytes_to_vec(&value.signing_public_key_certificate[..])
-                .map_err(anyhow::Error::msg)?,
-        );
+                .map_err(anyhow::Error::msg)?;
         Ok(ApplicationKeys {
             encryption_public_key_certificate,
             signing_public_key_certificate,
