@@ -77,6 +77,6 @@ impl Signer {
             })
     }
     pub fn sign(&self, message: &[u8]) -> oak_crypto::signer::Signature {
-        <SigningKey as oak_crypto::signer::Signer>::sign(self.key, message)
+        <SigningKey as oak_crypto::signer::Signer>::sign(&self.key, message)
     }
 }

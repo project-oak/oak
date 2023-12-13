@@ -15,6 +15,7 @@ oak_dice = { workspace = true }
 oak_restricted_kernel_interface = { workspace = true }
 p256 = { version = "*", default-features = false, features = ["ecdsa"] }
 strum = { version = "*", default-features = false, features = ["derive"] }
+lazy_static = { version = "*", features = ["spin_no_std"] }
 zerocopy = "*"
 
 [dev-dependencies]
