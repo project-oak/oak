@@ -16,9 +16,8 @@
 
 //! Provides verification based on evidence, endorsements and reference values.
 
-use crate::alloc::string::ToString;
-
 use crate::{
+    alloc::string::ToString,
     claims::{get_digest, parse_endorsement_statement},
     endorsement::verify_binary_endorsement,
     proto::oak::attestation::v1::{
@@ -37,25 +36,34 @@ use crate::{
 use alloc::vec::Vec;
 use coset::{cwt::ClaimsSet, CborSerializable, CoseKey};
 use ecdsa::{signature::Verifier, Signature};
-use oak_dice::cert::{cose_key_to_verifying_key, get_public_key_from_claims_set};
+use oak_dice::cert::{
+    cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
+};
+use p256::pkcs8::EncodePublicKey;
 
 // We don't use additional authenticated data.
 const ADDITIONAL_DATA: &[u8] = b"";
 
-fn failure(err: anyhow::Error) -> AttestationResults {
-    AttestationResults {
-        status: Status::GenericFailure.into(),
-        reason: err.to_string(),
-        ..Default::default()
-    }
+pub struct DiceChainResult {
+    encryption_public_key: Vec<u8>,
+    signing_public_key: Vec<u8>,
 }
 
-fn success(encryption_public_key: Vec<u8>, signing_public_key: Vec<u8>) -> AttestationResults {
-    AttestationResults {
-        status: Status::Success.into(),
-        encryption_public_key,
-        signing_public_key,
-        ..Default::default()
+impl From<&anyhow::Result<DiceChainResult>> for AttestationResults {
+    fn from(value: &anyhow::Result<DiceChainResult>) -> Self {
+        match value {
+            Ok(dice_chain_result) => AttestationResults {
+                status: Status::Success.into(),
+                encryption_public_key: dice_chain_result.encryption_public_key.clone(),
+                signing_public_key: dice_chain_result.signing_public_key.clone(),
+                ..Default::default()
+            },
+            Err(err) => AttestationResults {
+                status: Status::GenericFailure.into(),
+                reason: err.to_string(),
+                ..Default::default()
+            },
+        }
     }
 }
 
@@ -66,13 +74,10 @@ pub fn verify(
     evidence: &Evidence,
     endorsements: &Endorsements,
     reference_values: &ReferenceValues,
-) -> AttestationResults {
-    let chain_result = verify_dice_chain(evidence);
-    if chain_result.is_err() {
-        return failure(chain_result.err().unwrap());
-    }
+) -> anyhow::Result<DiceChainResult> {
+    let dice_chain_result = verify_dice_chain(evidence)?;
 
-    let per_setup_result = match (
+    match (
         endorsements.r#type.as_ref(),
         reference_values.r#type.as_ref(),
     ) {
@@ -87,42 +92,17 @@ pub fn verify(
         (Some(endorsements::Type::Cb(ends)), Some(reference_values::Type::Cb(rvs))) => {
             verify_cb(evidence, ends, rvs)
         }
-        (None, None) => Err(anyhow::Error::msg(
-            "endorsements and reference values both empty",
-        )),
-        (None, Some(_)) => Err(anyhow::Error::msg("endorsements are empty")),
-        (Some(_), None) => Err(anyhow::Error::msg("reference values are empty")),
-        (Some(_), Some(_)) => Err(anyhow::Error::msg(
-            "mismatch between endorsements and reference values",
-        )),
-    };
-    if per_setup_result.is_err() {
-        return failure(per_setup_result.err().unwrap());
-    }
+        (None, None) => anyhow::bail!("Endorsements and reference values both empty"),
+        (None, Some(_)) => anyhow::bail!("Endorsements are empty"),
+        (Some(_), None) => anyhow::bail!("Reference values are empty"),
+        (Some(_), Some(_)) => anyhow::bail!("Mismatch between endorsements and reference values"),
+    }?;
 
-    let pkeys = chain_result.unwrap();
-    let encryption_cose_key = pkeys.get(0).unwrap();
-    let encryption_public_key = encryption_cose_key
-        .clone()
-        .to_vec()
-        .map_err(|_cose_err| anyhow::anyhow!("could not serialize encryption public key"));
-    if encryption_public_key.is_err() {
-        return failure(encryption_public_key.err().unwrap());
-    }
-    let signing_cose_key = pkeys.get(1).unwrap();
-    let signing_public_key = signing_cose_key
-        .clone()
-        .to_vec()
-        .map_err(|_cose_err| anyhow::anyhow!("could not serialize signing public key"));
-    if signing_public_key.is_err() {
-        return failure(signing_public_key.err().unwrap());
-    }
-
-    success(encryption_public_key.unwrap(), signing_public_key.unwrap())
+    Ok(dice_chain_result)
 }
 
 /// Verifies signatures along the certificate chain induced by DICE layers.
-fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<[CoseKey; 2]> {
+fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<DiceChainResult> {
     let root_layer = evidence
         .root_layer
         .as_ref()
@@ -157,35 +137,45 @@ fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<[CoseKey; 2]> {
         .ok_or_else(|| anyhow::anyhow!("no application fields in evidence"))?;
 
     // Process encryption certificate.
-    let ecert = coset::CoseSign1::from_slice(&appl_keys.encryption_public_key_certificate)
-        .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
-    ecert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
+    let encryption_cert =
+        coset::CoseSign1::from_slice(&appl_keys.encryption_public_key_certificate)
+            .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
+    encryption_cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
         let sig = Signature::from_slice(signature)?;
         verifying_key.verify(contents, &sig)
     })?;
-    let epayload = ecert
+    let encryption_payload = encryption_cert
         .payload
         .ok_or_else(|| anyhow::anyhow!("no encryption cert payload"))?;
-    let eclaims = ClaimsSet::from_slice(&epayload)
+    let encryption_claims = ClaimsSet::from_slice(&encryption_payload)
         .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption claims set"))?;
-    let ecose_key = get_public_key_from_claims_set(&eclaims).map_err(|msg| anyhow::anyhow!(msg))?;
+    let encryption_cose_key =
+        get_public_key_from_claims_set(&encryption_claims).map_err(|msg| anyhow::anyhow!(msg))?;
+    let encryption_public_key =
+        cose_key_to_hpke_public_key(&encryption_cose_key).map_err(|msg| anyhow::anyhow!(msg))?;
 
     // Process signing certificate.
-    let scert = coset::CoseSign1::from_slice(&appl_keys.signing_public_key_certificate)
+    let signing_cert = coset::CoseSign1::from_slice(&appl_keys.signing_public_key_certificate)
         .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
-    scert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
+    signing_cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
         let sig = Signature::from_slice(signature)?;
         verifying_key.verify(contents, &sig)
     })?;
-    let spayload = scert
+    let signing_payload = signing_cert
         .payload
         .ok_or_else(|| anyhow::anyhow!("no signing cert payload"))?;
-    let sclaims = ClaimsSet::from_slice(&spayload)
+    let signing_claims = ClaimsSet::from_slice(&signing_payload)
         .map_err(|_cose_err| anyhow::anyhow!("could not parse signing claims set"))?;
-    let scose_key: CoseKey =
-        get_public_key_from_claims_set(&sclaims).map_err(|msg| anyhow::anyhow!(msg))?;
+    let signing_cose_key: CoseKey =
+        get_public_key_from_claims_set(&signing_claims).map_err(|msg| anyhow::anyhow!(msg))?;
+    let signing_verifying_key =
+        cose_key_to_verifying_key(&signing_cose_key).map_err(|msg| anyhow::anyhow!(msg))?;
+    let signing_public_key = signing_verifying_key.to_public_key_der()?.into_vec();
 
-    Ok([ecose_key, scose_key])
+    Ok(DiceChainResult {
+        encryption_public_key,
+        signing_public_key,
+    })
 }
 
 fn verify_oak_restricted_kernel(
@@ -460,6 +450,7 @@ fn verify_transparent_release_endorsement(
     let expected = hex_to_raw_digest(&hex_digest)?;
 
     match reference_value.r#type.as_ref() {
+        Some(binary_reference_value::Type::Skip(_)) => Ok(()),
         Some(binary_reference_value::Type::Endorsement(erv)) => verify_binary_endorsement(
             now_utc_millis,
             &endorsement.endorsement,

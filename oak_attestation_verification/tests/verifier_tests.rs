@@ -19,11 +19,11 @@ use std::fs;
 
 use oak_attestation_verification::{
     proto::oak::attestation::v1::{
-        attestation_results::Status, AmdSevReferenceValues, BinaryReferenceValue,
-        ContainerLayerEndorsements, ContainerLayerReferenceValues, EndorsementReferenceValue,
-        Endorsements, Evidence, KernelLayerEndorsements, KernelLayerReferenceValues,
-        OakContainersEndorsements, OakContainersReferenceValues, ReferenceValues,
-        RootLayerEndorsements, RootLayerReferenceValues, StringReferenceValue,
+        attestation_results::Status, AmdSevReferenceValues, AttestationResults,
+        BinaryReferenceValue, ContainerLayerEndorsements, ContainerLayerReferenceValues,
+        EndorsementReferenceValue, Endorsements, Evidence, KernelLayerEndorsements,
+        KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
+        ReferenceValues, RootLayerEndorsements, RootLayerReferenceValues, StringReferenceValue,
         SystemLayerEndorsements, SystemLayerReferenceValues, TransparentReleaseEndorsement,
     },
     util::convert_pem_to_raw,
@@ -157,11 +157,13 @@ fn verify_succeeds() {
     let reference_values = create_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = AttestationResults::from(&r);
 
     eprintln!("======================================");
-    eprintln!("code={} reason={}", r.status as i32, r.reason);
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
     eprintln!("======================================");
-    assert!(r.status() == Status::Success);
+    assert!(r.is_ok());
+    assert!(p.status() == Status::Success);
 }
 
 #[test]
@@ -172,11 +174,13 @@ fn verify_fails_with_manipulated_root_public_key() {
     let reference_values = create_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = AttestationResults::from(&r);
 
     eprintln!("======================================");
-    eprintln!("code={} reason={}", r.status as i32, r.reason);
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
     eprintln!("======================================");
-    assert!(r.status() == Status::GenericFailure);
+    assert!(r.is_err());
+    assert!(p.status() == Status::GenericFailure);
 }
 
 #[test]
@@ -186,6 +190,8 @@ fn verify_fails_with_empty_args() {
     let reference_values = ReferenceValues::default();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = AttestationResults::from(&r);
 
-    assert!(r.status() == Status::GenericFailure);
+    assert!(r.is_err());
+    assert!(p.status() == Status::GenericFailure);
 }

@@ -25,6 +25,8 @@ option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
 
+message SkipVerification {}
+
 // Verifies the transparency log entry, including signatures and the digest.
 message EndorsementReferenceValue {
   // The endorser's public signing key for signature verification.
@@ -36,18 +38,18 @@ message EndorsementReferenceValue {
 
 message BinaryReferenceValue {
   oneof type {
-    // Verifies the endorsement of the underlying binary.
-    EndorsementReferenceValue endorsement = 1;
-
-    // Explicitly verifies digests if the client has them.
-    //
-    // Setting empty digests can be used to deliberately skip a verification
-    // step, rather than making it fail. For example:
-    //     root_layer { stage0 { digests {} } }
+    // Deliberately skips a verification step, rather than failing. For example:
+    //     root_layer { stage0 { skip {} } }
     // will skip the verification, contrasting
     //     root_layer { stage0 {} }
     // which will make the verification fail.
-    Digests digests = 2;
+    SkipVerification skip = 1;
+
+    // Verifies the endorsement of the underlying binary.
+    EndorsementReferenceValue endorsement = 2;
+
+    // Explicitly verifies digests if the client has them.
+    Digests digests = 3;
   }
 }
 

@@ -39,14 +39,10 @@ message AttestationResults {
   string reason = 2;
 
   // Contains the verified public key for encryption whenever the status
-  // indicates success.
-  //
-  // This is a serialized CoseKey - is this what we want for public keys?
+  // indicates success. The format of the key is serialized HPKE.
   bytes encryption_public_key = 3;
 
   // Contains the verified public key for signing whenever the status
-  // indicates success.
-  //
-  // This is a serialized CoseKey - is this what we want for public keys?
+  // indicates success. The format of the key is serialized ECDSA.
   bytes signing_public_key = 4;
 }
