@@ -390,6 +390,23 @@
 <a href="#390" id="390">390</a>
 <a href="#391" id="391">391</a>
 <a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -576,47 +593,6 @@
             .unwrap()
     };
 
-    <span class="kw">let </span>stage0_dice_data = {
-        <span class="kw">let </span>dice_memory_slice = {
-            <span class="kw">let </span>e820_dice_data_entry = info
-                .e820_table()
-                .iter()
-                .find(|e| e.entry_type() == <span class="prelude-val">Some</span>(oak_linux_boot_params::E820EntryType::DiceData))
-                .expect(<span class="string">&quot;failed to find dice data&quot;</span>);
-
-            <span class="kw">let </span>start_addr = {
-                <span class="kw">let </span>phys_addr = PhysAddr::new_truncate(
-                    e820_dice_data_entry
-                        .addr()
-                        .try_into()
-                        .expect(<span class="string">&quot;couldn&#39;t convert usize to u64&quot;</span>),
-                );
-                <span class="kw">let </span>pt = PAGE_TABLES.get().expect(<span class="string">&quot;failed to get page tables&quot;</span>);
-                pt.translate_physical(phys_addr)
-                    .expect(<span class="string">&quot;failed to translate physical dice address&quot;</span>)
-            };
-
-            <span class="comment">// Safety: the E820 table indicated that this is the corrct memory segment.
-            </span><span class="kw">unsafe </span>{
-                core::slice::from_raw_parts_mut::&lt;u8&gt;(
-                    start_addr.as_mut_ptr(),
-                    e820_dice_data_entry.size(),
-                )
-            }
-        };
-
-        <span class="kw">let </span>dice_data = oak_dice::evidence::Stage0DiceData::read_from(dice_memory_slice)
-            .expect(<span class="string">&quot;failed to read dice data&quot;</span>);
-
-        <span class="comment">// Overwrite the dice data provided by stage0 after reading.
-        </span>dice_memory_slice.fill(<span class="number">0</span>);
-
-        <span class="kw">if </span>dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
-            <span class="macro">panic!</span>(<span class="string">&quot;dice data loaded from stage0 failed validation&quot;</span>);
-        }
-        dice_data
-    };
-
     <span class="kw">if </span>sev_es_enabled {
         <span class="kw">let </span>mapper = PAGE_TABLES.get().unwrap();
         <span class="comment">// Now that the page tables have been updated, we have to re-share the GHCB with the
@@ -674,6 +650,64 @@
     // We&#39;ll let the heap to grow to 1 TB (1 &lt;&lt; 19 * 2 MiB pages), max.
     </span><span class="kw">let </span>heap_page_range = VMA_ALLOCATOR.lock().allocate(<span class="number">1 </span>&lt;&lt; <span class="number">19</span>).unwrap();
     memory::init_kernel_heap(heap_page_range).unwrap();
+
+    <span class="kw">let </span>stage0_dice_data = {
+        <span class="kw">let </span>dice_memory_slice = {
+            <span class="kw">let </span>e820_dice_data_entry = info
+                .e820_table()
+                .iter()
+                .find(|e| e.entry_type() == <span class="prelude-val">Some</span>(oak_linux_boot_params::E820EntryType::DiceData))
+                .expect(<span class="string">&quot;failed to find dice data&quot;</span>);
+
+            <span class="kw">let </span>phys_start_addr = PhysAddr::new_truncate(
+                e820_dice_data_entry
+                    .addr()
+                    .try_into()
+                    .expect(<span class="string">&quot;couldn&#39;t convert usize to u64&quot;</span>),
+            );
+
+            <span class="comment">// Validate that the dice data mem address matches the kernel args if present
+            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(arg) = kernel_args.get(<span class="kw-2">&amp;</span><span class="macro">alloc::format!</span>(
+                <span class="string">&quot;--{}&quot;</span>,
+                oak_dice::evidence::DICE_DATA_CMDLINE_PARAM
+            )) {
+                <span class="kw">let </span>parsed_arg = u64::from_str_radix(
+                    arg.strip_prefix(<span class="string">&quot;0x&quot;</span>)
+                        .expect(<span class="string">&quot;failed stripping the hex prefix&quot;</span>),
+                    <span class="number">16</span>,
+                )
+                .expect(<span class="string">&quot;couldn&#39;t parse address as a hex number&quot;</span>);
+                <span class="kw">if </span>parsed_arg != phys_start_addr.as_u64() {
+                    <span class="macro">panic!</span>(<span class="string">&quot;inconsistent dice data addresses supplied in the E820 table and kernel args&quot;</span>)
+                }
+            }
+
+            <span class="kw">let </span>virt_start_addr = {
+                <span class="kw">let </span>pt = PAGE_TABLES.get().expect(<span class="string">&quot;failed to get page tables&quot;</span>);
+                pt.translate_physical(phys_start_addr)
+                    .expect(<span class="string">&quot;failed to translate physical dice address&quot;</span>)
+            };
+
+            <span class="comment">// Safety: the E820 table indicated that this is the corrct memory segment.
+            </span><span class="kw">unsafe </span>{
+                core::slice::from_raw_parts_mut::&lt;u8&gt;(
+                    virt_start_addr.as_mut_ptr(),
+                    e820_dice_data_entry.size(),
+                )
+            }
+        };
+
+        <span class="kw">let </span>dice_data = oak_dice::evidence::Stage0DiceData::read_from(dice_memory_slice)
+            .expect(<span class="string">&quot;failed to read dice data&quot;</span>);
+
+        <span class="comment">// Overwrite the dice data provided by stage0 after reading.
+        </span>dice_memory_slice.fill(<span class="number">0</span>);
+
+        <span class="kw">if </span>dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
+            <span class="macro">panic!</span>(<span class="string">&quot;dice data loaded from stage0 failed validation&quot;</span>);
+        }
+        dice_data
+    };
 
     <span class="comment">// Okay. We&#39;ve got page tables and a heap. Set up the &quot;late&quot; IDT, this time with descriptors for
     // user mode.
