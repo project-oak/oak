@@ -2,15 +2,15 @@
     pub root_layer: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="struct.RootLayerEvidence.html" title="struct oak_containers_stage1::client::proto::oak::attestation::v1::RootLayerEvidence">RootLayerEvidence</a>&gt;,
     pub layers: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="struct.LayerEvidence.html" title="struct oak_containers_stage1::client::proto::oak::attestation::v1::LayerEvidence">LayerEvidence</a>&gt;,
     pub application_keys: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="struct.ApplicationKeys.html" title="struct oak_containers_stage1::client::proto::oak::attestation::v1::ApplicationKeys">ApplicationKeys</a>&gt;,
-}</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Attestation Evidence used by the client to the identity of firmware and software running inside a
-Trusted Execution Environment.</p>
+}</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Attestation Evidence used by the client to the identity of firmware and
+software running inside a Trusted Execution Environment.</p>
 <p>The name is chosen to match the RATS terminology:
 &lt;<a href="https://datatracker.ietf.org/doc/html/rfc9334#name-evidence">https://datatracker.ietf.org/doc/html/rfc9334#name-evidence</a>&gt;</p>
 </div></details><h2 id="fields" class="fields small-section-header">Fields<a href="#fields" class="anchor">§</a></h2><span id="structfield.root_layer" class="structfield small-section-header"><a href="#structfield.root_layer" class="anchor field">§</a><code>root_layer: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="struct.RootLayerEvidence.html" title="struct oak_containers_stage1::client::proto::oak::attestation::v1::RootLayerEvidence">RootLayerEvidence</a>&gt;</code></span><div class="docblock"><p>Layer0 attestation evidence.</p>
 </div><span id="structfield.layers" class="structfield small-section-header"><a href="#structfield.layers" class="anchor field">§</a><code>layers: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="struct.LayerEvidence.html" title="struct oak_containers_stage1::client::proto::oak::attestation::v1::LayerEvidence">LayerEvidence</a>&gt;</code></span><div class="docblock"><p>Layer1..LayerN-1 attestation evidence.</p>
 </div><span id="structfield.application_keys" class="structfield small-section-header"><a href="#structfield.application_keys" class="anchor field">§</a><code>application_keys: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="struct.ApplicationKeys.html" title="struct oak_containers_stage1::client::proto::oak::attestation::v1::ApplicationKeys">ApplicationKeys</a>&gt;</code></span><div class="docblock"><p>Application keys signed by the penultimate layer’s ECA key.</p>
-<p>We are not signing these keys with the last layer’s ECA key, because it’s the application layer
-and the these keys are never shared with it.
+<p>We are not signing these keys with the last layer’s ECA key, because it
+is the application layer and the these keys are never shared with it.
 The last layer uses an API to the previous layer to:</p>
 <ul>
 <li>Derive session keys from the encryption key</li>

@@ -287,8 +287,6 @@
 <a href="#287" id="287">287</a>
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -413,6 +411,7 @@
         .context(<span class="string">&quot;couldn&#39;t generate encryption public key certificate&quot;</span>)<span class="question-mark">?
         </span>.to_vec()
         .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+
         <span class="kw">let </span>signing_public_key_certificate = generate_signing_certificate(
             <span class="kw-2">&amp;</span><span class="self">self</span>.signing_key,
             issuer_id,
@@ -425,8 +424,8 @@
         .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
 
         evidence.application_keys = <span class="prelude-val">Some</span>(ApplicationKeys {
-            encryption_public_key_certificate: <span class="prelude-val">Some</span>(encryption_public_key_certificate),
-            signing_public_key_certificate: <span class="prelude-val">Some</span>(signing_public_key_certificate),
+            encryption_public_key_certificate,
+            signing_public_key_certificate,
         });
 
         <span class="prelude-val">Ok</span>(evidence)
@@ -557,16 +556,13 @@
 <span class="kw">impl </span>TryFrom&lt;oak_dice::evidence::ApplicationKeys&gt; <span class="kw">for </span>ApplicationKeys {
     <span class="kw">type </span>Error = anyhow::Error;
     <span class="kw">fn </span>try_from(value: oak_dice::evidence::ApplicationKeys) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>encryption_public_key_certificate = <span class="prelude-val">Some</span>(
-            oak_dice::utils::cbor_encoded_bytes_to_vec(
-                <span class="kw-2">&amp;</span>value.encryption_public_key_certificate[..],
-            )
-            .map_err(anyhow::Error::msg)<span class="question-mark">?</span>,
-        );
-        <span class="kw">let </span>signing_public_key_certificate = <span class="prelude-val">Some</span>(
+        <span class="kw">let </span>encryption_public_key_certificate = oak_dice::utils::cbor_encoded_bytes_to_vec(
+            <span class="kw-2">&amp;</span>value.encryption_public_key_certificate[..],
+        )
+        .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+        <span class="kw">let </span>signing_public_key_certificate =
             oak_dice::utils::cbor_encoded_bytes_to_vec(<span class="kw-2">&amp;</span>value.signing_public_key_certificate[..])
-                .map_err(anyhow::Error::msg)<span class="question-mark">?</span>,
-        );
+                .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(ApplicationKeys {
             encryption_public_key_certificate,
             signing_public_key_certificate,

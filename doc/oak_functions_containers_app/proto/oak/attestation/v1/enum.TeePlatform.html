@@ -3,11 +3,12 @@
     AmdSevSnp = 1,
     IntelTdx = 2,
 }</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>This proto defines the layered DICE Attestation Evidence.</p>
-<p>DICE provides a mechanism for combining software measurements and corresponding certificates
-into a chain, where each element (called “layer”) represents a piece of software loaded into
-the VMs memory. These layers are loaded sequentially, i.e. the previous layer loads the next
-layer. The previous layer is also responsible for measuring the next layer, generating a
-private key and a certificate for it.</p>
+<p>DICE provides a mechanism for combining software measurements and
+corresponding certificates into a chain, where each element (called layer)
+represents a piece of software loaded into the VMs memory. These layers are
+loaded sequentially, i.e. the previous layer loads the next layer. The
+previous layer is also responsible for measuring the next layer, generating
+a private key and a certificate for it.</p>
 <p>&lt;<a href="https://trustedcomputinggroup.org/wp-content/uploads/TCG_DICE_Attestation_Architecture_r22_02dec2020.pdf">https://trustedcomputinggroup.org/wp-content/uploads/TCG_DICE_Attestation_Architecture_r22_02dec2020.pdf</a>&gt;
 &lt;<a href="https://trustedcomputinggroup.org/wp-content/uploads/DICE-Layering-Architecture-r19_pub.pdf">https://trustedcomputinggroup.org/wp-content/uploads/DICE-Layering-Architecture-r19_pub.pdf</a>&gt;</p>
 </div></details><h2 id="variants" class="variants small-section-header">Variants<a href="#variants" class="anchor">§</a></h2><div class="variants"><section id="variant.Unspecified" class="variant"><a href="#variant.Unspecified" class="anchor">§</a><h3 class="code-header">Unspecified = 0</h3></section><section id="variant.AmdSevSnp" class="variant"><a href="#variant.AmdSevSnp" class="anchor">§</a><h3 class="code-header">AmdSevSnp = 1</h3></section><section id="variant.IntelTdx" class="variant"><a href="#variant.IntelTdx" class="anchor">§</a><h3 class="code-header">IntelTdx = 2</h3></section></div><h2 id="implementations" class="small-section-header">Implementations<a href="#implementations" class="anchor">§</a></h2><div id="implementations-list"><details class="toggle implementors-toggle" open><summary><section id="impl-TeePlatform" class="impl"><a href="#impl-TeePlatform" class="anchor">§</a><h3 class="code-header">impl <a class="enum" href="enum.TeePlatform.html" title="enum oak_functions_containers_app::proto::oak::attestation::v1::TeePlatform">TeePlatform</a></h3></section></summary><div class="impl-items"><details class="toggle method-toggle" open><summary><section id="method.is_valid" class="method"><h4 class="code-header">pub fn <a href="#method.is_valid" class="fn">is_valid</a>(value: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.i32.html">i32</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></h4></section></summary><div class="docblock"><p>Returns <code>true</code> if <code>value</code> is a variant of <code>TeePlatform</code>.</p>
