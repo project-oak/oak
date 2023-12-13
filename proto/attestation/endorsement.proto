@@ -60,7 +60,6 @@ message KernelLayerEndorsements {
 
 message SystemLayerEndorsements {
   TransparentReleaseEndorsement system_image = 1;
-  TransparentReleaseEndorsement configuration = 2;
 }
 
 message ApplicationLayerEndorsements {

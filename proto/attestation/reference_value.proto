@@ -25,6 +25,8 @@ option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
 
+message SkipVerification {}
+
 // Verifies the transparency log entry, including signatures and the digest.
 message EndorsementReferenceValue {
   // The endorser's public signing key for signature verification.
@@ -36,11 +38,18 @@ message EndorsementReferenceValue {
 
 message BinaryReferenceValue {
   oneof type {
+    // Deliberately skips a verification step, rather than failing. For example:
+    //     root_layer { stage0 { skip {} } }
+    // will skip the verification, contrasting
+    //     root_layer { stage0 {} }
+    // which will make the verification fail.
+    SkipVerification skip = 1;
+
     // Verifies the endorsement of the underlying binary.
-    EndorsementReferenceValue endorsement = 1;
+    EndorsementReferenceValue endorsement = 2;
 
     // Explicitly verifies digests if the client has them.
-    Digests digests = 2;
+    Digests digests = 3;
   }
 }
 
@@ -68,9 +77,10 @@ message RootLayerReferenceValues {
 
 message AmdSevReferenceValues {
   bytes amd_root_public_key = 1;
+
   // TBD: Add conditions on all kinds of fields contained in the
   // attestation report.
-  string firmware_version = 2;
+  StringReferenceValue firmware_version = 2;
 
   // If true, will skip the check that the TEE is not in debug mode.
   bool allow_debug = 3;
@@ -95,9 +105,12 @@ message KernelLayerReferenceValues {
   // Verifies the kernel binary based on endorsement.
   BinaryReferenceValue kernel_image = 1;
 
-  // Compare command line as string until further notice.
-  StringReferenceValue kernel_cmd_line = 2;
+  // Verifies the command line by which the kernel was built. The command
+  // line is treated as a binary blob, as if it were a binary.
+  BinaryReferenceValue kernel_cmd_line = 2;
 
+  // One part of the kernel is modified by the system after loading. Verifies
+  // that part after these modifications.
   BinaryReferenceValue kernel_setup_data = 3;
 
   BinaryReferenceValue init_ram_fs = 4;
@@ -110,25 +123,22 @@ message KernelLayerReferenceValues {
 message SystemLayerReferenceValues {
   // Verifies the system image binary based on endorsement.
   BinaryReferenceValue system_image = 1;
-
-  // Configuration measurements.
-  BinaryReferenceValue configuration = 2;
 }
 
 // Represents an application running under Oak Restricted Kernel.
 message ApplicationLayerReferenceValues {
-  // Verifies the binary based on endorsement.
+  // Verifies the application binary based on endorsement.
   BinaryReferenceValue binary = 1;
 
-  // Configuration measurements.
+  // Verifies configuration with respect to the application binary.
   BinaryReferenceValue configuration = 2;
 }
 
 message ContainerLayerReferenceValues {
-  // Verifies the binary based on endorsement.
+  // Verifies the container binary based on endorsement.
   BinaryReferenceValue binary = 1;
 
-  // Configuration measurements.
+  // Verifies configuration with respect to the container binary.
   BinaryReferenceValue configuration = 2;
 }
 
