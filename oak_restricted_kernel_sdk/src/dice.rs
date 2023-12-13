@@ -21,27 +21,29 @@ use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
 use p256::ecdsa::SigningKey;
 use zerocopy::{AsBytes, FromZeroes};
 
+lazy_static::lazy_static! {
+    static ref DICE_WRAPPER: anyhow::Result<DiceWrapper> = {
+        let dice_data = get_restricted_kernel_dice_data()?;
+        let encryption_key = EncryptionKeyProvider::try_from(&dice_data)?;
+        let signing_key = SigningKey::from_slice(
+            &dice_data.application_private_keys.signing_private_key[..P256_PRIVATE_KEY_SIZE],
+        )
+        .map_err(|error| anyhow::anyhow!("couldn't deserialize signing key: {}", error))?;
+        let evidence = dice_data.evidence;
+        Ok(DiceWrapper {
+            evidence,
+            encryption_key,
+            signing_key,
+        })
+    };
+}
+
 /// Wrapper for DICE evidence and application private keys.
 #[allow(dead_code)]
 struct DiceWrapper {
     pub evidence: Evidence,
     pub encryption_key: EncryptionKeyProvider,
-    pub signer: Signer,
-}
-
-#[allow(dead_code)]
-impl DiceWrapper {
-    pub fn try_create() -> anyhow::Result<Self> {
-        let restricted_kernel_dice_data = get_restricted_kernel_dice_data()?;
-        let encryption_key = EncryptionKeyProvider::try_from(&restricted_kernel_dice_data)?;
-        let signer = Signer::try_from(&restricted_kernel_dice_data)?;
-        let evidence = restricted_kernel_dice_data.evidence;
-        Ok(Self {
-            evidence,
-            encryption_key,
-            signer,
-        })
-    }
+    pub signing_key: p256::ecdsa::SigningKey,
 }
 
 fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData> {
@@ -55,24 +57,21 @@ fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData>
 }
 
 pub struct Signer {
-    key: SigningKey,
+    key: &'static SigningKey,
 }
 
 impl Signer {
-    pub fn sign(&self, message: &[u8]) -> oak_crypto::signer::Signature {
-        <SigningKey as oak_crypto::signer::Signer>::sign(&self.key, message)
+    pub fn create() -> anyhow::Result<Self> {
+        DICE_WRAPPER
+            .as_ref()
+            .map_err(anyhow::Error::msg)
+            .and_then(|d| {
+                Ok(Signer {
+                    key: &d.signing_key,
+                })
+            })
     }
-}
-
-impl TryFrom<&oak_dice::evidence::RestrictedKernelDiceData> for Signer {
-    type Error = anyhow::Error;
-    fn try_from(
-        dice_data: &oak_dice::evidence::RestrictedKernelDiceData,
-    ) -> Result<Self, Self::Error> {
-        let key = SigningKey::from_slice(
-            &dice_data.application_private_keys.signing_private_key[..P256_PRIVATE_KEY_SIZE],
-        )
-        .map_err(|error| anyhow::anyhow!("couldn't deserialize signing key: {}", error))?;
-        Ok(Signer { key })
+    pub fn sign(&self, message: &[u8]) -> oak_crypto::signer::Signature {
+        <SigningKey as oak_crypto::signer::Signer>::sign(self.key, message)
     }
 }
