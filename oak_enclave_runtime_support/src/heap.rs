@@ -39,7 +39,7 @@ unsafe impl FlexSource for Source {
             min_size
         };
 
-        oak_restricted_kernel_sdk::syscall::mmap(
+        oak_restricted_kernel_interface::syscall::mmap(
             // TODO(#3864): One we start compiling C++ applications internally using the Oak
             // Toolchain, we won't need to manually separate Rust and C++ heaps.
             Some(0x100_0000_0000 as *const core::ffi::c_void),

@@ -11,11 +11,7 @@ log = "*"
 oak_channel = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
-oak_remote_attestation = { workspace = true }
 oak_restricted_kernel_interface = { workspace = true }
 p256 = { version = "*", default-features = false, features = ["ecdsa"] }
 strum = { version = "*", default-features = false, features = ["derive"] }
 zerocopy = "*"
-
-[dev-dependencies]
-os_pipe = "*"

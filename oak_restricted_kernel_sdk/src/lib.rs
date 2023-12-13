@@ -15,16 +15,13 @@
 //
 
 #![cfg_attr(not(test), no_std)]
-#![feature(c_size_t)]
 
 extern crate alloc;
 
 mod channel;
 mod dice;
 mod logging;
-mod raw_syscall;
-pub mod syscall;
 
 pub use channel::FileDescriptorChannel;
-pub use dice::{DiceWrapper, Signer};
+pub use dice::Signer;
 pub use logging::StderrLogger;

@@ -2082,6 +2082,7 @@ dependencies = [
  "hkdf",
  "hpke",
  "micro_rpc_build",
+ "oak_dice",
  "p256",
  "prost",
  "rand_core",
@@ -2146,7 +2147,6 @@ dependencies = [
  "libm",
  "log",
  "oak_restricted_kernel_interface",
- "oak_restricted_kernel_sdk",
  "rlsf",
  "spinning_top",
 ]
@@ -2473,6 +2473,7 @@ name = "oak_restricted_kernel_interface"
 version = "0.1.0"
 dependencies = [
  "bitflags 2.3.3",
+ "os_pipe",
  "strum",
 ]
 
@@ -2485,9 +2486,7 @@ dependencies = [
  "oak_channel",
  "oak_crypto",
  "oak_dice",
- "oak_remote_attestation",
  "oak_restricted_kernel_interface",
- "os_pipe",
  "p256",
  "strum",
  "zerocopy 0.7.3",
