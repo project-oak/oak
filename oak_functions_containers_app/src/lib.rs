@@ -144,7 +144,7 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
             )
         })?;
 
-        AsyncEncryptionHandler::create(encryption_key_provider, |r| {
+        AsyncEncryptionHandler::create(encryption_key_provider, |r| async {
             // Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
             let response_result: Result<Vec<u8>, micro_rpc::Status> =
