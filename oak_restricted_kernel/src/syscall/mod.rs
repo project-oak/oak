@@ -30,7 +30,7 @@ use self::{
     mmap::syscall_mmap,
     process::syscall_exit,
 };
-use crate::{mm, snp_guest::DerivedKey};
+use crate::{mm, DerivedKey};
 use alloc::boxed::Box;
 use core::{arch::asm, ffi::c_void};
 use oak_channel::Channel;

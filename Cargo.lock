@@ -2546,6 +2546,7 @@ version = "0.1.0"
 dependencies = [
  "coset",
  "hex",
+ "hkdf",
  "oak_dice",
  "oak_sev_guest",
  "p256",

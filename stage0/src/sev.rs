@@ -14,14 +14,13 @@
 // limitations under the License.
 //
 
+use crate::{sev_status, BootAllocator};
+use alloc::boxed::Box;
 use core::{
     alloc::{AllocError, Allocator, Layout},
     ops::{Deref, DerefMut},
     ptr::NonNull,
 };
-
-use crate::{sev_status, BootAllocator};
-use alloc::boxed::Box;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 pub use oak_sev_guest::ghcb::Ghcb;
@@ -35,7 +34,7 @@ use oak_sev_guest::{
         SevStatus, SnpPageStateChangeRequest,
     },
 };
-use spinning_top::Spinlock;
+use spinning_top::{const_spinlock, Spinlock};
 use x86_64::{
     instructions::tlb,
     structures::paging::{
@@ -47,6 +46,9 @@ use x86_64::{
 use zerocopy::{AsBytes, FromBytes};
 
 pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
+
+/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest message protocol.
+static GUEST_MESSAGE_ENCRYPTOR: Spinlock<Option<GuestMessageEncryptor>> = const_spinlock(None);
 
 /// Allocator that forces allocations to be 4K-aligned (and sized) and marks the pages as shared.
 ///
@@ -499,11 +501,14 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
     log::info!("SEV-SNP memory validation complete.");
 }
 
-pub fn init_guest_message_encryptor() -> Result<GuestMessageEncryptor, &'static str> {
+pub fn init_guest_message_encryptor() -> Result<(), &'static str> {
     // Safety: `SecretsPage` implements `FromBytes` which ensures that it has no requirements on the
     // underlying bytes.
     let key = &unsafe { crate::SEV_SECRETS.assume_init_ref() }.vmpck_0[..];
-    GuestMessageEncryptor::new(key)
+    GUEST_MESSAGE_ENCRYPTOR
+        .lock()
+        .replace(GuestMessageEncryptor::new(key)?);
+    Ok(())
 }
 
 /// Sends a request to the Secure Processor using the Guest Message Protocol.
@@ -511,9 +516,12 @@ pub fn send_guest_message_request<
     Request: AsBytes + FromBytes + Message,
     Response: AsBytes + FromBytes + Message,
 >(
-    encryptor: &mut GuestMessageEncryptor,
     request: Request,
 ) -> Result<Response, &'static str> {
+    let mut guard = GUEST_MESSAGE_ENCRYPTOR.lock();
+    let encryptor = guard
+        .as_mut()
+        .ok_or("guest message encryptor is not initialized")?;
     let alloc = &crate::SHORT_TERM_ALLOC;
     let mut request_message = Shared::new_in(GuestMessage::new(), alloc);
     encryptor.encrypt_message(request, request_message.as_mut())?;
@@ -527,7 +535,7 @@ pub fn send_guest_message_request<
 
     GHCB_WRAPPER
         .get()
-        .expect("ghcb not initialized")
+        .ok_or("ghcb not initialized")?
         .lock()
         .do_guest_message_request(request_address, response_address)?;
     response_message.validate()?;

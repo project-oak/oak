@@ -14,9 +14,8 @@
 // limitations under the License.
 //
 
-use crate::snp_guest::DerivedKey;
-
 use super::fd::{copy_max_slice, FileDescriptor};
+use crate::DerivedKey;
 use alloc::boxed::Box;
 use oak_restricted_kernel_interface::{Errno, DERIVED_KEY_FD};
 
