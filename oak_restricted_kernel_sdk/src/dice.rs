@@ -73,15 +73,17 @@ pub struct Signer {
 impl Signer {
     pub fn create(key_origin: KeyOrigin) -> anyhow::Result<Self> {
         match key_origin {
-            Instance => DICE_WRAPPER
-                .as_ref()
-                .map_err(anyhow::Error::msg)
-                .and_then(|d| {
-                    Ok(Signer {
-                        key: &d.signing_key,
+            KeyOrigin::Instance => {
+                DICE_WRAPPER
+                    .as_ref()
+                    .map_err(anyhow::Error::msg)
+                    .and_then(|d| {
+                        Ok(Signer {
+                            key: &d.signing_key,
+                        })
                     })
-                }),
-            Group => Err(anyhow::Error::msg(
+            }
+            KeyOrigin::Group => Err(anyhow::Error::msg(
                 "Group keys are not yet implemented for the restricted kernel.",
             )),
         }
@@ -99,15 +101,17 @@ pub struct EncryptionKeyHandle {
 impl EncryptionKeyHandle {
     pub fn create(key_origin: KeyOrigin) -> anyhow::Result<Self> {
         match key_origin {
-            Instance => DICE_WRAPPER
-                .as_ref()
-                .map_err(anyhow::Error::msg)
-                .and_then(|d| {
-                    Ok(EncryptionKeyHandle {
-                        key: &d.encryption_key,
+            KeyOrigin::Instance => {
+                DICE_WRAPPER
+                    .as_ref()
+                    .map_err(anyhow::Error::msg)
+                    .and_then(|d| {
+                        Ok(EncryptionKeyHandle {
+                            key: &d.encryption_key,
+                        })
                     })
-                }),
-            Group => Err(anyhow::Error::msg(
+            }
+            KeyOrigin::Group => Err(anyhow::Error::msg(
                 "Group keys are not yet implemented for the restricted kernel.",
             )),
         }
