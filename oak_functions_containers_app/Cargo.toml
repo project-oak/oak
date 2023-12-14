@@ -34,7 +34,7 @@ prost = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tokio-stream = { version = "*", features = ["net"] }
 tonic = { workspace = true }
-tower = "*"
+tower = { version = "*", features = ["load-shed"] }
 tower-http = { version = "*", features = ["trace"] }
 tracing = "*"
 
