@@ -16,6 +16,7 @@
 
 use alloc::{sync::Arc, vec::Vec};
 use anyhow::Context;
+use core::future::Future;
 use oak_crypto::{
     encryptor::{
         AsyncRecipientContextGenerator, AsyncServerEncryptor, RecipientContextGenerator,
@@ -89,20 +90,22 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
 /// Wraps a closure to an underlying function with request encryption and response decryption logic,
 /// based on the provided encryption key.
 /// [`AsyncEncryptionHandler`] can be used when an [`AsyncRecipientContextGenerator`] is needed.
-pub struct AsyncEncryptionHandler<G, H>
+pub struct AsyncEncryptionHandler<G, H, F>
 where
     G: AsyncRecipientContextGenerator + Send + Sync,
-    H: FnOnce(Vec<u8>) -> Vec<u8>,
+    H: FnOnce(Vec<u8>) -> F,
+    F: Future<Output = Vec<u8>>,
 {
     // TODO(#3442): Use attester to attest to the public key.
     recipient_context_generator: Arc<G>,
     request_handler: H,
 }
 
-impl<G, H> AsyncEncryptionHandler<G, H>
+impl<G, H, F> AsyncEncryptionHandler<G, H, F>
 where
     G: AsyncRecipientContextGenerator + Send + Sync,
-    H: FnOnce(Vec<u8>) -> Vec<u8>,
+    H: FnOnce(Vec<u8>) -> F,
+    F: Future<Output = Vec<u8>>,
 {
     pub fn create(recipient_context_generator: Arc<G>, request_handler: H) -> Self {
         Self {
@@ -126,7 +129,7 @@ where
             .context("couldn't decrypt request")?;
 
         // Handle request.
-        let response = (self.request_handler)(request);
+        let response = (self.request_handler)(request).await;
 
         // Encrypt and serialize response.
         // The resulting decryptor for consequent requests is discarded because we don't expect
