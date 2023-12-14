@@ -407,6 +407,7 @@
 <a href="#407" id="407">407</a>
 <a href="#408" id="408">408</a>
 <a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -807,6 +808,7 @@
                     span.record(<span class="string">&quot;rpc.grpc.status_code&quot;</span>, code);
                 }),
         )
+        .layer(tower::load_shed::LoadShedLayer::new())
         .layer(MonitoringLayer::new(meter.clone()))
         .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
             encryption_context,
