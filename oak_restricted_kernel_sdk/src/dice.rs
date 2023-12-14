@@ -126,3 +126,24 @@ impl RecipientContextGenerator for EncryptionKeyHandle {
         self.key.generate_recipient_context(encapsulated_public_key)
     }
 }
+
+pub struct Attester {
+    evidence: &'static Evidence,
+}
+
+impl Attester {
+    pub fn create() -> anyhow::Result<Self> {
+        DICE_WRAPPER
+            .as_ref()
+            .map_err(anyhow::Error::msg)
+            .and_then(|d| {
+                Ok(Attester {
+                    evidence: &d.evidence,
+                })
+            })
+    }
+    /// Get the attestation evidence of the current enclave.
+    pub fn get_evidence(&self) -> &Evidence {
+        self.evidence
+    }
+}
