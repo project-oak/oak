@@ -554,7 +554,7 @@
             )
         })<span class="question-mark">?</span>;
 
-        AsyncEncryptionHandler::create(encryption_key_provider, |r| {
+        AsyncEncryptionHandler::create(encryption_key_provider, |r| <span class="kw">async </span>{
             <span class="comment">// Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
             </span><span class="kw">let </span>response_result: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, micro_rpc::Status&gt; =

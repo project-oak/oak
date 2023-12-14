@@ -136,6 +136,9 @@
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -154,6 +157,7 @@
 
 </span><span class="kw">use </span>alloc::{sync::Arc, vec::Vec};
 <span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>core::future::Future;
 <span class="kw">use </span>oak_crypto::{
     encryptor::{
         AsyncRecipientContextGenerator, AsyncServerEncryptor, RecipientContextGenerator,
@@ -227,20 +231,22 @@
 <span class="doccomment">/// Wraps a closure to an underlying function with request encryption and response decryption logic,
 /// based on the provided encryption key.
 /// [`AsyncEncryptionHandler`] can be used when an [`AsyncRecipientContextGenerator`] is needed.
-</span><span class="kw">pub struct </span>AsyncEncryptionHandler&lt;G, H&gt;
+</span><span class="kw">pub struct </span>AsyncEncryptionHandler&lt;G, H, F&gt;
 <span class="kw">where
     </span>G: AsyncRecipientContextGenerator + Send + Sync,
-    H: FnOnce(Vec&lt;u8&gt;) -&gt; Vec&lt;u8&gt;,
+    H: FnOnce(Vec&lt;u8&gt;) -&gt; F,
+    F: Future&lt;Output = Vec&lt;u8&gt;&gt;,
 {
     <span class="comment">// TODO(#3442): Use attester to attest to the public key.
     </span>recipient_context_generator: Arc&lt;G&gt;,
     request_handler: H,
 }
 
-<span class="kw">impl</span>&lt;G, H&gt; AsyncEncryptionHandler&lt;G, H&gt;
+<span class="kw">impl</span>&lt;G, H, F&gt; AsyncEncryptionHandler&lt;G, H, F&gt;
 <span class="kw">where
     </span>G: AsyncRecipientContextGenerator + Send + Sync,
-    H: FnOnce(Vec&lt;u8&gt;) -&gt; Vec&lt;u8&gt;,
+    H: FnOnce(Vec&lt;u8&gt;) -&gt; F,
+    F: Future&lt;Output = Vec&lt;u8&gt;&gt;,
 {
     <span class="kw">pub fn </span>create(recipient_context_generator: Arc&lt;G&gt;, request_handler: H) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
@@ -264,7 +270,7 @@
             </span>.context(<span class="string">&quot;couldn&#39;t decrypt request&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Handle request.
-        </span><span class="kw">let </span>response = (<span class="self">self</span>.request_handler)(request);
+        </span><span class="kw">let </span>response = (<span class="self">self</span>.request_handler)(request).<span class="kw">await</span>;
 
         <span class="comment">// Encrypt and serialize response.
         // The resulting decryptor for consequent requests is discarded because we don&#39;t expect
