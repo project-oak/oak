@@ -15,7 +15,7 @@
 //
 
 use anyhow::Ok;
-use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
 use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
 use p256::ecdsa::SigningKey;
@@ -73,5 +73,31 @@ impl Signer {
     }
     pub fn sign(&self, message: &[u8]) -> oak_crypto::signer::Signature {
         <SigningKey as oak_crypto::signer::Signer>::sign(self.key, message)
+    }
+}
+
+pub struct EncryptionKeyHandle {
+    key: &'static EncryptionKeyProvider,
+}
+
+impl EncryptionKeyHandle {
+    pub fn create() -> anyhow::Result<Self> {
+        DICE_WRAPPER
+            .as_ref()
+            .map_err(anyhow::Error::msg)
+            .and_then(|d| {
+                Ok(EncryptionKeyHandle {
+                    key: &d.encryption_key,
+                })
+            })
+    }
+}
+
+impl RecipientContextGenerator for EncryptionKeyHandle {
+    fn generate_recipient_context(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<oak_crypto::hpke::RecipientContext> {
+        self.key.generate_recipient_context(encapsulated_public_key)
     }
 }
