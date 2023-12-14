@@ -56,21 +56,35 @@ fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData>
     Ok(result)
 }
 
+/// Defines the origin of the key that should be used.
+pub enum KeyOrigin {
+    /// Describes the key originating in the hardware of the current TEE.
+    Instance,
+    /// Use a key that is shared across enclaves executing the same task.
+    /// Not yet supported on the restricted kernel.
+    Group,
+}
+
 #[derive(core::marker::Copy, Clone)]
 pub struct Signer {
     key: &'static SigningKey,
 }
 
 impl Signer {
-    pub fn create() -> anyhow::Result<Self> {
-        DICE_WRAPPER
-            .as_ref()
-            .map_err(anyhow::Error::msg)
-            .and_then(|d| {
-                Ok(Signer {
-                    key: &d.signing_key,
-                })
-            })
+    pub fn create(key_origin: KeyOrigin) -> anyhow::Result<Self> {
+        match key_origin {
+            Instance => DICE_WRAPPER
+                .as_ref()
+                .map_err(anyhow::Error::msg)
+                .and_then(|d| {
+                    Ok(Signer {
+                        key: &d.signing_key,
+                    })
+                }),
+            Group => Err(anyhow::Error::msg(
+                "Group keys are not yet implemented for the restricted kernel.",
+            )),
+        }
     }
     pub fn sign(&self, message: &[u8]) -> oak_crypto::signer::Signature {
         <SigningKey as oak_crypto::signer::Signer>::sign(self.key, message)
@@ -83,15 +97,20 @@ pub struct EncryptionKeyHandle {
 }
 
 impl EncryptionKeyHandle {
-    pub fn create() -> anyhow::Result<Self> {
-        DICE_WRAPPER
-            .as_ref()
-            .map_err(anyhow::Error::msg)
-            .and_then(|d| {
-                Ok(EncryptionKeyHandle {
-                    key: &d.encryption_key,
-                })
-            })
+    pub fn create(key_origin: KeyOrigin) -> anyhow::Result<Self> {
+        match key_origin {
+            Instance => DICE_WRAPPER
+                .as_ref()
+                .map_err(anyhow::Error::msg)
+                .and_then(|d| {
+                    Ok(EncryptionKeyHandle {
+                        key: &d.encryption_key,
+                    })
+                }),
+            Group => Err(anyhow::Error::msg(
+                "Group keys are not yet implemented for the restricted kernel.",
+            )),
+        }
     }
 }
 
