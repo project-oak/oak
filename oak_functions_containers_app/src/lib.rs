@@ -398,6 +398,7 @@ pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static, P:
                     span.record("rpc.grpc.status_code", code);
                 }),
         )
+        .layer(tower::load_shed::LoadShedLayer::new())
         .layer(MonitoringLayer::new(meter.clone()))
         .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
             encryption_context,
