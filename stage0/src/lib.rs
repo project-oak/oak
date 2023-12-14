@@ -21,7 +21,7 @@
 
 extern crate alloc;
 
-use crate::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
+use crate::{kernel::KernelType, sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 use alloc::{boxed::Box, format};
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 use linked_list_allocator::LockedHeap;
@@ -320,7 +320,11 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     // Append the DICE data address to the kernel command-line.
     let extra = format!("--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}");
-    let cmdline = if cmdline.is_empty() {
+    let cmdline = if kernel_info.kernel_type == KernelType::Elf {
+        // Current systems that use the ELF kernel does not support DICE data, so don't append the
+        // extra parameter.
+        cmdline
+    } else if cmdline.is_empty() {
         extra
     } else if cmdline.contains("--") {
         format!("{} {}", cmdline, extra)
