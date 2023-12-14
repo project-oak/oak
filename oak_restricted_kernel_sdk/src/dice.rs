@@ -56,6 +56,7 @@ fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData>
     Ok(result)
 }
 
+#[derive(core::marker::Copy, Clone)]
 pub struct Signer {
     key: &'static SigningKey,
 }
@@ -76,6 +77,7 @@ impl Signer {
     }
 }
 
+#[derive(core::marker::Copy, Clone)]
 pub struct EncryptionKeyHandle {
     key: &'static EncryptionKeyProvider,
 }
