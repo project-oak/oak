@@ -39,6 +39,17 @@ const KERNEL_FILE_PATH: &[u8] = b"opt/stage0/elf_kernel\0";
 /// The file path used by Stage0 to read the kernel command-line from the fw_cfg device.
 const CMDLINE_FILE_PATH: &[u8] = b"opt/stage0/cmdline\0";
 
+/// The type of kernel that was loaded.
+#[derive(PartialEq)]
+pub enum KernelType {
+    // The kernel was preloaded into memory by the VMM.
+    Preloaded,
+    // The kernel was supplied in the Linux bzImage format.
+    BzImage,
+    // The kernel was supplied as an ELF binary.
+    Elf,
+}
+
 /// Information about the kernel image.
 pub struct KernelInfo {
     /// The start address where the kernel is loaded.
@@ -49,6 +60,8 @@ pub struct KernelInfo {
     pub entry: VirtAddr,
     /// The SHA2-256 digest of the raw kernel image.
     pub measurement: crate::Measurement,
+    /// The type of kernel that we are booting.
+    pub kernel_type: KernelType,
 }
 
 impl Default for KernelInfo {
@@ -58,6 +71,7 @@ impl Default for KernelInfo {
             size: DEFAULT_KERNEL_SIZE,
             entry: VirtAddr::new(DEFAULT_KERNEL_START),
             measurement: crate::Measurement::default(),
+            kernel_type: KernelType::Preloaded,
         }
     }
 }
@@ -146,11 +160,13 @@ pub fn try_load_kernel_image(
         // kernel. See <https://www.kernel.org/doc/html/v6.3/x86/boot.html>.
         let entry = start_address + 0x200usize;
         log::debug!("Kernel entry point {:#018x}", entry.as_u64());
+        let kernel_type = KernelType::BzImage;
         Some(KernelInfo {
             start_address,
             size,
             entry,
             measurement,
+            kernel_type,
         })
     } else {
         Some(parse_elf_file(buf, e820_table, measurement))
@@ -187,6 +203,7 @@ fn parse_elf_file(
 
     let kernel_size = (kernel_end - kernel_start) as usize;
     let entry = crate::phys_to_virt(PhysAddr::new(file.ehdr.e_entry));
+    let kernel_type = KernelType::Elf;
     log::debug!("Kernel size {}", kernel_size);
     log::debug!("Kernel start address {:#018x}", kernel_start.as_u64());
     log::debug!("Kernel entry point {:#018x}", entry.as_u64());
@@ -196,6 +213,7 @@ fn parse_elf_file(
         size: kernel_size,
         entry,
         measurement,
+        kernel_type,
     }
 }
 
