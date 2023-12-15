@@ -381,6 +381,10 @@
 <a href="#381" id="381">381</a>
 <a href="#382" id="382">382</a>
 <a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -404,7 +408,7 @@
 
 </span><span class="kw">extern crate </span>alloc;
 
-<span class="kw">use crate</span>::{sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
+<span class="kw">use crate</span>::{kernel::KernelType, sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 <span class="kw">use </span>alloc::{boxed::Box, format};
 <span class="kw">use </span>core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
@@ -703,7 +707,11 @@
 
     <span class="comment">// Append the DICE data address to the kernel command-line.
     </span><span class="kw">let </span>extra = <span class="macro">format!</span>(<span class="string">&quot;--{DICE_DATA_CMDLINE_PARAM}={dice_data:p}&quot;</span>);
-    <span class="kw">let </span>cmdline = <span class="kw">if </span>cmdline.is_empty() {
+    <span class="kw">let </span>cmdline = <span class="kw">if </span>kernel_info.kernel_type == KernelType::Elf {
+        <span class="comment">// Current systems that use the ELF kernel does not support DICE data, so don&#39;t append the
+        // extra parameter.
+        </span>cmdline
+    } <span class="kw">else if </span>cmdline.is_empty() {
         extra
     } <span class="kw">else if </span>cmdline.contains(<span class="string">&quot;--&quot;</span>) {
         <span class="macro">format!</span>(<span class="string">&quot;{} {}&quot;</span>, cmdline, extra)

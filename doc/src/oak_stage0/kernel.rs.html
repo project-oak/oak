@@ -227,6 +227,24 @@
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
 <a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -268,6 +286,17 @@
 <span class="doccomment">/// The file path used by Stage0 to read the kernel command-line from the fw_cfg device.
 </span><span class="kw">const </span>CMDLINE_FILE_PATH: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;opt/stage0/cmdline\0&quot;</span>;
 
+<span class="doccomment">/// The type of kernel that was loaded.
+</span><span class="attr">#[derive(PartialEq)]
+</span><span class="kw">pub enum </span>KernelType {
+    <span class="comment">// The kernel was preloaded into memory by the VMM.
+    </span>Preloaded,
+    <span class="comment">// The kernel was supplied in the Linux bzImage format.
+    </span>BzImage,
+    <span class="comment">// The kernel was supplied as an ELF binary.
+    </span>Elf,
+}
+
 <span class="doccomment">/// Information about the kernel image.
 </span><span class="kw">pub struct </span>KernelInfo {
     <span class="doccomment">/// The start address where the kernel is loaded.
@@ -278,6 +307,8 @@
     </span><span class="kw">pub </span>entry: VirtAddr,
     <span class="doccomment">/// The SHA2-256 digest of the raw kernel image.
     </span><span class="kw">pub </span>measurement: <span class="kw">crate</span>::Measurement,
+    <span class="doccomment">/// The type of kernel that we are booting.
+    </span><span class="kw">pub </span>kernel_type: KernelType,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>KernelInfo {
@@ -287,6 +318,7 @@
             size: DEFAULT_KERNEL_SIZE,
             entry: VirtAddr::new(DEFAULT_KERNEL_START),
             measurement: <span class="kw">crate</span>::Measurement::default(),
+            kernel_type: KernelType::Preloaded,
         }
     }
 }
@@ -375,11 +407,13 @@
         // kernel. See &lt;https://www.kernel.org/doc/html/v6.3/x86/boot.html&gt;.
         </span><span class="kw">let </span>entry = start_address + <span class="number">0x200usize</span>;
         <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel entry point {:#018x}&quot;</span>, entry.as_u64());
+        <span class="kw">let </span>kernel_type = KernelType::BzImage;
         <span class="prelude-val">Some</span>(KernelInfo {
             start_address,
             size,
             entry,
             measurement,
+            kernel_type,
         })
     } <span class="kw">else </span>{
         <span class="prelude-val">Some</span>(parse_elf_file(buf, e820_table, measurement))
@@ -416,6 +450,7 @@
 
     <span class="kw">let </span>kernel_size = (kernel_end - kernel_start) <span class="kw">as </span>usize;
     <span class="kw">let </span>entry = <span class="kw">crate</span>::phys_to_virt(PhysAddr::new(file.ehdr.e_entry));
+    <span class="kw">let </span>kernel_type = KernelType::Elf;
     <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel size {}&quot;</span>, kernel_size);
     <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel start address {:#018x}&quot;</span>, kernel_start.as_u64());
     <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel entry point {:#018x}&quot;</span>, entry.as_u64());
@@ -425,6 +460,7 @@
         size: kernel_size,
         entry,
         measurement,
+        kernel_type,
     }
 }
 
