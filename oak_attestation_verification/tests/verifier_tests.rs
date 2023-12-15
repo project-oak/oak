@@ -23,8 +23,9 @@ use oak_attestation_verification::{
         BinaryReferenceValue, ContainerLayerEndorsements, ContainerLayerReferenceValues,
         EndorsementReferenceValue, Endorsements, Evidence, KernelLayerEndorsements,
         KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
-        ReferenceValues, RootLayerEndorsements, RootLayerReferenceValues, StringReferenceValue,
-        SystemLayerEndorsements, SystemLayerReferenceValues, TransparentReleaseEndorsement,
+        ReferenceValues, RootLayerEndorsements, RootLayerReferenceValues, SkipVerification,
+        StringReferenceValue, SystemLayerEndorsements, SystemLayerReferenceValues,
+        TransparentReleaseEndorsement,
     },
     util::convert_pem_to_raw,
     verifier::verify,
@@ -106,6 +107,9 @@ fn create_reference_values() -> ReferenceValues {
         endorser_public_key,
         rekor_public_key,
     };
+    let skip = BinaryReferenceValue {
+        r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::binary_reference_value::Type::Skip(SkipVerification {})),
+    };
     let brv = BinaryReferenceValue {
         r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::binary_reference_value::Type::Endorsement(erv)),
     };
@@ -125,19 +129,19 @@ fn create_reference_values() -> ReferenceValues {
         intel_tdx: None,
     };
     let kernel_layer = KernelLayerReferenceValues {
-        kernel_image: Some(brv.clone()),
-        kernel_cmd_line: Some(brv.clone()),
-        kernel_setup_data: Some(brv.clone()),
-        init_ram_fs: Some(brv.clone()),
-        memory_map: Some(brv.clone()),
-        acpi: Some(brv.clone()),
+        kernel_image: Some(skip.clone()),
+        kernel_cmd_line: Some(skip.clone()),
+        kernel_setup_data: Some(skip.clone()),
+        init_ram_fs: Some(skip.clone()),
+        memory_map: Some(skip.clone()),
+        acpi: Some(skip.clone()),
     };
     let system_layer = SystemLayerReferenceValues {
-        system_image: Some(brv.clone()),
+        system_image: Some(skip.clone()),
     };
     let container_layer = ContainerLayerReferenceValues {
-        binary: Some(brv.clone()),
-        configuration: Some(brv.clone()),
+        binary: Some(skip.clone()),
+        configuration: Some(skip.clone()),
     };
     let vs = OakContainersReferenceValues {
         root_layer: Some(root_layer),
