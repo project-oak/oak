@@ -23,14 +23,14 @@ use crate::{
     proto::oak::{
         attestation::v1::{
             attestation_results::Status, binary_reference_value, endorsements, reference_values,
-            ApplicationLayerEndorsements, ApplicationLayerReferenceValues, AttestationResults,
-            BinaryReferenceValue, CbEndorsements, CbReferenceValues, ContainerLayerEndorsements,
-            ContainerLayerReferenceValues, Endorsements, Evidence, KernelLayerEndorsements,
-            KernelLayerReferenceValues, LayerEvidence, OakContainersEndorsements,
-            OakContainersReferenceValues, OakRestrictedKernelEndorsements,
-            OakRestrictedKernelReferenceValues, ReferenceValues, RootLayerEndorsements,
-            RootLayerEvidence, RootLayerReferenceValues, SystemLayerEndorsements,
-            SystemLayerReferenceValues, TransparentReleaseEndorsement,
+            ApplicationKeys, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
+            AttestationResults, BinaryReferenceValue, CbEndorsements, CbReferenceValues,
+            ContainerLayerEndorsements, ContainerLayerReferenceValues, Endorsements, Evidence,
+            KernelLayerEndorsements, KernelLayerReferenceValues, LayerEvidence,
+            OakContainersEndorsements, OakContainersReferenceValues,
+            OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+            RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
+            SystemLayerEndorsements, SystemLayerReferenceValues, TransparentReleaseEndorsement,
         },
         RawDigest,
     },
@@ -44,8 +44,10 @@ use coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLa
 use ecdsa::{signature::Verifier, Signature};
 use oak_dice::cert::{
     cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
-    ACPI_MEASUREMENT_ID, INITRD_MEASUREMENT_ID, KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID,
-    KERNEL_MEASUREMENT_ID, MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID,
+    ACPI_MEASUREMENT_ID, CONTAINER_IMAGE_ID, ENCLAVE_APPLICATION_LAYER_ID, INITRD_MEASUREMENT_ID,
+    KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
+    LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID,
+    MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
 };
 
 // We don't use additional authenticated data.
@@ -225,6 +227,10 @@ fn verify_oak_restricted_kernel(
 
     verify_kernel_layer(now_utc_millis, &evidence.layers[0], e_kernel, r_kernel)?;
 
+    let l_appl = evidence
+        .application_keys
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no application keys"))?;
     let e_appl = endorsements
         .application_layer
         .as_ref()
@@ -234,7 +240,7 @@ fn verify_oak_restricted_kernel(
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no application layer reference values"))?;
 
-    verify_application_layer(now_utc_millis, e_appl, r_appl)
+    verify_application_layer(now_utc_millis, l_appl, e_appl, r_appl)
 }
 
 fn verify_oak_containers(
@@ -284,6 +290,10 @@ fn verify_oak_containers(
 
     verify_system_layer(now_utc_millis, &evidence.layers[1], e_system, r_system)?;
 
+    let l_container = evidence
+        .application_keys
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no application keys"))?;
     let e_container = endorsements
         .container_layer
         .as_ref()
@@ -293,7 +303,7 @@ fn verify_oak_containers(
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no container layer reference values"))?;
 
-    verify_container_layer(now_utc_millis, e_container, r_container)
+    verify_container_layer(now_utc_millis, l_container, e_container, r_container)
 }
 
 fn verify_cb(
@@ -336,7 +346,7 @@ fn verify_kernel_layer(
     e: &KernelLayerEndorsements,
     r: &KernelLayerReferenceValues,
 ) -> anyhow::Result<()> {
-    let claims = claims_set_from_evidence_layer(l)?;
+    let claims = claims_set_from_serialized_cert(&l.eca_certificate)?;
 
     let e_kernel_image = e
         .kernel_image
@@ -450,84 +460,124 @@ fn verify_kernel_layer(
 /// Verifies all ingredients of the system image layer for Oak Containers.
 fn verify_system_layer(
     now_utc_millis: i64,
-    _l: &LayerEvidence,
+    l: &LayerEvidence,
     e: &SystemLayerEndorsements,
     r: &SystemLayerReferenceValues,
 ) -> anyhow::Result<()> {
+    let claims = claims_set_from_serialized_cert(&l.eca_certificate)?;
+
     let e_system_image = e
         .system_image
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no system image endorsement"))?;
-
     let r_system_image = r
         .system_image
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no system image reference value"))?;
 
-    verify_transparent_release_endorsement(now_utc_millis, e_system_image, r_system_image)
+    verify_item(
+        &claims,
+        SYSTEM_IMAGE_LAYER_ID,
+        LAYER_2_CODE_MEASUREMENT_ID,
+        now_utc_millis,
+        e_system_image,
+        r_system_image,
+    )
 }
 
 /// Verifies all ingredients of the application layer for Oak Restricted Kernel.
 fn verify_application_layer(
     now_utc_millis: i64,
+    l: &ApplicationKeys,
     e: &ApplicationLayerEndorsements,
     r: &ApplicationLayerReferenceValues,
 ) -> anyhow::Result<()> {
-    // Verify Transparent Release endorsements in application layer.
+    // WIP: Which of the two app certificates contains the claims?
+    let claims = claims_set_from_serialized_cert(&l.signing_public_key_certificate)?;
+
     let e_binary = e
         .binary
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no binary endorsement"))?;
-
     let r_binary = r
         .binary
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no binary reference value"))?;
 
-    verify_transparent_release_endorsement(now_utc_millis, e_binary, r_binary)?;
+    verify_item(
+        &claims,
+        ENCLAVE_APPLICATION_LAYER_ID,
+        LAYER_3_CODE_MEASUREMENT_ID, // This is confusing, use Layer 2 or Layer 3?
+        now_utc_millis,
+        e_binary,
+        r_binary,
+    )?;
 
     let e_config = e
         .configuration
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no configuration endorsement"))?;
-
     let r_config = r
         .configuration
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no configuration reference value"))?;
 
-    verify_transparent_release_endorsement(now_utc_millis, e_config, r_config)
+    verify_item(
+        &claims,
+        ENCLAVE_APPLICATION_LAYER_ID,
+        LAYER_3_CONFIG_MEASUREMENT_ID, // This is confusing, use Layer 2 or Layer 3?
+        // We shouldn't use the layer number in the constant names.
+        now_utc_millis,
+        e_config,
+        r_config,
+    )
 }
 
 /// Verifies all ingredients of the container layer for Oak Containers.
 fn verify_container_layer(
     now_utc_millis: i64,
+    l: &ApplicationKeys,
     e: &ContainerLayerEndorsements,
     r: &ContainerLayerReferenceValues,
 ) -> anyhow::Result<()> {
+    // WIP: Which of the two app certificates contains the claims?
+    let claims = claims_set_from_serialized_cert(&l.signing_public_key_certificate)?;
+
     let e_binary = e
         .binary
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no binary endorsement"))?;
-
     let r_binary = r
         .binary
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no binary reference value"))?;
 
-    verify_transparent_release_endorsement(now_utc_millis, e_binary, r_binary)?;
+    verify_item(
+        &claims,
+        CONTAINER_IMAGE_ID, // Should this be CONTAINER_LAYER_ID?
+        LAYER_3_CODE_MEASUREMENT_ID,
+        now_utc_millis,
+        e_binary,
+        r_binary,
+    )?;
 
     let e_config = e
         .configuration
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no binary endorsement"))?;
-
     let r_config = r
         .configuration
         .as_ref()
         .ok_or_else(|| anyhow::anyhow!("no binary reference value"))?;
 
-    verify_transparent_release_endorsement(now_utc_millis, e_config, r_config)
+    verify_item(
+        &claims,
+        CONTAINER_IMAGE_ID, // Should this be CONTAINER_LAYER_ID?
+        LAYER_3_CONFIG_MEASUREMENT_ID,
+        now_utc_millis,
+        e_config,
+        r_config,
+    )
 }
 
 /// Shorthand for verify_measurement + verify_transparent_release_endorsement.
@@ -605,9 +655,9 @@ fn verify_transparent_release_endorsement(
     }
 }
 
-/// Extracts the CBOR map from a layer of the evidence.
-fn claims_set_from_evidence_layer(layer: &LayerEvidence) -> anyhow::Result<ClaimsSet> {
-    let cert = coset::CoseSign1::from_slice(&layer.eca_certificate)
+/// Parses the CBOR map from a serizalized certificate.
+fn claims_set_from_serialized_cert(slice: &[u8]) -> anyhow::Result<ClaimsSet> {
+    let cert = coset::CoseSign1::from_slice(slice)
         .map_err(|_cose_err| anyhow::anyhow!("could not parse certificate"))?;
     let payload = cert
         .payload
