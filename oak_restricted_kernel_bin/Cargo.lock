@@ -690,7 +690,7 @@ name = "oak_channel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bitflags 1.3.2",
+ "bitflags 2.3.3",
  "bytes",
  "log",
  "micro_rpc",
@@ -729,7 +729,7 @@ dependencies = [
 name = "oak_dice"
 version = "0.1.0"
 dependencies = [
- "bitflags 1.3.2",
+ "bitflags 2.3.3",
  "ciborium",
  "coset",
  "hex",
@@ -746,7 +746,7 @@ dependencies = [
 name = "oak_linux_boot_params"
 version = "0.1.0"
 dependencies = [
- "bitflags 1.3.2",
+ "bitflags 2.3.3",
  "static_assertions",
  "strum",
  "zerocopy",
@@ -761,7 +761,7 @@ dependencies = [
  "anyhow",
  "arrayvec",
  "atomic_refcell",
- "bitflags 1.3.2",
+ "bitflags 2.3.3",
  "bitvec",
  "coset",
  "goblin",
@@ -807,7 +807,7 @@ dependencies = [
 name = "oak_restricted_kernel_interface"
 version = "0.1.0"
 dependencies = [
- "bitflags 1.3.2",
+ "bitflags 2.3.3",
  "strum",
 ]
 
@@ -816,7 +816,7 @@ name = "oak_sev_guest"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
- "bitflags 1.3.2",
+ "bitflags 2.3.3",
  "lock_api",
  "snafu",
  "spinning_top",
@@ -839,7 +839,7 @@ name = "oak_virtio"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bitflags 1.3.2",
+ "bitflags 2.3.3",
  "log",
  "rust-hypervisor-firmware-virtio",
  "strum",
@@ -1094,7 +1094,7 @@ name = "rust-hypervisor-firmware-virtio"
 version = "0.1.0"
 dependencies = [
  "atomic_refcell",
- "bitflags 1.3.2",
+ "bitflags 2.3.3",
  "log",
  "x86_64",
 ]
