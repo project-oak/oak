@@ -1,0 +1,17 @@
+[package]
+name = "oak_stage0_dice"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+coset = { version = "*", default-features = false }
+oak_dice = { workspace = true }
+p256 = { version = "*", default-features = false, features = ["ecdsa"] }
+oak_sev_guest = { workspace = true, features = ["rust-crypto"] }
+hex = { version = "*", default-features = false, features = ["alloc"] }
+rand_core = { version = "*", default-features = false, features = [
+  "getrandom",
+] }
+sha2 = { version = "*", default-features = false, features = ["force-soft"] }
+zerocopy = "*"

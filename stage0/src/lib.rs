@@ -301,7 +301,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     log::debug!("ACPI table generation digest: {:?}", acpi_measurement);
     log::debug!("E820 table digest: {:?}", memory_map_measurement);
 
-    let measurements = dice_attestation::Measurements {
+    let measurements = oak_stage0_dice::Measurements {
         acpi_measurement,
         kernel_measurement: kernel_info.measurement,
         cmdline_measurement,
@@ -310,7 +310,10 @@ pub fn rust64_start(encrypted: u64) -> ! {
         memory_map_measurement,
     };
 
-    let dice_data = dice_attestation::generate_dice_data(&measurements);
+    let dice_data = Box::leak(Box::new_in(
+        oak_stage0_dice::generate_dice_data(&measurements, dice_attestation::get_attestation),
+        &crate::BOOT_ALLOC,
+    ));
     // Reserve the memory containing the DICE data.
     zero_page.insert_e820_entry(BootE820Entry::new(
         dice_data.as_bytes().as_ptr() as usize,

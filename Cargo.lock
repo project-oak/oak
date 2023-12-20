@@ -2531,6 +2531,7 @@ dependencies = [
  "oak_dice",
  "oak_linux_boot_params",
  "oak_sev_guest",
+ "oak_stage0_dice",
  "p256",
  "rand_core",
  "sev_serial",
@@ -2539,6 +2540,20 @@ dependencies = [
  "static_assertions",
  "strum",
  "x86_64",
+ "zerocopy",
+]
+
+[[package]]
+name = "oak_stage0_dice"
+version = "0.1.0"
+dependencies = [
+ "coset",
+ "hex",
+ "oak_dice",
+ "oak_sev_guest",
+ "p256",
+ "rand_core",
+ "sha2",
  "zerocopy",
 ]
 
