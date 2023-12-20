@@ -22,4 +22,4 @@ sha2 = { version = "*", default-features = false }
 time = { version = "0.3.28", features = ["serde", "parsing", "formatting"] }
 
 [build-dependencies]
-micro_rpc_build = { workspace = true }
+prost-build = { workspace = true }

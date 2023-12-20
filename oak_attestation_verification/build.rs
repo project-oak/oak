@@ -15,25 +15,25 @@
 //
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    micro_rpc_build::compile(
-        &[
-            &format!(
-                "{}proto/attestation/endorsement.proto",
-                env!("WORKSPACE_ROOT")
-            ),
-            &format!("{}proto/attestation/evidence.proto", env!("WORKSPACE_ROOT")),
-            &format!(
-                "{}proto/attestation/reference_value.proto",
-                env!("WORKSPACE_ROOT")
-            ),
-            &format!(
-                "{}proto/attestation/verification.proto",
-                env!("WORKSPACE_ROOT")
-            ),
-        ],
-        &[env!("WORKSPACE_ROOT")],
-        Default::default(),
-    );
+    let proto_paths = [
+        "proto/attestation/endorsement.proto",
+        "proto/attestation/evidence.proto",
+        "proto/attestation/reference_value.proto",
+        "proto/attestation/verification.proto",
+    ];
+    prost_build::compile_protos(&proto_paths, &[env!("WORKSPACE_ROOT")])
+        .expect("proto compilation failed");
+
+    // Tell cargo to rerun this build script if the proto file has changed.
+    // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
+    for proto_path in proto_paths.iter() {
+        let file_path = std::path::Path::new(proto_path);
+        println!(
+            "cargo:rerun-if-changed={}{}",
+            env!("WORKSPACE_ROOT"),
+            file_path.display()
+        );
+    }
 
     Ok(())
 }

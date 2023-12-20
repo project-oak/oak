@@ -523,14 +523,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f665ee40bc4a3c5590afb1e9677db74a508659dfd71e126420da8274909a0167"
 
 [[package]]
-name = "micro_rpc_build"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "prost-build",
-]
-
-[[package]]
 name = "multimap"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -545,10 +537,10 @@ dependencies = [
  "coset",
  "ecdsa",
  "hex",
- "micro_rpc_build",
  "oak_dice",
  "p256",
  "prost",
+ "prost-build",
  "serde",
  "serde_jcs",
  "serde_json",
