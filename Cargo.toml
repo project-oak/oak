@@ -53,6 +53,7 @@ members = [
   "sev_serial",
   "snp_measurement",
   "stage0",
+  "stage0_dice",
   "testing/oak_echo_service",
   "xtask",
 ]
@@ -101,6 +102,7 @@ oak_remote_attestation = { path = "./oak_remote_attestation" }
 oak_restricted_kernel_sdk = { path = "./oak_restricted_kernel_sdk" }
 oak_restricted_kernel_interface = { path = "./oak_restricted_kernel_interface" }
 oak_sev_guest = { path = "./oak_sev_guest", default-features = false }
+oak_stage0_dice = { path = "./stage0_dice" }
 oak_simple_io = { path = "./oak_simple_io" }
 oak_tdx_guest = { path = "./oak_tdx_guest" }
 oak_virtio = { path = "./oak_virtio" }
