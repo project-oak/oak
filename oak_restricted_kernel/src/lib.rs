@@ -41,7 +41,6 @@ mod args;
 mod avx;
 mod boot;
 mod descriptors;
-mod dice_attestation;
 mod elf;
 mod ghcb;
 mod interrupts;
@@ -337,7 +336,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
         .expect("failed to load application binary from channel");
 
     let restricted_kernel_dice_data =
-        dice_attestation::generate_dice_data(stage0_dice_data, application.digest());
+        oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, application.digest());
 
     let derived_key = if sev_snp_enabled {
         snp_guest::get_derived_key().expect("couldn't derive key")

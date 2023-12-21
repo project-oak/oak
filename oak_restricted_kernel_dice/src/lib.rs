@@ -14,6 +14,15 @@
 // limitations under the License.
 //
 
+//! This crate contains the logic used by oak_restricted_kernel to create attestations. It is broken
+//! out into a seperate crate to allow this logic to be used independently used in tests to create
+//! mock attestations, without also pulling in oak_restricted_kernel's allocator, which breaks
+//! tests.
+
+#![no_std]
+
+extern crate alloc;
+
 use coset::{cbor::Value, cwt::ClaimName, CborSerializable};
 use oak_crypto::hpke::Serializable;
 use oak_dice::cert::{ENCLAVE_APPLICATION_LAYER_ID, LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID};
