@@ -385,6 +385,9 @@
 <a href="#385" id="385">385</a>
 <a href="#386" id="386">386</a>
 <a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -688,7 +691,7 @@
     <span class="macro">log::debug!</span>(<span class="string">&quot;ACPI table generation digest: {:?}&quot;</span>, acpi_measurement);
     <span class="macro">log::debug!</span>(<span class="string">&quot;E820 table digest: {:?}&quot;</span>, memory_map_measurement);
 
-    <span class="kw">let </span>measurements = dice_attestation::Measurements {
+    <span class="kw">let </span>measurements = oak_stage0_dice::Measurements {
         acpi_measurement,
         kernel_measurement: kernel_info.measurement,
         cmdline_measurement,
@@ -697,7 +700,10 @@
         memory_map_measurement,
     };
 
-    <span class="kw">let </span>dice_data = dice_attestation::generate_dice_data(<span class="kw-2">&amp;</span>measurements);
+    <span class="kw">let </span>dice_data = Box::leak(Box::new_in(
+        oak_stage0_dice::generate_dice_data(<span class="kw-2">&amp;</span>measurements, dice_attestation::get_attestation),
+        <span class="kw-2">&amp;</span><span class="kw">crate</span>::BOOT_ALLOC,
+    ));
     <span class="comment">// Reserve the memory containing the DICE data.
     </span>zero_page.insert_e820_entry(BootE820Entry::new(
         dice_data.as_bytes().as_ptr() <span class="kw">as </span>usize,
