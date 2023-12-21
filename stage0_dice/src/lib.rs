@@ -14,6 +14,11 @@
 // limitations under the License.
 //
 
+//! This crate contains the logic used by stage0 to create attestations. It is broken out into a
+//! seperate crate to allow this logic to be used independently used in tests to create mock
+//! attestations, without also pulling in the global allocator and attestation hardware attestation
+//! retrieval logic of the stage0 crate.
+
 #![no_std]
 
 extern crate alloc;
