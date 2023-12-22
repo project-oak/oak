@@ -5,6 +5,10 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+# Functionality to create and use mock attestations. Helpful for tests.
+mock_attestion = ["oak_stage0_dice", "oak_restricted_kernel_dice"]
+
 [dependencies]
 anyhow = { version = "*", default-features = false }
 log = "*"
@@ -12,6 +16,8 @@ oak_channel = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
 oak_restricted_kernel_interface = { workspace = true }
+oak_restricted_kernel_dice = { workspace = true, optional = true }
+oak_stage0_dice = { workspace = true, optional = true }
 p256 = { version = "*", default-features = false, features = ["ecdsa"] }
 strum = { version = "*", default-features = false, features = ["derive"] }
 lazy_static = { version = "*", features = ["spin_no_std"] }
