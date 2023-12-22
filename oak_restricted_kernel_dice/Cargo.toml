@@ -1,0 +1,12 @@
+[package]
+name = "oak_restricted_kernel_dice"
+version = "0.1.0"
+authors = ["Andri Saar <andrisaar@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+p256 = { version = "*", default-features = false, features = ["ecdsa"] }
+coset = { version = "*", default-features = false }
+oak_crypto = { workspace = true }
+oak_dice = { workspace = true }
