@@ -15,7 +15,7 @@
 //
 
 //! This crate contains the logic used by oak_restricted_kernel to create attestations. It is broken
-//! out into a seperate crate to allow this logic to be used independently used in tests to create
+//! out into a separate crate to allow this logic to be used independently used in tests to create
 //! mock attestations, without also pulling in oak_restricted_kernel's allocator, which breaks
 //! tests.
 
