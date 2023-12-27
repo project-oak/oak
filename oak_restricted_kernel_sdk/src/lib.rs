@@ -23,5 +23,5 @@ mod dice;
 mod logging;
 
 pub use channel::FileDescriptorChannel;
-pub use dice::{Attester, EncryptionKeyHandle, KeyOrigin, Signer};
+pub use dice::*;
 pub use logging::StderrLogger;
