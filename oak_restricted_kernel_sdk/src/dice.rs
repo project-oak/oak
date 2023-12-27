@@ -29,7 +29,6 @@ lazy_static::lazy_static! {
     };
 }
 
-#[cfg(not(feature = "mock_attestion"))]
 fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData> {
     let mut result = RestrictedKernelDiceData::new_zeroed();
     let buffer = result.as_bytes_mut();
@@ -41,16 +40,22 @@ fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData>
 }
 
 #[cfg(feature = "mock_attestion")]
-fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData> {
+lazy_static::lazy_static! {
+    static ref MOCK_DICE_WRAPPER: anyhow::Result<DiceWrapper> = {
+        let dice_data = get_mock_dice_data();
+        let dice_wrapper = dice_data.try_into()?;
+        Ok(dice_wrapper)
+    };
+}
+
+#[cfg(feature = "mock_attestion")]
+fn get_mock_dice_data() -> RestrictedKernelDiceData {
     let stage0_dice_data = oak_stage0_dice::generate_dice_data(
         &oak_stage0_dice::Measurements::default(),
         oak_stage0_dice::mock_attestation_report,
     );
 
-    Ok(oak_restricted_kernel_dice::generate_dice_data(
-        stage0_dice_data.clone(),
-        &[],
-    ))
+    oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data.clone(), &[])
 }
 
 /// Wrapper for DICE evidence and application private keys.
@@ -84,6 +89,8 @@ pub enum KeyOrigin {
     /// Use a key that is shared across enclaves executing the same task.
     /// Not yet supported on the restricted kernel.
     Group,
+    #[cfg(feature = "mock_attestion")]
+    Mock,
 }
 
 #[derive(core::marker::Copy, Clone)]
@@ -107,6 +114,15 @@ impl Signer {
             KeyOrigin::Group => Err(anyhow::Error::msg(
                 "Group keys are not yet implemented for the restricted kernel.",
             )),
+            #[cfg(feature = "mock_attestion")]
+            KeyOrigin::Mock => MOCK_DICE_WRAPPER
+                .as_ref()
+                .map_err(anyhow::Error::msg)
+                .and_then(|d| {
+                    Ok(Signer {
+                        key: &d.signing_key,
+                    })
+                }),
         }
     }
     pub fn sign(&self, message: &[u8]) -> oak_crypto::signer::Signature {
@@ -135,6 +151,15 @@ impl EncryptionKeyHandle {
             KeyOrigin::Group => Err(anyhow::Error::msg(
                 "Group keys are not yet implemented for the restricted kernel.",
             )),
+            #[cfg(feature = "mock_attestion")]
+            KeyOrigin::Mock => MOCK_DICE_WRAPPER
+                .as_ref()
+                .map_err(anyhow::Error::msg)
+                .and_then(|d| {
+                    Ok(EncryptionKeyHandle {
+                        key: &d.encryption_key,
+                    })
+                }),
         }
     }
 }
@@ -153,15 +178,31 @@ pub struct Attester {
 }
 
 impl Attester {
-    pub fn create() -> anyhow::Result<Self> {
-        DICE_WRAPPER
-            .as_ref()
-            .map_err(anyhow::Error::msg)
-            .and_then(|d| {
-                Ok(Attester {
-                    evidence: &d.evidence,
-                })
-            })
+    pub fn create(key_origin: KeyOrigin) -> anyhow::Result<Self> {
+        match key_origin {
+            KeyOrigin::Instance => {
+                DICE_WRAPPER
+                    .as_ref()
+                    .map_err(anyhow::Error::msg)
+                    .and_then(|d| {
+                        Ok(Attester {
+                            evidence: &d.evidence,
+                        })
+                    })
+            }
+            KeyOrigin::Group => Err(anyhow::Error::msg(
+                "Group evidence is not yet implemented for the restricted kernel.",
+            )),
+            #[cfg(feature = "mock_attestion")]
+            KeyOrigin::Mock => MOCK_DICE_WRAPPER
+                .as_ref()
+                .map_err(anyhow::Error::msg)
+                .and_then(|d| {
+                    Ok(Attester {
+                        evidence: &d.evidence,
+                    })
+                }),
+        }
     }
     /// Get the attestation evidence of the current enclave.
     pub fn get_evidence(&self) -> &Evidence {
