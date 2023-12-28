@@ -14,22 +14,20 @@
 // limitations under the License.
 //
 
+use oak_attestation_proto::oak::attestation::v1::{
+    attestation_results::Status, AmdSevReferenceValues, BinaryReferenceValue,
+    ContainerLayerEndorsements, ContainerLayerReferenceValues, EndorsementReferenceValue,
+    Endorsements, Evidence, KernelLayerEndorsements, KernelLayerReferenceValues,
+    OakContainersEndorsements, OakContainersReferenceValues, ReferenceValues,
+    RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, StringReferenceValue,
+    SystemLayerEndorsements, SystemLayerReferenceValues, TransparentReleaseEndorsement,
+};
+use oak_attestation_verification::{
+    util::convert_pem_to_raw,
+    verifier::{to_attestation_results, verify},
+};
 use prost::Message;
 use std::fs;
-
-use oak_attestation_verification::{
-    proto::oak::attestation::v1::{
-        attestation_results::Status, AmdSevReferenceValues, AttestationResults,
-        BinaryReferenceValue, ContainerLayerEndorsements, ContainerLayerReferenceValues,
-        EndorsementReferenceValue, Endorsements, Evidence, KernelLayerEndorsements,
-        KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
-        ReferenceValues, RootLayerEndorsements, RootLayerReferenceValues, SkipVerification,
-        StringReferenceValue, SystemLayerEndorsements, SystemLayerReferenceValues,
-        TransparentReleaseEndorsement,
-    },
-    util::convert_pem_to_raw,
-    verifier::verify,
-};
 
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
 const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
@@ -87,7 +85,9 @@ fn create_endorsements() -> Endorsements {
         container_layer: Some(container_layer),
     };
     Endorsements {
-        r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::endorsements::Type::OakContainers(ends)),
+        r#type: Some(
+            oak_attestation_proto::oak::attestation::v1::endorsements::Type::OakContainers(ends),
+        ),
     }
 }
 
@@ -108,10 +108,18 @@ fn create_reference_values() -> ReferenceValues {
         rekor_public_key,
     };
     let skip = BinaryReferenceValue {
-        r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::binary_reference_value::Type::Skip(SkipVerification {})),
+        r#type: Some(
+            oak_attestation_proto::oak::attestation::v1::binary_reference_value::Type::Skip(
+                SkipVerification {},
+            ),
+        ),
     };
     let brv = BinaryReferenceValue {
-        r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::binary_reference_value::Type::Endorsement(erv)),
+        r#type: Some(
+            oak_attestation_proto::oak::attestation::v1::binary_reference_value::Type::Endorsement(
+                erv,
+            ),
+        ),
     };
     let srv = StringReferenceValue {
         values: ["whatever".to_owned()].to_vec(),
@@ -150,7 +158,9 @@ fn create_reference_values() -> ReferenceValues {
         container_layer: Some(container_layer),
     };
     ReferenceValues {
-        r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::reference_values::Type::OakContainers(vs)),
+        r#type: Some(
+            oak_attestation_proto::oak::attestation::v1::reference_values::Type::OakContainers(vs),
+        ),
     }
 }
 
@@ -161,7 +171,7 @@ fn verify_succeeds() {
     let reference_values = create_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = AttestationResults::from(&r);
+    let p = to_attestation_results(&r);
 
     eprintln!("======================================");
     eprintln!("code={} reason={}", p.status as i32, p.reason);
@@ -178,7 +188,7 @@ fn verify_fails_with_manipulated_root_public_key() {
     let reference_values = create_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = AttestationResults::from(&r);
+    let p = to_attestation_results(&r);
 
     eprintln!("======================================");
     eprintln!("code={} reason={}", p.status as i32, p.reason);
@@ -194,7 +204,7 @@ fn verify_fails_with_empty_args() {
     let reference_values = ReferenceValues::default();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = AttestationResults::from(&r);
+    let p = to_attestation_results(&r);
 
     assert!(r.is_err());
     assert!(p.status() == Status::GenericFailure);

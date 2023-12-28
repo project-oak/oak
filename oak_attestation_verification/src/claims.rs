@@ -21,9 +21,9 @@
 
 extern crate alloc;
 
-use crate::proto::oak::HexDigest;
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use anyhow::Context;
+use oak_attestation_proto::oak::HexDigest;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 

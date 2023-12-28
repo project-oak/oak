@@ -99,6 +99,8 @@ oak_grpc_utils = { path = "./oak_grpc_utils" }
 oak_launcher_utils = { path = "./oak_launcher_utils" }
 oak_linux_boot_params = { path = "./linux_boot_params" }
 oak_logger = { path = "./oak_functions/logger" }
+oak_attestation_proto = { path = "./proto/attestation" }
+oak_functions_proto = { path = "./proto/oak_functions" }
 oak_remote_attestation = { path = "./oak_remote_attestation" }
 oak_restricted_kernel_dice = { path = "./oak_restricted_kernel_dice" }
 oak_restricted_kernel_sdk = { path = "./oak_restricted_kernel_sdk" }

@@ -15,12 +15,11 @@
 //
 
 //! Oak Functions benchmark example.
-pub mod proto {
-    include!(concat!(env!("OUT_DIR"), "/oak.functions.benchmark.rs"));
-}
 
+use oak_functions_proto::oak::oak_functions::benchmark::{
+    benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest, LookupTest,
+};
 use prost::Message;
-use proto::{benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest, LookupTest};
 
 #[cfg_attr(not(test), no_mangle)]
 pub extern "C" fn main() {

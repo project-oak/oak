@@ -264,9 +264,9 @@ checksum = "7dfdb4953a096c551ce9ace855a604d702e6e62d77fac690575ae347571717f5"
 name = "benchmark"
 version = "0.1.0"
 dependencies = [
+ "oak_functions_proto",
  "oak_functions_sdk",
  "prost",
- "prost-build",
 ]
 
 [[package]]
@@ -1566,6 +1566,7 @@ dependencies = [
  "location_utils",
  "log",
  "oak_functions_abi",
+ "oak_functions_proto",
  "prost",
 ]
 
@@ -1579,6 +1580,7 @@ dependencies = [
  "location_utils",
  "multimap",
  "oak_functions_abi",
+ "oak_functions_proto",
  "prost",
  "rand",
  "serde",
@@ -1855,6 +1857,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_attestation_proto"
+version = "0.0.1"
+dependencies = [
+ "prost",
+ "prost-build",
+]
+
+[[package]]
 name = "oak_attestation_verification"
 version = "0.1.0"
 dependencies = [
@@ -1863,10 +1873,10 @@ dependencies = [
  "coset",
  "ecdsa",
  "hex",
+ "oak_attestation_proto",
  "oak_dice",
  "p256",
  "prost",
- "prost-build",
  "serde",
  "serde_jcs",
  "serde_json",
@@ -2141,7 +2151,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "prost",
- "prost-build",
  "static_assertions",
  "strum",
 ]
@@ -2208,6 +2217,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_client",
  "oak_functions_launcher",
+ "oak_functions_proto",
  "oak_functions_test_utils",
  "oak_grpc_utils",
  "oak_remote_attestation",
@@ -2238,6 +2248,7 @@ dependencies = [
  "oak_crypto",
  "oak_functions_abi",
  "oak_functions_client",
+ "oak_functions_proto",
  "oak_functions_test_utils",
  "oak_grpc_utils",
  "oak_launcher_utils",
@@ -2262,6 +2273,14 @@ dependencies = [
  "oak_functions_client",
  "rand",
  "tokio",
+]
+
+[[package]]
+name = "oak_functions_proto"
+version = "0.0.1"
+dependencies = [
+ "prost",
+ "prost-build",
 ]
 
 [[package]]
@@ -2315,6 +2334,7 @@ dependencies = [
  "oak_core",
  "oak_crypto",
  "oak_functions_abi",
+ "oak_functions_proto",
  "oak_functions_sdk",
  "oak_functions_test_utils",
  "oak_remote_attestation",
@@ -2337,6 +2357,7 @@ dependencies = [
  "nix 0.26.2",
  "oak_functions_abi",
  "oak_functions_client",
+ "oak_functions_proto",
  "port_check",
  "prost",
  "tempfile",

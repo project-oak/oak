@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,13 +14,19 @@
 // limitations under the License.
 //
 
-#![cfg_attr(not(test), no_std)]
-#![feature(let_chains)]
+// Inlined from tonic::include_proto in order to cut dependency on tonic.
+macro_rules! include_proto {
+    ($package: tt) => {
+        include!(concat!(env!("OUT_DIR"), concat!("/", $package, ".rs")));
+    };
+}
 
-extern crate alloc;
+pub mod oak {
+    include_proto!("oak");
 
-pub mod claims;
-pub mod endorsement;
-pub mod rekor;
-pub mod util;
-pub mod verifier;
+    pub mod attestation {
+        pub mod v1 {
+            include_proto!("oak.attestation.v1");
+        }
+    }
+}

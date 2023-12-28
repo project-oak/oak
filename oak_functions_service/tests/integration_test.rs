@@ -19,11 +19,13 @@
 
 extern crate alloc;
 
-use benchmark::proto::{benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest};
 use core::assert_matches::assert_matches;
 use oak_crypto::{
     encryptor::{ClientEncryptor, EncryptionKeyProvider},
     proto::oak::crypto::v1::EncryptedRequest,
+};
+use oak_functions_proto::oak::oak_functions::benchmark::{
+    benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest,
 };
 use oak_functions_service::{
     proto::oak::functions::{

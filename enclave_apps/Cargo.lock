@@ -784,7 +784,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "prost",
- "prost-build",
  "static_assertions",
  "strum",
 ]
@@ -806,6 +805,14 @@ dependencies = [
  "oak_restricted_kernel_sdk",
  "static_assertions",
  "zerocopy",
+]
+
+[[package]]
+name = "oak_functions_proto"
+version = "0.0.1"
+dependencies = [
+ "prost",
+ "prost-build",
 ]
 
 [[package]]
@@ -832,6 +839,7 @@ dependencies = [
  "oak_core",
  "oak_crypto",
  "oak_functions_abi",
+ "oak_functions_proto",
  "oak_functions_sdk",
  "oak_remote_attestation",
  "prost",

@@ -10,6 +10,3 @@ anyhow = { version = "*", default-features = false }
 prost = { workspace = true }
 strum = { version = "*", default-features = false, features = ["derive"] }
 static_assertions = "*"
-
-[build-dependencies]
-prost-build = { workspace = true }
