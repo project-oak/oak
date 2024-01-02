@@ -61,6 +61,7 @@ members = [
 exclude = [
   "fuzz",
   "enclave_applications",
+  "micro_rpc_workspace_test",
   "oak_functions/loader/fuzz",
   "oak_restricted_kernel_bin",
   "oak_restricted_kernel_wrapper",
