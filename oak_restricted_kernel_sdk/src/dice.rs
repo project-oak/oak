@@ -27,8 +27,7 @@ use zerocopy::{AsBytes, FromZeroes};
 // This trait just aliases the `RecipientContextGenerator`, while using different naming
 // as defined in the Oak SDK design doc. TODO(#3841): Renane the relevant trait and struct in our
 // crypto crates.
-/// Generate [`SessionKeys`] using the encryption private key, a
-/// corresponding public key of which is contained in the Attestation Evidence.
+/// Generate [`SessionKeys`] for the provided public key.
 pub trait EncryptionKeyHandle {
     fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys>;
 }
