@@ -21,10 +21,21 @@ use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
 use p256::ecdsa::SigningKey;
 use zerocopy::{AsBytes, FromZeroes};
 
+/// Generate a recpient context for the provided public key using an encyrption private key, a
+/// corresponding public key of which is contained in the Attestation Evidence.
 pub use oak_crypto::encryptor::RecipientContextGenerator as EncryptionKeyHandle;
+
+/// Sign the provided message bytestring using a signing private key, a
+/// corresponding public key of which is contained in the Attestation Evidence.
 pub trait Signer {
+    /// Attempt to sign the provided message bytestring using a signing private key, a
+    /// corresponding public key of which is contained in the Attestation Evidence.
     fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature>;
 }
+
+/// Exposes the ability to read the Attestation Evidence. It is discouraged for enclave applications
+/// to operate with evidences. The evidence should only be used to forward it to the host
+/// application once, which then sends it to the clients.
 pub trait Evidencer {
     fn get_evidence(&self) -> &Evidence;
 }
@@ -90,6 +101,7 @@ impl TryFrom<RestrictedKernelDiceData> for DiceWrapper {
     }
 }
 
+/// [`Signer`] implementation that using the instance's evidence and corresponding private keys.
 #[derive(Clone)]
 pub struct InstanceSigner {
     key: &'static SigningKey,
@@ -117,6 +129,7 @@ impl Signer for InstanceSigner {
 }
 
 #[cfg(feature = "mock_attestion")]
+/// [`Signer`] implementation that using mock evidence and corresponding mock private keys.
 #[derive(Clone)]
 pub struct MockSigner {
     key: &'static SigningKey,
@@ -143,6 +156,8 @@ impl Signer for MockSigner {
     }
 }
 
+/// [`EncryptionKeyHandle`] implementation that using the instance's evidence and corresponding
+/// private keys.
 #[derive(Clone)]
 pub struct InstanceEncryptionKeyHandle {
     key: &'static EncryptionKeyProvider,
@@ -171,6 +186,8 @@ impl EncryptionKeyHandle for InstanceEncryptionKeyHandle {
 }
 
 #[cfg(feature = "mock_attestion")]
+/// [`EncryptionKeyHandle`] implementation that using mock evidence and corresponding mock
+/// private keys.
 #[derive(Clone)]
 pub struct MockEncryptionKeyHandle {
     key: &'static EncryptionKeyProvider,
@@ -200,6 +217,7 @@ impl EncryptionKeyHandle for MockEncryptionKeyHandle {
     }
 }
 
+/// [`Evidencer`] implementation that exposes the instance's evidence.
 pub struct InstanceEvidencer {
     evidence: &'static Evidence,
 }
@@ -223,6 +241,7 @@ impl Evidencer for InstanceEvidencer {
     }
 }
 
+/// [`Evidencer`] implementation that exposes mock evidence.
 #[cfg(feature = "mock_attestion")]
 pub struct MockEvidencer {
     evidence: &'static Evidence,
