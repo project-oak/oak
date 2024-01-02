@@ -25,7 +25,7 @@ pub use oak_crypto::encryptor::RecipientContextGenerator as EncryptionKeyHandle;
 pub trait Signer {
     fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature>;
 }
-pub trait Attester {
+pub trait Evidencer {
     fn get_evidence(&self) -> &Evidence;
 }
 
@@ -200,42 +200,42 @@ impl EncryptionKeyHandle for MockEncryptionKeyHandle {
     }
 }
 
-pub struct InstanceAttester {
+pub struct InstanceEvidencer {
     evidence: &'static Evidence,
 }
 
-impl InstanceAttester {
+impl InstanceEvidencer {
     pub fn create() -> anyhow::Result<Self> {
         DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
             .and_then(|d| {
-                Ok(InstanceAttester {
+                Ok(InstanceEvidencer {
                     evidence: &d.evidence,
                 })
             })
     }
 }
 
-impl Attester for InstanceAttester {
+impl Evidencer for InstanceEvidencer {
     fn get_evidence(&self) -> &Evidence {
         self.evidence
     }
 }
 
 #[cfg(feature = "mock_attestion")]
-pub struct MockAttester {
+pub struct MockEvidencer {
     evidence: &'static Evidence,
 }
 
 #[cfg(feature = "mock_attestion")]
-impl MockAttester {
+impl MockEvidencer {
     pub fn create() -> anyhow::Result<Self> {
         MOCK_DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
             .and_then(|d| {
-                Ok(MockAttester {
+                Ok(MockEvidencer {
                     evidence: &d.evidence,
                 })
             })
@@ -243,7 +243,7 @@ impl MockAttester {
 }
 
 #[cfg(feature = "mock_attestion")]
-impl Attester for MockAttester {
+impl Evidencer for MockEvidencer {
     fn get_evidence(&self) -> &Evidence {
         self.evidence
     }
