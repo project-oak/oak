@@ -15,15 +15,32 @@
 //
 
 use anyhow::Ok;
-use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
+// Use aliasing the to conform to the naming defined in the Oak SDK design doc. TODO(#3841): Renane
+// the relevant trait and struct in our crypto crates.
+use oak_crypto::hpke::RecipientContext as SessionKeys;
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
 use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
 use p256::ecdsa::SigningKey;
 use zerocopy::{AsBytes, FromZeroes};
 
-/// Generate a recpient context for the provided public key using an encyrption private key, a
+// This trait just aliases the `RecipientContextGenerator`, while using different naming
+// as defined in the Oak SDK design doc. TODO(#3841): Renane the relevant trait and struct in our
+// crypto crates.
+/// Generate [`SessionKeys`] using the encryption private key, a
 /// corresponding public key of which is contained in the Attestation Evidence.
-pub use oak_crypto::encryptor::RecipientContextGenerator as EncryptionKeyHandle;
+pub trait EncryptionKeyHandle {
+    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys>;
+}
+
+impl<T> EncryptionKeyHandle for T
+where
+    T: RecipientContextGenerator,
+{
+    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) {
+        self.generate_recipient_context(encapsulated_public_key)
+    }
+}
 
 /// Sign the provided message bytestring using a signing private key, a
 /// corresponding public key of which is contained in the Attestation Evidence.
@@ -177,11 +194,8 @@ impl InstanceEncryptionKeyHandle {
 }
 
 impl EncryptionKeyHandle for InstanceEncryptionKeyHandle {
-    fn generate_recipient_context(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<oak_crypto::hpke::RecipientContext> {
-        self.key.generate_recipient_context(encapsulated_public_key)
+    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys> {
+        self.key.generate_session_keys(encapsulated_public_key)
     }
 }
 
@@ -209,11 +223,8 @@ impl MockEncryptionKeyHandle {
 
 #[cfg(feature = "mock_attestion")]
 impl EncryptionKeyHandle for MockEncryptionKeyHandle {
-    fn generate_recipient_context(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<oak_crypto::hpke::RecipientContext> {
-        self.key.generate_recipient_context(encapsulated_public_key)
+    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys> {
+        self.key.generate_session_keys(encapsulated_public_key)
     }
 }
 
