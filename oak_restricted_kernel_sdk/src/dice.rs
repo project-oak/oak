@@ -37,7 +37,7 @@ impl<T> EncryptionKeyHandle for T
 where
     T: RecipientContextGenerator,
 {
-    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) {
+    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys> {
         self.generate_recipient_context(encapsulated_public_key)
     }
 }
