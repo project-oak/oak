@@ -144,9 +144,8 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
 
         // Canonicalized JSON document that is signed. Canonicalization should follow the RFC 8785
         // rules.
-        let canonicalized = serde_jcs::to_string(&entry_subset)
+        let canonicalized = serde_jcs::to_vec(&entry_subset)
             .context("couldn't create canonicalized json string")?;
-        let canonicalized = canonicalized.as_bytes().to_vec();
 
         // Extract the signature from the LogEntry.
         let sig_base64 = log_entry
