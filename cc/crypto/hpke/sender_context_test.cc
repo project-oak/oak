@@ -140,7 +140,7 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageSuccess) {
   std::string ciphertext(ciphertext_bytes.begin(), ciphertext_bytes.end());
 
   // Successfully open encrypted message and get back original plaintext.
-  auto decyphered_message = sender_context.Open(ciphertext, associated_data_response_);
+  auto decyphered_message = sender_context.Open(default_nonce_bytes_, ciphertext, associated_data_response_);
   EXPECT_TRUE(decyphered_message.ok());
 
   // Cleanup the lingering context.
@@ -192,7 +192,7 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureNoncesNotAligned) {
   std::string ciphertext(ciphertext_bytes.begin(), ciphertext_bytes.end());
 
   // Attempt to open the encrypted message. This should fail.
-  auto decyphered_message = sender_context.Open(ciphertext, associated_data_response_);
+  auto decyphered_message = sender_context.Open(default_nonce_bytes_, ciphertext, associated_data_response_);
   EXPECT_FALSE(decyphered_message.ok());
   EXPECT_EQ(decyphered_message.status().code(), absl::StatusCode::kAborted);
 
@@ -243,7 +243,7 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureAssociatedDataNotAli
 
   // Attempt to open the encrypted message using different associated data. This should fail.
   std::string different_associated_data = "Different response associated data";
-  auto decyphered_message = sender_context.Open(ciphertext, different_associated_data);
+  auto decyphered_message = sender_context.Open(default_nonce_bytes_, ciphertext, different_associated_data);
   EXPECT_FALSE(decyphered_message.ok());
   EXPECT_EQ(decyphered_message.status().code(), absl::StatusCode::kAborted);
 
@@ -268,7 +268,7 @@ TEST_F(SenderContextTest, SenderOpensEmptyEncryptedMessageFailure) {
 
   // We use an empty ciphertext.
   std::string ciphertext = "";
-  auto decyphered_message = sender_context.Open(ciphertext, associated_data_response_);
+  auto decyphered_message = sender_context.Open(default_nonce_bytes_, ciphertext, associated_data_response_);
   EXPECT_FALSE(decyphered_message.ok());
   EXPECT_EQ(decyphered_message.status().code(), absl::StatusCode::kInvalidArgument);
 }
