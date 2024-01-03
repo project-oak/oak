@@ -24,7 +24,6 @@ pub mod check_build_licenses;
 pub mod check_license;
 pub mod check_todo;
 pub mod containers;
-pub mod diffs;
 pub mod examples;
 pub mod files;
 pub mod internal;
