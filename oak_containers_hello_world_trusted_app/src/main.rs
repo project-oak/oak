@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use anyhow::anyhow;
-use oak_containers_hello_world_trusted_app::orchestrator_client::OrchestratorClient;
+use oak_containers_orchestrator_client::OrchestratorClient;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::net::TcpListener;
 

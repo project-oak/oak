@@ -10,7 +10,7 @@ oak_grpc_utils = { workspace = true }
 
 [dependencies]
 anyhow = "*"
-async-trait = { version = "*", default-features = false }
+oak_containers_orchestrator_client = { workspace = true }
 oak_crypto = { workspace = true }
 oak_remote_attestation = { workspace = true }
 prost = "*"
@@ -18,6 +18,3 @@ prost-types = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tokio-stream = { version = "*", features = ["net"] }
 tonic = { workspace = true }
-async-stream = "*"
-bytes = "*"
-tower = "*"

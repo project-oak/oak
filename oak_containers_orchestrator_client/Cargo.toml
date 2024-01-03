@@ -10,6 +10,7 @@ oak_grpc_utils = { workspace = true }
 
 [dependencies]
 anyhow = "*"
+async-trait = { version = "*", default-features = false }
 oak_crypto = { workspace = true }
 oak_remote_attestation = { workspace = true }
 opentelemetry-otlp = { version = "*", default-features = false, features = [

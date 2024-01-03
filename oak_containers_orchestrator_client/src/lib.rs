@@ -44,6 +44,8 @@ use self::proto::oak::{
     key_provisioning::v1::GroupKeys,
     session::v1::AttestationEvidence,
 };
+mod orchestrator_client;
+pub use crate::orchestrator_client::OrchestratorClient;
 use anyhow::Context;
 use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
 use tonic::transport::Channel;

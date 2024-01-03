@@ -28,4 +28,3 @@ mod proto {
 }
 
 pub mod app_service;
-pub mod orchestrator_client;
