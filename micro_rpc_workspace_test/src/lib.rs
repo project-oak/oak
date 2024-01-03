@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,10 +14,16 @@
 // limitations under the License.
 //
 
-fn main() {
-    micro_rpc_build::compile(
-        &["../proto/micro_rpc/messages.proto"],
-        &["../proto"],
-        Default::default(),
+// Test to confirm that the dependency on micro_rpc and its own protobuf types works correctly.
+#[test]
+fn micro_rpc_dep_test() {
+    let response_wrapper: micro_rpc::ResponseWrapper = Err(micro_rpc::Status::new_with_message(
+        micro_rpc::StatusCode::InvalidArgument,
+        "error",
+    ))
+    .into();
+    assert_eq!(
+        format!("{response_wrapper:?}"),
+        r##"ResponseWrapper { response: Some(Error(Status { code: 3, message: "error" })) }"##
     );
 }
