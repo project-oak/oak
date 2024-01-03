@@ -34,7 +34,7 @@ use oak_sev_guest::{
         SevStatus, SnpPageStateChangeRequest,
     },
 };
-use spinning_top::{const_spinlock, Spinlock};
+use spinning_top::Spinlock;
 use x86_64::{
     instructions::tlb,
     structures::paging::{
@@ -51,7 +51,7 @@ use crate::{sev_status, BootAllocator};
 pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
 /// Cryptographic helper to encrypt and decrypt messages for the GHCB guest message protocol.
-static GUEST_MESSAGE_ENCRYPTOR: Spinlock<Option<GuestMessageEncryptor>> = const_spinlock(None);
+static GUEST_MESSAGE_ENCRYPTOR: Spinlock<Option<GuestMessageEncryptor>> = Spinlock::new(None);
 
 /// Allocator that forces allocations to be 4K-aligned (and sized) and marks the pages as shared.
 ///

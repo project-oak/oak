@@ -18,7 +18,10 @@ use std::{
     fs,
     io::{BufRead, BufReader},
     net::Shutdown,
-    os::unix::{io::AsRawFd, net, net::UnixStream},
+    os::{
+        fd::AsRawFd,
+        unix::{net, net::UnixStream},
+    },
     path::PathBuf,
     process::Stdio,
 };

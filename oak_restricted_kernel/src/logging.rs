@@ -19,14 +19,14 @@ use core::fmt::Write;
 use log::info;
 use oak_sev_guest::io::PortFactoryWrapper;
 use sev_serial::SerialPort;
-use spinning_top::{const_spinlock, Spinlock};
+use spinning_top::Spinlock;
 
 extern crate log;
 
 // Base I/O port for the first serial port in the system (colloquially known as COM1)
 const COM1_BASE: u16 = 0x3f8;
 
-pub static SERIAL1: Spinlock<Option<SerialPort>> = const_spinlock(None);
+pub static SERIAL1: Spinlock<Option<SerialPort>> = Spinlock::new(None);
 
 struct Logger {}
 

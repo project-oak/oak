@@ -33,5 +33,5 @@ tokio = { version = "*", features = [
   "sync"
 ] }
 tokio-stream = { version = "*", features = ["net"] }
-tonic = { workspace = true }
+tonic = { workspace = true, features = ["codegen"] }
 which = "*"
