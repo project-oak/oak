@@ -19,11 +19,11 @@ use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate gRPC code for exchanging messages with clients.
     generate_grpc_code(
-        "../",
         &[
             "oak_remote_attestation/proto/v1/messages.proto",
             "oak_remote_attestation/proto/v1/service_streaming.proto",
         ],
+        "../",
         CodegenOptions {
             build_server: true,
             ..Default::default()
