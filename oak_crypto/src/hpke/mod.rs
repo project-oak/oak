@@ -370,3 +370,13 @@ fn increment_sequence_number(sequence_number: &mut u128) -> anyhow::Result<()> {
         .context("couldn't increment sequence number")?;
     Ok(())
 }
+
+pub(crate) fn deserialize_nonce(nonce: &[u8]) -> anyhow::Result<AeadNonce> {
+    nonce.try_into().map_err(|_| {
+        anyhow!(
+            "incorrect nonce size, expected {}, found {}",
+            AEAD_NONCE_SIZE_BYTES,
+            nonce.len()
+        )
+    })
+}
