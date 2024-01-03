@@ -14,6 +14,14 @@
 // limitations under the License.
 //
 
+mod proto {
+    pub mod oak {
+        pub mod test {
+            tonic::include_proto!("oak.test");
+        }
+    }
+}
+
 // Test to confirm that the dependency on micro_rpc and its own protobuf types works correctly.
 #[test]
 fn micro_rpc_dep_test() {
@@ -25,5 +33,25 @@ fn micro_rpc_dep_test() {
     assert_eq!(
         format!("{response_wrapper:?}"),
         r##"ResponseWrapper { response: Some(Error(Status { code: 3, message: "error" })) }"##
+    );
+}
+
+// Test to confirm that the dependency on oak_crypto and its own protobuf types works correctly.
+#[test]
+fn oak_crypto_dep_test() {
+    let request_wrapper = proto::oak::test::TestRequestWrapper {
+        encrypted_request: Some(oak_crypto::proto::oak::crypto::v1::EncryptedRequest {
+            encrypted_message: Some(oak_crypto::proto::oak::crypto::v1::AeadEncryptedMessage {
+                associated_data: vec![],
+                nonce: vec![],
+                ciphertext: vec![],
+            }),
+            serialized_encapsulated_public_key: Some(vec![]),
+        }),
+    };
+
+    assert_eq!(
+        format!("{request_wrapper:?}"),
+        r##"TestRequestWrapper { encrypted_request: Some(EncryptedRequest { encrypted_message: Some(AeadEncryptedMessage { ciphertext: [], associated_data: [], nonce: [] }), serialized_encapsulated_public_key: Some([]) }) }"##
     );
 }

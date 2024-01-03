@@ -42,21 +42,23 @@ impl ExternPath {
 
 /// Generate gRPC code from Protobuf using `tonic` library.
 ///
-/// The path to the root repository must be passed as `proto_path`. All paths to `.proto` files
+/// The path to the root repository must be passed as `include`. All paths to `.proto` files
 /// must be specified relative to this path. Likewise, all imported paths in `.proto` files must
 /// be specified relative to this path.
+// TODO(#4588): Swap the include and protos arguments, so they match the order of the
+// corresponding arguments in the `tonic_build::configure()` function.
 pub fn generate_grpc_code(
-    proto_path: &str,
-    file_paths: &[&str],
+    include: &str,
+    protos: &[&str],
     options: CodegenOptions,
 ) -> std::io::Result<()> {
     set_protoc_env_if_unset();
 
     // TODO(#1093): Move all proto generation to a common crate.
-    let proto_path = std::path::Path::new(proto_path);
-    let file_paths: Vec<std::path::PathBuf> = file_paths
+    let include = std::path::Path::new(include);
+    let file_paths: Vec<std::path::PathBuf> = protos
         .iter()
-        .map(|file_path| proto_path.join(file_path))
+        .map(|file_path| include.join(file_path))
         .collect();
 
     // Generate the normal (non-Oak) server and client code for the gRPC service,
@@ -80,7 +82,7 @@ pub fn generate_grpc_code(
     for extern_path in options.extern_paths {
         config = config.extern_path(extern_path.proto_path, extern_path.rust_path);
     }
-    config.compile(&file_paths, &[proto_path.to_path_buf()])
+    config.compile(&file_paths, &[include])
 }
 
 fn set_protoc_env_if_unset() {
