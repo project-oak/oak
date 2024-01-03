@@ -16,8 +16,9 @@
 
 use anyhow::Ok;
 use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
-// Use aliasing the to conform to the naming defined in the Oak SDK design doc. TODO(#3841): Renane
-// the relevant trait and struct in our crypto crates.
+// Alias this struct in order to conform to the naming outlined in the restricted kernel SDK design
+// doc.
+// TODO(#3841): rename the relevant trait and struct in our crypto crates.
 use oak_crypto::hpke::RecipientContext as SessionKeys;
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
 use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
@@ -25,8 +26,8 @@ use p256::ecdsa::SigningKey;
 use zerocopy::{AsBytes, FromZeroes};
 
 // This trait just aliases the `RecipientContextGenerator`, while using different naming
-// as defined in the Oak SDK design doc. TODO(#3841): Renane the relevant trait and struct in our
-// crypto crates.
+// as defined in the Oak SDK design doc.
+// TODO(#3841): rename the relevant trait and struct in our crypto crates.
 /// Generate [`SessionKeys`] for the provided public key.
 pub trait EncryptionKeyHandle {
     fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys>;
