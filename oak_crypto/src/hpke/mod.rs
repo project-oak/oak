@@ -117,11 +117,6 @@ pub(crate) fn setup_base_sender(
         .export(b"response_key", &mut response_key)
         .map_err(|error| anyhow!("couldn't export response key: {}", error))?;
 
-    let mut response_base_nonce = [0u8; AEAD_NONCE_SIZE_BYTES];
-    sender_context
-        .export(b"response_nonce", &mut response_base_nonce)
-        .map_err(|error| anyhow!("couldn't export response nonce: {}", error))?;
-
     Ok((
         encapsulated_public_key.to_bytes().to_vec(),
         SenderContext {
@@ -129,7 +124,6 @@ pub(crate) fn setup_base_sender(
             request_base_nonce,
             request_sequence_number: 0,
             response_key,
-            response_base_nonce,
             response_sequence_number: 0,
         },
     ))
@@ -203,7 +197,6 @@ pub struct SenderContext {
     request_sequence_number: u128,
 
     response_key: AeadKey,
-    response_base_nonce: AeadNonce,
     /// Response sequence number that is XORed with the base nonce values to get AEAD nonces.
     /// Is represented as [`u128`] because the [`AEAD_NONCE_SIZE_BYTES`] is 12 bytes.
     response_sequence_number: u128,
@@ -237,13 +230,12 @@ impl SenderContext {
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
     pub(crate) fn open(
         &mut self,
+        nonce: &AeadNonce,
         ciphertext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        let nonce = compute_nonce(self.response_sequence_number, &self.response_base_nonce)
-            .context("couldn't compute nonce")?;
         let plaintext =
-            crate::hpke::aead::decrypt(&self.response_key, &nonce, ciphertext, associated_data)
+            crate::hpke::aead::decrypt(&self.response_key, nonce, ciphertext, associated_data)
                 .context("couldn't decrypt response message")?;
         increment_sequence_number(&mut self.response_sequence_number)
             .context("couldn't increment sequence number")?;
@@ -276,13 +268,12 @@ impl RecipientContext {
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
     pub(crate) fn open(
         &mut self,
+        nonce: &AeadNonce,
         ciphertext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        let nonce = compute_nonce(self.request_sequence_number, &self.request_base_nonce)
-            .context("couldn't compute nonce")?;
         let plaintext =
-            crate::hpke::aead::decrypt(&self.request_key, &nonce, ciphertext, associated_data)
+            crate::hpke::aead::decrypt(&self.request_key, nonce, ciphertext, associated_data)
                 .context("couldn't decrypt request message")?;
         increment_sequence_number(&mut self.request_sequence_number)
             .context("couldn't increment sequence number")?;

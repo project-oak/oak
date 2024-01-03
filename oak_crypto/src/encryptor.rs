@@ -21,7 +21,7 @@
 use crate::{
     hpke::{
         setup_base_recipient, setup_base_sender, KeyPair, PrivateKey, PublicKey, RecipientContext,
-        SenderContext,
+        SenderContext, aead::AEAD_NONCE_SIZE_BYTES,
     },
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
@@ -204,10 +204,16 @@ impl ClientEncryptor {
             .encrypted_message
             .as_ref()
             .context("response doesn't contain encrypted message")?;
+        let nonce = encrypted_message
+            .nonce
+            .clone()
+            .try_into()
+            .map_err(|_| anyhow!("incorrect nonce size, expected {}, found {}", AEAD_NONCE_SIZE_BYTES, encrypted_message.nonce.len()))?;
 
         let plaintext = self
             .sender_context
             .open(
+                &nonce,
                 &encrypted_message.ciphertext,
                 &encrypted_message.associated_data,
             )
@@ -252,9 +258,16 @@ impl ServerEncryptor {
             .encrypted_message
             .as_ref()
             .context("request doesn't contain encrypted message")?;
+        let nonce = encrypted_message
+            .nonce
+            .clone()
+            .try_into()
+            .map_err(|_| anyhow!("incorrect nonce size, expected {}, found {}", AEAD_NONCE_SIZE_BYTES, encrypted_message.nonce.len()))?;
+
         let plaintext = self
             .recipient_context
             .open(
+                &nonce,
                 &encrypted_message.ciphertext,
                 &encrypted_message.associated_data,
             )
