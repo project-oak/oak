@@ -20,8 +20,8 @@
 
 use crate::{
     hpke::{
-        setup_base_recipient, setup_base_sender, KeyPair, PrivateKey, PublicKey, RecipientContext,
-        SenderContext,
+        deserialize_nonce, setup_base_recipient, setup_base_sender, KeyPair, PrivateKey, PublicKey,
+        RecipientContext, SenderContext,
     },
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
@@ -204,10 +204,13 @@ impl ClientEncryptor {
             .encrypted_message
             .as_ref()
             .context("response doesn't contain encrypted message")?;
+        let nonce =
+            deserialize_nonce(&encrypted_message.nonce).context("couldn't deserialize nonce")?;
 
         let plaintext = self
             .sender_context
             .open(
+                &nonce,
                 &encrypted_message.ciphertext,
                 &encrypted_message.associated_data,
             )
@@ -252,9 +255,13 @@ impl ServerEncryptor {
             .encrypted_message
             .as_ref()
             .context("request doesn't contain encrypted message")?;
+        let nonce =
+            deserialize_nonce(&encrypted_message.nonce).context("couldn't deserialize nonce")?;
+
         let plaintext = self
             .recipient_context
             .open(
+                &nonce,
                 &encrypted_message.ciphertext,
                 &encrypted_message.associated_data,
             )

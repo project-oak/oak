@@ -107,7 +107,11 @@ fn test_hpke() {
         // Check that the message was encrypted.
         assert_ne!(test_request_message, encrypted_request);
         let decrypted_request = recipient_context
-            .open(&encrypted_request, &test_request_associated_data)
+            .open(
+                &test_request_nonce,
+                &encrypted_request,
+                &test_request_associated_data,
+            )
             .expect("recipient context couldn't open request");
         assert_eq!(test_request_message, decrypted_request);
 
@@ -121,7 +125,11 @@ fn test_hpke() {
         // Check that the message was encrypted.
         assert_ne!(test_response_message, encrypted_response);
         let decrypted_response = sender_context
-            .open(&encrypted_response, &test_response_associated_data)
+            .open(
+                &test_response_nonce,
+                &encrypted_response,
+                &test_response_associated_data,
+            )
             .expect("sender couldn't open response");
         assert_eq!(test_response_message, decrypted_response);
     }
