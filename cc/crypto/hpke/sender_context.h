@@ -60,7 +60,7 @@ class SenderContext {
   // Decrypts response message and validates associated data using AEAD as part of
   // bidirectional communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
-  absl::StatusOr<std::string> Open(absl::string_view ciphertext, absl::string_view associated_data);
+  absl::StatusOr<std::string> Open(const std::vector<uint8_t>& nonce, absl::string_view ciphertext, absl::string_view associated_data);
 
   ~SenderContext();
 

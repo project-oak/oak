@@ -28,7 +28,7 @@ public final class RecipientContext implements AutoCloseable {
   }
 
   private native byte[] nativeGenerateNonce();
-  private native byte[] nativeOpen(final byte[] ciphertext, final byte[] associatedData);
+  private native byte[] nativeOpen(final byte[] nonce, final byte[] ciphertext, final byte[] associatedData);
   private native byte[] nativeSeal(
       final byte[] nonce, final byte[] plaintext, final byte[] associatedData);
   private native void nativeDestroy();
@@ -50,8 +50,8 @@ public final class RecipientContext implements AutoCloseable {
    * <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
    */
   public final Result<byte[], Exception> open(
-      final byte[] ciphertext, final byte[] associatedData) {
-    byte[] nativeResult = nativeOpen(ciphertext, associatedData);
+      final byte[] nonce, final byte[] ciphertext, final byte[] associatedData) {
+    byte[] nativeResult = nativeOpen(nonce, ciphertext, associatedData);
     if (nativeResult == null) {
       return Result.error(new Exception("RecipientContext open failed"));
     }

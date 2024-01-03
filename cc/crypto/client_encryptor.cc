@@ -17,6 +17,7 @@
 #include "cc/crypto/client_encryptor.h"
 
 #include <memory>
+#include <vector>
 #include <utility>
 
 #include "absl/status/statusor.h"
@@ -69,8 +70,13 @@ absl::StatusOr<EncryptedRequest> ClientEncryptor::Encrypt(absl::string_view plai
 
 absl::StatusOr<DecryptionResult> ClientEncryptor::Decrypt(EncryptedResponse encrypted_response) {
   // Decrypt response.
+  const std::vector<uint8_t> nonce(
+      encrypted_response.encrypted_message().nonce().begin(),
+      encrypted_response.encrypted_message().nonce().end()
+  );
   absl::StatusOr<std::string> plaintext =
-      sender_context_->Open(encrypted_response.encrypted_message().ciphertext(),
+      sender_context_->Open(nonce,
+                            encrypted_response.encrypted_message().ciphertext(),
                             encrypted_response.encrypted_message().associated_data());
   if (!plaintext.ok()) {
     return plaintext.status();
