@@ -262,7 +262,6 @@
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
 <a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -409,9 +408,8 @@
 
         <span class="comment">// Canonicalized JSON document that is signed. Canonicalization should follow the RFC 8785
         // rules.
-        </span><span class="kw">let </span>canonicalized = serde_jcs::to_string(<span class="kw-2">&amp;</span>entry_subset)
+        </span><span class="kw">let </span>canonicalized = serde_jcs::to_vec(<span class="kw-2">&amp;</span>entry_subset)
             .context(<span class="string">&quot;couldn&#39;t create canonicalized json string&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>canonicalized = canonicalized.as_bytes().to_vec();
 
         <span class="comment">// Extract the signature from the LogEntry.
         </span><span class="kw">let </span>sig_base64 = log_entry
