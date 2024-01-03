@@ -90,6 +90,8 @@
 <a href="#90" id="90">90</a>
 <a href="#91" id="91">91</a>
 <a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -134,21 +136,23 @@
 
 <span class="doccomment">/// Generate gRPC code from Protobuf using `tonic` library.
 ///
-/// The path to the root repository must be passed as `proto_path`. All paths to `.proto` files
+/// The path to the root repository must be passed as `include`. All paths to `.proto` files
 /// must be specified relative to this path. Likewise, all imported paths in `.proto` files must
 /// be specified relative to this path.
+</span><span class="comment">// TODO(#4588): Swap the include and protos arguments, so they match the order of the
+// corresponding arguments in the `tonic_build::configure()` function.
 </span><span class="kw">pub fn </span>generate_grpc_code(
-    proto_path: <span class="kw-2">&amp;</span>str,
-    file_paths: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str],
+    include: <span class="kw-2">&amp;</span>str,
+    protos: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str],
     options: CodegenOptions,
 ) -&gt; std::io::Result&lt;()&gt; {
     set_protoc_env_if_unset();
 
     <span class="comment">// TODO(#1093): Move all proto generation to a common crate.
-    </span><span class="kw">let </span>proto_path = std::path::Path::new(proto_path);
-    <span class="kw">let </span>file_paths: Vec&lt;std::path::PathBuf&gt; = file_paths
+    </span><span class="kw">let </span>include = std::path::Path::new(include);
+    <span class="kw">let </span>file_paths: Vec&lt;std::path::PathBuf&gt; = protos
         .iter()
-        .map(|file_path| proto_path.join(file_path))
+        .map(|file_path| include.join(file_path))
         .collect();
 
     <span class="comment">// Generate the normal (non-Oak) server and client code for the gRPC service,
@@ -172,7 +176,7 @@
     <span class="kw">for </span>extern_path <span class="kw">in </span>options.extern_paths {
         config = config.extern_path(extern_path.proto_path, extern_path.rust_path);
     }
-    config.compile(<span class="kw-2">&amp;</span>file_paths, <span class="kw-2">&amp;</span>[proto_path.to_path_buf()])
+    config.compile(<span class="kw-2">&amp;</span>file_paths, <span class="kw-2">&amp;</span>[include])
 }
 
 <span class="kw">fn </span>set_protoc_env_if_unset() {
