@@ -88,7 +88,8 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativ
   }
 
   const std::vector<uint8_t> nonce_bytes(nonce_str.begin(), nonce_str.end());
-  absl::StatusOr<std::string> result = sender_context->Open(nonce_bytes, ciphertext_str, associated_data_str);
+  absl::StatusOr<std::string> result =
+      sender_context->Open(nonce_bytes, ciphertext_str, associated_data_str);
   if (!result.ok()) {
     return {};
   }
@@ -135,7 +136,8 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_na
   }
 
   const std::vector<uint8_t> nonce_bytes(nonce_str.begin(), nonce_str.end());
-  absl::StatusOr<std::string> result = recipient_context->Open(nonce_bytes, ciphertext_str, associated_data_str);
+  absl::StatusOr<std::string> result =
+      recipient_context->Open(nonce_bytes, ciphertext_str, associated_data_str);
   if (!result.ok()) {
     return {};
   }

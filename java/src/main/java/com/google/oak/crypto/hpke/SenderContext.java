@@ -33,7 +33,8 @@ public final class SenderContext implements AutoCloseable {
   private native byte[] nativeGenerateNonce();
   private native byte[] nativeSeal(
       final byte[] nonce, final byte[] plaintext, final byte[] associatedData);
-  private native byte[] nativeOpen(final byte[] nonce, final byte[] ciphertext, final byte[] associatedData);
+  private native byte[] nativeOpen(
+      final byte[] nonce, final byte[] ciphertext, final byte[] associatedData);
   private native void nativeDestroy();
 
   public final byte[] getSerializedEncapsulatedPublicKey() {
