@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-#![feature(file_create_new)]
-
 use log::{debug, info};
 use nix::sys::termios::{cfmakeraw, tcgetattr, tcsetattr, SetArg};
 use std::{

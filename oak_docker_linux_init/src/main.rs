@@ -14,8 +14,6 @@
 // limitations under the License.
 //
 
-#![feature(file_create_new)]
-
 use log::info;
 use std::{
     fs::File,
