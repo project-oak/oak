@@ -21,8 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "proto/attestation/reference_value.proto",
         "proto/attestation/verification.proto",
     ];
-    prost_build::compile_protos(&proto_paths, &[env!("WORKSPACE_ROOT")])
-        .expect("proto compilation failed");
+    prost_build::compile_protos(&proto_paths, &[".."]).expect("proto compilation failed");
 
     // Tell cargo to rerun this build script if the proto file has changed.
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath

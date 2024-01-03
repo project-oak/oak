@@ -32,11 +32,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Generate micro RPC code for exchanging messages with the enclave.
     micro_rpc_build::compile(
-        &[format!(
-            "{}proto/oak_functions/service/oak_functions.proto",
-            env!("WORKSPACE_ROOT")
-        )],
-        &[env!("WORKSPACE_ROOT")],
+        &["proto/oak_functions/service/oak_functions.proto"],
+        &[".."],
         Default::default(),
     );
 

@@ -16,11 +16,8 @@
 
 fn main() {
     micro_rpc_build::compile(
-        &[format!(
-            "{}proto/oak_functions/sdk/oak_functions_wasm.proto",
-            env!("WORKSPACE_ROOT")
-        )],
-        &[format!("{}proto/oak_functions/sdk", env!("WORKSPACE_ROOT"))],
+        &["proto/oak_functions/sdk/oak_functions_wasm.proto"],
+        &[".."],
         Default::default(),
     );
 }

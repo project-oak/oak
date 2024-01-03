@@ -21,17 +21,12 @@ fn main() {
         "proto/oak_functions/abi.proto",
         "proto/oak_functions/lookup_data.proto",
     ];
-    prost_build::compile_protos(&file_paths, &[env!("WORKSPACE_ROOT")])
-        .expect("proto compilation failed");
+    prost_build::compile_protos(&file_paths, &[".."]).expect("proto compilation failed");
 
     // Tell cargo to rerun this build script if the proto file has changed.
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
     for proto_path in file_paths.iter() {
         let file_path = std::path::Path::new(proto_path);
-        println!(
-            "cargo:rerun-if-changed={}{}",
-            env!("WORKSPACE_ROOT"),
-            file_path.display()
-        );
+        println!("cargo:rerun-if-changed=../{}", file_path.display());
     }
 }
