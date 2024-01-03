@@ -361,6 +361,13 @@
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
 <a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -383,8 +390,8 @@
 
 </span><span class="kw">use crate</span>::{
     hpke::{
-        setup_base_recipient, setup_base_sender, KeyPair, PrivateKey, PublicKey, RecipientContext,
-        SenderContext,
+        deserialize_nonce, setup_base_recipient, setup_base_sender, KeyPair, PrivateKey, PublicKey,
+        RecipientContext, SenderContext,
     },
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
@@ -567,10 +574,13 @@
             .encrypted_message
             .as_ref()
             .context(<span class="string">&quot;response doesn&#39;t contain encrypted message&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>nonce =
+            deserialize_nonce(<span class="kw-2">&amp;</span>encrypted_message.nonce).context(<span class="string">&quot;couldn&#39;t deserialize nonce&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>plaintext = <span class="self">self
             </span>.sender_context
             .open(
+                <span class="kw-2">&amp;</span>nonce,
                 <span class="kw-2">&amp;</span>encrypted_message.ciphertext,
                 <span class="kw-2">&amp;</span>encrypted_message.associated_data,
             )
@@ -615,9 +625,13 @@
             .encrypted_message
             .as_ref()
             .context(<span class="string">&quot;request doesn&#39;t contain encrypted message&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>nonce =
+            deserialize_nonce(<span class="kw-2">&amp;</span>encrypted_message.nonce).context(<span class="string">&quot;couldn&#39;t deserialize nonce&quot;</span>)<span class="question-mark">?</span>;
+
         <span class="kw">let </span>plaintext = <span class="self">self
             </span>.recipient_context
             .open(
+                <span class="kw-2">&amp;</span>nonce,
                 <span class="kw-2">&amp;</span>encrypted_message.ciphertext,
                 <span class="kw-2">&amp;</span>encrypted_message.associated_data,
             )

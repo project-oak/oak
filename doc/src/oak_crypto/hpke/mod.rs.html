@@ -379,6 +379,7 @@
 <a href="#379" id="379">379</a>
 <a href="#380" id="380">380</a>
 <a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -498,11 +499,6 @@
         .export(<span class="string">b&quot;response_key&quot;</span>, <span class="kw-2">&amp;mut </span>response_key)
         .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t export response key: {}&quot;</span>, error))<span class="question-mark">?</span>;
 
-    <span class="kw">let </span><span class="kw-2">mut </span>response_base_nonce = [<span class="number">0u8</span>; AEAD_NONCE_SIZE_BYTES];
-    sender_context
-        .export(<span class="string">b&quot;response_nonce&quot;</span>, <span class="kw-2">&amp;mut </span>response_base_nonce)
-        .map_err(|error| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t export response nonce: {}&quot;</span>, error))<span class="question-mark">?</span>;
-
     <span class="prelude-val">Ok</span>((
         encapsulated_public_key.to_bytes().to_vec(),
         SenderContext {
@@ -510,7 +506,6 @@
             request_base_nonce,
             request_sequence_number: <span class="number">0</span>,
             response_key,
-            response_base_nonce,
             response_sequence_number: <span class="number">0</span>,
         },
     ))
@@ -584,7 +579,6 @@
     </span>request_sequence_number: u128,
 
     response_key: AeadKey,
-    response_base_nonce: AeadNonce,
     <span class="doccomment">/// Response sequence number that is XORed with the base nonce values to get AEAD nonces.
     /// Is represented as [`u128`] because the [`AEAD_NONCE_SIZE_BYTES`] is 12 bytes.
     </span>response_sequence_number: u128,
@@ -618,13 +612,12 @@
     /// &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption&gt;
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>open(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        nonce: <span class="kw-2">&amp;</span>AeadNonce,
         ciphertext: <span class="kw-2">&amp;</span>[u8],
         associated_data: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-        <span class="kw">let </span>nonce = compute_nonce(<span class="self">self</span>.response_sequence_number, <span class="kw-2">&amp;</span><span class="self">self</span>.response_base_nonce)
-            .context(<span class="string">&quot;couldn&#39;t compute nonce&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>plaintext =
-            <span class="kw">crate</span>::hpke::aead::decrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.response_key, <span class="kw-2">&amp;</span>nonce, ciphertext, associated_data)
+            <span class="kw">crate</span>::hpke::aead::decrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.response_key, nonce, ciphertext, associated_data)
                 .context(<span class="string">&quot;couldn&#39;t decrypt response message&quot;</span>)<span class="question-mark">?</span>;
         increment_sequence_number(<span class="kw-2">&amp;mut </span><span class="self">self</span>.response_sequence_number)
             .context(<span class="string">&quot;couldn&#39;t increment sequence number&quot;</span>)<span class="question-mark">?</span>;
@@ -657,13 +650,12 @@
     /// &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption&gt;
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>open(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        nonce: <span class="kw-2">&amp;</span>AeadNonce,
         ciphertext: <span class="kw-2">&amp;</span>[u8],
         associated_data: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; anyhow::Result&lt;Vec&lt;u8&gt;&gt; {
-        <span class="kw">let </span>nonce = compute_nonce(<span class="self">self</span>.request_sequence_number, <span class="kw-2">&amp;</span><span class="self">self</span>.request_base_nonce)
-            .context(<span class="string">&quot;couldn&#39;t compute nonce&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>plaintext =
-            <span class="kw">crate</span>::hpke::aead::decrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.request_key, <span class="kw-2">&amp;</span>nonce, ciphertext, associated_data)
+            <span class="kw">crate</span>::hpke::aead::decrypt(<span class="kw-2">&amp;</span><span class="self">self</span>.request_key, nonce, ciphertext, associated_data)
                 .context(<span class="string">&quot;couldn&#39;t decrypt request message&quot;</span>)<span class="question-mark">?</span>;
         increment_sequence_number(<span class="kw-2">&amp;mut </span><span class="self">self</span>.request_sequence_number)
             .context(<span class="string">&quot;couldn&#39;t increment sequence number&quot;</span>)<span class="question-mark">?</span>;
@@ -759,5 +751,15 @@
         .checked_add(<span class="number">1</span>)
         .context(<span class="string">&quot;couldn&#39;t increment sequence number&quot;</span>)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>deserialize_nonce(nonce: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;AeadNonce&gt; {
+    nonce.try_into().map_err(|<span class="kw">_</span>| {
+        <span class="macro">anyhow!</span>(
+            <span class="string">&quot;incorrect nonce size, expected {}, found {}&quot;</span>,
+            AEAD_NONCE_SIZE_BYTES,
+            nonce.len()
+        )
+    })
 }
 </code></pre></div></section></main></body></html>
