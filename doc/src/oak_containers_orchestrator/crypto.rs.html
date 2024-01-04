@@ -94,6 +94,64 @@
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -113,29 +171,29 @@
     orchestrator_crypto_server::OrchestratorCrypto, DeriveSessionKeysRequest,
     DeriveSessionKeysResponse, KeyOrigin,
 };
-<span class="kw">use </span>oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
+<span class="kw">use </span>anyhow::{anyhow, Context};
+<span class="kw">use </span>hpke::{kem::X25519HkdfSha256, Deserializable, Kem};
+<span class="kw">use </span>oak_containers_orchestrator_client::proto::oak::key_provisioning::v1::GroupKeys;
+<span class="kw">use </span>oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator, ServerEncryptor};
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>tonic::{Request, Response};
 
-<span class="kw">pub struct </span>KeyStore {
+<span class="doccomment">/// An implementation of the Key Store without group keys.
+</span><span class="kw">pub struct </span>InstanceKeyStore {
     <span class="comment">// TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
     </span>instance_encryption_key: Arc&lt;EncryptionKeyProvider&gt;,
-    group_encryption_key: Arc&lt;EncryptionKeyProvider&gt;,
 }
 
-<span class="kw">impl </span>Default <span class="kw">for </span>KeyStore {
+<span class="kw">impl </span>Default <span class="kw">for </span>InstanceKeyStore {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::new()
     }
 }
 
-<span class="kw">impl </span>KeyStore {
+<span class="kw">impl </span>InstanceKeyStore {
     <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>instance_encryption_key = Arc::new(EncryptionKeyProvider::generate());
-        <span class="kw">let </span>group_encryption_key = instance_encryption_key.clone();
         <span class="self">Self </span>{
-            instance_encryption_key,
-            group_encryption_key,
+            instance_encryption_key: Arc::new(EncryptionKeyProvider::generate()),
         }
     }
 
@@ -149,10 +207,68 @@
     <span class="kw">pub fn </span>instance_encryption_public_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
         <span class="self">self</span>.instance_encryption_key.get_serialized_public_key()
     }
+
+    <span class="kw">pub fn </span>generate_group_keys(<span class="self">self</span>) -&gt; KeyStore {
+        KeyStore {
+            instance_encryption_key: <span class="self">self</span>.instance_encryption_key,
+            group_encryption_key: EncryptionKeyProvider::generate(),
+        }
+    }
+
+    <span class="kw">pub fn </span>provide_group_keys(<span class="self">self</span>, group_keys: GroupKeys) -&gt; anyhow::Result&lt;KeyStore&gt; {
+        <span class="comment">// Create server encryptor for decrypting the group keys received from the leader enclave.
+        </span><span class="kw">let </span>encrypted_encryption_private_key = group_keys
+            .encrypted_encryption_private_key
+            .context(<span class="string">&quot;encrypted encryption key wasn&#39;t provided&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>encapsulated_public_key = encrypted_encryption_private_key
+            .serialized_encapsulated_public_key
+            .as_ref()
+            .context(<span class="string">&quot;encapsulated public key wasn&#39;t provided&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>server_encryptor = ServerEncryptor::create(
+            encapsulated_public_key,
+            <span class="self">self</span>.instance_encryption_key.clone(),
+        )
+        .context(<span class="string">&quot;couldn&#39;t create server encryptor&quot;</span>)<span class="question-mark">?</span>;
+
+        <span class="comment">// Decrypt group keys.
+        </span><span class="kw">let </span>(decrypted_encryption_private_key, <span class="kw">_</span>) = server_encryptor
+            .decrypt(<span class="kw-2">&amp;</span>encrypted_encryption_private_key)
+            .context(<span class="string">&quot;couldn&#39;t decrypt the encryption private key&quot;</span>)<span class="question-mark">?</span>;
+
+        <span class="comment">// Parse private key and derive public key.
+        // TODO(#4513): We shouldn&#39;t store the public key, only the private key.
+        </span><span class="kw">let </span>encryption_private_key =
+            &lt;X25519HkdfSha256 <span class="kw">as </span>Kem&gt;::PrivateKey::from_bytes(<span class="kw-2">&amp;</span>decrypted_encryption_private_key)
+                .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialize private key: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
+        <span class="kw">let </span>encryption_public_key = X25519HkdfSha256::sk_to_pk(<span class="kw-2">&amp;</span>encryption_private_key);
+        <span class="kw">let </span>group_encryption_key =
+            EncryptionKeyProvider::new(encryption_private_key, encryption_public_key);
+
+        <span class="comment">// Add group keys to the Orchestrator key store.
+        </span><span class="prelude-val">Ok</span>(KeyStore {
+            instance_encryption_key: <span class="self">self</span>.instance_encryption_key,
+            group_encryption_key,
+        })
+    }
 }
 
-<span class="comment">// TODO(#4442): Create CryptoService after group key was provisioned.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>CryptoService {
+<span class="doccomment">/// An implementation of the Key Store with initialized group keys.
+</span><span class="kw">pub struct </span>KeyStore {
+    <span class="comment">// TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
+    </span>instance_encryption_key: Arc&lt;EncryptionKeyProvider&gt;,
+    group_encryption_key: EncryptionKeyProvider,
+}
+
+<span class="kw">impl </span>KeyStore {
+    <span class="kw">pub fn </span>instance_encryption_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;EncryptionKeyProvider&gt; {
+        <span class="comment">// TODO(#4442): Currently we have to give the encryption key provider to the `ipc_server`.
+        // Once we move all enclave apps to the new crypto service and update the `Attester` to not
+        // have the private key - this function should be removed.
+        </span><span class="self">self</span>.instance_encryption_key.clone()
+    }
+}
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>CryptoService {
     key_store: Arc&lt;KeyStore&gt;,
 }
 

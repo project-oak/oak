@@ -368,6 +368,8 @@
 <a href="#368" id="368">368</a>
 <a href="#369" id="369">369</a>
 <a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -447,7 +449,8 @@
     }
 }
 
-<span class="kw">impl </span>EncryptionKeyProvider {
+<span class="comment">// TODO(#4513): Merge `EncryptionKeyProvider` and `hpke::KeyPair` into `EncryptionKey`.
+</span><span class="kw">impl </span>EncryptionKeyProvider {
     <span class="doccomment">/// Creates a crypto provider with a newly generated key pair.
     </span><span class="kw">pub fn </span>generate() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
@@ -462,7 +465,8 @@
     }
 
     <span class="kw">pub fn </span>get_private_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
-        <span class="self">self</span>.key_pair.get_private_key()
+        <span class="comment">// TODO(#4513): Implement Rust protections for the private key.
+        </span><span class="self">self</span>.key_pair.get_private_key()
     }
 
     <span class="doccomment">/// Returns a NIST P-256 SEC1 encoded point public key.

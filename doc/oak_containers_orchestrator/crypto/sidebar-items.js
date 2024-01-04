@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["KeyStore"]};
+window.SIDEBAR_ITEMS = {"struct":["InstanceKeyStore","KeyStore"]};
