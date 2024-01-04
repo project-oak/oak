@@ -18,10 +18,10 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_na
 /*
  * Class:     com_google_oak_crypto_hpke_RecipientContext
  * Method:    nativeOpen
- * Signature: ([B[B)[B
+ * Signature: ([B[B[B)[B
  */
 JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_nativeOpen
-  (JNIEnv *, jobject, jbyteArray, jbyteArray);
+  (JNIEnv *, jobject, jbyteArray, jbyteArray, jbyteArray);
 
 /*
  * Class:     com_google_oak_crypto_hpke_RecipientContext

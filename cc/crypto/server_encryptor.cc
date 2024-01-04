@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -44,8 +45,10 @@ absl::StatusOr<DecryptionResult> ServerEncryptor::Decrypt(EncryptedRequest encry
   }
 
   // Decrypt request.
+  const std::vector<uint8_t> nonce(encrypted_request.encrypted_message().nonce().begin(),
+                                   encrypted_request.encrypted_message().nonce().end());
   absl::StatusOr<std::string> plaintext =
-      recipient_context_->Open(encrypted_request.encrypted_message().ciphertext(),
+      recipient_context_->Open(nonce, encrypted_request.encrypted_message().ciphertext(),
                                encrypted_request.encrypted_message().associated_data());
   if (!plaintext.ok()) {
     return plaintext.status();

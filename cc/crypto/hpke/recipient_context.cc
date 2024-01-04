@@ -118,14 +118,14 @@ std::vector<uint8_t> RecipientContext::GenerateNonce() {
   return nonce;
 }
 
-absl::StatusOr<std::string> RecipientContext::Open(absl::string_view ciphertext,
+absl::StatusOr<std::string> RecipientContext::Open(const std::vector<uint8_t>& nonce,
+                                                   absl::string_view ciphertext,
                                                    absl::string_view associated_data) {
   /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
   /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
   if (request_sequence_number_ == UINT64_MAX) {
     return absl::OutOfRangeError("Maximum sequence number reached");
   }
-  std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, request_sequence_number_);
 
   absl::StatusOr<std::string> plaintext =
       AeadOpen(request_aead_context_.get(), nonce, ciphertext, associated_data);
