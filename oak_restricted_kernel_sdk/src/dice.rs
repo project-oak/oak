@@ -193,8 +193,15 @@ impl InstanceEncryptionKeyHandle {
     }
 }
 
-impl EncryptionKeyHandle for InstanceEncryptionKeyHandle {
-    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys> {
+// Implements `RecipientContextGenerator` instead of `EncryptionKeyHandle`, as
+// the latter is implemented for for all structs that impl the former.
+// TODO(#3841): remove this comment once `RecipientContextGenerator` has been
+// renamed to `EncryptionKeyHandle`, and the alias trait has been removed.
+impl RecipientContextGenerator for InstanceEncryptionKeyHandle {
+    fn generate_recipient_context(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<SessionKeys> {
         self.key.generate_session_keys(encapsulated_public_key)
     }
 }
@@ -222,8 +229,15 @@ impl MockEncryptionKeyHandle {
 }
 
 #[cfg(feature = "mock_attestion")]
-impl EncryptionKeyHandle for MockEncryptionKeyHandle {
-    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys> {
+// Implements `RecipientContextGenerator` instead of `EncryptionKeyHandle`, as
+// the latter is implemented for for all structs that impl the former.
+// TODO(#3841): remove this comment once `RecipientContextGenerator` has been
+// renamed to `EncryptionKeyHandle`, and the alias trait has been removed.
+impl RecipientContextGenerator for MockEncryptionKeyHandle {
+    fn generate_recipient_context(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<SessionKeys> {
         self.key.generate_session_keys(encapsulated_public_key)
     }
 }
