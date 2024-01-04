@@ -220,8 +220,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>anyhow::Result;
-<span class="kw">use </span>oak_containers_orchestrator_client::LauncherClient;
+</span><span class="kw">use </span><span class="kw">crate</span>::launcher_client::LauncherClient;
+<span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>opentelemetry_api::{
     metrics::{AsyncInstrument, Meter, MeterProvider, ObservableCounter, ObservableGauge, Unit},
     KeyValue,

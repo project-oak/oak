@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["KeyProvisioningRole"],"mod":["hostlib_key_provisioning_client"],"struct":["GetGroupKeysResponse","GetKeyProvisioningRoleResponse"]};

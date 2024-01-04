@@ -152,6 +152,8 @@
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -167,13 +169,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::containers::v1::{
-    orchestrator_crypto_server::OrchestratorCrypto, DeriveSessionKeysRequest,
-    DeriveSessionKeysResponse, KeyOrigin,
+</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
+    containers::v1::{
+        orchestrator_crypto_server::OrchestratorCrypto, DeriveSessionKeysRequest,
+        DeriveSessionKeysResponse, KeyOrigin,
+    },
+    key_provisioning::v1::GroupKeys,
 };
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>hpke::{kem::X25519HkdfSha256, Deserializable, Kem};
-<span class="kw">use </span>oak_containers_orchestrator_client::proto::oak::key_provisioning::v1::GroupKeys;
 <span class="kw">use </span>oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator, ServerEncryptor};
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>tonic::{Request, Response};

@@ -126,6 +126,7 @@
 
 </span><span class="kw">use crate</span>::{
     crypto::{CryptoService, KeyStore},
+    launcher_client::LauncherClient,
     proto::oak::containers::{
         orchestrator_server::{Orchestrator, OrchestratorServer},
         v1::orchestrator_crypto_server::OrchestratorCryptoServer,
@@ -133,7 +134,6 @@
     },
 };
 <span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_containers_orchestrator_client::LauncherClient;
 <span class="kw">use </span>oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
 <span class="kw">use </span>std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
 <span class="kw">use </span>tokio::{fs::set_permissions, net::UnixListener};

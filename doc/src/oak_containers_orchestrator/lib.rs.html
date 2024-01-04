@@ -41,6 +41,7 @@
 <a href="#41" id="41">41</a>
 <a href="#42" id="42">42</a>
 <a href="#43" id="43">43</a>
+<a href="#44" id="44">44</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -56,7 +57,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">mod </span>proto {
+</span><span class="kw">pub mod </span>proto {
     <span class="kw">pub mod </span>oak {
         <span class="kw">pub mod </span>containers {
             <span class="attr">#![allow(clippy::return_self_not_must_use)]
@@ -82,6 +83,7 @@
 <span class="kw">pub mod </span>dice;
 <span class="kw">pub mod </span>ipc_server;
 <span class="kw">pub mod </span>key_provisioning;
+<span class="kw">pub mod </span>launcher_client;
 <span class="kw">pub mod </span>logging;
 <span class="kw">pub mod </span>metrics;
 </code></pre></div></section></main></body></html>
