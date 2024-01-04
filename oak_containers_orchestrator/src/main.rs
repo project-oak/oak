@@ -15,8 +15,10 @@
 
 use anyhow::{anyhow, Context};
 use clap::Parser;
-use oak_containers_orchestrator::crypto::KeyStore;
-use oak_containers_orchestrator_client::LauncherClient;
+use oak_containers_orchestrator::crypto::InstanceKeyStore;
+use oak_containers_orchestrator_client::{
+    proto::oak::containers::v1::KeyProvisioningRole, LauncherClient,
+};
 use oak_dice::cert::generate_ecdsa_key_pair;
 use oak_remote_attestation::attester::{Attester, EmptyAttestationReportGenerator};
 use std::{path::PathBuf, sync::Arc};
@@ -41,7 +43,7 @@ struct Args {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     oak_containers_orchestrator::logging::setup()?;
 
     let args = Args::parse();
@@ -67,20 +69,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &container_bundle,
         &application_config,
     );
-    let key_store = Arc::new(KeyStore::new());
+    let instance_key_store = InstanceKeyStore::new();
     // Ignore the signing key for now.
     let (_signing_key, verifying_key) = generate_ecdsa_key_pair();
 
     let dice_evidence = dice_builder.add_application_keys(
         additional_claims,
-        &key_store.instance_encryption_public_key(),
+        &instance_key_store.instance_encryption_public_key(),
         &verifying_key,
     )?;
     // TODO(#4074): Remove once DICE attestation is fully implemented.
     let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
     let attester = Attester::new(
         attestation_report_generator,
-        key_store.instance_encryption_key(),
+        instance_key_store.instance_encryption_key(),
     );
     let evidence = attester
         .generate_attestation_evidence()
@@ -93,6 +95,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if let Some(path) = args.ipc_socket_path.parent() {
         tokio::fs::create_dir_all(path).await?;
     }
+
+    let key_provisioning_role = launcher_client
+        .get_key_provisioning_role()
+        .await
+        .map_err(|error| anyhow!("couldn't get key provisioning role: {:?}", error))?;
+    let key_store = Arc::new(match key_provisioning_role {
+        KeyProvisioningRole::Unspecified => anyhow::bail!("unspecified key provisioning role"),
+        KeyProvisioningRole::Leader => instance_key_store.generate_group_keys(),
+        KeyProvisioningRole::Dependant => {
+            let group_keys = launcher_client
+                .get_group_keys()
+                .await
+                .map_err(|error| anyhow!("couldn't get group keys: {:?}", error))?;
+            instance_key_store
+                .provide_group_keys(group_keys)
+                .context("couldn't provide group keys")?
+        }
+    });
 
     let _metrics = oak_containers_orchestrator::metrics::run(launcher_client.clone())?;
 

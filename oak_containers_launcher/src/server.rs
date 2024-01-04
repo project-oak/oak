@@ -16,6 +16,12 @@
 use crate::proto::oak::{
     containers::{
         launcher_server::{Launcher, LauncherServer},
+        v1::{
+            hostlib_key_provisioning_server::{
+                HostlibKeyProvisioning, HostlibKeyProvisioningServer,
+            },
+            GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole,
+        },
         GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
     },
     session::v1::AttestationEvidence,
@@ -190,6 +196,29 @@ impl Launcher for LauncherServerImplementation {
 }
 
 #[tonic::async_trait]
+impl HostlibKeyProvisioning for LauncherServerImplementation {
+    async fn get_key_provisioning_role(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<GetKeyProvisioningRoleResponse>, tonic::Status> {
+        // TODO(#4442): Implement setting Hostlib Key Provisioning role via an input argument.
+        Ok(tonic::Response::new(GetKeyProvisioningRoleResponse {
+            role: KeyProvisioningRole::Leader.into(),
+        }))
+    }
+
+    async fn get_group_keys(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<GetGroupKeysResponse>, tonic::Status> {
+        // TODO(#4442): Implement sending group keys to the orchestrator.
+        Err(tonic::Status::unimplemented(
+            "Key Provisioning is not implemented",
+        ))
+    }
+}
+
+#[tonic::async_trait]
 impl MetricsService for LauncherServerImplementation {
     async fn export(
         &self,
@@ -267,6 +296,7 @@ pub async fn new(
     });
     Server::builder()
         .add_service(LauncherServer::from_arc(server_impl.clone()))
+        .add_service(HostlibKeyProvisioningServer::from_arc(server_impl.clone()))
         .add_service(MetricsServiceServer::from_arc(server_impl.clone()))
         .add_service(LogsServiceServer::from_arc(server_impl))
         .serve_with_incoming_shutdown(TcpListenerStream::new(listener), shutdown.map(|_| ()))
