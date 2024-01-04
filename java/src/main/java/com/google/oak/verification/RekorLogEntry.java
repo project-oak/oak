@@ -96,7 +96,9 @@ public final class RekorLogEntry {
    * Based on
    * <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.>
    */
-  static class Data { Hash hash; }
+  static class Data {
+    Hash hash;
+  }
 
   /**
    * Represents a hash digest.
