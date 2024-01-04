@@ -4609,7 +4609,6 @@ dependencies = [
  "clap_complete",
  "colored",
  "itertools",
- "maplit",
  "nix 0.26.2",
  "oak_functions_test_utils",
  "once_cell",

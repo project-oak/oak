@@ -36,19 +36,6 @@ pub struct Opt {
     pub logs: bool,
     #[arg(long, help = "continue execution after error")]
     pub keep_going: bool,
-    #[arg(
-        long,
-        help = r#"Scope of the command [all, commits:<count>, diff_to_main].
-        all: The command is run for all relevant files.
-        commits:<count>: The command is run only for the files modified in the last number of
-        commits given in <count>, as well as the files affected by them. All tracked files
-        that are modified are included in the set of modified files, even if the changes are
-        not staged yet. <count> must be positive.
-        diff_to_main: Similar to commits:<count>, except that the diff to main is used for
-        identifying the set of modified files, instead of using a number of commits."#,
-        default_value = "diff_to_main"
-    )]
-    pub scope: Scope,
     #[command(subcommand)]
     pub cmd: Command,
 }
@@ -92,42 +79,6 @@ pub struct RunOakExampleOpt {
     pub example_name: String,
     #[arg(long, help = "path to the lookup data file")]
     pub lookup_data_path: Option<String>,
-}
-
-#[derive(Clone, Debug, PartialEq, Default)]
-pub enum Scope {
-    // The entire code base.
-    #[default]
-    All,
-    // Parts of the code base, affected by the changes in the diff between this branch and main.
-    DiffToMain,
-    // Parts of the code base, affected by the changes in the specified commits.
-    Commits(u8),
-}
-
-impl std::str::FromStr for Scope {
-    type Err = String;
-    fn from_str(scope: &str) -> Result<Self, Self::Err> {
-        let commits_pattern = regex::Regex::new(r"commits:(\d+)").unwrap();
-        match scope {
-            "all" => Ok(Self::All),
-            "diff_to_main" => Ok(Self::DiffToMain),
-            scope => match commits_pattern.captures(scope) {
-                Some(groups) => {
-                    let commits_count = groups
-                        .get(1)
-                        .ok_or(format!("couldn't parse commits {}", scope))?
-                        .as_str()
-                        .to_string();
-                    let count = commits_count
-                        .parse::<u8>()
-                        .map_err(|err| format!("couldn't parse to u8 {:?}", err))?;
-                    Ok(Self::Commits(count))
-                }
-                None => Err(format!("couldn't parse scope {}", scope)),
-            },
-        }
-    }
 }
 
 #[derive(Parser, Clone, Debug)]

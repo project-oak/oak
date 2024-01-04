@@ -81,7 +81,7 @@ jobs:
           # Do not run tests that require KVM on GitHub Actions, since nested virtualization is not supported.
           OAK_KVM_TESTS: skip
         run: |
-          ./scripts/docker_run nix develop .#ci --command ./scripts/xtask --scope=all ${{ matrix.cmd }}
+          ./scripts/docker_run nix develop .#ci --command ./scripts/xtask ${{ matrix.cmd }}
           df --human-readable
 
         # Ensure that the previous steps did not modify our source-code and that

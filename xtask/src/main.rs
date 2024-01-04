@@ -32,7 +32,6 @@ use xtask::{
     check_build_licenses::*,
     check_license::*,
     check_todo::*,
-    diffs::*,
     examples::*,
     files::*,
     internal::{self, *},
@@ -97,16 +96,16 @@ fn match_cmd(opt: &Opt) -> Step {
         Command::BuildEnclaveBinary => launcher::build_enclave_binary(),
         Command::RunOakFunctionsExample(ref run_opt) => run_oak_functions_example(run_opt),
         Command::RunTests => run_tests(),
-        Command::RunCargoClippy => run_cargo_clippy(&opt.scope),
-        Command::RunCargoTests(ref run_opt) => run_cargo_tests(run_opt, &opt.scope),
+        Command::RunCargoClippy => run_cargo_clippy(),
+        Command::RunCargoTests(ref run_opt) => run_cargo_tests(run_opt),
         Command::RunBazelTests => run_bazel_tests(),
         Command::RunCargoFuzz(ref opt) => run_cargo_fuzz(opt),
-        Command::Format => format(&opt.scope),
-        Command::CheckFormat => check_format(&opt.scope),
+        Command::Format => format(),
+        Command::CheckFormat => check_format(),
         Command::RunCi => run_ci(),
         Command::Completion(ref opt) => run_completion(opt),
         Command::RunCargoDeny => run_cargo_deny(),
-        Command::RunCargoUdeps => run_cargo_udeps(&opt.scope),
+        Command::RunCargoUdeps => run_cargo_udeps(),
         Command::RunCargoClean => run_cargo_clean(),
     }
 }
@@ -134,20 +133,16 @@ fn run_tests() -> Step {
     Step::Multiple {
         name: "tests".to_string(),
         steps: vec![
-            run_cargo_tests(&RunTestsOpt { cleanup: false }, &Scope::DiffToMain),
+            run_cargo_tests(&RunTestsOpt { cleanup: false }),
             run_bazel_tests(),
         ],
     }
 }
 
-fn run_cargo_tests(opt: &RunTestsOpt, scope: &Scope) -> Step {
-    let all_affected_crates = all_affected_crates(scope);
+fn run_cargo_tests(opt: &RunTestsOpt) -> Step {
     Step::Multiple {
         name: "cargo tests".to_string(),
-        steps: vec![
-            run_cargo_test(opt, &all_affected_crates),
-            run_cargo_doc(&all_affected_crates),
-        ],
+        steps: vec![run_cargo_test(opt), run_cargo_doc()],
     }
 }
 
@@ -207,9 +202,7 @@ pub fn run_fuzz_targets_in_crate(path: &Path, opt: &RunCargoFuzz) -> Step {
     }
 }
 
-fn format(scope: &Scope) -> Step {
-    let modified_files = modified_files(scope);
-    let modified_crates = directly_modified_crates(&modified_files);
+fn format() -> Step {
     Step::Multiple {
         name: "format".to_string(),
         steps: vec![
@@ -217,28 +210,25 @@ fn format(scope: &Scope) -> Step {
             run_buildifier(FormatMode::Fix),
             run_prettier(FormatMode::Fix),
             run_markdownlint(FormatMode::Fix),
-            run_cargo_fmt(FormatMode::Fix, &modified_crates),
+            run_cargo_fmt(FormatMode::Fix),
         ],
     }
 }
 
-fn check_format(scope: &Scope) -> Step {
-    let modified_files = modified_files(scope);
-    let modified_crates = directly_modified_crates(&modified_files);
-
+fn check_format() -> Step {
     Step::Multiple {
         name: "format".to_string(),
         steps: vec![
-            run_check_license(&modified_files),
-            run_check_build_licenses(&modified_files),
-            run_check_todo(&modified_files),
+            run_check_license(),
+            run_check_build_licenses(),
+            run_check_todo(),
             run_clang_format(FormatMode::Check),
             run_buildifier(FormatMode::Check),
             run_prettier(FormatMode::Check),
             run_markdownlint(FormatMode::Check),
             // TODO(#1304): Uncomment, when re-run from GitHub is fixed.
             // run_liche(),
-            run_cargo_fmt(FormatMode::Check, &modified_crates),
+            run_cargo_fmt(FormatMode::Check),
             run_hadolint(),
             run_shellcheck(),
         ],
@@ -449,13 +439,12 @@ fn run_clang_format(mode: FormatMode) -> Step {
     }
 }
 
-fn run_check_license(modified_files: &ModifiedContent) -> Step {
+fn run_check_license() -> Step {
     Step::Multiple {
         name: "check license".to_string(),
         steps: source_files()
             .filter(|p| is_source_code_file(p))
             .map(to_string)
-            .filter(|file| modified_files.contains(file))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: CheckLicense::new(entry),
@@ -464,13 +453,12 @@ fn run_check_license(modified_files: &ModifiedContent) -> Step {
     }
 }
 
-fn run_check_build_licenses(modified_files: &ModifiedContent) -> Step {
+fn run_check_build_licenses() -> Step {
     Step::Multiple {
         name: "check BUILD licenses".to_string(),
         steps: source_files()
             .filter(|p| is_build_file(p))
             .map(to_string)
-            .filter(|file| modified_files.contains(file))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: CheckBuildLicenses::new(entry),
@@ -479,13 +467,12 @@ fn run_check_build_licenses(modified_files: &ModifiedContent) -> Step {
     }
 }
 
-fn run_check_todo(modified_files: &ModifiedContent) -> Step {
+fn run_check_todo() -> Step {
     Step::Multiple {
         name: "check todo".to_string(),
         steps: source_files()
             .filter(|p| is_source_code_file(p))
             .map(to_string)
-            .filter(|file| modified_files.contains(file))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: CheckTodo::new(entry),
@@ -494,12 +481,11 @@ fn run_check_todo(modified_files: &ModifiedContent) -> Step {
     }
 }
 
-fn run_cargo_fmt(mode: FormatMode, modified_crates: &ModifiedContent) -> Step {
+fn run_cargo_fmt(mode: FormatMode) -> Step {
     Step::Multiple {
         name: "cargo fmt".to_string(),
         steps: crate_manifest_files()
             .map(to_string)
-            .filter(|path| modified_crates.contains(path))
             .map(|entry| Step::Single {
                 name: entry.clone(),
                 command: Cmd::new(
@@ -518,13 +504,12 @@ fn run_cargo_fmt(mode: FormatMode, modified_crates: &ModifiedContent) -> Step {
     }
 }
 
-fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> Step {
+fn run_cargo_test(opt: &RunTestsOpt) -> Step {
     Step::Multiple {
         name: "cargo test".to_string(),
         steps: crate_manifest_files()
             // Exclude `fuzz` crates, as there are no tests and binaries should not be executed.
             .filter(|path| !is_fuzzing_toml_file(path))
-            .filter(|path| all_affected_crates.contains_path(path))
             .map(|entry| {
                 // Run `cargo test` in the directory of the crate, not the top-level directory.
                 // This is needed as otherwise any crate-specific `.cargo/config.toml` files would
@@ -569,12 +554,11 @@ fn run_cargo_test(opt: &RunTestsOpt, all_affected_crates: &ModifiedContent) -> S
     }
 }
 
-fn run_cargo_doc(all_affected_crates: &ModifiedContent) -> Step {
+fn run_cargo_doc() -> Step {
     Step::Multiple {
         name: "cargo doc".to_string(),
         steps: crate_manifest_files()
             .map(to_string)
-            .filter(|path| all_affected_crates.contains(path))
             .map(|entry| {
                 let mut path = PathBuf::from(entry);
                 path.pop();
@@ -588,12 +572,10 @@ fn run_cargo_doc(all_affected_crates: &ModifiedContent) -> Step {
     }
 }
 
-fn run_cargo_clippy(scope: &Scope) -> Step {
-    let all_affected_crates = all_affected_crates(scope);
+fn run_cargo_clippy() -> Step {
     Step::Multiple {
         name: "cargo clippy".to_string(),
         steps: crate_manifest_files()
-            .filter(|path| all_affected_crates.contains_path(path))
             .map(|entry| Step::Single {
                 name: entry.to_str().unwrap().to_string(),
                 command: Cmd::new_in_dir(
@@ -633,13 +615,10 @@ fn run_cargo_deny() -> Step {
     }
 }
 
-fn run_cargo_udeps(scope: &Scope) -> Step {
-    let all_affected_crates = all_affected_crates(scope);
-
+fn run_cargo_udeps() -> Step {
     Step::Multiple {
         name: "cargo udeps".to_string(),
         steps: workspace_manifest_files()
-            .filter(|path| all_affected_crates.contains_path(path))
             // TODO(#4129): Remove when cargo-udeps supports build-std.
             .filter(|path| {
                 path != Path::new("./stage0_bin/Cargo.toml")
