@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
+use crate::launcher_client::LauncherClient;
 use anyhow::Result;
-use oak_containers_orchestrator_client::LauncherClient;
 use opentelemetry_api::{
     metrics::{AsyncInstrument, Meter, MeterProvider, ObservableCounter, ObservableGauge, Unit},
     KeyValue,

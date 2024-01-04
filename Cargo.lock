@@ -1975,7 +1975,6 @@ dependencies = [
  "hpke",
  "log",
  "nix 0.26.2",
- "oak_containers_orchestrator_client",
  "oak_crypto",
  "oak_dice",
  "oak_grpc_utils",
@@ -1997,22 +1996,6 @@ dependencies = [
  "tokio-util",
  "tonic",
  "walkdir",
-]
-
-[[package]]
-name = "oak_containers_orchestrator_client"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "oak_crypto",
- "oak_grpc_utils",
- "oak_remote_attestation",
- "opentelemetry-otlp",
- "prost",
- "prost-types",
- "tokio",
- "tonic",
- "tower",
 ]
 
 [[package]]
@@ -2052,7 +2035,7 @@ dependencies = [
  "bitflags 2.4.1",
  "clap",
  "nix 0.26.2",
- "oak_containers_orchestrator_client",
+ "oak_containers_orchestrator",
  "oak_grpc_utils",
  "opentelemetry-otlp",
  "opentelemetry_api",
@@ -2192,7 +2175,7 @@ dependencies = [
  "clap",
  "http",
  "micro_rpc",
- "oak_containers_orchestrator_client",
+ "oak_containers_orchestrator",
  "oak_crypto",
  "oak_functions_service",
  "oak_functions_test_utils",

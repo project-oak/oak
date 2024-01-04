@@ -15,6 +15,7 @@
 
 use crate::{
     crypto::{CryptoService, KeyStore},
+    launcher_client::LauncherClient,
     proto::oak::containers::{
         orchestrator_server::{Orchestrator, OrchestratorServer},
         v1::orchestrator_crypto_server::OrchestratorCryptoServer,
@@ -22,7 +23,6 @@ use crate::{
     },
 };
 use anyhow::Context;
-use oak_containers_orchestrator_client::LauncherClient;
 use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
 use std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
 use tokio::{fs::set_permissions, net::UnixListener};

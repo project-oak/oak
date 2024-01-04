@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-mod proto {
+pub mod proto {
     pub mod oak {
         pub mod containers {
             #![allow(clippy::return_self_not_must_use)]
@@ -39,5 +39,6 @@ pub mod crypto;
 pub mod dice;
 pub mod ipc_server;
 pub mod key_provisioning;
+pub mod launcher_client;
 pub mod logging;
 pub mod metrics;
