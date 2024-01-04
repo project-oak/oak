@@ -21,10 +21,7 @@ extern crate alloc;
 
 use benchmark::proto::{benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest};
 use core::assert_matches::assert_matches;
-use oak_crypto::{
-    encryptor::{ClientEncryptor, EncryptionKeyProvider},
-    proto::oak::crypto::v1::EncryptedRequest,
-};
+use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedRequest};
 use oak_functions_service::{
     proto::oak::functions::{
         ExtendNextLookupDataRequest, FinishNextLookupDataRequest, InitializeRequest, InvokeRequest,
@@ -32,7 +29,6 @@ use oak_functions_service::{
     },
     OakFunctionsService,
 };
-use oak_remote_attestation::proto::oak::attestation::v1::Evidence;
 use prost::Message;
 use std::sync::Arc;
 
@@ -51,8 +47,11 @@ fn init() {
 
 fn new_service_for_testing() -> OakFunctionsService {
     OakFunctionsService::new(
-        Evidence::default(),
-        Arc::new(EncryptionKeyProvider::generate()),
+        oak_restricted_kernel_sdk::MockEvidencer::create().expect("failed to create Evidencer"),
+        Arc::new(
+            oak_restricted_kernel_sdk::MockEncryptionKeyHandle::create()
+                .expect("failed to create EncryptionKeyHandle"),
+        ),
         None,
     )
 }

@@ -43,8 +43,7 @@ pub mod wasm;
 use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 use instance::OakFunctionsInstance;
 use oak_core::sync::OnceCell;
-use oak_crypto::encryptor::EncryptionKeyProvider;
-use oak_remote_attestation::{handler::EncryptionHandler, proto::oak::attestation::v1::Evidence};
+use oak_remote_attestation::handler::EncryptionHandler;
 use prost::Message;
 use proto::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
@@ -58,22 +57,31 @@ pub trait Observer {
     fn wasm_invocation(&self, duration: core::time::Duration);
 }
 
+#[cfg(not(test))]
+type EvidencerImpl = oak_restricted_kernel_sdk::InstanceEvidencer;
+#[cfg(test)]
+type EvidencerImpl = oak_restricted_kernel_sdk::MockEvidencer;
+#[cfg(not(test))]
+type EncryptionKeyHandleImpl = oak_restricted_kernel_sdk::InstanceEncryptionKeyHandle;
+#[cfg(test)]
+type EncryptionKeyHandleImpl = oak_restricted_kernel_sdk::MockEncryptionKeyHandle;
+
 pub struct OakFunctionsService {
-    evidence: Evidence,
-    encryption_key_provider: Arc<EncryptionKeyProvider>,
+    evidencer: EvidencerImpl,
+    encryption_key_handle: Arc<EncryptionKeyHandleImpl>,
     instance: OnceCell<OakFunctionsInstance>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
 impl OakFunctionsService {
     pub fn new(
-        evidence: Evidence,
-        encryption_key_provider: Arc<EncryptionKeyProvider>,
+        evidencer: EvidencerImpl,
+        encryption_key_handle: Arc<EncryptionKeyHandleImpl>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> Self {
         Self {
-            evidence,
-            encryption_key_provider,
+            evidencer,
+            encryption_key_handle,
             instance: OnceCell::new(),
             observer,
         }
@@ -85,6 +93,22 @@ impl OakFunctionsService {
                 "not initialized",
             )
         })
+    }
+    /// Extract the public key without verifying. This function is intended as a temporary
+    /// fix to allow the application to start using the oak SDK, while it still
+    /// requires the ability to extract the attestation public key, and to send it
+    /// directly to the client.
+    // TODO(#4571): Remove this function once the client has been updated to use
+    // the verification library. At this point the evidence will just be directly
+    // sent to the client, which extracts the public key from it upon succesful
+    // verification.
+    fn get_encryption_public_key(&self) -> Result<Vec<u8>, alloc::string::String> {
+        let encryption_claims = self.evidencer.get_evidence().application_keys.claims()?;
+        let encryption_cose_key =
+            oak_dice::cert::get_public_key_from_claims_set(&encryption_claims)
+                .map_err(|msg| msg.to_string())?;
+        oak_dice::cert::cose_key_to_hpke_public_key(&encryption_cose_key)
+            .map_err(|msg| msg.to_string())
     }
 }
 
@@ -110,13 +134,29 @@ impl OakFunctions for OakFunctionsService {
                         "already initialized",
                     ));
                 }
+                let public_key = self.get_encryption_public_key().map_err(|err| {
+                    micro_rpc::Status::new_with_message(
+                        micro_rpc::StatusCode::Internal,
+                        format!("failed to get encryption public key: {err}"),
+                    )
+                })?;
+                let evidence =
+                    oak_remote_attestation::proto::oak::attestation::v1::Evidence::try_from(
+                        self.evidencer.get_evidence().clone(),
+                    )
+                    .map_err(|err| {
+                        micro_rpc::Status::new_with_message(
+                            micro_rpc::StatusCode::Internal,
+                            format!("failed to convert evidence to proto: {err}"),
+                        )
+                    })?;
                 #[allow(deprecated)]
                 Ok(InitializeResponse {
                     public_key_info: Some(PublicKeyInfo {
-                        public_key: self.encryption_key_provider.get_serialized_public_key(),
                         attestation: Vec::new(),
+                        public_key,
                     }),
-                    evidence: Some(self.evidence.clone()),
+                    evidence: Some(evidence),
                 })
             }
         }
@@ -127,7 +167,7 @@ impl OakFunctions for OakFunctionsService {
         request: InvokeRequest,
     ) -> Result<InvokeResponse, micro_rpc::Status> {
         log::debug!("called handle_user_request");
-        let encryption_key_provider = self.encryption_key_provider.clone();
+        let encryption_key_handle = self.encryption_key_handle.clone();
         let instance = self.get_instance()?;
 
         let encrypted_request = request.encrypted_request.ok_or_else(|| {
@@ -137,7 +177,7 @@ impl OakFunctions for OakFunctionsService {
             )
         })?;
 
-        EncryptionHandler::create(encryption_key_provider, |r| {
+        EncryptionHandler::create(encryption_key_handle, |r| {
             // Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
             let response_result: Result<Vec<u8>, micro_rpc::Status> =
