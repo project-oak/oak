@@ -246,7 +246,8 @@ impl AddChecksum {
 
         let checksum =
             AddChecksum::checksum(&file[self.start as usize..(self.start + self.length) as usize]);
-        *file.get_mut(self.offset as usize).unwrap() -= checksum;
+        let val = file.get_mut(self.offset as usize).unwrap();
+        *val = val.wrapping_sub(checksum);
         Ok(())
     }
 
