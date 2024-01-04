@@ -44,7 +44,6 @@ use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 use instance::OakFunctionsInstance;
 use oak_core::sync::OnceCell;
 use oak_remote_attestation::handler::EncryptionHandler;
-use oak_restricted_kernel_sdk::Evidencer;
 use prost::Message;
 use proto::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
@@ -58,26 +57,24 @@ pub trait Observer {
     fn wasm_invocation(&self, duration: core::time::Duration);
 }
 
-#[cfg(not(test))]
-type EvidencerImpl = oak_restricted_kernel_sdk::InstanceEvidencer;
-#[cfg(test)]
-type EvidencerImpl = oak_restricted_kernel_sdk::MockEvidencer;
-#[cfg(not(test))]
-type EncryptionKeyHandleImpl = oak_restricted_kernel_sdk::InstanceEncryptionKeyHandle;
-#[cfg(test)]
-type EncryptionKeyHandleImpl = oak_restricted_kernel_sdk::MockEncryptionKeyHandle;
-
-pub struct OakFunctionsService {
-    evidencer: EvidencerImpl,
-    encryption_key_handle: Arc<EncryptionKeyHandleImpl>,
+pub struct OakFunctionsService<
+    EKH: oak_restricted_kernel_sdk::EncryptionKeyHandle + 'static,
+    EVD: oak_restricted_kernel_sdk::Evidencer,
+> {
+    evidencer: EVD,
+    encryption_key_handle: Arc<EKH>,
     instance: OnceCell<OakFunctionsInstance>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
-impl OakFunctionsService {
+impl<
+        EKH: oak_restricted_kernel_sdk::EncryptionKeyHandle + 'static,
+        EVD: oak_restricted_kernel_sdk::Evidencer,
+    > OakFunctionsService<EKH, EVD>
+{
     pub fn new(
-        evidencer: EvidencerImpl,
-        encryption_key_handle: Arc<EncryptionKeyHandleImpl>,
+        evidencer: EVD,
+        encryption_key_handle: Arc<EKH>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> Self {
         Self {
@@ -113,7 +110,11 @@ impl OakFunctionsService {
     }
 }
 
-impl OakFunctions for OakFunctionsService {
+impl<
+        EKH: oak_restricted_kernel_sdk::EncryptionKeyHandle + 'static,
+        EVD: oak_restricted_kernel_sdk::Evidencer,
+    > OakFunctions for OakFunctionsService<EKH, EVD>
+{
     fn initialize(
         &self,
         request: InitializeRequest,
