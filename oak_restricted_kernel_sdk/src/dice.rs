@@ -15,32 +15,15 @@
 //
 
 use anyhow::Ok;
-use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
-// Alias this struct in order to conform to the naming outlined in the restricted kernel SDK design
-// doc.
-// TODO(#3841): rename the relevant trait and struct in our crypto crates.
-use oak_crypto::hpke::RecipientContext as SessionKeys;
+pub use oak_crypto::encryptor::EncryptionKeyHandle;
+use oak_crypto::{
+    encryptor::{EncryptionKeyProvider, RecipientContextGenerator},
+    hpke::RecipientContext as SessionKeys,
+};
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
 use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
 use p256::ecdsa::SigningKey;
 use zerocopy::{AsBytes, FromZeroes};
-
-// This trait just aliases the `RecipientContextGenerator`, while using different naming
-// as defined in the Oak SDK design doc.
-// TODO(#3841): rename the relevant trait and struct in our crypto crates.
-/// Generate [`SessionKeys`] for the provided public key.
-pub trait EncryptionKeyHandle {
-    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys>;
-}
-
-impl<T> EncryptionKeyHandle for T
-where
-    T: RecipientContextGenerator,
-{
-    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys> {
-        self.generate_recipient_context(encapsulated_public_key)
-    }
-}
 
 /// Sign the provided message bytestring using a signing private key, a
 /// corresponding public key of which is contained in the Attestation Evidence.
@@ -193,16 +176,9 @@ impl InstanceEncryptionKeyHandle {
     }
 }
 
-// Implements `RecipientContextGenerator` instead of `EncryptionKeyHandle`, as
-// the latter is implemented for for all structs that impl the former.
-// TODO(#3841): remove this comment once `RecipientContextGenerator` has been
-// renamed to `EncryptionKeyHandle`, and the alias trait has been removed.
-impl RecipientContextGenerator for InstanceEncryptionKeyHandle {
-    fn generate_recipient_context(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<SessionKeys> {
-        self.key.generate_session_keys(encapsulated_public_key)
+impl EncryptionKeyHandle for InstanceEncryptionKeyHandle {
+    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys> {
+        self.key.generate_recipient_context(encapsulated_public_key)
     }
 }
 
@@ -229,16 +205,9 @@ impl MockEncryptionKeyHandle {
 }
 
 #[cfg(feature = "mock_attestion")]
-// Implements `RecipientContextGenerator` instead of `EncryptionKeyHandle`, as
-// the latter is implemented for for all structs that impl the former.
-// TODO(#3841): remove this comment once `RecipientContextGenerator` has been
-// renamed to `EncryptionKeyHandle`, and the alias trait has been removed.
 impl RecipientContextGenerator for MockEncryptionKeyHandle {
-    fn generate_recipient_context(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<SessionKeys> {
-        self.key.generate_session_keys(encapsulated_public_key)
+    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys> {
+        self.key.generate_recipient_context(encapsulated_public_key)
     }
 }
 
