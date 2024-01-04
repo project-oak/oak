@@ -15,7 +15,7 @@
 
 use anyhow::{anyhow, Context};
 use clap::Parser;
-use oak_containers_orchestrator_client::LauncherClient;
+use oak_containers_orchestrator::launcher_client::LauncherClient;
 use oak_functions_containers_app::{orchestrator_client::OrchestratorClient, serve};
 use opentelemetry_api::global::set_error_handler;
 use std::{

@@ -9,7 +9,7 @@ license = "Apache-2.0"
 anyhow = "*"
 bitflags = "*"
 clap = { version = "*", features = ["derive"] }
-oak_containers_orchestrator_client = { workspace = true }
+oak_containers_orchestrator = { workspace = true }
 opentelemetry_api = { version = "*", default-features = false, features = [
   "logs"
 ] }

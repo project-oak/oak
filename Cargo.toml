@@ -12,7 +12,6 @@ members = [
   "oak_containers_hello_world_untrusted_app",
   "oak_containers_launcher",
   "oak_containers_orchestrator",
-  "oak_containers_orchestrator_client",
   "oak_containers_stage1",
   "oak_containers_syslogd",
   "oak_core",
@@ -82,7 +81,7 @@ micro_rpc_build = { path = "./micro_rpc_build" }
 oak_attestation_verification = { path = "./oak_attestation_verification" }
 oak_channel = { path = "./oak_channel" }
 oak_client = { path = "./oak_client" }
-oak_containers_orchestrator_client = { path = "./oak_containers_orchestrator_client" }
+oak_containers_orchestrator = { path = "./oak_containers_orchestrator" }
 oak_containers_launcher = { path = "./oak_containers_launcher" }
 oak_core = { path = "./oak_core" }
 oak_crypto = { path = "./oak_crypto" }

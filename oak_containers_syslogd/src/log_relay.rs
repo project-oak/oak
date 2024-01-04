@@ -16,7 +16,7 @@
 
 use crate::systemd_journal::{Journal, JournalOpenFlags};
 use anyhow::{Context, Result};
-use oak_containers_orchestrator_client::LauncherClient;
+use oak_containers_orchestrator::launcher_client::LauncherClient;
 use opentelemetry_api::logs::{AnyValue, LogRecord, Logger, Severity};
 use std::{
     sync::Arc,

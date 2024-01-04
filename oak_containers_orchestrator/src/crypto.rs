@@ -13,13 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::proto::oak::containers::v1::{
-    orchestrator_crypto_server::OrchestratorCrypto, DeriveSessionKeysRequest,
-    DeriveSessionKeysResponse, KeyOrigin,
+use crate::proto::oak::{
+    containers::v1::{
+        orchestrator_crypto_server::OrchestratorCrypto, DeriveSessionKeysRequest,
+        DeriveSessionKeysResponse, KeyOrigin,
+    },
+    key_provisioning::v1::GroupKeys,
 };
 use anyhow::{anyhow, Context};
 use hpke::{kem::X25519HkdfSha256, Deserializable, Kem};
-use oak_containers_orchestrator_client::proto::oak::key_provisioning::v1::GroupKeys;
 use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator, ServerEncryptor};
 use std::sync::Arc;
 use tonic::{Request, Response};

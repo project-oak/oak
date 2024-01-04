@@ -13,28 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub mod proto {
-    pub mod oak {
-        pub mod containers {
-            #![allow(clippy::return_self_not_must_use)]
-            tonic::include_proto!("oak.containers");
-            pub mod v1 {
-                #![allow(clippy::return_self_not_must_use)]
-                tonic::include_proto!("oak.containers.v1");
-            }
-        }
-        pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::{attestation, session};
-        pub mod key_provisioning {
-            pub mod v1 {
-                #![allow(clippy::return_self_not_must_use)]
-                tonic::include_proto!("oak.key_provisioning.v1");
-            }
-        }
-    }
-}
-
-use self::proto::oak::{
+use crate::proto::oak::{
     attestation::v1::Evidence,
     containers::{
         launcher_client::LauncherClient as GrpcLauncherClient,

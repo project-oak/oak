@@ -20,6 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
         "../",
         &[
+            "oak_remote_attestation/proto/v1/messages.proto",
             "oak_containers/proto/interfaces.proto",
             "proto/key_provisioning/key_provisioning.proto",
             "proto/containers/orchestrator_crypto.proto",
@@ -27,6 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ],
         CodegenOptions {
             build_server: true,
+            build_client: true,
             ..Default::default()
         },
     )?;
