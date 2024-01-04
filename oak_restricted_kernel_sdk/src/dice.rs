@@ -16,34 +16,53 @@
 
 use anyhow::Ok;
 use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
+// Alias this struct in order to conform to the naming outlined in the restricted kernel SDK design
+// doc.
+// TODO(#3841): rename the relevant trait and struct in our crypto crates.
+use oak_crypto::hpke::RecipientContext as SessionKeys;
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
 use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
 use p256::ecdsa::SigningKey;
 use zerocopy::{AsBytes, FromZeroes};
 
+// This trait just aliases the `RecipientContextGenerator`, while using different naming
+// as defined in the Oak SDK design doc.
+// TODO(#3841): rename the relevant trait and struct in our crypto crates.
+/// Generate [`SessionKeys`] for the provided public key.
+pub trait EncryptionKeyHandle {
+    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys>;
+}
+
+impl<T> EncryptionKeyHandle for T
+where
+    T: RecipientContextGenerator,
+{
+    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys> {
+        self.generate_recipient_context(encapsulated_public_key)
+    }
+}
+
+/// Sign the provided message bytestring using a signing private key, a
+/// corresponding public key of which is contained in the Attestation Evidence.
+pub trait Signer {
+    /// Attempt to sign the provided message bytestring using a signing private key, a
+    /// corresponding public key of which is contained in the Attestation Evidence.
+    fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature>;
+}
+
+/// Exposes the ability to read the Attestation Evidence. It is discouraged for enclave applications
+/// to operate with evidences. The evidence should only be used to forward it to the host
+/// application once, which then sends it to the clients.
+pub trait Evidencer {
+    fn get_evidence(&self) -> &Evidence;
+}
+
 lazy_static::lazy_static! {
     static ref DICE_WRAPPER: anyhow::Result<DiceWrapper> = {
         let dice_data = get_restricted_kernel_dice_data()?;
-        let encryption_key = EncryptionKeyProvider::try_from(&dice_data)?;
-        let signing_key = SigningKey::from_slice(
-            &dice_data.application_private_keys.signing_private_key[..P256_PRIVATE_KEY_SIZE],
-        )
-        .map_err(|error| anyhow::anyhow!("couldn't deserialize signing key: {}", error))?;
-        let evidence = dice_data.evidence;
-        Ok(DiceWrapper {
-            evidence,
-            encryption_key,
-            signing_key,
-        })
+        let dice_wrapper = dice_data.try_into()?;
+        Ok(dice_wrapper)
     };
-}
-
-/// Wrapper for DICE evidence and application private keys.
-#[allow(dead_code)]
-struct DiceWrapper {
-    pub evidence: Evidence,
-    pub encryption_key: EncryptionKeyProvider,
-    pub signing_key: p256::ecdsa::SigningKey,
 }
 
 fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData> {
@@ -56,94 +75,206 @@ fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData>
     Ok(result)
 }
 
-/// Defines the origin of the key that should be used.
-pub enum KeyOrigin {
-    /// Describes the key originating in the hardware of the current TEE.
-    Instance,
-    /// Use a key that is shared across enclaves executing the same task.
-    /// Not yet supported on the restricted kernel.
-    Group,
+#[cfg(feature = "mock_attestion")]
+lazy_static::lazy_static! {
+    static ref MOCK_DICE_WRAPPER: anyhow::Result<DiceWrapper> = {
+        let dice_data = get_mock_dice_data();
+        let dice_wrapper = dice_data.try_into()?;
+        Ok(dice_wrapper)
+    };
 }
 
-#[derive(core::marker::Copy, Clone)]
-pub struct Signer {
+#[cfg(feature = "mock_attestion")]
+fn get_mock_dice_data() -> RestrictedKernelDiceData {
+    let stage0_dice_data = oak_stage0_dice::generate_dice_data(
+        &oak_stage0_dice::Measurements::default(),
+        oak_stage0_dice::mock_attestation_report,
+    );
+
+    oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, &[])
+}
+
+/// Wrapper for DICE evidence and application private keys.
+struct DiceWrapper {
+    pub evidence: Evidence,
+    pub encryption_key: EncryptionKeyProvider,
+    pub signing_key: p256::ecdsa::SigningKey,
+}
+
+impl TryFrom<RestrictedKernelDiceData> for DiceWrapper {
+    type Error = anyhow::Error;
+    fn try_from(dice_data: RestrictedKernelDiceData) -> Result<Self, Self::Error> {
+        let encryption_key = EncryptionKeyProvider::try_from(&dice_data)?;
+        let signing_key = SigningKey::from_slice(
+            &dice_data.application_private_keys.signing_private_key[..P256_PRIVATE_KEY_SIZE],
+        )
+        .map_err(|error| anyhow::anyhow!("couldn't deserialize signing key: {}", error))?;
+        let evidence = dice_data.evidence;
+        Ok(DiceWrapper {
+            evidence,
+            encryption_key,
+            signing_key,
+        })
+    }
+}
+
+/// [`Signer`] implementation that using the instance's evidence and corresponding private keys.
+#[derive(Clone)]
+pub struct InstanceSigner {
     key: &'static SigningKey,
 }
 
-impl Signer {
-    pub fn create(key_origin: KeyOrigin) -> anyhow::Result<Self> {
-        match key_origin {
-            KeyOrigin::Instance => {
-                DICE_WRAPPER
-                    .as_ref()
-                    .map_err(anyhow::Error::msg)
-                    .and_then(|d| {
-                        Ok(Signer {
-                            key: &d.signing_key,
-                        })
-                    })
-            }
-            KeyOrigin::Group => Err(anyhow::Error::msg(
-                "Group keys are not yet implemented for the restricted kernel.",
-            )),
-        }
-    }
-    pub fn sign(&self, message: &[u8]) -> oak_crypto::signer::Signature {
-        <SigningKey as oak_crypto::signer::Signer>::sign(self.key, message)
-    }
-}
-
-#[derive(core::marker::Copy, Clone)]
-pub struct EncryptionKeyHandle {
-    key: &'static EncryptionKeyProvider,
-}
-
-impl EncryptionKeyHandle {
-    pub fn create(key_origin: KeyOrigin) -> anyhow::Result<Self> {
-        match key_origin {
-            KeyOrigin::Instance => {
-                DICE_WRAPPER
-                    .as_ref()
-                    .map_err(anyhow::Error::msg)
-                    .and_then(|d| {
-                        Ok(EncryptionKeyHandle {
-                            key: &d.encryption_key,
-                        })
-                    })
-            }
-            KeyOrigin::Group => Err(anyhow::Error::msg(
-                "Group keys are not yet implemented for the restricted kernel.",
-            )),
-        }
-    }
-}
-
-impl RecipientContextGenerator for EncryptionKeyHandle {
-    fn generate_recipient_context(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<oak_crypto::hpke::RecipientContext> {
-        self.key.generate_recipient_context(encapsulated_public_key)
-    }
-}
-
-pub struct Attester {
-    evidence: &'static Evidence,
-}
-
-impl Attester {
+impl InstanceSigner {
     pub fn create() -> anyhow::Result<Self> {
         DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
             .and_then(|d| {
-                Ok(Attester {
+                Ok(InstanceSigner {
+                    key: &d.signing_key,
+                })
+            })
+    }
+}
+
+impl Signer for InstanceSigner {
+    fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature> {
+        Ok(<SigningKey as oak_crypto::signer::Signer>::sign(
+            self.key, message,
+        ))
+    }
+}
+
+#[cfg(feature = "mock_attestion")]
+/// [`Signer`] implementation that using mock evidence and corresponding mock private keys.
+#[derive(Clone)]
+pub struct MockSigner {
+    key: &'static SigningKey,
+}
+#[cfg(feature = "mock_attestion")]
+impl MockSigner {
+    pub fn create() -> anyhow::Result<Self> {
+        MOCK_DICE_WRAPPER
+            .as_ref()
+            .map_err(anyhow::Error::msg)
+            .and_then(|d| {
+                Ok(MockSigner {
+                    key: &d.signing_key,
+                })
+            })
+    }
+}
+#[cfg(feature = "mock_attestion")]
+impl Signer for MockSigner {
+    fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature> {
+        Ok(<SigningKey as oak_crypto::signer::Signer>::sign(
+            self.key, message,
+        ))
+    }
+}
+
+/// [`EncryptionKeyHandle`] implementation that using the instance's evidence and corresponding
+/// private keys.
+#[derive(Clone)]
+pub struct InstanceEncryptionKeyHandle {
+    key: &'static EncryptionKeyProvider,
+}
+
+impl InstanceEncryptionKeyHandle {
+    pub fn create() -> anyhow::Result<Self> {
+        DICE_WRAPPER
+            .as_ref()
+            .map_err(anyhow::Error::msg)
+            .and_then(|d| {
+                Ok(InstanceEncryptionKeyHandle {
+                    key: &d.encryption_key,
+                })
+            })
+    }
+}
+
+impl EncryptionKeyHandle for InstanceEncryptionKeyHandle {
+    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys> {
+        self.key.generate_session_keys(encapsulated_public_key)
+    }
+}
+
+#[cfg(feature = "mock_attestion")]
+/// [`EncryptionKeyHandle`] implementation that using mock evidence and corresponding mock
+/// private keys.
+#[derive(Clone)]
+pub struct MockEncryptionKeyHandle {
+    key: &'static EncryptionKeyProvider,
+}
+
+#[cfg(feature = "mock_attestion")]
+impl MockEncryptionKeyHandle {
+    pub fn create() -> anyhow::Result<Self> {
+        MOCK_DICE_WRAPPER
+            .as_ref()
+            .map_err(anyhow::Error::msg)
+            .and_then(|d| {
+                Ok(MockEncryptionKeyHandle {
+                    key: &d.encryption_key,
+                })
+            })
+    }
+}
+
+#[cfg(feature = "mock_attestion")]
+impl EncryptionKeyHandle for MockEncryptionKeyHandle {
+    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys> {
+        self.key.generate_session_keys(encapsulated_public_key)
+    }
+}
+
+/// [`Evidencer`] implementation that exposes the instance's evidence.
+pub struct InstanceEvidencer {
+    evidence: &'static Evidence,
+}
+
+impl InstanceEvidencer {
+    pub fn create() -> anyhow::Result<Self> {
+        DICE_WRAPPER
+            .as_ref()
+            .map_err(anyhow::Error::msg)
+            .and_then(|d| {
+                Ok(InstanceEvidencer {
                     evidence: &d.evidence,
                 })
             })
     }
-    /// Get the attestation evidence of the current enclave.
-    pub fn get_evidence(&self) -> &Evidence {
+}
+
+impl Evidencer for InstanceEvidencer {
+    fn get_evidence(&self) -> &Evidence {
+        self.evidence
+    }
+}
+
+/// [`Evidencer`] implementation that exposes mock evidence.
+#[cfg(feature = "mock_attestion")]
+pub struct MockEvidencer {
+    evidence: &'static Evidence,
+}
+
+#[cfg(feature = "mock_attestion")]
+impl MockEvidencer {
+    pub fn create() -> anyhow::Result<Self> {
+        MOCK_DICE_WRAPPER
+            .as_ref()
+            .map_err(anyhow::Error::msg)
+            .and_then(|d| {
+                Ok(MockEvidencer {
+                    evidence: &d.evidence,
+                })
+            })
+    }
+}
+
+#[cfg(feature = "mock_attestion")]
+impl Evidencer for MockEvidencer {
+    fn get_evidence(&self) -> &Evidence {
         self.evidence
     }
 }
