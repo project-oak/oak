@@ -16,6 +16,7 @@
 use anyhow::{anyhow, Context};
 use clap::Parser;
 use oak_containers_orchestrator::launcher_client::LauncherClient;
+use oak_containers_sdk::EncryptionKeyHandle;
 use oak_functions_containers_app::{orchestrator_client::OrchestratorClient, serve};
 use opentelemetry_api::global::set_error_handler;
 use std::{
@@ -56,6 +57,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = OrchestratorClient::create()
         .await
         .context("couldn't create Orchestrator client")?;
+    let encryption_key_handle = EncryptionKeyHandle::create()
+        .await
+        .map_err(|error| anyhow!("couldn't create encryption key handle: {:?}", error))?;
 
     // To be used when connecting trusted app to orchestrator.
     let _application_config = client.get_application_config().await?;
@@ -65,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         OAK_FUNCTIONS_CONTAINERS_APP_PORT,
     );
     let listener = TcpListener::bind(addr).await?;
-    let server_handle = tokio::spawn(serve(listener, Arc::new(client.clone()), metrics));
+    let server_handle = tokio::spawn(serve(listener, encryption_key_handle, metrics));
 
     eprintln!("Running Oak Functions on Oak Containers at address: {addr}");
     client.notify_app_ready().await?;

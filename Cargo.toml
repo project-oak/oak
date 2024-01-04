@@ -12,6 +12,7 @@ members = [
   "oak_containers_hello_world_untrusted_app",
   "oak_containers_launcher",
   "oak_containers_orchestrator",
+  "oak_containers_sdk",
   "oak_containers_stage1",
   "oak_containers_syslogd",
   "oak_core",
@@ -83,6 +84,7 @@ oak_channel = { path = "./oak_channel" }
 oak_client = { path = "./oak_client" }
 oak_containers_orchestrator = { path = "./oak_containers_orchestrator" }
 oak_containers_launcher = { path = "./oak_containers_launcher" }
+oak_containers_sdk = { path = "./oak_containers_sdk" }
 oak_core = { path = "./oak_core" }
 oak_crypto = { path = "./oak_crypto" }
 oak_dice = { path = "./oak_dice" }

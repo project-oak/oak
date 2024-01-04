@@ -13,14 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{
-    orchestrator_client::OrchestratorClient,
-    proto::oak::containers::example::{
-        trusted_application_server::{TrustedApplication, TrustedApplicationServer},
-        HelloRequest, HelloResponse,
-    },
+use crate::proto::oak::containers::example::{
+    trusted_application_server::{TrustedApplication, TrustedApplicationServer},
+    HelloRequest, HelloResponse,
 };
 use anyhow::anyhow;
+use oak_containers_sdk::EncryptionKeyHandle;
 use oak_crypto::encryptor::AsyncServerEncryptor;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
@@ -28,15 +26,15 @@ use tokio_stream::wrappers::TcpListenerStream;
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 struct TrustedApplicationImplementation {
-    orchestrator_client: OrchestratorClient,
     application_config: Vec<u8>,
+    encryption_key_handle: EncryptionKeyHandle,
 }
 
 impl TrustedApplicationImplementation {
-    pub fn new(orchestrator_client: OrchestratorClient, application_config: Vec<u8>) -> Self {
+    pub fn new(application_config: Vec<u8>, encryption_key_handle: EncryptionKeyHandle) -> Self {
         Self {
-            orchestrator_client,
             application_config,
+            encryption_key_handle,
         }
     }
 }
@@ -52,9 +50,7 @@ impl TrustedApplication for TrustedApplicationImplementation {
             .encrypted_request
             .ok_or(tonic::Status::internal("encrypted request wasn't provided"))?;
 
-        // TODO(#4477): Remove unnecessary copies of the Orchestrator client.
-        let orchestrator_client = self.orchestrator_client.clone();
-        let mut server_encryptor = AsyncServerEncryptor::new(&orchestrator_client);
+        let mut server_encryptor = AsyncServerEncryptor::new(&self.encryption_key_handle);
 
         // Associated data is ignored.
         let (name_bytes, _) =
@@ -82,12 +78,12 @@ impl TrustedApplication for TrustedApplicationImplementation {
 
 pub async fn create(
     listener: TcpListener,
-    orchestrator_client: OrchestratorClient,
     application_config: Vec<u8>,
+    encryption_key_handle: EncryptionKeyHandle,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(TrustedApplicationServer::new(
-            TrustedApplicationImplementation::new(orchestrator_client, application_config),
+            TrustedApplicationImplementation::new(application_config, encryption_key_handle),
         ))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
