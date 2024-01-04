@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["all_affected_crates","directly_modified_crates","modified_files"],"struct":["ModifiedContent"]};
