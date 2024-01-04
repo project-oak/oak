@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["KeyOrigin"],"struct":["Attester","EncryptionKeyHandle","FileDescriptorChannel","Signer","StderrLogger"]};
+window.SIDEBAR_ITEMS = {"struct":["FileDescriptorChannel","InstanceEncryptionKeyHandle","InstanceEvidencer","InstanceSigner","StderrLogger"],"trait":["EncryptionKeyHandle","Evidencer","Signer"]};
