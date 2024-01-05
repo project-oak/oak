@@ -87,7 +87,7 @@ where
         &self,
         encapsulated_public_key: &[u8],
     ) -> anyhow::Result<RecipientContext> {
-        self.generate_recipient_context(encapsulated_public_key)
+        self.generate_recipient_context(encapsulated_public_key).await
     }
 }
 
