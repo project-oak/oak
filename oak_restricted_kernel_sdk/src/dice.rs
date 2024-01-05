@@ -58,7 +58,7 @@ fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData>
     Ok(result)
 }
 
-#[cfg(feature = "mock_attestion")]
+#[cfg(feature = "mock_attestation")]
 lazy_static::lazy_static! {
     static ref MOCK_DICE_WRAPPER: anyhow::Result<DiceWrapper> = {
         let dice_data = get_mock_dice_data();
@@ -67,7 +67,7 @@ lazy_static::lazy_static! {
     };
 }
 
-#[cfg(feature = "mock_attestion")]
+#[cfg(feature = "mock_attestation")]
 fn get_mock_dice_data() -> RestrictedKernelDiceData {
     let stage0_dice_data = oak_stage0_dice::generate_dice_data(
         &oak_stage0_dice::Measurements::default(),
@@ -128,13 +128,13 @@ impl Signer for InstanceSigner {
     }
 }
 
-#[cfg(feature = "mock_attestion")]
+#[cfg(feature = "mock_attestation")]
 /// [`Signer`] implementation that using mock evidence and corresponding mock private keys.
 #[derive(Clone)]
 pub struct MockSigner {
     key: &'static SigningKey,
 }
-#[cfg(feature = "mock_attestion")]
+#[cfg(feature = "mock_attestation")]
 impl MockSigner {
     pub fn create() -> anyhow::Result<Self> {
         MOCK_DICE_WRAPPER
@@ -147,7 +147,7 @@ impl MockSigner {
             })
     }
 }
-#[cfg(feature = "mock_attestion")]
+#[cfg(feature = "mock_attestation")]
 impl Signer for MockSigner {
     fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature> {
         Ok(<SigningKey as oak_crypto::signer::Signer>::sign(
@@ -182,7 +182,7 @@ impl EncryptionKeyHandle for InstanceEncryptionKeyHandle {
     }
 }
 
-#[cfg(feature = "mock_attestion")]
+#[cfg(feature = "mock_attestation")]
 /// [`EncryptionKeyHandle`] implementation that using mock evidence and corresponding mock
 /// private keys.
 #[derive(Clone)]
@@ -190,7 +190,7 @@ pub struct MockEncryptionKeyHandle {
     key: &'static EncryptionKeyProvider,
 }
 
-#[cfg(feature = "mock_attestion")]
+#[cfg(feature = "mock_attestation")]
 impl MockEncryptionKeyHandle {
     pub fn create() -> anyhow::Result<Self> {
         MOCK_DICE_WRAPPER
@@ -204,7 +204,7 @@ impl MockEncryptionKeyHandle {
     }
 }
 
-#[cfg(feature = "mock_attestion")]
+#[cfg(feature = "mock_attestation")]
 impl RecipientContextGenerator for MockEncryptionKeyHandle {
     fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys> {
         self.key.generate_recipient_context(encapsulated_public_key)
@@ -236,12 +236,12 @@ impl Evidencer for InstanceEvidencer {
 }
 
 /// [`Evidencer`] implementation that exposes mock evidence.
-#[cfg(feature = "mock_attestion")]
+#[cfg(feature = "mock_attestation")]
 pub struct MockEvidencer {
     evidence: &'static Evidence,
 }
 
-#[cfg(feature = "mock_attestion")]
+#[cfg(feature = "mock_attestation")]
 impl MockEvidencer {
     pub fn create() -> anyhow::Result<Self> {
         MOCK_DICE_WRAPPER
@@ -255,7 +255,7 @@ impl MockEvidencer {
     }
 }
 
-#[cfg(feature = "mock_attestion")]
+#[cfg(feature = "mock_attestation")]
 impl Evidencer for MockEvidencer {
     fn get_evidence(&self) -> &Evidence {
         self.evidence

@@ -104,7 +104,7 @@ impl EncryptionKeyProvider {
     }
 }
 
-// This trait just aliases the `RecipientContextGenerator`, while using different naming
+// This trait just aliases the [`RecipientContextGenerator`], while using different naming
 // as defined in the Oak SDK design doc.
 // TODO(#3841): rename the relevant trait and struct in our crypto crates.
 /// Generate [`SessionKeys`] for the provided public key.
@@ -114,6 +114,7 @@ pub trait EncryptionKeyHandle {
 
 // Alias this struct in order to conform to the naming outlined in the restricted kernel SDK design
 // doc.
+// TODO(#3841): rename the relevant struct and remove this alias.
 use crate::encryptor::RecipientContext as SessionKeys;
 
 impl<T> RecipientContextGenerator for T
