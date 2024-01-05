@@ -20,11 +20,11 @@ COPY files /
 RUN systemctl enable systemd-networkd
 
 # Copy the orchestartor binary & service
-COPY ./target/oak_containers_orchestrator /usr/bin/
+COPY ./target/oak_containers_orchestrator /usr/bin/oak_containers_orchestrator
 RUN systemctl enable oak-orchestrator
 
 # Log relay
-COPY ./target/oak_containers_syslogd /usr/bin
+COPY ./target/oak_containers_syslogd_patched /usr/bin/oak_containers_syslogd
 RUN systemctl enable oak-syslogd
 
 # Only enable interactive logins if the kernel was booted with "debug" flag.
