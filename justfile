@@ -37,8 +37,38 @@ stage1_cpio:
 oak_containers_kernel:
     env --chdir=oak_containers_kernel make
 
-oak_containers_system_image:
-    env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 bash build.sh
+oak_containers_orchestrator:
+    cargo build --package=oak_containers_orchestrator --release --target=x86_64-unknown-linux-musl
+    mkdir --parents {{oak_containers_system_image_dir}}/target
+    cp --force ./target/x86_64-unknown-linux-musl/release/oak_containers_orchestrator {{oak_containers_orchestrator}}
+
+# When built under nix the interpreter points to some nix-specific location that doesn't exist on a regular Linux host, therefore
+# we need to manually patch the binary to set it back to the normal regular location.
+# But we can't do it in-place, as that would confuse cargo. Therefore we copy the binary to a new location and patch that.
+oak_containers_syslogd:
+    cargo build --package=oak_containers_syslogd --release
+    mkdir --parents {{oak_containers_system_image_dir}}/target
+    cp --force ./target/x86_64-unknown-linux-gnu/release/oak_containers_syslogd {{oak_containers_syslogd}}
+    patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 {{oak_containers_syslogd}}
+
+oak_containers_system_image_dir := 'oak_containers_system_image'
+oak_containers_syslogd := oak_containers_system_image_dir / 'target/oak_containers_syslogd'
+oak_containers_orchestrator := oak_containers_system_image_dir / 'target/oak_containers_orchestrator'
+oak_containers_system_image_tar := oak_containers_system_image_dir / 'target/image.tar'
+oak_containers_system_image_tag := 'oak-containers-system-image:latest'
+
+oak_containers_system_image: oak_containers_orchestrator oak_containers_syslogd
+    chmod --recursive a+rX {{oak_containers_system_image_dir}}/files/
+    # We need to actually create a container, otherwise we won't be able to use `docker export` that gives us a filesystem image.
+    # (`docker save` creates a tarball which has all the layers separate, which is _not_ what we want.)
+    docker build ./oak_containers_system_image --tag={{oak_containers_system_image_tag}}
+    readonly NEW_DOCKER_CONTAINER_ID="$(docker create {{oak_containers_system_image_tag}})" && \
+        docker export "$NEW_DOCKER_CONTAINER_ID" > {{oak_containers_system_image_tar}} && \
+        docker rm "$NEW_DOCKER_CONTAINER_ID"
+    ls -lah {{oak_containers_system_image_tar}}
+    # Hack, as Docker doesn't give us a `/etc/hosts` which means `localhost` won't resolve.
+    tar --append --file={{oak_containers_system_image_tar}} --directory={{oak_containers_system_image_dir}}/files etc/hosts
+    xz --force {{oak_containers_system_image_tar}}
 
 # Oak Containers Hello World entry point.
 
