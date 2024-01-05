@@ -87,11 +87,6 @@
 <a href="#87" id="87">87</a>
 <a href="#88" id="88">88</a>
 <a href="#89" id="89">89</a>
-<a href="#90" id="90">90</a>
-<a href="#91" id="91">91</a>
-<a href="#92" id="92">92</a>
-<a href="#93" id="93">93</a>
-<a href="#94" id="94">94</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -108,7 +103,9 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">/// Options for building gRPC code.
+</span><span class="kw">use </span>std::path::Path;
+
+<span class="doccomment">/// Options for building gRPC code.
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>CodegenOptions {
     <span class="doccomment">/// Specify whether to build client related code.
@@ -139,23 +136,16 @@
 /// The path to the root repository must be passed as `include`. All paths to `.proto` files
 /// must be specified relative to this path. Likewise, all imported paths in `.proto` files must
 /// be specified relative to this path.
-</span><span class="comment">// TODO(#4588): Swap the include and protos arguments, so they match the order of the
-// corresponding arguments in the `tonic_build::configure()` function.
 </span><span class="kw">pub fn </span>generate_grpc_code(
-    include: <span class="kw-2">&amp;</span>str,
-    protos: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str],
+    protos: <span class="kw-2">&amp;</span>[<span class="kw">impl </span>AsRef&lt;Path&gt;],
+    include: <span class="kw">impl </span>AsRef&lt;Path&gt;,
     options: CodegenOptions,
 ) -&gt; std::io::Result&lt;()&gt; {
     set_protoc_env_if_unset();
 
     <span class="comment">// TODO(#1093): Move all proto generation to a common crate.
-    </span><span class="kw">let </span>include = std::path::Path::new(include);
-    <span class="kw">let </span>file_paths: Vec&lt;std::path::PathBuf&gt; = protos
-        .iter()
-        .map(|file_path| include.join(file_path))
-        .collect();
 
-    <span class="comment">// Generate the normal (non-Oak) server and client code for the gRPC service,
+    // Generate the normal (non-Oak) server and client code for the gRPC service,
     // along with the Rust types corresponding to the message definitions.
     </span><span class="kw">let </span><span class="kw-2">mut </span>config = tonic_build::configure()
         .build_client(options.build_client)
@@ -166,17 +156,17 @@
     // every time. Instead, we specify the list of files to watch explicitly, even though that
     // may not have 100% recall, since some of the transitive includes may be missed.
     </span>config = config.emit_rerun_if_changed(<span class="bool-val">false</span>);
-    file_paths.iter().for_each(|filename| {
+    protos.iter().for_each(|filename| {
         <span class="macro">println!</span>(
             <span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>,
-            filename.as_os_str().to_string_lossy()
+            include.as_ref().join(filename).to_string_lossy()
         )
     });
 
     <span class="kw">for </span>extern_path <span class="kw">in </span>options.extern_paths {
         config = config.extern_path(extern_path.proto_path, extern_path.rust_path);
     }
-    config.compile(<span class="kw-2">&amp;</span>file_paths, <span class="kw-2">&amp;</span>[include])
+    config.compile(protos, <span class="kw-2">&amp;</span>[include])
 }
 
 <span class="kw">fn </span>set_protoc_env_if_unset() {
