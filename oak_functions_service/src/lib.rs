@@ -59,9 +59,9 @@ pub trait Observer {
 
 pub struct OakFunctionsService<
     EKH: oak_restricted_kernel_sdk::EncryptionKeyHandle + 'static,
-    EVD: oak_restricted_kernel_sdk::Evidencer,
+    EP: oak_restricted_kernel_sdk::Evidencer,
 > {
-    evidencer: EVD,
+    evidence_provider: EP,
     encryption_key_handle: Arc<EKH>,
     instance: OnceCell<OakFunctionsInstance>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
@@ -69,16 +69,16 @@ pub struct OakFunctionsService<
 
 impl<
         EKH: oak_restricted_kernel_sdk::EncryptionKeyHandle + 'static,
-        EVD: oak_restricted_kernel_sdk::Evidencer,
-    > OakFunctionsService<EKH, EVD>
+        EP: oak_restricted_kernel_sdk::Evidencer,
+    > OakFunctionsService<EKH, EP>
 {
     pub fn new(
-        evidencer: EVD,
+        evidence_provider: EP,
         encryption_key_handle: Arc<EKH>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> Self {
         Self {
-            evidencer,
+            evidence_provider,
             encryption_key_handle,
             instance: OnceCell::new(),
             observer,
@@ -101,7 +101,11 @@ impl<
     // sent to the client, which extracts the public key from it upon succesful
     // verification.
     fn get_encryption_public_key(&self) -> Result<Vec<u8>, alloc::string::String> {
-        let encryption_claims = self.evidencer.get_evidence().application_keys.claims()?;
+        let encryption_claims = self
+            .evidence_provider
+            .get_evidence()
+            .application_keys
+            .claims()?;
         let encryption_cose_key =
             oak_dice::cert::get_public_key_from_claims_set(&encryption_claims)
                 .map_err(|msg| msg.to_string())?;
@@ -112,8 +116,8 @@ impl<
 
 impl<
         EKH: oak_restricted_kernel_sdk::EncryptionKeyHandle + 'static,
-        EVD: oak_restricted_kernel_sdk::Evidencer,
-    > OakFunctions for OakFunctionsService<EKH, EVD>
+        EP: oak_restricted_kernel_sdk::Evidencer,
+    > OakFunctions for OakFunctionsService<EKH, EP>
 {
     fn initialize(
         &self,
@@ -144,7 +148,7 @@ impl<
                 })?;
                 let evidence =
                     oak_remote_attestation::proto::oak::attestation::v1::Evidence::try_from(
-                        self.evidencer.get_evidence().clone(),
+                        self.evidence_provider.get_evidence().clone(),
                     )
                     .map_err(|err| {
                         micro_rpc::Status::new_with_message(
