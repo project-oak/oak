@@ -100,17 +100,18 @@ impl<
     // the verification library. At this point the evidence will just be directly
     // sent to the client, which extracts the public key from it upon succesful
     // verification.
-    fn get_encryption_public_key(&self) -> Result<Vec<u8>, alloc::string::String> {
+    fn get_encryption_public_key(&self) -> Result<Vec<u8>, anyhow::Error> {
         let encryption_claims = self
             .evidence_provider
             .get_evidence()
             .application_keys
-            .claims()?;
+            .claims()
+            .map_err(anyhow::Error::msg)?;
         let encryption_cose_key =
             oak_dice::cert::get_public_key_from_claims_set(&encryption_claims)
-                .map_err(|msg| msg.to_string())?;
+                .map_err(anyhow::Error::msg)?;
         oak_dice::cert::cose_key_to_hpke_public_key(&encryption_cose_key)
-            .map_err(|msg| msg.to_string())
+            .map_err(anyhow::Error::msg)
     }
 }
 
