@@ -205,7 +205,7 @@ impl MockEncryptionKeyHandle {
 }
 
 #[cfg(feature = "mock_attestation")]
-impl RecipientContextGenerator for MockEncryptionKeyHandle {
+impl EncryptionKeyHandle for MockEncryptionKeyHandle {
     fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys> {
         self.key.generate_recipient_context(encapsulated_public_key)
     }
