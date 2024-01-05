@@ -299,7 +299,7 @@
 <span class="doccomment">/// Exposes the ability to read the Attestation Evidence. It is discouraged for enclave applications
 /// to operate with evidences. The evidence should only be used to forward it to the host
 /// application once, which then sends it to the clients.
-</span><span class="kw">pub trait </span>Evidencer {
+</span><span class="kw">pub trait </span>EvidenceProvider {
     <span class="kw">fn </span>get_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Evidence;
 }
 
@@ -474,44 +474,44 @@
     }
 }
 
-<span class="doccomment">/// [`Evidencer`] implementation that exposes the instance&#39;s evidence.
-</span><span class="kw">pub struct </span>InstanceEvidencer {
+<span class="doccomment">/// [`EvidenceProvider`] implementation that exposes the instance&#39;s evidence.
+</span><span class="kw">pub struct </span>InstanceEvidenceProvider {
     evidence: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Evidence,
 }
 
-<span class="kw">impl </span>InstanceEvidencer {
+<span class="kw">impl </span>InstanceEvidenceProvider {
     <span class="kw">pub fn </span>create() -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
             .and_then(|d| {
-                <span class="prelude-val">Ok</span>(InstanceEvidencer {
+                <span class="prelude-val">Ok</span>(InstanceEvidenceProvider {
                     evidence: <span class="kw-2">&amp;</span>d.evidence,
                 })
             })
     }
 }
 
-<span class="kw">impl </span>Evidencer <span class="kw">for </span>InstanceEvidencer {
+<span class="kw">impl </span>EvidenceProvider <span class="kw">for </span>InstanceEvidenceProvider {
     <span class="kw">fn </span>get_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Evidence {
         <span class="self">self</span>.evidence
     }
 }
 
-<span class="doccomment">/// [`Evidencer`] implementation that exposes mock evidence.
+<span class="doccomment">/// [`EvidenceProvider`] implementation that exposes mock evidence.
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;mock_attestation&quot;</span>)]
-</span><span class="kw">pub struct </span>MockEvidencer {
+</span><span class="kw">pub struct </span>MockEvidenceProvider {
     evidence: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>Evidence,
 }
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;mock_attestation&quot;</span>)]
-</span><span class="kw">impl </span>MockEvidencer {
+</span><span class="kw">impl </span>MockEvidenceProvider {
     <span class="kw">pub fn </span>create() -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         MOCK_DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
             .and_then(|d| {
-                <span class="prelude-val">Ok</span>(MockEvidencer {
+                <span class="prelude-val">Ok</span>(MockEvidenceProvider {
                     evidence: <span class="kw-2">&amp;</span>d.evidence,
                 })
             })
@@ -519,7 +519,7 @@
 }
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;mock_attestation&quot;</span>)]
-</span><span class="kw">impl </span>Evidencer <span class="kw">for </span>MockEvidencer {
+</span><span class="kw">impl </span>EvidenceProvider <span class="kw">for </span>MockEvidenceProvider {
     <span class="kw">fn </span>get_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Evidence {
         <span class="self">self</span>.evidence
     }
