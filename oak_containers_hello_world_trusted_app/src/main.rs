@@ -15,7 +15,7 @@
 
 use anyhow::anyhow;
 use oak_containers_hello_world_trusted_app::orchestrator_client::OrchestratorClient;
-use oak_containers_sdk::EncryptionKeyHandle;
+use oak_containers_sdk::InstanceEncryptionKeyHandle;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::net::TcpListener;
 
@@ -27,7 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .map_err(|error| anyhow!("couldn't create Orchestrator client: {:?}", error))?;
     let application_config = client.clone().get_application_config().await?;
-    let encryption_key_handle = EncryptionKeyHandle::create()
+    let encryption_key_handle = InstanceEncryptionKeyHandle::create()
         .await
         .map_err(|error| anyhow!("couldn't create encryption key handle: {:?}", error))?;
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), TRUSTED_APP_PORT);

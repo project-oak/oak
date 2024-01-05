@@ -63,18 +63,18 @@ pub mod orchestrator_client;
 // Instance of the OakFunctions service for Oak Containers.
 pub struct OakFunctionsContainersService {
     instance: OnceLock<OakFunctionsInstance>,
-    encryption_key_handle: Arc<EncryptionKeyHandle>,
+    encryption_key_handle: Arc<dyn EncryptionKeyHandle>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
 impl OakFunctionsContainersService {
     pub fn new(
-        encryption_key_handle: EncryptionKeyHandle,
+        encryption_key_handle: Arc<dyn EncryptionKeyHandle>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> Self {
         Self {
             instance: OnceLock::new(),
-            encryption_key_handle: Arc::new(encryption_key_handle),
+            encryption_key_handle,
             observer,
         }
     }
@@ -375,7 +375,7 @@ const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
 pub async fn serve<P: MeterProvider>(
     listener: TcpListener,
-    encryption_key_handle: EncryptionKeyHandle,
+    encryption_key_handle: Arc<dyn EncryptionKeyHandle>,
     provider: P,
 ) -> anyhow::Result<()> {
     let meter = provider.meter("oak_functions_containers_app");

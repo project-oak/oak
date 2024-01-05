@@ -18,7 +18,7 @@ use crate::proto::oak::containers::example::{
     HelloRequest, HelloResponse,
 };
 use anyhow::anyhow;
-use oak_containers_sdk::EncryptionKeyHandle;
+use oak_containers_sdk::InstanceEncryptionKeyHandle;
 use oak_crypto::encryptor::AsyncServerEncryptor;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
@@ -27,11 +27,14 @@ const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 struct TrustedApplicationImplementation {
     application_config: Vec<u8>,
-    encryption_key_handle: EncryptionKeyHandle,
+    encryption_key_handle: InstanceEncryptionKeyHandle,
 }
 
 impl TrustedApplicationImplementation {
-    pub fn new(application_config: Vec<u8>, encryption_key_handle: EncryptionKeyHandle) -> Self {
+    pub fn new(
+        application_config: Vec<u8>,
+        encryption_key_handle: InstanceEncryptionKeyHandle,
+    ) -> Self {
         Self {
             application_config,
             encryption_key_handle,
@@ -79,7 +82,7 @@ impl TrustedApplication for TrustedApplicationImplementation {
 pub async fn create(
     listener: TcpListener,
     application_config: Vec<u8>,
-    encryption_key_handle: EncryptionKeyHandle,
+    encryption_key_handle: InstanceEncryptionKeyHandle,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(TrustedApplicationServer::new(

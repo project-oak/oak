@@ -71,11 +71,31 @@ impl OrchestratorCryptoClient {
     }
 }
 
-pub struct EncryptionKeyHandle {
+pub trait EncryptionKeyHandle {
+    async fn derive_session_keys(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<RecipientContext>;
+}
+
+#[async_trait]
+impl<T> EncryptionKeyHandle for T
+where
+    T: AsyncRecipientContextGenerator,
+{
+    async fn derive_session_keys(
+        &self,
+        encapsulated_public_key: &[u8],
+    ) -> anyhow::Result<RecipientContext> {
+        self.generate_recipient_context(encapsulated_public_key)
+    }
+}
+
+pub struct InstanceEncryptionKeyHandle {
     orchestrator_crypto_client: OrchestratorCryptoClient,
 }
 
-impl EncryptionKeyHandle {
+impl InstanceEncryptionKeyHandle {
     pub async fn create() -> anyhow::Result<Self> {
         Ok(Self {
             orchestrator_crypto_client: OrchestratorCryptoClient::create()
@@ -86,7 +106,7 @@ impl EncryptionKeyHandle {
 }
 
 #[async_trait]
-impl AsyncRecipientContextGenerator for EncryptionKeyHandle {
+impl AsyncRecipientContextGenerator for InstanceEncryptionKeyHandle {
     async fn generate_recipient_context(
         &self,
         encapsulated_public_key: &[u8],

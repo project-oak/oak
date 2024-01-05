@@ -2194,12 +2194,8 @@ dependencies = [
  "clap",
  "http",
  "micro_rpc",
-<<<<<<< HEAD
  "oak_containers_orchestrator",
-=======
- "oak_containers_orchestrator_client",
  "oak_containers_sdk",
->>>>>>> fae2326ec (Add Oak Containers SDK for encryption)
  "oak_crypto",
  "oak_functions_service",
  "oak_functions_test_utils",
