@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["AsyncServerEncryptor","ClientEncryptor","EncryptionKeyProvider","ServerEncryptor"],"trait":["AsyncRecipientContextGenerator","RecipientContextGenerator"]};
+window.SIDEBAR_ITEMS = {"struct":["AsyncServerEncryptor","ClientEncryptor","EncryptionKeyProvider","ServerEncryptor"],"trait":["AsyncRecipientContextGenerator","EncryptionKeyHandle","RecipientContextGenerator"]};
