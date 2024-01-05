@@ -159,7 +159,7 @@
     protos.iter().for_each(|filename| {
         <span class="macro">println!</span>(
             <span class="string">&quot;cargo:rerun-if-changed={}&quot;</span>,
-            include.as_ref().join(filename).to_string_lossy()
+            filename.as_ref().as_os_str().to_string_lossy()
         )
     });
 
