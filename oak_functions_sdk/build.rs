@@ -16,7 +16,7 @@
 
 fn main() {
     micro_rpc_build::compile(
-        &["proto/oak_functions/sdk/oak_functions_wasm.proto"],
+        &["../proto/oak_functions/sdk/oak_functions_wasm.proto"],
         &[".."],
         Default::default(),
     );

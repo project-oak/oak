@@ -19,13 +19,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate gRPC code for connecting to the launcher.
     generate_grpc_code(
         &[
-            "oak_containers/proto/interfaces.proto",
-            "oak_crypto/proto/v1/crypto.proto",
-            "oak_remote_attestation/proto/v1/messages.proto",
-            "proto/key_provisioning/key_provisioning.proto",
-            "proto/containers/hostlib_key_provisioning.proto",
+            "../oak_containers/proto/interfaces.proto",
+            "../oak_crypto/proto/v1/crypto.proto",
+            "../oak_remote_attestation/proto/v1/messages.proto",
+            "../proto/key_provisioning/key_provisioning.proto",
+            "../proto/containers/hostlib_key_provisioning.proto",
         ],
-        "../",
+        "..",
         CodegenOptions {
             build_server: true,
             ..Default::default()

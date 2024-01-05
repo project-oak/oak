@@ -20,10 +20,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate gRPC code for exchanging messages with clients.
     generate_grpc_code(
         &[
-            "oak_remote_attestation/proto/v1/messages.proto",
-            "oak_remote_attestation/proto/v1/service_streaming.proto",
+            "../oak_remote_attestation/proto/v1/messages.proto",
+            "../oak_remote_attestation/proto/v1/service_streaming.proto",
         ],
-        "../",
+        "..",
         CodegenOptions {
             build_server: true,
             ..Default::default()
@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Generate micro RPC code for exchanging messages with the enclave.
     micro_rpc_build::compile(
-        &["proto/oak_functions/service/oak_functions.proto"],
+        &["../proto/oak_functions/service/oak_functions.proto"],
         &[".."],
         Default::default(),
     );

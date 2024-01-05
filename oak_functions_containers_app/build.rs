@@ -20,11 +20,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate gRPC code for exchanging messages with clients.
     generate_grpc_code(
         &[
-            "oak_crypto/proto/v1/crypto.proto",
-            "proto/attestation/evidence.proto",
-            "proto/oak_functions/service/oak_functions.proto",
+            "../oak_crypto/proto/v1/crypto.proto",
+            "../proto/attestation/evidence.proto",
+            "../proto/oak_functions/service/oak_functions.proto",
         ],
-        "../",
+        "..",
         CodegenOptions {
             build_server: true,
             // The client is only used in the integration test.
@@ -38,10 +38,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     generate_grpc_code(
         &[
-            "oak_containers/proto/interfaces.proto",
-            "oak_remote_attestation/proto/v1/messages.proto",
+            "../oak_containers/proto/interfaces.proto",
+            "../oak_remote_attestation/proto/v1/messages.proto",
         ],
-        "../",
+        "..",
         CodegenOptions {
             build_client: true,
             ..Default::default()
