@@ -46,13 +46,13 @@ fn main() -> ! {
     }
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
 
-    let encryption_key_handlee = oak_restricted_kernel_sdk::InstanceEncryptionKeyHandle::create()
+    let encryption_key_handle = oak_restricted_kernel_sdk::InstanceEncryptionKeyHandle::create()
         .expect("couldn't encryption key");
     let evidencer =
         oak_restricted_kernel_sdk::InstanceEvidencer::create().expect("couldn't get evidence");
     let service = oak_functions_service::OakFunctionsService::new(
         evidencer,
-        Arc::new(encryption_key_handlee),
+        Arc::new(encryption_key_handle),
         None,
     );
     let server = oak_functions_service::proto::oak::functions::OakFunctionsServer::new(service);
