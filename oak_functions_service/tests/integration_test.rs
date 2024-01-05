@@ -47,10 +47,10 @@ fn init() {
 
 fn new_service_for_testing() -> OakFunctionsService<
     oak_restricted_kernel_sdk::MockEncryptionKeyHandle,
-    oak_restricted_kernel_sdk::MockEvidenceProvidder,
+    oak_restricted_kernel_sdk::MockEvidenceProvider,
 > {
     OakFunctionsService::new(
-        oak_restricted_kernel_sdk::MockEvidenceProvidder::create()
+        oak_restricted_kernel_sdk::MockEvidenceProvider::create()
             .expect("failed to create EvidenceProvidder"),
         Arc::new(
             oak_restricted_kernel_sdk::MockEncryptionKeyHandle::create()
