@@ -18,8 +18,8 @@ use oak_grpc_utils::{generate_grpc_code, CodegenOptions, ExternPath};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
-        "proto",
         &["test.proto", "stubs.proto"],
+        "proto",
         CodegenOptions {
             extern_paths: vec![ExternPath::new(
                 ".oak.crypto.v1",

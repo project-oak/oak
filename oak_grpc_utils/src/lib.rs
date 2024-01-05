@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use std::path::Path;
+
 /// Options for building gRPC code.
 #[derive(Default)]
 pub struct CodegenOptions {
@@ -45,21 +47,14 @@ impl ExternPath {
 /// The path to the root repository must be passed as `include`. All paths to `.proto` files
 /// must be specified relative to this path. Likewise, all imported paths in `.proto` files must
 /// be specified relative to this path.
-// TODO(#4588): Swap the include and protos arguments, so they match the order of the
-// corresponding arguments in the `tonic_build::configure()` function.
 pub fn generate_grpc_code(
-    include: &str,
-    protos: &[&str],
+    protos: &[impl AsRef<Path>],
+    include: impl AsRef<Path>,
     options: CodegenOptions,
 ) -> std::io::Result<()> {
     set_protoc_env_if_unset();
 
     // TODO(#1093): Move all proto generation to a common crate.
-    let include = std::path::Path::new(include);
-    let file_paths: Vec<std::path::PathBuf> = protos
-        .iter()
-        .map(|file_path| include.join(file_path))
-        .collect();
 
     // Generate the normal (non-Oak) server and client code for the gRPC service,
     // along with the Rust types corresponding to the message definitions.
@@ -72,17 +67,17 @@ pub fn generate_grpc_code(
     // every time. Instead, we specify the list of files to watch explicitly, even though that
     // may not have 100% recall, since some of the transitive includes may be missed.
     config = config.emit_rerun_if_changed(false);
-    file_paths.iter().for_each(|filename| {
+    protos.iter().for_each(|filename| {
         println!(
             "cargo:rerun-if-changed={}",
-            filename.as_os_str().to_string_lossy()
+            filename.as_ref().as_os_str().to_string_lossy()
         )
     });
 
     for extern_path in options.extern_paths {
         config = config.extern_path(extern_path.proto_path, extern_path.rust_path);
     }
-    config.compile(&file_paths, &[include])
+    config.compile(protos, &[include])
 }
 
 fn set_protoc_env_if_unset() {
