@@ -36,7 +36,7 @@ pub trait Signer {
 /// Exposes the ability to read the Attestation Evidence. It is discouraged for enclave applications
 /// to operate with evidences. The evidence should only be used to forward it to the host
 /// application once, which then sends it to the clients.
-pub trait Evidencer {
+pub trait EvidenceProvider {
     fn get_evidence(&self) -> &Evidence;
 }
 
@@ -211,44 +211,44 @@ impl EncryptionKeyHandle for MockEncryptionKeyHandle {
     }
 }
 
-/// [`Evidencer`] implementation that exposes the instance's evidence.
-pub struct InstanceEvidencer {
+/// [`EvidenceProvider`] implementation that exposes the instance's evidence.
+pub struct InstanceEvidenceProvider {
     evidence: &'static Evidence,
 }
 
-impl InstanceEvidencer {
+impl InstanceEvidenceProvider {
     pub fn create() -> anyhow::Result<Self> {
         DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
             .and_then(|d| {
-                Ok(InstanceEvidencer {
+                Ok(InstanceEvidenceProvider {
                     evidence: &d.evidence,
                 })
             })
     }
 }
 
-impl Evidencer for InstanceEvidencer {
+impl EvidenceProvider for InstanceEvidenceProvider {
     fn get_evidence(&self) -> &Evidence {
         self.evidence
     }
 }
 
-/// [`Evidencer`] implementation that exposes mock evidence.
+/// [`EvidenceProvider`] implementation that exposes mock evidence.
 #[cfg(feature = "mock_attestation")]
-pub struct MockEvidencer {
+pub struct MockEvidenceProvider {
     evidence: &'static Evidence,
 }
 
 #[cfg(feature = "mock_attestation")]
-impl MockEvidencer {
+impl MockEvidenceProvider {
     pub fn create() -> anyhow::Result<Self> {
         MOCK_DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
             .and_then(|d| {
-                Ok(MockEvidencer {
+                Ok(MockEvidenceProvider {
                     evidence: &d.evidence,
                 })
             })
@@ -256,7 +256,7 @@ impl MockEvidencer {
 }
 
 #[cfg(feature = "mock_attestation")]
-impl Evidencer for MockEvidencer {
+impl EvidenceProvider for MockEvidenceProvider {
     fn get_evidence(&self) -> &Evidence {
         self.evidence
     }

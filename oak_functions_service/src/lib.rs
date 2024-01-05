@@ -59,7 +59,7 @@ pub trait Observer {
 
 pub struct OakFunctionsService<
     EKH: oak_restricted_kernel_sdk::EncryptionKeyHandle + 'static,
-    EP: oak_restricted_kernel_sdk::Evidencer,
+    EP: oak_restricted_kernel_sdk::EvidenceProvider,
 > {
     evidence_provider: EP,
     encryption_key_handle: Arc<EKH>,
@@ -69,7 +69,7 @@ pub struct OakFunctionsService<
 
 impl<
         EKH: oak_restricted_kernel_sdk::EncryptionKeyHandle + 'static,
-        EP: oak_restricted_kernel_sdk::Evidencer,
+        EP: oak_restricted_kernel_sdk::EvidenceProvider,
     > OakFunctionsService<EKH, EP>
 {
     pub fn new(
@@ -117,7 +117,7 @@ impl<
 
 impl<
         EKH: oak_restricted_kernel_sdk::EncryptionKeyHandle + 'static,
-        EP: oak_restricted_kernel_sdk::Evidencer,
+        EP: oak_restricted_kernel_sdk::EvidenceProvider,
     > OakFunctions for OakFunctionsService<EKH, EP>
 {
     fn initialize(
