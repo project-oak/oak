@@ -142,10 +142,11 @@ impl<
                         format!("failed to get encryption public key: {err}"),
                     )
                 })?;
-                let evidence =
-                    oak_remote_attestation::proto::oak::attestation::v1::Evidence::try_from(
-                        self.evidencer.get_evidence().clone(),
-                    )
+                let evidence: oak_remote_attestation::proto::oak::attestation::v1::Evidence = self
+                    .evidencer
+                    .get_evidence()
+                    .clone()
+                    .try_into()
                     .map_err(|err| {
                         micro_rpc::Status::new_with_message(
                             micro_rpc::StatusCode::Internal,
