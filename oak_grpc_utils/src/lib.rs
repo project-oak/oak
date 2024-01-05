@@ -70,7 +70,7 @@ pub fn generate_grpc_code(
     protos.iter().for_each(|filename| {
         println!(
             "cargo:rerun-if-changed={}",
-            include.as_ref().join(filename).to_string_lossy()
+            filename.as_ref().as_os_str().to_string_lossy()
         )
     });
 
