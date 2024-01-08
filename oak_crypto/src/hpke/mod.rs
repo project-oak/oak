@@ -27,7 +27,7 @@ use hpke::{
     aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Kem as KemTrait, OpModeR, OpModeS,
 };
 pub use hpke::{Deserializable, Serializable};
-use rand_core::OsRng;
+use rand_core::{OsRng, RngCore};
 
 type Aead = AesGcm256;
 type Kdf = HkdfSha256;
@@ -352,6 +352,13 @@ impl RecipientContext {
             response_sequence_number: context.response_sequence_number as u128,
         })
     }
+}
+
+// Generate a random nonce for AEAD.
+pub(crate) fn generate_random_nonce() -> AeadNonce {
+    let mut nonce = AeadNonce::default();
+    OsRng.fill_bytes(&mut nonce);
+    nonce
 }
 
 fn compute_nonce(sequence_number: u128, base_nonce: &AeadNonce) -> anyhow::Result<AeadNonce> {
