@@ -20,8 +20,8 @@
 
 use crate::{
     hpke::{
-        deserialize_nonce, setup_base_recipient, setup_base_sender, KeyPair, PrivateKey, PublicKey,
-        RecipientContext, SenderContext,
+        deserialize_nonce, generate_random_nonce, setup_base_recipient, setup_base_sender, KeyPair,
+        PrivateKey, PublicKey, RecipientContext, SenderContext,
     },
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
@@ -200,10 +200,7 @@ impl ClientEncryptor {
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<EncryptedRequest> {
-        let nonce = self
-            .sender_context
-            .generate_nonce()
-            .context("couldn't generate nonce")?;
+        let nonce = generate_random_nonce();
         let ciphertext = self
             .sender_context
             .seal(&nonce, plaintext, associated_data)
@@ -304,10 +301,7 @@ impl ServerEncryptor {
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<EncryptedResponse> {
-        let nonce = self
-            .recipient_context
-            .generate_nonce()
-            .context("couldn't generate nonce")?;
+        let nonce = generate_random_nonce();
         let ciphertext = self
             .recipient_context
             .seal(&nonce, plaintext, associated_data)
