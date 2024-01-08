@@ -656,7 +656,7 @@
             inner,
             latencies: <span class="self">self
                 </span>.meter
-                .u64_histogram(<span class="string">&quot;rpc/server/server_latency&quot;</span>)
+                .u64_histogram(<span class="string">&quot;rpc_server_latency&quot;</span>)
                 .with_unit(Unit::new(<span class="string">&quot;milliseconds&quot;</span>))
                 .with_description(<span class="string">&quot;Distribution of server-side RPC latency&quot;</span>)
                 .init(),
@@ -754,12 +754,12 @@
         <span class="self">Self </span>{
             wasm_initialization: meter
                 .u64_histogram(<span class="string">&quot;wasm_initialization&quot;</span>)
-                .with_unit(Unit::new(<span class="string">&quot;milliseconds&quot;</span>))
+                .with_unit(Unit::new(<span class="string">&quot;microseconds&quot;</span>))
                 .with_description(<span class="string">&quot;Time spent setting up wasm sandbox for invocation&quot;</span>)
                 .init(),
             wasm_invocation: meter
                 .u64_histogram(<span class="string">&quot;wasm_invocation&quot;</span>)
-                .with_unit(Unit::new(<span class="string">&quot;milliseconds&quot;</span>))
+                .with_unit(Unit::new(<span class="string">&quot;microseconds&quot;</span>))
                 .with_description(<span class="string">&quot;Time spent on calling `main` in wasm sandbox&quot;</span>)
                 .init(),
         }
@@ -768,12 +768,12 @@
 <span class="kw">impl </span>Observer <span class="kw">for </span>OtelObserver {
     <span class="kw">fn </span>wasm_initialization(<span class="kw-2">&amp;</span><span class="self">self</span>, duration: core::time::Duration) {
         <span class="self">self</span>.wasm_initialization
-            .record(duration.as_millis().try_into().unwrap_or(u64::MAX), <span class="kw-2">&amp;</span>[])
+            .record(duration.as_micros().try_into().unwrap_or(u64::MAX), <span class="kw-2">&amp;</span>[])
     }
 
     <span class="kw">fn </span>wasm_invocation(<span class="kw-2">&amp;</span><span class="self">self</span>, duration: core::time::Duration) {
         <span class="self">self</span>.wasm_invocation
-            .record(duration.as_millis().try_into().unwrap_or(u64::MAX), <span class="kw-2">&amp;</span>[])
+            .record(duration.as_micros().try_into().unwrap_or(u64::MAX), <span class="kw-2">&amp;</span>[])
     }
 }
 
