@@ -47,3 +47,13 @@ cc_library(
         "@com_google_absl//absl/strings",
     ],
 )
+
+cc_test(
+    name = "grpc_streaming_transport_test",
+    srcs = ["grpc_streaming_transport_test.cc"],
+    deps = [
+        ":grpc_streaming_transport",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

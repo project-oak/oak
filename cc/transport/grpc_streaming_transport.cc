@@ -41,6 +41,11 @@ using ::oak::session::v1::RequestWrapper;
 using ::oak::session::v1::ResponseWrapper;
 }  // namespace
 
+absl::Status to_absl_status(const grpc::Status& grpc_status) {
+  return absl::Status(static_cast<absl::StatusCode>(grpc_status.error_code()),
+                      grpc_status.error_message());
+}
+
 absl::StatusOr<AttestationBundle> GrpcStreamingTransport::GetEvidence() {
   // Create request.
   RequestWrapper request;
@@ -99,26 +104,36 @@ GrpcStreamingTransport::~GrpcStreamingTransport() {
 absl::StatusOr<ResponseWrapper> GrpcStreamingTransport::Send(const RequestWrapper& request) {
   // Send a request.
   if (!channel_reader_writer_->Write(request)) {
-    return absl::InternalError("couldn't send request");
+    absl::Status status = Close();
+    if (status.ok()) {
+      return absl::InternalError(
+          "failed to read request for unspecified reason. This is likely an implementation bug.");
+    } else {
+      return absl::Status(status.code(), absl::StrCat("while writing request: ", status.message()));
+    }
   }
 
   // Receive a response.
   ResponseWrapper response;
   if (!channel_reader_writer_->Read(&response)) {
-    return absl::InternalError("couldn't receive response");
+    absl::Status status = Close();
+    if (status.ok()) {
+      return absl::InternalError(
+          "failed to write request for unspecified reason. This is likely an implementation bug.");
+    } else {
+      return absl::Status(status.code(), absl::StrCat("while reading request: ", status.message()));
+    }
   }
   return response;
 }
 
 absl::Status GrpcStreamingTransport::Close() {
-  if (!channel_reader_writer_->WritesDone()) {
-    return absl::InternalError("couldn't close writing stream");
-  }
-  ::grpc::Status status = channel_reader_writer_->Finish();
-  if (!status.ok()) {
-    return absl::InternalError("couldn't close reading stream: " + status.error_message());
-  }
-  return absl::OkStatus();
+  absl::call_once(close_once_, [this]() {
+    channel_reader_writer_->WritesDone();
+    grpc::Status grpc_close_status = channel_reader_writer_->Finish();
+    close_status_ = to_absl_status(grpc_close_status);
+  });
+  return close_status_;
 }
 
 }  // namespace oak::transport
