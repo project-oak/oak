@@ -42,7 +42,7 @@ use zerocopy::{AsBytes, FromZeroes};
 
 type DerivedKey = [u8; 32];
 
-// The number of custom bytes that can be included in the attestation report.
+// The number of bytes of custom data that can be included in the attestation report.
 pub const REPORT_DATA_SIZE: usize = 64;
 
 /// Measurements of various components in Stage1.

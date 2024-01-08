@@ -33,6 +33,8 @@ const AMD_SEV_SNP_ATTESTATION_REPORT_SIZE: usize = 1184;
 static_assertions::const_assert!(REPORT_SIZE >= AMD_SEV_SNP_ATTESTATION_REPORT_SIZE);
 
 /// The size for compound device identifiers.
+///
+/// See <https://pigweed.googlesource.com/open-dice/+/HEAD/docs/specification.md>
 pub const CDI_SIZE: usize = 32;
 
 /// The maximum size of an ECDSA private key.

@@ -535,7 +535,7 @@ pub fn send_guest_message_request<
 
     GHCB_WRAPPER
         .get()
-        .ok_or("ghcb not initialized")?
+        .ok_or("GHCB not initialized")?
         .lock()
         .do_guest_message_request(request_address, response_address)?;
     response_message.validate()?;

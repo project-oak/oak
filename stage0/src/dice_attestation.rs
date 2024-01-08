@@ -25,7 +25,7 @@ use oak_sev_guest::{
 
 type DerivedKey = [u8; 32];
 
-// The number of custom bytes that can be included in the attestation report.
+// The number of bytes of custom data that can be included in the attestation report.
 const REPORT_DATA_SIZE: usize = 64;
 
 /// Returns an attestation report.
