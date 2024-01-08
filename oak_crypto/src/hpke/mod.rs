@@ -239,12 +239,12 @@ impl RecipientContext {
             request_key: self.request_key.to_vec(),
             // TODO(#4507): Remove nonces from the Proto message.
             request_base_nonce: vec![],
-            request_sequence_number: 0 as u64,
+            request_sequence_number: 0_u64,
 
             response_key: self.response_key.to_vec(),
             // TODO(#4507): Remove nonces from the Proto message.
             response_base_nonce: vec![],
-            response_sequence_number: 0 as u64,
+            response_sequence_number: 0_u64,
         })
     }
 

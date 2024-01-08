@@ -87,8 +87,8 @@ fn test_hpke() {
     let encrypted_request = sender_context
         .seal(
             &test_request_nonce,
-            &TEST_REQUEST_MESSAGE,
-            &TEST_REQUEST_ASSOCIATED_DATA,
+            TEST_REQUEST_MESSAGE,
+            TEST_REQUEST_ASSOCIATED_DATA,
         )
         .expect("sender context couldn't seal request");
     // Check that the message was encrypted.
@@ -97,7 +97,7 @@ fn test_hpke() {
         .open(
             &test_request_nonce,
             &encrypted_request,
-            &TEST_REQUEST_ASSOCIATED_DATA,
+            TEST_REQUEST_ASSOCIATED_DATA,
         )
         .expect("recipient context couldn't open request");
     assert_eq!(TEST_REQUEST_MESSAGE, decrypted_request);
@@ -105,8 +105,8 @@ fn test_hpke() {
     let encrypted_response = recipient_context
         .seal(
             &test_response_nonce,
-            &TEST_RESPONSE_MESSAGE,
-            &TEST_RESPONSE_ASSOCIATED_DATA,
+            TEST_RESPONSE_MESSAGE,
+            TEST_RESPONSE_ASSOCIATED_DATA,
         )
         .expect("recipient context couldn't seal response");
     // Check that the message was encrypted.
@@ -115,7 +115,7 @@ fn test_hpke() {
         .open(
             &test_response_nonce,
             &encrypted_response,
-            &TEST_RESPONSE_ASSOCIATED_DATA,
+            TEST_RESPONSE_ASSOCIATED_DATA,
         )
         .expect("sender couldn't open response");
     assert_eq!(TEST_RESPONSE_MESSAGE, decrypted_response);
@@ -131,7 +131,7 @@ fn test_encryptor() {
     let mut server_encryptor = None;
 
     let encrypted_request = client_encryptor
-        .encrypt(&TEST_REQUEST_MESSAGE, &TEST_REQUEST_ASSOCIATED_DATA)
+        .encrypt(TEST_REQUEST_MESSAGE, TEST_REQUEST_ASSOCIATED_DATA)
         .expect("client couldn't encrypt request");
     // Check that the message was encrypted.
     assert_ne!(
@@ -166,7 +166,7 @@ fn test_encryptor() {
     let encrypted_response = server_encryptor
         .as_mut()
         .expect("server encryptor is not initialized")
-        .encrypt(&TEST_RESPONSE_MESSAGE, &TEST_RESPONSE_ASSOCIATED_DATA)
+        .encrypt(TEST_RESPONSE_MESSAGE, TEST_RESPONSE_ASSOCIATED_DATA)
         .expect("server couldn't encrypt response");
     // Check that the message was encrypted.
     assert_ne!(
@@ -227,7 +227,7 @@ async fn test_async_encryptor() {
     let mut server_encryptor = AsyncServerEncryptor::new(&key_provider);
 
     let encrypted_request = client_encryptor
-        .encrypt(&TEST_REQUEST_MESSAGE, &TEST_REQUEST_ASSOCIATED_DATA)
+        .encrypt(TEST_REQUEST_MESSAGE, TEST_REQUEST_ASSOCIATED_DATA)
         .expect("client couldn't encrypt request");
     // Check that the message was encrypted.
     assert_ne!(
@@ -246,7 +246,7 @@ async fn test_async_encryptor() {
     assert_eq!(TEST_REQUEST_ASSOCIATED_DATA, request_associated_data);
 
     let encrypted_response = server_encryptor
-        .encrypt(&TEST_RESPONSE_MESSAGE, &TEST_RESPONSE_ASSOCIATED_DATA)
+        .encrypt(TEST_RESPONSE_MESSAGE, TEST_RESPONSE_ASSOCIATED_DATA)
         .expect("server couldn't encrypt response");
     // Check that the message was encrypted.
     assert_ne!(
