@@ -247,7 +247,7 @@ impl<S> tower::Layer<S> for MonitoringLayer {
             inner,
             latencies: self
                 .meter
-                .u64_histogram("rpc/server/server_latency")
+                .u64_histogram("rpc_server_latency")
                 .with_unit(Unit::new("milliseconds"))
                 .with_description("Distribution of server-side RPC latency")
                 .init(),
@@ -345,12 +345,12 @@ impl OtelObserver {
         Self {
             wasm_initialization: meter
                 .u64_histogram("wasm_initialization")
-                .with_unit(Unit::new("milliseconds"))
+                .with_unit(Unit::new("microseconds"))
                 .with_description("Time spent setting up wasm sandbox for invocation")
                 .init(),
             wasm_invocation: meter
                 .u64_histogram("wasm_invocation")
-                .with_unit(Unit::new("milliseconds"))
+                .with_unit(Unit::new("microseconds"))
                 .with_description("Time spent on calling `main` in wasm sandbox")
                 .init(),
         }
@@ -359,12 +359,12 @@ impl OtelObserver {
 impl Observer for OtelObserver {
     fn wasm_initialization(&self, duration: core::time::Duration) {
         self.wasm_initialization
-            .record(duration.as_millis().try_into().unwrap_or(u64::MAX), &[])
+            .record(duration.as_micros().try_into().unwrap_or(u64::MAX), &[])
     }
 
     fn wasm_invocation(&self, duration: core::time::Duration) {
         self.wasm_invocation
-            .record(duration.as_millis().try_into().unwrap_or(u64::MAX), &[])
+            .record(duration.as_micros().try_into().unwrap_or(u64::MAX), &[])
     }
 }
 
