@@ -18,6 +18,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <random>
 #include <string>
 #include <utility>
 #include <vector>
@@ -77,6 +78,15 @@ absl::StatusOr<std::vector<uint8_t>> GetBaseNonce(EVP_HPKE_CTX* hpke_ctx,
     return absl::AbortedError("Unable to export nonce");
   }
   return nonce;
+}
+
+std::vector<uint8_t> GenerateRandomNonce() {
+  std::vector<uint8_t> nonce(kAeadNonceSizeBytes);
+  // We use 8 here since sequence number is 64 bits.
+  for (size_t i = 0; i < 8; ++i) {
+    // Get the first 8 bits and push bits right since the encoded nonce is big-endian.
+    nonce[kAeadNonceSizeBytes - i - 1] = rand() & 0xff;
+  }
 }
 
 std::vector<uint8_t> CalculateNonce(const std::vector<uint8_t>& base_nonce,
