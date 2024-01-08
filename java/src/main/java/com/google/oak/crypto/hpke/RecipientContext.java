@@ -27,24 +27,11 @@ public final class RecipientContext implements AutoCloseable {
     this.nativePtr = nativePtr;
   }
 
-  private native byte[] nativeGenerateNonce();
   private native byte[] nativeOpen(
       final byte[] nonce, final byte[] ciphertext, final byte[] associatedData);
   private native byte[] nativeSeal(
       final byte[] nonce, final byte[] plaintext, final byte[] associatedData);
   private native void nativeDestroy();
-
-  /**
-   * Generates an AEAD nonce used by AEAD encryption scheme.
-   * <https://datatracker.ietf.org/doc/html/rfc5116>
-   */
-  public final Result<byte[], Exception> generateNonce() {
-    byte[] nativeResult = nativeGenerateNonce();
-    if (nativeResult == null) {
-      return Result.error(new Exception("RecipientContext generateNonce failed"));
-    }
-    return Result.success(nativeResult);
-  }
 
   /**
    * Decrypts message and validates associated data using AEAD.

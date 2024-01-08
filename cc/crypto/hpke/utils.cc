@@ -66,9 +66,7 @@ absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(EVP_HPKE_CTX* hpke_ctx,
 
 std::vector<uint8_t> GenerateRandomNonce() {
   std::vector<uint8_t> nonce(kAeadNonceSizeBytes);
-  // We use 8 here since sequence number is 64 bits.
-  for (size_t i = 0; i < 8; ++i) {
-    // Get the first 8 bits and push bits right since the encoded nonce is big-endian.
+  for (size_t i = 0; i < kAeadNonceSizeBytes; ++i) {
     nonce[kAeadNonceSizeBytes - i - 1] = rand() & 0xff;
   }
   return nonce;
