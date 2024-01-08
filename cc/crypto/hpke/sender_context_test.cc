@@ -45,15 +45,12 @@ class SenderContextTest : public testing::Test {
                              236, 244, 165, 13, 38,  157, 220, 162, 233, 235, 158,
                              226, 157, 152, 52, 162, 106, 93,  68,  12,  171};
     default_nonce_bytes_ = {1, 242, 45, 144, 96, 26, 190, 43, 156, 154, 2, 69};
-    default_starting_sequence_number_ = 0;
   }
 
   SenderContext CreateTestSenderContext(std::unique_ptr<EVP_AEAD_CTX> response_aead_context) {
     return SenderContext(std::vector<uint8_t>(),
                          nullptr,  // Sender request sealing is not tested in this test.
-                         default_nonce_bytes_, default_starting_sequence_number_,
-                         std::move(response_aead_context), default_nonce_bytes_,
-                         default_starting_sequence_number_);
+                         std::move(response_aead_context));
   }
 
   std::string serialized_public_key_;
@@ -62,7 +59,6 @@ class SenderContextTest : public testing::Test {
   std::string associated_data_request_;
   std::vector<uint8_t> default_response_key_;
   std::vector<uint8_t> default_nonce_bytes_;
-  uint64_t default_starting_sequence_number_;
 };
 
 TEST_F(SenderContextTest, SetupBaseSenderReturnsUniqueEncapsulatedKey) {

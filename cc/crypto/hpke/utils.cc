@@ -64,43 +64,12 @@ absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(EVP_HPKE_CTX* hpke_ctx,
   return std::move(aead_context);
 }
 
-absl::StatusOr<std::vector<uint8_t>> GetBaseNonce(EVP_HPKE_CTX* hpke_ctx,
-                                                  absl::string_view nonce_context_string) {
-  std::vector<uint8_t> nonce(kAeadNonceSizeBytes);
-  std::vector<uint8_t> nonce_context_bytes(nonce_context_string.begin(),
-                                           nonce_context_string.end());
-  if (!EVP_HPKE_CTX_export(
-          /* ctx= */ hpke_ctx,
-          /* out= */ nonce.data(),
-          /* secret_len= */ nonce.size(),
-          /* context= */ nonce_context_bytes.data(),
-          /* context_len= */ nonce_context_bytes.size())) {
-    return absl::AbortedError("Unable to export nonce");
-  }
-  return nonce;
-}
-
 std::vector<uint8_t> GenerateRandomNonce() {
   std::vector<uint8_t> nonce(kAeadNonceSizeBytes);
   // We use 8 here since sequence number is 64 bits.
   for (size_t i = 0; i < 8; ++i) {
     // Get the first 8 bits and push bits right since the encoded nonce is big-endian.
     nonce[kAeadNonceSizeBytes - i - 1] = rand() & 0xff;
-  }
-}
-
-std::vector<uint8_t> CalculateNonce(const std::vector<uint8_t>& base_nonce,
-                                    uint64_t sequence_number) {
-  std::vector<uint8_t> nonce(kAeadNonceSizeBytes);
-  // We use 8 here since sequence number is 64 bits.
-  for (size_t i = 0; i < 8; ++i) {
-    // Get the first 8 bits and push bits right since the encoded nonce is big-endian.
-    nonce[kAeadNonceSizeBytes - i - 1] = sequence_number & 0xff;
-    sequence_number >>= 8;
-  }
-  // XOR each of the nonce bits with the base nonce.
-  for (size_t i = 0; i < kAeadNonceSizeBytes; ++i) {
-    nonce[i] ^= base_nonce.at(i);
   }
   return nonce;
 }
