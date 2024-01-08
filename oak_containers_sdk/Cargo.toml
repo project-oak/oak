@@ -1,7 +1,7 @@
 [package]
-name = "oak_containers_hello_world_trusted_app"
+name = "oak_containers_sdk"
 version = "0.1.0"
-authors = ["Juliette Pretot <julsh@google.com>"]
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
@@ -10,14 +10,12 @@ oak_grpc_utils = { workspace = true }
 
 [dependencies]
 anyhow = "*"
-oak_containers_sdk = { workspace = true }
+async-trait = { version = "*", default-features = false }
 oak_crypto = { workspace = true }
-oak_remote_attestation = { workspace = true }
 prost = "*"
 prost-types = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tokio-stream = { version = "*", features = ["net"] }
 tonic = { workspace = true }
 async-stream = "*"
-bytes = "*"
 tower = "*"

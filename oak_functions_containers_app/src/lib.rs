@@ -63,18 +63,18 @@ pub mod orchestrator_client;
 // Instance of the OakFunctions service for Oak Containers.
 pub struct OakFunctionsContainersService<G: AsyncRecipientContextGenerator + Send + Sync> {
     instance: OnceLock<OakFunctionsInstance>,
-    encryption_context: Arc<G>,
+    encryption_key_handle: Arc<G>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
 impl<G: AsyncRecipientContextGenerator + Send + Sync> OakFunctionsContainersService<G> {
     pub fn new(
-        encryption_context: Arc<G>,
+        encryption_key_handle: Arc<G>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> Self {
         Self {
             instance: OnceLock::new(),
-            encryption_context,
+            encryption_key_handle,
             observer,
         }
     }
@@ -135,7 +135,6 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
         &self,
         request: tonic::Request<InvokeRequest>,
     ) -> tonic::Result<tonic::Response<InvokeResponse>> {
-        let encryption_key_provider = self.encryption_context.clone();
         let instance = self.get_instance()?;
 
         let encrypted_request = request.into_inner().encrypted_request.ok_or_else(|| {
@@ -144,7 +143,7 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
             )
         })?;
 
-        AsyncEncryptionHandler::create(encryption_key_provider, |r| async {
+        AsyncEncryptionHandler::create(self.encryption_key_handle.clone(), |r| async {
             // Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
             let response_result: Result<Vec<u8>, micro_rpc::Status> =
@@ -378,7 +377,7 @@ const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
 pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static, P: MeterProvider>(
     listener: TcpListener,
-    encryption_context: Arc<G>,
+    encryption_key_handle: Arc<G>,
     provider: P,
 ) -> anyhow::Result<()> {
     let meter = provider.meter("oak_functions_containers_app");
@@ -401,7 +400,7 @@ pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static, P:
         .layer(tower::load_shed::LoadShedLayer::new())
         .layer(MonitoringLayer::new(meter.clone()))
         .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
-            encryption_context,
+            encryption_key_handle,
             Some(Arc::new(OtelObserver::new(meter))),
         )))
         .serve_with_incoming(TcpListenerStream::new(listener))

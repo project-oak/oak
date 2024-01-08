@@ -9,10 +9,10 @@ oak_grpc_utils = { workspace = true }
 
 [dependencies]
 anyhow = "*"
-async-trait = { version = "*", default-features = false }
 clap = { version = "*", features = ["derive"] }
 http = "*"
 oak_containers_orchestrator = { workspace = true }
+oak_containers_sdk = { workspace = true }
 oak_functions_service = { workspace = true, features = ["std"] }
 oak_crypto = { workspace = true }
 oak_remote_attestation = { workspace = true }

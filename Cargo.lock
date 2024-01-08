@@ -1908,8 +1908,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-stream",
- "async-trait",
  "bytes",
+ "oak_containers_sdk",
  "oak_crypto",
  "oak_grpc_utils",
  "oak_remote_attestation",
@@ -1996,6 +1996,23 @@ dependencies = [
  "tokio-util",
  "tonic",
  "walkdir",
+]
+
+[[package]]
+name = "oak_containers_sdk"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-stream",
+ "async-trait",
+ "oak_crypto",
+ "oak_grpc_utils",
+ "prost",
+ "prost-types",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tower",
 ]
 
 [[package]]
@@ -2171,11 +2188,11 @@ name = "oak_functions_containers_app"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "clap",
  "http",
  "micro_rpc",
  "oak_containers_orchestrator",
+ "oak_containers_sdk",
  "oak_crypto",
  "oak_functions_service",
  "oak_functions_test_utils",
