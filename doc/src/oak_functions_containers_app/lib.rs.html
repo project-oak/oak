@@ -407,7 +407,6 @@
 <a href="#407" id="407">407</a>
 <a href="#408" id="408">408</a>
 <a href="#409" id="409">409</a>
-<a href="#410" id="410">410</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -473,18 +472,18 @@
 <span class="comment">// Instance of the OakFunctions service for Oak Containers.
 </span><span class="kw">pub struct </span>OakFunctionsContainersService&lt;G: AsyncRecipientContextGenerator + Send + Sync&gt; {
     instance: OnceLock&lt;OakFunctionsInstance&gt;,
-    encryption_context: Arc&lt;G&gt;,
+    encryption_key_handle: Arc&lt;G&gt;,
     observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
 }
 
 <span class="kw">impl</span>&lt;G: AsyncRecipientContextGenerator + Send + Sync&gt; OakFunctionsContainersService&lt;G&gt; {
     <span class="kw">pub fn </span>new(
-        encryption_context: Arc&lt;G&gt;,
+        encryption_key_handle: Arc&lt;G&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             instance: OnceLock::new(),
-            encryption_context,
+            encryption_key_handle,
             observer,
         }
     }
@@ -545,7 +544,6 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: tonic::Request&lt;InvokeRequest&gt;,
     ) -&gt; tonic::Result&lt;tonic::Response&lt;InvokeResponse&gt;&gt; {
-        <span class="kw">let </span>encryption_key_provider = <span class="self">self</span>.encryption_context.clone();
         <span class="kw">let </span>instance = <span class="self">self</span>.get_instance()<span class="question-mark">?</span>;
 
         <span class="kw">let </span>encrypted_request = request.into_inner().encrypted_request.ok_or_else(|| {
@@ -554,7 +552,7 @@
             )
         })<span class="question-mark">?</span>;
 
-        AsyncEncryptionHandler::create(encryption_key_provider, |r| <span class="kw">async </span>{
+        AsyncEncryptionHandler::create(<span class="self">self</span>.encryption_key_handle.clone(), |r| <span class="kw">async </span>{
             <span class="comment">// Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
             </span><span class="kw">let </span>response_result: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, micro_rpc::Status&gt; =
@@ -788,7 +786,7 @@
 <span class="comment">// Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
 </span><span class="kw">pub async fn </span>serve&lt;G: AsyncRecipientContextGenerator + Send + Sync + <span class="lifetime">&#39;static</span>, P: MeterProvider&gt;(
     listener: TcpListener,
-    encryption_context: Arc&lt;G&gt;,
+    encryption_key_handle: Arc&lt;G&gt;,
     provider: P,
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">let </span>meter = provider.meter(<span class="string">&quot;oak_functions_containers_app&quot;</span>);
@@ -811,7 +809,7 @@
         .layer(tower::load_shed::LoadShedLayer::new())
         .layer(MonitoringLayer::new(meter.clone()))
         .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
-            encryption_context,
+            encryption_key_handle,
             <span class="prelude-val">Some</span>(Arc::new(OtelObserver::new(meter))),
         )))
         .serve_with_incoming(TcpListenerStream::new(listener))
