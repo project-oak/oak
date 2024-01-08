@@ -23,13 +23,14 @@ pub mod proto {
 }
 
 use crate::proto::oak::functions::oak_functions_client::OakFunctionsClient;
-use oak_containers_sdk::crypto::EncryptionKeyHandle;
+use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_functions_containers_app::serve;
 use oak_functions_service::proto::oak::functions::InitializeRequest;
 use opentelemetry_api::metrics::noop::NoopMeterProvider;
 use std::{
     fs,
     net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
     time::Duration,
 };
 use tokio::net::TcpListener;
@@ -44,13 +45,9 @@ async fn test_lookup() {
     let listener = TcpListener::bind(addr).await.unwrap();
     let addr = listener.local_addr().unwrap();
 
-    let encryption_key_handle = EncryptionKeyHandle::create()
-        .await
-        .expect("couldn't create encryption key handle");
-
     let server_handle = tokio::spawn(serve(
         listener,
-        encryption_key_handle,
+        Arc::new(EncryptionKeyProvider::generate()),
         NoopMeterProvider::new(),
     ));
 

@@ -16,7 +16,7 @@
 
 use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
 use anyhow::Context;
-use oak_containers_sdk::EncryptionKeyHandle;
+use oak_crypto::encryptor::AsyncRecipientContextGenerator;
 use oak_functions_service::{
     instance::OakFunctionsInstance,
     proto::oak::functions::{
@@ -61,15 +61,15 @@ pub mod proto {
 pub mod orchestrator_client;
 
 // Instance of the OakFunctions service for Oak Containers.
-pub struct OakFunctionsContainersService {
+pub struct OakFunctionsContainersService<G: AsyncRecipientContextGenerator + Send + Sync> {
     instance: OnceLock<OakFunctionsInstance>,
-    encryption_key_handle: Arc<dyn EncryptionKeyHandle>,
+    encryption_key_handle: Arc<G>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
-impl OakFunctionsContainersService {
+impl<G: AsyncRecipientContextGenerator + Send + Sync> OakFunctionsContainersService<G> {
     pub fn new(
-        encryption_key_handle: Arc<dyn EncryptionKeyHandle>,
+        encryption_key_handle: Arc<G>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> Self {
         Self {
@@ -110,7 +110,9 @@ fn map_status(status: micro_rpc::Status) -> tonic::Status {
 }
 
 #[tonic::async_trait]
-impl OakFunctions for OakFunctionsContainersService {
+impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
+    for OakFunctionsContainersService<G>
+{
     async fn initialize(
         &self,
         request: tonic::Request<InitializeRequest>,
@@ -373,9 +375,9 @@ static GRPC_SUCCESS: http::header::HeaderValue = http::header::HeaderValue::from
 const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-pub async fn serve<P: MeterProvider>(
+pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static, P: MeterProvider>(
     listener: TcpListener,
-    encryption_key_handle: Arc<dyn EncryptionKeyHandle>,
+    encryption_key_handle: Arc<G>,
     provider: P,
 ) -> anyhow::Result<()> {
     let meter = provider.meter("oak_functions_containers_app");
