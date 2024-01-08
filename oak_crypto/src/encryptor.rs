@@ -20,8 +20,8 @@
 
 use crate::{
     hpke::{
-        deserialize_nonce, setup_base_recipient, setup_base_sender, KeyPair, PrivateKey, PublicKey,
-        RecipientContext, SenderContext, generate_random_nonce,
+        deserialize_nonce, generate_random_nonce, setup_base_recipient, setup_base_sender, KeyPair,
+        PrivateKey, PublicKey, RecipientContext, SenderContext,
     },
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
