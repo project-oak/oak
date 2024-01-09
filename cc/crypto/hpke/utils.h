@@ -41,16 +41,17 @@ struct KeyInfo {
 absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(EVP_HPKE_CTX* hpke_ctx,
                                                          absl::string_view key_context_string);
 
-// Generate base nonce for the AEAD context.
-absl::StatusOr<std::vector<uint8_t>> GetBaseNonce(EVP_HPKE_CTX* ctx,
-                                                  absl::string_view nonce_context_string);
-
-// Determines current nonce from the sequence number and the base nonce. This is needed for AEAD
-// response encryption. This is the same nonce computation as for HPKE to ensure nonce uniqueness.
-// It is up to the caller to increment the sequence number after calling the function.
-// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
-std::vector<uint8_t> CalculateNonce(const std::vector<uint8_t>& base_nonce,
-                                    uint64_t sequence_number);
+// Generates random nonce for AEAD.
+// RFC 9180 uses deterministic nonces which leads to the possibility of the following attack:
+// - An attacker can record a client request and wait until the application database changes
+//   - I.e. it updates an internal lookup database based on the public data
+// - Then if an attacker replays the same request it can get a different response encrypted with the
+// same nonce
+//   - And having 2 different messages encrypted with the same nonce breaks AES-GCM
+//     - The attack is called AES-GCM Forbidden Attack
+// To mitigate the AES-GCM Forbidden Attack Oak is using random nonces for encrypting messages with
+// AEAD.
+absl::StatusOr<std::vector<uint8_t>> GenerateRandomNonce();
 
 // Encrypts `plaintext` and authenticates `associated_data` using AEAD with `context` and `nonce`.
 absl::StatusOr<std::string> AeadSeal(const EVP_AEAD_CTX* context, std::vector<uint8_t> nonce,

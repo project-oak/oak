@@ -30,48 +30,25 @@
 
 namespace oak::crypto {
 
-const uint64_t kStartingSequenceNumber = 0;
-
-std::vector<uint8_t> SenderContext::GenerateNonce() {
-  std::vector<uint8_t> nonce = CalculateNonce(request_base_nonce_, request_sequence_number_);
-  return nonce;
-}
-
 absl::StatusOr<std::string> SenderContext::Seal(const std::vector<uint8_t>& nonce,
                                                 absl::string_view plaintext,
                                                 absl::string_view associated_data) {
-  /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
-  /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
-  if (request_sequence_number_ == UINT64_MAX) {
-    return absl::OutOfRangeError("Maximum sequence number reached");
-  }
-
   absl::StatusOr<std::string> ciphertext =
       AeadSeal(request_aead_context_.get(), nonce, plaintext, associated_data);
   if (!ciphertext.ok()) {
     return ciphertext.status();
   }
-  request_sequence_number_ += 1;
-
   return ciphertext;
 }
 
 absl::StatusOr<std::string> SenderContext::Open(const std::vector<uint8_t>& nonce,
                                                 absl::string_view ciphertext,
                                                 absl::string_view associated_data) {
-  /// Maximum sequence number which can fit in kAeadNonceSizeBytes bytes.
-  /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
-  if (response_sequence_number_ == UINT64_MAX) {
-    return absl::OutOfRangeError("Maximum sequence number reached");
-  }
-
   absl::StatusOr<std::string> plaintext =
       AeadOpen(response_aead_context_.get(), nonce, ciphertext, associated_data);
   if (!plaintext.ok()) {
     return plaintext.status();
   }
-  response_sequence_number_ += 1;
-
   return plaintext;
 }
 
@@ -116,7 +93,7 @@ absl::StatusOr<std::unique_ptr<SenderContext>> SetupBaseSender(
   }
   encap_public_key_info.key_bytes.resize(encap_public_key_info.key_size);
 
-  // Configure sender request context and nonce.
+  // Configure sender request context.
   // This is a deviation from the HPKE RFC, because we are deriving both session request and
   // response keys from the exporter secret, instead of having a request key be directly derived
   // from the shared secret. This is required to be able to share session keys between the Kernel
@@ -127,31 +104,17 @@ absl::StatusOr<std::unique_ptr<SenderContext>> SetupBaseSender(
     return request_aead_context.status();
   }
 
-  auto request_nonce = GetBaseNonce(hpke_sender_context.get(), "request_nonce");
-  if (!request_nonce.ok()) {
-    return request_nonce.status();
-  }
-
-  // Configure sender response context and nonce.
+  // Configure sender response context.
   auto response_aead_context = GetContext(hpke_sender_context.get(), "response_key");
   if (!response_aead_context.ok()) {
     return response_aead_context.status();
-  }
-
-  auto response_nonce = GetBaseNonce(hpke_sender_context.get(), "response_nonce");
-  if (!response_nonce.ok()) {
-    return response_nonce.status();
   }
 
   // Create sender context.
   std::unique_ptr<SenderContext> sender_context = std::make_unique<SenderContext>(
       /* encapsulated_public_key= */ encap_public_key_info.key_bytes,
       /* request_aead_context= */ *std::move(request_aead_context),
-      /* request_base_nonce= */ *request_nonce,
-      /* request_sequence_number= */ kStartingSequenceNumber,
-      /* response_aead_context= */ *std::move(response_aead_context),
-      /* response_base_nonce= */ *response_nonce,
-      /* response_sequence_number= */ kStartingSequenceNumber);
+      /* response_aead_context= */ *std::move(response_aead_context));
 
   EVP_HPKE_CTX_free(hpke_sender_context.release());
   return sender_context;

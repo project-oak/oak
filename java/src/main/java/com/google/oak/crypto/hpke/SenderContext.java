@@ -30,7 +30,6 @@ public final class SenderContext implements AutoCloseable {
     this.nativePtr = nativePtr;
   }
 
-  private native byte[] nativeGenerateNonce();
   private native byte[] nativeSeal(
       final byte[] nonce, final byte[] plaintext, final byte[] associatedData);
   private native byte[] nativeOpen(
@@ -39,18 +38,6 @@ public final class SenderContext implements AutoCloseable {
 
   public final byte[] getSerializedEncapsulatedPublicKey() {
     return serializedEncapsulatedPublicKey;
-  }
-
-  /**
-   * Generates an AEAD nonce used by AEAD encryption scheme.
-   * <https://datatracker.ietf.org/doc/html/rfc5116>
-   */
-  public final Result<byte[], Exception> generateNonce() {
-    byte[] nativeResult = nativeGenerateNonce();
-    if (nativeResult == null) {
-      return Result.error(new Exception("SenderContext generateNonce failed"));
-    }
-    return Result.success(nativeResult);
   }
 
   /**

@@ -23,6 +23,14 @@ JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseSe
 JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseRecipient
   (JNIEnv *, jclass, jbyteArray, jobject, jbyteArray);
 
+/*
+ * Class:     com_google_oak_crypto_hpke_Hpke
+ * Method:    nativeGenerateRandomNonce
+ * Signature: ()[B
+ */
+JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeGenerateRandomNonce
+  (JNIEnv *, jclass);
+
 #ifdef __cplusplus
 }
 #endif
