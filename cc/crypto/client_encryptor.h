@@ -48,7 +48,7 @@ class ClientEncryptor {
       absl::string_view serialized_server_public_key);
 
   // Constructor for initializing all private variables of the class.
-  ClientEncryptor(std::unique_ptr<SenderContext> sender_context)
+  explicit ClientEncryptor(std::unique_ptr<SenderContext> sender_context)
       : serialized_encapsulated_public_key_has_been_sent_(false),
         sender_context_(std::move(sender_context)){};
 

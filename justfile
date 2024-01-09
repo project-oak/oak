@@ -69,3 +69,6 @@ kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_cont
 
 kokoro_run_tests:
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --workspace --exclude='oak_containers_hello_world_untrusted_app'
+
+clang-tidy:
+    bazel build --config=clang-tidy //cc/...

@@ -84,7 +84,7 @@ absl::StatusOr<std::string> AeadSeal(const EVP_AEAD_CTX* context, std::vector<ui
       plaintext_bytes.size() + EVP_AEAD_max_overhead(EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()));
 
   std::vector<uint8_t> ciphertext_bytes(max_out_len);
-  size_t ciphertext_bytes_len;
+  size_t ciphertext_bytes_len = 0;
 
   if (!EVP_AEAD_CTX_seal(
           /* ctx= */ context,
@@ -115,7 +115,7 @@ absl::StatusOr<std::string> AeadOpen(const EVP_AEAD_CTX* context, std::vector<ui
 
   // The plaintext should not be longer than the ciphertext.
   std::vector<uint8_t> plaintext_bytes(ciphertext_bytes.size());
-  size_t plaintext_bytes_size;
+  size_t plaintext_bytes_size = 0;
 
   if (!EVP_AEAD_CTX_open(
           /* ctx= */ context,
