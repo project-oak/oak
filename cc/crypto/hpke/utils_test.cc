@@ -16,6 +16,8 @@
 
 #include "cc/crypto/hpke/utils.h"
 
+#include <cstdint>
+
 #include "absl/status/statusor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

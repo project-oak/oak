@@ -16,6 +16,7 @@
 
 #include "cc/crypto/hpke/sender_context.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
