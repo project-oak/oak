@@ -45,7 +45,7 @@ class RecipientContext {
         response_aead_context_(std::move(response_aead_context)) {}
 
   static absl::StatusOr<std::unique_ptr<RecipientContext>> Deserialize(
-      ::oak::crypto::v1::CryptoContext serialized_recipient_context);
+      ::oak::crypto::v1::SessionKeys session_keys);
 
   // Decrypts message and validates associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>

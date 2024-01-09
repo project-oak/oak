@@ -46,24 +46,17 @@ message EncryptedResponse {
 message AeadEncryptedMessage {
   bytes ciphertext = 1;
   bytes associated_data = 2;
-  // TODO(#4507): Nonce is currently not used by the crypto library. We need to make a non-breaking
-  // change, where we first make the library send and use deterministic nonces in the Proto, and
-  // then replace it with a rendom nonce.
   bytes nonce = 3;
 }
 
 // Envelope containing session keys required to encrypt/decrypt messages within a secure session.
 // Needed to serialize contexts in order to send them over an RPC.
-message CryptoContext {
-  // AEAD key and nonce for encrypting/decrypting client requests.
+message SessionKeys {
+  // AEAD key for encrypting/decrypting client requests.
   bytes request_key = 1;
-  bytes request_base_nonce = 2;
-  uint64 request_sequence_number = 3;
 
-  // Symmetric key and nonce for encrypting/decrypting enclave responses.
-  bytes response_key = 4;
-  bytes response_base_nonce = 5;
-  uint64 response_sequence_number = 6;
+  // AEAD key for encrypting/decrypting enclave responses.
+  bytes response_key = 2;
 }
 
 message Signature {

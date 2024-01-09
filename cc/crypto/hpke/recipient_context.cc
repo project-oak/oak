@@ -32,7 +32,7 @@
 namespace oak::crypto {
 
 namespace {
-using ::oak::crypto::v1::CryptoContext;
+using ::oak::crypto::v1::SessionKeys;
 
 // Validates that the public and private key pairing is valid for HPKE. If the public and private
 // keys are valid, the recipient_keys argument will be an initialized HPKE_KEY.
@@ -76,11 +76,11 @@ absl::Status ValidateKeys(std::vector<uint8_t>& public_key_bytes,
 }  // namespace
 
 absl::StatusOr<std::unique_ptr<RecipientContext>> RecipientContext::Deserialize(
-    CryptoContext serialized_recipient_context) {
+    SessionKeys session_keys) {
   std::unique_ptr<EVP_AEAD_CTX> request_aead_context(EVP_AEAD_CTX_new(
       /* aead= */ EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()),
-      /* key= */ (uint8_t*)serialized_recipient_context.request_key().data(),
-      /* key_len= */ serialized_recipient_context.request_key().size(),
+      /* key= */ (uint8_t*)session_keys.request_key().data(),
+      /* key_len= */ session_keys.request_key().size(),
       /* tag_len= */ 0));
   if (request_aead_context == nullptr) {
     return absl::AbortedError("Unable to deserialize request AEAD context");
@@ -88,8 +88,8 @@ absl::StatusOr<std::unique_ptr<RecipientContext>> RecipientContext::Deserialize(
 
   std::unique_ptr<EVP_AEAD_CTX> response_aead_context(EVP_AEAD_CTX_new(
       /* aead= */ EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()),
-      /* key= */ (uint8_t*)serialized_recipient_context.response_key().data(),
-      /* key_len= */ serialized_recipient_context.response_key().size(),
+      /* key= */ (uint8_t*)session_keys.response_key().data(),
+      /* key_len= */ session_keys.response_key().size(),
       /* tag_len= */ 0));
   if (response_aead_context == nullptr) {
     return absl::AbortedError("Unable to deserialize response AEAD context");

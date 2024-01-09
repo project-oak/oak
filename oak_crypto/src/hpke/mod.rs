@@ -16,19 +16,17 @@
 
 pub(crate) mod aead;
 
+use crate::{
+    hpke::aead::{AeadKey, AeadNonce, AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
+    proto::oak::crypto::v1::CryptoContext,
+};
 use alloc::{vec, vec::Vec};
-
 use anyhow::{anyhow, Context};
 use hpke::{
     aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Kem as KemTrait, OpModeR, OpModeS,
 };
 pub use hpke::{Deserializable, Serializable};
 use rand_core::{OsRng, RngCore};
-
-use crate::{
-    hpke::aead::{AeadKey, AeadNonce, AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
-    proto::oak::crypto::v1::CryptoContext,
-};
 
 type Aead = AesGcm256;
 type Kdf = HkdfSha256;
@@ -235,23 +233,16 @@ impl RecipientContext {
         Ok(ciphertext)
     }
 
-    /// Serializes recipient context into a `CryptoContext` Protobuf message.
-    pub fn serialize(self) -> anyhow::Result<CryptoContext> {
-        Ok(CryptoContext {
+    /// Serializes recipient context into a `SessionKeys` Protobuf message.
+    pub fn serialize(self) -> anyhow::Result<SessionKeys> {
+        Ok(SessionKeys {
             request_key: self.request_key.to_vec(),
-            // TODO(#4507): Remove nonces from the Proto message.
-            request_base_nonce: vec![],
-            request_sequence_number: 0_u64,
-
             response_key: self.response_key.to_vec(),
-            // TODO(#4507): Remove nonces from the Proto message.
-            response_base_nonce: vec![],
-            response_sequence_number: 0_u64,
         })
     }
 
-    /// Deserializes recipient context from a `CryptoContext` Protobuf message.
-    pub fn deserialize(context: CryptoContext) -> anyhow::Result<Self> {
+    /// Deserializes recipient context from a `SessionKeys` Protobuf message.
+    pub fn deserialize(context: SessionKeys) -> anyhow::Result<Self> {
         Ok(Self {
             request_key: context.request_key.try_into().map_err(|v: Vec<u8>| {
                 anyhow!(
