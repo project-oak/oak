@@ -16,16 +16,16 @@
 
 #include "cc/transport/grpc_streaming_transport.h"
 
-#include <gmock/gmock.h>
-#include <grpcpp/server_builder.h>
-#include <gtest/gtest.h>
-
 #include <chrono>
 #include <thread>
 
 #include "absl/log/absl_check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
+#include "gmock/gmock.h"
+#include "grpcpp/server_builder.h"
+#include "grpcpp/support/time.h"
+#include "gtest/gtest.h"
 #include "oak_crypto/proto/v1/crypto.pb.h"
 #include "oak_remote_attestation/proto/v1/messages.pb.h"
 #include "oak_remote_attestation/proto/v1/service_streaming.grpc.pb.h"
@@ -60,8 +60,9 @@ class GrpcStreamingTransportTest : public ::testing::Test {
     channel_ = server_->InProcessChannel({});
     stub_ = oak::session::v1::StreamingSession::NewStub(channel_);
 
-    std::chrono::time_point deadline =
-        std::chrono::system_clock::now() + std::chrono::milliseconds(5000);
+    absl::Time absl_deadline = absl::Now() + absl::Seconds(10);
+    gpr_timespec deadline;
+    deadline.tv_sec = absl::ToInt64Seconds(absl::time_internal::ToUnixDuration(absl_deadline));
     context_.set_deadline(deadline);
   }
 
