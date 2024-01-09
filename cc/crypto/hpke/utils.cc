@@ -66,7 +66,7 @@ absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(EVP_HPKE_CTX* hpke_ctx,
 
 absl::StatusOr<std::vector<uint8_t>> GenerateRandomNonce() {
   std::vector<uint8_t> nonce(kAeadNonceSizeBytes);
-  if (!RAND_bytes(&nonce[0], nonce.size())) {
+  if (!RAND_bytes(nonce.data(), nonce.size())) {
     return absl::AbortedError("Unable to generate random nonce");
   }
   return nonce;
