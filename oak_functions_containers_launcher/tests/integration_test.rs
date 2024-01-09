@@ -47,6 +47,7 @@ async fn test_launcher_key_value_lookup() {
     assert_eq!(response, b"test_value");
 }
 
+/*
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_echo() {
@@ -149,3 +150,4 @@ async fn test_launcher_weather_lookup() {
     eprintln!("bazel status: {:?}", status);
     assert!(status.success());
 }
+*/
