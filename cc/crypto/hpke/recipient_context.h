@@ -46,8 +46,6 @@ class RecipientContext {
   static absl::StatusOr<std::unique_ptr<RecipientContext>> Deserialize(
       ::oak::crypto::v1::CryptoContext serialized_recipient_context);
 
-  std::vector<uint8_t> GenerateNonce();
-
   // Decrypts message and validates associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
   absl::StatusOr<std::string> Open(const std::vector<uint8_t>& nonce, absl::string_view ciphertext,

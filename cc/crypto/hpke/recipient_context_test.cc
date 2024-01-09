@@ -18,6 +18,7 @@
 
 #include "absl/status/statusor.h"
 #include "cc/crypto/hpke/sender_context.h"
+#include "cc/crypto/hpke/utils.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "oak_crypto/proto/v1/crypto.pb.h"
@@ -120,15 +121,16 @@ TEST_F(RecipientContextTest, RecipientContextOpenSuccess) {
 
   std::string plaintext = "Hello World";
 
-  const std::vector<uint8_t> nonce = (*sender_context)->GenerateNonce();
-  auto ciphertext = (*sender_context)->Seal(nonce, plaintext, associated_data_request_);
+  absl::StatusOr<const std::vector<uint8_t>> nonce = GenerateRandomNonce();
+  ASSERT_TRUE(nonce.ok());
+  auto ciphertext = (*sender_context)->Seal(*nonce, plaintext, associated_data_request_);
   ASSERT_TRUE(ciphertext.ok());
 
   std::string encap_public_key = (*sender_context)->GetSerializedEncapsulatedPublicKey();
   auto recipient_context = SetupBaseRecipient(encap_public_key, recipient_key_pair_, info_string_);
   ASSERT_TRUE(recipient_context.ok());
   auto received_plaintext =
-      (*recipient_context)->Open(nonce, *ciphertext, associated_data_request_);
+      (*recipient_context)->Open(*nonce, *ciphertext, associated_data_request_);
   ASSERT_TRUE(received_plaintext.ok());
 
   EXPECT_THAT(*received_plaintext, StrEq(plaintext));
@@ -141,8 +143,9 @@ TEST_F(RecipientContextTest, RecipientRequestContextOpenFailure) {
 
   std::string plaintext = "Hello World";
 
-  const std::vector<uint8_t> nonce = (*sender_context)->GenerateNonce();
-  auto ciphertext = (*sender_context)->Seal(nonce, plaintext, associated_data_request_);
+  absl::StatusOr<const std::vector<uint8_t>> nonce = GenerateRandomNonce();
+  ASSERT_TRUE(nonce.ok());
+  auto ciphertext = (*sender_context)->Seal(*nonce, plaintext, associated_data_request_);
   ASSERT_TRUE(ciphertext.ok());
 
   std::string edited_ciphertext = absl::StrCat(*ciphertext, "no!");
@@ -152,7 +155,7 @@ TEST_F(RecipientContextTest, RecipientRequestContextOpenFailure) {
   ASSERT_TRUE(recipient_context.ok());
 
   auto received_plaintext =
-      (*recipient_context)->Open(nonce, edited_ciphertext, associated_data_request_);
+      (*recipient_context)->Open(*nonce, edited_ciphertext, associated_data_request_);
   EXPECT_FALSE(received_plaintext.ok());
   EXPECT_EQ(received_plaintext.status().code(), absl::StatusCode::kAborted);
 }
@@ -163,8 +166,9 @@ TEST_F(RecipientContextTest, RecipientResponseContextSealSuccess) {
 
   std::string plaintext = "Hello World";
 
-  const std::vector<uint8_t> nonce = (*recipient_context)->GenerateNonce();
-  auto ciphertext = (*recipient_context)->Seal(nonce, plaintext, associated_data_response_);
+  absl::StatusOr<const std::vector<uint8_t>> nonce = GenerateRandomNonce();
+  ASSERT_TRUE(nonce.ok());
+  auto ciphertext = (*recipient_context)->Seal(*nonce, plaintext, associated_data_response_);
   ASSERT_TRUE(ciphertext.ok());
   EXPECT_THAT(plaintext, StrNe(*ciphertext));
 }
@@ -175,8 +179,9 @@ TEST_F(RecipientContextTest, RecipientResponseContextSealFailure) {
 
   std::string empty_plaintext = "";
 
-  const std::vector<uint8_t> nonce = (*recipient_context)->GenerateNonce();
-  auto ciphertext = (*recipient_context)->Seal(nonce, empty_plaintext, associated_data_response_);
+  absl::StatusOr<const std::vector<uint8_t>> nonce = GenerateRandomNonce();
+  ASSERT_TRUE(nonce.ok());
+  auto ciphertext = (*recipient_context)->Seal(*nonce, empty_plaintext, associated_data_response_);
   EXPECT_FALSE(ciphertext.ok());
   EXPECT_EQ(ciphertext.status().code(), absl::StatusCode::kInvalidArgument);
 }

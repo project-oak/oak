@@ -100,9 +100,12 @@ JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseRe
 
 JNIEXPORT jbyteArray JNICALL
 Java_com_google_oak_crypto_hpke_Hpke_nativeGenerateRandomNonce(JNIEnv* env, jclass obj) {
-  std::vector<uint8_t> nonce = oak::crypto::GenerateRandomNonce();
+  absl::StatusOr<std::vector<uint8_t>> nonce = oak::crypto::GenerateRandomNonce();
+  if (!nonce.ok()) {
+    return {};
+  }
 
-  jbyteArray ret = env->NewByteArray(nonce.size());
-  env->SetByteArrayRegion(ret, 0, nonce.size(), reinterpret_cast<const jbyte*>(&nonce.front()));
+  jbyteArray ret = env->NewByteArray(nonce->size());
+  env->SetByteArrayRegion(ret, 0, nonce->size(), reinterpret_cast<const jbyte*>(&nonce->front()));
   return ret;
 }

@@ -18,7 +18,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
-#include <random>
 #include <string>
 #include <utility>
 #include <vector>
@@ -29,6 +28,7 @@
 #include "absl/strings/string_view.h"
 #include "openssl/aead.h"
 #include "openssl/hpke.h"
+#include "openssl/rand.h"
 
 namespace oak::crypto {
 
@@ -48,7 +48,7 @@ absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(EVP_HPKE_CTX* hpke_ctx,
           /* secret_len= */ key.size(),
           /* context= */ key_context_bytes.data(),
           /* context_len= */ key_context_bytes.size())) {
-    return absl::AbortedError("Unable to export key.");
+    return absl::AbortedError("Unable to export key");
   }
 
   std::unique_ptr<EVP_AEAD_CTX> aead_context(EVP_AEAD_CTX_new(
@@ -58,16 +58,16 @@ absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(EVP_HPKE_CTX* hpke_ctx,
       /* tag_len= */ 0));
 
   if (aead_context == nullptr) {
-    return absl::AbortedError("Unable to generate AEAD context.");
+    return absl::AbortedError("Unable to generate AEAD context");
   }
 
   return std::move(aead_context);
 }
 
-std::vector<uint8_t> GenerateRandomNonce() {
+absl::StatusOr<std::vector<uint8_t>> GenerateRandomNonce() {
   std::vector<uint8_t> nonce(kAeadNonceSizeBytes);
-  for (size_t i = 0; i < kAeadNonceSizeBytes; ++i) {
-    nonce[kAeadNonceSizeBytes - i - 1] = rand() & 0xff;
+  if (!RAND_bytes(&nonce[0], nonce.size())) {
+    return absl::AbortedError("Unable to generate random nonce");
   }
   return nonce;
 }

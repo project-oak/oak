@@ -100,11 +100,6 @@ absl::StatusOr<std::unique_ptr<RecipientContext>> RecipientContext::Deserialize(
       /* response_aead_context= */ std::move(response_aead_context));
 }
 
-std::vector<uint8_t> RecipientContext::GenerateNonce() {
-  std::vector<uint8_t> nonce = GenerateRandomNonce();
-  return nonce;
-}
-
 absl::StatusOr<std::string> RecipientContext::Open(const std::vector<uint8_t>& nonce,
                                                    absl::string_view ciphertext,
                                                    absl::string_view associated_data) {

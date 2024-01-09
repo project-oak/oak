@@ -87,3 +87,15 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "utils_test",
+    size = "small",
+    srcs = ["utils_test.cc"],
+    deps = [
+        ":utils",
+        "@boringssl//:crypto",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_googletest//:gtest_main",
+    ],
+)

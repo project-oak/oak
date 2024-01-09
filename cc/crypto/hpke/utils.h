@@ -51,7 +51,7 @@ absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(EVP_HPKE_CTX* hpke_ctx,
 //     - The attack is called AES-GCM Forbidden Attack
 // To mitigate the AES-GCM Forbidden Attack Oak is using random nonces for encrypting messages with
 // AEAD.
-std::vector<uint8_t> GenerateRandomNonce();
+absl::StatusOr<std::vector<uint8_t>> GenerateRandomNonce();
 
 // Encrypts `plaintext` and authenticates `associated_data` using AEAD with `context` and `nonce`.
 absl::StatusOr<std::string> AeadSeal(const EVP_AEAD_CTX* context, std::vector<uint8_t> nonce,

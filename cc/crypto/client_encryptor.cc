@@ -23,6 +23,7 @@
 #include "absl/status/statusor.h"
 #include "cc/crypto/common.h"
 #include "cc/crypto/hpke/sender_context.h"
+#include "cc/crypto/hpke/utils.h"
 #include "oak_crypto/proto/v1/crypto.pb.h"
 
 namespace oak::crypto {
@@ -45,8 +46,12 @@ absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
 absl::StatusOr<EncryptedRequest> ClientEncryptor::Encrypt(absl::string_view plaintext,
                                                           absl::string_view associated_data) {
   // Encrypt request.
-  const std::vector<uint8_t> nonce = sender_context_->GenerateNonce();
-  absl::StatusOr<std::string> ciphertext = sender_context_->Seal(nonce, plaintext, associated_data);
+  absl::StatusOr<const std::vector<uint8_t>> nonce = GenerateRandomNonce();
+  if (!nonce.ok()) {
+    return nonce.status();
+  }
+  absl::StatusOr<std::string> ciphertext =
+      sender_context_->Seal(*nonce, plaintext, associated_data);
   if (!ciphertext.ok()) {
     return ciphertext.status();
   }
@@ -54,7 +59,7 @@ absl::StatusOr<EncryptedRequest> ClientEncryptor::Encrypt(absl::string_view plai
   // Create request message.
   EncryptedRequest encrypted_request;
   *encrypted_request.mutable_encrypted_message()->mutable_nonce() =
-      std::string(nonce.begin(), nonce.end());
+      std::string(nonce->begin(), nonce->end());
   *encrypted_request.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
   *encrypted_request.mutable_encrypted_message()->mutable_associated_data() = associated_data;
 

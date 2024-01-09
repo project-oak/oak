@@ -30,11 +30,6 @@
 
 namespace oak::crypto {
 
-std::vector<uint8_t> SenderContext::GenerateNonce() {
-  std::vector<uint8_t> nonce = GenerateRandomNonce();
-  return nonce;
-}
-
 absl::StatusOr<std::string> SenderContext::Seal(const std::vector<uint8_t>& nonce,
                                                 absl::string_view plaintext,
                                                 absl::string_view associated_data) {
