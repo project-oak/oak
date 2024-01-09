@@ -7,10 +7,11 @@ license = "Apache-2.0"
 
 [dependencies]
 coset = { version = "*", default-features = false }
-oak_dice = { workspace = true }
-p256 = { version = "*", default-features = false, features = ["ecdsa"] }
-oak_sev_guest = { workspace = true, features = ["rust-crypto"] }
+hkdf = { version = "*", default-features = false }
 hex = { version = "*", default-features = false, features = ["alloc"] }
+oak_dice = { workspace = true }
+oak_sev_guest = { workspace = true, features = ["rust-crypto"] }
+p256 = { version = "*", default-features = false, features = ["ecdsa"] }
 rand_core = { version = "*", default-features = false, features = [
   "getrandom",
 ] }

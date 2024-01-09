@@ -14,23 +14,16 @@
 // limitations under the License.
 //
 
-use crate::{ghcb::GHCB_PROTOCOL, mm::Translator, GUEST_HOST_HEAP, PAGE_TABLES};
-use alloc::boxed::Box;
+use crate::mm::Translator;
 use core::{panic, slice::from_raw_parts};
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
-use oak_sev_guest::{
-    cpuid::CpuidPage,
-    crypto::GuestMessageEncryptor,
-    guest::{GuestMessage, Message},
-    secrets::SecretsPage,
-};
-use spinning_top::{const_spinlock, Spinlock};
+use oak_sev_guest::{cpuid::CpuidPage, secrets::SecretsPage};
 use x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
 };
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::FromBytes;
 
 /// The exclusive upper limit of the address range where we expect the SNP-specific pages to reside.
 ///
@@ -44,9 +37,6 @@ pub static SECRETS_PAGE: OnceCell<SecretsPage> = OnceCell::new();
 
 /// The SEV-SNP CPUID page.
 pub static CPUID_PAGE: OnceCell<CpuidPage> = OnceCell::new();
-
-/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest message protocol.
-pub static GUEST_MESSAGE_ENCRYPTOR: Spinlock<Option<GuestMessageEncryptor>> = const_spinlock(None);
 
 /// Wrapper for the guest-physical addresses of the secrets page and the CPUID page.
 pub struct SnpPageAddresses {
@@ -152,71 +142,6 @@ pub fn init_snp_pages<T: Translator>(snp_pages: SnpPageAddresses, mapper: &T) {
         .unwrap()
         .validate()
         .expect("invalid secrets page");
-}
-
-/// Initializes the guest message encryptor.
-///
-/// This functions will panic if the secrets page has not yet been initialized.
-pub fn init_guest_message_encryptor() {
-    // For now we always use VMPCK_0 from the secrets page as the key.
-    let key = &SECRETS_PAGE
-        .get()
-        .expect("secrets page is not initialized")
-        .vmpck_0[..];
-    // Stage 0 will have generated an attestation report and this would have consumed 2 sequence
-    // numbers (1 for the request, 1 for the response).
-    GUEST_MESSAGE_ENCRYPTOR.lock().replace(
-        GuestMessageEncryptor::new_with_sequence_number(key, 2)
-            .expect("couldn't create guest message encryptor"),
-    );
-}
-
-pub fn send_guest_message_request<
-    Request: AsBytes + FromBytes + Message,
-    Response: AsBytes + FromBytes + Message,
->(
-    request: Request,
-) -> anyhow::Result<Response> {
-    let mut guard = GUEST_MESSAGE_ENCRYPTOR.lock();
-    let encryptor = guard
-        .as_mut()
-        .ok_or_else(|| anyhow::anyhow!("guest message encryptor is not initialized"))?;
-
-    let alloc = GUEST_HOST_HEAP
-        .get()
-        .ok_or_else(|| anyhow::anyhow!("guest-host heap is not initialized"))?;
-
-    let mut request_message = Box::new_in(GuestMessage::new(), alloc);
-    encryptor
-        .encrypt_message(request, request_message.as_mut())
-        .map_err(anyhow::Error::msg)?;
-    let response_message = Box::new_in(GuestMessage::new(), alloc);
-
-    let translator = PAGE_TABLES
-        .get()
-        .ok_or_else(|| anyhow::anyhow!("address translator is not initialized"))?;
-    let request_address = translator
-        .translate_virtual(VirtAddr::from_ptr(
-            request_message.as_ref() as *const GuestMessage
-        ))
-        .ok_or_else(|| anyhow::anyhow!("couldn't translate request address"))?;
-    let response_address = translator
-        .translate_virtual(VirtAddr::from_ptr(
-            response_message.as_ref() as *const GuestMessage
-        ))
-        .ok_or_else(|| anyhow::anyhow!("couldn't translate response address"))?;
-
-    GHCB_PROTOCOL
-        .get()
-        .expect("ghcb not initialized")
-        .lock()
-        .do_guest_message_request(request_address, response_address)
-        .map_err(anyhow::Error::msg)?;
-
-    response_message.validate().map_err(anyhow::Error::msg)?;
-    encryptor
-        .decrypt_message::<Response>(&response_message)
-        .map_err(anyhow::Error::msg)
 }
 
 /// Panics if the physical address is not the start of a 4KiB page, null, or not below the maximum

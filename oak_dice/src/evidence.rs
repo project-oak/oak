@@ -32,6 +32,11 @@ const AMD_SEV_SNP_ATTESTATION_REPORT_SIZE: usize = 1184;
 
 static_assertions::const_assert!(REPORT_SIZE >= AMD_SEV_SNP_ATTESTATION_REPORT_SIZE);
 
+/// The size for compound device identifiers.
+///
+/// See <https://pigweed.googlesource.com/open-dice/+/HEAD/docs/specification.md>
+pub const CDI_SIZE: usize = 32;
+
 /// The maximum size of an ECDSA private key.
 pub const PRIVATE_KEY_SIZE: usize = 64;
 
@@ -149,6 +154,23 @@ impl Drop for CertificateAuthority {
     }
 }
 
+// A derived compound device identifier for a layer.
+#[derive(AsBytes, FromZeroes, FromBytes)]
+#[repr(C)]
+pub struct CompoundDeviceIdentifier {
+    /// The RAW bytes representing the CDI.
+    pub cdi: [u8; CDI_SIZE],
+}
+
+static_assertions::assert_eq_size!([u8; CDI_SIZE], CompoundDeviceIdentifier);
+
+impl Drop for CompoundDeviceIdentifier {
+    fn drop(&mut self) {
+        // Zero out the CDI.
+        self.cdi.fill(0);
+    }
+}
+
 /// Wrapper for passing DICE info from Stage0 to the next layer (Stage 1 or the Restricted Kernel).
 #[derive(AsBytes, FromZeroes, FromBytes)]
 #[repr(C, align(4096))]
@@ -160,8 +182,11 @@ pub struct Stage0DiceData {
     pub root_layer_evidence: RootLayerEvidence,
     /// The evidence about the next layer.
     pub layer_1_evidence: LayerEvidence,
+    /// The private key for the Layer 1 ECA certificate.
     pub layer_1_certificate_authority: CertificateAuthority,
-    _padding_1: [u8; 672],
+    /// The compound device identifier for Layer 1.
+    pub layer_1_cdi: CompoundDeviceIdentifier,
+    _padding_1: [u8; 640],
 }
 
 static_assertions::assert_eq_size!([u8; 4096], Stage0DiceData);

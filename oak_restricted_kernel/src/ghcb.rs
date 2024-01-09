@@ -53,7 +53,7 @@ static mut GHCB_WRAPPER: GhcbAlignmentWrapper = GhcbAlignmentWrapper { ghcb: Ghc
 
 pub fn get_ghcb_port_factory() -> PortFactoryWrapper {
     PortFactoryWrapper::Ghcb(GhcbIoFactory::new(
-        GHCB_PROTOCOL.get().expect("ghcb not initialized"),
+        GHCB_PROTOCOL.get().expect("GHCB not initialized"),
     ))
 }
 
