@@ -261,6 +261,7 @@
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -335,6 +336,7 @@
     <span class="kw">let </span>stage0_dice_data = oak_stage0_dice::generate_dice_data(
         <span class="kw-2">&amp;</span>oak_stage0_dice::Measurements::default(),
         oak_stage0_dice::mock_attestation_report,
+        oak_stage0_dice::mock_derived_key,
     );
 
     oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, <span class="kw-2">&amp;</span>[])

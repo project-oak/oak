@@ -533,6 +533,14 @@
 <a href="#533" id="533">533</a>
 <a href="#534" id="534">534</a>
 <a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -549,14 +557,13 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>core::{
+</span><span class="kw">use crate</span>::{sev_status, BootAllocator};
+<span class="kw">use </span>alloc::boxed::Box;
+<span class="kw">use </span>core::{
     alloc::{AllocError, Allocator, Layout},
     ops::{Deref, DerefMut},
     ptr::NonNull,
 };
-
-<span class="kw">use crate</span>::{sev_status, BootAllocator};
-<span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">pub use </span>oak_sev_guest::ghcb::Ghcb;
@@ -570,7 +577,7 @@
         SevStatus, SnpPageStateChangeRequest,
     },
 };
-<span class="kw">use </span>spinning_top::Spinlock;
+<span class="kw">use </span>spinning_top::{const_spinlock, Spinlock};
 <span class="kw">use </span>x86_64::{
     instructions::tlb,
     structures::paging::{
@@ -582,6 +589,9 @@
 <span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
 
 <span class="kw">pub static </span>GHCB_WRAPPER: OnceCell&lt;Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;&gt;&gt; = OnceCell::new();
+
+<span class="doccomment">/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest message protocol.
+</span><span class="kw">static </span>GUEST_MESSAGE_ENCRYPTOR: Spinlock&lt;<span class="prelude-ty">Option</span>&lt;GuestMessageEncryptor&gt;&gt; = const_spinlock(<span class="prelude-val">None</span>);
 
 <span class="doccomment">/// Allocator that forces allocations to be 4K-aligned (and sized) and marks the pages as shared.
 ///
@@ -1034,11 +1044,14 @@
     <span class="macro">log::info!</span>(<span class="string">&quot;SEV-SNP memory validation complete.&quot;</span>);
 }
 
-<span class="kw">pub fn </span>init_guest_message_encryptor() -&gt; <span class="prelude-ty">Result</span>&lt;GuestMessageEncryptor, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+<span class="kw">pub fn </span>init_guest_message_encryptor() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// Safety: `SecretsPage` implements `FromBytes` which ensures that it has no requirements on the
     // underlying bytes.
     </span><span class="kw">let </span>key = <span class="kw-2">&amp;</span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::SEV_SECRETS.assume_init_ref() }.vmpck_0[..];
-    GuestMessageEncryptor::new(key)
+    GUEST_MESSAGE_ENCRYPTOR
+        .lock()
+        .replace(GuestMessageEncryptor::new(key)<span class="question-mark">?</span>);
+    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="doccomment">/// Sends a request to the Secure Processor using the Guest Message Protocol.
@@ -1046,9 +1059,12 @@
     Request: AsBytes + FromBytes + Message,
     Response: AsBytes + FromBytes + Message,
 &gt;(
-    encryptor: <span class="kw-2">&amp;mut </span>GuestMessageEncryptor,
     request: Request,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Response, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>guard = GUEST_MESSAGE_ENCRYPTOR.lock();
+    <span class="kw">let </span>encryptor = guard
+        .as_mut()
+        .ok_or(<span class="string">&quot;guest message encryptor is not initialized&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>alloc = <span class="kw-2">&amp;</span><span class="kw">crate</span>::SHORT_TERM_ALLOC;
     <span class="kw">let </span><span class="kw-2">mut </span>request_message = Shared::new_in(GuestMessage::new(), alloc);
     encryptor.encrypt_message(request, request_message.as_mut())<span class="question-mark">?</span>;
@@ -1062,8 +1078,8 @@
 
     GHCB_WRAPPER
         .get()
-        .expect(<span class="string">&quot;ghcb not initialized&quot;</span>)
-        .lock()
+        .ok_or(<span class="string">&quot;GHCB not initialized&quot;</span>)<span class="question-mark">?
+        </span>.lock()
         .do_guest_message_request(request_address, response_address)<span class="question-mark">?</span>;
     response_message.validate()<span class="question-mark">?</span>;
     encryptor.decrypt_message::&lt;Response&gt;(response_message.as_ref())

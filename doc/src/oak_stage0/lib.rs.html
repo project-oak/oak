@@ -388,6 +388,13 @@
 <a href="#388" id="388">388</a>
 <a href="#389" id="389">389</a>
 <a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -599,6 +606,9 @@
         .unwrap_or_default();
 
     <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
+        <span class="comment">// Initialize the Guest Message encryptor for generating attestation reports and a unique
+        // device secret.
+        </span>sev::init_guest_message_encryptor().expect(<span class="string">&quot;couldn&#39;t initialize guest message encryptor&quot;</span>);
         <span class="comment">// Safety: we&#39;re only interested in the pointer value of SEV_SECRETS, not its contents.
         </span><span class="kw">let </span>cc_blob = Box::leak(Box::new_in(
             oak_linux_boot_params::CCBlobSevInfo::new(
@@ -701,7 +711,11 @@
     };
 
     <span class="kw">let </span>dice_data = Box::leak(Box::new_in(
-        oak_stage0_dice::generate_dice_data(<span class="kw-2">&amp;</span>measurements, dice_attestation::get_attestation),
+        oak_stage0_dice::generate_dice_data(
+            <span class="kw-2">&amp;</span>measurements,
+            dice_attestation::get_attestation,
+            dice_attestation::get_derived_key,
+        ),
         <span class="kw-2">&amp;</span><span class="kw">crate</span>::BOOT_ALLOC,
     ));
     <span class="comment">// Reserve the memory containing the DICE data.

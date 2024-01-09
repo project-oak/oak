@@ -173,81 +173,6 @@
 <a href="#173" id="173">173</a>
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
-<a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
-<a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
-<a href="#243" id="243">243</a>
-<a href="#244" id="244">244</a>
-<a href="#245" id="245">245</a>
-<a href="#246" id="246">246</a>
-<a href="#247" id="247">247</a>
-<a href="#248" id="248">248</a>
-<a href="#249" id="249">249</a>
-<a href="#250" id="250">250</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -264,23 +189,16 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{ghcb::GHCB_PROTOCOL, mm::Translator, GUEST_HOST_HEAP, PAGE_TABLES};
-<span class="kw">use </span>alloc::boxed::Box;
+</span><span class="kw">use </span><span class="kw">crate</span>::mm::Translator;
 <span class="kw">use </span>core::{panic, slice::from_raw_parts};
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
-<span class="kw">use </span>oak_sev_guest::{
-    cpuid::CpuidPage,
-    crypto::GuestMessageEncryptor,
-    guest::{GuestMessage, Message},
-    secrets::SecretsPage,
-};
-<span class="kw">use </span>spinning_top::{const_spinlock, Spinlock};
+<span class="kw">use </span>oak_sev_guest::{cpuid::CpuidPage, secrets::SecretsPage};
 <span class="kw">use </span>x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
 };
-<span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
+<span class="kw">use </span>zerocopy::FromBytes;
 
 <span class="doccomment">/// The exclusive upper limit of the address range where we expect the SNP-specific pages to reside.
 ///
@@ -294,9 +212,6 @@
 
 <span class="doccomment">/// The SEV-SNP CPUID page.
 </span><span class="kw">pub static </span>CPUID_PAGE: OnceCell&lt;CpuidPage&gt; = OnceCell::new();
-
-<span class="doccomment">/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest message protocol.
-</span><span class="kw">pub static </span>GUEST_MESSAGE_ENCRYPTOR: Spinlock&lt;<span class="prelude-ty">Option</span>&lt;GuestMessageEncryptor&gt;&gt; = const_spinlock(<span class="prelude-val">None</span>);
 
 <span class="doccomment">/// Wrapper for the guest-physical addresses of the secrets page and the CPUID page.
 </span><span class="kw">pub struct </span>SnpPageAddresses {
@@ -402,71 +317,6 @@
         .unwrap()
         .validate()
         .expect(<span class="string">&quot;invalid secrets page&quot;</span>);
-}
-
-<span class="doccomment">/// Initializes the guest message encryptor.
-///
-/// This functions will panic if the secrets page has not yet been initialized.
-</span><span class="kw">pub fn </span>init_guest_message_encryptor() {
-    <span class="comment">// For now we always use VMPCK_0 from the secrets page as the key.
-    </span><span class="kw">let </span>key = <span class="kw-2">&amp;</span>SECRETS_PAGE
-        .get()
-        .expect(<span class="string">&quot;secrets page is not initialized&quot;</span>)
-        .vmpck_0[..];
-    <span class="comment">// Stage 0 will have generated an attestation report and this would have consumed 2 sequence
-    // numbers (1 for the request, 1 for the response).
-    </span>GUEST_MESSAGE_ENCRYPTOR.lock().replace(
-        GuestMessageEncryptor::new_with_sequence_number(key, <span class="number">2</span>)
-            .expect(<span class="string">&quot;couldn&#39;t create guest message encryptor&quot;</span>),
-    );
-}
-
-<span class="kw">pub fn </span>send_guest_message_request&lt;
-    Request: AsBytes + FromBytes + Message,
-    Response: AsBytes + FromBytes + Message,
-&gt;(
-    request: Request,
-) -&gt; anyhow::Result&lt;Response&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>guard = GUEST_MESSAGE_ENCRYPTOR.lock();
-    <span class="kw">let </span>encryptor = guard
-        .as_mut()
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;guest message encryptor is not initialized&quot;</span>))<span class="question-mark">?</span>;
-
-    <span class="kw">let </span>alloc = GUEST_HOST_HEAP
-        .get()
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;guest-host heap is not initialized&quot;</span>))<span class="question-mark">?</span>;
-
-    <span class="kw">let </span><span class="kw-2">mut </span>request_message = Box::new_in(GuestMessage::new(), alloc);
-    encryptor
-        .encrypt_message(request, request_message.as_mut())
-        .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-    <span class="kw">let </span>response_message = Box::new_in(GuestMessage::new(), alloc);
-
-    <span class="kw">let </span>translator = PAGE_TABLES
-        .get()
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;address translator is not initialized&quot;</span>))<span class="question-mark">?</span>;
-    <span class="kw">let </span>request_address = translator
-        .translate_virtual(VirtAddr::from_ptr(
-            request_message.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>GuestMessage
-        ))
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t translate request address&quot;</span>))<span class="question-mark">?</span>;
-    <span class="kw">let </span>response_address = translator
-        .translate_virtual(VirtAddr::from_ptr(
-            response_message.as_ref() <span class="kw">as </span><span class="kw-2">*const </span>GuestMessage
-        ))
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t translate response address&quot;</span>))<span class="question-mark">?</span>;
-
-    GHCB_PROTOCOL
-        .get()
-        .expect(<span class="string">&quot;ghcb not initialized&quot;</span>)
-        .lock()
-        .do_guest_message_request(request_address, response_address)
-        .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-
-    response_message.validate().map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-    encryptor
-        .decrypt_message::&lt;Response&gt;(<span class="kw-2">&amp;</span>response_message)
-        .map_err(anyhow::Error::msg)
 }
 
 <span class="doccomment">/// Panics if the physical address is not the start of a 4KiB page, null, or not below the maximum

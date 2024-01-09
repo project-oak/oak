@@ -49,6 +49,30 @@
 <a href="#49" id="49">49</a>
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
+<a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -65,14 +89,21 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>oak_sev_guest::{
-    guest::{AttestationReport, AttestationRequest, AttestationResponse, ReportStatus},
+</span><span class="kw">use </span><span class="kw">crate</span>::sev::send_guest_message_request;
+<span class="kw">use </span>oak_sev_guest::{
+    guest::{
+        AttestationReport, AttestationRequest, AttestationResponse, GuestFieldFlags, KeyRequest,
+        KeyResponse, ReportStatus,
+    },
     msr::SevStatus,
 };
 
-<span class="kw">use </span><span class="kw">crate</span>::sev::{init_guest_message_encryptor, send_guest_message_request};
+<span class="kw">type </span>DerivedKey = [u8; <span class="number">32</span>];
 
-<span class="doccomment">/// Returns an attestation report using AMD SEV-SNP.
+<span class="comment">// The number of bytes of custom data that can be included in the attestation report.
+</span><span class="kw">const </span>REPORT_DATA_SIZE: usize = <span class="number">64</span>;
+
+<span class="doccomment">/// Returns an attestation report.
 ///
 /// If AMD SEV-SNP is enabled it returns a valid hardware-rooted attestation report. In other cases
 /// it generates an empty attestation report for testing. The additional data will be set in both
@@ -83,14 +114,12 @@
 /// * `report_data` - The custom data that must be included in the report. This is typically used to
 ///   bind information (such as the hash of a public key) to the report.
 </span><span class="kw">pub fn </span>get_attestation(
-    report_data: [u8; oak_stage0_dice::REPORT_DATA_SIZE],
+    report_data: [u8; REPORT_DATA_SIZE],
 ) -&gt; <span class="prelude-ty">Result</span>&lt;AttestationReport, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="kw">if </span><span class="kw">crate</span>::sev_status().contains(SevStatus::SNP_ACTIVE) {
-        <span class="kw">let </span><span class="kw-2">mut </span>guest_message_encryptor = init_guest_message_encryptor()<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>report_request = AttestationRequest::new();
         report_request.report_data = report_data;
-        <span class="kw">let </span>attestation_response: AttestationResponse =
-            send_guest_message_request(<span class="kw-2">&amp;mut </span>guest_message_encryptor, report_request)<span class="question-mark">?</span>;
+        <span class="kw">let </span>attestation_response: AttestationResponse = send_guest_message_request(report_request)<span class="question-mark">?</span>;
         attestation_response.validate()<span class="question-mark">?</span>;
         <span class="kw">if </span>attestation_response.get_status() != <span class="prelude-val">Some</span>(ReportStatus::Success) {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;report request failed due to invalid parameters&quot;</span>);
@@ -98,6 +127,25 @@
         <span class="prelude-val">Ok</span>(attestation_response.report)
     } <span class="kw">else </span>{
         oak_stage0_dice::mock_attestation_report(report_data)
+    }
+}
+
+<span class="doccomment">/// Requests a derived key.
+///
+/// The key is derived from the VCEK. The key derivation mixes in the VM launch measurement and
+/// guest policy and uses VMPL0.
+///
+/// We use this key as the unique device secret for deriving compound devices identifiers for each
+/// layer, and eventually a sealing key in the last layer.
+</span><span class="kw">pub fn </span>get_derived_key() -&gt; <span class="prelude-ty">Result</span>&lt;DerivedKey, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="kw">if </span><span class="kw">crate</span>::sev_status().contains(SevStatus::SNP_ACTIVE) {
+        <span class="kw">let </span><span class="kw-2">mut </span>key_request = KeyRequest::new();
+        <span class="kw">let </span>selected_fields = GuestFieldFlags::MEASUREMENT | GuestFieldFlags::GUEST_POLICY;
+        key_request.guest_field_select = selected_fields.bits();
+        <span class="kw">let </span>key_response: KeyResponse = send_guest_message_request(key_request)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(key_response.derived_key)
+    } <span class="kw">else </span>{
+        oak_stage0_dice::mock_derived_key()
     }
 }
 </code></pre></div></section></main></body></html>

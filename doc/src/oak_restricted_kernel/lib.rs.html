@@ -403,9 +403,6 @@
 <a href="#403" id="403">403</a>
 <a href="#404" id="404">404</a>
 <a href="#405" id="405">405</a>
-<a href="#406" id="406">406</a>
-<a href="#407" id="407">407</a>
-<a href="#408" id="408">408</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -463,7 +460,6 @@
 <span class="attr">#[cfg(feature = <span class="string">&quot;simple_io_channel&quot;</span>)]
 </span><span class="kw">mod </span>simpleio;
 <span class="kw">mod </span>snp;
-<span class="kw">pub mod </span>snp_guest;
 <span class="kw">mod </span>syscall;
 <span class="attr">#[cfg(feature = <span class="string">&quot;vsock_channel&quot;</span>)]
 </span><span class="kw">mod </span>virtio;
@@ -476,11 +472,10 @@
     acpi::Acpi,
     mm::Translator,
     snp::{get_snp_page_addresses, init_snp_pages},
-    snp_guest::DerivedKey,
 };
 <span class="kw">use </span>alloc::{alloc::Allocator, boxed::Box};
 <span class="kw">use </span>core::{marker::Sync, panic::PanicInfo, str::FromStr};
-<span class="kw">use </span>hkdf::HkdfExtract;
+<span class="kw">use </span>hkdf::Hkdf;
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>log::{error, info};
 <span class="kw">use </span>mm::{
@@ -499,6 +494,9 @@
     PhysAddr, VirtAddr,
 };
 <span class="kw">use </span>zerocopy::FromBytes;
+
+<span class="doccomment">/// A derived sealing key.
+</span><span class="kw">type </span>DerivedKey = [u8; <span class="number">32</span>];
 
 <span class="doccomment">/// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 512 GiB of memory, for now.
@@ -604,7 +602,6 @@
                 snp_pages.expect(<span class="string">&quot;missing SNP CPUID and secrets pages&quot;</span>),
                 mapper,
             );
-            snp::init_guest_message_encryptor();
         }
     }
 
@@ -743,22 +740,19 @@
     <span class="kw">let </span>application = payload::Application::load_raw(<span class="kw-2">&amp;mut *</span>channel)
         .expect(<span class="string">&quot;failed to load application binary from channel&quot;</span>);
 
+    <span class="comment">// Mix in the application digest when deriving CDI for Layer 2.
+    </span><span class="kw">let </span>hkdf = Hkdf::&lt;Sha256&gt;::new(
+        <span class="prelude-val">Some</span>(application.digest()),
+        <span class="kw-2">&amp;</span>stage0_dice_data.layer_1_cdi.cdi[..],
+    );
+    <span class="kw">let </span><span class="kw-2">mut </span>derived_key = DerivedKey::default();
+    hkdf.expand(<span class="string">b&quot;CDI_Seal&quot;</span>, <span class="kw-2">&amp;mut </span>derived_key)
+        .expect(<span class="string">&quot;invalid length for derived key&quot;</span>);
+
     <span class="kw">let </span>restricted_kernel_dice_data =
         oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, application.digest());
 
-    <span class="kw">let </span>derived_key = <span class="kw">if </span>sev_snp_enabled {
-        snp_guest::get_derived_key().expect(<span class="string">&quot;couldn&#39;t derive key&quot;</span>)
-    } <span class="kw">else </span>{
-        <span class="comment">// Zero fixed key since we can&#39;t derive a consistent key without SEV-SNP.
-        </span>DerivedKey::default()
-    };
-    <span class="comment">// Mix the application digest into the final derived key.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>extraction = HkdfExtract::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(<span class="string">b&quot;Oak application key&quot;</span>));
-    extraction.input_ikm(<span class="kw-2">&amp;</span>derived_key);
-    extraction.input_ikm(application.digest());
-    <span class="kw">let </span>(derived_key, <span class="kw">_</span>) = extraction.finalize();
-
-    syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key.into());
+    syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key);
 
     <span class="comment">// Safety: we&#39;ve loaded the Restricted Application. Whether that&#39;s valid or not is no longer
     // under the kernel&#39;s control.

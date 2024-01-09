@@ -201,6 +201,29 @@
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -228,6 +251,7 @@
 
 <span class="kw">use </span>alloc::{string::String, vec, vec::Vec};
 <span class="kw">use </span>coset::{cbor::value::Value, cwt::ClaimName, CborSerializable, CoseSign1};
+<span class="kw">use </span>hkdf::Hkdf;
 <span class="kw">use </span>oak_dice::{
     cert::{
         derive_verifying_key_id, generate_ecdsa_key_pair, generate_signing_certificate,
@@ -242,7 +266,9 @@
 <span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>zerocopy::{AsBytes, FromZeroes};
 
-<span class="comment">// The number of custom bytes that can be included in the attestation report.
+<span class="kw">type </span>DerivedKey = [u8; <span class="number">32</span>];
+
+<span class="comment">// The number of bytes of custom data that can be included in the attestation report.
 </span><span class="kw">pub const </span>REPORT_DATA_SIZE: usize = <span class="number">64</span>;
 
 <span class="doccomment">/// Measurements of various components in Stage1.
@@ -334,9 +360,11 @@
 <span class="doccomment">/// Generates attestation evidence for the &#39;measurements&#39; of all Stage 1 components.
 </span><span class="kw">pub fn </span>generate_dice_data&lt;
     F: FnOnce([u8; REPORT_DATA_SIZE]) -&gt; <span class="prelude-ty">Result</span>&lt;AttestationReport, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;,
+    G: FnOnce() -&gt; <span class="prelude-ty">Result</span>&lt;DerivedKey, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;,
 &gt;(
     measurements: <span class="kw-2">&amp;</span>Measurements,
     get_attestation: F,
+    get_derived_key: G,
 ) -&gt; Stage0DiceData {
     <span class="kw">let </span><span class="kw-2">mut </span>result = Stage0DiceData::new_zeroed();
     <span class="comment">// Generate ECA Stage0 key pair. This key will be used to sign Stage1 ECA certificate.
@@ -356,8 +384,6 @@
         .to_vec()
         .expect(<span class="string">&quot;couldn&#39;t serialize stage 1 ECA certificate&quot;</span>);
 
-    <span class="kw">let </span>stage1_eca_signing_key: Vec&lt;u8&gt; = stage1_eca_signing_key.to_bytes().as_slice().into();
-
     <span class="comment">// Use the SHA2-256 digest of the serialized ECA verifying key as the report data.
     </span><span class="kw">let </span>eca_measurement = {
         <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha256::default();
@@ -371,6 +397,18 @@
     <span class="kw">let </span>report = get_attestation(report_data).expect(<span class="string">&quot;couldn&#39;t get attestation report.&quot;</span>);
     <span class="kw">let </span>report_bytes = report.as_bytes();
 
+    <span class="comment">// Use the root derived key as the UDS (unique device secret) for deriving sealing keys.
+    </span><span class="kw">let </span>ikm: DerivedKey = get_derived_key().expect(<span class="string">&quot;couldn&#39;t get derived key&quot;</span>);
+
+    <span class="comment">// Mix in the measurements of the kernel, the kernel command-line, the kernel setup data and the
+    // initial RAM disk when deriving the CDI for Layer 1.
+    </span><span class="kw">let </span><span class="kw-2">mut </span>salt: Vec&lt;u8&gt; = Vec::with_capacity(<span class="number">128</span>);
+    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.kernel_measurement[..]);
+    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.cmdline_measurement[..]);
+    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.setup_data_measurement[..]);
+    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.ram_disk_measurement[..]);
+    <span class="kw">let </span>hkdf = Hkdf::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>salt), <span class="kw-2">&amp;</span>ikm[..]);
+
     result.magic = STAGE0_MAGIC;
     result.root_layer_evidence.tee_platform = TeePlatform::AmdSevSnp <span class="kw">as </span>u64;
     result
@@ -383,8 +421,11 @@
         .expect(<span class="string">&quot;failed to set eca public key&quot;</span>);
     result.layer_1_evidence.eca_certificate[..stage1_eca_cert.len()]
         .copy_from_slice(<span class="kw-2">&amp;</span>stage1_eca_cert);
-    result.layer_1_certificate_authority.eca_private_key[..stage1_eca_signing_key.len()]
-        .copy_from_slice(<span class="kw-2">&amp;</span>stage1_eca_signing_key);
+    result.layer_1_certificate_authority.eca_private_key[..stage1_eca_signing_key.to_bytes().len()]
+        .copy_from_slice(stage1_eca_signing_key.to_bytes().as_slice());
+    hkdf.expand(<span class="string">b&quot;CDI_Seal&quot;</span>, <span class="kw-2">&amp;mut </span>result.layer_1_cdi.cdi[..])
+        .expect(<span class="string">&quot;invalid length for HKDF output&quot;</span>);
+
     result
 }
 
@@ -403,5 +444,10 @@
     <span class="kw">let </span><span class="kw-2">mut </span>report = AttestationReport::new_zeroed();
     report.data.report_data = report_data;
     <span class="prelude-val">Ok</span>(report)
+}
+
+<span class="doccomment">/// Returns a fixed key filled with zeros.
+</span><span class="kw">pub fn </span>mock_derived_key() -&gt; <span class="prelude-ty">Result</span>&lt;DerivedKey, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+    <span class="prelude-val">Ok</span>(DerivedKey::default())
 }
 </code></pre></div></section></main></body></html>

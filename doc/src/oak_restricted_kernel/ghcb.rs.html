@@ -229,7 +229,7 @@
 
 <span class="kw">pub fn </span>get_ghcb_port_factory() -&gt; PortFactoryWrapper {
     PortFactoryWrapper::Ghcb(GhcbIoFactory::new(
-        GHCB_PROTOCOL.get().expect(<span class="string">&quot;ghcb not initialized&quot;</span>),
+        GHCB_PROTOCOL.get().expect(<span class="string">&quot;GHCB not initialized&quot;</span>),
     ))
 }
 

@@ -234,6 +234,31 @@
 <a href="#234" id="234">234</a>
 <a href="#235" id="235">235</a>
 <a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -267,6 +292,11 @@
 </span><span class="kw">const </span>AMD_SEV_SNP_ATTESTATION_REPORT_SIZE: usize = <span class="number">1184</span>;
 
 <span class="macro">static_assertions::const_assert!</span>(REPORT_SIZE &gt;= AMD_SEV_SNP_ATTESTATION_REPORT_SIZE);
+
+<span class="doccomment">/// The size for compound device identifiers.
+///
+/// See &lt;https://pigweed.googlesource.com/open-dice/+/HEAD/docs/specification.md&gt;
+</span><span class="kw">pub const </span>CDI_SIZE: usize = <span class="number">32</span>;
 
 <span class="doccomment">/// The maximum size of an ECDSA private key.
 </span><span class="kw">pub const </span>PRIVATE_KEY_SIZE: usize = <span class="number">64</span>;
@@ -385,6 +415,23 @@
     }
 }
 
+<span class="comment">// A derived compound device identifier for a layer.
+</span><span class="attr">#[derive(AsBytes, FromZeroes, FromBytes)]
+#[repr(C)]
+</span><span class="kw">pub struct </span>CompoundDeviceIdentifier {
+    <span class="doccomment">/// The RAW bytes representing the CDI.
+    </span><span class="kw">pub </span>cdi: [u8; CDI_SIZE],
+}
+
+<span class="macro">static_assertions::assert_eq_size!</span>([u8; CDI_SIZE], CompoundDeviceIdentifier);
+
+<span class="kw">impl </span>Drop <span class="kw">for </span>CompoundDeviceIdentifier {
+    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="comment">// Zero out the CDI.
+        </span><span class="self">self</span>.cdi.fill(<span class="number">0</span>);
+    }
+}
+
 <span class="doccomment">/// Wrapper for passing DICE info from Stage0 to the next layer (Stage 1 or the Restricted Kernel).
 </span><span class="attr">#[derive(AsBytes, FromZeroes, FromBytes)]
 #[repr(C, align(<span class="number">4096</span>))]
@@ -396,8 +443,11 @@
     </span><span class="kw">pub </span>root_layer_evidence: RootLayerEvidence,
     <span class="doccomment">/// The evidence about the next layer.
     </span><span class="kw">pub </span>layer_1_evidence: LayerEvidence,
-    <span class="kw">pub </span>layer_1_certificate_authority: CertificateAuthority,
-    _padding_1: [u8; <span class="number">672</span>],
+    <span class="doccomment">/// The private key for the Layer 1 ECA certificate.
+    </span><span class="kw">pub </span>layer_1_certificate_authority: CertificateAuthority,
+    <span class="doccomment">/// The compound device identifier for Layer 1.
+    </span><span class="kw">pub </span>layer_1_cdi: CompoundDeviceIdentifier,
+    _padding_1: [u8; <span class="number">640</span>],
 }
 
 <span class="macro">static_assertions::assert_eq_size!</span>([u8; <span class="number">4096</span>], Stage0DiceData);
