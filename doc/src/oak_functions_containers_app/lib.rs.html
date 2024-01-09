@@ -406,7 +406,6 @@
 <a href="#406" id="406">406</a>
 <a href="#407" id="407">407</a>
 <a href="#408" id="408">408</a>
-<a href="#409" id="409">409</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -438,7 +437,7 @@
 };
 <span class="kw">use </span>oak_remote_attestation::handler::AsyncEncryptionHandler;
 <span class="kw">use </span>opentelemetry_api::{
-    metrics::{Histogram, Meter, MeterProvider, Unit},
+    metrics::{Histogram, Meter, Unit},
     KeyValue,
 };
 <span class="kw">use </span>prost::Message;
@@ -784,12 +783,11 @@
 </span><span class="kw">const </span>GRPC_STATUS_HEADER_CODE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;grpc-status&quot;</span>;
 
 <span class="comment">// Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-</span><span class="kw">pub async fn </span>serve&lt;G: AsyncRecipientContextGenerator + Send + Sync + <span class="lifetime">&#39;static</span>, P: MeterProvider&gt;(
+</span><span class="kw">pub async fn </span>serve&lt;G: AsyncRecipientContextGenerator + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(
     listener: TcpListener,
     encryption_key_handle: Arc&lt;G&gt;,
-    provider: P,
+    meter: Meter,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">let </span>meter = provider.meter(<span class="string">&quot;oak_functions_containers_app&quot;</span>);
     tonic::transport::Server::builder()
         .layer(
             tower_http::trace::TraceLayer::new_for_grpc()
