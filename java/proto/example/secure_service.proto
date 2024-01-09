@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak.example.encrypted;
 
-import "oak_remote_attestation/proto/v1/service_streaming.proto";
+import "proto/session/v1/service_streaming.proto";
 
 option java_multiple_files = true;
 option java_package = "com.google.oak.example.encrypted";

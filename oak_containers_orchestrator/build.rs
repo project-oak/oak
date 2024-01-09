@@ -19,11 +19,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate gRPC code for Orchestrator services.
     generate_grpc_code(
         &[
-            "../oak_remote_attestation/proto/v1/messages.proto",
             "../oak_containers/proto/interfaces.proto",
             "../proto/key_provisioning/key_provisioning.proto",
             "../proto/containers/orchestrator_crypto.proto",
             "../proto/containers/hostlib_key_provisioning.proto",
+            "../proto/session/v1/messages.proto",
         ],
         "..",
         CodegenOptions {

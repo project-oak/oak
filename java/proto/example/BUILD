@@ -26,7 +26,7 @@ package(
 proto_library(
     name = "secure_service_proto",
     srcs = ["secure_service.proto"],
-    deps = ["//oak_remote_attestation/proto/v1:service_streaming_proto"],
+    deps = ["//proto/session/v1:service_streaming_proto"],
 )
 
 java_proto_library(

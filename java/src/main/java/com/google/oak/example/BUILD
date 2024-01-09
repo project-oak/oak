@@ -30,7 +30,7 @@ java_library(
         "//java/src/main/java/com/google/oak/crypto/hpke",
         "//java/src/main/java/com/google/oak/server",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_remote_attestation/proto/v1:service_streaming_java_proto",
+        "//proto/session/v1:service_streaming_java_proto",
         "@io_grpc_grpc_java//stub",
     ],
 )
