@@ -35,7 +35,6 @@ pub struct OrchestratorClient {
     inner: GrpcOrchestratorClient<tonic::transport::channel::Channel>,
 }
 
-// TODO(#4478): Reuse Orchestrator client in all Oak Containers examples.
 impl OrchestratorClient {
     pub async fn create() -> Result<Self> {
         let inner: GrpcOrchestratorClient<tonic::transport::channel::Channel> = {

@@ -16,16 +16,12 @@
 mod proto {
     pub mod oak {
         pub mod containers {
-            #![allow(clippy::return_self_not_must_use)]
-            tonic::include_proto!("oak.containers");
             pub mod example {
                 tonic::include_proto!("oak.containers.example");
             }
         }
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::{attestation, session};
     }
 }
 
 pub mod app_service;
-pub mod orchestrator_client;
