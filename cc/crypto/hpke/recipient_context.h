@@ -17,6 +17,7 @@
 #ifndef CC_CRYPTO_HPKE_RECIPIENT_CONTEXT_H_
 #define CC_CRYPTO_HPKE_RECIPIENT_CONTEXT_H_
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>

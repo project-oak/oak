@@ -70,6 +70,7 @@ cc_test(
     deps = [
         ":recipient_context",
         ":sender_context",
+        "//cc/crypto/hpke:utils",
         "//oak_crypto/proto/v1:crypto_cc_proto",
         "@boringssl//:crypto",
         "@com_google_absl//absl/status:statusor",
@@ -83,6 +84,7 @@ cc_test(
     srcs = ["sender_context_test.cc"],
     deps = [
         ":sender_context",
+        "//cc/crypto/hpke:utils",
         "@com_google_absl//absl/status:statusor",
         "@com_google_googletest//:gtest_main",
     ],

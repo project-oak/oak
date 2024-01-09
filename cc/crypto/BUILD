@@ -26,6 +26,7 @@ cc_library(
     deps = [
         ":common",
         "//cc/crypto/hpke:sender_context",
+        "//cc/crypto/hpke:utils",
         "//oak_crypto/proto/v1:crypto_cc_proto",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -40,6 +41,7 @@ cc_library(
         ":common",
         ":encryption_key_provider",
         "//cc/crypto/hpke:recipient_context",
+        "//cc/crypto/hpke:utils",
         "//oak_crypto/proto/v1:crypto_cc_proto",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

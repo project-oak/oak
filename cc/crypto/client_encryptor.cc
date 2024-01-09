@@ -16,7 +16,9 @@
 
 #include "cc/crypto/client_encryptor.h"
 
+#include <cstdint>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
