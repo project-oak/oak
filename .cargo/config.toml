@@ -5,7 +5,13 @@
 # process is deterministic.
 #
 # See https://linux.die.net/man/1/ld (--build-id flag).
-rustflags = ["-C", "link-args=-Xlinker --build-id=none"]
+rustflags = [
+  "-C",
+  "link-args=-Xlinker --build-id=none",
+  # Enable `tokio_unstable` so that we can access the Tokio runtime metrics.
+  "--cfg",
+  "tokio_unstable"
+]
 
 [target.x86_64-unknown-linux-musl]
 # Make NT_GNU_BUILD_ID header generation deterministic.
@@ -14,7 +20,13 @@ rustflags = ["-C", "link-args=-Xlinker --build-id=none"]
 # process is deterministic.
 #
 # See https://linux.die.net/man/1/ld (--build-id flag).
-rustflags = ["-C", "link-args=-Xlinker --build-id=none"]
+rustflags = [
+  "-C",
+  "link-args=-Xlinker --build-id=none",
+  # Enable `tokio_unstable` so that we can access the Tokio runtime metrics.
+  "--cfg",
+  "tokio_unstable"
+]
 
 # Workaround for 'unable to find __addtf3, __multf3 and __subtf3'
 # Related issue: https://github.com/rust-lang/compiler-builtins/issues/201

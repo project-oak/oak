@@ -29,7 +29,7 @@ use oak_functions_service::{
 };
 use oak_remote_attestation::handler::AsyncEncryptionHandler;
 use opentelemetry_api::{
-    metrics::{Histogram, Meter, MeterProvider, Unit},
+    metrics::{Histogram, Meter, Unit},
     KeyValue,
 };
 use prost::Message;
@@ -375,12 +375,11 @@ static GRPC_SUCCESS: http::header::HeaderValue = http::header::HeaderValue::from
 const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static, P: MeterProvider>(
+pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static>(
     listener: TcpListener,
     encryption_key_handle: Arc<G>,
-    provider: P,
+    meter: Meter,
 ) -> anyhow::Result<()> {
-    let meter = provider.meter("oak_functions_containers_app");
     tonic::transport::Server::builder()
         .layer(
             tower_http::trace::TraceLayer::new_for_grpc()
