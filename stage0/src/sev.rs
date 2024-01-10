@@ -496,6 +496,19 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
         }
         .expect("failed to validate memory");
     }
+
+    // Also pvalidate the range from 0xF0000 to 0xFFFFF since the Linux Kernel will scan this range
+    // for the SMBIOS entry point table if CONFIG_DMI is enabled, even if the range is marked as
+    // reserved.
+    // See <https://github.com/torvalds/linux/blob/master/drivers/firmware/dmi_scan.c>
+    let range = PhysFrame::<Size4KiB>::range(
+        PhysFrame::from_start_address(PhysAddr::new(0xF0000)).unwrap(),
+        PhysFrame::from_start_address(PhysAddr::new(0x100000)).unwrap(),
+    );
+    range
+        .pvalidate(&mut validation_pt, encrypted)
+        .expect("failed to validate SMBIOS memory");
+
     page_tables.pd_0[1].set_unused();
     page_tables.pdpt[1].set_unused();
     tlb::flush_all();
