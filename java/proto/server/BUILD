@@ -26,7 +26,7 @@ package(
 proto_library(
     name = "secure_proxy_proto",
     srcs = ["secure_proxy.proto"],
-    deps = ["//proto/session/v1:service_streaming_proto"],
+    deps = ["//proto/session:service_streaming_proto"],
 )
 
 java_proto_library(

@@ -27,7 +27,7 @@
 #include "grpcpp/create_channel.h"
 #include "grpcpp/grpcpp.h"
 #include "grpcpp/security/credentials.h"
-#include "proto/session/v1/service_streaming.grpc.pb.h"
+#include "proto/session/service_streaming.grpc.pb.h"
 
 using ::grpc::Channel;
 using ::grpc::ClientContext;

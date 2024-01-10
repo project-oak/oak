@@ -19,8 +19,8 @@ use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
         &[
-            "../proto/session/v1/messages.proto",
-            "../proto/session/v1/service_streaming.proto",
+            "../proto/session/messages.proto",
+            "../proto/session/service_streaming.proto",
         ],
         "..",
         CodegenOptions {

@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak.server;
 
-import "proto/session/v1/service_streaming.proto";
+import "proto/session/service_streaming.proto";
 
 option java_multiple_files = true;
 option java_package = "com.google.oak.server";

@@ -23,7 +23,7 @@ cc_library(
     name = "attestation_verifier",
     hdrs = ["attestation_verifier.h"],
     deps = [
-        "//proto/session/v1:messages_cc_proto",
+        "//proto/session:messages_cc_proto",
         "@com_google_absl//absl/status",
     ],
 )
@@ -34,7 +34,7 @@ cc_library(
     hdrs = ["insecure_attestation_verifier.h"],
     deps = [
         ":attestation_verifier",
-        "//proto/session/v1:messages_cc_proto",
+        "//proto/session:messages_cc_proto",
         "@com_google_absl//absl/status",
     ],
 )

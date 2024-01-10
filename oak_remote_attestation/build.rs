@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "../proto/attestation/dice.proto",
             "../proto/attestation/evidence.proto",
             "../proto/attestation/endorsement.proto",
-            "../proto/session/v1/messages.proto",
+            "../proto/session/messages.proto",
         ],
         &[".."],
         Default::default(),

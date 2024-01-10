@@ -21,7 +21,7 @@
 
 #include "absl/status/status.h"
 #include "cc/remote_attestation/attestation_verifier.h"
-#include "proto/session/v1/messages.pb.h"
+#include "proto/session/messages.pb.h"
 
 namespace oak::remote_attestation {
 

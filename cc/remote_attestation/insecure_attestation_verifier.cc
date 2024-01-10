@@ -19,7 +19,7 @@
 #include <string>
 
 #include "absl/status/status.h"
-#include "proto/session/v1/messages.pb.h"
+#include "proto/session/messages.pb.h"
 
 namespace oak::remote_attestation {
 

@@ -24,7 +24,7 @@
 #include "cc/crypto/client_encryptor.h"
 #include "cc/crypto/common.h"
 #include "oak_crypto/proto/v1/crypto.pb.h"
-#include "proto/session/v1/messages.pb.h"
+#include "proto/session/messages.pb.h"
 
 namespace oak::client {
 
