@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["app_service","orchestrator_client"]};
+window.SIDEBAR_ITEMS = {"mod":["app_service"]};
