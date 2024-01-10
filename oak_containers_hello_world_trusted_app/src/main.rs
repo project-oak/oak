@@ -13,9 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::anyhow;
-use oak_containers_hello_world_trusted_app::orchestrator_client::OrchestratorClient;
-use oak_containers_sdk::InstanceEncryptionKeyHandle;
+use anyhow::Context;
+use oak_containers_sdk::{InstanceEncryptionKeyHandle, OrchestratorClient};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::net::TcpListener;
 
@@ -25,11 +24,16 @@ const TRUSTED_APP_PORT: u16 = 8080;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = OrchestratorClient::create()
         .await
-        .map_err(|error| anyhow!("couldn't create Orchestrator client: {:?}", error))?;
-    let application_config = client.clone().get_application_config().await?;
+        .context("Could't create orchestrator client")?;
+
+    let application_config = client
+        .get_application_config()
+        .await
+        .context("failed to get application config")?;
+
     let encryption_key_handle = InstanceEncryptionKeyHandle::create()
         .await
-        .map_err(|error| anyhow!("couldn't create encryption key handle: {:?}", error))?;
+        .context("couldn't create encryption key handle: {:?}")?;
     let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), TRUSTED_APP_PORT);
     let listener = TcpListener::bind(addr).await?;
     let join_handle = tokio::spawn(oak_containers_hello_world_trusted_app::app_service::create(
@@ -37,7 +41,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         application_config,
         encryption_key_handle,
     ));
-    client.notify_app_ready().await?;
+    client
+        .notify_app_ready()
+        .await
+        .context("failed to notify that app is ready")?;
     join_handle.await??;
     Ok(())
 }

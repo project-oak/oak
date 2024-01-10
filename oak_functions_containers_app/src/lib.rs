@@ -58,8 +58,6 @@ pub mod proto {
     }
 }
 
-pub mod orchestrator_client;
-
 // Instance of the OakFunctions service for Oak Containers.
 pub struct OakFunctionsContainersService<G: AsyncRecipientContextGenerator + Send + Sync> {
     instance: OnceLock<OakFunctionsInstance>,
