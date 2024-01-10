@@ -93,7 +93,7 @@ absl::Status ServerEncryptor::InitializeRecipientContexts(const EncryptedRequest
     return absl::InvalidArgumentError(
         "serialized encapsulated public key is not present in the initial request message");
   }
-  std::string serialized_encapsulated_public_key = request.serialized_encapsulated_public_key();
+  const std::string& serialized_encapsulated_public_key = request.serialized_encapsulated_public_key();
 
   // Create recipient contexts.
   absl::StatusOr<std::unique_ptr<RecipientContext>> recipient_context =

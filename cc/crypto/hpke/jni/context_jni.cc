@@ -34,7 +34,7 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativ
   jclass sender_context_class = env->GetObjectClass(obj);
   jfieldID fid = env->GetFieldID(sender_context_class, "nativePtr", "J");
   oak::crypto::SenderContext* sender_context =
-      (oak::crypto::SenderContext*)(env->GetLongField(obj, fid));
+      reinterpret_cast<oak::crypto::SenderContext*>(env->GetLongField(obj, fid));
   if (sender_context == NULL) {
     return {};
   }

@@ -42,7 +42,7 @@ class ServerEncryptor {
   // Constructor for `ServerEncryptor`.
   // `RecipientContextGenerator` argument is a long-term object containing the private key and
   // should outlive the per-session `ServerEncryptor` object.
-  ServerEncryptor(RecipientContextGenerator& recipient_context_generator)
+  explicit ServerEncryptor(RecipientContextGenerator& recipient_context_generator)
       : recipient_context_generator_(recipient_context_generator), recipient_context_(nullptr){};
 
   // Decrypts a [`EncryptedRequest`] proto message using AEAD.

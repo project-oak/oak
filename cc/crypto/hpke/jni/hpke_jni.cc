@@ -52,7 +52,7 @@ JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseSe
   jmethodID sender_context_constructor = env->GetMethodID(sender_context_class, "<init>", "([BJ)V");
   jobject sender_context =
       env->NewObject(sender_context_class, sender_context_constructor,
-                     serialized_encapsulated_public_key, (long)native_sender_context->release());
+                     serialized_encapsulated_public_key, reinterpret_cast<long>(native_sender_context->release()));
 
   return sender_context;
 }
@@ -93,7 +93,7 @@ JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseRe
   jmethodID recipient_context_constructor =
       env->GetMethodID(recipient_context_class, "<init>", "(J)V");
   jobject recipient_context = env->NewObject(recipient_context_class, recipient_context_constructor,
-                                             (long)native_recipient_context->release());
+                                             reinterpret_cast<long>(native_recipient_context->release()));
 
   return recipient_context;
 }
