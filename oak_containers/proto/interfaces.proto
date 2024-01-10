@@ -41,16 +41,6 @@ message SendAttestationEvidenceRequest {
   oak.attestation.v1.Evidence dice_evidence = 2;
 }
 
-message GetCryptoContextRequest {
-  // Ephemeral Diffie-Hellman client public key that is needed to derive a session key.
-  bytes serialized_encapsulated_public_key = 1;
-}
-
-message GetCryptoContextResponse {
-  // Session keys for decrypting client requests and encrypting enclave responses.
-  oak.crypto.v1.CryptoContext context = 1;
-}
-
 // Defines the service exposed by the launcher, that can be invoked by the stage1 and the
 // orchestrator.
 service Launcher {
@@ -86,8 +76,4 @@ service Orchestrator {
   // Notifies the orchestrator that the trusted app is ready to serve requests and listening on the
   // pre-arranged port (8080).
   rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-
-  // Returns crypto context for decrypting client requests and encrypting enclave responses.
-  // TODO(#3841): Store private key in the Orchestrator and generate session keys for each session.
-  rpc GetCryptoContext(GetCryptoContextRequest) returns (GetCryptoContextResponse) {}
 }
