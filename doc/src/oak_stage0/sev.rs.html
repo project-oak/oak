@@ -541,6 +541,12 @@
 <a href="#541" id="541">541</a>
 <a href="#542" id="542">542</a>
 <a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -587,6 +593,7 @@
     PhysAddr, VirtAddr,
 };
 <span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
+<span class="kw">use </span>zeroize::Zeroize;
 
 <span class="kw">pub static </span>GHCB_WRAPPER: OnceCell&lt;Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;&gt;&gt; = OnceCell::new();
 
@@ -1044,13 +1051,18 @@
     <span class="macro">log::info!</span>(<span class="string">&quot;SEV-SNP memory validation complete.&quot;</span>);
 }
 
-<span class="kw">pub fn </span>init_guest_message_encryptor() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+<span class="doccomment">/// Initializes the Guest Message encryptor using VMPCK0.
+</span><span class="kw">pub fn </span>init_guest_message_encryptor() -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// Safety: `SecretsPage` implements `FromBytes` which ensures that it has no requirements on the
     // underlying bytes.
-    </span><span class="kw">let </span>key = <span class="kw-2">&amp;</span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::SEV_SECRETS.assume_init_ref() }.vmpck_0[..];
+    </span><span class="kw">let </span>key = <span class="kw-2">&amp;mut </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::SEV_SECRETS.assume_init_mut() }.vmpck_0[..];
     GUEST_MESSAGE_ENCRYPTOR
         .lock()
         .replace(GuestMessageEncryptor::new(key)<span class="question-mark">?</span>);
+    <span class="comment">// Once the we have read VMPCK0 we wipe it so that later boot stages cannot request attestation
+    // reports or derived sealing keys for VMPL0. This stops later boot stages from creating
+    // counterfeit DICE chains.
+    </span>key.zeroize();
     <span class="prelude-val">Ok</span>(())
 }
 
