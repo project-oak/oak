@@ -4,6 +4,7 @@ Checks: >
     bugprone-*,
     google-*,
     performance-*,
+    -performance-no-int-to-ptr,
     -bugprone-reserved-identifier,
     -bugprone-narrowing-conversions,
 
