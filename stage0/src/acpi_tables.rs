@@ -16,7 +16,7 @@
 
 use crate::acpi::{EBDA, EBDA_SIZE};
 use bitflags::bitflags;
-use core::{mem::size_of, slice};
+use core::{marker::PhantomData, mem::size_of, ops::Deref, slice};
 use x86_64::VirtAddr;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
@@ -259,6 +259,33 @@ impl Rsdt {
     }
 }
 
+/// A wrapper for entry addresses in XSDT table.
+///
+/// An entry address in XSDT has 8 bytes, but they are placed from table offset
+/// 36 and not 8-byte aligned. This wrapper handles the unaligned access.
+#[repr(C)]
+pub struct XsdtEntryPtr<'a> {
+    addr: [u8; 8],
+    _phantom: PhantomData<&'a DescriptionHeader>,
+}
+
+impl<'a> XsdtEntryPtr<'a> {
+    pub fn raw_val(&self) -> u64 {
+        // As per Section 5.2 in the ACPI specification 6.5,
+        // Address is little endian.
+        u64::from_le_bytes(self.addr)
+    }
+}
+
+impl<'a> Deref for XsdtEntryPtr<'a> {
+    type Target = DescriptionHeader;
+
+    fn deref(&self) -> &DescriptionHeader {
+        // Safety: the address has been validated in Xsdt::validate().
+        unsafe { &*(self.raw_val() as *const DescriptionHeader) }
+    }
+}
+
 /// Extended System Description Table.
 ///
 /// See Section 5.2.8 in the ACPI specification for more details.
@@ -293,8 +320,8 @@ impl Xsdt {
 
         // Safety: we're never dereferencing the pointer.
         let ebda_base = unsafe { EBDA.as_ptr() } as usize;
-        for &entry in self.entries() {
-            let ptr = entry as *const _ as usize;
+        for entry in self.entries() {
+            let ptr = entry.raw_val() as usize;
             if !(ebda_base..ebda_base + EBDA_SIZE).contains(&ptr) {
                 return Err("XSDT invalid: entry points outside EBDA");
             }
@@ -302,23 +329,25 @@ impl Xsdt {
         Ok(())
     }
 
-    pub fn entries(&self) -> &[&'static DescriptionHeader] {
+    pub fn entries(&self) -> &[XsdtEntryPtr] {
         let entries_base = self as *const _ as usize + size_of::<DescriptionHeader>();
         // Safety: we've validated that the address and length makes sense in `validate()`.
+        // XsdtEntryPtr is 1-byte aligned.
         unsafe {
             slice::from_raw_parts(
-                entries_base as *const &DescriptionHeader,
-                (self.header.length as usize - size_of::<DescriptionHeader>()) / size_of::<usize>(),
+                entries_base as *const XsdtEntryPtr,
+                (self.header.length as usize - size_of::<DescriptionHeader>())
+                    / size_of::<XsdtEntryPtr>(),
             )
         }
     }
 
     /// Finds a table based on the signature, if it is present.
-    pub fn get(&self, table: &[u8; 4]) -> Option<&'static DescriptionHeader> {
+    pub fn get(&self, table: &[u8; 4]) -> Option<&DescriptionHeader> {
         self.entries()
             .iter()
-            .find(|&&entry| entry.signature == *table)
-            .copied()
+            .find(|entry| entry.signature == *table)
+            .map(|p| &**p)
     }
 }
 

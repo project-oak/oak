@@ -11,10 +11,7 @@ unmaintained = "deny"
 unsound = "deny"
 yanked = "deny"
 notice = "deny"
-ignore = [
-  # TODO(#4251): Remove once the webpki crate is fixed.
-  "RUSTSEC-2023-0052",
-]
+ignore = []
 
 [bans]
 multiple-versions = "allow"

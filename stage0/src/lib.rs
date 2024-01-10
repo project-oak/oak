@@ -209,6 +209,9 @@ pub fn rust64_start(encrypted: u64) -> ! {
         .unwrap_or_default();
 
     if sev_status().contains(SevStatus::SNP_ACTIVE) {
+        // Initialize the Guest Message encryptor for generating attestation reports and a unique
+        // device secret.
+        sev::init_guest_message_encryptor().expect("couldn't initialize guest message encryptor");
         // Safety: we're only interested in the pointer value of SEV_SECRETS, not its contents.
         let cc_blob = Box::leak(Box::new_in(
             oak_linux_boot_params::CCBlobSevInfo::new(
@@ -311,7 +314,11 @@ pub fn rust64_start(encrypted: u64) -> ! {
     };
 
     let dice_data = Box::leak(Box::new_in(
-        oak_stage0_dice::generate_dice_data(&measurements, dice_attestation::get_attestation),
+        oak_stage0_dice::generate_dice_data(
+            &measurements,
+            dice_attestation::get_attestation,
+            dice_attestation::get_derived_key,
+        ),
         &crate::BOOT_ALLOC,
     ));
     // Reserve the memory containing the DICE data.

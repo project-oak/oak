@@ -16,6 +16,7 @@
 
 #include "cc/crypto/server_encryptor.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
@@ -26,6 +27,7 @@
 #include "absl/strings/string_view.h"
 #include "cc/crypto/common.h"
 #include "cc/crypto/hpke/recipient_context.h"
+#include "cc/crypto/hpke/utils.h"
 #include "oak_crypto/proto/v1/crypto.pb.h"
 
 namespace oak::crypto {
@@ -65,9 +67,12 @@ absl::StatusOr<EncryptedResponse> ServerEncryptor::Encrypt(absl::string_view pla
   }
 
   // Encrypt response.
-  const std::vector<uint8_t> nonce = recipient_context_->GenerateNonce();
+  absl::StatusOr<const std::vector<uint8_t>> nonce = GenerateRandomNonce();
+  if (!nonce.ok()) {
+    return nonce.status();
+  }
   absl::StatusOr<std::string> ciphertext =
-      recipient_context_->Seal(nonce, plaintext, associated_data);
+      recipient_context_->Seal(*nonce, plaintext, associated_data);
   if (!ciphertext.ok()) {
     return ciphertext.status();
   }
@@ -75,7 +80,7 @@ absl::StatusOr<EncryptedResponse> ServerEncryptor::Encrypt(absl::string_view pla
   // Create response message.
   EncryptedResponse encrypted_response;
   *encrypted_response.mutable_encrypted_message()->mutable_nonce() =
-      std::string(nonce.begin(), nonce.end());
+      std::string(nonce->begin(), nonce->end());
   *encrypted_response.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
   *encrypted_response.mutable_encrypted_message()->mutable_associated_data() = associated_data;
 

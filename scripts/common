@@ -20,10 +20,10 @@ readonly DOCKER_IMAGE_NAME='europe-west2-docker.pkg.dev/oak-ci/oak-development/o
 # from a registry first.
 
 # Do not modify manually. This value is automatically updated by ./scripts/docker_build .
-readonly DOCKER_IMAGE_ID='sha256:56202cb6861e0d821583aea70852c94ce5f33faed76b0bebc4bfd19702ab06ee'
+readonly DOCKER_IMAGE_ID='sha256:0eaee35dde1820758b59c6c92069e1b23f236d74120e19168134380cd4e97f7b'
 
 # Do not modify manually. This value is automatically updated by ./scripts/docker_push .
-readonly DOCKER_IMAGE_REPO_DIGEST='europe-west2-docker.pkg.dev/oak-ci/oak-development/oak-development@sha256:fb860e7f92ce0a9c2c4e1998004bd97c45842b98396289486dab923b937f8784'
+readonly DOCKER_IMAGE_REPO_DIGEST='europe-west2-docker.pkg.dev/oak-ci/oak-development/oak-development@sha256:59f3914b8237601bcacdb6ba86c6aebe9f5fcc49c9ed377e281ed1e852bc7faa'
 
 readonly CACHE_DIR='bazel-cache'
 readonly SERVER_BIN_DIR="${PWD}/oak_loader/bin"

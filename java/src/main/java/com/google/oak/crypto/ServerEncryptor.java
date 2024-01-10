@@ -121,7 +121,7 @@ public class ServerEncryptor implements AutoCloseable {
     }
 
     // Encrypt response.
-    return recipientContext.get().generateNonce().andThen(nonce
+    return Hpke.generateRandomNonce().andThen(nonce
         -> recipientContext.get()
                .seal(nonce, plaintext, associatedData)
                // Create response message.

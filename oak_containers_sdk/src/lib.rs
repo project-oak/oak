@@ -16,16 +16,19 @@
 mod proto {
     pub mod oak {
         pub mod containers {
+            tonic::include_proto!("oak.containers");
             pub mod v1 {
                 #![allow(clippy::return_self_not_must_use)]
                 tonic::include_proto!("oak.containers.v1");
             }
         }
         pub use oak_crypto::proto::oak::crypto;
+        pub use oak_remote_attestation::proto::oak::{attestation, session};
     }
 }
 
 pub mod crypto;
+pub mod orchestrator_client;
 
 // Unix Domain Sockets do not use URIs, hence this URI will never be used.
 // It is defined purely since in order to create a channel, since a URI has to
@@ -40,3 +43,4 @@ const ORCHESTRATOR_IPC_SOCKET: &str = "/oak_utils/orchestrator_ipc";
 
 // Re-export structs so that they are available at the top level of the SDK.
 pub use crypto::{EncryptionKeyHandle, InstanceEncryptionKeyHandle};
+pub use orchestrator_client::OrchestratorClient;

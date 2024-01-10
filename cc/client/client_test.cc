@@ -16,6 +16,7 @@
 
 #include "cc/client/client.h"
 
+#include <cstdint>
 #include <memory>
 #include <utility>
 
