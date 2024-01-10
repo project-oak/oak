@@ -63,7 +63,7 @@ class ClientEncryptor {
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
   // Returns a response message plaintext and associated data.
-  absl::StatusOr<DecryptionResult> Decrypt(oak::crypto::v1::EncryptedResponse encrypted_response);
+  absl::StatusOr<DecryptionResult> Decrypt(const oak::crypto::v1::EncryptedResponse& encrypted_response);
 
  private:
   // Encapsulated public key needed to establish a symmetric session key.

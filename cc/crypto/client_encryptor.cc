@@ -75,7 +75,7 @@ absl::StatusOr<EncryptedRequest> ClientEncryptor::Encrypt(absl::string_view plai
   return encrypted_request;
 }
 
-absl::StatusOr<DecryptionResult> ClientEncryptor::Decrypt(EncryptedResponse encrypted_response) {
+absl::StatusOr<DecryptionResult> ClientEncryptor::Decrypt(const EncryptedResponse& encrypted_response) {
   // Decrypt response.
   const std::vector<uint8_t> nonce(encrypted_response.encrypted_message().nonce().begin(),
                                    encrypted_response.encrypted_message().nonce().end());

@@ -49,7 +49,7 @@ class ServerEncryptor {
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
   // Returns a response message plaintext and associated data.
-  absl::StatusOr<DecryptionResult> Decrypt(oak::crypto::v1::EncryptedRequest encrypted_request);
+  absl::StatusOr<DecryptionResult> Decrypt(const oak::crypto::v1::EncryptedRequest& encrypted_request);
 
   // Encrypts `plaintext` and authenticates `associated_data` using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
