@@ -17,6 +17,8 @@
 #include "cc/crypto/hpke/recipient_context.h"
 
 #include <cstdint>
+#include <string>
+#include <vector>
 
 #include "absl/status/statusor.h"
 #include "cc/crypto/hpke/sender_context.h"

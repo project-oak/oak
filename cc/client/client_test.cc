@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "absl/status/statusor.h"
@@ -35,7 +36,6 @@ namespace oak::client {
 namespace {
 
 using ::oak::crypto::EncryptionKeyProvider;
-using ::oak::crypto::KeyPair;
 using ::oak::crypto::ServerEncryptor;
 using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;

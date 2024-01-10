@@ -36,7 +36,6 @@ using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
 using ::oak::session::v1::AttestationBundle;
 using ::oak::session::v1::GetPublicKeyRequest;
-using ::oak::session::v1::InvokeRequest;
 using ::oak::session::v1::RequestWrapper;
 using ::oak::session::v1::ResponseWrapper;
 }  // namespace
