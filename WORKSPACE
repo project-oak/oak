@@ -179,3 +179,18 @@ load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_depende
 # This sets up some common toolchains for building targets. For more details, please see
 # https://bazelbuild.github.io/rules_foreign_cc/0.9.0/flatten.html#rules_foreign_cc_dependencies
 rules_foreign_cc_dependencies()
+
+load(
+    "@bazel_tools//tools/build_defs/repo:git.bzl",
+    "git_repository",
+)
+
+# Run clang-tidy on C++ code with the following command:
+# bazel build //cc/... \
+#   --aspects=@bazel_clang_tidy//clang_tidy:clang_tidy.bzl%clang_tidy_aspect \
+#   --output_groups=report
+git_repository(
+    name = "bazel_clang_tidy",
+    commit = "f43f9d61c201b314c62a3ebcf2d4a37f1a3b06f7",
+    remote = "https://github.com/erenon/bazel_clang_tidy.git",
+)
