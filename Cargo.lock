@@ -2584,6 +2584,7 @@ dependencies = [
  "strum",
  "x86_64",
  "zerocopy",
+ "zeroize",
 ]
 
 [[package]]

@@ -44,6 +44,7 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 use zerocopy::{AsBytes, FromBytes};
+use zeroize::Zeroize;
 
 pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 
@@ -501,13 +502,18 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
     log::info!("SEV-SNP memory validation complete.");
 }
 
+/// Initializes the Guest Message encryptor using VMPCK0.
 pub fn init_guest_message_encryptor() -> Result<(), &'static str> {
     // Safety: `SecretsPage` implements `FromBytes` which ensures that it has no requirements on the
     // underlying bytes.
-    let key = &unsafe { crate::SEV_SECRETS.assume_init_ref() }.vmpck_0[..];
+    let key = &mut unsafe { crate::SEV_SECRETS.assume_init_mut() }.vmpck_0[..];
     GUEST_MESSAGE_ENCRYPTOR
         .lock()
         .replace(GuestMessageEncryptor::new(key)?);
+    // Once the we have read VMPCK0 we wipe it so that later boot stages cannot request attestation
+    // reports or derived sealing keys for VMPL0. This stops later boot stages from creating
+    // counterfeit DICE chains.
+    key.zeroize();
     Ok(())
 }
 
