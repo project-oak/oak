@@ -133,11 +133,23 @@ impl ZeroPage {
         self.validate_e820_table();
 
         // Carve out a chunk of memory out for the ACPI area and reserved memory just below 1 MiB.
+        // The ACPI area is from 0x80000-0x9FFFF. We also reserve the region from 0xA0000-0xEFFFF
+        // since historically this contained hardware-related regions such as the VGA bios rom.
         self.insert_e820_entry(BootE820Entry::new(0x8_0000, 0x2_0000, E820EntryType::ACPI));
         self.insert_e820_entry(BootE820Entry::new(
             0xA_0000,
-            0x6_0000,
+            0x5_0000,
             E820EntryType::RESERVED,
+        ));
+        // Mark the memory range for the SMBIOS entry point table as disabled since we don't support
+        // DMI or SMBIOS tables. If this memory range is enabled (even it if is reserved) and the
+        // Linux kernel has CONFIG_DMI enabled it will try to scan this memory range to find the
+        // SMBIOS entry point table. On AMD SEV-SNP scanning of this memory range causes #VC
+        // exceptions, so we don't want the kernel to try to scan it.
+        self.insert_e820_entry(BootE820Entry::new(
+            0xF_0000,
+            0x1_0000,
+            E820EntryType::DISABLED,
         ));
 
         for entry in self.inner.e820_table() {
