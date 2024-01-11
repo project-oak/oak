@@ -21,6 +21,10 @@ use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+use serde_canonical_json::CanonicalFormatter;
+use serde_json::Serializer;
 
 use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_raw};
 
@@ -31,24 +35,22 @@ pub struct LogEntry {
     /// We cannot directly use the type `Body` here, since body is Base64-encoded.
     #[serde(rename = "body")]
     pub body: String,
+    // #[serde(rename = "integratedTime")]
+    // pub integrated_time: usize,
+    // This is the SHA256 hash of the DER-encoded public key for the log at the time the entry was
+    // included in the log
+    // Pattern: ^[0-9a-fA-F]{64}$
+    // #[serde(rename = "logID")]
+    // pub log_id: String,
 
-    #[serde(rename = "integratedTime")]
-    pub integrated_time: usize,
+    // Minimum: 0
+    // #[serde(rename = "logIndex")]
+    // pub log_index: u64,
 
-    /// This is the SHA256 hash of the DER-encoded public key for the log at the time the entry was
-    /// included in the log
-    /// Pattern: ^[0-9a-fA-F]{64}$
-    #[serde(rename = "logID")]
-    pub log_id: String,
-
-    /// Minimum: 0
-    #[serde(rename = "logIndex")]
-    pub log_index: u64,
-
-    /// Includes a signature over the body, integratedTime, logID, and logIndex.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "verification")]
-    pub verification: Option<LogEntryVerification>,
+    // Includes a signature over the body, integratedTime, logID, and logIndex.
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // #[serde(rename = "verification")]
+    // pub verification: Option<LogEntryVerification>,
 }
 
 /// Struct representing the body in a Rekor LogEntry.
@@ -118,10 +120,11 @@ pub struct LogEntryVerification {
 /// be obtained from the `/api/v1/log/publicKey` Rest API. For `sigstore.dev`, it is a PEM-encoded
 /// x509/PKIX public key.
 pub struct RekorSignatureBundle {
+    // TODO: doc here
     /// Canonicalized JSON representation, based on RFC 8785 rules, of a subset of a Rekor LogEntry
     /// fields that are signed to generate `signedEntryTimestamp` (also a field in the Rekor
     /// LogEntry). These fields include body, integratedTime, logID and logIndex.
-    pub canonicalized: Vec<u8>,
+    pub signed_data: Vec<u8>,
 
     /// The signature over the canonicalized JSON document.
     pub signature: Vec<u8>,
@@ -129,41 +132,41 @@ pub struct RekorSignatureBundle {
 
 /// Converter for creating a RekorSignatureBundle from a Rekor LogEntry as described in
 /// <https://github.com/sigstore/rekor/blob/4fcdcaa58fd5263560a82978d781eb64f5c5f93c/openapi.yaml#L433-L476>.
-impl TryFrom<&LogEntry> for RekorSignatureBundle {
-    type Error = anyhow::Error;
+// impl TryFrom<&LogEntry> for RekorSignatureBundle {
+//     type Error = anyhow::Error;
 
-    fn try_from(log_entry: &LogEntry) -> anyhow::Result<Self> {
-        // Create a copy of the LogEntry, but skip the verification.
-        let entry_subset = LogEntry {
-            body: log_entry.body.clone(),
-            integrated_time: log_entry.integrated_time,
-            log_id: log_entry.log_id.clone(),
-            log_index: log_entry.log_index,
-            verification: None,
-        };
+//     fn try_from(log_entry: &LogEntry) -> anyhow::Result<Self> {
+//         // Create a copy of the LogEntry, but skip the verification.
+//         let entry_subset = LogEntry {
+//             body: log_entry.body.clone(),
+//             integrated_time: log_entry.integrated_time,
+//             log_id: log_entry.log_id.clone(),
+//             log_index: log_entry.log_index,
+//             verification: None,
+//         };
 
-        // Canonicalized JSON document that is signed. Canonicalization should follow the RFC 8785
-        // rules.
-        let canonicalized = serde_jcs::to_vec(&entry_subset)
-            .context("couldn't create canonicalized json string")?;
+//         // Canonicalized JSON document that is signed. Canonicalization should follow the RFC
+// 8785         // rules.
+//         let signed_data = serde_jcs::to_vec(&entry_subset)
+//             .context("couldn't create canonicalized json string")?;
 
-        // Extract the signature from the LogEntry.
-        let sig_base64 = log_entry
-            .verification
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("no verification field in the log entry"))?
-            .signed_entry_timestamp
-            .clone();
-        let signature = BASE64_STANDARD
-            .decode(sig_base64)
-            .context("couldn't decode Base64 signature")?;
+//         // Extract the signature from the LogEntry.
+//         let sig_base64 = log_entry
+//             .verification
+//             .as_ref()
+//             .ok_or_else(|| anyhow::anyhow!("no verification field in the log entry"))?
+//             .signed_entry_timestamp
+//             .clone();
+//         let signature = BASE64_STANDARD
+//             .decode(sig_base64)
+//             .context("couldn't decode Base64 signature")?;
 
-        Ok(Self {
-            canonicalized,
-            signature,
-        })
-    }
-}
+//         Ok(Self {
+//             signed_data: signed_data,
+//             signature,
+//         })
+//     }
+// }
 
 /// Verifies a Rekor LogEntry. This includes verifying:
 ///
@@ -202,12 +205,14 @@ pub fn get_rekor_log_entry_body(log_entry: &[u8]) -> anyhow::Result<Body> {
 
 /// Parses a blob into a Rekor log entry and verifies the signature in
 /// `signedEntryTimestamp`` using Rekor's public key.
+///
+/// TODO: specify what log_entry needs to contain.
 pub fn verify_rekor_signature(log_entry: &[u8], rekor_public_key: &[u8]) -> anyhow::Result<()> {
     let signature_bundle = rekor_signature_bundle(log_entry)?;
 
     verify_signature_raw(
         &signature_bundle.signature,
-        &signature_bundle.canonicalized,
+        &signature_bundle.signed_data,
         rekor_public_key,
     )
     .context("couldn't verify signedEntryTimestamp of the Rekor LogEntry")
@@ -255,10 +260,62 @@ pub fn verify_rekor_body(body: &Body, contents_bytes: &[u8]) -> anyhow::Result<(
         .context("couldn't verify signature over the endorsement")
 }
 
-fn rekor_signature_bundle(log_entry: &[u8]) -> anyhow::Result<RekorSignatureBundle> {
-    let parsed: BTreeMap<String, LogEntry> =
-        serde_json::from_slice(log_entry).context("couldn't parse bytes into a LogEntry object")?;
-    let entry = parsed.values().next().context("no entry in the map")?;
+// TODO remove after tests. Keeping around for now to compare outputs from old and new.
+// fn rekor_signature_bundle_old(log_entry_json_bytes: &[u8]) ->
+// anyhow::Result<RekorSignatureBundle> {     let parsed: BTreeMap<String, LogEntry> =
+// serde_json::from_slice(log_entry_json_bytes)         .context("couldn't parse bytes into a
+// LogEntry object")?;     let entry = parsed.values().next().context("no entry in the map")?;
 
-    RekorSignatureBundle::try_from(entry)
+//     RekorSignatureBundle::try_from(entry)
+// }
+
+/// For a sample of expected JSON structure, see ../testdata/logentry.json .
+fn rekor_signature_bundle(log_entry_json_bytes: &[u8]) -> anyhow::Result<RekorSignatureBundle> {
+    let mut log_entry_json = serde_json::from_slice::<Value>(log_entry_json_bytes)
+        .context("Couldn't parse bytes as JSON")?;
+
+    let log_entry_root_object = log_entry_json
+        .as_object_mut()
+        .context("JSON root expected to be a JSON object")?;
+
+    anyhow::ensure!(
+        log_entry_root_object.len() == 1,
+        "Expected exactly 1 entry in log entry root JSON object"
+    );
+
+    let log_entry_artifact_object = log_entry_root_object
+        .values_mut()
+        .next()
+        .unwrap() // Already ensured one item must exist.
+        .as_object_mut()
+        .context("Artifact metadata expected to be a JSON object")?;
+
+    let verification: Value = log_entry_artifact_object
+        .remove("verification")
+        .context("'verification' key not found in artifact JSON")?;
+
+    // TODO does this always equal canonicalized?
+    // Note on preserving order: https://users.rust-lang.org/t/how-to-keep-order-after-using-serde-json-from-str-to-deserialize-a-string-to-struct/97727
+
+    let mut serializer = Serializer::with_formatter(Vec::new(), CanonicalFormatter::new());
+    log_entry_artifact_object
+        .serialize(&mut serializer)
+        .expect("Failed to serialize Rekor signed payload to JSON");
+
+    let signed_json_bytes = serializer.into_inner();
+
+    let signed_entry_timestamp_base64_encoded = verification
+        .as_object()
+        .context("Expected 'verification' entry to contain a JSON object")?["signedEntryTimestamp"]
+        .as_str()
+        .context("Expected 'signedEntryTimestamp' entry to contain a JSON string")?;
+
+    let signed_entry_timestamp_bytes = BASE64_STANDARD
+        .decode(signed_entry_timestamp_base64_encoded)
+        .context("Couldn't Base64 decode signedEntryTimestap")?;
+
+    Ok(RekorSignatureBundle {
+        signed_data: signed_json_bytes,
+        signature: signed_entry_timestamp_bytes,
+    })
 }
