@@ -315,9 +315,10 @@ fn verify_cb(
     _endorsements: &CbEndorsements,
     _reference_values: &CbReferenceValues,
 ) -> anyhow::Result<()> {
-    anyhow::bail!("Needs implementation")
+    anyhow::bail!("needs implementation")
 }
 
+/// Verifies the AMD attestation report.
 fn verify_amd_attestation_report(
     report: &[u8],
     reference_values: &AmdSevReferenceValues,
@@ -341,11 +342,12 @@ fn verify_amd_attestation_report(
     Ok(())
 }
 
+/// Verifies the Intel attestation report.
 fn verify_intel_attestation_report(
     _report: &[u8],
     _reference_values: &IntelTdxReferenceValues,
 ) -> anyhow::Result<()> {
-    anyhow::bail!("Needs implementation")
+    anyhow::bail!("needs implementation")
 }
 
 /// Verifies all ingredients of the root layer, which is common to both
