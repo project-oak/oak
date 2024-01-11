@@ -71,7 +71,7 @@ impl GuestMessage {
 
 /// The authenticated subsection of the header used for an encrypted guest request message.
 ///
-/// See Table 97 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 99 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct AuthenticatedHeader {
@@ -103,7 +103,7 @@ static_assertions::assert_eq_size!(AuthenticatedHeader, [u8; 48]);
 
 /// The header for an encrypted guest request message.
 ///
-/// See Table 97 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 99 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct GuestMessageHeader {
@@ -188,7 +188,7 @@ impl GuestMessageHeader {
 
 /// The AEAD algorithm used for encryption.
 ///
-/// See Table 98 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 100 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[derive(Debug, FromRepr)]
 #[repr(u8)]
 pub enum AeadAlgorithm {
@@ -200,7 +200,7 @@ pub enum AeadAlgorithm {
 
 /// The type of message represented by the payload.
 ///
-/// See Table 99 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 101 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[derive(Debug, FromRepr)]
 #[repr(u8)]
 pub enum MessageType {
@@ -246,7 +246,7 @@ pub enum MessageType {
 
 /// Request for a derived key.
 ///
-/// See Table 17 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 18 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct KeyRequest {
@@ -513,7 +513,7 @@ impl AttestationResponse {
 
 /// A signed attestation report.
 ///
-/// See Table 21 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 22 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct AttestationReport {
@@ -535,7 +535,7 @@ impl AttestationReport {
 
 /// The data contained in an attestation report.
 ///
-/// See Table 21 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 22 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct AttestationReportData {
@@ -684,7 +684,7 @@ bitflags! {
 
 /// The required policy for a guest to run.
 ///
-/// See Table 8 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 9 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct GuestPolicy {
@@ -789,7 +789,7 @@ pub enum ReportStatus {
 
 /// An ECDSA signature.
 ///
-/// See Table 107 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 119 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 pub struct EcdsaSignature {
@@ -815,7 +815,7 @@ impl EcdsaSignature {
 
 /// An ECDSA public key.
 ///
-/// See Table 108 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 120 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[repr(C)]
 #[derive(Debug)]
 pub struct EcdsaPublicKey {
@@ -833,7 +833,7 @@ static_assertions::assert_eq_size!(EcdsaPublicKey, [u8; 1028]);
 
 /// The signing algorithm used for the report signature.
 ///
-/// See Table 105 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 117 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[derive(Debug, FromRepr)]
 #[repr(u32)]
 pub enum SigningAlgorithm {
@@ -845,7 +845,7 @@ pub enum SigningAlgorithm {
 
 /// The elliptic curve used.
 ///
-/// See Table 106 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
+/// See Table 118 in <https://www.amd.com/system/files/TechDocs/56860.pdf>.
 #[derive(Debug, FromRepr)]
 #[repr(u32)]
 pub enum EccCurve {
