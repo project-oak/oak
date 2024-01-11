@@ -448,6 +448,18 @@
 <a href="#448" id="448">448</a>
 <a href="#449" id="449">449</a>
 <a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -583,11 +595,23 @@
         <span class="self">self</span>.validate_e820_table();
 
         <span class="comment">// Carve out a chunk of memory out for the ACPI area and reserved memory just below 1 MiB.
+        // The ACPI area is from 0x80000-0x9FFFF. We also reserve the region from 0xA0000-0xEFFFF
+        // since historically this contained hardware-related regions such as the VGA bios rom.
         </span><span class="self">self</span>.insert_e820_entry(BootE820Entry::new(<span class="number">0x8_0000</span>, <span class="number">0x2_0000</span>, E820EntryType::ACPI));
         <span class="self">self</span>.insert_e820_entry(BootE820Entry::new(
             <span class="number">0xA_0000</span>,
-            <span class="number">0x6_0000</span>,
+            <span class="number">0x5_0000</span>,
             E820EntryType::RESERVED,
+        ));
+        <span class="comment">// Mark the memory range for the SMBIOS entry point table as disabled since we don&#39;t support
+        // DMI or SMBIOS tables. If this memory range is enabled (even it if is reserved) and the
+        // Linux kernel has CONFIG_DMI enabled it will try to scan this memory range to find the
+        // SMBIOS entry point table. On AMD SEV-SNP scanning of this memory range causes #VC
+        // exceptions, so we don&#39;t want the kernel to try to scan it.
+        </span><span class="self">self</span>.insert_e820_entry(BootE820Entry::new(
+            <span class="number">0xF_0000</span>,
+            <span class="number">0x1_0000</span>,
+            E820EntryType::DISABLED,
         ));
 
         <span class="kw">for </span>entry <span class="kw">in </span><span class="self">self</span>.inner.e820_table() {
