@@ -143,6 +143,10 @@ memory just below the end of 4 GiB address space, like any other BIOS ROM.
                |          Restricted Kernel ELF Header          |
      0x20_0000 +------------------------------------------------+ 2MiB
                |                                                |
+     0x10_0000 +------------------------------------------------+ 1MiB
+               |                     Disabled                   |
+      0xF_0000 +------------------------------------------------+ 960KiB
+               |               Reserved BIOS Range              |
       0xA_0000 +------------------------------------------------+ 640KiB
                |     Extended BIOS Data Area (ACPI Tables)      |
       0x8_0000 +------------------------------------------------+ 512KiB
@@ -162,10 +166,6 @@ into the kernel (by calling the PVALIDATE instruction).
 The one difference is that the Linux kernel assumes that the firmware will not
 validate the VGA BIOS ROM range (0C0000-0xC7FFF), so we skip this range. For
 simplicity of the logic we actually skip a larger range (0xA0000-0xEFFFF).
-
-We explicitly PVALIDATE the SMBIOS entry table memory range (0xF0000-0xFFFFF)
-even though it is marked as reserved since the Linux kernel will scan this range
-looking for the table if CONFIG_DMI is enabled.
 
 We don't have to PVALIDATE the Stage 0 ROM image range, since that memory was
 already set in the appropriate validated state by the Secure Processor before
