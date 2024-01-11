@@ -33,8 +33,12 @@ pub mod verifier;
 
 use crate::transport::{EvidenceProvider, Transport};
 use anyhow::{anyhow, Context};
+use oak_attestation_verification::{
+    proto::oak::attestation::v1::ReferenceValues,
+    verifier::verify,
+};
 use oak_crypto::encryptor::ClientEncryptor;
-use std::vec::Vec;
+use std::{time::SystemTime, vec::Vec};
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
@@ -47,15 +51,23 @@ pub struct OakClient<T: Transport> {
 }
 
 impl<T: Transport + EvidenceProvider> OakClient<T> {
-    pub async fn create(mut transport: T) -> anyhow::Result<Self> {
+    pub async fn create(mut transport: T, reference_values: &ReferenceValues) -> anyhow::Result<Self> {
         // TODO(#3641): Implement client-side attestation verification.
-        let evidence = transport
-            .get_evidence()
+        let endorsed_evidence = transport
+            .get_endorsed_evidence()
             .await
             .context("couldn't get attestation evidence")?;
+
+        let attestation_results = verify(
+                SystemTime::now().as_millis(),
+                &endorsed_evidence.evidence.context("endorsed evidence doesn't contain evidence")?,
+                &endorsed_evidence.endorsements.context("endorsed evidence doesn't contain endorsements")?,
+                reference_values,
+            ).context("attestation evidence verification failed")?;
+
         Ok(Self {
             transport,
-            server_encryption_public_key: evidence.encryption_public_key.to_vec(),
+            server_encryption_public_key: attestation_results.encryption_public_key.to_vec(),
         })
     }
 

@@ -16,7 +16,7 @@
 
 use crate::proto::oak::session::v1::{
     request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
-    AttestationEvidence, GetPublicKeyRequest, InvokeRequest, RequestWrapper,
+    AttestationBundle, GetPublicKeyRequest, InvokeRequest, RequestWrapper,
 };
 use anyhow::Context;
 use oak_crypto::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
@@ -82,12 +82,12 @@ impl Transport for GrpcStreamingTransport {
 
 #[async_trait::async_trait]
 pub trait EvidenceProvider {
-    async fn get_evidence(&mut self) -> anyhow::Result<AttestationEvidence>;
+    async fn get_endorsed_evidence(&mut self) -> anyhow::Result<AttestationBundle>;
 }
 
 #[async_trait::async_trait]
 impl EvidenceProvider for GrpcStreamingTransport {
-    async fn get_evidence(&mut self) -> anyhow::Result<AttestationEvidence> {
+    async fn get_endorsed_evidence(&mut self) -> anyhow::Result<AttestationBundle> {
         let mut response_stream = self
             .rpc_client
             .stream(futures_util::stream::iter(vec![RequestWrapper {
@@ -107,7 +107,7 @@ impl EvidenceProvider for GrpcStreamingTransport {
             .context("gRPC server error when requesting attestation evidence")?
             .context("received empty response stream")?;
 
-        let Some(response_wrapper::Response::GetPublicKeyResponse(get_evidence_response)) =
+        let Some(response_wrapper::Response::GetPublicKeyResponse(get_endorsed_evidence_response)) =
             response_wrapper.response
         else {
             return Err(anyhow::anyhow!(
@@ -116,10 +116,8 @@ impl EvidenceProvider for GrpcStreamingTransport {
         };
 
         #[allow(deprecated)]
-        get_evidence_response
+        get_endorsed_evidence_response
             .attestation_bundle
-            .context("get_evidence_response message doesn't contain an attestation bundle")?
-            .attestation_evidence
-            .context("get_evidence_response message doesn't contain an attestation evidence")
+            .context("get_endorsed_evidence_response message doesn't contain the endorsed evidence")
     }
 }

@@ -1924,6 +1924,7 @@ dependencies = [
  "async-trait",
  "futures-util",
  "log",
+ "oak_attestation_verification",
  "oak_crypto",
  "oak_grpc_utils",
  "oak_remote_attestation",

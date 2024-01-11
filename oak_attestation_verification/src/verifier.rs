@@ -54,8 +54,8 @@ use oak_dice::cert::{
 const ADDITIONAL_DATA: &[u8] = b"";
 
 pub struct DiceChainResult {
-    encryption_public_key: Vec<u8>,
-    signing_public_key: Vec<u8>,
+    pub encryption_public_key: Vec<u8>,
+    pub signing_public_key: Vec<u8>,
 }
 
 impl From<&anyhow::Result<DiceChainResult>> for AttestationResults {

@@ -19,6 +19,7 @@ syntax = "proto3";
 package oak.session.v1;
 
 import "oak_crypto/proto/v1/crypto.proto";
+import "proto/attestation/endorsement.proto";
 import "proto/attestation/evidence.proto";
 
 option java_multiple_files = true;
@@ -57,7 +58,10 @@ message AttestationBundle {
   AttestationEndorsement attestation_endorsement = 2;
 
   // The DICE attestation evidence.
-  oak.attestation.v1.Evidence dice_evidence = 3;
+  oak.attestation.v1.Evidence evidence = 3;
+
+  // Thea attestation endorsements.
+  oak.attestation.v1.Endorsements endorsements = 4;
 }
 
 // AttestationEndorsement contains statements that some entity (e.g., a hardware provider) vouches

@@ -10,6 +10,7 @@ anyhow = "*"
 async-trait = "*"
 futures-util = "*"
 log = "*"
+oak_attestation_verification = { workspace = true }
 oak_crypto = { workspace = true }
 oak_remote_attestation = { workspace = true }
 prost = { workspace = true }
