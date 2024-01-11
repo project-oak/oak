@@ -27,7 +27,7 @@
 #include "grpcpp/create_channel.h"
 #include "grpcpp/grpcpp.h"
 #include "oak_crypto/proto/v1/crypto.pb.h"
-#include "oak_remote_attestation/proto/v1/messages.pb.h"
+#include "proto/session/messages.pb.h"
 
 namespace oak::transport {
 

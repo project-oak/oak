@@ -27,9 +27,9 @@
 #include "grpcpp/support/time.h"
 #include "gtest/gtest.h"
 #include "oak_crypto/proto/v1/crypto.pb.h"
-#include "oak_remote_attestation/proto/v1/messages.pb.h"
-#include "oak_remote_attestation/proto/v1/service_streaming.grpc.pb.h"
-#include "oak_remote_attestation/proto/v1/service_streaming.pb.h"
+#include "proto/session/messages.pb.h"
+#include "proto/session/service_streaming.grpc.pb.h"
+#include "proto/session/service_streaming.pb.h"
 
 using oak::crypto::v1::EncryptedRequest;
 using oak::crypto::v1::EncryptedResponse;

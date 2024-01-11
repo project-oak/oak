@@ -17,10 +17,10 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     micro_rpc_build::compile(
         &[
-            "../oak_remote_attestation/proto/v1/messages.proto",
             "../proto/attestation/dice.proto",
             "../proto/attestation/evidence.proto",
             "../proto/attestation/endorsement.proto",
+            "../proto/session/messages.proto",
         ],
         &[".."],
         Default::default(),

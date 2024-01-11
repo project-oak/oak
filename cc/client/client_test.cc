@@ -30,7 +30,7 @@
 #include "cc/transport/transport.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "oak_remote_attestation/proto/v1/messages.pb.h"
+#include "proto/session/messages.pb.h"
 
 namespace oak::client {
 namespace {
