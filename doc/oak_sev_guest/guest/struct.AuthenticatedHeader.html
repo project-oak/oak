@@ -8,7 +8,7 @@
     pub message_vmpck: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a>,
     /* private fields */
 }</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>The authenticated subsection of the header used for an encrypted guest request message.</p>
-<p>See Table 97 in <a href="https://www.amd.com/system/files/TechDocs/56860.pdf">https://www.amd.com/system/files/TechDocs/56860.pdf</a>.</p>
+<p>See Table 99 in <a href="https://www.amd.com/system/files/TechDocs/56860.pdf">https://www.amd.com/system/files/TechDocs/56860.pdf</a>.</p>
 </div></details><h2 id="fields" class="fields small-section-header">Fields<a href="#fields" class="anchor">§</a></h2><span id="structfield.algorithm" class="structfield small-section-header"><a href="#structfield.algorithm" class="anchor field">§</a><code>algorithm: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a></code></span><div class="docblock"><p>The algorithm used to encrypt the payload.</p>
 <p>Use <code>GuestMessageHeader::get_algorithm</code> to try to convert this to an <code>AeadAlgorithm</code> enum.</p>
 </div><span id="structfield.header_version" class="structfield small-section-header"><a href="#structfield.header_version" class="anchor field">§</a><code>header_version: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a></code></span><div class="docblock"><p>The header version. Currently only version 1 is supported.</p>

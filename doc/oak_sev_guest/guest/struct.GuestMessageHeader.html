@@ -4,7 +4,7 @@
     pub auth_header: <a class="struct" href="struct.AuthenticatedHeader.html" title="struct oak_sev_guest::guest::AuthenticatedHeader">AuthenticatedHeader</a>,
     /* private fields */
 }</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>The header for an encrypted guest request message.</p>
-<p>See Table 97 in <a href="https://www.amd.com/system/files/TechDocs/56860.pdf">https://www.amd.com/system/files/TechDocs/56860.pdf</a>.</p>
+<p>See Table 99 in <a href="https://www.amd.com/system/files/TechDocs/56860.pdf">https://www.amd.com/system/files/TechDocs/56860.pdf</a>.</p>
 </div></details><h2 id="fields" class="fields small-section-header">Fields<a href="#fields" class="anchor">§</a></h2><span id="structfield.auth_tag" class="structfield small-section-header"><a href="#structfield.auth_tag" class="anchor field">§</a><code>auth_tag: [<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a>; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.array.html">32</a>]</code></span><div class="docblock"><p>The authentication tag for the payload and additional data.</p>
 </div><span id="structfield.sequence_number" class="structfield small-section-header"><a href="#structfield.sequence_number" class="anchor field">§</a><code>sequence_number: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a></code></span><div class="docblock"><p>The message sequence number. This is used as the IV for the AEAD.</p>
 <p>The same sequence number must never be reused with the same key.</p>

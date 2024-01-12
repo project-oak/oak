@@ -5,7 +5,7 @@
     pub tcb_version: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a>,
     /* private fields */
 }</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Request for a derived key.</p>
-<p>See Table 17 in <a href="https://www.amd.com/system/files/TechDocs/56860.pdf">https://www.amd.com/system/files/TechDocs/56860.pdf</a>.</p>
+<p>See Table 18 in <a href="https://www.amd.com/system/files/TechDocs/56860.pdf">https://www.amd.com/system/files/TechDocs/56860.pdf</a>.</p>
 </div></details><h2 id="fields" class="fields small-section-header">Fields<a href="#fields" class="anchor">§</a></h2><span id="structfield.guest_field_select" class="structfield small-section-header"><a href="#structfield.guest_field_select" class="anchor field">§</a><code>guest_field_select: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u64.html">u64</a></code></span><div class="docblock"><p>Mask indicating which guest data will be mixed into the derived key.</p>
 <p>Use <code>KeyRequest::get_guest_field_select_flags</code> to try to convert this to a
 <code>GuestFieldFlags</code> enum.</p>

@@ -708,6 +708,60 @@
 <a href="#708" id="708">708</a>
 <a href="#709" id="709">709</a>
 <a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -733,14 +787,16 @@
     proto::oak::{
         attestation::v1::{
             attestation_results::Status, binary_reference_value, endorsements, reference_values,
-            ApplicationKeys, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
-            AttestationResults, BinaryReferenceValue, CbEndorsements, CbReferenceValues,
-            ContainerLayerEndorsements, ContainerLayerReferenceValues, Endorsements, Evidence,
+            AmdSevReferenceValues, ApplicationKeys, ApplicationLayerEndorsements,
+            ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue,
+            CbEndorsements, CbReferenceValues, ContainerLayerEndorsements,
+            ContainerLayerReferenceValues, Endorsements, Evidence, IntelTdxReferenceValues,
             KernelLayerEndorsements, KernelLayerReferenceValues, LayerEvidence,
             OakContainersEndorsements, OakContainersReferenceValues,
             OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
             RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
-            SystemLayerEndorsements, SystemLayerReferenceValues, TransparentReleaseEndorsement,
+            SystemLayerEndorsements, SystemLayerReferenceValues, TeePlatform,
+            TransparentReleaseEndorsement,
         },
         RawDigest,
     },
@@ -759,6 +815,8 @@
     LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID,
     MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
 };
+<span class="kw">use </span>oak_sev_guest::guest::{AttestationReport, PolicyFlags};
+<span class="kw">use </span>zerocopy::FromBytes;
 
 <span class="comment">// We don&#39;t use additional authenticated data.
 </span><span class="kw">const </span>ADDITIONAL_DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;&quot;</span>;
@@ -1021,17 +1079,67 @@
     _endorsements: <span class="kw-2">&amp;</span>CbEndorsements,
     _reference_values: <span class="kw-2">&amp;</span>CbReferenceValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Needs implementation&quot;</span>)
+    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;needs implementation&quot;</span>)
+}
+
+<span class="doccomment">/// Verifies the AMD SEV attestation report.
+</span><span class="kw">fn </span>verify_amd_sev_attestation_report(
+    report: <span class="kw-2">&amp;</span>[u8],
+    reference_values: <span class="kw-2">&amp;</span>AmdSevReferenceValues,
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">let </span>parsed = AttestationReport::ref_from(report)
+        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse AMD SEV attestation report&quot;</span>))<span class="question-mark">?</span>;
+    parsed.validate().map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
+    <span class="kw">let </span>data = <span class="kw-2">&amp;</span>parsed.data;
+
+    <span class="comment">// Verify that we are not in debug mode.
+    </span><span class="kw">if </span>!reference_values.allow_debug {
+        <span class="kw">let </span>policy_flags = data
+            .policy
+            .get_flags()
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;failed to parse flags&quot;</span>))<span class="question-mark">?</span>;
+        <span class="kw">if </span>policy_flags.bits() &amp; PolicyFlags::DEBUG.bits() != <span class="number">0 </span>{
+            <span class="macro">anyhow::bail!</span>(<span class="string">&quot;debug mode not allowed&quot;</span>);
+        }
+    }
+
+    <span class="prelude-val">Ok</span>(())
+}
+
+<span class="doccomment">/// Verifies the Intel TDX attestation report.
+</span><span class="kw">fn </span>verify_intel_tdx_attestation_report(
+    _report: <span class="kw-2">&amp;</span>[u8],
+    _reference_values: <span class="kw-2">&amp;</span>IntelTdxReferenceValues,
+) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="macro">anyhow::bail!</span>(<span class="string">&quot;needs implementation&quot;</span>)
 }
 
 <span class="doccomment">/// Verifies all ingredients of the root layer, which is common to both
 /// Oak Restricted Kernel and Oak Containers setups.
 </span><span class="kw">fn </span>verify_root_layer(
     now_utc_millis: i64,
-    _l: <span class="kw-2">&amp;</span>RootLayerEvidence,
+    l: <span class="kw-2">&amp;</span>RootLayerEvidence,
     e: <span class="kw-2">&amp;</span>RootLayerEndorsements,
     r: <span class="kw-2">&amp;</span>RootLayerReferenceValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">match </span>l.platform() {
+        TeePlatform::Unspecified =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">&quot;unspecified TEE platform&quot;</span>),
+        TeePlatform::AmdSevSnp =&gt; {
+            <span class="kw">let </span>amd_sev = r
+                .amd_sev
+                .as_ref()
+                .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no AMD SEV reference values&quot;</span>))<span class="question-mark">?</span>;
+            verify_amd_sev_attestation_report(<span class="kw-2">&amp;</span>l.remote_attestation_report, amd_sev)<span class="question-mark">?
+        </span>}
+        TeePlatform::IntelTdx =&gt; {
+            <span class="kw">let </span>intel_tdx = r
+                .intel_tdx
+                .as_ref()
+                .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no Intel TDX reference values&quot;</span>))<span class="question-mark">?</span>;
+            verify_intel_tdx_attestation_report(<span class="kw-2">&amp;</span>l.remote_attestation_report, intel_tdx)<span class="question-mark">?
+        </span>}
+    }
+
     <span class="kw">let </span>e_stage0 = e
         .stage0
         .as_ref()

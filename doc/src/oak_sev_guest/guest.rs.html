@@ -959,7 +959,7 @@
 
 <span class="doccomment">/// The authenticated subsection of the header used for an encrypted guest request message.
 ///
-/// See Table 97 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 99 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>AuthenticatedHeader {
@@ -991,7 +991,7 @@
 
 <span class="doccomment">/// The header for an encrypted guest request message.
 ///
-/// See Table 97 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 99 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>GuestMessageHeader {
@@ -1076,7 +1076,7 @@
 
 <span class="doccomment">/// The AEAD algorithm used for encryption.
 ///
-/// See Table 98 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 100 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[derive(Debug, FromRepr)]
 #[repr(u8)]
 </span><span class="kw">pub enum </span>AeadAlgorithm {
@@ -1088,7 +1088,7 @@
 
 <span class="doccomment">/// The type of message represented by the payload.
 ///
-/// See Table 99 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 101 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[derive(Debug, FromRepr)]
 #[repr(u8)]
 </span><span class="kw">pub enum </span>MessageType {
@@ -1134,7 +1134,7 @@
 
 <span class="doccomment">/// Request for a derived key.
 ///
-/// See Table 17 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 18 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>KeyRequest {
@@ -1401,7 +1401,7 @@
 
 <span class="doccomment">/// A signed attestation report.
 ///
-/// See Table 21 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 22 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>AttestationReport {
@@ -1423,7 +1423,7 @@
 
 <span class="doccomment">/// The data contained in an attestation report.
 ///
-/// See Table 21 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 22 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>AttestationReportData {
@@ -1572,7 +1572,7 @@
 
 <span class="doccomment">/// The required policy for a guest to run.
 ///
-/// See Table 8 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 9 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>GuestPolicy {
@@ -1677,7 +1677,7 @@
 
 <span class="doccomment">/// An ECDSA signature.
 ///
-/// See Table 107 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 119 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
 #[derive(Debug, AsBytes, FromZeroes, FromBytes)]
 </span><span class="kw">pub struct </span>EcdsaSignature {
@@ -1703,7 +1703,7 @@
 
 <span class="doccomment">/// An ECDSA public key.
 ///
-/// See Table 108 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 120 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[repr(C)]
 #[derive(Debug)]
 </span><span class="kw">pub struct </span>EcdsaPublicKey {
@@ -1721,7 +1721,7 @@
 
 <span class="doccomment">/// The signing algorithm used for the report signature.
 ///
-/// See Table 105 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 117 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[derive(Debug, FromRepr)]
 #[repr(u32)]
 </span><span class="kw">pub enum </span>SigningAlgorithm {
@@ -1733,7 +1733,7 @@
 
 <span class="doccomment">/// The elliptic curve used.
 ///
-/// See Table 106 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
+/// See Table 118 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
 </span><span class="attr">#[derive(Debug, FromRepr)]
 #[repr(u32)]
 </span><span class="kw">pub enum </span>EccCurve {
