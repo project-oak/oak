@@ -855,87 +855,6 @@
 <a href="#855" id="855">855</a>
 <a href="#856" id="856">856</a>
 <a href="#857" id="857">857</a>
-<a href="#858" id="858">858</a>
-<a href="#859" id="859">859</a>
-<a href="#860" id="860">860</a>
-<a href="#861" id="861">861</a>
-<a href="#862" id="862">862</a>
-<a href="#863" id="863">863</a>
-<a href="#864" id="864">864</a>
-<a href="#865" id="865">865</a>
-<a href="#866" id="866">866</a>
-<a href="#867" id="867">867</a>
-<a href="#868" id="868">868</a>
-<a href="#869" id="869">869</a>
-<a href="#870" id="870">870</a>
-<a href="#871" id="871">871</a>
-<a href="#872" id="872">872</a>
-<a href="#873" id="873">873</a>
-<a href="#874" id="874">874</a>
-<a href="#875" id="875">875</a>
-<a href="#876" id="876">876</a>
-<a href="#877" id="877">877</a>
-<a href="#878" id="878">878</a>
-<a href="#879" id="879">879</a>
-<a href="#880" id="880">880</a>
-<a href="#881" id="881">881</a>
-<a href="#882" id="882">882</a>
-<a href="#883" id="883">883</a>
-<a href="#884" id="884">884</a>
-<a href="#885" id="885">885</a>
-<a href="#886" id="886">886</a>
-<a href="#887" id="887">887</a>
-<a href="#888" id="888">888</a>
-<a href="#889" id="889">889</a>
-<a href="#890" id="890">890</a>
-<a href="#891" id="891">891</a>
-<a href="#892" id="892">892</a>
-<a href="#893" id="893">893</a>
-<a href="#894" id="894">894</a>
-<a href="#895" id="895">895</a>
-<a href="#896" id="896">896</a>
-<a href="#897" id="897">897</a>
-<a href="#898" id="898">898</a>
-<a href="#899" id="899">899</a>
-<a href="#900" id="900">900</a>
-<a href="#901" id="901">901</a>
-<a href="#902" id="902">902</a>
-<a href="#903" id="903">903</a>
-<a href="#904" id="904">904</a>
-<a href="#905" id="905">905</a>
-<a href="#906" id="906">906</a>
-<a href="#907" id="907">907</a>
-<a href="#908" id="908">908</a>
-<a href="#909" id="909">909</a>
-<a href="#910" id="910">910</a>
-<a href="#911" id="911">911</a>
-<a href="#912" id="912">912</a>
-<a href="#913" id="913">913</a>
-<a href="#914" id="914">914</a>
-<a href="#915" id="915">915</a>
-<a href="#916" id="916">916</a>
-<a href="#917" id="917">917</a>
-<a href="#918" id="918">918</a>
-<a href="#919" id="919">919</a>
-<a href="#920" id="920">920</a>
-<a href="#921" id="921">921</a>
-<a href="#922" id="922">922</a>
-<a href="#923" id="923">923</a>
-<a href="#924" id="924">924</a>
-<a href="#925" id="925">925</a>
-<a href="#926" id="926">926</a>
-<a href="#927" id="927">927</a>
-<a href="#928" id="928">928</a>
-<a href="#929" id="929">929</a>
-<a href="#930" id="930">930</a>
-<a href="#931" id="931">931</a>
-<a href="#932" id="932">932</a>
-<a href="#933" id="933">933</a>
-<a href="#934" id="934">934</a>
-<a href="#935" id="935">935</a>
-<a href="#936" id="936">936</a>
-<a href="#937" id="937">937</a>
-<a href="#938" id="938">938</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// As images can be large (hundreds of megabytes), the launcher chunks up the response into smaller
 /// pieces to respect proto/gRPC limits. The image needs to be reassembled in the stage1 or the
 /// orchestrator.
@@ -961,20 +880,6 @@
     </span><span class="kw">pub </span>evidence: ::core::option::Option&lt;<span class="kw">super</span>::session::v1::AttestationEvidence&gt;,
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>dice_evidence: ::core::option::Option&lt;<span class="kw">super</span>::attestation::v1::Evidence&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>GetCryptoContextRequest {
-    <span class="doccomment">/// Ephemeral Diffie-Hellman client public key that is needed to derive a session key.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>serialized_encapsulated_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>GetCryptoContextResponse {
-    <span class="doccomment">/// Session keys for decrypting client requests and encrypting enclave responses.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>context: ::core::option::Option&lt;<span class="kw">super</span>::crypto::v1::CryptoContext&gt;,
 }
 <span class="doccomment">/// Generated client implementations.
 </span><span class="kw">pub mod </span>launcher_client {
@@ -1277,27 +1182,6 @@
             <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
             <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
                 <span class="string">&quot;/oak.containers.Orchestrator/NotifyAppReady&quot;</span>,
-            );
-            <span class="self">self</span>.inner.unary(request.into_request(), path, codec).<span class="kw">await
-        </span>}
-        <span class="doccomment">/// Returns crypto context for decrypting client requests and encrypting enclave responses.
-        /// TODO(#3841): Store private key in the Orchestrator and generate session keys for each session.
-        </span><span class="kw">pub async fn </span>get_crypto_context(
-            <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-            request: <span class="kw">impl </span>tonic::IntoRequest&lt;<span class="kw">super</span>::GetCryptoContextRequest&gt;,
-        ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;<span class="kw">super</span>::GetCryptoContextResponse&gt;, tonic::Status&gt; {
-            <span class="self">self</span>.inner
-                .ready()
-                .<span class="kw">await
-                </span>.map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        <span class="macro">format!</span>(<span class="string">&quot;Service was not ready: {}&quot;</span>, e.into()),
-                    )
-                })<span class="question-mark">?</span>;
-            <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
-            <span class="kw">let </span>path = http::uri::PathAndQuery::from_static(
-                <span class="string">&quot;/oak.containers.Orchestrator/GetCryptoContext&quot;</span>,
             );
             <span class="self">self</span>.inner.unary(request.into_request(), path, codec).<span class="kw">await
         </span>}
@@ -1658,12 +1542,6 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>,
             request: tonic::Request&lt;()&gt;,
         ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;()&gt;, tonic::Status&gt;;
-        <span class="doccomment">/// Returns crypto context for decrypting client requests and encrypting enclave responses.
-        /// TODO(#3841): Store private key in the Orchestrator and generate session keys for each session.
-        </span><span class="kw">async fn </span>get_crypto_context(
-            <span class="kw-2">&amp;</span><span class="self">self</span>,
-            request: tonic::Request&lt;<span class="kw">super</span>::GetCryptoContextRequest&gt;,
-        ) -&gt; <span class="prelude-ty">Result</span>&lt;tonic::Response&lt;<span class="kw">super</span>::GetCryptoContextResponse&gt;, tonic::Status&gt;;
     }
     <span class="doccomment">/// Defines the service exposed by the orchestrator, that can be invoked by the application.
     </span><span class="attr">#[derive(Debug)]
@@ -1784,46 +1662,6 @@
                     <span class="kw">let </span>fut = <span class="kw">async move </span>{
                         <span class="kw">let </span>inner = inner.<span class="number">0</span>;
                         <span class="kw">let </span>method = NotifyAppReadySvc(inner);
-                        <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
-                        <span class="kw">let </span><span class="kw-2">mut </span>grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            );
-                        <span class="kw">let </span>res = grpc.unary(method, req).<span class="kw">await</span>;
-                        <span class="prelude-val">Ok</span>(res)
-                    };
-                    Box::pin(fut)
-                }
-                <span class="string">&quot;/oak.containers.Orchestrator/GetCryptoContext&quot; </span>=&gt; {
-                    <span class="attr">#[allow(non_camel_case_types)]
-                    </span><span class="kw">struct </span>GetCryptoContextSvc&lt;T: Orchestrator&gt;(<span class="kw">pub </span>Arc&lt;T&gt;);
-                    <span class="kw">impl</span>&lt;
-                        T: Orchestrator,
-                    &gt; tonic::server::UnaryService&lt;<span class="kw">super</span>::GetCryptoContextRequest&gt;
-                    <span class="kw">for </span>GetCryptoContextSvc&lt;T&gt; {
-                        <span class="kw">type </span>Response = <span class="kw">super</span>::GetCryptoContextResponse;
-                        <span class="kw">type </span>Future = BoxFuture&lt;
-                            tonic::Response&lt;<span class="self">Self</span>::Response&gt;,
-                            tonic::Status,
-                        &gt;;
-                        <span class="kw">fn </span>call(
-                            <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-                            request: tonic::Request&lt;<span class="kw">super</span>::GetCryptoContextRequest&gt;,
-                        ) -&gt; <span class="self">Self</span>::Future {
-                            <span class="kw">let </span>inner = <span class="self">self</span>.<span class="number">0</span>.clone();
-                            <span class="kw">let </span>fut = <span class="kw">async move </span>{
-                                (<span class="kw-2">*</span>inner).get_crypto_context(request).<span class="kw">await
-                            </span>};
-                            Box::pin(fut)
-                        }
-                    }
-                    <span class="kw">let </span>accept_compression_encodings = <span class="self">self</span>.accept_compression_encodings;
-                    <span class="kw">let </span>send_compression_encodings = <span class="self">self</span>.send_compression_encodings;
-                    <span class="kw">let </span>inner = <span class="self">self</span>.inner.clone();
-                    <span class="kw">let </span>fut = <span class="kw">async move </span>{
-                        <span class="kw">let </span>inner = inner.<span class="number">0</span>;
-                        <span class="kw">let </span>method = GetCryptoContextSvc(inner);
                         <span class="kw">let </span>codec = tonic::codec::ProstCodec::default();
                         <span class="kw">let </span><span class="kw-2">mut </span>grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(
