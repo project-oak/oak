@@ -12,7 +12,7 @@ clap = { version = "*", features = ["derive"] }
 coset = { version = "*", features = ["std"] }
 hpke = { version = "*", default-features = false, features = [
   "alloc",
-  "x25519"
+  "x25519",
 ] }
 log = "*"
 nix = "*"
@@ -52,6 +52,7 @@ tokio-stream = { version = "*", features = ["net"] }
 tokio-util = { version = "*", default-features = false }
 tonic = { workspace = true }
 walkdir = "*"
+zeroize = "*"
 
 [build-dependencies]
 oak_grpc_utils = { workspace = true }

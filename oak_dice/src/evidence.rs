@@ -21,6 +21,7 @@ use crate::utils::PaddedCopyFromSlice;
 use alloc::{format, string::String, vec::Vec};
 use strum::{Display, FromRepr};
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// The maximum size of the signed attestation report.
 pub const REPORT_SIZE: usize = 2048;
@@ -138,7 +139,7 @@ impl LayerEvidence {
 static_assertions::assert_eq_size!([u8; CERTIFICATE_SIZE], LayerEvidence);
 
 /// Private key that can be used by a layer to sign a certificate for the next layer.
-#[derive(AsBytes, FromZeroes, FromBytes)]
+#[derive(AsBytes, FromZeroes, FromBytes, Zeroize, ZeroizeOnDrop)]
 #[repr(C)]
 pub struct CertificateAuthority {
     /// The RAW bytes representing an ECDSA private key.
@@ -147,15 +148,8 @@ pub struct CertificateAuthority {
 
 static_assertions::assert_eq_size!([u8; PRIVATE_KEY_SIZE], CertificateAuthority);
 
-impl Drop for CertificateAuthority {
-    fn drop(&mut self) {
-        // Zero out the ECA private key.
-        self.eca_private_key.fill(0);
-    }
-}
-
 // A derived compound device identifier for a layer.
-#[derive(AsBytes, FromZeroes, FromBytes)]
+#[derive(AsBytes, FromZeroes, FromBytes, Zeroize, ZeroizeOnDrop)]
 #[repr(C)]
 pub struct CompoundDeviceIdentifier {
     /// The RAW bytes representing the CDI.
@@ -163,13 +157,6 @@ pub struct CompoundDeviceIdentifier {
 }
 
 static_assertions::assert_eq_size!([u8; CDI_SIZE], CompoundDeviceIdentifier);
-
-impl Drop for CompoundDeviceIdentifier {
-    fn drop(&mut self) {
-        // Zero out the CDI.
-        self.cdi.fill(0);
-    }
-}
 
 /// Wrapper for passing DICE info from Stage0 to the next layer (Stage 1 or the Restricted Kernel).
 #[derive(AsBytes, FromZeroes, FromBytes)]
@@ -215,7 +202,7 @@ impl ApplicationKeys {
 static_assertions::assert_eq_size!([u8; 2048], ApplicationKeys);
 
 /// ECDSA private keys that can be used for an application for signing or encryption.
-#[derive(AsBytes, FromZeroes, FromBytes)]
+#[derive(AsBytes, FromZeroes, FromBytes, Zeroize, ZeroizeOnDrop)]
 #[repr(C)]
 pub struct ApplicationPrivateKeys {
     /// The RAW bytes representing an ECDSA private key that can be used to sign arbitrary data.
@@ -225,14 +212,6 @@ pub struct ApplicationPrivateKeys {
 }
 
 static_assertions::assert_eq_size!([u8; 128], ApplicationPrivateKeys);
-
-impl Drop for ApplicationPrivateKeys {
-    fn drop(&mut self) {
-        // Zero out the private keys.
-        self.signing_private_key.fill(0);
-        self.encryption_private_key.fill(0);
-    }
-}
 
 /// Wrapper for passing the attestation evidence from the Restricted Kernel to the application.
 #[derive(AsBytes, FromZeroes, FromBytes, Clone)]

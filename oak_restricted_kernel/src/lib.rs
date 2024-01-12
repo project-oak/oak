@@ -89,6 +89,7 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 use zerocopy::FromBytes;
+use zeroize::Zeroize;
 
 /// A derived sealing key.
 type DerivedKey = [u8; 32];
@@ -291,7 +292,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
             .expect("failed to read dice data");
 
         // Overwrite the dice data provided by stage0 after reading.
-        dice_memory_slice.fill(0);
+        dice_memory_slice.zeroize();
 
         if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
             panic!("dice data loaded from stage0 failed validation");

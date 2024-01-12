@@ -726,6 +726,7 @@ dependencies = [
  "static_assertions",
  "strum",
  "zerocopy",
+ "zeroize",
 ]
 
 [[package]]
@@ -854,6 +855,7 @@ dependencies = [
  "prost",
  "rand_core",
  "sha2",
+ "zeroize",
 ]
 
 [[package]]
