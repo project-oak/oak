@@ -26,6 +26,7 @@ use std::{
     fs::OpenOptions,
     io::{Read, Seek, Write},
 };
+use zeroize::Zeroize;
 
 /// The path to the file where the DICE data provided by Stage 1 is stored.
 const STAGE1_DICE_DATA_PATH: &str = "/oak/dice";
@@ -39,14 +40,16 @@ pub fn load_stage1_dice_data() -> anyhow::Result<DiceBuilder> {
         .write(true)
         .open(STAGE1_DICE_DATA_PATH)
         .context("couldn't open DICE data file")?;
-    let mut buffer = Vec::new();
+    let size = file.metadata().map(|m| m.len() as usize).unwrap_or(0);
+
+    let mut buffer = Vec::with_capacity(size);
     file.read_to_end(&mut buffer)
         .context("couldn't read DICE data from file")?;
 
     let result =
         DiceData::decode_length_delimited(&buffer[..]).context("couldn't parse DICE data")?;
 
-    buffer.fill(0);
+    buffer.zeroize();
     file.rewind()?;
     file.write_all(&buffer)
         .context("couldn't overwrite DICE data file")?;

@@ -31,6 +31,7 @@ use std::{
 };
 use x86_64::PhysAddr;
 use zerocopy::FromBytes;
+use zeroize::Zeroize;
 
 /// The expected string representation of the custom type for the reserved memory range that
 /// contains the DICE data.
@@ -119,7 +120,7 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
             .ok_or_else(|| anyhow::anyhow!("size mismatch while reading DICE data"))?;
 
         // Zero out the source memory.
-        source.fill(0);
+        source.zeroize();
         result
     };
 

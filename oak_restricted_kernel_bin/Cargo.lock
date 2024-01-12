@@ -740,6 +740,7 @@ dependencies = [
  "static_assertions",
  "strum",
  "zerocopy",
+ "zeroize",
 ]
 
 [[package]]
@@ -793,6 +794,7 @@ dependencies = [
  "virtio-drivers",
  "x86_64",
  "zerocopy",
+ "zeroize",
 ]
 
 [[package]]

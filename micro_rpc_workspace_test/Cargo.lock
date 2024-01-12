@@ -910,6 +910,7 @@ dependencies = [
  "static_assertions",
  "strum",
  "zerocopy",
+ "zeroize",
 ]
 
 [[package]]

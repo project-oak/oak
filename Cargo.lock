@@ -2026,6 +2026,7 @@ dependencies = [
  "tokio-util",
  "tonic",
  "walkdir",
+ "zeroize",
 ]
 
 [[package]]
@@ -2073,6 +2074,7 @@ dependencies = [
  "x86_64",
  "xz2",
  "zerocopy",
+ "zeroize",
 ]
 
 [[package]]
@@ -2137,6 +2139,7 @@ dependencies = [
  "static_assertions",
  "strum",
  "zerocopy",
+ "zeroize",
 ]
 
 [[package]]
@@ -2455,6 +2458,7 @@ dependencies = [
  "prost",
  "rand_core",
  "sha2",
+ "zeroize",
 ]
 
 [[package]]
@@ -2499,6 +2503,7 @@ dependencies = [
  "virtio-drivers",
  "x86_64",
  "zerocopy",
+ "zeroize",
 ]
 
 [[package]]
