@@ -19,11 +19,10 @@ use crate::{
     proto::oak::containers::{
         orchestrator_server::{Orchestrator, OrchestratorServer},
         v1::orchestrator_crypto_server::OrchestratorCryptoServer,
-        GetApplicationConfigResponse, GetCryptoContextRequest, GetCryptoContextResponse,
+        GetApplicationConfigResponse,
     },
 };
 use anyhow::Context;
-use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
 use std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
 use tokio::{fs::set_permissions, net::UnixListener};
 use tokio_stream::wrappers::UnixListenerStream;
@@ -31,7 +30,6 @@ use tokio_util::sync::CancellationToken;
 use tonic::{transport::Server, Request, Response};
 
 pub struct ServiceImplementation {
-    encryption_key_provider: Arc<EncryptionKeyProvider>,
     application_config: Vec<u8>,
     launcher_client: Arc<LauncherClient>,
 }
@@ -54,26 +52,6 @@ impl Orchestrator for ServiceImplementation {
             .map_err(|err| tonic::Status::internal(format!("couldn't send notification: {err}")))?;
         Ok(tonic::Response::new(()))
     }
-
-    // TODO(#4442): Move generating session keys to a separate service.
-    async fn get_crypto_context(
-        &self,
-        request: Request<GetCryptoContextRequest>,
-    ) -> Result<Response<GetCryptoContextResponse>, tonic::Status> {
-        let context = self
-            .encryption_key_provider
-            .generate_recipient_context(&request.into_inner().serialized_encapsulated_public_key)
-            .map_err(|err| {
-                tonic::Status::internal(format!("couldn't generate crypto context: {err}"))
-            })?
-            .serialize()
-            .map_err(|err| {
-                tonic::Status::internal(format!("couldn't serialize crypto context: {err}"))
-            })?;
-        Ok(tonic::Response::new(GetCryptoContextResponse {
-            context: Some(context),
-        }))
-    }
 }
 
 pub async fn create<P>(
@@ -88,7 +66,6 @@ where
 {
     let service_instance = ServiceImplementation {
         // TODO(#4442): Remove once apps use the new crypto service.
-        encryption_key_provider: key_store.instance_encryption_key(),
         application_config,
         launcher_client,
     };
