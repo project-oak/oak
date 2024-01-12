@@ -1893,7 +1893,6 @@ dependencies = [
  "ecdsa",
  "hex",
  "oak_dice",
- "oak_sev_guest",
  "p256",
  "prost",
  "prost-build",
@@ -1902,7 +1901,6 @@ dependencies = [
  "serde_json",
  "sha2",
  "time",
- "zerocopy",
 ]
 
 [[package]]
