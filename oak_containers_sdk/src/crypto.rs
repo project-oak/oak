@@ -13,13 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{
-    proto::oak::containers::v1::{
-        orchestrator_crypto_client::OrchestratorCryptoClient as GrpcOrchestratorCryptoClient,
-        DeriveSessionKeysRequest, KeyOrigin,
-    },
-    IGNORED_ENDPOINT_URI, ORCHESTRATOR_IPC_SOCKET,
-};
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_crypto::{
@@ -28,6 +21,14 @@ use oak_crypto::{
 };
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
+
+use crate::{
+    proto::oak::containers::v1::{
+        orchestrator_crypto_client::OrchestratorCryptoClient as GrpcOrchestratorCryptoClient,
+        DeriveSessionKeysRequest, KeyOrigin,
+    },
+    IGNORED_ENDPOINT_URI, ORCHESTRATOR_IPC_SOCKET,
+};
 
 struct OrchestratorCryptoClient {
     inner: GrpcOrchestratorCryptoClient<tonic::transport::channel::Channel>,

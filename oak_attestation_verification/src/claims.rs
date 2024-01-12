@@ -21,11 +21,13 @@
 
 extern crate alloc;
 
-use crate::proto::oak::HexDigest;
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
+
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
+
+use crate::proto::oak::HexDigest;
 
 /// PredicateType which identifies a V1 Claim, for in-toto statements.
 pub const CLAIM_V1: &str = "https://github.com/project-oak/transparent-release/claim/v1";
@@ -280,9 +282,10 @@ pub fn get_digest(claim: &EndorsementStatement) -> anyhow::Result<HexDigest> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use super::get_digest;
     use crate::claims::{parse_endorsement_statement, validate_endorsement};
-    use std::fs;
 
     const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
 

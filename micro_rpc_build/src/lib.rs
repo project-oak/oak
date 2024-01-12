@@ -18,9 +18,10 @@
 
 //! This crate allows compiling protobuf services to Rust in `build.rs` scripts.
 
+use std::path::Path;
+
 use anyhow::Context;
 use prost_build::{Method, Service};
-use std::path::Path;
 
 #[derive(Copy, Clone, Debug, Default)]
 pub enum ReceiverType {

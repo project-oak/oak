@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
-use crate::Syscall;
 use core::arch::asm;
+
+use crate::Syscall;
 
 /// Invoke system calls based on the Linux calling convention using `SYSCALL`.
 ///

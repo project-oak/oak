@@ -14,11 +14,13 @@
 // limitations under the License.
 //
 
-use crate::acpi::{EBDA, EBDA_SIZE};
-use bitflags::bitflags;
 use core::{marker::PhantomData, mem::size_of, ops::Deref, slice};
+
+use bitflags::bitflags;
 use x86_64::VirtAddr;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
+
+use crate::acpi::{EBDA, EBDA_SIZE};
 
 /// ACPI Root System Description Pointer.
 ///

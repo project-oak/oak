@@ -19,6 +19,7 @@ use core::{
     mem::MaybeUninit,
     sync::atomic::{AtomicBool, Ordering},
 };
+
 use spinning_top::{const_spinlock, Spinlock};
 
 /// A synchronised implementation of a cell that can be initialized only once.

@@ -37,17 +37,19 @@ pub mod proto {
 mod qemu;
 mod server;
 
-use crate::proto::oak::session::v1::{
-    AttestationBundle, AttestationEndorsement, AttestationEvidence,
-};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use anyhow::Context;
 use clap::Parser;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::{
     net::TcpListener,
     sync::oneshot::{channel, Receiver, Sender},
     task::JoinHandle,
     time::{timeout, Duration},
+};
+
+use crate::proto::oak::session::v1::{
+    AttestationBundle, AttestationEndorsement, AttestationEvidence,
 };
 
 /// The local IP address assigned to the VM guest.

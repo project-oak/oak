@@ -16,11 +16,12 @@
 
 #![no_std]
 
-use bitflags::bitflags;
 use core::{
     ffi::{c_char, CStr},
     mem::size_of,
 };
+
+use bitflags::bitflags;
 use strum::{Display, FromRepr};
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 

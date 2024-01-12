@@ -16,6 +16,8 @@
 
 extern crate test;
 
+use std::time::Duration;
+
 use location_utils::{
     cell_id_to_bytes, find_cell, location_from_degrees, location_to_bytes, S2_DEFAULT_LEVEL,
 };
@@ -23,7 +25,6 @@ use lookup_data_generator::data::generate_and_serialize_sparse_weather_entries;
 use maplit::hashmap;
 use oak_functions_test_utils::make_request;
 use rand::{prelude::StdRng, SeedableRng};
-use std::time::Duration;
 use test::Bencher;
 
 #[tokio::test]

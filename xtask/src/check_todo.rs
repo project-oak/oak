@@ -14,9 +14,10 @@
 // limitations under the License.
 //
 
-use crate::internal::*;
 use once_cell::sync::Lazy;
 use regex::Regex;
+
+use crate::internal::*;
 
 static PATTERN: Lazy<Regex> =
     // Break up "TO" and "DO" to avoid false positives on this code.

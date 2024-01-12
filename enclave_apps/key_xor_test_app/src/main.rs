@@ -21,6 +21,7 @@
 extern crate alloc;
 
 use core::panic::PanicInfo;
+
 use log::info;
 use oak_channel::{Read, Write};
 use oak_restricted_kernel_interface::{syscall::read, DERIVED_KEY_FD};

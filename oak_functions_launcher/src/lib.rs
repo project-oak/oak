@@ -40,17 +40,19 @@ pub mod proto {
     }
 }
 
-use crate::proto::oak::functions::{
-    InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
-};
+use std::{fs, path::PathBuf, time::Duration};
+
 use anyhow::Context;
 use clap::Parser;
 use oak_launcher_utils::{
     channel::{self, ConnectorHandle},
     launcher,
 };
-use std::{fs, path::PathBuf, time::Duration};
 use ubyte::ByteUnit;
+
+use crate::proto::oak::functions::{
+    InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
+};
 
 #[derive(Parser, Debug)]
 #[group(skip)]

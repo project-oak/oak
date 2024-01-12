@@ -14,6 +14,13 @@
 // limitations under the License.
 //
 
+use std::{fs, path::PathBuf};
+
+use anyhow::{anyhow, Context};
+use hashbrown::HashMap;
+use prost::Message;
+use ubyte::ByteUnit;
+
 use crate::{
     channel::ConnectorHandle,
     proto::oak::functions::{
@@ -21,11 +28,6 @@ use crate::{
         LookupDataEntry, OakFunctionsAsyncClient,
     },
 };
-use anyhow::{anyhow, Context};
-use hashbrown::HashMap;
-use prost::Message;
-use std::{fs, path::PathBuf};
-use ubyte::ByteUnit;
 
 struct UpdateClient<'a, I: Iterator<Item = LookupDataChunk>> {
     inner: &'a mut OakFunctionsAsyncClient<ConnectorHandle>,

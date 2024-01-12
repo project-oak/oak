@@ -14,7 +14,11 @@
 // limitations under the License.
 //
 
-use crate::try_parse_phys_addr;
+use std::{
+    fs::{read_dir, read_to_string, OpenOptions},
+    os::fd::AsRawFd,
+};
+
 use anyhow::Context;
 use ciborium::Value;
 use coset::cwt::ClaimName;
@@ -25,13 +29,11 @@ use oak_dice::{
 };
 use oak_remote_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
 use sha2::{Digest, Sha256};
-use std::{
-    fs::{read_dir, read_to_string, OpenOptions},
-    os::fd::AsRawFd,
-};
 use x86_64::PhysAddr;
 use zerocopy::FromBytes;
 use zeroize::Zeroize;
+
+use crate::try_parse_phys_addr;
 
 /// The expected string representation of the custom type for the reserved memory range that
 /// contains the DICE data.

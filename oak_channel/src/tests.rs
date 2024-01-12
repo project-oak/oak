@@ -18,9 +18,10 @@
 
 extern crate std;
 
+use alloc::{boxed::Box, collections::VecDeque, vec};
+
 use super::*;
 use crate::message::{Message, RequestMessage};
-use alloc::{boxed::Box, collections::VecDeque, vec};
 
 const BODY_LEN_MULTIPLIER: usize = 5;
 const MOCK_LARGE_PAYLOAD_LEN: usize = frame::MAX_BODY_SIZE * BODY_LEN_MULTIPLIER;

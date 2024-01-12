@@ -15,8 +15,9 @@
 
 //! Integration tests for the Oak Functions Launcher.
 
-use oak_functions_client::OakFunctionsClient;
 use std::time::Duration;
+
+use oak_functions_client::OakFunctionsClient;
 use xtask::{launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
 
 // Allow enough worker threads to collect output from background tasks.

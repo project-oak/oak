@@ -14,19 +14,21 @@
 // limitations under the License.
 //
 
-use crate::{
-    acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
-    apic::Lapic,
-    pic::disable_pic8259,
-};
 use core::{
     arch::x86_64::_mm_pause,
     ffi::c_void,
     mem::MaybeUninit,
     sync::atomic::{AtomicU32, Ordering},
 };
+
 use oak_sev_guest::ap_jump_table::ApJumpTable;
 use x86_64::PhysAddr;
+
+use crate::{
+    acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
+    apic::Lapic,
+    pic::disable_pic8259,
+};
 
 extern "C" {
     #[link_name = "ap_start"]

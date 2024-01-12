@@ -16,6 +16,20 @@
 
 //! Provides verification based on evidence, endorsements and reference values.
 
+use alloc::vec::Vec;
+
+use coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
+use ecdsa::{signature::Verifier, Signature};
+use oak_dice::cert::{
+    cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
+    ACPI_MEASUREMENT_ID, CONTAINER_IMAGE_ID, ENCLAVE_APPLICATION_LAYER_ID, INITRD_MEASUREMENT_ID,
+    KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
+    LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID,
+    MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
+};
+use oak_sev_guest::guest::{AttestationReport, PolicyFlags};
+use zerocopy::FromBytes;
+
 use crate::{
     alloc::string::ToString,
     claims::{get_digest, parse_endorsement_statement},
@@ -40,19 +54,6 @@ use crate::{
         hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match, raw_to_hex_digest, MatchResult,
     },
 };
-
-use alloc::vec::Vec;
-use coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
-use ecdsa::{signature::Verifier, Signature};
-use oak_dice::cert::{
-    cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
-    ACPI_MEASUREMENT_ID, CONTAINER_IMAGE_ID, ENCLAVE_APPLICATION_LAYER_ID, INITRD_MEASUREMENT_ID,
-    KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
-    LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID,
-    MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
-};
-use oak_sev_guest::guest::{AttestationReport, PolicyFlags};
-use zerocopy::FromBytes;
 
 // We don't use additional authenticated data.
 const ADDITIONAL_DATA: &[u8] = b"";

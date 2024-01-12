@@ -14,13 +14,14 @@
 // limitations under the License.
 //
 
-use log::{debug, info};
-use nix::sys::termios::{cfmakeraw, tcgetattr, tcsetattr, SetArg};
 use std::{
     fs::OpenOptions,
     io::{Read, Write},
     os::fd::{AsRawFd, RawFd},
 };
+
+use log::{debug, info};
+use nix::sys::termios::{cfmakeraw, tcgetattr, tcsetattr, SetArg};
 
 mod init;
 

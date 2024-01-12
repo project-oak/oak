@@ -20,6 +20,7 @@
 #![feature(naked_functions)]
 
 use core::panic::PanicInfo;
+
 use oak_linux_boot_params::BootParams;
 
 #[no_mangle]

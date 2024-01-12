@@ -14,17 +14,19 @@
 // limitations under the License.
 //
 
-use crate::page::PageType;
+use std::{collections::HashMap, mem::size_of, path::PathBuf};
+
 use anyhow::Context;
 use log::{debug, info, trace};
 use sha2::{Digest, Sha256};
-use std::{collections::HashMap, mem::size_of, path::PathBuf};
 use strum::FromRepr;
 use x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr,
 };
 use zerocopy::AsBytes;
+
+use crate::page::PageType;
 
 /// The address of the first byte after the end of the firmware image.
 ///

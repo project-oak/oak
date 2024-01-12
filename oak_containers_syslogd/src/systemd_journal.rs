@@ -14,9 +14,7 @@
 // limitations under the License.
 //
 
-use self::systemd_sys::*;
 use core::ffi::c_size_t;
-use nix::errno::Errno;
 use std::{
     cmp::Ordering,
     collections::HashMap,
@@ -24,7 +22,11 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+
+use nix::errno::Errno;
 use tokio::sync::OnceCell;
+
+use self::systemd_sys::*;
 
 mod systemd_sys {
     use core::ffi::c_size_t;

@@ -14,11 +14,12 @@
 // limitations under the License.
 //
 
-use bitvec::{order::Lsb0, prelude::BitArray};
 use core::{
     ops::{BitAnd, Not},
     option::Option,
 };
+
+use bitvec::{order::Lsb0, prelude::BitArray};
 use x86_64::structures::paging::{
     frame::PhysFrameRange, page::PageSize, FrameAllocator, FrameDeallocator, PhysFrame,
 };
@@ -215,9 +216,10 @@ impl<S: PageSize, const N: usize> FrameDeallocator<S> for BitmapAllocator<S, N> 
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use super::*;
     use assertables::*;
     use x86_64::{structures::paging::Size4KiB, PhysAddr};
+
+    use super::*;
 
     fn create_allocator<const N: usize>(start: u64, end: u64) -> BitmapAllocator<Size4KiB, N> {
         BitmapAllocator::<Size4KiB, N>::new(PhysFrame::range(

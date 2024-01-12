@@ -14,6 +14,12 @@
 // limitations under the License.
 //
 
+use alloc::{sync::Arc, vec::Vec};
+
+use byteorder::{ByteOrder, LittleEndian};
+use hashbrown::HashMap;
+use spinning_top::Spinlock;
+
 use super::{
     api::StdWasmApiFactory, OakLinker, UserState, WasmApiFactory, WasmHandler, ALLOC_FUNCTION_NAME,
     MEMORY_NAME,
@@ -23,10 +29,6 @@ use crate::{
     lookup::LookupDataManager,
     wasm::{AbiPointer, AbiPointerOffset},
 };
-use alloc::{sync::Arc, vec::Vec};
-use byteorder::{ByteOrder, LittleEndian};
-use hashbrown::HashMap;
-use spinning_top::Spinlock;
 
 #[test]
 fn test_read_write_u32_in_wasm_memory() {

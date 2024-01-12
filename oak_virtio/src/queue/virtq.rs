@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
-use bitflags::bitflags;
 use core::num::Wrapping;
+
+use bitflags::bitflags;
 use x86_64::PhysAddr;
 
 bitflags! {

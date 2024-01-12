@@ -13,9 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use anyhow::Context;
 use oak_containers_sdk::{InstanceEncryptionKeyHandle, OrchestratorClient};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::net::TcpListener;
 
 const TRUSTED_APP_PORT: u16 = 8080;

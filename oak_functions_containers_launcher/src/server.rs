@@ -17,9 +17,8 @@
 // TODO(#4409): this duplicates `oak_functions_launcher/src/server.rs`. Refactor these to share
 // code.
 
-use crate::proto::oak::functions::{
-    oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient, InvokeRequest,
-};
+use std::{net::SocketAddr, pin::Pin};
+
 use futures::{Future, Stream, StreamExt};
 use oak_functions_launcher::proto::oak::session::v1::{
     request_wrapper, response_wrapper,
@@ -27,8 +26,11 @@ use oak_functions_launcher::proto::oak::session::v1::{
     AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
     InvokeResponse, RequestWrapper, ResponseWrapper,
 };
-use std::{net::SocketAddr, pin::Pin};
 use tonic::{transport::Server, Request, Response, Status, Streaming};
+
+use crate::proto::oak::functions::{
+    oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient, InvokeRequest,
+};
 
 pub struct SessionProxy {
     connector_handle: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,

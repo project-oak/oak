@@ -25,14 +25,9 @@ mod stdio;
 #[cfg(test)]
 mod tests;
 
-use self::{
-    fd::{syscall_fsync, syscall_read, syscall_write},
-    mmap::syscall_mmap,
-    process::syscall_exit,
-};
-use crate::{mm, DerivedKey};
 use alloc::boxed::Box;
 use core::{arch::asm, ffi::c_void};
+
 use oak_channel::Channel;
 use oak_dice::evidence::RestrictedKernelDiceData as DiceData;
 use oak_restricted_kernel_interface::{Errno, Syscall};
@@ -43,6 +38,13 @@ use x86_64::{
     },
     VirtAddr,
 };
+
+use self::{
+    fd::{syscall_fsync, syscall_read, syscall_write},
+    mmap::syscall_mmap,
+    process::syscall_exit,
+};
+use crate::{mm, DerivedKey};
 
 /// State we need to track for system calls.
 ///

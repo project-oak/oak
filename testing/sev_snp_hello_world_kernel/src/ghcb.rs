@@ -15,6 +15,7 @@
 //
 
 use core::mem::MaybeUninit;
+
 use oak_sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
     msr::{

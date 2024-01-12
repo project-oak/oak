@@ -17,6 +17,7 @@
 //! Constants and helper functions to work with CWT-based DICE certificates.
 
 use alloc::{string::String, vec, vec::Vec};
+
 use coset::{
     cbor::value::Value,
     cwt::{ClaimName, ClaimsSet, ClaimsSetBuilder},

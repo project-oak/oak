@@ -18,9 +18,10 @@
 #![feature(result_flattening)]
 #![feature(array_chunks)]
 
+use std::net::{Ipv6Addr, SocketAddr};
+
 use clap::Parser;
 use oak_functions_launcher::LookupDataConfig;
-use std::net::{Ipv6Addr, SocketAddr};
 use tokio::signal;
 use ubyte::ByteUnit;
 

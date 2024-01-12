@@ -19,8 +19,9 @@
 // TODO(#3703): Remove when fixed.
 #![allow(clippy::extra_unused_type_parameters)]
 
-use bitflags::bitflags;
 use core::mem::size_of;
+
+use bitflags::bitflags;
 use strum::{EnumIter, FromRepr};
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
@@ -864,8 +865,9 @@ mod tests {
     //! Test to check the getters and setters for the bit fields of the `key_select` field in the
     //! `KeyRequest` struct.
 
-    use super::*;
     use strum::IntoEnumIterator;
+
+    use super::*;
 
     #[test]
     fn test_key_request_key_select() {

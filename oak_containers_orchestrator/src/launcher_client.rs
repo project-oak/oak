@@ -13,6 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use anyhow::Context;
+use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
+use tonic::transport::Channel;
+
 use crate::proto::oak::{
     attestation::v1::Evidence,
     containers::{
@@ -23,9 +27,6 @@ use crate::proto::oak::{
     key_provisioning::v1::GroupKeys,
     session::v1::AttestationEvidence,
 };
-use anyhow::Context;
-use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
-use tonic::transport::Channel;
 
 /// Utility struct used to interface with the launcher
 pub struct LauncherClient {

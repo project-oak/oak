@@ -26,15 +26,16 @@ pub mod proto {
 mod lookup;
 pub mod server;
 
-use crate::proto::oak::functions::{
-    oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient, InitializeRequest,
-    InitializeResponse,
-};
 use anyhow::Context;
 use oak_containers_launcher::Launcher;
 use oak_functions_launcher::LookupDataConfig;
 use tokio::time::Duration;
 use tonic::transport::Endpoint;
+
+use crate::proto::oak::functions::{
+    oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient, InitializeRequest,
+    InitializeResponse,
+};
 
 pub struct UntrustedApp {
     pub oak_functions_client: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,

@@ -14,13 +14,13 @@
 // limitations under the License.
 //
 
-use crate::{sev_status, BootAllocator};
 use alloc::boxed::Box;
 use core::{
     alloc::{AllocError, Allocator, Layout},
     ops::{Deref, DerefMut},
     ptr::NonNull,
 };
+
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 pub use oak_sev_guest::ghcb::Ghcb;
@@ -45,6 +45,8 @@ use x86_64::{
 };
 use zerocopy::{AsBytes, FromBytes};
 use zeroize::Zeroize;
+
+use crate::{sev_status, BootAllocator};
 
 pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
 

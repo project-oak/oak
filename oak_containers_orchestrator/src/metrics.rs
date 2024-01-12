@@ -14,13 +14,15 @@
 // limitations under the License.
 //
 
-use crate::launcher_client::LauncherClient;
+use std::{sync::Arc, time::Duration};
+
 use anyhow::Result;
 use opentelemetry_api::{
     metrics::{AsyncInstrument, Meter, MeterProvider, ObservableCounter, ObservableGauge, Unit},
     KeyValue,
 };
-use std::{sync::Arc, time::Duration};
+
+use crate::launcher_client::LauncherClient;
 
 // It's not dead, it's just asynchronous.
 #[allow(dead_code)]

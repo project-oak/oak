@@ -14,13 +14,14 @@
 // limitations under the License.
 //
 
+use anyhow::Context;
+use oak_crypto::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
+use tonic::transport::Channel;
+
 use crate::proto::oak::session::v1::{
     request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
     AttestationEvidence, GetPublicKeyRequest, InvokeRequest, RequestWrapper,
 };
-use anyhow::Context;
-use oak_crypto::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
-use tonic::transport::Channel;
 
 pub struct GrpcStreamingTransport {
     rpc_client: StreamingSessionClient<Channel>,

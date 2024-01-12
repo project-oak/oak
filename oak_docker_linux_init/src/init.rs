@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
-use nix::mount::{mount, MsFlags};
 use std::env::set_current_dir;
+
+use nix::mount::{mount, MsFlags};
 
 /// Performs the minimum initialization required from the initial process on Linux to allow an
 /// application on an initial RAM disk to operate as expected.
