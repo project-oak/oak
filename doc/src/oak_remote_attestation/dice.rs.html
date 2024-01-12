@@ -288,6 +288,8 @@
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -304,11 +306,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::attestation::v1::{
-    ApplicationKeys, CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
-    TeePlatform,
-};
-<span class="kw">use </span>alloc::{vec, vec::Vec};
+</span><span class="kw">use </span>alloc::{vec, vec::Vec};
+
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>coset::{
     cwt::{ClaimName, ClaimsSet},
@@ -323,6 +322,11 @@
 };
 <span class="kw">use </span>p256::ecdsa::{SigningKey, VerifyingKey};
 <span class="kw">use </span>zeroize::Zeroize;
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::attestation::v1::{
+    ApplicationKeys, CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
+    TeePlatform,
+};
 
 <span class="doccomment">/// Builds the DICE evidence and certificate authority for the next DICE layer.
 </span><span class="kw">pub struct </span>DiceBuilder {

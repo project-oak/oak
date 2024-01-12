@@ -531,6 +531,7 @@
 <a href="#531" id="531">531</a>
 <a href="#532" id="532">532</a>
 <a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -553,8 +554,9 @@
 //! Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 //! for more information.
 
-</span><span class="kw">use </span>bitflags::bitflags;
-<span class="kw">use </span>core::arch::{asm, x86_64::CpuidResult};
+</span><span class="kw">use </span>core::arch::{asm, x86_64::CpuidResult};
+
+<span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>x86_64::{
     structures::paging::{frame::PhysFrameRange, page::Size4KiB},
     PhysAddr,

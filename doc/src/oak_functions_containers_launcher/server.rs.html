@@ -131,6 +131,8 @@
 <a href="#131" id="131">131</a>
 <a href="#132" id="132">132</a>
 <a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -150,9 +152,8 @@
 // TODO(#4409): this duplicates `oak_functions_launcher/src/server.rs`. Refactor these to share
 // code.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::{
-    oak_functions_client::OakFunctionsClient <span class="kw">as </span>GrpcOakFunctionsClient, InvokeRequest,
-};
+</span><span class="kw">use </span>std::{net::SocketAddr, pin::Pin};
+
 <span class="kw">use </span>futures::{Future, Stream, StreamExt};
 <span class="kw">use </span>oak_functions_launcher::proto::oak::session::v1::{
     request_wrapper, response_wrapper,
@@ -160,8 +161,11 @@
     AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
     InvokeResponse, RequestWrapper, ResponseWrapper,
 };
-<span class="kw">use </span>std::{net::SocketAddr, pin::Pin};
 <span class="kw">use </span>tonic::{transport::Server, Request, Response, Status, Streaming};
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::{
+    oak_functions_client::OakFunctionsClient <span class="kw">as </span>GrpcOakFunctionsClient, InvokeRequest,
+};
 
 <span class="kw">pub struct </span>SessionProxy {
     connector_handle: GrpcOakFunctionsClient&lt;tonic::transport::channel::Channel&gt;,

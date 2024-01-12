@@ -94,6 +94,7 @@
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
 <a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -112,7 +113,10 @@
 
 </span><span class="doccomment">//! Verifies binary endorsements as coming from Transparent Release.
 
-</span><span class="kw">use crate</span>::{
+</span><span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
+
+<span class="kw">use crate</span>::{
     claims::{
         get_digest, parse_endorsement_statement, validate_endorsement, verify_validity_duration,
         EndorsementStatement,
@@ -121,8 +125,6 @@
     rekor::{get_rekor_log_entry_body, verify_rekor_log_entry},
     util::{convert_pem_to_raw, equal_keys, is_hex_digest_match, MatchResult},
 };
-<span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
 
 <span class="doccomment">/// Compares the digest contained in the endorsement against the given one.
 </span><span class="kw">pub fn </span>verify_binary_digest(

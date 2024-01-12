@@ -68,6 +68,8 @@
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -84,12 +86,14 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::mm::Translator;
-<span class="kw">use </span>core::alloc::Allocator;
+</span><span class="kw">use </span>core::alloc::Allocator;
+
 <span class="kw">use </span>log::info;
 <span class="kw">use </span>oak_channel::{Read, Write};
 <span class="kw">use </span>rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
 <span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
+
+<span class="kw">use </span><span class="kw">crate</span>::mm::Translator;
 
 <span class="comment">// The virtio vsock port on which to listen.
 </span><span class="attr">#[cfg(feature = <span class="string">&quot;vsock_channel&quot;</span>)]

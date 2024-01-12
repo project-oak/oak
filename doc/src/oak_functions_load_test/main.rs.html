@@ -61,6 +61,7 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -77,10 +78,11 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>anyhow::Context;
+</span><span class="kw">use </span>std::time::Instant;
+
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>bencher::stats::Stats;
 <span class="kw">use </span>oak_functions_client::OakFunctionsClient;
-<span class="kw">use </span>std::time::Instant;
 
 <span class="comment">// From https://pantheon.corp.google.com/api-gateway/gateway/weather-lookup-grpc/location/europe-west2?project=oak-ci.
 </span><span class="kw">const </span>URL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://weather-lookup-grpc-8tk01hn7.nw.gateway.dev&quot;</span>;

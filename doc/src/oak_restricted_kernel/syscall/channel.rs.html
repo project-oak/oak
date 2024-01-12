@@ -58,6 +58,8 @@
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -74,10 +76,12 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">super</span>::fd::FileDescriptor;
-<span class="kw">use </span>alloc::boxed::Box;
+</span><span class="kw">use </span>alloc::boxed::Box;
+
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_restricted_kernel_interface::{Errno, OAK_CHANNEL_FD};
+
+<span class="kw">use </span><span class="kw">super</span>::fd::FileDescriptor;
 
 <span class="attr">#[repr(transparent)]
 </span><span class="kw">pub struct </span>ChannelDescriptor {

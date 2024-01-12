@@ -173,6 +173,8 @@
 <a href="#173" id="173">173</a>
 <a href="#174" id="174">174</a>
 <a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -189,8 +191,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::mm::Translator;
-<span class="kw">use </span>core::{panic, slice::from_raw_parts};
+</span><span class="kw">use </span>core::{panic, slice::from_raw_parts};
+
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
 <span class="kw">use </span>oak_sev_guest::{cpuid::CpuidPage, secrets::SecretsPage};
@@ -199,6 +201,8 @@
     PhysAddr, VirtAddr,
 };
 <span class="kw">use </span>zerocopy::FromBytes;
+
+<span class="kw">use </span><span class="kw">crate</span>::mm::Translator;
 
 <span class="doccomment">/// The exclusive upper limit of the address range where we expect the SNP-specific pages to reside.
 ///

@@ -116,6 +116,7 @@
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
 <a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -144,15 +145,16 @@
 <span class="kw">mod </span>lookup;
 <span class="kw">pub mod </span>server;
 
-<span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::{
-    oak_functions_client::OakFunctionsClient <span class="kw">as </span>GrpcOakFunctionsClient, InitializeRequest,
-    InitializeResponse,
-};
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_containers_launcher::Launcher;
 <span class="kw">use </span>oak_functions_launcher::LookupDataConfig;
 <span class="kw">use </span>tokio::time::Duration;
 <span class="kw">use </span>tonic::transport::Endpoint;
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::{
+    oak_functions_client::OakFunctionsClient <span class="kw">as </span>GrpcOakFunctionsClient, InitializeRequest,
+    InitializeResponse,
+};
 
 <span class="kw">pub struct </span>UntrustedApp {
     <span class="kw">pub </span>oak_functions_client: GrpcOakFunctionsClient&lt;tonic::transport::channel::Channel&gt;,

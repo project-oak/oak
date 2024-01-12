@@ -389,6 +389,8 @@
 <a href="#389" id="389">389</a>
 <a href="#390" id="390">390</a>
 <a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -409,17 +411,19 @@
 //! &lt;https://www.rfc-editor.org/rfc/rfc9180.html&gt;
 //! &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption&gt;
 
-</span><span class="kw">use crate</span>::{
+</span><span class="kw">use </span>alloc::{boxed::Box, sync::Arc, vec::Vec};
+
+<span class="kw">use </span>anyhow::{anyhow, Context};
+<span class="kw">use </span>async_trait::async_trait;
+<span class="kw">use </span>hpke::Deserializable;
+
+<span class="kw">use crate</span>::{
     hpke::{
         deserialize_nonce, generate_random_nonce, setup_base_recipient, setup_base_sender, KeyPair,
         PrivateKey, PublicKey, RecipientContext, SenderContext,
     },
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
-<span class="kw">use </span>alloc::{boxed::Box, sync::Arc, vec::Vec};
-<span class="kw">use </span>anyhow::{anyhow, Context};
-<span class="kw">use </span>async_trait::async_trait;
-<span class="kw">use </span>hpke::Deserializable;
 
 <span class="doccomment">/// Info string used by Hybrid Public Key Encryption;
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>OAK_HPKE_INFO: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;Oak Hybrid Public Key Encryption v1&quot;</span>;

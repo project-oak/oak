@@ -266,6 +266,7 @@
 <a href="#266" id="266">266</a>
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -284,8 +285,9 @@
 
 </span><span class="doccomment">//! Rust instruction wrappers for managing page state and interacting with the hypervisor.
 
-</span><span class="kw">use </span>bitflags::bitflags;
-<span class="kw">use </span>core::arch::asm;
+</span><span class="kw">use </span>core::arch::asm;
+
+<span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>strum::FromRepr;
 
 <span class="doccomment">/// Whether a page is in the validated state or not.

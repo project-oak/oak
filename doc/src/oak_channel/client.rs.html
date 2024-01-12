@@ -69,6 +69,8 @@
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
 <a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -87,12 +89,14 @@
 
 </span><span class="kw">extern crate </span>alloc;
 
+<span class="kw">use </span>alloc::boxed::Box;
+
+<span class="kw">use </span>oak_core::timer::Timer;
+
 <span class="kw">use crate</span>::{
     message::{InvocationId, RequestMessage, ResponseMessage},
     Channel, InvocationChannel,
 };
-<span class="kw">use </span>alloc::boxed::Box;
-<span class="kw">use </span>oak_core::timer::Timer;
 
 <span class="kw">pub struct </span>ClientChannelHandle {
     inner: InvocationChannel,

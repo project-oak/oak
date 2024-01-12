@@ -233,6 +233,8 @@
 <a href="#233" id="233">233</a>
 <a href="#234" id="234">234</a>
 <a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -267,9 +269,11 @@
     ])
 });
 
-<span class="kw">use crate</span>::{internal::<span class="kw-2">*</span>, workspace_path};
-<span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>std::path::{Path, PathBuf};
+
+<span class="kw">use </span>once_cell::sync::Lazy;
+
+<span class="kw">use crate</span>::{internal::<span class="kw-2">*</span>, workspace_path};
 
 <span class="attr">#[derive(Debug, Clone, PartialEq)]
 </span><span class="kw">pub struct </span>App {

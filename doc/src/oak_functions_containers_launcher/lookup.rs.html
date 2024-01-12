@@ -183,6 +183,7 @@
 <a href="#183" id="183">183</a>
 <a href="#184" id="184">184</a>
 <a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -201,13 +202,14 @@
 
 </span><span class="kw">use </span>std::{collections::HashMap, path::PathBuf};
 
+<span class="kw">use </span>anyhow::{anyhow, Context};
+<span class="kw">use </span>prost::Message;
+<span class="kw">use </span>ubyte::ByteUnit;
+
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::{
     oak_functions_client::OakFunctionsClient <span class="kw">as </span>GrpcOakFunctionsClient, Empty,
     ExtendNextLookupDataRequest, FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry,
 };
-<span class="kw">use </span>anyhow::{anyhow, Context};
-<span class="kw">use </span>prost::Message;
-<span class="kw">use </span>ubyte::ByteUnit;
 
 <span class="kw">struct </span>UpdateClient&lt;<span class="lifetime">&#39;a</span>, I: Iterator&lt;Item = LookupDataChunk&gt;&gt; {
     inner: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>GrpcOakFunctionsClient&lt;tonic::transport::channel::Channel&gt;,

@@ -303,6 +303,8 @@
 <a href="#303" id="303">303</a>
 <a href="#304" id="304">304</a>
 <a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -318,19 +320,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
-    containers::{
-        launcher_server::{Launcher, LauncherServer},
-        v1::{
-            hostlib_key_provisioning_server::{
-                HostlibKeyProvisioning, HostlibKeyProvisioningServer,
-            },
-            GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole,
-        },
-        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
-    },
-    session::v1::AttestationEvidence,
+</span><span class="kw">use </span>std::{
+    pin::Pin,
+    sync::{Arc, Mutex},
 };
+
 <span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>futures::{FutureExt, Stream};
 <span class="kw">use </span>opentelemetry_proto::tonic::{
@@ -346,10 +340,6 @@
     },
     common::v1::any_value::Value,
 };
-<span class="kw">use </span>std::{
-    pin::Pin,
-    sync::{Arc, Mutex},
-};
 <span class="kw">use </span>tokio::{
     io::{AsyncReadExt, BufReader},
     net::TcpListener,
@@ -357,6 +347,20 @@
 };
 <span class="kw">use </span>tokio_stream::wrappers::TcpListenerStream;
 <span class="kw">use </span>tonic::{transport::Server, Request, Response, Status};
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
+    containers::{
+        launcher_server::{Launcher, LauncherServer},
+        v1::{
+            hostlib_key_provisioning_server::{
+                HostlibKeyProvisioning, HostlibKeyProvisioningServer,
+            },
+            GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole,
+        },
+        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+    },
+    session::v1::AttestationEvidence,
+};
 
 <span class="comment">// Most gRPC implementations limit message sizes to 4MiB. Let&#39;s stay
 // comfortably below that by limiting responses to 3MiB.

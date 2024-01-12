@@ -58,6 +58,7 @@
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -73,16 +74,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
+</span><span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>tokio::time::Duration;
+<span class="kw">use </span>tonic::transport::Endpoint;
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
     containers::example::{
         trusted_application_client::TrustedApplicationClient <span class="kw">as </span>GrpcTrustedApplicationClient,
         HelloRequest,
     },
     crypto::v1::{EncryptedRequest, EncryptedResponse},
 };
-<span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>tokio::time::Duration;
-<span class="kw">use </span>tonic::transport::Endpoint;
 
 <span class="doccomment">/// Utility struct used to interface with the launcher
 </span><span class="kw">pub struct </span>TrustedApplicationClient {

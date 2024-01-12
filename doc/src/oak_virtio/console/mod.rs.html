@@ -256,6 +256,7 @@
 <a href="#256" id="256">256</a>
 <a href="#257" id="257">257</a>
 <a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -272,18 +273,19 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>core::alloc::Allocator;
+</span><span class="kw">use </span>alloc::collections::VecDeque;
+<span class="kw">use </span>core::alloc::Allocator;
 
-<span class="kw">use crate</span>::{
-    queue::{DeviceWriteOnlyQueue, DriverWriteOnlyQueue},
-    InverseTranslator, Read, Translator, Write,
-};
-<span class="kw">use </span>alloc::collections::VecDeque;
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>rust_hypervisor_firmware_virtio::{
     device::VirtioBaseDevice,
     pci::{find_device, VirtioPciTransport},
     virtio::VirtioTransport,
+};
+
+<span class="kw">use crate</span>::{
+    queue::{DeviceWriteOnlyQueue, DriverWriteOnlyQueue},
+    InverseTranslator, Read, Translator, Write,
 };
 
 <span class="doccomment">/// The number of buffer descriptors in each of the queues.

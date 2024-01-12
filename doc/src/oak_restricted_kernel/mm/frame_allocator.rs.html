@@ -180,6 +180,8 @@
 <a href="#180" id="180">180</a>
 <a href="#181" id="181">181</a>
 <a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -196,14 +198,15 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">super</span>::bitmap_frame_allocator::BitmapAllocator;
-<span class="kw">use </span>x86_64::{
+</span><span class="kw">use </span>x86_64::{
     structures::paging::{
         frame::PhysFrameRange, FrameAllocator, FrameDeallocator, PageSize, PhysFrame, Size2MiB,
         Size4KiB,
     },
     PhysAddr,
 };
+
+<span class="kw">use </span><span class="kw">super</span>::bitmap_frame_allocator::BitmapAllocator;
 
 <span class="doccomment">/// Allocator to track physical memory frames.
 ///
@@ -324,8 +327,9 @@
 </span><span class="kw">mod </span>tests {
     <span class="kw">extern crate </span>std;
 
-    <span class="kw">use super</span>::<span class="kw-2">*</span>;
     <span class="kw">use </span>x86_64::{structures::paging::PageSize, PhysAddr};
+
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
     <span class="kw">fn </span>create_frame(start: u64) -&gt; PhysFrame&lt;Size2MiB&gt; {
         PhysFrame::from_start_address(PhysAddr::new(start)).unwrap()

@@ -55,6 +55,7 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -71,11 +72,12 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>anyhow::Context;
+</span><span class="kw">use </span>std::path::PathBuf;
+
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>goblin::elf::{program_header::PT_LOAD, Elf};
 <span class="kw">use </span>log::{debug, info};
 <span class="kw">use </span>sha2::{Digest, Sha256};
-<span class="kw">use </span>std::path::PathBuf;
 <span class="kw">use </span>x86_64::PhysAddr;
 
 <span class="doccomment">/// A memory segment extracted from an ELF file.

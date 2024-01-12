@@ -245,6 +245,8 @@
 <a href="#245" id="245">245</a>
 <a href="#246" id="246">246</a>
 <a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -284,17 +286,19 @@
 <span class="kw">mod </span>qemu;
 <span class="kw">mod </span>server;
 
-<span class="kw">use </span><span class="kw">crate</span>::proto::oak::session::v1::{
-    AttestationBundle, AttestationEndorsement, AttestationEvidence,
-};
+<span class="kw">use </span>std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>clap::Parser;
-<span class="kw">use </span>std::net::{IpAddr, Ipv4Addr, SocketAddr};
 <span class="kw">use </span>tokio::{
     net::TcpListener,
     sync::oneshot::{channel, Receiver, Sender},
     task::JoinHandle,
     time::{timeout, Duration},
+};
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::session::v1::{
+    AttestationBundle, AttestationEndorsement, AttestationEvidence,
 };
 
 <span class="doccomment">/// The local IP address assigned to the VM guest.

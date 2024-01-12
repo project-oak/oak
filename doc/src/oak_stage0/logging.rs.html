@@ -60,6 +60,8 @@
 <a href="#60" id="60">60</a>
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -76,10 +78,12 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::io_port_factory;
-<span class="kw">use </span>core::{fmt::Write, ops::DerefMut};
+</span><span class="kw">use </span>core::{fmt::Write, ops::DerefMut};
+
 <span class="kw">use </span>sev_serial::SerialPort;
 <span class="kw">use </span>spinning_top::Spinlock;
+
+<span class="kw">use </span><span class="kw">crate</span>::io_port_factory;
 
 <span class="kw">extern crate </span>log;
 

@@ -114,6 +114,7 @@
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -130,16 +131,17 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>clap::Parser;
-<span class="kw">use </span>location_utils::{cell_id_from_bytes, location_from_bytes, LOCATION_SIZE, S2_DEFAULT_LEVEL};
-<span class="kw">use </span>log::{debug, info};
-<span class="kw">use </span>prost::Message;
-<span class="kw">use </span>std::{
+</span><span class="kw">use </span>std::{
     collections::{HashMap, HashSet},
     fs::File,
     io::{BufReader, Read},
 };
+
+<span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>clap::Parser;
+<span class="kw">use </span>location_utils::{cell_id_from_bytes, location_from_bytes, LOCATION_SIZE, S2_DEFAULT_LEVEL};
+<span class="kw">use </span>log::{debug, info};
+<span class="kw">use </span>prost::Message;
 
 <span class="attr">#[derive(Parser, Clone, Debug)]
 #[command(about = <span class="string">&quot;Oak Functions Lookup Data Checker&quot;</span>)]

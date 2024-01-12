@@ -604,6 +604,7 @@
 <a href="#604" id="604">604</a>
 <a href="#605" id="605">605</a>
 <a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -623,7 +624,11 @@
 </span><span class="doccomment">//! This module contains an implementation of the guest-hypervisor communications block (GHCB) page
 //! that can be used for communicating with the hypervisor.
 
-</span><span class="kw">use crate</span>::{
+</span><span class="kw">use </span>bitflags::bitflags;
+<span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
+<span class="kw">use </span>zerocopy::{AsBytes, FromBytes, FromZeroes};
+
+<span class="kw">use crate</span>::{
     cpuid::{CpuidInput, CpuidOutput},
     msr::{
         register_ghcb_location, set_ghcb_address_and_exit, GhcbGpa, RegisterGhcbGpaError,
@@ -631,9 +636,6 @@
     },
     Translator,
 };
-<span class="kw">use </span>bitflags::bitflags;
-<span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
-<span class="kw">use </span>zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 <span class="doccomment">/// The size of the GHCB page.
 </span><span class="kw">pub const </span>GHCB_PAGE_SIZE: usize = <span class="number">4096</span>;

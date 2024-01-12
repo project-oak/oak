@@ -886,6 +886,8 @@
 <a href="#886" id="886">886</a>
 <a href="#887" id="887">887</a>
 <a href="#888" id="888">888</a>
+<a href="#889" id="889">889</a>
+<a href="#890" id="890">890</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -907,8 +909,9 @@
 </span><span class="comment">// TODO(#3703): Remove when fixed.
 </span><span class="attr">#![allow(clippy::extra_unused_type_parameters)]
 
-</span><span class="kw">use </span>bitflags::bitflags;
-<span class="kw">use </span>core::mem::size_of;
+</span><span class="kw">use </span>core::mem::size_of;
+
+<span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>strum::{EnumIter, FromRepr};
 <span class="kw">use </span>zerocopy::{AsBytes, FromBytes, FromZeroes};
 
@@ -1752,8 +1755,9 @@
     <span class="doccomment">//! Test to check the getters and setters for the bit fields of the `key_select` field in the
     //! `KeyRequest` struct.
 
-    </span><span class="kw">use super</span>::<span class="kw-2">*</span>;
-    <span class="kw">use </span>strum::IntoEnumIterator;
+    </span><span class="kw">use </span>strum::IntoEnumIterator;
+
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_key_request_key_select() {

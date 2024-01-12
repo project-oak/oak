@@ -92,6 +92,7 @@
 <a href="#92" id="92">92</a>
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -107,15 +108,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::containers::example::{
-    trusted_application_server::{TrustedApplication, TrustedApplicationServer},
-    HelloRequest, HelloResponse,
-};
-<span class="kw">use </span>anyhow::anyhow;
+</span><span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>oak_containers_sdk::InstanceEncryptionKeyHandle;
 <span class="kw">use </span>oak_crypto::encryptor::AsyncServerEncryptor;
 <span class="kw">use </span>tokio::net::TcpListener;
 <span class="kw">use </span>tokio_stream::wrappers::TcpListenerStream;
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::containers::example::{
+    trusted_application_server::{TrustedApplication, TrustedApplicationServer},
+    HelloRequest, HelloResponse,
+};
 
 <span class="kw">const </span>EMPTY_ASSOCIATED_DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;&quot;</span>;
 

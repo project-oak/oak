@@ -285,6 +285,8 @@
 <a href="#285" id="285">285</a>
 <a href="#286" id="286">286</a>
 <a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -303,17 +305,19 @@
 
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod </span>aead;
 
-<span class="kw">use crate</span>::{
-    hpke::aead::{AeadKey, AeadNonce, AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
-    proto::oak::crypto::v1::CryptoContext,
-};
 <span class="kw">use </span>alloc::{vec, vec::Vec};
+
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>hpke::{
     aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Kem <span class="kw">as </span>KemTrait, OpModeR, OpModeS,
 };
 <span class="kw">pub use </span>hpke::{Deserializable, Serializable};
 <span class="kw">use </span>rand_core::{OsRng, RngCore};
+
+<span class="kw">use crate</span>::{
+    hpke::aead::{AeadKey, AeadNonce, AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
+    proto::oak::crypto::v1::CryptoContext,
+};
 
 <span class="kw">type </span>Aead = AesGcm256;
 <span class="kw">type </span>Kdf = HkdfSha256;

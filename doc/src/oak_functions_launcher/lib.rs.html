@@ -189,6 +189,8 @@
 <a href="#189" id="189">189</a>
 <a href="#190" id="190">190</a>
 <a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -231,17 +233,19 @@
     }
 }
 
-<span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::{
-    InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
-};
+<span class="kw">use </span>std::{fs, path::PathBuf, time::Duration};
+
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>oak_launcher_utils::{
     channel::{<span class="self">self</span>, ConnectorHandle},
     launcher,
 };
-<span class="kw">use </span>std::{fs, path::PathBuf, time::Duration};
 <span class="kw">use </span>ubyte::ByteUnit;
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::{
+    InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
+};
 
 <span class="attr">#[derive(Parser, Debug)]
 #[group(skip)]

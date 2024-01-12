@@ -824,6 +824,8 @@
 <a href="#824" id="824">824</a>
 <a href="#825" id="825">825</a>
 <a href="#826" id="826">826</a>
+<a href="#827" id="827">827</a>
+<a href="#828" id="828">828</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -840,19 +842,21 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::PROCESSES;
+</span><span class="kw">use </span>std::{
+    collections::{HashMap, HashSet},
+    path::{Path, PathBuf},
+    time::Instant,
+};
+
 <span class="kw">use </span>async_recursion::async_recursion;
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>clap::{Parser, Subcommand};
 <span class="kw">use </span>colored::<span class="kw-2">*</span>;
 <span class="kw">use </span>nix::sys::signal::Signal;
-<span class="kw">use </span>std::{
-    collections::{HashMap, HashSet},
-    path::{Path, PathBuf},
-    time::Instant,
-};
 <span class="kw">use </span>strum_macros::EnumIter;
 <span class="kw">use </span>tokio::io::{empty, AsyncRead, AsyncReadExt};
+
+<span class="kw">use </span><span class="kw">crate</span>::PROCESSES;
 
 <span class="attr">#[derive(Parser, Clone)]
 </span><span class="kw">pub struct </span>Opt {

@@ -83,6 +83,8 @@
 <a href="#83" id="83">83</a>
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -116,10 +118,12 @@
 <span class="kw">pub mod </span>transport;
 <span class="kw">pub mod </span>verifier;
 
-<span class="kw">use </span><span class="kw">crate</span>::transport::{EvidenceProvider, Transport};
+<span class="kw">use </span>std::vec::Vec;
+
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>oak_crypto::encryptor::ClientEncryptor;
-<span class="kw">use </span>std::vec::Vec;
+
+<span class="kw">use </span><span class="kw">crate</span>::transport::{EvidenceProvider, Transport};
 
 <span class="kw">const </span>EMPTY_ASSOCIATED_DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;&quot;</span>;
 

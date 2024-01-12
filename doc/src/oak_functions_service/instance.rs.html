@@ -119,6 +119,8 @@
 <a href="#119" id="119">119</a>
 <a href="#120" id="120">120</a>
 <a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -135,7 +137,13 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{
+</span><span class="kw">use </span>alloc::{format, sync::Arc};
+
+<span class="kw">use </span>bytes::Bytes;
+<span class="kw">use </span>micro_rpc::{Status, Vec};
+<span class="kw">use </span>oak_functions_abi::Request;
+
+<span class="kw">use crate</span>::{
     logger::StandaloneLogger,
     lookup::LookupDataManager,
     proto::oak::functions::{
@@ -145,10 +153,6 @@
     },
     wasm, Observer,
 };
-<span class="kw">use </span>alloc::{format, sync::Arc};
-<span class="kw">use </span>bytes::Bytes;
-<span class="kw">use </span>micro_rpc::{Status, Vec};
-<span class="kw">use </span>oak_functions_abi::Request;
 
 <span class="kw">pub struct </span>OakFunctionsInstance {
     lookup_data_manager: Arc&lt;LookupDataManager&lt;StandaloneLogger&gt;&gt;,

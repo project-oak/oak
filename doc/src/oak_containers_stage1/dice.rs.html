@@ -152,6 +152,8 @@
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -168,7 +170,11 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::try_parse_phys_addr;
+</span><span class="kw">use </span>std::{
+    fs::{read_dir, read_to_string, OpenOptions},
+    os::fd::AsRawFd,
+};
+
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>ciborium::Value;
 <span class="kw">use </span>coset::cwt::ClaimName;
@@ -179,13 +185,11 @@
 };
 <span class="kw">use </span>oak_remote_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
 <span class="kw">use </span>sha2::{Digest, Sha256};
-<span class="kw">use </span>std::{
-    fs::{read_dir, read_to_string, OpenOptions},
-    os::fd::AsRawFd,
-};
 <span class="kw">use </span>x86_64::PhysAddr;
 <span class="kw">use </span>zerocopy::FromBytes;
 <span class="kw">use </span>zeroize::Zeroize;
+
+<span class="kw">use </span><span class="kw">crate</span>::try_parse_phys_addr;
 
 <span class="doccomment">/// The expected string representation of the custom type for the reserved memory range that
 /// contains the DICE data.

@@ -302,6 +302,7 @@
 <a href="#302" id="302">302</a>
 <a href="#303" id="303">303</a>
 <a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -320,8 +321,9 @@
 
 </span><span class="doccomment">//! Rust implementation of the TDX TDCALL instruction.
 
-</span><span class="kw">use </span>bitflags::bitflags;
-<span class="kw">use </span>core::{arch::asm, mem::size_of};
+</span><span class="kw">use </span>core::{arch::asm, mem::size_of};
+
+<span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>strum::{Display, FromRepr};
 <span class="kw">use </span>x86_64::structures::paging::{PageSize, PhysFrame, Size1GiB, Size2MiB, Size4KiB};
 

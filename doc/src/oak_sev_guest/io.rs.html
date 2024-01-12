@@ -302,6 +302,8 @@
 <a href="#302" id="302">302</a>
 <a href="#303" id="303">303</a>
 <a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -318,14 +320,16 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::ghcb::{Ghcb, GhcbProtocol};
-<span class="kw">use </span>core::marker::PhantomData;
+</span><span class="kw">use </span>core::marker::PhantomData;
+
 <span class="kw">use </span>lock_api::{Mutex, RawMutex};
 <span class="kw">use </span>spinning_top::{RawSpinlock, Spinlock};
 <span class="kw">use </span>x86_64::{
     instructions::port::Port,
     structures::port::{PortRead, PortWrite},
 };
+
+<span class="kw">use </span><span class="kw">crate</span>::ghcb::{Ghcb, GhcbProtocol};
 
 <span class="doccomment">/// Factory for instantiating IO port readers and writers.
 ///

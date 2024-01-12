@@ -220,6 +220,8 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -236,16 +238,13 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{
-    mm::{Mapper, PageTableFlags},
-    FRAME_ALLOCATOR, PAGE_TABLES,
-};
-<span class="kw">use </span>core::{
+</span><span class="kw">use </span>core::{
     alloc::{GlobalAlloc, Layout},
     ops::Deref,
     ptr::NonNull,
     result::Result,
 };
+
 <span class="kw">use </span>linked_list_allocator::{Heap, LockedHeap};
 <span class="kw">use </span>log::info;
 <span class="kw">use </span>spinning_top::Spinlock;
@@ -255,6 +254,11 @@
         Size2MiB,
     },
     VirtAddr,
+};
+
+<span class="kw">use crate</span>::{
+    mm::{Mapper, PageTableFlags},
+    FRAME_ALLOCATOR, PAGE_TABLES,
 };
 
 <span class="attr">#[cfg(not(test))]

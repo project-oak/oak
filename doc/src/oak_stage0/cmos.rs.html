@@ -85,6 +85,7 @@
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -101,8 +102,9 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::io_port_factory;
-<span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortReader, PortWrapper, PortWriter};
+</span><span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortReader, PortWrapper, PortWriter};
+
+<span class="kw">use </span><span class="kw">crate</span>::io_port_factory;
 
 <span class="kw">const </span>CMOS_INDEX_PORT: u16 = <span class="number">0x0070</span>;
 <span class="kw">const </span>CMOS_DATA_PORT: u16 = <span class="number">0x0071</span>;

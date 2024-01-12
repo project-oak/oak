@@ -139,6 +139,7 @@
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
 <a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -154,7 +155,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
+</span><span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
+<span class="kw">use </span>tonic::transport::Channel;
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
     attestation::v1::Evidence,
     containers::{
         launcher_client::LauncherClient <span class="kw">as </span>GrpcLauncherClient,
@@ -164,9 +169,6 @@
     key_provisioning::v1::GroupKeys,
     session::v1::AttestationEvidence,
 };
-<span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
-<span class="kw">use </span>tonic::transport::Channel;
 
 <span class="doccomment">/// Utility struct used to interface with the launcher
 </span><span class="kw">pub struct </span>LauncherClient {

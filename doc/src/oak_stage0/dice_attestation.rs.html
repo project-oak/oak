@@ -73,6 +73,7 @@
 <a href="#73" id="73">73</a>
 <a href="#74" id="74">74</a>
 <a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -89,14 +90,15 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::sev::send_guest_message_request;
-<span class="kw">use </span>oak_sev_guest::{
+</span><span class="kw">use </span>oak_sev_guest::{
     guest::{
         AttestationReport, AttestationRequest, AttestationResponse, GuestFieldFlags, KeyRequest,
         KeyResponse, ReportStatus,
     },
     msr::SevStatus,
 };
+
+<span class="kw">use </span><span class="kw">crate</span>::sev::send_guest_message_request;
 
 <span class="kw">type </span>DerivedKey = [u8; <span class="number">32</span>];
 

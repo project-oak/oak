@@ -64,6 +64,7 @@
 <a href="#64" id="64">64</a>
 <a href="#65" id="65">65</a>
 <a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -92,8 +93,9 @@
 
 <span class="kw">mod </span>app_client;
 
-<span class="kw">use </span><span class="kw">crate</span>::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
 <span class="kw">use </span>oak_containers_launcher::{proto::oak::session::v1::AttestationBundle, Launcher};
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
 
 <span class="kw">pub struct </span>UntrustedApp {
     launcher: Launcher,

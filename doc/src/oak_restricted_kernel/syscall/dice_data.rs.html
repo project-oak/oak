@@ -60,6 +60,8 @@
 <a href="#60" id="60">60</a>
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -76,11 +78,13 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">super</span>::fd::{copy_max_slice, FileDescriptor};
-<span class="kw">use </span>alloc::boxed::Box;
+</span><span class="kw">use </span>alloc::boxed::Box;
+
 <span class="kw">use </span>oak_dice::evidence::RestrictedKernelDiceData <span class="kw">as </span>DiceData;
 <span class="kw">use </span>oak_restricted_kernel_interface::{Errno, DICE_DATA_FD};
 <span class="kw">use </span>zeroize::Zeroize;
+
+<span class="kw">use </span><span class="kw">super</span>::fd::{copy_max_slice, FileDescriptor};
 
 <span class="kw">struct </span>DiceDataDescriptor {
     data: DiceData,

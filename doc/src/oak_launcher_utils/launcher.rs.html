@@ -258,6 +258,8 @@
 <a href="#258" id="258">258</a>
 <a href="#259" id="259">259</a>
 <a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -274,14 +276,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::channel::{Connector, ConnectorHandle};
-<span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
-<span class="kw">use </span>async_trait::async_trait;
-<span class="kw">use </span>clap::Parser;
-<span class="kw">use </span>command_fds::tokio::CommandFdAsyncExt;
-<span class="kw">use </span>log::info;
-<span class="kw">use </span>oak_channel::Write;
-<span class="kw">use </span>std::{
+</span><span class="kw">use </span>std::{
     fs,
     io::{BufRead, BufReader},
     net::Shutdown,
@@ -289,6 +284,15 @@
     path::PathBuf,
     process::Stdio,
 };
+
+<span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>async_trait::async_trait;
+<span class="kw">use </span>clap::Parser;
+<span class="kw">use </span>command_fds::tokio::CommandFdAsyncExt;
+<span class="kw">use </span>log::info;
+<span class="kw">use </span>oak_channel::Write;
+
+<span class="kw">use </span><span class="kw">crate</span>::channel::{Connector, ConnectorHandle};
 
 <span class="kw">const </span>PAGE_SIZE: usize = <span class="number">4096</span>;
 

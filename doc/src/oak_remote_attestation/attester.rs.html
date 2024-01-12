@@ -77,6 +77,8 @@
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
 <a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -93,10 +95,12 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::session::v1::AttestationEvidence;
-<span class="kw">use </span>alloc::{sync::Arc, vec::Vec};
+</span><span class="kw">use </span>alloc::{sync::Arc, vec::Vec};
+
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_crypto::encryptor::EncryptionKeyProvider;
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::session::v1::AttestationEvidence;
 
 <span class="doccomment">/// A trait implementing the functionality of generating a remote attestation report.
 ///

@@ -106,6 +106,8 @@
 <a href="#106" id="106">106</a>
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -122,15 +124,17 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::systemd_journal::{Journal, JournalOpenFlags};
-<span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
-<span class="kw">use </span>oak_containers_orchestrator::launcher_client::LauncherClient;
-<span class="kw">use </span>opentelemetry_api::logs::{AnyValue, LogRecord, Logger, Severity};
-<span class="kw">use </span>std::{
+</span><span class="kw">use </span>std::{
     sync::Arc,
     time::{Duration, SystemTime},
 };
+
+<span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>oak_containers_orchestrator::launcher_client::LauncherClient;
+<span class="kw">use </span>opentelemetry_api::logs::{AnyValue, LogRecord, Logger, Severity};
 <span class="kw">use </span>tokio::sync::{mpsc, OnceCell};
+
+<span class="kw">use </span><span class="kw">crate</span>::systemd_journal::{Journal, JournalOpenFlags};
 
 <span class="kw">pub async fn </span>run(launcher_client: LauncherClient, terminate: Arc&lt;OnceCell&lt;()&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
     <span class="comment">// Journal is not Send, because the underlying systemd journal can&#39;t be shared between threads

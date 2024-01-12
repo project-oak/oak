@@ -424,6 +424,7 @@
 <a href="#424" id="424">424</a>
 <a href="#425" id="425">425</a>
 <a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -440,15 +441,16 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>acpi::{AcpiHandler, AcpiTables, AmlTable, PhysicalMapping};
-<span class="kw">use </span>alloc::{boxed::Box, string::String, vec::Vec};
+</span><span class="kw">use </span>alloc::{boxed::Box, string::String, vec::Vec};
+<span class="kw">use </span>core::ptr::NonNull;
+
+<span class="kw">use </span>acpi::{AcpiHandler, AcpiTables, AmlTable, PhysicalMapping};
 <span class="kw">use </span>aml::{
     resource::{resource_descriptor_list, MemoryRangeDescriptor, Resource},
     value::Args,
     AmlContext, AmlError, AmlName, AmlValue, LevelType, NamespaceLevel,
 };
 <span class="kw">use </span>anyhow::{anyhow, bail, <span class="prelude-ty">Result</span>};
-<span class="kw">use </span>core::ptr::NonNull;
 <span class="kw">use </span>oak_linux_boot_params::BootParams;
 <span class="kw">use </span>x86_64::PhysAddr;
 

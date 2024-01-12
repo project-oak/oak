@@ -77,6 +77,7 @@
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
 <a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -93,8 +94,9 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::io_port_factory;
-<span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortWrapper, PortWriter};
+</span><span class="kw">use </span>oak_sev_guest::io::{IoPortFactory, PortWrapper, PortWriter};
+
+<span class="kw">use </span><span class="kw">crate</span>::io_port_factory;
 
 <span class="kw">const </span>PIC0_BASE: u16 = <span class="number">0x20</span>;
 <span class="kw">const </span>PIC1_BASE: u16 = <span class="number">0xA0</span>;

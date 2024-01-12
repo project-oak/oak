@@ -414,6 +414,8 @@
 <a href="#414" id="414">414</a>
 <a href="#415" id="415">415</a>
 <a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -430,14 +432,16 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use super</span>::{
+</span><span class="kw">use </span>alloc::collections::VecDeque;
+<span class="kw">use </span>core::{alloc::Allocator, num::Wrapping};
+
+<span class="kw">use </span>rust_hypervisor_firmware_virtio::virtio::VirtioTransport;
+
+<span class="kw">use super</span>::{
     packet::{Packet, VSockFlags, VSockOp, HEADER_SIZE},
     VSock, DATA_BUFFER_SIZE,
 };
 <span class="kw">use crate</span>::{Read, Write};
-<span class="kw">use </span>alloc::collections::VecDeque;
-<span class="kw">use </span>core::{alloc::Allocator, num::Wrapping};
-<span class="kw">use </span>rust_hypervisor_firmware_virtio::virtio::VirtioTransport;
 
 <span class="doccomment">/// The maximum buffer size used by the socket.
 ///

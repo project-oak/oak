@@ -416,6 +416,8 @@
 <a href="#416" id="416">416</a>
 <a href="#417" id="417">417</a>
 <a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -432,8 +434,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{shutdown, snp::CPUID_PAGE};
-<span class="kw">use </span>core::{arch::asm, ops::Deref};
+</span><span class="kw">use </span>core::{arch::asm, ops::Deref};
+
 <span class="kw">use </span>log::error;
 <span class="kw">use </span>oak_sev_guest::{
     interrupts::{mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame},
@@ -446,6 +448,8 @@
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
     VirtAddr,
 };
+
+<span class="kw">use crate</span>::{shutdown, snp::CPUID_PAGE};
 
 <span class="kw">static </span>IDT: Spinlock&lt;InterruptDescriptorTable&gt; = Spinlock::new(InterruptDescriptorTable::new());
 

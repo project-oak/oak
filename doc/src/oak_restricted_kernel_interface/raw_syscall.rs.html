@@ -120,6 +120,7 @@
 <a href="#120" id="120">120</a>
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -136,8 +137,9 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::Syscall;
-<span class="kw">use </span>core::arch::asm;
+</span><span class="kw">use </span>core::arch::asm;
+
+<span class="kw">use </span><span class="kw">crate</span>::Syscall;
 
 <span class="doccomment">/// Invoke system calls based on the Linux calling convention using `SYSCALL`.
 ///

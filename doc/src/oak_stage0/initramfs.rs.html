@@ -61,6 +61,8 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -77,12 +79,14 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{
+</span><span class="kw">use </span>core::{ffi::CStr, slice};
+
+<span class="kw">use </span>oak_linux_boot_params::BootE820Entry;
+
+<span class="kw">use crate</span>::{
     fw_cfg::{check_non_overlapping, find_suitable_dma_address, FwCfg},
     kernel::KernelInfo,
 };
-<span class="kw">use </span>core::{ffi::CStr, slice};
-<span class="kw">use </span>oak_linux_boot_params::BootE820Entry;
 
 <span class="doccomment">/// The file path used by Stage0 to read the initial RAM disk from the fw_cfg device.
 </span><span class="kw">const </span>INITIAL_RAM_DISK_FILE_PATH: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;opt/stage0/initramfs\0&quot;</span>;

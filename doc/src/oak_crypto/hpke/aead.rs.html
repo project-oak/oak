@@ -67,6 +67,7 @@
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -86,8 +87,9 @@
 </span><span class="doccomment">//! Implementation of Authenticated Encryption with Associated Data (AEAD).
 //! &lt;https://datatracker.ietf.org/doc/html/rfc5116&gt;
 
-</span><span class="kw">use </span>aes_gcm::{aead::AeadInPlace, Aes256Gcm, Key, KeyInit, Nonce};
-<span class="kw">use </span>alloc::vec::Vec;
+</span><span class="kw">use </span>alloc::vec::Vec;
+
+<span class="kw">use </span>aes_gcm::{aead::AeadInPlace, Aes256Gcm, Key, KeyInit, Nonce};
 <span class="kw">use </span>anyhow::anyhow;
 
 <span class="doccomment">/// Represents `N_k` from RFC9180.

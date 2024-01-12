@@ -487,6 +487,9 @@
 <a href="#487" id="487">487</a>
 <a href="#488" id="488">488</a>
 <a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -503,7 +506,12 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{
+</span><span class="kw">use </span>core::arch::x86_64::__cpuid;
+
+<span class="kw">use </span>oak_sev_guest::cpuid::CpuidInput;
+<span class="kw">use </span>x86_64::PhysAddr;
+
+<span class="kw">use crate</span>::{
     msr::{
         ApicBase, ApicBaseFlags, ApicErrorFlags, DestinationMode, DestinationShorthand, Level,
         MessageType, SpuriousInterruptFlags, TriggerMode, X2ApicErrorStatusRegister,
@@ -512,9 +520,6 @@
     },
     sev::GHCB_WRAPPER,
 };
-<span class="kw">use </span>core::arch::x86_64::__cpuid;
-<span class="kw">use </span>oak_sev_guest::cpuid::CpuidInput;
-<span class="kw">use </span>x86_64::PhysAddr;
 
 <span class="doccomment">/// Interrupt Command.
 ///
@@ -571,8 +576,8 @@
 }
 
 <span class="kw">mod </span>xapic {
-    <span class="kw">use crate</span>::{paging::PAGE_TABLE_REFS, sev::GHCB_WRAPPER};
     <span class="kw">use </span>core::mem::MaybeUninit;
+
     <span class="kw">use </span>x86_64::{
         instructions::tlb::flush_all,
         structures::paging::{PageSize, PageTableFlags, Size2MiB, Size4KiB},
@@ -580,6 +585,7 @@
     };
 
     <span class="kw">use super</span>::{ApicErrorFlags, SpuriousInterruptFlags};
+    <span class="kw">use crate</span>::{paging::PAGE_TABLE_REFS, sev::GHCB_WRAPPER};
 
     <span class="doccomment">/// Representation of the APIC MMIO registers.
     ///

@@ -198,6 +198,8 @@
 <a href="#198" id="198">198</a>
 <a href="#199" id="199">199</a>
 <a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -214,16 +216,13 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{
-    mm::{Mapper, PageTableFlags},
-    FRAME_ALLOCATOR, PAGE_TABLES,
-};
-<span class="kw">use </span>core::{
+</span><span class="kw">use </span>core::{
     cmp::max,
     ffi::{c_int, c_size_t, c_void},
     iter::repeat_with,
     slice,
 };
+
 <span class="kw">use </span>oak_restricted_kernel_interface::{
     syscalls::{MmapFlags, MmapProtection},
     Errno,
@@ -232,6 +231,11 @@
     align_up,
     structures::paging::{FrameAllocator, Page, PageSize, Size2MiB},
     VirtAddr,
+};
+
+<span class="kw">use crate</span>::{
+    mm::{Mapper, PageTableFlags},
+    FRAME_ALLOCATOR, PAGE_TABLES,
 };
 
 <span class="kw">pub fn </span>mmap(

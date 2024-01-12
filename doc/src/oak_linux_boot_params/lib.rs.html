@@ -773,6 +773,7 @@
 <a href="#773" id="773">773</a>
 <a href="#774" id="774">774</a>
 <a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -791,11 +792,12 @@
 
 </span><span class="attr">#![no_std]
 
-</span><span class="kw">use </span>bitflags::bitflags;
-<span class="kw">use </span>core::{
+</span><span class="kw">use </span>core::{
     ffi::{c_char, CStr},
     mem::size_of,
 };
+
+<span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>strum::{Display, FromRepr};
 <span class="kw">use </span>zerocopy::{AsBytes, FromBytes, FromZeroes};
 

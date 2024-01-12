@@ -176,6 +176,7 @@
 <a href="#176" id="176">176</a>
 <a href="#177" id="177">177</a>
 <a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -192,12 +193,13 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{
+</span><span class="kw">use </span>core::ffi::{c_int, c_size_t, c_ssize_t, c_void};
+
+<span class="kw">use crate</span>::{
     syscall,
     syscalls::{MmapFlags, MmapProtection},
     Errno, Syscall,
 };
-<span class="kw">use </span>core::ffi::{c_int, c_size_t, c_ssize_t, c_void};
 
 <span class="attr">#[no_mangle]
 </span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>sys_read(fd: c_int, buf: <span class="kw-2">*mut </span>c_void, count: c_size_t) -&gt; c_ssize_t {

@@ -139,6 +139,8 @@
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
 <a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -155,12 +157,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use super</span>::{WasmApi, WasmApiFactory};
-<span class="kw">use crate</span>::{
-    logger::{OakLogger, StandaloneLogger},
-    lookup::{format_bytes, limit, LookupData, LookupDataManager},
-};
-<span class="kw">use </span>alloc::{boxed::Box, format, sync::Arc, vec::Vec};
+</span><span class="kw">use </span>alloc::{boxed::Box, format, sync::Arc, vec::Vec};
+
 <span class="kw">use </span>log::Level;
 <span class="kw">use </span>oak_functions_sdk::proto::oak::functions::wasm::v1::{
     LogRequest, LogResponse, LookupDataRequest, LookupDataResponse, ReadRequestRequest,
@@ -168,6 +166,12 @@
     WriteResponseRequest, WriteResponseResponse,
 };
 <span class="kw">use </span>spinning_top::Spinlock;
+
+<span class="kw">use super</span>::{WasmApi, WasmApiFactory};
+<span class="kw">use crate</span>::{
+    logger::{OakLogger, StandaloneLogger},
+    lookup::{format_bytes, limit, LookupData, LookupDataManager},
+};
 
 <span class="doccomment">/// The main purpose of this factory is to allow creating a new instance of the
 /// [`StdWasmApiImpl`] for each incoming gRPC request, with an immutable snapshot of the

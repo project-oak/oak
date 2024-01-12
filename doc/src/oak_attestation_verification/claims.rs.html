@@ -308,6 +308,9 @@
 <a href="#308" id="308">308</a>
 <a href="#309" id="309">309</a>
 <a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -331,11 +334,13 @@
 
 </span><span class="kw">extern crate </span>alloc;
 
-<span class="kw">use </span><span class="kw">crate</span>::proto::oak::HexDigest;
 <span class="kw">use </span>alloc::{collections::BTreeMap, string::String, vec::Vec};
+
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 <span class="kw">use </span>time::OffsetDateTime;
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::HexDigest;
 
 <span class="doccomment">/// PredicateType which identifies a V1 Claim, for in-toto statements.
 </span><span class="kw">pub const </span>CLAIM_V1: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://github.com/project-oak/transparent-release/claim/v1&quot;</span>;
@@ -590,9 +595,10 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>std::fs;
+
     <span class="kw">use </span><span class="kw">super</span>::get_digest;
     <span class="kw">use </span><span class="kw">crate</span>::claims::{parse_endorsement_statement, validate_endorsement};
-    <span class="kw">use </span>std::fs;
 
     <span class="kw">const </span>ENDORSEMENT_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;testdata/endorsement.json&quot;</span>;
 

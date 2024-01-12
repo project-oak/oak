@@ -697,6 +697,7 @@
 <a href="#697" id="697">697</a>
 <a href="#698" id="698">698</a>
 <a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -713,10 +714,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::FRAME_ALLOCATOR;
+</span><span class="kw">use </span>core::ops::DerefMut;
 
-<span class="kw">use super</span>::{Mapper, PageTableFlags, Translator};
-<span class="kw">use </span>core::ops::DerefMut;
 <span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>x86_64::{
     structures::paging::{
@@ -729,6 +728,9 @@
     },
     PhysAddr, VirtAddr,
 };
+
+<span class="kw">use super</span>::{Mapper, PageTableFlags, Translator};
+<span class="kw">use </span><span class="kw">crate</span>::FRAME_ALLOCATOR;
 
 <span class="attr">#[derive(Clone, Copy)]
 </span><span class="kw">pub enum </span>MemoryEncryption {

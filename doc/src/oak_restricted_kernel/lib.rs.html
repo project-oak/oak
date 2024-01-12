@@ -404,6 +404,8 @@
 <a href="#404" id="404">404</a>
 <a href="#405" id="405">405</a>
 <a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -469,13 +471,9 @@
 
 <span class="kw">extern crate </span>alloc;
 
-<span class="kw">use crate</span>::{
-    acpi::Acpi,
-    mm::Translator,
-    snp::{get_snp_page_addresses, init_snp_pages},
-};
 <span class="kw">use </span>alloc::{alloc::Allocator, boxed::Box};
 <span class="kw">use </span>core::{marker::Sync, panic::PanicInfo, str::FromStr};
+
 <span class="kw">use </span>hkdf::Hkdf;
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>log::{error, info};
@@ -496,6 +494,12 @@
 };
 <span class="kw">use </span>zerocopy::FromBytes;
 <span class="kw">use </span>zeroize::Zeroize;
+
+<span class="kw">use crate</span>::{
+    acpi::Acpi,
+    mm::Translator,
+    snp::{get_snp_page_addresses, init_snp_pages},
+};
 
 <span class="doccomment">/// A derived sealing key.
 </span><span class="kw">type </span>DerivedKey = [u8; <span class="number">32</span>];

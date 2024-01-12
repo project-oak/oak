@@ -395,6 +395,8 @@
 <a href="#395" id="395">395</a>
 <a href="#396" id="396">396</a>
 <a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -418,9 +420,9 @@
 
 </span><span class="kw">extern crate </span>alloc;
 
-<span class="kw">use crate</span>::{kernel::KernelType, sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 <span class="kw">use </span>alloc::{boxed::Box, format};
 <span class="kw">use </span>core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
+
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_dice::evidence::DICE_DATA_CMDLINE_PARAM;
@@ -438,6 +440,8 @@
     PhysAddr, VirtAddr,
 };
 <span class="kw">use </span>zerocopy::AsBytes;
+
+<span class="kw">use crate</span>::{kernel::KernelType, sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 
 <span class="kw">mod </span>acpi;
 <span class="kw">mod </span>acpi_tables;

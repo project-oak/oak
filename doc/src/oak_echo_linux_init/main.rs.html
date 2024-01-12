@@ -66,6 +66,7 @@
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -82,13 +83,14 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>log::{debug, info};
-<span class="kw">use </span>nix::sys::termios::{cfmakeraw, tcgetattr, tcsetattr, SetArg};
-<span class="kw">use </span>std::{
+</span><span class="kw">use </span>std::{
     fs::OpenOptions,
     io::{Read, Write},
     os::fd::{AsRawFd, RawFd},
 };
+
+<span class="kw">use </span>log::{debug, info};
+<span class="kw">use </span>nix::sys::termios::{cfmakeraw, tcgetattr, tcsetattr, SetArg};
 
 <span class="kw">mod </span>init;
 

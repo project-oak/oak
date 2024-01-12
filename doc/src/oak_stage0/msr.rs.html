@@ -441,6 +441,7 @@
 <a href="#441" id="441">441</a>
 <a href="#442" id="442">442</a>
 <a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -457,10 +458,11 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::sev::GHCB_WRAPPER;
-<span class="kw">use </span>bitflags::bitflags;
+</span><span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>strum::FromRepr;
 <span class="kw">use </span>x86_64::{registers::model_specific::Msr <span class="kw">as </span>DirectMsr, PhysAddr};
+
+<span class="kw">use </span><span class="kw">crate</span>::sev::GHCB_WRAPPER;
 
 <span class="doccomment">/// Wrapper that can access a MSR either directly or through the GHCB, depending on the environment.
 </span><span class="kw">pub struct </span>Msr {

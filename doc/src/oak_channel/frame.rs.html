@@ -169,6 +169,8 @@
 <a href="#169" id="169">169</a>
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -189,12 +191,14 @@
 
 </span><span class="kw">extern crate </span>alloc;
 
-<span class="kw">use </span><span class="kw">crate</span>::Channel;
 <span class="kw">use </span>alloc::{boxed::Box, format, vec::Vec};
+<span class="kw">use </span>core::borrow::BorrowMut;
+
 <span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>bytes::{BufMut, BytesMut};
-<span class="kw">use </span>core::borrow::BorrowMut;
 <span class="kw">use </span>oak_core::timer::Timer;
+
+<span class="kw">use </span><span class="kw">crate</span>::Channel;
 
 <span class="kw">pub const </span>PADDING_SIZE: usize = <span class="number">4</span>;
 

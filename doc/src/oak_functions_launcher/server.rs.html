@@ -134,6 +134,8 @@
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -150,7 +152,12 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{
+</span><span class="kw">use </span>std::{net::SocketAddr, pin::Pin};
+
+<span class="kw">use </span>futures::{Future, Stream, StreamExt};
+<span class="kw">use </span>tonic::{transport::Server, Request, Response, Status, Streaming};
+
+<span class="kw">use crate</span>::{
     channel::ConnectorHandle,
     proto::oak::{
         functions,
@@ -162,9 +169,6 @@
         },
     },
 };
-<span class="kw">use </span>futures::{Future, Stream, StreamExt};
-<span class="kw">use </span>std::{net::SocketAddr, pin::Pin};
-<span class="kw">use </span>tonic::{transport::Server, Request, Response, Status, Streaming};
 
 <span class="kw">pub struct </span>SessionProxy {
     connector_handle: ConnectorHandle,

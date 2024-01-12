@@ -548,6 +548,8 @@
 <a href="#548" id="548">548</a>
 <a href="#549" id="549">549</a>
 <a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -564,13 +566,13 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{sev_status, BootAllocator};
-<span class="kw">use </span>alloc::boxed::Box;
+</span><span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>core::{
     alloc::{AllocError, Allocator, Layout},
     ops::{Deref, DerefMut},
     ptr::NonNull,
 };
+
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">pub use </span>oak_sev_guest::ghcb::Ghcb;
@@ -595,6 +597,8 @@
 };
 <span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
 <span class="kw">use </span>zeroize::Zeroize;
+
+<span class="kw">use crate</span>::{sev_status, BootAllocator};
 
 <span class="kw">pub static </span>GHCB_WRAPPER: OnceCell&lt;Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;&gt;&gt; = OnceCell::new();
 

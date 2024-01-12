@@ -762,6 +762,7 @@
 <a href="#762" id="762">762</a>
 <a href="#763" id="763">763</a>
 <a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -780,7 +781,21 @@
 
 </span><span class="doccomment">//! Provides verification based on evidence, endorsements and reference values.
 
-</span><span class="kw">use crate</span>::{
+</span><span class="kw">use </span>alloc::vec::Vec;
+
+<span class="kw">use </span>coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
+<span class="kw">use </span>ecdsa::{signature::Verifier, Signature};
+<span class="kw">use </span>oak_dice::cert::{
+    cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
+    ACPI_MEASUREMENT_ID, CONTAINER_IMAGE_ID, ENCLAVE_APPLICATION_LAYER_ID, INITRD_MEASUREMENT_ID,
+    KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
+    LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID,
+    MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
+};
+<span class="kw">use </span>oak_sev_guest::guest::{AttestationReport, PolicyFlags};
+<span class="kw">use </span>zerocopy::FromBytes;
+
+<span class="kw">use crate</span>::{
     alloc::string::ToString,
     claims::{get_digest, parse_endorsement_statement},
     endorsement::verify_binary_endorsement,
@@ -804,19 +819,6 @@
         hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match, raw_to_hex_digest, MatchResult,
     },
 };
-
-<span class="kw">use </span>alloc::vec::Vec;
-<span class="kw">use </span>coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
-<span class="kw">use </span>ecdsa::{signature::Verifier, Signature};
-<span class="kw">use </span>oak_dice::cert::{
-    cose_key_to_hpke_public_key, cose_key_to_verifying_key, get_public_key_from_claims_set,
-    ACPI_MEASUREMENT_ID, CONTAINER_IMAGE_ID, ENCLAVE_APPLICATION_LAYER_ID, INITRD_MEASUREMENT_ID,
-    KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
-    LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID,
-    MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
-};
-<span class="kw">use </span>oak_sev_guest::guest::{AttestationReport, PolicyFlags};
-<span class="kw">use </span>zerocopy::FromBytes;
 
 <span class="comment">// We don&#39;t use additional authenticated data.
 </span><span class="kw">const </span>ADDITIONAL_DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;&quot;</span>;

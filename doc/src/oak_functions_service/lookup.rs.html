@@ -342,6 +342,8 @@
 <a href="#342" id="342">342</a>
 <a href="#343" id="343">343</a>
 <a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -358,17 +360,19 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::logger::OakLogger;
-<span class="kw">use </span>alloc::{
+</span><span class="kw">use </span>alloc::{
     format,
     string::{String, ToString},
     sync::Arc,
     vec::Vec,
 };
+
 <span class="kw">use </span>bytes::Bytes;
 <span class="kw">use </span>hashbrown::HashMap;
 <span class="kw">use </span>log::{info, Level};
 <span class="kw">use </span>spinning_top::Spinlock;
+
+<span class="kw">use </span><span class="kw">crate</span>::logger::OakLogger;
 
 <span class="comment">// Data maintains the invariant on lookup data to have [at most one
 // value](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md#invariant-at-most-one-value)

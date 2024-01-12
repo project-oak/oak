@@ -251,6 +251,8 @@
 <a href="#251" id="251">251</a>
 <a href="#252" id="252">252</a>
 <a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -278,14 +280,9 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests;
 
-<span class="kw">use </span><span class="self">self</span>::{
-    fd::{syscall_fsync, syscall_read, syscall_write},
-    mmap::syscall_mmap,
-    process::syscall_exit,
-};
-<span class="kw">use crate</span>::{mm, DerivedKey};
 <span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>core::{arch::asm, ffi::c_void};
+
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_dice::evidence::RestrictedKernelDiceData <span class="kw">as </span>DiceData;
 <span class="kw">use </span>oak_restricted_kernel_interface::{Errno, Syscall};
@@ -296,6 +293,13 @@
     },
     VirtAddr,
 };
+
+<span class="kw">use </span><span class="self">self</span>::{
+    fd::{syscall_fsync, syscall_read, syscall_write},
+    mmap::syscall_mmap,
+    process::syscall_exit,
+};
+<span class="kw">use crate</span>::{mm, DerivedKey};
 
 <span class="doccomment">/// State we need to track for system calls.
 ///

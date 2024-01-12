@@ -201,6 +201,7 @@
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -224,6 +225,14 @@
 <span class="kw">mod </span>dice;
 <span class="kw">mod </span>image;
 
+<span class="kw">use </span>std::{
+    error::Error,
+    fs::{<span class="self">self</span>, create_dir},
+    io::ErrorKind,
+    path::Path,
+    str::FromStr,
+};
+
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>client::LauncherClient;
@@ -234,13 +243,6 @@
 };
 <span class="kw">use </span>oak_remote_attestation::proto::oak::attestation::v1::DiceData;
 <span class="kw">use </span>prost::Message;
-<span class="kw">use </span>std::{
-    error::Error,
-    fs::{<span class="self">self</span>, create_dir},
-    io::ErrorKind,
-    path::Path,
-    str::FromStr,
-};
 <span class="kw">use </span>tokio::process::Command;
 <span class="kw">use </span>x86_64::PhysAddr;
 

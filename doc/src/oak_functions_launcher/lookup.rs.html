@@ -189,6 +189,8 @@
 <a href="#189" id="189">189</a>
 <a href="#190" id="190">190</a>
 <a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -205,18 +207,20 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{
+</span><span class="kw">use </span>std::{fs, path::PathBuf};
+
+<span class="kw">use </span>anyhow::{anyhow, Context};
+<span class="kw">use </span>hashbrown::HashMap;
+<span class="kw">use </span>prost::Message;
+<span class="kw">use </span>ubyte::ByteUnit;
+
+<span class="kw">use crate</span>::{
     channel::ConnectorHandle,
     proto::oak::functions::{
         Empty, ExtendNextLookupDataRequest, FinishNextLookupDataRequest, LookupDataChunk,
         LookupDataEntry, OakFunctionsAsyncClient,
     },
 };
-<span class="kw">use </span>anyhow::{anyhow, Context};
-<span class="kw">use </span>hashbrown::HashMap;
-<span class="kw">use </span>prost::Message;
-<span class="kw">use </span>std::{fs, path::PathBuf};
-<span class="kw">use </span>ubyte::ByteUnit;
 
 <span class="kw">struct </span>UpdateClient&lt;<span class="lifetime">&#39;a</span>, I: Iterator&lt;Item = LookupDataChunk&gt;&gt; {
     inner: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>OakFunctionsAsyncClient&lt;ConnectorHandle&gt;,

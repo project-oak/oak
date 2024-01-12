@@ -245,6 +245,8 @@
 <a href="#245" id="245">245</a>
 <a href="#246" id="246">246</a>
 <a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -261,12 +263,14 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg};
-<span class="kw">use </span>alloc::{ffi::CString, string::String, vec};
+</span><span class="kw">use </span>alloc::{ffi::CString, string::String, vec};
 <span class="kw">use </span>core::{ffi::CStr, slice};
+
 <span class="kw">use </span>elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
 <span class="kw">use </span>oak_linux_boot_params::BootE820Entry;
 <span class="kw">use </span>x86_64::{PhysAddr, VirtAddr};
+
+<span class="kw">use </span><span class="kw">crate</span>::fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg};
 
 <span class="doccomment">/// The default start location and entry point for the kernel if a kernel wasn&#39;t supplied via the
 /// QEMU fw_cfg device.

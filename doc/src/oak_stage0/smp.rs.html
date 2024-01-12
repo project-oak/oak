@@ -156,6 +156,8 @@
 <a href="#156" id="156">156</a>
 <a href="#157" id="157">157</a>
 <a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -172,19 +174,21 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{
-    acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
-    apic::Lapic,
-    pic::disable_pic8259,
-};
-<span class="kw">use </span>core::{
+</span><span class="kw">use </span>core::{
     arch::x86_64::_mm_pause,
     ffi::c_void,
     mem::MaybeUninit,
     sync::atomic::{AtomicU32, Ordering},
 };
+
 <span class="kw">use </span>oak_sev_guest::ap_jump_table::ApJumpTable;
 <span class="kw">use </span>x86_64::PhysAddr;
+
+<span class="kw">use crate</span>::{
+    acpi_tables::{LocalApicFlags, Madt, ProcessorLocalApic, ProcessorLocalX2Apic, Rsdp},
+    apic::Lapic,
+    pic::disable_pic8259,
+};
 
 <span class="kw">extern </span><span class="string">&quot;C&quot; </span>{
     <span class="attr">#[link_name = <span class="string">&quot;ap_start&quot;</span>]

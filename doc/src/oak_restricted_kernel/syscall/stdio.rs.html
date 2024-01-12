@@ -56,6 +56,7 @@
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -72,12 +73,13 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::logging::SERIAL1;
+</span><span class="kw">use </span>alloc::boxed::Box;
+<span class="kw">use </span>core::cmp::min;
+
+<span class="kw">use </span>oak_restricted_kernel_interface::Errno;
 
 <span class="kw">use </span><span class="kw">super</span>::fd::FileDescriptor;
-<span class="kw">use </span>alloc::boxed::Box;
-<span class="kw">use </span>core::cmp::min;
-<span class="kw">use </span>oak_restricted_kernel_interface::Errno;
+<span class="kw">use </span><span class="kw">crate</span>::logging::SERIAL1;
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">struct </span>Stderr {}

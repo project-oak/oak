@@ -100,6 +100,8 @@
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -121,15 +123,17 @@
 <span class="kw">mod </span>stage0;
 <span class="kw">mod </span>vmsa;
 
+<span class="kw">use </span>std::path::PathBuf;
+
+<span class="kw">use </span>clap::Parser;
+<span class="kw">use </span>log::trace;
+<span class="kw">use </span>page::PageInfo;
+
 <span class="kw">use crate</span>::{
     elf::load_elf_segments,
     stage0::load_stage0,
     vmsa::{get_boot_vmsa, VMSA_ADDRESS},
 };
-<span class="kw">use </span>clap::Parser;
-<span class="kw">use </span>log::trace;
-<span class="kw">use </span>page::PageInfo;
-<span class="kw">use </span>std::path::PathBuf;
 
 <span class="doccomment">/// The default workspace-relative path to the Stage 0 firmware ROM image.
 </span><span class="kw">const </span>DEFAULT_STAGE0_ROM: <span class="kw-2">&amp;</span>str = <span class="string">&quot;stage0_bin/target/x86_64-unknown-none/release/oak_stage0.bin&quot;</span>;

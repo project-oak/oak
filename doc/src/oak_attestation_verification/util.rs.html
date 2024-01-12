@@ -210,6 +210,8 @@
 <a href="#210" id="210">210</a>
 <a href="#211" id="211">211</a>
 <a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -226,14 +228,16 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::proto::oak::{HexDigest, RawDigest};
-<span class="kw">use </span>alloc::{string::String, vec::Vec};
+</span><span class="kw">use </span>alloc::{string::String, vec::Vec};
+<span class="kw">use </span>core::{cmp::Ordering, str::FromStr};
+
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
-<span class="kw">use </span>core::{cmp::Ordering, str::FromStr};
 <span class="kw">use </span>ecdsa::{signature::Verifier, Signature};
 <span class="kw">use </span>p256::ecdsa::VerifyingKey;
 <span class="kw">use </span>sha2::{Digest, Sha256, Sha384, Sha512};
+
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::{HexDigest, RawDigest};
 
 <span class="kw">const </span>PEM_HEADER: <span class="kw-2">&amp;</span>str = <span class="string">&quot;-----BEGIN PUBLIC KEY-----&quot;</span>;
 <span class="kw">const </span>PEM_FOOTER: <span class="kw-2">&amp;</span>str = <span class="string">&quot;-----END PUBLIC KEY-----&quot;</span>;

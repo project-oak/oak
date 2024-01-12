@@ -316,6 +316,7 @@
 <a href="#316" id="316">316</a>
 <a href="#317" id="317">317</a>
 <a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -336,9 +337,10 @@
 
 </span><span class="doccomment">//! This crate allows compiling protobuf services to Rust in `build.rs` scripts.
 
-</span><span class="kw">use </span>anyhow::Context;
+</span><span class="kw">use </span>std::path::Path;
+
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>prost_build::{Method, Service};
-<span class="kw">use </span>std::path::Path;
 
 <span class="attr">#[derive(Copy, Clone, Debug, Default)]
 </span><span class="kw">pub enum </span>ReceiverType {

@@ -101,6 +101,7 @@
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
 <a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -120,8 +121,9 @@
 </span><span class="kw">extern crate </span>alloc;
 
 <span class="kw">use </span>alloc::collections::btree_map::BTreeMap;
-<span class="kw">use </span>arrayvec::ArrayString;
 <span class="kw">use </span>core::{cell::LazyCell, ffi::CStr};
+
+<span class="kw">use </span>arrayvec::ArrayString;
 
 <span class="kw">static </span><span class="kw-2">mut </span>ARGS: ArrayString&lt;<span class="number">512</span>&gt; = ArrayString::new_const();
 

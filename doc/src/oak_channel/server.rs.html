@@ -71,6 +71,8 @@
 <a href="#71" id="71">71</a>
 <a href="#72" id="72">72</a>
 <a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -87,10 +89,12 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use crate</span>::{message, Channel, InvocationChannel};
-<span class="kw">use </span>alloc::boxed::Box;
+</span><span class="kw">use </span>alloc::boxed::Box;
+
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_core::{samplestore::SampleStore, timer::Timer};
+
+<span class="kw">use crate</span>::{message, Channel, InvocationChannel};
 
 <span class="doccomment">/// Starts a blocking server that listens for requests on the provided channel
 /// and responds to them using the provided [`micro_rpc::Transport`].

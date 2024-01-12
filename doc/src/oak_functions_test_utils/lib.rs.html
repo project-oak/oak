@@ -276,6 +276,7 @@
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
 <a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -294,16 +295,17 @@
 
 </span><span class="doccomment">//! Test utilities to help with unit testing of Oak Functions code.
 
-</span><span class="kw">use </span>anyhow::Context;
+</span><span class="kw">use </span>std::{
+    collections::HashMap, future::Future, io::Write, pin::Pin, process::Command, task::Poll,
+    time::Duration,
+};
+
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>log::info;
 <span class="kw">use </span>nix::unistd::Pid;
 <span class="kw">use </span>oak_functions_abi::Response;
 <span class="kw">use </span>oak_functions_client::OakFunctionsClient;
 <span class="kw">use </span>prost::Message;
-<span class="kw">use </span>std::{
-    collections::HashMap, future::Future, io::Write, pin::Pin, process::Command, task::Poll,
-    time::Duration,
-};
 <span class="kw">use </span>tokio::{sync::oneshot, task::JoinHandle};
 <span class="kw">use </span>ubyte::ByteUnit;
 

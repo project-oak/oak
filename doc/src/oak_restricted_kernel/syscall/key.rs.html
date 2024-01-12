@@ -54,6 +54,8 @@
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -70,10 +72,12 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">super</span>::fd::{copy_max_slice, FileDescriptor};
-<span class="kw">use </span><span class="kw">crate</span>::DerivedKey;
-<span class="kw">use </span>alloc::boxed::Box;
+</span><span class="kw">use </span>alloc::boxed::Box;
+
 <span class="kw">use </span>oak_restricted_kernel_interface::{Errno, DERIVED_KEY_FD};
+
+<span class="kw">use </span><span class="kw">super</span>::fd::{copy_max_slice, FileDescriptor};
+<span class="kw">use </span><span class="kw">crate</span>::DerivedKey;
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">struct </span>DerivedKeyDescriptor {

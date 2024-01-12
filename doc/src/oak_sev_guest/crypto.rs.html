@@ -139,6 +139,8 @@
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
 <a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -158,10 +160,12 @@
 </span><span class="doccomment">//! This module provides an optional implementation for encrypting and decrypting guest requests
 //! using the RustCrypto `aes-gcm` crate.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::guest::{GuestMessage, Message};
+</span><span class="kw">use </span>core::mem::size_of;
+
 <span class="kw">use </span>aes_gcm::{AeadInPlace, Aes256Gcm, KeyInit, Nonce, Tag};
-<span class="kw">use </span>core::mem::size_of;
 <span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
+
+<span class="kw">use </span><span class="kw">crate</span>::guest::{GuestMessage, Message};
 
 <span class="doccomment">/// The size of initialization vector/nonce for AES-GCM
 </span><span class="kw">const </span>IV_SIZE: usize = <span class="number">12</span>;

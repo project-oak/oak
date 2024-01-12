@@ -70,6 +70,7 @@
 <a href="#70" id="70">70</a>
 <a href="#71" id="71">71</a>
 <a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -91,13 +92,14 @@
 </span><span class="kw">mod </span>log_relay;
 <span class="kw">mod </span>systemd_journal;
 
+<span class="kw">use </span>std::sync::Arc;
+
 <span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>oak_containers_orchestrator::launcher_client::LauncherClient;
 <span class="kw">use </span>opentelemetry_api::global::set_error_handler;
 <span class="kw">use </span>signal_hook::consts::signal::SIGTERM;
 <span class="kw">use </span>signal_hook_tokio::Signals;
-<span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>tokio::sync::OnceCell;
 <span class="kw">use </span>tokio_stream::StreamExt;
 

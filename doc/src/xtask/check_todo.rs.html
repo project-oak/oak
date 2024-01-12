@@ -74,6 +74,7 @@
 <a href="#74" id="74">74</a>
 <a href="#75" id="75">75</a>
 <a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -90,9 +91,10 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span><span class="kw">crate</span>::internal::<span class="kw-2">*</span>;
-<span class="kw">use </span>once_cell::sync::Lazy;
+</span><span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>regex::Regex;
+
+<span class="kw">use </span><span class="kw">crate</span>::internal::<span class="kw-2">*</span>;
 
 <span class="kw">static </span>PATTERN: Lazy&lt;Regex&gt; =
     <span class="comment">// Break up &quot;TO&quot; and &quot;DO&quot; to avoid false positives on this code.

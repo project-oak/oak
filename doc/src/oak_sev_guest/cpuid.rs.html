@@ -128,6 +128,7 @@
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -147,8 +148,9 @@
 </span><span class="doccomment">//! This module contains structs that can be used to interpret the contents of the CPUID page that
 //! is provisioned into the VM guest memory during SEV-SNP startup.
 
-</span><span class="kw">use </span><span class="kw">crate</span>::interrupts::MutableInterruptStackFrame;
-<span class="kw">use </span>zerocopy::{FromBytes, FromZeroes};
+</span><span class="kw">use </span>zerocopy::{FromBytes, FromZeroes};
+
+<span class="kw">use </span><span class="kw">crate</span>::interrupts::MutableInterruptStackFrame;
 
 <span class="doccomment">/// The maximum number of CPUID functions that can be included in the page.
 </span><span class="kw">pub const </span>CPUID_COUNT_MAX: usize = <span class="number">64</span>;

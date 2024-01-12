@@ -401,6 +401,8 @@
 <a href="#401" id="401">401</a>
 <a href="#402" id="402">402</a>
 <a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -417,11 +419,12 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>bitvec::{order::Lsb0, prelude::BitArray};
-<span class="kw">use </span>core::{
+</span><span class="kw">use </span>core::{
     ops::{BitAnd, Not},
     option::Option,
 };
+
+<span class="kw">use </span>bitvec::{order::Lsb0, prelude::BitArray};
 <span class="kw">use </span>x86_64::structures::paging::{
     frame::PhysFrameRange, page::PageSize, FrameAllocator, FrameDeallocator, PhysFrame,
 };
@@ -618,9 +621,10 @@
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
     <span class="kw">extern crate </span>std;
-    <span class="kw">use super</span>::<span class="kw-2">*</span>;
     <span class="kw">use </span>assertables::<span class="kw-2">*</span>;
     <span class="kw">use </span>x86_64::{structures::paging::Size4KiB, PhysAddr};
+
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
     <span class="kw">fn </span>create_allocator&lt;<span class="kw">const </span>N: usize&gt;(start: u64, end: u64) -&gt; BitmapAllocator&lt;Size4KiB, N&gt; {
         BitmapAllocator::&lt;Size4KiB, N&gt;::new(PhysFrame::range(

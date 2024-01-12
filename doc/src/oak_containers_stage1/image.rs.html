@@ -37,6 +37,7 @@
 <a href="#37" id="37">37</a>
 <a href="#38" id="38">38</a>
 <a href="#39" id="39">39</a>
+<a href="#40" id="40">40</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -53,9 +54,10 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
+</span><span class="kw">use </span>std::{ffi::CString, os::unix::prelude::OsStrExt, path::Path};
+
+<span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>nix::unistd::execv;
-<span class="kw">use </span>std::{ffi::CString, os::unix::prelude::OsStrExt, path::Path};
 <span class="kw">use </span>tar::Archive;
 <span class="kw">use </span>xz2::read::XzDecoder;
 
