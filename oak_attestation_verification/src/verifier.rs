@@ -318,13 +318,13 @@ fn verify_cb(
     anyhow::bail!("needs implementation")
 }
 
-/// Verifies the AMD attestation report.
-fn verify_amd_attestation_report(
+/// Verifies the AMD SEV attestation report.
+fn verify_amd_sev_attestation_report(
     report: &[u8],
     reference_values: &AmdSevReferenceValues,
 ) -> anyhow::Result<()> {
     let parsed = AttestationReport::ref_from(report)
-        .ok_or_else(|| anyhow::anyhow!("could not parse AMD attestation report"))?;
+        .ok_or_else(|| anyhow::anyhow!("could not parse AMD SEV attestation report"))?;
     parsed.validate().map_err(|msg| anyhow::anyhow!(msg))?;
     let data = &parsed.data;
 
@@ -342,8 +342,8 @@ fn verify_amd_attestation_report(
     Ok(())
 }
 
-/// Verifies the Intel attestation report.
-fn verify_intel_attestation_report(
+/// Verifies the Intel TDX attestation report.
+fn verify_intel_tdx_attestation_report(
     _report: &[u8],
     _reference_values: &IntelTdxReferenceValues,
 ) -> anyhow::Result<()> {
@@ -365,14 +365,14 @@ fn verify_root_layer(
                 .amd_sev
                 .as_ref()
                 .ok_or_else(|| anyhow::anyhow!("no AMD SEV reference values"))?;
-            verify_amd_attestation_report(&l.remote_attestation_report, amd_sev)?
+            verify_amd_sev_attestation_report(&l.remote_attestation_report, amd_sev)?
         }
         TeePlatform::IntelTdx => {
             let intel_tdx = r
                 .intel_tdx
                 .as_ref()
                 .ok_or_else(|| anyhow::anyhow!("no Intel TDX reference values"))?;
-            verify_intel_attestation_report(&l.remote_attestation_report, intel_tdx)?
+            verify_intel_tdx_attestation_report(&l.remote_attestation_report, intel_tdx)?
         }
     }
 
