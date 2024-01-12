@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-use crate::sev::send_guest_message_request;
 use oak_sev_guest::{
     guest::{
         AttestationReport, AttestationRequest, AttestationResponse, GuestFieldFlags, KeyRequest,
@@ -22,6 +21,8 @@ use oak_sev_guest::{
     },
     msr::SevStatus,
 };
+
+use crate::sev::send_guest_message_request;
 
 type DerivedKey = [u8; 32];
 

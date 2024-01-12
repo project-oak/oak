@@ -14,11 +14,13 @@
 // limitations under the License.
 //
 
-use super::fd::{copy_max_slice, FileDescriptor};
 use alloc::boxed::Box;
+
 use oak_dice::evidence::RestrictedKernelDiceData as DiceData;
 use oak_restricted_kernel_interface::{Errno, DICE_DATA_FD};
 use zeroize::Zeroize;
+
+use super::fd::{copy_max_slice, FileDescriptor};
 
 struct DiceDataDescriptor {
     data: DiceData,

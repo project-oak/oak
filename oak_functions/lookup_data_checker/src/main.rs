@@ -14,16 +14,17 @@
 // limitations under the License.
 //
 
-use anyhow::Context;
-use clap::Parser;
-use location_utils::{cell_id_from_bytes, location_from_bytes, LOCATION_SIZE, S2_DEFAULT_LEVEL};
-use log::{debug, info};
-use prost::Message;
 use std::{
     collections::{HashMap, HashSet},
     fs::File,
     io::{BufReader, Read},
 };
+
+use anyhow::Context;
+use clap::Parser;
+use location_utils::{cell_id_from_bytes, location_from_bytes, LOCATION_SIZE, S2_DEFAULT_LEVEL};
+use log::{debug, info};
+use prost::Message;
 
 #[derive(Parser, Clone, Debug)]
 #[command(about = "Oak Functions Lookup Data Checker")]

@@ -16,9 +16,8 @@
 
 use alloc::{alloc::Global, vec};
 
-use crate::test::identity_map;
-
 use super::*;
+use crate::test::identity_map;
 
 const QUEUE_SIZE: usize = 4;
 const BUFFER_SIZE: usize = 4;

@@ -14,16 +14,18 @@
 // limitations under the License.
 //
 
+use alloc::{ffi::CString, vec::Vec};
+use core::{ffi::CStr, mem::size_of, slice};
+
+use oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
+use x86_64::PhysAddr;
+use zerocopy::AsBytes;
+
 use crate::{
     cmos::Cmos,
     fw_cfg::{find_suitable_dma_address, FwCfg},
     BOOT_ALLOC,
 };
-use alloc::{ffi::CString, vec::Vec};
-use core::{ffi::CStr, mem::size_of, slice};
-use oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
-use x86_64::PhysAddr;
-use zerocopy::AsBytes;
 
 /// Boot metadata for the Linux kernel.
 ///

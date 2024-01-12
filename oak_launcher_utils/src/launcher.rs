@@ -14,13 +14,6 @@
 // limitations under the License.
 //
 
-use crate::channel::{Connector, ConnectorHandle};
-use anyhow::{Context, Result};
-use async_trait::async_trait;
-use clap::Parser;
-use command_fds::tokio::CommandFdAsyncExt;
-use log::info;
-use oak_channel::Write;
 use std::{
     fs,
     io::{BufRead, BufReader},
@@ -29,6 +22,15 @@ use std::{
     path::PathBuf,
     process::Stdio,
 };
+
+use anyhow::{Context, Result};
+use async_trait::async_trait;
+use clap::Parser;
+use command_fds::tokio::CommandFdAsyncExt;
+use log::info;
+use oak_channel::Write;
+
+use crate::channel::{Connector, ConnectorHandle};
 
 const PAGE_SIZE: usize = 4096;
 

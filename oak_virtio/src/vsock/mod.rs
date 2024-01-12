@@ -14,18 +14,20 @@
 // limitations under the License.
 //
 
-use crate::{
-    queue::{DeviceWriteOnlyQueue, DriverWriteOnlyQueue},
-    vsock::packet::VSockOp,
-    InverseTranslator, Translator,
-};
-use anyhow::Context;
 use core::alloc::Allocator;
+
+use anyhow::Context;
 use packet::Packet;
 use rust_hypervisor_firmware_virtio::{
     device::VirtioBaseDevice,
     pci::{find_device, VirtioPciTransport},
     virtio::VirtioTransport,
+};
+
+use crate::{
+    queue::{DeviceWriteOnlyQueue, DriverWriteOnlyQueue},
+    vsock::packet::VSockOp,
+    InverseTranslator, Translator,
 };
 
 pub mod packet;

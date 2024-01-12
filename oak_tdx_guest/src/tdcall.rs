@@ -16,8 +16,9 @@
 
 //! Rust implementation of the TDX TDCALL instruction.
 
-use bitflags::bitflags;
 use core::{arch::asm, mem::size_of};
+
+use bitflags::bitflags;
 use strum::{Display, FromRepr};
 use x86_64::structures::paging::{PageSize, PhysFrame, Size1GiB, Size2MiB, Size4KiB};
 

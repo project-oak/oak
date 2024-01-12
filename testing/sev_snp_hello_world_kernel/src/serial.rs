@@ -15,6 +15,7 @@
 //
 
 use core::fmt::Write;
+
 use lazy_static::lazy_static;
 use oak_sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},

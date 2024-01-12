@@ -16,16 +16,17 @@
 
 //! Test utilities to help with unit testing of Oak Functions code.
 
+use std::{
+    collections::HashMap, future::Future, io::Write, pin::Pin, process::Command, task::Poll,
+    time::Duration,
+};
+
 use anyhow::Context;
 use log::info;
 use nix::unistd::Pid;
 use oak_functions_abi::Response;
 use oak_functions_client::OakFunctionsClient;
 use prost::Message;
-use std::{
-    collections::HashMap, future::Future, io::Write, pin::Pin, process::Command, task::Poll,
-    time::Duration,
-};
 use tokio::{sync::oneshot, task::JoinHandle};
 use ubyte::ByteUnit;
 

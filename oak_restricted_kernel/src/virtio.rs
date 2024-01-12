@@ -14,12 +14,14 @@
 // limitations under the License.
 //
 
-use crate::mm::Translator;
 use core::alloc::Allocator;
+
 use log::info;
 use oak_channel::{Read, Write};
 use rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
 use x86_64::{PhysAddr, VirtAddr};
+
+use crate::mm::Translator;
 
 // The virtio vsock port on which to listen.
 #[cfg(feature = "vsock_channel")]

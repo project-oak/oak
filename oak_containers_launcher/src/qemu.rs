@@ -14,10 +14,6 @@
 // limitations under the License.
 //
 
-use crate::path_exists;
-use anyhow::Result;
-use clap::Parser;
-use command_fds::tokio::CommandFdAsyncExt;
 use std::{
     io::{BufRead, BufReader},
     net::Ipv4Addr,
@@ -25,6 +21,12 @@ use std::{
     path::PathBuf,
     process::Stdio,
 };
+
+use anyhow::Result;
+use clap::Parser;
+use command_fds::tokio::CommandFdAsyncExt;
+
+use crate::path_exists;
 
 /// Represents parameters used for launching VM instances.
 #[derive(Parser, Clone, Debug, PartialEq)]

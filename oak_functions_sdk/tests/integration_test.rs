@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+use std::{path::PathBuf, sync::Arc};
+
 use hashbrown::HashMap;
 use lazy_static::lazy_static;
 use oak_functions_abi::{Request, Response};
@@ -22,7 +24,6 @@ use oak_functions_service::{
     lookup::{Data, LookupDataManager},
     wasm::{api::StdWasmApiFactory, WasmHandler},
 };
-use std::{path::PathBuf, sync::Arc};
 
 lazy_static! {
     static ref PATH_TO_MODULES: PathBuf = {

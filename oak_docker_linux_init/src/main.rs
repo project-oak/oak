@@ -14,11 +14,12 @@
 // limitations under the License.
 //
 
-use log::info;
 use std::{
     fs::File,
     io::{BufRead, BufReader},
 };
+
+use log::info;
 use subprocess::Exec;
 
 mod init;

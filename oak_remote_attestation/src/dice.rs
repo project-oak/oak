@@ -14,11 +14,8 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::attestation::v1::{
-    ApplicationKeys, CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
-    TeePlatform,
-};
 use alloc::{vec, vec::Vec};
+
 use anyhow::{anyhow, Context};
 use coset::{
     cwt::{ClaimName, ClaimsSet},
@@ -33,6 +30,11 @@ use oak_dice::{
 };
 use p256::ecdsa::{SigningKey, VerifyingKey};
 use zeroize::Zeroize;
+
+use crate::proto::oak::attestation::v1::{
+    ApplicationKeys, CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
+    TeePlatform,
+};
 
 /// Builds the DICE evidence and certificate authority for the next DICE layer.
 pub struct DiceBuilder {

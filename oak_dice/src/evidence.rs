@@ -17,11 +17,13 @@
 //! C-like structs for representing DICE data in environments where we don't have protocol buffer
 //! support.
 
-use crate::utils::PaddedCopyFromSlice;
 use alloc::{format, string::String, vec::Vec};
+
 use strum::{Display, FromRepr};
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 use zeroize::{Zeroize, ZeroizeOnDrop};
+
+use crate::utils::PaddedCopyFromSlice;
 
 /// The maximum size of the signed attestation report.
 pub const REPORT_SIZE: usize = 2048;

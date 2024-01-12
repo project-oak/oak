@@ -17,10 +17,12 @@
 //! This module provides an optional implementation for encrypting and decrypting guest requests
 //! using the RustCrypto `aes-gcm` crate.
 
-use crate::guest::{GuestMessage, Message};
-use aes_gcm::{AeadInPlace, Aes256Gcm, KeyInit, Nonce, Tag};
 use core::mem::size_of;
+
+use aes_gcm::{AeadInPlace, Aes256Gcm, KeyInit, Nonce, Tag};
 use zerocopy::{AsBytes, FromBytes};
+
+use crate::guest::{GuestMessage, Message};
 
 /// The size of initialization vector/nonce for AES-GCM
 const IV_SIZE: usize = 12;

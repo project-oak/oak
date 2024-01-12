@@ -18,6 +18,12 @@
 //! <https://www.rfc-editor.org/rfc/rfc9180.html>
 //! <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
 
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
+
+use anyhow::{anyhow, Context};
+use async_trait::async_trait;
+use hpke::Deserializable;
+
 use crate::{
     hpke::{
         deserialize_nonce, generate_random_nonce, setup_base_recipient, setup_base_sender, KeyPair,
@@ -25,10 +31,6 @@ use crate::{
     },
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
-use alloc::{boxed::Box, sync::Arc, vec::Vec};
-use anyhow::{anyhow, Context};
-use async_trait::async_trait;
-use hpke::Deserializable;
 
 /// Info string used by Hybrid Public Key Encryption;
 pub(crate) const OAK_HPKE_INFO: &[u8] = b"Oak Hybrid Public Key Encryption v1";

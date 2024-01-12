@@ -14,10 +14,6 @@
 // limitations under the License.
 //
 
-use crate::mm::{
-    encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset},
-    Mapper, PageTableFlags, Translator, ENCRYPTED_BIT_POSITION,
-};
 use oak_core::sync::OnceCell;
 use oak_sev_guest::{
     ghcb::{Ghcb, GhcbProtocol},
@@ -34,6 +30,11 @@ use x86_64::{
         mapper::PageTableFrameMapping, MappedPageTable, Page, PageSize, PhysFrame, Size2MiB,
         Size4KiB,
     },
+};
+
+use crate::mm::{
+    encrypted_mapper::{EncryptedPageTable, MemoryEncryption, PhysOffset},
+    Mapper, PageTableFlags, Translator, ENCRYPTED_BIT_POSITION,
 };
 
 /// A wrapper to ensure that the GHCB is alone in a 2MiB page.

@@ -14,9 +14,10 @@
 // limitations under the License.
 //
 
+use std::{ffi::CString, os::unix::prelude::OsStrExt, path::Path};
+
 use anyhow::{anyhow, Result};
 use nix::unistd::execv;
-use std::{ffi::CString, os::unix::prelude::OsStrExt, path::Path};
 use tar::Archive;
 use xz2::read::XzDecoder;
 

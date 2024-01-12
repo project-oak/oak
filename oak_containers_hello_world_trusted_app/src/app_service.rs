@@ -13,15 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::proto::oak::containers::example::{
-    trusted_application_server::{TrustedApplication, TrustedApplicationServer},
-    HelloRequest, HelloResponse,
-};
 use anyhow::anyhow;
 use oak_containers_sdk::InstanceEncryptionKeyHandle;
 use oak_crypto::encryptor::AsyncServerEncryptor;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
+
+use crate::proto::oak::containers::example::{
+    trusted_application_server::{TrustedApplication, TrustedApplicationServer},
+    HelloRequest, HelloResponse,
+};
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 

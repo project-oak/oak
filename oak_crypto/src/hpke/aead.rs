@@ -17,8 +17,9 @@
 //! Implementation of Authenticated Encryption with Associated Data (AEAD).
 //! <https://datatracker.ietf.org/doc/html/rfc5116>
 
-use aes_gcm::{aead::AeadInPlace, Aes256Gcm, Key, KeyInit, Nonce};
 use alloc::vec::Vec;
+
+use aes_gcm::{aead::AeadInPlace, Aes256Gcm, Key, KeyInit, Nonce};
 use anyhow::anyhow;
 
 /// Represents `N_k` from RFC9180.

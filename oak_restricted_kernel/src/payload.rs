@@ -14,10 +14,10 @@
 // limitations under the License.
 //
 
-use crate::syscall::mmap::mmap;
 use alloc::{boxed::Box, format, vec};
-use anyhow::{anyhow, Result};
 use core::arch::asm;
+
+use anyhow::{anyhow, Result};
 use goblin::{
     elf::{Elf, ProgramHeader, ProgramHeaders},
     elf64::program_header::{PF_W, PF_X, PT_LOAD},
@@ -30,6 +30,8 @@ use x86_64::{
     structures::paging::{PageSize, Size2MiB, Size4KiB},
     VirtAddr,
 };
+
+use crate::syscall::mmap::mmap;
 
 /// Reads a chunk of data and acknowledges the transmission by writing back the number of bytes
 /// read.

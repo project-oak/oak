@@ -14,14 +14,16 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::{HexDigest, RawDigest};
 use alloc::{string::String, vec::Vec};
+use core::{cmp::Ordering, str::FromStr};
+
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use core::{cmp::Ordering, str::FromStr};
 use ecdsa::{signature::Verifier, Signature};
 use p256::ecdsa::VerifyingKey;
 use sha2::{Digest, Sha256, Sha384, Sha512};
+
+use crate::proto::oak::{HexDigest, RawDigest};
 
 const PEM_HEADER: &str = "-----BEGIN PUBLIC KEY-----";
 const PEM_FOOTER: &str = "-----END PUBLIC KEY-----";

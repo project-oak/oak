@@ -13,6 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::{
+    fs::OpenOptions,
+    io::{Read, Seek, Write},
+};
+
 use anyhow::Context;
 use ciborium::Value;
 use coset::cwt::ClaimName;
@@ -22,10 +27,6 @@ use oak_dice::cert::{
 use oak_remote_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
 use prost::Message;
 use sha2::{Digest, Sha256};
-use std::{
-    fs::OpenOptions,
-    io::{Read, Seek, Write},
-};
 use zeroize::Zeroize;
 
 /// The path to the file where the DICE data provided by Stage 1 is stored.

@@ -14,13 +14,14 @@
 // limitations under the License.
 //
 
+use std::{fs::File, io::Write};
+
 use anyhow::Context;
 use clap::Parser;
 use lookup_data_generator::data::{
     generate_and_serialize_random_entries, generate_and_serialize_sparse_weather_entries,
     generate_and_serialize_weather_entries,
 };
-use std::{fs::File, io::Write};
 
 #[derive(Parser, Clone, Debug)]
 #[command(about = "Oak Functions Lookup Data Generator")]

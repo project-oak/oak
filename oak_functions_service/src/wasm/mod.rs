@@ -22,15 +22,10 @@ pub mod api;
 #[cfg(test)]
 mod tests;
 
+use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 #[cfg(feature = "std")]
 use std::time::Instant;
 
-use crate::{
-    logger::{OakLogger, StandaloneLogger},
-    lookup::LookupDataManager,
-    Observer,
-};
-use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 use api::StdWasmApiFactory;
 use byteorder::{ByteOrder, LittleEndian};
 use log::Level;
@@ -38,6 +33,12 @@ use micro_rpc::StatusCode;
 use oak_functions_abi::{Request, Response};
 use spinning_top::Spinlock;
 use wasmi::{MemoryType, Store};
+
+use crate::{
+    logger::{OakLogger, StandaloneLogger},
+    lookup::LookupDataManager,
+    Observer,
+};
 
 /// Fixed name of the function to start a Wasm. Every Oak Wasm module must provide this function.
 pub const MAIN_FUNCTION_NAME: &str = "main";

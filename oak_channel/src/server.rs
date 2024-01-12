@@ -14,10 +14,12 @@
 // limitations under the License.
 //
 
-use crate::{message, Channel, InvocationChannel};
 use alloc::boxed::Box;
+
 use anyhow::Context;
 use oak_core::{samplestore::SampleStore, timer::Timer};
+
+use crate::{message, Channel, InvocationChannel};
 
 /// Starts a blocking server that listens for requests on the provided channel
 /// and responds to them using the provided [`micro_rpc::Transport`].

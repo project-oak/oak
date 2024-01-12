@@ -34,7 +34,6 @@
 //! SEV-SNP AP creation NAE should be used instead. See section 4.3.2 of
 //! <https://www.amd.com/system/files/TechDocs/56421-guest-hypervisor-communication-block-standardization.pdf>.
 
-use crate::{instructions::vmgexit, interrupts::MutableInterruptStackFrame};
 //use anyhow::{anyhow, bail, Result};
 use bitflags::bitflags;
 use snafu::prelude::*;
@@ -43,6 +42,8 @@ use x86_64::{
     registers::model_specific::Msr,
     structures::paging::{PageSize, PhysFrame, Size2MiB, Size4KiB},
 };
+
+use crate::{instructions::vmgexit, interrupts::MutableInterruptStackFrame};
 
 /// The version of the GHCB MSR protocol supported by this library. This represents the version
 /// specific to AMD SEV-SNP.

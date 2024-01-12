@@ -18,6 +18,7 @@
 //! verifying signatures in a Rekor LogEntry.
 
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
+
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};

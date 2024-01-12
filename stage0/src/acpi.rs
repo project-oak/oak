@@ -17,15 +17,17 @@
 // These data structures (and constants) are derived from qemu/hw/acpi/bios-linker-loader.c that
 // defines the interface.
 
-use crate::{acpi_tables::Rsdp, fw_cfg::FwCfg};
 use core::{
     ffi::CStr,
     fmt::{Debug, Formatter, Result as FmtResult},
     mem::{size_of, zeroed, MaybeUninit},
 };
+
 use sha2::{Digest, Sha256};
 use strum::FromRepr;
 use zerocopy::AsBytes;
+
+use crate::{acpi_tables::Rsdp, fw_cfg::FwCfg};
 
 // RSDP has to be within the first 1 KiB of EBDA, so we treat it separately. The full size of EBDA
 // is 128 KiB, but let's reserve the whole 1 KiB for the RSDP.

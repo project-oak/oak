@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::{path::PathBuf, sync::Arc};
+
 use anyhow::{anyhow, Context};
 use clap::Parser;
 use oak_containers_orchestrator::{
@@ -21,7 +23,6 @@ use oak_containers_orchestrator::{
 };
 use oak_dice::cert::generate_ecdsa_key_pair;
 use oak_remote_attestation::attester::{Attester, EmptyAttestationReportGenerator};
-use std::{path::PathBuf, sync::Arc};
 use tokio_util::sync::CancellationToken;
 
 #[derive(Parser, Debug)]

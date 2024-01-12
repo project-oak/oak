@@ -13,6 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use anyhow::Context;
+use tokio::time::Duration;
+use tonic::transport::Endpoint;
+
 use crate::proto::oak::{
     containers::example::{
         trusted_application_client::TrustedApplicationClient as GrpcTrustedApplicationClient,
@@ -20,9 +24,6 @@ use crate::proto::oak::{
     },
     crypto::v1::{EncryptedRequest, EncryptedResponse},
 };
-use anyhow::Context;
-use tokio::time::Duration;
-use tonic::transport::Endpoint;
 
 /// Utility struct used to interface with the launcher
 pub struct TrustedApplicationClient {

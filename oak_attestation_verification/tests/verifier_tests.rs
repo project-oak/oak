@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-use prost::Message;
 use std::fs;
 
 use oak_attestation_verification::{
@@ -30,6 +29,7 @@ use oak_attestation_verification::{
     util::convert_pem_to_raw,
     verifier::verify,
 };
+use prost::Message;
 
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
 const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";

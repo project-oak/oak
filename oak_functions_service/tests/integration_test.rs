@@ -19,8 +19,10 @@
 
 extern crate alloc;
 
-use benchmark::proto::{benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest};
 use core::assert_matches::assert_matches;
+use std::sync::Arc;
+
+use benchmark::proto::{benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest};
 use oak_crypto::{
     encryptor::{ClientEncryptor, EncryptionKeyProvider},
     proto::oak::crypto::v1::EncryptedRequest,
@@ -34,7 +36,6 @@ use oak_functions_service::{
 };
 use oak_remote_attestation::proto::oak::attestation::v1::Evidence;
 use prost::Message;
-use std::sync::Arc;
 
 const MOCK_CONSTANT_RESPONSE_SIZE: u32 = 1024;
 const LOOKUP_TEST_KEY: &[u8] = b"test_key";

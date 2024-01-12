@@ -14,12 +14,14 @@
 // limitations under the License.
 //
 
+use core::{ffi::CStr, slice};
+
+use oak_linux_boot_params::BootE820Entry;
+
 use crate::{
     fw_cfg::{check_non_overlapping, find_suitable_dma_address, FwCfg},
     kernel::KernelInfo,
 };
-use core::{ffi::CStr, slice};
-use oak_linux_boot_params::BootE820Entry;
 
 /// The file path used by Stage0 to read the initial RAM disk from the fw_cfg device.
 const INITIAL_RAM_DISK_FILE_PATH: &[u8] = b"opt/stage0/initramfs\0";

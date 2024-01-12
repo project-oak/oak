@@ -14,17 +14,19 @@
 // limitations under the License.
 //
 
-use crate::logger::OakLogger;
 use alloc::{
     format,
     string::{String, ToString},
     sync::Arc,
     vec::Vec,
 };
+
 use bytes::Bytes;
 use hashbrown::HashMap;
 use log::{info, Level};
 use spinning_top::Spinlock;
+
+use crate::logger::OakLogger;
 
 // Data maintains the invariant on lookup data to have [at most one
 // value](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md#invariant-at-most-one-value)

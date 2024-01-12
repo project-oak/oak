@@ -15,9 +15,10 @@
 
 extern crate test;
 
+use std::time::Duration;
+
 use maplit::hashmap;
 use oak_functions_test_utils::make_request;
-use std::time::Duration;
 use test::Bencher;
 
 #[tokio::test]

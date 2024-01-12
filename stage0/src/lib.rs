@@ -21,9 +21,9 @@
 
 extern crate alloc;
 
-use crate::{kernel::KernelType, sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 use alloc::{boxed::Box, format};
 use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
+
 use linked_list_allocator::LockedHeap;
 use oak_core::sync::OnceCell;
 use oak_dice::evidence::DICE_DATA_CMDLINE_PARAM;
@@ -41,6 +41,8 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 use zerocopy::AsBytes;
+
+use crate::{kernel::KernelType, sev::GHCB_WRAPPER, smp::AP_JUMP_TABLE};
 
 mod acpi;
 mod acpi_tables;

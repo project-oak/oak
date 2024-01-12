@@ -63,13 +63,9 @@ mod virtio_console;
 
 extern crate alloc;
 
-use crate::{
-    acpi::Acpi,
-    mm::Translator,
-    snp::{get_snp_page_addresses, init_snp_pages},
-};
 use alloc::{alloc::Allocator, boxed::Box};
 use core::{marker::Sync, panic::PanicInfo, str::FromStr};
+
 use hkdf::Hkdf;
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
@@ -90,6 +86,12 @@ use x86_64::{
 };
 use zerocopy::FromBytes;
 use zeroize::Zeroize;
+
+use crate::{
+    acpi::Acpi,
+    mm::Translator,
+    snp::{get_snp_page_addresses, init_snp_pages},
+};
 
 /// A derived sealing key.
 type DerivedKey = [u8; 32];

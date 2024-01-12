@@ -14,15 +14,16 @@
 // limitations under the License.
 //
 
-use acpi::{AcpiHandler, AcpiTables, AmlTable, PhysicalMapping};
 use alloc::{boxed::Box, string::String, vec::Vec};
+use core::ptr::NonNull;
+
+use acpi::{AcpiHandler, AcpiTables, AmlTable, PhysicalMapping};
 use aml::{
     resource::{resource_descriptor_list, MemoryRangeDescriptor, Resource},
     value::Args,
     AmlContext, AmlError, AmlName, AmlValue, LevelType, NamespaceLevel,
 };
 use anyhow::{anyhow, bail, Result};
-use core::ptr::NonNull;
 use oak_linux_boot_params::BootParams;
 use x86_64::PhysAddr;
 

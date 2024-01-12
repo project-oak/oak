@@ -41,6 +41,7 @@ pub mod lookup;
 pub mod wasm;
 
 use alloc::{format, string::ToString, sync::Arc, vec::Vec};
+
 use instance::OakFunctionsInstance;
 use oak_core::sync::OnceCell;
 use oak_crypto::encryptor::EncryptionKeyProvider;

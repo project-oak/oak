@@ -14,12 +14,13 @@
 // limitations under the License.
 //
 
+use core::ffi::{c_int, c_size_t, c_ssize_t, c_void};
+
 use crate::{
     syscall,
     syscalls::{MmapFlags, MmapProtection},
     Errno, Syscall,
 };
-use core::ffi::{c_int, c_size_t, c_ssize_t, c_void};
 
 #[no_mangle]
 pub extern "C" fn sys_read(fd: c_int, buf: *mut c_void, count: c_size_t) -> c_ssize_t {

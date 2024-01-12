@@ -17,6 +17,10 @@
 //! This module contains an implementation of the guest-hypervisor communications block (GHCB) page
 //! that can be used for communicating with the hypervisor.
 
+use bitflags::bitflags;
+use x86_64::{PhysAddr, VirtAddr};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
+
 use crate::{
     cpuid::{CpuidInput, CpuidOutput},
     msr::{
@@ -25,9 +29,6 @@ use crate::{
     },
     Translator,
 };
-use bitflags::bitflags;
-use x86_64::{PhysAddr, VirtAddr};
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 /// The size of the GHCB page.
 pub const GHCB_PAGE_SIZE: usize = 4096;

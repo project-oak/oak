@@ -13,6 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
+
+use anyhow::Context;
+use tokio::{fs::set_permissions, net::UnixListener};
+use tokio_stream::wrappers::UnixListenerStream;
+use tokio_util::sync::CancellationToken;
+use tonic::{transport::Server, Request, Response};
+
 use crate::{
     crypto::{CryptoService, KeyStore},
     launcher_client::LauncherClient,
@@ -22,12 +30,6 @@ use crate::{
         GetApplicationConfigResponse,
     },
 };
-use anyhow::Context;
-use std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
-use tokio::{fs::set_permissions, net::UnixListener};
-use tokio_stream::wrappers::UnixListenerStream;
-use tokio_util::sync::CancellationToken;
-use tonic::{transport::Server, Request, Response};
 
 pub struct ServiceImplementation {
     application_config: Vec<u8>,

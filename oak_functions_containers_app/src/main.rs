@@ -13,17 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
+    time::Duration,
+};
+
 use anyhow::{anyhow, Context};
 use clap::Parser;
 use oak_containers_orchestrator::launcher_client::LauncherClient;
 use oak_containers_sdk::{InstanceEncryptionKeyHandle, OrchestratorClient};
 use oak_functions_containers_app::serve;
 use opentelemetry_api::{global::set_error_handler, metrics::MeterProvider, KeyValue};
-use std::{
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::Arc,
-    time::Duration,
-};
 use tokio::{net::TcpListener, runtime::Handle};
 
 const OAK_FUNCTIONS_CONTAINERS_APP_PORT: u16 = 8080;

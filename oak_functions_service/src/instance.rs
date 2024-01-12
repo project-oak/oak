@@ -14,6 +14,12 @@
 // limitations under the License.
 //
 
+use alloc::{format, sync::Arc};
+
+use bytes::Bytes;
+use micro_rpc::{Status, Vec};
+use oak_functions_abi::Request;
+
 use crate::{
     logger::StandaloneLogger,
     lookup::LookupDataManager,
@@ -24,10 +30,6 @@ use crate::{
     },
     wasm, Observer,
 };
-use alloc::{format, sync::Arc};
-use bytes::Bytes;
-use micro_rpc::{Status, Vec};
-use oak_functions_abi::Request;
 
 pub struct OakFunctionsInstance {
     lookup_data_manager: Arc<LookupDataManager<StandaloneLogger>>,

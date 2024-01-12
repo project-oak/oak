@@ -14,7 +14,13 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
+use std::{
+    future::Future,
+    pin::Pin,
+    sync::{Arc, OnceLock},
+    time::Instant,
+};
+
 use anyhow::Context;
 use oak_crypto::encryptor::AsyncRecipientContextGenerator;
 use oak_functions_service::{
@@ -33,15 +39,11 @@ use opentelemetry_api::{
     KeyValue,
 };
 use prost::Message;
-use std::{
-    future::Future,
-    pin::Pin,
-    sync::{Arc, OnceLock},
-    time::Instant,
-};
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 use tracing::Span;
+
+use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
 
 pub mod proto {
     pub mod oak {
