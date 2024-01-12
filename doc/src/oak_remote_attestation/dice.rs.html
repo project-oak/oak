@@ -287,6 +287,7 @@
 <a href="#287" id="287">287</a>
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -321,6 +322,7 @@
     evidence::Stage0DiceData,
 };
 <span class="kw">use </span>p256::ecdsa::{SigningKey, VerifyingKey};
+<span class="kw">use </span>zeroize::Zeroize;
 
 <span class="doccomment">/// Builds the DICE evidence and certificate authority for the next DICE layer.
 </span><span class="kw">pub struct </span>DiceBuilder {
@@ -436,7 +438,7 @@
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="comment">// Zero out the ECA private key if it was set.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(certificate_authority) = <span class="kw-2">&amp;mut </span><span class="self">self</span>.certificate_authority {
-            certificate_authority.eca_private_key.fill(<span class="number">0</span>);
+            certificate_authority.eca_private_key.zeroize();
         }
     }
 }

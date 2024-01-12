@@ -59,6 +59,7 @@
 <a href="#59" id="59">59</a>
 <a href="#60" id="60">60</a>
 <a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -79,6 +80,7 @@
 <span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>oak_dice::evidence::RestrictedKernelDiceData <span class="kw">as </span>DiceData;
 <span class="kw">use </span>oak_restricted_kernel_interface::{Errno, DICE_DATA_FD};
+<span class="kw">use </span>zeroize::Zeroize;
 
 <span class="kw">struct </span>DiceDataDescriptor {
     data: DiceData,
@@ -98,7 +100,7 @@
 
         <span class="comment">// destroy the data that was read, to ensure that it can only be read once
         </span><span class="kw">let </span>slice_to_read = <span class="kw-2">&amp;mut </span>data_as_slice[<span class="self">self</span>.index..(<span class="self">self</span>.index + length)];
-        slice_to_read.fill(<span class="number">0</span>);
+        slice_to_read.zeroize();
 
         <span class="self">self</span>.index += length;
         <span class="prelude-val">Ok</span>(length <span class="kw">as </span>isize)

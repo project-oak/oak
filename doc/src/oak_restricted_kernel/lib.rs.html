@@ -403,6 +403,7 @@
 <a href="#403" id="403">403</a>
 <a href="#404" id="404">404</a>
 <a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -494,6 +495,7 @@
     PhysAddr, VirtAddr,
 };
 <span class="kw">use </span>zerocopy::FromBytes;
+<span class="kw">use </span>zeroize::Zeroize;
 
 <span class="doccomment">/// A derived sealing key.
 </span><span class="kw">type </span>DerivedKey = [u8; <span class="number">32</span>];
@@ -696,7 +698,7 @@
             .expect(<span class="string">&quot;failed to read dice data&quot;</span>);
 
         <span class="comment">// Overwrite the dice data provided by stage0 after reading.
-        </span>dice_memory_slice.fill(<span class="number">0</span>);
+        </span>dice_memory_slice.zeroize();
 
         <span class="kw">if </span>dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
             <span class="macro">panic!</span>(<span class="string">&quot;dice data loaded from stage0 failed validation&quot;</span>);

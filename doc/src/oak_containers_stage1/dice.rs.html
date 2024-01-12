@@ -151,6 +151,7 @@
 <a href="#151" id="151">151</a>
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -184,6 +185,7 @@
 };
 <span class="kw">use </span>x86_64::PhysAddr;
 <span class="kw">use </span>zerocopy::FromBytes;
+<span class="kw">use </span>zeroize::Zeroize;
 
 <span class="doccomment">/// The expected string representation of the custom type for the reserved memory range that
 /// contains the DICE data.
@@ -272,7 +274,7 @@
             .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;size mismatch while reading DICE data&quot;</span>))<span class="question-mark">?</span>;
 
         <span class="comment">// Zero out the source memory.
-        </span>source.fill(<span class="number">0</span>);
+        </span>source.zeroize();
         result
     };
 

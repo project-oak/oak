@@ -85,6 +85,9 @@
 <a href="#85" id="85">85</a>
 <a href="#86" id="86">86</a>
 <a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -113,6 +116,7 @@
     fs::OpenOptions,
     io::{Read, Seek, Write},
 };
+<span class="kw">use </span>zeroize::Zeroize;
 
 <span class="doccomment">/// The path to the file where the DICE data provided by Stage 1 is stored.
 </span><span class="kw">const </span>STAGE1_DICE_DATA_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;/oak/dice&quot;</span>;
@@ -126,14 +130,16 @@
         .write(<span class="bool-val">true</span>)
         .open(STAGE1_DICE_DATA_PATH)
         .context(<span class="string">&quot;couldn&#39;t open DICE data file&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::new();
+    <span class="kw">let </span>size = file.metadata().map(|m| m.len() <span class="kw">as </span>usize).unwrap_or(<span class="number">0</span>);
+
+    <span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::with_capacity(size);
     file.read_to_end(<span class="kw-2">&amp;mut </span>buffer)
         .context(<span class="string">&quot;couldn&#39;t read DICE data from file&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let </span>result =
         DiceData::decode_length_delimited(<span class="kw-2">&amp;</span>buffer[..]).context(<span class="string">&quot;couldn&#39;t parse DICE data&quot;</span>)<span class="question-mark">?</span>;
 
-    buffer.fill(<span class="number">0</span>);
+    buffer.zeroize();
     file.rewind()<span class="question-mark">?</span>;
     file.write_all(<span class="kw-2">&amp;</span>buffer)
         .context(<span class="string">&quot;couldn&#39;t overwrite DICE data file&quot;</span>)<span class="question-mark">?</span>;
