@@ -22,6 +22,7 @@ oak_core = { workspace = true }
 oak_crypto = { workspace = true }
 oak_functions_abi = { workspace = true }
 oak_functions_sdk = { workspace = true }
+oak_functions_proto = { workspace = true }
 oak_remote_attestation = { workspace = true }
 prost = { workspace = true }
 spinning_top = "*"

@@ -23,11 +23,6 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 
-pub mod proto {
-    include!(concat!(env!("OUT_DIR"), "/oak.functions.abi.rs"));
-    include!(concat!(env!("OUT_DIR"), "/oak.functions.lookup_data.rs"));
-}
-
 /// See REQUEST_RESPONSE_ENCODING.MD in the crate root.
 #[derive(Clone, PartialEq, Debug)]
 pub struct Request {

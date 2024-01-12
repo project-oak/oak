@@ -15,6 +15,7 @@ hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
 nix = "*"
 oak_functions_abi = { workspace = true }
 oak_functions_client = { workspace = true }
+oak_functions_proto = { workspace = true }
 port_check = "*"
 prost = { workspace = true }
 tempfile = "*"

@@ -14,12 +14,12 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::{HexDigest, RawDigest};
 use alloc::{string::String, vec::Vec};
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use core::{cmp::Ordering, str::FromStr};
 use ecdsa::{signature::Verifier, Signature};
+use oak_attestation_proto::oak::{HexDigest, RawDigest};
 use p256::ecdsa::VerifyingKey;
 use sha2::{Digest, Sha256, Sha384, Sha512};
 

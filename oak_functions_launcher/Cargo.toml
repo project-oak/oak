@@ -15,6 +15,7 @@ command-fds = { version = "*", features = ["tokio"] }
 futures = "*"
 log = "*"
 env_logger = "*"
+oak_functions_proto = { workspace = true }
 prost = { workspace = true }
 serde = "*"
 tokio = { version = "*", features = [

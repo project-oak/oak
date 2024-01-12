@@ -21,7 +21,7 @@ use location_utils::{
     DEFAULT_CUTOFF_RADIUS_RADIANS, S2_DEFAULT_LEVEL,
 };
 use multimap::MultiMap;
-use oak_functions_abi::proto::Entry;
+use oak_functions_proto::oak::oak_functions::lookup_data::Entry;
 use prost::Message;
 use rand::Rng;
 use serde::Serialize;

@@ -13,6 +13,7 @@ coset = { version = "*", default-features = false }
 ecdsa = { version = "*", features = ["pkcs8", "pem"] }
 hex = "*"
 oak_dice = { workspace = true }
+oak_attestation_proto = { workspace = true }
 prost = { workspace = true }
 p256 = { version = "*", features = ["ecdsa-core", "ecdsa", "pem"] }
 serde = { version = "*", features = ["derive"] }
@@ -20,6 +21,3 @@ serde_jcs = "*"
 serde_json = "*"
 sha2 = { version = "*", default-features = false }
 time = { version = "0.3.28", features = ["serde", "parsing", "formatting"] }
-
-[build-dependencies]
-prost-build = { workspace = true }
