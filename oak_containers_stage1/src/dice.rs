@@ -23,11 +23,11 @@ use anyhow::Context;
 use ciborium::Value;
 use coset::cwt::ClaimName;
 use nix::sys::mman::{mmap, munmap, MapFlags, ProtFlags};
+use oak_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
 use oak_dice::{
     cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID},
     evidence::{Stage0DiceData, STAGE0_MAGIC},
 };
-use oak_remote_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
 use sha2::{Digest, Sha256};
 use x86_64::PhysAddr;
 use zerocopy::FromBytes;

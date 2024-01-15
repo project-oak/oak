@@ -15,8 +15,8 @@
 
 pub mod proto {
     pub mod oak {
+        pub use oak_attestation::proto::oak::attestation;
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::attestation;
         pub mod functions {
             tonic::include_proto!("oak.functions");
         }

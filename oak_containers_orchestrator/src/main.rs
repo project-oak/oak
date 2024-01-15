@@ -17,12 +17,12 @@ use std::{path::PathBuf, sync::Arc};
 
 use anyhow::{anyhow, Context};
 use clap::Parser;
+use oak_attestation::attester::{Attester, EmptyAttestationReportGenerator};
 use oak_containers_orchestrator::{
     crypto::InstanceKeyStore, launcher_client::LauncherClient,
     proto::oak::containers::v1::KeyProvisioningRole,
 };
 use oak_dice::cert::generate_ecdsa_key_pair;
-use oak_remote_attestation::attester::{Attester, EmptyAttestationReportGenerator};
 use tokio_util::sync::CancellationToken;
 
 #[derive(Parser, Debug)]
