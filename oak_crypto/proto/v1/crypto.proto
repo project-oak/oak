@@ -55,7 +55,7 @@ message SessionKeys {
   // AEAD key for encrypting/decrypting client requests.
   bytes request_key = 1;
   // AEAD key for encrypting/decrypting enclave responses.
-  bytes response_key = 2;
+  bytes response_key = 4;
 }
 
 message Signature {
