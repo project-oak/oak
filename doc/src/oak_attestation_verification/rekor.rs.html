@@ -263,6 +263,11 @@
 <a href="#263" id="263">263</a>
 <a href="#264" id="264">264</a>
 <a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -287,6 +292,8 @@
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
 <span class="kw">use </span>serde::{Deserialize, Serialize};
+<span class="kw">use </span>serde_canonical_json::CanonicalFormatter;
+<span class="kw">use </span>serde_json::Serializer;
 
 <span class="kw">use </span><span class="kw">crate</span>::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_raw};
 
@@ -410,8 +417,11 @@
 
         <span class="comment">// Canonicalized JSON document that is signed. Canonicalization should follow the RFC 8785
         // rules.
-        </span><span class="kw">let </span>canonicalized = serde_jcs::to_vec(<span class="kw-2">&amp;</span>entry_subset)
-            .context(<span class="string">&quot;couldn&#39;t create canonicalized json string&quot;</span>)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span><span class="kw-2">mut </span>serializer = Serializer::with_formatter(Vec::new(), CanonicalFormatter::new());
+        entry_subset
+            .serialize(<span class="kw-2">&amp;mut </span>serializer)
+            .context(<span class="string">&quot;Failed to serialize Rekor signed payload to JSON&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>signed_json_bytes: Vec&lt;u8&gt; = serializer.into_inner();
 
         <span class="comment">// Extract the signature from the LogEntry.
         </span><span class="kw">let </span>sig_base64 = log_entry
@@ -425,7 +435,7 @@
             .context(<span class="string">&quot;couldn&#39;t decode Base64 signature&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            canonicalized,
+            canonicalized: signed_json_bytes,
             signature,
         })
     }
