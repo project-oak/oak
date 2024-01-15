@@ -144,7 +144,7 @@ impl OrchestratorCrypto for CryptoService {
             KeyOrigin::Group => &self.key_store.group_encryption_key,
         };
 
-        let context = encryption_key
+        let session_keys = encryption_key
             .generate_recipient_context(&request.serialized_encapsulated_public_key)
             .map_err(|err| tonic::Status::internal(format!("couldn't derive session keys: {err}")))?
             .serialize()
@@ -152,7 +152,7 @@ impl OrchestratorCrypto for CryptoService {
                 tonic::Status::internal(format!("couldn't serialize session keys: {err}"))
             })?;
         Ok(tonic::Response::new(DeriveSessionKeysResponse {
-            context: Some(context),
+            session_keys: Some(session_keys),
         }))
     }
 }

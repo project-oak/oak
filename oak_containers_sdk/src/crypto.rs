@@ -65,9 +65,8 @@ impl OrchestratorCryptoClient {
             })
             .await?
             .into_inner()
-            // Crypto context.
-            .context
-            .context("crypto context wasn't provided by the Orchestrator")?;
+            .session_keys
+            .context("session keys weren't provided by the Orchestrator")?;
         Ok(context)
     }
 }
