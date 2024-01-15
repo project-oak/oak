@@ -87,20 +87,27 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
     let length = std::mem::size_of::<Stage0DiceData>();
     // Linux presents an inclusive end address.
     let end = start + (length as u64 - 1);
+
+    println!("Reading DICE data from physical memory. Start={start:p}, End={end:p}");
+
     // Ensure that the exact memory range is marked as reserved.
     if !read_memory_ranges()?.iter().any(|range| {
         range.start == start && range.end == end && range.type_description == EXPECTED_E820_TYPE
     }) {
         anyhow::bail!("DICE data range is not reserved");
     }
+    println!("DICE data range is reserved");
 
     // Open a file representing the physical memory.
-    let dice_file = OpenOptions::new()
+    let dice_file_descriptor = OpenOptions::new()
         .read(true)
         .write(true)
         .open(PHYS_MEM_PATH)
         .context("couldn't open DICE memory device for reading")?;
 
+    println!("Opened DICE memory device for reading: FD={dice_file_descriptor:?}");
+
+    println!("Mapping DICE data into virtual memory");
     // Safety: we have checked that the exact memory range is marked as reserved so the Linux kernel
     // will not use it for anything else.
     let start_ptr = unsafe {
@@ -109,10 +116,11 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
             length.try_into()?,
             ProtFlags::PROT_READ | ProtFlags::PROT_WRITE,
             MapFlags::MAP_SHARED,
-            dice_file.as_raw_fd(),
+            dice_file_descriptor.as_raw_fd(),
             start.as_u64().try_into()?,
         )?
     };
+    println!("Mapped DICE data into virtual memory: Start={start_ptr:p}");
 
     let result = {
         // Safety: we have checked the length, know it is backed by physical memory and is reserved.
@@ -125,6 +133,7 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
         source.zeroize();
         result
     };
+    println!("Read DICE data: Magic={}", result.magic);
 
     if result.magic != STAGE0_MAGIC {
         anyhow::bail!("invalid DICE data");
@@ -132,6 +141,8 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
 
     // Safety: we have just mapped this memory, and the slice over it has been dropped.
     unsafe { munmap(start_ptr, length)? };
+    println!("Unmapped DICE data from virtual memory");
+
     Ok(result)
 }
 
