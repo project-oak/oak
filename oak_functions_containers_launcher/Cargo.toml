@@ -25,6 +25,7 @@ tonic = { workspace = true }
 ubyte = "*"
 
 [dev-dependencies]
+oak_attestation_verification = { workspace = true }
 oak_functions_client = { workspace = true }
 oak_functions_test_utils = { workspace = true }
 xtask = { workspace = true }

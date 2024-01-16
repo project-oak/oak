@@ -18,6 +18,7 @@
 
 use alloc::vec::Vec;
 
+use anyhow::Context;
 use coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
 use ecdsa::{signature::Verifier, Signature};
 use oak_dice::cert::{
@@ -58,9 +59,28 @@ use crate::{
 // We don't use additional authenticated data.
 const ADDITIONAL_DATA: &[u8] = b"";
 
+pub trait AttestationVerifier {
+    fn verify(
+        &self,
+        evidence: &Evidence,
+        endorsements: &Endorsements,
+    ) -> anyhow::Result<DiceChainResult>;
+}
+
+/// Verifier that doesn't check the Evidence against Reference Values and only checks the DICE chain
+/// correctness.
+/// Should be only used for testing.
+pub struct InsecureAttestationVerifier;
+
+impl AttestationVerifier for InsecureAttestationVerifier {
+    fn verify(&self, evidence: &Evidence, _: &Endorsements) -> anyhow::Result<DiceChainResult> {
+        verify_dice_chain(evidence).context("couldn't verify the DICE chain")
+    }
+}
+
 pub struct DiceChainResult {
-    encryption_public_key: Vec<u8>,
-    signing_public_key: Vec<u8>,
+    pub encryption_public_key: Vec<u8>,
+    pub signing_public_key: Vec<u8>,
 }
 
 impl From<&anyhow::Result<DiceChainResult>> for AttestationResults {
@@ -152,7 +172,7 @@ fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<DiceChainResult> {
     let appl_keys = evidence
         .application_keys
         .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no application fields in evidence"))?;
+        .ok_or_else(|| anyhow::anyhow!("no application keys in evidence"))?;
 
     // Process encryption certificate.
     let encryption_cert =

@@ -13,6 +13,7 @@ env_logger = "*"
 http = "*"
 log = "*"
 micro_rpc = { workspace = true }
+oak_attestation_verification = { workspace = true }
 oak_client = { workspace = true }
 oak_functions_abi = { workspace = true }
 prost = { workspace = true }
