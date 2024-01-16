@@ -17,7 +17,7 @@
 use std::{sync::Arc, time::Duration};
 
 use anyhow::Result;
-use opentelemetry_api::{
+use opentelemetry::{
     metrics::{AsyncInstrument, Meter, MeterProvider, ObservableCounter, ObservableGauge, Unit},
     KeyValue,
 };

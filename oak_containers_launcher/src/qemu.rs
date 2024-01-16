@@ -24,7 +24,7 @@ use std::{
 
 use anyhow::Result;
 use clap::Parser;
-use command_fds::tokio::CommandFdAsyncExt;
+use command_fds::CommandFdExt;
 
 use crate::path_exists;
 
@@ -110,7 +110,12 @@ impl Qemu {
         cmd.stderr(Stdio::inherit());
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::inherit());
-        cmd.preserved_fds(vec![guest_socket.as_raw_fd()]);
+
+        // Extract the raw file descriptor numbers from the streams before passing them to the child
+        // process, since that takes ownership of them.
+        let guest_socket_fd = guest_socket.as_raw_fd();
+
+        cmd.preserved_fds(vec![guest_socket.into()]);
 
         // Construct the command-line arguments for `qemu`.
         cmd.arg("-enable-kvm");
@@ -135,12 +140,12 @@ impl Qemu {
         if let Some(port) = params.telnet_console {
             cmd.args([
                 "-serial",
-                format!("telnet:localhost:{},server", port).as_str(),
+                format!("telnet:localhost:{port},server").as_str(),
             ]);
         } else {
             cmd.args([
                 "-chardev",
-                format!("socket,id=consock,fd={}", guest_socket.as_raw_fd()).as_str(),
+                format!("socket,id=consock,fd={guest_socket_fd}").as_str(),
             ]);
             cmd.args(["-serial", "chardev:consock"]);
         }
