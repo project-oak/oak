@@ -22,6 +22,7 @@ use std::{
 };
 
 use anyhow::Context;
+use oak_attestation::handler::AsyncEncryptionHandler;
 use oak_crypto::encryptor::AsyncRecipientContextGenerator;
 use oak_functions_service::{
     instance::OakFunctionsInstance,
@@ -33,7 +34,6 @@ use oak_functions_service::{
     },
     Observer,
 };
-use oak_remote_attestation::handler::AsyncEncryptionHandler;
 use opentelemetry_api::{
     metrics::{Histogram, Meter, Unit},
     KeyValue,
@@ -55,8 +55,8 @@ pub mod proto {
             #![allow(clippy::return_self_not_must_use)]
             tonic::include_proto!("oak.containers");
         }
+        pub use oak_attestation::proto::oak::{attestation, session};
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::{attestation, session};
     }
 }
 

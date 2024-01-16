@@ -64,7 +64,7 @@ fn main() -> ! {
     let encryption_key =
         oak_crypto::encryptor::EncryptionKeyProvider::try_from(&restricted_kernel_dice_data)
             .expect("couldn't get encryption key");
-    let evidence = oak_remote_attestation::proto::oak::attestation::v1::Evidence::try_from(
+    let evidence = oak_attestation::proto::oak::attestation::v1::Evidence::try_from(
         restricted_kernel_dice_data.evidence,
     )
     .expect("couldn't get evidence");

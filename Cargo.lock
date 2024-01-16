@@ -1884,6 +1884,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_attestation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ciborium",
+ "coset",
+ "log",
+ "micro_rpc_build",
+ "oak_crypto",
+ "oak_dice",
+ "p256",
+ "prost",
+ "rand_core",
+ "sha2",
+ "zeroize",
+]
+
+[[package]]
 name = "oak_attestation_verification"
 version = "0.1.0"
 dependencies = [
@@ -1926,9 +1944,9 @@ dependencies = [
  "async-trait",
  "futures-util",
  "log",
+ "oak_attestation",
  "oak_crypto",
  "oak_grpc_utils",
- "oak_remote_attestation",
  "prost",
  "tonic",
 ]
@@ -1982,9 +2000,9 @@ dependencies = [
  "env_logger",
  "futures",
  "log",
+ "oak_attestation",
  "oak_crypto",
  "oak_grpc_utils",
- "oak_remote_attestation",
  "opentelemetry-proto",
  "prost",
  "prost-types",
@@ -2005,10 +2023,10 @@ dependencies = [
  "hpke",
  "log",
  "nix 0.26.2",
+ "oak_attestation",
  "oak_crypto",
  "oak_dice",
  "oak_grpc_utils",
- "oak_remote_attestation",
  "oci-spec",
  "opentelemetry-otlp",
  "opentelemetry_api",
@@ -2036,9 +2054,9 @@ dependencies = [
  "anyhow",
  "async-stream",
  "async-trait",
+ "oak_attestation",
  "oak_crypto",
  "oak_grpc_utils",
- "oak_remote_attestation",
  "prost",
  "prost-types",
  "tokio",
@@ -2057,10 +2075,10 @@ dependencies = [
  "coset",
  "futures-util",
  "nix 0.26.2",
+ "oak_attestation",
  "oak_crypto",
  "oak_dice",
  "oak_grpc_utils",
- "oak_remote_attestation",
  "p256",
  "prost",
  "prost-types",
@@ -2225,13 +2243,13 @@ dependencies = [
  "clap",
  "http",
  "micro_rpc",
+ "oak_attestation",
  "oak_containers_orchestrator",
  "oak_containers_sdk",
  "oak_crypto",
  "oak_functions_service",
  "oak_functions_test_utils",
  "oak_grpc_utils",
- "oak_remote_attestation",
  "opentelemetry-otlp",
  "opentelemetry_api",
  "opentelemetry_sdk",
@@ -2254,6 +2272,7 @@ dependencies = [
  "env_logger",
  "futures",
  "log",
+ "oak_attestation",
  "oak_containers_launcher",
  "oak_crypto",
  "oak_functions_abi",
@@ -2261,7 +2280,6 @@ dependencies = [
  "oak_functions_launcher",
  "oak_functions_test_utils",
  "oak_grpc_utils",
- "oak_remote_attestation",
  "prost",
  "tokio",
  "tonic",
@@ -2285,6 +2303,7 @@ dependencies = [
  "log",
  "micro_rpc",
  "micro_rpc_build",
+ "oak_attestation",
  "oak_channel",
  "oak_crypto",
  "oak_functions_abi",
@@ -2292,7 +2311,6 @@ dependencies = [
  "oak_functions_test_utils",
  "oak_grpc_utils",
  "oak_launcher_utils",
- "oak_remote_attestation",
  "prost",
  "rand",
  "serde",
@@ -2363,12 +2381,12 @@ dependencies = [
  "log",
  "micro_rpc",
  "micro_rpc_build",
+ "oak_attestation",
  "oak_core",
  "oak_crypto",
  "oak_functions_abi",
  "oak_functions_sdk",
  "oak_functions_test_utils",
- "oak_remote_attestation",
  "prost",
  "spinning_top",
  "tokio",
@@ -2441,24 +2459,6 @@ dependencies = [
  "static_assertions",
  "strum",
  "zerocopy",
-]
-
-[[package]]
-name = "oak_remote_attestation"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ciborium",
- "coset",
- "log",
- "micro_rpc_build",
- "oak_crypto",
- "oak_dice",
- "p256",
- "prost",
- "rand_core",
- "sha2",
- "zeroize",
 ]
 
 [[package]]

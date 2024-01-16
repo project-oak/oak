@@ -672,6 +672,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_attestation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ciborium",
+ "coset",
+ "log",
+ "micro_rpc_build",
+ "oak_crypto",
+ "oak_dice",
+ "p256",
+ "prost",
+ "rand_core",
+ "sha2",
+ "zeroize",
+]
+
+[[package]]
 name = "oak_channel"
 version = "0.1.0"
 dependencies = [
@@ -796,13 +814,13 @@ version = "0.1.0"
 dependencies = [
  "log",
  "micro_rpc",
+ "oak_attestation",
  "oak_channel",
  "oak_core",
  "oak_crypto",
  "oak_dice",
  "oak_enclave_runtime_support",
  "oak_functions_service",
- "oak_remote_attestation",
  "oak_restricted_kernel_interface",
  "oak_restricted_kernel_sdk",
  "static_assertions",
@@ -830,32 +848,14 @@ dependencies = [
  "log",
  "micro_rpc",
  "micro_rpc_build",
+ "oak_attestation",
  "oak_core",
  "oak_crypto",
  "oak_functions_abi",
  "oak_functions_sdk",
- "oak_remote_attestation",
  "prost",
  "spinning_top",
  "wasmi",
-]
-
-[[package]]
-name = "oak_remote_attestation"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ciborium",
- "coset",
- "log",
- "micro_rpc_build",
- "oak_crypto",
- "oak_dice",
- "p256",
- "prost",
- "rand_core",
- "sha2",
- "zeroize",
 ]
 
 [[package]]
