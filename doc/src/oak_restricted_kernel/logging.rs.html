@@ -94,14 +94,14 @@
 <span class="kw">use </span>log::info;
 <span class="kw">use </span>oak_sev_guest::io::PortFactoryWrapper;
 <span class="kw">use </span>sev_serial::SerialPort;
-<span class="kw">use </span>spinning_top::{const_spinlock, Spinlock};
+<span class="kw">use </span>spinning_top::Spinlock;
 
 <span class="kw">extern crate </span>log;
 
 <span class="comment">// Base I/O port for the first serial port in the system (colloquially known as COM1)
 </span><span class="kw">const </span>COM1_BASE: u16 = <span class="number">0x3f8</span>;
 
-<span class="kw">pub static </span>SERIAL1: Spinlock&lt;<span class="prelude-ty">Option</span>&lt;SerialPort&gt;&gt; = const_spinlock(<span class="prelude-val">None</span>);
+<span class="kw">pub static </span>SERIAL1: Spinlock&lt;<span class="prelude-ty">Option</span>&lt;SerialPort&gt;&gt; = Spinlock::new(<span class="prelude-val">None</span>);
 
 <span class="kw">struct </span>Logger {}
 

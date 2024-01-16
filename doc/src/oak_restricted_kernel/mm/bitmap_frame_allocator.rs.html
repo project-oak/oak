@@ -691,7 +691,7 @@
             .map(|<span class="kw">_</span>| alloc.allocate_frame().unwrap())
             .collect();
 
-        <span class="macro">assert_set_eq_other!</span>(expected_frames, got_frames);
+        <span class="macro">assert_set_eq!</span>(expected_frames, got_frames);
         <span class="macro">assert_eq!</span>(<span class="prelude-val">None</span>, alloc.allocate_frame());
         <span class="macro">assert_eq!</span>(<span class="number">9</span>, alloc.num_allocated());
     }
@@ -760,7 +760,7 @@
         <span class="kw">let </span>got_frames: Vec&lt;PhysFrame&lt;Size4KiB&gt;&gt; = (<span class="number">0</span>..expected_frames.len())
             .map(|<span class="kw">_</span>| alloc.allocate_frame().unwrap())
             .collect();
-        <span class="macro">assert_set_eq_other!</span>(expected_frames, got_frames);
+        <span class="macro">assert_set_eq!</span>(expected_frames, got_frames);
         <span class="macro">assert_eq!</span>(<span class="prelude-val">None</span>, alloc.allocate_frame());
     }
 

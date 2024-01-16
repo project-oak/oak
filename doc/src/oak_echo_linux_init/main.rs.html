@@ -86,7 +86,7 @@
 </span><span class="kw">use </span>std::{
     fs::OpenOptions,
     io::{Read, Write},
-    os::fd::{AsRawFd, RawFd},
+    os::fd::AsFd,
 };
 
 <span class="kw">use </span>log::{debug, info};
@@ -112,7 +112,7 @@
         .expect(<span class="string">&quot;couldn&#39;t open virtio console port for reading&quot;</span>);
 
     <span class="comment">// Enable raw mode so that Linux does not also echo back the values.
-    </span>set_console_to_raw_mode(reader.as_raw_fd());
+    </span>set_console_to_raw_mode(reader.as_fd());
 
     <span class="kw">let </span><span class="kw-2">mut </span>writer = OpenOptions::new()
         .write(<span class="bool-val">true</span>)
@@ -131,8 +131,8 @@
     }
 }
 
-<span class="kw">fn </span>set_console_to_raw_mode(fd: RawFd) {
-    <span class="kw">let </span><span class="kw-2">mut </span>attributes = tcgetattr(fd).expect(<span class="string">&quot;file descriptor does not represent a console&quot;</span>);
+<span class="kw">fn </span>set_console_to_raw_mode&lt;Fd: AsFd&gt;(fd: Fd) {
+    <span class="kw">let </span><span class="kw-2">mut </span>attributes = tcgetattr(<span class="kw-2">&amp;</span>fd).expect(<span class="string">&quot;file descriptor does not represent a console&quot;</span>);
     cfmakeraw(<span class="kw-2">&amp;mut </span>attributes);
     tcsetattr(fd, SetArg::TCSANOW, <span class="kw-2">&amp;</span>attributes).expect(<span class="string">&quot;couldn&#39;t set raw mode on console&quot;</span>);
 }

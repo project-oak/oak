@@ -586,7 +586,7 @@
         SevStatus, SnpPageStateChangeRequest,
     },
 };
-<span class="kw">use </span>spinning_top::{const_spinlock, Spinlock};
+<span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>x86_64::{
     instructions::tlb,
     structures::paging::{
@@ -603,7 +603,7 @@
 <span class="kw">pub static </span>GHCB_WRAPPER: OnceCell&lt;Spinlock&lt;GhcbProtocol&lt;<span class="lifetime">&#39;static</span>, Ghcb&gt;&gt;&gt; = OnceCell::new();
 
 <span class="doccomment">/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest message protocol.
-</span><span class="kw">static </span>GUEST_MESSAGE_ENCRYPTOR: Spinlock&lt;<span class="prelude-ty">Option</span>&lt;GuestMessageEncryptor&gt;&gt; = const_spinlock(<span class="prelude-val">None</span>);
+</span><span class="kw">static </span>GUEST_MESSAGE_ENCRYPTOR: Spinlock&lt;<span class="prelude-ty">Option</span>&lt;GuestMessageEncryptor&gt;&gt; = Spinlock::new(<span class="prelude-val">None</span>);
 
 <span class="doccomment">/// Allocator that forces allocations to be 4K-aligned (and sized) and marks the pages as shared.
 ///

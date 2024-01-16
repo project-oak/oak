@@ -260,6 +260,9 @@
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -280,7 +283,10 @@
     fs,
     io::{BufRead, BufReader},
     net::Shutdown,
-    os::unix::{io::AsRawFd, net, net::UnixStream},
+    os::{
+        fd::AsRawFd,
+        unix::{net, net::UnixStream},
+    },
     path::PathBuf,
     process::Stdio,
 };

@@ -742,7 +742,7 @@
         };
 
         <span class="comment">// Parse the DSDT and all SSDTs.
-        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>dsdt) = acpi.tables.dsdt {
+        </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="kw-2">ref </span>dsdt) = acpi.tables.dsdt() {
             acpi.aml
                 .parse_table(dsdt.contents())
                 .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;failed to parse ACPI DSDT: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
@@ -750,7 +750,7 @@
             <span class="macro">bail!</span>(<span class="string">&quot;no DSDT found in ACPI tables&quot;</span>);
         }
 
-        <span class="kw">for </span>ssdt <span class="kw">in </span><span class="kw-2">&amp;</span>acpi.tables.ssdts {
+        <span class="kw">for </span>ssdt <span class="kw">in </span>acpi.tables.ssdts() {
             acpi.aml.parse_table(ssdt.contents()).map_err(|err| {
                 <span class="macro">anyhow!</span>(
                     <span class="string">&quot;failed to parse ACPI SSDT at address {}: {:?}&quot;</span>,

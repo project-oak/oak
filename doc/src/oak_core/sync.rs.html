@@ -131,7 +131,7 @@
     sync::atomic::{AtomicBool, Ordering},
 };
 
-<span class="kw">use </span>spinning_top::{const_spinlock, Spinlock};
+<span class="kw">use </span>spinning_top::Spinlock;
 
 <span class="doccomment">/// A synchronised implementation of a cell that can be initialized only once.
 ///
@@ -147,7 +147,7 @@
     <span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             initialized: AtomicBool::new(<span class="bool-val">false</span>),
-            lock: const_spinlock(()),
+            lock: Spinlock::new(()),
             value: UnsafeCell::new(MaybeUninit::uninit()),
         }
     }

@@ -152,8 +152,6 @@
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -170,10 +168,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>std::{
-    fs::{read_dir, read_to_string, OpenOptions},
-    os::fd::AsRawFd,
-};
+</span><span class="kw">use </span>std::fs::{read_dir, read_to_string, OpenOptions};
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>ciborium::Value;
@@ -265,7 +260,8 @@
             length.try_into()<span class="question-mark">?</span>,
             ProtFlags::PROT_READ | ProtFlags::PROT_WRITE,
             MapFlags::MAP_SHARED,
-            dice_file.as_raw_fd(),
+            <span class="comment">// Pass the file descriptor as reference to avoid closing it.
+            </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>dice_file),
             start.as_u64().try_into()<span class="question-mark">?</span>,
         )<span class="question-mark">?
     </span>};
