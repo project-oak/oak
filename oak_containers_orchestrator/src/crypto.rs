@@ -23,7 +23,7 @@ use tonic::{Request, Response};
 use crate::proto::oak::{
     containers::v1::{
         orchestrator_crypto_server::OrchestratorCrypto, DeriveSessionKeysRequest,
-        DeriveSessionKeysResponse, KeyOrigin,
+        DeriveSessionKeysResponse, KeyOrigin, SignRequest, SignResponse,
     },
     key_provisioning::v1::GroupKeys,
 };
@@ -154,5 +154,13 @@ impl OrchestratorCrypto for CryptoService {
         Ok(tonic::Response::new(DeriveSessionKeysResponse {
             session_keys: Some(session_keys),
         }))
+    }
+
+    async fn sign(
+        &self,
+        _request: Request<SignRequest>,
+    ) -> Result<Response<SignResponse>, tonic::Status> {
+        // TODO(#4074): Implement once the DICE signing key is available in the orchestrator.
+        Err(tonic::Status::unimplemented("not yet implemented"))
     }
 }
