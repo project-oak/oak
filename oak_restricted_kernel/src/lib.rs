@@ -55,7 +55,6 @@ pub mod shutdown;
 #[cfg(feature = "simple_io_channel")]
 mod simpleio;
 mod snp;
-pub mod snp_guest;
 mod syscall;
 #[cfg(feature = "vsock_channel")]
 mod virtio;
@@ -64,15 +63,10 @@ mod virtio_console;
 
 extern crate alloc;
 
-use crate::{
-    acpi::Acpi,
-    mm::Translator,
-    snp::{get_snp_page_addresses, init_snp_pages},
-    snp_guest::DerivedKey,
-};
 use alloc::{alloc::Allocator, boxed::Box};
 use core::{marker::Sync, panic::PanicInfo, str::FromStr};
-use hkdf::HkdfExtract;
+
+use hkdf::Hkdf;
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
@@ -91,6 +85,16 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 use zerocopy::FromBytes;
+use zeroize::Zeroize;
+
+use crate::{
+    acpi::Acpi,
+    mm::Translator,
+    snp::{get_snp_page_addresses, init_snp_pages},
+};
+
+/// A derived sealing key.
+type DerivedKey = [u8; 32];
 
 /// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 512 GiB of memory, for now.
@@ -196,7 +200,6 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 snp_pages.expect("missing SNP CPUID and secrets pages"),
                 mapper,
             );
-            snp::init_guest_message_encryptor();
         }
     }
 
@@ -291,7 +294,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
             .expect("failed to read dice data");
 
         // Overwrite the dice data provided by stage0 after reading.
-        dice_memory_slice.fill(0);
+        dice_memory_slice.zeroize();
 
         if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
             panic!("dice data loaded from stage0 failed validation");
@@ -335,22 +338,19 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let application = payload::Application::load_raw(&mut *channel)
         .expect("failed to load application binary from channel");
 
+    // Mix in the application digest when deriving CDI for Layer 2.
+    let hkdf = Hkdf::<Sha256>::new(
+        Some(application.digest()),
+        &stage0_dice_data.layer_1_cdi.cdi[..],
+    );
+    let mut derived_key = DerivedKey::default();
+    hkdf.expand(b"CDI_Seal", &mut derived_key)
+        .expect("invalid length for derived key");
+
     let restricted_kernel_dice_data =
         oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, application.digest());
 
-    let derived_key = if sev_snp_enabled {
-        snp_guest::get_derived_key().expect("couldn't derive key")
-    } else {
-        // Zero fixed key since we can't derive a consistent key without SEV-SNP.
-        DerivedKey::default()
-    };
-    // Mix the application digest into the final derived key.
-    let mut extraction = HkdfExtract::<Sha256>::new(Some(b"Oak application key"));
-    extraction.input_ikm(&derived_key);
-    extraction.input_ikm(application.digest());
-    let (derived_key, _) = extraction.finalize();
-
-    syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key.into());
+    syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key);
 
     // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
     // under the kernel's control.

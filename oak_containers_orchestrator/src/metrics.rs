@@ -14,13 +14,16 @@
 // limitations under the License.
 //
 
-use crate::launcher_client::LauncherClient;
+use std::{sync::Arc, time::Duration};
+
 use anyhow::Result;
 use opentelemetry_api::{
     metrics::{AsyncInstrument, Meter, MeterProvider, ObservableCounter, ObservableGauge, Unit},
     KeyValue,
 };
-use std::{sync::Arc, time::Duration};
+use procfs::CurrentSI;
+
+use crate::launcher_client::LauncherClient;
 
 // It's not dead, it's just asynchronous.
 #[allow(dead_code)]
@@ -94,7 +97,7 @@ impl SystemMetrics {
     }
 
     fn cpu_seconds_total(counter: &dyn AsyncInstrument<u64>) {
-        let stats = procfs::KernelStats::new().unwrap();
+        let stats = procfs::KernelStats::current().unwrap();
 
         for (cpu, stats) in stats.cpu_time.iter().enumerate() {
             let attributes = |mode| {
@@ -124,24 +127,24 @@ impl SystemMetrics {
     }
 
     fn context_switches_total(counter: &dyn AsyncInstrument<u64>) {
-        let stats = procfs::KernelStats::new().unwrap();
+        let stats = procfs::KernelStats::current().unwrap();
         counter.observe(stats.ctxt, &[]);
     }
 
     fn forks_total(counter: &dyn AsyncInstrument<u64>) {
-        let stats = procfs::KernelStats::new().unwrap();
+        let stats = procfs::KernelStats::current().unwrap();
         counter.observe(stats.processes, &[]);
     }
 
     fn procs_blocked(gauge: &dyn AsyncInstrument<u64>) {
-        let stats = procfs::KernelStats::new().unwrap();
+        let stats = procfs::KernelStats::current().unwrap();
         if let Some(procs_blocked) = stats.procs_blocked {
             gauge.observe(procs_blocked.into(), &[]);
         }
     }
 
     fn procs_running(gauge: &dyn AsyncInstrument<u64>) {
-        let stats = procfs::KernelStats::new().unwrap();
+        let stats = procfs::KernelStats::current().unwrap();
         if let Some(procs_running) = stats.procs_running {
             gauge.observe(procs_running.into(), &[]);
         }

@@ -14,23 +14,23 @@
 // limitations under the License.
 //
 
-use crate::try_parse_phys_addr;
+use std::fs::{read_dir, read_to_string, OpenOptions};
+
 use anyhow::Context;
 use ciborium::Value;
 use coset::cwt::ClaimName;
 use nix::sys::mman::{mmap, munmap, MapFlags, ProtFlags};
+use oak_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
 use oak_dice::{
     cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID},
     evidence::{Stage0DiceData, STAGE0_MAGIC},
 };
-use oak_remote_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
 use sha2::{Digest, Sha256};
-use std::{
-    fs::{read_dir, read_to_string, OpenOptions},
-    os::fd::AsRawFd,
-};
 use x86_64::PhysAddr;
 use zerocopy::FromBytes;
+use zeroize::Zeroize;
+
+use crate::try_parse_phys_addr;
 
 /// The expected string representation of the custom type for the reserved memory range that
 /// contains the DICE data.
@@ -106,7 +106,8 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
             length.try_into()?,
             ProtFlags::PROT_READ | ProtFlags::PROT_WRITE,
             MapFlags::MAP_SHARED,
-            dice_file.as_raw_fd(),
+            // Pass the file descriptor as reference to avoid closing it.
+            Some(&dice_file),
             start.as_u64().try_into()?,
         )?
     };
@@ -119,7 +120,7 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
             .ok_or_else(|| anyhow::anyhow!("size mismatch while reading DICE data"))?;
 
         // Zero out the source memory.
-        source.fill(0);
+        source.zeroize();
         result
     };
 

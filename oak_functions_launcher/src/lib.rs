@@ -23,8 +23,8 @@ pub mod server;
 
 pub mod proto {
     pub mod oak {
+        pub use oak_attestation::proto::oak::attestation;
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::attestation;
         pub mod functions {
             #![allow(dead_code)]
             use prost::Message;
@@ -40,17 +40,19 @@ pub mod proto {
     }
 }
 
-use crate::proto::oak::functions::{
-    InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
-};
+use std::{fs, path::PathBuf, time::Duration};
+
 use anyhow::Context;
 use clap::Parser;
 use oak_launcher_utils::{
     channel::{self, ConnectorHandle},
     launcher,
 };
-use std::{fs, path::PathBuf, time::Duration};
 use ubyte::ByteUnit;
+
+use crate::proto::oak::functions::{
+    InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
+};
 
 #[derive(Parser, Debug)]
 #[group(skip)]

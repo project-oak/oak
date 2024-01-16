@@ -30,14 +30,6 @@ java_binary(
 )
 
 java_binary(
-    name = "main_verifier",
-    main_class = "com.google.oak.verification.MainVerifier",
-    runtime_deps = [
-        ":verification",
-    ],
-)
-
-java_binary(
     name = "signature_verifier",
     main_class = "com.google.oak.verification.SignatureVerifier",
     runtime_deps = [
@@ -49,10 +41,6 @@ java_library(
     name = "verification",
     srcs = glob(["*.java"]),
     deps = [
-        "//proto:digest_java_proto",
-        "//proto/attestation:endorsement_java_proto",
-        "//proto/attestation:evidence_java_proto",
-        "//proto/attestation:reference_value_java_proto",
         "@com_google_code_gson_gson",
     ],
 )

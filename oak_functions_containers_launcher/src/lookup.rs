@@ -16,13 +16,14 @@
 
 use std::{collections::HashMap, path::PathBuf};
 
+use anyhow::{anyhow, Context};
+use prost::Message;
+use ubyte::ByteUnit;
+
 use crate::proto::oak::functions::{
     oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient, Empty,
     ExtendNextLookupDataRequest, FinishNextLookupDataRequest, LookupDataChunk, LookupDataEntry,
 };
-use anyhow::{anyhow, Context};
-use prost::Message;
-use ubyte::ByteUnit;
 
 struct UpdateClient<'a, I: Iterator<Item = LookupDataChunk>> {
     inner: &'a mut GrpcOakFunctionsClient<tonic::transport::channel::Channel>,

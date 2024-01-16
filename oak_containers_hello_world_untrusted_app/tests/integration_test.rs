@@ -15,9 +15,10 @@
 
 //! Integration test that launches the trusted app and invokes it.
 
+use std::sync::Once;
+
 use oak_containers_launcher::Args;
 use oak_crypto::encryptor::ClientEncryptor;
-use std::sync::Once;
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 

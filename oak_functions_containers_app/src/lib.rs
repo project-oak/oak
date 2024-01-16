@@ -14,8 +14,15 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
+use std::{
+    future::Future,
+    pin::Pin,
+    sync::{Arc, OnceLock},
+    time::Instant,
+};
+
 use anyhow::Context;
+use oak_attestation::handler::AsyncEncryptionHandler;
 use oak_crypto::encryptor::AsyncRecipientContextGenerator;
 use oak_functions_service::{
     instance::OakFunctionsInstance,
@@ -27,21 +34,16 @@ use oak_functions_service::{
     },
     Observer,
 };
-use oak_remote_attestation::handler::AsyncEncryptionHandler;
 use opentelemetry_api::{
-    metrics::{Histogram, Meter, MeterProvider, Unit},
+    metrics::{Histogram, Meter, Unit},
     KeyValue,
 };
 use prost::Message;
-use std::{
-    future::Future,
-    pin::Pin,
-    sync::{Arc, OnceLock},
-    time::Instant,
-};
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 use tracing::Span;
+
+use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
 
 pub mod proto {
     pub mod oak {
@@ -53,28 +55,26 @@ pub mod proto {
             #![allow(clippy::return_self_not_must_use)]
             tonic::include_proto!("oak.containers");
         }
+        pub use oak_attestation::proto::oak::{attestation, session};
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::{attestation, session};
     }
 }
-
-pub mod orchestrator_client;
 
 // Instance of the OakFunctions service for Oak Containers.
 pub struct OakFunctionsContainersService<G: AsyncRecipientContextGenerator + Send + Sync> {
     instance: OnceLock<OakFunctionsInstance>,
-    encryption_context: Arc<G>,
+    encryption_key_handle: Arc<G>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
 impl<G: AsyncRecipientContextGenerator + Send + Sync> OakFunctionsContainersService<G> {
     pub fn new(
-        encryption_context: Arc<G>,
+        encryption_key_handle: Arc<G>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> Self {
         Self {
             instance: OnceLock::new(),
-            encryption_context,
+            encryption_key_handle,
             observer,
         }
     }
@@ -135,7 +135,6 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
         &self,
         request: tonic::Request<InvokeRequest>,
     ) -> tonic::Result<tonic::Response<InvokeResponse>> {
-        let encryption_key_provider = self.encryption_context.clone();
         let instance = self.get_instance()?;
 
         let encrypted_request = request.into_inner().encrypted_request.ok_or_else(|| {
@@ -144,7 +143,7 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
             )
         })?;
 
-        AsyncEncryptionHandler::create(encryption_key_provider, |r| async {
+        AsyncEncryptionHandler::create(self.encryption_key_handle.clone(), |r| async {
             // Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
             let response_result: Result<Vec<u8>, micro_rpc::Status> =
@@ -248,7 +247,7 @@ impl<S> tower::Layer<S> for MonitoringLayer {
             inner,
             latencies: self
                 .meter
-                .u64_histogram("rpc/server/server_latency")
+                .u64_histogram("rpc_server_latency")
                 .with_unit(Unit::new("milliseconds"))
                 .with_description("Distribution of server-side RPC latency")
                 .init(),
@@ -346,12 +345,12 @@ impl OtelObserver {
         Self {
             wasm_initialization: meter
                 .u64_histogram("wasm_initialization")
-                .with_unit(Unit::new("milliseconds"))
+                .with_unit(Unit::new("microseconds"))
                 .with_description("Time spent setting up wasm sandbox for invocation")
                 .init(),
             wasm_invocation: meter
                 .u64_histogram("wasm_invocation")
-                .with_unit(Unit::new("milliseconds"))
+                .with_unit(Unit::new("microseconds"))
                 .with_description("Time spent on calling `main` in wasm sandbox")
                 .init(),
         }
@@ -360,12 +359,12 @@ impl OtelObserver {
 impl Observer for OtelObserver {
     fn wasm_initialization(&self, duration: core::time::Duration) {
         self.wasm_initialization
-            .record(duration.as_millis().try_into().unwrap_or(u64::MAX), &[])
+            .record(duration.as_micros().try_into().unwrap_or(u64::MAX), &[])
     }
 
     fn wasm_invocation(&self, duration: core::time::Duration) {
         self.wasm_invocation
-            .record(duration.as_millis().try_into().unwrap_or(u64::MAX), &[])
+            .record(duration.as_micros().try_into().unwrap_or(u64::MAX), &[])
     }
 }
 
@@ -376,12 +375,11 @@ static GRPC_SUCCESS: http::header::HeaderValue = http::header::HeaderValue::from
 const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static, P: MeterProvider>(
+pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static>(
     listener: TcpListener,
-    encryption_context: Arc<G>,
-    provider: P,
+    encryption_key_handle: Arc<G>,
+    meter: Meter,
 ) -> anyhow::Result<()> {
-    let meter = provider.meter("oak_functions_containers_app");
     tonic::transport::Server::builder()
         .layer(
             tower_http::trace::TraceLayer::new_for_grpc()
@@ -401,7 +399,7 @@ pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static, P:
         .layer(tower::load_shed::LoadShedLayer::new())
         .layer(MonitoringLayer::new(meter.clone()))
         .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
-            encryption_context,
+            encryption_key_handle,
             Some(Arc::new(OtelObserver::new(meter))),
         )))
         .serve_with_incoming(TcpListenerStream::new(listener))

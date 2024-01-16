@@ -12,13 +12,13 @@ clap = { version = "*", features = ["derive"] }
 coset = { version = "*", features = ["std"] }
 hpke = { version = "*", default-features = false, features = [
   "alloc",
-  "x25519"
+  "x25519",
 ] }
 log = "*"
-nix = "*"
+nix = { version = "*", features = ["user"] }
+oak_attestation = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
-oak_remote_attestation = { workspace = true }
 oci-spec = "*"
 opentelemetry_api = { version = "*", default-features = false, features = [
   "metrics",
@@ -52,6 +52,7 @@ tokio-stream = { version = "*", features = ["net"] }
 tokio-util = { version = "*", default-features = false }
 tonic = { workspace = true }
 walkdir = "*"
+zeroize = "*"
 
 [build-dependencies]
 oak_grpc_utils = { workspace = true }

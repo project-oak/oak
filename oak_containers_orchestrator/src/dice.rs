@@ -13,19 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::Context;
-use ciborium::Value;
-use coset::cwt::ClaimName;
-use oak_dice::cert::{
-    CONTAINER_IMAGE_ID, LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID, SHA2_256_ID,
-};
-use oak_remote_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
-use prost::Message;
-use sha2::{Digest, Sha256};
 use std::{
     fs::OpenOptions,
     io::{Read, Seek, Write},
 };
+
+use anyhow::Context;
+use ciborium::Value;
+use coset::cwt::ClaimName;
+use oak_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
+use oak_dice::cert::{
+    CONTAINER_IMAGE_ID, LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID, SHA2_256_ID,
+};
+use prost::Message;
+use sha2::{Digest, Sha256};
+use zeroize::Zeroize;
 
 /// The path to the file where the DICE data provided by Stage 1 is stored.
 const STAGE1_DICE_DATA_PATH: &str = "/oak/dice";
@@ -39,14 +41,16 @@ pub fn load_stage1_dice_data() -> anyhow::Result<DiceBuilder> {
         .write(true)
         .open(STAGE1_DICE_DATA_PATH)
         .context("couldn't open DICE data file")?;
-    let mut buffer = Vec::new();
+    let size = file.metadata().map(|m| m.len() as usize).unwrap_or(0);
+
+    let mut buffer = Vec::with_capacity(size);
     file.read_to_end(&mut buffer)
         .context("couldn't read DICE data from file")?;
 
     let result =
         DiceData::decode_length_delimited(&buffer[..]).context("couldn't parse DICE data")?;
 
-    buffer.fill(0);
+    buffer.zeroize();
     file.rewind()?;
     file.write_all(&buffer)
         .context("couldn't overwrite DICE data file")?;

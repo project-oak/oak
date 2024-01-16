@@ -18,9 +18,12 @@
 //! verifying signatures in a Rekor LogEntry.
 
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
+
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};
+use serde_canonical_json::CanonicalFormatter;
+use serde_json::Serializer;
 
 use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_raw};
 
@@ -144,8 +147,11 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
 
         // Canonicalized JSON document that is signed. Canonicalization should follow the RFC 8785
         // rules.
-        let canonicalized = serde_jcs::to_vec(&entry_subset)
-            .context("couldn't create canonicalized json string")?;
+        let mut serializer = Serializer::with_formatter(Vec::new(), CanonicalFormatter::new());
+        entry_subset
+            .serialize(&mut serializer)
+            .context("Failed to serialize Rekor signed payload to JSON")?;
+        let signed_json_bytes: Vec<u8> = serializer.into_inner();
 
         // Extract the signature from the LogEntry.
         let sig_base64 = log_entry
@@ -159,7 +165,7 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
             .context("couldn't decode Base64 signature")?;
 
         Ok(Self {
-            canonicalized,
+            canonicalized: signed_json_bytes,
             signature,
         })
     }

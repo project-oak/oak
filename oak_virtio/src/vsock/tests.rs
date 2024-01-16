@@ -14,12 +14,13 @@
 // limitations under the License.
 //
 
+use alloc::alloc::Global;
+
 use super::*;
 use crate::test::{
     identity_map, inverse_identity_map, new_legacy_transport, new_transport_small_queue,
     new_valid_transport, DeviceStatus, TestingTransport, VIRTIO_F_VERSION_1,
 };
-use alloc::alloc::Global;
 
 const GUEST_CID: u64 = 3;
 

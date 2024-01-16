@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-use crate::{shutdown, snp::CPUID_PAGE};
 use core::{arch::asm, ops::Deref};
+
 use log::error;
 use oak_sev_guest::{
     interrupts::{mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame},
@@ -28,6 +28,8 @@ use x86_64::{
     structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode},
     VirtAddr,
 };
+
+use crate::{shutdown, snp::CPUID_PAGE};
 
 static IDT: Spinlock<InterruptDescriptorTable> = Spinlock::new(InterruptDescriptorTable::new());
 

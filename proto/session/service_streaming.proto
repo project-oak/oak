@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak.session.v1;
 
-import "oak_remote_attestation/proto/v1/messages.proto";
+import "proto/session/messages.proto";
 
 option java_multiple_files = true;
 option java_package = "com.google.oak.session.v1";

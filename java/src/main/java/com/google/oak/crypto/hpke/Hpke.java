@@ -27,6 +27,7 @@ public final class Hpke {
       final byte[] serializedRecipientPublicKey, final byte[] info);
   private static native RecipientContext nativeSetupBaseRecipient(
       final byte[] serializedEncapsulatedPublicKey, KeyPair recipientKeyPair, final byte[] info);
+  private static native byte[] nativeGenerateRandomNonce();
 
   /**
    * Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
@@ -62,6 +63,18 @@ public final class Hpke {
       return Result.error(new Exception("Failed to setupBaseRecipient"));
     }
     return Result.success(ctx);
+  }
+
+  /**
+   * Generates a random nonce used by AEAD encryption scheme.
+   * <https://datatracker.ietf.org/doc/html/rfc5116>
+   */
+  public static final Result<byte[], Exception> generateRandomNonce() {
+    byte[] nativeResult = nativeGenerateRandomNonce();
+    if (nativeResult == null) {
+      return Result.error(new Exception("generateRandomNonce failed"));
+    }
+    return Result.success(nativeResult);
   }
 
   private Hpke() {}

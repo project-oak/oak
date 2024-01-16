@@ -16,8 +16,8 @@
 
 pub mod proto {
     pub mod oak {
+        pub use oak_attestation::proto::oak::attestation;
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::attestation;
         pub mod session {
             pub mod v1 {
                 #![allow(clippy::return_self_not_must_use)]
@@ -31,10 +31,12 @@ pub mod proto {
 pub mod transport;
 pub mod verifier;
 
-use crate::transport::{EvidenceProvider, Transport};
+use std::vec::Vec;
+
 use anyhow::{anyhow, Context};
 use oak_crypto::encryptor::ClientEncryptor;
-use std::vec::Vec;
+
+use crate::transport::{EvidenceProvider, Transport};
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 

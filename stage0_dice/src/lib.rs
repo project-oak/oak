@@ -24,7 +24,9 @@
 extern crate alloc;
 
 use alloc::{string::String, vec, vec::Vec};
+
 use coset::{cbor::value::Value, cwt::ClaimName, CborSerializable, CoseSign1};
+use hkdf::Hkdf;
 use oak_dice::{
     cert::{
         derive_verifying_key_id, generate_ecdsa_key_pair, generate_signing_certificate,
@@ -39,7 +41,9 @@ use p256::ecdsa::SigningKey;
 use sha2::{Digest, Sha256};
 use zerocopy::{AsBytes, FromZeroes};
 
-// The number of custom bytes that can be included in the attestation report.
+type DerivedKey = [u8; 32];
+
+// The number of bytes of custom data that can be included in the attestation report.
 pub const REPORT_DATA_SIZE: usize = 64;
 
 /// Measurements of various components in Stage1.
@@ -131,9 +135,11 @@ fn generate_stage1_certificate(
 /// Generates attestation evidence for the 'measurements' of all Stage 1 components.
 pub fn generate_dice_data<
     F: FnOnce([u8; REPORT_DATA_SIZE]) -> Result<AttestationReport, &'static str>,
+    G: FnOnce() -> Result<DerivedKey, &'static str>,
 >(
     measurements: &Measurements,
     get_attestation: F,
+    get_derived_key: G,
 ) -> Stage0DiceData {
     let mut result = Stage0DiceData::new_zeroed();
     // Generate ECA Stage0 key pair. This key will be used to sign Stage1 ECA certificate.
@@ -153,8 +159,6 @@ pub fn generate_dice_data<
         .to_vec()
         .expect("couldn't serialize stage 1 ECA certificate");
 
-    let stage1_eca_signing_key: Vec<u8> = stage1_eca_signing_key.to_bytes().as_slice().into();
-
     // Use the SHA2-256 digest of the serialized ECA verifying key as the report data.
     let eca_measurement = {
         let mut digest = Sha256::default();
@@ -168,6 +172,18 @@ pub fn generate_dice_data<
     let report = get_attestation(report_data).expect("couldn't get attestation report.");
     let report_bytes = report.as_bytes();
 
+    // Use the root derived key as the UDS (unique device secret) for deriving sealing keys.
+    let ikm: DerivedKey = get_derived_key().expect("couldn't get derived key");
+
+    // Mix in the measurements of the kernel, the kernel command-line, the kernel setup data and the
+    // initial RAM disk when deriving the CDI for Layer 1.
+    let mut salt: Vec<u8> = Vec::with_capacity(128);
+    salt.extend_from_slice(&measurements.kernel_measurement[..]);
+    salt.extend_from_slice(&measurements.cmdline_measurement[..]);
+    salt.extend_from_slice(&measurements.setup_data_measurement[..]);
+    salt.extend_from_slice(&measurements.ram_disk_measurement[..]);
+    let hkdf = Hkdf::<Sha256>::new(Some(&salt), &ikm[..]);
+
     result.magic = STAGE0_MAGIC;
     result.root_layer_evidence.tee_platform = TeePlatform::AmdSevSnp as u64;
     result
@@ -180,8 +196,11 @@ pub fn generate_dice_data<
         .expect("failed to set eca public key");
     result.layer_1_evidence.eca_certificate[..stage1_eca_cert.len()]
         .copy_from_slice(&stage1_eca_cert);
-    result.layer_1_certificate_authority.eca_private_key[..stage1_eca_signing_key.len()]
-        .copy_from_slice(&stage1_eca_signing_key);
+    result.layer_1_certificate_authority.eca_private_key[..stage1_eca_signing_key.to_bytes().len()]
+        .copy_from_slice(stage1_eca_signing_key.to_bytes().as_slice());
+    hkdf.expand(b"CDI_Seal", &mut result.layer_1_cdi.cdi[..])
+        .expect("invalid length for HKDF output");
+
     result
 }
 
@@ -200,4 +219,9 @@ pub fn mock_attestation_report(
     let mut report = AttestationReport::new_zeroed();
     report.data.report_data = report_data;
     Ok(report)
+}
+
+/// Returns a fixed key filled with zeros.
+pub fn mock_derived_key() -> Result<DerivedKey, &'static str> {
+    Ok(DerivedKey::default())
 }

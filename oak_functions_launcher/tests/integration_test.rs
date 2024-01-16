@@ -15,12 +15,13 @@
 
 //! Integration tests for the Oak Functions Launcher.
 
+use std::{io::Write, time::Duration};
+
 use oak_functions_client::OakFunctionsClient;
 use oak_functions_launcher::{
     proto::oak::functions::OakFunctionsAsyncClient, update_lookup_data, LookupDataConfig,
 };
 use oak_launcher_utils::launcher;
-use std::{io::Write, time::Duration};
 use ubyte::ByteUnit;
 use xtask::{launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
 

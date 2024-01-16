@@ -20,6 +20,7 @@
 #![feature(naked_functions)]
 
 use core::{arch::asm, panic::PanicInfo};
+
 use lazy_static::lazy_static;
 use oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
 use oak_sev_guest::{

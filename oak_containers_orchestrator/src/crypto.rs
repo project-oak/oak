@@ -13,6 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Arc;
+
+use anyhow::{anyhow, Context};
+use hpke::{kem::X25519HkdfSha256, Deserializable, Kem};
+use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator, ServerEncryptor};
+use tonic::{Request, Response};
+
 use crate::proto::oak::{
     containers::v1::{
         orchestrator_crypto_server::OrchestratorCrypto, DeriveSessionKeysRequest,
@@ -20,11 +27,6 @@ use crate::proto::oak::{
     },
     key_provisioning::v1::GroupKeys,
 };
-use anyhow::{anyhow, Context};
-use hpke::{kem::X25519HkdfSha256, Deserializable, Kem};
-use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator, ServerEncryptor};
-use std::sync::Arc;
-use tonic::{Request, Response};
 
 /// An implementation of the Key Store without group keys.
 pub struct InstanceKeyStore {
@@ -142,7 +144,7 @@ impl OrchestratorCrypto for CryptoService {
             KeyOrigin::Group => &self.key_store.group_encryption_key,
         };
 
-        let context = encryption_key
+        let session_keys = encryption_key
             .generate_recipient_context(&request.serialized_encapsulated_public_key)
             .map_err(|err| tonic::Status::internal(format!("couldn't derive session keys: {err}")))?
             .serialize()
@@ -150,7 +152,7 @@ impl OrchestratorCrypto for CryptoService {
                 tonic::Status::internal(format!("couldn't serialize session keys: {err}"))
             })?;
         Ok(tonic::Response::new(DeriveSessionKeysResponse {
-            context: Some(context),
+            session_keys: Some(session_keys),
         }))
     }
 }

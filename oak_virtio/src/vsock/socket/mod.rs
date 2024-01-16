@@ -14,14 +14,16 @@
 // limitations under the License.
 //
 
+use alloc::collections::VecDeque;
+use core::{alloc::Allocator, num::Wrapping};
+
+use rust_hypervisor_firmware_virtio::virtio::VirtioTransport;
+
 use super::{
     packet::{Packet, VSockFlags, VSockOp, HEADER_SIZE},
     VSock, DATA_BUFFER_SIZE,
 };
 use crate::{Read, Write};
-use alloc::collections::VecDeque;
-use core::{alloc::Allocator, num::Wrapping};
-use rust_hypervisor_firmware_virtio::virtio::VirtioTransport;
 
 /// The maximum buffer size used by the socket.
 ///

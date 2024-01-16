@@ -25,9 +25,10 @@
 
 #![feature(async_closure)]
 
+use std::path::{Path, PathBuf};
+
 use clap::{CommandFactory, Parser};
 use colored::*;
-use std::path::{Path, PathBuf};
 use xtask::{
     check_build_licenses::*,
     check_license::*,

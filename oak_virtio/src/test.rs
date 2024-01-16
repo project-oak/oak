@@ -14,13 +14,15 @@
 // limitations under the License.
 //
 
-use crate::queue::virtq::{AvailRing, Desc, DescFlags, UsedRing};
 use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
-use bitflags::bitflags;
 use core::mem::size_of;
-use rust_hypervisor_firmware_virtio::virtio::{Error, VirtioTransport};
 use std::sync::Mutex;
+
+use bitflags::bitflags;
+use rust_hypervisor_firmware_virtio::virtio::{Error, VirtioTransport};
 use x86_64::{PhysAddr, VirtAddr};
+
+use crate::queue::virtq::{AvailRing, Desc, DescFlags, UsedRing};
 
 /// Virtio Version 1 feature bit.
 /// See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-4100006>.

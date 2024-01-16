@@ -16,30 +16,8 @@
 
 //! Provides verification based on evidence, endorsements and reference values.
 
-use crate::{
-    alloc::string::ToString,
-    claims::{get_digest, parse_endorsement_statement},
-    endorsement::verify_binary_endorsement,
-    proto::oak::{
-        attestation::v1::{
-            attestation_results::Status, binary_reference_value, endorsements, reference_values,
-            ApplicationKeys, ApplicationLayerEndorsements, ApplicationLayerReferenceValues,
-            AttestationResults, BinaryReferenceValue, CbEndorsements, CbReferenceValues,
-            ContainerLayerEndorsements, ContainerLayerReferenceValues, Endorsements, Evidence,
-            KernelLayerEndorsements, KernelLayerReferenceValues, LayerEvidence,
-            OakContainersEndorsements, OakContainersReferenceValues,
-            OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-            RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
-            SystemLayerEndorsements, SystemLayerReferenceValues, TransparentReleaseEndorsement,
-        },
-        RawDigest,
-    },
-    util::{
-        hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match, raw_to_hex_digest, MatchResult,
-    },
-};
-
 use alloc::vec::Vec;
+
 use coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
 use ecdsa::{signature::Verifier, Signature};
 use oak_dice::cert::{
@@ -48,6 +26,33 @@ use oak_dice::cert::{
     KERNEL_COMMANDLINE_MEASUREMENT_ID, KERNEL_LAYER_ID, KERNEL_MEASUREMENT_ID,
     LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID,
     MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
+};
+use oak_sev_guest::guest::{AttestationReport, PolicyFlags};
+use zerocopy::FromBytes;
+
+use crate::{
+    alloc::string::ToString,
+    claims::{get_digest, parse_endorsement_statement},
+    endorsement::verify_binary_endorsement,
+    proto::oak::{
+        attestation::v1::{
+            attestation_results::Status, binary_reference_value, endorsements, reference_values,
+            AmdSevReferenceValues, ApplicationKeys, ApplicationLayerEndorsements,
+            ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue,
+            CbEndorsements, CbReferenceValues, ContainerLayerEndorsements,
+            ContainerLayerReferenceValues, Endorsements, Evidence, IntelTdxReferenceValues,
+            KernelLayerEndorsements, KernelLayerReferenceValues, LayerEvidence,
+            OakContainersEndorsements, OakContainersReferenceValues,
+            OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+            RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
+            SystemLayerEndorsements, SystemLayerReferenceValues, TeePlatform,
+            TransparentReleaseEndorsement,
+        },
+        RawDigest,
+    },
+    util::{
+        hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match, raw_to_hex_digest, MatchResult,
+    },
 };
 
 // We don't use additional authenticated data.
@@ -311,17 +316,67 @@ fn verify_cb(
     _endorsements: &CbEndorsements,
     _reference_values: &CbReferenceValues,
 ) -> anyhow::Result<()> {
-    anyhow::bail!("Needs implementation")
+    anyhow::bail!("needs implementation")
+}
+
+/// Verifies the AMD SEV attestation report.
+fn verify_amd_sev_attestation_report(
+    report: &[u8],
+    reference_values: &AmdSevReferenceValues,
+) -> anyhow::Result<()> {
+    let parsed = AttestationReport::ref_from(report)
+        .ok_or_else(|| anyhow::anyhow!("could not parse AMD SEV attestation report"))?;
+    parsed.validate().map_err(|msg| anyhow::anyhow!(msg))?;
+    let data = &parsed.data;
+
+    // Verify that we are not in debug mode.
+    if !reference_values.allow_debug {
+        let policy_flags = data
+            .policy
+            .get_flags()
+            .ok_or_else(|| anyhow::anyhow!("failed to parse flags"))?;
+        if policy_flags.bits() & PolicyFlags::DEBUG.bits() != 0 {
+            anyhow::bail!("debug mode not allowed");
+        }
+    }
+
+    Ok(())
+}
+
+/// Verifies the Intel TDX attestation report.
+fn verify_intel_tdx_attestation_report(
+    _report: &[u8],
+    _reference_values: &IntelTdxReferenceValues,
+) -> anyhow::Result<()> {
+    anyhow::bail!("needs implementation")
 }
 
 /// Verifies all ingredients of the root layer, which is common to both
 /// Oak Restricted Kernel and Oak Containers setups.
 fn verify_root_layer(
     now_utc_millis: i64,
-    _l: &RootLayerEvidence,
+    l: &RootLayerEvidence,
     e: &RootLayerEndorsements,
     r: &RootLayerReferenceValues,
 ) -> anyhow::Result<()> {
+    match l.platform() {
+        TeePlatform::Unspecified => anyhow::bail!("unspecified TEE platform"),
+        TeePlatform::AmdSevSnp => {
+            let amd_sev = r
+                .amd_sev
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("no AMD SEV reference values"))?;
+            verify_amd_sev_attestation_report(&l.remote_attestation_report, amd_sev)?
+        }
+        TeePlatform::IntelTdx => {
+            let intel_tdx = r
+                .intel_tdx
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("no Intel TDX reference values"))?;
+            verify_intel_tdx_attestation_report(&l.remote_attestation_report, intel_tdx)?
+        }
+    }
+
     let e_stage0 = e
         .stage0
         .as_ref()

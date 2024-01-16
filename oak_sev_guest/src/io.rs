@@ -14,14 +14,16 @@
 // limitations under the License.
 //
 
-use crate::ghcb::{Ghcb, GhcbProtocol};
 use core::marker::PhantomData;
+
 use lock_api::{Mutex, RawMutex};
 use spinning_top::{RawSpinlock, Spinlock};
 use x86_64::{
     instructions::port::Port,
     structures::port::{PortRead, PortWrite},
 };
+
+use crate::ghcb::{Ghcb, GhcbProtocol};
 
 /// Factory for instantiating IO port readers and writers.
 ///

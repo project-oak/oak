@@ -14,10 +14,12 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::session::v1::AttestationEvidence;
 use alloc::{sync::Arc, vec::Vec};
+
 use anyhow::Context;
 use oak_crypto::encryptor::EncryptionKeyProvider;
+
+use crate::proto::oak::session::v1::AttestationEvidence;
 
 /// A trait implementing the functionality of generating a remote attestation report.
 ///

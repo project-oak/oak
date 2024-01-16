@@ -22,19 +22,21 @@ pub mod proto {
     }
 }
 
-use crate::proto::oak::functions::oak_functions_client::OakFunctionsClient;
-use oak_crypto::encryptor::EncryptionKeyProvider;
-use oak_functions_containers_app::serve;
-use oak_functions_service::proto::oak::functions::InitializeRequest;
-use opentelemetry_api::metrics::noop::NoopMeterProvider;
 use std::{
     fs,
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
     time::Duration,
 };
+
+use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_functions_containers_app::serve;
+use oak_functions_service::proto::oak::functions::InitializeRequest;
+use opentelemetry_api::metrics::{noop::NoopMeterProvider, MeterProvider};
 use tokio::net::TcpListener;
 use tonic::transport::Endpoint;
+
+use crate::proto::oak::functions::oak_functions_client::OakFunctionsClient;
 
 #[tokio::test]
 async fn test_lookup() {
@@ -48,7 +50,7 @@ async fn test_lookup() {
     let server_handle = tokio::spawn(serve(
         listener,
         Arc::new(EncryptionKeyProvider::generate()),
-        NoopMeterProvider::new(),
+        NoopMeterProvider::new().meter(""),
     ));
 
     let mut oak_functions_client: OakFunctionsClient<tonic::transport::channel::Channel> = {

@@ -18,12 +18,14 @@
 
 extern crate alloc;
 
-use crate::Channel;
 use alloc::{boxed::Box, format, vec::Vec};
+use core::borrow::BorrowMut;
+
 use bitflags::bitflags;
 use bytes::{BufMut, BytesMut};
-use core::borrow::BorrowMut;
 use oak_core::timer::Timer;
+
+use crate::Channel;
 
 pub const PADDING_SIZE: usize = 4;
 

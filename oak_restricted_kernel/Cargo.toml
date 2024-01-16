@@ -54,6 +54,7 @@ oak_virtio = { workspace = true, optional = true }
 virtio-drivers = { version = "*", optional = true }
 x86_64 = "*"
 zerocopy = "*"
+zeroize = "*"
 
 [dev-dependencies]
 assertables = "*"

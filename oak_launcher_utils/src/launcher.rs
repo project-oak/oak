@@ -14,21 +14,26 @@
 // limitations under the License.
 //
 
-use crate::channel::{Connector, ConnectorHandle};
+use std::{
+    fs,
+    io::{BufRead, BufReader},
+    net::Shutdown,
+    os::{
+        fd::AsRawFd,
+        unix::{net, net::UnixStream},
+    },
+    path::PathBuf,
+    process::Stdio,
+};
+
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use clap::Parser;
 use command_fds::tokio::CommandFdAsyncExt;
 use log::info;
 use oak_channel::Write;
-use std::{
-    fs,
-    io::{BufRead, BufReader},
-    net::Shutdown,
-    os::unix::{io::AsRawFd, net, net::UnixStream},
-    path::PathBuf,
-    process::Stdio,
-};
+
+use crate::channel::{Connector, ConnectorHandle};
 
 const PAGE_SIZE: usize = 4096;
 

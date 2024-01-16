@@ -7,3 +7,4 @@ wrap_comments = true
 imports_granularity = "Crate"
 imports_layout = "mixed"
 edition = "2021"
+group_imports = "StdExternalCrate"

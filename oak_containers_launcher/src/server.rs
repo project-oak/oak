@@ -13,19 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::proto::oak::{
-    containers::{
-        launcher_server::{Launcher, LauncherServer},
-        v1::{
-            hostlib_key_provisioning_server::{
-                HostlibKeyProvisioning, HostlibKeyProvisioningServer,
-            },
-            GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole,
-        },
-        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
-    },
-    session::v1::AttestationEvidence,
+use std::{
+    pin::Pin,
+    sync::{Arc, Mutex},
 };
+
 use anyhow::anyhow;
 use futures::{FutureExt, Stream};
 use opentelemetry_proto::tonic::{
@@ -41,10 +33,6 @@ use opentelemetry_proto::tonic::{
     },
     common::v1::any_value::Value,
 };
-use std::{
-    pin::Pin,
-    sync::{Arc, Mutex},
-};
 use tokio::{
     io::{AsyncReadExt, BufReader},
     net::TcpListener,
@@ -52,6 +40,20 @@ use tokio::{
 };
 use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{transport::Server, Request, Response, Status};
+
+use crate::proto::oak::{
+    containers::{
+        launcher_server::{Launcher, LauncherServer},
+        v1::{
+            hostlib_key_provisioning_server::{
+                HostlibKeyProvisioning, HostlibKeyProvisioningServer,
+            },
+            GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole,
+        },
+        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+    },
+    session::v1::AttestationEvidence,
+};
 
 // Most gRPC implementations limit message sizes to 4MiB. Let's stay
 // comfortably below that by limiting responses to 3MiB.

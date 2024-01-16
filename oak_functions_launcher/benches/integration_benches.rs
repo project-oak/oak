@@ -19,6 +19,8 @@
 
 extern crate test;
 
+use std::path::PathBuf;
+
 use oak_crypto::encryptor::ClientEncryptor;
 use oak_functions_launcher::{
     proto::oak::functions::{InvokeRequest, OakFunctionsAsyncClient},
@@ -26,7 +28,6 @@ use oak_functions_launcher::{
 };
 use oak_launcher_utils::launcher;
 use prost::Message;
-use std::path::PathBuf;
 use test::Bencher;
 use ubyte::ByteUnit;
 use xtask::workspace_path;

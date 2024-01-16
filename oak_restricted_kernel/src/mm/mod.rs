@@ -14,11 +14,6 @@
 // limitations under the License.
 //
 
-use self::{
-    encrypted_mapper::{EncryptedPageTable, MemoryEncryption},
-    page_tables::RootPageTable,
-};
-use crate::{FRAME_ALLOCATOR, PAGE_TABLES, VMA_ALLOCATOR};
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
@@ -36,6 +31,12 @@ use x86_64::{
     },
     PhysAddr, VirtAddr,
 };
+
+use self::{
+    encrypted_mapper::{EncryptedPageTable, MemoryEncryption},
+    page_tables::RootPageTable,
+};
+use crate::{FRAME_ALLOCATOR, PAGE_TABLES, VMA_ALLOCATOR};
 
 mod bitmap_frame_allocator;
 pub mod encrypted_mapper;

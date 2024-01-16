@@ -14,11 +14,8 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::attestation::v1::{
-    ApplicationKeys, CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
-    TeePlatform,
-};
 use alloc::{vec, vec::Vec};
+
 use anyhow::{anyhow, Context};
 use coset::{
     cwt::{ClaimName, ClaimsSet},
@@ -32,6 +29,12 @@ use oak_dice::{
     evidence::Stage0DiceData,
 };
 use p256::ecdsa::{SigningKey, VerifyingKey};
+use zeroize::Zeroize;
+
+use crate::proto::oak::attestation::v1::{
+    ApplicationKeys, CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
+    TeePlatform,
+};
 
 /// Builds the DICE evidence and certificate authority for the next DICE layer.
 pub struct DiceBuilder {
@@ -147,7 +150,7 @@ impl Drop for DiceData {
     fn drop(&mut self) {
         // Zero out the ECA private key if it was set.
         if let Some(certificate_authority) = &mut self.certificate_authority {
-            certificate_authority.eca_private_key.fill(0);
+            certificate_authority.eca_private_key.zeroize();
         }
     }
 }

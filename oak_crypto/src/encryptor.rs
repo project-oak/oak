@@ -18,17 +18,19 @@
 //! <https://www.rfc-editor.org/rfc/rfc9180.html>
 //! <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
 
-use crate::{
-    hpke::{
-        deserialize_nonce, setup_base_recipient, setup_base_sender, KeyPair, PrivateKey, PublicKey,
-        RecipientContext, SenderContext,
-    },
-    proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
-};
 use alloc::{boxed::Box, sync::Arc, vec::Vec};
+
 use anyhow::{anyhow, Context};
 use async_trait::async_trait;
 use hpke::Deserializable;
+
+use crate::{
+    hpke::{
+        deserialize_nonce, generate_random_nonce, setup_base_recipient, setup_base_sender, KeyPair,
+        PrivateKey, PublicKey, RecipientContext, SenderContext,
+    },
+    proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
+};
 
 /// Info string used by Hybrid Public Key Encryption;
 pub(crate) const OAK_HPKE_INFO: &[u8] = b"Oak Hybrid Public Key Encryption v1";
@@ -200,10 +202,7 @@ impl ClientEncryptor {
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<EncryptedRequest> {
-        let nonce = self
-            .sender_context
-            .generate_nonce()
-            .context("couldn't generate nonce")?;
+        let nonce = generate_random_nonce();
         let ciphertext = self
             .sender_context
             .seal(&nonce, plaintext, associated_data)
@@ -304,10 +303,7 @@ impl ServerEncryptor {
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<EncryptedResponse> {
-        let nonce = self
-            .recipient_context
-            .generate_nonce()
-            .context("couldn't generate nonce")?;
+        let nonce = generate_random_nonce();
         let ciphertext = self
             .recipient_context
             .seal(&nonce, plaintext, associated_data)

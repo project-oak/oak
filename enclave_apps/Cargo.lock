@@ -342,9 +342,9 @@ checksum = "90e5c1c8368803113bf0c9584fc495a58b86dc8a29edbf8fe877d21d9507e797"
 
 [[package]]
 name = "elliptic-curve"
-version = "0.13.6"
+version = "0.13.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d97ca172ae9dc9f9b779a6e3a65d308f2af74e5b8c921299075bdb4a0370e914"
+checksum = "b5e6043086bf7973472e0c7dff2142ea0b680d30e18d9cc40f267efbf222bd47"
 dependencies = [
  "base16ct",
  "crypto-bigint",
@@ -672,6 +672,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_attestation"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ciborium",
+ "coset",
+ "log",
+ "micro_rpc_build",
+ "oak_crypto",
+ "oak_dice",
+ "p256",
+ "prost",
+ "rand_core",
+ "sha2",
+ "zeroize",
+]
+
+[[package]]
 name = "oak_channel"
 version = "0.1.0"
 dependencies = [
@@ -726,6 +744,7 @@ dependencies = [
  "static_assertions",
  "strum",
  "zerocopy",
+ "zeroize",
 ]
 
 [[package]]
@@ -795,13 +814,13 @@ version = "0.1.0"
 dependencies = [
  "log",
  "micro_rpc",
+ "oak_attestation",
  "oak_channel",
  "oak_core",
  "oak_crypto",
  "oak_dice",
  "oak_enclave_runtime_support",
  "oak_functions_service",
- "oak_remote_attestation",
  "oak_restricted_kernel_interface",
  "oak_restricted_kernel_sdk",
  "static_assertions",
@@ -829,33 +848,16 @@ dependencies = [
  "log",
  "micro_rpc",
  "micro_rpc_build",
+ "oak_attestation",
  "oak_core",
  "oak_crypto",
  "oak_dice",
  "oak_functions_abi",
  "oak_functions_sdk",
- "oak_remote_attestation",
  "oak_restricted_kernel_sdk",
  "prost",
  "spinning_top",
  "wasmi",
-]
-
-[[package]]
-name = "oak_remote_attestation"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ciborium",
- "coset",
- "log",
- "micro_rpc_build",
- "oak_crypto",
- "oak_dice",
- "p256",
- "prost",
- "rand_core",
- "sha2",
 ]
 
 [[package]]
@@ -1549,9 +1551,9 @@ dependencies = [
 
 [[package]]
 name = "zeroize"
-version = "1.6.0"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a0956f1ba7c7909bfb66c2e9e4124ab6f6482560f6628b5aaeba39207c9aad9"
+checksum = "525b4ec142c6b68a2d10f01f7bbf6755599ca3f81ea53b8431b7dd348f5fdb2d"
 dependencies = [
  "zeroize_derive",
 ]

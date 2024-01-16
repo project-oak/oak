@@ -14,12 +14,14 @@
 // limitations under the License.
 //
 
-use crate::fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg};
 use alloc::{ffi::CString, string::String, vec};
 use core::{ffi::CStr, slice};
+
 use elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
 use oak_linux_boot_params::BootE820Entry;
 use x86_64::{PhysAddr, VirtAddr};
+
+use crate::fw_cfg::{check_memory, check_non_overlapping, find_suitable_dma_address, FwCfg};
 
 /// The default start location and entry point for the kernel if a kernel wasn't supplied via the
 /// QEMU fw_cfg device.

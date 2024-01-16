@@ -1,0 +1,22 @@
+[package]
+name = "oak_containers_sdk"
+version = "0.1.0"
+authors = ["Ivan Petrov <ivanpetrov@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[build-dependencies]
+oak_grpc_utils = { workspace = true }
+
+[dependencies]
+anyhow = "*"
+async-trait = { version = "*", default-features = false }
+oak_attestation = { workspace = true }
+oak_crypto = { workspace = true }
+prost = "*"
+prost-types = "*"
+tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
+tokio-stream = { version = "*", features = ["net"] }
+tonic = { workspace = true }
+async-stream = "*"
+tower = "*"

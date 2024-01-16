@@ -1,5 +1,5 @@
 [package]
-name = "oak_remote_attestation"
+name = "oak_attestation"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
@@ -17,6 +17,7 @@ rand_core = { version = "*", default-features = false, features = [
   "getrandom",
 ] }
 sha2 = { version = "*", default-features = false }
+zeroize = "*"
 
 [build-dependencies]
 micro_rpc_build = { workspace = true }

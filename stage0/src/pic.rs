@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
-use crate::io_port_factory;
 use oak_sev_guest::io::{IoPortFactory, PortWrapper, PortWriter};
+
+use crate::io_port_factory;
 
 const PIC0_BASE: u16 = 0x20;
 const PIC1_BASE: u16 = 0xA0;

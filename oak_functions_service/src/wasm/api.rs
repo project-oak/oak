@@ -14,12 +14,8 @@
 // limitations under the License.
 //
 
-use super::{WasmApi, WasmApiFactory};
-use crate::{
-    logger::{OakLogger, StandaloneLogger},
-    lookup::{format_bytes, limit, LookupData, LookupDataManager},
-};
 use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
+
 use log::Level;
 use oak_functions_sdk::proto::oak::functions::wasm::v1::{
     LogRequest, LogResponse, LookupDataRequest, LookupDataResponse, ReadRequestRequest,
@@ -27,6 +23,12 @@ use oak_functions_sdk::proto::oak::functions::wasm::v1::{
     WriteResponseRequest, WriteResponseResponse,
 };
 use spinning_top::Spinlock;
+
+use super::{WasmApi, WasmApiFactory};
+use crate::{
+    logger::{OakLogger, StandaloneLogger},
+    lookup::{format_bytes, limit, LookupData, LookupDataManager},
+};
 
 /// The main purpose of this factory is to allow creating a new instance of the
 /// [`StdWasmApiImpl`] for each incoming gRPC request, with an immutable snapshot of the

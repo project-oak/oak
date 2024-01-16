@@ -14,19 +14,21 @@
 // limitations under the License.
 //
 
-use crate::PROCESSES;
-use async_recursion::async_recursion;
-use async_trait::async_trait;
-use clap::{Parser, Subcommand};
-use colored::*;
-use nix::sys::signal::Signal;
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     time::Instant,
 };
+
+use async_recursion::async_recursion;
+use async_trait::async_trait;
+use clap::{Parser, Subcommand};
+use colored::*;
+use nix::sys::signal::Signal;
 use strum_macros::EnumIter;
 use tokio::io::{empty, AsyncRead, AsyncReadExt};
+
+use crate::PROCESSES;
 
 #[derive(Parser, Clone)]
 pub struct Opt {

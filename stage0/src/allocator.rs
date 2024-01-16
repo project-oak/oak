@@ -20,6 +20,7 @@ use core::{
     ptr::NonNull,
     sync::atomic::{AtomicUsize, Ordering},
 };
+
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use spinning_top::Spinlock;
 use x86_64::VirtAddr;
@@ -124,8 +125,9 @@ pub fn init_global_allocator(e820_table: &[BootE820Entry]) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use alloc::boxed::Box;
+
+    use super::*;
 
     #[test]
     fn simple_alloc() {

@@ -19,15 +19,17 @@ mod page;
 mod stage0;
 mod vmsa;
 
+use std::path::PathBuf;
+
+use clap::Parser;
+use log::trace;
+use page::PageInfo;
+
 use crate::{
     elf::load_elf_segments,
     stage0::load_stage0,
     vmsa::{get_boot_vmsa, VMSA_ADDRESS},
 };
-use clap::Parser;
-use log::trace;
-use page::PageInfo;
-use std::path::PathBuf;
 
 /// The default workspace-relative path to the Stage 0 firmware ROM image.
 const DEFAULT_STAGE0_ROM: &str = "stage0_bin/target/x86_64-unknown-none/release/oak_stage0.bin";

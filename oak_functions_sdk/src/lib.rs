@@ -36,6 +36,7 @@ pub mod proto {
 }
 
 use alloc::{string::ToString, vec::Vec};
+
 use micro_rpc::{Status, StatusCode};
 use proto::oak::functions::wasm::v1::{
     LogRequest, LogResponse, LookupDataRequest, LookupDataResponse, ReadRequestRequest,

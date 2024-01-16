@@ -14,15 +14,17 @@
 // limitations under the License.
 //
 
-use crate::systemd_journal::{Journal, JournalOpenFlags};
-use anyhow::{Context, Result};
-use oak_containers_orchestrator::launcher_client::LauncherClient;
-use opentelemetry_api::logs::{AnyValue, LogRecord, Logger, Severity};
 use std::{
     sync::Arc,
     time::{Duration, SystemTime},
 };
+
+use anyhow::{Context, Result};
+use oak_containers_orchestrator::launcher_client::LauncherClient;
+use opentelemetry_api::logs::{AnyValue, LogRecord, Logger, Severity};
 use tokio::sync::{mpsc, OnceCell};
+
+use crate::systemd_journal::{Journal, JournalOpenFlags};
 
 pub async fn run(launcher_client: LauncherClient, terminate: Arc<OnceCell<()>>) -> Result<()> {
     // Journal is not Send, because the underlying systemd journal can't be shared between threads

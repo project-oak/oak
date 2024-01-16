@@ -72,6 +72,7 @@ fn get_mock_dice_data() -> RestrictedKernelDiceData {
     let stage0_dice_data = oak_stage0_dice::generate_dice_data(
         &oak_stage0_dice::Measurements::default(),
         oak_stage0_dice::mock_attestation_report,
+        oak_stage0_dice::mock_derived_key,
     );
 
     oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, &[])

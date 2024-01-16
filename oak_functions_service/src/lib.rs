@@ -25,8 +25,8 @@ extern crate std;
 
 pub mod proto {
     pub mod oak {
+        pub use oak_attestation::proto::oak::attestation;
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::attestation;
         pub mod functions {
             #![allow(dead_code)]
             use prost::Message;
@@ -41,9 +41,11 @@ pub mod lookup;
 pub mod wasm;
 
 use alloc::{format, string::ToString, sync::Arc, vec::Vec};
+
 use instance::OakFunctionsInstance;
+use oak_attestation::{handler::EncryptionHandler, proto::oak::attestation::v1::Evidence};
 use oak_core::sync::OnceCell;
-use oak_remote_attestation::handler::EncryptionHandler;
+use oak_crypto::encryptor::EncryptionKeyProvider;
 use prost::Message;
 use proto::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,

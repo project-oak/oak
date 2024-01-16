@@ -17,8 +17,9 @@
 #![feature(const_fmt_arguments_new)]
 #![feature(async_closure)]
 
-use once_cell::sync::Lazy;
 use std::{path::PathBuf, sync::Mutex};
+
+use once_cell::sync::Lazy;
 
 pub mod check_build_licenses;
 pub mod check_license;

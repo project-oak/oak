@@ -23,8 +23,8 @@ pub mod proto {
                 tonic::include_proto!("oak.containers.v1");
             }
         }
+        pub use oak_attestation::proto::oak::{attestation, session};
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::{attestation, session};
         pub mod key_provisioning {
             pub mod v1 {
                 #![allow(clippy::return_self_not_must_use)]
@@ -37,17 +37,19 @@ pub mod proto {
 mod qemu;
 mod server;
 
-use crate::proto::oak::session::v1::{
-    AttestationBundle, AttestationEndorsement, AttestationEvidence,
-};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use anyhow::Context;
 use clap::Parser;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tokio::{
     net::TcpListener,
     sync::oneshot::{channel, Receiver, Sender},
     task::JoinHandle,
     time::{timeout, Duration},
+};
+
+use crate::proto::oak::session::v1::{
+    AttestationBundle, AttestationEndorsement, AttestationEvidence,
 };
 
 /// The local IP address assigned to the VM guest.

@@ -14,12 +14,14 @@
 // limitations under the License.
 //
 
-use crate::{mm::Translator, PAGE_TABLES};
 use alloc::collections::VecDeque;
 use core::alloc::Allocator;
+
 use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
 use oak_simple_io::SimpleIo;
 use x86_64::VirtAddr;
+
+use crate::{mm::Translator, PAGE_TABLES};
 
 /// A communications channel using a simple IO device.
 pub struct SimpleIoChannel<'a, A: Allocator> {

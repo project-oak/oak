@@ -28,6 +28,7 @@
 #include "absl/strings/string_view.h"
 #include "openssl/aead.h"
 #include "openssl/hpke.h"
+#include "openssl/rand.h"
 
 namespace oak::crypto {
 
@@ -47,7 +48,7 @@ absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(EVP_HPKE_CTX* hpke_ctx,
           /* secret_len= */ key.size(),
           /* context= */ key_context_bytes.data(),
           /* context_len= */ key_context_bytes.size())) {
-    return absl::AbortedError("Unable to export key.");
+    return absl::AbortedError("Unable to export key");
   }
 
   std::unique_ptr<EVP_AEAD_CTX> aead_context(EVP_AEAD_CTX_new(
@@ -57,40 +58,16 @@ absl::StatusOr<std::unique_ptr<EVP_AEAD_CTX>> GetContext(EVP_HPKE_CTX* hpke_ctx,
       /* tag_len= */ 0));
 
   if (aead_context == nullptr) {
-    return absl::AbortedError("Unable to generate AEAD context.");
+    return absl::AbortedError("Unable to generate AEAD context");
   }
 
   return std::move(aead_context);
 }
 
-absl::StatusOr<std::vector<uint8_t>> GetBaseNonce(EVP_HPKE_CTX* hpke_ctx,
-                                                  absl::string_view nonce_context_string) {
+absl::StatusOr<std::vector<uint8_t>> GenerateRandomNonce() {
   std::vector<uint8_t> nonce(kAeadNonceSizeBytes);
-  std::vector<uint8_t> nonce_context_bytes(nonce_context_string.begin(),
-                                           nonce_context_string.end());
-  if (!EVP_HPKE_CTX_export(
-          /* ctx= */ hpke_ctx,
-          /* out= */ nonce.data(),
-          /* secret_len= */ nonce.size(),
-          /* context= */ nonce_context_bytes.data(),
-          /* context_len= */ nonce_context_bytes.size())) {
-    return absl::AbortedError("Unable to export nonce");
-  }
-  return nonce;
-}
-
-std::vector<uint8_t> CalculateNonce(const std::vector<uint8_t>& base_nonce,
-                                    uint64_t sequence_number) {
-  std::vector<uint8_t> nonce(kAeadNonceSizeBytes);
-  // We use 8 here since sequence number is 64 bits.
-  for (size_t i = 0; i < 8; ++i) {
-    // Get the first 8 bits and push bits right since the encoded nonce is big-endian.
-    nonce[kAeadNonceSizeBytes - i - 1] = sequence_number & 0xff;
-    sequence_number >>= 8;
-  }
-  // XOR each of the nonce bits with the base nonce.
-  for (size_t i = 0; i < kAeadNonceSizeBytes; ++i) {
-    nonce[i] ^= base_nonce.at(i);
+  if (!RAND_bytes(nonce.data(), nonce.size())) {
+    return absl::AbortedError("Unable to generate random nonce");
   }
   return nonce;
 }
@@ -107,7 +84,7 @@ absl::StatusOr<std::string> AeadSeal(const EVP_AEAD_CTX* context, std::vector<ui
       plaintext_bytes.size() + EVP_AEAD_max_overhead(EVP_HPKE_AEAD_aead(EVP_hpke_aes_256_gcm()));
 
   std::vector<uint8_t> ciphertext_bytes(max_out_len);
-  size_t ciphertext_bytes_len;
+  size_t ciphertext_bytes_len = 0;
 
   if (!EVP_AEAD_CTX_seal(
           /* ctx= */ context,
@@ -138,7 +115,7 @@ absl::StatusOr<std::string> AeadOpen(const EVP_AEAD_CTX* context, std::vector<ui
 
   // The plaintext should not be longer than the ciphertext.
   std::vector<uint8_t> plaintext_bytes(ciphertext_bytes.size());
-  size_t plaintext_bytes_size;
+  size_t plaintext_bytes_size = 0;
 
   if (!EVP_AEAD_CTX_open(
           /* ctx= */ context,

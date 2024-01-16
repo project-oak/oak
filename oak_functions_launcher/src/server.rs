@@ -14,6 +14,11 @@
 // limitations under the License.
 //
 
+use std::{net::SocketAddr, pin::Pin};
+
+use futures::{Future, Stream, StreamExt};
+use tonic::{transport::Server, Request, Response, Status, Streaming};
+
 use crate::{
     channel::ConnectorHandle,
     proto::oak::{
@@ -26,9 +31,6 @@ use crate::{
         },
     },
 };
-use futures::{Future, Stream, StreamExt};
-use std::{net::SocketAddr, pin::Pin};
-use tonic::{transport::Server, Request, Response, Status, Streaming};
 
 pub struct SessionProxy {
     connector_handle: ConnectorHandle,
