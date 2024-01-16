@@ -2368,6 +2368,8 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_sdk",
  "oak_functions_test_utils",
+ "oak_restricted_kernel_sdk",
+ "prost",
  "spinning_top 0.3.0",
  "tokio",
  "wasmi",

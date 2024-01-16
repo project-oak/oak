@@ -23,7 +23,6 @@ use core::assert_matches::assert_matches;
 use std::sync::Arc;
 
 use benchmark::proto::{benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest};
-use oak_attestation::proto::oak::attestation::v1::Evidence;
 use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedRequest};
 use oak_functions_service::{
     proto::oak::functions::{

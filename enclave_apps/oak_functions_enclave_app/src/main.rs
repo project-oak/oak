@@ -49,8 +49,8 @@ fn main() -> ! {
 
     let encryption_key_handle = oak_restricted_kernel_sdk::InstanceEncryptionKeyHandle::create()
         .expect("couldn't encryption key");
-    let evidencer =
-        oak_restricted_kernel_sdk::InstanceEvidencer::create().expect("couldn't get evidence");
+    let evidencer = oak_restricted_kernel_sdk::InstanceEvidenceProvider::create()
+        .expect("couldn't get evidence");
     let service = oak_functions_service::OakFunctionsService::new(
         evidencer,
         Arc::new(encryption_key_handle),

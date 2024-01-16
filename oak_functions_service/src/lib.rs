@@ -43,9 +43,8 @@ pub mod wasm;
 use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 
 use instance::OakFunctionsInstance;
-use oak_attestation::{handler::EncryptionHandler, proto::oak::attestation::v1::Evidence};
+use oak_attestation::handler::EncryptionHandler;
 use oak_core::sync::OnceCell;
-use oak_crypto::encryptor::EncryptionKeyProvider;
 use prost::Message;
 use proto::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
@@ -149,16 +148,15 @@ impl<
                         format!("failed to get encryption public key: {err}"),
                     )
                 })?;
-                let evidence =
-                    oak_remote_attestation::proto::oak::attestation::v1::Evidence::try_from(
-                        self.evidence_provider.get_evidence().clone(),
+                let evidence = oak_attestation::proto::oak::attestation::v1::Evidence::try_from(
+                    self.evidence_provider.get_evidence().clone(),
+                )
+                .map_err(|err| {
+                    micro_rpc::Status::new_with_message(
+                        micro_rpc::StatusCode::Internal,
+                        format!("failed to convert evidence to proto: {err}"),
                     )
-                    .map_err(|err| {
-                        micro_rpc::Status::new_with_message(
-                            micro_rpc::StatusCode::Internal,
-                            format!("failed to convert evidence to proto: {err}"),
-                        )
-                    })?;
+                })?;
                 #[allow(deprecated)]
                 Ok(InitializeResponse {
                     public_key_info: Some(PublicKeyInfo {
