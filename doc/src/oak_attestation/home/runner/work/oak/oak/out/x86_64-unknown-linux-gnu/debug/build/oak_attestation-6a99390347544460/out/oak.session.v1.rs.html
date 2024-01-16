@@ -112,6 +112,12 @@
 <a href="#112" id="112">112</a>
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// AttestationEvidence contains all the information that originates in the TEE and can serve as
 /// claims about the Target Environment. The name is chosen to match the RATS terminology
 /// (see &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence&gt;).
@@ -146,11 +152,17 @@
     #[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>attestation_evidence: ::core::option::Option&lt;AttestationEvidence&gt;,
     <span class="doccomment">/// Supporting evidence required for verifying the integrity of attestation evidence.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="attr">#[deprecated]
+    #[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>attestation_endorsement: ::core::option::Option&lt;AttestationEndorsement&gt;,
     <span class="doccomment">/// The DICE attestation evidence.
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
-    </span><span class="kw">pub </span>dice_evidence: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::attestation::v1::Evidence&gt;,
+    </span><span class="kw">pub </span>evidence: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::attestation::v1::Evidence&gt;,
+    <span class="doccomment">/// Thea attestation endorsements.
+    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
+    </span><span class="kw">pub </span>endorsements: ::core::option::Option&lt;
+        <span class="kw">super</span>::<span class="kw">super</span>::attestation::v1::Endorsements,
+    &gt;,
 }
 <span class="doccomment">/// AttestationEndorsement contains statements that some entity (e.g., a hardware provider) vouches
 /// for the integrity of claims about the TEE or the software running on it.

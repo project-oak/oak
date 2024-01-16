@@ -247,6 +247,25 @@
 <a href="#247" id="247">247</a>
 <a href="#248" id="248">248</a>
 <a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -290,6 +309,9 @@
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>clap::Parser;
+<span class="kw">use </span>oak_attestation::proto::oak::attestation::v1::{
+    endorsements, Endorsements, Evidence, OakRestrictedKernelEndorsements,
+};
 <span class="kw">use </span>tokio::{
     net::TcpListener,
     sync::oneshot::{channel, Receiver, Sender},
@@ -370,7 +392,7 @@
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
     </span>endorsed_attestation_evidence: <span class="prelude-ty">Option</span>&lt;AttestationBundle&gt;,
     <span class="comment">// Receiver that is used to get the Attestation Evidence from the server implementation.
-    </span>attestation_evidence_receiver: <span class="prelude-ty">Option</span>&lt;Receiver&lt;AttestationEvidence&gt;&gt;,
+    </span>attestation_evidence_receiver: <span class="prelude-ty">Option</span>&lt;Receiver&lt;(AttestationEvidence, Evidence)&gt;&gt;,
     app_ready_notifier: <span class="prelude-ty">Option</span>&lt;Receiver&lt;()&gt;&gt;,
     trusted_app_address: <span class="prelude-ty">Option</span>&lt;SocketAddr&gt;,
     shutdown: <span class="prelude-ty">Option</span>&lt;Sender&lt;()&gt;&gt;,
@@ -385,7 +407,7 @@
         <span class="kw">let </span>port = listener.local_addr()<span class="question-mark">?</span>.port();
         <span class="macro">log::info!</span>(<span class="string">&quot;Launcher service listening on port {port}&quot;</span>);
         <span class="kw">let </span>(attestation_evidence_sender, attestation_evidence_receiver) =
-            channel::&lt;AttestationEvidence&gt;();
+            channel::&lt;(AttestationEvidence, Evidence)&gt;();
         <span class="kw">let </span>(shutdown_sender, shutdown_receiver) = channel::&lt;()&gt;();
         <span class="kw">let </span>(app_notifier_sender, app_notifier_receiver) = channel::&lt;()&gt;();
         <span class="kw">let </span>server = tokio::spawn(server::new(
@@ -465,15 +487,31 @@
         </span><span class="attr">#[allow(deprecated)]
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(receiver) = <span class="self">self</span>.attestation_evidence_receiver.take() {
             <span class="comment">// Set a timeout since we don&#39;t want to wait forever if the VM didn&#39;t start properly.
-            </span><span class="kw">let </span>evidence = timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
-                .<span class="kw">await
-                </span>.context(<span class="string">&quot;couldn&#39;t get attestation evidence before timeout&quot;</span>)<span class="question-mark">?
-                </span>.context(<span class="string">&quot;no attestation evidence available&quot;</span>)<span class="question-mark">?</span>;
+            </span><span class="kw">let </span>(deprecated_evidence, evidence) =
+                timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
+                    .<span class="kw">await
+                    </span>.context(<span class="string">&quot;couldn&#39;t get attestation evidence before timeout&quot;</span>)<span class="question-mark">?
+                    </span>.context(<span class="string">&quot;no attestation evidence available&quot;</span>)<span class="question-mark">?</span>;
+
+            <span class="comment">// Initialize attestation endorsements.
+            // TODO(#4074): Add layer endorsements.
+            </span><span class="kw">let </span>oak_restricted_kernel_endorsements = OakRestrictedKernelEndorsements {
+                root_layer: <span class="prelude-val">None</span>,
+                kernel_layer: <span class="prelude-val">None</span>,
+                application_layer: <span class="prelude-val">None</span>,
+            };
+            <span class="kw">let </span>endorsements = Endorsements {
+                r#type: <span class="prelude-val">Some</span>(endorsements::Type::OakRestrictedKernel(
+                    oak_restricted_kernel_endorsements,
+                )),
+            };
+
             <span class="attr">#[allow(deprecated)]
             </span><span class="kw">let </span>endorsed_attestation_evidence = AttestationBundle {
-                attestation_evidence: <span class="prelude-val">Some</span>(evidence),
+                attestation_evidence: <span class="prelude-val">Some</span>(deprecated_evidence),
                 attestation_endorsement: <span class="prelude-val">Some</span>(<span class="self">self</span>.attestation_endorsement.clone()),
-                dice_evidence: <span class="prelude-val">None</span>,
+                evidence: <span class="prelude-val">Some</span>(evidence),
+                endorsements: <span class="prelude-val">Some</span>(endorsements),
             };
             <span class="self">self</span>.endorsed_attestation_evidence
                 .replace(endorsed_attestation_evidence);
