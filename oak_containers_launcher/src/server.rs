@@ -169,7 +169,9 @@ impl Launcher for LauncherServerImplementation {
         // TODO(#4627): Remove old `AttestationEvidence` message.
         #[allow(deprecated)]
         let deprecated_evidence = request.evidence.ok_or_else(|| {
-            tonic::Status::internal("send_attestation_evidence_request doesn't have evidence")
+            tonic::Status::internal(
+                "send_attestation_evidence_request doesn't have deprecated evidence",
+            )
         })?;
 
         self.attestation_evidence_sender

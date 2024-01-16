@@ -227,14 +227,14 @@ impl Launcher {
 
             // Initialize attestation endorsements.
             // TODO(#4074): Add layer endorsements.
-            let oak_restricted_kernel_endoesements = OakRestrictedKernelEndorsements {
+            let oak_restricted_kernel_endorsements = OakRestrictedKernelEndorsements {
                 root_layer: None,
                 kernel_layer: None,
                 application_layer: None,
             };
             let endorsements = Endorsements {
                 r#type: Some(endorsements::Type::OakRestrictedKernel(
-                    oak_restricted_kernel_endoesements,
+                    oak_restricted_kernel_endorsements,
                 )),
             };
 
