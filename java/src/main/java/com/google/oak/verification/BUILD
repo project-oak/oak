@@ -30,14 +30,6 @@ java_binary(
 )
 
 java_binary(
-    name = "main_verifier",
-    main_class = "com.google.oak.verification.MainVerifier",
-    runtime_deps = [
-        ":verification",
-    ],
-)
-
-java_binary(
     name = "signature_verifier",
     main_class = "com.google.oak.verification.SignatureVerifier",
     runtime_deps = [
