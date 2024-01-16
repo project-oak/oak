@@ -36,7 +36,7 @@ message DeriveSessionKeysRequest {
 
 message DeriveSessionKeysResponse {
   // Session keys for decrypting client requests and encrypting enclave responses.
-  oak.crypto.v1.CryptoContext context = 1;
+  oak.crypto.v1.SessionKeys session_keys = 1;
 }
 
 // RPC service that is exposed to an enclave application and allows it to:

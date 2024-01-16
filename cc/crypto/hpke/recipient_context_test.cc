@@ -31,7 +31,7 @@
 namespace oak::crypto {
 namespace {
 
-using ::oak::crypto::v1::CryptoContext;
+using ::oak::crypto::v1::SessionKeys;
 using ::testing::StrEq;
 using ::testing::StrNe;
 
@@ -80,7 +80,7 @@ class RecipientContextTest : public testing::Test {
   std::string info_string_;
   std::string associated_data_response_;
   std::string associated_data_request_;
-  CryptoContext crypto_context_;
+  SessionKeys crypto_context_;
 };
 
 TEST_F(RecipientContextTest, SetupBaseRecipientEmptyEncapKeyReturnsFailure) {

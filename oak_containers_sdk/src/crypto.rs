@@ -17,7 +17,7 @@ use anyhow::Context;
 use async_trait::async_trait;
 use oak_crypto::{
     encryptor::AsyncRecipientContextGenerator, hpke::RecipientContext,
-    proto::oak::crypto::v1::CryptoContext,
+    proto::oak::crypto::v1::SessionKeys,
 };
 use tonic::transport::{Endpoint, Uri};
 use tower::service_fn;
@@ -54,7 +54,7 @@ impl OrchestratorCryptoClient {
         &self,
         key_origin: KeyOrigin,
         serialized_encapsulated_public_key: &[u8],
-    ) -> Result<CryptoContext, Box<dyn std::error::Error>> {
+    ) -> Result<SessionKeys, Box<dyn std::error::Error>> {
         let context = self
             .inner
             // TODO(#4477): Remove unnecessary copies of the Orchestrator client.
@@ -65,9 +65,8 @@ impl OrchestratorCryptoClient {
             })
             .await?
             .into_inner()
-            // Crypto context.
-            .context
-            .context("crypto context wasn't provided by the Orchestrator")?;
+            .session_keys
+            .context("session keys weren't provided by the Orchestrator")?;
         Ok(context)
     }
 }
