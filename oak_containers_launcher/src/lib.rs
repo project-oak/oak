@@ -224,7 +224,8 @@ impl Launcher {
             let endorsed_attestation_evidence = AttestationBundle {
                 attestation_evidence: Some(evidence),
                 attestation_endorsement: Some(self.attestation_endorsement.clone()),
-                dice_evidence: None,
+                evidence: None,
+                endorsements: None,
             };
             self.endorsed_attestation_evidence
                 .replace(endorsed_attestation_evidence);
