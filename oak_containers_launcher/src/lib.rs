@@ -41,6 +41,9 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::Context;
 use clap::Parser;
+use oak_attestation::proto::oak::attestation::v1::{
+    endorsements, Endorsements, Evidence, OakRestrictedKernelEndorsements,
+};
 use tokio::{
     net::TcpListener,
     sync::oneshot::{channel, Receiver, Sender},
@@ -121,7 +124,7 @@ pub struct Launcher {
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
     endorsed_attestation_evidence: Option<AttestationBundle>,
     // Receiver that is used to get the Attestation Evidence from the server implementation.
-    attestation_evidence_receiver: Option<Receiver<AttestationEvidence>>,
+    attestation_evidence_receiver: Option<Receiver<(AttestationEvidence, Evidence)>>,
     app_ready_notifier: Option<Receiver<()>>,
     trusted_app_address: Option<SocketAddr>,
     shutdown: Option<Sender<()>>,
@@ -136,7 +139,7 @@ impl Launcher {
         let port = listener.local_addr()?.port();
         log::info!("Launcher service listening on port {port}");
         let (attestation_evidence_sender, attestation_evidence_receiver) =
-            channel::<AttestationEvidence>();
+            channel::<(AttestationEvidence, Evidence)>();
         let (shutdown_sender, shutdown_receiver) = channel::<()>();
         let (app_notifier_sender, app_notifier_receiver) = channel::<()>();
         let server = tokio::spawn(server::new(
@@ -216,15 +219,31 @@ impl Launcher {
         #[allow(deprecated)]
         if let Some(receiver) = self.attestation_evidence_receiver.take() {
             // Set a timeout since we don't want to wait forever if the VM didn't start properly.
-            let evidence = timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
-                .await
-                .context("couldn't get attestation evidence before timeout")?
-                .context("no attestation evidence available")?;
+            let (deprecated_evidence, evidence) =
+                timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
+                    .await
+                    .context("couldn't get attestation evidence before timeout")?
+                    .context("no attestation evidence available")?;
+
+            // Initialize attestation endorsements.
+            // TODO(#4074): Add layer endorsements.
+            let oak_restricted_kernel_endorsements = OakRestrictedKernelEndorsements {
+                root_layer: None,
+                kernel_layer: None,
+                application_layer: None,
+            };
+            let endorsements = Endorsements {
+                r#type: Some(endorsements::Type::OakRestrictedKernel(
+                    oak_restricted_kernel_endorsements,
+                )),
+            };
+
             #[allow(deprecated)]
             let endorsed_attestation_evidence = AttestationBundle {
-                attestation_evidence: Some(evidence),
+                attestation_evidence: Some(deprecated_evidence),
                 attestation_endorsement: Some(self.attestation_endorsement.clone()),
-                dice_evidence: None,
+                evidence: Some(evidence),
+                endorsements: Some(endorsements),
             };
             self.endorsed_attestation_evidence
                 .replace(endorsed_attestation_evidence);

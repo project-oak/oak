@@ -20,6 +20,7 @@ use std::{
 
 use anyhow::anyhow;
 use futures::{FutureExt, Stream};
+use oak_attestation::proto::oak::attestation::v1::Evidence;
 use opentelemetry_proto::tonic::{
     collector::{
         logs::v1::{
@@ -67,7 +68,8 @@ struct LauncherServerImplementation {
     container_bundle: std::path::PathBuf,
     application_config: Option<std::path::PathBuf>,
     // Will be used to send the Attestation Evidence to the Launcher.
-    attestation_evidence_sender: Mutex<Option<Sender<AttestationEvidence>>>,
+    // TODO(#4627): Remove old `AttestationEvidence` message.
+    attestation_evidence_sender: Mutex<Option<Sender<(AttestationEvidence, Evidence)>>>,
     // Will be used to notify the untrusted application that the trusted application is ready and
     // listening on a socket address.
     app_ready_notifier: Mutex<Option<Sender<()>>>,
@@ -160,7 +162,18 @@ impl Launcher for LauncherServerImplementation {
         &self,
         request: Request<SendAttestationEvidenceRequest>,
     ) -> Result<Response<()>, tonic::Status> {
+        let request = request.into_inner();
+        let evidence = request.dice_evidence.ok_or_else(|| {
+            tonic::Status::internal("send_attestation_evidence_request doesn't have evidence")
+        })?;
+        // TODO(#4627): Remove old `AttestationEvidence` message.
         #[allow(deprecated)]
+        let deprecated_evidence = request.evidence.ok_or_else(|| {
+            tonic::Status::internal(
+                "send_attestation_evidence_request doesn't have deprecated evidence",
+            )
+        })?;
+
         self.attestation_evidence_sender
             .lock()
             .map_err(|err| {
@@ -172,7 +185,7 @@ impl Launcher for LauncherServerImplementation {
             .ok_or_else(|| {
                 tonic::Status::invalid_argument("app has already sent an attestation evidence")
             })?
-            .send(request.into_inner().evidence.unwrap_or_default())
+            .send((deprecated_evidence, evidence))
             .map_err(|_err| {
                 tonic::Status::internal("couldn't send attestation evidence".to_string())
             })?;
@@ -285,7 +298,7 @@ pub async fn new(
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: Option<std::path::PathBuf>,
-    attestation_evidence_sender: Sender<AttestationEvidence>,
+    attestation_evidence_sender: Sender<(AttestationEvidence, Evidence)>,
     app_ready_notifier: Sender<()>,
     shutdown: Receiver<()>,
 ) -> Result<(), anyhow::Error> {

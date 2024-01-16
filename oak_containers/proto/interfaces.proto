@@ -20,6 +20,7 @@ package oak.containers;
 
 import "google/protobuf/empty.proto";
 import "oak_crypto/proto/v1/crypto.proto";
+import "proto/attestation/endorsement.proto";
 import "proto/attestation/evidence.proto";
 import "proto/session/messages.proto";
 
