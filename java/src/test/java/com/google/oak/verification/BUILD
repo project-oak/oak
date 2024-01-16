@@ -35,25 +35,6 @@ java_test(
 )
 
 java_test(
-    name = "main_verifier_test",
-    srcs = ["MainVerifierTest.java"],
-    data = [
-        "//oak_attestation_verification/testdata:endorsement.json",
-        "//oak_attestation_verification/testdata:logentry.json",
-        "//oak_attestation_verification/testdata:oak-development.pem",
-        "//oak_attestation_verification/testdata:rekor_public_key.pem",
-    ],
-    test_class = "com.google.oak.verification.MainVerifierTest",
-    deps = [
-        "//java/src/main/java/com/google/oak/verification",
-        "//proto/attestation:endorsement_java_proto",
-        "//proto/attestation:evidence_java_proto",
-        "//proto/attestation:reference_value_java_proto",
-        "@com_google_protobuf//java/core",
-    ],
-)
-
-java_test(
     name = "rekor_log_entry_test",
     srcs = ["RekorLogEntryTest.java"],
     data = ["//oak_attestation_verification/testdata:logentry.json"],
