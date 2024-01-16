@@ -14,10 +14,7 @@
 // limitations under the License.
 //
 
-use std::{
-    fs::{read_dir, read_to_string, OpenOptions},
-    os::fd::AsRawFd,
-};
+use std::fs::{read_dir, read_to_string, OpenOptions};
 
 use anyhow::Context;
 use ciborium::Value;
@@ -109,7 +106,8 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
             length.try_into()?,
             ProtFlags::PROT_READ | ProtFlags::PROT_WRITE,
             MapFlags::MAP_SHARED,
-            dice_file.as_raw_fd(),
+            // Pass the file descriptor as reference to avoid closing it.
+            Some(&dice_file),
             start.as_u64().try_into()?,
         )?
     };
