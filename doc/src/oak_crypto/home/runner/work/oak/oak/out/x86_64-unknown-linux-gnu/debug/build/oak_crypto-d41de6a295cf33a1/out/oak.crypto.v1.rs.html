@@ -55,17 +55,6 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
-<a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
-<a href="#65" id="65">65</a>
-<a href="#66" id="66">66</a>
-<a href="#67" id="67">67</a>
-<a href="#68" id="68">68</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Request message encrypted using Hybrid Public Key Encryption (HPKE).
 /// &lt;&lt;https://www.rfc-editor.org/rfc/rfc9180.html&gt;&gt;
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -102,31 +91,20 @@
     </span><span class="kw">pub </span>ciphertext: ::prost::alloc::vec::Vec&lt;u8&gt;,
     <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>associated_data: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// TODO(#4507): Nonce is currently not used by the crypto library. We need to make a non-breaking
-    /// change, where we first make the library send and use deterministic nonces in the Proto, and
-    /// then replace it with a rendom nonce.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;3&quot;</span>)]
+    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;3&quot;</span>)]
     </span><span class="kw">pub </span>nonce: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 <span class="doccomment">/// Envelope containing session keys required to encrypt/decrypt messages within a secure session.
 /// Needed to serialize contexts in order to send them over an RPC.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>CryptoContext {
-    <span class="doccomment">/// AEAD key and nonce for encrypting/decrypting client requests.
+</span><span class="kw">pub struct </span>SessionKeys {
+    <span class="doccomment">/// AEAD key for encrypting/decrypting client requests.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>request_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
-    </span><span class="kw">pub </span>request_base_nonce: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="attr">#[prost(uint64, tag = <span class="string">&quot;3&quot;</span>)]
-    </span><span class="kw">pub </span>request_sequence_number: u64,
-    <span class="doccomment">/// Symmetric key and nonce for encrypting/decrypting enclave responses.
+    <span class="doccomment">/// AEAD key for encrypting/decrypting enclave responses.
     </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;4&quot;</span>)]
     </span><span class="kw">pub </span>response_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;5&quot;</span>)]
-    </span><span class="kw">pub </span>response_base_nonce: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="attr">#[prost(uint64, tag = <span class="string">&quot;6&quot;</span>)]
-    </span><span class="kw">pub </span>response_sequence_number: u64,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

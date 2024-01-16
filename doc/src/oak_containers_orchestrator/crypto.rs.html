@@ -302,7 +302,7 @@
             KeyOrigin::Group =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.key_store.group_encryption_key,
         };
 
-        <span class="kw">let </span>context = encryption_key
+        <span class="kw">let </span>session_keys = encryption_key
             .generate_recipient_context(<span class="kw-2">&amp;</span>request.serialized_encapsulated_public_key)
             .map_err(|err| tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t derive session keys: {err}&quot;</span>)))<span class="question-mark">?
             </span>.serialize()
@@ -310,7 +310,7 @@
                 tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t serialize session keys: {err}&quot;</span>))
             })<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(tonic::Response::new(DeriveSessionKeysResponse {
-            context: <span class="prelude-val">Some</span>(context),
+            session_keys: <span class="prelude-val">Some</span>(session_keys),
         }))
     }
 }

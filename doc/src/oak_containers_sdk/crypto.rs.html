@@ -130,7 +130,6 @@
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
 <a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -150,7 +149,7 @@
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>oak_crypto::{
     encryptor::AsyncRecipientContextGenerator, hpke::RecipientContext,
-    proto::oak::crypto::v1::CryptoContext,
+    proto::oak::crypto::v1::SessionKeys,
 };
 <span class="kw">use </span>tonic::transport::{Endpoint, Uri};
 <span class="kw">use </span>tower::service_fn;
@@ -187,7 +186,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         key_origin: KeyOrigin,
         serialized_encapsulated_public_key: <span class="kw-2">&amp;</span>[u8],
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;CryptoContext, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;SessionKeys, Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
         <span class="kw">let </span>context = <span class="self">self
             </span>.inner
             <span class="comment">// TODO(#4477): Remove unnecessary copies of the Orchestrator client.
@@ -198,9 +197,8 @@
             })
             .<span class="kw">await</span><span class="question-mark">?
             </span>.into_inner()
-            <span class="comment">// Crypto context.
-            </span>.context
-            .context(<span class="string">&quot;crypto context wasn&#39;t provided by the Orchestrator&quot;</span>)<span class="question-mark">?</span>;
+            .session_keys
+            .context(<span class="string">&quot;session keys weren&#39;t provided by the Orchestrator&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(context)
     }
 }

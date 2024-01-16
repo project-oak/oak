@@ -430,6 +430,7 @@
 };
 
 <span class="kw">use </span>anyhow::Context;
+<span class="kw">use </span>oak_attestation::handler::AsyncEncryptionHandler;
 <span class="kw">use </span>oak_crypto::encryptor::AsyncRecipientContextGenerator;
 <span class="kw">use </span>oak_functions_service::{
     instance::OakFunctionsInstance,
@@ -441,7 +442,6 @@
     },
     Observer,
 };
-<span class="kw">use </span>oak_remote_attestation::handler::AsyncEncryptionHandler;
 <span class="kw">use </span>opentelemetry_api::{
     metrics::{Histogram, Meter, Unit},
     KeyValue,
@@ -463,8 +463,8 @@
             <span class="attr">#![allow(clippy::return_self_not_must_use)]
             </span><span class="macro">tonic::include_proto!</span>(<span class="string">&quot;oak.containers&quot;</span>);
         }
+        <span class="kw">pub use </span>oak_attestation::proto::oak::{attestation, session};
         <span class="kw">pub use </span>oak_crypto::proto::oak::crypto;
-        <span class="kw">pub use </span>oak_remote_attestation::proto::oak::{attestation, session};
     }
 }
 
