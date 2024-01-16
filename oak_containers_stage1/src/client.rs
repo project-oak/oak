@@ -45,6 +45,7 @@ impl LauncherClient {
             .context("couldn't form streaming connection")?
             .into_inner();
 
+        println!("get_oak_system_image: got stream");
         let mut image_buf: Vec<u8> = Vec::new();
         while let Some(mut load_response) = stream
             .message()
@@ -53,6 +54,10 @@ impl LauncherClient {
         {
             image_buf.append(&mut load_response.image_chunk);
         }
+        println!(
+            "get_oak_system_image: stream terminated, got {} bytes",
+            image_buf.len()
+        );
 
         Ok(image_buf)
     }

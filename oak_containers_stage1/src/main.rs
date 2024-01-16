@@ -57,6 +57,8 @@ struct Args {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
+
+    println!("Mounting /dev");
     if !Path::new("/dev").try_exists()? {
         create_dir("/dev").context("error creating /dev")?;
     }
@@ -69,6 +71,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .context("error mounting /dev")?;
 
+    println!("Creating /dev/ram0");
     Command::new("/mke2fs")
         .args(["/dev/ram0"])
         .spawn()?
@@ -77,6 +80,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if !Path::new("/rootfs").try_exists()? {
         create_dir("/rootfs").context("error creating /rootfs")?;
     }
+
+    println!("Mounting /dev/ram0 to /rootfs");
     mount(
         Some("/dev/ram0"),
         "/rootfs",
@@ -86,6 +91,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     )
     .context("error mounting ramdrive to /rootfs")?;
 
+    println!("Mounting /sys");
     // Mount /sys so that we can read the memory map.
     if !Path::new("/sys").try_exists()? {
         create_dir("/sys").context("error creating /sys")?;
@@ -102,10 +108,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut dice_builder = dice::extract_stage0_dice_data(args.dice_addr)?;
 
     // Unmount /sys and /dev as they are no longer needed.
+    println!("Unmounting /sys and /dev");
     umount("/sys").context("failed to unmount /sys")?;
     umount("/dev").context("failed to unmount /dev")?;
 
     // switch_root(8) magic
+    println!("Switching root");
     chdir("/rootfs").context("failed to chdir to /rootfs")?;
     mount(
         Some("/rootfs"),
@@ -118,10 +126,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     chroot(".").context("failed to chroot to .")?;
     chdir("/").context("failed to chdir to /")?;
 
+    println!("Creating launcher client");
     let mut client = LauncherClient::new(args.launcher_addr.parse()?)
         .await
         .context("error creating the launcher client")?;
 
+    println!("Fetching system image");
     let buf = client
         .get_oak_system_image()
         .await

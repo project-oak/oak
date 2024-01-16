@@ -35,6 +35,7 @@ pub fn switch(init: &str) -> Result<!> {
     let args: Vec<CString> = std::env::args_os()
         .map(|arg| CString::new(arg.as_bytes()).unwrap())
         .collect();
+    println!("Switching to {init} with args {args:?}");
     execv(CString::new(init).unwrap().as_c_str(), &args[..])?;
     unreachable!()
 }
