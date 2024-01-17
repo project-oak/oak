@@ -21,7 +21,7 @@ use std::{
 
 use anyhow::{Context, Result};
 use oak_containers_orchestrator::launcher_client::LauncherClient;
-use opentelemetry_api::logs::{AnyValue, LogRecord, Logger, Severity};
+use opentelemetry::logs::{AnyValue, LogRecord, Logger, Severity};
 use tokio::sync::{mpsc, OnceCell};
 
 use crate::systemd_journal::{Journal, JournalOpenFlags};
