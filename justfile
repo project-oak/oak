@@ -25,8 +25,8 @@ oak_restricted_kernel_bin:
 oak_restricted_kernel_simple_io_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel --bin=oak_restricted_kernel_simple_io_bin
 
-oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
-    env --chdir=oak_restricted_kernel_wrapper cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin
+oak_restricted_kernel_simple_io_wrapper: oak_restricted_kernel_simple_io_bin
+    env --chdir=oak_restricted_kernel_wrapper cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin
 
 stage0_bin:
     env --chdir=stage0_bin cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/stage0_bin
@@ -62,7 +62,7 @@ all_oak_functions_containers_binaries: stage0_bin stage1_cpio oak_containers_ker
 
 # Entry points for Kokoro CI.
 
-kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin oak_restricted_kernel_simple_io_bin stage0_bin
+kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin oak_restricted_kernel_simple_io_bin oak_restricted_kernel_simple_io_wrapper stage0_bin
 
 kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
