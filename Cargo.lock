@@ -2353,7 +2353,6 @@ name = "oak_functions_service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "benchmark",
  "byteorder",
  "bytes",
@@ -2365,9 +2364,11 @@ dependencies = [
  "oak_attestation",
  "oak_core",
  "oak_crypto",
+ "oak_dice",
  "oak_functions_abi",
  "oak_functions_sdk",
  "oak_functions_test_utils",
+ "oak_restricted_kernel_sdk",
  "prost",
  "spinning_top 0.3.0",
  "tokio",

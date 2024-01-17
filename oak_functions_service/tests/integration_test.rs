@@ -23,11 +23,7 @@ use core::assert_matches::assert_matches;
 use std::sync::Arc;
 
 use benchmark::proto::{benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest};
-use oak_attestation::proto::oak::attestation::v1::Evidence;
-use oak_crypto::{
-    encryptor::{ClientEncryptor, EncryptionKeyProvider},
-    proto::oak::crypto::v1::EncryptedRequest,
-};
+use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedRequest};
 use oak_functions_service::{
     proto::oak::functions::{
         ExtendNextLookupDataRequest, FinishNextLookupDataRequest, InitializeRequest, InvokeRequest,
@@ -50,10 +46,17 @@ fn init() {
         .try_init();
 }
 
-fn new_service_for_testing() -> OakFunctionsService {
+fn new_service_for_testing() -> OakFunctionsService<
+    oak_restricted_kernel_sdk::MockEncryptionKeyHandle,
+    oak_restricted_kernel_sdk::MockEvidenceProvider,
+> {
     OakFunctionsService::new(
-        Evidence::default(),
-        Arc::new(EncryptionKeyProvider::generate()),
+        oak_restricted_kernel_sdk::MockEvidenceProvider::create()
+            .expect("failed to create EvidenceProvidder"),
+        Arc::new(
+            oak_restricted_kernel_sdk::MockEncryptionKeyHandle::create()
+                .expect("failed to create EncryptionKeyHandle"),
+        ),
         None,
     )
 }

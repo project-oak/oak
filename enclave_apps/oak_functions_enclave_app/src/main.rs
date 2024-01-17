@@ -26,7 +26,6 @@ use core::panic::PanicInfo;
 use log::info;
 use oak_core::samplestore::StaticSampleStore;
 use oak_restricted_kernel_sdk::{FileDescriptorChannel, StderrLogger};
-use zerocopy::{AsBytes, FromZeroes};
 
 static LOGGER: StderrLogger = StderrLogger {};
 
@@ -48,28 +47,15 @@ fn main() -> ! {
     }
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
 
-    let restricted_kernel_dice_data = {
-        let mut result = oak_dice::evidence::RestrictedKernelDiceData::new_zeroed();
-        let buffer = result.as_bytes_mut();
-        let len = oak_restricted_kernel_interface::syscall::read(
-            oak_restricted_kernel_interface::DICE_DATA_FD,
-            buffer,
-        )
-        .expect("couldn't read DICE data");
-        if len != buffer.len() {
-            panic!("invalid dice data size");
-        }
-        result
-    };
-    let encryption_key =
-        oak_crypto::encryptor::EncryptionKeyProvider::try_from(&restricted_kernel_dice_data)
-            .expect("couldn't get encryption key");
-    let evidence = oak_attestation::proto::oak::attestation::v1::Evidence::try_from(
-        restricted_kernel_dice_data.evidence,
-    )
-    .expect("couldn't get evidence");
-    let service =
-        oak_functions_service::OakFunctionsService::new(evidence, Arc::new(encryption_key), None);
+    let encryption_key_handle = oak_restricted_kernel_sdk::InstanceEncryptionKeyHandle::create()
+        .expect("couldn't encryption key");
+    let evidencer = oak_restricted_kernel_sdk::InstanceEvidenceProvider::create()
+        .expect("couldn't get evidence");
+    let service = oak_functions_service::OakFunctionsService::new(
+        evidencer,
+        Arc::new(encryption_key_handle),
+        None,
+    );
     let server = oak_functions_service::proto::oak::functions::OakFunctionsServer::new(service);
     oak_channel::server::start_blocking_server(
         Box::<FileDescriptorChannel>::default(),

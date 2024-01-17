@@ -57,6 +57,7 @@ pub fn crate_manifest_files() -> impl Iterator<Item = PathBuf> {
     source_files()
         .filter(|p| is_cargo_toml_file(p))
         .filter(|p| is_cargo_package_file(p))
+        .filter(|p| !p.ends_with("fuzz/Cargo.toml"))
 }
 
 /// Return an iterator of all known Cargo Manifest files that define workspaces.
