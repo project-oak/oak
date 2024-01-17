@@ -194,3 +194,60 @@ git_repository(
     commit = "f43f9d61c201b314c62a3ebcf2d4a37f1a3b06f7",
     remote = "https://github.com/erenon/bazel_clang_tidy.git",
 )
+
+# Bazel rules for building OCI images and runtime bundles.
+http_archive(
+    name = "rules_oci",
+    sha256 = "686f871f9697e08877b85ea6c16c8d48f911bf466c3aeaf108ca0ab2603c7306",
+    strip_prefix = "rules_oci-1.5.1",
+    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.5.1/rules_oci-v1.5.1.tar.gz",
+)
+
+load("@rules_oci//oci:dependencies.bzl", "rules_oci_dependencies")
+
+rules_oci_dependencies()
+
+load("@rules_oci//oci:repositories.bzl", "LATEST_CRANE_VERSION", "LATEST_ZOT_VERSION", "oci_register_toolchains")
+
+oci_register_toolchains(
+    name = "oci",
+    crane_version = LATEST_CRANE_VERSION,
+    zot_version = LATEST_ZOT_VERSION,
+)
+
+load("@rules_oci//oci:pull.bzl", "oci_pull")
+
+oci_pull(
+    name = "distroless_cc_debian12",
+    digest = "sha256:6714977f9f02632c31377650c15d89a7efaebf43bab0f37c712c30fc01edb973",
+    image = "gcr.io/distroless/cc-debian12",
+    platforms = ["linux/amd64"],
+)
+
+load("@//bazel:repositories.bzl", "oak_repositories")
+
+oak_repositories()
+
+# Register a hermetic C++ toolchain to ensure that binaries use a glibc version supported by
+# distroless images. The glibc version provided by nix may be too new.
+# This (currently) needs to be loaded after rules_oci because it defaults to using an older version
+# of aspect-build/bazel-lib.
+http_archive(
+    name = "aspect_gcc_toolchain",
+    sha256 = "3341394b1376fb96a87ac3ca01c582f7f18e7dc5e16e8cf40880a31dd7ac0e1e",
+    strip_prefix = "gcc-toolchain-0.4.2",
+    urls = [
+        "https://github.com/aspect-build/gcc-toolchain/archive/refs/tags/0.4.2.tar.gz",
+    ],
+)
+
+load("@aspect_gcc_toolchain//toolchain:repositories.bzl", "gcc_toolchain_dependencies")
+
+gcc_toolchain_dependencies()
+
+load("@aspect_gcc_toolchain//toolchain:defs.bzl", "ARCHS", "gcc_register_toolchain")
+
+gcc_register_toolchain(
+    name = "gcc_toolchain_x86_64",
+    target_arch = ARCHS.x86_64,
+)
