@@ -126,7 +126,10 @@ impl CryptoService {
         Self { key_store }
     }
 
-    fn siging_key(&self, key_origin: KeyOrigin) -> Result<&p256::ecdsa::SigningKey, tonic::Status> {
+    fn signing_key(
+        &self,
+        key_origin: KeyOrigin,
+    ) -> Result<&p256::ecdsa::SigningKey, tonic::Status> {
         match key_origin {
             KeyOrigin::Unspecified => {
                 Err(tonic::Status::invalid_argument("unspecified key origin"))?
@@ -176,7 +179,7 @@ impl OrchestratorCrypto for CryptoService {
         request: Request<SignRequest>,
     ) -> Result<Response<SignResponse>, tonic::Status> {
         let request = request.into_inner();
-        let signing_key = self.siging_key(request.key_origin())?;
+        let signing_key = self.signing_key(request.key_origin())?;
         let signature = <p256::ecdsa::SigningKey as oak_crypto::signer::Signer>::sign(
             signing_key,
             &request.message,
