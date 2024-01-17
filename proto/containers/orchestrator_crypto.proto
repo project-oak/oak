@@ -17,8 +17,9 @@
 syntax = "proto3";
 
 // TODO(#4392): Remove this file once the migration is complete.
-// This file is deprecated, the relevant functionality is available in `proto/containers/application_interfaces.proto`.
-// DO NOT MODIFY THIS FILE, DO NOT ADD NEW DEPENDENCIES ON IT.
+// This file is deprecated, the relevant functionality is available in
+// `proto/containers/application_interfaces.proto`. DO NOT MODIFY THIS FILE, DO NOT ADD NEW
+// DEPENDENCIES ON IT.
 
 package oak.containers.v1;
 

@@ -23,7 +23,6 @@ import "proto/attestation/evidence.proto";
 import "proto/session/messages.proto";
 import "proto/containers/common.proto";
 
-
 // As images can be large (hundreds of megabytes), the launcher chunks up the response into smaller
 // pieces to respect proto/gRPC limits. The image needs to be reassembled in the stage1 or the
 // orchestrator.

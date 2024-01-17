@@ -15,10 +15,10 @@
 #
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@rules_proto//proto:defs.bzl", "proto_library")
-load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_grpc_library", "py_proto_library")
+load("@rules_cc//cc:defs.bzl", "cc_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -34,10 +34,10 @@ proto_library(
     name = "application_interfaces_proto",
     srcs = ["application_interfaces.proto"],
     deps = [
+        ":common_proto",
         "//oak_crypto/proto/v1:crypto_proto",
         "//oak_remote_attestation/proto/v1:messages_proto",
         "@com_google_protobuf//:empty_proto",
-        ":common_proto"
     ],
 )
 
@@ -52,7 +52,6 @@ cc_grpc_library(
     grpc_only = True,
     deps = [":application_interfaces_proto"],
 )
-
 
 py_proto_library(
     name = "application_interfaces_py_proto",
@@ -95,6 +94,6 @@ build_test(
     targets = [
         ":hostlib_key_provisioning_proto",
         ":application_interfaces_proto",
-        ":launcher_proto"
+        ":launcher_proto",
     ],
 )
