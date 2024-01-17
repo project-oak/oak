@@ -18,6 +18,6 @@
 load("//bazel/tools/umoci:umoci_toolchain.bzl", "register_umoci_toolchain")
 
 # buildifier: disable=unnamed-macro
-def oak_repositories(oak_workspace_name = None):
+def oak_toolchain_repositories(oak_workspace_name = None):
     """Downloads dependencies and registers toolchains used by Oak rules."""
     register_umoci_toolchain(name = "umoci_toolchain", oak_workspace_name = oak_workspace_name)

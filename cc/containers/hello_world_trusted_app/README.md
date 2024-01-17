@@ -9,4 +9,4 @@
 C++ implementation of the trusted part (inside the TEE) of the Oak Containers
 Hello World example application. This implementation parallels the Rust
 implementation in
-[`/oak_containers_hello_world_trusted_app`](../../oak_containers_hello_world_trusted_app).
+[`/oak_containers_hello_world_trusted_app`](../../../oak_containers_hello_world_trusted_app).

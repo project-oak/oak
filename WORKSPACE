@@ -224,9 +224,9 @@ oci_pull(
     platforms = ["linux/amd64"],
 )
 
-load("@//bazel:repositories.bzl", "oak_repositories")
+load("@//bazel:repositories.bzl", "oak_toolchain_repositories")
 
-oak_repositories()
+oak_toolchain_repositories()
 
 # Register a hermetic C++ toolchain to ensure that binaries use a glibc version supported by
 # distroless images. The glibc version provided by nix may be too new.

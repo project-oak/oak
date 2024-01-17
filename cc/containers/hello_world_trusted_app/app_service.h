@@ -20,7 +20,7 @@
 
 #include "absl/log/die_if_null.h"
 #include "absl/strings/string_view.h"
-#include "cc/oak_containers_hello_world_trusted_app/orchestrator_client.h"
+#include "cc/containers/hello_world_trusted_app/orchestrator_client.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
 #include "oak_containers_hello_world_trusted_app/proto/interface.grpc.pb.h"

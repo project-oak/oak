@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "cc/oak_containers_hello_world_trusted_app/orchestrator_client.h"
+#include "cc/containers/hello_world_trusted_app/orchestrator_client.h"
 
 #include <memory>
 #include <string>

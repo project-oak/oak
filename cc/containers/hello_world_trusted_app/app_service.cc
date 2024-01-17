@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "cc/oak_containers_hello_world_trusted_app/app_service.h"
+#include "cc/containers/hello_world_trusted_app/app_service.h"
 
 #include <string>
 
 #include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h"
 #include "cc/crypto/common.h"
 #include "cc/crypto/server_encryptor.h"
 #include "grpcpp/server_context.h"
@@ -34,6 +35,8 @@ using ::oak::crypto::DecryptionResult;
 using ::oak::crypto::ServerEncryptor;
 using ::oak::crypto::v1::EncryptedResponse;
 
+constexpr absl::string_view kEmptyAssociatedData = "";
+
 grpc::Status TrustedApplicationImpl::Hello(grpc::ServerContext* context,
                                            const HelloRequest* request, HelloResponse* response) {
   ServerEncryptor server_encryptor(orchestrator_client_);
@@ -48,7 +51,7 @@ grpc::Status TrustedApplicationImpl::Hello(grpc::ServerContext* context,
                                       "! Btw, the Trusted App has a config with a length of ",
                                       application_config_.size(), " bytes.");
   absl::StatusOr<EncryptedResponse> encrypted_response =
-      server_encryptor.Encrypt(greeting, /*associated_data=*/"");
+      server_encryptor.Encrypt(greeting, kEmptyAssociatedData);
   if (!encrypted_response.ok()) {
     return grpc::Status(static_cast<grpc::StatusCode>(encrypted_response.status().code()),
                         std::string(encrypted_response.status().message()));

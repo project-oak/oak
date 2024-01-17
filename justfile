@@ -46,7 +46,7 @@ oak_containers_hello_world_container_bundle_tar:
     env --chdir=oak_containers_hello_world_container DOCKER_BUILDKIT=0 bash build_container_bundle
 
 cc_oak_containers_hello_world_container_bundle_tar:
-    env bazel build -c opt //cc/oak_containers_hello_world_trusted_app:bundle.tar
+    env bazel build -c opt //cc/containers/hello_world_trusted_app:bundle.tar
 
 oak_containers_hello_world_untrusted_app:
     env cargo build --release --package='oak_containers_hello_world_untrusted_app'
