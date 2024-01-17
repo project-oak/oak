@@ -24,7 +24,7 @@ fn main() {
     println!("cargo:rerun-if-changed=layout.ld");
     println!("cargo:rustc-link-arg=--script=layout.ld");
     let kernel_directory = "oak_restricted_kernel_bin";
-    let file_name = "oak_restricted_kernel_bin";
+    let file_name = "oak_restricted_kernel_simple_io_bin";
 
     // The source file is the output from building "../oak_restricted_kernel_bin" in release mode.
     let mut source_path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
