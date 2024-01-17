@@ -17,6 +17,7 @@
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
+load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_grpc_library", "py_proto_library")
 
 package(
@@ -42,6 +43,13 @@ proto_library(
 
 cc_proto_library(
     name = "application_interfaces_cc_proto",
+    deps = [":application_interfaces_proto"],
+)
+
+cc_grpc_library(
+    name = "application_interfaces_cc_grpc",
+    srcs = [":application_interfaces_proto"],
+    grpc_only = True,
     deps = [":application_interfaces_proto"],
 )
 
