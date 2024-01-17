@@ -14,11 +14,11 @@
 // limitations under the License.
 //
 
-use std::time::Instant;
-
 use anyhow::Context;
 use bencher::stats::Stats;
+use oak_attestation_verification::verifier::InsecureAttestationVerifier;
 use oak_functions_client::OakFunctionsClient;
+use std::time::Instant;
 
 // From https://pantheon.corp.google.com/api-gateway/gateway/weather-lookup-grpc/location/europe-west2?project=oak-ci.
 const URL: &str = "https://weather-lookup-grpc-8tk01hn7.nw.gateway.dev";
@@ -28,7 +28,7 @@ const TOTAL_REQUESTS: usize = 50;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let mut client = OakFunctionsClient::new(URL)
+    let mut client = OakFunctionsClient::new(URL, &InsecureAttestationVerifier{})
         .await
         .context("couldn't create client")?;
 

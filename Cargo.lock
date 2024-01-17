@@ -2294,6 +2294,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bencher",
+ "oak_attestation_verification",
  "oak_functions_client",
  "rand",
  "tokio",
