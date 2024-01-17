@@ -81,6 +81,15 @@ proto_library(
     ],
 )
 
+# TODO(#4392): Remove once the migration is complete.
+proto_library(
+    name = "orchestrator_crypto_proto",
+    srcs = ["orchestrator_crypto.proto"],
+    deps = [
+        "//oak_crypto/proto/v1:crypto_proto",
+    ],
+)
+
 build_test(
     name = "build_test",
     targets = [
