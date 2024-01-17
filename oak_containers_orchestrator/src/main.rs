@@ -17,7 +17,6 @@ use std::{path::PathBuf, sync::Arc};
 
 use anyhow::{anyhow, Context};
 use clap::Parser;
-use oak_attestation::attester::{Attester, EmptyAttestationReportGenerator};
 use oak_containers_orchestrator::{
     crypto::InstanceKeyStore, launcher_client::LauncherClient,
     proto::oak::containers::v1::KeyProvisioningRole,
@@ -78,17 +77,8 @@ async fn main() -> anyhow::Result<()> {
         &instance_key_store.instance_encryption_public_key(),
         &verifying_key,
     )?;
-    // TODO(#4074): Remove once DICE attestation is fully implemented.
-    let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
-    let attester = Attester::new(
-        attestation_report_generator,
-        instance_key_store.instance_encryption_key(),
-    );
-    let evidence = attester
-        .generate_attestation_evidence()
-        .map_err(|error| anyhow!("couldn't generate attestation evidence: {:?}", error))?;
     launcher_client
-        .send_attestation_evidence(evidence, dice_evidence)
+        .send_attestation_evidence(dice_evidence.clone().into(), dice_evidence)
         .await
         .map_err(|error| anyhow!("couldn't send attestation evidence: {:?}", error))?;
 
