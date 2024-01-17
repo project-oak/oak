@@ -119,6 +119,6 @@ impl EvidenceProvider for GrpcStreamingTransport {
         #[allow(deprecated)]
         get_endorsed_evidence_response
             .attestation_bundle
-            .context("get_endorsed_evidence_response message doesn't contain the endorsed evidence")
+            .context("get_endorsed_evidence_response message doesn't contain endorsed evidence")
     }
 }
