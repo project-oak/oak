@@ -17,8 +17,6 @@
 //! Provides verification based on evidence, endorsements and reference values.
 
 use alloc::vec::Vec;
-
-use anyhow::Context;
 use coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
 use ecdsa::{signature::Verifier, Signature};
 use oak_dice::cert::{
@@ -65,17 +63,6 @@ pub trait AttestationVerifier {
         evidence: &Evidence,
         endorsements: &Endorsements,
     ) -> anyhow::Result<DiceChainResult>;
-}
-
-/// Verifier that doesn't check the Evidence against Reference Values and only checks the DICE chain
-/// correctness.
-/// Should be only used for testing.
-pub struct InsecureAttestationVerifier;
-
-impl AttestationVerifier for InsecureAttestationVerifier {
-    fn verify(&self, evidence: &Evidence, _: &Endorsements) -> anyhow::Result<DiceChainResult> {
-        verify_dice_chain(evidence).context("couldn't verify the DICE chain")
-    }
 }
 
 pub struct DiceChainResult {
@@ -140,7 +127,7 @@ pub fn verify(
 }
 
 /// Verifies signatures along the certificate chain induced by DICE layers.
-fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<DiceChainResult> {
+pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<DiceChainResult> {
     let root_layer = evidence
         .root_layer
         .as_ref()

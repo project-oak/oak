@@ -19,7 +19,7 @@
 
 use anyhow::Context;
 use clap::Parser;
-use oak_attestation_verification::verifier::InsecureAttestationVerifier;
+use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_abi::Request;
 use oak_functions_client::OakFunctionsClient;
 use regex::Regex;

@@ -17,7 +17,7 @@
 
 use std::time::Duration;
 
-use oak_attestation_verification::verifier::InsecureAttestationVerifier;
+use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_client::OakFunctionsClient;
 use xtask::{launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
 

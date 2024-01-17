@@ -30,3 +30,4 @@ pub mod proto {
 
 pub mod client;
 pub mod transport;
+pub mod verifier;

@@ -18,7 +18,7 @@ use std::time::Instant;
 
 use anyhow::Context;
 use bencher::stats::Stats;
-use oak_attestation_verification::verifier::InsecureAttestationVerifier;
+use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_client::OakFunctionsClient;
 
 // From https://pantheon.corp.google.com/api-gateway/gateway/weather-lookup-grpc/location/europe-west2?project=oak-ci.

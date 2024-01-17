@@ -24,7 +24,7 @@ use std::{
 use anyhow::Context;
 use log::info;
 use nix::unistd::Pid;
-use oak_attestation_verification::verifier::InsecureAttestationVerifier;
+use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_abi::Response;
 use oak_functions_client::OakFunctionsClient;
 use prost::Message;
