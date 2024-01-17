@@ -131,7 +131,7 @@
 
 <span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>oak_containers_orchestrator::launcher_client::LauncherClient;
-<span class="kw">use </span>opentelemetry_api::logs::{AnyValue, LogRecord, Logger, Severity};
+<span class="kw">use </span>opentelemetry::logs::{AnyValue, LogRecord, Logger, Severity};
 <span class="kw">use </span>tokio::sync::{mpsc, OnceCell};
 
 <span class="kw">use </span><span class="kw">crate</span>::systemd_journal::{Journal, JournalOpenFlags};

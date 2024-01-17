@@ -263,6 +263,15 @@
 <a href="#263" id="263">263</a>
 <a href="#264" id="264">264</a>
 <a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -294,7 +303,7 @@
 <span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>clap::Parser;
-<span class="kw">use </span>command_fds::tokio::CommandFdAsyncExt;
+<span class="kw">use </span>command_fds::CommandFdExt;
 <span class="kw">use </span>log::info;
 <span class="kw">use </span>oak_channel::Write;
 
@@ -366,10 +375,19 @@
         <span class="kw">let </span><span class="kw-2">mut </span>cmd = tokio::process::Command::new(params.vmm_binary);
         <span class="kw">let </span>(guest_socket, <span class="kw-2">mut </span>host_socket) = net::UnixStream::pair()<span class="question-mark">?</span>;
 
+        <span class="comment">// Clone the console stream so we can use it in the child process and also return it from
+        // this method.
+        </span><span class="kw">let </span>guest_console_clone = guest_console.try_clone().unwrap();
+
+        <span class="comment">// Extract the raw file descriptor numbers from the streams before passing them to the child
+        // process, since that takes ownership of them.
+        </span><span class="kw">let </span>guest_console_fd = guest_console.as_raw_fd();
+        <span class="kw">let </span>guest_socket_fd = guest_socket.as_raw_fd();
+
         cmd.stderr(Stdio::inherit());
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::inherit());
-        cmd.preserved_fds(<span class="macro">vec!</span>[guest_console.as_raw_fd(), guest_socket.as_raw_fd()]);
+        cmd.preserved_fds(<span class="macro">vec!</span>[guest_console.into(), guest_socket.into()]);
 
         <span class="comment">// Construct the command-line arguments for `qemu`.
         </span>cmd.arg(<span class="string">&quot;-enable-kvm&quot;</span>);
@@ -391,13 +409,13 @@
         <span class="comment">// Route first serial port to console.
         </span>cmd.args([
             <span class="string">&quot;-chardev&quot;</span>,
-            <span class="macro">format!</span>(<span class="string">&quot;socket,id=consock,fd={}&quot;</span>, guest_console.as_raw_fd()).as_str(),
+            <span class="macro">format!</span>(<span class="string">&quot;socket,id=consock,fd={guest_console_fd}&quot;</span>).as_str(),
         ]);
         cmd.args([<span class="string">&quot;-serial&quot;</span>, <span class="string">&quot;chardev:consock&quot;</span>]);
         <span class="comment">// Add the virtio device.
         </span>cmd.args([
             <span class="string">&quot;-chardev&quot;</span>,
-            <span class="macro">format!</span>(<span class="string">&quot;socket,id=commsock,fd={}&quot;</span>, guest_socket.as_raw_fd()).as_str(),
+            <span class="macro">format!</span>(<span class="string">&quot;socket,id=commsock,fd={guest_socket_fd}&quot;</span>).as_str(),
         ]);
         cmd.args([<span class="string">&quot;-device&quot;</span>, <span class="string">&quot;virtio-serial-device,max_ports=1&quot;</span>]);
         cmd.args([<span class="string">&quot;-device&quot;</span>, <span class="string">&quot;virtconsole,chardev=commsock&quot;</span>]);
@@ -419,7 +437,7 @@
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(gdb_port) = params.gdb {
             <span class="comment">// Listen for a gdb connection on the provided port and wait for debugger before booting
-            </span>cmd.args([<span class="string">&quot;-gdb&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;tcp::{}&quot;</span>, gdb_port).as_str()]);
+            </span>cmd.args([<span class="string">&quot;-gdb&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;tcp::{gdb_port}&quot;</span>).as_str()]);
             cmd.arg(<span class="string">&quot;-S&quot;</span>);
         }
 
@@ -441,7 +459,7 @@
         <span class="self">Self</span>::write_chunk(<span class="kw-2">&amp;mut </span>host_socket, chunks.remainder())<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            guest_console,
+            guest_console: guest_console_clone,
             host_socket,
             instance,
         })

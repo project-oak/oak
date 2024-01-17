@@ -217,6 +217,7 @@
 <a href="#217" id="217">217</a>
 <a href="#218" id="218">218</a>
 <a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -276,6 +277,7 @@
     source_files()
         .filter(|p| is_cargo_toml_file(p))
         .filter(|p| is_cargo_package_file(p))
+        .filter(|p| !p.ends_with(<span class="string">&quot;fuzz/Cargo.toml&quot;</span>))
 }
 
 <span class="doccomment">/// Return an iterator of all known Cargo Manifest files that define workspaces.
