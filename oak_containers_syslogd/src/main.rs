@@ -24,7 +24,7 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use clap::Parser;
 use oak_containers_orchestrator::launcher_client::LauncherClient;
-use opentelemetry_api::global::set_error_handler;
+use opentelemetry::global::set_error_handler;
 use signal_hook::consts::signal::SIGTERM;
 use signal_hook_tokio::Signals;
 use tokio::sync::OnceCell;

@@ -10,9 +10,7 @@ anyhow = "*"
 bitflags = "*"
 clap = { version = "*", features = ["derive"] }
 oak_containers_orchestrator = { workspace = true }
-opentelemetry_api = { version = "*", default-features = false, features = [
-  "logs"
-] }
+opentelemetry = { version = "*", default-features = false, features = ["logs"] }
 opentelemetry_sdk = { version = "*", default-features = false, features = [
   "logs",
   "rt-tokio"

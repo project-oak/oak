@@ -17,7 +17,7 @@ oak_containers_sdk = { workspace = true }
 oak_functions_service = { workspace = true, features = ["std"] }
 oak_crypto = { workspace = true }
 micro_rpc = { workspace = true }
-opentelemetry_api = { version = "*", default-features = false, features = [
+opentelemetry = { version = "*", default-features = false, features = [
   "metrics",
   "trace",
 ] }
