@@ -105,7 +105,7 @@ impl EvidenceProvider for GrpcStreamingTransport {
         let response_wrapper = response_stream
             .message()
             .await
-            .context("gRPC server error when requesting an endorsed evidence")?
+            .context("gRPC server error when requesting endorsed evidence")?
             .context("received empty response stream")?;
 
         let Some(response_wrapper::Response::GetPublicKeyResponse(get_endorsed_evidence_response)) =
