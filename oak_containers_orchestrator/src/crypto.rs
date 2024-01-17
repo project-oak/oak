@@ -32,18 +32,14 @@ use crate::proto::oak::{
 pub struct InstanceKeyStore {
     // TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
     instance_encryption_key: Arc<EncryptionKeyProvider>,
-}
-
-impl Default for InstanceKeyStore {
-    fn default() -> Self {
-        Self::new()
-    }
+    instance_signing_key: p256::ecdsa::SigningKey,
 }
 
 impl InstanceKeyStore {
-    pub fn new() -> Self {
+    pub fn new(instance_signing_key: p256::ecdsa::SigningKey) -> Self {
         Self {
             instance_encryption_key: Arc::new(EncryptionKeyProvider::generate()),
+            instance_signing_key,
         }
     }
 
@@ -62,6 +58,7 @@ impl InstanceKeyStore {
         KeyStore {
             instance_encryption_key: self.instance_encryption_key,
             group_encryption_key: EncryptionKeyProvider::generate(),
+            instance_signing_key: self.instance_signing_key,
         }
     }
 
@@ -97,6 +94,7 @@ impl InstanceKeyStore {
         // Add group keys to the Orchestrator key store.
         Ok(KeyStore {
             instance_encryption_key: self.instance_encryption_key,
+            instance_signing_key: self.instance_signing_key,
             group_encryption_key,
         })
     }
@@ -107,6 +105,7 @@ pub struct KeyStore {
     // TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
     instance_encryption_key: Arc<EncryptionKeyProvider>,
     group_encryption_key: EncryptionKeyProvider,
+    instance_signing_key: p256::ecdsa::SigningKey,
 }
 
 impl KeyStore {
@@ -125,6 +124,25 @@ pub(crate) struct CryptoService {
 impl CryptoService {
     pub(crate) fn new(key_store: Arc<KeyStore>) -> Self {
         Self { key_store }
+    }
+
+    fn signing_key(
+        &self,
+        key_origin: KeyOrigin,
+    ) -> Result<&p256::ecdsa::SigningKey, tonic::Status> {
+        match key_origin {
+            KeyOrigin::Unspecified => {
+                Err(tonic::Status::invalid_argument("unspecified key origin"))?
+            }
+            KeyOrigin::Instance => Ok(&self.key_store.instance_signing_key),
+            KeyOrigin::Group =>
+            // TODO(#4442): Implement with key provisioning.
+            {
+                Err(tonic::Status::unimplemented(
+                    "signing using the group key is not yet implemented",
+                ))
+            }
+        }
     }
 }
 
@@ -158,9 +176,16 @@ impl OrchestratorCrypto for CryptoService {
 
     async fn sign(
         &self,
-        _request: Request<SignRequest>,
+        request: Request<SignRequest>,
     ) -> Result<Response<SignResponse>, tonic::Status> {
-        // TODO(#4074): Implement once the DICE signing key is available in the orchestrator.
-        Err(tonic::Status::unimplemented("not yet implemented"))
+        let request = request.into_inner();
+        let signing_key = self.signing_key(request.key_origin())?;
+        let signature = <p256::ecdsa::SigningKey as oak_crypto::signer::Signer>::sign(
+            signing_key,
+            &request.message,
+        );
+        Ok(tonic::Response::new(SignResponse {
+            signature: Some(signature),
+        }))
     }
 }

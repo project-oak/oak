@@ -34,7 +34,7 @@ use oak_functions_service::{
     },
     Observer,
 };
-use opentelemetry_api::{
+use opentelemetry::{
     metrics::{Histogram, Meter, Unit},
     KeyValue,
 };

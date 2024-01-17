@@ -32,7 +32,7 @@ use std::{
 use oak_crypto::encryptor::EncryptionKeyProvider;
 use oak_functions_containers_app::serve;
 use oak_functions_service::proto::oak::functions::InitializeRequest;
-use opentelemetry_api::metrics::{noop::NoopMeterProvider, MeterProvider};
+use opentelemetry::metrics::{noop::NoopMeterProvider, MeterProvider};
 use tokio::net::TcpListener;
 use tonic::transport::Endpoint;
 

@@ -24,7 +24,7 @@ use clap::Parser;
 use oak_containers_orchestrator::launcher_client::LauncherClient;
 use oak_containers_sdk::{InstanceEncryptionKeyHandle, OrchestratorClient};
 use oak_functions_containers_app::serve;
-use opentelemetry_api::{global::set_error_handler, metrics::MeterProvider, KeyValue};
+use opentelemetry::{global::set_error_handler, metrics::MeterProvider, KeyValue};
 use tokio::{net::TcpListener, runtime::Handle};
 
 const OAK_FUNCTIONS_CONTAINERS_APP_PORT: u16 = 8080;
