@@ -16,6 +16,8 @@
 
 syntax = "proto3";
 
+// TODO(#4392): Currently in the process of moving to `/proto` directory.
+// DO NOT MODIFY THOSE FILES WHILE THEY ARE BEING MOVED.
 package oak.crypto.v1;
 
 option java_multiple_files = true;
