@@ -19,10 +19,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate gRPC code for connecting to the Orchestrator.
     generate_grpc_code(
         &[
-            "oak_containers/proto/interfaces.proto",
             "oak_crypto/proto/v1/crypto.proto",
             "proto/session/messages.proto",
-            "proto/containers/orchestrator_crypto.proto",
+            "proto/containers/application_interfaces.proto",
         ],
         "..",
         CodegenOptions {

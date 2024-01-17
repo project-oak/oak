@@ -15,7 +15,6 @@ clap = { version = "*", features = ["derive"] }
 coset = { version = "*", features = ["std"] }
 futures-util = "*"
 oak_attestation = { workspace = true }
-oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
 nix = { version = "*", features = ["mman"] }
 p256 = { version = "*" }

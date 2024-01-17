@@ -16,6 +16,8 @@
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_cc//cc:defs.bzl", "cc_proto_library")
+load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_grpc_library", "py_proto_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -23,10 +25,43 @@ package(
 )
 
 proto_library(
-    name = "orchestrator_crypto_proto",
-    srcs = ["orchestrator_crypto.proto"],
+    name = "common_proto",
+    srcs = ["common.proto"],
+)
+
+proto_library(
+    name = "application_interfaces_proto",
+    srcs = ["application_interfaces.proto"],
     deps = [
         "//oak_crypto/proto/v1:crypto_proto",
+        "//oak_remote_attestation/proto/v1:messages_proto",
+        "@com_google_protobuf//:empty_proto",
+        ":common_proto"
+    ],
+)
+
+cc_proto_library(
+    name = "application_interfaces_cc_proto",
+    deps = [":application_interfaces_proto"],
+)
+
+
+py_proto_library(
+    name = "application_interfaces_py_proto",
+    deps = [":application_interfaces_proto"],
+)
+
+py_grpc_library(
+    name = "application_interfaces_py_grpc",
+    srcs = [":application_interfaces_proto"],
+    deps = [":application_interfaces_py_proto"],
+)
+
+proto_library(
+    name = "launcher_proto",
+    srcs = ["launcher.proto"],
+    deps = [
+        ":common_proto",
     ],
 )
 
@@ -42,6 +77,7 @@ build_test(
     name = "build_test",
     targets = [
         ":hostlib_key_provisioning_proto",
-        ":orchestrator_crypto_proto",
+        ":application_interfaces_proto",
+        ":launcher_proto"
     ],
 )

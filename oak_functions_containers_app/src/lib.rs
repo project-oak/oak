@@ -52,8 +52,10 @@ pub mod proto {
             tonic::include_proto!("oak.functions");
         }
         pub mod containers {
-            #![allow(clippy::return_self_not_must_use)]
-            tonic::include_proto!("oak.containers");
+            pub mod v1 {
+                #![allow(clippy::return_self_not_must_use)]
+                tonic::include_proto!("oak.containers.v1");
+            }
         }
         pub use oak_attestation::proto::oak::{attestation, session};
         pub use oak_crypto::proto::oak::crypto;

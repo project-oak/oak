@@ -24,9 +24,9 @@ use tonic::{transport::Server, Request, Response};
 use crate::{
     crypto::{CryptoService, KeyStore},
     launcher_client::LauncherClient,
-    proto::oak::containers::{
+    proto::oak::containers::v1::{
+        orchestrator_crypto_server::OrchestratorCryptoServer,
         orchestrator_server::{Orchestrator, OrchestratorServer},
-        v1::orchestrator_crypto_server::OrchestratorCryptoServer,
         GetApplicationConfigResponse,
     },
 };
