@@ -62,8 +62,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::parse();
 
-    let verifier = InsecureAttestationVerifier {};
-    let mut client = OakFunctionsClient::new(&opt.uri, &verifier)
+    let mut client = OakFunctionsClient::new(&opt.uri, &InsecureAttestationVerifier {})
         .await
         .context("couldn't create Oak Functions client")?;
 

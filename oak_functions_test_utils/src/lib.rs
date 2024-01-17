@@ -263,8 +263,7 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {
     let uri = format!("http://localhost:{port}/");
 
     // Create client
-    let verifier = InsecureAttestationVerifier {};
-    let mut client = OakFunctionsClient::new(&uri, &verifier)
+    let mut client = OakFunctionsClient::new(&uri, &InsecureAttestationVerifier {})
         .await
         .expect("couldn't create client");
 
