@@ -70,9 +70,8 @@ async fn main() -> anyhow::Result<()> {
         &container_bundle,
         &application_config,
     );
-    let instance_key_store = InstanceKeyStore::new();
-    // Ignore the signing key for now.
-    let (_signing_key, verifying_key) = generate_ecdsa_key_pair();
+    let (signing_key, verifying_key) = generate_ecdsa_key_pair();
+    let instance_key_store = InstanceKeyStore::new(signing_key);
 
     let dice_evidence = dice_builder.add_application_keys(
         additional_claims,
