@@ -14,10 +14,10 @@
 // limitations under the License.
 
 use anyhow::Context;
-use oak_attestation_verification::verifier::AttestationVerifier;
 use oak_client::{
     client::OakClient, proto::oak::session::v1::streaming_session_client::StreamingSessionClient,
     transport::GrpcStreamingTransport,
+    verifier::AttestationVerifier,
 };
 use prost::Message;
 use tonic::transport::Channel;

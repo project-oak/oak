@@ -14,13 +14,13 @@
 // limitations under the License.
 //
 
-use std::vec::Vec;
-
+use crate::{
+    transport::{EvidenceProvider, Transport},
+    verifier::AttestationVerifier,
+};
 use anyhow::{anyhow, Context};
-use oak_attestation_verification::verifier::AttestationVerifier;
 use oak_crypto::encryptor::ClientEncryptor;
-
-use crate::transport::{EvidenceProvider, Transport};
+use std::vec::Vec;
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 

@@ -17,8 +17,16 @@
 use anyhow::Context;
 use oak_attestation_verification::{
     proto::oak::attestation::v1::{Endorsements, Evidence},
-    verifier::{verify_dice_chain, AttestationVerifier, DiceChainResult},
+    verifier::{verify_dice_chain, DiceChainResult},
 };
+
+pub trait AttestationVerifier {
+    fn verify(
+        &self,
+        evidence: &Evidence,
+        endorsements: &Endorsements,
+    ) -> anyhow::Result<DiceChainResult>;
+}
 
 /// Verifier that doesn't check the Evidence against Reference Values and only checks the DICE chain
 /// correctness.

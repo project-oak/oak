@@ -58,14 +58,6 @@ use crate::{
 // We don't use additional authenticated data.
 const ADDITIONAL_DATA: &[u8] = b"";
 
-pub trait AttestationVerifier {
-    fn verify(
-        &self,
-        evidence: &Evidence,
-        endorsements: &Endorsements,
-    ) -> anyhow::Result<DiceChainResult>;
-}
-
 pub struct DiceChainResult {
     pub encryption_public_key: Vec<u8>,
     pub signing_public_key: Vec<u8>,

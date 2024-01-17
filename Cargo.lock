@@ -2190,7 +2190,6 @@ dependencies = [
  "http",
  "log",
  "micro_rpc",
- "oak_attestation_verification",
  "oak_client",
  "oak_functions_abi",
  "prost",
