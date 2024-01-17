@@ -164,6 +164,31 @@
 <a href="#164" id="164">164</a>
 <a href="#165" id="165">165</a>
 <a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -198,18 +223,14 @@
 </span><span class="kw">pub struct </span>InstanceKeyStore {
     <span class="comment">// TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
     </span>instance_encryption_key: Arc&lt;EncryptionKeyProvider&gt;,
-}
-
-<span class="kw">impl </span>Default <span class="kw">for </span>InstanceKeyStore {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>::new()
-    }
+    instance_signing_key: p256::ecdsa::SigningKey,
 }
 
 <span class="kw">impl </span>InstanceKeyStore {
-    <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(instance_signing_key: p256::ecdsa::SigningKey) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             instance_encryption_key: Arc::new(EncryptionKeyProvider::generate()),
+            instance_signing_key,
         }
     }
 
@@ -228,6 +249,7 @@
         KeyStore {
             instance_encryption_key: <span class="self">self</span>.instance_encryption_key,
             group_encryption_key: EncryptionKeyProvider::generate(),
+            instance_signing_key: <span class="self">self</span>.instance_signing_key,
         }
     }
 
@@ -263,6 +285,7 @@
         <span class="comment">// Add group keys to the Orchestrator key store.
         </span><span class="prelude-val">Ok</span>(KeyStore {
             instance_encryption_key: <span class="self">self</span>.instance_encryption_key,
+            instance_signing_key: <span class="self">self</span>.instance_signing_key,
             group_encryption_key,
         })
     }
@@ -273,6 +296,7 @@
     <span class="comment">// TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
     </span>instance_encryption_key: Arc&lt;EncryptionKeyProvider&gt;,
     group_encryption_key: EncryptionKeyProvider,
+    instance_signing_key: p256::ecdsa::SigningKey,
 }
 
 <span class="kw">impl </span>KeyStore {
@@ -291,6 +315,25 @@
 <span class="kw">impl </span>CryptoService {
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(key_store: Arc&lt;KeyStore&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ key_store }
+    }
+
+    <span class="kw">fn </span>signing_key(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        key_origin: KeyOrigin,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>p256::ecdsa::SigningKey, tonic::Status&gt; {
+        <span class="kw">match </span>key_origin {
+            KeyOrigin::Unspecified =&gt; {
+                <span class="prelude-val">Err</span>(tonic::Status::invalid_argument(<span class="string">&quot;unspecified key origin&quot;</span>))<span class="question-mark">?
+            </span>}
+            KeyOrigin::Instance =&gt; <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.key_store.instance_signing_key),
+            KeyOrigin::Group =&gt;
+            <span class="comment">// TODO(#4442): Implement with key provisioning.
+            </span>{
+                <span class="prelude-val">Err</span>(tonic::Status::unimplemented(
+                    <span class="string">&quot;signing using the group key is not yet implemented&quot;</span>,
+                ))
+            }
+        }
     }
 }
 
@@ -324,10 +367,17 @@
 
     <span class="kw">async fn </span>sign(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _request: Request&lt;SignRequest&gt;,
+        request: Request&lt;SignRequest&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Response&lt;SignResponse&gt;, tonic::Status&gt; {
-        <span class="comment">// TODO(#4074): Implement once the DICE signing key is available in the orchestrator.
-        </span><span class="prelude-val">Err</span>(tonic::Status::unimplemented(<span class="string">&quot;not yet implemented&quot;</span>))
+        <span class="kw">let </span>request = request.into_inner();
+        <span class="kw">let </span>signing_key = <span class="self">self</span>.signing_key(request.key_origin())<span class="question-mark">?</span>;
+        <span class="kw">let </span>signature = &lt;p256::ecdsa::SigningKey <span class="kw">as </span>oak_crypto::signer::Signer&gt;::sign(
+            signing_key,
+            <span class="kw-2">&amp;</span>request.message,
+        );
+        <span class="prelude-val">Ok</span>(tonic::Response::new(SignResponse {
+            signature: <span class="prelude-val">Some</span>(signature),
+        }))
     }
 }
 </code></pre></div></section></main></body></html>
