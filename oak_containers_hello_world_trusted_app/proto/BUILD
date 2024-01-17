@@ -1,5 +1,5 @@
 #
-# Copyright 2023 The Project Oak Authors
+# Copyright 2024 The Project Oak Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,48 +14,31 @@
 # limitations under the License.
 #
 
-load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//cc/oak_containers_hello_world_trusted_app:__subpackages__"],
     licenses = ["notice"],
 )
 
 proto_library(
-    name = "orchestrator_crypto_proto",
-    srcs = ["orchestrator_crypto.proto"],
+    name = "interface_proto",
+    srcs = ["interface.proto"],
     deps = [
         "//oak_crypto/proto/v1:crypto_proto",
     ],
 )
 
 cc_proto_library(
-    name = "orchestrator_crypto_cc_proto",
-    deps = [":orchestrator_crypto_proto"],
+    name = "interface_cc_proto",
+    deps = [":interface_proto"],
 )
 
 cc_grpc_library(
-    name = "orchestrator_crypto_cc_grpc",
-    srcs = [":orchestrator_crypto_proto"],
+    name = "interface_cc_grpc",
+    srcs = [":interface_proto"],
     grpc_only = True,
-    deps = [":orchestrator_crypto_cc_proto"],
-)
-
-proto_library(
-    name = "hostlib_key_provisioning_proto",
-    srcs = ["hostlib_key_provisioning.proto"],
-    deps = [
-        "//proto/key_provisioning:key_provisioning_proto",
-    ],
-)
-
-build_test(
-    name = "build_test",
-    targets = [
-        ":hostlib_key_provisioning_proto",
-        ":orchestrator_crypto_proto",
-    ],
+    deps = [":interface_cc_proto"],
 )
