@@ -14,13 +14,15 @@
 // limitations under the License.
 //
 
+use std::vec::Vec;
+
+use anyhow::{anyhow, Context};
+use oak_crypto::encryptor::ClientEncryptor;
+
 use crate::{
     transport::{EvidenceProvider, Transport},
     verifier::AttestationVerifier,
 };
-use anyhow::{anyhow, Context};
-use oak_crypto::encryptor::ClientEncryptor;
-use std::vec::Vec;
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
@@ -33,9 +35,9 @@ pub struct OakClient<T: Transport> {
 }
 
 impl<T: Transport + EvidenceProvider> OakClient<T> {
-    pub async fn create<V: AttestationVerifier>(
+    pub async fn create(
         mut transport: T,
-        verifier: &V,
+        verifier: &dyn AttestationVerifier,
     ) -> anyhow::Result<Self> {
         let endorsed_evidence = transport
             .get_endorsed_evidence()

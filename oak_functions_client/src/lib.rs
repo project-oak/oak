@@ -16,8 +16,7 @@
 use anyhow::Context;
 use oak_client::{
     client::OakClient, proto::oak::session::v1::streaming_session_client::StreamingSessionClient,
-    transport::GrpcStreamingTransport,
-    verifier::AttestationVerifier,
+    transport::GrpcStreamingTransport, verifier::AttestationVerifier,
 };
 use prost::Message;
 use tonic::transport::Channel;
@@ -27,7 +26,7 @@ pub struct OakFunctionsClient {
 }
 
 impl OakFunctionsClient {
-    pub async fn new<V: AttestationVerifier>(uri: &str, verifier: &V) -> anyhow::Result<Self> {
+    pub async fn new(uri: &str, verifier: &dyn AttestationVerifier) -> anyhow::Result<Self> {
         let channel = Channel::from_shared(uri.to_string())
             .context("couldn't create gRPC channel")?
             .connect()
