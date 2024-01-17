@@ -39,6 +39,15 @@ message DeriveSessionKeysResponse {
   oak.crypto.v1.SessionKeys session_keys = 1;
 }
 
+message SignRequest {
+  KeyOrigin key_origin = 1;
+  bytes message = 2;
+}
+
+message SignResponse {
+  oak.crypto.v1.Signature signature = 1;
+}
+
 // RPC service that is exposed to an enclave application and allows it to:
 // - Encrypt/decrypt messages
 // - Sign arbitrary data
@@ -46,4 +55,6 @@ message DeriveSessionKeysResponse {
 service OrchestratorCrypto {
   // Derives session keys for decrypting client requests and encrypting enclave responses.
   rpc DeriveSessionKeys(DeriveSessionKeysRequest) returns (DeriveSessionKeysResponse) {}
+  // Signs the provided message using the hardware rooted signing key.
+  rpc Sign(SignRequest) returns (SignResponse) {}
 }
