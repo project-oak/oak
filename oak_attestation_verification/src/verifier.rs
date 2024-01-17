@@ -17,6 +17,7 @@
 //! Provides verification based on evidence, endorsements and reference values.
 
 use alloc::vec::Vec;
+
 use coset::{cbor::Value, cwt::ClaimsSet, CborSerializable, CoseKey, RegisteredLabelWithPrivate};
 use ecdsa::{signature::Verifier, Signature};
 use oak_dice::cert::{
