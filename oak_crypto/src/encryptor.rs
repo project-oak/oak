@@ -124,7 +124,6 @@ impl EncryptionKeyHandle for EncryptionKeyProvider {
 }
 
 #[async_trait]
-// #[async_trait(?Send)]
 pub trait AsyncEncryptionKeyHandle {
     async fn generate_recipient_context(
         &self,
@@ -133,7 +132,6 @@ pub trait AsyncEncryptionKeyHandle {
 }
 
 #[async_trait]
-// #[async_trait(?Send)]
 impl AsyncEncryptionKeyHandle for EncryptionKeyProvider {
     async fn generate_recipient_context(
         &self,
