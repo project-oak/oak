@@ -265,3 +265,29 @@ async fn test_async_encryptor() {
     assert_eq!(TEST_RESPONSE_MESSAGE, decrypted_response);
     assert_eq!(TEST_RESPONSE_ASSOCIATED_DATA, response_associated_data);
 }
+
+const _TEST_SIGNATURE_MESSAGE_ONE_: &[u8] = b"Dogs are the best";
+const _TEST_SIGNATURE_MESSAGE_TWO_: &[u8] = b"Cats are even better";
+
+use crate::{signer::Signer, verifier::Verifier};
+
+#[test]
+fn test_signer_and_verifier() {
+    let (signing_key_one, verifying_key_one) = oak_dice::cert::generate_ecdsa_key_pair();
+
+    let signature = signing_key_one.sign(_TEST_SIGNATURE_MESSAGE_ONE_);
+
+    assert!(verifying_key_one
+        .verify(_TEST_SIGNATURE_MESSAGE_ONE_, &signature)
+        .is_ok());
+
+    assert!(verifying_key_one
+        .verify(_TEST_SIGNATURE_MESSAGE_TWO_, &signature)
+        .is_err());
+
+    let (_, verifying_key_two_) = oak_dice::cert::generate_ecdsa_key_pair();
+
+    assert!(verifying_key_two_
+        .verify(_TEST_SIGNATURE_MESSAGE_TWO_, &signature)
+        .is_err());
+}
