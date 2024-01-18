@@ -27,6 +27,6 @@ impl Verifier for p256::ecdsa::VerifyingKey {
             .context("could not parse signature")?;
         <p256::ecdsa::VerifyingKey as p256::ecdsa::signature::Verifier<
             p256::ecdsa::Signature,
-        >>::verify(&self, message, &parsed_signature).map_err(anyhow::Error::msg)
+        >>::verify(self, message, &parsed_signature).map_err(anyhow::Error::msg)
     }
 }
