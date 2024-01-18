@@ -20,8 +20,7 @@ use core::future::Future;
 use anyhow::Context;
 use oak_crypto::{
     encryptor::{
-        AsyncEncryptionKeyHandle, AsyncServerEncryptor, EncryptionKeyHandle,
-        ServerEncryptor,
+        AsyncEncryptionKeyHandle, AsyncServerEncryptor, EncryptionKeyHandle, ServerEncryptor,
     },
     proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
 };
@@ -47,10 +46,7 @@ pub struct EncryptionHandler<H: FnOnce(Vec<u8>) -> Vec<u8>> {
 }
 
 impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
-    pub fn create(
-        encryption_key: Arc<dyn EncryptionKeyHandle>,
-        request_handler: H,
-    ) -> Self {
+    pub fn create(encryption_key: Arc<dyn EncryptionKeyHandle>, request_handler: H) -> Self {
         Self {
             encryption_key,
             request_handler,
@@ -120,8 +116,7 @@ where
         encrypted_request: &EncryptedRequest,
     ) -> anyhow::Result<EncryptedResponse> {
         // Initialize server encryptor.
-        let mut server_encryptor =
-            AsyncServerEncryptor::new(self.encryption_key_handle.as_ref());
+        let mut server_encryptor = AsyncServerEncryptor::new(self.encryption_key_handle.as_ref());
 
         // Decrypt request.
         let (request, _associated_data) = server_encryptor

@@ -71,10 +71,8 @@ pub struct OakFunctionsService<
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
-impl<
-        EKH: EncryptionKeyHandle + 'static,
-        EP: oak_restricted_kernel_sdk::EvidenceProvider,
-    > OakFunctionsService<EKH, EP>
+impl<EKH: EncryptionKeyHandle + 'static, EP: oak_restricted_kernel_sdk::EvidenceProvider>
+    OakFunctionsService<EKH, EP>
 {
     pub fn new(
         evidence_provider: EP,
@@ -119,10 +117,8 @@ impl<
     }
 }
 
-impl<
-        EKH: EncryptionKeyHandle + 'static,
-        EP: oak_restricted_kernel_sdk::EvidenceProvider,
-    > OakFunctions for OakFunctionsService<EKH, EP>
+impl<EKH: EncryptionKeyHandle + 'static, EP: oak_restricted_kernel_sdk::EvidenceProvider>
+    OakFunctions for OakFunctionsService<EKH, EP>
 {
     fn initialize(
         &self,

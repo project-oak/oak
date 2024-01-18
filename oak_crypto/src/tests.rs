@@ -21,8 +21,8 @@ use async_trait::async_trait;
 
 use crate::{
     encryptor::{
-        AsyncEncryptionKeyHandle, AsyncServerEncryptor, ClientEncryptor,
-        EncryptionKeyProvider, ServerEncryptor, OAK_HPKE_INFO,
+        AsyncEncryptionKeyHandle, AsyncServerEncryptor, ClientEncryptor, EncryptionKeyProvider,
+        ServerEncryptor, OAK_HPKE_INFO,
     },
     hpke::{
         aead::{AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
