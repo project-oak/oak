@@ -42,14 +42,14 @@ class ServerEncryptor {
   // Constructor for `ServerEncryptor`.
   // `RecipientContextGenerator` argument is a long-term object containing the private key and
   // should outlive the per-session `ServerEncryptor` object.
-  ServerEncryptor(RecipientContextGenerator& recipient_context_generator)
+  explicit ServerEncryptor(RecipientContextGenerator& recipient_context_generator)
       : recipient_context_generator_(recipient_context_generator), recipient_context_(nullptr){};
 
   // Decrypts a [`EncryptedRequest`] proto message using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
   //
   // Returns a response message plaintext and associated data.
-  absl::StatusOr<DecryptionResult> Decrypt(oak::crypto::v1::EncryptedRequest encrypted_request);
+  absl::StatusOr<DecryptionResult> Decrypt(const oak::crypto::v1::EncryptedRequest& encrypted_request);
 
   // Encrypts `plaintext` and authenticates `associated_data` using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>

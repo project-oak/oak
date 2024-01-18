@@ -37,7 +37,7 @@ using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
 }  // namespace
 
-absl::StatusOr<DecryptionResult> ServerEncryptor::Decrypt(EncryptedRequest encrypted_request) {
+absl::StatusOr<DecryptionResult> ServerEncryptor::Decrypt(const EncryptedRequest& encrypted_request) {
   // Get recipient context.
   if (!recipient_context_) {
     absl::Status status = InitializeRecipientContexts(encrypted_request);
@@ -93,7 +93,7 @@ absl::Status ServerEncryptor::InitializeRecipientContexts(const EncryptedRequest
     return absl::InvalidArgumentError(
         "serialized encapsulated public key is not present in the initial request message");
   }
-  std::string serialized_encapsulated_public_key = request.serialized_encapsulated_public_key();
+  const std::string& serialized_encapsulated_public_key = request.serialized_encapsulated_public_key();
 
   // Create recipient contexts.
   absl::StatusOr<std::unique_ptr<RecipientContext>> recipient_context =
