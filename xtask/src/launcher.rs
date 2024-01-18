@@ -27,7 +27,7 @@ static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
     workspace_path(&[
         "target",
         "x86_64-unknown-linux-gnu",
-        "debug",
+        "release",
         "oak_functions_launcher",
     ])
 });
@@ -70,7 +70,7 @@ impl App {
             "enclave_apps",
             "target",
             "x86_64-unknown-none",
-            "debug",
+            "release",
             &self.enclave_crate_name(),
         ])
         .to_str()
@@ -87,7 +87,7 @@ impl App {
                     "oak_restricted_kernel_bin",
                     "target",
                     "x86_64-unknown-none",
-                    "debug",
+                    "release",
                     "oak_restricted_kernel_bin",
                 ])
                 .to_str()
@@ -150,7 +150,7 @@ pub fn build_stage0() -> Step {
 pub fn build_binary(name: &str, directory: &str) -> Step {
     Step::Single {
         name: name.to_string(),
-        command: Cmd::new_in_dir("cargo", vec!["build"], Path::new(directory)),
+        command: Cmd::new_in_dir("cargo", vec!["build", "--release"], Path::new(directory)),
     }
 }
 
