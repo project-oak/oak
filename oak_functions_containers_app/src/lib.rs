@@ -374,6 +374,10 @@ static GRPC_SUCCESS: http::header::HeaderValue = http::header::HeaderValue::from
 // Equivalent to `tonic::status::GRPC_STATUS_HEADER_CODE`.
 const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 
+// Tonic limits the incoming RPC size to 4 MB by default; bump it up to 1 GiB. We're not sending
+// traffic over a "real" network anyway, after all.
+const MAX_DECODING_MESSAGE_SIZE: usize = 1024 * 1024 * 1024;
+
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
 pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static>(
     listener: TcpListener,
@@ -398,10 +402,13 @@ pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static>(
         )
         .layer(tower::load_shed::LoadShedLayer::new())
         .layer(MonitoringLayer::new(meter.clone()))
-        .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
-            encryption_key_handle,
-            Some(Arc::new(OtelObserver::new(meter))),
-        )))
+        .add_service(
+            OakFunctionsServer::new(OakFunctionsContainersService::new(
+                encryption_key_handle,
+                Some(Arc::new(OtelObserver::new(meter))),
+            ))
+            .max_decoding_message_size(MAX_DECODING_MESSAGE_SIZE),
+        )
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .context("failed to start up the service")
