@@ -47,7 +47,8 @@ async fn test_server() {
         .await;
 
     // Wait for the server to start up.
-    std::thread::sleep(Duration::from_secs(10));
+    // TODO(#4677): Reduce the wait time.
+    std::thread::sleep(Duration::from_secs(15));
 
     {
         // Lookup match.
