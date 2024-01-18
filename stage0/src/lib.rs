@@ -299,12 +299,30 @@ pub fn rust64_start(encrypted: u64) -> ! {
 
     let memory_map_measurement = measure_byte_slice(zero_page.e820_table().as_bytes());
 
-    log::debug!("Kernel image digest: {:?}", kernel_info.measurement);
-    log::debug!("Kernel setup data digest: {:?}", setup_data_measurement);
-    log::debug!("Kernel image digest: {:?}", cmdline_measurement);
-    log::debug!("Initial RAM disk digest: {:?}", ram_disk_measurement);
-    log::debug!("ACPI table generation digest: {:?}", acpi_measurement);
-    log::debug!("E820 table digest: {:?}", memory_map_measurement);
+    log::debug!(
+        "Kernel image digest: sha2-256:{}",
+        hex::encode(kernel_info.measurement)
+    );
+    log::debug!(
+        "Kernel setup data digest: sha2-256:{}",
+        hex::encode(setup_data_measurement)
+    );
+    log::debug!(
+        "Kernel image digest: sha2-256:{}",
+        hex::encode(cmdline_measurement)
+    );
+    log::debug!(
+        "Initial RAM disk digest: sha2-256:{}",
+        hex::encode(ram_disk_measurement)
+    );
+    log::debug!(
+        "ACPI table generation digest: sha2-256:{}",
+        hex::encode(acpi_measurement)
+    );
+    log::debug!(
+        "E820 table digest: sha2-256:{}",
+        hex::encode(memory_map_measurement)
+    );
 
     let measurements = oak_stage0_dice::Measurements {
         acpi_measurement,
