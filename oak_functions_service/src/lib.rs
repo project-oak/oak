@@ -17,6 +17,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(never_type)]
 #![feature(unwrap_infallible)]
+// Required for enabling benchmark tests.
+#![feature(test)]
 
 extern crate alloc;
 
