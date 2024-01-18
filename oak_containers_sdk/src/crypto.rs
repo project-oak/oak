@@ -85,7 +85,7 @@ impl InstanceEncryptionKeyHandle {
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl AsyncEncryptionKeyHandle for InstanceEncryptionKeyHandle {
     async fn generate_recipient_context(
         &self,

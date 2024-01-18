@@ -22,7 +22,6 @@ use std::{
 };
 
 use anyhow::Context;
-use async_trait::async_trait;
 use oak_attestation::handler::AsyncEncryptionHandler;
 use oak_crypto::encryptor::AsyncEncryptionKeyHandle;
 use oak_functions_service::{
@@ -110,8 +109,7 @@ fn map_status(status: micro_rpc::Status) -> tonic::Status {
     tonic::Status::new(code, status.message)
 }
 
-#[async_trait]
-// #[tonic::async_trait]
+#[tonic::async_trait]
 impl<G: AsyncEncryptionKeyHandle + Send + Sync + 'static> OakFunctions
     for OakFunctionsContainersService<G>
 {
