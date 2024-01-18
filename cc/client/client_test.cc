@@ -62,8 +62,7 @@ class TestTransport : public TransportWrapper {
     return std::make_unique<TestTransport>(*encryption_key);
   }
 
-  explicit TestTransport(EncryptionKeyProvider encryption_key)
-      : encryption_key_(encryption_key) {}
+  explicit TestTransport(EncryptionKeyProvider encryption_key) : encryption_key_(encryption_key) {}
 
   absl::StatusOr<AttestationBundle> GetEvidence() override {
     AttestationBundle endorsed_evidence;
