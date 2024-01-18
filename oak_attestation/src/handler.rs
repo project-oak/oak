@@ -41,14 +41,14 @@ pub struct PublicKeyInfo {
 /// based on the provided encryption key.
 pub struct EncryptionHandler<H: FnOnce(Vec<u8>) -> Vec<u8>> {
     // TODO(#3442): Use attester to attest to the public key.
-    encryption_key: Arc<dyn EncryptionKeyHandle>,
+    encryption_key_handle: Arc<dyn EncryptionKeyHandle>,
     request_handler: H,
 }
 
 impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
-    pub fn create(encryption_key: Arc<dyn EncryptionKeyHandle>, request_handler: H) -> Self {
+    pub fn create(encryption_key_handle: Arc<dyn EncryptionKeyHandle>, request_handler: H) -> Self {
         Self {
-            encryption_key,
+            encryption_key_handle,
             request_handler,
         }
     }
@@ -63,7 +63,7 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
             .context("initial request message doesn't contain encapsulated public key")?;
         let mut server_encryptor = ServerEncryptor::create(
             serialized_encapsulated_public_key,
-            self.encryption_key.clone(),
+            self.encryption_key_handle.clone(),
         )
         .context("couldn't create server encryptor")?;
 
