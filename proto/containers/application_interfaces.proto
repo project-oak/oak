@@ -66,7 +66,6 @@ message SignResponse {
 // RPC service that is exposed to an enclave application and allows it to:
 // - Encrypt/decrypt messages
 // - Sign arbitrary data
-// TODO(#4504): Implement data signing.
 service OrchestratorCrypto {
   // Derives session keys for decrypting client requests and encrypting enclave responses.
   rpc DeriveSessionKeys(DeriveSessionKeysRequest) returns (DeriveSessionKeysResponse) {}
