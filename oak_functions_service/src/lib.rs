@@ -47,6 +47,7 @@ use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 use instance::OakFunctionsInstance;
 use oak_attestation::handler::EncryptionHandler;
 use oak_core::sync::OnceCell;
+use oak_crypto::encryptor::EncryptionKeyHandle;
 use prost::Message;
 use proto::oak::functions::{
     AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest, ExtendNextLookupDataResponse,
@@ -61,7 +62,7 @@ pub trait Observer {
 }
 
 pub struct OakFunctionsService<
-    EKH: oak_restricted_kernel_sdk::EncryptionKeyHandle + 'static,
+    EKH: EncryptionKeyHandle + 'static,
     EP: oak_restricted_kernel_sdk::EvidenceProvider,
 > {
     evidence_provider: EP,
@@ -71,7 +72,7 @@ pub struct OakFunctionsService<
 }
 
 impl<
-        EKH: oak_restricted_kernel_sdk::EncryptionKeyHandle + 'static,
+        EKH: EncryptionKeyHandle + 'static,
         EP: oak_restricted_kernel_sdk::EvidenceProvider,
     > OakFunctionsService<EKH, EP>
 {
@@ -119,7 +120,7 @@ impl<
 }
 
 impl<
-        EKH: oak_restricted_kernel_sdk::EncryptionKeyHandle + 'static,
+        EKH: EncryptionKeyHandle + 'static,
         EP: oak_restricted_kernel_sdk::EvidenceProvider,
     > OakFunctions for OakFunctionsService<EKH, EP>
 {

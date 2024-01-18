@@ -20,7 +20,7 @@ use core::future::Future;
 use anyhow::Context;
 use oak_crypto::{
     encryptor::{
-        AsyncRecipientContextGenerator, AsyncServerEncryptor, RecipientContextGenerator,
+        AsyncEncryptionKeyHandle, AsyncServerEncryptor, EncryptionKeyHandle,
         ServerEncryptor,
     },
     proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
@@ -42,17 +42,17 @@ pub struct PublicKeyInfo {
 /// based on the provided encryption key.
 pub struct EncryptionHandler<H: FnOnce(Vec<u8>) -> Vec<u8>> {
     // TODO(#3442): Use attester to attest to the public key.
-    encryption_key_provider: Arc<dyn RecipientContextGenerator>,
+    encryption_key: Arc<dyn EncryptionKeyHandle>,
     request_handler: H,
 }
 
 impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
     pub fn create(
-        encryption_key_provider: Arc<dyn RecipientContextGenerator>,
+        encryption_key: Arc<dyn EncryptionKeyHandle>,
         request_handler: H,
     ) -> Self {
         Self {
-            encryption_key_provider,
+            encryption_key,
             request_handler,
         }
     }
@@ -67,7 +67,7 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
             .context("initial request message doesn't contain encapsulated public key")?;
         let mut server_encryptor = ServerEncryptor::create(
             serialized_encapsulated_public_key,
-            self.encryption_key_provider.clone(),
+            self.encryption_key.clone(),
         )
         .context("couldn't create server encryptor")?;
 
@@ -90,27 +90,27 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
 
 /// Wraps a closure to an underlying function with request encryption and response decryption logic,
 /// based on the provided encryption key.
-/// [`AsyncEncryptionHandler`] can be used when an [`AsyncRecipientContextGenerator`] is needed.
+/// [`AsyncEncryptionHandler`] can be used when an [`AsyncEncryptionKeyHandle`] is needed.
 pub struct AsyncEncryptionHandler<G, H, F>
 where
-    G: AsyncRecipientContextGenerator + Send + Sync,
+    G: AsyncEncryptionKeyHandle + Send + Sync,
     H: FnOnce(Vec<u8>) -> F,
     F: Future<Output = Vec<u8>>,
 {
     // TODO(#3442): Use attester to attest to the public key.
-    recipient_context_generator: Arc<G>,
+    encryption_key_handle: Arc<G>,
     request_handler: H,
 }
 
 impl<G, H, F> AsyncEncryptionHandler<G, H, F>
 where
-    G: AsyncRecipientContextGenerator + Send + Sync,
+    G: AsyncEncryptionKeyHandle + Send + Sync,
     H: FnOnce(Vec<u8>) -> F,
     F: Future<Output = Vec<u8>>,
 {
-    pub fn create(recipient_context_generator: Arc<G>, request_handler: H) -> Self {
+    pub fn create(encryption_key_handle: Arc<G>, request_handler: H) -> Self {
         Self {
-            recipient_context_generator,
+            encryption_key_handle,
             request_handler,
         }
     }
@@ -121,7 +121,7 @@ where
     ) -> anyhow::Result<EncryptedResponse> {
         // Initialize server encryptor.
         let mut server_encryptor =
-            AsyncServerEncryptor::new(self.recipient_context_generator.as_ref());
+            AsyncServerEncryptor::new(self.encryption_key_handle.as_ref());
 
         // Decrypt request.
         let (request, _associated_data) = server_encryptor

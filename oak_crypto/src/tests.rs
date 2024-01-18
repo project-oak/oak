@@ -21,7 +21,7 @@ use async_trait::async_trait;
 
 use crate::{
     encryptor::{
-        AsyncRecipientContextGenerator, AsyncServerEncryptor, ClientEncryptor,
+        AsyncEncryptionKeyHandle, AsyncServerEncryptor, ClientEncryptor,
         EncryptionKeyProvider, ServerEncryptor, OAK_HPKE_INFO,
     },
     hpke::{
@@ -125,8 +125,8 @@ fn test_hpke() {
 
 #[test]
 fn test_encryptor() {
-    let key_provider = Arc::new(EncryptionKeyProvider::generate());
-    let serialized_server_public_key = key_provider.get_serialized_public_key();
+    let encryption_key = Arc::new(EncryptionKeyProvider::generate());
+    let serialized_server_public_key = encryption_key.get_serialized_public_key();
 
     let mut client_encryptor = ClientEncryptor::create(&serialized_server_public_key)
         .expect("couldn't create client encryptor");
@@ -152,7 +152,7 @@ fn test_encryptor() {
             .as_ref()
             .expect("initial request message doesn't contain encapsulated public key");
         server_encryptor = Some(
-            ServerEncryptor::create(serialized_encapsulated_public_key, key_provider.clone())
+            ServerEncryptor::create(serialized_encapsulated_public_key, encryption_key.clone())
                 .expect("couldn't create server encryptor"),
         );
     }
@@ -186,17 +186,17 @@ fn test_encryptor() {
     assert_eq!(TEST_RESPONSE_ASSOCIATED_DATA, response_associated_data);
 }
 
-struct TestEncryptionKeyProvider {
+struct TestEncryptionKey {
     key_pair: KeyPair,
 }
 
-impl Default for TestEncryptionKeyProvider {
+impl Default for TestEncryptionKey {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl TestEncryptionKeyProvider {
+impl TestEncryptionKey {
     pub fn new() -> Self {
         Self {
             key_pair: KeyPair::generate(),
@@ -209,7 +209,7 @@ impl TestEncryptionKeyProvider {
 }
 
 #[async_trait]
-impl AsyncRecipientContextGenerator for TestEncryptionKeyProvider {
+impl AsyncEncryptionKeyHandle for TestEncryptionKey {
     async fn generate_recipient_context(
         &self,
         encapsulated_public_key: &[u8],
@@ -221,12 +221,12 @@ impl AsyncRecipientContextGenerator for TestEncryptionKeyProvider {
 
 #[tokio::test]
 async fn test_async_encryptor() {
-    let key_provider = TestEncryptionKeyProvider::new();
-    let serialized_server_public_key = key_provider.get_serialized_public_key();
+    let encryption_key = TestEncryptionKey::new();
+    let serialized_server_public_key = encryption_key.get_serialized_public_key();
 
     let mut client_encryptor = ClientEncryptor::create(&serialized_server_public_key)
         .expect("couldn't create client encryptor");
-    let mut server_encryptor = AsyncServerEncryptor::new(&key_provider);
+    let mut server_encryptor = AsyncServerEncryptor::new(&encryption_key);
 
     let encrypted_request = client_encryptor
         .encrypt(TEST_REQUEST_MESSAGE, TEST_REQUEST_ASSOCIATED_DATA)

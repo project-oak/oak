@@ -15,10 +15,8 @@
 //
 
 use anyhow::Ok;
-pub use oak_crypto::encryptor::EncryptionKeyHandle;
 use oak_crypto::{
-    encryptor::{EncryptionKeyProvider, RecipientContextGenerator},
-    hpke::RecipientContext as SessionKeys,
+    encryptor::{EncryptionKeyHandle, EncryptionKeyProvider}, hpke::RecipientContext,
 };
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
 use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
@@ -178,7 +176,7 @@ impl InstanceEncryptionKeyHandle {
 }
 
 impl EncryptionKeyHandle for InstanceEncryptionKeyHandle {
-    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys> {
+    fn generate_recipient_context(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<RecipientContext> {
         self.key.generate_recipient_context(encapsulated_public_key)
     }
 }

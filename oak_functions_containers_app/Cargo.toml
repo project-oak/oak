@@ -9,6 +9,7 @@ oak_grpc_utils = { workspace = true }
 
 [dependencies]
 anyhow = "*"
+async-trait = { version = "*", default-features = false }
 clap = { version = "*", features = ["derive"] }
 http = "*"
 oak_attestation = { workspace = true }
