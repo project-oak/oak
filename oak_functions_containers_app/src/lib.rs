@@ -283,10 +283,10 @@ where
         let mut attributes = Vec::new();
         let mut parts = req.uri().path().rsplitn(3, '/');
         if let Some(method) = parts.next() {
-            attributes.push(KeyValue::new("method", method.to_string()));
+            attributes.push(KeyValue::new("rpc_method", method.to_string()));
         }
         if let Some(service) = parts.next() {
-            attributes.push(KeyValue::new("service", service.to_string()));
+            attributes.push(KeyValue::new("rpc_service_name", service.to_string()));
         }
 
         // copied from the example in `tower::Service` to guarantee that `poll_ready` has been
