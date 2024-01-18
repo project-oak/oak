@@ -18,6 +18,8 @@ extern crate test;
 use std::time::Duration;
 
 use maplit::hashmap;
+use oak_client::verifier::InsecureAttestationVerifier;
+use oak_functions_client::OakFunctionsClient;
 use oak_functions_test_utils::make_request;
 use test::Bencher;
 
@@ -100,10 +102,15 @@ fn bench_wasm_handler(bencher: &mut Bencher) {
     // Wait for the server to start up.
     std::thread::sleep(Duration::from_secs(20));
 
+    let uri = format!("http://localhost:{server_port}/");
+    let mut client = runtime
+        .block_on(OakFunctionsClient::new(&uri, &InsecureAttestationVerifier))
+        .expect("couldn't create client");
+
     let summary = bencher.bench(|bencher| {
         bencher.iter(|| {
-            let response = runtime.block_on(make_request(server_port, b"key_1"));
-            assert_eq!(b"value_1", &response.as_ref());
+            let response = runtime.block_on(client.invoke(b"key_1"));
+            assert_eq!(b"value_1", &response.unwrap().as_ref());
         });
         Ok(())
     });
