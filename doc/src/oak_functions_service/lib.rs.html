@@ -248,6 +248,8 @@
 <a href="#248" id="248">248</a>
 <a href="#249" id="249">249</a>
 <a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -267,6 +269,8 @@
 </span><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 #![feature(never_type)]
 #![feature(unwrap_infallible)]
+</span><span class="comment">// Required for enabling benchmark tests.
+</span><span class="attr">#![feature(test)]
 
 </span><span class="kw">extern crate </span>alloc;
 

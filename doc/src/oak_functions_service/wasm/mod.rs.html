@@ -549,17 +549,6 @@
 <a href="#549" id="549">549</a>
 <a href="#550" id="550">550</a>
 <a href="#551" id="551">551</a>
-<a href="#552" id="552">552</a>
-<a href="#553" id="553">553</a>
-<a href="#554" id="554">554</a>
-<a href="#555" id="555">555</a>
-<a href="#556" id="556">556</a>
-<a href="#557" id="557">557</a>
-<a href="#558" id="558">558</a>
-<a href="#559" id="559">559</a>
-<a href="#560" id="560">560</a>
-<a href="#561" id="561">561</a>
-<a href="#562" id="562">562</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -594,7 +583,7 @@
 <span class="kw">use </span>micro_rpc::StatusCode;
 <span class="kw">use </span>oak_functions_abi::{Request, Response};
 <span class="kw">use </span>spinning_top::Spinlock;
-<span class="kw">use </span>wasmi::{MemoryType, Store};
+<span class="kw">use </span>wasmi::Store;
 
 <span class="kw">use crate</span>::{
     logger::{OakLogger, StandaloneLogger},
@@ -681,19 +670,8 @@
 <span class="kw">where
     </span>L: OakLogger,
 {
-    <span class="kw">fn </span>new(engine: <span class="kw-2">&amp;</span>wasmi::Engine, store: <span class="kw-2">&amp;mut </span>Store&lt;UserState&lt;L&gt;&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>new(engine: <span class="kw-2">&amp;</span>wasmi::Engine) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span><span class="kw-2">mut </span>linker: wasmi::Linker&lt;UserState&lt;L&gt;&gt; = wasmi::Linker::new(engine);
-
-        <span class="comment">// Add memory to linker.
-        // TODO(#3783): Find a sensible value for initial pages.
-        </span><span class="kw">let </span>initial_pages = <span class="number">100</span>;
-        <span class="kw">let </span>memory_type =
-            MemoryType::new(initial_pages, <span class="prelude-val">None</span>).expect(<span class="string">&quot;failed to define Wasm memory type&quot;</span>);
-        <span class="kw">let </span>memory =
-            wasmi::Memory::new(store, memory_type).expect(<span class="string">&quot;failed to initialize Wasm memory&quot;</span>);
-        linker
-            .define(OAK_FUNCTIONS, MEMORY_NAME, wasmi::Extern::Memory(memory))
-            .expect(<span class="string">&quot;failed to define Wasm memory in linker&quot;</span>);
 
         linker
             .func_wrap(
@@ -780,13 +758,11 @@
 
     <span class="doccomment">/// Instantiates the Oak Linker and checks whether the instance exports `main`, `alloc` and a
     /// memory is attached.
-    ///
-    /// Use the same store used when creating the linker.
     </span><span class="kw">fn </span>instantiate(
-        <span class="self">self</span>,
-        <span class="kw-2">mut </span>store: Store&lt;UserState&lt;L&gt;&gt;,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="kw-2">mut </span>store: <span class="kw-2">&amp;mut </span>Store&lt;UserState&lt;L&gt;&gt;,
         module: Arc&lt;wasmi::Module&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(wasmi::Instance, Store&lt;UserState&lt;L&gt;&gt;), micro_rpc::Status&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;wasmi::Instance, micro_rpc::Status&gt; {
         <span class="kw">let </span>instance = <span class="self">self
             </span>.linker
             .instantiate(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;</span>module)
@@ -807,7 +783,7 @@
 
         <span class="comment">// Check that the instance exports &quot;main&quot;.
         </span><span class="kw">let _ </span>= <span class="kw-2">&amp;</span>instance
-            .get_typed_func::&lt;(), ()&gt;(<span class="kw-2">&amp;</span>store, MAIN_FUNCTION_NAME)
+            .get_typed_func::&lt;(), ()&gt;(<span class="kw-2">&amp;mut </span>store, MAIN_FUNCTION_NAME)
             .map_err(|err| {
                 micro_rpc::Status::new_with_message(
                     micro_rpc::StatusCode::Internal,
@@ -817,7 +793,7 @@
 
         <span class="comment">// Check that the instance exports &quot;alloc&quot;.
         </span><span class="kw">let _ </span>= <span class="kw-2">&amp;</span>instance
-            .get_typed_func::&lt;i32, AbiPointer&gt;(<span class="kw-2">&amp;</span>store, ALLOC_FUNCTION_NAME)
+            .get_typed_func::&lt;i32, AbiPointer&gt;(<span class="kw-2">&amp;mut </span>store, ALLOC_FUNCTION_NAME)
             .map_err(|err| {
                 micro_rpc::Status::new_with_message(
                     micro_rpc::StatusCode::Internal,
@@ -834,7 +810,7 @@
             )
         })<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>((instance, store))
+        <span class="prelude-val">Ok</span>(instance)
     }
 }
 
@@ -985,9 +961,9 @@
 }
 
 <span class="comment">// A request handler with a Wasm module for handling multiple requests.
-</span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>WasmHandler&lt;L: OakLogger&gt; {
     wasm_module: Arc&lt;wasmi::Module&gt;,
+    linker: OakLinker&lt;L&gt;,
     wasm_api_factory: Arc&lt;<span class="kw">dyn </span>WasmApiFactory&lt;L&gt; + Send + Sync&gt;,
     logger: L,
     <span class="attr">#[cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), allow(dead_code))]
@@ -1028,8 +1004,11 @@
         <span class="kw">let </span>module = wasmi::Module::new(<span class="kw-2">&amp;</span>engine, wasm_module_bytes)
             .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t load module from buffer: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
 
+        <span class="kw">let </span>linker = OakLinker::new(module.engine());
+
         <span class="prelude-val">Ok</span>(WasmHandler {
             wasm_module: Arc::new(module),
+            linker,
             wasm_api_factory,
             logger,
             observer,
@@ -1051,8 +1030,7 @@
         <span class="kw">let </span>user_state = UserState::new(wasm_api.transport(), <span class="self">self</span>.logger.clone());
         <span class="comment">// For isolated requests we need to create a new store for every request.
         </span><span class="kw">let </span><span class="kw-2">mut </span>store = wasmi::Store::new(module.engine(), user_state);
-        <span class="kw">let </span>linker = OakLinker::new(module.engine(), <span class="kw-2">&amp;mut </span>store);
-        <span class="kw">let </span>(instance, <span class="kw-2">mut </span>store) = linker.instantiate(store, module)<span class="question-mark">?</span>;
+        <span class="kw">let </span>instance = <span class="self">self</span>.linker.instantiate(<span class="kw-2">&amp;mut </span>store, module)<span class="question-mark">?</span>;
 
         instance.exports(<span class="kw-2">&amp;</span>store).for_each(|export| {
             store
