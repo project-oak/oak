@@ -14,11 +14,16 @@
 // limitations under the License.
 //
 
+extern crate test;
+
 use alloc::{sync::Arc, vec::Vec};
+use std::time::Duration;
 
 use byteorder::{ByteOrder, LittleEndian};
 use hashbrown::HashMap;
+use oak_functions_abi::Request;
 use spinning_top::Spinlock;
+use test::Bencher;
 
 use super::{
     api::StdWasmApiFactory, OakLinker, UserState, WasmApiFactory, WasmHandler, ALLOC_FUNCTION_NAME,
@@ -125,9 +130,57 @@ fn test_read_request() {
     assert_eq!(request_bytes, test_state.request.clone());
 }
 
+#[test]
+fn test_invoke() {
+    let test_state = create_test_state();
+    let data = b"Hello, world!";
+    let response = test_state
+        .wasm_handler
+        .handle_invoke(Request {
+            body: data.to_vec(),
+        })
+        .unwrap();
+    assert_eq!(response.body, data.to_vec());
+}
+
+#[bench]
+fn bench_invoke(bencher: &mut Bencher) {
+    let test_state = create_test_state();
+    let data = b"Hello, world!";
+
+    let summary = bencher.bench(|bencher| {
+        bencher.iter(|| {
+            let response = test_state
+                .wasm_handler
+                .handle_invoke(Request {
+                    body: data.to_vec(),
+                })
+                .unwrap();
+            assert_eq!(response.body, data.to_vec());
+        });
+        Ok(())
+    });
+
+    // When running `cargo test` this benchmark test gets executed too, but `summary` will be `None`
+    // in that case. So, here we first check that `summary` is not empty.
+    if let Ok(Some(summary)) = summary {
+        // `summary.mean` is in nanoseconds, even though it is not explicitly documented in
+        // https://doc.rust-lang.org/test/stats/struct.Summary.html.
+        let elapsed = Duration::from_nanos(summary.mean as u64);
+        // We expect the `mean` time for loading the test Wasm module and running its main function
+        // to be less than a fixed threshold.
+        assert!(
+            elapsed < Duration::from_micros(100),
+            "elapsed time: {:.0?}",
+            elapsed
+        );
+    }
+}
+
 struct TestState {
     instance: wasmi::Instance,
     store: wasmi::Store<UserState<StandaloneLogger>>,
+    wasm_handler: WasmHandler<StandaloneLogger>,
     request: Vec<u8>,
 }
 
@@ -155,16 +208,17 @@ fn create_test_state() -> TestState {
 
     let user_state = UserState::new(wasm_api.transport(), logger.clone());
 
-    let module = wasm_handler.wasm_module;
+    let module = wasm_handler.wasm_module.clone();
     let mut store = wasmi::Store::new(module.engine(), user_state);
-    let linker = OakLinker::new(module.engine(), &mut store);
-    let (instance, store) = linker
-        .instantiate(store, module)
+    let linker = OakLinker::new(module.engine());
+    let instance = linker
+        .instantiate(&mut store, module)
         .expect("couldn't instantiate Wasm module");
 
     TestState {
-        store,
         instance,
+        store,
+        wasm_handler,
         request: request.clone(),
     }
 }

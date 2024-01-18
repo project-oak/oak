@@ -32,7 +32,7 @@ use log::Level;
 use micro_rpc::StatusCode;
 use oak_functions_abi::{Request, Response};
 use spinning_top::Spinlock;
-use wasmi::{MemoryType, Store};
+use wasmi::Store;
 
 use crate::{
     logger::{OakLogger, StandaloneLogger},
@@ -119,19 +119,8 @@ impl<L> OakLinker<L>
 where
     L: OakLogger,
 {
-    fn new(engine: &wasmi::Engine, store: &mut Store<UserState<L>>) -> Self {
+    fn new(engine: &wasmi::Engine) -> Self {
         let mut linker: wasmi::Linker<UserState<L>> = wasmi::Linker::new(engine);
-
-        // Add memory to linker.
-        // TODO(#3783): Find a sensible value for initial pages.
-        let initial_pages = 100;
-        let memory_type =
-            MemoryType::new(initial_pages, None).expect("failed to define Wasm memory type");
-        let memory =
-            wasmi::Memory::new(store, memory_type).expect("failed to initialize Wasm memory");
-        linker
-            .define(OAK_FUNCTIONS, MEMORY_NAME, wasmi::Extern::Memory(memory))
-            .expect("failed to define Wasm memory in linker");
 
         linker
             .func_wrap(
@@ -218,13 +207,11 @@ where
 
     /// Instantiates the Oak Linker and checks whether the instance exports `main`, `alloc` and a
     /// memory is attached.
-    ///
-    /// Use the same store used when creating the linker.
     fn instantiate(
-        self,
-        mut store: Store<UserState<L>>,
+        &self,
+        mut store: &mut Store<UserState<L>>,
         module: Arc<wasmi::Module>,
-    ) -> Result<(wasmi::Instance, Store<UserState<L>>), micro_rpc::Status> {
+    ) -> Result<wasmi::Instance, micro_rpc::Status> {
         let instance = self
             .linker
             .instantiate(&mut store, &module)
@@ -245,7 +232,7 @@ where
 
         // Check that the instance exports "main".
         let _ = &instance
-            .get_typed_func::<(), ()>(&store, MAIN_FUNCTION_NAME)
+            .get_typed_func::<(), ()>(&mut store, MAIN_FUNCTION_NAME)
             .map_err(|err| {
                 micro_rpc::Status::new_with_message(
                     micro_rpc::StatusCode::Internal,
@@ -255,7 +242,7 @@ where
 
         // Check that the instance exports "alloc".
         let _ = &instance
-            .get_typed_func::<i32, AbiPointer>(&store, ALLOC_FUNCTION_NAME)
+            .get_typed_func::<i32, AbiPointer>(&mut store, ALLOC_FUNCTION_NAME)
             .map_err(|err| {
                 micro_rpc::Status::new_with_message(
                     micro_rpc::StatusCode::Internal,
@@ -272,7 +259,7 @@ where
             )
         })?;
 
-        Ok((instance, store))
+        Ok(instance)
     }
 }
 
@@ -423,9 +410,9 @@ where
 }
 
 // A request handler with a Wasm module for handling multiple requests.
-#[derive(Clone)]
 pub struct WasmHandler<L: OakLogger> {
     wasm_module: Arc<wasmi::Module>,
+    linker: OakLinker<L>,
     wasm_api_factory: Arc<dyn WasmApiFactory<L> + Send + Sync>,
     logger: L,
     #[cfg_attr(not(feature = "std"), allow(dead_code))]
@@ -466,8 +453,11 @@ where
         let module = wasmi::Module::new(&engine, wasm_module_bytes)
             .map_err(|err| anyhow::anyhow!("couldn't load module from buffer: {:?}", err))?;
 
+        let linker = OakLinker::new(module.engine());
+
         Ok(WasmHandler {
             wasm_module: Arc::new(module),
+            linker,
             wasm_api_factory,
             logger,
             observer,
@@ -489,8 +479,7 @@ where
         let user_state = UserState::new(wasm_api.transport(), self.logger.clone());
         // For isolated requests we need to create a new store for every request.
         let mut store = wasmi::Store::new(module.engine(), user_state);
-        let linker = OakLinker::new(module.engine(), &mut store);
-        let (instance, mut store) = linker.instantiate(store, module)?;
+        let instance = self.linker.instantiate(&mut store, module)?;
 
         instance.exports(&store).for_each(|export| {
             store
