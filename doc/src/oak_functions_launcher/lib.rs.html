@@ -191,6 +191,10 @@
 <a href="#191" id="191">191</a>
 <a href="#192" id="192">192</a>
 <a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -349,8 +353,12 @@
     config: <span class="kw-2">&amp;</span>LookupDataConfig,
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="macro">log::info!</span>(<span class="string">&quot;updating lookup data&quot;</span>);
-    lookup::update_lookup_data(client, <span class="kw-2">&amp;</span>config.lookup_data_path, config.max_chunk_size).<span class="kw">await
-</span>}
+    <span class="kw">let </span>start = std::time::Instant::now();
+    <span class="kw">let </span>result =
+        lookup::update_lookup_data(client, <span class="kw-2">&amp;</span>config.lookup_data_path, config.max_chunk_size).<span class="kw">await</span>;
+    <span class="macro">log::info!</span>(<span class="string">&quot;updated lookup data in {}ms&quot;</span>, start.elapsed().as_millis());
+    result
+}
 
 <span class="comment">// Loads application config (including Wasm bytes) into the enclave and returns a remote attestation
 // evidence.
