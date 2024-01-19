@@ -342,13 +342,13 @@
 #[group(skip)]
 </span><span class="kw">pub struct </span>Args {
     <span class="attr">#[arg(long, required = <span class="bool-val">true</span>, value_parser = path_exists,)]
-    </span>system_image: std::path::PathBuf,
+    </span><span class="kw">pub </span>system_image: std::path::PathBuf,
     <span class="attr">#[arg(long, required = <span class="bool-val">true</span>, value_parser = path_exists,)]
-    </span>container_bundle: std::path::PathBuf,
+    </span><span class="kw">pub </span>container_bundle: std::path::PathBuf,
     <span class="attr">#[arg(long, value_parser = path_exists,)]
-    </span>application_config: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
+    </span><span class="kw">pub </span>application_config: <span class="prelude-ty">Option</span>&lt;std::path::PathBuf&gt;,
     <span class="attr">#[command(flatten)]
-    </span>qemu_params: qemu::Params,
+    </span><span class="kw">pub </span>qemu_params: qemu::Params,
 }
 
 <span class="kw">impl </span>Args {
