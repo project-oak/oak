@@ -397,6 +397,24 @@
 <a href="#397" id="397">397</a>
 <a href="#398" id="398">398</a>
 <a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -605,7 +623,7 @@
     // point will fail.
     </span>allocator::init_global_allocator(zero_page.e820_table());
 
-    <span class="kw">let </span>setup_data_measurement = zero_page
+    <span class="kw">let </span>setup_data_sha2_256_digest = zero_page
         .try_fill_hdr_from_setup_data(<span class="kw-2">&amp;mut </span>fwcfg)
         .unwrap_or_default();
 
@@ -630,7 +648,7 @@
     }
 
     <span class="kw">let </span>cmdline = kernel::try_load_cmdline(<span class="kw-2">&amp;mut </span>fwcfg).unwrap_or_default();
-    <span class="kw">let </span>cmdline_measurement = measure_byte_slice(cmdline.as_bytes());
+    <span class="kw">let </span>cmdline_sha2_256_digest = measure_byte_slice(cmdline.as_bytes());
 
     <span class="kw">let </span>kernel_info =
         kernel::try_load_kernel_image(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table()).unwrap_or_default();
@@ -658,8 +676,8 @@
     <span class="kw">let </span>rsdp = acpi::build_acpi_tables(<span class="kw-2">&amp;mut </span>fwcfg, <span class="kw-2">&amp;mut </span>acpi_digest).unwrap();
     zero_page.set_acpi_rsdp_addr(PhysAddr::new(rsdp <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64));
     <span class="kw">let </span>acpi_digest = acpi_digest.finalize();
-    <span class="kw">let </span><span class="kw-2">mut </span>acpi_measurement = Measurement::default();
-    acpi_measurement[..].copy_from_slice(<span class="kw-2">&amp;</span>acpi_digest[..]);
+    <span class="kw">let </span><span class="kw-2">mut </span>acpi_sha2_256_digest = Measurement::default();
+    acpi_sha2_256_digest[..].copy_from_slice(<span class="kw-2">&amp;</span>acpi_digest[..]);
 
     <span class="kw">if let </span><span class="prelude-val">Err</span>(err) = smp::bootstrap_aps(rsdp) {
         <span class="macro">log::warn!</span>(
@@ -688,7 +706,7 @@
         }
     }
 
-    <span class="kw">let </span>ram_disk_measurement =
+    <span class="kw">let </span>ram_disk_sha2_256_digest =
         initramfs::try_load_initial_ram_disk(<span class="kw-2">&amp;mut </span>fwcfg, zero_page.e820_table(), <span class="kw-2">&amp;</span>kernel_info)
             .map(|ram_disk| {
                 zero_page.set_initial_ram_disk(ram_disk);
@@ -696,22 +714,40 @@
             })
             .unwrap_or_default();
 
-    <span class="kw">let </span>memory_map_measurement = measure_byte_slice(zero_page.e820_table().as_bytes());
+    <span class="kw">let </span>memory_map_sha2_256_digest = measure_byte_slice(zero_page.e820_table().as_bytes());
 
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image digest: {:?}&quot;</span>, kernel_info.measurement);
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel setup data digest: {:?}&quot;</span>, setup_data_measurement);
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Kernel image digest: {:?}&quot;</span>, cmdline_measurement);
-    <span class="macro">log::debug!</span>(<span class="string">&quot;Initial RAM disk digest: {:?}&quot;</span>, ram_disk_measurement);
-    <span class="macro">log::debug!</span>(<span class="string">&quot;ACPI table generation digest: {:?}&quot;</span>, acpi_measurement);
-    <span class="macro">log::debug!</span>(<span class="string">&quot;E820 table digest: {:?}&quot;</span>, memory_map_measurement);
+    <span class="macro">log::debug!</span>(
+        <span class="string">&quot;Kernel image digest: sha2-256:{}&quot;</span>,
+        hex::encode(kernel_info.measurement)
+    );
+    <span class="macro">log::debug!</span>(
+        <span class="string">&quot;Kernel setup data digest: sha2-256:{}&quot;</span>,
+        hex::encode(setup_data_sha2_256_digest)
+    );
+    <span class="macro">log::debug!</span>(
+        <span class="string">&quot;Kernel image digest: sha2-256:{}&quot;</span>,
+        hex::encode(cmdline_sha2_256_digest)
+    );
+    <span class="macro">log::debug!</span>(
+        <span class="string">&quot;Initial RAM disk digest: sha2-256:{}&quot;</span>,
+        hex::encode(ram_disk_sha2_256_digest)
+    );
+    <span class="macro">log::debug!</span>(
+        <span class="string">&quot;ACPI table generation digest: sha2-256:{}&quot;</span>,
+        hex::encode(acpi_sha2_256_digest)
+    );
+    <span class="macro">log::debug!</span>(
+        <span class="string">&quot;E820 table digest: sha2-256:{}&quot;</span>,
+        hex::encode(memory_map_sha2_256_digest)
+    );
 
     <span class="kw">let </span>measurements = oak_stage0_dice::Measurements {
-        acpi_measurement,
-        kernel_measurement: kernel_info.measurement,
-        cmdline_measurement,
-        ram_disk_measurement,
-        setup_data_measurement,
-        memory_map_measurement,
+        acpi_sha2_256_digest,
+        kernel_sha2_256_digest: kernel_info.measurement,
+        cmdline_sha2_256_digest,
+        ram_disk_sha2_256_digest,
+        setup_data_sha2_256_digest,
+        memory_map_sha2_256_digest,
     };
 
     <span class="kw">let </span>dice_data = Box::leak(Box::new_in(

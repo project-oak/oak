@@ -277,17 +277,17 @@
 </span><span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>Measurements {
     <span class="doccomment">/// The measurement of the kernel image.
-    </span><span class="kw">pub </span>kernel_measurement: [u8; <span class="number">32</span>],
+    </span><span class="kw">pub </span>kernel_sha2_256_digest: [u8; <span class="number">32</span>],
     <span class="doccomment">/// The measurement of the kernel command-line.
-    </span><span class="kw">pub </span>cmdline_measurement: [u8; <span class="number">32</span>],
+    </span><span class="kw">pub </span>cmdline_sha2_256_digest: [u8; <span class="number">32</span>],
     <span class="doccomment">/// The measurement of the kernel setup data.
-    </span><span class="kw">pub </span>setup_data_measurement: [u8; <span class="number">32</span>],
+    </span><span class="kw">pub </span>setup_data_sha2_256_digest: [u8; <span class="number">32</span>],
     <span class="doccomment">/// The measurement of the initial RAM disk.
-    </span><span class="kw">pub </span>ram_disk_measurement: [u8; <span class="number">32</span>],
+    </span><span class="kw">pub </span>ram_disk_sha2_256_digest: [u8; <span class="number">32</span>],
     <span class="doccomment">/// The measurement of the physical memory map.
-    </span><span class="kw">pub </span>memory_map_measurement: [u8; <span class="number">32</span>],
+    </span><span class="kw">pub </span>memory_map_sha2_256_digest: [u8; <span class="number">32</span>],
     <span class="doccomment">/// The concatenated measurement of the command used for building the ACPI tables.
-    </span><span class="kw">pub </span>acpi_measurement: [u8; <span class="number">32</span>],
+    </span><span class="kw">pub </span>acpi_sha2_256_digest: [u8; <span class="number">32</span>],
 }
 
 <span class="doccomment">/// Generates an ECA certificate for use by the next boot stage (Stage 1).
@@ -305,42 +305,42 @@
                 Value::Integer(KERNEL_MEASUREMENT_ID.into()),
                 Value::Map(<span class="macro">alloc::vec!</span>[(
                     Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.kernel_measurement.into()),
+                    Value::Bytes(measurements.kernel_sha2_256_digest.into()),
                 )]),
             ),
             (
                 Value::Integer(KERNEL_COMMANDLINE_MEASUREMENT_ID.into()),
                 Value::Map(<span class="macro">alloc::vec!</span>[(
                     Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.cmdline_measurement.into()),
+                    Value::Bytes(measurements.cmdline_sha2_256_digest.into()),
                 )]),
             ),
             (
                 Value::Integer(SETUP_DATA_MEASUREMENT_ID.into()),
                 Value::Map(<span class="macro">alloc::vec!</span>[(
                     Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.setup_data_measurement.into()),
+                    Value::Bytes(measurements.setup_data_sha2_256_digest.into()),
                 )]),
             ),
             (
                 Value::Integer(INITRD_MEASUREMENT_ID.into()),
                 Value::Map(<span class="macro">alloc::vec!</span>[(
                     Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.ram_disk_measurement.into()),
+                    Value::Bytes(measurements.ram_disk_sha2_256_digest.into()),
                 )]),
             ),
             (
                 Value::Integer(MEMORY_MAP_MEASUREMENT_ID.into()),
                 Value::Map(<span class="macro">alloc::vec!</span>[(
                     Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.memory_map_measurement.into()),
+                    Value::Bytes(measurements.memory_map_sha2_256_digest.into()),
                 )]),
             ),
             (
                 Value::Integer(ACPI_MEASUREMENT_ID.into()),
                 Value::Map(<span class="macro">alloc::vec!</span>[(
                     Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.acpi_measurement.into()),
+                    Value::Bytes(measurements.acpi_sha2_256_digest.into()),
                 )]),
             ),
         ]),
@@ -387,14 +387,14 @@
         .expect(<span class="string">&quot;couldn&#39;t serialize stage 1 ECA certificate&quot;</span>);
 
     <span class="comment">// Use the SHA2-256 digest of the serialized ECA verifying key as the report data.
-    </span><span class="kw">let </span>eca_measurement = {
+    </span><span class="kw">let </span>eca_sha2_256_digest = {
         <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha256::default();
         digest.update(<span class="kw-2">&amp;</span>stage0_eca_verifying_key);
         digest.finalize()
     };
 
     <span class="kw">let </span><span class="kw-2">mut </span>report_data = [<span class="number">0u8</span>; REPORT_DATA_SIZE];
-    report_data[..eca_measurement.len()].copy_from_slice(<span class="kw-2">&amp;</span>eca_measurement[..]);
+    report_data[..eca_sha2_256_digest.len()].copy_from_slice(<span class="kw-2">&amp;</span>eca_sha2_256_digest[..]);
 
     <span class="kw">let </span>report = get_attestation(report_data).expect(<span class="string">&quot;couldn&#39;t get attestation report.&quot;</span>);
     <span class="kw">let </span>report_bytes = report.as_bytes();
@@ -405,10 +405,10 @@
     <span class="comment">// Mix in the measurements of the kernel, the kernel command-line, the kernel setup data and the
     // initial RAM disk when deriving the CDI for Layer 1.
     </span><span class="kw">let </span><span class="kw-2">mut </span>salt: Vec&lt;u8&gt; = Vec::with_capacity(<span class="number">128</span>);
-    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.kernel_measurement[..]);
-    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.cmdline_measurement[..]);
-    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.setup_data_measurement[..]);
-    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.ram_disk_measurement[..]);
+    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.kernel_sha2_256_digest[..]);
+    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.cmdline_sha2_256_digest[..]);
+    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.setup_data_sha2_256_digest[..]);
+    salt.extend_from_slice(<span class="kw-2">&amp;</span>measurements.ram_disk_sha2_256_digest[..]);
     <span class="kw">let </span>hkdf = Hkdf::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>salt), <span class="kw-2">&amp;</span>ikm[..]);
 
     result.magic = STAGE0_MAGIC;
