@@ -558,6 +558,7 @@ dependencies = [
  "base64",
  "coset",
  "ecdsa",
+ "getrandom",
  "hex",
  "oak_dice",
  "oak_sev_guest",

@@ -66,8 +66,7 @@ all_oak_functions_containers_binaries: stage0_bin stage1_cpio oak_containers_ker
 ensure_no_std package:
     cargo check --target=x86_64-unknown-none --package='{{package}}'
 
-# TODO(#4682): Add "oak_attestation_verification" when it is no_std compatible
-all_ensure_no_std: (ensure_no_std "micro_rpc")
+all_ensure_no_std: (ensure_no_std "micro_rpc") (ensure_no_std "oak_attestation_verification") (ensure_no_std "oak_restricted_kernel_sdk")
 
 # Entry points for Kokoro CI.
 

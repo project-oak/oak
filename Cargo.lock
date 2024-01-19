@@ -1873,6 +1873,7 @@ dependencies = [
  "base64 0.21.7",
  "coset",
  "ecdsa",
+ "getrandom",
  "hex",
  "oak_dice",
  "oak_sev_guest",

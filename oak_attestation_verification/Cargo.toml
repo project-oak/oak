@@ -14,6 +14,10 @@ anyhow = { version = "*", default-features = false }
 base64 = { version = "0.21", default-features = false, features = ["alloc"] }
 coset = { version = "*", default-features = false }
 ecdsa = { version = "*", features = ["pkcs8", "pem"] }
+getrandom = { version = "*", features = [
+  # While getrandom isn't used directly, rdrand is required to support x64_64-unknown-none.
+  "rdrand"
+] }
 hex = { version = "*", default-features = false }
 oak_dice = { workspace = true }
 oak_sev_guest = { workspace = true }
