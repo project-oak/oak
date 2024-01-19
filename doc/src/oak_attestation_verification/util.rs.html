@@ -212,6 +212,21 @@
 <a href="#212" id="212">212</a>
 <a href="#213" id="213">213</a>
 <a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -231,7 +246,6 @@
 </span><span class="kw">use </span>alloc::{string::String, vec::Vec};
 <span class="kw">use </span>core::{cmp::Ordering, str::FromStr};
 
-<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
 <span class="kw">use </span>ecdsa::{signature::Verifier, Signature};
 <span class="kw">use </span>p256::ecdsa::VerifyingKey;
@@ -258,7 +272,9 @@
         .expect(<span class="string">&quot;could not find expected footer&quot;</span>);
     <span class="kw">let </span>remove_newlines = stripped.replace(<span class="string">&#39;\n&#39;</span>, <span class="string">&quot;&quot;</span>);
 
-    <span class="prelude-val">Ok</span>(BASE64_STANDARD.decode(remove_newlines)<span class="question-mark">?</span>)
+    BASE64_STANDARD
+        .decode(remove_newlines)
+        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))
 }
 
 <span class="doccomment">/// Converts a raw public key to PEM format.
@@ -278,8 +294,12 @@
 
 <span class="doccomment">/// Converts a PEM-encoded x509/PKIX public key to a verifying key.
 </span><span class="kw">pub fn </span>convert_pem_to_verifying_key(public_key_pem: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;VerifyingKey&gt; {
-    VerifyingKey::from_str(public_key_pem)
-        .context(<span class="string">&quot;couldn&#39;t parse pem as a p256::ecdsa::VerifyingKey&quot;</span>)
+    VerifyingKey::from_str(public_key_pem).map_err(|error| {
+        <span class="macro">anyhow::anyhow!</span>(
+            <span class="string">&quot;couldn&#39;t parse pem as a p256::ecdsa::VerifyingKey: {}&quot;</span>,
+            error
+        )
+    })
 }
 
 <span class="doccomment">/// Converts a raw public key to a verifying key.
@@ -304,11 +324,12 @@
     contents: <span class="kw-2">&amp;</span>[u8],
     public_key: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">let </span>sig = Signature::from_der(signature).context(<span class="string">&quot;invalid ASN.1 signature&quot;</span>)<span class="question-mark">?</span>;
+    <span class="kw">let </span>sig = Signature::from_der(signature)
+        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;invalid ASN.1 signature: {}&quot;</span>, error))<span class="question-mark">?</span>;
     <span class="kw">let </span>key = convert_raw_to_verifying_key(public_key)<span class="question-mark">?</span>;
 
     key.verify(contents, <span class="kw-2">&amp;</span>sig)
-        .context(<span class="string">&quot;couldn&#39;t verify signature&quot;</span>)
+        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t verify signature: {}&quot;</span>, error))
 }
 
 <span class="kw">pub fn </span>hash_sha2_256(input: <span class="kw-2">&amp;</span>[u8]) -&gt; [u8; <span class="number">32</span>] {
@@ -413,15 +434,24 @@
 <span class="doccomment">/// Converts hex digest to raw digest.
 </span><span class="kw">pub fn </span>hex_to_raw_digest(h: <span class="kw-2">&amp;</span>HexDigest) -&gt; anyhow::Result&lt;RawDigest&gt; {
     <span class="kw">let </span>raw = RawDigest {
-        psha2: hex::decode(<span class="kw-2">&amp;</span>h.psha2).context(<span class="string">&quot;could not decode field psha2&quot;</span>)<span class="question-mark">?</span>,
-        sha1: hex::decode(<span class="kw-2">&amp;</span>h.sha1).context(<span class="string">&quot;could not decode field sha1&quot;</span>)<span class="question-mark">?</span>,
-        sha2_256: hex::decode(<span class="kw-2">&amp;</span>h.sha2_256).context(<span class="string">&quot;could not decode field sha2_256&quot;</span>)<span class="question-mark">?</span>,
-        sha2_512: hex::decode(<span class="kw-2">&amp;</span>h.sha2_512).context(<span class="string">&quot;could not decode field sha2_512&quot;</span>)<span class="question-mark">?</span>,
-        sha3_512: hex::decode(<span class="kw-2">&amp;</span>h.sha3_512).context(<span class="string">&quot;could not decode field sha3_512&quot;</span>)<span class="question-mark">?</span>,
-        sha3_384: hex::decode(<span class="kw-2">&amp;</span>h.sha3_384).context(<span class="string">&quot;could not decode field sha3_384&quot;</span>)<span class="question-mark">?</span>,
-        sha3_256: hex::decode(<span class="kw-2">&amp;</span>h.sha3_256).context(<span class="string">&quot;could not decode field sha3_256&quot;</span>)<span class="question-mark">?</span>,
-        sha3_224: hex::decode(<span class="kw-2">&amp;</span>h.sha3_224).context(<span class="string">&quot;could not decode field sha3_224&quot;</span>)<span class="question-mark">?</span>,
-        sha2_384: hex::decode(<span class="kw-2">&amp;</span>h.sha2_384).context(<span class="string">&quot;could not decode field sha2_384&quot;</span>)<span class="question-mark">?</span>,
+        psha2: hex::decode(<span class="kw-2">&amp;</span>h.psha2)
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not decode field psha2: {}&quot;</span>, error))<span class="question-mark">?</span>,
+        sha1: hex::decode(<span class="kw-2">&amp;</span>h.sha1)
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not decode field sha1: {}&quot;</span>, error))<span class="question-mark">?</span>,
+        sha2_256: hex::decode(<span class="kw-2">&amp;</span>h.sha2_256)
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not decode field sha2_256: {}&quot;</span>, error))<span class="question-mark">?</span>,
+        sha2_512: hex::decode(<span class="kw-2">&amp;</span>h.sha2_512)
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not decode field sha2_512: {}&quot;</span>, error))<span class="question-mark">?</span>,
+        sha3_512: hex::decode(<span class="kw-2">&amp;</span>h.sha3_512)
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not decode field sha3_512: {}&quot;</span>, error))<span class="question-mark">?</span>,
+        sha3_384: hex::decode(<span class="kw-2">&amp;</span>h.sha3_384)
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not decode field sha3_384: {}&quot;</span>, error))<span class="question-mark">?</span>,
+        sha3_256: hex::decode(<span class="kw-2">&amp;</span>h.sha3_256)
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not decode field sha3_256: {}&quot;</span>, error))<span class="question-mark">?</span>,
+        sha3_224: hex::decode(<span class="kw-2">&amp;</span>h.sha3_224)
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not decode field sha3_224: {}&quot;</span>, error))<span class="question-mark">?</span>,
+        sha2_384: hex::decode(<span class="kw-2">&amp;</span>h.sha2_384)
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not decode field sha2_384: {}&quot;</span>, error))<span class="question-mark">?</span>,
     };
 
     <span class="prelude-val">Ok</span>(raw)

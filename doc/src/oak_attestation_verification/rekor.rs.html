@@ -268,6 +268,19 @@
 <a href="#268" id="268">268</a>
 <a href="#269" id="269">269</a>
 <a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -287,19 +300,20 @@
 </span><span class="doccomment">//! This module provides structs for representing a Rekor LogEntry, as well as logic for parsing and
 //! verifying signatures in a Rekor LogEntry.
 
-</span><span class="kw">use </span>alloc::{collections::BTreeMap, string::String, vec::Vec};
+</span><span class="kw">use </span>alloc::{collections::BTreeMap, format, string::String, vec::Vec};
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
-<span class="kw">use </span>serde::{Deserialize, Serialize};
-<span class="kw">use </span>serde_canonical_json::CanonicalFormatter;
-<span class="kw">use </span>serde_json::Serializer;
+<span class="kw">use </span>serde::Deserialize;
+<span class="attr">#[cfg(feature = <span class="string">&quot;serialize&quot;</span>)]
+</span><span class="kw">use </span>serde::Serialize;
 
 <span class="kw">use </span><span class="kw">crate</span>::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_raw};
 
 <span class="doccomment">/// Struct representing a Rekor LogEntry.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.&gt;
-</span><span class="attr">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>LogEntry {
     <span class="doccomment">/// We cannot directly use the type `Body` here, since body is Base64-encoded.
     </span><span class="attr">#[serde(rename = <span class="string">&quot;body&quot;</span>)]
@@ -325,7 +339,8 @@
 }
 
 <span class="doccomment">/// Struct representing the body in a Rekor LogEntry.
-</span><span class="attr">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>Body {
     <span class="attr">#[serde(rename = <span class="string">&quot;apiVersion&quot;</span>)]
     </span><span class="kw">pub </span>api_version: String,
@@ -335,7 +350,8 @@
 
 <span class="doccomment">/// Struct representing the `spec` in the body of a Rekor LogEntry.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L39.&gt;
-</span><span class="attr">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>Spec {
     <span class="kw">pub </span>data: Data,
     <span class="kw">pub </span>signature: GenericSignature,
@@ -343,14 +359,16 @@
 
 <span class="doccomment">/// Struct representing the hashed data in the body of a Rekor LogEntry.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.&gt;
-</span><span class="attr">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>Data {
     <span class="kw">pub </span>hash: Hash,
 }
 
 <span class="doccomment">/// Struct representing a hash digest.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L273.&gt;
-</span><span class="attr">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>Hash {
     <span class="kw">pub </span>algorithm: String,
     <span class="kw">pub </span>value: String,
@@ -358,7 +376,8 @@
 
 <span class="doccomment">/// Struct representing a signature in the body of a Rekor LogEntry.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L383&gt;
-</span><span class="attr">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>GenericSignature {
     <span class="doccomment">/// Base64 content that is signed.
     </span><span class="kw">pub </span>content: String,
@@ -369,7 +388,8 @@
 
 <span class="doccomment">/// Struct representing a public key included in the body of a Rekor LogEntry.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L551.&gt;
-</span><span class="attr">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>PublicKey {
     <span class="doccomment">/// Base64 content of a public key.
     </span><span class="kw">pub </span>content: String,
@@ -378,7 +398,8 @@
 <span class="doccomment">/// Struct representing a verification object in a Rekor LogEntry. The verification object in Rekor
 /// also contains an inclusion proof. Since we currently don&#39;t verify the inclusion proof in the
 /// client, it is omitted from this struct.
-</span><span class="attr">#[derive(Debug, Deserialize, PartialEq, Serialize)]
+</span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>LogEntryVerification {
     <span class="comment">// Base64-encoded signature over the body, integratedTime, logID, and logIndex.
     </span><span class="attr">#[serde(rename = <span class="string">&quot;signedEntryTimestamp&quot;</span>)]
@@ -406,22 +427,21 @@
     <span class="kw">type </span>Error = anyhow::Error;
 
     <span class="kw">fn </span>try_from(log_entry: <span class="kw-2">&amp;</span>LogEntry) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="comment">// Create a copy of the LogEntry, but skip the verification.
-        </span><span class="kw">let </span>entry_subset = LogEntry {
-            body: log_entry.body.clone(),
-            integrated_time: log_entry.integrated_time,
-            log_id: log_entry.log_id.clone(),
-            log_index: log_entry.log_index,
-            verification: <span class="prelude-val">None</span>,
-        };
-
-        <span class="comment">// Canonicalized JSON document that is signed. Canonicalization should follow the RFC 8785
-        // rules.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>serializer = Serializer::with_formatter(Vec::new(), CanonicalFormatter::new());
-        entry_subset
-            .serialize(<span class="kw-2">&amp;mut </span>serializer)
-            .context(<span class="string">&quot;Failed to serialize Rekor signed payload to JSON&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>signed_json_bytes: Vec&lt;u8&gt; = serializer.into_inner();
+        <span class="comment">// Canonicalized JSON document that is signed; note that verification is omitted.
+        // Canonicalization should follow the RFC 8785 rules. We hardcode the canonical
+        // serialization because serialization with serde_json requires std; if we get the
+        // serialization wrong (e.g., because a string contain characters requiring special
+        // escaping), the signature will fail to match. Thus, this should result in incorrectly
+        // rejecting some valid signature bundles, not incorrectly accepting valid ones.
+        </span><span class="macro">anyhow::ensure!</span>(!log_entry.body.contains(<span class="string">&#39;&quot;&#39;</span>));
+        <span class="macro">anyhow::ensure!</span>(!log_entry.log_id.contains(<span class="string">&#39;&quot;&#39;</span>));
+        <span class="kw">let </span>canonicalized = <span class="macro">format!</span>(
+            <span class="string">r#&quot;{{&quot;body&quot;:&quot;{body}&quot;,&quot;integratedTime&quot;:{time},&quot;logID&quot;:&quot;{id}&quot;,&quot;logIndex&quot;:{index}}}&quot;#</span>,
+            body = <span class="kw-2">&amp;</span>log_entry.body,
+            time = log_entry.integrated_time,
+            id = <span class="kw-2">&amp;</span>log_entry.log_id,
+            index = log_entry.log_index
+        );
 
         <span class="comment">// Extract the signature from the LogEntry.
         </span><span class="kw">let </span>sig_base64 = log_entry
@@ -432,10 +452,10 @@
             .clone();
         <span class="kw">let </span>signature = BASE64_STANDARD
             .decode(sig_base64)
-            .context(<span class="string">&quot;couldn&#39;t decode Base64 signature&quot;</span>)<span class="question-mark">?</span>;
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t decode Base64 signature: {}&quot;</span>, error))<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-            canonicalized: signed_json_bytes,
+            canonicalized: canonicalized.as_bytes().to_vec(),
             signature,
         })
     }
@@ -465,15 +485,18 @@
 /// instance of `Body`.
 </span><span class="kw">pub fn </span>get_rekor_log_entry_body(log_entry: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;Body&gt; {
     <span class="kw">let </span>parsed: BTreeMap&lt;String, LogEntry&gt; =
-        serde_json::from_slice(log_entry).context(<span class="string">&quot;couldn&#39;t parse bytes into a LogEntry object&quot;</span>)<span class="question-mark">?</span>;
+        serde_json::from_slice(log_entry).map_err(|error| {
+            <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t parse bytes into a LogEntry object: {}&quot;</span>, error)
+        })<span class="question-mark">?</span>;
     <span class="kw">let </span>entry = parsed.values().next().context(<span class="string">&quot;no entry in the map&quot;</span>)<span class="question-mark">?</span>;
 
     <span class="comment">// Parse base64-encoded entry.body into an instance of Body.
     </span><span class="kw">let </span>body_bytes: Vec&lt;u8&gt; = BASE64_STANDARD
         .decode(entry.body.clone())
-        .context(<span class="string">&quot;couldn&#39;t decode Base64 signature&quot;</span>)<span class="question-mark">?</span>;
+        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t decode Base64 signature: {}&quot;</span>, error))<span class="question-mark">?</span>;
 
-    serde_json::from_slice(<span class="kw-2">&amp;</span>body_bytes).context(<span class="string">&quot;couldn&#39;t parse bytes into a Body object&quot;</span>)
+    serde_json::from_slice(<span class="kw-2">&amp;</span>body_bytes)
+        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t parse bytes into a Body object: {}&quot;</span>, error))
 }
 
 <span class="doccomment">/// Parses a blob into a Rekor log entry and verifies the signature in
@@ -524,7 +547,8 @@
     <span class="kw">let </span>public_key_pem_vec: Vec&lt;u8&gt; = BASE64_STANDARD
         .decode(body.spec.signature.public_key.content.as_bytes())
         .expect(<span class="string">&quot;couldn&#39;t decode the public key in the Rekor LogEntry body&quot;</span>);
-    <span class="kw">let </span>public_key_pem = core::str::from_utf8(<span class="kw-2">&amp;</span>public_key_pem_vec)<span class="question-mark">?</span>;
+    <span class="kw">let </span>public_key_pem =
+        core::str::from_utf8(<span class="kw-2">&amp;</span>public_key_pem_vec).map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;
     <span class="kw">let </span>public_key = convert_pem_to_raw(public_key_pem)<span class="question-mark">?</span>;
 
     verify_signature_raw(<span class="kw-2">&amp;</span>signature, contents_bytes, <span class="kw-2">&amp;</span>public_key)
@@ -533,7 +557,9 @@
 
 <span class="kw">fn </span>rekor_signature_bundle(log_entry: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;RekorSignatureBundle&gt; {
     <span class="kw">let </span>parsed: BTreeMap&lt;String, LogEntry&gt; =
-        serde_json::from_slice(log_entry).context(<span class="string">&quot;couldn&#39;t parse bytes into a LogEntry object&quot;</span>)<span class="question-mark">?</span>;
+        serde_json::from_slice(log_entry).map_err(|error| {
+            <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t parse bytes into a LogEntry object: {}&quot;</span>, error)
+        })<span class="question-mark">?</span>;
     <span class="kw">let </span>entry = parsed.values().next().context(<span class="string">&quot;no entry in the map&quot;</span>)<span class="question-mark">?</span>;
 
     RekorSignatureBundle::try_from(entry)

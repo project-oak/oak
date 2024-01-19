@@ -763,6 +763,11 @@
 <a href="#763" id="763">763</a>
 <a href="#764" id="764">764</a>
 <a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
+<a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -901,7 +906,8 @@
         cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
             <span class="kw">let </span>sig = Signature::from_slice(signature)<span class="question-mark">?</span>;
             verifying_key.verify(contents, <span class="kw-2">&amp;</span>sig)
-        })<span class="question-mark">?</span>;
+        })
+        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;
         <span class="kw">let </span>payload = cert
             .payload
             .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no cert payload&quot;</span>))<span class="question-mark">?</span>;
@@ -923,10 +929,12 @@
     </span><span class="kw">let </span>encryption_cert =
         coset::CoseSign1::from_slice(<span class="kw-2">&amp;</span>appl_keys.encryption_public_key_certificate)
             .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse encryption certificate&quot;</span>))<span class="question-mark">?</span>;
-    encryption_cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
-        <span class="kw">let </span>sig = Signature::from_slice(signature)<span class="question-mark">?</span>;
-        verifying_key.verify(contents, <span class="kw-2">&amp;</span>sig)
-    })<span class="question-mark">?</span>;
+    encryption_cert
+        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
+            <span class="kw">let </span>sig = Signature::from_slice(signature)<span class="question-mark">?</span>;
+            verifying_key.verify(contents, <span class="kw-2">&amp;</span>sig)
+        })
+        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;
     <span class="kw">let </span>encryption_payload = encryption_cert
         .payload
         .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no encryption cert payload&quot;</span>))<span class="question-mark">?</span>;
@@ -940,10 +948,12 @@
     <span class="comment">// Process signing certificate.
     </span><span class="kw">let </span>signing_cert = coset::CoseSign1::from_slice(<span class="kw-2">&amp;</span>appl_keys.signing_public_key_certificate)
         .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse encryption certificate&quot;</span>))<span class="question-mark">?</span>;
-    signing_cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
-        <span class="kw">let </span>sig = Signature::from_slice(signature)<span class="question-mark">?</span>;
-        verifying_key.verify(contents, <span class="kw-2">&amp;</span>sig)
-    })<span class="question-mark">?</span>;
+    signing_cert
+        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
+            <span class="kw">let </span>sig = Signature::from_slice(signature)<span class="question-mark">?</span>;
+            verifying_key.verify(contents, <span class="kw-2">&amp;</span>sig)
+        })
+        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;
     <span class="kw">let </span>signing_payload = signing_cert
         .payload
         .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no signing cert payload&quot;</span>))<span class="question-mark">?</span>;
