@@ -23,7 +23,7 @@ use std::{
 
 use anyhow::Context;
 use oak_attestation::handler::AsyncEncryptionHandler;
-use oak_crypto::encryptor::AsyncRecipientContextGenerator;
+use oak_crypto::encryptor::AsyncEncryptionKeyHandle;
 use oak_functions_service::{
     instance::OakFunctionsInstance,
     proto::oak::functions::{
@@ -61,13 +61,13 @@ pub mod proto {
 }
 
 // Instance of the OakFunctions service for Oak Containers.
-pub struct OakFunctionsContainersService<G: AsyncRecipientContextGenerator + Send + Sync> {
+pub struct OakFunctionsContainersService<G: AsyncEncryptionKeyHandle + Send + Sync> {
     instance: OnceLock<OakFunctionsInstance>,
     encryption_key_handle: Arc<G>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
-impl<G: AsyncRecipientContextGenerator + Send + Sync> OakFunctionsContainersService<G> {
+impl<G: AsyncEncryptionKeyHandle + Send + Sync> OakFunctionsContainersService<G> {
     pub fn new(
         encryption_key_handle: Arc<G>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
@@ -110,7 +110,7 @@ fn map_status(status: micro_rpc::Status) -> tonic::Status {
 }
 
 #[tonic::async_trait]
-impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
+impl<G: AsyncEncryptionKeyHandle + Send + Sync + 'static> OakFunctions
     for OakFunctionsContainersService<G>
 {
     async fn initialize(
@@ -375,7 +375,7 @@ static GRPC_SUCCESS: http::header::HeaderValue = http::header::HeaderValue::from
 const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static>(
+pub async fn serve<G: AsyncEncryptionKeyHandle + Send + Sync + 'static>(
     listener: TcpListener,
     encryption_key_handle: Arc<G>,
     meter: Meter,

@@ -16,7 +16,7 @@
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_crypto::{
-    encryptor::AsyncRecipientContextGenerator, hpke::RecipientContext,
+    encryptor::AsyncEncryptionKeyHandle, hpke::RecipientContext,
     proto::oak::crypto::v1::SessionKeys,
 };
 use tonic::transport::{Endpoint, Uri};
@@ -71,28 +71,6 @@ impl OrchestratorCryptoClient {
     }
 }
 
-#[async_trait(?Send)]
-pub trait EncryptionKeyHandle {
-    async fn derive_session_keys(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<RecipientContext>;
-}
-
-#[async_trait(?Send)]
-impl<T> EncryptionKeyHandle for T
-where
-    T: AsyncRecipientContextGenerator,
-{
-    async fn derive_session_keys(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<RecipientContext> {
-        self.generate_recipient_context(encapsulated_public_key)
-            .await
-    }
-}
-
 pub struct InstanceEncryptionKeyHandle {
     orchestrator_crypto_client: OrchestratorCryptoClient,
 }
@@ -108,7 +86,7 @@ impl InstanceEncryptionKeyHandle {
 }
 
 #[async_trait]
-impl AsyncRecipientContextGenerator for InstanceEncryptionKeyHandle {
+impl AsyncEncryptionKeyHandle for InstanceEncryptionKeyHandle {
     async fn generate_recipient_context(
         &self,
         encapsulated_public_key: &[u8],
