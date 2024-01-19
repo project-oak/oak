@@ -146,10 +146,18 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
     fn try_from(log_entry: &LogEntry) -> anyhow::Result<Self> {
         // Canonicalized JSON document that is signed; note that verification is omitted.
         // Canonicalization should follow the RFC 8785 rules. We hardcode the canonical
-        // serialization because serialization with serde_json requires std.
+        // serialization because serialization with serde_json requires std; if we get the
+        // serialization wrong (e.g., because a string contain characters requiring special
+        // escaping), the signature will fail to match. Thus, this should result in incorrectly
+        // rejecting some valid signature bundles, not incorrectly accepting valid ones.
+        anyhow::ensure!(!log_entry.body.contains('"'));
+        anyhow::ensure!(!log_entry.log_id.contains('"'));
         let canonicalized = format!(
-            "{{\"body\":\"{}\",\"integratedTime\":{},\"logID\":\"{}\",\"logIndex\":{}}}",
-            log_entry.body, log_entry.integrated_time, log_entry.log_id, log_entry.log_index
+            r#"{{"body":"{body}","integratedTime":{time},"logID":"{id}","logIndex":{index}}}"#,
+            body = &log_entry.body,
+            time = log_entry.integrated_time,
+            id = &log_entry.log_id,
+            index = log_entry.log_index
         );
 
         // Extract the signature from the LogEntry.
