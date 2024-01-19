@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["ReceiverType"],"fn":["compile"],"struct":["CompileOptions"]};
+window.SIDEBAR_ITEMS = {"enum":["ReceiverType"],"fn":["compile"],"struct":["CompileOptions","ExternPath"]};

@@ -317,6 +317,27 @@
 <a href="#317" id="317">317</a>
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -368,6 +389,24 @@
 
     <span class="doccomment">/// List of `bytes` fields that will use `bytes::Bytes` instead of `Vec&lt;u8&gt;`
     </span><span class="kw">pub </span>bytes: Vec&lt;String&gt;,
+
+    <span class="doccomment">/// Specifies externally provided Protobuf packages or types.
+    </span><span class="kw">pub </span>extern_paths: Vec&lt;ExternPath&gt;,
+}
+
+<span class="attr">#[derive(Default, Clone)]
+</span><span class="kw">pub struct </span>ExternPath {
+    proto_path: String,
+    rust_path: String,
+}
+
+<span class="kw">impl </span>ExternPath {
+    <span class="kw">pub fn </span>new(proto_path: <span class="kw-2">&amp;</span>str, rust_path: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+        ExternPath {
+            proto_path: proto_path.to_string(),
+            rust_path: rust_path.to_string(),
+        }
+    }
 }
 
 <span class="doccomment">/// Compile Rust server code from the services in the provided protobuf file.
@@ -403,6 +442,9 @@
     config.service_generator(Box::new(ServiceGenerator {
         options: options.clone(),
     }));
+    <span class="kw">for </span>extern_path <span class="kw">in </span>options.extern_paths {
+        config.extern_path(extern_path.proto_path, extern_path.rust_path);
+    }
     config
         <span class="comment">// Use BTreeMap to allow using this function in no-std crates.
         </span>.btree_map([<span class="string">&quot;.&quot;</span>])
