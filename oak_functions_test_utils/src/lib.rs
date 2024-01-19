@@ -24,6 +24,7 @@ use std::{
 use anyhow::Context;
 use log::info;
 use nix::unistd::Pid;
+use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_abi::Response;
 use oak_functions_client::OakFunctionsClient;
 use prost::Message;
@@ -262,7 +263,7 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {
     let uri = format!("http://localhost:{port}/");
 
     // Create client
-    let mut client = OakFunctionsClient::new(&uri)
+    let mut client = OakFunctionsClient::new(&uri, &InsecureAttestationVerifier {})
         .await
         .expect("couldn't create client");
 
