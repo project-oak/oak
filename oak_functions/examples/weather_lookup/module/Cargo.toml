@@ -9,17 +9,17 @@ license = "Apache-2.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-location_utils = { path = "../../../location_utils" }
-oak_functions_sdk = { path = "../../../../oak_functions_sdk" }
+location_utils = { workspace = true }
+oak_functions_sdk = { workspace = true }
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 
 [dev-dependencies]
 lookup_data_generator = { path = "../../../lookup_data_generator" }
-oak_functions_abi = { path = "../../../../oak_functions_abi" }
+oak_functions_abi = { workspace = true }
 maplit = "*"
 rand = "*"
-oak_functions_test_utils = { path = "../../../../oak_functions_test_utils" }
+oak_functions_test_utils = { workspace = true }
 tokio = { version = "*", features = [
   "fs",
   "macros",
