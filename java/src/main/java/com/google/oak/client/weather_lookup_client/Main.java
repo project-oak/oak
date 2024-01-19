@@ -19,6 +19,7 @@ package com.google.oak.client.weather_lookup_client;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.micro_rpc.ResponseWrapper;
+import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.client.OakClient;
 import com.google.oak.remote_attestation.InsecureAttestationVerifier;
 import com.google.oak.session.v1.StreamingSessionGrpc;
@@ -29,6 +30,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -52,7 +54,8 @@ public class Main {
     // Create Oak Client.
     GrpcStreamingTransport transport = new GrpcStreamingTransport(client::stream);
     Result<OakClient<GrpcStreamingTransport>, Exception> oakClientCreateResult =
-        OakClient.create(transport, new InsecureAttestationVerifier());
+        OakClient.create(transport, new InsecureAttestationVerifier(), Clock.systemUTC(),
+            ReferenceValues.getDefaultInstance());
     OakClient<GrpcStreamingTransport> oakClient = oakClientCreateResult.unwrap("creating client");
 
     // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.

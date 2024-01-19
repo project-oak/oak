@@ -16,11 +16,15 @@
 
 package com.google.oak.client;
 
+import com.google.oak.attestation.v1.AttestationResults;
+import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.crypto.ClientEncryptor;
 import com.google.oak.remote_attestation.AttestationVerifier;
 import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
+import java.time.Clock;
+import java.time.temporal.ChronoField;
 
 /**
  * Oak Client class for exchanging encrypted messages with an Oak Enclave which is being run by the
@@ -42,15 +46,24 @@ public class OakClient<T extends Transport> implements AutoCloseable {
    * @return an instance of the {@code OakClient} wrapped in a {@code Result}
    */
   public static <E extends EvidenceProvider & Transport, V extends AttestationVerifier>
-      Result<OakClient<E>, Exception> create(E transport, V verifier) {
+      Result<OakClient<E>, Exception> create(
+          E transport, V verifier, Clock clock, ReferenceValues referenceValues) {
     // TODO(#3641): Implement client-side attestation verification.
     return transport.getEvidence()
         .mapError(Exception::new)
         .andThen(e
-            -> verifier.verify(e.getAttestationEvidence(), e.getAttestationEndorsement())
+            -> verifier
+                   .verify(clock.instant().getLong(ChronoField.MILLI_OF_SECOND), e.getEvidence(),
+                       e.getEndorsements(), referenceValues)
                    .map(b
                        -> new OakClient<E>(transport,
-                           e.getAttestationEvidence().getEncryptionPublicKey().toByteArray())));
+                           e.hasEvidence() ? e.getEvidence()
+                                                 .getApplicationKeys()
+                                                 .getEncryptionPublicKeyCertificate()
+                                                 .toByteArray()
+                                           : e.getAttestationEvidence()
+                                                 .getEncryptionPublicKey()
+                                                 .toByteArray())));
   }
 
   private OakClient(T transport, byte[] serverEncryptionPublicKey) {

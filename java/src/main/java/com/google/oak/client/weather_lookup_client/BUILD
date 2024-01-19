@@ -31,6 +31,7 @@ java_binary(
         "//java/src/main/java/com/google/oak/transport:grpc_streaming_transport",
         "//java/src/main/java/com/google/oak/util",
         "//proto/micro_rpc:messages_java_proto",
+        "//proto/attestation:reference_value_java_proto",
         "//proto/session:service_streaming_java_grpc",
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//netty",

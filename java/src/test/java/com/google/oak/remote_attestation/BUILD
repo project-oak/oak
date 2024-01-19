@@ -27,5 +27,6 @@ java_test(
     deps = [
         "//java/src/main/java/com/google/oak/remote_attestation:amd_attestation_verifier",
         "//java/src/main/java/com/google/oak/util",
+        "//proto/attestation:verification_java_proto",
     ],
 )

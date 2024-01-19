@@ -20,6 +20,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
+import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.client.OakClient;
 import com.google.oak.example.encrypted.Request;
 import com.google.oak.example.encrypted.Response;
@@ -32,6 +33,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.Server;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
+import java.time.Clock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,7 +69,9 @@ public final class SecureServiceImplTest {
     GrpcStreamingTransport transport = new GrpcStreamingTransport(stub::encryptedConnect);
 
     try (OakClient<GrpcStreamingTransport> oakClient =
-             OakClient.create(transport, new InsecureAttestationVerifier())
+             OakClient
+                 .create(transport, new InsecureAttestationVerifier(), Clock.systemUTC(),
+                     ReferenceValues.getDefaultInstance())
                  .unwrap("creating client")) {
       Request request = Request.newBuilder().setData(ByteString.copyFromUtf8(message)).build();
       byte[] bytes = oakClient.invoke(request.toByteArray()).unwrap("invoking client");

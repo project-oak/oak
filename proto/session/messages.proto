@@ -60,7 +60,7 @@ message AttestationBundle {
   // The DICE attestation evidence.
   oak.attestation.v1.Evidence evidence = 3;
 
-  // Thea attestation endorsements.
+  // The DICE attestation endorsements.
   oak.attestation.v1.Endorsements endorsements = 4;
 }
 

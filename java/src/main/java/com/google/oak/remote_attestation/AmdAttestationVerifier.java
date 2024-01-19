@@ -16,8 +16,10 @@
 
 package com.google.oak.remote_attestation;
 
-import com.google.oak.session.v1.AttestationEndorsement;
-import com.google.oak.session.v1.AttestationEvidence;
+import com.google.oak.attestation.v1.AttestationResults;
+import com.google.oak.attestation.v1.Endorsements;
+import com.google.oak.attestation.v1.Evidence;
+import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.util.Result;
 
 /**
@@ -50,11 +52,12 @@ public class AmdAttestationVerifier implements AttestationVerifier {
    */
   // TODO(#3641): Rewrite java-doc to represent actual AMD attestation verification.
   @Override
-  public final Result<Boolean, Exception> verify(
-      final AttestationEvidence evidence, final AttestationEndorsement endorsement) {
+  public final Result<AttestationResults, Exception> verify(long nowUtcMillis,
+      final Evidence evidence, final Endorsements endorsements,
+      final ReferenceValues referenceValues) {
     // TODO(#3641): Implement AMD SEV-SNP attestation verification.
     if (referenceValue.length == 0) {
-      return Result.success(true);
+      return Result.success(AttestationResults.getDefaultInstance());
     } else {
       return Result.error(new Exception("unsupported reference value"));
     }

@@ -16,6 +16,7 @@
 
 package com.google.oak.remote_attestation;
 
+import com.google.oak.attestation.v1.AttestationResults;
 import com.google.oak.remote_attestation.AmdAttestationVerifier;
 import com.google.oak.util.Result;
 import org.junit.Assert;
@@ -32,7 +33,7 @@ public class AmdAttestationVerifierTest {
   public void testVerify() throws Exception {
     // TODO(#3641): Implement AMD SEV-SNP attestation verification.
     AmdAttestationVerifier verifier = new AmdAttestationVerifier(TEST_REFERENCE_VALUE);
-    Result<Boolean, Exception> verifyResult = verifier.verify(null, null);
+    Result<AttestationResults, Exception> verifyResult = verifier.verify(0, null, null, null);
     Assert.assertTrue(verifyResult.isSuccess());
   }
 }

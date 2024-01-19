@@ -26,7 +26,10 @@ java_library(
     srcs = ["AttestationVerifier.java"],
     deps = [
         "//java/src/main/java/com/google/oak/util",
-        "//proto/session:messages_java_proto",
+        "//proto/attestation:endorsement_java_proto",
+        "//proto/attestation:evidence_java_proto",
+        "//proto/attestation:reference_value_java_proto",
+        "//proto/attestation:verification_java_proto",
     ],
 )
 
@@ -35,7 +38,10 @@ java_library(
     srcs = ["AttestationVerifier.java"],
     deps = [
         "//java/src/main/java/com/google/oak/util",
-        "//proto/session:messages_java_proto",
+        "//proto/attestation:endorsement_java_proto",
+        "//proto/attestation:evidence_java_proto",
+        "//proto/attestation:reference_value_java_proto",
+        "//proto/attestation:verification_java_proto",
     ],
 )
 
@@ -45,7 +51,10 @@ java_library(
     deps = [
         ":attestation_verifier",
         "//java/src/main/java/com/google/oak/util",
-        "//proto/session:messages_java_proto",
+        "//proto/attestation:endorsement_java_proto",
+        "//proto/attestation:evidence_java_proto",
+        "//proto/attestation:reference_value_java_proto",
+        "//proto/attestation:verification_java_proto",
     ],
 )
 
@@ -55,7 +64,10 @@ java_library(
     deps = [
         ":attestation_verifier",
         "//java/src/main/java/com/google/oak/util",
-        "//proto/session:messages_java_proto",
+        "//proto/attestation:endorsement_java_proto",
+        "//proto/attestation:evidence_java_proto",
+        "//proto/attestation:reference_value_java_proto",
+        "//proto/attestation:verification_java_proto",
     ],
 )
 
@@ -65,6 +77,9 @@ java_library(
     deps = [
         ":attestation_verifier_android",
         "//java/src/main/java/com/google/oak/util",
-        "//proto/session:messages_java_proto",
+        "//proto/attestation:endorsement_java_proto",
+        "//proto/attestation:evidence_java_proto",
+        "//proto/attestation:reference_value_java_proto",
+        "//proto/attestation:verification_java_proto",
     ],
 )

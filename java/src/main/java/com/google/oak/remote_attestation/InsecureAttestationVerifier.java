@@ -16,8 +16,10 @@
 
 package com.google.oak.remote_attestation;
 
-import com.google.oak.session.v1.AttestationEndorsement;
-import com.google.oak.session.v1.AttestationEvidence;
+import com.google.oak.attestation.v1.AttestationResults;
+import com.google.oak.attestation.v1.Endorsements;
+import com.google.oak.attestation.v1.Evidence;
+import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.util.Result;
 
 /**
@@ -35,8 +37,9 @@ public class InsecureAttestationVerifier implements AttestationVerifier {
    * @return success value wrapped in a {@code Result}
    */
   @Override
-  public final Result<Boolean, Exception> verify(
-      final AttestationEvidence evidence, final AttestationEndorsement endorsement) {
-    return Result.success(true);
+  public final Result<AttestationResults, Exception> verify(long nowUtcMillis,
+      final Evidence evidence, final Endorsements endorsements,
+      final ReferenceValues referenceValues) {
+    return Result.success(AttestationResults.getDefaultInstance());
   }
 }

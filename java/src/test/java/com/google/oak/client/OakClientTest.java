@@ -19,18 +19,21 @@ package com.google.oak.client;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
+import com.google.oak.attestation.v1.ApplicationKeys;
+import com.google.oak.attestation.v1.Endorsements;
+import com.google.oak.attestation.v1.Evidence;
+import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.crypto.ServerEncryptor;
 import com.google.oak.crypto.hpke.KeyPair;
 import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.remote_attestation.InsecureAttestationVerifier;
 import com.google.oak.session.v1.AttestationBundle;
-import com.google.oak.session.v1.AttestationEndorsement;
-import com.google.oak.session.v1.AttestationEvidence;
 import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
+import java.time.Clock;
 import java.util.Arrays;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -58,14 +61,15 @@ public class OakClientTest {
 
     @Override
     public Result<AttestationBundle, String> getEvidence() {
-      AttestationEvidence attestationEvidence =
-          AttestationEvidence.newBuilder()
-              .setEncryptionPublicKey(ByteString.copyFrom(keyPair.publicKey))
+      Evidence attestationEvidence =
+          Evidence.newBuilder()
+              .setApplicationKeys(ApplicationKeys.newBuilder().setEncryptionPublicKeyCertificate(
+                  ByteString.copyFrom(keyPair.publicKey)))
               .build();
-      AttestationEndorsement attestationEndorsement = AttestationEndorsement.getDefaultInstance();
+      Endorsements attestationEndorsements = Endorsements.getDefaultInstance();
       AttestationBundle attestationBundle = AttestationBundle.newBuilder()
-                                                .setAttestationEvidence(attestationEvidence)
-                                                .setAttestationEndorsement(attestationEndorsement)
+                                                .setEvidence(attestationEvidence)
+                                                .setEndorsements(attestationEndorsements)
                                                 .build();
 
       return Result.success(attestationBundle);
@@ -98,7 +102,8 @@ public class OakClientTest {
   @Test
   public void testOakClient() throws Exception {
     Result<OakClient<TestTransport>, Exception> oakClientCreateResult =
-        OakClient.create(new TestTransport(), new InsecureAttestationVerifier());
+        OakClient.create(new TestTransport(), new InsecureAttestationVerifier(), Clock.systemUTC(),
+            ReferenceValues.getDefaultInstance());
     assertTrue(oakClientCreateResult.isSuccess());
 
     try (OakClient<TestTransport> oakClient = oakClientCreateResult.success().get()) {
