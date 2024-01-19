@@ -63,6 +63,12 @@ oak_functions_containers_launcher:
 
 all_oak_functions_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_functions_containers_container_bundle_tar oak_functions_containers_launcher
 
+ensure_no_std package:
+    cargo check --target=x86_64-unknown-none --package='{{package}}'
+
+# TODO(#4682): Add "oak_attestation_verification" when it is no_std compatible
+all_ensure_no_std: (ensure_no_std "micro_rpc")
+
 # Entry points for Kokoro CI.
 
 kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin oak_restricted_kernel_simple_io_bin oak_restricted_kernel_simple_io_wrapper stage0_bin
@@ -70,7 +76,7 @@ kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin oak_restr
 kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
 
-kokoro_run_tests:
+kokoro_run_tests: all_ensure_no_std
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --workspace --exclude='oak_containers_hello_world_untrusted_app'
 
 clang-tidy:
