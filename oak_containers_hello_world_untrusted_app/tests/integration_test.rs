@@ -96,12 +96,10 @@ async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
     assert_eq!(greeting, "Hello from the trusted side, fancy test! Btw, the Trusted App has a config with a length of 0 bytes.");
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn hello_world() {
     run_hello_world_test(Args::default_for_test().container_bundle).await;
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn cc_hello_world() {
     run_hello_world_test(
         format!(
@@ -111,4 +109,15 @@ async fn cc_hello_world() {
         .into(),
     )
     .await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn all_hello_world() {
+    // Combine both test cases into one test to avoid running them in parallel.
+    // Nextest runs each test case in a separate process, which means that even though they appear
+    // to be sharing synchronized state, that state is not synchronized, and therefore they both end
+    // up rebuilding the dependencies through the Lazy cell above.
+    // See https://nexte.st/book/usage.html?highlight=process#limitations
+    hello_world().await;
+    cc_hello_world().await;
 }
