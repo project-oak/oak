@@ -31,7 +31,7 @@
 
 namespace oak::oak_containers_hello_world_trusted_app {
 
-class OrchestratorClient : public crypto::RecipientContextGenerator {
+class OrchestratorClient : public crypto::EncryptionKeyHandle {
  public:
   OrchestratorClient();
 
