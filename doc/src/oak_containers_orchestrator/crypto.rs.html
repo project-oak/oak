@@ -208,7 +208,7 @@
 
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>hpke::{kem::X25519HkdfSha256, Deserializable, Kem};
-<span class="kw">use </span>oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator, ServerEncryptor};
+<span class="kw">use </span>oak_crypto::encryptor::{EncryptionKeyHandle, EncryptionKeyProvider, ServerEncryptor};
 <span class="kw">use </span>tonic::{Request, Response};
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::{

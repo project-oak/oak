@@ -135,11 +135,6 @@
 <a href="#135" id="135">135</a>
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -162,8 +157,7 @@
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_crypto::{
     encryptor::{
-        AsyncRecipientContextGenerator, AsyncServerEncryptor, RecipientContextGenerator,
-        ServerEncryptor,
+        AsyncEncryptionKeyHandle, AsyncServerEncryptor, EncryptionKeyHandle, ServerEncryptor,
     },
     proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
 };
@@ -184,17 +178,14 @@
 /// based on the provided encryption key.
 </span><span class="kw">pub struct </span>EncryptionHandler&lt;H: FnOnce(Vec&lt;u8&gt;) -&gt; Vec&lt;u8&gt;&gt; {
     <span class="comment">// TODO(#3442): Use attester to attest to the public key.
-    </span>encryption_key_provider: Arc&lt;<span class="kw">dyn </span>RecipientContextGenerator&gt;,
+    </span>encryption_key_handle: Arc&lt;<span class="kw">dyn </span>EncryptionKeyHandle&gt;,
     request_handler: H,
 }
 
 <span class="kw">impl</span>&lt;H: FnOnce(Vec&lt;u8&gt;) -&gt; Vec&lt;u8&gt;&gt; EncryptionHandler&lt;H&gt; {
-    <span class="kw">pub fn </span>create(
-        encryption_key_provider: Arc&lt;<span class="kw">dyn </span>RecipientContextGenerator&gt;,
-        request_handler: H,
-    ) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>create(encryption_key_handle: Arc&lt;<span class="kw">dyn </span>EncryptionKeyHandle&gt;, request_handler: H) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            encryption_key_provider,
+            encryption_key_handle,
             request_handler,
         }
     }
@@ -209,7 +200,7 @@
             .context(<span class="string">&quot;initial request message doesn&#39;t contain encapsulated public key&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span><span class="kw-2">mut </span>server_encryptor = ServerEncryptor::create(
             serialized_encapsulated_public_key,
-            <span class="self">self</span>.encryption_key_provider.clone(),
+            <span class="self">self</span>.encryption_key_handle.clone(),
         )
         .context(<span class="string">&quot;couldn&#39;t create server encryptor&quot;</span>)<span class="question-mark">?</span>;
 
@@ -232,27 +223,27 @@
 
 <span class="doccomment">/// Wraps a closure to an underlying function with request encryption and response decryption logic,
 /// based on the provided encryption key.
-/// [`AsyncEncryptionHandler`] can be used when an [`AsyncRecipientContextGenerator`] is needed.
+/// [`AsyncEncryptionHandler`] can be used when an [`AsyncEncryptionKeyHandle`] is needed.
 </span><span class="kw">pub struct </span>AsyncEncryptionHandler&lt;G, H, F&gt;
 <span class="kw">where
-    </span>G: AsyncRecipientContextGenerator + Send + Sync,
+    </span>G: AsyncEncryptionKeyHandle + Send + Sync,
     H: FnOnce(Vec&lt;u8&gt;) -&gt; F,
     F: Future&lt;Output = Vec&lt;u8&gt;&gt;,
 {
     <span class="comment">// TODO(#3442): Use attester to attest to the public key.
-    </span>recipient_context_generator: Arc&lt;G&gt;,
+    </span>encryption_key_handle: Arc&lt;G&gt;,
     request_handler: H,
 }
 
 <span class="kw">impl</span>&lt;G, H, F&gt; AsyncEncryptionHandler&lt;G, H, F&gt;
 <span class="kw">where
-    </span>G: AsyncRecipientContextGenerator + Send + Sync,
+    </span>G: AsyncEncryptionKeyHandle + Send + Sync,
     H: FnOnce(Vec&lt;u8&gt;) -&gt; F,
     F: Future&lt;Output = Vec&lt;u8&gt;&gt;,
 {
-    <span class="kw">pub fn </span>create(recipient_context_generator: Arc&lt;G&gt;, request_handler: H) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>create(encryption_key_handle: Arc&lt;G&gt;, request_handler: H) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            recipient_context_generator,
+            encryption_key_handle,
             request_handler,
         }
     }
@@ -262,8 +253,7 @@
         encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
     ) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
         <span class="comment">// Initialize server encryptor.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>server_encryptor =
-            AsyncServerEncryptor::new(<span class="self">self</span>.recipient_context_generator.as_ref());
+        </span><span class="kw">let </span><span class="kw-2">mut </span>server_encryptor = AsyncServerEncryptor::new(<span class="self">self</span>.encryption_key_handle.as_ref());
 
         <span class="comment">// Decrypt request.
         </span><span class="kw">let </span>(request, _associated_data) = server_encryptor

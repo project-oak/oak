@@ -262,6 +262,11 @@
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
 <a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -279,10 +284,9 @@
 //
 
 </span><span class="kw">use </span>anyhow::Ok;
-<span class="kw">pub use </span>oak_crypto::encryptor::EncryptionKeyHandle;
 <span class="kw">use </span>oak_crypto::{
-    encryptor::{EncryptionKeyProvider, RecipientContextGenerator},
-    hpke::RecipientContext <span class="kw">as </span>SessionKeys,
+    encryptor::{EncryptionKeyHandle, EncryptionKeyProvider},
+    hpke::RecipientContext,
 };
 <span class="kw">use </span>oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
 <span class="kw">use </span>oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
@@ -442,7 +446,10 @@
 }
 
 <span class="kw">impl </span>EncryptionKeyHandle <span class="kw">for </span>InstanceEncryptionKeyHandle {
-    <span class="kw">fn </span>generate_session_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, encapsulated_public_key: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;SessionKeys&gt; {
+    <span class="kw">fn </span>generate_recipient_context(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        encapsulated_public_key: <span class="kw-2">&amp;</span>[u8],
+    ) -&gt; anyhow::Result&lt;RecipientContext&gt; {
         <span class="self">self</span>.key.generate_recipient_context(encapsulated_public_key)
     }
 }
@@ -471,7 +478,10 @@
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;mock_attestation&quot;</span>)]
 </span><span class="kw">impl </span>EncryptionKeyHandle <span class="kw">for </span>MockEncryptionKeyHandle {
-    <span class="kw">fn </span>generate_session_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, encapsulated_public_key: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;SessionKeys&gt; {
+    <span class="kw">fn </span>generate_recipient_context(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        encapsulated_public_key: <span class="kw-2">&amp;</span>[u8],
+    ) -&gt; anyhow::Result&lt;RecipientContext&gt; {
         <span class="self">self</span>.key.generate_recipient_context(encapsulated_public_key)
     }
 }

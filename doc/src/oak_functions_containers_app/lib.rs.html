@@ -431,7 +431,7 @@
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_attestation::handler::AsyncEncryptionHandler;
-<span class="kw">use </span>oak_crypto::encryptor::AsyncRecipientContextGenerator;
+<span class="kw">use </span>oak_crypto::encryptor::AsyncEncryptionKeyHandle;
 <span class="kw">use </span>oak_functions_service::{
     instance::OakFunctionsInstance,
     proto::oak::functions::{
@@ -469,13 +469,13 @@
 }
 
 <span class="comment">// Instance of the OakFunctions service for Oak Containers.
-</span><span class="kw">pub struct </span>OakFunctionsContainersService&lt;G: AsyncRecipientContextGenerator + Send + Sync&gt; {
+</span><span class="kw">pub struct </span>OakFunctionsContainersService&lt;G: AsyncEncryptionKeyHandle + Send + Sync&gt; {
     instance: OnceLock&lt;OakFunctionsInstance&gt;,
     encryption_key_handle: Arc&lt;G&gt;,
     observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
 }
 
-<span class="kw">impl</span>&lt;G: AsyncRecipientContextGenerator + Send + Sync&gt; OakFunctionsContainersService&lt;G&gt; {
+<span class="kw">impl</span>&lt;G: AsyncEncryptionKeyHandle + Send + Sync&gt; OakFunctionsContainersService&lt;G&gt; {
     <span class="kw">pub fn </span>new(
         encryption_key_handle: Arc&lt;G&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
@@ -518,7 +518,7 @@
 }
 
 <span class="attr">#[tonic::async_trait]
-</span><span class="kw">impl</span>&lt;G: AsyncRecipientContextGenerator + Send + Sync + <span class="lifetime">&#39;static</span>&gt; OakFunctions
+</span><span class="kw">impl</span>&lt;G: AsyncEncryptionKeyHandle + Send + Sync + <span class="lifetime">&#39;static</span>&gt; OakFunctions
     <span class="kw">for </span>OakFunctionsContainersService&lt;G&gt;
 {
     <span class="kw">async fn </span>initialize(
@@ -783,7 +783,7 @@
 </span><span class="kw">const </span>GRPC_STATUS_HEADER_CODE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;grpc-status&quot;</span>;
 
 <span class="comment">// Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-</span><span class="kw">pub async fn </span>serve&lt;G: AsyncRecipientContextGenerator + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(
+</span><span class="kw">pub async fn </span>serve&lt;G: AsyncEncryptionKeyHandle + Send + Sync + <span class="lifetime">&#39;static</span>&gt;(
     listener: TcpListener,
     encryption_key_handle: Arc&lt;G&gt;,
     meter: Meter,
