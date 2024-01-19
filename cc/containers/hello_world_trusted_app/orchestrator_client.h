@@ -22,7 +22,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "cc/crypto/encryption_key_provider.h"
+#include "cc/crypto/encryption_key.h"
 #include "cc/crypto/hpke/recipient_context.h"
 #include "grpcpp/channel.h"
 #include "oak_containers/proto/interfaces.grpc.pb.h"
