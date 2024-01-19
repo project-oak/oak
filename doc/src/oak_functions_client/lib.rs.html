@@ -76,25 +76,25 @@
 
 </span><span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_client::{
-    proto::oak::session::v1::streaming_session_client::StreamingSessionClient,
-    transport::GrpcStreamingTransport, OakClient,
+    client::OakClient, proto::oak::session::v1::streaming_session_client::StreamingSessionClient,
+    transport::GrpcStreamingTransport, verifier::AttestationVerifier,
 };
 <span class="kw">use </span>prost::Message;
 <span class="kw">use </span>tonic::transport::Channel;
 
 <span class="kw">pub struct </span>OakFunctionsClient {
-    oak_client: oak_client::OakClient&lt;GrpcStreamingTransport&gt;,
+    oak_client: OakClient&lt;GrpcStreamingTransport&gt;,
 }
 
 <span class="kw">impl </span>OakFunctionsClient {
-    <span class="kw">pub async fn </span>new(uri: <span class="kw-2">&amp;</span>str) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+    <span class="kw">pub async fn </span>new(uri: <span class="kw-2">&amp;</span>str, verifier: <span class="kw-2">&amp;</span><span class="kw">dyn </span>AttestationVerifier) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>channel = Channel::from_shared(uri.to_string())
             .context(<span class="string">&quot;couldn&#39;t create gRPC channel&quot;</span>)<span class="question-mark">?
             </span>.connect()
             .<span class="kw">await
             </span>.context(<span class="string">&quot;couldn&#39;t connect via gRPC channel&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>transport = GrpcStreamingTransport::new(StreamingSessionClient::new(channel));
-        <span class="kw">let </span>oak_client = OakClient::create(transport)
+        <span class="kw">let </span>oak_client = OakClient::create(transport, verifier)
             .<span class="kw">await
             </span>.context(<span class="string">&quot;couldn&#39;t create Oak client&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ oak_client })

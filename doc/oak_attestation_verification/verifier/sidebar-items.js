@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["verify"],"struct":["DiceChainResult"]};
+window.SIDEBAR_ITEMS = {"fn":["verify","verify_dice_chain"],"struct":["DiceChainResult"]};

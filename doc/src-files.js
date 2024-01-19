@@ -11,7 +11,7 @@ var srcIndex = JSON.parse('{\
 "oak_attestation":["",[],["attester.rs","dice.rs","handler.rs","lib.rs"]],\
 "oak_attestation_verification":["",[],["claims.rs","endorsement.rs","lib.rs","rekor.rs","util.rs","verifier.rs"]],\
 "oak_channel":["",[],["client.rs","frame.rs","lib.rs","message.rs","server.rs"]],\
-"oak_client":["",[],["lib.rs","transport.rs","verifier.rs"]],\
+"oak_client":["",[],["client.rs","lib.rs","transport.rs","verifier.rs"]],\
 "oak_containers_hello_world_trusted_app":["",[],["app_service.rs","lib.rs"]],\
 "oak_containers_hello_world_untrusted_app":["",[],["app_client.rs","lib.rs"]],\
 "oak_containers_launcher":["",[],["lib.rs","qemu.rs","server.rs"]],\

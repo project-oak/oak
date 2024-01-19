@@ -62,6 +62,7 @@
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -82,6 +83,7 @@
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>bencher::stats::Stats;
+<span class="kw">use </span>oak_client::verifier::InsecureAttestationVerifier;
 <span class="kw">use </span>oak_functions_client::OakFunctionsClient;
 
 <span class="comment">// From https://pantheon.corp.google.com/api-gateway/gateway/weather-lookup-grpc/location/europe-west2?project=oak-ci.
@@ -92,7 +94,7 @@
 
 <span class="attr">#[tokio::main]
 </span><span class="kw">async fn </span>main() -&gt; anyhow::Result&lt;()&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>client = OakFunctionsClient::new(URL)
+    <span class="kw">let </span><span class="kw-2">mut </span>client = OakFunctionsClient::new(URL, <span class="kw-2">&amp;</span>InsecureAttestationVerifier {})
         .<span class="kw">await
         </span>.context(<span class="string">&quot;couldn&#39;t create client&quot;</span>)<span class="question-mark">?</span>;
 
