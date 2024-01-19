@@ -273,9 +273,11 @@ use crate::{signer::Signer, verifier::Verifier};
 
 #[test]
 fn test_signer_and_verifier() {
-    let (signing_key_one, verifying_key_one) = oak_dice::cert::generate_ecdsa_key_pair();
+    let signing_key_one = p256::ecdsa::SigningKey::random(&mut rand_core::OsRng);
 
     let signature = signing_key_one.sign(TEST_SIGNATURE_MESSAGE_ONE);
+
+    let verifying_key_one = p256::ecdsa::VerifyingKey::from(signing_key_one);
 
     assert!(verifying_key_one
         .verify(TEST_SIGNATURE_MESSAGE_ONE, &signature)
@@ -285,7 +287,10 @@ fn test_signer_and_verifier() {
         .verify(TEST_SIGNATURE_MESSAGE_TWO, &signature)
         .is_err());
 
-    let (_, verifying_key_two) = oak_dice::cert::generate_ecdsa_key_pair();
+    let verifying_key_two = {
+        let signing_key_two = p256::ecdsa::SigningKey::random(&mut rand_core::OsRng);
+        p256::ecdsa::VerifyingKey::from(signing_key_two)
+    };
 
     assert!(verifying_key_two
         .verify(TEST_SIGNATURE_MESSAGE_TWO, &signature)

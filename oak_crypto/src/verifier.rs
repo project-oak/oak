@@ -30,3 +30,13 @@ impl Verifier for p256::ecdsa::VerifyingKey {
         >>::verify(self, message, &parsed_signature).map_err(anyhow::Error::msg)
     }
 }
+
+struct VerifierKeyHandle {
+    inner: p256::ecdsa::VerifyingKey,
+}
+
+impl Verifier for VerifierKeyHandle {
+    fn verify(&self, message: &[u8], signature: &crate::signer::Signature) -> anyhow::Result<()> {
+        self.inner.verify(message, signature)
+    }
+}
