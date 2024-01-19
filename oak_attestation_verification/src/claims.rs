@@ -23,7 +23,6 @@ extern crate alloc;
 
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
-use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
@@ -70,7 +69,7 @@ pub enum InvalidClaimData {
 }
 
 /// Detailed content of a claim.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct ClaimPredicate<S> {
     /// URI indicating the type of the claim. It determines the meaning of
     /// `claimSpec` and `evidence`.
@@ -95,7 +94,7 @@ pub struct ClaimPredicate<S> {
 }
 
 /// Validity time range of an issued claim.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct ClaimValidity {
     /// The timestamp (encoded as an Epoch time) from which the claim is
     /// effective.
@@ -128,7 +127,8 @@ pub type EndorsementStatement = Statement<ClaimPredicate<Claimless>>;
 
 /// Converts the given byte array into an endorsement statement.
 pub fn parse_endorsement_statement(bytes: &[u8]) -> anyhow::Result<EndorsementStatement> {
-    serde_json::from_slice(bytes).context("parsing endorsement bytes")
+    serde_json::from_slice(bytes)
+        .map_err(|error| anyhow::anyhow!("parsing endorsement bytes: {}", error))
 }
 
 /// Checks that the given statement is a valid claim:

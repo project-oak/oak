@@ -7,20 +7,27 @@ license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-anyhow = "*"
-base64 = "0.21"
+anyhow = { version = "*", default-features = false }
+base64 = { version = "0.21", default-features = false, features = ["alloc"] }
 coset = { version = "*", default-features = false }
 ecdsa = { version = "*", features = ["pkcs8", "pem"] }
-hex = "*"
+hex = { version = "*", default-features = false }
 oak_dice = { workspace = true }
 oak_sev_guest = { workspace = true }
 prost = { workspace = true }
-p256 = { version = "*", features = ["ecdsa-core", "ecdsa", "pem"] }
-serde = { version = "*", features = ["derive"] }
-serde_canonical_json = "*"
-serde_json = "*"
+p256 = { version = "*", default-features = false, features = [
+  "alloc",
+  "ecdsa-core",
+  "ecdsa",
+  "pem"
+] }
+serde = { version = "*", default-features = false, features = ["derive"] }
+serde_json = { version = "*", default-features = false, features = ["alloc"] }
 sha2 = { version = "*", default-features = false }
-time = { version = "0.3.28", features = ["serde", "parsing", "formatting"] }
+time = { version = "0.3.28", default-features = false, features = [
+  "serde",
+  "parsing"
+] }
 zerocopy = "*"
 
 [build-dependencies]
