@@ -23,8 +23,9 @@ extern crate alloc;
 
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
-use anyhow::Context;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+#[cfg(feature = "serialize")]
+use serde::Serialize;
 use time::OffsetDateTime;
 
 use crate::proto::oak::HexDigest;
@@ -45,14 +46,16 @@ pub const STATEMENT_INTOTO_V01: &str = "https://in-toto.io/Statement/v0.1";
 pub type DigestSet = BTreeMap<String, String>;
 
 /// A software artifact identified by its name and a set of artifacts.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct Subject {
     pub name: String,
     pub digest: DigestSet,
 }
 
 /// Represents a generic statement that binds a predicate to a subject.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct Statement<P> {
     pub _type: String,
     #[serde(rename = "predicateType")]
@@ -70,7 +73,8 @@ pub enum InvalidClaimData {
 }
 
 /// Detailed content of a claim.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct ClaimPredicate<S> {
     /// URI indicating the type of the claim. It determines the meaning of
     /// `claimSpec` and `evidence`.
@@ -95,7 +99,8 @@ pub struct ClaimPredicate<S> {
 }
 
 /// Validity time range of an issued claim.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct ClaimValidity {
     /// The timestamp (encoded as an Epoch time) from which the claim is
     /// effective.
@@ -110,7 +115,8 @@ pub struct ClaimValidity {
 }
 
 /// Metadata about an artifact that serves as the evidence for the truth of a claim.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct ClaimEvidence {
     /// Optional field specifying the role of this evidence within the claim.
     pub role: Option<String>,
@@ -121,14 +127,16 @@ pub struct ClaimEvidence {
 }
 
 /// Inner type for a simple claim with no further fields.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct Claimless {}
 
 pub type EndorsementStatement = Statement<ClaimPredicate<Claimless>>;
 
 /// Converts the given byte array into an endorsement statement.
 pub fn parse_endorsement_statement(bytes: &[u8]) -> anyhow::Result<EndorsementStatement> {
-    serde_json::from_slice(bytes).context("parsing endorsement bytes")
+    serde_json::from_slice(bytes)
+        .map_err(|error| anyhow::anyhow!("parsing endorsement bytes: {}", error))
 }
 
 /// Checks that the given statement is a valid claim:
