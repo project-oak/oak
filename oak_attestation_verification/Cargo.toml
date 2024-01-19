@@ -5,6 +5,9 @@ authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+serialize = ["time/formatting"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 anyhow = { version = "*", default-features = false }
