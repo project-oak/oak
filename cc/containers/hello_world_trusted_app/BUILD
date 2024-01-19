@@ -41,7 +41,7 @@ cc_library(
     srcs = ["orchestrator_client.cc"],
     hdrs = ["orchestrator_client.h"],
     deps = [
-        "//cc/crypto:encryption_key_provider",
+        "//cc/crypto:encryption_key",
         "//cc/crypto/hpke:recipient_context",
         "//oak_containers/proto:interfaces_cc_grpc",
         "//oak_containers/proto:interfaces_cc_proto",
