@@ -9,7 +9,7 @@ license = "Apache-2.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-oak_functions_sdk = { path = "../../../../oak_functions_sdk" }
+oak_functions_sdk = { workspace = true }
 
 [dev-dependencies]
-oak_functions_abi = { path = "../../../../oak_functions_abi" }
+oak_functions_abi = { workspace = true }

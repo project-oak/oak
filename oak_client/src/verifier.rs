@@ -14,39 +14,27 @@
 // limitations under the License.
 //
 
-pub trait EvidenceProvider {
-    fn get_evidence(&mut self) -> anyhow::Result<Evidence>;
-}
+use anyhow::Context;
+use oak_attestation_verification::{
+    proto::oak::attestation::v1::{Endorsements, Evidence},
+    verifier::{verify_dice_chain, DiceChainResult},
+};
 
-/// Attestation evidence used to verify the validity of the Trusted Execution
-/// Environment and the binary running on it.
-/// <https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence>
-pub struct Evidence {
-    pub enclave_public_key: Vec<u8>,
-}
-
-/// Reference values used by the verifier to appraise the attestation evidence.
-/// <https://www.rfc-editor.org/rfc/rfc9334.html#name-reference-values>
-pub struct ReferenceValue {
-    pub binary_hash: String,
-}
-
-/// Verifier that appraises the attestation evidence and produces an attestation
-/// result.
-/// <https://www.rfc-editor.org/rfc/rfc9334.html#name-verifier>
-pub trait Verifier {
-    fn verify(&self, evidence: &Evidence, reference_value: &ReferenceValue) -> anyhow::Result<()>;
-}
-
-pub struct AmdSevSnpVerifier {}
-
-// TODO(#3641): Implement client-side attestation verification.
-impl Verifier for AmdSevSnpVerifier {
+pub trait AttestationVerifier {
     fn verify(
         &self,
-        _evidence: &Evidence,
-        _reference_value: &ReferenceValue,
-    ) -> anyhow::Result<()> {
-        Ok(())
+        evidence: &Evidence,
+        endorsements: &Endorsements,
+    ) -> anyhow::Result<DiceChainResult>;
+}
+
+/// Verifier that doesn't check the Evidence against Reference Values and only checks the DICE chain
+/// correctness.
+/// Should be only used for testing.
+pub struct InsecureAttestationVerifier;
+
+impl AttestationVerifier for InsecureAttestationVerifier {
+    fn verify(&self, evidence: &Evidence, _: &Endorsements) -> anyhow::Result<DiceChainResult> {
+        verify_dice_chain(evidence).context("couldn't verify the DICE chain")
     }
 }

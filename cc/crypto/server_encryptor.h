@@ -25,7 +25,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/crypto/common.h"
-#include "cc/crypto/encryption_key_provider.h"
+#include "cc/crypto/encryption_key.h"
 #include "cc/crypto/hpke/recipient_context.h"
 #include "oak_crypto/proto/v1/crypto.pb.h"
 
@@ -40,10 +40,10 @@ namespace oak::crypto {
 class ServerEncryptor {
  public:
   // Constructor for `ServerEncryptor`.
-  // `RecipientContextGenerator` argument is a long-term object containing the private key and
+  // `EncryptionKeyHandle` argument is a long-term object containing the private key and
   // should outlive the per-session `ServerEncryptor` object.
-  ServerEncryptor(RecipientContextGenerator& recipient_context_generator)
-      : recipient_context_generator_(recipient_context_generator), recipient_context_(nullptr){};
+  ServerEncryptor(EncryptionKeyHandle& encryption_key_handle)
+      : encryption_key_handle_(encryption_key_handle), recipient_context_(nullptr){};
 
   // Decrypts a [`EncryptedRequest`] proto message using AEAD.
   // <https://datatracker.ietf.org/doc/html/rfc5116>
@@ -60,7 +60,7 @@ class ServerEncryptor {
                                                                absl::string_view associated_data);
 
  private:
-  RecipientContextGenerator& recipient_context_generator_;
+  EncryptionKeyHandle& encryption_key_handle_;
   std::unique_ptr<RecipientContext> recipient_context_;
 
   absl::Status InitializeRecipientContexts(const oak::crypto::v1::EncryptedRequest& request);

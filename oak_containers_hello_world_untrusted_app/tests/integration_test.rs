@@ -19,19 +19,34 @@ use std::sync::Once;
 
 use oak_containers_launcher::Args;
 use oak_crypto::encryptor::ClientEncryptor;
+use once_cell::sync::Lazy;
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
-static INIT: Once = Once::new();
+static INIT_LOGGING: Once = Once::new();
 
 fn init_logging() {
-    INIT.call_once(|| {
+    INIT_LOGGING.call_once(|| {
         env_logger::init();
     });
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn hello_world() {
+static INIT_DEPENDENCIES: Lazy<anyhow::Result<()>> = Lazy::new(|| {
+    // This takes a long time, but we want to make sure everything it up to date.
+    // TODO(#4195): Stop dependencies from always being rebuilt.
+    duct::cmd!("just", "all_oak_containers_binaries",)
+        .dir(env!("WORKSPACE_ROOT"))
+        .run()?;
+    Ok(())
+});
+
+fn init_dependencies() {
+    INIT_DEPENDENCIES
+        .as_ref()
+        .expect("couldn't build dependencies");
+}
+
+async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
     init_logging();
 
     if xtask::testing::skip_test() {
@@ -39,12 +54,14 @@ async fn hello_world() {
         return;
     }
 
-    // This takes a long time, but we want to make sure everything it up to date.
-    // TODO(#4195): Stop dependencies from always being rebuilt.
-    build_dependencies().expect("couldn't build dependencies");
+    init_dependencies();
 
+    let app_args = Args {
+        container_bundle,
+        ..Args::default_for_test()
+    };
     let mut untrusted_app =
-        oak_containers_hello_world_untrusted_app::UntrustedApp::create(Args::default_for_test())
+        oak_containers_hello_world_untrusted_app::UntrustedApp::create(app_args)
             .await
             .expect("could not create untrusted app");
 
@@ -79,9 +96,28 @@ async fn hello_world() {
     assert_eq!(greeting, "Hello from the trusted side, fancy test! Btw, the Trusted App has a config with a length of 0 bytes.");
 }
 
-fn build_dependencies() -> anyhow::Result<()> {
-    duct::cmd!("just", "all_oak_containers_binaries",)
-        .dir(env!("WORKSPACE_ROOT"))
-        .run()?;
-    Ok(())
+async fn hello_world() {
+    run_hello_world_test(Args::default_for_test().container_bundle).await;
+}
+
+async fn cc_hello_world() {
+    run_hello_world_test(
+        format!(
+            "{}bazel-bin/cc/containers/hello_world_trusted_app/bundle.tar",
+            env!("WORKSPACE_ROOT")
+        )
+        .into(),
+    )
+    .await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn all_hello_world() {
+    // Combine both test cases into one test to avoid running them in parallel.
+    // Nextest runs each test case in a separate process, which means that even though they appear
+    // to be sharing synchronized state, that state is not synchronized, and therefore they both end
+    // up rebuilding the dependencies through the Lazy cell above.
+    // See https://nexte.st/book/usage.html?highlight=process#limitations
+    hello_world().await;
+    cc_hello_world().await;
 }

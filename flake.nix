@@ -152,6 +152,7 @@
             containers = with pkgs; mkShell {
               inputsFrom = [
                 base
+                bazelShell
                 rust
               ];
               packages = [

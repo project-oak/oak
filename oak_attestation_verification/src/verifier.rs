@@ -59,8 +59,8 @@ use crate::{
 const ADDITIONAL_DATA: &[u8] = b"";
 
 pub struct DiceChainResult {
-    encryption_public_key: Vec<u8>,
-    signing_public_key: Vec<u8>,
+    pub encryption_public_key: Vec<u8>,
+    pub signing_public_key: Vec<u8>,
 }
 
 impl From<&anyhow::Result<DiceChainResult>> for AttestationResults {
@@ -120,7 +120,7 @@ pub fn verify(
 }
 
 /// Verifies signatures along the certificate chain induced by DICE layers.
-fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<DiceChainResult> {
+pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<DiceChainResult> {
     let root_layer = evidence
         .root_layer
         .as_ref()
@@ -152,7 +152,7 @@ fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<DiceChainResult> {
     let appl_keys = evidence
         .application_keys
         .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no application fields in evidence"))?;
+        .ok_or_else(|| anyhow::anyhow!("no application keys in evidence"))?;
 
     // Process encryption certificate.
     let encryption_cert =

@@ -49,6 +49,24 @@ pub struct CompileOptions {
 
     /// List of `bytes` fields that will use `bytes::Bytes` instead of `Vec<u8>`
     pub bytes: Vec<String>,
+
+    /// Specifies externally provided Protobuf packages or types.
+    pub extern_paths: Vec<ExternPath>,
+}
+
+#[derive(Default, Clone)]
+pub struct ExternPath {
+    proto_path: String,
+    rust_path: String,
+}
+
+impl ExternPath {
+    pub fn new(proto_path: &str, rust_path: &str) -> Self {
+        ExternPath {
+            proto_path: proto_path.to_string(),
+            rust_path: rust_path.to_string(),
+        }
+    }
 }
 
 /// Compile Rust server code from the services in the provided protobuf file.
@@ -84,6 +102,9 @@ pub fn compile(
     config.service_generator(Box::new(ServiceGenerator {
         options: options.clone(),
     }));
+    for extern_path in options.extern_paths {
+        config.extern_path(extern_path.proto_path, extern_path.rust_path);
+    }
     config
         // Use BTreeMap to allow using this function in no-std crates.
         .btree_map(["."])

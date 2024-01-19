@@ -10,7 +10,7 @@ anyhow = "*"
 async-trait = "*"
 futures-util = "*"
 log = "*"
-oak_attestation = { workspace = true }
+oak_attestation_verification = { workspace = true }
 oak_crypto = { workspace = true }
 prost = { workspace = true }
 tonic = { workspace = true }

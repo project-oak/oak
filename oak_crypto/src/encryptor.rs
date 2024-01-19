@@ -106,40 +106,14 @@ impl EncryptionKeyProvider {
     }
 }
 
-// This trait just aliases [`RecipientContextGenerator`], while using different naming
-// as defined in the Oak SDK design doc.
-// TODO(#3841): rename the relevant trait and struct in our crypto crates.
-/// Generate [`SessionKeys`] for the provided public key.
 pub trait EncryptionKeyHandle {
-    fn generate_session_keys(&self, encapsulated_public_key: &[u8]) -> anyhow::Result<SessionKeys>;
-}
-
-// Alias this struct in order to conform to the naming outlined in the restricted kernel SDK design
-// doc.
-// TODO(#3841): rename the relevant struct and remove this alias.
-use crate::encryptor::RecipientContext as SessionKeys;
-
-impl<T> RecipientContextGenerator for T
-where
-    T: EncryptionKeyHandle,
-{
-    fn generate_recipient_context(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<SessionKeys> {
-        self.generate_session_keys(encapsulated_public_key)
-    }
-}
-
-pub trait RecipientContextGenerator {
-    // TODO(#3841): Implement Oak Kernel Crypto API and return corresponding session keys instead.
     fn generate_recipient_context(
         &self,
         encapsulated_public_key: &[u8],
     ) -> anyhow::Result<RecipientContext>;
 }
 
-impl RecipientContextGenerator for EncryptionKeyProvider {
+impl EncryptionKeyHandle for EncryptionKeyProvider {
     fn generate_recipient_context(
         &self,
         encapsulated_public_key: &[u8],
@@ -150,7 +124,7 @@ impl RecipientContextGenerator for EncryptionKeyProvider {
 }
 
 #[async_trait]
-pub trait AsyncRecipientContextGenerator {
+pub trait AsyncEncryptionKeyHandle {
     async fn generate_recipient_context(
         &self,
         encapsulated_public_key: &[u8],
@@ -158,12 +132,12 @@ pub trait AsyncRecipientContextGenerator {
 }
 
 #[async_trait]
-impl AsyncRecipientContextGenerator for EncryptionKeyProvider {
+impl AsyncEncryptionKeyHandle for EncryptionKeyProvider {
     async fn generate_recipient_context(
         &self,
         encapsulated_public_key: &[u8],
     ) -> anyhow::Result<RecipientContext> {
-        (self as &dyn RecipientContextGenerator).generate_recipient_context(encapsulated_public_key)
+        (self as &dyn EncryptionKeyHandle).generate_recipient_context(encapsulated_public_key)
     }
 }
 
@@ -258,9 +232,9 @@ pub struct ServerEncryptor {
 impl ServerEncryptor {
     pub fn create(
         serialized_encapsulated_public_key: &[u8],
-        recipient_context_generator: Arc<dyn RecipientContextGenerator>,
+        encryption_key_handle: Arc<dyn EncryptionKeyHandle>,
     ) -> anyhow::Result<Self> {
-        let recipient_context = recipient_context_generator
+        let recipient_context = encryption_key_handle
             .generate_recipient_context(serialized_encapsulated_public_key)
             .context("couldn't generate recipient crypto context")?;
         Ok(Self::new(recipient_context))
@@ -331,19 +305,19 @@ impl ServerEncryptor {
 // the Restricted Kernel.
 pub struct AsyncServerEncryptor<'a, G>
 where
-    G: AsyncRecipientContextGenerator + Send + Sync,
+    G: AsyncEncryptionKeyHandle + Send + Sync,
 {
-    recipient_context_generator: &'a G,
+    encryption_key_handle: &'a G,
     inner: Option<ServerEncryptor>,
 }
 
 impl<'a, G> AsyncServerEncryptor<'a, G>
 where
-    G: AsyncRecipientContextGenerator + Send + Sync,
+    G: AsyncEncryptionKeyHandle + Send + Sync,
 {
-    pub fn new(recipient_context_generator: &'a G) -> Self {
+    pub fn new(encryption_key_handle: &'a G) -> Self {
         Self {
-            recipient_context_generator,
+            encryption_key_handle,
             inner: None,
         }
     }
@@ -363,7 +337,7 @@ where
                     .as_ref()
                     .context("initial request message doesn't contain encapsulated public key")?;
                 let recipient_context = self
-                    .recipient_context_generator
+                    .encryption_key_handle
                     .generate_recipient_context(serialized_encapsulated_public_key)
                     .await
                     .context("couldn't generate recipient crypto context")?;
