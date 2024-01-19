@@ -16,8 +16,6 @@
 
 pub use crate::proto::oak::crypto::v1::Signature;
 
-// TODO(#3836): Implement signature verification.
-
 pub trait Signer {
     fn sign(&self, message: &[u8]) -> Signature;
 }
