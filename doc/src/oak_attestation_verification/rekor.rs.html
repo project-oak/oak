@@ -305,7 +305,7 @@
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
 <span class="kw">use </span>serde::Deserialize;
-<span class="attr">#[cfg(feature = <span class="string">&quot;serialize&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span>serde::Serialize;
 
 <span class="kw">use </span><span class="kw">crate</span>::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_raw};
@@ -313,7 +313,7 @@
 <span class="doccomment">/// Struct representing a Rekor LogEntry.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.&gt;
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>LogEntry {
     <span class="doccomment">/// We cannot directly use the type `Body` here, since body is Base64-encoded.
     </span><span class="attr">#[serde(rename = <span class="string">&quot;body&quot;</span>)]
@@ -340,7 +340,7 @@
 
 <span class="doccomment">/// Struct representing the body in a Rekor LogEntry.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>Body {
     <span class="attr">#[serde(rename = <span class="string">&quot;apiVersion&quot;</span>)]
     </span><span class="kw">pub </span>api_version: String,
@@ -351,7 +351,7 @@
 <span class="doccomment">/// Struct representing the `spec` in the body of a Rekor LogEntry.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L39.&gt;
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>Spec {
     <span class="kw">pub </span>data: Data,
     <span class="kw">pub </span>signature: GenericSignature,
@@ -360,7 +360,7 @@
 <span class="doccomment">/// Struct representing the hashed data in the body of a Rekor LogEntry.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.&gt;
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>Data {
     <span class="kw">pub </span>hash: Hash,
 }
@@ -368,7 +368,7 @@
 <span class="doccomment">/// Struct representing a hash digest.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L273.&gt;
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>Hash {
     <span class="kw">pub </span>algorithm: String,
     <span class="kw">pub </span>value: String,
@@ -377,7 +377,7 @@
 <span class="doccomment">/// Struct representing a signature in the body of a Rekor LogEntry.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L383&gt;
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>GenericSignature {
     <span class="doccomment">/// Base64 content that is signed.
     </span><span class="kw">pub </span>content: String,
@@ -389,7 +389,7 @@
 <span class="doccomment">/// Struct representing a public key included in the body of a Rekor LogEntry.
 /// Based on &lt;https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L551.&gt;
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>PublicKey {
     <span class="doccomment">/// Base64 content of a public key.
     </span><span class="kw">pub </span>content: String,
@@ -399,7 +399,7 @@
 /// also contains an inclusion proof. Since we currently don&#39;t verify the inclusion proof in the
 /// client, it is omitted from this struct.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>LogEntryVerification {
     <span class="comment">// Base64-encoded signature over the body, integratedTime, logID, and logIndex.
     </span><span class="attr">#[serde(rename = <span class="string">&quot;signedEntryTimestamp&quot;</span>)]

@@ -345,7 +345,7 @@
 <span class="kw">use </span>alloc::{collections::BTreeMap, string::String, vec::Vec};
 
 <span class="kw">use </span>serde::Deserialize;
-<span class="attr">#[cfg(feature = <span class="string">&quot;serialize&quot;</span>)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span>serde::Serialize;
 <span class="kw">use </span>time::OffsetDateTime;
 
@@ -368,7 +368,7 @@
 
 <span class="doccomment">/// A software artifact identified by its name and a set of artifacts.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>Subject {
     <span class="kw">pub </span>name: String,
     <span class="kw">pub </span>digest: DigestSet,
@@ -376,7 +376,7 @@
 
 <span class="doccomment">/// Represents a generic statement that binds a predicate to a subject.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>Statement&lt;P&gt; {
     <span class="kw">pub </span>_type: String,
     <span class="attr">#[serde(rename = <span class="string">&quot;predicateType&quot;</span>)]
@@ -395,7 +395,7 @@
 
 <span class="doccomment">/// Detailed content of a claim.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>ClaimPredicate&lt;S&gt; {
     <span class="doccomment">/// URI indicating the type of the claim. It determines the meaning of
     /// `claimSpec` and `evidence`.
@@ -421,7 +421,7 @@
 
 <span class="doccomment">/// Validity time range of an issued claim.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>ClaimValidity {
     <span class="doccomment">/// The timestamp (encoded as an Epoch time) from which the claim is
     /// effective.
@@ -437,7 +437,7 @@
 
 <span class="doccomment">/// Metadata about an artifact that serves as the evidence for the truth of a claim.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>ClaimEvidence {
     <span class="doccomment">/// Optional field specifying the role of this evidence within the claim.
     </span><span class="kw">pub </span>role: <span class="prelude-ty">Option</span>&lt;String&gt;,
@@ -449,7 +449,7 @@
 
 <span class="doccomment">/// Inner type for a simple claim with no further fields.
 </span><span class="attr">#[derive(Debug, Deserialize, PartialEq)]
-#[cfg_attr(feature = <span class="string">&quot;serialize&quot;</span>, derive(Serialize))]
+#[cfg_attr(feature = <span class="string">&quot;std&quot;</span>, derive(Serialize))]
 </span><span class="kw">pub struct </span>Claimless {}
 
 <span class="kw">pub type </span>EndorsementStatement = Statement&lt;ClaimPredicate&lt;Claimless&gt;&gt;;
