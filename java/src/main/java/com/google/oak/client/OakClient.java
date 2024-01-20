@@ -24,7 +24,6 @@ import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
 import java.time.Clock;
-import java.time.temporal.ChronoField;
 
 /**
  * Oak Client class for exchanging encrypted messages with an Oak Enclave which is being run by the
@@ -53,7 +52,7 @@ public class OakClient<T extends Transport> implements AutoCloseable {
         .mapError(Exception::new)
         .andThen(e
             -> verifier
-                   .verify(clock.instant().getLong(ChronoField.MILLI_OF_SECOND), e.getEvidence(),
+                   .verify(clock.instant().toEpochMilli(), e.getEvidence(),
                        e.getEndorsements(), referenceValues)
                    .map(b
                        -> new OakClient<E>(transport,
