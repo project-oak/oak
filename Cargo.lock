@@ -2515,6 +2515,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_restricted_kernel_sdk_proc_macro"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "oak_sev_guest"
 version = "0.1.0"
 dependencies = [

@@ -823,6 +823,7 @@ dependencies = [
  "oak_functions_service",
  "oak_restricted_kernel_interface",
  "oak_restricted_kernel_sdk",
+ "oak_restricted_kernel_sdk_proc_macro",
  "static_assertions",
  "zerocopy",
 ]
@@ -882,6 +883,14 @@ dependencies = [
  "p256",
  "strum",
  "zerocopy",
+]
+
+[[package]]
+name = "oak_restricted_kernel_sdk_proc_macro"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 1.0.102",
 ]
 
 [[package]]

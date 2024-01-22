@@ -57,6 +57,7 @@ members = [
   "stage0_dice",
   "testing/oak_echo_service",
   "xtask",
+  "oak_restricted_kernel_sdk_proc_macro"
 ]
 exclude = [
   "fuzz",
