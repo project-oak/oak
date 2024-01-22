@@ -67,19 +67,12 @@ pub struct Params {
 }
 
 impl Params {
-    pub fn default_for_test() -> Self {
+    pub fn default_for_root(root: &str) -> Self {
         let vmm_binary = which::which("qemu-system-x86_64").expect("could not find qemu path");
-        let stage0_binary = format!(
-            "{}stage0_bin/target/x86_64-unknown-none/release/stage0_bin",
-            env!("WORKSPACE_ROOT")
-        )
-        .into();
-        let kernel = format!(
-            "{}oak_containers_kernel/target/bzImage",
-            env!("WORKSPACE_ROOT")
-        )
-        .into();
-        let initrd = format!("{}/target/stage1.cpio", env!("WORKSPACE_ROOT")).into();
+        let stage0_binary =
+            format!("{root}stage0_bin/target/x86_64-unknown-none/release/stage0_bin",).into();
+        let kernel = format!("{root}oak_containers_kernel/target/bzImage",).into();
+        let initrd = format!("{root}/target/stage1.cpio").into();
         Self {
             vmm_binary,
             stage0_binary,
