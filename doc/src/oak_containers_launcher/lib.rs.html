@@ -262,10 +262,6 @@
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
 <a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
-<a href="#266" id="266">266</a>
-<a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -312,6 +308,7 @@
 <span class="kw">use </span>oak_attestation::proto::oak::attestation::v1::{
     endorsements, Endorsements, Evidence, OakRestrictedKernelEndorsements,
 };
+<span class="kw">pub use </span>qemu::Params <span class="kw">as </span>QemuParams;
 <span class="kw">use </span>tokio::{
     net::TcpListener,
     sync::oneshot::{channel, Receiver, Sender},
@@ -352,21 +349,16 @@
 }
 
 <span class="kw">impl </span>Args {
-    <span class="kw">pub fn </span>default_for_test() -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>system_image = <span class="macro">format!</span>(
-            <span class="string">&quot;{}oak_containers_system_image/target/image.tar.xz&quot;</span>,
-            <span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>)
-        )
-        .into();
+    <span class="kw">pub fn </span>default_for_root(root: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+        <span class="kw">let </span>system_image = <span class="macro">format!</span>(<span class="string">&quot;{root}oak_containers_system_image/target/image.tar.xz&quot;</span>,).into();
         <span class="kw">let </span>container_bundle = <span class="macro">format!</span>(
-            <span class="string">&quot;{}oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar&quot;</span>,
-            <span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>)
+            <span class="string">&quot;{root}oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar&quot;</span>,
         ).into();
         <span class="self">Self </span>{
             system_image,
             container_bundle,
             application_config: <span class="prelude-val">None</span>,
-            qemu_params: qemu::Params::default_for_test(),
+            qemu_params: qemu::Params::default_for_root(root),
         }
     }
 }

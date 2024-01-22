@@ -1,6 +1,6 @@
 (function() {var implementors = {
 "lookup_data_checker":[["impl Parser for <a class=\"struct\" href=\"lookup_data_checker/struct.Opt.html\" title=\"struct lookup_data_checker::Opt\">Opt</a>"]],
-"oak_containers_launcher":[["impl Parser for <a class=\"struct\" href=\"oak_containers_launcher/struct.Args.html\" title=\"struct oak_containers_launcher::Args\">Args</a>"]],
+"oak_containers_launcher":[["impl Parser for <a class=\"struct\" href=\"oak_containers_launcher/struct.QemuParams.html\" title=\"struct oak_containers_launcher::QemuParams\">Params</a>"],["impl Parser for <a class=\"struct\" href=\"oak_containers_launcher/struct.Args.html\" title=\"struct oak_containers_launcher::Args\">Args</a>"]],
 "oak_containers_stage1":[["impl Parser for <a class=\"struct\" href=\"oak_containers_stage1/struct.Args.html\" title=\"struct oak_containers_stage1::Args\">Args</a>"]],
 "oak_containers_syslogd":[["impl Parser for <a class=\"struct\" href=\"oak_containers_syslogd/struct.Args.html\" title=\"struct oak_containers_syslogd::Args\">Args</a>"]],
 "oak_functions_launcher":[["impl Parser for <a class=\"struct\" href=\"oak_functions_launcher/struct.Args.html\" title=\"struct oak_functions_launcher::Args\">Args</a>"]],
