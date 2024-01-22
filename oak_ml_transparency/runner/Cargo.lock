@@ -561,10 +561,9 @@ dependencies = [
  "getrandom",
  "hex",
  "oak_dice",
+ "oak_proto_rust",
  "oak_sev_guest",
  "p256",
- "prost",
- "prost-build",
  "serde",
  "serde_json",
  "sha2",
@@ -588,6 +587,14 @@ dependencies = [
  "strum",
  "zerocopy",
  "zeroize",
+]
+
+[[package]]
+name = "oak_proto_rust"
+version = "0.0.1"
+dependencies = [
+ "prost",
+ "prost-build",
 ]
 
 [[package]]

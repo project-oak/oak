@@ -79,7 +79,7 @@ pub fn compile_rust_wasm(manifest_path: &str, release: bool) -> anyhow::Result<V
 pub fn serialize_entries(entries: HashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
     let mut buf = Vec::new();
     for (key, value) in entries.into_iter() {
-        let entry_proto = oak_functions_abi::proto::Entry { key, value };
+        let entry_proto = oak_proto_rust::oak::oak_functions::lookup_data::Entry { key, value };
         entry_proto
             .encode_length_delimited(&mut buf)
             .expect("couldn't encode entry as length delimited");

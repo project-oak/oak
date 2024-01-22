@@ -15,10 +15,8 @@
 //
 
 use anyhow::Context;
-use oak_attestation_verification::{
-    proto::oak::attestation::v1::{Endorsements, Evidence},
-    verifier::{verify_dice_chain, DiceChainResult},
-};
+use oak_attestation_verification::verifier::{verify_dice_chain, DiceChainResult};
+use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
 
 pub trait AttestationVerifier {
     fn verify(
