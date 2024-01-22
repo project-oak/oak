@@ -52,8 +52,8 @@ public class OakClient<T extends Transport> implements AutoCloseable {
         .mapError(Exception::new)
         .andThen(e
             -> verifier
-                   .verify(clock.instant().toEpochMilli(), e.getEvidence(),
-                       e.getEndorsements(), referenceValues)
+                   .verify(clock.instant().toEpochMilli(), e.getEvidence(), e.getEndorsements(),
+                       referenceValues)
                    .map(b
                        -> new OakClient<E>(transport,
                            e.hasEvidence() ? e.getEvidence()
