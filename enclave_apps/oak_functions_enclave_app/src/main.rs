@@ -25,11 +25,11 @@ use core::panic::PanicInfo;
 
 use log::info;
 use oak_core::samplestore::StaticSampleStore;
-use oak_restricted_kernel_sdk::{FileDescriptorChannel, StderrLogger};
+use oak_restricted_kernel_sdk::FileDescriptorChannel;
 
 #[no_mangle]
 fn _start() -> ! {
-    oak_enclave_runtime_support::init(log::LevelFilter::Debug);
+    oak_restricted_kernel_sdk::init(log::LevelFilter::Debug);
     main();
 }
 
@@ -62,7 +62,11 @@ fn main() -> ! {
 }
 
 #[alloc_error_handler]
-oak_restricted_kernel_sdk::alloc_error_handler;
+fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
+    oak_restricted_kernel_sdk::alloc_error_handler(layout);
+}
 
 #[panic_handler]
-oak_restricted_kernel_sdk::panic_handler;
+fn panic(info: &PanicInfo) -> ! {
+    oak_restricted_kernel_sdk::panic_handler(info);
+}

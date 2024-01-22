@@ -10,6 +10,7 @@ log = "*"
 micro_rpc = { workspace = true }
 oak_channel = { workspace = true }
 oak_restricted_kernel_sdk = { workspace = true }
+oak_restricted_kernel_interface = { workspace = true }
 static_assertions = "*"
 
 [[bin]]
