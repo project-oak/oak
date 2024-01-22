@@ -27,13 +27,9 @@ use log::info;
 use oak_core::samplestore::StaticSampleStore;
 use oak_restricted_kernel_sdk::{FileDescriptorChannel, StderrLogger};
 
-static LOGGER: StderrLogger = StderrLogger {};
-
 #[no_mangle]
 fn _start() -> ! {
-    log::set_logger(&LOGGER).unwrap();
-    log::set_max_level(log::LevelFilter::Debug);
-    oak_enclave_runtime_support::init();
+    oak_enclave_runtime_support::init(log::LevelFilter::Debug);
     main();
 }
 
@@ -66,12 +62,7 @@ fn main() -> ! {
 }
 
 #[alloc_error_handler]
-fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
-    panic!("error allocating memory: {:#?}", layout);
-}
+oak_restricted_kernel_sdk::alloc_error_handler;
 
 #[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    log::error!("PANIC: {}", info);
-    oak_restricted_kernel_interface::syscall::exit(-1);
-}
+oak_restricted_kernel_sdk::panic_handler;

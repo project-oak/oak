@@ -25,3 +25,22 @@ mod logging;
 pub use channel::FileDescriptorChannel;
 pub use dice::*;
 pub use logging::StderrLogger;
+use logging::STDERR_LOGGER;
+
+/// Initialization function that sets up the allocator and logger.
+pub fn init(log_level: log::LevelFilter::Debug) {
+    log::set_logger(&STDERR_LOGGER).expect("failed to set logger");
+    log::set_max_level(log_level);
+    oak_enclave_runtime_support::init();
+}
+
+#[alloc_error_handler]
+pub fn alloc_error_handler(layout: ::core::alloc::Layout) -> ! {
+    panic!("error allocating memory: {:#?}", layout);
+}
+
+#[panic_handler]
+pub fn panic_handler(info: &core::panic::PanicInfo) -> ! {
+    log::error!("PANIC: {}", info);
+    oak_restricted_kernel_interface::syscall::exit(-1);
+}
