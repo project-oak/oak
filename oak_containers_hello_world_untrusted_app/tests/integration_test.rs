@@ -58,7 +58,7 @@ async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
 
     let app_args = Args {
         container_bundle,
-        ..Args::default_for_test()
+        ..Args::default_for_root(env!("WORKSPACE_ROOT"))
     };
     let mut untrusted_app =
         oak_containers_hello_world_untrusted_app::UntrustedApp::create(app_args)
@@ -97,7 +97,7 @@ async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
 }
 
 async fn hello_world() {
-    run_hello_world_test(Args::default_for_test().container_bundle).await;
+    run_hello_world_test(Args::default_for_root(env!("WORKSPACE_ROOT")).container_bundle).await;
 }
 
 async fn cc_hello_world() {

@@ -44,6 +44,7 @@ use clap::Parser;
 use oak_attestation::proto::oak::attestation::v1::{
     endorsements, Endorsements, Evidence, OakRestrictedKernelEndorsements,
 };
+pub use qemu::Params as QemuParams;
 use tokio::{
     net::TcpListener,
     sync::oneshot::{channel, Receiver, Sender},
@@ -84,21 +85,16 @@ pub struct Args {
 }
 
 impl Args {
-    pub fn default_for_test() -> Self {
-        let system_image = format!(
-            "{}oak_containers_system_image/target/image.tar.xz",
-            env!("WORKSPACE_ROOT")
-        )
-        .into();
+    pub fn default_for_root(root: &str) -> Self {
+        let system_image = format!("{root}oak_containers_system_image/target/image.tar.xz",).into();
         let container_bundle = format!(
-            "{}oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar",
-            env!("WORKSPACE_ROOT")
+            "{root}oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar",
         ).into();
         Self {
             system_image,
             container_bundle,
             application_config: None,
-            qemu_params: qemu::Params::default_for_test(),
+            qemu_params: qemu::Params::default_for_root(root),
         }
     }
 }
