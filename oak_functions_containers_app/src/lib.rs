@@ -283,10 +283,10 @@ where
         let mut attributes = Vec::new();
         let mut parts = req.uri().path().rsplitn(3, '/');
         if let Some(method) = parts.next() {
-            attributes.push(KeyValue::new("method", method.to_string()));
+            attributes.push(KeyValue::new("rpc_method", method.to_string()));
         }
         if let Some(service) = parts.next() {
-            attributes.push(KeyValue::new("service", service.to_string()));
+            attributes.push(KeyValue::new("rpc_service_name", service.to_string()));
         }
 
         // copied from the example in `tower::Service` to guarantee that `poll_ready` has been
@@ -374,6 +374,10 @@ static GRPC_SUCCESS: http::header::HeaderValue = http::header::HeaderValue::from
 // Equivalent to `tonic::status::GRPC_STATUS_HEADER_CODE`.
 const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 
+// Tonic limits the incoming RPC size to 4 MB by default; bump it up to 1 GiB. We're not sending
+// traffic over a "real" network anyway, after all.
+const MAX_DECODING_MESSAGE_SIZE: usize = 1024 * 1024 * 1024;
+
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
 pub async fn serve<G: AsyncEncryptionKeyHandle + Send + Sync + 'static>(
     listener: TcpListener,
@@ -398,10 +402,13 @@ pub async fn serve<G: AsyncEncryptionKeyHandle + Send + Sync + 'static>(
         )
         .layer(tower::load_shed::LoadShedLayer::new())
         .layer(MonitoringLayer::new(meter.clone()))
-        .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
-            encryption_key_handle,
-            Some(Arc::new(OtelObserver::new(meter))),
-        )))
+        .add_service(
+            OakFunctionsServer::new(OakFunctionsContainersService::new(
+                encryption_key_handle,
+                Some(Arc::new(OtelObserver::new(meter))),
+            ))
+            .max_decoding_message_size(MAX_DECODING_MESSAGE_SIZE),
+        )
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .context("failed to start up the service")

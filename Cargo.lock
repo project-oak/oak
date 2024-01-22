@@ -1517,7 +1517,9 @@ dependencies = [
  "http",
  "log",
  "maplit",
+ "oak_client",
  "oak_functions_abi",
+ "oak_functions_client",
  "oak_functions_sdk",
  "oak_functions_test_utils",
  "tokio",
@@ -1871,6 +1873,7 @@ dependencies = [
  "base64 0.21.7",
  "coset",
  "ecdsa",
+ "getrandom",
  "hex",
  "oak_dice",
  "oak_sev_guest",
@@ -1878,7 +1881,6 @@ dependencies = [
  "prost",
  "prost-build",
  "serde",
- "serde_canonical_json",
  "serde_json",
  "sha2",
  "time",
@@ -3409,18 +3411,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63261df402c67811e9ac6def069e4786148c4563f4b50fd4bf30aa370d626b02"
 dependencies = [
  "serde_derive",
-]
-
-[[package]]
-name = "serde_canonical_json"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ef94ee2661f3ce924fa936258393d02155fa22c5a81125016a24069e23a0465"
-dependencies = [
- "itoa",
- "lazy_static",
- "regex",
- "serde_json",
 ]
 
 [[package]]

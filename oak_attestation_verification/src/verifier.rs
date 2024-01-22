@@ -136,7 +136,8 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<DiceChainResult>
         cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
             let sig = Signature::from_slice(signature)?;
             verifying_key.verify(contents, &sig)
-        })?;
+        })
+        .map_err(|error| anyhow::anyhow!(error))?;
         let payload = cert
             .payload
             .ok_or_else(|| anyhow::anyhow!("no cert payload"))?;
@@ -158,10 +159,12 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<DiceChainResult>
     let encryption_cert =
         coset::CoseSign1::from_slice(&appl_keys.encryption_public_key_certificate)
             .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
-    encryption_cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
-        let sig = Signature::from_slice(signature)?;
-        verifying_key.verify(contents, &sig)
-    })?;
+    encryption_cert
+        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
+            let sig = Signature::from_slice(signature)?;
+            verifying_key.verify(contents, &sig)
+        })
+        .map_err(|error| anyhow::anyhow!(error))?;
     let encryption_payload = encryption_cert
         .payload
         .ok_or_else(|| anyhow::anyhow!("no encryption cert payload"))?;
@@ -175,10 +178,12 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<DiceChainResult>
     // Process signing certificate.
     let signing_cert = coset::CoseSign1::from_slice(&appl_keys.signing_public_key_certificate)
         .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
-    signing_cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
-        let sig = Signature::from_slice(signature)?;
-        verifying_key.verify(contents, &sig)
-    })?;
+    signing_cert
+        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
+            let sig = Signature::from_slice(signature)?;
+            verifying_key.verify(contents, &sig)
+        })
+        .map_err(|error| anyhow::anyhow!(error))?;
     let signing_payload = signing_cert
         .payload
         .ok_or_else(|| anyhow::anyhow!("no signing cert payload"))?;
