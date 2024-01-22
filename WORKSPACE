@@ -23,13 +23,15 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # Google Abseil.
 # https://github.com/abseil/abseil-cpp
+
+COM_GOOGLE_ABSL_TAG = "20230802.1"
+
 http_archive(
     name = "com_google_absl",
-    sha256 = "5366d7e7fa7ba0d915014d387b66d0d002c03236448e1ba9ef98122c13b35c36",
-    strip_prefix = "abseil-cpp-20230125.3",
+    sha256 = "987ce98f02eefbaf930d6e38ab16aa05737234d7afbab2d5c4ea7adbe50c28ed",
+    strip_prefix = "abseil-cpp-{}".format(COM_GOOGLE_ABSL_TAG),
     urls = [
-        # Abseil LTS 20230125.3.
-        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230125.3.tar.gz",
+        "https://github.com/abseil/abseil-cpp/archive/refs/tags/{}.tar.gz".format(COM_GOOGLE_ABSL_TAG),
     ],
 )
 
@@ -57,15 +59,46 @@ http_archive(
     ],
 )
 
+# Google Protocol Buffers.
+# https://github.com/protocolbuffers/protobuf
+COM_GOOGLE_PROTOBUF_TAG = "25.2"
+
+http_archive(
+    name = "com_google_protobuf",
+    sha256 = "8ff511a64fc46ee792d3fe49a5a1bcad6f7dc50dfbba5a28b0e5b979c17f9871",
+    strip_prefix = "protobuf-{}".format(COM_GOOGLE_PROTOBUF_TAG),
+    urls = [
+        "https://github.com/protocolbuffers/protobuf/releases/download/v{}/protobuf-{}.tar.gz".format(COM_GOOGLE_PROTOBUF_TAG, COM_GOOGLE_PROTOBUF_TAG),
+    ],
+)
+
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()
+
+RULES_JVM_EXTERNAL_TAG = "6.0"
+
+# External Java rules.
+# https://github.com/bazelbuild/rules_jvm_external
+http_archive(
+    name = "rules_jvm_external",
+    sha256 = "85fd6bad58ac76cc3a27c8e051e4255ff9ccd8c92ba879670d195622e7c0a9b7",
+    strip_prefix = "rules_jvm_external-{}".format(RULES_JVM_EXTERNAL_TAG),
+    urls = [
+        "https://github.com/bazelbuild/rules_jvm_external/releases/download/{}/rules_jvm_external-{}.tar.gz".format(RULES_JVM_EXTERNAL_TAG, RULES_JVM_EXTERNAL_TAG),
+    ],
+)
+
 # C++ gRPC support.
 # https://github.com/grpc/grpc
+COM_GITHUB_GRPC_GRPC_TAG = "1.60.0"
+
 http_archive(
     name = "com_github_grpc_grpc",
-    sha256 = "e034992a0b464042021f6d440f2090acc2422c103a322b0844e3921ccea981dc",
-    strip_prefix = "grpc-1.56.0",
+    sha256 = "437068b8b777d3b339da94d3498f1dc20642ac9bfa76db43abdd522186b1542b",
+    strip_prefix = "grpc-{}".format(COM_GITHUB_GRPC_GRPC_TAG),
     urls = [
-        # gRPC v1.56.0 (2023-06-14).
-        "https://github.com/grpc/grpc/archive/refs/tags/v1.56.0.tar.gz",
+        "https://github.com/grpc/grpc/archive/refs/tags/v{}.tar.gz".format(COM_GITHUB_GRPC_GRPC_TAG),
     ],
 )
 
@@ -79,48 +112,19 @@ grpc_extra_deps()
 
 # Java gRPC support.
 # https://github.com/grpc/grpc-java
+# Use the same version as the C++ gRPC library.
 http_archive(
     name = "io_grpc_grpc_java",
-    sha256 = "4af5ecbaed16455fcda9fdab36e131696f5092858dd130f026069fcf11817a21",
-    strip_prefix = "grpc-java-1.56.0",
+    sha256 = "02c9a7f9400d4e29c7e55667851083a9f695935081787079a834da312129bf97",
+    strip_prefix = "grpc-java-{}".format(COM_GITHUB_GRPC_GRPC_TAG),
     urls = [
-        # Java gRPC v1.56.0 (2023-06-21).
-        "https://github.com/grpc/grpc-java/archive/refs/tags/v1.56.0.tar.gz",
+        "https://github.com/grpc/grpc-java/archive/refs/tags/v{}.tar.gz".format(COM_GITHUB_GRPC_GRPC_TAG),
     ],
 )
 
 load("@io_grpc_grpc_java//:repositories.bzl", "IO_GRPC_GRPC_JAVA_ARTIFACTS", "IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS", "grpc_java_repositories")
 
 grpc_java_repositories()
-
-# Google Protocol Buffers.
-# https://github.com/protocolbuffers/protobuf
-http_archive(
-    name = "com_google_protobuf",
-    sha256 = "3a5f47ad3aa10192c5577ff086b24b9739a36937c34ceab6db912a16a3ef7f8e",
-    strip_prefix = "protobuf-23.3",
-    urls = [
-        # Protocol Buffers v23.3 (2023-06-14).
-        "https://github.com/protocolbuffers/protobuf/releases/download/v23.3/protobuf-23.3.tar.gz",
-    ],
-)
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-# `protobuf_deps` should be loaded after `grpc_deps` in the WORKSPACE file.
-protobuf_deps()
-
-# External Java rules.
-# https://github.com/bazelbuild/rules_jvm_external
-http_archive(
-    name = "rules_jvm_external",
-    sha256 = "f86fd42a809e1871ca0aabe89db0d440451219c3ce46c58da240c7dcdc00125f",
-    strip_prefix = "rules_jvm_external-5.2",
-    urls = [
-        # Rules Java v5.2 (2023-04-13).
-        "https://github.com/bazelbuild/rules_jvm_external/releases/download/5.2/rules_jvm_external-5.2.tar.gz",
-    ],
-)
 
 load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
 
