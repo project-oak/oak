@@ -2508,6 +2508,7 @@ dependencies = [
  "oak_enclave_runtime_support",
  "oak_restricted_kernel_dice",
  "oak_restricted_kernel_interface",
+ "oak_restricted_kernel_sdk_proc_macro",
  "oak_stage0_dice",
  "p256",
  "strum 0.25.0",

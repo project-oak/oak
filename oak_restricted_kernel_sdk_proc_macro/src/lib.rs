@@ -44,6 +44,7 @@ fn process_entry_fn(entry_fn: ItemFn) -> TokenStream {
         #[no_mangle]
         fn _start() -> ! {
             oak_restricted_kernel_sdk::init(log::LevelFilter::Debug);
+            log::info!("In main!");
             #entry_fn_name();
         }
 

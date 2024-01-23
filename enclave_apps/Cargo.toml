@@ -15,5 +15,4 @@ oak_core = { path = "../oak_core" }
 oak_crypto = { path = "../oak_crypto" }
 oak_dice = { path = "../oak_dice" }
 oak_restricted_kernel_sdk = { path = "../oak_restricted_kernel_sdk" }
-oak_restricted_kernel_sdk_proc_macro = { path = "../oak_restricted_kernel_sdk_proc_macro" }
 oak_restricted_kernel_interface = { path = "../oak_restricted_kernel_interface" }

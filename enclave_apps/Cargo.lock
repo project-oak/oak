@@ -816,7 +816,6 @@ dependencies = [
  "oak_dice",
  "oak_functions_service",
  "oak_restricted_kernel_sdk",
- "oak_restricted_kernel_sdk_proc_macro",
  "static_assertions",
  "zerocopy",
 ]
@@ -874,6 +873,7 @@ dependencies = [
  "oak_dice",
  "oak_enclave_runtime_support",
  "oak_restricted_kernel_interface",
+ "oak_restricted_kernel_sdk_proc_macro",
  "p256",
  "strum",
  "zerocopy",
