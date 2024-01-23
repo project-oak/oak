@@ -41,6 +41,7 @@ use opentelemetry::{
 use prost::Message;
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
+use tonic::codec::CompressionEncoding;
 use tracing::Span;
 
 use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
@@ -407,7 +408,8 @@ pub async fn serve<G: AsyncEncryptionKeyHandle + Send + Sync + 'static>(
                 encryption_key_handle,
                 Some(Arc::new(OtelObserver::new(meter))),
             ))
-            .max_decoding_message_size(MAX_DECODING_MESSAGE_SIZE),
+            .max_decoding_message_size(MAX_DECODING_MESSAGE_SIZE)
+            .accept_compressed(CompressionEncoding::Gzip),
         )
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await

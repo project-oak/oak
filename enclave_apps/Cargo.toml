@@ -10,7 +10,6 @@ members = [
 [workspace.dependencies]
 micro_rpc = { path = "../micro_rpc" }
 oak_attestation = { path = "../oak_attestation" }
-oak_enclave_runtime_support = { path = "../oak_enclave_runtime_support" }
 oak_channel = { path = "../oak_channel" }
 oak_core = { path = "../oak_core" }
 oak_crypto = { path = "../oak_crypto" }
