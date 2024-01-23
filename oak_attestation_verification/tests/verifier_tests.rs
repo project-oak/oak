@@ -34,6 +34,7 @@ use prost::Message;
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
 const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
 const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
+const VCEK_MILAN_CERT_DER: &str = "testdata/vcek_milan.der";
 const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 const EVIDENCE_PATH: &str = "testdata/evidence.binarypb";
@@ -52,6 +53,7 @@ fn create_endorsements() -> Endorsements {
     let endorsement = fs::read(ENDORSEMENT_PATH).expect("couldn't read endorsement");
     let signature = fs::read(SIGNATURE_PATH).expect("couldn't read signature");
     let log_entry = fs::read(LOG_ENTRY_PATH).expect("couldn't read log entry");
+    let vcek_milan_cert = fs::read(VCEK_MILAN_CERT_DER).expect("couldn't read TEE cert");
 
     // Use this for all binaries.
     let tre = TransparentReleaseEndorsement {
@@ -61,7 +63,7 @@ fn create_endorsements() -> Endorsements {
     };
 
     let root_layer = RootLayerEndorsements {
-        tee_certificate: b"T O D O".to_vec(),
+        tee_certificate: vcek_milan_cert,
         stage0: Some(tre.clone()),
     };
     let kernel_layer = KernelLayerEndorsements {

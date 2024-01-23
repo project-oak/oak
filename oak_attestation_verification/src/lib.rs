@@ -37,6 +37,7 @@ pub mod proto {
     }
 }
 
+pub mod amd;
 pub mod claims;
 pub mod endorsement;
 pub mod rekor;
