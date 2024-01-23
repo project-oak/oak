@@ -18,6 +18,8 @@ use core::fmt::Write;
 
 use oak_restricted_kernel_interface::syscall::{fsync, write};
 
+pub static STDERR_LOGGER: StderrLogger = StderrLogger {};
+
 struct Stderr {}
 
 impl Stderr {
