@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["FileDescriptorChannel","InstanceEncryptionKeyHandle","InstanceEvidenceProvider","InstanceSigner","StderrLogger"],"trait":["EvidenceProvider","Signer"]};
+window.SIDEBAR_ITEMS = {"fn":["alloc_error_handler","init","panic_handler"],"struct":["FileDescriptorChannel","InstanceEncryptionKeyHandle","InstanceEvidenceProvider","InstanceSigner","StderrLogger"],"trait":["EvidenceProvider","Signer"]};

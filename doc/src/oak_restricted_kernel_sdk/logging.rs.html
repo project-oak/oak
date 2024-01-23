@@ -55,6 +55,8 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -74,6 +76,8 @@
 </span><span class="kw">use </span>core::fmt::Write;
 
 <span class="kw">use </span>oak_restricted_kernel_interface::syscall::{fsync, write};
+
+<span class="kw">pub static </span>STDERR_LOGGER: StderrLogger = StderrLogger {};
 
 <span class="kw">struct </span>Stderr {}
 
