@@ -17,7 +17,7 @@ fn process_oak_main(input_item: Item) -> Result<TokenStream> {
         syn::Item::Fn(fn_item) => Ok(fn_item),
         _ => Err(syn::Error::new(
             syn::spanned::Spanned::span(&input_item),
-            "the oak_main macro can only be applied to functions",
+            "the entrypoint macro can only be applied to functions",
         )),
     }?;
 
