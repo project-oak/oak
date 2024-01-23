@@ -883,6 +883,7 @@ dependencies = [
 name = "oak_restricted_kernel_sdk_proc_macro"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "quote",
  "syn 1.0.102",
 ]
