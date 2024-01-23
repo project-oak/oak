@@ -125,7 +125,7 @@ fn chip_id(vcek: &Certificate) -> anyhow::Result<[u8; 64]> {
     Err(anyhow::anyhow!("no chip ID found in VCEK vert"))
 }
 
-fn tcb_version(vcek: &Certificate) -> anyhow::Result<TcbVersion> {
+pub fn tcb_version(vcek: &Certificate) -> anyhow::Result<TcbVersion> {
     let mut tcb = TcbVersion::new_zeroed();
     for ext in vcek
         .tbs_certificate
@@ -205,13 +205,18 @@ pub fn verify_attestation_report_signature(
     }?;
     let message = report.data.as_bytes();
 
-    // Only the first 48 bytes of r and s make up p384::ecdsa::Signature,
-    // the rest is headroom to allow longer signatures as well.
-    let mut rr: [u8; 48] = [0; 48];
-    let mut ss: [u8; 48] = [0; 48];
-    rr.copy_from_slice(&report.signature.r[0..48]);
-    ss.copy_from_slice(&report.signature.s[0..48]);
-    let signature = p384::ecdsa::Signature::from_scalars(rr, ss)
+    // `report.signature.{r,s}` contain 48 bytes, the rest is zero padded
+    // to allow longer signatures as well. The 48 bytes are interpreted as
+    // a single little-endian encoded integer. `p384::ecdsa::Signature`
+    // requires big-endian, so need to mirror.
+    let mut r: [u8; 48] = [0; 48];
+    let mut s: [u8; 48] = [0; 48];
+    for i in 0..48 {
+        let j = 47 - i;
+        r[i] = report.signature.r[j];
+        s[i] = report.signature.s[j];
+    }
+    let signature = p384::ecdsa::Signature::from_scalars(r, s)
         .map_err(|_err| anyhow::anyhow!("could not extract ECDSA P-384 signature"))?;
 
     Ok(verifying_key

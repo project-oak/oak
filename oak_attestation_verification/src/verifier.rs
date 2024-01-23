@@ -387,7 +387,8 @@ fn verify_root_layer(
             // We demand that product-specific ASK signs the VCEK.
             let vcek = Certificate::from_der(&e.tee_certificate)
                 .map_err(|_err| anyhow::anyhow!("could not parse VCEK cert"))?;
-            // TODO: Check that VCEK asks for Milan or bail.
+            // Right now there are only Milan CPUs, so it is not urgent to code the
+            // decision between Milan and Genoa which would appear here.
             let ask_milan = Certificate::from_pem(ASK_MILAN_CERT_PEM)
                 .map_err(|_err| anyhow::anyhow!("could not parse ASK cert"))?;
             verify_cert_signature(&ask_milan, &vcek)?;
