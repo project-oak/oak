@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "cc/crypto/encryption_key_provider.h"
+#include "cc/crypto/encryption_key.h"
 
 #include <memory>
 

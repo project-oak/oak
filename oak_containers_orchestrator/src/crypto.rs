@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context};
 use hpke::{kem::X25519HkdfSha256, Deserializable, Kem};
-use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator, ServerEncryptor};
+use oak_crypto::encryptor::{EncryptionKeyHandle, EncryptionKeyProvider, ServerEncryptor};
 use tonic::{Request, Response};
 
 use crate::proto::oak::{

@@ -60,10 +60,7 @@ class GrpcStreamingTransportTest : public ::testing::Test {
     channel_ = server_->InProcessChannel({});
     stub_ = oak::session::v1::StreamingSession::NewStub(channel_);
 
-    absl::Time absl_deadline = absl::Now() + absl::Seconds(10);
-    gpr_timespec deadline;
-    deadline.tv_sec = absl::ToInt64Seconds(absl::time_internal::ToUnixDuration(absl_deadline));
-    context_.set_deadline(deadline);
+    context_.set_deadline(gpr_time_from_seconds(10, GPR_TIMESPAN));
   }
 
   void TearDown() override {

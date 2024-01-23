@@ -30,22 +30,18 @@ fn process_oak_main(input_item: Item) -> Result<TokenStream> {
 
         #[no_mangle]
         fn _start() -> ! {
-            log::set_logger(&LOGGER).unwrap();
-            log::set_max_level(log::LevelFilter::Debug);
-            oak_enclave_runtime_support::init();
-            log::info!("In main!");
+            oak_restricted_kernel_sdk::init(log::LevelFilter::Debug);
             #input_fn_name();
         }
 
         #[alloc_error_handler]
         fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
-            panic!("error allocating memory: {:#?}", layout);
+            oak_restricted_kernel_sdk::alloc_error_handler(layout);
         }
 
         #[panic_handler]
         fn panic(info: &core::panic::PanicInfo) -> ! {
-            log::error!("PANIC: {}", info);
-            oak_restricted_kernel_interface::syscall::exit(-1);
+            oak_restricted_kernel_sdk::panic_handler(info);
         }
     };
 

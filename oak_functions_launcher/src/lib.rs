@@ -156,7 +156,11 @@ pub async fn update_lookup_data(
     config: &LookupDataConfig,
 ) -> anyhow::Result<()> {
     log::info!("updating lookup data");
-    lookup::update_lookup_data(client, &config.lookup_data_path, config.max_chunk_size).await
+    let start = std::time::Instant::now();
+    let result =
+        lookup::update_lookup_data(client, &config.lookup_data_path, config.max_chunk_size).await;
+    log::info!("updated lookup data in {}ms", start.elapsed().as_millis());
+    result
 }
 
 // Loads application config (including Wasm bytes) into the enclave and returns a remote attestation

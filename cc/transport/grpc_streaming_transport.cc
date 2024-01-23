@@ -21,6 +21,7 @@
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "grpcpp/channel.h"
 #include "grpcpp/client_context.h"
@@ -65,7 +66,7 @@ absl::StatusOr<AttestationBundle> GrpcStreamingTransport::GetEvidence() {
       return absl::InternalError("received InvokeResponse instead of GetPublicKeyResponse");
     case ResponseWrapper::RESPONSE_NOT_SET:
     default:
-      return absl::InternalError("received unsupported response: " + response->DebugString());
+      return absl::InternalError("received unsupported response: " + absl::StrCat(*response));
   }
 }
 
@@ -89,7 +90,7 @@ absl::StatusOr<EncryptedResponse> GrpcStreamingTransport::Invoke(
       return response->invoke_response().encrypted_response();
     case ResponseWrapper::RESPONSE_NOT_SET:
     default:
-      return absl::InternalError("received unsupported response: " + response->DebugString());
+      return absl::InternalError("received unsupported response: " + absl::StrCat(*response));
   }
 }
 

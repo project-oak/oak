@@ -19,6 +19,7 @@
 
 use anyhow::Context;
 use clap::Parser;
+use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_abi::Request;
 use oak_functions_client::OakFunctionsClient;
 use regex::Regex;
@@ -61,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opt = Opt::parse();
 
-    let mut client = OakFunctionsClient::new(&opt.uri)
+    let mut client = OakFunctionsClient::new(&opt.uri, &InsecureAttestationVerifier {})
         .await
         .context("couldn't create Oak Functions client")?;
 

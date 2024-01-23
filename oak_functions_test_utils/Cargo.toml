@@ -13,6 +13,7 @@ log = "*"
 http = "*"
 hyper = { version = "*", features = ["client", "http1", "runtime", "server"] }
 nix = { version = "*", features = ["process", "signal"] }
+oak_client = { workspace = true }
 oak_functions_abi = { workspace = true }
 oak_functions_client = { workspace = true }
 port_check = "*"
