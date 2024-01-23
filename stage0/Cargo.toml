@@ -5,8 +5,13 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = ["efi"]
+efi = ["dep:crc"]
+
 [dependencies]
 bitflags = "*"
+crc = { version = "*", optional = true }
 coset = { version = "*", default-features = false }
 elf = { version = "*", default-features = false }
 hex = { version = "*", default-features = false, features = ["alloc"] }
