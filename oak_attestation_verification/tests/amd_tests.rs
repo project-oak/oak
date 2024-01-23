@@ -23,6 +23,33 @@ const ASK_MILAN_CERT_PEM: &str = include_str!("../data/ask_milan.pem");
 const ASK_GENOA_CERT_PEM: &str = include_str!("../data/ask_genoa.pem");
 const VCEK_MILAN_CERT_PEM: &str = include_str!("../testdata/vcek_milan.pem");
 
+// Utility to print all extension in a certificate.
+fn eprint_exts(cert: &Certificate) -> anyhow::Result<()> {
+    for ext in cert
+        .tbs_certificate
+        .extensions
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("could not get extensions from cert"))?
+    {
+        eprintln!(
+            "cert ext id={} val={}",
+            ext.extn_id,
+            hex::encode(ext.extn_value.as_bytes())
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn print_all_certs() {
+    let ark = Certificate::from_pem(ARK_MILAN_CERT_PEM).expect("could not parse cert");
+    let ask = Certificate::from_pem(ASK_MILAN_CERT_PEM).expect("could not parse cert");
+    let vcek = Certificate::from_pem(VCEK_MILAN_CERT_PEM).expect("could not parse cert");
+    eprint_exts(&ark).expect("error");
+    eprint_exts(&ask).expect("error");
+    eprint_exts(&vcek).expect("error");
+}
+
 #[test]
 fn milan_ark_signs_itself() {
     let ark = Certificate::from_pem(ARK_MILAN_CERT_PEM).expect("could not parse cert");

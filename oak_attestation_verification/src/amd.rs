@@ -95,7 +95,8 @@ fn to_array_64<T>(slice: &[T]) -> anyhow::Result<&[T; 64]> {
     }
 }
 
-fn product_name(vcek: &Certificate) -> anyhow::Result<String> {
+// Currently unused.
+pub fn product_name(vcek: &Certificate) -> anyhow::Result<String> {
     for ext in vcek
         .tbs_certificate
         .extensions
@@ -125,7 +126,7 @@ fn chip_id(vcek: &Certificate) -> anyhow::Result<[u8; 64]> {
     Err(anyhow::anyhow!("no chip ID found in VCEK vert"))
 }
 
-pub fn tcb_version(vcek: &Certificate) -> anyhow::Result<TcbVersion> {
+fn tcb_version(vcek: &Certificate) -> anyhow::Result<TcbVersion> {
     let mut tcb = TcbVersion::new_zeroed();
     for ext in vcek
         .tbs_certificate
@@ -149,53 +150,29 @@ pub fn tcb_version(vcek: &Certificate) -> anyhow::Result<TcbVersion> {
     Ok(tcb)
 }
 
-// fn eprint_ext(cert: &Certificate) -> anyhow::Result<()> {
-//     for ext in cert
-//         .tbs_certificate
-//         .extensions
-//         .as_ref()
-//         .ok_or_else(|| anyhow::anyhow!("could not get extensions from cert"))?
-//     {
-//         eprintln!(
-//             "cert ext id={} val={}",
-//             ext.extn_id,
-//             hex::encode(ext.extn_value.as_bytes())
-//         );
-//     }
-//     Ok(())
-// }
-
 pub fn verify_attestation_report_signature(
     vcek: &Certificate,
     report: &AttestationReport,
 ) -> anyhow::Result<()> {
-    // eprint_ext(vcek)?;
+    // First check some necessary condition for the signature to be valid.
+    let arpt_chip_id = report.data.chip_id;
+    let vcek_chip_id = chip_id(vcek)?;
+    if arpt_chip_id != vcek_chip_id {
+        anyhow::bail!(
+            "chip id differs attestation={} vcek={}",
+            hex::encode(arpt_chip_id),
+            hex::encode(vcek_chip_id)
+        );
+    }
 
-    // eprintln!("VCEK product name: {}", product_name(vcek)?);
-    // let rtcb = &report.data.reported_tcb;
-    // let ctcb = &report.data.current_tcb;
-    // let vtcb = &tcb_version(vcek)?;
-    // eprintln!(
-    //     "ARPT reported TCB version: ucodeSPL={}&snpSPL={}&teeSPL={}&blSPL={}",
-    //     rtcb.microcode, rtcb.snp, rtcb.tee, rtcb.boot_loader
-    // );
-    // eprintln!(
-    //     "ARPT current  TCB version: ucodeSPL={}&snpSPL={}&teeSPL={}&blSPL={}",
-    //     ctcb.microcode, ctcb.snp, ctcb.tee, ctcb.boot_loader
-    // );
-    // eprintln!(
-    //     "VCEK          TCB version: ucodeSPL={}&snpSPL={}&teeSPL={}&blSPL={}",
-    //     vtcb.microcode, vtcb.snp, vtcb.tee, vtcb.boot_loader
-    // );
-
-    let actual_chip_id = report.data.chip_id;
-    let expected_chip_id = chip_id(vcek)?;
-    // eprintln!("VCEK chip ID: {}", hex::encode(expected_chip_id));
-    // eprintln!("ARPT chip ID: {}", hex::encode(actual_chip_id));
-    for i in 0..64 {
-        if actual_chip_id[i] != expected_chip_id[i] {
-            anyhow::bail!("chip id differs {}", i);
-        }
+    let arpt_tcb = &report.data.reported_tcb;
+    let vcek_tcb = tcb_version(vcek)?;
+    if arpt_tcb.snp != vcek_tcb.snp
+        || arpt_tcb.microcode != vcek_tcb.microcode
+        || arpt_tcb.tee != vcek_tcb.tee
+        || arpt_tcb.boot_loader != vcek_tcb.boot_loader
+    {
+        anyhow::bail!("mismatch in TCB version");
     }
 
     let verifying_key = {
