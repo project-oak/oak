@@ -750,6 +750,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "micro_rpc",
+ "oak_core",
  "oak_echo_service",
  "oak_restricted_kernel_sdk",
 ]
@@ -800,6 +801,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "micro_rpc",
+ "oak_core",
  "oak_functions_service",
  "oak_restricted_kernel_sdk",
 ]
@@ -862,7 +864,6 @@ dependencies = [
  "lazy_static",
  "log",
  "oak_channel",
- "oak_core",
  "oak_crypto",
  "oak_dice",
  "oak_enclave_runtime_support",

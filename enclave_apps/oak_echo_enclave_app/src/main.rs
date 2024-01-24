@@ -24,9 +24,8 @@ use alloc::boxed::Box;
 use core::panic::PanicInfo;
 
 use log::info;
-use oak_restricted_kernel_sdk::{
-    oak_core::samplestore::StaticSampleStore, start_blocking_server, FileDescriptorChannel,
-};
+use oak_core::samplestore::StaticSampleStore;
+use oak_restricted_kernel_sdk::{start_blocking_server, FileDescriptorChannel};
 
 #[no_mangle]
 fn _start() -> ! {
