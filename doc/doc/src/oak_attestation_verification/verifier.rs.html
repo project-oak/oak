@@ -767,6 +767,28 @@
 <a href="#767" id="767">767</a>
 <a href="#768" id="768">768</a>
 <a href="#769" id="769">769</a>
+<a href="#770" id="770">770</a>
+<a href="#771" id="771">771</a>
+<a href="#772" id="772">772</a>
+<a href="#773" id="773">773</a>
+<a href="#774" id="774">774</a>
+<a href="#775" id="775">775</a>
+<a href="#776" id="776">776</a>
+<a href="#777" id="777">777</a>
+<a href="#778" id="778">778</a>
+<a href="#779" id="779">779</a>
+<a href="#780" id="780">780</a>
+<a href="#781" id="781">781</a>
+<a href="#782" id="782">782</a>
+<a href="#783" id="783">783</a>
+<a href="#784" id="784">784</a>
+<a href="#785" id="785">785</a>
+<a href="#786" id="786">786</a>
+<a href="#787" id="787">787</a>
+<a href="#788" id="788">788</a>
+<a href="#789" id="789">789</a>
+<a href="#790" id="790">790</a>
+<a href="#791" id="791">791</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -812,16 +834,23 @@
     RawDigest,
 };
 <span class="kw">use </span>oak_sev_guest::guest::{AttestationReport, PolicyFlags};
+<span class="kw">use </span>x509_cert::{
+    der::{Decode, DecodePem},
+    Certificate,
+};
 <span class="kw">use </span>zerocopy::FromBytes;
 
 <span class="kw">use crate</span>::{
     alloc::string::ToString,
+    amd::{verify_attestation_report_signature, verify_cert_signature},
     claims::{get_digest, parse_endorsement_statement},
     endorsement::verify_binary_endorsement,
     util::{
         hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match, raw_to_hex_digest, MatchResult,
     },
 };
+
+<span class="kw">const </span>ASK_MILAN_CERT_PEM: <span class="kw-2">&amp;</span>str = <span class="macro">include_str!</span>(<span class="string">&quot;../data/ask_milan.pem&quot;</span>);
 
 <span class="comment">// We don&#39;t use additional authenticated data.
 </span><span class="kw">const </span>ADDITIONAL_DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;&quot;</span>;
@@ -1095,11 +1124,16 @@
 <span class="doccomment">/// Verifies the AMD SEV attestation report.
 </span><span class="kw">fn </span>verify_amd_sev_attestation_report(
     report: <span class="kw-2">&amp;</span>[u8],
+    vcek: <span class="kw-2">&amp;</span>Certificate,
     reference_values: <span class="kw-2">&amp;</span>AmdSevReferenceValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">let </span>parsed = AttestationReport::ref_from(report)
         .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse AMD SEV attestation report&quot;</span>))<span class="question-mark">?</span>;
     parsed.validate().map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
+
+    <span class="comment">// We demand that the attestation report is signed by the VCEK public key.
+    </span>verify_attestation_report_signature(vcek, parsed)<span class="question-mark">?</span>;
+
     <span class="kw">let </span>data = <span class="kw-2">&amp;</span>parsed.data;
 
     <span class="comment">// Verify that we are not in debug mode.
@@ -1139,7 +1173,17 @@
                 .amd_sev
                 .as_ref()
                 .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no AMD SEV reference values&quot;</span>))<span class="question-mark">?</span>;
-            verify_amd_sev_attestation_report(<span class="kw-2">&amp;</span>l.remote_attestation_report, amd_sev)<span class="question-mark">?
+
+            <span class="comment">// We demand that product-specific ASK signs the VCEK.
+            </span><span class="kw">let </span>vcek = Certificate::from_der(<span class="kw-2">&amp;</span>e.tee_certificate)
+                .map_err(|_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse VCEK cert&quot;</span>))<span class="question-mark">?</span>;
+            <span class="comment">// Right now there are only Milan CPUs, so it is not urgent to code the
+            // decision between Milan and Genoa which would appear here.
+            </span><span class="kw">let </span>ask_milan = Certificate::from_pem(ASK_MILAN_CERT_PEM)
+                .map_err(|_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse ASK cert&quot;</span>))<span class="question-mark">?</span>;
+            verify_cert_signature(<span class="kw-2">&amp;</span>ask_milan, <span class="kw-2">&amp;</span>vcek)<span class="question-mark">?</span>;
+
+            verify_amd_sev_attestation_report(<span class="kw-2">&amp;</span>l.remote_attestation_report, <span class="kw-2">&amp;</span>vcek, amd_sev)<span class="question-mark">?
         </span>}
         TeePlatform::IntelTdx =&gt; {
             <span class="kw">let </span>intel_tdx = r
