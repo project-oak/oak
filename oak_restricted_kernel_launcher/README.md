@@ -1,11 +1,11 @@
-# restricted_kernel_launcher
+# oak_restricted_kernel_launcher
 
 Simple launcher used to launch an instance of the restricted kernel in a VM.
 
 Documentation is available via:
 
 ```shell
-cargo run --package=restricted_kernel_launcher -- --help
+cargo run --package=oak_restricted_kernel_launcher -- --help
 ```
 
 The instructions below for building the required dependencies and running an app
@@ -26,7 +26,7 @@ After building dependencies, an enclave app may be run like so:
 
 ```shell
 RUST_LOG=DEBUG \
-cargo run --package=restricted_kernel_launcher -- \
+cargo run --package=oak_restricted_kernel_launcher -- \
 --enclave-binary=oak_restricted_kernel_bin/target/x86_64-unknown-none/debug/oak_restricted_kernel_bin \
 --vmm-binary=$(which qemu-system-x86_64) \
 --memory-size=256M \

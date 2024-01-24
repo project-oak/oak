@@ -48,6 +48,7 @@ members = [
   "oak_restricted_kernel_dice",
   "oak_restricted_kernel_interface",
   "oak_restricted_kernel_sdk",
+  "oak_restricted_kernel_launcher",
   "oak_sev_guest",
   "oak_simple_io",
   "oak_tdx_guest",
@@ -57,7 +58,6 @@ members = [
   "stage0",
   "stage0_dice",
   "testing/oak_echo_service",
-  "testing/restricted_kernel_launcher",
   "xtask",
   "oak_restricted_kernel_sdk_proc_macro"
 ]

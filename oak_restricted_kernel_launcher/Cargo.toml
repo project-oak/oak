@@ -1,5 +1,5 @@
 [package]
-name = "restricted_kernel_launcher"
+name = "oak_restricted_kernel_launcher"
 version = "0.1.0"
 authors = ["Juliette Pluto <julsh@google.com>"]
 edition = "2021"

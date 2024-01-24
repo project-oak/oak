@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("Restricted Kernel Launcher args: {:?}", cli);
 
     let (mut launched_instance, _connector_handle) =
-        restricted_kernel_launcher::create(cli.launcher_params).await?;
+        oak_restricted_kernel_launcher::create(cli.launcher_params).await?;
 
     // Wait until something dies or we get a signal to terminate.
     tokio::select! {
