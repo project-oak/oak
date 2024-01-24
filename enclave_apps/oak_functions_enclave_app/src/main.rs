@@ -22,8 +22,10 @@ extern crate alloc;
 
 use alloc::{boxed::Box, sync::Arc};
 
-use oak_core::samplestore::StaticSampleStore;
-use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel};
+use oak_restricted_kernel_sdk::{
+    entrypoint, oak_core::samplestore::StaticSampleStore, start_blocking_server,
+    FileDescriptorChannel,
+};
 
 #[entrypoint]
 fn main() -> ! {
@@ -45,7 +47,7 @@ fn main() -> ! {
         None,
     );
     let server = oak_functions_service::proto::oak::functions::OakFunctionsServer::new(service);
-    oak_channel::server::start_blocking_server(
+    start_blocking_server(
         Box::<FileDescriptorChannel>::default(),
         server,
         &mut invocation_stats,

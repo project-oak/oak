@@ -23,9 +23,8 @@ extern crate alloc;
 use core::panic::PanicInfo;
 
 use log::info;
-use oak_channel::{Read, Write};
 use oak_restricted_kernel_interface::{syscall::read, DERIVED_KEY_FD};
-use oak_restricted_kernel_sdk::FileDescriptorChannel;
+use oak_restricted_kernel_sdk::{FileDescriptorChannel, Read, Write};
 
 #[no_mangle]
 fn _start() -> ! {

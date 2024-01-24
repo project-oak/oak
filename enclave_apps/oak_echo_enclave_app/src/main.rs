@@ -24,8 +24,9 @@ use alloc::boxed::Box;
 use core::panic::PanicInfo;
 
 use log::info;
-use oak_core::samplestore::StaticSampleStore;
-use oak_restricted_kernel_sdk::FileDescriptorChannel;
+use oak_restricted_kernel_sdk::{
+    oak_core::samplestore::StaticSampleStore, start_blocking_server, FileDescriptorChannel,
+};
 
 #[no_mangle]
 fn _start() -> ! {
@@ -44,7 +45,7 @@ fn start_echo_server() -> ! {
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
     let service = oak_echo_service::EchoService;
     let server = oak_echo_service::proto::EchoServer::new(service);
-    oak_channel::server::start_blocking_server(
+    start_blocking_server(
         Box::<FileDescriptorChannel>::default(),
         server,
         &mut invocation_stats,

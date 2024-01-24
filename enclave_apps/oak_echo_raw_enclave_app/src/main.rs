@@ -24,8 +24,7 @@ use alloc::{vec, vec::Vec};
 use core::panic::PanicInfo;
 
 use log::info;
-use oak_channel::{Read, Write};
-use oak_restricted_kernel_sdk::FileDescriptorChannel;
+use oak_restricted_kernel_sdk::{FileDescriptorChannel, Read, Write};
 
 const MESSAGE_SIZE: usize = 1;
 

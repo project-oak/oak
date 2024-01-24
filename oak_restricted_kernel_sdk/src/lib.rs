@@ -22,10 +22,11 @@ mod channel;
 mod dice;
 mod logging;
 
-pub use channel::FileDescriptorChannel;
+pub use channel::*;
 pub use dice::*;
 pub use logging::StderrLogger;
 use logging::STDERR_LOGGER;
+pub use oak_core;
 pub use oak_restricted_kernel_sdk_proc_macro::entrypoint;
 
 /// Initialization function that sets up the allocator and logger.

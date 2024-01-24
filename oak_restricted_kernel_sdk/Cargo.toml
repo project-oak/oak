@@ -12,6 +12,7 @@ mock_attestation = ["oak_stage0_dice", "oak_restricted_kernel_dice"]
 [dependencies]
 anyhow = { version = "*", default-features = false }
 log = "*"
+oak_core = { workspace = true }
 oak_channel = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
