@@ -12,7 +12,8 @@ unsound = "deny"
 yanked = "deny"
 notice = "deny"
 ignore = [
-    #"RUSTSEC-2023-0071",  # rsa 0.9.6
+  # For crate rsa 0.9.6. Remove when there is a safe upgrade.
+  "RUSTSEC-2023-0071",
 ]
 
 [bans]
