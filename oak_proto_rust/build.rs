@@ -1,5 +1,5 @@
 //
-// Copyright 2021 The Project Oak Authors
+// Copyright 2023 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +14,23 @@
 // limitations under the License.
 //
 
-extern crate prost_build;
-
-fn main() {
-    let file_paths = ["proto/oak_functions/benchmark.proto"];
-    prost_build::compile_protos(&file_paths, &["../../../../"]).expect("proto compilation failed");
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let proto_paths = [
+        "../proto/attestation/endorsement.proto",
+        "../proto/attestation/evidence.proto",
+        "../proto/attestation/reference_value.proto",
+        "../proto/attestation/verification.proto",
+        "../proto/oak_functions/abi.proto",
+        "../proto/oak_functions/benchmark.proto",
+        "../proto/oak_functions/lookup_data.proto",
+    ];
+    prost_build::compile_protos(&proto_paths, &[".."]).expect("proto compilation failed");
 
     // Tell cargo to rerun this build script if the proto file has changed.
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
-    for proto_path in file_paths.iter() {
-        let file_path = std::path::Path::new(proto_path);
-        println!("cargo:rerun-if-changed=../../../../{}", file_path.display());
+    for proto_path in proto_paths.iter() {
+        println!("cargo:rerun-if-changed={}", proto_path);
     }
+
+    Ok(())
 }

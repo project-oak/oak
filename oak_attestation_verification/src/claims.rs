@@ -23,12 +23,11 @@ extern crate alloc;
 
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 
+use oak_proto_rust::oak::HexDigest;
 use serde::Deserialize;
 #[cfg(feature = "std")]
 use serde::Serialize;
 use time::OffsetDateTime;
-
-use crate::proto::oak::HexDigest;
 
 /// PredicateType which identifies a V1 Claim, for in-toto statements.
 pub const CLAIM_V1: &str = "https://github.com/project-oak/transparent-release/claim/v1";

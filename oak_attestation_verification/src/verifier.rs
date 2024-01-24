@@ -27,6 +27,21 @@ use oak_dice::cert::{
     LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID,
     MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
 };
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        attestation_results::Status, binary_reference_value, endorsements, reference_values,
+        AmdSevReferenceValues, ApplicationKeys, ApplicationLayerEndorsements,
+        ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbEndorsements,
+        CbReferenceValues, ContainerLayerEndorsements, ContainerLayerReferenceValues, Endorsements,
+        Evidence, IntelTdxReferenceValues, KernelLayerEndorsements, KernelLayerReferenceValues,
+        LayerEvidence, OakContainersEndorsements, OakContainersReferenceValues,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
+        SystemLayerEndorsements, SystemLayerReferenceValues, TeePlatform,
+        TransparentReleaseEndorsement,
+    },
+    RawDigest,
+};
 use oak_sev_guest::guest::{AttestationReport, PolicyFlags};
 use x509_cert::{
     der::{Decode, DecodePem},
@@ -39,22 +54,6 @@ use crate::{
     amd::{verify_attestation_report_signature, verify_cert_signature},
     claims::{get_digest, parse_endorsement_statement},
     endorsement::verify_binary_endorsement,
-    proto::oak::{
-        attestation::v1::{
-            attestation_results::Status, binary_reference_value, endorsements, reference_values,
-            AmdSevReferenceValues, ApplicationKeys, ApplicationLayerEndorsements,
-            ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue,
-            CbEndorsements, CbReferenceValues, ContainerLayerEndorsements,
-            ContainerLayerReferenceValues, Endorsements, Evidence, IntelTdxReferenceValues,
-            KernelLayerEndorsements, KernelLayerReferenceValues, LayerEvidence,
-            OakContainersEndorsements, OakContainersReferenceValues,
-            OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-            RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
-            SystemLayerEndorsements, SystemLayerReferenceValues, TeePlatform,
-            TransparentReleaseEndorsement,
-        },
-        RawDigest,
-    },
     util::{
         hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match, raw_to_hex_digest, MatchResult,
     },
@@ -70,21 +69,21 @@ pub struct DiceChainResult {
     pub signing_public_key: Vec<u8>,
 }
 
-impl From<&anyhow::Result<DiceChainResult>> for AttestationResults {
-    fn from(value: &anyhow::Result<DiceChainResult>) -> Self {
-        match value {
-            Ok(dice_chain_result) => AttestationResults {
-                status: Status::Success.into(),
-                encryption_public_key: dice_chain_result.encryption_public_key.clone(),
-                signing_public_key: dice_chain_result.signing_public_key.clone(),
-                ..Default::default()
-            },
-            Err(err) => AttestationResults {
-                status: Status::GenericFailure.into(),
-                reason: err.to_string(),
-                ..Default::default()
-            },
-        }
+pub fn to_attestation_results(
+    verify_result: &anyhow::Result<DiceChainResult>,
+) -> AttestationResults {
+    match verify_result {
+        Ok(dice_chain_result) => AttestationResults {
+            status: Status::Success.into(),
+            encryption_public_key: dice_chain_result.encryption_public_key.clone(),
+            signing_public_key: dice_chain_result.signing_public_key.clone(),
+            ..Default::default()
+        },
+        Err(err) => AttestationResults {
+            status: Status::GenericFailure.into(),
+            reason: err.to_string(),
+            ..Default::default()
+        },
     }
 }
 

@@ -797,8 +797,6 @@ name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "prost",
- "prost-build",
  "static_assertions",
  "strum",
 ]
@@ -847,10 +845,19 @@ dependencies = [
  "oak_dice",
  "oak_functions_abi",
  "oak_functions_sdk",
+ "oak_proto_rust",
  "oak_restricted_kernel_sdk",
  "prost",
  "spinning_top",
  "wasmi",
+]
+
+[[package]]
+name = "oak_proto_rust"
+version = "0.0.1"
+dependencies = [
+ "prost",
+ "prost-build",
 ]
 
 [[package]]

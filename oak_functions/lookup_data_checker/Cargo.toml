@@ -12,5 +12,5 @@ clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 location_utils = { workspace = true }
 log = "*"
-oak_functions_abi = { workspace = true }
+oak_proto_rust = { workspace = true }
 prost = { workspace = true }

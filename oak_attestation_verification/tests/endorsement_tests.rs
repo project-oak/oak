@@ -25,10 +25,10 @@ use oak_attestation_verification::{
         verify_binary_digest, verify_binary_endorsement, verify_endorsement_statement,
         verify_endorser_public_key,
     },
-    proto::oak::HexDigest,
     rekor::{verify_rekor_log_entry, verify_rekor_signature},
     util::{convert_pem_to_raw, MatchResult},
 };
+use oak_proto_rust::oak::HexDigest;
 
 const BINARY_DIGEST: &str = "39051983bbb600bbfb91bd22ee4c976420f8f0c6a895fd083dcb0d153ddd5fd6";
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
