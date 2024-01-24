@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-//! Contains structs for specifying in-toto statements and claims about
+//! Contains code related to AMD hardware certificates and attestation report.
 
 use alloc::string::String;
 
@@ -28,6 +28,10 @@ use x509_cert::{
 };
 use zerocopy::{AsBytes, FromZeroes};
 
+// The keys in the key-value map of X509 certificates are Object Identifiers
+// (OIDs) which have a global registry. The present OIDs are taken from
+// Table 8 of
+// https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/57230.pdf
 const RSA_SSA_PSS_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.2.840.113549.1.1.10");
 const PRODUCT_NAME_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.2");
 const BL_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.3.1");
@@ -42,13 +46,14 @@ const UCODE_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.37
 // https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/programmer-references/55766_SEV-KM_API_Specification.pdf
 // Ideally, we'd check everything listed there.
 pub fn validate_ark_ask_certs(ark: &Certificate, ask: &Certificate) -> anyhow::Result<()> {
-    if ark.tbs_certificate.version != Version::V3 {
-        anyhow::bail!("unexpected version of ARK cert");
-    }
-
-    if ask.tbs_certificate.version != Version::V3 {
-        anyhow::bail!("unexpected version of ASK cert");
-    }
+    anyhow::ensure!(
+        ark.tbs_certificate.version == Version::V3,
+        "unexpected version of ARK cert"
+    );
+    anyhow::ensure!(
+        ask.tbs_certificate.version == Version::V3,
+        "unexpected version of ASK cert"
+    );
 
     verify_cert_signature(ark, ask)?;
     verify_cert_signature(ark, ark)?;
@@ -57,12 +62,11 @@ pub fn validate_ark_ask_certs(ark: &Certificate, ask: &Certificate) -> anyhow::R
 }
 
 pub fn verify_cert_signature(signer: &Certificate, signee: &Certificate) -> anyhow::Result<()> {
-    if signee.signature_algorithm.oid != RSA_SSA_PSS_OID {
-        anyhow::bail!(
-            "unsupported signature algorithm: {:?}",
-            signee.signature_algorithm
-        );
-    }
+    anyhow::ensure!(
+        signee.signature_algorithm.oid == RSA_SSA_PSS_OID,
+        "unsupported signature algorithm: {:?}",
+        signee.signature_algorithm
+    );
 
     let verifying_key = {
         let pubkey_info = signer

@@ -19,6 +19,12 @@ package(
     licenses = ["notice"],
 )
 
+# These certificates are the root of trust of the AMD hardware verification
+# chain: ARK -> ASK -> VCEK -> attestation report. The ARK and and ASK
+# certificates are parameter-free (with the exception of the chip generation
+# which is called `product name` elsewhere). They are valid until 2045 and
+# can therefore be statically included. Since they are static it is sufficient
+# to verify the ARK -> ASK validity offline in a unit test.
 exports_files([
     "ark_genoa.pem",
     "ask_genoa.pem",

@@ -27,7 +27,7 @@ exports_files([
     "logentry.json",
     "oak-development.pem",
     "rekor_public_key.pem",
-    # The VCEK cert needs to match the hardwrare ID of the attestation report in the
+    # The VCEK cert needs to match the hardware ID of the attestation report in the
     # test evidence proto. The additional parameters in the URL encode the current
     # TCB version in the attestation report.
     #
