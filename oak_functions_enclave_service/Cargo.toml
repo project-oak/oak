@@ -1,5 +1,5 @@
 [package]
-name = "oak_functions_service"
+name = "oak_functions_enclave_service"
 version = "0.1.0"
 authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
@@ -8,35 +8,25 @@ license = "Apache-2.0"
 [features]
 default = ["deny_sensitive_logging"]
 # Disable sensitive logging.
-deny_sensitive_logging = []
-std = ["anyhow/std", "wasmi/std"]
+deny_sensitive_logging = ["oak_functions_service/deny_sensitive_logging"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
-byteorder = { version = "*", default-features = false }
-bytes = { version = "*", default-features = false }
-hashbrown = "*"
-log = "*"
 prost = { workspace = true }
 micro_rpc = { workspace = true }
 oak_attestation = { workspace = true }
 oak_core = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
-oak_functions_abi = { workspace = true }
-oak_functions_sdk = { workspace = true }
+oak_restricted_kernel_sdk = { workspace = true }
+oak_functions_service = { workspace = true }
 oak_proto_rust = { workspace = true }
-spinning_top = "*"
-wasmi = { version = "*", default-features = false }
-
-[build-dependencies]
-micro_rpc_build = { workspace = true }
+log = "*"
 
 [dev-dependencies]
 env_logger = { version = "*", default-features = false }
 oak_attestation = { workspace = true }
 oak_functions_test_utils = { workspace = true }
-tokio = { workspace = true, features = ["rt", "macros"] }
 oak_restricted_kernel_sdk = { workspace = true, features = [
   "mock_attestation"
 ] }

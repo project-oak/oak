@@ -812,10 +812,27 @@ dependencies = [
  "oak_core",
  "oak_crypto",
  "oak_dice",
- "oak_functions_service",
+ "oak_functions_enclave_service",
  "oak_restricted_kernel_sdk",
  "static_assertions",
  "zerocopy",
+]
+
+[[package]]
+name = "oak_functions_enclave_service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "micro_rpc",
+ "oak_attestation",
+ "oak_core",
+ "oak_crypto",
+ "oak_dice",
+ "oak_functions_service",
+ "oak_proto_rust",
+ "oak_restricted_kernel_sdk",
+ "prost",
 ]
 
 [[package]]
@@ -846,7 +863,6 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_sdk",
  "oak_proto_rust",
- "oak_restricted_kernel_sdk",
  "prost",
  "spinning_top",
  "wasmi",
