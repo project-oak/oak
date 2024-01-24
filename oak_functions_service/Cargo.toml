@@ -11,6 +11,10 @@ default = ["deny_sensitive_logging"]
 deny_sensitive_logging = []
 std = ["anyhow/std", "wasmi/std"]
 
+[[bench]]
+name = "wasm_benchmark"
+harness = false
+
 [dependencies]
 anyhow = { version = "*", default-features = false }
 byteorder = { version = "*", default-features = false }
@@ -34,9 +38,11 @@ wasmi = { version = "*", default-features = false }
 micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
+criterion = "*"
 env_logger = { version = "*", default-features = false }
 oak_attestation = { workspace = true }
 oak_functions_test_utils = { workspace = true }
+rand = "*"
 tokio = { workspace = true, features = ["rt", "macros"] }
 oak_restricted_kernel_sdk = { workspace = true, features = [
   "mock_attestation"
