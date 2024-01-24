@@ -64,6 +64,10 @@ pub struct Params {
     /// Gigabyte).
     #[arg(long)]
     pub memory_size: Option<String>,
+
+    /// Path to the initrd image to use.
+    #[arg(long, value_parser = path_exists)]
+    pub initrd: Option<PathBuf>,
 }
 
 /// Checks if file with a given path exists.
@@ -165,6 +169,13 @@ impl Instance {
             // Listen for a gdb connection on the provided port and wait for debugger before booting
             cmd.args(["-gdb", format!("tcp::{gdb_port}").as_str()]);
             cmd.arg("-S");
+        }
+
+        if let Some(initrd) = params.initrd {
+            cmd.args([
+                "-initrd",
+                initrd.into_os_string().into_string().unwrap().as_str(),
+            ]);
         }
 
         info!("executing: {:?}", cmd);
