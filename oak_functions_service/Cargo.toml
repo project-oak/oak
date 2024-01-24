@@ -20,7 +20,6 @@ log = "*"
 prost = { workspace = true }
 micro_rpc = { workspace = true }
 oak_attestation = { workspace = true }
-oak_core = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
 oak_functions_abi = { workspace = true }
@@ -33,10 +32,6 @@ wasmi = { version = "*", default-features = false }
 micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
-env_logger = { version = "*", default-features = false }
 oak_attestation = { workspace = true }
 oak_functions_test_utils = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros"] }
-oak_restricted_kernel_sdk = { workspace = true, features = [
-  "mock_attestation"
-] }
