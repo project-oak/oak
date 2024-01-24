@@ -85,9 +85,9 @@ pub fn verify_cert_signature(signer: &Certificate, signee: &Certificate) -> anyh
     let signature = Signature::try_from(signee.signature.raw_bytes())
         .map_err(|_err| anyhow::anyhow!("could not extract RSA signature"))?;
 
-    Ok(verifying_key
+    verifying_key
         .verify(&message, &signature)
-        .map_err(|_err| anyhow::anyhow!("signature verification failed"))?)
+        .map_err(|_err| anyhow::anyhow!("signature verification failed"))
 }
 
 // Currently unused, use `pub` only to disable the warning.
@@ -193,7 +193,7 @@ pub fn verify_attestation_report_signature(
     let signature = p384::ecdsa::Signature::from_scalars(r, s)
         .map_err(|_err| anyhow::anyhow!("could not extract ECDSA P-384 signature"))?;
 
-    Ok(verifying_key
+    verifying_key
         .verify(message, &signature)
-        .map_err(|_err| anyhow::anyhow!("failed to verify ECDSA P-384 signature"))?)
+        .map_err(|_err| anyhow::anyhow!("failed to verify ECDSA P-384 signature"))
 }
