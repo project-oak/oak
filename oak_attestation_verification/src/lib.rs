@@ -19,6 +19,7 @@
 
 extern crate alloc;
 
+pub mod amd;
 pub mod claims;
 pub mod endorsement;
 pub mod rekor;

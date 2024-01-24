@@ -43,16 +43,23 @@ use oak_proto_rust::oak::{
     RawDigest,
 };
 use oak_sev_guest::guest::{AttestationReport, PolicyFlags};
+use x509_cert::{
+    der::{Decode, DecodePem},
+    Certificate,
+};
 use zerocopy::FromBytes;
 
 use crate::{
     alloc::string::ToString,
+    amd::{verify_attestation_report_signature, verify_cert_signature},
     claims::{get_digest, parse_endorsement_statement},
     endorsement::verify_binary_endorsement,
     util::{
         hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match, raw_to_hex_digest, MatchResult,
     },
 };
+
+const ASK_MILAN_CERT_PEM: &str = include_str!("../data/ask_milan.pem");
 
 // We don't use additional authenticated data.
 const ADDITIONAL_DATA: &[u8] = b"";
@@ -326,11 +333,16 @@ fn verify_cb(
 /// Verifies the AMD SEV attestation report.
 fn verify_amd_sev_attestation_report(
     report: &[u8],
+    vcek: &Certificate,
     reference_values: &AmdSevReferenceValues,
 ) -> anyhow::Result<()> {
     let parsed = AttestationReport::ref_from(report)
         .ok_or_else(|| anyhow::anyhow!("could not parse AMD SEV attestation report"))?;
     parsed.validate().map_err(|msg| anyhow::anyhow!(msg))?;
+
+    // We demand that the attestation report is signed by the VCEK public key.
+    verify_attestation_report_signature(vcek, parsed)?;
+
     let data = &parsed.data;
 
     // Verify that we are not in debug mode.
@@ -370,7 +382,17 @@ fn verify_root_layer(
                 .amd_sev
                 .as_ref()
                 .ok_or_else(|| anyhow::anyhow!("no AMD SEV reference values"))?;
-            verify_amd_sev_attestation_report(&l.remote_attestation_report, amd_sev)?
+
+            // We demand that product-specific ASK signs the VCEK.
+            let vcek = Certificate::from_der(&e.tee_certificate)
+                .map_err(|_err| anyhow::anyhow!("could not parse VCEK cert"))?;
+            // Right now there are only Milan CPUs, so it is not urgent to code the
+            // decision between Milan and Genoa which would appear here.
+            let ask_milan = Certificate::from_pem(ASK_MILAN_CERT_PEM)
+                .map_err(|_err| anyhow::anyhow!("could not parse ASK cert"))?;
+            verify_cert_signature(&ask_milan, &vcek)?;
+
+            verify_amd_sev_attestation_report(&l.remote_attestation_report, &vcek, amd_sev)?
         }
         TeePlatform::IntelTdx => {
             let intel_tdx = r
