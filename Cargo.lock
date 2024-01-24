@@ -342,8 +342,8 @@ name = "benchmark"
 version = "0.1.0"
 dependencies = [
  "oak_functions_sdk",
+ "oak_proto_rust",
  "prost",
- "prost-build",
 ]
 
 [[package]]
@@ -1596,7 +1596,7 @@ dependencies = [
  "env_logger",
  "location_utils",
  "log",
- "oak_functions_abi",
+ "oak_proto_rust",
  "prost",
 ]
 
@@ -1609,7 +1609,7 @@ dependencies = [
  "clap",
  "location_utils",
  "multimap 0.10.0",
- "oak_functions_abi",
+ "oak_proto_rust",
  "prost",
  "rand",
  "serde",
@@ -1876,10 +1876,10 @@ dependencies = [
  "getrandom",
  "hex",
  "oak_dice",
+ "oak_proto_rust",
  "oak_sev_guest",
  "p256",
  "prost",
- "prost-build",
  "serde",
  "serde_json",
  "sha2",
@@ -1911,6 +1911,7 @@ dependencies = [
  "oak_attestation_verification",
  "oak_crypto",
  "oak_grpc_utils",
+ "oak_proto_rust",
  "prost",
  "tonic",
 ]
@@ -2174,8 +2175,6 @@ name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "prost",
- "prost-build",
  "static_assertions",
  "strum 0.25.0",
 ]
@@ -2241,11 +2240,11 @@ dependencies = [
  "oak_client",
  "oak_containers_launcher",
  "oak_crypto",
- "oak_functions_abi",
  "oak_functions_client",
  "oak_functions_launcher",
  "oak_functions_test_utils",
  "oak_grpc_utils",
+ "oak_proto_rust",
  "prost",
  "tokio",
  "tonic",
@@ -2278,6 +2277,7 @@ dependencies = [
  "oak_functions_test_utils",
  "oak_grpc_utils",
  "oak_launcher_utils",
+ "oak_proto_rust",
  "prost",
  "rand",
  "serde",
@@ -2340,7 +2340,6 @@ name = "oak_functions_service"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "benchmark",
  "byteorder",
  "bytes",
  "env_logger",
@@ -2355,6 +2354,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_sdk",
  "oak_functions_test_utils",
+ "oak_proto_rust",
  "oak_restricted_kernel_sdk",
  "prost",
  "spinning_top 0.3.0",
@@ -2376,6 +2376,7 @@ dependencies = [
  "oak_client",
  "oak_functions_abi",
  "oak_functions_client",
+ "oak_proto_rust",
  "port_check",
  "prost",
  "tempfile",
@@ -2429,6 +2430,14 @@ dependencies = [
  "static_assertions",
  "strum 0.25.0",
  "zerocopy",
+]
+
+[[package]]
+name = "oak_proto_rust"
+version = "0.0.1"
+dependencies = [
+ "prost",
+ "prost-build",
 ]
 
 [[package]]

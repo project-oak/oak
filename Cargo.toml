@@ -43,6 +43,7 @@ members = [
   "oak_functions_test_utils",
   "oak_hello_world_linux_init",
   "oak_launcher_utils",
+  "oak_proto_rust",
   "oak_restricted_kernel",
   "oak_restricted_kernel_dice",
   "oak_restricted_kernel_interface",
@@ -103,6 +104,7 @@ oak_grpc_utils = { path = "./oak_grpc_utils" }
 oak_launcher_utils = { path = "./oak_launcher_utils" }
 oak_linux_boot_params = { path = "./linux_boot_params" }
 oak_logger = { path = "./oak_functions/logger" }
+oak_proto_rust = { path = "./oak_proto_rust" }
 oak_restricted_kernel_dice = { path = "./oak_restricted_kernel_dice" }
 oak_restricted_kernel_sdk = { path = "./oak_restricted_kernel_sdk" }
 oak_restricted_kernel_sdk_proc_macro = { path = "./oak_restricted_kernel_sdk_proc_macro" }

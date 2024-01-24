@@ -22,7 +22,6 @@ extern crate alloc;
 use core::assert_matches::assert_matches;
 use std::sync::Arc;
 
-use benchmark::proto::{benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest};
 use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedRequest};
 use oak_functions_service::{
     proto::oak::functions::{
@@ -30,6 +29,9 @@ use oak_functions_service::{
         LookupDataChunk, LookupDataEntry, OakFunctionsClient, OakFunctionsServer,
     },
     OakFunctionsService,
+};
+use oak_proto_rust::oak::oak_functions::benchmark::{
+    benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest,
 };
 use prost::Message;
 

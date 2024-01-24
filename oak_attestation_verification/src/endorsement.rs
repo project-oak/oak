@@ -17,13 +17,13 @@
 //! Verifies binary endorsements as coming from Transparent Release.
 
 use base64::{prelude::BASE64_STANDARD, Engine as _};
+use oak_proto_rust::oak::HexDigest;
 
 use crate::{
     claims::{
         get_digest, parse_endorsement_statement, validate_endorsement, verify_validity_duration,
         EndorsementStatement,
     },
-    proto::oak::HexDigest,
     rekor::{get_rekor_log_entry_body, verify_rekor_log_entry},
     util::{convert_pem_to_raw, equal_keys, is_hex_digest_match, MatchResult},
 };
