@@ -99,35 +99,33 @@ fn to_array_64<T>(slice: &[T]) -> anyhow::Result<&[T; 64]> {
     }
 }
 
-// Currently unused.
-pub fn product_name(vcek: &Certificate) -> anyhow::Result<String> {
-    for ext in vcek
+// Currently unused, use `pub` only to disable the warning.
+pub fn product_name(cert: &Certificate) -> anyhow::Result<String> {
+    let exts = cert
         .tbs_certificate
         .extensions
         .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("could not get extensions from VCEK cert"))?
-    {
-        if ext.extn_id == PRODUCT_NAME_OID {
-            return String::from_utf8(ext.extn_value.as_bytes().to_vec())
-                .map_err(|_utf8_err| anyhow::anyhow!("failed to read product name"));
-        }
-    }
-    Err(anyhow::anyhow!("no product name found in VCEK vert"))
+        .ok_or_else(|| anyhow::anyhow!("could not get extensions from cert"))?;
+    let pn_ext = exts
+        .iter()
+        .find(|&ext| ext.extn_id == PRODUCT_NAME_OID)
+        .ok_or_else(|| anyhow::anyhow!("no product name found in cert"))?;
+    String::from_utf8(pn_ext.extn_value.as_bytes().to_vec())
+        .map_err(|_utf8_err| anyhow::anyhow!("failed to read product name"))
 }
 
-fn chip_id(vcek: &Certificate) -> anyhow::Result<[u8; 64]> {
-    for ext in vcek
+fn chip_id(cert: &Certificate) -> anyhow::Result<[u8; 64]> {
+    let exts = cert
         .tbs_certificate
         .extensions
         .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("could not get extensions from VCEK cert"))?
-    {
-        if ext.extn_id == CHIP_ID_OID {
-            let chip_id = ext.extn_value.as_bytes().to_vec();
-            return to_array_64(&chip_id).copied();
-        }
-    }
-    Err(anyhow::anyhow!("no chip ID found in VCEK vert"))
+        .ok_or_else(|| anyhow::anyhow!("could not get extensions from cert"))?;
+    let chip_id_ext = exts
+        .iter()
+        .find(|&ext| ext.extn_id == CHIP_ID_OID)
+        .ok_or_else(|| anyhow::anyhow!("no chip ID found in cert"))?;
+    let chip_id = chip_id_ext.extn_value.as_bytes().to_vec();
+    return to_array_64(&chip_id).copied();
 }
 
 fn tcb_version(vcek: &Certificate) -> anyhow::Result<TcbVersion> {
@@ -158,26 +156,25 @@ pub fn verify_attestation_report_signature(
     vcek: &Certificate,
     report: &AttestationReport,
 ) -> anyhow::Result<()> {
-    // First check some necessary condition for the signature to be valid.
+    // First check some necessary conditions for the signature to be valid.
     let arpt_chip_id = report.data.chip_id;
     let vcek_chip_id = chip_id(vcek)?;
-    if arpt_chip_id != vcek_chip_id {
-        anyhow::bail!(
-            "chip id differs attestation={} vcek={}",
-            hex::encode(arpt_chip_id),
-            hex::encode(vcek_chip_id)
-        );
-    }
+    anyhow::ensure!(
+        arpt_chip_id == vcek_chip_id,
+        "chip id differs attestation={} vcek={}",
+        hex::encode(arpt_chip_id),
+        hex::encode(vcek_chip_id)
+    );
 
     let arpt_tcb = &report.data.reported_tcb;
     let vcek_tcb = tcb_version(vcek)?;
-    if arpt_tcb.snp != vcek_tcb.snp
-        || arpt_tcb.microcode != vcek_tcb.microcode
-        || arpt_tcb.tee != vcek_tcb.tee
-        || arpt_tcb.boot_loader != vcek_tcb.boot_loader
-    {
-        anyhow::bail!("mismatch in TCB version");
-    }
+    anyhow::ensure!(
+        arpt_tcb.snp == vcek_tcb.snp
+            && arpt_tcb.microcode == vcek_tcb.microcode
+            && arpt_tcb.tee == vcek_tcb.tee
+            && arpt_tcb.boot_loader == vcek_tcb.boot_loader,
+        "mismatch in TCB version"
+    );
 
     let verifying_key = {
         let pubkey_info = vcek.tbs_certificate.subject_public_key_info.owned_to_ref();
