@@ -11,7 +11,9 @@ unmaintained = "deny"
 unsound = "deny"
 yanked = "deny"
 notice = "deny"
-ignore = []
+ignore = [
+    #"RUSTSEC-2023-0071",  # rsa 0.9.6
+]
 
 [bans]
 multiple-versions = "allow"
