@@ -21,20 +21,12 @@
 extern crate alloc;
 
 use alloc::{boxed::Box, sync::Arc};
-use core::panic::PanicInfo;
 
-use log::info;
 use oak_core::samplestore::StaticSampleStore;
-use oak_restricted_kernel_sdk::FileDescriptorChannel;
+use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel};
 
-#[no_mangle]
-fn _start() -> ! {
-    oak_restricted_kernel_sdk::init(log::LevelFilter::Debug);
-    main();
-}
-
+#[entrypoint]
 fn main() -> ! {
-    info!("In main!");
     #[cfg(feature = "deny_sensitive_logging")]
     {
         // Only log warnings and errors to reduce the risk of accidentally leaking execution
@@ -59,14 +51,4 @@ fn main() -> ! {
         &mut invocation_stats,
     )
     .expect("server encountered an unrecoverable error");
-}
-
-#[alloc_error_handler]
-fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
-    oak_restricted_kernel_sdk::alloc_error_handler(layout);
-}
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    oak_restricted_kernel_sdk::panic_handler(info);
 }
