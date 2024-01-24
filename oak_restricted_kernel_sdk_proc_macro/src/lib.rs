@@ -36,6 +36,13 @@ fn validate_type_signature(entry_item: Item) -> Result<ItemFn> {
         )),
     }?;
 
+    if !entry_fn.sig.inputs.is_empty() {
+        return Err(syn::Error::new(
+            syn::spanned::Spanned::span(&entry_fn.sig.inputs),
+            "the entrypoint function should not take arguments",
+        ));
+    }
+
     let return_type_error = syn::Error::new(
         syn::spanned::Spanned::span(&entry_fn.sig.output),
         "the entrypoint function should have return type !",
