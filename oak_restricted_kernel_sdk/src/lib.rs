@@ -26,6 +26,7 @@ pub use channel::FileDescriptorChannel;
 pub use dice::*;
 pub use logging::StderrLogger;
 use logging::STDERR_LOGGER;
+pub use oak_restricted_kernel_sdk_proc_macro::entrypoint;
 
 /// Initialization function that sets up the allocator and logger.
 pub fn init(log_level: log::LevelFilter) {
