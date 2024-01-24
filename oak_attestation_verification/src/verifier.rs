@@ -42,7 +42,7 @@ use oak_proto_rust::oak::{
     },
     RawDigest,
 };
-use oak_sev_guest::guest::{AttestationReport, PolicyFlags};
+use oak_sev_snp_attestation_report::AttestationReport;
 use x509_cert::{
     der::{Decode, DecodePem},
     Certificate,
@@ -343,17 +343,12 @@ fn verify_amd_sev_attestation_report(
     // We demand that the attestation report is signed by the VCEK public key.
     verify_attestation_report_signature(vcek, parsed)?;
 
-    let data = &parsed.data;
-
     // Verify that we are not in debug mode.
-    if !reference_values.allow_debug {
-        let policy_flags = data
-            .policy
-            .get_flags()
-            .ok_or_else(|| anyhow::anyhow!("failed to parse flags"))?;
-        if policy_flags.bits() & PolicyFlags::DEBUG.bits() != 0 {
-            anyhow::bail!("debug mode not allowed");
-        }
+    let has_debug: bool = parsed
+        .has_debug_flag()
+        .map_err(|error| anyhow::anyhow!(error))?;
+    if !reference_values.allow_debug && has_debug {
+        anyhow::bail!("debug mode not allowed");
     }
 
     Ok(())

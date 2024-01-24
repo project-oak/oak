@@ -16,11 +16,12 @@
 
 use oak_sev_guest::{
     guest::{
-        AttestationReport, AttestationRequest, AttestationResponse, GuestFieldFlags, KeyRequest,
-        KeyResponse, ReportStatus,
+        AttestationRequest, AttestationResponse, GuestFieldFlags, KeyRequest, KeyResponse,
+        ReportStatus,
     },
     msr::SevStatus,
 };
+use oak_sev_snp_attestation_report::AttestationReport;
 
 use crate::sev::send_guest_message_request;
 

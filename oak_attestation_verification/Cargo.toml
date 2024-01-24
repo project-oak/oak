@@ -21,7 +21,7 @@ getrandom = { version = "*", default-features = false, features = [
 hex = { version = "*", default-features = false }
 oak_dice = { workspace = true }
 oak_proto_rust = { workspace = true }
-oak_sev_guest = { workspace = true }
+oak_sev_snp_attestation_report = { workspace = true }
 p256 = { version = "*", default-features = false, features = [
   "alloc",
   "ecdsa-core",

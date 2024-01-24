@@ -18,7 +18,7 @@
 
 use alloc::string::String;
 
-use oak_sev_guest::guest::{AttestationReport, TcbVersion};
+use oak_sev_snp_attestation_report::{AttestationReport, TcbVersion};
 use p256::pkcs8::ObjectIdentifier;
 use rsa::{pss::Signature, signature::Verifier, RsaPublicKey};
 use sha2::Sha384;
