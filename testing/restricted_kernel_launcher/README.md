@@ -12,16 +12,14 @@ The instructions below for building the required dependencies and running an app
 using this launcher are provided on a best effort basis.
 
 First the dependencies used to run launch an instance of the restricted kernel
-must be build.
+must be built.
 
 (instructions gained from inspecting xtask, may change in the future)
 
 Stage0, the restricted kernel, and an enclave app may be built like so:
 
 ```shell
-(cd oak/stage0_bin && cargo objcopy --release -- -O binary target/x86_64-unknown-none/release/oak_stage0.bin) && \
-(cd oak_restricted_kernel_bin && cargo build)
-(cd enclave_apps/oak_echo_raw_enclave_app && cargo build)
+just stage0_bin oak_restricted_kernel_bin oak_echo_raw_enclave_app
 ```
 
 After building dependencies, an enclave app may be run like so:
