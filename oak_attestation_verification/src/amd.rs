@@ -33,7 +33,7 @@ use zerocopy::{AsBytes, FromZeroes};
 // Table 8 of
 // https://www.amd.com/content/dam/amd/en/documents/epyc-technical-docs/specifications/57230.pdf
 const RSA_SSA_PSS_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.2.840.113549.1.1.10");
-const PRODUCT_NAME_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.2");
+const _PRODUCT_NAME_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.2");
 const BL_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.3.1");
 const TEE_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.3.2");
 const SNP_OID: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.3704.1.3.3");
@@ -91,7 +91,7 @@ pub fn verify_cert_signature(signer: &Certificate, signee: &Certificate) -> anyh
 }
 
 // Currently unused, use `pub` only to disable the warning.
-pub fn product_name(cert: &Certificate) -> anyhow::Result<String> {
+fn _product_name(cert: &Certificate) -> anyhow::Result<String> {
     let exts = cert
         .tbs_certificate
         .extensions
@@ -99,7 +99,7 @@ pub fn product_name(cert: &Certificate) -> anyhow::Result<String> {
         .ok_or_else(|| anyhow::anyhow!("could not get extensions from cert"))?;
     let pn_ext = exts
         .iter()
-        .find(|&ext| ext.extn_id == PRODUCT_NAME_OID)
+        .find(|&ext| ext.extn_id == _PRODUCT_NAME_OID)
         .ok_or_else(|| anyhow::anyhow!("no product name found in cert"))?;
     String::from_utf8(pn_ext.extn_value.as_bytes().to_vec())
         .map_err(|_utf8_err| anyhow::anyhow!("failed to read product name"))
@@ -165,11 +165,28 @@ pub fn verify_attestation_report_signature(
     let arpt_tcb = &report.data.reported_tcb;
     let vcek_tcb = tcb_version(vcek)?;
     anyhow::ensure!(
-        arpt_tcb.snp == vcek_tcb.snp
-            && arpt_tcb.microcode == vcek_tcb.microcode
-            && arpt_tcb.tee == vcek_tcb.tee
-            && arpt_tcb.boot_loader == vcek_tcb.boot_loader,
-        "mismatch in TCB version"
+        arpt_tcb.snp == vcek_tcb.snp,
+        "mismatch in snp field of TCB version: report={} vcek={}",
+        arpt_tcb.snp,
+        vcek_tcb.snp
+    );
+    anyhow::ensure!(
+        arpt_tcb.microcode == vcek_tcb.microcode,
+        "mismatch in microcode field of TCB version: report={} vcek={}",
+        arpt_tcb.microcode,
+        vcek_tcb.microcode
+    );
+    anyhow::ensure!(
+        arpt_tcb.tee == vcek_tcb.tee,
+        "mismatch in tee field of TCB version: report={} vcek={}",
+        arpt_tcb.tee,
+        vcek_tcb.tee
+    );
+    anyhow::ensure!(
+        arpt_tcb.boot_loader == vcek_tcb.boot_loader,
+        "mismatch in boot_loader field of TCB version: report={} vcek={}",
+        arpt_tcb.boot_loader,
+        vcek_tcb.boot_loader
     );
 
     let verifying_key = {

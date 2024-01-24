@@ -25,6 +25,9 @@ package(
 # which is called `product name` elsewhere). They are valid until 2045 and
 # can therefore be statically included. Since they are static it is sufficient
 # to verify the ARK -> ASK validity offline in a unit test.
+#
+# To verify ARK, redownload from https://www.amd.com/en/developer/sev.html and
+# convert and compare against the repository copies.
 exports_files([
     "ark_genoa.pem",
     "ask_genoa.pem",
