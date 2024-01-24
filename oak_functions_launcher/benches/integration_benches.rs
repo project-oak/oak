@@ -80,7 +80,6 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
             "oak_stage0.bin",
         ]),
         gdb: None,
-        initrd: None,
         memory_size: Some("256M".to_string()),
     };
     log::debug!("launcher params: {:?}", params);
