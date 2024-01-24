@@ -28,14 +28,13 @@ exports_files([
     "oak-development.pem",
     "rekor_public_key.pem",
     # The VCEK cert needs to match the hardware ID of the attestation report in the
-    # test evidence proto. The additional parameters in the URL encode the current
+    # test evidence proto. The additional parameters in the URL encode the reported
     # TCB version in the attestation report.
     #
     # URL for downloading the VCEK cert:
     # https://kdsintf.amd.com/vcek/v1/Milan/cd3c4e6b5b64026ac135d76f888ea6bcc1351ec610d64b0af4028422b84c17ad2571905acfe2eb2181c119df4241e94a926d1b06c02e82845416202151212fdd?ucodeSPL=168&snpSPL=8&teeSPL=0&blSPL=3
     # ARPT reported TCB version: ucodeSPL=168&snpSPL=8&teeSPL=0&blSPL=3
     # ARPT current  TCB version: ucodeSPL=209&snpSPL=14&teeSPL=0&blSPL=3
-    # The VCEK matches the reported TCB version.
     "vcek_milan.der",
     "vcek_milan.pem",
 ])
