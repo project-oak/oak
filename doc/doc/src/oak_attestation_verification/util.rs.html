@@ -226,7 +226,6 @@
 <a href="#226" id="226">226</a>
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -248,10 +247,9 @@
 
 <span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
 <span class="kw">use </span>ecdsa::{signature::Verifier, Signature};
+<span class="kw">use </span>oak_proto_rust::oak::{HexDigest, RawDigest};
 <span class="kw">use </span>p256::ecdsa::VerifyingKey;
 <span class="kw">use </span>sha2::{Digest, Sha256, Sha384, Sha512};
-
-<span class="kw">use </span><span class="kw">crate</span>::proto::oak::{HexDigest, RawDigest};
 
 <span class="kw">const </span>PEM_HEADER: <span class="kw-2">&amp;</span>str = <span class="string">&quot;-----BEGIN PUBLIC KEY-----&quot;</span>;
 <span class="kw">const </span>PEM_FOOTER: <span class="kw-2">&amp;</span>str = <span class="string">&quot;-----END PUBLIC KEY-----&quot;</span>;

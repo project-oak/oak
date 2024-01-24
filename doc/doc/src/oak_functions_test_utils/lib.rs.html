@@ -359,7 +359,7 @@
 </span><span class="kw">pub fn </span>serialize_entries(entries: HashMap&lt;Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;) -&gt; Vec&lt;u8&gt; {
     <span class="kw">let </span><span class="kw-2">mut </span>buf = Vec::new();
     <span class="kw">for </span>(key, value) <span class="kw">in </span>entries.into_iter() {
-        <span class="kw">let </span>entry_proto = oak_functions_abi::proto::Entry { key, value };
+        <span class="kw">let </span>entry_proto = oak_proto_rust::oak::oak_functions::lookup_data::Entry { key, value };
         entry_proto
             .encode_length_delimited(<span class="kw-2">&amp;mut </span>buf)
             .expect(<span class="string">&quot;couldn&#39;t encode entry as length delimited&quot;</span>);

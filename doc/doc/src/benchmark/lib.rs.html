@@ -42,7 +42,6 @@
 <a href="#42" id="42">42</a>
 <a href="#43" id="43">43</a>
 <a href="#44" id="44">44</a>
-<a href="#45" id="45">45</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -60,12 +59,11 @@
 //
 
 </span><span class="doccomment">//! Oak Functions benchmark example.
-</span><span class="kw">pub mod </span>proto {
-    <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.benchmark.rs&quot;</span>));
-}
 
+</span><span class="kw">use </span>oak_proto_rust::oak::oak_functions::benchmark::{
+    benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest, LookupTest,
+};
 <span class="kw">use </span>prost::Message;
-<span class="kw">use </span>proto::{benchmark_request::Action, BenchmarkRequest, EchoAndPanicTest, LookupTest};
 
 <span class="attr">#[cfg_attr(not(test), no_mangle)]
 </span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>main() {

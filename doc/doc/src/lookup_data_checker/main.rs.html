@@ -115,6 +115,8 @@
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
 <a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -157,8 +159,10 @@
     <span class="kw">let </span><span class="kw-2">mut </span>entries = HashMap::new();
     <span class="kw">while </span>lookup_data_buffer.has_remaining() {
         <span class="kw">let </span>entry =
-            oak_functions_abi::proto::Entry::decode_length_delimited(<span class="kw-2">&amp;mut </span>lookup_data_buffer)
-                .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t decode entry: {err}&quot;</span>))<span class="question-mark">?</span>;
+            oak_proto_rust::oak::oak_functions::lookup_data::Entry::decode_length_delimited(
+                <span class="kw-2">&amp;mut </span>lookup_data_buffer,
+            )
+            .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t decode entry: {err}&quot;</span>))<span class="question-mark">?</span>;
         entries.insert(entry.key, entry.value);
     }
     <span class="prelude-val">Ok</span>(entries)

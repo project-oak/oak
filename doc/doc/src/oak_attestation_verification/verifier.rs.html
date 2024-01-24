@@ -767,7 +767,6 @@
 <a href="#767" id="767">767</a>
 <a href="#768" id="768">768</a>
 <a href="#769" id="769">769</a>
-<a href="#770" id="770">770</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -797,6 +796,21 @@
     LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID,
     MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
 };
+<span class="kw">use </span>oak_proto_rust::oak::{
+    attestation::v1::{
+        attestation_results::Status, binary_reference_value, endorsements, reference_values,
+        AmdSevReferenceValues, ApplicationKeys, ApplicationLayerEndorsements,
+        ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbEndorsements,
+        CbReferenceValues, ContainerLayerEndorsements, ContainerLayerReferenceValues, Endorsements,
+        Evidence, IntelTdxReferenceValues, KernelLayerEndorsements, KernelLayerReferenceValues,
+        LayerEvidence, OakContainersEndorsements, OakContainersReferenceValues,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
+        SystemLayerEndorsements, SystemLayerReferenceValues, TeePlatform,
+        TransparentReleaseEndorsement,
+    },
+    RawDigest,
+};
 <span class="kw">use </span>oak_sev_guest::guest::{AttestationReport, PolicyFlags};
 <span class="kw">use </span>zerocopy::FromBytes;
 
@@ -804,22 +818,6 @@
     alloc::string::ToString,
     claims::{get_digest, parse_endorsement_statement},
     endorsement::verify_binary_endorsement,
-    proto::oak::{
-        attestation::v1::{
-            attestation_results::Status, binary_reference_value, endorsements, reference_values,
-            AmdSevReferenceValues, ApplicationKeys, ApplicationLayerEndorsements,
-            ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue,
-            CbEndorsements, CbReferenceValues, ContainerLayerEndorsements,
-            ContainerLayerReferenceValues, Endorsements, Evidence, IntelTdxReferenceValues,
-            KernelLayerEndorsements, KernelLayerReferenceValues, LayerEvidence,
-            OakContainersEndorsements, OakContainersReferenceValues,
-            OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-            RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
-            SystemLayerEndorsements, SystemLayerReferenceValues, TeePlatform,
-            TransparentReleaseEndorsement,
-        },
-        RawDigest,
-    },
     util::{
         hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match, raw_to_hex_digest, MatchResult,
     },
@@ -833,21 +831,21 @@
     <span class="kw">pub </span>signing_public_key: Vec&lt;u8&gt;,
 }
 
-<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>anyhow::Result&lt;DiceChainResult&gt;&gt; <span class="kw">for </span>AttestationResults {
-    <span class="kw">fn </span>from(value: <span class="kw-2">&amp;</span>anyhow::Result&lt;DiceChainResult&gt;) -&gt; <span class="self">Self </span>{
-        <span class="kw">match </span>value {
-            <span class="prelude-val">Ok</span>(dice_chain_result) =&gt; AttestationResults {
-                status: Status::Success.into(),
-                encryption_public_key: dice_chain_result.encryption_public_key.clone(),
-                signing_public_key: dice_chain_result.signing_public_key.clone(),
-                ..Default::default()
-            },
-            <span class="prelude-val">Err</span>(err) =&gt; AttestationResults {
-                status: Status::GenericFailure.into(),
-                reason: err.to_string(),
-                ..Default::default()
-            },
-        }
+<span class="kw">pub fn </span>to_attestation_results(
+    verify_result: <span class="kw-2">&amp;</span>anyhow::Result&lt;DiceChainResult&gt;,
+) -&gt; AttestationResults {
+    <span class="kw">match </span>verify_result {
+        <span class="prelude-val">Ok</span>(dice_chain_result) =&gt; AttestationResults {
+            status: Status::Success.into(),
+            encryption_public_key: dice_chain_result.encryption_public_key.clone(),
+            signing_public_key: dice_chain_result.signing_public_key.clone(),
+            ..Default::default()
+        },
+        <span class="prelude-val">Err</span>(err) =&gt; AttestationResults {
+            status: Status::GenericFailure.into(),
+            reason: err.to_string(),
+            ..Default::default()
+        },
     }
 }
 

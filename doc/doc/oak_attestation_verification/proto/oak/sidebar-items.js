@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":["attestation"],"struct":["HexDigest","RawDigest"]};

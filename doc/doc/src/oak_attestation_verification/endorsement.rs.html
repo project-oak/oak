@@ -119,13 +119,13 @@
 </span><span class="doccomment">//! Verifies binary endorsements as coming from Transparent Release.
 
 </span><span class="kw">use </span>base64::{prelude::BASE64_STANDARD, Engine <span class="kw">as _</span>};
+<span class="kw">use </span>oak_proto_rust::oak::HexDigest;
 
 <span class="kw">use crate</span>::{
     claims::{
         get_digest, parse_endorsement_statement, validate_endorsement, verify_validity_duration,
         EndorsementStatement,
     },
-    proto::oak::HexDigest,
     rekor::{get_rekor_log_entry_body, verify_rekor_log_entry},
     util::{convert_pem_to_raw, equal_keys, is_hex_digest_match, MatchResult},
 };

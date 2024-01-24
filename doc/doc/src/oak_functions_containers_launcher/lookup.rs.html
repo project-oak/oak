@@ -184,6 +184,8 @@
 <a href="#184" id="184">184</a>
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -323,8 +325,10 @@
     <span class="kw">let </span><span class="kw-2">mut </span>entries = HashMap::new();
     <span class="kw">while </span>lookup_data_buffer.has_remaining() {
         <span class="kw">let </span>entry =
-            oak_functions_abi::proto::Entry::decode_length_delimited(<span class="kw-2">&amp;mut </span>lookup_data_buffer)
-                .context(<span class="string">&quot;couldn&#39;t decode entry&quot;</span>)<span class="question-mark">?</span>;
+            oak_proto_rust::oak::oak_functions::lookup_data::Entry::decode_length_delimited(
+                <span class="kw-2">&amp;mut </span>lookup_data_buffer,
+            )
+            .context(<span class="string">&quot;couldn&#39;t decode entry&quot;</span>)<span class="question-mark">?</span>;
         entries.insert(entry.key, entry.value);
     }
     <span class="prelude-val">Ok</span>(entries)

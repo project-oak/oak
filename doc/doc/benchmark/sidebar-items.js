@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["main"],"mod":["proto"]};
+window.SIDEBAR_ITEMS = {"fn":["main"]};

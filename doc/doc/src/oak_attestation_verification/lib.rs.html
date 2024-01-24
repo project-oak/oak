@@ -24,24 +24,6 @@
 <a href="#24" id="24">24</a>
 <a href="#25" id="25">25</a>
 <a href="#26" id="26">26</a>
-<a href="#27" id="27">27</a>
-<a href="#28" id="28">28</a>
-<a href="#29" id="29">29</a>
-<a href="#30" id="30">30</a>
-<a href="#31" id="31">31</a>
-<a href="#32" id="32">32</a>
-<a href="#33" id="33">33</a>
-<a href="#34" id="34">34</a>
-<a href="#35" id="35">35</a>
-<a href="#36" id="36">36</a>
-<a href="#37" id="37">37</a>
-<a href="#38" id="38">38</a>
-<a href="#39" id="39">39</a>
-<a href="#40" id="40">40</a>
-<a href="#41" id="41">41</a>
-<a href="#42" id="42">42</a>
-<a href="#43" id="43">43</a>
-<a href="#44" id="44">44</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -62,24 +44,6 @@
 #![feature(let_chains)]
 
 </span><span class="kw">extern crate </span>alloc;
-
-<span class="comment">// Inlined from tonic::include_proto in order to cut dependency on tonic.
-</span><span class="macro">macro_rules! </span>include_proto {
-    (<span class="macro-nonterminal">$package</span>: tt) =&gt; {
-        <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="macro">concat!</span>(<span class="string">&quot;/&quot;</span>, <span class="macro-nonterminal">$package</span>, <span class="string">&quot;.rs&quot;</span>)));
-    };
-}
-
-<span class="kw">pub mod </span>proto {
-    <span class="kw">pub mod </span>oak {
-        <span class="macro">include_proto!</span>(<span class="string">&quot;oak&quot;</span>);
-        <span class="kw">pub mod </span>attestation {
-            <span class="kw">pub mod </span>v1 {
-                <span class="macro">include_proto!</span>(<span class="string">&quot;oak.attestation.v1&quot;</span>);
-            }
-        }
-    }
-}
 
 <span class="kw">pub mod </span>claims;
 <span class="kw">pub mod </span>endorsement;

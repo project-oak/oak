@@ -318,7 +318,6 @@
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
 <a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -344,12 +343,11 @@
 
 <span class="kw">use </span>alloc::{collections::BTreeMap, string::String, vec::Vec};
 
+<span class="kw">use </span>oak_proto_rust::oak::HexDigest;
 <span class="kw">use </span>serde::Deserialize;
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
 </span><span class="kw">use </span>serde::Serialize;
 <span class="kw">use </span>time::OffsetDateTime;
-
-<span class="kw">use </span><span class="kw">crate</span>::proto::oak::HexDigest;
 
 <span class="doccomment">/// PredicateType which identifies a V1 Claim, for in-toto statements.
 </span><span class="kw">pub const </span>CLAIM_V1: <span class="kw-2">&amp;</span>str = <span class="string">&quot;https://github.com/project-oak/transparent-release/claim/v1&quot;</span>;
