@@ -90,15 +90,6 @@ pub fn verify_cert_signature(signer: &Certificate, signee: &Certificate) -> anyh
         .map_err(|_err| anyhow::anyhow!("signature verification failed"))?)
 }
 
-fn to_array_64<T>(slice: &[T]) -> anyhow::Result<&[T; 64]> {
-    if slice.len() == 64 {
-        let ptr = slice.as_ptr() as *const [T; 64];
-        unsafe { Ok(&*ptr) }
-    } else {
-        anyhow::bail!("unexpected length of chip ID")
-    }
-}
-
 // Currently unused, use `pub` only to disable the warning.
 pub fn product_name(cert: &Certificate) -> anyhow::Result<String> {
     let exts = cert
@@ -125,7 +116,12 @@ fn chip_id(cert: &Certificate) -> anyhow::Result<[u8; 64]> {
         .find(|&ext| ext.extn_id == CHIP_ID_OID)
         .ok_or_else(|| anyhow::anyhow!("no chip ID found in cert"))?;
     let chip_id = chip_id_ext.extn_value.as_bytes().to_vec();
-    return to_array_64(&chip_id).copied();
+    anyhow::ensure!(chip_id.len() == 64, "length of chip ID value is not 64");
+
+    // Copy into array of fixed length.
+    let mut result = [0; 64];
+    result.copy_from_slice(&chip_id[0..64]);
+    Ok(result)
 }
 
 fn tcb_version(vcek: &Certificate) -> anyhow::Result<TcbVersion> {
