@@ -179,13 +179,13 @@ fn bench_invoke(bencher: &mut Bencher) {
 
 struct TestState {
     instance: wasmi::Instance,
-    store: wasmi::Store<UserState<StandaloneLogger>>,
-    wasm_handler: WasmHandler<StandaloneLogger>,
+    store: wasmi::Store<UserState>,
+    wasm_handler: WasmHandler,
     request: Vec<u8>,
 }
 
 fn create_test_state() -> TestState {
-    let logger = StandaloneLogger {};
+    let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let api_factory = Arc::new(StdWasmApiFactory {
         lookup_data_manager,
