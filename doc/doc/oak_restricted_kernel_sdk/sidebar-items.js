@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"attr":["entrypoint"],"fn":["alloc_error_handler","init","panic_handler"],"struct":["FileDescriptorChannel","InstanceEncryptionKeyHandle","InstanceEvidenceProvider","InstanceSigner","StderrLogger"],"trait":["EvidenceProvider","Signer"]};
+window.SIDEBAR_ITEMS = {"attr":["entrypoint"],"fn":["alloc_error_handler","init","panic_handler","start_blocking_server"],"struct":["FileDescriptorChannel","InstanceEncryptionKeyHandle","InstanceEvidenceProvider","InstanceSigner","StderrLogger"],"trait":["EvidenceProvider","Read","Signer","Write"]};

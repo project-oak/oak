@@ -90,7 +90,7 @@
 //
 
 </span><span class="kw">use </span>anyhow::anyhow;
-<span class="kw">use </span>oak_channel::{Read, Write};
+<span class="kw">pub use </span>oak_channel::{server::start_blocking_server, Read, Write};
 <span class="kw">use </span>oak_restricted_kernel_interface::OAK_CHANNEL_FD;
 
 <span class="doccomment">/// Channel that communicates over a file descriptor.
