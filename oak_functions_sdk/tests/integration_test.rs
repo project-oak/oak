@@ -50,7 +50,7 @@ lazy_static! {
 
 #[tokio::test]
 async fn test_read_write() {
-    let logger = StandaloneLogger {};
+    let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let api_factory = StdWasmApiFactory {
         lookup_data_manager,
@@ -73,7 +73,7 @@ async fn test_read_write() {
 
 #[tokio::test]
 async fn test_double_read() {
-    let logger = StandaloneLogger {};
+    let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let api_factory = StdWasmApiFactory {
         lookup_data_manager,
@@ -96,7 +96,7 @@ async fn test_double_read() {
 
 #[tokio::test]
 async fn test_double_write() {
-    let logger = StandaloneLogger {};
+    let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let api_factory = StdWasmApiFactory {
         lookup_data_manager,
@@ -119,7 +119,7 @@ async fn test_double_write() {
 
 #[tokio::test]
 async fn test_write_log() {
-    let logger = StandaloneLogger {};
+    let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let api_factory = StdWasmApiFactory {
         lookup_data_manager,
@@ -147,7 +147,7 @@ async fn test_storage_get_item() {
         b"StorageGetResponse".to_vec().into(),
     )]);
 
-    let logger = StandaloneLogger {};
+    let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
     let api_factory = StdWasmApiFactory {
         lookup_data_manager,
@@ -173,7 +173,7 @@ async fn test_storage_get_item_not_found() {
     // empty lookup data, no key will be found
     let entries = HashMap::new();
 
-    let logger = StandaloneLogger {};
+    let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
     let api_factory = StdWasmApiFactory {
         lookup_data_manager,
@@ -200,7 +200,7 @@ async fn test_storage_get_item_huge_key() {
     let bytes: Vec<u8> = vec![42u8; 1 << 20];
     let entries = HashMap::from_iter([(bytes.clone().into(), bytes.clone().into())]);
 
-    let logger = StandaloneLogger {};
+    let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(entries, logger.clone()));
     let api_factory = StdWasmApiFactory {
         lookup_data_manager,
@@ -224,7 +224,7 @@ async fn test_storage_get_item_huge_key() {
 
 #[tokio::test]
 async fn test_echo() {
-    let logger = StandaloneLogger {};
+    let logger = Arc::new(StandaloneLogger);
     let message_to_echo = "ECHO";
 
     let lookup_data_manager =
@@ -254,7 +254,7 @@ async fn test_blackhole() {
     // Keep in sync with
     // `workspace/oak_functions/sdk/oak_functions/tests/testing_module/src/lib.rs`.
 
-    let logger = StandaloneLogger {};
+    let logger = Arc::new(StandaloneLogger);
     let message_to_blackhole = "BLACKHOLE";
 
     let lookup_data_manager =
@@ -285,7 +285,7 @@ async fn test_huge_response() {
     // Keep in sync with
     // `workspace/oak_functions/sdk/oak_functions/tests/testing_module/src/lib.rs`.
 
-    let logger = StandaloneLogger {};
+    let logger = Arc::new(StandaloneLogger);
 
     let lookup_data_manager =
         Arc::new(LookupDataManager::for_test(Data::default(), logger.clone()));

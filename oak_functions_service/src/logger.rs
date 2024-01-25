@@ -16,7 +16,7 @@
 
 pub use log::Level;
 
-pub trait OakLogger: Send + Sync + Clone {
+pub trait OakLogger: Send + Sync {
     /// Logs the message, which might contain sensitive information, at the specified `Level`.
     ///
     /// Only insecure debug-only implementations may provide a non-empty implementation. Production
@@ -33,8 +33,7 @@ pub trait OakLogger: Send + Sync + Clone {
 /// Temporary OakLogger implementation using the `log` crate.
 ///
 /// TODO(#2783): Replace with redesigned logger implementation.
-#[derive(Clone, Default)]
-pub struct StandaloneLogger {}
+pub struct StandaloneLogger;
 
 // TODO(#2783): Implement a logger that differentiates between public and sensitive loges.
 impl OakLogger for StandaloneLogger {

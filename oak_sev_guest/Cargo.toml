@@ -15,6 +15,7 @@ aes-gcm = { version = "*", optional = true, default-features = false, features =
 ] }
 bitflags = "*"
 lock_api = "*"
+oak_sev_snp_attestation_report = { workspace = true }
 spinning_top = "*"
 static_assertions = "*"
 snafu = { version = "*", default-features = false }

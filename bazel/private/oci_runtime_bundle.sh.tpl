@@ -32,10 +32,18 @@ readonly BUNDLE_DIR=$(mktemp -d)
 trap 'rm -rf -- "${BUNDLE_DIR}"' EXIT
 "${UMOCI}" unpack --rootless --image "${IMAGE_DIR}" "${BUNDLE_DIR}"
 
-# Sort mount options, which umoci emits in a non-deterministic order.
-"${YQ}" -i -o=json 'with(.mounts ; .[] | select(.options != null) | .options |= sort)' "${BUNDLE_DIR}/config.json"
+# Patch the OCI runtime bundle config to remove non-determinism:
+#   * uid and gid mappings depend on the ids of the user running umoci.
+#   * /etc/resolv.conf mount options change if run as root.
+#   * mount options are emitted in a non-deterministic order.
+"${YQ}" -i -o=json '
+    with(.linux.uidMappings ; .[] | .hostID = 0) |
+    with(.linux.gidMappings ; .[] | .hostID = 0) |
+    with(.mounts ; .[] | select(.destination == "/etc/resolv.conf") | .options = ["rbind", "ro"]) |
+    with(.mounts ; .[] | select(.options != null) | .options |= sort)
+    ' "${BUNDLE_DIR}/config.json"
 
 # Pack the runtime bundle into a (reproducible) tar, excluding unnecessary files
 # added by umoci.
-tar --create --sort=name --mtime="2000-01-01" --owner=0 --group=0 --numeric-owner \
+tar --create --sort=name --mtime="2000-01-01Z" --owner=0 --group=0 --numeric-owner \
     --file="$2" --directory="${BUNDLE_DIR}" --exclude=./umoci.json --exclude='./sha256_*.mtree' .

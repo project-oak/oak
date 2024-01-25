@@ -20,25 +20,13 @@
 
 extern crate alloc;
 
-use core::panic::PanicInfo;
-
-use log::info;
+use oak_channel::{Read, Write};
 use oak_restricted_kernel_interface::{syscall::read, DERIVED_KEY_FD};
-use oak_restricted_kernel_sdk::{FileDescriptorChannel, Read, Write};
-
-#[no_mangle]
-fn _start() -> ! {
-    oak_restricted_kernel_sdk::init(log::LevelFilter::Debug);
-    main();
-}
-
-fn main() -> ! {
-    info!("In main!");
-    run_server()
-}
+use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel, Read, Write};
 
 // Continuously reads single bytes from the communication channel, XORs them with a byte from the
 // derived key and sends them back.
+#[entrypoint]
 fn run_server() -> ! {
     let mut key = [0u8; 32];
     let mut byte = [0u8; 1];
@@ -52,14 +40,4 @@ fn run_server() -> ! {
         byte[0] ^= iter.next().expect("iterator ran out");
         channel.write_all(&byte[..]).expect("couldn't write bytes");
     }
-}
-
-#[alloc_error_handler]
-fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
-    oak_restricted_kernel_sdk::alloc_error_handler(layout);
-}
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    oak_restricted_kernel_sdk::panic_handler(info);
 }

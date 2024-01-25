@@ -421,11 +421,22 @@ dependencies = [
  "aes-gcm",
  "bitflags 2.4.0",
  "lock_api",
+ "oak_sev_snp_attestation_report",
  "snafu",
  "spinning_top",
  "static_assertions",
  "strum",
  "x86_64",
+ "zerocopy",
+]
+
+[[package]]
+name = "oak_sev_snp_attestation_report"
+version = "0.0.0"
+dependencies = [
+ "bitflags 1.3.2",
+ "static_assertions",
+ "strum",
  "zerocopy",
 ]
 
@@ -444,6 +455,7 @@ dependencies = [
  "oak_dice",
  "oak_linux_boot_params",
  "oak_sev_guest",
+ "oak_sev_snp_attestation_report",
  "oak_stage0_dice",
  "p256",
  "rand_core",
@@ -472,7 +484,7 @@ dependencies = [
  "hex",
  "hkdf",
  "oak_dice",
- "oak_sev_guest",
+ "oak_sev_snp_attestation_report",
  "p256",
  "rand_core",
  "sha2",
