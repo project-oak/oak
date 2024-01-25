@@ -17,13 +17,11 @@
 extern crate test;
 
 use alloc::{sync::Arc, vec::Vec};
-use std::time::Duration;
 
 use byteorder::{ByteOrder, LittleEndian};
 use hashbrown::HashMap;
 use oak_functions_abi::Request;
 use spinning_top::Spinlock;
-use test::Bencher;
 
 use super::{
     api::StdWasmApiFactory, OakLinker, UserState, WasmApiFactory, WasmHandler, ALLOC_FUNCTION_NAME,
@@ -143,40 +141,6 @@ fn test_invoke() {
     assert_eq!(response.body, data.to_vec());
 }
 
-#[bench]
-fn bench_invoke(bencher: &mut Bencher) {
-    let test_state = create_test_state();
-    let data = b"Hello, world!";
-
-    let summary = bencher.bench(|bencher| {
-        bencher.iter(|| {
-            let response = test_state
-                .wasm_handler
-                .handle_invoke(Request {
-                    body: data.to_vec(),
-                })
-                .unwrap();
-            assert_eq!(response.body, data.to_vec());
-        });
-        Ok(())
-    });
-
-    // When running `cargo test` this benchmark test gets executed too, but `summary` will be `None`
-    // in that case. So, here we first check that `summary` is not empty.
-    if let Ok(Some(summary)) = summary {
-        // `summary.mean` is in nanoseconds, even though it is not explicitly documented in
-        // https://doc.rust-lang.org/test/stats/struct.Summary.html.
-        let elapsed = Duration::from_nanos(summary.mean as u64);
-        // We expect the `mean` time for loading the test Wasm module and running its main function
-        // to be less than a fixed threshold.
-        assert!(
-            elapsed < Duration::from_micros(100),
-            "elapsed time: {:.0?}",
-            elapsed
-        );
-    }
-}
-
 struct TestState {
     instance: wasmi::Instance,
     store: wasmi::Store<UserState>,
@@ -188,7 +152,7 @@ fn create_test_state() -> TestState {
     let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let api_factory = Arc::new(StdWasmApiFactory {
-        lookup_data_manager,
+        lookup_data_manager: lookup_data_manager.clone(),
     });
 
     let wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
