@@ -31,12 +31,6 @@ fn main() {
         (false, false) => panic!("One of feature oak_restricted_kernel_simple_io_bin or feature oak_restricted_kernel_bin must be enabled.")
     };
 
-    if cfg!(feature = "oak_restricted_kernel_simple_io_bin") {
-        "oak_restricted_kernel_simple_io_bin"
-    } else {
-        "oak_restricted_kernel_bin"
-    };
-
     // The source file is the output from building "../oak_restricted_kernel_bin" in release mode.
     let mut source_path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     source_path.pop();
