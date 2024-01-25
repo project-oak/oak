@@ -27,8 +27,8 @@ fn main() {
     let file_name = match (cfg!(feature = "oak_restricted_kernel_bin"), cfg!(feature = "oak_restricted_kernel_simple_io_bin")) {
         (true, false) => "oak_restricted_kernel_bin",
         (false, true) => "oak_restricted_kernel_simple_io_bin",
-        (true, true) => panic!("oak_restricted_kernel_simple_io_bin and feature oak_restricted_kernel_bin cannot be enabled at the same time. Only either version can be built."),
-        (false, false) => panic!("One of oak_restricted_kernel_simple_io_bin and feature oak_restricted_kernel_bin must be enabled.")
+        (true, true) => panic!("feature oak_restricted_kernel_simple_io_bin and feature oak_restricted_kernel_bin cannot be enabled at the same time. Only either version can be built."),
+        (false, false) => panic!("One of feature oak_restricted_kernel_simple_io_bin or feature oak_restricted_kernel_bin must be enabled.")
     };
 
     if cfg!(feature = "oak_restricted_kernel_simple_io_bin") {
