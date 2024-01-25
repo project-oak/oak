@@ -2633,6 +2633,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_restricted_kernel_launcher"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "env_logger",
+ "log",
+ "oak_channel",
+ "oak_launcher_utils",
+ "tokio",
+]
+
+[[package]]
 name = "oak_restricted_kernel_sdk"
 version = "0.1.0"
 dependencies = [

@@ -48,6 +48,7 @@ members = [
   "oak_restricted_kernel_dice",
   "oak_restricted_kernel_interface",
   "oak_restricted_kernel_sdk",
+  "oak_restricted_kernel_launcher",
   "oak_sev_guest",
   "oak_sev_snp_attestation_report",
   "oak_simple_io",

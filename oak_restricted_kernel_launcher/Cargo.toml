@@ -1,0 +1,22 @@
+[package]
+name = "oak_restricted_kernel_launcher"
+version = "0.1.0"
+authors = ["Juliette Pluto <julsh@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "*"
+clap = { version = "*", features = ["derive"] }
+log = "*"
+env_logger = "*"
+tokio = { version = "*", features = [
+  "rt-multi-thread",
+  "macros",
+  "net",
+  "process",
+  "signal",
+  "sync",
+] }
+oak_launcher_utils = { workspace = true }
+oak_channel = { workspace = true, features = ["client"] }
