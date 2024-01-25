@@ -177,10 +177,10 @@
 /// [`StdWasmApiImpl`] for each incoming gRPC request, with an immutable snapshot of the
 /// current lookup data.
 </span><span class="kw">pub struct </span>StdWasmApiFactory {
-    <span class="kw">pub </span>lookup_data_manager: Arc&lt;LookupDataManager&lt;StandaloneLogger&gt;&gt;,
+    <span class="kw">pub </span>lookup_data_manager: Arc&lt;LookupDataManager&gt;,
 }
 
-<span class="kw">impl </span>WasmApiFactory&lt;StandaloneLogger&gt; <span class="kw">for </span>StdWasmApiFactory {
+<span class="kw">impl </span>WasmApiFactory <span class="kw">for </span>StdWasmApiFactory {
     <span class="kw">fn </span>create_wasm_api(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: Vec&lt;u8&gt;,
@@ -188,7 +188,7 @@
     ) -&gt; Box&lt;<span class="kw">dyn </span>WasmApi&gt; {
         Box::new(StdWasmApiImpl {
             lookup_data: <span class="self">self</span>.lookup_data_manager.create_lookup_data(),
-            logger: StandaloneLogger::default(),
+            logger: Arc::new(StandaloneLogger),
             request,
             response,
         })
@@ -201,8 +201,8 @@
 /// future.
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>StdWasmApiImpl {
-    lookup_data: LookupData&lt;StandaloneLogger&gt;,
-    logger: StandaloneLogger,
+    lookup_data: LookupData,
+    logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;,
     <span class="doccomment">/// Current request, as received from the client.
     </span>request: Vec&lt;u8&gt;,
     <span class="doccomment">/// Current response, as received from the Wasm module.

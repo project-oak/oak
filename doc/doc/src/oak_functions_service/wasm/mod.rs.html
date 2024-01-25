@@ -540,15 +540,6 @@
 <a href="#540" id="540">540</a>
 <a href="#541" id="541">541</a>
 <a href="#542" id="542">542</a>
-<a href="#543" id="543">543</a>
-<a href="#544" id="544">544</a>
-<a href="#545" id="545">545</a>
-<a href="#546" id="546">546</a>
-<a href="#547" id="547">547</a>
-<a href="#548" id="548">548</a>
-<a href="#549" id="549">549</a>
-<a href="#550" id="550">550</a>
-<a href="#551" id="551">551</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -610,9 +601,9 @@
 
 <span class="doccomment">/// `UserState` holds the user request bytes and response bytes for a particular execution of an Oak
 /// Wasm module. The `UserState` also holds a reference to the logger and the enabled extensions.
-</span><span class="kw">pub struct </span>UserState&lt;L: OakLogger&gt; {
+</span><span class="kw">pub struct </span>UserState {
     wasm_api_transport: Box&lt;<span class="kw">dyn </span>micro_rpc::Transport&lt;Error = !&gt;&gt;,
-    logger: L,
+    logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;,
 }
 
 <span class="doccomment">/// Stubs a Wasm imported function in the provided linker.
@@ -624,7 +615,7 @@
         <span class="macro-nonterminal">$linker</span>.func_wrap(
             <span class="macro">stringify!</span>(<span class="macro-nonterminal">$function_mod</span>),
             <span class="macro">stringify!</span>(<span class="macro-nonterminal">$function_name</span>),
-            |caller: wasmi::Caller&lt;<span class="lifetime">&#39;_</span>, UserState&lt;L&gt;&gt;, $(<span class="kw">_</span>: <span class="macro-nonterminal">$t</span>),<span class="kw-2">*</span>| {
+            |caller: wasmi::Caller&lt;<span class="lifetime">&#39;_</span>, UserState&gt;, $(<span class="kw">_</span>: <span class="macro-nonterminal">$t</span>),<span class="kw-2">*</span>| {
                 caller
                     .data()
                     .log_error(<span class="macro">concat!</span>(<span class="string">&quot;called stubbed &quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$function_mod</span>), <span class="string">&quot;.&quot;</span>, <span class="macro">stringify!</span>(<span class="macro-nonterminal">$function_name</span>)));
@@ -637,14 +628,14 @@
     };
 }
 
-<span class="kw">impl</span>&lt;L&gt; UserState&lt;L&gt;
-<span class="kw">where
-    </span>L: OakLogger,
-{
+<span class="kw">impl </span>UserState {
     <span class="doccomment">/// Stores the user request bytes, extensions, and logger. The response bytes are initialized
     /// with the empty response because every request needs to have a response and we fixed the
     /// empty response as the default response.
-    </span><span class="kw">fn </span>new(wasm_api_transport: Box&lt;<span class="kw">dyn </span>micro_rpc::Transport&lt;Error = !&gt;&gt;, logger: L) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">fn </span>new(
+        wasm_api_transport: Box&lt;<span class="kw">dyn </span>micro_rpc::Transport&lt;Error = !&gt;&gt;,
+        logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;,
+    ) -&gt; <span class="self">Self </span>{
         UserState {
             wasm_api_transport,
             logger,
@@ -662,16 +653,13 @@
 /// the [`OakCaller`]) to provide `alloc` for allocating memory. The [`OakLinker`] checks that the
 /// Wasm module provides `alloc` and `main`, which every Oak Wasm module must provide, and defines
 /// the memory which the [`OakCaller`] uses.
-</span><span class="kw">struct </span>OakLinker&lt;L: OakLogger&gt; {
-    linker: wasmi::Linker&lt;UserState&lt;L&gt;&gt;,
+</span><span class="kw">struct </span>OakLinker {
+    linker: wasmi::Linker&lt;UserState&gt;,
 }
 
-<span class="kw">impl</span>&lt;L&gt; OakLinker&lt;L&gt;
-<span class="kw">where
-    </span>L: OakLogger,
-{
+<span class="kw">impl </span>OakLinker {
     <span class="kw">fn </span>new(engine: <span class="kw-2">&amp;</span>wasmi::Engine) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>linker: wasmi::Linker&lt;UserState&lt;L&gt;&gt; = wasmi::Linker::new(engine);
+        <span class="kw">let </span><span class="kw-2">mut </span>linker: wasmi::Linker&lt;UserState&gt; = wasmi::Linker::new(engine);
 
         linker
             .func_wrap(
@@ -680,7 +668,7 @@
                 </span><span class="string">&quot;invoke&quot;</span>,
                 <span class="comment">// The types in the signatures correspond to the parameters from
                 // oak_functions_abi/src/lib.rs.
-                </span>|caller: wasmi::Caller&lt;<span class="lifetime">&#39;_</span>, UserState&lt;L&gt;&gt;,
+                </span>|caller: wasmi::Caller&lt;<span class="lifetime">&#39;_</span>, UserState&gt;,
                  request_ptr: AbiPointer,
                  request_len: AbiPointerOffset,
                  response_ptr_ptr: AbiPointer,
@@ -760,7 +748,7 @@
     /// memory is attached.
     </span><span class="kw">fn </span>instantiate(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut </span>store: <span class="kw-2">&amp;mut </span>Store&lt;UserState&lt;L&gt;&gt;,
+        <span class="kw-2">mut </span>store: <span class="kw-2">&amp;mut </span>Store&lt;UserState&gt;,
         module: Arc&lt;wasmi::Module&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;wasmi::Instance, micro_rpc::Status&gt; {
         <span class="kw">let </span>instance = <span class="self">self
@@ -817,17 +805,14 @@
 <span class="doccomment">/// Provides functionality for reading from the Wasm memory, as well as allocating and writing to
 /// the Wasm memory. The Wasm memory is defined by the [`OakLinker`]. [`OakCaller`]
 /// relies on `alloc`, which every Oak Wasm module must provide.
-</span><span class="kw">struct </span>OakCaller&lt;<span class="lifetime">&#39;a</span>, L: OakLogger&gt; {
-    caller: wasmi::Caller&lt;<span class="lifetime">&#39;a</span>, UserState&lt;L&gt;&gt;,
+</span><span class="kw">struct </span>OakCaller&lt;<span class="lifetime">&#39;a</span>&gt; {
+    caller: wasmi::Caller&lt;<span class="lifetime">&#39;a</span>, UserState&gt;,
     alloc: wasmi::TypedFunc&lt;i32, AbiPointer&gt;,
     memory: wasmi::Memory,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, L&gt; OakCaller&lt;<span class="lifetime">&#39;a</span>, L&gt;
-<span class="kw">where
-    </span>L: OakLogger,
-{
-    <span class="kw">fn </span>new(caller: wasmi::Caller&lt;<span class="lifetime">&#39;a</span>, UserState&lt;L&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, StatusCode&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; OakCaller&lt;<span class="lifetime">&#39;a</span>&gt; {
+    <span class="kw">fn </span>new(caller: wasmi::Caller&lt;<span class="lifetime">&#39;a</span>, UserState&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, StatusCode&gt; {
         <span class="comment">// Get typed `alloc` to store.
         </span><span class="kw">let </span>ext = caller.get_export(ALLOC_FUNCTION_NAME).ok_or_else(|| {
             caller
@@ -951,21 +936,21 @@
         })
     }
 
-    <span class="kw">fn </span>data_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>UserState&lt;L&gt; {
+    <span class="kw">fn </span>data_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>UserState {
         <span class="self">self</span>.caller.data_mut()
     }
 
-    <span class="kw">fn </span>data(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>UserState&lt;L&gt; {
+    <span class="kw">fn </span>data(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>UserState {
         <span class="self">self</span>.caller.data()
     }
 }
 
 <span class="comment">// A request handler with a Wasm module for handling multiple requests.
-</span><span class="kw">pub struct </span>WasmHandler&lt;L: OakLogger&gt; {
+</span><span class="kw">pub struct </span>WasmHandler {
     wasm_module: Arc&lt;wasmi::Module&gt;,
-    linker: OakLinker&lt;L&gt;,
-    wasm_api_factory: Arc&lt;<span class="kw">dyn </span>WasmApiFactory&lt;L&gt; + Send + Sync&gt;,
-    logger: L,
+    linker: OakLinker,
+    wasm_api_factory: Arc&lt;<span class="kw">dyn </span>WasmApiFactory + Send + Sync&gt;,
+    logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;,
     <span class="attr">#[cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), allow(dead_code))]
     </span>observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
 }
@@ -975,7 +960,7 @@
 /// An instance of [`WasmApiFactory`] is expected to live for the lifetime of the server, while
 /// each instance of the created [`WasmApi`] is expected to live for the lifetime of a single
 /// request.
-</span><span class="kw">pub trait </span>WasmApiFactory&lt;L: OakLogger&gt; {
+</span><span class="kw">pub trait </span>WasmApiFactory {
     <span class="kw">fn </span>create_wasm_api(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         request: Vec&lt;u8&gt;,
@@ -990,14 +975,11 @@
     <span class="kw">fn </span>transport(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>micro_rpc::Transport&lt;Error = !&gt;&gt;;
 }
 
-<span class="kw">impl</span>&lt;L&gt; WasmHandler&lt;L&gt;
-<span class="kw">where
-    </span>L: OakLogger,
-{
+<span class="kw">impl </span>WasmHandler {
     <span class="kw">pub fn </span>create(
         wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
-        wasm_api_factory: Arc&lt;<span class="kw">dyn </span>WasmApiFactory&lt;L&gt; + Send + Sync&gt;,
-        logger: L,
+        wasm_api_factory: Arc&lt;<span class="kw">dyn </span>WasmApiFactory + Send + Sync&gt;,
+        logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>engine = wasmi::Engine::default();
@@ -1086,10 +1068,10 @@
 <span class="doccomment">/// Creates a new `WasmHandler` instance.
 </span><span class="kw">pub fn </span>new_wasm_handler(
     wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
-    lookup_data_manager: Arc&lt;LookupDataManager&lt;StandaloneLogger&gt;&gt;,
+    lookup_data_manager: Arc&lt;LookupDataManager&gt;,
     observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
-) -&gt; anyhow::Result&lt;WasmHandler&lt;StandaloneLogger&gt;&gt; {
-    <span class="kw">let </span>logger = StandaloneLogger::default();
+) -&gt; anyhow::Result&lt;WasmHandler&gt; {
+    <span class="kw">let </span>logger = Arc::new(StandaloneLogger);
     <span class="kw">let </span>wasm_api_factory = StdWasmApiFactory {
         lookup_data_manager,
     };

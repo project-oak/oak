@@ -155,8 +155,8 @@
 };
 
 <span class="kw">pub struct </span>OakFunctionsInstance {
-    lookup_data_manager: Arc&lt;LookupDataManager&lt;StandaloneLogger&gt;&gt;,
-    wasm_handler: wasm::WasmHandler&lt;StandaloneLogger&gt;,
+    lookup_data_manager: Arc&lt;LookupDataManager&gt;,
+    wasm_handler: wasm::WasmHandler,
 }
 
 <span class="kw">impl </span>OakFunctionsInstance {
@@ -166,7 +166,7 @@
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, micro_rpc::Status&gt; {
         <span class="kw">let </span>lookup_data_manager =
-            Arc::new(LookupDataManager::new_empty(StandaloneLogger::default()));
+            Arc::new(LookupDataManager::new_empty(Arc::new(StandaloneLogger)));
         <span class="kw">let </span>wasm_handler =
             wasm::new_wasm_handler(<span class="kw-2">&amp;</span>request.wasm_module, lookup_data_manager.clone(), observer)
                 .map_err(|err| {
