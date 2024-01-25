@@ -20,9 +20,8 @@
 
 extern crate alloc;
 
-use oak_channel::{Read, Write};
 use oak_restricted_kernel_interface::{syscall::read, DERIVED_KEY_FD};
-use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel};
+use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel, Read, Write};
 
 // Continuously reads single bytes from the communication channel, XORs them with a byte from the
 // derived key and sends them back.
