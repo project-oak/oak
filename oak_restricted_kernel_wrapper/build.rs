@@ -20,7 +20,7 @@ use std::{
     path::PathBuf,
 };
 
-// returns source_path if it can be constructed and if points to a valid file
+// returns source_path if it can be constructed and if it points to a valid file
 fn try_source_path() -> Result<PathBuf, &'static str> {
     let kernel_directory = "oak_restricted_kernel_bin";
     let file_name = match (cfg!(feature = "oak_restricted_kernel_bin"), cfg!(feature = "oak_restricted_kernel_simple_io_bin")) {
