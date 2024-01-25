@@ -76,6 +76,13 @@
 <a href="#76" id="76">76</a>
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -114,9 +121,16 @@
         )),
     }<span class="question-mark">?</span>;
 
+    <span class="kw">if </span>!entry_fn.sig.inputs.is_empty() {
+        <span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(
+            syn::spanned::Spanned::span(<span class="kw-2">&amp;</span>entry_fn.sig.inputs),
+            <span class="string">&quot;the entrypoint function must not take arguments&quot;</span>,
+        ));
+    }
+
     <span class="kw">let </span>return_type_error = syn::Error::new(
         syn::spanned::Spanned::span(<span class="kw-2">&amp;</span>entry_fn.sig.output),
-        <span class="string">&quot;the entrypoint function should have return type !&quot;</span>,
+        <span class="string">&quot;the entrypoint function must have return type !&quot;</span>,
     );
     <span class="kw">match </span><span class="kw-2">&amp;</span>entry_fn.sig.output {
         syn::ReturnType::Default =&gt; <span class="prelude-val">Err</span>(return_type_error),
