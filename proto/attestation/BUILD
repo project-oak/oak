@@ -89,6 +89,7 @@ java_proto_library(
 proto_library(
     name = "verification_proto",
     srcs = ["verification.proto"],
+    deps = ["//proto:digest_proto"],
 )
 
 cc_proto_library(

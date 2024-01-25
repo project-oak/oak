@@ -46,7 +46,7 @@ pub const ENCLAVE_APPLICATION_LAYER_ID: i64 = -4670556;
 /// The CWT private claim ID for the Oak Containers system image.
 pub const SYSTEM_IMAGE_LAYER_ID: i64 = -4670557;
 /// The CWT private claim ID for the container image.
-pub const CONTAINER_IMAGE_ID: i64 = -4670559;
+pub const CONTAINER_IMAGE_LAYER_ID: i64 = -4670559;
 /// The CWT private claim ID for the kernel measurement.
 pub const KERNEL_MEASUREMENT_ID: i64 = -4670561;
 /// The CWT private claim ID for the kernel command-line measurement.
@@ -63,8 +63,8 @@ pub const ACPI_MEASUREMENT_ID: i64 = -4670566;
 pub const LAYER_2_CODE_MEASUREMENT_ID: i64 = -4670567;
 /// The CWT private claim ID for the measurement of the layer 3 binary.
 pub const LAYER_3_CODE_MEASUREMENT_ID: i64 = -4670569;
-/// The CWT private claim ID for the measurement of the layer 3 config.
-pub const LAYER_3_CONFIG_MEASUREMENT_ID: i64 = -4670570;
+/// The CWT private claim ID for the measurement of the application or container config.
+pub const FINAL_LAYER_CONFIG_MEASUREMENT_ID: i64 = -4670570;
 /// The CWT private claim ID for SHA2_256 digests.
 pub const SHA2_256_ID: i64 = -4670572;
 

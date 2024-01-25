@@ -29,6 +29,7 @@ pub mod oak {
 
     pub mod attestation {
         pub mod v1 {
+            #![allow(clippy::large_enum_variant)]
             include_proto!("oak.attestation.v1");
         }
     }

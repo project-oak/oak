@@ -58,7 +58,7 @@ impl AttestationReport {
             .get_flags()
             .ok_or("Failed to parse flags")?;
 
-        Ok(policy_flags.bits() & PolicyFlags::DEBUG.bits() != 0)
+        Ok(policy_flags.contains(PolicyFlags::DEBUG))
     }
 
     /// Gets the signing algorithm field as a `SigningAlgorithm` enum if possible.
