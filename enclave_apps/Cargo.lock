@@ -586,10 +586,8 @@ version = "0.1.0"
 dependencies = [
  "log",
  "micro_rpc",
- "oak_channel",
  "oak_restricted_kernel_interface",
  "oak_restricted_kernel_sdk",
- "static_assertions",
 ]
 
 [[package]]
@@ -752,11 +750,9 @@ version = "0.1.0"
 dependencies = [
  "log",
  "micro_rpc",
- "oak_channel",
  "oak_core",
  "oak_echo_service",
  "oak_restricted_kernel_sdk",
- "static_assertions",
 ]
 
 [[package]]
@@ -765,9 +761,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "micro_rpc",
- "oak_channel",
  "oak_restricted_kernel_sdk",
- "static_assertions",
 ]
 
 [[package]]
@@ -807,15 +801,9 @@ version = "0.1.0"
 dependencies = [
  "log",
  "micro_rpc",
- "oak_attestation",
- "oak_channel",
  "oak_core",
- "oak_crypto",
- "oak_dice",
  "oak_functions_service",
  "oak_restricted_kernel_sdk",
- "static_assertions",
- "zerocopy",
 ]
 
 [[package]]

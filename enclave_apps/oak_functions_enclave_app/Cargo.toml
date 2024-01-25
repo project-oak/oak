@@ -17,14 +17,8 @@ allow_sensitive_logging = []
 oak_functions_service = { path = "../../oak_functions_service", default-features = false }
 log = "*"
 micro_rpc = { workspace = true }
-oak_attestation = { workspace = true }
-oak_core = { workspace = true }
-oak_channel = { workspace = true }
-oak_crypto = { workspace = true }
-oak_dice = { workspace = true }
 oak_restricted_kernel_sdk = { workspace = true }
-static_assertions = "*"
-zerocopy = "*"
+oak_core = { workspace = true }
 
 [[bin]]
 name = "oak_functions_enclave_app"

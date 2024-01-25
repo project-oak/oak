@@ -22,7 +22,7 @@ mod channel;
 mod dice;
 mod logging;
 
-pub use channel::FileDescriptorChannel;
+pub use channel::*;
 pub use dice::*;
 pub use logging::StderrLogger;
 use logging::STDERR_LOGGER;

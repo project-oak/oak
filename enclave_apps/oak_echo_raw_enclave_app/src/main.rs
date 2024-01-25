@@ -22,8 +22,7 @@ extern crate alloc;
 
 use alloc::{vec, vec::Vec};
 
-use oak_channel::{Read, Write};
-use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel};
+use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel, Read, Write};
 
 const MESSAGE_SIZE: usize = 1;
 

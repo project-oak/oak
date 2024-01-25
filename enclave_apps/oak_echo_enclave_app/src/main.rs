@@ -23,7 +23,7 @@ extern crate alloc;
 use alloc::boxed::Box;
 
 use oak_core::samplestore::StaticSampleStore;
-use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel};
+use oak_restricted_kernel_sdk::{entrypoint, start_blocking_server, FileDescriptorChannel};
 
 // Starts an echo server that uses the Oak communication channel:
 // https://github.com/project-oak/oak/blob/main/oak_channel/SPEC.md
@@ -32,7 +32,7 @@ fn start_echo_server() -> ! {
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
     let service = oak_echo_service::EchoService;
     let server = oak_echo_service::proto::EchoServer::new(service);
-    oak_channel::server::start_blocking_server(
+    start_blocking_server(
         Box::<FileDescriptorChannel>::default(),
         server,
         &mut invocation_stats,
