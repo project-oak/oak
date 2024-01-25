@@ -21,25 +21,13 @@
 extern crate alloc;
 
 use alloc::boxed::Box;
-use core::panic::PanicInfo;
 
-use log::info;
 use oak_core::samplestore::StaticSampleStore;
-use oak_restricted_kernel_sdk::FileDescriptorChannel;
-
-#[no_mangle]
-fn _start() -> ! {
-    oak_restricted_kernel_sdk::init(log::LevelFilter::Debug);
-    main();
-}
-
-fn main() -> ! {
-    info!("In main!");
-    start_echo_server()
-}
+use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel};
 
 // Starts an echo server that uses the Oak communication channel:
 // https://github.com/project-oak/oak/blob/main/oak_channel/SPEC.md
+#[entrypoint]
 fn start_echo_server() -> ! {
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
     let service = oak_echo_service::EchoService;
@@ -50,14 +38,4 @@ fn start_echo_server() -> ! {
         &mut invocation_stats,
     )
     .expect("server encountered an unrecoverable error");
-}
-
-#[alloc_error_handler]
-fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
-    oak_restricted_kernel_sdk::alloc_error_handler(layout);
-}
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    oak_restricted_kernel_sdk::panic_handler(info);
 }
