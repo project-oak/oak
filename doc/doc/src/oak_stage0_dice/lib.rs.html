@@ -220,11 +220,6 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -263,15 +258,12 @@
     },
     evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
 };
-<span class="kw">use </span>oak_sev_guest::guest::AttestationReport;
+<span class="kw">use </span>oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 <span class="kw">use </span>p256::ecdsa::SigningKey;
 <span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>zerocopy::{AsBytes, FromZeroes};
 
 <span class="kw">type </span>DerivedKey = [u8; <span class="number">32</span>];
-
-<span class="comment">// The number of bytes of custom data that can be included in the attestation report.
-</span><span class="kw">pub const </span>REPORT_DATA_SIZE: usize = <span class="number">64</span>;
 
 <span class="doccomment">/// Measurements of various components in Stage1.
 </span><span class="attr">#[derive(Default)]
@@ -443,9 +435,7 @@
 </span><span class="kw">pub fn </span>mock_attestation_report(
     report_data: [u8; REPORT_DATA_SIZE],
 ) -&gt; <span class="prelude-ty">Result</span>&lt;AttestationReport, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
-    <span class="kw">let </span><span class="kw-2">mut </span>report = AttestationReport::new_zeroed();
-    report.data.report_data = report_data;
-    <span class="prelude-val">Ok</span>(report)
+    <span class="prelude-val">Ok</span>(AttestationReport::from_report_data(report_data))
 }
 
 <span class="doccomment">/// Returns a fixed key filled with zeros.

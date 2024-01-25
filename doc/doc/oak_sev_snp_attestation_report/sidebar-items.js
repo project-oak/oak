@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["REPORT_DATA_SIZE"],"enum":["AuthorKey","SigningAlgorithm"],"struct":["AttestationReport","AttestationReportData","EcdsaSignature","GuestPolicy","PlatformInfo","PolicyFlags","TcbVersion"]};

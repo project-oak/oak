@@ -74,6 +74,7 @@
 <a href="#74" id="74">74</a>
 <a href="#75" id="75">75</a>
 <a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -92,11 +93,12 @@
 
 </span><span class="kw">use </span>oak_sev_guest::{
     guest::{
-        AttestationReport, AttestationRequest, AttestationResponse, GuestFieldFlags, KeyRequest,
-        KeyResponse, ReportStatus,
+        AttestationRequest, AttestationResponse, GuestFieldFlags, KeyRequest, KeyResponse,
+        ReportStatus,
     },
     msr::SevStatus,
 };
+<span class="kw">use </span>oak_sev_snp_attestation_report::AttestationReport;
 
 <span class="kw">use </span><span class="kw">crate</span>::sev::send_guest_message_request;
 
