@@ -20,7 +20,6 @@
 
 extern crate alloc;
 
-use oak_channel::{Read, Write};
 use oak_restricted_kernel_interface::{syscall::read, DERIVED_KEY_FD};
 use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel, Read, Write};
 
