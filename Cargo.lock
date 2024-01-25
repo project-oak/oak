@@ -2464,7 +2464,6 @@ dependencies = [
 name = "oak_functions_sdk"
 version = "0.1.0"
 dependencies = [
- "hashbrown 0.14.3",
  "lazy_static",
  "micro_rpc",
  "micro_rpc_build",
