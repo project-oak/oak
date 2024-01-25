@@ -6,7 +6,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
-default = []
+default = ["oak_restricted_kernel_bin"]
 oak_restricted_kernel_simple_io_bin = []
 oak_restricted_kernel_bin = []
 
