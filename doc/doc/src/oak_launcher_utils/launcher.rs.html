@@ -272,6 +272,17 @@
 <a href="#272" id="272">272</a>
 <a href="#273" id="273">273</a>
 <a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -338,6 +349,10 @@
     /// Gigabyte).
     </span><span class="attr">#[arg(long)]
     </span><span class="kw">pub </span>memory_size: <span class="prelude-ty">Option</span>&lt;String&gt;,
+
+    <span class="doccomment">/// Path to the initrd image to use.
+    </span><span class="attr">#[arg(long, value_parser = path_exists)]
+    </span><span class="kw">pub </span>initrd: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
 }
 
 <span class="doccomment">/// Checks if file with a given path exists.
@@ -439,6 +454,13 @@
             <span class="comment">// Listen for a gdb connection on the provided port and wait for debugger before booting
             </span>cmd.args([<span class="string">&quot;-gdb&quot;</span>, <span class="macro">format!</span>(<span class="string">&quot;tcp::{gdb_port}&quot;</span>).as_str()]);
             cmd.arg(<span class="string">&quot;-S&quot;</span>);
+        }
+
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(initrd) = params.initrd {
+            cmd.args([
+                <span class="string">&quot;-initrd&quot;</span>,
+                initrd.into_os_string().into_string().unwrap().as_str(),
+            ]);
         }
 
         <span class="macro">info!</span>(<span class="string">&quot;executing: {:?}&quot;</span>, cmd);
