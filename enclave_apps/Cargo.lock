@@ -802,7 +802,9 @@ dependencies = [
  "log",
  "micro_rpc",
  "oak_core",
+ "oak_functions_enclave_service",
  "oak_restricted_kernel_sdk",
+]
 
 [[package]]
 name = "oak_functions_enclave_service"
