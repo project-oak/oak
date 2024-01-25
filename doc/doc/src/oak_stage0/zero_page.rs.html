@@ -462,6 +462,12 @@
 <a href="#462" id="462">462</a>
 <a href="#463" id="463">463</a>
 <a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -763,6 +769,12 @@
         <span class="comment">// The size of the RAM disk will always fit into 32 bits since we only map a maximum of 1GiB
         // of RAM.
         </span><span class="self">self</span>.inner.hdr.ramdisk_size = ram_disk.len() <span class="kw">as </span>u32;
+    }
+
+    <span class="doccomment">/// Sets the address of the EFI system table.
+    </span><span class="kw">pub fn </span>set_efi_system_table(<span class="kw-2">&amp;mut </span><span class="self">self</span>, efi_info: PhysAddr) {
+        <span class="self">self</span>.inner.efi_info.efi_systab = efi_info.as_u64() <span class="kw">as </span>u32;
+        <span class="self">self</span>.inner.efi_info.efi_systab_hi = (efi_info.as_u64() &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>u32;
     }
 }
 
