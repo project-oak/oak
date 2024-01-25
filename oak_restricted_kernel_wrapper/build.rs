@@ -24,7 +24,18 @@ fn main() {
     println!("cargo:rerun-if-changed=layout.ld");
     println!("cargo:rustc-link-arg=--script=layout.ld");
     let kernel_directory = "oak_restricted_kernel_bin";
-    let file_name = "oak_restricted_kernel_simple_io_bin";
+    let file_name = match (cfg!(feature = "oak_restricted_kernel_bin"), cfg!(feature = "oak_restricted_kernel_simple_io_bin")) {
+        (true, false) => "oak_restricted_kernel_bin",
+        (false, true) => "oak_restricted_kernel_simple_io_bin",
+        (true, true) => panic!("oak_restricted_kernel_simple_io_bin and feature oak_restricted_kernel_bin cannot be enabled at the same time. Only either version can be built."),
+        (false, false) => panic!("One of oak_restricted_kernel_simple_io_bin and feature oak_restricted_kernel_bin must be enabled.")
+    };
+
+    if cfg!(feature = "oak_restricted_kernel_simple_io_bin") {
+        "oak_restricted_kernel_simple_io_bin"
+    } else {
+        "oak_restricted_kernel_bin"
+    };
 
     // The source file is the output from building "../oak_restricted_kernel_bin" in release mode.
     let mut source_path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
