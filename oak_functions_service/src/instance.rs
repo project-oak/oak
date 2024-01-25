@@ -32,8 +32,8 @@ use crate::{
 };
 
 pub struct OakFunctionsInstance {
-    lookup_data_manager: Arc<LookupDataManager<StandaloneLogger>>,
-    wasm_handler: wasm::WasmHandler<StandaloneLogger>,
+    lookup_data_manager: Arc<LookupDataManager>,
+    wasm_handler: wasm::WasmHandler,
 }
 
 impl OakFunctionsInstance {
@@ -43,7 +43,7 @@ impl OakFunctionsInstance {
         observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> Result<Self, micro_rpc::Status> {
         let lookup_data_manager =
-            Arc::new(LookupDataManager::new_empty(StandaloneLogger::default()));
+            Arc::new(LookupDataManager::new_empty(Arc::new(StandaloneLogger)));
         let wasm_handler =
             wasm::new_wasm_handler(&request.wasm_module, lookup_data_manager.clone(), observer)
                 .map_err(|err| {
