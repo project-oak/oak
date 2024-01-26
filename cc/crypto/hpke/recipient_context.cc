@@ -26,8 +26,8 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/crypto/hpke/utils.h"
-#include "proto/crypto/crypto.pb.h"
 #include "openssl/hpke.h"
+#include "proto/crypto/crypto.pb.h"
 
 namespace oak::crypto {
 
