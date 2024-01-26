@@ -25,6 +25,7 @@ jobs:
       matrix:
         buildconfig:
           - buildconfigs/key_xor_test_app.toml
+          - buildconfigs/oak_containers_system_image.toml
           - buildconfigs/oak_echo_enclave_app.toml
           - buildconfigs/oak_echo_raw_enclave_app.toml
           - buildconfigs/oak_restricted_kernel_simple_io_wrapper.toml

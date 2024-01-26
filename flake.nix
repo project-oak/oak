@@ -173,6 +173,15 @@
                 umoci
               ];
             };
+            containersSysImage = with pkgs; mkShell {
+              inputsFrom = [
+                bazelShell
+                rust
+              ];
+              packages = [
+                elfutils
+              ];
+            };
             # Shell for most CI steps (i.e. without contaniners support).
             ci = pkgs.mkShell {
               inputsFrom = [
