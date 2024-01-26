@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"oak_functions_service":[]
+"oak_functions_enclave_service":[["impl&lt;EKH: EncryptionKeyHandle + 'static, EP: EvidenceProvider&gt; <a class=\"trait\" href=\"oak_functions_enclave_service/proto/oak/functions/trait.OakFunctions.html\" title=\"trait oak_functions_enclave_service::proto::oak::functions::OakFunctions\">OakFunctions</a> for <a class=\"struct\" href=\"oak_functions_enclave_service/struct.OakFunctionsService.html\" title=\"struct oak_functions_enclave_service::OakFunctionsService\">OakFunctionsService</a>&lt;EKH, EP&gt;"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
