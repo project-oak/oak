@@ -27,7 +27,7 @@ After building dependencies, an enclave app may be run like so:
 ```shell
 RUST_LOG=DEBUG \
 cargo run --package=oak_restricted_kernel_launcher -- \
---enclave-binary=oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin \
+--kernel=oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin \
 --vmm-binary=$(which qemu-system-x86_64) \
 --memory-size=256M \
 --bios-binary=stage0_bin/target/x86_64-unknown-none/release/oak_stage0.bin \
