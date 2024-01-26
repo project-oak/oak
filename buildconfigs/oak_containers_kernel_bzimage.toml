@@ -1,0 +1,13 @@
+# This is the static build configuration that we use with the docker-based SLSA3 generator for
+# building the `oak_containers_kernel` binary, and its provenance.
+# See https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/docker.
+command = [
+  "nix",
+  "develop",
+  ".#bzImageProvenance",
+  "--command",
+  "env",
+  "--chdir=oak_containers_kernel",
+  "make",
+]
+artifact_path = "./oak_containers_kernel/target/bzImage"
