@@ -19,11 +19,11 @@
 
 extern crate alloc;
 
+use alloc::sync::Arc;
 use core::assert_matches::assert_matches;
-use std::sync::Arc;
 
 use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedRequest};
-use oak_functions_service::{
+use oak_functions_enclave_service::{
     proto::oak::functions::{
         ExtendNextLookupDataRequest, FinishNextLookupDataRequest, InitializeRequest, InvokeRequest,
         LookupDataChunk, LookupDataEntry, OakFunctionsClient, OakFunctionsServer,
@@ -147,8 +147,8 @@ fn it_should_only_initialize_once() {
     );
 }
 
-#[tokio::test]
-async fn it_should_error_on_invalid_wasm_module() {
+#[test]
+fn it_should_error_on_invalid_wasm_module() {
     init();
     let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
@@ -221,8 +221,8 @@ async fn it_should_error_on_invalid_wasm_module() {
     );
 }
 
-#[tokio::test]
-async fn it_should_support_lookup_data() {
+#[test]
+fn it_should_support_lookup_data() {
     init();
     let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));
@@ -301,8 +301,8 @@ async fn it_should_support_lookup_data() {
     assert_eq!(LOOKUP_TEST_VALUE, response_result.unwrap());
 }
 
-#[tokio::test]
-async fn it_should_handle_wasm_panic() {
+#[test]
+fn it_should_handle_wasm_panic() {
     init();
     let service = new_service_for_testing();
     let mut client = OakFunctionsClient::new(OakFunctionsServer::new(service));

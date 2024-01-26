@@ -39,12 +39,13 @@ fn main() -> ! {
         .expect("couldn't encryption key");
     let evidencer = oak_restricted_kernel_sdk::InstanceEvidenceProvider::create()
         .expect("couldn't get evidence");
-    let service = oak_functions_service::OakFunctionsService::new(
+    let service = oak_functions_enclave_service::OakFunctionsService::new(
         evidencer,
         Arc::new(encryption_key_handle),
         None,
     );
-    let server = oak_functions_service::proto::oak::functions::OakFunctionsServer::new(service);
+    let server =
+        oak_functions_enclave_service::proto::oak::functions::OakFunctionsServer::new(service);
     start_blocking_server(
         Box::<FileDescriptorChannel>::default(),
         server,

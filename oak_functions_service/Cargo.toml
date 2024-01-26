@@ -24,13 +24,11 @@ log = "*"
 prost = { workspace = true }
 micro_rpc = { workspace = true }
 oak_attestation = { workspace = true }
-oak_core = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
 oak_functions_abi = { workspace = true }
 oak_functions_sdk = { workspace = true }
 oak_proto_rust = { workspace = true }
-oak_restricted_kernel_sdk = { workspace = true }
 spinning_top = "*"
 wasmi = { version = "*", default-features = false }
 
@@ -39,11 +37,7 @@ micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
 criterion = "*"
-env_logger = { version = "*", default-features = false }
 oak_attestation = { workspace = true }
 oak_functions_test_utils = { workspace = true }
 rand = "*"
 tokio = { workspace = true, features = ["rt", "macros"] }
-oak_restricted_kernel_sdk = { workspace = true, features = [
-  "mock_attestation"
-] }

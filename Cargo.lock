@@ -64,6 +64,17 @@ dependencies = [
 
 [[package]]
 name = "ahash"
+version = "0.7.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a824f2aa7e75a0c98c5a504fceb80649e9c35265d44525b5f94de4771a395cd"
+dependencies = [
+ "getrandom",
+ "once_cell",
+ "version_check",
+]
+
+[[package]]
+name = "ahash"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77c3a9648d43b9cd48db467b3f87fdd6e146bcc88ab0180006cef2179fe11d01"
@@ -1336,6 +1347,9 @@ name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
+dependencies = [
+ "ahash 0.7.7",
+]
 
 [[package]]
 name = "hashbrown"
@@ -1343,7 +1357,7 @@ version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 dependencies = [
- "ahash",
+ "ahash 0.8.7",
  "allocator-api2",
 ]
 
@@ -2394,6 +2408,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_enclave_service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "env_logger",
+ "log",
+ "micro_rpc",
+ "oak_attestation",
+ "oak_core",
+ "oak_crypto",
+ "oak_dice",
+ "oak_functions_service",
+ "oak_functions_test_utils",
+ "oak_proto_rust",
+ "oak_restricted_kernel_sdk",
+ "prost",
+]
+
+[[package]]
 name = "oak_functions_launcher"
 version = "0.1.0"
 dependencies = [
@@ -2446,7 +2479,6 @@ dependencies = [
 name = "oak_functions_sdk"
 version = "0.1.0"
 dependencies = [
- "hashbrown 0.14.3",
  "lazy_static",
  "micro_rpc",
  "micro_rpc_build",
@@ -2484,20 +2516,17 @@ dependencies = [
  "byteorder",
  "bytes",
  "criterion",
- "env_logger",
- "hashbrown 0.14.3",
+ "hashbrown 0.12.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
  "oak_attestation",
- "oak_core",
  "oak_crypto",
  "oak_dice",
  "oak_functions_abi",
  "oak_functions_sdk",
  "oak_functions_test_utils",
  "oak_proto_rust",
- "oak_restricted_kernel_sdk",
  "prost",
  "rand",
  "spinning_top 0.3.0",
