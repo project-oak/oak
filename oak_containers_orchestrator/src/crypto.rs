@@ -13,6 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Arc;
+
+use anyhow::{anyhow, Context};
+use hpke::{kem::X25519HkdfSha256, Deserializable, Kem};
+use oak_crypto::{
+    encryptor::{ClientEncryptor, EncryptionKeyHandle, EncryptionKeyProvider, ServerEncryptor},
+    proto::oak::crypto::v1::EncryptedRequest,
+};
+use tonic::{Request, Response};
 
 use crate::proto::oak::{
     containers::v1::{
@@ -21,14 +30,6 @@ use crate::proto::oak::{
     },
     key_provisioning::v1::GroupKeys,
 };
-use anyhow::{anyhow, Context};
-use hpke::{kem::X25519HkdfSha256, Deserializable, Kem};
-use oak_crypto::{
-    encryptor::{EncryptionKeyHandle, EncryptionKeyProvider, ClientEncryptor, ServerEncryptor},
-    proto::oak::crypto::v1::EncryptedRequest,
-};
-use std::sync::Arc;
-use tonic::{Request, Response};
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
@@ -121,10 +122,16 @@ impl KeyStore {
     }
 
     /// Returns group encryption private key which was encrypted with the ``.
-    pub fn encrypted_group_encryption_key(&self, encryption_public_key: &[u8]) -> anyhow::Result<EncryptedRequest> {
+    pub fn encrypted_group_encryption_key(
+        &self,
+        encryption_public_key: &[u8],
+    ) -> anyhow::Result<EncryptedRequest> {
         let client_encryptor = ClientEncryptor::create(encryption_public_key)
             .context("couldn't create client encryptor")?;
-        client_encryptor.encrypt(&self.group_encryption_key.get_private_key(), EMPTY_ASSOCIATED_DATA)
+        client_encryptor.encrypt(
+            &self.group_encryption_key.get_private_key(),
+            EMPTY_ASSOCIATED_DATA,
+        )
     }
 }
 
