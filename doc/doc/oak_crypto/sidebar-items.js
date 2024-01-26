@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["encryptor","hpke","proto","signer"]};
+window.SIDEBAR_ITEMS = {"mod":["encryptor","hpke","proto","signer","verifier"]};
