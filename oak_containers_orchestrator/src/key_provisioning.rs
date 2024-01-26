@@ -54,7 +54,7 @@ impl KeyProvisioning for KeyProvisioningService {
         ))?;
         // TODO(#4442): Provide reference values by the hostlib and use `verify` function.
         let attestation_results = verify_dice_chain(&evidence).map_err(|err| {
-            tonic::Status::invalid_argument("couldn't verify endorsed evidence: {err}")
+            tonic::Status::invalid_argument(format!("couldn't verify endorsed evidence: {err}"))
         })?;
 
         // Encrypt group keys.
@@ -62,12 +62,11 @@ impl KeyProvisioning for KeyProvisioningService {
             .key_store
             .encrypted_group_encryption_key(&attestation_results.encryption_public_key)
             .map_err(|err| {
-                tonic::Status::internal("couldn't encrypt encryption private key: {err}")
+                tonic::Status::internal(format!("couldn't encrypt encryption private key: {err}"))
             })?;
         let group_keys = GroupKeys {
             encrypted_encryption_private_key: Some(encrypted_encryption_private_key),
         };
-
         Ok(tonic::Response::new(GetGroupKeysResponse {
             group_keys: Some(group_keys),
         }))
