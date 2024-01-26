@@ -19,19 +19,20 @@ jobs:
     if: |
       github.event_name == 'push' ||
       contains(github.event.pull_request.labels.*.name, 'provenance:force-run')
+
     # We use the same job template to generate provenances for multiple binaries.
     strategy:
       fail-fast: false
       matrix:
         buildconfig:
           - buildconfigs/key_xor_test_app.toml
+          - buildconfigs/oak_containers_kernel_bzimage.toml
+          - buildconfigs/oak_containers_stage1_cpio.toml
           - buildconfigs/oak_echo_enclave_app.toml
           - buildconfigs/oak_echo_raw_enclave_app.toml
-          - buildconfigs/oak_restricted_kernel_bin.toml
-          - buildconfigs/oak_restricted_kernel_simple_io_bin.toml
-          - buildconfigs/oak_restricted_kernel_simple_io_wrapper.toml
           - buildconfigs/oak_functions_enclave_app.toml
           - buildconfigs/oak_functions_insecure_enclave_app.toml
+          - buildconfigs/oak_restricted_kernel_simple_io_wrapper.toml
           - buildconfigs/stage0_bin.toml
 
     permissions:

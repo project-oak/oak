@@ -16,22 +16,20 @@
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_paths = [
-        "proto/attestation/endorsement.proto",
-        "proto/attestation/evidence.proto",
-        "proto/attestation/reference_value.proto",
-        "proto/attestation/verification.proto",
+        "../proto/attestation/endorsement.proto",
+        "../proto/attestation/evidence.proto",
+        "../proto/attestation/reference_value.proto",
+        "../proto/attestation/verification.proto",
+        "../proto/oak_functions/abi.proto",
+        "../proto/oak_functions/benchmark.proto",
+        "../proto/oak_functions/lookup_data.proto",
     ];
     prost_build::compile_protos(&proto_paths, &[".."]).expect("proto compilation failed");
 
     // Tell cargo to rerun this build script if the proto file has changed.
     // https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorerun-if-changedpath
     for proto_path in proto_paths.iter() {
-        let file_path = std::path::Path::new(proto_path);
-        println!(
-            "cargo:rerun-if-changed={}{}",
-            env!("WORKSPACE_ROOT"),
-            file_path.display()
-        );
+        println!("cargo:rerun-if-changed={}", proto_path);
     }
 
     Ok(())

@@ -5,8 +5,13 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = ["efi"]
+efi = ["dep:crc"]
+
 [dependencies]
 bitflags = "*"
+crc = { version = "*", optional = true }
 coset = { version = "*", default-features = false }
 elf = { version = "*", default-features = false }
 hex = { version = "*", default-features = false, features = ["alloc"] }
@@ -18,6 +23,7 @@ oak_dice = { workspace = true }
 oak_stage0_dice = { workspace = true }
 oak_linux_boot_params = { path = "../linux_boot_params" }
 oak_sev_guest = { workspace = true, features = ["rust-crypto"] }
+oak_sev_snp_attestation_report = { workspace = true }
 p256 = { version = "*", default-features = false, features = ["ecdsa"] }
 rand_core = { version = "*", default-features = false, features = [
   "getrandom",

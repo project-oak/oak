@@ -11,7 +11,8 @@ unmaintained = "deny"
 unsound = "deny"
 yanked = "deny"
 notice = "deny"
-ignore = []
+# For crate rsa 0.9.6. Remove when there is a safe upgrade.
+ignore = ["RUSTSEC-2023-0071"]
 
 [bans]
 multiple-versions = "allow"

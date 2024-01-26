@@ -16,7 +16,7 @@
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_crypto::{
-    encryptor::AsyncRecipientContextGenerator, hpke::RecipientContext,
+    encryptor::AsyncEncryptionKeyHandle, hpke::RecipientContext,
     proto::oak::crypto::v1::SessionKeys,
 };
 use tonic::transport::{Endpoint, Uri};
@@ -25,7 +25,7 @@ use tower::service_fn;
 use crate::{
     proto::oak::containers::v1::{
         orchestrator_crypto_client::OrchestratorCryptoClient as GrpcOrchestratorCryptoClient,
-        DeriveSessionKeysRequest, KeyOrigin,
+        DeriveSessionKeysRequest, KeyOrigin, SignRequest,
     },
     IGNORED_ENDPOINT_URI, ORCHESTRATOR_IPC_SOCKET,
 };
@@ -69,27 +69,23 @@ impl OrchestratorCryptoClient {
             .context("session keys weren't provided by the Orchestrator")?;
         Ok(context)
     }
-}
 
-#[async_trait(?Send)]
-pub trait EncryptionKeyHandle {
-    async fn derive_session_keys(
+    async fn sign(
         &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<RecipientContext>;
-}
-
-#[async_trait(?Send)]
-impl<T> EncryptionKeyHandle for T
-where
-    T: AsyncRecipientContextGenerator,
-{
-    async fn derive_session_keys(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<RecipientContext> {
-        self.generate_recipient_context(encapsulated_public_key)
-            .await
+        key_origin: KeyOrigin,
+        message: Vec<u8>,
+    ) -> anyhow::Result<oak_crypto::signer::Signature> {
+        self.inner
+            // TODO(#4477): Remove unnecessary copies of the Orchestrator client.
+            .clone()
+            .sign(SignRequest {
+                message,
+                key_origin: key_origin.into(),
+            })
+            .await?
+            .into_inner()
+            .signature
+            .context("signature was not provided by the Orchestrator")
     }
 }
 
@@ -108,7 +104,7 @@ impl InstanceEncryptionKeyHandle {
 }
 
 #[async_trait]
-impl AsyncRecipientContextGenerator for InstanceEncryptionKeyHandle {
+impl AsyncEncryptionKeyHandle for InstanceEncryptionKeyHandle {
     async fn generate_recipient_context(
         &self,
         encapsulated_public_key: &[u8],
@@ -128,5 +124,33 @@ impl AsyncRecipientContextGenerator for InstanceEncryptionKeyHandle {
                 tonic::Status::internal(format!("couldn't deserialize crypto context: {:?}", error))
             })?;
         Ok(crypto_context)
+    }
+}
+
+#[async_trait(?Send)]
+pub trait Signer {
+    async fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature>;
+}
+
+pub struct InstanceSigner {
+    orchestrator_crypto_client: OrchestratorCryptoClient,
+}
+
+impl InstanceSigner {
+    pub async fn create() -> anyhow::Result<Self> {
+        Ok(Self {
+            orchestrator_crypto_client: OrchestratorCryptoClient::create()
+                .await
+                .context("couldn't create Orchestrator crypto client")?,
+        })
+    }
+}
+
+#[async_trait(?Send)]
+impl Signer for InstanceSigner {
+    async fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature> {
+        self.orchestrator_crypto_client
+            .sign(KeyOrigin::Instance, message.to_vec())
+            .await
     }
 }

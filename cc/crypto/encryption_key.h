@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef CC_CRYPTO_ENCRYPTION_KEY_PROVIDER_H_
-#define CC_CRYPTO_ENCRYPTION_KEY_PROVIDER_H_
+#ifndef CC_CRYPTO_ENCRYPTION_KEY_H_
+#define CC_CRYPTO_ENCRYPTION_KEY_H_
 
 #include <memory>
 #include <string>
@@ -27,15 +27,15 @@
 
 namespace oak::crypto {
 
-class RecipientContextGenerator {
+class EncryptionKeyHandle {
  public:
   virtual absl::StatusOr<std::unique_ptr<RecipientContext>> GenerateRecipientContext(
       absl::string_view serialized_encapsulated_public_key) = 0;
 
-  virtual ~RecipientContextGenerator() = default;
+  virtual ~EncryptionKeyHandle() = default;
 };
 
-class EncryptionKeyProvider : public RecipientContextGenerator {
+class EncryptionKeyProvider : public EncryptionKeyHandle {
  public:
   static absl::StatusOr<EncryptionKeyProvider> Create();
 
@@ -52,4 +52,4 @@ class EncryptionKeyProvider : public RecipientContextGenerator {
 
 }  // namespace oak::crypto
 
-#endif  // CC_CRYPTO_ENCRYPTION_KEY_PROVIDER_H_
+#endif  // CC_CRYPTO_ENCRYPTION_KEY_H_

@@ -20,7 +20,7 @@ use tonic::transport::Channel;
 
 use crate::proto::oak::session::v1::{
     request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
-    AttestationEvidence, GetPublicKeyRequest, InvokeRequest, RequestWrapper,
+    AttestationBundle, GetPublicKeyRequest, InvokeRequest, RequestWrapper,
 };
 
 pub struct GrpcStreamingTransport {
@@ -83,12 +83,12 @@ impl Transport for GrpcStreamingTransport {
 
 #[async_trait::async_trait]
 pub trait EvidenceProvider {
-    async fn get_evidence(&mut self) -> anyhow::Result<AttestationEvidence>;
+    async fn get_endorsed_evidence(&mut self) -> anyhow::Result<AttestationBundle>;
 }
 
 #[async_trait::async_trait]
 impl EvidenceProvider for GrpcStreamingTransport {
-    async fn get_evidence(&mut self) -> anyhow::Result<AttestationEvidence> {
+    async fn get_endorsed_evidence(&mut self) -> anyhow::Result<AttestationBundle> {
         let mut response_stream = self
             .rpc_client
             .stream(futures_util::stream::iter(vec![RequestWrapper {
@@ -98,29 +98,27 @@ impl EvidenceProvider for GrpcStreamingTransport {
                 )),
             }]))
             .await
-            .context("couldn't get attestation evidence")?
+            .context("couldn't get endorsed evidence")?
             .into_inner();
 
         // Read the next (and only) message from the response stream.
         let response_wrapper = response_stream
             .message()
             .await
-            .context("gRPC server error when requesting attestation evidence")?
+            .context("gRPC server error when requesting endorsed evidence")?
             .context("received empty response stream")?;
 
-        let Some(response_wrapper::Response::GetPublicKeyResponse(get_evidence_response)) =
+        let Some(response_wrapper::Response::GetPublicKeyResponse(get_endorsed_evidence_response)) =
             response_wrapper.response
         else {
             return Err(anyhow::anyhow!(
-                "response_wrapper doesn't contain a valid get_evidence_response message"
+                "response_wrapper doesn't contain a valid get_endorsed_evidence_response message"
             ));
         };
 
         #[allow(deprecated)]
-        get_evidence_response
+        get_endorsed_evidence_response
             .attestation_bundle
-            .context("get_evidence_response message doesn't contain an attestation bundle")?
-            .attestation_evidence
-            .context("get_evidence_response message doesn't contain an attestation evidence")
+            .context("get_endorsed_evidence_response message doesn't contain endorsed evidence")
     }
 }

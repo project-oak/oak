@@ -300,6 +300,12 @@ impl ZeroPage {
         // of RAM.
         self.inner.hdr.ramdisk_size = ram_disk.len() as u32;
     }
+
+    /// Sets the address of the EFI system table.
+    pub fn set_efi_system_table(&mut self, efi_info: PhysAddr) {
+        self.inner.efi_info.efi_systab = efi_info.as_u64() as u32;
+        self.inner.efi_info.efi_systab_hi = (efi_info.as_u64() >> 32) as u32;
+    }
 }
 
 /// Builds an E820 table by reading the low and high memory amount from CMOS.

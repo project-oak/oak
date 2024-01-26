@@ -586,11 +586,8 @@ version = "0.1.0"
 dependencies = [
  "log",
  "micro_rpc",
- "oak_channel",
- "oak_enclave_runtime_support",
  "oak_restricted_kernel_interface",
  "oak_restricted_kernel_sdk",
- "static_assertions",
 ]
 
 [[package]]
@@ -753,13 +750,9 @@ version = "0.1.0"
 dependencies = [
  "log",
  "micro_rpc",
- "oak_channel",
  "oak_core",
  "oak_echo_service",
- "oak_enclave_runtime_support",
- "oak_restricted_kernel_interface",
  "oak_restricted_kernel_sdk",
- "static_assertions",
 ]
 
 [[package]]
@@ -768,11 +761,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "micro_rpc",
- "oak_channel",
- "oak_enclave_runtime_support",
- "oak_restricted_kernel_interface",
  "oak_restricted_kernel_sdk",
- "static_assertions",
 ]
 
 [[package]]
@@ -802,8 +791,6 @@ name = "oak_functions_abi"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "prost",
- "prost-build",
  "static_assertions",
  "strum",
 ]
@@ -814,17 +801,26 @@ version = "0.1.0"
 dependencies = [
  "log",
  "micro_rpc",
+ "oak_core",
+ "oak_functions_enclave_service",
+ "oak_restricted_kernel_sdk",
+]
+
+[[package]]
+name = "oak_functions_enclave_service"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "micro_rpc",
  "oak_attestation",
- "oak_channel",
  "oak_core",
  "oak_crypto",
  "oak_dice",
- "oak_enclave_runtime_support",
  "oak_functions_service",
- "oak_restricted_kernel_interface",
+ "oak_proto_rust",
  "oak_restricted_kernel_sdk",
- "static_assertions",
- "zerocopy",
+ "prost",
 ]
 
 [[package]]
@@ -849,15 +845,22 @@ dependencies = [
  "micro_rpc",
  "micro_rpc_build",
  "oak_attestation",
- "oak_core",
  "oak_crypto",
  "oak_dice",
  "oak_functions_abi",
  "oak_functions_sdk",
- "oak_restricted_kernel_sdk",
+ "oak_proto_rust",
  "prost",
  "spinning_top",
  "wasmi",
+]
+
+[[package]]
+name = "oak_proto_rust"
+version = "0.0.1"
+dependencies = [
+ "prost",
+ "prost-build",
 ]
 
 [[package]]
@@ -878,10 +881,20 @@ dependencies = [
  "oak_channel",
  "oak_crypto",
  "oak_dice",
+ "oak_enclave_runtime_support",
  "oak_restricted_kernel_interface",
+ "oak_restricted_kernel_sdk_proc_macro",
  "p256",
  "strum",
  "zerocopy",
+]
+
+[[package]]
+name = "oak_restricted_kernel_sdk_proc_macro"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 1.0.102",
 ]
 
 [[package]]
@@ -1379,9 +1392,9 @@ dependencies = [
 
 [[package]]
 name = "wasmi_arena"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "401c1f35e413fac1846d4843745589d9ec678977ab35a384db8ae7830525d468"
+checksum = "104a7f73be44570cac297b3035d76b169d6599637631cf37a1703326a0727073"
 
 [[package]]
 name = "wasmi_core"

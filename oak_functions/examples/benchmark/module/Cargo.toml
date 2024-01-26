@@ -10,7 +10,5 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 oak_functions_sdk = { workspace = true }
+oak_proto_rust = { workspace = true }
 prost = { workspace = true }
-
-[build-dependencies]
-prost-build = { workspace = true }

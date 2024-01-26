@@ -17,13 +17,11 @@
 use alloc::{string::String, vec::Vec};
 use core::{cmp::Ordering, str::FromStr};
 
-use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use ecdsa::{signature::Verifier, Signature};
+use oak_proto_rust::oak::{HexDigest, RawDigest};
 use p256::ecdsa::VerifyingKey;
 use sha2::{Digest, Sha256, Sha384, Sha512};
-
-use crate::proto::oak::{HexDigest, RawDigest};
 
 const PEM_HEADER: &str = "-----BEGIN PUBLIC KEY-----";
 const PEM_FOOTER: &str = "-----END PUBLIC KEY-----";
@@ -44,7 +42,9 @@ pub fn convert_pem_to_raw(public_key_pem: &str) -> anyhow::Result<Vec<u8>> {
         .expect("could not find expected footer");
     let remove_newlines = stripped.replace('\n', "");
 
-    Ok(BASE64_STANDARD.decode(remove_newlines)?)
+    BASE64_STANDARD
+        .decode(remove_newlines)
+        .map_err(|error| anyhow::anyhow!(error))
 }
 
 /// Converts a raw public key to PEM format.
@@ -64,8 +64,12 @@ pub fn convert_raw_to_pem(public_key: &[u8]) -> String {
 
 /// Converts a PEM-encoded x509/PKIX public key to a verifying key.
 pub fn convert_pem_to_verifying_key(public_key_pem: &str) -> anyhow::Result<VerifyingKey> {
-    VerifyingKey::from_str(public_key_pem)
-        .context("couldn't parse pem as a p256::ecdsa::VerifyingKey")
+    VerifyingKey::from_str(public_key_pem).map_err(|error| {
+        anyhow::anyhow!(
+            "couldn't parse pem as a p256::ecdsa::VerifyingKey: {}",
+            error
+        )
+    })
 }
 
 /// Converts a raw public key to a verifying key.
@@ -90,11 +94,12 @@ pub fn verify_signature_raw(
     contents: &[u8],
     public_key: &[u8],
 ) -> anyhow::Result<()> {
-    let sig = Signature::from_der(signature).context("invalid ASN.1 signature")?;
+    let sig = Signature::from_der(signature)
+        .map_err(|error| anyhow::anyhow!("invalid ASN.1 signature: {}", error))?;
     let key = convert_raw_to_verifying_key(public_key)?;
 
     key.verify(contents, &sig)
-        .context("couldn't verify signature")
+        .map_err(|error| anyhow::anyhow!("couldn't verify signature: {}", error))
 }
 
 pub fn hash_sha2_256(input: &[u8]) -> [u8; 32] {
@@ -199,15 +204,24 @@ pub fn raw_to_hex_digest(r: &RawDigest) -> HexDigest {
 /// Converts hex digest to raw digest.
 pub fn hex_to_raw_digest(h: &HexDigest) -> anyhow::Result<RawDigest> {
     let raw = RawDigest {
-        psha2: hex::decode(&h.psha2).context("could not decode field psha2")?,
-        sha1: hex::decode(&h.sha1).context("could not decode field sha1")?,
-        sha2_256: hex::decode(&h.sha2_256).context("could not decode field sha2_256")?,
-        sha2_512: hex::decode(&h.sha2_512).context("could not decode field sha2_512")?,
-        sha3_512: hex::decode(&h.sha3_512).context("could not decode field sha3_512")?,
-        sha3_384: hex::decode(&h.sha3_384).context("could not decode field sha3_384")?,
-        sha3_256: hex::decode(&h.sha3_256).context("could not decode field sha3_256")?,
-        sha3_224: hex::decode(&h.sha3_224).context("could not decode field sha3_224")?,
-        sha2_384: hex::decode(&h.sha2_384).context("could not decode field sha2_384")?,
+        psha2: hex::decode(&h.psha2)
+            .map_err(|error| anyhow::anyhow!("could not decode field psha2: {}", error))?,
+        sha1: hex::decode(&h.sha1)
+            .map_err(|error| anyhow::anyhow!("could not decode field sha1: {}", error))?,
+        sha2_256: hex::decode(&h.sha2_256)
+            .map_err(|error| anyhow::anyhow!("could not decode field sha2_256: {}", error))?,
+        sha2_512: hex::decode(&h.sha2_512)
+            .map_err(|error| anyhow::anyhow!("could not decode field sha2_512: {}", error))?,
+        sha3_512: hex::decode(&h.sha3_512)
+            .map_err(|error| anyhow::anyhow!("could not decode field sha3_512: {}", error))?,
+        sha3_384: hex::decode(&h.sha3_384)
+            .map_err(|error| anyhow::anyhow!("could not decode field sha3_384: {}", error))?,
+        sha3_256: hex::decode(&h.sha3_256)
+            .map_err(|error| anyhow::anyhow!("could not decode field sha3_256: {}", error))?,
+        sha3_224: hex::decode(&h.sha3_224)
+            .map_err(|error| anyhow::anyhow!("could not decode field sha3_224: {}", error))?,
+        sha2_384: hex::decode(&h.sha2_384)
+            .map_err(|error| anyhow::anyhow!("could not decode field sha2_384: {}", error))?,
     };
 
     Ok(raw)

@@ -40,5 +40,5 @@ static IGNORED_ENDPOINT_URI: &str = "file://[::]:0";
 const ORCHESTRATOR_IPC_SOCKET: &str = "/oak_utils/orchestrator_ipc";
 
 // Re-export structs so that they are available at the top level of the SDK.
-pub use crypto::{EncryptionKeyHandle, InstanceEncryptionKeyHandle};
+pub use crypto::InstanceEncryptionKeyHandle;
 pub use orchestrator_client::OrchestratorClient;

@@ -73,6 +73,18 @@ proto_library(
     ],
 )
 
+cc_proto_library(
+    name = "orchestrator_crypto_cc_proto",
+    deps = [":orchestrator_crypto_proto"],
+)
+
+cc_grpc_library(
+    name = "orchestrator_crypto_cc_grpc",
+    srcs = [":orchestrator_crypto_proto"],
+    grpc_only = True,
+    deps = [":orchestrator_crypto_cc_proto"],
+)
+
 proto_library(
     name = "hostlib_key_provisioning_proto",
     srcs = ["hostlib_key_provisioning.proto"],

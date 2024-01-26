@@ -27,4 +27,5 @@ tower = "*"
 
 [dev-dependencies]
 duct = "*"
+once_cell = "*"
 xtask = { workspace = true }

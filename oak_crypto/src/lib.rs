@@ -37,3 +37,4 @@ pub mod hpke;
 pub mod signer;
 #[cfg(test)]
 mod tests;
+pub mod verifier;

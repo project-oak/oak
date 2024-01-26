@@ -34,7 +34,7 @@ use oak_functions_containers_app::serve;
 use oak_functions_service::proto::oak::functions::InitializeRequest;
 use opentelemetry::metrics::{noop::NoopMeterProvider, MeterProvider};
 use tokio::net::TcpListener;
-use tonic::transport::Endpoint;
+use tonic::{codec::CompressionEncoding, transport::Endpoint};
 
 use crate::proto::oak::functions::oak_functions_client::OakFunctionsClient;
 
@@ -60,7 +60,7 @@ async fn test_lookup() {
             .connect()
             .await
             .expect("couldn't connect to trusted app");
-        OakFunctionsClient::new(channel)
+        OakFunctionsClient::new(channel).send_compressed(CompressionEncoding::Gzip)
     };
 
     let _ = oak_functions_client

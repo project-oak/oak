@@ -50,6 +50,8 @@ mod allocator;
 mod apic;
 mod cmos;
 mod dice_attestation;
+#[cfg(feature = "efi")]
+mod efi;
 mod fw_cfg;
 mod initramfs;
 mod kernel;
@@ -206,7 +208,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     // point will fail.
     allocator::init_global_allocator(zero_page.e820_table());
 
-    let setup_data_measurement = zero_page
+    let setup_data_sha2_256_digest = zero_page
         .try_fill_hdr_from_setup_data(&mut fwcfg)
         .unwrap_or_default();
 
@@ -231,7 +233,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     }
 
     let cmdline = kernel::try_load_cmdline(&mut fwcfg).unwrap_or_default();
-    let cmdline_measurement = measure_byte_slice(cmdline.as_bytes());
+    let cmdline_sha2_256_digest = measure_byte_slice(cmdline.as_bytes());
 
     let kernel_info =
         kernel::try_load_kernel_image(&mut fwcfg, zero_page.e820_table()).unwrap_or_default();
@@ -259,8 +261,8 @@ pub fn rust64_start(encrypted: u64) -> ! {
     let rsdp = acpi::build_acpi_tables(&mut fwcfg, &mut acpi_digest).unwrap();
     zero_page.set_acpi_rsdp_addr(PhysAddr::new(rsdp as *const _ as u64));
     let acpi_digest = acpi_digest.finalize();
-    let mut acpi_measurement = Measurement::default();
-    acpi_measurement[..].copy_from_slice(&acpi_digest[..]);
+    let mut acpi_sha2_256_digest = Measurement::default();
+    acpi_sha2_256_digest[..].copy_from_slice(&acpi_digest[..]);
 
     if let Err(err) = smp::bootstrap_aps(rsdp) {
         log::warn!(
@@ -289,7 +291,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
         }
     }
 
-    let ram_disk_measurement =
+    let ram_disk_sha2_256_digest =
         initramfs::try_load_initial_ram_disk(&mut fwcfg, zero_page.e820_table(), &kernel_info)
             .map(|ram_disk| {
                 zero_page.set_initial_ram_disk(ram_disk);
@@ -297,22 +299,40 @@ pub fn rust64_start(encrypted: u64) -> ! {
             })
             .unwrap_or_default();
 
-    let memory_map_measurement = measure_byte_slice(zero_page.e820_table().as_bytes());
+    let memory_map_sha2_256_digest = measure_byte_slice(zero_page.e820_table().as_bytes());
 
-    log::debug!("Kernel image digest: {:?}", kernel_info.measurement);
-    log::debug!("Kernel setup data digest: {:?}", setup_data_measurement);
-    log::debug!("Kernel image digest: {:?}", cmdline_measurement);
-    log::debug!("Initial RAM disk digest: {:?}", ram_disk_measurement);
-    log::debug!("ACPI table generation digest: {:?}", acpi_measurement);
-    log::debug!("E820 table digest: {:?}", memory_map_measurement);
+    log::debug!(
+        "Kernel image digest: sha2-256:{}",
+        hex::encode(kernel_info.measurement)
+    );
+    log::debug!(
+        "Kernel setup data digest: sha2-256:{}",
+        hex::encode(setup_data_sha2_256_digest)
+    );
+    log::debug!(
+        "Kernel image digest: sha2-256:{}",
+        hex::encode(cmdline_sha2_256_digest)
+    );
+    log::debug!(
+        "Initial RAM disk digest: sha2-256:{}",
+        hex::encode(ram_disk_sha2_256_digest)
+    );
+    log::debug!(
+        "ACPI table generation digest: sha2-256:{}",
+        hex::encode(acpi_sha2_256_digest)
+    );
+    log::debug!(
+        "E820 table digest: sha2-256:{}",
+        hex::encode(memory_map_sha2_256_digest)
+    );
 
     let measurements = oak_stage0_dice::Measurements {
-        acpi_measurement,
-        kernel_measurement: kernel_info.measurement,
-        cmdline_measurement,
-        ram_disk_measurement,
-        setup_data_measurement,
-        memory_map_measurement,
+        acpi_sha2_256_digest,
+        kernel_sha2_256_digest: kernel_info.measurement,
+        cmdline_sha2_256_digest,
+        ram_disk_sha2_256_digest,
+        setup_data_sha2_256_digest,
+        memory_map_sha2_256_digest,
     };
 
     let dice_data = Box::leak(Box::new_in(
@@ -344,6 +364,14 @@ pub fn rust64_start(encrypted: u64) -> ! {
         format!("{} -- {}", cmdline, extra)
     };
     zero_page.set_cmdline(cmdline);
+
+    // If required, create a fake EFI system table.
+    if cfg!(feature = "efi") {
+        let system_table = efi::create_efi_skeleton();
+        zero_page.set_efi_system_table(PhysAddr::new(
+            VirtAddr::from_ptr(Box::leak(system_table)).as_u64(),
+        ))
+    }
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 

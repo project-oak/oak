@@ -40,14 +40,18 @@ members = [
   "oak_functions_sdk/tests/lookup_module",
   "oak_functions_sdk/tests/testing_module",
   "oak_functions_service",
+  "oak_functions_enclave_service",
   "oak_functions_test_utils",
   "oak_hello_world_linux_init",
   "oak_launcher_utils",
+  "oak_proto_rust",
   "oak_restricted_kernel",
   "oak_restricted_kernel_dice",
   "oak_restricted_kernel_interface",
   "oak_restricted_kernel_sdk",
+  "oak_restricted_kernel_launcher",
   "oak_sev_guest",
+  "oak_sev_snp_attestation_report",
   "oak_simple_io",
   "oak_tdx_guest",
   "oak_virtio",
@@ -57,6 +61,7 @@ members = [
   "stage0_dice",
   "testing/oak_echo_service",
   "xtask",
+  "oak_restricted_kernel_sdk_proc_macro"
 ]
 exclude = [
   "fuzz",
@@ -96,16 +101,20 @@ oak_functions_launcher = { path = "./oak_functions_launcher" }
 oak_functions_lookup = { path = "./oak_functions/lookup" }
 oak_functions_sdk = { path = "./oak_functions_sdk" }
 oak_functions_service = { path = "./oak_functions_service", default-features = false }
+oak_functions_enclave_service = { path = "./oak_functions_enclave_service", default-features = false }
 oak_functions_test_utils = { path = "./oak_functions_test_utils" }
 oak_functions_wasm = { path = "./oak_functions/wasm" }
 oak_grpc_utils = { path = "./oak_grpc_utils" }
 oak_launcher_utils = { path = "./oak_launcher_utils" }
 oak_linux_boot_params = { path = "./linux_boot_params" }
 oak_logger = { path = "./oak_functions/logger" }
+oak_proto_rust = { path = "./oak_proto_rust" }
 oak_restricted_kernel_dice = { path = "./oak_restricted_kernel_dice" }
 oak_restricted_kernel_sdk = { path = "./oak_restricted_kernel_sdk" }
+oak_restricted_kernel_sdk_proc_macro = { path = "./oak_restricted_kernel_sdk_proc_macro" }
 oak_restricted_kernel_interface = { path = "./oak_restricted_kernel_interface" }
 oak_sev_guest = { path = "./oak_sev_guest", default-features = false }
+oak_sev_snp_attestation_report = { path = "./oak_sev_snp_attestation_report" }
 oak_stage0_dice = { path = "./stage0_dice" }
 oak_simple_io = { path = "./oak_simple_io" }
 oak_tdx_guest = { path = "./oak_tdx_guest" }

@@ -801,11 +801,22 @@ dependencies = [
  "aes-gcm",
  "bitflags 2.4.1",
  "lock_api",
+ "oak_sev_snp_attestation_report",
  "snafu",
  "spinning_top 0.3.0",
  "static_assertions",
  "strum",
  "x86_64",
+ "zerocopy",
+]
+
+[[package]]
+name = "oak_sev_snp_attestation_report"
+version = "0.0.0"
+dependencies = [
+ "bitflags 1.3.2",
+ "static_assertions",
+ "strum",
  "zerocopy",
 ]
 

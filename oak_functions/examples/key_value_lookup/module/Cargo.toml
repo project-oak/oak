@@ -9,14 +9,16 @@ license = "Apache-2.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-oak_functions_sdk = { path = "../../../../oak_functions_sdk" }
+oak_functions_sdk = { workspace = true }
 
 [dev-dependencies]
-oak_functions_abi = { path = "../../../../oak_functions_abi" }
+oak_client = { workspace = true }
+oak_functions_abi = { workspace = true }
+oak_functions_client = { workspace = true }
 hashbrown = "*"
 http = "*"
 maplit = "*"
-oak_functions_test_utils = { path = "../../../../oak_functions_test_utils" }
+oak_functions_test_utils = { workspace = true }
 tokio = { version = "*", features = [
   "fs",
   "macros",

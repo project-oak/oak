@@ -36,31 +36,28 @@ use oak_dice::{
     },
     evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
 };
-use oak_sev_guest::guest::AttestationReport;
+use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 use p256::ecdsa::SigningKey;
 use sha2::{Digest, Sha256};
 use zerocopy::{AsBytes, FromZeroes};
 
 type DerivedKey = [u8; 32];
 
-// The number of bytes of custom data that can be included in the attestation report.
-pub const REPORT_DATA_SIZE: usize = 64;
-
 /// Measurements of various components in Stage1.
 #[derive(Default)]
 pub struct Measurements {
     /// The measurement of the kernel image.
-    pub kernel_measurement: [u8; 32],
+    pub kernel_sha2_256_digest: [u8; 32],
     /// The measurement of the kernel command-line.
-    pub cmdline_measurement: [u8; 32],
+    pub cmdline_sha2_256_digest: [u8; 32],
     /// The measurement of the kernel setup data.
-    pub setup_data_measurement: [u8; 32],
+    pub setup_data_sha2_256_digest: [u8; 32],
     /// The measurement of the initial RAM disk.
-    pub ram_disk_measurement: [u8; 32],
+    pub ram_disk_sha2_256_digest: [u8; 32],
     /// The measurement of the physical memory map.
-    pub memory_map_measurement: [u8; 32],
+    pub memory_map_sha2_256_digest: [u8; 32],
     /// The concatenated measurement of the command used for building the ACPI tables.
-    pub acpi_measurement: [u8; 32],
+    pub acpi_sha2_256_digest: [u8; 32],
 }
 
 /// Generates an ECA certificate for use by the next boot stage (Stage 1).
@@ -78,42 +75,42 @@ fn generate_stage1_certificate(
                 Value::Integer(KERNEL_MEASUREMENT_ID.into()),
                 Value::Map(alloc::vec![(
                     Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.kernel_measurement.into()),
+                    Value::Bytes(measurements.kernel_sha2_256_digest.into()),
                 )]),
             ),
             (
                 Value::Integer(KERNEL_COMMANDLINE_MEASUREMENT_ID.into()),
                 Value::Map(alloc::vec![(
                     Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.cmdline_measurement.into()),
+                    Value::Bytes(measurements.cmdline_sha2_256_digest.into()),
                 )]),
             ),
             (
                 Value::Integer(SETUP_DATA_MEASUREMENT_ID.into()),
                 Value::Map(alloc::vec![(
                     Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.setup_data_measurement.into()),
+                    Value::Bytes(measurements.setup_data_sha2_256_digest.into()),
                 )]),
             ),
             (
                 Value::Integer(INITRD_MEASUREMENT_ID.into()),
                 Value::Map(alloc::vec![(
                     Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.ram_disk_measurement.into()),
+                    Value::Bytes(measurements.ram_disk_sha2_256_digest.into()),
                 )]),
             ),
             (
                 Value::Integer(MEMORY_MAP_MEASUREMENT_ID.into()),
                 Value::Map(alloc::vec![(
                     Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.memory_map_measurement.into()),
+                    Value::Bytes(measurements.memory_map_sha2_256_digest.into()),
                 )]),
             ),
             (
                 Value::Integer(ACPI_MEASUREMENT_ID.into()),
                 Value::Map(alloc::vec![(
                     Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(measurements.acpi_measurement.into()),
+                    Value::Bytes(measurements.acpi_sha2_256_digest.into()),
                 )]),
             ),
         ]),
@@ -160,14 +157,14 @@ pub fn generate_dice_data<
         .expect("couldn't serialize stage 1 ECA certificate");
 
     // Use the SHA2-256 digest of the serialized ECA verifying key as the report data.
-    let eca_measurement = {
+    let eca_sha2_256_digest = {
         let mut digest = Sha256::default();
         digest.update(&stage0_eca_verifying_key);
         digest.finalize()
     };
 
     let mut report_data = [0u8; REPORT_DATA_SIZE];
-    report_data[..eca_measurement.len()].copy_from_slice(&eca_measurement[..]);
+    report_data[..eca_sha2_256_digest.len()].copy_from_slice(&eca_sha2_256_digest[..]);
 
     let report = get_attestation(report_data).expect("couldn't get attestation report.");
     let report_bytes = report.as_bytes();
@@ -178,10 +175,10 @@ pub fn generate_dice_data<
     // Mix in the measurements of the kernel, the kernel command-line, the kernel setup data and the
     // initial RAM disk when deriving the CDI for Layer 1.
     let mut salt: Vec<u8> = Vec::with_capacity(128);
-    salt.extend_from_slice(&measurements.kernel_measurement[..]);
-    salt.extend_from_slice(&measurements.cmdline_measurement[..]);
-    salt.extend_from_slice(&measurements.setup_data_measurement[..]);
-    salt.extend_from_slice(&measurements.ram_disk_measurement[..]);
+    salt.extend_from_slice(&measurements.kernel_sha2_256_digest[..]);
+    salt.extend_from_slice(&measurements.cmdline_sha2_256_digest[..]);
+    salt.extend_from_slice(&measurements.setup_data_sha2_256_digest[..]);
+    salt.extend_from_slice(&measurements.ram_disk_sha2_256_digest[..]);
     let hkdf = Hkdf::<Sha256>::new(Some(&salt), &ikm[..]);
 
     result.magic = STAGE0_MAGIC;
@@ -216,9 +213,7 @@ pub fn generate_dice_data<
 pub fn mock_attestation_report(
     report_data: [u8; REPORT_DATA_SIZE],
 ) -> Result<AttestationReport, &'static str> {
-    let mut report = AttestationReport::new_zeroed();
-    report.data.report_data = report_data;
-    Ok(report)
+    Ok(AttestationReport::from_report_data(report_data))
 }
 
 /// Returns a fixed key filled with zeros.

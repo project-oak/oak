@@ -17,23 +17,23 @@
 use std::fs;
 
 use oak_attestation_verification::{
-    proto::oak::attestation::v1::{
-        attestation_results::Status, AmdSevReferenceValues, AttestationResults,
-        BinaryReferenceValue, ContainerLayerEndorsements, ContainerLayerReferenceValues,
-        EndorsementReferenceValue, Endorsements, Evidence, KernelLayerEndorsements,
-        KernelLayerReferenceValues, OakContainersEndorsements, OakContainersReferenceValues,
-        ReferenceValues, RootLayerEndorsements, RootLayerReferenceValues, SkipVerification,
-        StringReferenceValue, SystemLayerEndorsements, SystemLayerReferenceValues,
-        TransparentReleaseEndorsement,
-    },
     util::convert_pem_to_raw,
-    verifier::verify,
+    verifier::{to_attestation_results, verify},
+};
+use oak_proto_rust::oak::attestation::v1::{
+    attestation_results::Status, AmdSevReferenceValues, BinaryReferenceValue,
+    ContainerLayerEndorsements, ContainerLayerReferenceValues, EndorsementReferenceValue,
+    Endorsements, Evidence, KernelLayerEndorsements, KernelLayerReferenceValues,
+    OakContainersEndorsements, OakContainersReferenceValues, ReferenceValues,
+    RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, StringReferenceValue,
+    SystemLayerEndorsements, SystemLayerReferenceValues, TransparentReleaseEndorsement,
 };
 use prost::Message;
 
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
 const SIGNATURE_PATH: &str = "testdata/endorsement.json.sig";
 const LOG_ENTRY_PATH: &str = "testdata/logentry.json";
+const VCEK_MILAN_CERT_DER: &str = "testdata/vcek_milan.der";
 const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 const EVIDENCE_PATH: &str = "testdata/evidence.binarypb";
@@ -52,6 +52,7 @@ fn create_endorsements() -> Endorsements {
     let endorsement = fs::read(ENDORSEMENT_PATH).expect("couldn't read endorsement");
     let signature = fs::read(SIGNATURE_PATH).expect("couldn't read signature");
     let log_entry = fs::read(LOG_ENTRY_PATH).expect("couldn't read log entry");
+    let vcek_milan_cert = fs::read(VCEK_MILAN_CERT_DER).expect("couldn't read TEE cert");
 
     // Use this for all binaries.
     let tre = TransparentReleaseEndorsement {
@@ -61,7 +62,7 @@ fn create_endorsements() -> Endorsements {
     };
 
     let root_layer = RootLayerEndorsements {
-        tee_certificate: b"T O D O".to_vec(),
+        tee_certificate: vcek_milan_cert,
         stage0: Some(tre.clone()),
     };
     let kernel_layer = KernelLayerEndorsements {
@@ -87,7 +88,7 @@ fn create_endorsements() -> Endorsements {
         container_layer: Some(container_layer),
     };
     Endorsements {
-        r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::endorsements::Type::OakContainers(ends)),
+        r#type: Some(oak_proto_rust::oak::attestation::v1::endorsements::Type::OakContainers(ends)),
     }
 }
 
@@ -108,10 +109,16 @@ fn create_reference_values() -> ReferenceValues {
         rekor_public_key,
     };
     let skip = BinaryReferenceValue {
-        r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::binary_reference_value::Type::Skip(SkipVerification {})),
+        r#type: Some(
+            oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Skip(
+                SkipVerification {},
+            ),
+        ),
     };
     let brv = BinaryReferenceValue {
-        r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::binary_reference_value::Type::Endorsement(erv)),
+        r#type: Some(
+            oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Endorsement(erv),
+        ),
     };
     let srv = StringReferenceValue {
         values: ["whatever".to_owned()].to_vec(),
@@ -150,7 +157,9 @@ fn create_reference_values() -> ReferenceValues {
         container_layer: Some(container_layer),
     };
     ReferenceValues {
-        r#type: Some(oak_attestation_verification::proto::oak::attestation::v1::reference_values::Type::OakContainers(vs)),
+        r#type: Some(
+            oak_proto_rust::oak::attestation::v1::reference_values::Type::OakContainers(vs),
+        ),
     }
 }
 
@@ -161,7 +170,7 @@ fn verify_succeeds() {
     let reference_values = create_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = AttestationResults::from(&r);
+    let p = to_attestation_results(&r);
 
     eprintln!("======================================");
     eprintln!("code={} reason={}", p.status as i32, p.reason);
@@ -178,7 +187,7 @@ fn verify_fails_with_manipulated_root_public_key() {
     let reference_values = create_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = AttestationResults::from(&r);
+    let p = to_attestation_results(&r);
 
     eprintln!("======================================");
     eprintln!("code={} reason={}", p.status as i32, p.reason);
@@ -194,7 +203,7 @@ fn verify_fails_with_empty_args() {
     let reference_values = ReferenceValues::default();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = AttestationResults::from(&r);
+    let p = to_attestation_results(&r);
 
     assert!(r.is_err());
     assert!(p.status() == Status::GenericFailure);
