@@ -50,6 +50,7 @@ cc_grpc_library(
     name = "application_interfaces_cc_grpc",
     srcs = [":application_interfaces_proto"],
     grpc_only = True,
+    generate_mocks = True,
     deps = [":application_interfaces_proto"],
 )
 
