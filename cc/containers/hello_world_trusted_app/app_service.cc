@@ -25,7 +25,7 @@
 #include "grpcpp/support/status.h"
 #include "oak_containers_hello_world_trusted_app/proto/interface.grpc.pb.h"
 #include "oak_containers_hello_world_trusted_app/proto/interface.pb.h"
-#include "oak_crypto/proto/v1/crypto.pb.h"
+#include "proto/crypto/crypto.pb.h"
 
 namespace oak::oak_containers_hello_world_trusted_app {
 

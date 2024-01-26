@@ -31,7 +31,7 @@ java_library(
         "//java/src/main/java/com/google/oak/crypto/hpke",
         "//java/src/main/java/com/google/oak/transport",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_crypto/proto/v1:crypto_java_proto",
+        "//proto/crypto:crypto_java_proto",
         "//proto/session:messages_java_proto",
         "//proto/session:service_streaming_java_proto",
         "@com_google_guava_guava",

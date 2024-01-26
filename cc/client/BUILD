@@ -30,7 +30,7 @@ cc_library(
         "//cc/crypto:common",
         "//cc/remote_attestation:attestation_verifier",
         "//cc/transport",
-        "//oak_crypto/proto/v1:crypto_cc_proto",
+        "//proto/crypto:crypto_cc_proto",
         "//proto/session:messages_cc_proto",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/status:statusor",

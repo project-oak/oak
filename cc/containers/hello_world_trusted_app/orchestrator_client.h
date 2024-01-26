@@ -26,7 +26,7 @@
 #include "cc/crypto/hpke/recipient_context.h"
 #include "grpcpp/channel.h"
 #include "oak_containers/proto/interfaces.grpc.pb.h"
-#include "oak_crypto/proto/v1/crypto.pb.h"
+#include "proto/crypto/crypto.pb.h"
 #include "proto/containers/orchestrator_crypto.grpc.pb.h"
 
 namespace oak::oak_containers_hello_world_trusted_app {

@@ -31,7 +31,7 @@ java_test(
         "//java/src/main/java/com/google/oak/remote_attestation:insecure_attestation_verifier",
         "//java/src/main/java/com/google/oak/transport",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_crypto/proto/v1:crypto_java_proto",
+        "//proto/crypto:crypto_java_proto",
         "//proto/session:messages_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
     ],
