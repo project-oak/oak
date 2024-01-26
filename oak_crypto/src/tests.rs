@@ -265,3 +265,34 @@ async fn test_async_encryptor() {
     assert_eq!(TEST_RESPONSE_MESSAGE, decrypted_response);
     assert_eq!(TEST_RESPONSE_ASSOCIATED_DATA, response_associated_data);
 }
+
+const TEST_SIGNATURE_MESSAGE_ONE: &[u8] = b"Dogs are the best";
+const TEST_SIGNATURE_MESSAGE_TWO: &[u8] = b"Cats are even better";
+
+use crate::{signer::Signer, verifier::Verifier};
+
+#[test]
+fn test_signer_and_verifier() {
+    let signing_key_one = p256::ecdsa::SigningKey::random(&mut rand_core::OsRng);
+
+    let signature = signing_key_one.sign(TEST_SIGNATURE_MESSAGE_ONE);
+
+    let verifying_key_one = p256::ecdsa::VerifyingKey::from(signing_key_one);
+
+    assert!(verifying_key_one
+        .verify(TEST_SIGNATURE_MESSAGE_ONE, &signature)
+        .is_ok());
+
+    assert!(verifying_key_one
+        .verify(TEST_SIGNATURE_MESSAGE_TWO, &signature)
+        .is_err());
+
+    let verifying_key_two = {
+        let signing_key_two = p256::ecdsa::SigningKey::random(&mut rand_core::OsRng);
+        p256::ecdsa::VerifyingKey::from(signing_key_two)
+    };
+
+    assert!(verifying_key_two
+        .verify(TEST_SIGNATURE_MESSAGE_TWO, &signature)
+        .is_err());
+}
