@@ -45,8 +45,12 @@ pub struct Params {
     pub vmm_binary: PathBuf,
 
     /// Path to the enclave binary to load into the VM.
-    #[arg(long, value_parser = path_exists)]
-    pub enclave_binary: PathBuf,
+    #[arg(long, value_parser = path_exists, conflicts_with_all = &["kernel", "initrd"])]
+    pub enclave_binary: Option<PathBuf>,
+
+    /// Path to the enclave binary to load into the VM.
+    #[arg(long, value_parser = path_exists, conflicts_with_all = &["enclave_binary"])]
+    pub kernel: Option<PathBuf>,
 
     /// Path to the Oak Functions application binary to be loaded into the enclave.
     #[arg(long, value_parser = path_exists)]
@@ -66,7 +70,7 @@ pub struct Params {
     pub memory_size: Option<String>,
 
     /// Path to the initrd image to use.
-    #[arg(long, value_parser = path_exists)]
+    #[arg(long, value_parser = path_exists, requires_all = &["kernel"])]
     pub initrd: Option<PathBuf>,
 }
 
@@ -149,12 +153,7 @@ impl Instance {
         ]);
         cmd.args(["-device", "virtio-serial-device,max_ports=1"]);
         cmd.args(["-device", "virtconsole,chardev=commsock"]);
-        // Load the kernel ELF via the loader device.
-        cmd.args([
-            "-device",
-            format!("loader,file={}", params.enclave_binary.display()).as_str(),
-        ]);
-        // And yes, use stage0 as the BIOS.
+        // Use stage0 as the BIOS.
         cmd.args([
             "-bios",
             params
@@ -164,6 +163,20 @@ impl Instance {
                 .unwrap()
                 .as_str(),
         ]);
+        if let Some(enclave_binary) = params.enclave_binary {
+            // Load the kernel ELF via the loader device.
+            cmd.args([
+                "-device",
+                format!("loader,file={}", enclave_binary.display()).as_str(),
+            ]);
+        }
+        if let Some(kernel) = params.kernel {
+            // stage0 accoutrements: kernel that's compatible with the linux boot protocol
+            cmd.args([
+                "-kernel",
+                kernel.into_os_string().into_string().unwrap().as_str(),
+            ]);
+        }
 
         if let Some(gdb_port) = params.gdb {
             // Listen for a gdb connection on the provided port and wait for debugger before booting
