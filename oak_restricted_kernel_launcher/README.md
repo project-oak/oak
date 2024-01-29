@@ -29,7 +29,7 @@ RUST_LOG=DEBUG \
 cargo run --package=oak_restricted_kernel_launcher -- \
 --kernel=oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin \
 --vmm-binary=$(which qemu-system-x86_64) \
---memory-size=256M \
---bios-binary=stage0_bin/target/x86_64-unknown-none/release/oak_stage0.bin \
---app-binary=enclave_apps/target/x86_64-unknown-none/debug/oak_echo_raw_enclave_app
+--memory-size=8G \
+--bios-binary=stage0_bin/target/x86_64-unknown-none/release/stage0_bin \
+--app-binary=enclave_apps/target/x86_64-unknown-none/release/oak_echo_raw_enclave_app
 ```
