@@ -86,8 +86,7 @@ message OakContainersEndorsements {
 }
 
 message CBEndorsements {
-  // Serialized X.509 TEE certificate.
-  bytes tee_certificate = 1;
+  RootLayerEndorsements root_layer = 1;
 }
 
 // Endorsement contains statements that some entity (e.g. a hardware provider)
