@@ -18,8 +18,9 @@
 #![allow(clippy::extra_unused_type_parameters)]
 
 use alloc::{vec, vec::Vec};
-use bitflags::bitflags;
 use core::{cmp::min, ffi::CStr};
+
+use bitflags::bitflags;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWrapper, PortWriter};
 use x86_64::{

@@ -38,6 +38,7 @@ hpke = { version = "*", default-features = false, features = ["alloc"] }
 oak_dice = { workspace = true }
 oak_simple_io = { workspace = true, optional = true }
 oak_linux_boot_params = { workspace = true }
+oak_restricted_kernel_dice = { workspace = true }
 oak_restricted_kernel_interface = { workspace = true }
 rust-hypervisor-firmware-virtio = { path = "../third_party/rust-hypervisor-firmware-virtio" }
 oak_sev_guest = { workspace = true, features = ["rust-crypto"] }
@@ -53,6 +54,7 @@ oak_virtio = { workspace = true, optional = true }
 virtio-drivers = { version = "*", optional = true }
 x86_64 = "*"
 zerocopy = "*"
+zeroize = "*"
 
 [dev-dependencies]
 assertables = "*"

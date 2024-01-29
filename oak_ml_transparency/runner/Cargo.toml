@@ -10,7 +10,9 @@ license = "Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 anyhow = "*"
-oak_attestation_verification = { path = "../../oak_attestation_verification" }
+oak_attestation_verification = { path = "../../oak_attestation_verification", features = [
+  "std"
+] }
 clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 hex = "*"

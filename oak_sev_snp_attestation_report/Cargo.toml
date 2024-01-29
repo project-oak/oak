@@ -1,0 +1,12 @@
+[package]
+name = "oak_sev_snp_attestation_report"
+version = "0.0.0"
+authors = ["Ernesto Ocampo <ernoc@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+bitflags = "*"
+static_assertions = "*"
+strum = { version = "*", default-features = false, features = ["derive"] }
+zerocopy = { version = "*", features = ["derive"] }

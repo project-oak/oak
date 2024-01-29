@@ -14,6 +14,15 @@
 // limitations under the License.
 //
 
+extern crate test;
+
+use alloc::{sync::Arc, vec::Vec};
+
+use byteorder::{ByteOrder, LittleEndian};
+use hashbrown::HashMap;
+use oak_functions_abi::Request;
+use spinning_top::Spinlock;
+
 use super::{
     api::StdWasmApiFactory, OakLinker, UserState, WasmApiFactory, WasmHandler, ALLOC_FUNCTION_NAME,
     MEMORY_NAME,
@@ -23,10 +32,6 @@ use crate::{
     lookup::LookupDataManager,
     wasm::{AbiPointer, AbiPointerOffset},
 };
-use alloc::{sync::Arc, vec::Vec};
-use byteorder::{ByteOrder, LittleEndian};
-use hashbrown::HashMap;
-use spinning_top::Spinlock;
 
 #[test]
 fn test_read_write_u32_in_wasm_memory() {
@@ -123,24 +128,43 @@ fn test_read_request() {
     assert_eq!(request_bytes, test_state.request.clone());
 }
 
+#[test]
+fn test_invoke() {
+    let test_state = create_test_state();
+    let data = b"Hello, world!";
+    let response = test_state
+        .wasm_handler
+        .handle_invoke(Request {
+            body: data.to_vec(),
+        })
+        .unwrap();
+    assert_eq!(response.body, data.to_vec());
+}
+
 struct TestState {
     instance: wasmi::Instance,
-    store: wasmi::Store<UserState<StandaloneLogger>>,
+    store: wasmi::Store<UserState>,
+    wasm_handler: WasmHandler,
     request: Vec<u8>,
 }
 
 fn create_test_state() -> TestState {
-    let logger = StandaloneLogger {};
+    let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let api_factory = Arc::new(StdWasmApiFactory {
-        lookup_data_manager,
+        lookup_data_manager: lookup_data_manager.clone(),
     });
 
     let wasm_module_path = oak_functions_test_utils::build_rust_crate_wasm("echo").unwrap();
     let wasm_module_bytes = std::fs::read(wasm_module_path).unwrap();
 
-    let wasm_handler = WasmHandler::create(&wasm_module_bytes, api_factory.clone(), logger.clone())
-        .expect("couldn't create WasmHandler");
+    let wasm_handler = WasmHandler::create(
+        &wasm_module_bytes,
+        api_factory.clone(),
+        logger.clone(),
+        None,
+    )
+    .expect("couldn't create WasmHandler");
 
     let request = Vec::new();
     let response = Arc::new(Spinlock::new(Vec::new()));
@@ -148,16 +172,17 @@ fn create_test_state() -> TestState {
 
     let user_state = UserState::new(wasm_api.transport(), logger.clone());
 
-    let module = wasm_handler.wasm_module;
+    let module = wasm_handler.wasm_module.clone();
     let mut store = wasmi::Store::new(module.engine(), user_state);
-    let linker = OakLinker::new(module.engine(), &mut store);
-    let (instance, store) = linker
-        .instantiate(store, module)
+    let linker = OakLinker::new(module.engine());
+    let instance = linker
+        .instantiate(&mut store, module)
         .expect("couldn't instantiate Wasm module");
 
     TestState {
-        store,
         instance,
+        store,
+        wasm_handler,
         request: request.clone(),
     }
 }

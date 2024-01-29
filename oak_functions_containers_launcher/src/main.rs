@@ -69,17 +69,25 @@ async fn main() -> Result<(), anyhow::Error> {
             anyhow::anyhow!("couldn't get encrypted response: {}", error)
         })?;
 
-    #[allow(deprecated)]
-    let evidence = untrusted_app
+    let endorsed_evidence = untrusted_app
         .launcher
         .get_endorsed_evidence()
-        .await?
-        .attestation_evidence
-        .unwrap();
+        .await
+        .context("couldn't get endorsed evidence")?;
+    let evidence = endorsed_evidence
+        .evidence
+        .context("endorsed evidence message doesn't contain evidence")?;
+    let endorsements = endorsed_evidence
+        .endorsements
+        .context("endorsed evidence message doesn't contain endorsements")?;
+
+    // TODO(#4627): Remove deprecated attestation evidence.
+    #[allow(deprecated)]
+    let deprecated_evidence = endorsed_evidence.attestation_evidence.unwrap();
 
     log::info!(
         "obtained public key ({} bytes)",
-        evidence.encryption_public_key.len()
+        deprecated_evidence.encryption_public_key.len()
     );
 
     untrusted_app.setup_lookup_data(lookup_data_config).await?;
@@ -87,8 +95,10 @@ async fn main() -> Result<(), anyhow::Error> {
     let server_future = oak_functions_containers_launcher::server::new(
         SocketAddr::from((Ipv6Addr::UNSPECIFIED, args.functions_args.port)),
         untrusted_app.oak_functions_client.clone(),
-        evidence.encryption_public_key.clone(),
-        evidence.attestation.clone(),
+        evidence,
+        endorsements,
+        deprecated_evidence.encryption_public_key.clone(),
+        deprecated_evidence.attestation.clone(),
     );
 
     // Wait until something dies or we get a signal to terminate.

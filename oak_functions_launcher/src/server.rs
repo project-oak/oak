@@ -14,6 +14,12 @@
 // limitations under the License.
 //
 
+use std::{net::SocketAddr, pin::Pin};
+
+use futures::{Future, Stream, StreamExt};
+use oak_attestation::proto::oak::attestation::v1::{Endorsements, Evidence};
+use tonic::{transport::Server, Request, Response, Status, Streaming};
+
 use crate::{
     channel::ConnectorHandle,
     proto::oak::{
@@ -26,12 +32,11 @@ use crate::{
         },
     },
 };
-use futures::{Future, Stream, StreamExt};
-use std::{net::SocketAddr, pin::Pin};
-use tonic::{transport::Server, Request, Response, Status, Streaming};
 
 pub struct SessionProxy {
     connector_handle: ConnectorHandle,
+    evidence: Evidence,
+    endorsements: Endorsements,
     encryption_public_key: Vec<u8>,
     attestation: Vec<u8>,
 }
@@ -63,7 +68,8 @@ impl StreamingSession for SessionProxy {
         let attestation_bundle = AttestationBundle {
             attestation_evidence: Some(attestation_evidence),
             attestation_endorsement: Some(attestation_endorsement),
-            dice_evidence: None,
+            evidence: Some(self.evidence.clone()),
+            endorsements: Some(self.endorsements.clone()),
         };
 
         let connector_handle = self.connector_handle.clone();
@@ -121,11 +127,15 @@ impl StreamingSession for SessionProxy {
 pub fn new(
     addr: SocketAddr,
     connector_handle: ConnectorHandle,
+    evidence: Evidence,
+    endorsements: Endorsements,
     encryption_public_key: Vec<u8>,
     attestation: Vec<u8>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
     let server_impl = SessionProxy {
         connector_handle,
+        evidence,
+        endorsements,
         encryption_public_key,
         attestation,
     };

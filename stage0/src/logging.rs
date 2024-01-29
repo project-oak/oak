@@ -14,10 +14,12 @@
 // limitations under the License.
 //
 
-use crate::io_port_factory;
 use core::{fmt::Write, ops::DerefMut};
+
 use sev_serial::SerialPort;
 use spinning_top::Spinlock;
+
+use crate::io_port_factory;
 
 extern crate log;
 

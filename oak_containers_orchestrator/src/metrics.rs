@@ -14,13 +14,16 @@
 // limitations under the License.
 //
 
+use std::{sync::Arc, time::Duration};
+
 use anyhow::Result;
-use oak_containers_orchestrator_client::LauncherClient;
-use opentelemetry_api::{
+use opentelemetry::{
     metrics::{AsyncInstrument, Meter, MeterProvider, ObservableCounter, ObservableGauge, Unit},
     KeyValue,
 };
-use std::{sync::Arc, time::Duration};
+use procfs::CurrentSI;
+
+use crate::launcher_client::LauncherClient;
 
 // It's not dead, it's just asynchronous.
 #[allow(dead_code)]
@@ -30,6 +33,14 @@ pub struct SystemMetrics {
     forks_total: ObservableCounter<u64>,
     procs_blocked: ObservableGauge<u64>,
     procs_running: ObservableGauge<u64>,
+
+    // Network-related metrics
+    net_recv_bytes: ObservableCounter<u64>,
+    net_recv_packets: ObservableCounter<u64>,
+    net_recv_errs: ObservableCounter<u64>,
+    net_sent_bytes: ObservableCounter<u64>,
+    net_sent_packets: ObservableCounter<u64>,
+    net_sent_errs: ObservableCounter<u64>,
 }
 
 impl SystemMetrics {
@@ -56,11 +67,37 @@ impl SystemMetrics {
                 .u64_observable_gauge("procs_running")
                 .with_callback(Self::procs_running)
                 .try_init()?,
+            net_recv_bytes: meter
+                .u64_observable_counter("network_receive_bytes")
+                .with_unit(Unit::new("bytes"))
+                .with_callback(Self::net_recv_bytes)
+                .try_init()?,
+            net_recv_packets: meter
+                .u64_observable_counter("network_receive_packets")
+                .with_callback(Self::net_recv_packets)
+                .try_init()?,
+            net_recv_errs: meter
+                .u64_observable_counter("network_receive_errors")
+                .with_callback(Self::net_recv_errs)
+                .try_init()?,
+            net_sent_bytes: meter
+                .u64_observable_counter("network_transmit_bytes")
+                .with_unit(Unit::new("bytes"))
+                .with_callback(Self::net_sent_bytes)
+                .try_init()?,
+            net_sent_packets: meter
+                .u64_observable_counter("network_transmit_packets")
+                .with_callback(Self::net_sent_packets)
+                .try_init()?,
+            net_sent_errs: meter
+                .u64_observable_counter("network_transmit_errors")
+                .with_callback(Self::net_sent_errs)
+                .try_init()?,
         })
     }
 
     fn cpu_seconds_total(counter: &dyn AsyncInstrument<u64>) {
-        let stats = procfs::KernelStats::new().unwrap();
+        let stats = procfs::KernelStats::current().unwrap();
 
         for (cpu, stats) in stats.cpu_time.iter().enumerate() {
             let attributes = |mode| {
@@ -90,26 +127,74 @@ impl SystemMetrics {
     }
 
     fn context_switches_total(counter: &dyn AsyncInstrument<u64>) {
-        let stats = procfs::KernelStats::new().unwrap();
+        let stats = procfs::KernelStats::current().unwrap();
         counter.observe(stats.ctxt, &[]);
     }
 
     fn forks_total(counter: &dyn AsyncInstrument<u64>) {
-        let stats = procfs::KernelStats::new().unwrap();
+        let stats = procfs::KernelStats::current().unwrap();
         counter.observe(stats.processes, &[]);
     }
 
     fn procs_blocked(gauge: &dyn AsyncInstrument<u64>) {
-        let stats = procfs::KernelStats::new().unwrap();
+        let stats = procfs::KernelStats::current().unwrap();
         if let Some(procs_blocked) = stats.procs_blocked {
             gauge.observe(procs_blocked.into(), &[]);
         }
     }
 
     fn procs_running(gauge: &dyn AsyncInstrument<u64>) {
-        let stats = procfs::KernelStats::new().unwrap();
+        let stats = procfs::KernelStats::current().unwrap();
         if let Some(procs_running) = stats.procs_running {
             gauge.observe(procs_running.into(), &[]);
+        }
+    }
+
+    fn net_recv_bytes(counter: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::net::dev_status().unwrap();
+
+        for (interface, stats) in stats {
+            counter.observe(stats.recv_bytes, &[KeyValue::new("device", interface)]);
+        }
+    }
+
+    fn net_recv_packets(counter: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::net::dev_status().unwrap();
+
+        for (interface, stats) in stats {
+            counter.observe(stats.recv_packets, &[KeyValue::new("device", interface)]);
+        }
+    }
+
+    fn net_recv_errs(counter: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::net::dev_status().unwrap();
+
+        for (interface, stats) in stats {
+            counter.observe(stats.recv_errs, &[KeyValue::new("device", interface)]);
+        }
+    }
+
+    fn net_sent_bytes(counter: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::net::dev_status().unwrap();
+
+        for (interface, stats) in stats {
+            counter.observe(stats.sent_bytes, &[KeyValue::new("device", interface)]);
+        }
+    }
+
+    fn net_sent_packets(counter: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::net::dev_status().unwrap();
+
+        for (interface, stats) in stats {
+            counter.observe(stats.sent_packets, &[KeyValue::new("device", interface)]);
+        }
+    }
+
+    fn net_sent_errs(counter: &dyn AsyncInstrument<u64>) {
+        let stats = procfs::net::dev_status().unwrap();
+
+        for (interface, stats) in stats {
+            counter.observe(stats.sent_errs, &[KeyValue::new("device", interface)]);
         }
     }
 }

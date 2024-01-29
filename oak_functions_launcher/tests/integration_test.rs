@@ -15,12 +15,14 @@
 
 //! Integration tests for the Oak Functions Launcher.
 
+use std::{io::Write, time::Duration};
+
+use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_client::OakFunctionsClient;
 use oak_functions_launcher::{
     proto::oak::functions::OakFunctionsAsyncClient, update_lookup_data, LookupDataConfig,
 };
 use oak_launcher_utils::launcher;
-use std::{io::Write, time::Duration};
 use ubyte::ByteUnit;
 use xtask::{launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
 
@@ -44,9 +46,12 @@ async fn test_launcher_key_value_lookup() {
     // Wait for the server to start up.
     tokio::time::sleep(Duration::from_secs(20)).await;
 
-    let mut client = OakFunctionsClient::new(&format!("http://localhost:{port}"))
-        .await
-        .expect("failed to create client");
+    let mut client = OakFunctionsClient::new(
+        &format!("http://localhost:{port}"),
+        &InsecureAttestationVerifier {},
+    )
+    .await
+    .expect("failed to create client");
 
     let response = client.invoke(b"test_key").await.expect("failed to invoke");
     assert_eq!(response, b"test_value");
@@ -72,9 +77,12 @@ async fn test_launcher_echo() {
     // Wait for the server to start up.
     tokio::time::sleep(Duration::from_secs(20)).await;
 
-    let mut client = OakFunctionsClient::new(&format!("http://localhost:{port}"))
-        .await
-        .expect("failed to create client");
+    let mut client = OakFunctionsClient::new(
+        &format!("http://localhost:{port}"),
+        &InsecureAttestationVerifier {},
+    )
+    .await
+    .expect("failed to create client");
 
     let response = client.invoke(b"xxxyyyzzz").await.expect("failed to invoke");
     assert_eq!(std::str::from_utf8(&response).unwrap(), "xxxyyyzzz");
@@ -108,9 +116,12 @@ async fn test_launcher_weather_lookup() {
     // Wait for the server to start up.
     tokio::time::sleep(Duration::from_secs(20)).await;
 
-    let mut client = OakFunctionsClient::new(&format!("http://localhost:{port}"))
-        .await
-        .expect("failed to create client");
+    let mut client = OakFunctionsClient::new(
+        &format!("http://localhost:{port}"),
+        &InsecureAttestationVerifier {},
+    )
+    .await
+    .expect("failed to create client");
 
     let response = client
         .invoke(br#"{"lat":0,"lng":0}"#)
@@ -193,6 +204,7 @@ async fn test_load_large_lookup_data() {
             "oak_stage0.bin",
         ]),
         gdb: None,
+        initrd: None,
         memory_size: Some("256M".to_string()),
     };
     log::debug!("launcher params: {:?}", params);
@@ -288,6 +300,7 @@ async fn test_load_two_gib_lookup_data() {
             "oak_stage0.bin",
         ]),
         gdb: None,
+        initrd: None,
         memory_size: Some("256M".to_string()),
     };
     log::debug!("launcher params: {:?}", params);

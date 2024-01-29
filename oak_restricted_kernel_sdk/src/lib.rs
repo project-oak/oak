@@ -15,15 +15,31 @@
 //
 
 #![cfg_attr(not(test), no_std)]
-#![feature(c_size_t)]
 
 extern crate alloc;
 
 mod channel;
-pub mod dice;
+mod dice;
 mod logging;
-mod raw_syscall;
-pub mod syscall;
 
-pub use channel::FileDescriptorChannel;
+pub use channel::*;
+pub use dice::*;
 pub use logging::StderrLogger;
+use logging::STDERR_LOGGER;
+pub use oak_restricted_kernel_sdk_proc_macro::entrypoint;
+
+/// Initialization function that sets up the allocator and logger.
+pub fn init(log_level: log::LevelFilter) {
+    log::set_logger(&STDERR_LOGGER).expect("failed to set logger");
+    log::set_max_level(log_level);
+    oak_enclave_runtime_support::init();
+}
+
+pub fn alloc_error_handler(layout: ::core::alloc::Layout) -> ! {
+    panic!("error allocating memory: {:#?}", layout);
+}
+
+pub fn panic_handler(info: &core::panic::PanicInfo) -> ! {
+    log::error!("PANIC: {}", info);
+    oak_restricted_kernel_interface::syscall::exit(-1);
+}

@@ -30,8 +30,7 @@ touch "${KOKORO_ARTIFACTS_DIR}/binaries/git_commit_${KOKORO_GIT_COMMIT_oak:?}"
 # Copy the generated binaries to Placer. The timestamps are used to convey
 # the creation time.
 readonly generated_binaries=(
-    ./oak_restricted_kernel_bin/target/x86_64-unknown-none/release/oak_restricted_kernel_bin
-    ./oak_restricted_kernel_bin/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_bin
+    ./oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin
     ./stage0_bin/target/x86_64-unknown-none/release/stage0_bin
     ./enclave_apps/target/x86_64-unknown-none/release/key_xor_test_app
     ./enclave_apps/target/x86_64-unknown-none/release/oak_echo_enclave_app

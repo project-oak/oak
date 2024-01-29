@@ -21,6 +21,14 @@ mod client;
 mod dice;
 mod image;
 
+use std::{
+    error::Error,
+    fs::{self, create_dir},
+    io::ErrorKind,
+    path::Path,
+    str::FromStr,
+};
+
 use anyhow::Context;
 use clap::Parser;
 use client::LauncherClient;
@@ -29,15 +37,8 @@ use nix::{
     mount::{mount, umount, MsFlags},
     unistd::{chdir, chroot},
 };
-use oak_remote_attestation::proto::oak::attestation::v1::DiceData;
+use oak_attestation::proto::oak::attestation::v1::DiceData;
 use prost::Message;
-use std::{
-    error::Error,
-    fs::{self, create_dir},
-    io::ErrorKind,
-    path::Path,
-    str::FromStr,
-};
 use tokio::process::Command;
 use x86_64::PhysAddr;
 

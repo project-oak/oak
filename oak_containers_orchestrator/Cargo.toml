@@ -10,14 +10,17 @@ anyhow = "*"
 ciborium = { version = "*", default-features = false }
 clap = { version = "*", features = ["derive"] }
 coset = { version = "*", features = ["std"] }
+hpke = { version = "*", default-features = false, features = [
+  "alloc",
+  "x25519",
+] }
 log = "*"
-nix = "*"
-oak_containers_orchestrator_client = { workspace = true }
+nix = { version = "*", features = ["user"] }
+oak_attestation = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
-oak_remote_attestation = { workspace = true }
 oci-spec = "*"
-opentelemetry_api = { version = "*", default-features = false, features = [
+opentelemetry = { version = "*", default-features = false, features = [
   "metrics",
 ] }
 opentelemetry_sdk = { version = "*", default-features = false, features = [
@@ -25,6 +28,7 @@ opentelemetry_sdk = { version = "*", default-features = false, features = [
   "rt-tokio",
 ] }
 opentelemetry-otlp = { version = "*", default-features = false, features = [
+  "grpc-tonic",
   "metrics",
 ] }
 p256 = { version = "*", features = ["ecdsa"] }
@@ -49,6 +53,7 @@ tokio-stream = { version = "*", features = ["net"] }
 tokio-util = { version = "*", default-features = false }
 tonic = { workspace = true }
 walkdir = "*"
+zeroize = "*"
 
 [build-dependencies]
 oak_grpc_utils = { workspace = true }

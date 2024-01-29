@@ -16,8 +16,9 @@
 
 //! Rust instruction wrappers for managing page state and interacting with the hypervisor.
 
-use bitflags::bitflags;
 use core::arch::asm;
+
+use bitflags::bitflags;
 use strum::FromRepr;
 
 /// Whether a page is in the validated state or not.

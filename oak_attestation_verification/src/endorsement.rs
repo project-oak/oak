@@ -16,17 +16,17 @@
 
 //! Verifies binary endorsements as coming from Transparent Release.
 
+use base64::{prelude::BASE64_STANDARD, Engine as _};
+use oak_proto_rust::oak::HexDigest;
+
 use crate::{
     claims::{
         get_digest, parse_endorsement_statement, validate_endorsement, verify_validity_duration,
         EndorsementStatement,
     },
-    proto::oak::HexDigest,
     rekor::{get_rekor_log_entry_body, verify_rekor_log_entry},
     util::{convert_pem_to_raw, equal_keys, is_hex_digest_match, MatchResult},
 };
-use anyhow::Context;
-use base64::{prelude::BASE64_STANDARD, Engine as _};
 
 /// Compares the digest contained in the endorsement against the given one.
 pub fn verify_binary_digest(
@@ -80,8 +80,14 @@ pub fn verify_endorser_public_key(
 
     let actual_pem_vec = BASE64_STANDARD
         .decode(body.spec.signature.public_key.content)
-        .context("couldn't base64-decode public key bytes from server")?;
-    let actual_pem = core::str::from_utf8(&actual_pem_vec)?;
+        .map_err(|error| {
+            anyhow::anyhow!(
+                "couldn't base64-decode public key bytes from server: {}",
+                error
+            )
+        })?;
+    let actual_pem =
+        core::str::from_utf8(&actual_pem_vec).map_err(|error| anyhow::anyhow!(error))?;
     let actual = convert_pem_to_raw(actual_pem)?;
 
     if !equal_keys(endorser_public_key, &actual)? {

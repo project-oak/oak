@@ -18,16 +18,19 @@
 //! <https://www.rfc-editor.org/rfc/rfc9180.html>
 //! <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
 
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
+
+use anyhow::{anyhow, Context};
+use async_trait::async_trait;
+use hpke::Deserializable;
+
 use crate::{
     hpke::{
-        setup_base_recipient, setup_base_sender, KeyPair, PrivateKey, PublicKey, RecipientContext,
-        SenderContext,
+        deserialize_nonce, generate_random_nonce, setup_base_recipient, setup_base_sender, KeyPair,
+        PrivateKey, PublicKey, RecipientContext, SenderContext,
     },
     proto::oak::crypto::v1::{AeadEncryptedMessage, EncryptedRequest, EncryptedResponse},
 };
-use alloc::{boxed::Box, sync::Arc, vec::Vec};
-use anyhow::{anyhow, Context};
-use async_trait::async_trait;
 
 /// Info string used by Hybrid Public Key Encryption;
 pub(crate) const OAK_HPKE_INFO: &[u8] = b"Oak Hybrid Public Key Encryption v1";
@@ -42,6 +45,41 @@ impl Default for EncryptionKeyProvider {
     }
 }
 
+impl TryFrom<&oak_dice::evidence::RestrictedKernelDiceData> for EncryptionKeyProvider {
+    type Error = anyhow::Error;
+    fn try_from(
+        dice_data: &oak_dice::evidence::RestrictedKernelDiceData,
+    ) -> Result<Self, Self::Error> {
+        let claims = dice_data
+            .evidence
+            .application_keys
+            .claims()
+            .map_err(|err| {
+                anyhow::anyhow!("couldn't parse encryption public key certificate: {err}")
+            })?;
+        let private_key = PrivateKey::from_bytes(
+            &dice_data.application_private_keys.encryption_private_key
+                [..oak_dice::evidence::X25519_PRIVATE_KEY_SIZE],
+        )
+        .map_err(|error| anyhow::anyhow!("couldn't deserialize private key: {}", error))?;
+        let public_key = {
+            let cose_key =
+                oak_dice::cert::get_public_key_from_claims_set(&claims).map_err(|err| {
+                    anyhow::anyhow!("couldn't get public key from certificate: {err}")
+                })?;
+            oak_dice::cert::cose_key_to_hpke_public_key(&cose_key)
+                .map_err(|err| anyhow::anyhow!("couldn't extract public key: {err}"))?
+        };
+        let encryption_key_provider = EncryptionKeyProvider::new(
+            private_key,
+            PublicKey::from_bytes(&public_key)
+                .map_err(|err| anyhow::anyhow!("couldn't decode public key: {err}"))?,
+        );
+        Ok(encryption_key_provider)
+    }
+}
+
+// TODO(#4513): Merge `EncryptionKeyProvider` and `hpke::KeyPair` into `EncryptionKey`.
 impl EncryptionKeyProvider {
     /// Creates a crypto provider with a newly generated key pair.
     pub fn generate() -> Self {
@@ -57,6 +95,7 @@ impl EncryptionKeyProvider {
     }
 
     pub fn get_private_key(&self) -> Vec<u8> {
+        // TODO(#4513): Implement Rust protections for the private key.
         self.key_pair.get_private_key()
     }
 
@@ -67,15 +106,14 @@ impl EncryptionKeyProvider {
     }
 }
 
-pub trait RecipientContextGenerator {
-    // TODO(#3841): Implement Oak Kernel Crypto API and return corresponding session keys instead.
+pub trait EncryptionKeyHandle {
     fn generate_recipient_context(
         &self,
         encapsulated_public_key: &[u8],
     ) -> anyhow::Result<RecipientContext>;
 }
 
-impl RecipientContextGenerator for EncryptionKeyProvider {
+impl EncryptionKeyHandle for EncryptionKeyProvider {
     fn generate_recipient_context(
         &self,
         encapsulated_public_key: &[u8],
@@ -86,7 +124,7 @@ impl RecipientContextGenerator for EncryptionKeyProvider {
 }
 
 #[async_trait]
-pub trait AsyncRecipientContextGenerator {
+pub trait AsyncEncryptionKeyHandle {
     async fn generate_recipient_context(
         &self,
         encapsulated_public_key: &[u8],
@@ -94,12 +132,12 @@ pub trait AsyncRecipientContextGenerator {
 }
 
 #[async_trait]
-impl AsyncRecipientContextGenerator for EncryptionKeyProvider {
+impl AsyncEncryptionKeyHandle for EncryptionKeyProvider {
     async fn generate_recipient_context(
         &self,
         encapsulated_public_key: &[u8],
     ) -> anyhow::Result<RecipientContext> {
-        (self as &dyn RecipientContextGenerator).generate_recipient_context(encapsulated_public_key)
+        (self as &dyn EncryptionKeyHandle).generate_recipient_context(encapsulated_public_key)
     }
 }
 
@@ -138,10 +176,7 @@ impl ClientEncryptor {
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<EncryptedRequest> {
-        let nonce = self
-            .sender_context
-            .generate_nonce()
-            .context("couldn't generate nonce")?;
+        let nonce = generate_random_nonce();
         let ciphertext = self
             .sender_context
             .seal(&nonce, plaintext, associated_data)
@@ -169,10 +204,13 @@ impl ClientEncryptor {
             .encrypted_message
             .as_ref()
             .context("response doesn't contain encrypted message")?;
+        let nonce =
+            deserialize_nonce(&encrypted_message.nonce).context("couldn't deserialize nonce")?;
 
         let plaintext = self
             .sender_context
             .open(
+                &nonce,
                 &encrypted_message.ciphertext,
                 &encrypted_message.associated_data,
             )
@@ -194,9 +232,9 @@ pub struct ServerEncryptor {
 impl ServerEncryptor {
     pub fn create(
         serialized_encapsulated_public_key: &[u8],
-        recipient_context_generator: Arc<dyn RecipientContextGenerator>,
+        encryption_key_handle: Arc<dyn EncryptionKeyHandle>,
     ) -> anyhow::Result<Self> {
-        let recipient_context = recipient_context_generator
+        let recipient_context = encryption_key_handle
             .generate_recipient_context(serialized_encapsulated_public_key)
             .context("couldn't generate recipient crypto context")?;
         Ok(Self::new(recipient_context))
@@ -217,9 +255,13 @@ impl ServerEncryptor {
             .encrypted_message
             .as_ref()
             .context("request doesn't contain encrypted message")?;
+        let nonce =
+            deserialize_nonce(&encrypted_message.nonce).context("couldn't deserialize nonce")?;
+
         let plaintext = self
             .recipient_context
             .open(
+                &nonce,
                 &encrypted_message.ciphertext,
                 &encrypted_message.associated_data,
             )
@@ -235,10 +277,7 @@ impl ServerEncryptor {
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<EncryptedResponse> {
-        let nonce = self
-            .recipient_context
-            .generate_nonce()
-            .context("couldn't generate nonce")?;
+        let nonce = generate_random_nonce();
         let ciphertext = self
             .recipient_context
             .seal(&nonce, plaintext, associated_data)
@@ -266,19 +305,19 @@ impl ServerEncryptor {
 // the Restricted Kernel.
 pub struct AsyncServerEncryptor<'a, G>
 where
-    G: AsyncRecipientContextGenerator + Send + Sync,
+    G: AsyncEncryptionKeyHandle + Send + Sync,
 {
-    recipient_context_generator: &'a G,
+    encryption_key_handle: &'a G,
     inner: Option<ServerEncryptor>,
 }
 
 impl<'a, G> AsyncServerEncryptor<'a, G>
 where
-    G: AsyncRecipientContextGenerator + Send + Sync,
+    G: AsyncEncryptionKeyHandle + Send + Sync,
 {
-    pub fn new(recipient_context_generator: &'a G) -> Self {
+    pub fn new(encryption_key_handle: &'a G) -> Self {
         Self {
-            recipient_context_generator,
+            encryption_key_handle,
             inner: None,
         }
     }
@@ -298,7 +337,7 @@ where
                     .as_ref()
                     .context("initial request message doesn't contain encapsulated public key")?;
                 let recipient_context = self
-                    .recipient_context_generator
+                    .encryption_key_handle
                     .generate_recipient_context(serialized_encapsulated_public_key)
                     .await
                     .context("couldn't generate recipient crypto context")?;

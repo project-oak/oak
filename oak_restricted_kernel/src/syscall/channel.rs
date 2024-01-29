@@ -14,10 +14,12 @@
 // limitations under the License.
 //
 
-use super::fd::FileDescriptor;
 use alloc::boxed::Box;
+
 use oak_channel::Channel;
 use oak_restricted_kernel_interface::{Errno, OAK_CHANNEL_FD};
+
+use super::fd::FileDescriptor;
 
 #[repr(transparent)]
 pub struct ChannelDescriptor {

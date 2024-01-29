@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
-use crate::{files::file_contains, internal::*};
 use std::path::Path;
+
+use crate::{files::file_contains, internal::*};
 
 /// A [`Runnable`] command that checks for the existence of source files without the necessary
 /// license header.

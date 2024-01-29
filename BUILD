@@ -38,3 +38,10 @@ platform(
         "@platforms//cpu:x86_64",
     ],
 )
+
+filegroup(
+    name = "clang_tidy_config",
+    srcs = [".clang-tidy"],
+    visibility =
+        ["//visibility:public"],
+)

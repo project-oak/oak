@@ -13,15 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::proto::oak::{
-    containers::{
-        launcher_server::{Launcher, LauncherServer},
-        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
-    },
-    session::v1::AttestationEvidence,
+use std::{
+    pin::Pin,
+    sync::{Arc, Mutex},
 };
+
 use anyhow::anyhow;
 use futures::{FutureExt, Stream};
+use oak_attestation::proto::oak::attestation::v1::Evidence;
 use opentelemetry_proto::tonic::{
     collector::{
         logs::v1::{
@@ -35,10 +34,6 @@ use opentelemetry_proto::tonic::{
     },
     common::v1::any_value::Value,
 };
-use std::{
-    pin::Pin,
-    sync::{Arc, Mutex},
-};
 use tokio::{
     io::{AsyncReadExt, BufReader},
     net::TcpListener,
@@ -46,6 +41,20 @@ use tokio::{
 };
 use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{transport::Server, Request, Response, Status};
+
+use crate::proto::oak::{
+    containers::{
+        launcher_server::{Launcher, LauncherServer},
+        v1::{
+            hostlib_key_provisioning_server::{
+                HostlibKeyProvisioning, HostlibKeyProvisioningServer,
+            },
+            GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole,
+        },
+        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+    },
+    session::v1::AttestationEvidence,
+};
 
 // Most gRPC implementations limit message sizes to 4MiB. Let's stay
 // comfortably below that by limiting responses to 3MiB.
@@ -59,7 +68,8 @@ struct LauncherServerImplementation {
     container_bundle: std::path::PathBuf,
     application_config: Option<std::path::PathBuf>,
     // Will be used to send the Attestation Evidence to the Launcher.
-    attestation_evidence_sender: Mutex<Option<Sender<AttestationEvidence>>>,
+    // TODO(#4627): Remove old `AttestationEvidence` message.
+    attestation_evidence_sender: Mutex<Option<Sender<(AttestationEvidence, Evidence)>>>,
     // Will be used to notify the untrusted application that the trusted application is ready and
     // listening on a socket address.
     app_ready_notifier: Mutex<Option<Sender<()>>>,
@@ -152,7 +162,18 @@ impl Launcher for LauncherServerImplementation {
         &self,
         request: Request<SendAttestationEvidenceRequest>,
     ) -> Result<Response<()>, tonic::Status> {
+        let request = request.into_inner();
+        let evidence = request.dice_evidence.ok_or_else(|| {
+            tonic::Status::internal("send_attestation_evidence_request doesn't have evidence")
+        })?;
+        // TODO(#4627): Remove old `AttestationEvidence` message.
         #[allow(deprecated)]
+        let deprecated_evidence = request.evidence.ok_or_else(|| {
+            tonic::Status::internal(
+                "send_attestation_evidence_request doesn't have deprecated evidence",
+            )
+        })?;
+
         self.attestation_evidence_sender
             .lock()
             .map_err(|err| {
@@ -164,7 +185,7 @@ impl Launcher for LauncherServerImplementation {
             .ok_or_else(|| {
                 tonic::Status::invalid_argument("app has already sent an attestation evidence")
             })?
-            .send(request.into_inner().evidence.unwrap_or_default())
+            .send((deprecated_evidence, evidence))
             .map_err(|_err| {
                 tonic::Status::internal("couldn't send attestation evidence".to_string())
             })?;
@@ -186,6 +207,29 @@ impl Launcher for LauncherServerImplementation {
             .send(())
             .map_err(|_err| tonic::Status::internal("couldn't send notification".to_string()))?;
         Ok(tonic::Response::new(()))
+    }
+}
+
+#[tonic::async_trait]
+impl HostlibKeyProvisioning for LauncherServerImplementation {
+    async fn get_key_provisioning_role(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<GetKeyProvisioningRoleResponse>, tonic::Status> {
+        // TODO(#4442): Implement setting Hostlib Key Provisioning role via an input argument.
+        Ok(tonic::Response::new(GetKeyProvisioningRoleResponse {
+            role: KeyProvisioningRole::Leader.into(),
+        }))
+    }
+
+    async fn get_group_keys(
+        &self,
+        _request: Request<()>,
+    ) -> Result<Response<GetGroupKeysResponse>, tonic::Status> {
+        // TODO(#4442): Implement sending group keys to the orchestrator.
+        Err(tonic::Status::unimplemented(
+            "Key Provisioning is not implemented",
+        ))
     }
 }
 
@@ -254,7 +298,7 @@ pub async fn new(
     system_image: std::path::PathBuf,
     container_bundle: std::path::PathBuf,
     application_config: Option<std::path::PathBuf>,
-    attestation_evidence_sender: Sender<AttestationEvidence>,
+    attestation_evidence_sender: Sender<(AttestationEvidence, Evidence)>,
     app_ready_notifier: Sender<()>,
     shutdown: Receiver<()>,
 ) -> Result<(), anyhow::Error> {
@@ -267,6 +311,7 @@ pub async fn new(
     });
     Server::builder()
         .add_service(LauncherServer::from_arc(server_impl.clone()))
+        .add_service(HostlibKeyProvisioningServer::from_arc(server_impl.clone()))
         .add_service(MetricsServiceServer::from_arc(server_impl.clone()))
         .add_service(LogsServiceServer::from_arc(server_impl))
         .serve_with_incoming_shutdown(TcpListenerStream::new(listener), shutdown.map(|_| ()))

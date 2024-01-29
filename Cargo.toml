@@ -5,6 +5,7 @@ members = [
   "micro_rpc",
   "micro_rpc_build",
   "micro_rpc_tests",
+  "oak_attestation",
   "oak_attestation_verification",
   "oak_channel",
   "oak_client",
@@ -12,7 +13,7 @@ members = [
   "oak_containers_hello_world_untrusted_app",
   "oak_containers_launcher",
   "oak_containers_orchestrator",
-  "oak_containers_orchestrator_client",
+  "oak_containers_sdk",
   "oak_containers_stage1",
   "oak_containers_syslogd",
   "oak_core",
@@ -39,26 +40,33 @@ members = [
   "oak_functions_sdk/tests/lookup_module",
   "oak_functions_sdk/tests/testing_module",
   "oak_functions_service",
+  "oak_functions_enclave_service",
   "oak_functions_test_utils",
   "oak_hello_world_linux_init",
   "oak_launcher_utils",
-  "oak_remote_attestation",
+  "oak_proto_rust",
   "oak_restricted_kernel",
+  "oak_restricted_kernel_dice",
   "oak_restricted_kernel_interface",
   "oak_restricted_kernel_sdk",
+  "oak_restricted_kernel_launcher",
   "oak_sev_guest",
+  "oak_sev_snp_attestation_report",
   "oak_simple_io",
   "oak_tdx_guest",
   "oak_virtio",
   "sev_serial",
   "snp_measurement",
   "stage0",
+  "stage0_dice",
   "testing/oak_echo_service",
   "xtask",
+  "oak_restricted_kernel_sdk_proc_macro"
 ]
 exclude = [
   "fuzz",
   "enclave_applications",
+  "micro_rpc_workspace_test",
   "oak_functions/loader/fuzz",
   "oak_restricted_kernel_bin",
   "oak_restricted_kernel_wrapper",
@@ -76,11 +84,13 @@ benchmark = { path = "./oak_functions/examples/benchmark/module" }
 location_utils = { path = "./oak_functions/location_utils" }
 micro_rpc = { path = "./micro_rpc" }
 micro_rpc_build = { path = "./micro_rpc_build" }
+oak_attestation = { path = "./oak_attestation" }
 oak_attestation_verification = { path = "./oak_attestation_verification" }
 oak_channel = { path = "./oak_channel" }
 oak_client = { path = "./oak_client" }
-oak_containers_orchestrator_client = { path = "./oak_containers_orchestrator_client" }
+oak_containers_orchestrator = { path = "./oak_containers_orchestrator" }
 oak_containers_launcher = { path = "./oak_containers_launcher" }
+oak_containers_sdk = { path = "./oak_containers_sdk" }
 oak_core = { path = "./oak_core" }
 oak_crypto = { path = "./oak_crypto" }
 oak_dice = { path = "./oak_dice" }
@@ -91,16 +101,21 @@ oak_functions_launcher = { path = "./oak_functions_launcher" }
 oak_functions_lookup = { path = "./oak_functions/lookup" }
 oak_functions_sdk = { path = "./oak_functions_sdk" }
 oak_functions_service = { path = "./oak_functions_service", default-features = false }
+oak_functions_enclave_service = { path = "./oak_functions_enclave_service", default-features = false }
 oak_functions_test_utils = { path = "./oak_functions_test_utils" }
 oak_functions_wasm = { path = "./oak_functions/wasm" }
 oak_grpc_utils = { path = "./oak_grpc_utils" }
 oak_launcher_utils = { path = "./oak_launcher_utils" }
 oak_linux_boot_params = { path = "./linux_boot_params" }
 oak_logger = { path = "./oak_functions/logger" }
-oak_remote_attestation = { path = "./oak_remote_attestation" }
+oak_proto_rust = { path = "./oak_proto_rust" }
+oak_restricted_kernel_dice = { path = "./oak_restricted_kernel_dice" }
 oak_restricted_kernel_sdk = { path = "./oak_restricted_kernel_sdk" }
+oak_restricted_kernel_sdk_proc_macro = { path = "./oak_restricted_kernel_sdk_proc_macro" }
 oak_restricted_kernel_interface = { path = "./oak_restricted_kernel_interface" }
 oak_sev_guest = { path = "./oak_sev_guest", default-features = false }
+oak_sev_snp_attestation_report = { path = "./oak_sev_snp_attestation_report" }
+oak_stage0_dice = { path = "./stage0_dice" }
 oak_simple_io = { path = "./oak_simple_io" }
 oak_tdx_guest = { path = "./oak_tdx_guest" }
 oak_virtio = { path = "./oak_virtio" }

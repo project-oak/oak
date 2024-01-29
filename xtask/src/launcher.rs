@@ -32,9 +32,11 @@ static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
     ])
 });
 
-use crate::{internal::*, workspace_path};
-use once_cell::sync::Lazy;
 use std::path::{Path, PathBuf};
+
+use once_cell::sync::Lazy;
+
+use crate::{internal::*, workspace_path};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct App {

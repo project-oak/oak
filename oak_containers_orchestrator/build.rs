@@ -18,15 +18,17 @@ use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate gRPC code for Orchestrator services.
     generate_grpc_code(
-        "../",
         &[
-            "oak_containers/proto/interfaces.proto",
-            "proto/key_provisioning/key_provisioning.proto",
-            "proto/containers/orchestrator_crypto.proto",
-            "proto/containers/hostlib_key_provisioning.proto",
+            "../oak_containers/proto/interfaces.proto",
+            "../proto/key_provisioning/key_provisioning.proto",
+            "../proto/containers/orchestrator_crypto.proto",
+            "../proto/containers/hostlib_key_provisioning.proto",
+            "../proto/session/messages.proto",
         ],
+        "..",
         CodegenOptions {
             build_server: true,
+            build_client: true,
             ..Default::default()
         },
     )?;

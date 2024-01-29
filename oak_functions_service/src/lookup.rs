@@ -14,17 +14,19 @@
 // limitations under the License.
 //
 
-use crate::logger::OakLogger;
 use alloc::{
     format,
     string::{String, ToString},
     sync::Arc,
     vec::Vec,
 };
+
 use bytes::Bytes;
 use hashbrown::HashMap;
 use log::{info, Level};
 use spinning_top::Spinlock;
+
+use crate::logger::OakLogger;
 
 // Data maintains the invariant on lookup data to have [at most one
 // value](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md#invariant-at-most-one-value)
@@ -81,20 +83,17 @@ impl DataBuilder {
 /// idiom `Arc<Spinlock<T>>` we have `Spinlock<Arc<T>>`.
 ///
 /// In the future we may replace both the mutex and the hash map with something like RCU.
-pub struct LookupDataManager<L: OakLogger + Clone> {
+pub struct LookupDataManager {
     data: Spinlock<Arc<Data>>,
     // Behind a lock, because we have multiple references to LookupDataManager and need to mutate
     // data builder.
     data_builder: Spinlock<DataBuilder>,
-    logger: L,
+    logger: Arc<dyn OakLogger>,
 }
 
-impl<L> LookupDataManager<L>
-where
-    L: OakLogger + Clone,
-{
+impl LookupDataManager {
     /// Creates a new instance with empty backing data.
-    pub fn new_empty(logger: L) -> Self {
+    pub fn new_empty(logger: Arc<dyn OakLogger>) -> Self {
         Self {
             data: Spinlock::new(Arc::new(Data::new())),
             // Incrementally builds the backing data that will be used by new `LookupData`
@@ -105,7 +104,7 @@ where
     }
 
     /// Creates an instance of LookupData populated with the given entries.
-    pub fn for_test(data: Data, logger: L) -> Self {
+    pub fn for_test(data: Data, logger: Arc<dyn OakLogger>) -> Self {
         let test_manager = Self::new_empty(logger);
         *test_manager.data.lock() = Arc::new(data);
         test_manager
@@ -159,7 +158,7 @@ where
     }
 
     /// Creates a new `LookupData` instance with a reference to the current backing data.
-    pub fn create_lookup_data(&self) -> LookupData<L> {
+    pub fn create_lookup_data(&self) -> LookupData {
         let keys;
         let data = {
             let data = self.data.lock().clone();
@@ -173,16 +172,13 @@ where
 
 /// Provides access to shared lookup data.
 #[derive(Clone)]
-pub struct LookupData<L: OakLogger + Clone> {
+pub struct LookupData {
     data: Arc<Data>,
-    logger: L,
+    logger: Arc<dyn OakLogger>,
 }
 
-impl<L> LookupData<L>
-where
-    L: OakLogger + Clone,
-{
-    fn new(data: Arc<Data>, logger: L) -> Self {
+impl LookupData {
+    fn new(data: Arc<Data>, logger: Arc<dyn OakLogger>) -> Self {
         Self { data, logger }
     }
 
@@ -234,7 +230,8 @@ mod tests {
     use super::*;
 
     #[derive(Clone)]
-    struct TestLogger {}
+    struct TestLogger;
+
     impl OakLogger for TestLogger {
         fn log_sensitive(&self, _level: Level, _message: &str) {}
         fn log_public(&self, _level: Level, _message: &str) {}
@@ -244,7 +241,7 @@ mod tests {
     fn test_lookup_data_instance_consistency() {
         // Ensure that the data for a specific lookup data instance remains consistent even if the
         // data in the manager has been updated.
-        let manager = LookupDataManager::new_empty(TestLogger {});
+        let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
         let lookup_data_0 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
 
@@ -266,7 +263,7 @@ mod tests {
 
     #[test]
     fn test_update_lookup_data_one_chunk() {
-        let manager = LookupDataManager::new_empty(TestLogger {});
+        let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
         manager.extend_next_lookup_data(create_test_data(0, 2));
         manager.finish_next_lookup_data();
         let lookup_data = manager.create_lookup_data();
@@ -275,7 +272,7 @@ mod tests {
 
     #[test]
     fn test_update_lookup_data_two_chunks() {
-        let manager = LookupDataManager::new_empty(TestLogger {});
+        let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
         let lookup_data_0 = manager.create_lookup_data();
 
         manager.extend_next_lookup_data(create_test_data(0, 2));
@@ -292,7 +289,7 @@ mod tests {
 
     #[test]
     fn test_update_lookup_four_chunks() {
-        let manager = LookupDataManager::new_empty(TestLogger {});
+        let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
 
         manager.extend_next_lookup_data(create_test_data(0, 2));
         manager.extend_next_lookup_data(create_test_data(2, 3));
@@ -308,7 +305,7 @@ mod tests {
 
     #[test]
     fn test_update_lookup_data_abort_by_sender() {
-        let manager = LookupDataManager::new_empty(TestLogger {});
+        let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
         let lookup_data_0 = manager.create_lookup_data();
 
         manager.extend_next_lookup_data(create_test_data(0, 2));

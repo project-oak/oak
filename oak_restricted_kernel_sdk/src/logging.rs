@@ -16,7 +16,9 @@
 
 use core::fmt::Write;
 
-use crate::syscall::{fsync, write};
+use oak_restricted_kernel_interface::syscall::{fsync, write};
+
+pub static STDERR_LOGGER: StderrLogger = StderrLogger {};
 
 struct Stderr {}
 

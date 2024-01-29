@@ -14,15 +14,17 @@
 // limitations under the License.
 //
 
+use alloc::{alloc::Global, vec};
+
+use rand::RngCore;
+use rust_hypervisor_firmware_virtio::device::VirtioBaseDevice;
+
 use super::*;
 use crate::{
     test::{identity_map, inverse_identity_map, new_valid_transport, TestingTransport},
     vsock::{HOST_CID, QUEUE_SIZE},
     Read, Write,
 };
-use alloc::{alloc::Global, vec};
-use rand::RngCore;
-use rust_hypervisor_firmware_virtio::device::VirtioBaseDevice;
 
 const GUEST_CID: u64 = 3;
 const HOST_PORT: u32 = 1111;

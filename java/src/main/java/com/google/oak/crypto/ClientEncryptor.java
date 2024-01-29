@@ -82,7 +82,7 @@ public class ClientEncryptor implements AutoCloseable {
   public final Result<EncryptedRequest, Exception> encrypt(
       final byte[] plaintext, final byte[] associatedData) {
     // Encrypt request.
-    return senderContext.generateNonce().andThen(
+    return Hpke.generateRandomNonce().andThen(
         nonce -> senderContext.seal(nonce, plaintext, associatedData).map(ciphertext -> {
           // Create request message.
           EncryptedRequest.Builder encryptedRequestBuilder =
@@ -114,11 +114,12 @@ public class ClientEncryptor implements AutoCloseable {
   public final Result<DecryptionResult, Exception> decrypt(
       final EncryptedResponse encryptedResponse) {
     AeadEncryptedMessage aeadEncryptedMessage = encryptedResponse.getEncryptedMessage();
+    byte[] nonce = aeadEncryptedMessage.getNonce().toByteArray();
     byte[] ciphertext = aeadEncryptedMessage.getCiphertext().toByteArray();
     byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
 
     // Decrypt response.
-    return senderContext.open(ciphertext, associatedData)
+    return senderContext.open(nonce, ciphertext, associatedData)
         .map(plaintext -> new DecryptionResult(plaintext, associatedData));
   }
 }

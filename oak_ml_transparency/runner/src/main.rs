@@ -14,14 +14,15 @@
 // limitations under the License.
 //
 
-use clap::Parser;
-use log::info;
-use serde_json::{self};
 use std::{
     fs::File,
     io::{Read, Write},
     path::PathBuf,
 };
+
+use clap::Parser;
+use log::info;
+use serde_json::{self};
 
 #[derive(Parser, Clone)]
 #[command(about = "Oak Model Evaluation Runner")]

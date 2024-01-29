@@ -21,30 +21,14 @@
 extern crate alloc;
 
 use alloc::{vec, vec::Vec};
-use core::panic::PanicInfo;
-use log::info;
-use oak_channel::{Read, Write};
-use oak_restricted_kernel_sdk::{FileDescriptorChannel, StderrLogger};
+
+use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel, Read, Write};
 
 const MESSAGE_SIZE: usize = 1;
 
-static LOGGER: StderrLogger = StderrLogger {};
-
-#[no_mangle]
-fn _start() -> ! {
-    log::set_logger(&LOGGER).unwrap();
-    log::set_max_level(log::LevelFilter::Debug);
-    oak_enclave_runtime_support::init();
-    main();
-}
-
-fn main() -> ! {
-    info!("In main!");
-    start_echo_server()
-}
-
 // Starts an echo server that reads single bytes from the channel and writes
 // them back.
+#[entrypoint]
 fn start_echo_server() -> ! {
     let mut channel = FileDescriptorChannel::default();
     loop {
@@ -55,15 +39,4 @@ fn start_echo_server() -> ! {
         };
         channel.write_all(&bytes).expect("couldn't write bytes");
     }
-}
-
-#[alloc_error_handler]
-fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
-    panic!("error allocating memory: {:#?}", layout);
-}
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    log::error!("PANIC: {}", info);
-    oak_restricted_kernel_sdk::syscall::exit(-1);
 }

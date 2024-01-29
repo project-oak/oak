@@ -15,6 +15,7 @@
 //
 
 use core::arch::asm;
+
 use x86_64::registers::{
     control::{Cr0, Cr0Flags, Cr4, Cr4Flags},
     mxcsr::{read, write, MxCsr},

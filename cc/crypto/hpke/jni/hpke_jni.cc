@@ -18,6 +18,7 @@
 
 #include "../recipient_context.h"
 #include "../sender_context.h"
+#include "../utils.h"
 #include "absl/status/statusor.h"
 #include "com_google_oak_crypto_hpke_Hpke.h"
 #include "jni_helper.h"
@@ -95,4 +96,16 @@ JNIEXPORT jobject JNICALL Java_com_google_oak_crypto_hpke_Hpke_nativeSetupBaseRe
                                              (long)native_recipient_context->release());
 
   return recipient_context;
+}
+
+JNIEXPORT jbyteArray JNICALL
+Java_com_google_oak_crypto_hpke_Hpke_nativeGenerateRandomNonce(JNIEnv* env, jclass obj) {
+  absl::StatusOr<std::vector<uint8_t>> nonce = oak::crypto::GenerateRandomNonce();
+  if (!nonce.ok()) {
+    return {};
+  }
+
+  jbyteArray ret = env->NewByteArray(nonce->size());
+  env->SetByteArrayRegion(ret, 0, nonce->size(), reinterpret_cast<const jbyte*>(&nonce->front()));
+  return ret;
 }

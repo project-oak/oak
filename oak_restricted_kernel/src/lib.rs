@@ -41,7 +41,6 @@ mod args;
 mod avx;
 mod boot;
 mod descriptors;
-mod dice_attestation;
 mod elf;
 mod ghcb;
 mod interrupts;
@@ -56,7 +55,6 @@ pub mod shutdown;
 #[cfg(feature = "simple_io_channel")]
 mod simpleio;
 mod snp;
-pub mod snp_guest;
 mod syscall;
 #[cfg(feature = "vsock_channel")]
 mod virtio;
@@ -65,15 +63,10 @@ mod virtio_console;
 
 extern crate alloc;
 
-use crate::{
-    acpi::Acpi,
-    mm::Translator,
-    snp::{get_snp_page_addresses, init_snp_pages},
-    snp_guest::DerivedKey,
-};
 use alloc::{alloc::Allocator, boxed::Box};
 use core::{marker::Sync, panic::PanicInfo, str::FromStr};
-use hkdf::HkdfExtract;
+
+use hkdf::Hkdf;
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
@@ -92,6 +85,16 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 use zerocopy::FromBytes;
+use zeroize::Zeroize;
+
+use crate::{
+    acpi::Acpi,
+    mm::Translator,
+    snp::{get_snp_page_addresses, init_snp_pages},
+};
+
+/// A derived sealing key.
+type DerivedKey = [u8; 32];
 
 /// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 512 GiB of memory, for now.
@@ -184,47 +187,6 @@ pub fn start_kernel(info: &BootParams) -> ! {
             .unwrap()
     };
 
-    let stage0_dice_data = {
-        let dice_memory_slice = {
-            let e820_dice_data_entry = info
-                .e820_table()
-                .iter()
-                .find(|e| e.entry_type() == Some(oak_linux_boot_params::E820EntryType::DiceData))
-                .expect("failed to find dice data");
-
-            let start_addr = {
-                let phys_addr = PhysAddr::new_truncate(
-                    e820_dice_data_entry
-                        .addr()
-                        .try_into()
-                        .expect("couldn't convert usize to u64"),
-                );
-                let pt = PAGE_TABLES.get().expect("failed to get page tables");
-                pt.translate_physical(phys_addr)
-                    .expect("failed to translate physical dice address")
-            };
-
-            // Safety: the E820 table indicated that this is the corrct memory segment.
-            unsafe {
-                core::slice::from_raw_parts_mut::<u8>(
-                    start_addr.as_mut_ptr(),
-                    e820_dice_data_entry.size(),
-                )
-            }
-        };
-
-        let dice_data = oak_dice::evidence::Stage0DiceData::read_from(dice_memory_slice)
-            .expect("failed to read dice data");
-
-        // Overwrite the dice data provided by stage0 after reading.
-        dice_memory_slice.fill(0);
-
-        if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
-            panic!("dice data loaded from stage0 failed validation");
-        }
-        dice_data
-    };
-
     if sev_es_enabled {
         let mapper = PAGE_TABLES.get().unwrap();
         // Now that the page tables have been updated, we have to re-share the GHCB with the
@@ -238,7 +200,6 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 snp_pages.expect("missing SNP CPUID and secrets pages"),
                 mapper,
             );
-            snp::init_guest_message_encryptor();
         }
     }
 
@@ -283,6 +244,64 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let heap_page_range = VMA_ALLOCATOR.lock().allocate(1 << 19).unwrap();
     memory::init_kernel_heap(heap_page_range).unwrap();
 
+    let stage0_dice_data = {
+        let dice_memory_slice = {
+            let e820_dice_data_entry = info
+                .e820_table()
+                .iter()
+                .find(|e| e.entry_type() == Some(oak_linux_boot_params::E820EntryType::DiceData))
+                .expect("failed to find dice data");
+
+            let phys_start_addr = PhysAddr::new_truncate(
+                e820_dice_data_entry
+                    .addr()
+                    .try_into()
+                    .expect("couldn't convert usize to u64"),
+            );
+
+            // Validate that the dice data mem address matches the kernel args if present
+            if let Some(arg) = kernel_args.get(&alloc::format!(
+                "--{}",
+                oak_dice::evidence::DICE_DATA_CMDLINE_PARAM
+            )) {
+                let parsed_arg = u64::from_str_radix(
+                    arg.strip_prefix("0x")
+                        .expect("failed stripping the hex prefix"),
+                    16,
+                )
+                .expect("couldn't parse address as a hex number");
+                if parsed_arg != phys_start_addr.as_u64() {
+                    panic!("inconsistent dice data addresses supplied in the E820 table and kernel args")
+                }
+            }
+
+            let virt_start_addr = {
+                let pt = PAGE_TABLES.get().expect("failed to get page tables");
+                pt.translate_physical(phys_start_addr)
+                    .expect("failed to translate physical dice address")
+            };
+
+            // Safety: the E820 table indicated that this is the corrct memory segment.
+            unsafe {
+                core::slice::from_raw_parts_mut::<u8>(
+                    virt_start_addr.as_mut_ptr(),
+                    e820_dice_data_entry.size(),
+                )
+            }
+        };
+
+        let dice_data = oak_dice::evidence::Stage0DiceData::read_from(dice_memory_slice)
+            .expect("failed to read dice data");
+
+        // Overwrite the dice data provided by stage0 after reading.
+        dice_memory_slice.zeroize();
+
+        if dice_data.magic != oak_dice::evidence::STAGE0_MAGIC {
+            panic!("dice data loaded from stage0 failed validation");
+        }
+        dice_data
+    };
+
     // Okay. We've got page tables and a heap. Set up the "late" IDT, this time with descriptors for
     // user mode.
     let double_fault_stack = mm::allocate_stack();
@@ -319,22 +338,19 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let application = payload::Application::load_raw(&mut *channel)
         .expect("failed to load application binary from channel");
 
+    // Mix in the application digest when deriving CDI for Layer 2.
+    let hkdf = Hkdf::<Sha256>::new(
+        Some(application.digest()),
+        &stage0_dice_data.layer_1_cdi.cdi[..],
+    );
+    let mut derived_key = DerivedKey::default();
+    hkdf.expand(b"CDI_Seal", &mut derived_key)
+        .expect("invalid length for derived key");
+
     let restricted_kernel_dice_data =
-        dice_attestation::generate_dice_data(stage0_dice_data, application.digest());
+        oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, application.digest());
 
-    let derived_key = if sev_snp_enabled {
-        snp_guest::get_derived_key().expect("couldn't derive key")
-    } else {
-        // Zero fixed key since we can't derive a consistent key without SEV-SNP.
-        DerivedKey::default()
-    };
-    // Mix the application digest into the final derived key.
-    let mut extraction = HkdfExtract::<Sha256>::new(Some(b"Oak application key"));
-    extraction.input_ikm(&derived_key);
-    extraction.input_ikm(application.digest());
-    let (derived_key, _) = extraction.finalize();
-
-    syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key.into());
+    syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key);
 
     // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
     // under the kernel's control.

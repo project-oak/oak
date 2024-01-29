@@ -13,14 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::{Arc, OnceLock};
+
+use tonic::{Request, Response};
+
 use crate::{
     crypto::KeyStore,
     proto::oak::key_provisioning::v1::{
         key_provisioning_server::KeyProvisioning, GetGroupKeysRequest, GetGroupKeysResponse,
     },
 };
-use std::sync::{Arc, OnceLock};
-use tonic::{Request, Response};
 
 #[allow(dead_code)]
 /// Dependant is a Key Provisioning role that requests group keys from the

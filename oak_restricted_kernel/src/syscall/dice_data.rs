@@ -14,10 +14,13 @@
 // limitations under the License.
 //
 
-use super::fd::{copy_max_slice, FileDescriptor};
 use alloc::boxed::Box;
+
 use oak_dice::evidence::RestrictedKernelDiceData as DiceData;
 use oak_restricted_kernel_interface::{Errno, DICE_DATA_FD};
+use zeroize::Zeroize;
+
+use super::fd::{copy_max_slice, FileDescriptor};
 
 struct DiceDataDescriptor {
     data: DiceData,
@@ -37,7 +40,7 @@ impl FileDescriptor for DiceDataDescriptor {
 
         // destroy the data that was read, to ensure that it can only be read once
         let slice_to_read = &mut data_as_slice[self.index..(self.index + length)];
-        slice_to_read.fill(0);
+        slice_to_read.zeroize();
 
         self.index += length;
         Ok(length as isize)

@@ -17,8 +17,10 @@
 #ifndef CC_CRYPTO_HPKE_SENDER_CONTEXT_H_
 #define CC_CRYPTO_HPKE_SENDER_CONTEXT_H_
 
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "absl/status/statusor.h"
@@ -34,23 +36,15 @@ class SenderContext {
  public:
   SenderContext(std::vector<uint8_t> encapsulated_public_key,
                 std::unique_ptr<EVP_AEAD_CTX> request_aead_context,
-                std::vector<uint8_t> request_base_nonce, uint64_t request_sequence_number,
-                std::unique_ptr<EVP_AEAD_CTX> response_aead_context,
-                std::vector<uint8_t> response_base_nonce, uint64_t response_sequence_number)
+                std::unique_ptr<EVP_AEAD_CTX> response_aead_context)
       : serialized_encapsulated_public_key_(encapsulated_public_key.begin(),
                                             encapsulated_public_key.end()),
         request_aead_context_(std::move(request_aead_context)),
-        request_base_nonce_(request_base_nonce),
-        request_sequence_number_(request_sequence_number),
-        response_aead_context_(std::move(response_aead_context)),
-        response_base_nonce_(response_base_nonce),
-        response_sequence_number_(response_sequence_number) {}
+        response_aead_context_(std::move(response_aead_context)) {}
 
   std::string GetSerializedEncapsulatedPublicKey() const {
     return serialized_encapsulated_public_key_;
   }
-
-  std::vector<uint8_t> GenerateNonce();
 
   // Encrypts message with associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
@@ -60,20 +54,15 @@ class SenderContext {
   // Decrypts response message and validates associated data using AEAD as part of
   // bidirectional communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
-  absl::StatusOr<std::string> Open(absl::string_view ciphertext, absl::string_view associated_data);
+  absl::StatusOr<std::string> Open(const std::vector<uint8_t>& nonce, absl::string_view ciphertext,
+                                   absl::string_view associated_data);
 
   ~SenderContext();
 
  private:
   std::string serialized_encapsulated_public_key_;
-
   std::unique_ptr<EVP_AEAD_CTX> request_aead_context_;
-  std::vector<uint8_t> request_base_nonce_;
-  uint64_t request_sequence_number_;
-
   std::unique_ptr<EVP_AEAD_CTX> response_aead_context_;
-  std::vector<uint8_t> response_base_nonce_;
-  uint64_t response_sequence_number_;
 };
 
 // Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding

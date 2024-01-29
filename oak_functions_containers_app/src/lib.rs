@@ -14,9 +14,16 @@
 // limitations under the License.
 //
 
-use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
+use std::{
+    future::Future,
+    pin::Pin,
+    sync::{Arc, OnceLock},
+    time::Instant,
+};
+
 use anyhow::Context;
-use oak_crypto::encryptor::AsyncRecipientContextGenerator;
+use oak_attestation::handler::AsyncEncryptionHandler;
+use oak_crypto::encryptor::AsyncEncryptionKeyHandle;
 use oak_functions_service::{
     instance::OakFunctionsInstance,
     proto::oak::functions::{
@@ -25,22 +32,19 @@ use oak_functions_service::{
         InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
         ReserveRequest, ReserveResponse,
     },
+    Observer,
 };
-use oak_remote_attestation::handler::AsyncEncryptionHandler;
-use opentelemetry_api::{
-    metrics::{Histogram, Meter, MeterProvider, Unit},
+use opentelemetry::{
+    metrics::{Histogram, Meter, Unit},
     KeyValue,
 };
 use prost::Message;
-use std::{
-    future::Future,
-    pin::Pin,
-    sync::{Arc, OnceLock},
-    time::Instant,
-};
 use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
+use tonic::codec::CompressionEncoding;
 use tracing::Span;
+
+use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
 
 pub mod proto {
     pub mod oak {
@@ -52,24 +56,27 @@ pub mod proto {
             #![allow(clippy::return_self_not_must_use)]
             tonic::include_proto!("oak.containers");
         }
+        pub use oak_attestation::proto::oak::{attestation, session};
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::{attestation, session};
     }
 }
 
-pub mod orchestrator_client;
-
 // Instance of the OakFunctions service for Oak Containers.
-pub struct OakFunctionsContainersService<G: AsyncRecipientContextGenerator + Send + Sync> {
+pub struct OakFunctionsContainersService<G: AsyncEncryptionKeyHandle + Send + Sync> {
     instance: OnceLock<OakFunctionsInstance>,
-    encryption_context: Arc<G>,
+    encryption_key_handle: Arc<G>,
+    observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
-impl<G: AsyncRecipientContextGenerator + Send + Sync> OakFunctionsContainersService<G> {
-    pub fn new(encryption_context: Arc<G>) -> Self {
+impl<G: AsyncEncryptionKeyHandle + Send + Sync> OakFunctionsContainersService<G> {
+    pub fn new(
+        encryption_key_handle: Arc<G>,
+        observer: Option<Arc<dyn Observer + Send + Sync>>,
+    ) -> Self {
         Self {
             instance: OnceLock::new(),
-            encryption_context,
+            encryption_key_handle,
+            observer,
         }
     }
 
@@ -104,7 +111,7 @@ fn map_status(status: micro_rpc::Status) -> tonic::Status {
 }
 
 #[tonic::async_trait]
-impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
+impl<G: AsyncEncryptionKeyHandle + Send + Sync + 'static> OakFunctions
     for OakFunctionsContainersService<G>
 {
     async fn initialize(
@@ -115,7 +122,8 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
         match self.instance.get() {
             Some(_) => Err(tonic::Status::failed_precondition("already initialized")),
             None => {
-                let instance = OakFunctionsInstance::new(&request).map_err(map_status)?;
+                let instance = OakFunctionsInstance::new(&request, self.observer.clone())
+                    .map_err(map_status)?;
                 if self.instance.set(instance).is_err() {
                     return Err(tonic::Status::failed_precondition("already initialized"));
                 }
@@ -128,7 +136,6 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
         &self,
         request: tonic::Request<InvokeRequest>,
     ) -> tonic::Result<tonic::Response<InvokeResponse>> {
-        let encryption_key_provider = self.encryption_context.clone();
         let instance = self.get_instance()?;
 
         let encrypted_request = request.into_inner().encrypted_request.ok_or_else(|| {
@@ -137,7 +144,7 @@ impl<G: AsyncRecipientContextGenerator + Send + Sync + 'static> OakFunctions
             )
         })?;
 
-        AsyncEncryptionHandler::create(encryption_key_provider, |r| {
+        AsyncEncryptionHandler::create(self.encryption_key_handle.clone(), |r| async {
             // Wrap the invocation result (which may be an Error) into a micro RPC Response
             // wrapper protobuf, and encode that as bytes.
             let response_result: Result<Vec<u8>, micro_rpc::Status> =
@@ -228,10 +235,8 @@ struct MonitoringLayer {
 }
 
 impl MonitoringLayer {
-    fn new<M: MeterProvider>(provider: M) -> Self {
-        Self {
-            meter: provider.meter("oak_functions_container_app"),
-        }
+    fn new(meter: Meter) -> Self {
+        Self { meter }
     }
 }
 
@@ -243,7 +248,7 @@ impl<S> tower::Layer<S> for MonitoringLayer {
             inner,
             latencies: self
                 .meter
-                .u64_histogram("rpc/server/server_latency")
+                .u64_histogram("rpc_server_latency")
                 .with_unit(Unit::new("milliseconds"))
                 .with_description("Distribution of server-side RPC latency")
                 .init(),
@@ -279,10 +284,10 @@ where
         let mut attributes = Vec::new();
         let mut parts = req.uri().path().rsplitn(3, '/');
         if let Some(method) = parts.next() {
-            attributes.push(KeyValue::new("method", method.to_string()));
+            attributes.push(KeyValue::new("rpc_method", method.to_string()));
         }
         if let Some(service) = parts.next() {
-            attributes.push(KeyValue::new("service", service.to_string()));
+            attributes.push(KeyValue::new("rpc_service_name", service.to_string()));
         }
 
         // copied from the example in `tower::Service` to guarantee that `poll_ready` has been
@@ -331,17 +336,54 @@ fn create_trace<Body>(request: &http::Request<Body>) -> Span {
     )
 }
 
+struct OtelObserver {
+    wasm_initialization: Histogram<u64>,
+    wasm_invocation: Histogram<u64>,
+}
+
+impl OtelObserver {
+    pub fn new(meter: Meter) -> Self {
+        Self {
+            wasm_initialization: meter
+                .u64_histogram("wasm_initialization")
+                .with_unit(Unit::new("microseconds"))
+                .with_description("Time spent setting up wasm sandbox for invocation")
+                .init(),
+            wasm_invocation: meter
+                .u64_histogram("wasm_invocation")
+                .with_unit(Unit::new("microseconds"))
+                .with_description("Time spent on calling `main` in wasm sandbox")
+                .init(),
+        }
+    }
+}
+impl Observer for OtelObserver {
+    fn wasm_initialization(&self, duration: core::time::Duration) {
+        self.wasm_initialization
+            .record(duration.as_micros().try_into().unwrap_or(u64::MAX), &[])
+    }
+
+    fn wasm_invocation(&self, duration: core::time::Duration) {
+        self.wasm_invocation
+            .record(duration.as_micros().try_into().unwrap_or(u64::MAX), &[])
+    }
+}
+
 // Equivalent to `tonic::Code::Ok`.
 static GRPC_SUCCESS: http::header::HeaderValue = http::header::HeaderValue::from_static("0");
 
 // Equivalent to `tonic::status::GRPC_STATUS_HEADER_CODE`.
 const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 
+// Tonic limits the incoming RPC size to 4 MB by default; bump it up to 1 GiB. We're not sending
+// traffic over a "real" network anyway, after all.
+const MAX_DECODING_MESSAGE_SIZE: usize = 1024 * 1024 * 1024;
+
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static, P: MeterProvider>(
+pub async fn serve<G: AsyncEncryptionKeyHandle + Send + Sync + 'static>(
     listener: TcpListener,
-    encryption_context: Arc<G>,
-    provider: P,
+    encryption_key_handle: Arc<G>,
+    meter: Meter,
 ) -> anyhow::Result<()> {
     tonic::transport::Server::builder()
         .layer(
@@ -359,10 +401,16 @@ pub async fn serve<G: AsyncRecipientContextGenerator + Send + Sync + 'static, P:
                     span.record("rpc.grpc.status_code", code);
                 }),
         )
-        .layer(MonitoringLayer::new(provider))
-        .add_service(OakFunctionsServer::new(OakFunctionsContainersService::new(
-            encryption_context,
-        )))
+        .layer(tower::load_shed::LoadShedLayer::new())
+        .layer(MonitoringLayer::new(meter.clone()))
+        .add_service(
+            OakFunctionsServer::new(OakFunctionsContainersService::new(
+                encryption_key_handle,
+                Some(Arc::new(OtelObserver::new(meter))),
+            ))
+            .max_decoding_message_size(MAX_DECODING_MESSAGE_SIZE)
+            .accept_compressed(CompressionEncoding::Gzip),
+        )
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .context("failed to start up the service")

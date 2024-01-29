@@ -19,12 +19,12 @@ use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate gRPC code for loading the system image.
     generate_grpc_code(
-        "../",
         &[
-            "oak_containers/proto/interfaces.proto",
-            "oak_crypto/proto/v1/crypto.proto",
-            "oak_remote_attestation/proto/v1/messages.proto",
+            "../oak_containers/proto/interfaces.proto",
+            "../oak_crypto/proto/v1/crypto.proto",
+            "../proto/session/messages.proto",
         ],
+        "..",
         CodegenOptions {
             build_client: true,
             ..Default::default()

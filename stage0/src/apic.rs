@@ -14,6 +14,11 @@
 // limitations under the License.
 //
 
+use core::arch::x86_64::__cpuid;
+
+use oak_sev_guest::cpuid::CpuidInput;
+use x86_64::PhysAddr;
+
 use crate::{
     msr::{
         ApicBase, ApicBaseFlags, ApicErrorFlags, DestinationMode, DestinationShorthand, Level,
@@ -23,9 +28,6 @@ use crate::{
     },
     sev::GHCB_WRAPPER,
 };
-use core::arch::x86_64::__cpuid;
-use oak_sev_guest::cpuid::CpuidInput;
-use x86_64::PhysAddr;
 
 /// Interrupt Command.
 ///
@@ -82,8 +84,8 @@ trait SpuriousInterrupts {
 }
 
 mod xapic {
-    use crate::{paging::PAGE_TABLE_REFS, sev::GHCB_WRAPPER};
     use core::mem::MaybeUninit;
+
     use x86_64::{
         instructions::tlb::flush_all,
         structures::paging::{PageSize, PageTableFlags, Size2MiB, Size4KiB},
@@ -91,6 +93,7 @@ mod xapic {
     };
 
     use super::{ApicErrorFlags, SpuriousInterruptFlags};
+    use crate::{paging::PAGE_TABLE_REFS, sev::GHCB_WRAPPER};
 
     /// Representation of the APIC MMIO registers.
     ///

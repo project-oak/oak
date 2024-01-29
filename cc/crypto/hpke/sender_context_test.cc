@@ -16,12 +16,14 @@
 
 #include "cc/crypto/hpke/sender_context.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "absl/status/statusor.h"
+#include "cc/crypto/hpke/utils.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -45,15 +47,12 @@ class SenderContextTest : public testing::Test {
                              236, 244, 165, 13, 38,  157, 220, 162, 233, 235, 158,
                              226, 157, 152, 52, 162, 106, 93,  68,  12,  171};
     default_nonce_bytes_ = {1, 242, 45, 144, 96, 26, 190, 43, 156, 154, 2, 69};
-    default_starting_sequence_number_ = 0;
   }
 
   SenderContext CreateTestSenderContext(std::unique_ptr<EVP_AEAD_CTX> response_aead_context) {
     return SenderContext(std::vector<uint8_t>(),
                          nullptr,  // Sender request sealing is not tested in this test.
-                         default_nonce_bytes_, default_starting_sequence_number_,
-                         std::move(response_aead_context), default_nonce_bytes_,
-                         default_starting_sequence_number_);
+                         std::move(response_aead_context));
   }
 
   std::string serialized_public_key_;
@@ -62,7 +61,6 @@ class SenderContextTest : public testing::Test {
   std::string associated_data_request_;
   std::vector<uint8_t> default_response_key_;
   std::vector<uint8_t> default_nonce_bytes_;
-  uint64_t default_starting_sequence_number_;
 };
 
 TEST_F(SenderContextTest, SetupBaseSenderReturnsUniqueEncapsulatedKey) {
@@ -91,9 +89,10 @@ TEST_F(SenderContextTest, SenderSealsMessageSuccess) {
 
   std::string plaintext = "Hello World";
 
-  const std::vector<uint8_t> nonce = (*sender_context)->GenerateNonce();
+  absl::StatusOr<const std::vector<uint8_t>> nonce = GenerateRandomNonce();
+  ASSERT_TRUE(nonce.ok());
   absl::StatusOr<std::string> encrypted_request =
-      (*sender_context)->Seal(nonce, plaintext, associated_data_request_);
+      (*sender_context)->Seal(*nonce, plaintext, associated_data_request_);
   EXPECT_TRUE(encrypted_request.ok());
   EXPECT_THAT(*encrypted_request, StrNe(plaintext));
 }
@@ -140,7 +139,8 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageSuccess) {
   std::string ciphertext(ciphertext_bytes.begin(), ciphertext_bytes.end());
 
   // Successfully open encrypted message and get back original plaintext.
-  auto decyphered_message = sender_context.Open(ciphertext, associated_data_response_);
+  auto decyphered_message =
+      sender_context.Open(default_nonce_bytes_, ciphertext, associated_data_response_);
   EXPECT_TRUE(decyphered_message.ok());
 
   // Cleanup the lingering context.
@@ -192,7 +192,8 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureNoncesNotAligned) {
   std::string ciphertext(ciphertext_bytes.begin(), ciphertext_bytes.end());
 
   // Attempt to open the encrypted message. This should fail.
-  auto decyphered_message = sender_context.Open(ciphertext, associated_data_response_);
+  auto decyphered_message =
+      sender_context.Open(default_nonce_bytes_, ciphertext, associated_data_response_);
   EXPECT_FALSE(decyphered_message.ok());
   EXPECT_EQ(decyphered_message.status().code(), absl::StatusCode::kAborted);
 
@@ -243,7 +244,8 @@ TEST_F(SenderContextTest, SenderOpensEncryptedMessageFailureAssociatedDataNotAli
 
   // Attempt to open the encrypted message using different associated data. This should fail.
   std::string different_associated_data = "Different response associated data";
-  auto decyphered_message = sender_context.Open(ciphertext, different_associated_data);
+  auto decyphered_message =
+      sender_context.Open(default_nonce_bytes_, ciphertext, different_associated_data);
   EXPECT_FALSE(decyphered_message.ok());
   EXPECT_EQ(decyphered_message.status().code(), absl::StatusCode::kAborted);
 
@@ -268,7 +270,8 @@ TEST_F(SenderContextTest, SenderOpensEmptyEncryptedMessageFailure) {
 
   // We use an empty ciphertext.
   std::string ciphertext = "";
-  auto decyphered_message = sender_context.Open(ciphertext, associated_data_response_);
+  auto decyphered_message =
+      sender_context.Open(default_nonce_bytes_, ciphertext, associated_data_response_);
   EXPECT_FALSE(decyphered_message.ok());
   EXPECT_EQ(decyphered_message.status().code(), absl::StatusCode::kInvalidArgument);
 }

@@ -14,21 +14,17 @@
 // limitations under the License.
 //
 
-use crate::{
-    acpi::{Acpi, AcpiDevice, VIRTIO_MMIO},
-    mm::Translator,
-    GUEST_HOST_HEAP, PAGE_TABLES,
-};
 use alloc::{string::String, vec::Vec};
+use core::{
+    alloc::{Allocator, Layout},
+    ptr::NonNull,
+};
+
 use aml::{
     resource::{MemoryRangeDescriptor, Resource},
     AmlContext,
 };
 use anyhow::anyhow;
-use core::{
-    alloc::{Allocator, Layout},
-    ptr::NonNull,
-};
 use log::info;
 use oak_channel::{Read, Write};
 use spinning_top::Spinlock;
@@ -38,6 +34,12 @@ use virtio_drivers::{
     BufferDirection, Hal, PAGE_SIZE,
 };
 use x86_64::{PhysAddr, VirtAddr};
+
+use crate::{
+    acpi::{Acpi, AcpiDevice, VIRTIO_MMIO},
+    mm::Translator,
+    GUEST_HOST_HEAP, PAGE_TABLES,
+};
 
 struct OakHal;
 

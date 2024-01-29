@@ -15,6 +15,7 @@
 //
 
 use core::slice;
+
 use elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use x86_64::{

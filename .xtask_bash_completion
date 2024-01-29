@@ -109,16 +109,12 @@ _xtask() {
 
     case "${cmd}" in
         xtask)
-            opts="-h --dry-run --logs --keep-going --scope --help build-enclave-binary run-oak-functions-example format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
+            opts="-h --dry-run --logs --keep-going --help build-enclave-binary run-oak-functions-example format check-format run-tests run-cargo-clippy run-cargo-tests run-bazel-tests run-cargo-fuzz run-cargo-deny run-cargo-udeps run-ci run-cargo-clean completion help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
-                --scope)
-                    COMPREPLY=($(compgen -f "${cur}"))
-                    return 0
-                    ;;
                 *)
                     COMPREPLY=()
                     ;;
@@ -565,4 +561,8 @@ _xtask() {
     esac
 }
 
-complete -F _xtask -o bashdefault -o default xtask
+if [[ "${BASH_VERSINFO[0]}" -eq 4 && "${BASH_VERSINFO[1]}" -ge 4 || "${BASH_VERSINFO[0]}" -gt 4 ]]; then
+    complete -F _xtask -o nosort -o bashdefault -o default xtask
+else
+    complete -F _xtask -o bashdefault -o default xtask
+fi

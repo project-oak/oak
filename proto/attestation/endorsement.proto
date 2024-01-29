@@ -51,8 +51,11 @@ message RootLayerEndorsements {
 
 message KernelLayerEndorsements {
   TransparentReleaseEndorsement kernel_image = 1;
-  TransparentReleaseEndorsement kernel_setup_data = 2;
-  TransparentReleaseEndorsement init_ram_fs = 3;
+  TransparentReleaseEndorsement kernel_cmd_line = 2;
+  TransparentReleaseEndorsement kernel_setup_data = 3;
+  TransparentReleaseEndorsement init_ram_fs = 4;
+  TransparentReleaseEndorsement memory_map = 5;
+  TransparentReleaseEndorsement acpi = 6;
 }
 
 message SystemLayerEndorsements {
@@ -61,10 +64,12 @@ message SystemLayerEndorsements {
 
 message ApplicationLayerEndorsements {
   TransparentReleaseEndorsement binary = 1;
+  TransparentReleaseEndorsement configuration = 2;
 }
 
 message ContainerLayerEndorsements {
   TransparentReleaseEndorsement binary = 1;
+  TransparentReleaseEndorsement configuration = 2;
 }
 
 message OakRestrictedKernelEndorsements {

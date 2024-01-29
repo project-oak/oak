@@ -9,9 +9,6 @@ members = [
 
 [workspace.dependencies]
 micro_rpc = { path = "../micro_rpc" }
-oak_enclave_runtime_support = { path = "../oak_enclave_runtime_support" }
-oak_channel = { path = "../oak_channel" }
-oak_core = { path = "../oak_core" }
 oak_restricted_kernel_sdk = { path = "../oak_restricted_kernel_sdk" }
 oak_restricted_kernel_interface = { path = "../oak_restricted_kernel_interface" }
-oak_remote_attestation = { path = "../oak_remote_attestation" }
+oak_core = { path = "../oak_core" }

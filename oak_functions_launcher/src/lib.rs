@@ -23,8 +23,8 @@ pub mod server;
 
 pub mod proto {
     pub mod oak {
+        pub use oak_attestation::proto::oak::attestation;
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::attestation;
         pub mod functions {
             #![allow(dead_code)]
             use prost::Message;
@@ -40,17 +40,19 @@ pub mod proto {
     }
 }
 
-use crate::proto::oak::functions::{
-    InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
-};
+use std::{fs, path::PathBuf, time::Duration};
+
 use anyhow::Context;
 use clap::Parser;
 use oak_launcher_utils::{
     channel::{self, ConnectorHandle},
     launcher,
 };
-use std::{fs, path::PathBuf, time::Duration};
 use ubyte::ByteUnit;
+
+use crate::proto::oak::functions::{
+    InitializeRequest, InitializeResponse, OakFunctionsAsyncClient,
+};
 
 #[derive(Parser, Debug)]
 #[group(skip)]
@@ -154,7 +156,11 @@ pub async fn update_lookup_data(
     config: &LookupDataConfig,
 ) -> anyhow::Result<()> {
     log::info!("updating lookup data");
-    lookup::update_lookup_data(client, &config.lookup_data_path, config.max_chunk_size).await
+    let start = std::time::Instant::now();
+    let result =
+        lookup::update_lookup_data(client, &config.lookup_data_path, config.max_chunk_size).await;
+    log::info!("updated lookup data in {}ms", start.elapsed().as_millis());
+    result
 }
 
 // Loads application config (including Wasm bytes) into the enclave and returns a remote attestation

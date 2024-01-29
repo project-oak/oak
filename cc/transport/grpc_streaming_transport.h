@@ -24,17 +24,17 @@
 #include "absl/strings/string_view.h"
 #include "cc/transport/transport.h"
 #include "oak_crypto/proto/v1/crypto.pb.h"
-#include "oak_remote_attestation/proto/v1/messages.pb.h"
-#include "oak_remote_attestation/proto/v1/service_streaming.grpc.pb.h"
-#include "oak_remote_attestation/proto/v1/service_streaming.pb.h"
+#include "proto/session/messages.pb.h"
+#include "proto/session/service_streaming.grpc.pb.h"
+#include "proto/session/service_streaming.pb.h"
 
 namespace oak::transport {
 
 class GrpcStreamingTransport : public TransportWrapper {
  public:
   explicit GrpcStreamingTransport(
-      std::unique_ptr<::grpc::ClientReaderWriter<::oak::session::v1::RequestWrapper,
-                                                 ::oak::session::v1::ResponseWrapper>>
+      std::unique_ptr<::grpc::ClientReaderWriterInterface<::oak::session::v1::RequestWrapper,
+                                                          ::oak::session::v1::ResponseWrapper>>
           channel_reader_writer)
       : channel_reader_writer_(std::move(channel_reader_writer)) {}
 
@@ -45,9 +45,11 @@ class GrpcStreamingTransport : public TransportWrapper {
   ~GrpcStreamingTransport() override;
 
  private:
-  std::unique_ptr<::grpc::ClientReaderWriter<::oak::session::v1::RequestWrapper,
-                                             ::oak::session::v1::ResponseWrapper>>
+  std::unique_ptr<::grpc::ClientReaderWriterInterface<::oak::session::v1::RequestWrapper,
+                                                      ::oak::session::v1::ResponseWrapper>>
       channel_reader_writer_;
+  absl::once_flag close_once_;
+  absl::Status close_status_;
 
   absl::StatusOr<::oak::session::v1::ResponseWrapper> Send(
       const ::oak::session::v1::RequestWrapper& request);

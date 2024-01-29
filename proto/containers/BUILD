@@ -15,6 +15,8 @@
 #
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@com_github_grpc_grpc//bazel:cc_grpc_library.bzl", "cc_grpc_library")
+load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
@@ -28,6 +30,18 @@ proto_library(
     deps = [
         "//oak_crypto/proto/v1:crypto_proto",
     ],
+)
+
+cc_proto_library(
+    name = "orchestrator_crypto_cc_proto",
+    deps = [":orchestrator_crypto_proto"],
+)
+
+cc_grpc_library(
+    name = "orchestrator_crypto_cc_grpc",
+    srcs = [":orchestrator_crypto_proto"],
+    grpc_only = True,
+    deps = [":orchestrator_crypto_cc_proto"],
 )
 
 proto_library(

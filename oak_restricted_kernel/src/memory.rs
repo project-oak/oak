@@ -14,16 +14,13 @@
 // limitations under the License.
 //
 
-use crate::{
-    mm::{Mapper, PageTableFlags},
-    FRAME_ALLOCATOR, PAGE_TABLES,
-};
 use core::{
     alloc::{GlobalAlloc, Layout},
     ops::Deref,
     ptr::NonNull,
     result::Result,
 };
+
 use linked_list_allocator::{Heap, LockedHeap};
 use log::info;
 use spinning_top::Spinlock;
@@ -33,6 +30,11 @@ use x86_64::{
         Size2MiB,
     },
     VirtAddr,
+};
+
+use crate::{
+    mm::{Mapper, PageTableFlags},
+    FRAME_ALLOCATOR, PAGE_TABLES,
 };
 
 #[cfg(not(test))]

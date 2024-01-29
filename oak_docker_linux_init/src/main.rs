@@ -14,13 +14,12 @@
 // limitations under the License.
 //
 
-#![feature(file_create_new)]
-
-use log::info;
 use std::{
     fs::File,
     io::{BufRead, BufReader},
 };
+
+use log::info;
 use subprocess::Exec;
 
 mod init;

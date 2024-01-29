@@ -14,6 +14,13 @@
 // limitations under the License.
 //
 
+use std::{fs, path::PathBuf};
+
+use anyhow::{anyhow, Context};
+use hashbrown::HashMap;
+use prost::Message;
+use ubyte::ByteUnit;
+
 use crate::{
     channel::ConnectorHandle,
     proto::oak::functions::{
@@ -21,11 +28,6 @@ use crate::{
         LookupDataEntry, OakFunctionsAsyncClient,
     },
 };
-use anyhow::{anyhow, Context};
-use hashbrown::HashMap;
-use prost::Message;
-use std::{fs, path::PathBuf};
-use ubyte::ByteUnit;
 
 struct UpdateClient<'a, I: Iterator<Item = LookupDataChunk>> {
     inner: &'a mut OakFunctionsAsyncClient<ConnectorHandle>,
@@ -142,8 +144,10 @@ fn parse_lookup_entries<B: prost::bytes::Buf>(
     let mut entries = HashMap::new();
     while lookup_data_buffer.has_remaining() {
         let entry =
-            oak_functions_abi::proto::Entry::decode_length_delimited(&mut lookup_data_buffer)
-                .context("couldn't decode entry")?;
+            oak_proto_rust::oak::oak_functions::lookup_data::Entry::decode_length_delimited(
+                &mut lookup_data_buffer,
+            )
+            .context("couldn't decode entry")?;
         entries.insert(entry.key, entry.value);
     }
     Ok(entries)

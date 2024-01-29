@@ -21,23 +21,6 @@
 #include "com_google_oak_crypto_hpke_SenderContext.h"
 #include "jni_helper.h"
 
-JNIEXPORT jbyteArray JNICALL
-Java_com_google_oak_crypto_hpke_SenderContext_nativeGenerateNonce(JNIEnv* env, jobject obj) {
-  jclass sender_context_class = env->GetObjectClass(obj);
-  jfieldID fid = env->GetFieldID(sender_context_class, "nativePtr", "J");
-  oak::crypto::SenderContext* sender_context =
-      (oak::crypto::SenderContext*)(env->GetLongField(obj, fid));
-  if (sender_context == NULL) {
-    return {};
-  }
-
-  std::vector<uint8_t> nonce = sender_context->GenerateNonce();
-
-  jbyteArray ret = env->NewByteArray(nonce.size());
-  env->SetByteArrayRegion(ret, 0, nonce.size(), reinterpret_cast<const jbyte*>(&nonce.front()));
-  return ret;
-}
-
 JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativeSeal(
     JNIEnv* env, jobject obj, jbyteArray nonce, jbyteArray plaintext, jbyteArray associated_data) {
   if (nonce == NULL || plaintext == NULL || associated_data == NULL) {
@@ -70,11 +53,12 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativ
 }
 
 JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativeOpen(
-    JNIEnv* env, jobject obj, jbyteArray ciphertext, jbyteArray associated_data) {
+    JNIEnv* env, jobject obj, jbyteArray nonce, jbyteArray ciphertext, jbyteArray associated_data) {
   if (ciphertext == NULL || associated_data == NULL) {
     return {};
   }
 
+  std::string nonce_str = convert_jbytearray_to_string(env, nonce);
   std::string ciphertext_str = convert_jbytearray_to_string(env, ciphertext);
   std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
@@ -86,7 +70,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativ
     return {};
   }
 
-  absl::StatusOr<std::string> result = sender_context->Open(ciphertext_str, associated_data_str);
+  const std::vector<uint8_t> nonce_bytes(nonce_str.begin(), nonce_str.end());
+  absl::StatusOr<std::string> result =
+      sender_context->Open(nonce_bytes, ciphertext_str, associated_data_str);
   if (!result.ok()) {
     return {};
   }
@@ -97,29 +83,13 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativ
   return ret;
 }
 
-JNIEXPORT jbyteArray JNICALL
-Java_com_google_oak_crypto_hpke_RecipientContext_nativeGenerateNonce(JNIEnv* env, jobject obj) {
-  jclass recipient_context_class = env->GetObjectClass(obj);
-  jfieldID fid = env->GetFieldID(recipient_context_class, "nativePtr", "J");
-  oak::crypto::RecipientContext* recipient_context =
-      (oak::crypto::RecipientContext*)(env->GetLongField(obj, fid));
-  if (recipient_context == NULL) {
-    return {};
-  }
-
-  std::vector<uint8_t> nonce = recipient_context->GenerateNonce();
-
-  jbyteArray ret = env->NewByteArray(nonce.size());
-  env->SetByteArrayRegion(ret, 0, nonce.size(), reinterpret_cast<const jbyte*>(&nonce.front()));
-  return ret;
-}
-
 JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_nativeOpen(
-    JNIEnv* env, jobject obj, jbyteArray ciphertext, jbyteArray associated_data) {
+    JNIEnv* env, jobject obj, jbyteArray nonce, jbyteArray ciphertext, jbyteArray associated_data) {
   if (ciphertext == NULL || associated_data == NULL) {
     return {};
   }
 
+  std::string nonce_str = convert_jbytearray_to_string(env, nonce);
   std::string ciphertext_str = convert_jbytearray_to_string(env, ciphertext);
   std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
@@ -131,7 +101,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_na
     return {};
   }
 
-  absl::StatusOr<std::string> result = recipient_context->Open(ciphertext_str, associated_data_str);
+  const std::vector<uint8_t> nonce_bytes(nonce_str.begin(), nonce_str.end());
+  absl::StatusOr<std::string> result =
+      recipient_context->Open(nonce_bytes, ciphertext_str, associated_data_str);
   if (!result.ok()) {
     return {};
   }

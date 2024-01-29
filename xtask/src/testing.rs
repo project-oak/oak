@@ -14,14 +14,13 @@
 // limitations under the License.
 //
 
-use crate::internal::{read_to_end, Command, Context, Opt, Runnable, Running, Scope, Status, Step};
+use crate::internal::{read_to_end, Command, Context, Opt, Runnable, Running, Status, Step};
 
 fn opt_for_test() -> Opt {
     Opt {
         dry_run: false,
         logs: true,
         keep_going: false,
-        scope: Scope::All,
         cmd: Command::RunTests,
     }
 }

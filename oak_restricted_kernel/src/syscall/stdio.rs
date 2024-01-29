@@ -14,12 +14,13 @@
 // limitations under the License.
 //
 
-use crate::logging::SERIAL1;
-
-use super::fd::FileDescriptor;
 use alloc::boxed::Box;
 use core::cmp::min;
+
 use oak_restricted_kernel_interface::Errno;
+
+use super::fd::FileDescriptor;
+use crate::logging::SERIAL1;
 
 #[derive(Default)]
 struct Stderr {}

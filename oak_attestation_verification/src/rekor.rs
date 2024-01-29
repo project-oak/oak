@@ -17,16 +17,20 @@
 //! This module provides structs for representing a Rekor LogEntry, as well as logic for parsing and
 //! verifying signatures in a Rekor LogEntry.
 
-use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use alloc::{collections::BTreeMap, format, string::String, vec::Vec};
+
 use anyhow::Context;
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+#[cfg(feature = "std")]
+use serde::Serialize;
 
 use crate::util::{convert_pem_to_raw, hash_sha2_256, verify_signature_raw};
 
 /// Struct representing a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/log_entry.go#L89.>
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize))]
 pub struct LogEntry {
     /// We cannot directly use the type `Body` here, since body is Base64-encoded.
     #[serde(rename = "body")]
@@ -52,7 +56,8 @@ pub struct LogEntry {
 }
 
 /// Struct representing the body in a Rekor LogEntry.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize))]
 pub struct Body {
     #[serde(rename = "apiVersion")]
     pub api_version: String,
@@ -62,7 +67,8 @@ pub struct Body {
 
 /// Struct representing the `spec` in the body of a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L39.>
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize))]
 pub struct Spec {
     pub data: Data,
     pub signature: GenericSignature,
@@ -70,14 +76,16 @@ pub struct Spec {
 
 /// Struct representing the hashed data in the body of a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L179.>
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize))]
 pub struct Data {
     pub hash: Hash,
 }
 
 /// Struct representing a hash digest.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L273.>
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize))]
 pub struct Hash {
     pub algorithm: String,
     pub value: String,
@@ -85,7 +93,8 @@ pub struct Hash {
 
 /// Struct representing a signature in the body of a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L383>
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize))]
 pub struct GenericSignature {
     /// Base64 content that is signed.
     pub content: String,
@@ -96,7 +105,8 @@ pub struct GenericSignature {
 
 /// Struct representing a public key included in the body of a Rekor LogEntry.
 /// Based on <https://github.com/sigstore/rekor/blob/2978cdc26fdf8f5bfede8459afd9735f0f231a2a/pkg/generated/models/rekord_v001_schema.go#L551.>
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize))]
 pub struct PublicKey {
     /// Base64 content of a public key.
     pub content: String,
@@ -105,7 +115,8 @@ pub struct PublicKey {
 /// Struct representing a verification object in a Rekor LogEntry. The verification object in Rekor
 /// also contains an inclusion proof. Since we currently don't verify the inclusion proof in the
 /// client, it is omitted from this struct.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Debug, Deserialize, PartialEq)]
+#[cfg_attr(feature = "std", derive(Serialize))]
 pub struct LogEntryVerification {
     // Base64-encoded signature over the body, integratedTime, logID, and logIndex.
     #[serde(rename = "signedEntryTimestamp")]
@@ -133,20 +144,21 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
     type Error = anyhow::Error;
 
     fn try_from(log_entry: &LogEntry) -> anyhow::Result<Self> {
-        // Create a copy of the LogEntry, but skip the verification.
-        let entry_subset = LogEntry {
-            body: log_entry.body.clone(),
-            integrated_time: log_entry.integrated_time,
-            log_id: log_entry.log_id.clone(),
-            log_index: log_entry.log_index,
-            verification: None,
-        };
-
-        // Canonicalized JSON document that is signed. Canonicalization should follow the RFC 8785
-        // rules.
-        let canonicalized = serde_jcs::to_string(&entry_subset)
-            .context("couldn't create canonicalized json string")?;
-        let canonicalized = canonicalized.as_bytes().to_vec();
+        // Canonicalized JSON document that is signed; note that verification is omitted.
+        // Canonicalization should follow the RFC 8785 rules. We hardcode the canonical
+        // serialization because serialization with serde_json requires std; if we get the
+        // serialization wrong (e.g., because a string contain characters requiring special
+        // escaping), the signature will fail to match. Thus, this should result in incorrectly
+        // rejecting some valid signature bundles, not incorrectly accepting valid ones.
+        anyhow::ensure!(!log_entry.body.contains('"'));
+        anyhow::ensure!(!log_entry.log_id.contains('"'));
+        let canonicalized = format!(
+            r#"{{"body":"{body}","integratedTime":{time},"logID":"{id}","logIndex":{index}}}"#,
+            body = &log_entry.body,
+            time = log_entry.integrated_time,
+            id = &log_entry.log_id,
+            index = log_entry.log_index
+        );
 
         // Extract the signature from the LogEntry.
         let sig_base64 = log_entry
@@ -157,10 +169,10 @@ impl TryFrom<&LogEntry> for RekorSignatureBundle {
             .clone();
         let signature = BASE64_STANDARD
             .decode(sig_base64)
-            .context("couldn't decode Base64 signature")?;
+            .map_err(|error| anyhow::anyhow!("couldn't decode Base64 signature: {}", error))?;
 
         Ok(Self {
-            canonicalized,
+            canonicalized: canonicalized.as_bytes().to_vec(),
             signature,
         })
     }
@@ -190,15 +202,18 @@ pub fn verify_rekor_log_entry(
 /// instance of `Body`.
 pub fn get_rekor_log_entry_body(log_entry: &[u8]) -> anyhow::Result<Body> {
     let parsed: BTreeMap<String, LogEntry> =
-        serde_json::from_slice(log_entry).context("couldn't parse bytes into a LogEntry object")?;
+        serde_json::from_slice(log_entry).map_err(|error| {
+            anyhow::anyhow!("couldn't parse bytes into a LogEntry object: {}", error)
+        })?;
     let entry = parsed.values().next().context("no entry in the map")?;
 
     // Parse base64-encoded entry.body into an instance of Body.
     let body_bytes: Vec<u8> = BASE64_STANDARD
         .decode(entry.body.clone())
-        .context("couldn't decode Base64 signature")?;
+        .map_err(|error| anyhow::anyhow!("couldn't decode Base64 signature: {}", error))?;
 
-    serde_json::from_slice(&body_bytes).context("couldn't parse bytes into a Body object")
+    serde_json::from_slice(&body_bytes)
+        .map_err(|error| anyhow::anyhow!("couldn't parse bytes into a Body object: {}", error))
 }
 
 /// Parses a blob into a Rekor log entry and verifies the signature in
@@ -249,7 +264,8 @@ pub fn verify_rekor_body(body: &Body, contents_bytes: &[u8]) -> anyhow::Result<(
     let public_key_pem_vec: Vec<u8> = BASE64_STANDARD
         .decode(body.spec.signature.public_key.content.as_bytes())
         .expect("couldn't decode the public key in the Rekor LogEntry body");
-    let public_key_pem = core::str::from_utf8(&public_key_pem_vec)?;
+    let public_key_pem =
+        core::str::from_utf8(&public_key_pem_vec).map_err(|error| anyhow::anyhow!(error))?;
     let public_key = convert_pem_to_raw(public_key_pem)?;
 
     verify_signature_raw(&signature, contents_bytes, &public_key)
@@ -258,7 +274,9 @@ pub fn verify_rekor_body(body: &Body, contents_bytes: &[u8]) -> anyhow::Result<(
 
 fn rekor_signature_bundle(log_entry: &[u8]) -> anyhow::Result<RekorSignatureBundle> {
     let parsed: BTreeMap<String, LogEntry> =
-        serde_json::from_slice(log_entry).context("couldn't parse bytes into a LogEntry object")?;
+        serde_json::from_slice(log_entry).map_err(|error| {
+            anyhow::anyhow!("couldn't parse bytes into a LogEntry object: {}", error)
+        })?;
     let entry = parsed.values().next().context("no entry in the map")?;
 
     RekorSignatureBundle::try_from(entry)

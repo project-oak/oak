@@ -37,4 +37,13 @@ message AttestationResults {
 
   // Provides the reason why verification did not pass, on non-success status.
   string reason = 2;
+
+  // Contains the verified public key for encryption whenever the status
+  // indicates success. The key is serialized as an X25519 octet string.
+  bytes encryption_public_key = 3;
+
+  // Contains the verified public key for signing whenever the status
+  // indicates success. The key is serialized using the SEC 1
+  // Elliptic-Curve-Point-to-Octet-String conversion.
+  bytes signing_public_key = 4;
 }

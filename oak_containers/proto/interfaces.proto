@@ -20,8 +20,9 @@ package oak.containers;
 
 import "google/protobuf/empty.proto";
 import "oak_crypto/proto/v1/crypto.proto";
-import "oak_remote_attestation/proto/v1/messages.proto";
+import "proto/attestation/endorsement.proto";
 import "proto/attestation/evidence.proto";
+import "proto/session/messages.proto";
 
 // As images can be large (hundreds of megabytes), the launcher chunks up the response into smaller
 // pieces to respect proto/gRPC limits. The image needs to be reassembled in the stage1 or the
@@ -39,16 +40,6 @@ message GetApplicationConfigResponse {
 message SendAttestationEvidenceRequest {
   oak.session.v1.AttestationEvidence evidence = 1 [deprecated = true];
   oak.attestation.v1.Evidence dice_evidence = 2;
-}
-
-message GetCryptoContextRequest {
-  // Ephemeral Diffie-Hellman client public key that is needed to derive a session key.
-  bytes serialized_encapsulated_public_key = 1;
-}
-
-message GetCryptoContextResponse {
-  // Session keys for decrypting client requests and encrypting enclave responses.
-  oak.crypto.v1.CryptoContext context = 1;
 }
 
 // Defines the service exposed by the launcher, that can be invoked by the stage1 and the
@@ -86,8 +77,4 @@ service Orchestrator {
   // Notifies the orchestrator that the trusted app is ready to serve requests and listening on the
   // pre-arranged port (8080).
   rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-
-  // Returns crypto context for decrypting client requests and encrypting enclave responses.
-  // TODO(#3841): Store private key in the Orchestrator and generate session keys for each session.
-  rpc GetCryptoContext(GetCryptoContextRequest) returns (GetCryptoContextResponse) {}
 }

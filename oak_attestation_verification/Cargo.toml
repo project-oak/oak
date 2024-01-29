@@ -5,21 +5,43 @@ authors = ["Razieh Behjati <razieh@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+std = ["time/formatting"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-anyhow = "*"
-base64 = "*"
+anyhow = { version = "*", default-features = false }
+base64 = { version = "0.21", default-features = false, features = ["alloc"] }
 coset = { version = "*", default-features = false }
-ecdsa = { version = "*", features = ["pkcs8", "pem"] }
-hex = "*"
+ecdsa = { version = "*", default-features = false, features = ["pkcs8", "pem"] }
+getrandom = { version = "*", default-features = false, features = [
+  # While getrandom isn't used directly, rdrand is required to support x64_64-unknown-none.
+  "rdrand"
+] }
+hex = { version = "*", default-features = false }
 oak_dice = { workspace = true }
-prost = { workspace = true }
-p256 = { version = "*", features = ["ecdsa-core", "ecdsa", "pem"] }
-serde = { version = "*", features = ["derive"] }
-serde_jcs = "*"
-serde_json = "*"
+oak_proto_rust = { workspace = true }
+oak_sev_snp_attestation_report = { workspace = true }
+p256 = { version = "*", default-features = false, features = [
+  "alloc",
+  "ecdsa-core",
+  "ecdsa",
+  "pem"
+] }
+p384 = { version = "0.13.0", default-features = false, features = [
+  "ecdsa",
+  "pem"
+] }
+rsa = { version = "0.9.6", default-features = false }
+serde = { version = "*", default-features = false, features = ["derive"] }
+serde_json = { version = "*", default-features = false, features = ["alloc"] }
 sha2 = { version = "*", default-features = false }
-time = { version = "0.3.28", features = ["serde", "parsing", "formatting"] }
+time = { version = "0.3.28", default-features = false, features = [
+  "serde",
+  "parsing"
+] }
+x509-cert = { version = "0.2.5", default-features = false, features = ["pem"] }
+zerocopy = "*"
 
-[build-dependencies]
-micro_rpc_build = { workspace = true }
+[dev-dependencies]
+prost = { workspace = true }

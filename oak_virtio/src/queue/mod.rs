@@ -14,11 +14,13 @@
 // limitations under the License.
 //
 
-use crate::Translator;
 use alloc::{boxed::Box, collections::vec_deque::VecDeque, vec::Vec};
 use core::{alloc::Allocator, num::Wrapping};
+
 use virtq::{AvailRing, Desc, DescFlags, RingFlags, UsedElem, UsedRing, VirtQueue};
 use x86_64::{PhysAddr, VirtAddr};
+
+use crate::Translator;
 
 pub mod virtq;
 

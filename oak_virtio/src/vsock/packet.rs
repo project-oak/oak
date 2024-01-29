@@ -21,8 +21,9 @@
 //! See <https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-3960006>.
 
 use alloc::{vec, vec::Vec};
-use bitflags::bitflags;
 use core::{fmt::Debug, mem::size_of};
+
+use bitflags::bitflags;
 use strum::{Display, FromRepr};
 
 /// The size of the packet header in bytes.

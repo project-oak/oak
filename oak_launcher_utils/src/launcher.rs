@@ -14,21 +14,26 @@
 // limitations under the License.
 //
 
-use crate::channel::{Connector, ConnectorHandle};
-use anyhow::{Context, Result};
-use async_trait::async_trait;
-use clap::Parser;
-use command_fds::tokio::CommandFdAsyncExt;
-use log::info;
-use oak_channel::Write;
 use std::{
     fs,
     io::{BufRead, BufReader},
     net::Shutdown,
-    os::unix::{io::AsRawFd, net, net::UnixStream},
+    os::{
+        fd::AsRawFd,
+        unix::{net, net::UnixStream},
+    },
     path::PathBuf,
     process::Stdio,
 };
+
+use anyhow::{Context, Result};
+use async_trait::async_trait;
+use clap::Parser;
+use command_fds::CommandFdExt;
+use log::info;
+use oak_channel::Write;
+
+use crate::channel::{Connector, ConnectorHandle};
 
 const PAGE_SIZE: usize = 4096;
 
@@ -59,6 +64,10 @@ pub struct Params {
     /// Gigabyte).
     #[arg(long)]
     pub memory_size: Option<String>,
+
+    /// Path to the initrd image to use.
+    #[arg(long, value_parser = path_exists)]
+    pub initrd: Option<PathBuf>,
 }
 
 /// Checks if file with a given path exists.
@@ -96,10 +105,19 @@ impl Instance {
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
         let (guest_socket, mut host_socket) = net::UnixStream::pair()?;
 
+        // Clone the console stream so we can use it in the child process and also return it from
+        // this method.
+        let guest_console_clone = guest_console.try_clone().unwrap();
+
+        // Extract the raw file descriptor numbers from the streams before passing them to the child
+        // process, since that takes ownership of them.
+        let guest_console_fd = guest_console.as_raw_fd();
+        let guest_socket_fd = guest_socket.as_raw_fd();
+
         cmd.stderr(Stdio::inherit());
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::inherit());
-        cmd.preserved_fds(vec![guest_console.as_raw_fd(), guest_socket.as_raw_fd()]);
+        cmd.preserved_fds(vec![guest_console.into(), guest_socket.into()]);
 
         // Construct the command-line arguments for `qemu`.
         cmd.arg("-enable-kvm");
@@ -121,13 +139,13 @@ impl Instance {
         // Route first serial port to console.
         cmd.args([
             "-chardev",
-            format!("socket,id=consock,fd={}", guest_console.as_raw_fd()).as_str(),
+            format!("socket,id=consock,fd={guest_console_fd}").as_str(),
         ]);
         cmd.args(["-serial", "chardev:consock"]);
         // Add the virtio device.
         cmd.args([
             "-chardev",
-            format!("socket,id=commsock,fd={}", guest_socket.as_raw_fd()).as_str(),
+            format!("socket,id=commsock,fd={guest_socket_fd}").as_str(),
         ]);
         cmd.args(["-device", "virtio-serial-device,max_ports=1"]);
         cmd.args(["-device", "virtconsole,chardev=commsock"]);
@@ -149,8 +167,15 @@ impl Instance {
 
         if let Some(gdb_port) = params.gdb {
             // Listen for a gdb connection on the provided port and wait for debugger before booting
-            cmd.args(["-gdb", format!("tcp::{}", gdb_port).as_str()]);
+            cmd.args(["-gdb", format!("tcp::{gdb_port}").as_str()]);
             cmd.arg("-S");
+        }
+
+        if let Some(initrd) = params.initrd {
+            cmd.args([
+                "-initrd",
+                initrd.into_os_string().into_string().unwrap().as_str(),
+            ]);
         }
 
         info!("executing: {:?}", cmd);
@@ -171,7 +196,7 @@ impl Instance {
         Self::write_chunk(&mut host_socket, chunks.remainder())?;
 
         Ok(Self {
-            guest_console,
+            guest_console: guest_console_clone,
             host_socket,
             instance,
         })

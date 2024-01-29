@@ -26,8 +26,9 @@ mod proto {
 
 mod app_client;
 
-use crate::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
 use oak_containers_launcher::{proto::oak::session::v1::AttestationBundle, Launcher};
+
+use crate::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
 
 pub struct UntrustedApp {
     launcher: Launcher,
