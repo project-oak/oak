@@ -28,6 +28,7 @@ jobs:
           - buildconfigs/key_xor_test_app.toml
           - buildconfigs/oak_containers_kernel_bzimage.toml
           - buildconfigs/oak_containers_stage1_cpio.toml
+          - buildconfigs/oak_containers_system_image_tar_xz.toml
           - buildconfigs/oak_echo_enclave_app.toml
           - buildconfigs/oak_echo_raw_enclave_app.toml
           - buildconfigs/oak_functions_enclave_app.toml
