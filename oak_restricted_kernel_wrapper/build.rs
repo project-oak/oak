@@ -36,6 +36,7 @@ fn try_source_path() -> Result<PathBuf, &'static str> {
     source_path.push(kernel_directory);
     source_path.push("target/x86_64-unknown-none/release");
     source_path.push(file_name);
+    println!("cargo:rerun-if-changed={:?}", &source_path);
     match source_path.exists() {
         true => Ok(source_path),
         false => Err("contructed source_path does not exist"),
