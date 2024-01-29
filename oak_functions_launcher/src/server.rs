@@ -17,7 +17,7 @@
 use std::{net::SocketAddr, pin::Pin};
 
 use futures::{Future, Stream, StreamExt};
-use oak_attestation::proto::oak::attestation::v1::{Endorsements, Evidence};
+use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
 use tonic::{transport::Server, Request, Response, Status, Streaming};
 
 use crate::{

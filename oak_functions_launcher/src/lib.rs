@@ -23,13 +23,13 @@ pub mod server;
 
 pub mod proto {
     pub mod oak {
-        pub use oak_attestation::proto::oak::attestation;
-        pub use oak_crypto::proto::oak::crypto;
         pub mod functions {
             #![allow(dead_code)]
             use prost::Message;
             include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
         }
+        pub use oak_crypto::proto::oak::crypto;
+        pub use oak_proto_rust::oak::attestation;
         pub mod session {
             pub mod v1 {
                 #![allow(clippy::return_self_not_must_use)]

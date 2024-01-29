@@ -19,6 +19,7 @@ futures = "*"
 log = "*"
 oak_attestation = { workspace = true }
 oak_crypto = { workspace = true }
+oak_proto_rust = { workspace = true }
 opentelemetry-proto = { version = "*", default-features = false, features = [
   "gen-tonic",
   "logs",

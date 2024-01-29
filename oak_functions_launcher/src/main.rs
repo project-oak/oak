@@ -21,7 +21,7 @@
 use std::net::{Ipv6Addr, SocketAddr};
 
 use clap::Parser;
-use oak_attestation::proto::oak::attestation::v1::{
+use oak_proto_rust::oak::attestation::v1::{
     endorsements, Endorsements, OakRestrictedKernelEndorsements,
 };
 use oak_functions_launcher::LookupDataConfig;

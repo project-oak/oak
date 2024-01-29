@@ -41,7 +41,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use anyhow::Context;
 use clap::Parser;
-use oak_attestation::proto::oak::attestation::v1::{
+use oak_proto_rust::oak::attestation::v1::{
     endorsements, Endorsements, Evidence, OakRestrictedKernelEndorsements,
 };
 pub use qemu::Params as QemuParams;
