@@ -53,8 +53,8 @@ pub struct Params {
     pub kernel: Option<PathBuf>,
 
     /// Path to the Oak Functions application binary to be loaded into the enclave.
-    #[arg(long, value_parser = path_exists)]
-    pub app_binary: PathBuf,
+    #[arg(long, value_parser = path_exists, requires_all = &["enclave_binary"], conflicts_with_all = &["initrd"])]
+    pub app_binary: Option<PathBuf>,
 
     /// Path to the BIOS image to use.
     #[arg(long, value_parser = path_exists)]
@@ -94,17 +94,19 @@ pub struct Instance {
 impl Instance {
     /// Starts virtualized instance with given parameters and stream to write console logs to.
     pub fn start(params: Params, guest_console: net::UnixStream) -> Result<Self> {
-        let app_bytes = fs::read(&params.app_binary).with_context(|| {
-            format!(
-                "couldn't read application binary {}",
-                &params.app_binary.display()
-            )
-        })?;
-        log::info!(
-            "read application binary from disk {} ({} bytes)",
-            &params.app_binary.display(),
-            app_bytes.len()
-        );
+        let app_bytes = if let Some(app_binary) = params.app_binary {
+            let bytes = fs::read(&app_binary).with_context(|| {
+                format!("couldn't read application binary {}", app_binary.display())
+            })?;
+            log::info!(
+                "read application binary from disk {} ({} bytes)",
+                app_binary.display(),
+                bytes.len()
+            );
+            Some(bytes)
+        } else {
+            None
+        };
 
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
         let (guest_socket, mut host_socket) = net::UnixStream::pair()?;
@@ -195,18 +197,20 @@ impl Instance {
 
         let instance = cmd.spawn()?;
 
-        // Loading the application binary needs to happen before we start using microrpc over the
-        // channel.
-        host_socket
-            .write_all(&(app_bytes.len() as u32).to_le_bytes())
-            .expect("failed to send application binary length to enclave");
+        if let Some(app_bytes) = app_bytes {
+            // Loading the application binary needs to happen before we start using microrpc over
+            // the channel.
+            host_socket
+                .write_all(&(app_bytes.len() as u32).to_le_bytes())
+                .expect("failed to send application binary length to enclave");
 
-        // The kernel expects data to be transmitted in chunks of one page.
-        let mut chunks = app_bytes.array_chunks::<PAGE_SIZE>();
-        for chunk in chunks.by_ref() {
-            Self::write_chunk(&mut host_socket, chunk)?;
+            // The kernel expects data to be transmitted in chunks of one page.
+            let mut chunks = app_bytes.array_chunks::<PAGE_SIZE>();
+            for chunk in chunks.by_ref() {
+                Self::write_chunk(&mut host_socket, chunk)?;
+            }
+            Self::write_chunk(&mut host_socket, chunks.remainder())?;
         }
-        Self::write_chunk(&mut host_socket, chunks.remainder())?;
 
         Ok(Self {
             guest_console: guest_console_clone,

@@ -72,7 +72,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         ])),
         kernel: None,
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
-        app_binary: oak_functions_enclave_app_path.into(),
+        app_binary: Some(oak_functions_enclave_app_path.into()),
         bios_binary: workspace_path(&[
             "stage0_bin",
             "target",
