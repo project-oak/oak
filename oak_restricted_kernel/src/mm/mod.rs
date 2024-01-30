@@ -167,7 +167,12 @@ pub trait Mapper<S: PageSize> {
     ) -> Result<MapperFlush<S>, FlagUpdateError>;
 }
 
-pub fn init(memory_map: &[BootE820Entry], program_headers: &[ProgramHeader]) {
+pub fn init(
+    memory_map: &[BootE820Entry],
+    program_headers: &[ProgramHeader],
+    ramdisk_phys_addr: PhysAddr,
+    ramdisk_size: u64,
+) {
     let mut alloc = FRAME_ALLOCATOR.lock();
 
     /* Step 1: mark all RAM as available (event though it may contain data!) */
@@ -239,6 +244,27 @@ pub fn init(memory_map: &[BootE820Entry], program_headers: &[ProgramHeader]) {
             );
             alloc.mark_valid(range, false)
         });
+
+    // Thirdly, mark the ramdisk as reserved.
+    if ramdisk_size > 0 {
+        let ramdisk_range = PhysFrame::range(
+            PhysFrame::<x86_64::structures::paging::Size2MiB>::from_start_address(PhysAddr::new(
+                align_down(ramdisk_phys_addr.as_u64(), Size2MiB::SIZE),
+            ))
+            .unwrap(),
+            PhysFrame::from_start_address(PhysAddr::new(align_up(
+                ramdisk_phys_addr.as_u64() + ramdisk_size,
+                Size2MiB::SIZE,
+            )))
+            .unwrap(),
+        );
+        info!(
+            "marking [{:#018x}..{:#018x}) as reserved (ramdisk)",
+            ramdisk_range.start.start_address().as_u64(),
+            ramdisk_range.end.start_address().as_u64()
+        );
+        alloc.mark_valid(ramdisk_range, false);
+    };
 }
 
 /// Initializes the page tables used by the kernel.

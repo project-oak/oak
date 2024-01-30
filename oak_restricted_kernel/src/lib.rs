@@ -161,8 +161,19 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // Safety: in the linker script we specify that the ELF header should be placed at 0x200000.
     let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
 
+    let ramdisk_phys_addr: PhysAddr = {
+        let address = info.hdr.ramdisk_image;
+        PhysAddr::new(address.into())
+    };
+    let ramdisk_size: u64 = info.hdr.ramdisk_size.into();
+
     // Physical frame allocator
-    mm::init(info.e820_table(), program_headers);
+    mm::init(
+        info.e820_table(),
+        program_headers,
+        ramdisk_phys_addr,
+        ramdisk_size,
+    );
 
     // Note: `info` will not be valid after calling this!
     if PAGE_TABLES
@@ -336,20 +347,22 @@ pub fn start_kernel(info: &BootParams) -> ! {
         let ramdisk: Option<&[u8]> = match info.hdr.ramdisk_size {
             0 => None,
             _ => {
-                let start_addr = {
-                    let phys_start_addr = PhysAddr::new_truncate(info.hdr.ramdisk_image.into());
+                let virt_addr = {
                     let pt = PAGE_TABLES.get().expect("failed to get page tables");
-                    pt.translate_physical(phys_start_addr)
+                    pt.translate_physical(ramdisk_phys_addr)
                         .expect("failed to translate physical dice address")
                 };
 
-                // Safety: we rely on the firmware to ensure this range is valid and backed by
-                // physical memory. we rely on the firmware to mark location of the ramdisk is
-                // marked as reserved in the E820 table, so it isn't used by the
-                // heap allocator.
+                // Safety:
+                // We rely on the firmware to ensure this range is valid and backed by physical
+                // memory.
+                // We excluded this range from the frame allocator so it cannot be used by the heap
+                // allocator.
+                // The wrapper checked that this range does not conflict with the memory used by the
+                // kernel for the stack BSS, data, read-only data or code sections.
                 let ramdisk_slice = unsafe {
                     core::slice::from_raw_parts::<u8>(
-                        start_addr.as_mut_ptr(),
+                        virt_addr.as_mut_ptr(),
                         info.hdr.ramdisk_size.try_into().unwrap(),
                     )
                 };
