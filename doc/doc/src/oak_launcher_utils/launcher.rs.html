@@ -283,6 +283,23 @@
 <a href="#283" id="283">283</a>
 <a href="#284" id="284">284</a>
 <a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -330,12 +347,16 @@
     </span><span class="kw">pub </span>vmm_binary: PathBuf,
 
     <span class="doccomment">/// Path to the enclave binary to load into the VM.
-    </span><span class="attr">#[arg(long, value_parser = path_exists)]
-    </span><span class="kw">pub </span>enclave_binary: PathBuf,
+    </span><span class="attr">#[arg(long, value_parser = path_exists, conflicts_with_all = <span class="kw-2">&amp;</span>[<span class="string">&quot;kernel&quot;</span>, <span class="string">&quot;initrd&quot;</span>]</span>)]
+    <span class="kw">pub </span>enclave_binary: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
+
+    <span class="doccomment">/// Path to the enclave binary to load into the VM.
+    </span><span class="attr">#[arg(long, value_parser = path_exists, conflicts_with_all = <span class="kw-2">&amp;</span>[<span class="string">&quot;enclave_binary&quot;</span>]</span>)]
+    <span class="kw">pub </span>kernel: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
 
     <span class="doccomment">/// Path to the Oak Functions application binary to be loaded into the enclave.
-    </span><span class="attr">#[arg(long, value_parser = path_exists)]
-    </span><span class="kw">pub </span>app_binary: PathBuf,
+    </span><span class="attr">#[arg(long, value_parser = path_exists, requires_all = <span class="kw-2">&amp;</span>[<span class="string">&quot;enclave_binary&quot;</span>]</span>, conflicts_with_all = <span class="kw-2">&amp;</span>[<span class="string">&quot;initrd&quot;</span>])]
+    <span class="kw">pub </span>app_binary: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
 
     <span class="doccomment">/// Path to the BIOS image to use.
     </span><span class="attr">#[arg(long, value_parser = path_exists)]
@@ -351,8 +372,8 @@
     </span><span class="kw">pub </span>memory_size: <span class="prelude-ty">Option</span>&lt;String&gt;,
 
     <span class="doccomment">/// Path to the initrd image to use.
-    </span><span class="attr">#[arg(long, value_parser = path_exists)]
-    </span><span class="kw">pub </span>initrd: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
+    </span><span class="attr">#[arg(long, value_parser = path_exists, requires_all = <span class="kw-2">&amp;</span>[<span class="string">&quot;kernel&quot;</span>]</span>)]
+    <span class="kw">pub </span>initrd: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
 }
 
 <span class="doccomment">/// Checks if file with a given path exists.
@@ -375,17 +396,19 @@
 <span class="kw">impl </span>Instance {
     <span class="doccomment">/// Starts virtualized instance with given parameters and stream to write console logs to.
     </span><span class="kw">pub fn </span>start(params: Params, guest_console: net::UnixStream) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>app_bytes = fs::read(<span class="kw-2">&amp;</span>params.app_binary).with_context(|| {
-            <span class="macro">format!</span>(
-                <span class="string">&quot;couldn&#39;t read application binary {}&quot;</span>,
-                <span class="kw-2">&amp;</span>params.app_binary.display()
-            )
-        })<span class="question-mark">?</span>;
-        <span class="macro">log::info!</span>(
-            <span class="string">&quot;read application binary from disk {} ({} bytes)&quot;</span>,
-            <span class="kw-2">&amp;</span>params.app_binary.display(),
-            app_bytes.len()
-        );
+        <span class="kw">let </span>app_bytes = <span class="kw">if let </span><span class="prelude-val">Some</span>(app_binary) = params.app_binary {
+            <span class="kw">let </span>bytes = fs::read(<span class="kw-2">&amp;</span>app_binary).with_context(|| {
+                <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t read application binary {}&quot;</span>, app_binary.display())
+            })<span class="question-mark">?</span>;
+            <span class="macro">log::info!</span>(
+                <span class="string">&quot;read application binary from disk {} ({} bytes)&quot;</span>,
+                app_binary.display(),
+                bytes.len()
+            );
+            <span class="prelude-val">Some</span>(bytes)
+        } <span class="kw">else </span>{
+            <span class="prelude-val">None
+        </span>};
 
         <span class="kw">let </span><span class="kw-2">mut </span>cmd = tokio::process::Command::new(params.vmm_binary);
         <span class="kw">let </span>(guest_socket, <span class="kw-2">mut </span>host_socket) = net::UnixStream::pair()<span class="question-mark">?</span>;
@@ -434,12 +457,7 @@
         ]);
         cmd.args([<span class="string">&quot;-device&quot;</span>, <span class="string">&quot;virtio-serial-device,max_ports=1&quot;</span>]);
         cmd.args([<span class="string">&quot;-device&quot;</span>, <span class="string">&quot;virtconsole,chardev=commsock&quot;</span>]);
-        <span class="comment">// Load the kernel ELF via the loader device.
-        </span>cmd.args([
-            <span class="string">&quot;-device&quot;</span>,
-            <span class="macro">format!</span>(<span class="string">&quot;loader,file={}&quot;</span>, params.enclave_binary.display()).as_str(),
-        ]);
-        <span class="comment">// And yes, use stage0 as the BIOS.
+        <span class="comment">// Use stage0 as the BIOS.
         </span>cmd.args([
             <span class="string">&quot;-bios&quot;</span>,
             params
@@ -449,6 +467,20 @@
                 .unwrap()
                 .as_str(),
         ]);
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(enclave_binary) = params.enclave_binary {
+            <span class="comment">// Load the kernel ELF via the loader device.
+            </span>cmd.args([
+                <span class="string">&quot;-device&quot;</span>,
+                <span class="macro">format!</span>(<span class="string">&quot;loader,file={}&quot;</span>, enclave_binary.display()).as_str(),
+            ]);
+        }
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(kernel) = params.kernel {
+            <span class="comment">// stage0 accoutrements: kernel that&#39;s compatible with the linux boot protocol
+            </span>cmd.args([
+                <span class="string">&quot;-kernel&quot;</span>,
+                kernel.into_os_string().into_string().unwrap().as_str(),
+            ]);
+        }
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(gdb_port) = params.gdb {
             <span class="comment">// Listen for a gdb connection on the provided port and wait for debugger before booting
@@ -467,18 +499,20 @@
 
         <span class="kw">let </span>instance = cmd.spawn()<span class="question-mark">?</span>;
 
-        <span class="comment">// Loading the application binary needs to happen before we start using microrpc over the
-        // channel.
-        </span>host_socket
-            .write_all(<span class="kw-2">&amp;</span>(app_bytes.len() <span class="kw">as </span>u32).to_le_bytes())
-            .expect(<span class="string">&quot;failed to send application binary length to enclave&quot;</span>);
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(app_bytes) = app_bytes {
+            <span class="comment">// Loading the application binary needs to happen before we start using microrpc over
+            // the channel.
+            </span>host_socket
+                .write_all(<span class="kw-2">&amp;</span>(app_bytes.len() <span class="kw">as </span>u32).to_le_bytes())
+                .expect(<span class="string">&quot;failed to send application binary length to enclave&quot;</span>);
 
-        <span class="comment">// The kernel expects data to be transmitted in chunks of one page.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>chunks = app_bytes.array_chunks::&lt;PAGE_SIZE&gt;();
-        <span class="kw">for </span>chunk <span class="kw">in </span>chunks.by_ref() {
-            <span class="self">Self</span>::write_chunk(<span class="kw-2">&amp;mut </span>host_socket, chunk)<span class="question-mark">?</span>;
+            <span class="comment">// The kernel expects data to be transmitted in chunks of one page.
+            </span><span class="kw">let </span><span class="kw-2">mut </span>chunks = app_bytes.array_chunks::&lt;PAGE_SIZE&gt;();
+            <span class="kw">for </span>chunk <span class="kw">in </span>chunks.by_ref() {
+                <span class="self">Self</span>::write_chunk(<span class="kw-2">&amp;mut </span>host_socket, chunk)<span class="question-mark">?</span>;
+            }
+            <span class="self">Self</span>::write_chunk(<span class="kw-2">&amp;mut </span>host_socket, chunks.remainder())<span class="question-mark">?</span>;
         }
-        <span class="self">Self</span>::write_chunk(<span class="kw-2">&amp;mut </span>host_socket, chunks.remainder())<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             guest_console: guest_console_clone,
