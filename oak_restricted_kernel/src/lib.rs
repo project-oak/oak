@@ -346,7 +346,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 // Safety: the firmware ensures that the location of the ramdisk is marked as
                 // reserved in the E820 table.
                 let ramdisk_slice = unsafe {
-                    core::slice::from_raw_parts_mut::<u8>(
+                    core::slice::from_raw_parts::<u8>(
                         start_addr.as_mut_ptr(),
                         info.hdr.ramdisk_size.try_into().unwrap(),
                     )
