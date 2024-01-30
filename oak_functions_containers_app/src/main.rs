@@ -29,6 +29,9 @@ use tokio::{net::TcpListener, runtime::Handle};
 
 const OAK_FUNCTIONS_CONTAINERS_APP_PORT: u16 = 8080;
 
+#[global_allocator]
+static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(default_value = "http://10.0.2.100:8080")]
