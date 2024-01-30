@@ -332,11 +332,44 @@ pub fn start_kernel(info: &BootParams) -> ! {
         sev_status,
     );
 
-    // We need to load the application binary before we hand the channel over to the syscalls, which
-    // expose it to the user space.
-    info!("Loading application binary...");
-    let application = payload::Application::load_raw(&mut *channel)
-        .expect("failed to load application binary from channel");
+    let application: payload::Application = {
+        let ramdisk: Option<&[u8]> = match info.hdr.ramdisk_size {
+            0 => None,
+            _ => {
+                let start_addr = {
+                    let phys_start_addr = PhysAddr::new_truncate(info.hdr.ramdisk_image.into());
+                    let pt = PAGE_TABLES.get().expect("failed to get page tables");
+                    pt.translate_physical(phys_start_addr)
+                        .expect("failed to translate physical dice address")
+                };
+
+                // Safety: the firmware ensures that the location of the ramdisk is marked as
+                // reserved in the E820 table.
+                let ramdisk_slice = unsafe {
+                    core::slice::from_raw_parts_mut::<u8>(
+                        start_addr.as_mut_ptr(),
+                        info.hdr.ramdisk_size.try_into().unwrap(),
+                    )
+                };
+                Some(ramdisk_slice)
+            }
+        };
+
+        match ramdisk {
+            Some(ramdisk_slice) => {
+                info!("Parsing application from ramdisk...");
+                payload::Application::new(ramdisk_slice.into())
+                    .expect("failed to parse application from ramdisk")
+            }
+            None => {
+                // We need to load the application binary before we hand the channel over to the
+                // syscalls, which expose it to the user space.
+                info!("Loading application binary...");
+                payload::Application::load_raw(&mut *channel)
+                    .expect("failed to load application binary from channel")
+            }
+        }
+    };
 
     // Mix in the application digest when deriving CDI for Layer 2.
     let hkdf = Hkdf::<Sha256>::new(
