@@ -347,6 +347,8 @@ pub fn start_kernel(info: &BootParams) -> ! {
                     // Safety:
                     // We rely on the firmware to ensure this range is valid and backed by physical
                     // memory.
+                    // We rely on the wrapper that loaded the kernel ELF file into memory, to ensure
+                    // it didn't over overwrite the ramdisk range.
                     // We excluded this range from the frame allocator so it cannot be used by the
                     // heap allocator.
                     let slice: &[u8] = unsafe {
