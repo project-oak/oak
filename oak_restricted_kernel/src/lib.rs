@@ -358,8 +358,6 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 // memory.
                 // We excluded this range from the frame allocator so it cannot be used by the heap
                 // allocator.
-                // The wrapper checked that this range does not conflict with the memory used by the
-                // kernel for the stack BSS, data, read-only data or code sections.
                 let ramdisk_slice = unsafe {
                     core::slice::from_raw_parts::<u8>(
                         virt_addr.as_mut_ptr(),
