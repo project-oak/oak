@@ -64,14 +64,13 @@ dependencies = [
 
 [[package]]
 name = "ahash"
-version = "0.8.7"
+version = "0.7.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77c3a9648d43b9cd48db467b3f87fdd6e146bcc88ab0180006cef2179fe11d01"
+checksum = "5a824f2aa7e75a0c98c5a504fceb80649e9c35265d44525b5f94de4771a395cd"
 dependencies = [
- "cfg-if",
+ "getrandom",
  "once_cell",
  "version_check",
- "zerocopy",
 ]
 
 [[package]]
@@ -82,12 +81,6 @@ checksum = "b2969dcb958b36655471fc61f7e416fa76033bdd4bfed0678d8fee1e2d07a1f0"
 dependencies = [
  "memchr",
 ]
-
-[[package]]
-name = "allocator-api2"
-version = "0.2.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0942ffc6dcaadf03badf6e6a2d0228460359d5e34b57ccdc720b7382dfbd5ec5"
 
 [[package]]
 name = "aml"
@@ -356,7 +349,7 @@ version = "0.1.0"
 dependencies = [
  "oak_functions_sdk",
  "oak_proto_rust",
- "prost",
+ "prost 0.11.9",
 ]
 
 [[package]]
@@ -1336,16 +1329,15 @@ name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
+dependencies = [
+ "ahash",
+]
 
 [[package]]
 name = "hashbrown"
 version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
-dependencies = [
- "ahash",
- "allocator-api2",
-]
 
 [[package]]
 name = "heck"
@@ -1622,7 +1614,7 @@ dependencies = [
 name = "key_value_lookup"
 version = "0.1.0"
 dependencies = [
- "hashbrown 0.14.3",
+ "hashbrown 0.12.3",
  "http",
  "log",
  "maplit",
@@ -1706,7 +1698,7 @@ dependencies = [
  "location_utils",
  "log",
  "oak_proto_rust",
- "prost",
+ "prost 0.11.9",
 ]
 
 [[package]]
@@ -1719,7 +1711,7 @@ dependencies = [
  "location_utils",
  "multimap 0.10.0",
  "oak_proto_rust",
- "prost",
+ "prost 0.11.9",
  "rand",
  "serde",
  "serde_json",
@@ -1766,7 +1758,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "micro_rpc_build",
- "prost",
+ "prost 0.11.9",
 ]
 
 [[package]]
@@ -1774,7 +1766,7 @@ name = "micro_rpc_build"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "prost-build",
+ "prost-build 0.11.9",
 ]
 
 [[package]]
@@ -1785,8 +1777,8 @@ dependencies = [
  "maplit",
  "micro_rpc",
  "micro_rpc_build",
- "prost",
- "prost-types",
+ "prost 0.11.9",
+ "prost-types 0.11.9",
  "tokio",
 ]
 
@@ -1997,7 +1989,7 @@ dependencies = [
  "oak_crypto",
  "oak_dice",
  "p256",
- "prost",
+ "prost 0.11.9",
  "rand_core",
  "sha2",
  "zeroize",
@@ -2018,7 +2010,7 @@ dependencies = [
  "oak_sev_snp_attestation_report",
  "p256",
  "p384",
- "prost",
+ "prost 0.11.9",
  "rsa",
  "serde",
  "serde_json",
@@ -2053,7 +2045,7 @@ dependencies = [
  "oak_crypto",
  "oak_grpc_utils",
  "oak_proto_rust",
- "prost",
+ "prost 0.11.9",
  "tonic",
 ]
 
@@ -2067,8 +2059,8 @@ dependencies = [
  "oak_containers_sdk",
  "oak_crypto",
  "oak_grpc_utils",
- "prost",
- "prost-types",
+ "prost 0.11.9",
+ "prost-types 0.11.9",
  "tokio",
  "tokio-stream",
  "tonic",
@@ -2088,7 +2080,7 @@ dependencies = [
  "oak_crypto",
  "oak_grpc_utils",
  "once_cell",
- "prost",
+ "prost 0.11.9",
  "tokio",
  "tonic",
  "tower",
@@ -2111,8 +2103,8 @@ dependencies = [
  "oak_crypto",
  "oak_grpc_utils",
  "opentelemetry-proto",
- "prost",
- "prost-types",
+ "prost 0.11.9",
+ "prost-types 0.11.9",
  "tokio",
  "tokio-stream",
  "tonic",
@@ -2140,8 +2132,8 @@ dependencies = [
  "opentelemetry_sdk",
  "p256",
  "procfs",
- "prost",
- "prost-types",
+ "prost 0.11.9",
+ "prost-types 0.11.9",
  "rand_core",
  "sha2",
  "syslog",
@@ -2164,8 +2156,8 @@ dependencies = [
  "oak_attestation",
  "oak_crypto",
  "oak_grpc_utils",
- "prost",
- "prost-types",
+ "prost 0.11.9",
+ "prost-types 0.11.9",
  "tokio",
  "tokio-stream",
  "tonic",
@@ -2187,8 +2179,8 @@ dependencies = [
  "oak_dice",
  "oak_grpc_utils",
  "p256",
- "prost",
- "prost-types",
+ "prost 0.11.9",
+ "prost-types 0.11.9",
  "rand_core",
  "rtnetlink",
  "sha2",
@@ -2243,7 +2235,7 @@ dependencies = [
  "micro_rpc_build",
  "oak_dice",
  "p256",
- "prost",
+ "prost 0.11.9",
  "rand_core",
  "sha2",
  "tokio",
@@ -2293,11 +2285,11 @@ name = "oak_echo_service"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "hashbrown 0.14.3",
+ "hashbrown 0.12.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
- "prost",
+ "prost 0.11.9",
 ]
 
 [[package]]
@@ -2334,7 +2326,7 @@ dependencies = [
  "micro_rpc",
  "oak_client",
  "oak_functions_abi",
- "prost",
+ "prost 0.11.9",
  "regex",
  "tokio",
  "tonic",
@@ -2358,7 +2350,7 @@ dependencies = [
  "opentelemetry",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
- "prost",
+ "prost 0.11.9",
  "tikv-jemallocator",
  "tokio",
  "tokio-stream",
@@ -2387,7 +2379,7 @@ dependencies = [
  "oak_functions_test_utils",
  "oak_grpc_utils",
  "oak_proto_rust",
- "prost",
+ "prost 0.11.9",
  "tokio",
  "tonic",
  "ubyte",
@@ -2410,7 +2402,7 @@ dependencies = [
  "oak_functions_test_utils",
  "oak_proto_rust",
  "oak_restricted_kernel_sdk",
- "prost",
+ "prost 0.11.9",
 ]
 
 [[package]]
@@ -2425,7 +2417,7 @@ dependencies = [
  "command-fds",
  "env_logger",
  "futures",
- "hashbrown 0.14.3",
+ "hashbrown 0.12.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -2439,7 +2431,7 @@ dependencies = [
  "oak_grpc_utils",
  "oak_launcher_utils",
  "oak_proto_rust",
- "prost",
+ "prost 0.11.9",
  "rand",
  "serde",
  "tokio",
@@ -2472,7 +2464,7 @@ dependencies = [
  "oak_functions_abi",
  "oak_functions_service",
  "oak_functions_test_utils",
- "prost",
+ "prost 0.11.9",
  "tokio",
 ]
 
@@ -2503,7 +2495,7 @@ dependencies = [
  "byteorder",
  "bytes",
  "criterion",
- "hashbrown 0.14.3",
+ "hashbrown 0.12.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -2514,7 +2506,7 @@ dependencies = [
  "oak_functions_sdk",
  "oak_functions_test_utils",
  "oak_proto_rust",
- "prost",
+ "prost 0.11.9",
  "rand",
  "spinning_top 0.3.0",
  "tokio",
@@ -2537,7 +2529,7 @@ dependencies = [
  "oak_functions_client",
  "oak_proto_rust",
  "port_check",
- "prost",
+ "prost 0.11.9",
  "tempfile",
  "tokio",
  "ubyte",
@@ -2547,8 +2539,8 @@ dependencies = [
 name = "oak_grpc_utils"
 version = "0.1.0"
 dependencies = [
- "prost",
- "prost-build",
+ "prost 0.11.9",
+ "prost-build 0.11.9",
  "tempfile",
  "tonic-build",
 ]
@@ -2572,12 +2564,12 @@ dependencies = [
  "bmrng",
  "clap",
  "command-fds",
- "hashbrown 0.14.3",
+ "hashbrown 0.12.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
  "oak_channel",
- "prost",
+ "prost 0.11.9",
  "tokio",
 ]
 
@@ -2595,8 +2587,8 @@ dependencies = [
 name = "oak_proto_rust"
 version = "0.0.1"
 dependencies = [
- "prost",
- "prost-build",
+ "prost 0.11.9",
+ "prost-build 0.11.9",
 ]
 
 [[package]]
@@ -2880,7 +2872,7 @@ dependencies = [
  "opentelemetry-proto",
  "opentelemetry-semantic-conventions",
  "opentelemetry_sdk",
- "prost",
+ "prost 0.11.9",
  "thiserror",
  "tokio",
  "tonic",
@@ -2894,7 +2886,7 @@ checksum = "a2e155ce5cc812ea3d1dffbd1539aed653de4bf4882d60e6e04dcf0901d674e1"
 dependencies = [
  "opentelemetry",
  "opentelemetry_sdk",
- "prost",
+ "prost 0.11.9",
  "tonic",
 ]
 
@@ -3187,6 +3179,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "prettyplease"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a41cf62165e97c7f814d2221421dbb9afcbcdb0a88068e5ea206e19951c2cbb5"
+dependencies = [
+ "proc-macro2",
+ "syn 2.0.48",
+]
+
+[[package]]
 name = "primeorder"
 version = "0.13.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3261,7 +3263,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b82eaa1d779e9a4bc1c3217db8ffbeabaae1dca241bf70183242128d48681cd"
 dependencies = [
  "bytes",
- "prost-derive",
+ "prost-derive 0.11.9",
+]
+
+[[package]]
+name = "prost"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "146c289cda302b98a28d40c8b3b90498d6e526dd24ac2ecea73e4e491685b94a"
+dependencies = [
+ "bytes",
+ "prost-derive 0.12.3",
 ]
 
 [[package]]
@@ -3277,11 +3289,33 @@ dependencies = [
  "log",
  "multimap 0.8.3",
  "petgraph",
- "prettyplease",
- "prost",
- "prost-types",
+ "prettyplease 0.1.25",
+ "prost 0.11.9",
+ "prost-types 0.11.9",
  "regex",
  "syn 1.0.109",
+ "tempfile",
+ "which 4.4.2",
+]
+
+[[package]]
+name = "prost-build"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c55e02e35260070b6f716a2423c2ff1c3bb1642ddca6f99e1f26d06268a0e2d2"
+dependencies = [
+ "bytes",
+ "heck",
+ "itertools 0.10.5",
+ "log",
+ "multimap 0.8.3",
+ "once_cell",
+ "petgraph",
+ "prettyplease 0.2.16",
+ "prost 0.12.3",
+ "prost-types 0.12.3",
+ "regex",
+ "syn 2.0.48",
  "tempfile",
  "which 4.4.2",
 ]
@@ -3300,12 +3334,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "prost-derive"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "efb6c9a1dd1def8e2124d17e83a20af56f1570d6c2d2bd9e266ccb768df3840e"
+dependencies = [
+ "anyhow",
+ "itertools 0.10.5",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.48",
+]
+
+[[package]]
 name = "prost-types"
 version = "0.11.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "213622a1460818959ac1181aaeb2dc9c7f63df720db7d788b3e24eacd1983e13"
 dependencies = [
- "prost",
+ "prost 0.11.9",
+]
+
+[[package]]
+name = "prost-types"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "193898f59edcf43c26227dcd4c8427f00d99d61e95dcde58dabd49fa291d470e"
+dependencies = [
+ "prost 0.12.3",
 ]
 
 [[package]]
@@ -4304,7 +4360,7 @@ dependencies = [
  "hyper-timeout",
  "percent-encoding",
  "pin-project",
- "prost",
+ "prost 0.11.9",
  "rustls-native-certs",
  "rustls-pemfile",
  "tokio",
@@ -4318,15 +4374,15 @@ dependencies = [
 
 [[package]]
 name = "tonic-build"
-version = "0.9.2"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6fdaae4c2c638bb70fe42803a26fbd6fc6ac8c72f5c59f67ecc2a2dcabf4b07"
+checksum = "9d021fc044c18582b9a2408cd0dd05b1596e3ecdb5c4df822bb0183545683889"
 dependencies = [
- "prettyplease",
+ "prettyplease 0.2.16",
  "proc-macro2",
- "prost-build",
+ "prost-build 0.12.3",
  "quote",
- "syn 1.0.109",
+ "syn 2.0.48",
 ]
 
 [[package]]
