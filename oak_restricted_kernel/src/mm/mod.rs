@@ -170,8 +170,7 @@ pub trait Mapper<S: PageSize> {
 pub fn init(
     memory_map: &[BootE820Entry],
     program_headers: &[ProgramHeader],
-    ramdisk_phys_addr: PhysAddr,
-    ramdisk_size: u64,
+    ramdisk: &Option<crate::ramdisk::Ramdisk>,
 ) {
     let mut alloc = FRAME_ALLOCATOR.lock();
 
@@ -246,14 +245,14 @@ pub fn init(
         });
 
     // Thirdly, mark the ramdisk as reserved.
-    if ramdisk_size > 0 {
+    if let Some(ramdisk) = ramdisk {
         let ramdisk_range = PhysFrame::range(
             PhysFrame::<x86_64::structures::paging::Size2MiB>::from_start_address(PhysAddr::new(
-                align_down(ramdisk_phys_addr.as_u64(), Size2MiB::SIZE),
+                align_down(ramdisk.phys_addr.as_u64(), Size2MiB::SIZE),
             ))
             .unwrap(),
             PhysFrame::from_start_address(PhysAddr::new(align_up(
-                ramdisk_phys_addr.as_u64() + ramdisk_size,
+                ramdisk.phys_addr.as_u64() + ramdisk.size,
                 Size2MiB::SIZE,
             )))
             .unwrap(),
