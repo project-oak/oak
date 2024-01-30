@@ -6,6 +6,8 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
+default = ["global_allocator"]
+global_allocator = ["oak_enclave_runtime_support/global_allocator"]
 # Functionality to create and use mock attestations. Helpful for tests.
 mock_attestation = ["oak_stage0_dice", "oak_restricted_kernel_dice"]
 
@@ -16,7 +18,7 @@ oak_channel = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
 oak_restricted_kernel_interface = { workspace = true }
-oak_enclave_runtime_support = { workspace = true }
+oak_enclave_runtime_support = { workspace = true, optional = true }
 oak_restricted_kernel_sdk_proc_macro = { workspace = true }
 oak_restricted_kernel_dice = { workspace = true, optional = true }
 oak_stage0_dice = { workspace = true, optional = true }
