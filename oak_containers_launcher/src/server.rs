@@ -43,15 +43,11 @@ use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{transport::Server, Request, Response, Status};
 
 use crate::proto::oak::{
-    containers::{
+    containers::v1::{
+        hostlib_key_provisioning_server::{HostlibKeyProvisioning, HostlibKeyProvisioningServer},
         launcher_server::{Launcher, LauncherServer},
-        v1::{
-            hostlib_key_provisioning_server::{
-                HostlibKeyProvisioning, HostlibKeyProvisioningServer,
-            },
-            GetGroupKeysResponse, GetKeyProvisioningRoleResponse, KeyProvisioningRole,
-        },
-        GetApplicationConfigResponse, GetImageResponse, SendAttestationEvidenceRequest,
+        GetApplicationConfigResponse, GetGroupKeysResponse, GetImageResponse,
+        GetKeyProvisioningRoleResponse, KeyProvisioningRole, SendAttestationEvidenceRequest,
     },
     session::v1::AttestationEvidence,
 };

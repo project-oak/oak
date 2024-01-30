@@ -17,14 +17,17 @@
 mod proto {
     pub mod oak {
         pub mod containers {
-            tonic::include_proto!("oak.containers");
+            pub mod v1 {
+                #![allow(clippy::return_self_not_must_use)]
+                tonic::include_proto!("oak.containers.v1");
+            }
         }
         pub use oak_attestation::proto::oak::{attestation, session};
     }
 }
 
 use anyhow::{Context, Result};
-use proto::oak::containers::launcher_client::LauncherClient as GrpcLauncherClient;
+use proto::oak::containers::v1::launcher_client::LauncherClient as GrpcLauncherClient;
 use tonic::transport::{Channel, Uri};
 
 pub struct LauncherClient {

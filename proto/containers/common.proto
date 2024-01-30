@@ -14,19 +14,12 @@
 // limitations under the License.
 //
 
-use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
+syntax = "proto3";
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Generate gRPC code for connecting to the launcher.
-    generate_grpc_code(
-        &[
-            "../oak_containers/proto/interfaces.proto",
-            "../oak_crypto/proto/v1/crypto.proto",
-            "../proto/session/messages.proto",
-        ],
-        "..",
-        CodegenOptions::default(),
-    )?;
+package oak.containers.v1;
 
-    Ok(())
+message GetApplicationConfigResponse {
+  // Arbitrary config that the container can retrieve from the orchestrator.
+  // Included in the attestation measurements conducted by the orchestrator.
+  bytes config = 1;
 }
