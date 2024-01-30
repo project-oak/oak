@@ -343,8 +343,10 @@ pub fn start_kernel(info: &BootParams) -> ! {
                         .expect("failed to translate physical dice address")
                 };
 
-                // Safety: the firmware ensures that the location of the ramdisk is marked as
-                // reserved in the E820 table.
+                // Safety: we rely on the firmware to ensure this range is valid and backed by
+                // physical memory. we rely on the firmware to mark location of the ramdisk is
+                // marked as reserved in the E820 table, so it isn't used by the
+                // heap allocator.
                 let ramdisk_slice = unsafe {
                     core::slice::from_raw_parts::<u8>(
                         start_addr.as_mut_ptr(),
