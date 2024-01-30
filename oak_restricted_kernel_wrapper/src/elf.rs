@@ -17,7 +17,7 @@
 use core::slice;
 
 use elf::{abi::PT_LOAD, endian::AnyEndian, segment::ProgramHeader, ElfBytes};
-use oak_linux_boot_params::{BootE820Entry, E820EntryType};
+use oak_linux_boot_params::{BootE820Entry, E820EntryType, Ramdisk};
 use x86_64::{
     structures::paging::{PageSize, Size1GiB, Size2MiB},
     PhysAddr, VirtAddr,
@@ -29,7 +29,11 @@ const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;
 /// Parses an ELF file and lays it out in memory.
 ///
 /// Returns the entry point.
-pub fn parse_elf_file(buf: &[u8], e820_table: &[BootE820Entry]) -> VirtAddr {
+pub fn parse_elf_file(
+    buf: &[u8],
+    e820_table: &[BootE820Entry],
+    ramdisk: Option<Ramdisk>,
+) -> VirtAddr {
     let file = ElfBytes::<AnyEndian>::minimal_parse(buf).expect("couldn't parse kernel header");
 
     for ref phdr in file
@@ -38,7 +42,7 @@ pub fn parse_elf_file(buf: &[u8], e820_table: &[BootE820Entry]) -> VirtAddr {
         .iter()
         .filter(|&phdr| phdr.p_type == PT_LOAD)
     {
-        load_segment(phdr, buf, e820_table).unwrap();
+        load_segment(phdr, buf, e820_table, &ramdisk).unwrap();
     }
 
     phys_to_virt(PhysAddr::new(file.ehdr.e_entry))
@@ -49,6 +53,7 @@ fn load_segment(
     phdr: &ProgramHeader,
     buf: &[u8],
     e820_table: &[BootE820Entry],
+    ramdisk: &Option<Ramdisk>,
 ) -> Result<(), &'static str> {
     let file_offset = phdr.p_offset as usize;
     let file_length = phdr.p_filesz as usize;
@@ -61,7 +66,17 @@ fn load_segment(
         size,
         VirtAddr::from_ptr(buf.as_ptr()),
         buf.len(),
-    )?;
+    )
+    .map_err(|_| "region overlaps with ELF file")?;
+    if let Some(ramdisk) = ramdisk {
+        check_non_overlapping(
+            start_address,
+            size,
+            phys_to_virt(PhysAddr::new(ramdisk.addr.into())),
+            ramdisk.size as usize,
+        )
+        .map_err(|_| "region overlaps with ramdisk")?
+    };
     // Safety: we checked that the target memory is valid and that it does not overlap with the
     // source buffer.
     let target = unsafe { slice::from_raw_parts_mut::<u8>(start_address.as_mut_ptr(), size) };

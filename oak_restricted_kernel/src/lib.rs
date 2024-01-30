@@ -49,7 +49,6 @@ mod logging;
 mod memory;
 mod mm;
 mod payload;
-mod ramdisk;
 #[cfg(feature = "serial_channel")]
 mod serial;
 pub mod shutdown;
@@ -76,7 +75,7 @@ use mm::{
 };
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
-use oak_linux_boot_params::BootParams;
+use oak_linux_boot_params::{BootParams, Ramdisk};
 use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 use sha2::Sha256;
 use spinning_top::Spinlock;
@@ -91,7 +90,6 @@ use zeroize::Zeroize;
 use crate::{
     acpi::Acpi,
     mm::Translator,
-    ramdisk::Ramdisk,
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 
@@ -163,19 +161,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // Safety: in the linker script we specify that the ELF header should be placed at 0x200000.
     let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
 
-    let ramdisk: Option<Ramdisk> = {
-        let size: u64 = info.hdr.ramdisk_size.into();
-        match size {
-            0 => None,
-            _ => {
-                let phys_addr: PhysAddr = {
-                    let address = info.hdr.ramdisk_image;
-                    PhysAddr::new(address.into())
-                };
-                Some(Ramdisk { phys_addr, size })
-            }
-        }
-    };
+    let ramdisk: Option<Ramdisk> = info.ramdisk();
 
     // Physical frame allocator
     mm::init(info.e820_table(), program_headers, &ramdisk);
@@ -354,7 +340,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 let owned_slice: Box<[u8]> = {
                     let virt_addr = {
                         let pt = PAGE_TABLES.get().expect("failed to get page tables");
-                        pt.translate_physical(ramdisk.phys_addr)
+                        pt.translate_physical(PhysAddr::new(ramdisk.addr.into()))
                             .expect("failed to translate physical dice address")
                     };
 
@@ -374,7 +360,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
                     let owned_slice = Box::<[u8]>::from(slice);
                     // Once the application has been copied onto the heap, the original ramdisk
                     // location is marked as available.
-                    let ramdisk_range = ramdisk.phys_frame_range();
+                    let ramdisk_range = crate::mm::ramdisk_range(&ramdisk);
                     info!(
                         "marking [{:#018x}..{:#018x}) as available",
                         ramdisk_range.start.start_address().as_u64(),
