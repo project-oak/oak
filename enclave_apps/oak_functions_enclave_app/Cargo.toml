@@ -20,7 +20,6 @@ oak_functions_enclave_service = { path = "../../oak_functions_enclave_service", 
 log = "*"
 micro_rpc = { workspace = true }
 oak_restricted_kernel_sdk = { workspace = true }
-oak_core = { workspace = true }
 
 [[bin]]
 name = "oak_functions_enclave_app"
