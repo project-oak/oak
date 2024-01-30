@@ -24,9 +24,9 @@ package(
     licenses = ["notice"],
 )
 
-proto_library(
+alias(
     name = "crypto_proto",
-    srcs = ["crypto.proto"],
+    actual = "//proto/crypto:crypto_proto",
 )
 
 cc_proto_library(
