@@ -14,7 +14,29 @@
 // limitations under the License.
 //
 
+use x86_64::{
+    align_down, align_up,
+    structures::paging::{frame::PhysFrameRange, PageSize, PhysFrame, Size2MiB},
+    PhysAddr,
+};
+
 pub struct Ramdisk {
     pub phys_addr: x86_64::PhysAddr,
     pub size: u64,
+}
+
+impl Ramdisk {
+    pub fn phys_frame_range(&self) -> PhysFrameRange<Size2MiB> {
+        PhysFrame::range(
+            PhysFrame::<x86_64::structures::paging::Size2MiB>::from_start_address(PhysAddr::new(
+                align_down(self.phys_addr.as_u64(), Size2MiB::SIZE),
+            ))
+            .unwrap(),
+            PhysFrame::from_start_address(PhysAddr::new(align_up(
+                self.phys_addr.as_u64() + self.size,
+                Size2MiB::SIZE,
+            )))
+            .unwrap(),
+        )
+    }
 }

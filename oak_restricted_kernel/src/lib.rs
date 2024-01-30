@@ -351,8 +351,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let application: payload::Application = {
         match ramdisk {
             Some(ramdisk) => {
-                info!("Parsing application from ramdisk...");
-                let slice: Box<[u8]> = {
+                let owned_slice: Box<[u8]> = {
                     let virt_addr = {
                         let pt = PAGE_TABLES.get().expect("failed to get page tables");
                         pt.translate_physical(ramdisk.phys_addr)
@@ -364,15 +363,30 @@ pub fn start_kernel(info: &BootParams) -> ! {
                     // memory.
                     // We excluded this range from the frame allocator so it cannot be used by the
                     // heap allocator.
-                    unsafe {
+                    let slice: &[u8] = unsafe {
                         core::slice::from_raw_parts::<u8>(
                             virt_addr.as_mut_ptr(),
                             info.hdr.ramdisk_size.try_into().unwrap(),
                         )
-                    }
-                    .into()
+                    };
+
+                    info!("Copying application from ramdisk...");
+                    let owned_slice = Box::<[u8]>::from(slice);
+                    // Once the application has been copied onto the heap, the original ramdisk
+                    // location is marked as available.
+                    let ramdisk_range = ramdisk.phys_frame_range();
+                    info!(
+                        "marking [{:#018x}..{:#018x}) as available",
+                        ramdisk_range.start.start_address().as_u64(),
+                        ramdisk_range.end.start_address().as_u64()
+                    );
+                    FRAME_ALLOCATOR.lock().mark_valid(ramdisk_range, true);
+
+                    owned_slice
                 };
-                payload::Application::new(slice).expect("failed to parse application from ramdisk")
+                info!("Parsing application...");
+                payload::Application::new(owned_slice)
+                    .expect("failed to parse application from ramdisk")
             }
             None => {
                 // We need to load the application binary before we hand the channel over to the

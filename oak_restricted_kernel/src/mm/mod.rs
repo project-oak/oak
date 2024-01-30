@@ -246,17 +246,7 @@ pub fn init(
 
     // Thirdly, mark the ramdisk as reserved.
     if let Some(ramdisk) = ramdisk {
-        let ramdisk_range = PhysFrame::range(
-            PhysFrame::<x86_64::structures::paging::Size2MiB>::from_start_address(PhysAddr::new(
-                align_down(ramdisk.phys_addr.as_u64(), Size2MiB::SIZE),
-            ))
-            .unwrap(),
-            PhysFrame::from_start_address(PhysAddr::new(align_up(
-                ramdisk.phys_addr.as_u64() + ramdisk.size,
-                Size2MiB::SIZE,
-            )))
-            .unwrap(),
-        );
+        let ramdisk_range = ramdisk.phys_frame_range();
         info!(
             "marking [{:#018x}..{:#018x}) as reserved (ramdisk)",
             ramdisk_range.start.start_address().as_u64(),
