@@ -197,7 +197,7 @@ impl ClientEncryptor {
     /// Returns a response message plaintext and associated data.
     /// <https://datatracker.ietf.org/doc/html/rfc5116>
     pub fn decrypt(
-        &mut self,
+        &self,
         encrypted_response: &EncryptedResponse,
     ) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
         let encrypted_message = encrypted_response
@@ -248,7 +248,7 @@ impl ServerEncryptor {
     /// Returns a response message plaintext and associated data.
     /// <https://datatracker.ietf.org/doc/html/rfc5116>
     pub fn decrypt(
-        &mut self,
+        &self,
         encrypted_request: &EncryptedRequest,
     ) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
         let encrypted_message = encrypted_request
@@ -273,7 +273,7 @@ impl ServerEncryptor {
     /// Returns a [`EncryptedResponse`] proto message.
     /// <https://datatracker.ietf.org/doc/html/rfc5116>
     pub fn encrypt(
-        &mut self,
+        &self,
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<EncryptedResponse> {
@@ -329,7 +329,7 @@ where
         &mut self,
         encrypted_request: &EncryptedRequest,
     ) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
-        match &mut self.inner {
+        match &self.inner {
             Some(inner) => inner.decrypt(encrypted_request),
             None => {
                 let serialized_encapsulated_public_key = encrypted_request
@@ -341,7 +341,7 @@ where
                     .generate_recipient_context(serialized_encapsulated_public_key)
                     .await
                     .context("couldn't generate recipient crypto context")?;
-                let mut inner = ServerEncryptor::new(recipient_context);
+                let inner = ServerEncryptor::new(recipient_context);
                 let (plaintext, associated_data) = inner.decrypt(encrypted_request)?;
                 self.inner = Some(inner);
                 Ok((plaintext, associated_data))
