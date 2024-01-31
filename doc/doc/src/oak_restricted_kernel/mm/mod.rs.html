@@ -362,6 +362,36 @@
 <a href="#362" id="362">362</a>
 <a href="#363" id="363">363</a>
 <a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -380,7 +410,7 @@
 
 </span><span class="kw">use </span>goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 <span class="kw">use </span>log::info;
-<span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
+<span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType, Ramdisk};
 <span class="kw">use </span>oak_sev_guest::msr::{get_sev_status, SevStatus};
 <span class="kw">use </span>x86_64::{
     addr::{align_down, align_up},
@@ -389,6 +419,7 @@
         model_specific::{Efer, EferFlags},
     },
     structures::paging::{
+        frame::PhysFrameRange,
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
         FrameAllocator, Page, PageSize, PageTable, PageTableFlags <span class="kw">as </span>BasePageTableFlags, PhysFrame,
         Size2MiB,
@@ -531,7 +562,11 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;MapperFlush&lt;S&gt;, FlagUpdateError&gt;;
 }
 
-<span class="kw">pub fn </span>init(memory_map: <span class="kw-2">&amp;</span>[BootE820Entry], program_headers: <span class="kw-2">&amp;</span>[ProgramHeader]) {
+<span class="kw">pub fn </span>init(
+    memory_map: <span class="kw-2">&amp;</span>[BootE820Entry],
+    program_headers: <span class="kw-2">&amp;</span>[ProgramHeader],
+    ramdisk: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Ramdisk&gt;,
+) {
     <span class="kw">let </span><span class="kw-2">mut </span>alloc = FRAME_ALLOCATOR.lock();
 
     <span class="comment">/* Step 1: mark all RAM as available (event though it may contain data!) */
@@ -603,6 +638,31 @@
             );
             alloc.mark_valid(range, <span class="bool-val">false</span>)
         });
+
+    <span class="comment">// Thirdly, mark the ramdisk as reserved.
+    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ramdisk) = ramdisk {
+        <span class="kw">let </span>ramdisk_range = ramdisk_range(ramdisk);
+        <span class="macro">info!</span>(
+            <span class="string">&quot;marking [{:#018x}..{:#018x}) as reserved (ramdisk)&quot;</span>,
+            ramdisk_range.start.start_address().as_u64(),
+            ramdisk_range.end.start_address().as_u64()
+        );
+        alloc.mark_valid(ramdisk_range, <span class="bool-val">false</span>);
+    };
+}
+
+<span class="kw">pub fn </span>ramdisk_range(ramdisk: <span class="kw-2">&amp;</span>Ramdisk) -&gt; PhysFrameRange&lt;Size2MiB&gt; {
+    PhysFrame::range(
+        PhysFrame::&lt;x86_64::structures::paging::Size2MiB&gt;::from_start_address(PhysAddr::new(
+            align_down(ramdisk.addr.into(), Size2MiB::SIZE),
+        ))
+        .unwrap(),
+        PhysFrame::from_start_address(PhysAddr::new(align_up(
+            (ramdisk.addr + ramdisk.size).into(),
+            Size2MiB::SIZE,
+        )))
+        .unwrap(),
+    )
 }
 
 <span class="doccomment">/// Initializes the page tables used by the kernel.
