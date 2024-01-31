@@ -11,4 +11,3 @@ members = [
 micro_rpc = { path = "../micro_rpc" }
 oak_restricted_kernel_sdk = { path = "../oak_restricted_kernel_sdk" }
 oak_restricted_kernel_interface = { path = "../oak_restricted_kernel_interface" }
-oak_core = { path = "../oak_core" }
