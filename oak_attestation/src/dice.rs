@@ -144,6 +144,16 @@ impl DiceBuilder {
 
         Ok(evidence)
     }
+
+    #[allow(dead_code)]
+    fn serialize(self) -> DiceData {
+        DiceData {
+            evidence: Some(self.evidence),
+            certificate_authority: Some(CertificateAuthority {
+                eca_private_key: self.signing_key.to_bytes().as_slice().into(),
+            }),
+        }
+    }
 }
 
 impl Drop for DiceData {
@@ -151,17 +161,6 @@ impl Drop for DiceData {
         // Zero out the ECA private key if it was set.
         if let Some(certificate_authority) = &mut self.certificate_authority {
             certificate_authority.eca_private_key.zeroize();
-        }
-    }
-}
-
-impl From<DiceBuilder> for DiceData {
-    fn from(value: DiceBuilder) -> Self {
-        DiceData {
-            evidence: Some(value.evidence),
-            certificate_authority: Some(CertificateAuthority {
-                eca_private_key: value.signing_key.to_bytes().as_slice().into(),
-            }),
         }
     }
 }
@@ -187,101 +186,86 @@ impl TryFrom<DiceData> for DiceBuilder {
     }
 }
 
-impl TryFrom<Stage0DiceData> for DiceData {
-    type Error = anyhow::Error;
-    fn try_from(value: Stage0DiceData) -> anyhow::Result<Self> {
-        let mut layers = Vec::new();
-        let eca_certificate =
-            oak_dice::utils::cbor_encoded_bytes_to_vec(&value.layer_1_evidence.eca_certificate[..])
-                .map_err(anyhow::Error::msg)?;
-        layers.push(LayerEvidence { eca_certificate });
-        let root_layer = Some(value.root_layer_evidence.try_into()?);
-        let layers = vec![value.layer_1_evidence.try_into()?];
-        let application_keys = None;
-        let evidence = Some(Evidence {
-            root_layer,
-            layers,
-            application_keys,
-        });
-        let certificate_authority = Some(CertificateAuthority {
-            eca_private_key: value.layer_1_certificate_authority.eca_private_key
-                [..oak_dice::evidence::P256_PRIVATE_KEY_SIZE]
-                .to_vec(),
-        });
+#[allow(dead_code)]
+fn dice_data_to_proto(value: Stage0DiceData) -> anyhow::Result<DiceData> {
+    let mut layers = Vec::new();
+    let eca_certificate =
+        oak_dice::utils::cbor_encoded_bytes_to_vec(&value.layer_1_evidence.eca_certificate[..])
+            .map_err(anyhow::Error::msg)?;
+    layers.push(LayerEvidence { eca_certificate });
+    let root_layer = Some(root_layer_evidence_to_proto(value.root_layer_evidence)?);
+    let layers = vec![layer_evidence_to_proto(value.layer_1_evidence)?];
+    let application_keys = None;
+    let evidence = Some(Evidence {
+        root_layer,
+        layers,
+        application_keys,
+    });
+    let certificate_authority = Some(CertificateAuthority {
+        eca_private_key: value.layer_1_certificate_authority.eca_private_key
+            [..oak_dice::evidence::P256_PRIVATE_KEY_SIZE]
+            .to_vec(),
+    });
 
-        Ok(DiceData {
-            evidence,
-            certificate_authority,
-        })
+    Ok(DiceData {
+        evidence,
+        certificate_authority,
+    })
+}
+
+fn tee_platform_to_proto(src: oak_dice::evidence::TeePlatform) -> TeePlatform {
+    match src {
+        oak_dice::evidence::TeePlatform::AmdSevSnp => TeePlatform::AmdSevSnp,
+        oak_dice::evidence::TeePlatform::IntelTdx => TeePlatform::IntelTdx,
+        oak_dice::evidence::TeePlatform::Unspecified => TeePlatform::Unspecified,
     }
 }
 
-impl From<oak_dice::evidence::TeePlatform> for TeePlatform {
-    fn from(src: oak_dice::evidence::TeePlatform) -> Self {
-        match src {
-            oak_dice::evidence::TeePlatform::AmdSevSnp => TeePlatform::AmdSevSnp,
-            oak_dice::evidence::TeePlatform::IntelTdx => TeePlatform::IntelTdx,
-            oak_dice::evidence::TeePlatform::Unspecified => TeePlatform::Unspecified,
-        }
-    }
+#[allow(dead_code)]
+fn evidence_to_proto(value: oak_dice::evidence::Evidence) -> anyhow::Result<Evidence> {
+    let root_layer = Some(root_layer_evidence_to_proto(value.root_layer_evidence)?);
+    let layers = vec![layer_evidence_to_proto(value.restricted_kernel_evidence)?];
+    let application_keys = Some(application_keys_to_proto(value.application_keys)?);
+    Ok(Evidence {
+        root_layer,
+        layers,
+        application_keys,
+    })
 }
 
-impl TryFrom<oak_dice::evidence::Evidence> for Evidence {
-    type Error = anyhow::Error;
-    fn try_from(value: oak_dice::evidence::Evidence) -> anyhow::Result<Self> {
-        let root_layer = Some(value.root_layer_evidence.try_into()?);
-        let layers = vec![value.restricted_kernel_evidence.try_into()?];
-        let application_keys = Some(value.application_keys.try_into()?);
-        Ok(Evidence {
-            root_layer,
-            layers,
-            application_keys,
-        })
-    }
+fn root_layer_evidence_to_proto(value: oak_dice::evidence::RootLayerEvidence) -> anyhow::Result<RootLayerEvidence> {
+    let platform: TeePlatform = tee_platform_to_proto(value.get_tee_platform().map_err(anyhow::Error::msg)?);
+    let remote_attestation_report = value
+        .get_remote_attestation_report()
+        .map_err(anyhow::Error::msg)?
+        .to_vec();
+    let eca_public_key = value.get_eca_public_key().map_err(anyhow::Error::msg)?;
+    Ok(RootLayerEvidence {
+        platform: platform as i32,
+        remote_attestation_report,
+        eca_public_key,
+    })
 }
 
-impl TryFrom<oak_dice::evidence::RootLayerEvidence> for RootLayerEvidence {
-    type Error = anyhow::Error;
-    fn try_from(value: oak_dice::evidence::RootLayerEvidence) -> anyhow::Result<Self> {
-        let platform: TeePlatform = value.get_tee_platform().map_err(anyhow::Error::msg)?.into();
-        let remote_attestation_report = value
-            .get_remote_attestation_report()
-            .map_err(anyhow::Error::msg)?
-            .to_vec();
-        let eca_public_key = value.get_eca_public_key().map_err(anyhow::Error::msg)?;
-        Ok(RootLayerEvidence {
-            platform: platform as i32,
-            remote_attestation_report,
-            eca_public_key,
-        })
-    }
+fn layer_evidence_to_proto(value: oak_dice::evidence::LayerEvidence) -> anyhow::Result<LayerEvidence> {
+    let eca_certificate =
+        oak_dice::utils::cbor_encoded_bytes_to_vec(&value.eca_certificate[..])
+            .map_err(anyhow::Error::msg)?;
+    Ok(LayerEvidence { eca_certificate })
 }
 
-impl TryFrom<oak_dice::evidence::LayerEvidence> for LayerEvidence {
-    type Error = anyhow::Error;
-    fn try_from(value: oak_dice::evidence::LayerEvidence) -> anyhow::Result<Self> {
-        let eca_certificate =
-            oak_dice::utils::cbor_encoded_bytes_to_vec(&value.eca_certificate[..])
-                .map_err(anyhow::Error::msg)?;
-        Ok(LayerEvidence { eca_certificate })
-    }
-}
-
-impl TryFrom<oak_dice::evidence::ApplicationKeys> for ApplicationKeys {
-    type Error = anyhow::Error;
-    fn try_from(value: oak_dice::evidence::ApplicationKeys) -> anyhow::Result<Self> {
-        let encryption_public_key_certificate = oak_dice::utils::cbor_encoded_bytes_to_vec(
-            &value.encryption_public_key_certificate[..],
-        )
-        .map_err(anyhow::Error::msg)?;
-        let signing_public_key_certificate =
-            oak_dice::utils::cbor_encoded_bytes_to_vec(&value.signing_public_key_certificate[..])
-                .map_err(anyhow::Error::msg)?;
-        Ok(ApplicationKeys {
-            encryption_public_key_certificate,
-            signing_public_key_certificate,
-        })
-    }
+fn application_keys_to_proto(value: oak_dice::evidence::ApplicationKeys) -> anyhow::Result<ApplicationKeys> {
+    let encryption_public_key_certificate = oak_dice::utils::cbor_encoded_bytes_to_vec(
+        &value.encryption_public_key_certificate[..],
+    )
+    .map_err(anyhow::Error::msg)?;
+    let signing_public_key_certificate =
+        oak_dice::utils::cbor_encoded_bytes_to_vec(&value.signing_public_key_certificate[..])
+            .map_err(anyhow::Error::msg)?;
+    Ok(ApplicationKeys {
+        encryption_public_key_certificate,
+        signing_public_key_certificate,
+    })
 }
 
 impl LayerEvidence {
