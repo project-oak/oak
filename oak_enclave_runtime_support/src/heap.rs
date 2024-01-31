@@ -79,14 +79,23 @@ impl GrowableHeap {
         }
     }
 
+    /// # Safety
+    ///
+    /// Upheld by caller.
     pub unsafe fn init(&mut self) {}
 
+    #[allow(clippy::result_unit_err)]
     pub fn allocate(&mut self, layout: Layout) -> Result<NonNull<u8>, ()> {
         self.heap
             .allocate(layout)
             .ok_or_else(|| log::error!("failed to allocate memory with layout: {:?}", layout))
     }
 
+    /// # Safety
+    ///
+    ///  - `ptr` must denote a memory block previously allocated via `self`.
+    ///  - The memory block must have been allocated with the same alignment ([`Layout::align`]) as
+    ///    `align`.
     pub unsafe fn deallocate(&mut self, ptr: NonNull<u8>, align: usize) {
         self.heap.deallocate(ptr, align)
     }
