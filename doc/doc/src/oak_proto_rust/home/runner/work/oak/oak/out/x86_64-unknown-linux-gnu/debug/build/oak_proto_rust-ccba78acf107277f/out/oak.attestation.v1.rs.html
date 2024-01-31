@@ -508,6 +508,8 @@
 <a href="#508" id="508">508</a>
 <a href="#509" id="509">509</a>
 <a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// Endorsement for binaries from the Transparent Release process.
 /// &lt;&lt;https://github.com/project-oak/oak/blob/main/docs/release.md&gt;&gt;
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
@@ -602,9 +604,8 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>CbEndorsements {
-    <span class="doccomment">/// Serialized X.509 TEE certificate.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>tee_certificate: ::prost::alloc::vec::Vec&lt;u8&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerEndorsements&gt;,
 }
 <span class="doccomment">/// Endorsement contains statements that some entity (e.g. a hardware provider)
 /// vouches for the integrity of claims about the TEE or the software running
@@ -932,7 +933,10 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>CbReferenceValues {
-    <span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;1&quot;</span>)]
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>root_layer: ::core::option::Option&lt;RootLayerReferenceValues&gt;,
+    <span class="doccomment">/// Generic reference values starting from the second layer.
+    </span><span class="attr">#[prost(message, repeated, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>layers: ::prost::alloc::vec::Vec&lt;CbLayerReferenceValues&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
