@@ -6,7 +6,6 @@ license = "Apache-2.0"
 
 [dependencies]
 prost = { workspace = true }
-zeroize = "*"
 
 [build-dependencies]
 prost-build = { workspace = true }

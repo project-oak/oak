@@ -26,6 +26,7 @@ use oak_dice::{
     evidence::Stage0DiceData,
 };
 use p256::ecdsa::{SigningKey, VerifyingKey};
+use zeroize::Zeroize;
 
 use crate::proto::oak::attestation::v1::{
     ApplicationKeys, CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
@@ -145,8 +146,7 @@ impl DiceBuilder {
         Ok(evidence)
     }
 
-    #[allow(dead_code)]
-    fn serialize(self) -> DiceData {
+    pub fn serialize(self) -> DiceData {
         DiceData {
             evidence: Some(self.evidence),
             certificate_authority: Some(CertificateAuthority {
@@ -158,7 +158,7 @@ impl DiceBuilder {
 
 impl TryFrom<DiceData> for DiceBuilder {
     type Error = anyhow::Error;
-    fn try_from(value: DiceData) -> anyhow::Result<Self> {
+    fn try_from(mut value: DiceData) -> anyhow::Result<Self> {
         let evidence = value
             .evidence
             .as_ref()
@@ -170,6 +170,11 @@ impl TryFrom<DiceData> for DiceBuilder {
             .eca_private_key;
         let signing_key = SigningKey::from_slice(eca_private_key).map_err(anyhow::Error::msg)?;
 
+        // Zero out the ECA private key if it was set.
+        if let Some(certificate_authority) = &mut value.certificate_authority {
+            certificate_authority.eca_private_key.zeroize();
+        }
+
         Ok(DiceBuilder {
             evidence: evidence.clone(),
             signing_key: signing_key.clone(),
@@ -177,8 +182,7 @@ impl TryFrom<DiceData> for DiceBuilder {
     }
 }
 
-#[allow(dead_code)]
-fn dice_data_to_proto(value: Stage0DiceData) -> anyhow::Result<DiceData> {
+pub fn stage0_dice_data_to_proto(value: Stage0DiceData) -> anyhow::Result<DiceData> {
     let mut layers = Vec::new();
     let eca_certificate =
         oak_dice::utils::cbor_encoded_bytes_to_vec(&value.layer_1_evidence.eca_certificate[..])
@@ -212,8 +216,7 @@ fn tee_platform_to_proto(src: oak_dice::evidence::TeePlatform) -> TeePlatform {
     }
 }
 
-#[allow(dead_code)]
-fn evidence_to_proto(value: oak_dice::evidence::Evidence) -> anyhow::Result<Evidence> {
+pub fn evidence_to_proto(value: oak_dice::evidence::Evidence) -> anyhow::Result<Evidence> {
     let root_layer = Some(root_layer_evidence_to_proto(value.root_layer_evidence)?);
     let layers = vec![layer_evidence_to_proto(value.restricted_kernel_evidence)?];
     let application_keys = Some(application_keys_to_proto(value.application_keys)?);
