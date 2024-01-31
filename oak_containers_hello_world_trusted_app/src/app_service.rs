@@ -15,7 +15,7 @@
 
 use anyhow::anyhow;
 use oak_containers_sdk::InstanceEncryptionKeyHandle;
-use oak_crypto::encryptor::AsyncServerEncryptor;
+use oak_crypto::encryptor::ServerEncryptor;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 
@@ -54,12 +54,9 @@ impl TrustedApplication for TrustedApplicationImplementation {
             .encrypted_request
             .ok_or(tonic::Status::internal("encrypted request wasn't provided"))?;
 
-        let mut server_encryptor = AsyncServerEncryptor::new(&self.encryption_key_handle);
-
         // Associated data is ignored.
-        let (name_bytes, _) =
-            server_encryptor
-                .decrypt(&encrypted_request)
+        let (server_encryptor, name_bytes, _) =
+            ServerEncryptor::decrypt_async(&encrypted_request, &self.encryption_key_handle)
                 .await
                 .map_err(|error| {
                     tonic::Status::internal(format!("couldn't decrypt request: {:?}", error))

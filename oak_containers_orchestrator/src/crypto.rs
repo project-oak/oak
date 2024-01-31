@@ -72,20 +72,13 @@ impl InstanceKeyStore {
         let encrypted_encryption_private_key = group_keys
             .encrypted_encryption_private_key
             .context("encrypted encryption key wasn't provided")?;
-        let encapsulated_public_key = encrypted_encryption_private_key
-            .serialized_encapsulated_public_key
-            .as_ref()
-            .context("encapsulated public key wasn't provided")?;
-        let server_encryptor = ServerEncryptor::create(
-            encapsulated_public_key,
-            self.instance_encryption_key.clone(),
-        )
-        .context("couldn't create server encryptor")?;
 
         // Decrypt group keys.
-        let (decrypted_encryption_private_key, _) = server_encryptor
-            .decrypt(&encrypted_encryption_private_key)
-            .context("couldn't decrypt the encryption private key")?;
+        let (_, decrypted_encryption_private_key, _) = ServerEncryptor::decrypt(
+            &encrypted_encryption_private_key,
+            self.instance_encryption_key.as_ref(),
+        )
+        .context("couldn't decrypt the encryption private key")?;
 
         // Parse private key and derive public key.
         // TODO(#4513): We shouldn't store the public key, only the private key.
