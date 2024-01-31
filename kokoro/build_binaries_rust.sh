@@ -41,7 +41,7 @@ readonly generated_binaries=(
 )
 readonly binary_names=(
     oak_restricted_kernel_simple_io_wrapper_bin
-    oak_restricted_kernel_simple_io_cmd_line
+    oak_restricted_kernel_simple_io_wrapper_cmd_line_regexp
     stage0_bin
     key_xor_test_app
     oak_echo_enclave_app

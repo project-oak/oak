@@ -1,4 +1,1 @@
-# A regular expression on a single line that is required to match the kernel
-# command line. All lines starting with # are stripped when measuring and
-# endorsing this file.
 ^quiet panic=-1 init=/init .*$

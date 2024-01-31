@@ -32,7 +32,7 @@ touch "${KOKORO_ARTIFACTS_DIR}/binaries/git_commit_${KOKORO_GIT_COMMIT_oak:?}"
 readonly generated_binaries=(
     ./target/stage1.cpio
     ./oak_containers_kernel/target/bzImage
-    ./oak_containers_kernel/kernel_cmd_line_regexp.txt
+    ./oak_containers_kernel/cmd_line_regexp.txt
     ./oak_containers_system_image/target/image.tar.xz
     ./oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar
     ./oak_functions_containers_container/target/oak_functions_container_oci_filesystem_bundle.tar

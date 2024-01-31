@@ -1,5 +1,1 @@
-# Regular expressions (one per line) that are required to match the kernel
-# command line. All lines starting with # are ignored for the comparison but
-# are still measured and endorsed. Everything after the -- is ignored since
-# it is only passed on to later layers.
 ^console=ttyS0 panic=-1 earlycon=uart,io,0x3F8 brd.rd_nr=1 brd.rd_size=[1-9][0-9]* brd.max_part=1 ip=10.0.2.15:::255.255.255.0::eth0:off net.ifnames=0 quiet(| -- .*)$
