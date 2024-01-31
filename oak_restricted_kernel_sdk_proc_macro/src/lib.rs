@@ -63,7 +63,7 @@ fn process_entry_fn(entry_fn: ItemFn) -> TokenStream {
         #entry_fn
 
         #[global_allocator]
-        static ALLOCATOR: oak_restricted_kernel_sdk::utils::LockedGrowableHeap = oak_restricted_kernel_sdk::utils::LockedGrowableHeap::empty();
+        static ALLOCATOR: oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap = oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap::empty();
 
         static LOGGER: oak_restricted_kernel_sdk::StderrLogger = oak_restricted_kernel_sdk::StderrLogger {};
 
@@ -72,7 +72,7 @@ fn process_entry_fn(entry_fn: ItemFn) -> TokenStream {
             unsafe {
                 ALLOCATOR.lock().init();
             }
-            log::set_logger(&STDERR_LOGGER).expect("failed to set logger");
+            log::set_logger(&LOGGER).expect("failed to set logger");
             log::set_max_level(log::LevelFilter::Debug);
             log::info!("In main!");
             #entry_fn_name();
