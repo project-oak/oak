@@ -46,9 +46,6 @@ pub enum E820EntryType {
     DISABLED = 6,
     /// Persistent memory: must be handled distinct from conventional volatile memory.
     PMEM = 7,
-    /// Custom implementation-defined value indicating that the memory region is used to pass
-    /// DICE-related information from Stage 0 to the next DICE stage.
-    DiceData = 0xFF000001,
 }
 
 bitflags! {
