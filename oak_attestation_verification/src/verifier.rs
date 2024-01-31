@@ -114,7 +114,7 @@ pub fn verify(
             Some(reference_values::Type::OakContainers(rvs)),
         ) => verify_oak_containers(now_utc_millis, evidence, ends, rvs),
         (Some(endorsements::Type::Cb(ends)), Some(reference_values::Type::Cb(rvs))) => {
-            verify_cb(evidence, ends, rvs)
+            verify_cb(now_utc_millis, evidence, ends, rvs)
         }
         (None, None) => anyhow::bail!("Endorsements and reference values both empty"),
         (None, Some(_)) => anyhow::bail!("Endorsements are empty"),
@@ -323,11 +323,27 @@ fn verify_oak_containers(
 }
 
 fn verify_cb(
-    _evidence: &Evidence,
-    _endorsements: &CbEndorsements,
-    _reference_values: &CbReferenceValues,
+    now_utc_millis: i64,
+    evidence: &Evidence,
+    endorsements: &CbEndorsements,
+    reference_values: &CbReferenceValues,
 ) -> anyhow::Result<()> {
-    anyhow::bail!("needs implementation")
+    let l_root = evidence
+        .root_layer
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no root layer evidence"))?;
+    let e_root = endorsements
+        .root_layer
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no root layer endorsements"))?;
+    let r_root = reference_values
+        .root_layer
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no root layer reference values"))?;
+
+    verify_root_layer(now_utc_millis, l_root, e_root, r_root)?;
+
+    anyhow::bail!("needs more implementation")
 }
 
 /// Verifies the AMD SEV attestation report.

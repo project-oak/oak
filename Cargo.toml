@@ -77,6 +77,15 @@ exclude = [
   "third_party/rust-hypervisor-firmware-virtio",
 ]
 
+# Special version of release that enables more aggressive optimizations.
+# See https://doc.rust-lang.org/cargo/reference/profiles.html for more details.
+[profile.release-lto]
+inherits = "release"
+debug = 0
+lto = true
+panic = "abort"
+codegen-units = 1
+
 [workspace.dependencies]
 # Declare workspace-wide dependencies so that they don't need to use relative paths to refer to each other, and they are always kept in sync.
 # Local crates.
