@@ -2146,6 +2146,7 @@ dependencies = [
  "sha2",
  "syslog",
  "tar",
+ "tikv-jemallocator",
  "tokio",
  "tokio-stream",
  "tokio-util",
