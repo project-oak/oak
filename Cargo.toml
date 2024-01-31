@@ -103,7 +103,7 @@ oak_containers_sdk = { path = "./oak_containers_sdk" }
 oak_core = { path = "./oak_core" }
 oak_crypto = { path = "./oak_crypto" }
 oak_dice = { path = "./oak_dice" }
-oak_enclave_runtime_support = { path = "./oak_enclave_runtime_support" }
+oak_enclave_runtime_support = { path = "./oak_enclave_runtime_support", default-features = false }
 oak_functions_abi = { path = "./oak_functions_abi" }
 oak_functions_client = { path = "./oak_functions_client" }
 oak_functions_launcher = { path = "./oak_functions_launcher" }
