@@ -564,7 +564,7 @@
     /// Returns a response message plaintext and associated data.
     /// &lt;https://datatracker.ietf.org/doc/html/rfc5116&gt;
     </span><span class="kw">pub fn </span>decrypt(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         encrypted_response: <span class="kw-2">&amp;</span>EncryptedResponse,
     ) -&gt; anyhow::Result&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
         <span class="kw">let </span>encrypted_message = encrypted_response
@@ -615,7 +615,7 @@
     /// Returns a response message plaintext and associated data.
     /// &lt;https://datatracker.ietf.org/doc/html/rfc5116&gt;
     </span><span class="kw">pub fn </span>decrypt(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
     ) -&gt; anyhow::Result&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
         <span class="kw">let </span>encrypted_message = encrypted_request
@@ -640,7 +640,7 @@
     /// Returns a [`EncryptedResponse`] proto message.
     /// &lt;https://datatracker.ietf.org/doc/html/rfc5116&gt;
     </span><span class="kw">pub fn </span>encrypt(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         plaintext: <span class="kw-2">&amp;</span>[u8],
         associated_data: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
@@ -696,7 +696,7 @@
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
     ) -&gt; anyhow::Result&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
-        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.inner {
+        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.inner {
             <span class="prelude-val">Some</span>(inner) =&gt; inner.decrypt(encrypted_request),
             <span class="prelude-val">None </span>=&gt; {
                 <span class="kw">let </span>serialized_encapsulated_public_key = encrypted_request
@@ -708,7 +708,7 @@
                     .generate_recipient_context(serialized_encapsulated_public_key)
                     .<span class="kw">await
                     </span>.context(<span class="string">&quot;couldn&#39;t generate recipient crypto context&quot;</span>)<span class="question-mark">?</span>;
-                <span class="kw">let </span><span class="kw-2">mut </span>inner = ServerEncryptor::new(recipient_context);
+                <span class="kw">let </span>inner = ServerEncryptor::new(recipient_context);
                 <span class="kw">let </span>(plaintext, associated_data) = inner.decrypt(encrypted_request)<span class="question-mark">?</span>;
                 <span class="self">self</span>.inner = <span class="prelude-val">Some</span>(inner);
                 <span class="prelude-val">Ok</span>((plaintext, associated_data))

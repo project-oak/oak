@@ -455,7 +455,7 @@
     <span class="doccomment">/// Encrypts request message with associated data using AEAD.
     /// &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption&gt;
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>seal(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         nonce: <span class="kw-2">&amp;</span>AeadNonce,
         plaintext: <span class="kw-2">&amp;</span>[u8],
         associated_data: <span class="kw-2">&amp;</span>[u8],
@@ -470,7 +470,7 @@
     /// communication.
     /// &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption&gt;
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>open(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         nonce: <span class="kw-2">&amp;</span>AeadNonce,
         ciphertext: <span class="kw-2">&amp;</span>[u8],
         associated_data: <span class="kw-2">&amp;</span>[u8],
@@ -491,7 +491,7 @@
     <span class="doccomment">/// Decrypts request message and validates associated data using AEAD.
     /// &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption&gt;
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>open(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         nonce: <span class="kw-2">&amp;</span>AeadNonce,
         ciphertext: <span class="kw-2">&amp;</span>[u8],
         associated_data: <span class="kw-2">&amp;</span>[u8],
@@ -506,7 +506,7 @@
     /// communication.
     /// &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption&gt;
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>seal(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
         nonce: <span class="kw-2">&amp;</span>AeadNonce,
         plaintext: <span class="kw-2">&amp;</span>[u8],
         associated_data: <span class="kw-2">&amp;</span>[u8],

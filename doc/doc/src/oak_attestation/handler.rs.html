@@ -198,7 +198,7 @@
             .serialized_encapsulated_public_key
             .as_ref()
             .context(<span class="string">&quot;initial request message doesn&#39;t contain encapsulated public key&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>server_encryptor = ServerEncryptor::create(
+        <span class="kw">let </span>server_encryptor = ServerEncryptor::create(
             serialized_encapsulated_public_key,
             <span class="self">self</span>.encryption_key_handle.clone(),
         )
