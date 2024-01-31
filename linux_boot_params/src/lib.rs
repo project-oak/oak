@@ -496,6 +496,17 @@ impl SetupHeader {
     pub fn x_load_flags(&self) -> Option<XLoadFlags> {
         XLoadFlags::from_bits(self.xloadflags)
     }
+
+    pub fn ramdisk(&self) -> Option<Ramdisk> {
+        let size = self.ramdisk_size;
+        match size {
+            0 => None,
+            _ => {
+                let addr = self.ramdisk_image;
+                Some(Ramdisk { addr, size })
+            }
+        }
+    }
 }
 
 #[repr(C, packed)]
@@ -646,6 +657,11 @@ pub struct EDIDInfo {
     pub dummy: [u8; 128usize],
 }
 
+pub struct Ramdisk {
+    pub addr: u32,
+    pub size: u32,
+}
+
 #[repr(C, align(4096))]
 #[derive(Copy, Clone, Debug)]
 pub struct BootParams {
@@ -740,6 +756,10 @@ impl BootParams {
             // args.
             unsafe { CStr::from_ptr(self.hdr.cmd_line_ptr as *const c_char) }
         }
+    }
+
+    pub fn ramdisk(&self) -> Option<Ramdisk> {
+        self.hdr.ramdisk()
     }
 }
 
