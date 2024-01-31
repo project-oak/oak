@@ -498,7 +498,7 @@ impl SetupHeader {
     }
 
     pub fn ramdisk(&self) -> Option<Ramdisk> {
-        let size = self.ramdisk_size.into();
+        let size = self.ramdisk_size;
         match size {
             0 => None,
             _ => {
