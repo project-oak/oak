@@ -163,7 +163,10 @@ message CBLayerReferenceValues {
 }
 
 message CBReferenceValues {
-  repeated CBLayerReferenceValues layers = 1;
+  RootLayerReferenceValues root_layer = 1;
+
+  // Generic reference values starting from the second layer.
+  repeated CBLayerReferenceValues layers = 2;
 }
 
 message ReferenceValues {
