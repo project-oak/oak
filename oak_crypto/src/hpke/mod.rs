@@ -173,7 +173,7 @@ impl SenderContext {
     /// Encrypts request message with associated data using AEAD.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
     pub(crate) fn seal(
-        &mut self,
+        &self,
         nonce: &AeadNonce,
         plaintext: &[u8],
         associated_data: &[u8],
@@ -188,7 +188,7 @@ impl SenderContext {
     /// communication.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
     pub(crate) fn open(
-        &mut self,
+        &self,
         nonce: &AeadNonce,
         ciphertext: &[u8],
         associated_data: &[u8],
@@ -209,7 +209,7 @@ impl RecipientContext {
     /// Decrypts request message and validates associated data using AEAD.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
     pub(crate) fn open(
-        &mut self,
+        &self,
         nonce: &AeadNonce,
         ciphertext: &[u8],
         associated_data: &[u8],
@@ -224,7 +224,7 @@ impl RecipientContext {
     /// communication.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
     pub(crate) fn seal(
-        &mut self,
+        &self,
         nonce: &AeadNonce,
         plaintext: &[u8],
         associated_data: &[u8],

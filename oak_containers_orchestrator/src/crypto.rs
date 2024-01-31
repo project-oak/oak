@@ -71,7 +71,7 @@ impl InstanceKeyStore {
             .serialized_encapsulated_public_key
             .as_ref()
             .context("encapsulated public key wasn't provided")?;
-        let mut server_encryptor = ServerEncryptor::create(
+        let server_encryptor = ServerEncryptor::create(
             encapsulated_public_key,
             self.instance_encryption_key.clone(),
         )
