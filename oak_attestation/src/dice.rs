@@ -17,10 +17,7 @@
 use alloc::{vec, vec::Vec};
 
 use anyhow::{anyhow, Context};
-use coset::{
-    cwt::{ClaimName, ClaimsSet},
-    CborSerializable,
-};
+use coset::{cwt::ClaimName, CborSerializable};
 use oak_dice::{
     cert::{
         generate_ecdsa_key_pair, generate_kem_certificate, generate_signing_certificate,
@@ -56,13 +53,15 @@ impl DiceBuilder {
         // The last evidence layer contains the certificate for the current signing key. Since the
         // builder contains an existing signing key there must be at least one layer of evidence
         // that contains the certificate.
-        let claims_set = self
+
+        let layer_evidence = self
             .evidence
             .layers
             .last()
-            .ok_or_else(|| anyhow::anyhow!("no evidence layers found"))?
-            .get_claims()
-            .context("couldn't get layer claims set")?;
+            .ok_or_else(|| anyhow::anyhow!("no evidence layers found"))?;
+        let claims_set = get_claims_set_from_certificate_bytes(&layer_evidence.eca_certificate)
+            .map_err(anyhow::Error::msg)?;
+
         // The issuer for the next layer is the subject of the current last layer.
         let issuer_id = claims_set
             .subject
@@ -101,13 +100,15 @@ impl DiceBuilder {
         // The last evidence layer contains the certificate for the current signing key. Since the
         // builder contains an existing signing key there must be at least one layer of evidence
         // that contains the certificate.
-        let claims_set = self
+
+        let layer_evidence = self
             .evidence
             .layers
             .last()
-            .ok_or_else(|| anyhow::anyhow!("no evidence layers found"))?
-            .get_claims()
-            .context("couldn't get layer claims set")?;
+            .ok_or_else(|| anyhow::anyhow!("no evidence layers found"))?;
+        let claims_set = get_claims_set_from_certificate_bytes(&layer_evidence.eca_certificate)
+            .map_err(anyhow::Error::msg)?;
+
         // The issuer for the application keys is the subject of the final layer.
         let issuer_id = claims_set
             .subject
@@ -156,14 +157,14 @@ impl DiceBuilder {
     }
 }
 
-impl Drop for DiceData {
-    fn drop(&mut self) {
-        // Zero out the ECA private key if it was set.
-        if let Some(certificate_authority) = &mut self.certificate_authority {
-            certificate_authority.eca_private_key.zeroize();
-        }
-    }
-}
+// impl Drop for DiceData {
+//     fn drop(&mut self) {
+//         // Zero out the ECA private key if it was set.
+//         if let Some(certificate_authority) = &mut self.certificate_authority {
+//             certificate_authority.eca_private_key.zeroize();
+//         }
+//     }
+// }
 
 impl TryFrom<DiceData> for DiceBuilder {
     type Error = anyhow::Error;
@@ -233,8 +234,11 @@ fn evidence_to_proto(value: oak_dice::evidence::Evidence) -> anyhow::Result<Evid
     })
 }
 
-fn root_layer_evidence_to_proto(value: oak_dice::evidence::RootLayerEvidence) -> anyhow::Result<RootLayerEvidence> {
-    let platform: TeePlatform = tee_platform_to_proto(value.get_tee_platform().map_err(anyhow::Error::msg)?);
+fn root_layer_evidence_to_proto(
+    value: oak_dice::evidence::RootLayerEvidence,
+) -> anyhow::Result<RootLayerEvidence> {
+    let platform: TeePlatform =
+        tee_platform_to_proto(value.get_tee_platform().map_err(anyhow::Error::msg)?);
     let remote_attestation_report = value
         .get_remote_attestation_report()
         .map_err(anyhow::Error::msg)?
@@ -247,18 +251,20 @@ fn root_layer_evidence_to_proto(value: oak_dice::evidence::RootLayerEvidence) ->
     })
 }
 
-fn layer_evidence_to_proto(value: oak_dice::evidence::LayerEvidence) -> anyhow::Result<LayerEvidence> {
-    let eca_certificate =
-        oak_dice::utils::cbor_encoded_bytes_to_vec(&value.eca_certificate[..])
-            .map_err(anyhow::Error::msg)?;
+fn layer_evidence_to_proto(
+    value: oak_dice::evidence::LayerEvidence,
+) -> anyhow::Result<LayerEvidence> {
+    let eca_certificate = oak_dice::utils::cbor_encoded_bytes_to_vec(&value.eca_certificate[..])
+        .map_err(anyhow::Error::msg)?;
     Ok(LayerEvidence { eca_certificate })
 }
 
-fn application_keys_to_proto(value: oak_dice::evidence::ApplicationKeys) -> anyhow::Result<ApplicationKeys> {
-    let encryption_public_key_certificate = oak_dice::utils::cbor_encoded_bytes_to_vec(
-        &value.encryption_public_key_certificate[..],
-    )
-    .map_err(anyhow::Error::msg)?;
+fn application_keys_to_proto(
+    value: oak_dice::evidence::ApplicationKeys,
+) -> anyhow::Result<ApplicationKeys> {
+    let encryption_public_key_certificate =
+        oak_dice::utils::cbor_encoded_bytes_to_vec(&value.encryption_public_key_certificate[..])
+            .map_err(anyhow::Error::msg)?;
     let signing_public_key_certificate =
         oak_dice::utils::cbor_encoded_bytes_to_vec(&value.signing_public_key_certificate[..])
             .map_err(anyhow::Error::msg)?;
@@ -266,11 +272,4 @@ fn application_keys_to_proto(value: oak_dice::evidence::ApplicationKeys) -> anyh
         encryption_public_key_certificate,
         signing_public_key_certificate,
     })
-}
-
-impl LayerEvidence {
-    /// Extracts the `ClaimsSet` encoded in the ECA certificate of the layer.
-    pub fn get_claims(&self) -> anyhow::Result<ClaimsSet> {
-        get_claims_set_from_certificate_bytes(&self.eca_certificate).map_err(anyhow::Error::msg)
-    }
 }
