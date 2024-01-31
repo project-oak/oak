@@ -71,12 +71,12 @@ fn test_aead() {
 #[test]
 fn test_hpke() {
     let recipient_key_pair = KeyPair::generate();
-    let (serialized_encapsulated_public_key, mut sender_context) = setup_base_sender(
+    let (serialized_encapsulated_public_key, sender_context) = setup_base_sender(
         &recipient_key_pair.get_serialized_public_key(),
         TEST_HPKE_INFO,
     )
     .expect("couldn't setup base sender");
-    let mut recipient_context = setup_base_recipient(
+    let recipient_context = setup_base_recipient(
         &serialized_encapsulated_public_key,
         &recipient_key_pair,
         TEST_HPKE_INFO,

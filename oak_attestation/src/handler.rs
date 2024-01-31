@@ -61,7 +61,7 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
             .serialized_encapsulated_public_key
             .as_ref()
             .context("initial request message doesn't contain encapsulated public key")?;
-        let mut server_encryptor = ServerEncryptor::create(
+        let server_encryptor = ServerEncryptor::create(
             serialized_encapsulated_public_key,
             self.encryption_key_handle.clone(),
         )
