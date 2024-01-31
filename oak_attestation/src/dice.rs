@@ -26,7 +26,6 @@ use oak_dice::{
     evidence::Stage0DiceData,
 };
 use p256::ecdsa::{SigningKey, VerifyingKey};
-use zeroize::Zeroize;
 
 use crate::proto::oak::attestation::v1::{
     ApplicationKeys, CertificateAuthority, DiceData, Evidence, LayerEvidence, RootLayerEvidence,
@@ -156,15 +155,6 @@ impl DiceBuilder {
         }
     }
 }
-
-// impl Drop for DiceData {
-//     fn drop(&mut self) {
-//         // Zero out the ECA private key if it was set.
-//         if let Some(certificate_authority) = &mut self.certificate_authority {
-//             certificate_authority.eca_private_key.zeroize();
-//         }
-//     }
-// }
 
 impl TryFrom<DiceData> for DiceBuilder {
     type Error = anyhow::Error;

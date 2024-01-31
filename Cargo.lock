@@ -2597,6 +2597,7 @@ version = "0.0.1"
 dependencies = [
  "prost",
  "prost-build",
+ "zeroize",
 ]
 
 [[package]]
