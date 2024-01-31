@@ -18,7 +18,7 @@
 
 use heap::LockedGrowableHeap;
 
-mod heap;
+pub mod heap;
 mod libm;
 
 #[cfg_attr(all(not(test), feature = "global_allocator"), global_allocator)]

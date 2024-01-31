@@ -22,10 +22,14 @@ mod channel;
 mod dice;
 mod logging;
 
+pub mod utils {
+    pub use oak_core::*;
+    pub use oak_enclave_runtime_support::heap;
+}
+
 pub use channel::*;
 pub use dice::*;
 pub use logging::StderrLogger;
-pub use oak_core as utils;
 pub use oak_restricted_kernel_sdk_proc_macro::entrypoint;
 
 pub fn alloc_error_handler(layout: ::core::alloc::Layout) -> ! {
