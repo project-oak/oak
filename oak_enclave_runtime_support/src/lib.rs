@@ -16,16 +16,7 @@
 
 #![no_std]
 
-use heap::LockedGrowableHeap;
+pub use heap::LockedGrowableHeap;
 
 mod heap;
 mod libm;
-
-#[cfg_attr(not(test), global_allocator)]
-static ALLOCATOR: LockedGrowableHeap = LockedGrowableHeap::empty();
-
-pub fn init() {
-    unsafe {
-        ALLOCATOR.lock().init();
-    }
-}

@@ -6,4 +6,4 @@
 
 Runtime support library for applications built for Oak Restricted Kernel.
 
-For now, the runtime support library only sets up the global heap allocator.
+For now, the runtime support library provides a global heap allocator.
