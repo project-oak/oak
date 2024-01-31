@@ -20,7 +20,10 @@ use anyhow::Context;
 use ciborium::Value;
 use coset::cwt::ClaimName;
 use nix::sys::mman::{mmap, munmap, MapFlags, ProtFlags};
-use oak_attestation::{dice::{DiceBuilder, stage0_dice_data_to_proto}, proto::oak::attestation::v1::DiceData};
+use oak_attestation::{
+    dice::{stage0_dice_data_to_proto, DiceBuilder},
+    proto::oak::attestation::v1::DiceData,
+};
 use oak_dice::{
     cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID},
     evidence::{Stage0DiceData, STAGE0_MAGIC},

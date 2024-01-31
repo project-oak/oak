@@ -122,15 +122,13 @@ impl<EKH: EncryptionKeyHandle + 'static, EP: oak_restricted_kernel_sdk::Evidence
                         format!("failed to get encryption public key: {err}"),
                     )
                 })?;
-                let evidence = evidence_to_proto(
-                    self.evidence_provider.get_evidence().clone(),
-                )
-                .map_err(|err| {
-                    micro_rpc::Status::new_with_message(
-                        micro_rpc::StatusCode::Internal,
-                        format!("failed to convert evidence to proto: {err}"),
-                    )
-                })?;
+                let evidence = evidence_to_proto(self.evidence_provider.get_evidence().clone())
+                    .map_err(|err| {
+                        micro_rpc::Status::new_with_message(
+                            micro_rpc::StatusCode::Internal,
+                            format!("failed to convert evidence to proto: {err}"),
+                        )
+                    })?;
                 #[allow(deprecated)]
                 Ok(InitializeResponse {
                     public_key_info: Some(PublicKeyInfo {
