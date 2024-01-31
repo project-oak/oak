@@ -5,10 +5,6 @@ authors = ["Andri Saar <andrisaar@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
-[features]
-default = ["global_allocator"]
-global_allocator = []
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 libm = "*"
