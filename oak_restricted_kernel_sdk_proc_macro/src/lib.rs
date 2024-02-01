@@ -62,11 +62,15 @@ fn process_entry_fn(entry_fn: ItemFn) -> TokenStream {
     let generated = quote! {
         #entry_fn
 
+        #[global_allocator]
+        static ALLOCATOR: oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap = oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap::empty();
+
         static LOGGER: oak_restricted_kernel_sdk::StderrLogger = oak_restricted_kernel_sdk::StderrLogger {};
 
         #[no_mangle]
         fn _start() -> ! {
-            oak_restricted_kernel_sdk::init(log::LevelFilter::Debug);
+            log::set_logger(&LOGGER).expect("failed to set logger");
+            log::set_max_level(log::LevelFilter::Debug);
             log::info!("In main!");
             #entry_fn_name();
         }
