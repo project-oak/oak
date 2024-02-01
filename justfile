@@ -78,7 +78,7 @@ kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin oak_restr
 kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
 
-kokoro_run_tests: all_ensure_no_std
+kokoro_run_tests: all_ensure_no_std oak_containers_kernel
     RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --workspace --exclude='oak_containers_hello_world_untrusted_app'
 
 clang-tidy:
