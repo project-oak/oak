@@ -17,7 +17,10 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context};
 use hpke::{kem::X25519HkdfSha256, Deserializable, Kem};
-use oak_crypto::encryptor::{EncryptionKeyHandle, EncryptionKeyProvider, ServerEncryptor};
+use oak_crypto::{
+    encryptor::{ClientEncryptor, EncryptionKeyHandle, EncryptionKeyProvider, ServerEncryptor},
+    proto::oak::crypto::v1::EncryptedRequest,
+};
 use tonic::{Request, Response};
 
 use crate::proto::oak::{
@@ -27,6 +30,8 @@ use crate::proto::oak::{
     },
     key_provisioning::v1::GroupKeys,
 };
+
+const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 /// An implementation of the Key Store without group keys.
 pub struct InstanceKeyStore {
@@ -104,8 +109,8 @@ impl InstanceKeyStore {
 pub struct KeyStore {
     // TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
     instance_encryption_key: Arc<EncryptionKeyProvider>,
-    group_encryption_key: EncryptionKeyProvider,
     instance_signing_key: p256::ecdsa::SigningKey,
+    group_encryption_key: EncryptionKeyProvider,
 }
 
 impl KeyStore {
@@ -114,6 +119,19 @@ impl KeyStore {
         // Once we move all enclave apps to the new crypto service and update the `Attester` to not
         // have the private key - this function should be removed.
         self.instance_encryption_key.clone()
+    }
+
+    /// Returns group encryption private key which was encrypted with the `peer_public_key`.
+    pub fn encrypted_group_encryption_key(
+        &self,
+        peer_public_key: &[u8],
+    ) -> anyhow::Result<EncryptedRequest> {
+        let mut client_encryptor =
+            ClientEncryptor::create(peer_public_key).context("couldn't create client encryptor")?;
+        client_encryptor.encrypt(
+            &self.group_encryption_key.get_private_key(),
+            EMPTY_ASSOCIATED_DATA,
+        )
     }
 }
 
