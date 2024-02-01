@@ -75,13 +75,13 @@
 
 <span class="kw">pub mod </span>proto {
     <span class="kw">pub mod </span>oak {
-        <span class="kw">pub use </span>oak_attestation::proto::oak::attestation;
-        <span class="kw">pub use </span>oak_crypto::proto::oak::crypto;
         <span class="kw">pub mod </span>functions {
             <span class="attr">#![allow(dead_code)]
             </span><span class="kw">use </span>prost::Message;
             <span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.functions.rs&quot;</span>));
         }
+        <span class="kw">pub use </span>oak_crypto::proto::oak::crypto;
+        <span class="kw">pub use </span>oak_proto_rust::oak::attestation;
     }
 }
 

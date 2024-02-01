@@ -163,13 +163,13 @@
 </span><span class="kw">use </span>std::{net::SocketAddr, pin::Pin};
 
 <span class="kw">use </span>futures::{Future, Stream, StreamExt};
-<span class="kw">use </span>oak_attestation::proto::oak::attestation::v1::{Endorsements, Evidence};
 <span class="kw">use </span>oak_functions_launcher::proto::oak::session::v1::{
     request_wrapper, response_wrapper,
     streaming_session_server::{StreamingSession, StreamingSessionServer},
     AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
     InvokeResponse, RequestWrapper, ResponseWrapper,
 };
+<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
 <span class="kw">use </span>tonic::{transport::Server, Request, Response, Status, Streaming};
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::{

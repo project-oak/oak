@@ -34,11 +34,6 @@
 <a href="#34" id="34">34</a>
 <a href="#35" id="35">35</a>
 <a href="#36" id="36">36</a>
-<a href="#37" id="37">37</a>
-<a href="#38" id="38">38</a>
-<a href="#39" id="39">39</a>
-<a href="#40" id="40">40</a>
-<a href="#41" id="41">41</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -61,19 +56,14 @@
 
 <span class="kw">pub mod </span>proto {
     <span class="kw">pub mod </span>oak {
-        <span class="kw">pub mod </span>attestation {
-            <span class="kw">pub mod </span>v1 {
-                <span class="attr">#![allow(dead_code)]
-                </span><span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.attestation.v1.rs&quot;</span>));
-            }
-        }
-        <span class="kw">pub use </span>oak_crypto::proto::oak::crypto;
         <span class="kw">pub mod </span>session {
             <span class="kw">pub mod </span>v1 {
                 <span class="attr">#![allow(dead_code)]
                 </span><span class="macro">include!</span>(<span class="macro">concat!</span>(<span class="macro">env!</span>(<span class="string">&quot;OUT_DIR&quot;</span>), <span class="string">&quot;/oak.session.v1.rs&quot;</span>));
             }
         }
+        <span class="kw">pub use </span>oak_crypto::proto::oak::crypto;
+        <span class="kw">pub use </span>oak_proto_rust::oak::attestation;
     }
 }
 
