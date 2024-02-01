@@ -21,11 +21,9 @@ use heap::LockedGrowableHeap;
 pub mod heap;
 mod libm;
 
-#[cfg_attr(all(not(test), feature = "global_allocator"), global_allocator)]
+#[cfg(feature = "global_allocator")]
+#[global_allocator]
 static ALLOCATOR: LockedGrowableHeap = LockedGrowableHeap::empty();
 
-pub fn init() {
-    unsafe {
-        ALLOCATOR.lock().init();
-    }
-}
+#[deprecated(note = "please make use of `oak_restricted_kernel_sdk::entrypoint` instead.")]
+pub fn init() {}

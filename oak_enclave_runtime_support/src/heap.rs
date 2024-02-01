@@ -79,11 +79,6 @@ impl GrowableHeap {
         }
     }
 
-    /// # Safety
-    ///
-    /// Upheld by caller.
-    pub unsafe fn init(&mut self) {}
-
     #[allow(clippy::result_unit_err)]
     pub fn allocate(&mut self, layout: Layout) -> Result<NonNull<u8>, ()> {
         self.heap

@@ -69,9 +69,6 @@ fn process_entry_fn(entry_fn: ItemFn) -> TokenStream {
 
         #[no_mangle]
         fn _start() -> ! {
-            unsafe {
-                ALLOCATOR.lock().init();
-            }
             log::set_logger(&LOGGER).expect("failed to set logger");
             log::set_max_level(log::LevelFilter::Debug);
             log::info!("In main!");
