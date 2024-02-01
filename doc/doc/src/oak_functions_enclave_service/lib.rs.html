@@ -220,8 +220,6 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -244,7 +242,7 @@
 
 <span class="kw">use </span>alloc::{format, string::ToString, sync::Arc, vec::Vec};
 
-<span class="kw">use </span>oak_attestation::handler::EncryptionHandler;
+<span class="kw">use </span>oak_attestation::{dice::evidence_to_proto, handler::EncryptionHandler};
 <span class="kw">use </span>oak_core::sync::OnceCell;
 <span class="kw">use </span>oak_crypto::encryptor::EncryptionKeyHandle;
 <span class="kw">pub use </span>oak_functions_service::proto;
@@ -346,15 +344,13 @@
                         <span class="macro">format!</span>(<span class="string">&quot;failed to get encryption public key: {err}&quot;</span>),
                     )
                 })<span class="question-mark">?</span>;
-                <span class="kw">let </span>evidence = oak_attestation::proto::oak::attestation::v1::Evidence::try_from(
-                    <span class="self">self</span>.evidence_provider.get_evidence().clone(),
-                )
-                .map_err(|err| {
-                    micro_rpc::Status::new_with_message(
-                        micro_rpc::StatusCode::Internal,
-                        <span class="macro">format!</span>(<span class="string">&quot;failed to convert evidence to proto: {err}&quot;</span>),
-                    )
-                })<span class="question-mark">?</span>;
+                <span class="kw">let </span>evidence = evidence_to_proto(<span class="self">self</span>.evidence_provider.get_evidence().clone())
+                    .map_err(|err| {
+                        micro_rpc::Status::new_with_message(
+                            micro_rpc::StatusCode::Internal,
+                            <span class="macro">format!</span>(<span class="string">&quot;failed to convert evidence to proto: {err}&quot;</span>),
+                        )
+                    })<span class="question-mark">?</span>;
                 <span class="attr">#[allow(deprecated)]
                 </span><span class="prelude-val">Ok</span>(InitializeResponse {
                     public_key_info: <span class="prelude-val">Some</span>(PublicKeyInfo {

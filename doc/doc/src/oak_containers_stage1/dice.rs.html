@@ -152,6 +152,9 @@
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -174,7 +177,10 @@
 <span class="kw">use </span>ciborium::Value;
 <span class="kw">use </span>coset::cwt::ClaimName;
 <span class="kw">use </span>nix::sys::mman::{mmap, munmap, MapFlags, ProtFlags};
-<span class="kw">use </span>oak_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
+<span class="kw">use </span>oak_attestation::{
+    dice::{stage0_dice_data_to_proto, DiceBuilder},
+    proto::oak::attestation::v1::DiceData,
+};
 <span class="kw">use </span>oak_dice::{
     cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID},
     evidence::{Stage0DiceData, STAGE0_MAGIC},
@@ -227,7 +233,7 @@
 /// address.
 </span><span class="kw">pub fn </span>extract_stage0_dice_data(start: PhysAddr) -&gt; anyhow::Result&lt;DiceBuilder&gt; {
     <span class="kw">let </span>stage0_dice_data = read_stage0_dice_data(start)<span class="question-mark">?</span>;
-    <span class="kw">let </span>dice_data: DiceData = stage0_dice_data.try_into()<span class="question-mark">?</span>;
+    <span class="kw">let </span>dice_data: DiceData = stage0_dice_data_to_proto(stage0_dice_data)<span class="question-mark">?</span>;
     dice_data.try_into()
 }
 

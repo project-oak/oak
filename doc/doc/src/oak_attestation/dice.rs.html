@@ -266,30 +266,6 @@
 <a href="#266" id="266">266</a>
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
-<a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a>
-<a href="#285" id="285">285</a>
-<a href="#286" id="286">286</a>
-<a href="#287" id="287">287</a>
-<a href="#288" id="288">288</a>
-<a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -309,10 +285,7 @@
 </span><span class="kw">use </span>alloc::{vec, vec::Vec};
 
 <span class="kw">use </span>anyhow::{anyhow, Context};
-<span class="kw">use </span>coset::{
-    cwt::{ClaimName, ClaimsSet},
-    CborSerializable,
-};
+<span class="kw">use </span>coset::{cwt::ClaimName, CborSerializable};
 <span class="kw">use </span>oak_dice::{
     cert::{
         generate_ecdsa_key_pair, generate_kem_certificate, generate_signing_certificate,
@@ -348,13 +321,15 @@
         <span class="comment">// The last evidence layer contains the certificate for the current signing key. Since the
         // builder contains an existing signing key there must be at least one layer of evidence
         // that contains the certificate.
-        </span><span class="kw">let </span>claims_set = <span class="self">self
+
+        </span><span class="kw">let </span>layer_evidence = <span class="self">self
             </span>.evidence
             .layers
             .last()
-            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no evidence layers found&quot;</span>))<span class="question-mark">?
-            </span>.get_claims()
-            .context(<span class="string">&quot;couldn&#39;t get layer claims set&quot;</span>)<span class="question-mark">?</span>;
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no evidence layers found&quot;</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>claims_set = get_claims_set_from_certificate_bytes(<span class="kw-2">&amp;</span>layer_evidence.eca_certificate)
+            .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+
         <span class="comment">// The issuer for the next layer is the subject of the current last layer.
         </span><span class="kw">let </span>issuer_id = claims_set
             .subject
@@ -393,13 +368,15 @@
         <span class="comment">// The last evidence layer contains the certificate for the current signing key. Since the
         // builder contains an existing signing key there must be at least one layer of evidence
         // that contains the certificate.
-        </span><span class="kw">let </span>claims_set = <span class="self">self
+
+        </span><span class="kw">let </span>layer_evidence = <span class="self">self
             </span>.evidence
             .layers
             .last()
-            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no evidence layers found&quot;</span>))<span class="question-mark">?
-            </span>.get_claims()
-            .context(<span class="string">&quot;couldn&#39;t get layer claims set&quot;</span>)<span class="question-mark">?</span>;
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no evidence layers found&quot;</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>claims_set = get_claims_set_from_certificate_bytes(<span class="kw-2">&amp;</span>layer_evidence.eca_certificate)
+            .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+
         <span class="comment">// The issuer for the application keys is the subject of the final layer.
         </span><span class="kw">let </span>issuer_id = claims_set
             .subject
@@ -436,23 +413,12 @@
 
         <span class="prelude-val">Ok</span>(evidence)
     }
-}
 
-<span class="kw">impl </span>Drop <span class="kw">for </span>DiceData {
-    <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="comment">// Zero out the ECA private key if it was set.
-        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(certificate_authority) = <span class="kw-2">&amp;mut </span><span class="self">self</span>.certificate_authority {
-            certificate_authority.eca_private_key.zeroize();
-        }
-    }
-}
-
-<span class="kw">impl </span>From&lt;DiceBuilder&gt; <span class="kw">for </span>DiceData {
-    <span class="kw">fn </span>from(value: DiceBuilder) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>serialize(<span class="self">self</span>) -&gt; DiceData {
         DiceData {
-            evidence: <span class="prelude-val">Some</span>(value.evidence),
+            evidence: <span class="prelude-val">Some</span>(<span class="self">self</span>.evidence),
             certificate_authority: <span class="prelude-val">Some</span>(CertificateAuthority {
-                eca_private_key: value.signing_key.to_bytes().as_slice().into(),
+                eca_private_key: <span class="self">self</span>.signing_key.to_bytes().as_slice().into(),
             }),
         }
     }
@@ -460,7 +426,7 @@
 
 <span class="kw">impl </span>TryFrom&lt;DiceData&gt; <span class="kw">for </span>DiceBuilder {
     <span class="kw">type </span>Error = anyhow::Error;
-    <span class="kw">fn </span>try_from(value: DiceData) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+    <span class="kw">fn </span>try_from(<span class="kw-2">mut </span>value: DiceData) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>evidence = value
             .evidence
             .as_ref()
@@ -472,6 +438,11 @@
             </span>.eca_private_key;
         <span class="kw">let </span>signing_key = SigningKey::from_slice(eca_private_key).map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
 
+        <span class="comment">// Zero out the ECA private key if it was set.
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(certificate_authority) = <span class="kw-2">&amp;mut </span>value.certificate_authority {
+            certificate_authority.eca_private_key.zeroize();
+        }
+
         <span class="prelude-val">Ok</span>(DiceBuilder {
             evidence: evidence.clone(),
             signing_key: signing_key.clone(),
@@ -479,107 +450,88 @@
     }
 }
 
-<span class="kw">impl </span>TryFrom&lt;Stage0DiceData&gt; <span class="kw">for </span>DiceData {
-    <span class="kw">type </span>Error = anyhow::Error;
-    <span class="kw">fn </span>try_from(value: Stage0DiceData) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>layers = Vec::new();
-        <span class="kw">let </span>eca_certificate =
-            oak_dice::utils::cbor_encoded_bytes_to_vec(<span class="kw-2">&amp;</span>value.layer_1_evidence.eca_certificate[..])
-                .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-        layers.push(LayerEvidence { eca_certificate });
-        <span class="kw">let </span>root_layer = <span class="prelude-val">Some</span>(value.root_layer_evidence.try_into()<span class="question-mark">?</span>);
-        <span class="kw">let </span>layers = <span class="macro">vec!</span>[value.layer_1_evidence.try_into()<span class="question-mark">?</span>];
-        <span class="kw">let </span>application_keys = <span class="prelude-val">None</span>;
-        <span class="kw">let </span>evidence = <span class="prelude-val">Some</span>(Evidence {
-            root_layer,
-            layers,
-            application_keys,
-        });
-        <span class="kw">let </span>certificate_authority = <span class="prelude-val">Some</span>(CertificateAuthority {
-            eca_private_key: value.layer_1_certificate_authority.eca_private_key
-                [..oak_dice::evidence::P256_PRIVATE_KEY_SIZE]
-                .to_vec(),
-        });
+<span class="kw">pub fn </span>stage0_dice_data_to_proto(value: Stage0DiceData) -&gt; anyhow::Result&lt;DiceData&gt; {
+    <span class="kw">let </span><span class="kw-2">mut </span>layers = Vec::new();
+    <span class="kw">let </span>eca_certificate =
+        oak_dice::utils::cbor_encoded_bytes_to_vec(<span class="kw-2">&amp;</span>value.layer_1_evidence.eca_certificate[..])
+            .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+    layers.push(LayerEvidence { eca_certificate });
+    <span class="kw">let </span>root_layer = <span class="prelude-val">Some</span>(root_layer_evidence_to_proto(value.root_layer_evidence)<span class="question-mark">?</span>);
+    <span class="kw">let </span>layers = <span class="macro">vec!</span>[layer_evidence_to_proto(value.layer_1_evidence)<span class="question-mark">?</span>];
+    <span class="kw">let </span>application_keys = <span class="prelude-val">None</span>;
+    <span class="kw">let </span>evidence = <span class="prelude-val">Some</span>(Evidence {
+        root_layer,
+        layers,
+        application_keys,
+    });
+    <span class="kw">let </span>certificate_authority = <span class="prelude-val">Some</span>(CertificateAuthority {
+        eca_private_key: value.layer_1_certificate_authority.eca_private_key
+            [..oak_dice::evidence::P256_PRIVATE_KEY_SIZE]
+            .to_vec(),
+    });
 
-        <span class="prelude-val">Ok</span>(DiceData {
-            evidence,
-            certificate_authority,
-        })
+    <span class="prelude-val">Ok</span>(DiceData {
+        evidence,
+        certificate_authority,
+    })
+}
+
+<span class="kw">fn </span>tee_platform_to_proto(src: oak_dice::evidence::TeePlatform) -&gt; TeePlatform {
+    <span class="kw">match </span>src {
+        oak_dice::evidence::TeePlatform::AmdSevSnp =&gt; TeePlatform::AmdSevSnp,
+        oak_dice::evidence::TeePlatform::IntelTdx =&gt; TeePlatform::IntelTdx,
+        oak_dice::evidence::TeePlatform::Unspecified =&gt; TeePlatform::Unspecified,
     }
 }
 
-<span class="kw">impl </span>From&lt;oak_dice::evidence::TeePlatform&gt; <span class="kw">for </span>TeePlatform {
-    <span class="kw">fn </span>from(src: oak_dice::evidence::TeePlatform) -&gt; <span class="self">Self </span>{
-        <span class="kw">match </span>src {
-            oak_dice::evidence::TeePlatform::AmdSevSnp =&gt; TeePlatform::AmdSevSnp,
-            oak_dice::evidence::TeePlatform::IntelTdx =&gt; TeePlatform::IntelTdx,
-            oak_dice::evidence::TeePlatform::Unspecified =&gt; TeePlatform::Unspecified,
-        }
-    }
+<span class="kw">pub fn </span>evidence_to_proto(value: oak_dice::evidence::Evidence) -&gt; anyhow::Result&lt;Evidence&gt; {
+    <span class="kw">let </span>root_layer = <span class="prelude-val">Some</span>(root_layer_evidence_to_proto(value.root_layer_evidence)<span class="question-mark">?</span>);
+    <span class="kw">let </span>layers = <span class="macro">vec!</span>[layer_evidence_to_proto(value.restricted_kernel_evidence)<span class="question-mark">?</span>];
+    <span class="kw">let </span>application_keys = <span class="prelude-val">Some</span>(application_keys_to_proto(value.application_keys)<span class="question-mark">?</span>);
+    <span class="prelude-val">Ok</span>(Evidence {
+        root_layer,
+        layers,
+        application_keys,
+    })
 }
 
-<span class="kw">impl </span>TryFrom&lt;oak_dice::evidence::Evidence&gt; <span class="kw">for </span>Evidence {
-    <span class="kw">type </span>Error = anyhow::Error;
-    <span class="kw">fn </span>try_from(value: oak_dice::evidence::Evidence) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>root_layer = <span class="prelude-val">Some</span>(value.root_layer_evidence.try_into()<span class="question-mark">?</span>);
-        <span class="kw">let </span>layers = <span class="macro">vec!</span>[value.restricted_kernel_evidence.try_into()<span class="question-mark">?</span>];
-        <span class="kw">let </span>application_keys = <span class="prelude-val">Some</span>(value.application_keys.try_into()<span class="question-mark">?</span>);
-        <span class="prelude-val">Ok</span>(Evidence {
-            root_layer,
-            layers,
-            application_keys,
-        })
-    }
+<span class="kw">fn </span>root_layer_evidence_to_proto(
+    value: oak_dice::evidence::RootLayerEvidence,
+) -&gt; anyhow::Result&lt;RootLayerEvidence&gt; {
+    <span class="kw">let </span>platform: TeePlatform =
+        tee_platform_to_proto(value.get_tee_platform().map_err(anyhow::Error::msg)<span class="question-mark">?</span>);
+    <span class="kw">let </span>remote_attestation_report = value
+        .get_remote_attestation_report()
+        .map_err(anyhow::Error::msg)<span class="question-mark">?
+        </span>.to_vec();
+    <span class="kw">let </span>eca_public_key = value.get_eca_public_key().map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(RootLayerEvidence {
+        platform: platform <span class="kw">as </span>i32,
+        remote_attestation_report,
+        eca_public_key,
+    })
 }
 
-<span class="kw">impl </span>TryFrom&lt;oak_dice::evidence::RootLayerEvidence&gt; <span class="kw">for </span>RootLayerEvidence {
-    <span class="kw">type </span>Error = anyhow::Error;
-    <span class="kw">fn </span>try_from(value: oak_dice::evidence::RootLayerEvidence) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>platform: TeePlatform = value.get_tee_platform().map_err(anyhow::Error::msg)<span class="question-mark">?</span>.into();
-        <span class="kw">let </span>remote_attestation_report = value
-            .get_remote_attestation_report()
-            .map_err(anyhow::Error::msg)<span class="question-mark">?
-            </span>.to_vec();
-        <span class="kw">let </span>eca_public_key = value.get_eca_public_key().map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(RootLayerEvidence {
-            platform: platform <span class="kw">as </span>i32,
-            remote_attestation_report,
-            eca_public_key,
-        })
-    }
-}
-
-<span class="kw">impl </span>TryFrom&lt;oak_dice::evidence::LayerEvidence&gt; <span class="kw">for </span>LayerEvidence {
-    <span class="kw">type </span>Error = anyhow::Error;
-    <span class="kw">fn </span>try_from(value: oak_dice::evidence::LayerEvidence) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>eca_certificate =
-            oak_dice::utils::cbor_encoded_bytes_to_vec(<span class="kw-2">&amp;</span>value.eca_certificate[..])
-                .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(LayerEvidence { eca_certificate })
-    }
-}
-
-<span class="kw">impl </span>TryFrom&lt;oak_dice::evidence::ApplicationKeys&gt; <span class="kw">for </span>ApplicationKeys {
-    <span class="kw">type </span>Error = anyhow::Error;
-    <span class="kw">fn </span>try_from(value: oak_dice::evidence::ApplicationKeys) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>encryption_public_key_certificate = oak_dice::utils::cbor_encoded_bytes_to_vec(
-            <span class="kw-2">&amp;</span>value.encryption_public_key_certificate[..],
-        )
+<span class="kw">fn </span>layer_evidence_to_proto(
+    value: oak_dice::evidence::LayerEvidence,
+) -&gt; anyhow::Result&lt;LayerEvidence&gt; {
+    <span class="kw">let </span>eca_certificate = oak_dice::utils::cbor_encoded_bytes_to_vec(<span class="kw-2">&amp;</span>value.eca_certificate[..])
         .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-        <span class="kw">let </span>signing_public_key_certificate =
-            oak_dice::utils::cbor_encoded_bytes_to_vec(<span class="kw-2">&amp;</span>value.signing_public_key_certificate[..])
-                .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(ApplicationKeys {
-            encryption_public_key_certificate,
-            signing_public_key_certificate,
-        })
-    }
+    <span class="prelude-val">Ok</span>(LayerEvidence { eca_certificate })
 }
 
-<span class="kw">impl </span>LayerEvidence {
-    <span class="doccomment">/// Extracts the `ClaimsSet` encoded in the ECA certificate of the layer.
-    </span><span class="kw">pub fn </span>get_claims(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;ClaimsSet&gt; {
-        get_claims_set_from_certificate_bytes(<span class="kw-2">&amp;</span><span class="self">self</span>.eca_certificate).map_err(anyhow::Error::msg)
-    }
+<span class="kw">fn </span>application_keys_to_proto(
+    value: oak_dice::evidence::ApplicationKeys,
+) -&gt; anyhow::Result&lt;ApplicationKeys&gt; {
+    <span class="kw">let </span>encryption_public_key_certificate =
+        oak_dice::utils::cbor_encoded_bytes_to_vec(<span class="kw-2">&amp;</span>value.encryption_public_key_certificate[..])
+            .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+    <span class="kw">let </span>signing_public_key_certificate =
+        oak_dice::utils::cbor_encoded_bytes_to_vec(<span class="kw-2">&amp;</span>value.signing_public_key_certificate[..])
+            .map_err(anyhow::Error::msg)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(ApplicationKeys {
+        encryption_public_key_certificate,
+        signing_public_key_certificate,
+    })
 }
 </code></pre></div></section></main></body></html>
