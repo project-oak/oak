@@ -141,6 +141,15 @@
 <a href="#141" id="141">141</a>
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -166,8 +175,9 @@
 <span class="kw">use </span>oak_functions_launcher::proto::oak::session::v1::{
     request_wrapper, response_wrapper,
     streaming_session_server::{StreamingSession, StreamingSessionServer},
-    AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
-    InvokeResponse, RequestWrapper, ResponseWrapper,
+    AttestationBundle, AttestationEndorsement, AttestationEvidence, EndorsedEvidence,
+    GetEndorsedEvidenceResponse, GetPublicKeyResponse, InvokeResponse, RequestWrapper,
+    ResponseWrapper,
 };
 <span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
 <span class="kw">use </span>tonic::{transport::Server, Request, Response, Status, Streaming};
@@ -214,6 +224,10 @@
             evidence: <span class="prelude-val">Some</span>(<span class="self">self</span>.evidence.clone()),
             endorsements: <span class="prelude-val">Some</span>(<span class="self">self</span>.endorsements.clone()),
         };
+        <span class="kw">let </span>endorsed_evidence = EndorsedEvidence {
+            evidence: <span class="prelude-val">Some</span>(<span class="self">self</span>.evidence.clone()),
+            endorsements: <span class="prelude-val">Some</span>(<span class="self">self</span>.endorsements.clone()),
+        };
 
         <span class="kw">let </span><span class="kw-2">mut </span>connector_handle = <span class="self">self</span>.connector_handle.clone();
 
@@ -228,9 +242,13 @@
 
                 <span class="kw">let </span>response = <span class="kw">match </span>request {
                     request_wrapper::Request::GetPublicKeyRequest(<span class="kw">_</span>) =&gt; {
-
                         response_wrapper::Response::GetPublicKeyResponse(GetPublicKeyResponse {
                             attestation_bundle: <span class="prelude-val">Some</span>(attestation_bundle.clone()),
+                        })
+                    }
+                    request_wrapper::Request::GetEndorsedEvidenceRequest(<span class="kw">_</span>) =&gt; {
+                        response_wrapper::Response::GetEndorsedEvidenceResponse(GetEndorsedEvidenceResponse {
+                            endorsed_evidence: <span class="prelude-val">Some</span>(endorsed_evidence.clone()),
                         })
                     }
                     request_wrapper::Request::InvokeRequest(invoke_request) =&gt; {

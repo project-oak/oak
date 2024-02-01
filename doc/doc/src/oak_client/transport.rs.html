@@ -121,7 +121,6 @@
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
 <a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -144,7 +143,7 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::session::v1::{
     request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
-    AttestationBundle, GetPublicKeyRequest, InvokeRequest, RequestWrapper,
+    EndorsedEvidence, GetEndorsedEvidenceRequest, InvokeRequest, RequestWrapper,
 };
 
 <span class="kw">pub struct </span>GrpcStreamingTransport {
@@ -207,18 +206,17 @@
 
 <span class="attr">#[async_trait::async_trait]
 </span><span class="kw">pub trait </span>EvidenceProvider {
-    <span class="kw">async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;AttestationBundle&gt;;
+    <span class="kw">async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;EndorsedEvidence&gt;;
 }
 
 <span class="attr">#[async_trait::async_trait]
 </span><span class="kw">impl </span>EvidenceProvider <span class="kw">for </span>GrpcStreamingTransport {
-    <span class="kw">async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;AttestationBundle&gt; {
+    <span class="kw">async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;EndorsedEvidence&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>response_stream = <span class="self">self
             </span>.rpc_client
             .stream(futures_util::stream::iter(<span class="macro">vec!</span>[RequestWrapper {
-                <span class="comment">// TODO(#3641): Rename the corresponding message to `GetEvidence`.
-                </span>request: <span class="prelude-val">Some</span>(request_wrapper::Request::GetPublicKeyRequest(
-                    GetPublicKeyRequest {},
+                request: <span class="prelude-val">Some</span>(request_wrapper::Request::GetEndorsedEvidenceRequest(
+                    GetEndorsedEvidenceRequest {},
                 )),
             }]))
             .<span class="kw">await
@@ -232,17 +230,17 @@
             </span>.context(<span class="string">&quot;gRPC server error when requesting endorsed evidence&quot;</span>)<span class="question-mark">?
             </span>.context(<span class="string">&quot;received empty response stream&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span><span class="prelude-val">Some</span>(response_wrapper::Response::GetPublicKeyResponse(get_endorsed_evidence_response)) =
-            response_wrapper.response
+        <span class="kw">let </span><span class="prelude-val">Some</span>(response_wrapper::Response::GetEndorsedEvidenceResponse(
+            get_endorsed_evidence_response,
+        )) = response_wrapper.response
         <span class="kw">else </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow::anyhow!</span>(
                 <span class="string">&quot;response_wrapper doesn&#39;t contain a valid get_endorsed_evidence_response message&quot;
             </span>));
         };
 
-        <span class="attr">#[allow(deprecated)]
-        </span>get_endorsed_evidence_response
-            .attestation_bundle
+        get_endorsed_evidence_response
+            .endorsed_evidence
             .context(<span class="string">&quot;get_endorsed_evidence_response message doesn&#39;t contain endorsed evidence&quot;</span>)
     }
 }

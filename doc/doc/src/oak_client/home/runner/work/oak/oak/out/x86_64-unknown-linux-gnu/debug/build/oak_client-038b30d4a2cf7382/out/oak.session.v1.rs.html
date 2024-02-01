@@ -278,6 +278,31 @@
 <a href="#278" id="278">278</a>
 <a href="#279" id="279">279</a>
 <a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// AttestationEvidence contains all the information that originates in the TEE and can serve as
 /// claims about the Target Environment. The name is chosen to match the RATS terminology
 /// (see &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence&gt;).
@@ -361,6 +386,27 @@
     </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>attestation_bundle: ::core::option::Option&lt;AttestationBundle&gt;,
 }
+<span class="doccomment">/// Endorsed evidence contains an attestation evidence provided by the enclave and the corresponding
+/// attestation endorsements provided by the hostlib.
+</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>EndorsedEvidence {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>evidence: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::attestation::v1::Evidence&gt;,
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="kw">pub </span>endorsements: ::core::option::Option&lt;
+        <span class="kw">super</span>::<span class="kw">super</span>::attestation::v1::Endorsements,
+    &gt;,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>GetEndorsedEvidenceRequest {}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>GetEndorsedEvidenceResponse {
+    <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>endorsed_evidence: ::core::option::Option&lt;EndorsedEvidence&gt;,
+}
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InvokeRequest {
@@ -401,7 +447,7 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>RequestWrapper {
-    <span class="attr">#[prost(oneof = <span class="string">&quot;request_wrapper::Request&quot;</span>, tags = <span class="string">&quot;1, 2&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">&quot;request_wrapper::Request&quot;</span>, tags = <span class="string">&quot;1, 2, 3&quot;</span>)]
     </span><span class="kw">pub </span>request: ::core::option::Option&lt;request_wrapper::Request&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `RequestWrapper`.
@@ -413,12 +459,14 @@
         </span>GetPublicKeyRequest(<span class="kw">super</span>::GetPublicKeyRequest),
         <span class="attr">#[prost(message, tag = <span class="string">&quot;2&quot;</span>)]
         </span>InvokeRequest(<span class="kw">super</span>::InvokeRequest),
+        <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
+        </span>GetEndorsedEvidenceRequest(<span class="kw">super</span>::GetEndorsedEvidenceRequest),
     }
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ResponseWrapper {
-    <span class="attr">#[prost(oneof = <span class="string">&quot;response_wrapper::Response&quot;</span>, tags = <span class="string">&quot;1, 2&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">&quot;response_wrapper::Response&quot;</span>, tags = <span class="string">&quot;1, 2, 3&quot;</span>)]
     </span><span class="kw">pub </span>response: ::core::option::Option&lt;response_wrapper::Response&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `ResponseWrapper`.
@@ -430,6 +478,8 @@
         </span>GetPublicKeyResponse(<span class="kw">super</span>::GetPublicKeyResponse),
         <span class="attr">#[prost(message, tag = <span class="string">&quot;2&quot;</span>)]
         </span>InvokeResponse(<span class="kw">super</span>::InvokeResponse),
+        <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
+        </span>GetEndorsedEvidenceResponse(<span class="kw">super</span>::GetEndorsedEvidenceResponse),
     }
 }
 <span class="doccomment">/// Generated client implementations.
