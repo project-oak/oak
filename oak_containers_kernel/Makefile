@@ -12,3 +12,4 @@ target/linux-6.1.33:
 	mkdir -p target
 	curl -O -L --output-dir target https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.1.33.tar.xz
 	tar -C target -Jxf target/linux-6.1.33.tar.xz
+	patch -p1 -d target/linux-6.1.33 < patches/virtio-dma.patch
