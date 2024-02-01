@@ -11,6 +11,7 @@ coset = { version = "*", default-features = false }
 log = { version = "*", default-features = false }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
+oak_proto_rust = { workspace = true }
 prost = { workspace = true }
 p256 = { version = "*", default-features = false, features = ["ecdsa"] }
 rand_core = { version = "*", default-features = false, features = [

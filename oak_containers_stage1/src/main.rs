@@ -37,7 +37,7 @@ use nix::{
     mount::{mount, umount, MsFlags},
     unistd::{chdir, chroot},
 };
-use oak_attestation::proto::oak::attestation::v1::DiceData;
+use oak_proto_rust::oak::attestation::v1::DiceData;
 use prost::Message;
 use tokio::process::Command;
 use x86_64::PhysAddr;

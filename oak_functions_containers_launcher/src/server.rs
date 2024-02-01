@@ -20,13 +20,13 @@
 use std::{net::SocketAddr, pin::Pin};
 
 use futures::{Future, Stream, StreamExt};
-use oak_attestation::proto::oak::attestation::v1::{Endorsements, Evidence};
 use oak_functions_launcher::proto::oak::session::v1::{
     request_wrapper, response_wrapper,
     streaming_session_server::{StreamingSession, StreamingSessionServer},
     AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
     InvokeResponse, RequestWrapper, ResponseWrapper,
 };
+use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
 use tonic::{transport::Server, Request, Response, Status, Streaming};
 
 use crate::proto::oak::functions::{

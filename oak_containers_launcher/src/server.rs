@@ -20,7 +20,7 @@ use std::{
 
 use anyhow::anyhow;
 use futures::{FutureExt, Stream};
-use oak_attestation::proto::oak::attestation::v1::Evidence;
+use oak_proto_rust::oak::attestation::v1::Evidence;
 use opentelemetry_proto::tonic::{
     collector::{
         logs::v1::{
