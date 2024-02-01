@@ -32,12 +32,11 @@ use zeroize::Zeroize;
 
 use crate::try_parse_phys_addr;
 
-/// The expected string representation of the custom type for the reserved memory range that
-/// contains the DICE data.
+/// The expected string representation for reserved memory.
 ///
-/// Since we use a custom type the Linux Kernel does not recognize it. The text is defined in
+/// The text is defined in
 /// <https://github.com/torvalds/linux/blob/d88520ad73b79e71e3ddf08de335b8520ae41c5c/arch/x86/kernel/e820.c#L1086>.
-const EXPECTED_E820_TYPE: &str = "Unknown E820 type";
+const RESERVED_E820_TYPE: &str = "Reserved";
 
 /// The path for reading the memory map from the sysfs pseudo-filesystem.
 const MEMMAP_PATH: &str = "/sys/firmware/memmap";
@@ -84,12 +83,15 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
     let length = std::mem::size_of::<Stage0DiceData>();
     // Linux presents an inclusive end address.
     let end = start + (length as u64 - 1);
-    // Ensure that the exact memory range is marked as reserved.
-    if !read_memory_ranges()?.iter().any(|range| {
-        range.start == start && range.end == end && range.type_description == EXPECTED_E820_TYPE
-    }) {
-        anyhow::bail!("DICE data range is not reserved");
-    }
+    // Ensure that the memory range is in reserved memory.
+    anyhow::ensure!(
+        !read_memory_ranges()?.iter().any(|range| {
+            let dice_data_fully_contained_in_range = range.start <= start && range.end <= end;
+
+            range.type_description == RESERVED_E820_TYPE && dice_data_fully_contained_in_range
+        }),
+        "DICE data range is not in reserved memory"
+    );
 
     // Open a file representing the physical memory.
     let dice_file = OpenOptions::new()
