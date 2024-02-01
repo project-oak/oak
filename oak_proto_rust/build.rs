@@ -1,5 +1,5 @@
 //
-// Copyright 2023 The Project Oak Authors
+// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let proto_paths = [
+        "../proto/attestation/dice.proto",
         "../proto/attestation/endorsement.proto",
         "../proto/attestation/evidence.proto",
         "../proto/attestation/reference_value.proto",
