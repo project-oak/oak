@@ -1,0 +1,29 @@
+diff '--color=auto' -u -r linux-6.1.33-orig/drivers/virtio/virtio.c linux-6.1.33/drivers/virtio/virtio.c
+--- linux-6.1.33-orig/drivers/virtio/virtio.c	2023-06-09 08:34:30.000000000 +0000
++++ linux-6.1.33/drivers/virtio/virtio.c	2024-02-01 18:55:31.105888971 +0000
+@@ -177,11 +177,8 @@
+ 	if (virtio_check_mem_acc_cb(dev)) {
+ 		if (!virtio_has_feature(dev, VIRTIO_F_VERSION_1)) {
+ 			dev_warn(&dev->dev,
+-				 "device must provide VIRTIO_F_VERSION_1\n");
+-			return -ENODEV;
+-		}
+-
+-		if (!virtio_has_feature(dev, VIRTIO_F_ACCESS_PLATFORM)) {
++				"device does not provide VIRTIO_F_VERSION_1 while restricted memory access is enabled!.\n");
++		} else if (!virtio_has_feature(dev, VIRTIO_F_ACCESS_PLATFORM)) {
+ 			dev_warn(&dev->dev,
+ 				 "device must provide VIRTIO_F_ACCESS_PLATFORM\n");
+ 			return -ENODEV;
+diff '--color=auto' -u -r linux-6.1.33-orig/include/linux/virtio_config.h linux-6.1.33/include/linux/virtio_config.h
+--- linux-6.1.33-orig/include/linux/virtio_config.h	2023-06-09 08:34:30.000000000 +0000
++++ linux-6.1.33/include/linux/virtio_config.h	2024-02-01 19:02:29.526141223 +0000
+@@ -201,6 +201,9 @@
+ 	 * Note the reverse polarity of the quirk feature (compared to most
+ 	 * other features), this is for compatibility with legacy systems.
+ 	 */
++	if (!virtio_has_feature(vdev, VIRTIO_F_VERSION_1))
++		return false;
++
+ 	return !virtio_has_feature(vdev, VIRTIO_F_ACCESS_PLATFORM);
+ }
