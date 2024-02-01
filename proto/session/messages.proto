@@ -96,6 +96,19 @@ message GetPublicKeyResponse {
   AttestationBundle attestation_bundle = 1;
 }
 
+// Endorsed evidence contains an attestation evidence provided by the enclave and the corresponding
+// attestation endorsements provided by the hostlib.
+message EndorsedEvidence {
+  oak.attestation.v1.Evidence evidence = 1;
+  oak.attestation.v1.Endorsements endorsements = 2;
+}
+
+message GetEndorsedEvidenceRequest {}
+
+message GetEndorsedEvidenceResponse {
+  EndorsedEvidence endorsed_evidence = 1;
+}
+
 message InvokeRequest {
   // Body of the request, encrypted using Hybrid Public Key Encryption (HPKE).
   // <https://www.rfc-editor.org/rfc/rfc9180.html>
