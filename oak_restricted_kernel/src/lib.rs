@@ -263,14 +263,16 @@ pub fn start_kernel(info: &BootParams) -> ! {
             };
 
             // Ensure that the dice data is stored within reserved memory.
-            assert!(info.e820_table().iter().any(|e| {
-                let dice_data_fully_contained_in_segment = e.addr() as u64
-                    <= dice_data_phys_addr.as_u64()
-                    && (dice_data_phys_addr.as_u64()
-                        + core::mem::size_of::<oak_dice::evidence::Stage0DiceData>() as u64)
-                        <= (e.addr() + e.size()) as u64;
+            assert!(info.e820_table().iter().any(|entry| {
+                let range = entry.addr()..(entry.addr() + entry.size());
+                let dice_data_fully_contained_in_segment = range
+                    .contains(&(dice_data_phys_addr.as_u64() as usize))
+                    && range.contains(
+                        &(dice_data_phys_addr.as_u64() as usize
+                            + core::mem::size_of::<oak_dice::evidence::Stage0DiceData>()),
+                    );
 
-                e.entry_type().expect("failed to get type")
+                entry.entry_type().expect("failed to get type")
                     == oak_linux_boot_params::E820EntryType::RESERVED
                     && dice_data_fully_contained_in_segment
             }));

@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+use core::ops::RangeBounds;
 use std::fs::{read_dir, read_to_string, OpenOptions};
 
 use anyhow::Context;
@@ -68,6 +69,15 @@ struct MemoryRange {
     type_description: String,
 }
 
+impl core::ops::RangeBounds<PhysAddr> for MemoryRange {
+    fn start_bound(&self) -> core::ops::Bound<&PhysAddr> {
+        core::ops::Bound::Included(&self.start)
+    }
+    fn end_bound(&self) -> core::ops::Bound<&PhysAddr> {
+        core::ops::Bound::Included(&self.end)
+    }
+}
+
 /// Extracts the DICE evidence and ECA key from the Stage 0 DICE data located at the given physical
 /// address.
 pub fn extract_stage0_dice_data(start: PhysAddr) -> anyhow::Result<DiceBuilder> {
@@ -85,11 +95,11 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
     let end = start + (length as u64 - 1);
     // Ensure that the memory range is in reserved memory.
     anyhow::ensure!(
-        !read_memory_ranges()?.iter().any(|range| {
-            let dice_data_fully_contained_in_range = range.start <= start && end <= range.end;
-
-            range.type_description == RESERVED_E820_TYPE && dice_data_fully_contained_in_range
-        }),
+        !read_memory_ranges()?
+            .iter()
+            .any(|range| range.type_description == RESERVED_E820_TYPE
+                && range.contains(&start)
+                && range.contains(&end)),
         "DICE data range is not in reserved memory"
     );
 
