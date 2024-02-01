@@ -126,8 +126,8 @@ impl KeyStore {
         &self,
         peer_public_key: &[u8],
     ) -> anyhow::Result<EncryptedRequest> {
-        let mut client_encryptor = ClientEncryptor::create(peer_public_key)
-            .context("couldn't create client encryptor")?;
+        let mut client_encryptor =
+            ClientEncryptor::create(peer_public_key).context("couldn't create client encryptor")?;
         client_encryptor.encrypt(
             &self.group_encryption_key.get_private_key(),
             EMPTY_ASSOCIATED_DATA,
