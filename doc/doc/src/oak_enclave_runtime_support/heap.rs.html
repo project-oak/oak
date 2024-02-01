@@ -124,6 +124,10 @@
 <a href="#124" id="124">124</a>
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -205,15 +209,19 @@
         }
     }
 
-    <span class="kw">pub unsafe fn </span>init(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {}
-
-    <span class="kw">pub fn </span>allocate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, layout: Layout) -&gt; <span class="prelude-ty">Result</span>&lt;NonNull&lt;u8&gt;, ()&gt; {
+    <span class="attr">#[allow(clippy::result_unit_err)]
+    </span><span class="kw">pub fn </span>allocate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, layout: Layout) -&gt; <span class="prelude-ty">Result</span>&lt;NonNull&lt;u8&gt;, ()&gt; {
         <span class="self">self</span>.heap
             .allocate(layout)
             .ok_or_else(|| <span class="macro">log::error!</span>(<span class="string">&quot;failed to allocate memory with layout: {:?}&quot;</span>, layout))
     }
 
-    <span class="kw">pub unsafe fn </span>deallocate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ptr: NonNull&lt;u8&gt;, align: usize) {
+    <span class="doccomment">/// # Safety
+    ///
+    ///  - `ptr` must denote a memory block previously allocated via `self`.
+    ///  - The memory block must have been allocated with the same alignment ([`Layout::align`]) as
+    ///    `align`.
+    </span><span class="kw">pub unsafe fn </span>deallocate(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ptr: NonNull&lt;u8&gt;, align: usize) {
         <span class="self">self</span>.heap.deallocate(ptr, align)
     }
 }

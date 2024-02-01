@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["init"]};
+window.SIDEBAR_ITEMS = {"fn":["init"],"mod":["heap"]};

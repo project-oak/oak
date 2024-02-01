@@ -83,6 +83,10 @@
 <a href="#83" id="83">83</a>
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -147,11 +151,15 @@
     <span class="kw">let </span>generated = <span class="macro">quote! </span>{
         #entry_fn
 
+        <span class="attr">#[global_allocator]
+        </span><span class="kw">static </span>ALLOCATOR: oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap = oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap::empty();
+
         <span class="kw">static </span>LOGGER: oak_restricted_kernel_sdk::StderrLogger = oak_restricted_kernel_sdk::StderrLogger {};
 
         <span class="attr">#[no_mangle]
         </span><span class="kw">fn </span>_start() -&gt; ! {
-            oak_restricted_kernel_sdk::init(log::LevelFilter::Debug);
+            log::set_logger(<span class="kw-2">&amp;</span>LOGGER).expect(<span class="string">&quot;failed to set logger&quot;</span>);
+            log::set_max_level(log::LevelFilter::Debug);
             <span class="macro">log::info!</span>(<span class="string">&quot;In main!&quot;</span>);
             #entry_fn_name();
         }

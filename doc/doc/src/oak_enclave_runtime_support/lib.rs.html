@@ -27,8 +27,6 @@
 <a href="#27" id="27">27</a>
 <a href="#28" id="28">28</a>
 <a href="#29" id="29">29</a>
-<a href="#30" id="30">30</a>
-<a href="#31" id="31">31</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -49,15 +47,13 @@
 
 </span><span class="kw">use </span>heap::LockedGrowableHeap;
 
-<span class="kw">mod </span>heap;
+<span class="kw">pub mod </span>heap;
 <span class="kw">mod </span>libm;
 
-<span class="attr">#[cfg_attr(not(test), global_allocator)]
+<span class="attr">#[cfg(feature = <span class="string">&quot;global_allocator&quot;</span>)]
+#[global_allocator]
 </span><span class="kw">static </span>ALLOCATOR: LockedGrowableHeap = LockedGrowableHeap::empty();
 
-<span class="kw">pub fn </span>init() {
-    <span class="kw">unsafe </span>{
-        ALLOCATOR.lock().init();
-    }
-}
+<span class="attr">#[deprecated(note = <span class="string">&quot;please make use of `oak_restricted_kernel_sdk::entrypoint` instead.&quot;</span>)]
+</span><span class="kw">pub fn </span>init() {}
 </code></pre></div></section></main></body></html>
