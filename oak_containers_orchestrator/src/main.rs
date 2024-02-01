@@ -127,9 +127,14 @@ async fn main() -> anyhow::Result<()> {
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
             &args.ipc_socket_path,
-            key_store,
+            key_store.clone(),
             application_config,
             launcher_client,
+            cancellation_token.clone(),
+        ),
+        oak_containers_orchestrator::key_provisioning::create(
+            &args.orchestrator_addr,
+            key_store,
             cancellation_token.clone(),
         ),
         oak_containers_orchestrator::container_runtime::run(

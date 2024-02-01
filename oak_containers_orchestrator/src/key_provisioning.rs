@@ -16,13 +16,16 @@
 use std::sync::Arc;
 
 use oak_attestation_verification::verifier::verify_dice_chain;
-use tonic::{Request, Response};
+use tokio::net::TcpListener;
+use tokio_stream::wrappers::TcpListenerStream;
+use tokio_util::sync::CancellationToken;
+use tonic::{transport::Server, Request, Response};
 
 use crate::{
     crypto::KeyStore,
     proto::oak::key_provisioning::v1::{
-        key_provisioning_server::KeyProvisioning, GetGroupKeysRequest, GetGroupKeysResponse,
-        GroupKeys,
+        key_provisioning_server::{KeyProvisioning, KeyProvisioningServer},
+        GetGroupKeysRequest, GetGroupKeysResponse, GroupKeys,
     },
 };
 
@@ -71,4 +74,26 @@ impl KeyProvisioning for KeyProvisioningService {
             group_keys: Some(group_keys),
         }))
     }
+}
+
+pub async fn create(
+    address: &str,
+    key_store: Arc<KeyStore>,
+    cancellation_token: CancellationToken,
+) -> Result<(), anyhow::Error> {
+    let key_provisioning_service_instance = KeyProvisioningService::new(key_store);
+
+    let listener = TcpListener::bind(address).await?;
+
+    Server::builder()
+        .add_service(KeyProvisioningServer::new(
+            key_provisioning_service_instance,
+        ))
+        .serve_with_incoming_shutdown(
+            TcpListenerStream::new(listener),
+            cancellation_token.cancelled(),
+        )
+        .await?;
+
+    Ok(())
 }
