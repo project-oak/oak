@@ -18,6 +18,33 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, Item, ItemFn, Result};
 
+/// Marks a function as the entrypoint to an enclave app and sets up an conviences such an
+/// allocator, logger, panic handler.
+///
+/// This macro assumes that crates using it have declared the [`no_std`] and [`no_main`] attributes,
+/// and the [`alloc_error_handler`] unstable feature of the rust compiler.
+///
+/// [`no_std`]: <https://github.com/rust-lang/rust/issues/51540>
+/// [`no_main`]: <https://docs.rust-embedded.org/embedonomicon/smallest-no-std.html#the-code>
+/// [`alloc_error_handler`]: <https://github.com/rust-lang/rust/issues/51540>
+///
+/// # Examples
+///
+/// Filename: src/main.rs
+/// ```
+/// #![no_std]
+/// #![no_main]
+/// #![feature(alloc_error_handler)]
+///
+/// extern crate alloc;
+///
+/// use oak_restricted_kernel_sdk::entrypoint;
+///
+/// #[entrypoint]
+/// fn start_enclave_app() -> ! {
+///     // business logic starts here
+///     /* ... */
+/// }
 #[proc_macro_attribute]
 pub fn entrypoint(_attr: TokenStream, entry: TokenStream) -> TokenStream {
     let entry_item = parse_macro_input!(entry as syn::Item);
