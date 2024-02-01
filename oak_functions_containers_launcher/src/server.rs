@@ -24,9 +24,9 @@ use oak_attestation::proto::oak::attestation::v1::{Endorsements, Evidence};
 use oak_functions_launcher::proto::oak::session::v1::{
     request_wrapper, response_wrapper,
     streaming_session_server::{StreamingSession, StreamingSessionServer},
-    AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
-    EndorsedEvidence, GetEndorsedEvidenceResponse,
-    InvokeResponse, RequestWrapper, ResponseWrapper,
+    AttestationBundle, AttestationEndorsement, AttestationEvidence, EndorsedEvidence,
+    GetEndorsedEvidenceResponse, GetPublicKeyResponse, InvokeResponse, RequestWrapper,
+    ResponseWrapper,
 };
 use tonic::{transport::Server, Request, Response, Status, Streaming};
 

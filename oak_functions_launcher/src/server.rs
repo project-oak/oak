@@ -27,9 +27,9 @@ use crate::{
         session::v1::{
             request_wrapper, response_wrapper,
             streaming_session_server::{StreamingSession, StreamingSessionServer},
-            AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
-            EndorsedEvidence, GetEndorsedEvidenceResponse,
-            InvokeResponse, RequestWrapper, ResponseWrapper,
+            AttestationBundle, AttestationEndorsement, AttestationEvidence, EndorsedEvidence,
+            GetEndorsedEvidenceResponse, GetPublicKeyResponse, InvokeResponse, RequestWrapper,
+            ResponseWrapper,
         },
     },
 };
