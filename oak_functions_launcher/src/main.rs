@@ -21,10 +21,10 @@
 use std::net::{Ipv6Addr, SocketAddr};
 
 use clap::Parser;
+use oak_functions_launcher::LookupDataConfig;
 use oak_proto_rust::oak::attestation::v1::{
     endorsements, Endorsements, OakRestrictedKernelEndorsements,
 };
-use oak_functions_launcher::LookupDataConfig;
 use tokio::signal;
 use ubyte::ByteUnit;
 
