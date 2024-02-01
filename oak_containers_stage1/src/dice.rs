@@ -86,7 +86,7 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
     // Ensure that the memory range is in reserved memory.
     anyhow::ensure!(
         !read_memory_ranges()?.iter().any(|range| {
-            let dice_data_fully_contained_in_range = range.start <= start && range.end <= end;
+            let dice_data_fully_contained_in_range = range.start <= start && end <= range.end;
 
             range.type_description == RESERVED_E820_TYPE && dice_data_fully_contained_in_range
         }),
