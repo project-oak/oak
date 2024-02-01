@@ -121,12 +121,12 @@ impl KeyStore {
         self.instance_encryption_key.clone()
     }
 
-    /// Returns group encryption private key which was encrypted with the ``.
+    /// Returns group encryption private key which was encrypted with the `peer_public_key`.
     pub fn encrypted_group_encryption_key(
         &self,
-        encryption_public_key: &[u8],
+        peer_public_key: &[u8],
     ) -> anyhow::Result<EncryptedRequest> {
-        let mut client_encryptor = ClientEncryptor::create(encryption_public_key)
+        let mut client_encryptor = ClientEncryptor::create(peer_public_key)
             .context("couldn't create client encryptor")?;
         client_encryptor.encrypt(
             &self.group_encryption_key.get_private_key(),
