@@ -95,7 +95,7 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
     let end = start + (length as u64 - 1);
     // Ensure that the memory range is in reserved memory.
     anyhow::ensure!(
-        !read_memory_ranges()?
+        read_memory_ranges()?
             .iter()
             .any(|range| range.type_description == RESERVED_E820_TYPE
                 && range.contains(&start)
