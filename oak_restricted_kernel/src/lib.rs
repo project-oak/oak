@@ -265,12 +265,16 @@ pub fn start_kernel(info: &BootParams) -> ! {
             // Ensure that the dice data is stored within reserved memory.
             assert!(info.e820_table().iter().any(|entry| {
                 let dice_data_fully_contained_in_segment = {
-                    let range = entry.addr()..(entry.addr() + entry.size());
-                    range.contains(&(dice_data_phys_addr.as_u64() as usize))
-                        && range.contains(
-                            &(dice_data_phys_addr.as_u64() as usize
-                                + core::mem::size_of::<oak_dice::evidence::Stage0DiceData>()),
-                        )
+                    let range = PhysAddr::new(entry.addr().try_into().unwrap())
+                        ..=PhysAddr::new((entry.addr() + entry.size()).try_into().unwrap());
+                    range.contains(&dice_data_phys_addr)
+                        && range.contains(&PhysAddr::new(
+                            dice_data_phys_addr.as_u64()
+                                + u64::try_from(core::mem::size_of::<
+                                    oak_dice::evidence::Stage0DiceData,
+                                >())
+                                .unwrap(),
+                        ))
                 };
 
                 entry.entry_type().expect("failed to get type")
