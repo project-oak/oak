@@ -189,6 +189,24 @@
 <a href="#189" id="189">189</a>
 <a href="#190" id="190">190</a>
 <a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -208,7 +226,10 @@
 
 <span class="kw">use </span>anyhow::{anyhow, Context};
 <span class="kw">use </span>hpke::{kem::X25519HkdfSha256, Deserializable, Kem};
-<span class="kw">use </span>oak_crypto::encryptor::{EncryptionKeyHandle, EncryptionKeyProvider, ServerEncryptor};
+<span class="kw">use </span>oak_crypto::{
+    encryptor::{ClientEncryptor, EncryptionKeyHandle, EncryptionKeyProvider, ServerEncryptor},
+    proto::oak::crypto::v1::EncryptedRequest,
+};
 <span class="kw">use </span>tonic::{Request, Response};
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
@@ -218,6 +239,8 @@
     },
     key_provisioning::v1::GroupKeys,
 };
+
+<span class="kw">const </span>EMPTY_ASSOCIATED_DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;&quot;</span>;
 
 <span class="doccomment">/// An implementation of the Key Store without group keys.
 </span><span class="kw">pub struct </span>InstanceKeyStore {
@@ -295,8 +318,8 @@
 </span><span class="kw">pub struct </span>KeyStore {
     <span class="comment">// TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
     </span>instance_encryption_key: Arc&lt;EncryptionKeyProvider&gt;,
-    group_encryption_key: EncryptionKeyProvider,
     instance_signing_key: p256::ecdsa::SigningKey,
+    group_encryption_key: EncryptionKeyProvider,
 }
 
 <span class="kw">impl </span>KeyStore {
@@ -305,6 +328,19 @@
         // Once we move all enclave apps to the new crypto service and update the `Attester` to not
         // have the private key - this function should be removed.
         </span><span class="self">self</span>.instance_encryption_key.clone()
+    }
+
+    <span class="doccomment">/// Returns group encryption private key which was encrypted with the `peer_public_key`.
+    </span><span class="kw">pub fn </span>encrypted_group_encryption_key(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        peer_public_key: <span class="kw-2">&amp;</span>[u8],
+    ) -&gt; anyhow::Result&lt;EncryptedRequest&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>client_encryptor =
+            ClientEncryptor::create(peer_public_key).context(<span class="string">&quot;couldn&#39;t create client encryptor&quot;</span>)<span class="question-mark">?</span>;
+        client_encryptor.encrypt(
+            <span class="kw-2">&amp;</span><span class="self">self</span>.group_encryption_key.get_private_key(),
+            EMPTY_ASSOCIATED_DATA,
+        )
     }
 }
 
