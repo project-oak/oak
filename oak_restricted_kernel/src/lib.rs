@@ -394,7 +394,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 .expect("failed to load application binary from channel");
                 log::info!("Binary loaded, size: {}", payload.len());
                 payload::Application::new(payload.into_boxed_slice())
-                    .expect("failed to parse application from ramdisk")
+                    .expect("failed to parse application")
             }
         }
     };
