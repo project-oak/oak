@@ -30,7 +30,7 @@ if [[ -n "$(ls "${TARGET_DIR:?}"/*)" ]]; then
   exit 1
 fi
 
-cargo doc --no-deps --target-dir="${TARGET_DIR:?}"
+cargo doc --target="${DEFAULT_TARGET}" --no-deps --target-dir="${TARGET_DIR:?}"
 
 # Remove non-doc artifacts from the target dir.
 rm --recursive --force "${TARGET_DIR}/debug"
@@ -41,12 +41,6 @@ rm "${TARGET_DIR:?}/.rustc_info.json"
 
 # Remove unnecessary lock file, which is also owned by root and therefore problematic.
 rm "${TARGET_DIR:?}/${DEFAULT_TARGET}/doc/.lock"
-
-# Strip the target triple from the path.
-mv "${TARGET_DIR:?}/${DEFAULT_TARGET}/doc" "${TARGET_DIR:?}/doc"
-
-# Remove the target triple directory.
-rm --recursive --force "${TARGET_DIR:?}/${DEFAULT_TARGET}"
 
 # The docs generated from the Cargo workspace do not include a workspace-level index, so we generate
 # one here and redirect to the appropriate documentation.
