@@ -55,7 +55,7 @@ pub use logging::StderrLogger;
 ///
 /// #[entrypoint]
 /// fn start_enclave_app() -> ! {
-///     // TODO: implement business logic starts below.
+///     // TODO(#0000): implement business logic below.
 ///     unimplemented!();
 /// }
 /// ```
