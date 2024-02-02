@@ -8,6 +8,7 @@ members = [
   "oak_attestation",
   "oak_attestation_verification",
   "oak_channel",
+  "oak_channel_core",
   "oak_client",
   "oak_containers_hello_world_trusted_app",
   "oak_containers_hello_world_untrusted_app",
@@ -96,6 +97,7 @@ micro_rpc_build = { path = "./micro_rpc_build" }
 oak_attestation = { path = "./oak_attestation" }
 oak_attestation_verification = { path = "./oak_attestation_verification" }
 oak_channel = { path = "./oak_channel" }
+oak_channel_core = { path = "./oak_channel_core" }
 oak_client = { path = "./oak_client" }
 oak_containers_orchestrator = { path = "./oak_containers_orchestrator" }
 oak_containers_launcher = { path = "./oak_containers_launcher" }

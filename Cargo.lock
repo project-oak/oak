@@ -2038,8 +2038,16 @@ dependencies = [
  "bytes",
  "log",
  "micro_rpc",
+ "oak_channel_core",
  "oak_core",
  "static_assertions",
+]
+
+[[package]]
+name = "oak_channel_core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
 ]
 
 [[package]]
@@ -2623,7 +2631,7 @@ dependencies = [
  "libm",
  "linked_list_allocator",
  "log",
- "oak_channel",
+ "oak_channel_core",
  "oak_core",
  "oak_crypto",
  "oak_dice",

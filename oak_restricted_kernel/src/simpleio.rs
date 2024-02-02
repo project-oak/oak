@@ -85,7 +85,7 @@ impl<'a, A: Allocator> SimpleIoChannel<'a, A> {
     }
 }
 
-impl<'a, A: Allocator> oak_channel::Write for SimpleIoChannel<'a, A> {
+impl<'a, A: Allocator> oak_channel_core::Write for SimpleIoChannel<'a, A> {
     fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()> {
         let mut start = 0;
         let data_len = data.len();
@@ -102,7 +102,7 @@ impl<'a, A: Allocator> oak_channel::Write for SimpleIoChannel<'a, A> {
     }
 }
 
-impl<'a, A: Allocator> oak_channel::Read for SimpleIoChannel<'a, A> {
+impl<'a, A: Allocator> oak_channel_core::Read for SimpleIoChannel<'a, A> {
     fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()> {
         let len = data.len();
         let mut count = 0;

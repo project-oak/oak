@@ -15,6 +15,7 @@ anyhow = { version = "*", default-features = false }
 log = { version = "*", default-features = false }
 micro_rpc = { workspace = true }
 oak_core = { workspace = true }
+oak_channel_core = { workspace = true }
 static_assertions = "*"
 bitflags = "*"
 bytes = { version = "*", default-features = false }

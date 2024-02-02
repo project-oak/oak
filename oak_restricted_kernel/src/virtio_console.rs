@@ -26,7 +26,7 @@ use aml::{
 };
 use anyhow::anyhow;
 use log::info;
-use oak_channel::{Read, Write};
+use oak_channel_core::{Read, Write};
 use spinning_top::Spinlock;
 use virtio_drivers::{
     device::console::VirtIOConsole,

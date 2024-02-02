@@ -17,7 +17,7 @@
 use core::alloc::Allocator;
 
 use log::info;
-use oak_channel::{Read, Write};
+use oak_channel_core::{Read, Write};
 use rust_hypervisor_firmware_virtio::pci::VirtioPciTransport;
 use x86_64::{PhysAddr, VirtAddr};
 
