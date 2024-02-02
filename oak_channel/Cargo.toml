@@ -7,7 +7,7 @@ license = "Apache-2.0"
 
 [features]
 default = []
-std = []
+std = ["oak_channel_core/std"]
 client = ["std"]
 
 [dependencies]
