@@ -55,6 +55,9 @@
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
 <a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -97,7 +100,10 @@
     }
 }
 
-<span class="kw">pub struct </span>StderrLogger {}
+<span class="doccomment">/// [`log::Log`] implementation that outputs logs on standard error.
+///
+/// Implicitly declared as the global logger when using the [`crate::entrypoint`] macro.
+</span><span class="kw">pub struct </span>StderrLogger {}
 
 <span class="kw">impl </span>log::Log <span class="kw">for </span>StderrLogger {
     <span class="kw">fn </span>enabled(<span class="kw-2">&amp;</span><span class="self">self</span>, _metadata: <span class="kw-2">&amp;</span>log::Metadata) -&gt; bool {

@@ -320,6 +320,8 @@
 <a href="#320" id="320">320</a>
 <a href="#321" id="321">321</a>
 <a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -428,7 +430,9 @@
     }
 }
 
-<span class="kw">pub trait </span>EncryptionKeyHandle {
+<span class="doccomment">/// Exposes the ability to derive a session key from the provided encapsulated private key,
+/// using a private key that has been endorsed in the Attestation Evidence.
+</span><span class="kw">pub trait </span>EncryptionKeyHandle {
     <span class="kw">fn </span>generate_recipient_context(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         encapsulated_public_key: <span class="kw-2">&amp;</span>[u8],

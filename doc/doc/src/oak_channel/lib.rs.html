@@ -143,6 +143,12 @@
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
 <a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -182,7 +188,10 @@
 <span class="kw">use </span>bytes::BytesMut;
 <span class="kw">use </span>oak_core::timer::Timer;
 
-<span class="kw">pub trait </span>Read {
+<span class="doccomment">/// Simple no_std compatible equivalent of [`std::io::Read`].
+///
+/// [`std::io::Read`]: &lt;https://doc.rust-lang.org/std/io/trait.Read.html&gt;
+</span><span class="kw">pub trait </span>Read {
     <span class="kw">fn </span>read_exact(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;mut </span>[u8]) -&gt; anyhow::Result&lt;()&gt;;
 }
 
@@ -193,7 +202,10 @@
     }
 }
 
-<span class="kw">pub trait </span>Write {
+<span class="doccomment">/// Simple no_std compatible equivalent of [`std::io::Write`].
+///
+/// [`std::io::Write`]: &lt;https://doc.rust-lang.org/std/io/trait.Write.html&gt;
+</span><span class="kw">pub trait </span>Write {
     <span class="kw">fn </span>write_all(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;()&gt;;
     <span class="kw">fn </span>flush(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt;;
 }

@@ -266,7 +266,6 @@
 <a href="#266" id="266">266</a>
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -284,26 +283,25 @@
 //
 
 </span><span class="kw">use </span>anyhow::Ok;
-<span class="kw">use </span>oak_crypto::{
-    encryptor::{EncryptionKeyHandle, EncryptionKeyProvider},
-    hpke::RecipientContext,
-};
+<span class="kw">pub use </span>oak_crypto::encryptor::EncryptionKeyHandle;
+<span class="kw">use </span>oak_crypto::{encryptor::EncryptionKeyProvider, hpke::RecipientContext};
 <span class="kw">use </span>oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
 <span class="kw">use </span>oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
 <span class="kw">use </span>p256::ecdsa::SigningKey;
 <span class="kw">use </span>zerocopy::{AsBytes, FromZeroes};
 
-<span class="doccomment">/// Sign the provided message bytestring using a signing private key, a
-/// corresponding public key of which is contained in the Attestation Evidence.
+<span class="doccomment">/// Exposes the ability to sign bytestrings using a private key that has been endorsed in
+/// the Attestation Evidence.
 </span><span class="kw">pub trait </span>Signer {
     <span class="doccomment">/// Attempt to sign the provided message bytestring using a signing private key, a
     /// corresponding public key of which is contained in the Attestation Evidence.
     </span><span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;oak_crypto::signer::Signature&gt;;
 }
 
-<span class="doccomment">/// Exposes the ability to read the Attestation Evidence. It is discouraged for enclave applications
-/// to operate with evidences. The evidence should only be used to forward it to the host
-/// application once, which then sends it to the clients.
+<span class="doccomment">/// Exposes the ability to read the Attestation Evidence.
+/// Note: Applications should only use the evidence to initially send it to the host application
+/// once, which then sends it to the clients. It is discouraged for enclave applications to operate
+/// directly with evidences.
 </span><span class="kw">pub trait </span>EvidenceProvider {
     <span class="kw">fn </span>get_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Evidence;
 }
