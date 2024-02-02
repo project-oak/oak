@@ -18,8 +18,8 @@
 
 use core::fmt::Write;
 
-pub use oak_core::{samplestore::*, sync::*, timer::*};
-pub use oak_enclave_runtime_support::heap::*;
+pub use oak_core::*;
+pub use oak_enclave_runtime_support::heap;
 use oak_restricted_kernel_interface::syscall::{fsync, write};
 
 struct Stderr {}

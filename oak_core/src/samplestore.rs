@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Probabilisting sample store to compute percentiles over some measurement.
+
 /// Basic probabilisting sample store to compute percentiles over some measurement.
 /// N is the number of elements kept in memory; it must be larger than 0.
 /// The array is allocated statically; SampleStore does not use heap allocation.

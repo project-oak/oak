@@ -25,7 +25,7 @@ use alloc::{boxed::Box, sync::Arc};
 use oak_restricted_kernel_sdk::{
     channel::{start_blocking_server, FileDescriptorChannel},
     entrypoint,
-    utils::StaticSampleStore,
+    utils::samplestore::StaticSampleStore,
 };
 
 #[entrypoint]

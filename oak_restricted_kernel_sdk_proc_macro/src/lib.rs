@@ -63,7 +63,7 @@ fn process_entry_fn(entry_fn: ItemFn) -> TokenStream {
         #entry_fn
 
         #[global_allocator]
-        static ALLOCATOR: oak_restricted_kernel_sdk::utils::LockedGrowableHeap = oak_restricted_kernel_sdk::utils::LockedGrowableHeap::empty();
+        static ALLOCATOR: oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap = oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap::empty();
 
         static LOGGER: oak_restricted_kernel_sdk::utils::StderrLogger = oak_restricted_kernel_sdk::utils::StderrLogger {};
 
