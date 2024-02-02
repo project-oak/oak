@@ -30,6 +30,35 @@ pub mod utils {
 pub use channel::*;
 pub use dice::*;
 pub use logging::StderrLogger;
+/// Marks a function as the entrypoint to an enclave app and sets up an conviences such an
+/// allocator, logger, panic handler.
+///
+/// This macro assumes that crates using it have declared the [`no_std`] and [`no_main`]
+/// attributes, and the [`alloc_error_handler`] unstable feature of the rust compiler.
+///
+/// [`no_std`]: <https://github.com/rust-lang/rust/issues/51540>
+/// [`no_main`]: <https://docs.rust-embedded.org/embedonomicon/smallest-no-std.html#the-code>
+/// [`alloc_error_handler`]: <https://github.com/rust-lang/rust/issues/51540>
+///
+/// # Examples
+///
+/// Filename: src/main.rs
+///
+/// ```ignore
+/// #![no_std]
+/// #![no_main]
+/// #![feature(alloc_error_handler)]
+///
+/// extern crate alloc;
+///
+/// use oak_restricted_kernel_sdk::entrypoint;
+///
+/// #[entrypoint]
+/// fn start_enclave_app() -> ! {
+///     // TODO: implement business logic starts below.
+///     unimplemented!();
+/// }
+/// ```
 pub use oak_restricted_kernel_sdk_proc_macro::entrypoint;
 
 /// Provides a default implementation for [`alloc_error_handler`] attribute.
