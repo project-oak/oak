@@ -31,6 +31,7 @@ use syn::{parse_macro_input, Item, ItemFn, Result};
 /// # Examples
 ///
 /// Filename: src/main.rs
+///
 /// ```
 /// #![no_std]
 /// #![no_main]
@@ -45,6 +46,7 @@ use syn::{parse_macro_input, Item, ItemFn, Result};
 ///     // business logic starts here
 ///     /* ... */
 /// }
+/// ```
 #[proc_macro_attribute]
 pub fn entrypoint(_attr: TokenStream, entry: TokenStream) -> TokenStream {
     let entry_item = parse_macro_input!(entry as syn::Item);

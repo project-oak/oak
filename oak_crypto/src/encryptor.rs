@@ -106,7 +106,7 @@ impl EncryptionKeyProvider {
     }
 }
 
-/// Exposes the ability to derive a session key from for the provided encapsulated private key,
+/// Exposes the ability to derive a session key from the provided encapsulated private key,
 /// using a private key that has been endorsed in the Attestation Evidence.
 pub trait EncryptionKeyHandle {
     fn generate_recipient_context(
