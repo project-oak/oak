@@ -347,7 +347,7 @@ pub fn rust64_start(encrypted: u64) -> ! {
     zero_page.insert_e820_entry(BootE820Entry::new(
         dice_data.as_bytes().as_ptr() as usize,
         dice_data.as_bytes().len(),
-        E820EntryType::DiceData,
+        E820EntryType::RESERVED,
     ));
 
     // Append the DICE data address to the kernel command-line.

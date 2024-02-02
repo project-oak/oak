@@ -248,46 +248,53 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     let stage0_dice_data = {
         let dice_memory_slice = {
-            let e820_dice_data_entry = info
-                .e820_table()
-                .iter()
-                .find(|e| e.entry_type() == Some(oak_linux_boot_params::E820EntryType::DiceData))
-                .expect("failed to find dice data");
-
-            let phys_start_addr = PhysAddr::new_truncate(
-                e820_dice_data_entry
-                    .addr()
-                    .try_into()
-                    .expect("couldn't convert usize to u64"),
-            );
-
-            // Validate that the dice data mem address matches the kernel args if present
-            if let Some(arg) = kernel_args.get(&alloc::format!(
-                "--{}",
-                oak_dice::evidence::DICE_DATA_CMDLINE_PARAM
-            )) {
+            let dice_data_phys_addr = {
+                let arg = kernel_args
+                    .get(&alloc::format!(
+                        "--{}",
+                        oak_dice::evidence::DICE_DATA_CMDLINE_PARAM
+                    ))
+                    .expect("no dice data address supplied in the kernel args");
                 let parsed_arg = u64::from_str_radix(
                     arg.strip_prefix("0x")
                         .expect("failed stripping the hex prefix"),
                     16,
                 )
                 .expect("couldn't parse address as a hex number");
-                if parsed_arg != phys_start_addr.as_u64() {
-                    panic!("inconsistent dice data addresses supplied in the E820 table and kernel args")
-                }
-            }
+                PhysAddr::new(parsed_arg)
+            };
 
-            let virt_start_addr = {
+            // Ensure that the dice data is stored within reserved memory.
+            assert!(info.e820_table().iter().any(|entry| {
+                let dice_data_fully_contained_in_segment = {
+                    let range = PhysAddr::new(entry.addr().try_into().unwrap())
+                        ..=PhysAddr::new((entry.addr() + entry.size()).try_into().unwrap());
+                    range.contains(&dice_data_phys_addr)
+                        && range.contains(&PhysAddr::new(
+                            dice_data_phys_addr.as_u64()
+                                + u64::try_from(core::mem::size_of::<
+                                    oak_dice::evidence::Stage0DiceData,
+                                >())
+                                .unwrap(),
+                        ))
+                };
+
+                entry.entry_type().expect("failed to get type")
+                    == oak_linux_boot_params::E820EntryType::RESERVED
+                    && dice_data_fully_contained_in_segment
+            }));
+
+            let dice_data_virt_addr = {
                 let pt = PAGE_TABLES.get().expect("failed to get page tables");
-                pt.translate_physical(phys_start_addr)
+                pt.translate_physical(dice_data_phys_addr)
                     .expect("failed to translate physical dice address")
             };
 
             // Safety: the E820 table indicated that this is the corrct memory segment.
             unsafe {
                 core::slice::from_raw_parts_mut::<u8>(
-                    virt_start_addr.as_mut_ptr(),
-                    e820_dice_data_entry.size(),
+                    dice_data_virt_addr.as_mut_ptr(),
+                    core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
                 )
             }
         };
