@@ -15,26 +15,25 @@
 //
 
 use anyhow::Ok;
-use oak_crypto::{
-    encryptor::{EncryptionKeyHandle, EncryptionKeyProvider},
-    hpke::RecipientContext,
-};
+pub use oak_crypto::encryptor::EncryptionKeyHandle;
+use oak_crypto::{encryptor::EncryptionKeyProvider, hpke::RecipientContext};
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
 use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
 use p256::ecdsa::SigningKey;
 use zerocopy::{AsBytes, FromZeroes};
 
-/// Sign the provided message bytestring using a signing private key, a
-/// corresponding public key of which is contained in the Attestation Evidence.
+/// Exposes the ability to sign bytestrings using a private key that has been endorsed in
+/// the Attestation Evidence.
 pub trait Signer {
     /// Attempt to sign the provided message bytestring using a signing private key, a
     /// corresponding public key of which is contained in the Attestation Evidence.
     fn sign(&self, message: &[u8]) -> anyhow::Result<oak_crypto::signer::Signature>;
 }
 
-/// Exposes the ability to read the Attestation Evidence. It is discouraged for enclave applications
-/// to operate with evidences. The evidence should only be used to forward it to the host
-/// application once, which then sends it to the clients.
+/// Exposes the ability to read the Attestation Evidence.
+/// Note: Applications should only use the evidence to initially send it to the host application
+/// once, which then sends it to the clients. It is discouraged for enclave applications to operate
+/// directly with evidences.
 pub trait EvidenceProvider {
     fn get_evidence(&self) -> &Evidence;
 }
