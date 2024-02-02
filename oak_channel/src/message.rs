@@ -30,9 +30,10 @@ static_assertions::assert_eq_size!([u8; INVOCATION_ID_SIZE], InvocationId);
 
 pub const BODY_OFFSET: usize = 8;
 
+// messages never have a length of zero
+#[allow(clippy::len_without_is_empty)]
 pub trait Message {
     fn len(&self) -> usize;
-    fn is_empty(&self) -> bool;
     fn encode(self) -> Vec<u8>;
     fn decode(frames: &[u8]) -> Self;
 }
@@ -48,10 +49,6 @@ pub struct RequestMessage {
 impl Message for RequestMessage {
     fn len(&self) -> usize {
         LENGTH_SIZE + INVOCATION_ID_SIZE + self.body.len()
-    }
-
-    fn is_empty(&self) -> bool {
-        false
     }
 
     fn encode(self) -> Vec<u8> {
@@ -99,10 +96,6 @@ pub struct ResponseMessage {
 impl Message for ResponseMessage {
     fn len(&self) -> usize {
         LENGTH_SIZE + INVOCATION_ID_SIZE + self.body.len()
-    }
-
-    fn is_empty(&self) -> bool {
-        false
     }
 
     fn encode(self) -> Vec<u8> {
