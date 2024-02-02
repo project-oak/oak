@@ -119,22 +119,6 @@
 <a href="#119" id="119">119</a>
 <a href="#120" id="120">120</a>
 <a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -156,9 +140,7 @@
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_crypto::{
-    encryptor::{
-        AsyncEncryptionKeyHandle, AsyncServerEncryptor, EncryptionKeyHandle, ServerEncryptor,
-    },
+    encryptor::{AsyncEncryptionKeyHandle, EncryptionKeyHandle, ServerEncryptor},
     proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
 };
 
@@ -193,21 +175,10 @@
 
 <span class="kw">impl</span>&lt;H: FnOnce(Vec&lt;u8&gt;) -&gt; Vec&lt;u8&gt;&gt; EncryptionHandler&lt;H&gt; {
     <span class="kw">pub fn </span>invoke(<span class="self">self</span>, encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
-        <span class="comment">// Initialize server encryptor.
-        </span><span class="kw">let </span>serialized_encapsulated_public_key = encrypted_request
-            .serialized_encapsulated_public_key
-            .as_ref()
-            .context(<span class="string">&quot;initial request message doesn&#39;t contain encapsulated public key&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">let </span>server_encryptor = ServerEncryptor::create(
-            serialized_encapsulated_public_key,
-            <span class="self">self</span>.encryption_key_handle.clone(),
-        )
-        .context(<span class="string">&quot;couldn&#39;t create server encryptor&quot;</span>)<span class="question-mark">?</span>;
-
         <span class="comment">// Decrypt request.
-        </span><span class="kw">let </span>(request, <span class="kw">_</span>) = server_encryptor
-            .decrypt(encrypted_request)
-            .context(<span class="string">&quot;couldn&#39;t decrypt request&quot;</span>)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>(server_encryptor, request, <span class="kw">_</span>) =
+            ServerEncryptor::decrypt(encrypted_request, <span class="self">self</span>.encryption_key_handle.as_ref())
+                .context(<span class="string">&quot;couldn&#39;t create server encryptor&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Handle request.
         </span><span class="kw">let </span>response = (<span class="self">self</span>.request_handler)(request);
@@ -252,14 +223,11 @@
         <span class="self">self</span>,
         encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
     ) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
-        <span class="comment">// Initialize server encryptor.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>server_encryptor = AsyncServerEncryptor::new(<span class="self">self</span>.encryption_key_handle.as_ref());
-
         <span class="comment">// Decrypt request.
-        </span><span class="kw">let </span>(request, _associated_data) = server_encryptor
-            .decrypt(encrypted_request)
-            .<span class="kw">await
-            </span>.context(<span class="string">&quot;couldn&#39;t decrypt request&quot;</span>)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>(server_encryptor, request, _associated_data) =
+            ServerEncryptor::decrypt_async(encrypted_request, <span class="self">self</span>.encryption_key_handle.as_ref())
+                .<span class="kw">await
+                </span>.context(<span class="string">&quot;couldn&#39;t decrypt request&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Handle request.
         </span><span class="kw">let </span>response = (<span class="self">self</span>.request_handler)(request).<span class="kw">await</span>;

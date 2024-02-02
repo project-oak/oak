@@ -320,51 +320,6 @@
 <a href="#320" id="320">320</a>
 <a href="#321" id="321">321</a>
 <a href="#322" id="322">322</a>
-<a href="#323" id="323">323</a>
-<a href="#324" id="324">324</a>
-<a href="#325" id="325">325</a>
-<a href="#326" id="326">326</a>
-<a href="#327" id="327">327</a>
-<a href="#328" id="328">328</a>
-<a href="#329" id="329">329</a>
-<a href="#330" id="330">330</a>
-<a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
-<a href="#341" id="341">341</a>
-<a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
-<a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
-<a href="#352" id="352">352</a>
-<a href="#353" id="353">353</a>
-<a href="#354" id="354">354</a>
-<a href="#355" id="355">355</a>
-<a href="#356" id="356">356</a>
-<a href="#357" id="357">357</a>
-<a href="#358" id="358">358</a>
-<a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
-<a href="#362" id="362">362</a>
-<a href="#363" id="363">363</a>
-<a href="#364" id="364">364</a>
-<a href="#365" id="365">365</a>
-<a href="#366" id="366">366</a>
-<a href="#367" id="367">367</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -385,9 +340,9 @@
 //! &lt;https://www.rfc-editor.org/rfc/rfc9180.html&gt;
 //! &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption&gt;
 
-</span><span class="kw">use </span>alloc::{boxed::Box, sync::Arc, vec::Vec};
+</span><span class="kw">use </span>alloc::{boxed::Box, vec::Vec};
 
-<span class="kw">use </span>anyhow::{anyhow, Context};
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>hpke::Deserializable;
 
@@ -597,24 +552,52 @@
 }
 
 <span class="kw">impl </span>ServerEncryptor {
-    <span class="kw">pub fn </span>create(
-        serialized_encapsulated_public_key: <span class="kw-2">&amp;</span>[u8],
-        encryption_key_handle: Arc&lt;<span class="kw">dyn </span>EncryptionKeyHandle&gt;,
-    ) -&gt; anyhow::Result&lt;<span class="self">Self</span>&gt; {
+    <span class="doccomment">/// Decrypts a [`EncryptedRequest`] proto message using AEAD.
+    /// Returns a response encryptor, the message plaintext and associated data.
+    /// &lt;https://datatracker.ietf.org/doc/html/rfc5116&gt;
+    </span><span class="kw">pub fn </span>decrypt&lt;E: EncryptionKeyHandle + <span class="question-mark">?</span>Sized&gt;(
+        encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
+        encryption_key_handle: <span class="kw-2">&amp;</span>E,
+    ) -&gt; anyhow::Result&lt;(<span class="self">Self</span>, Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
+        <span class="kw">let </span>serialized_encapsulated_public_key = encrypted_request
+            .serialized_encapsulated_public_key
+            .as_ref()
+            .context(<span class="string">&quot;initial request message doesn&#39;t contain encapsulated public key&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let </span>recipient_context = encryption_key_handle
             .generate_recipient_context(serialized_encapsulated_public_key)
             .context(<span class="string">&quot;couldn&#39;t generate recipient crypto context&quot;</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span>::new(recipient_context))
+        <span class="kw">let </span>encryptor = <span class="self">Self </span>{ recipient_context };
+        <span class="kw">let </span>(plaintext, associated_data) = encryptor.decrypt_inner(encrypted_request)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>((encryptor, plaintext, associated_data))
+    }
+
+    <span class="doccomment">/// Decrypts a [`EncryptedRequest`] proto message using AEAD.
+    /// Returns a response encryptor, the message plaintext and associated data.
+    /// &lt;https://datatracker.ietf.org/doc/html/rfc5116&gt;
+    </span><span class="comment">// TODO(#4311): Merge `decrypt` and `decrypt_async` once there is `async` support in the
+    // Restricted Kernel.
+    </span><span class="kw">pub async fn </span>decrypt_async&lt;E: AsyncEncryptionKeyHandle + <span class="question-mark">?</span>Sized&gt;(
+        encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
+        encryption_key_handle: <span class="kw-2">&amp;</span>E,
+    ) -&gt; anyhow::Result&lt;(<span class="self">Self</span>, Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
+        <span class="kw">let </span>serialized_encapsulated_public_key = encrypted_request
+            .serialized_encapsulated_public_key
+            .as_ref()
+            .context(<span class="string">&quot;initial request message doesn&#39;t contain encapsulated public key&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>recipient_context = encryption_key_handle
+            .generate_recipient_context(serialized_encapsulated_public_key)
+            .<span class="kw">await
+            </span>.context(<span class="string">&quot;couldn&#39;t generate recipient crypto context&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">let </span>encryptor = <span class="self">Self </span>{ recipient_context };
+        <span class="kw">let </span>(plaintext, associated_data) = encryptor.decrypt_inner(encrypted_request)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>((encryptor, plaintext, associated_data))
     }
 
     <span class="kw">pub fn </span>new(recipient_context: RecipientContext) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ recipient_context }
     }
 
-    <span class="doccomment">/// Decrypts a [`EncryptedRequest`] proto message using AEAD.
-    /// Returns a response message plaintext and associated data.
-    /// &lt;https://datatracker.ietf.org/doc/html/rfc5116&gt;
-    </span><span class="kw">pub fn </span>decrypt(
+    <span class="kw">fn </span>decrypt_inner(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
     ) -&gt; anyhow::Result&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
@@ -640,7 +623,7 @@
     /// Returns a [`EncryptedResponse`] proto message.
     /// &lt;https://datatracker.ietf.org/doc/html/rfc5116&gt;
     </span><span class="kw">pub fn </span>encrypt(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="self">self</span>,
         plaintext: <span class="kw-2">&amp;</span>[u8],
         associated_data: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
@@ -657,79 +640,6 @@
                 associated_data: associated_data.to_vec(),
             }),
         })
-    }
-}
-
-<span class="doccomment">/// Encryptor object for decrypting client requests that are received by the server and encrypting
-/// server responses that will be sent back to the client. Each Encryptor object corresponds to a
-/// single crypto session between the client and the server.
-/// Encryptor state is initialized after receiving an initial request message containing client&#39;s
-/// encapsulated public key.
-///
-/// Sequence numbers for requests and responses are incremented separately, meaning that there could
-/// be multiple responses per request and multiple requests per response.
-</span><span class="comment">// TODO(#4311): Merge `AsyncServerEncryptor` and `ServerEncryptor` once there is `async` support in
-// the Restricted Kernel.
-</span><span class="kw">pub struct </span>AsyncServerEncryptor&lt;<span class="lifetime">&#39;a</span>, G&gt;
-<span class="kw">where
-    </span>G: AsyncEncryptionKeyHandle + Send + Sync,
-{
-    encryption_key_handle: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>G,
-    inner: <span class="prelude-ty">Option</span>&lt;ServerEncryptor&gt;,
-}
-
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, G&gt; AsyncServerEncryptor&lt;<span class="lifetime">&#39;a</span>, G&gt;
-<span class="kw">where
-    </span>G: AsyncEncryptionKeyHandle + Send + Sync,
-{
-    <span class="kw">pub fn </span>new(encryption_key_handle: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>G) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            encryption_key_handle,
-            inner: <span class="prelude-val">None</span>,
-        }
-    }
-
-    <span class="doccomment">/// Decrypts a [`EncryptedRequest`] proto message using AEAD.
-    /// Returns a response message plaintext and associated data.
-    /// &lt;https://datatracker.ietf.org/doc/html/rfc5116&gt;
-    </span><span class="kw">pub async fn </span>decrypt(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        encrypted_request: <span class="kw-2">&amp;</span>EncryptedRequest,
-    ) -&gt; anyhow::Result&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
-        <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.inner {
-            <span class="prelude-val">Some</span>(inner) =&gt; inner.decrypt(encrypted_request),
-            <span class="prelude-val">None </span>=&gt; {
-                <span class="kw">let </span>serialized_encapsulated_public_key = encrypted_request
-                    .serialized_encapsulated_public_key
-                    .as_ref()
-                    .context(<span class="string">&quot;initial request message doesn&#39;t contain encapsulated public key&quot;</span>)<span class="question-mark">?</span>;
-                <span class="kw">let </span>recipient_context = <span class="self">self
-                    </span>.encryption_key_handle
-                    .generate_recipient_context(serialized_encapsulated_public_key)
-                    .<span class="kw">await
-                    </span>.context(<span class="string">&quot;couldn&#39;t generate recipient crypto context&quot;</span>)<span class="question-mark">?</span>;
-                <span class="kw">let </span>inner = ServerEncryptor::new(recipient_context);
-                <span class="kw">let </span>(plaintext, associated_data) = inner.decrypt(encrypted_request)<span class="question-mark">?</span>;
-                <span class="self">self</span>.inner = <span class="prelude-val">Some</span>(inner);
-                <span class="prelude-val">Ok</span>((plaintext, associated_data))
-            }
-        }
-    }
-
-    <span class="doccomment">/// Encrypts `plaintext` and authenticates `associated_data` using AEAD.
-    /// Returns a [`EncryptedResponse`] proto message.
-    /// &lt;https://datatracker.ietf.org/doc/html/rfc5116&gt;
-    </span><span class="kw">pub fn </span>encrypt(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        plaintext: <span class="kw-2">&amp;</span>[u8],
-        associated_data: <span class="kw-2">&amp;</span>[u8],
-    ) -&gt; anyhow::Result&lt;EncryptedResponse&gt; {
-        <span class="kw">match </span><span class="kw-2">&amp;mut </span><span class="self">self</span>.inner {
-            <span class="prelude-val">Some</span>(inner) =&gt; inner.encrypt(plaintext, associated_data),
-            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;couldn&#39;t encrypt response because crypto context is not initialized&quot;
-            </span>)),
-        }
     }
 }
 </code></pre></div></section></main></body></html>

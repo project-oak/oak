@@ -155,6 +155,18 @@
 <a href="#155" id="155">155</a>
 <a href="#156" id="156">156</a>
 <a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -171,7 +183,8 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>std::fs::{read_dir, read_to_string, OpenOptions};
+</span><span class="kw">use </span>core::ops::RangeBounds;
+<span class="kw">use </span>std::fs::{read_dir, read_to_string, OpenOptions};
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>ciborium::Value;
@@ -192,12 +205,11 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::try_parse_phys_addr;
 
-<span class="doccomment">/// The expected string representation of the custom type for the reserved memory range that
-/// contains the DICE data.
+<span class="doccomment">/// The expected string representation for reserved memory.
 ///
-/// Since we use a custom type the Linux Kernel does not recognize it. The text is defined in
+/// The text is defined in
 /// &lt;https://github.com/torvalds/linux/blob/d88520ad73b79e71e3ddf08de335b8520ae41c5c/arch/x86/kernel/e820.c#L1086&gt;.
-</span><span class="kw">const </span>EXPECTED_E820_TYPE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;Unknown E820 type&quot;</span>;
+</span><span class="kw">const </span>RESERVED_E820_TYPE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;Reserved&quot;</span>;
 
 <span class="doccomment">/// The path for reading the memory map from the sysfs pseudo-filesystem.
 </span><span class="kw">const </span>MEMMAP_PATH: <span class="kw-2">&amp;</span>str = <span class="string">&quot;/sys/firmware/memmap&quot;</span>;
@@ -229,6 +241,15 @@
     type_description: String,
 }
 
+<span class="kw">impl </span>core::ops::RangeBounds&lt;PhysAddr&gt; <span class="kw">for </span>MemoryRange {
+    <span class="kw">fn </span>start_bound(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; core::ops::Bound&lt;<span class="kw-2">&amp;</span>PhysAddr&gt; {
+        core::ops::Bound::Included(<span class="kw-2">&amp;</span><span class="self">self</span>.start)
+    }
+    <span class="kw">fn </span>end_bound(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; core::ops::Bound&lt;<span class="kw-2">&amp;</span>PhysAddr&gt; {
+        core::ops::Bound::Included(<span class="kw-2">&amp;</span><span class="self">self</span>.end)
+    }
+}
+
 <span class="doccomment">/// Extracts the DICE evidence and ECA key from the Stage 0 DICE data located at the given physical
 /// address.
 </span><span class="kw">pub fn </span>extract_stage0_dice_data(start: PhysAddr) -&gt; anyhow::Result&lt;DiceBuilder&gt; {
@@ -244,12 +265,15 @@
     <span class="kw">let </span>length = std::mem::size_of::&lt;Stage0DiceData&gt;();
     <span class="comment">// Linux presents an inclusive end address.
     </span><span class="kw">let </span>end = start + (length <span class="kw">as </span>u64 - <span class="number">1</span>);
-    <span class="comment">// Ensure that the exact memory range is marked as reserved.
-    </span><span class="kw">if </span>!read_memory_ranges()<span class="question-mark">?</span>.iter().any(|range| {
-        range.start == start &amp;&amp; range.end == end &amp;&amp; range.type_description == EXPECTED_E820_TYPE
-    }) {
-        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;DICE data range is not reserved&quot;</span>);
-    }
+    <span class="comment">// Ensure that the memory range is in reserved memory.
+    </span><span class="macro">anyhow::ensure!</span>(
+        read_memory_ranges()<span class="question-mark">?
+            </span>.iter()
+            .any(|range| range.type_description == RESERVED_E820_TYPE
+                &amp;&amp; range.contains(<span class="kw-2">&amp;</span>start)
+                &amp;&amp; range.contains(<span class="kw-2">&amp;</span>end)),
+        <span class="string">&quot;DICE data range is not in reserved memory&quot;
+    </span>);
 
     <span class="comment">// Open a file representing the physical memory.
     </span><span class="kw">let </span>dice_file = OpenOptions::new()
