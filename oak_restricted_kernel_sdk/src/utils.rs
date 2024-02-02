@@ -14,8 +14,12 @@
 // limitations under the License.
 //
 
+//! Various utilities like loggers, allocators, timers, etc.
+
 use core::fmt::Write;
 
+pub use oak_core::{samplestore::*, sync::*, timer::*};
+pub use oak_enclave_runtime_support::heap::*;
 use oak_restricted_kernel_interface::syscall::{fsync, write};
 
 struct Stderr {}
@@ -57,4 +61,23 @@ impl log::Log for StderrLogger {
     fn flush(&self) {
         Stderr::flush();
     }
+}
+
+/// Provides a default implementation for [`alloc_error_handler`] attribute.
+///
+/// This handler is declared implicitly when using the [`entrypoint`] macro.
+///
+/// [`alloc_error_handler`]: <https://github.com/rust-lang/rust/issues/51540>
+pub fn alloc_error_handler(layout: ::core::alloc::Layout) -> ! {
+    panic!("error allocating memory: {:#?}", layout);
+}
+
+/// Provides a default implementation for [`panic_handler`] attribute.
+///
+/// This handler is declared implicitly when using the [`entrypoint`] macro.
+///
+/// [`panic_handler`]: <https://doc.rust-lang.org/reference/runtime.html#the-panic_handler-attribute>
+pub fn panic_handler(info: &core::panic::PanicInfo) -> ! {
+    log::error!("PANIC: {}", info);
+    oak_restricted_kernel_interface::syscall::exit(-1);
 }

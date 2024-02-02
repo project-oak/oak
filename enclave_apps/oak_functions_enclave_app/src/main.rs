@@ -23,7 +23,9 @@ extern crate alloc;
 use alloc::{boxed::Box, sync::Arc};
 
 use oak_restricted_kernel_sdk::{
-    entrypoint, start_blocking_server, utils::samplestore::StaticSampleStore, FileDescriptorChannel,
+    channel::{start_blocking_server, FileDescriptorChannel},
+    entrypoint,
+    utils::StaticSampleStore,
 };
 
 #[entrypoint]

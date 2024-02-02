@@ -63,9 +63,9 @@ fn process_entry_fn(entry_fn: ItemFn) -> TokenStream {
         #entry_fn
 
         #[global_allocator]
-        static ALLOCATOR: oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap = oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap::empty();
+        static ALLOCATOR: oak_restricted_kernel_sdk::utils::LockedGrowableHeap = oak_restricted_kernel_sdk::utils::LockedGrowableHeap::empty();
 
-        static LOGGER: oak_restricted_kernel_sdk::StderrLogger = oak_restricted_kernel_sdk::StderrLogger {};
+        static LOGGER: oak_restricted_kernel_sdk::utils::StderrLogger = oak_restricted_kernel_sdk::utils::StderrLogger {};
 
         #[no_mangle]
         fn _start() -> ! {
@@ -77,12 +77,12 @@ fn process_entry_fn(entry_fn: ItemFn) -> TokenStream {
 
         #[alloc_error_handler]
         fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
-            oak_restricted_kernel_sdk::alloc_error_handler(layout);
+            oak_restricted_kernel_sdk::utils::alloc_error_handler(layout);
         }
 
         #[panic_handler]
         fn panic(info: &core::panic::PanicInfo) -> ! {
-            oak_restricted_kernel_sdk::panic_handler(info);
+            oak_restricted_kernel_sdk::utils::panic_handler(info);
         }
     };
     TokenStream::from(generated)

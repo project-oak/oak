@@ -23,7 +23,9 @@ extern crate alloc;
 use alloc::boxed::Box;
 
 use oak_restricted_kernel_sdk::{
-    entrypoint, start_blocking_server, utils::samplestore::StaticSampleStore, FileDescriptorChannel,
+    channel::{start_blocking_server, FileDescriptorChannel},
+    entrypoint,
+    utils::StaticSampleStore,
 };
 
 // Starts an echo server that uses the Oak communication channel:
