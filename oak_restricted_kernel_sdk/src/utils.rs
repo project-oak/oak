@@ -65,7 +65,8 @@ impl log::Log for StderrLogger {
 
 /// Provides a default implementation for [`alloc_error_handler`] attribute.
 ///
-/// This handler is declared implicitly when using the [`entrypoint`] macro.
+/// This handler is declared implicitly when using the [`crate::entrypoint`]
+/// macro.
 ///
 /// [`alloc_error_handler`]: <https://github.com/rust-lang/rust/issues/51540>
 pub fn alloc_error_handler(layout: ::core::alloc::Layout) -> ! {
@@ -74,7 +75,8 @@ pub fn alloc_error_handler(layout: ::core::alloc::Layout) -> ! {
 
 /// Provides a default implementation for [`panic_handler`] attribute.
 ///
-/// This handler is declared implicitly when using the [`entrypoint`] macro.
+/// This handler is declared implicitly when using the [`crate::entrypoint`]
+/// macro.
 ///
 /// [`panic_handler`]: <https://doc.rust-lang.org/reference/runtime.html#the-panic_handler-attribute>
 pub fn panic_handler(info: &core::panic::PanicInfo) -> ! {
