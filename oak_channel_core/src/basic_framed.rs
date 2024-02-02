@@ -38,17 +38,19 @@ fn read_chunk<C: Channel + ?Sized>(channel: &mut C, chunk: &mut [u8]) -> Result<
 ///
 /// The protocol to load the application is very simple:
 /// 1. loader sends the size of the application binary, as u32
-/// 2. loader sends max 4 KiB of data and waits for the kernel to acknowledge
-/// 3. kernel reads up to 4 KiB of data and acks by responding with the amount of data read
+/// 2. loader sends MAX_SIZE of data and waits for the kernel to acknowledge
+/// 3. kernel reads up to MAX_SIZE of data and acks by responding with the amount of data read
 /// 4. repeat (2) and (3) until all the data has been transmitted
-pub fn load_raw<C: Channel + ?Sized>(channel: &mut C) -> Result<vec::Vec<u8>> {
+pub fn load_raw<C: Channel + ?Sized, const MAX_SIZE: usize>(
+    channel: &mut C,
+) -> Result<vec::Vec<u8>> {
     let payload_len = {
         let mut buf: [u8; 4] = Default::default();
         channel.read_exact(&mut buf)?;
         u32::from_le_bytes(buf)
     };
     let mut payload = vec![0; payload_len as usize];
-    let mut chunks_mut = payload.array_chunks_mut::<4096>();
+    let mut chunks_mut = payload.array_chunks_mut::<MAX_SIZE>();
 
     for chunk in chunks_mut.by_ref() {
         read_chunk(channel, chunk)?;

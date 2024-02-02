@@ -81,7 +81,7 @@ use sha2::Sha256;
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
-    structures::paging::{Page, Size2MiB},
+    structures::paging::{Page, PageSize, Size2MiB, Size4KiB},
     PhysAddr, VirtAddr,
 };
 use zerocopy::FromBytes;
@@ -387,8 +387,11 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 // We need to load the application binary before we hand the channel over to the
                 // syscalls, which expose it to the user space.
                 info!("Loading application binary...");
-                let payload = oak_channel_core::basic_framed::load_raw(&mut *channel)
-                    .expect("failed to load application binary from channel");
+                let payload = oak_channel_core::basic_framed::load_raw::<
+                    dyn Channel,
+                    { Size4KiB::SIZE as usize },
+                >(&mut *channel)
+                .expect("failed to load application binary from channel");
                 log::info!("Binary loaded, size: {}", payload.len());
                 payload::Application::new(payload.into_boxed_slice())
                     .expect("failed to parse application from ramdisk")
