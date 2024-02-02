@@ -66,7 +66,6 @@ extern crate alloc;
 use alloc::{alloc::Allocator, boxed::Box};
 use core::{marker::Sync, panic::PanicInfo, str::FromStr};
 
-use hkdf::Hkdf;
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
@@ -77,7 +76,6 @@ use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootParams, Ramdisk};
 use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
-use sha2::Sha256;
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
@@ -92,9 +90,6 @@ use crate::{
     mm::Translator,
     snp::{get_snp_page_addresses, init_snp_pages},
 };
-
-/// A derived sealing key.
-type DerivedKey = [u8; 32];
 
 /// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 512 GiB of memory, for now.
@@ -391,21 +386,12 @@ pub fn start_kernel(info: &BootParams) -> ! {
         }
     };
 
+    let (derived_key, restricted_kernel_dice_data) =
+        oak_restricted_kernel_dice::attest_application(stage0_dice_data, &application_bytes);
+
     log::info!("Binary loaded, size: {}", application_bytes.len());
     let application =
         payload::Application::new(application_bytes).expect("failed to parse application");
-
-    // Mix in the application digest when deriving CDI for Layer 2.
-    let hkdf = Hkdf::<Sha256>::new(
-        Some(application.digest()),
-        &stage0_dice_data.layer_1_cdi.cdi[..],
-    );
-    let mut derived_key = DerivedKey::default();
-    hkdf.expand(b"CDI_Seal", &mut derived_key)
-        .expect("invalid length for derived key");
-
-    let restricted_kernel_dice_data =
-        oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, application.digest());
 
     syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key);
 

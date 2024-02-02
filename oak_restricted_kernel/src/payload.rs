@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use alloc::{boxed::Box, format};
+use alloc::boxed::Box;
 use core::arch::asm;
 
 use anyhow::{anyhow, Result};
@@ -24,7 +24,6 @@ use goblin::{
 };
 use oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 use self_cell::self_cell;
-use sha2::{Digest, Sha256};
 use x86_64::{
     structures::paging::{PageSize, Size2MiB},
     VirtAddr,
@@ -45,26 +44,18 @@ self_cell!(
 /// Representation of an Restricted Application that the Restricted Kernel can run.
 pub struct Application {
     binary: Binary,
-    digest: [u8; 32],
 }
 
 impl Application {
     /// Attempts to parse the provided binary blob as an ELF file representing an Restricted
     /// Application.
     pub fn new(blob: Box<[u8]>) -> Result<Self> {
-        let digest = Sha256::digest(&blob[..]).into();
-
         Ok(Application {
             binary: Binary::try_new(blob, |boxed| {
                 goblin::elf::Elf::parse(boxed)
                     .map_err(|err| anyhow!("failed to parse ELF file: {}", err))
             })?,
-            digest,
         })
-    }
-
-    pub fn digest(&self) -> &[u8] {
-        &self.digest[..]
     }
 
     fn program_headers(&self) -> &ProgramHeaders {
@@ -150,10 +141,7 @@ impl Application {
         )
         .expect("failed to allocate memory for user stack");
 
-        log::info!(
-            "Running application; binary hash: {}",
-            self.digest.map(|x| format!("{:02x}", x)).join("")
-        );
+        log::info!("Running application");
 
         // Enter Ring 3 and jump to user code.
         // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the user to

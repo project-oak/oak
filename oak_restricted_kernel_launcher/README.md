@@ -19,7 +19,7 @@ must be built.
 Stage0, the restricted kernel, and an enclave app may be built like so:
 
 ```shell
-just stage0_bin oak_restricted_kernel_wrapper oak_echo_raw_enclave_app
+just stage0_bin oak_restricted_kernel_wrapper oak_orchestrator oak_echo_raw_enclave_app
 ```
 
 After building dependencies, an enclave app may be run like so:
@@ -31,5 +31,6 @@ cargo run --package=oak_restricted_kernel_launcher -- \
 --vmm-binary=$(which qemu-system-x86_64) \
 --memory-size=8G \
 --bios-binary=stage0_bin/target/x86_64-unknown-none/release/stage0_bin \
+--initrd=enclave_apps/target/x86_64-unknown-none/release/oak_orchestrator \
 --app-binary=enclave_apps/target/x86_64-unknown-none/release/oak_echo_raw_enclave_app
 ```
