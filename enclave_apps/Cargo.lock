@@ -852,6 +852,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_orchestrator"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak_channel",
+ "oak_restricted_kernel_sdk",
+]
+
+[[package]]
 name = "oak_proto_rust"
 version = "0.0.1"
 dependencies = [
