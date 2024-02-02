@@ -32,6 +32,7 @@ pub const BODY_OFFSET: usize = 8;
 
 pub trait Message {
     fn len(&self) -> usize;
+    fn is_empty(&self) -> bool;
     fn encode(self) -> Vec<u8>;
     fn decode(frames: &[u8]) -> Self;
 }
@@ -47,6 +48,10 @@ pub struct RequestMessage {
 impl Message for RequestMessage {
     fn len(&self) -> usize {
         LENGTH_SIZE + INVOCATION_ID_SIZE + self.body.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        false
     }
 
     fn encode(self) -> Vec<u8> {
@@ -94,6 +99,10 @@ pub struct ResponseMessage {
 impl Message for ResponseMessage {
     fn len(&self) -> usize {
         LENGTH_SIZE + INVOCATION_ID_SIZE + self.body.len()
+    }
+
+    fn is_empty(&self) -> bool {
+        false
     }
 
     fn encode(self) -> Vec<u8> {

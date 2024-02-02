@@ -28,7 +28,7 @@ mod tests;
 use alloc::boxed::Box;
 use core::{arch::asm, ffi::c_void};
 
-use oak_channel_core::Channel;
+use oak_channel::Channel;
 use oak_dice::evidence::RestrictedKernelDiceData as DiceData;
 use oak_restricted_kernel_interface::{Errno, Syscall};
 use x86_64::{

@@ -31,7 +31,7 @@ hkdf = "*"
 linked_list_allocator = { version = "*", features = ["alloc_ref"] }
 log = "*"
 libm = "*"
-oak_channel_core = { workspace = true }
+oak_channel = { workspace = true }
 oak_core = { workspace = true }
 oak_crypto = { workspace = true }
 hpke = { version = "*", default-features = false, features = ["alloc"] }

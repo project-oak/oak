@@ -73,7 +73,7 @@ use mm::{
     frame_allocator::PhysicalMemoryAllocator, page_tables::RootPageTable,
     virtual_address_allocator::VirtualAddressAllocator,
 };
-use oak_channel_core::Channel;
+use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootParams, Ramdisk};
 use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
@@ -387,7 +387,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 // We need to load the application binary before we hand the channel over to the
                 // syscalls, which expose it to the user space.
                 info!("Loading application binary...");
-                let payload = oak_channel_core::basic_framed::load_raw::<
+                let payload = oak_channel::basic_framed::load_raw::<
                     dyn Channel,
                     { Size4KiB::SIZE as usize },
                 >(&mut *channel)

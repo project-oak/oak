@@ -647,10 +647,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5ce46fe64a9d73be07dcbe690a38ce1b293be448fd8ce1e6c1b8062c9f72c6a"
 
 [[package]]
-name = "oak_channel_core"
+name = "oak_channel"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bitflags 2.4.1",
+ "bytes",
+ "log",
+ "oak_core",
+ "static_assertions",
 ]
 
 [[package]]
@@ -727,7 +732,7 @@ dependencies = [
  "libm",
  "linked_list_allocator",
  "log",
- "oak_channel_core",
+ "oak_channel",
  "oak_core",
  "oak_crypto",
  "oak_dice",

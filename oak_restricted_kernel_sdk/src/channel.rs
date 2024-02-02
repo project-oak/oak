@@ -16,8 +16,12 @@
 
 //! Provides functionality to communicate with host application over the communication channel.
 
-use anyhow::anyhow;
-pub use oak_channel::{server::start_blocking_server, Read, Write};
+use alloc::boxed::Box;
+
+use anyhow::{anyhow, Context};
+use oak_channel::Channel;
+pub use oak_channel::{Read, Write};
+use oak_core::samplestore::SampleStore;
 use oak_restricted_kernel_interface::OAK_CHANNEL_FD;
 
 /// Channel that communicates over a file descriptor.
@@ -73,5 +77,39 @@ impl Write for FileDescriptorChannel {
     fn flush(&mut self) -> anyhow::Result<()> {
         oak_restricted_kernel_interface::syscall::fsync(self.fd)
             .map_err(|err| anyhow!("sync failure: {}", err))
+    }
+}
+
+/// Starts a blocking server that listens for requests on the provided channel
+/// and responds to them using the provided [`micro_rpc::Transport`].
+pub fn start_blocking_server<T: micro_rpc::Transport<Error = !>>(
+    channel: Box<dyn Channel>,
+    mut server: T,
+    stats: &mut dyn SampleStore,
+) -> anyhow::Result<!> {
+    let channel_handle = &mut oak_channel::server::ServerChannelHandle::new(channel);
+    loop {
+        log::debug!("waiting for a request message");
+        let (request_message, timer) = channel_handle
+            .read_request()
+            .context("couldn't receive message")?;
+        let request_message_invocation_id = request_message.invocation_id;
+        log::debug!(
+            "received request message with invocation id {} ({} bytes)",
+            request_message_invocation_id,
+            request_message.body.len()
+        );
+        let response = server.invoke(request_message.body.as_ref()).into_ok();
+        log::debug!(
+            "sending response message with invocation id {} ({} bytes)",
+            request_message_invocation_id,
+            response.len()
+        );
+        let response_message = oak_channel::message::ResponseMessage {
+            invocation_id: request_message_invocation_id,
+            body: response,
+        };
+        channel_handle.write_response(response_message)?;
+        stats.record(timer.elapsed());
     }
 }
