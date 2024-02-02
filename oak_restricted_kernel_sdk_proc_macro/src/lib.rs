@@ -69,9 +69,9 @@ fn process_entry_fn(entry_fn: ItemFn) -> TokenStream {
 
         #[no_mangle]
         fn _start() -> ! {
-            log::set_logger(&LOGGER).expect("failed to set logger");
-            log::set_max_level(log::LevelFilter::Debug);
-            log::info!("In main!");
+            oak_restricted_kernel_sdk::utils::log::set_logger(&LOGGER).expect("failed to set logger");
+            oak_restricted_kernel_sdk::utils::log::set_max_level(oak_restricted_kernel_sdk::utils::log::LevelFilter::Debug);
+            oak_restricted_kernel_sdk::utils::log::info!("In main!");
             #entry_fn_name();
         }
 
