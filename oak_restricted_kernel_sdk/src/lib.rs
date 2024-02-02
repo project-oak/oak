@@ -29,7 +29,7 @@ use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
 /// allocator, logger, panic handler.
 ///
 /// This macro assumes that crates using it have declared the [`no_std`] and [`no_main`]
-/// attributes, and the [`alloc_error_handler`] unstable feature of the rust compiler.
+/// attributes, and the enabled [`alloc_error_handler`] unstable feature of the rust compiler.
 ///
 /// [`no_std`]: <https://github.com/rust-lang/rust/issues/51540>
 /// [`no_main`]: <https://docs.rust-embedded.org/embedonomicon/smallest-no-std.html#the-code>
