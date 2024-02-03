@@ -26,7 +26,7 @@
 #include "grpcpp/server_builder.h"
 #include "grpcpp/support/time.h"
 #include "gtest/gtest.h"
-#include "oak_crypto/proto/v1/crypto.pb.h"
+#include "proto/crypto/crypto.pb.h"
 #include "proto/session/messages.pb.h"
 #include "proto/session/service_streaming.grpc.pb.h"
 #include "proto/session/service_streaming.pb.h"

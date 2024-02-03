@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak.functions;
 
-import "oak_crypto/proto/v1/crypto.proto";
+import "proto/crypto/crypto.proto";
 import "proto/attestation/evidence.proto";
 
 service OakFunctions {

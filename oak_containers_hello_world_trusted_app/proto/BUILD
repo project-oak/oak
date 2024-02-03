@@ -27,7 +27,7 @@ proto_library(
     name = "interface_proto",
     srcs = ["interface.proto"],
     deps = [
-        "//oak_crypto/proto/v1:crypto_proto",
+        "//proto/crypto:crypto_proto",
     ],
 )
 

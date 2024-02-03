@@ -30,6 +30,6 @@ java_test(
         "//java/src/main/java/com/google/oak/crypto:server_encryptor",
         "//java/src/main/java/com/google/oak/crypto/hpke",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_crypto/proto/v1:crypto_java_proto",
+        "//proto/crypto:crypto_java_proto",
     ],
 )

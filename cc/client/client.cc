@@ -24,7 +24,7 @@
 #include "absl/strings/string_view.h"
 #include "cc/crypto/client_encryptor.h"
 #include "cc/crypto/common.h"
-#include "oak_crypto/proto/v1/crypto.pb.h"
+#include "proto/crypto/crypto.pb.h"
 #include "proto/session/messages.pb.h"
 
 namespace oak::client {

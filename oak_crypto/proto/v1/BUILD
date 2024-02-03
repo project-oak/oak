@@ -17,16 +17,15 @@
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@rules_cc//cc:defs.bzl", "cc_proto_library")
 load("@rules_java//java:defs.bzl", "java_lite_proto_library", "java_proto_library")
-load("@rules_proto//proto:defs.bzl", "proto_library")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-proto_library(
+alias(
     name = "crypto_proto",
-    srcs = ["crypto.proto"],
+    actual = "//proto/crypto:crypto_proto",
 )
 
 cc_proto_library(

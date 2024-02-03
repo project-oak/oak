@@ -28,7 +28,7 @@ proto_library(
     name = "orchestrator_crypto_proto",
     srcs = ["orchestrator_crypto.proto"],
     deps = [
-        "//oak_crypto/proto/v1:crypto_proto",
+        "//proto/crypto:crypto_proto",
     ],
 )
 
