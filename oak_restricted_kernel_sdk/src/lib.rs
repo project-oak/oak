@@ -16,6 +16,8 @@
 
 #![feature(doc_cfg)]
 #![cfg_attr(not(test), no_std)]
+#![feature(never_type)]
+#![feature(unwrap_infallible)]
 
 extern crate alloc;
 

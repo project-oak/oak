@@ -53,7 +53,7 @@ pub struct Params {
     pub kernel: Option<PathBuf>,
 
     /// Path to the Oak Functions application binary to be loaded into the enclave.
-    #[arg(long, value_parser = path_exists, requires_all = &["enclave_binary"], conflicts_with_all = &["initrd"])]
+    #[arg(long, value_parser = path_exists)]
     pub app_binary: Option<PathBuf>,
 
     /// Path to the BIOS image to use.

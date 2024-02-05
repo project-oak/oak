@@ -25,8 +25,8 @@
 #include "cc/crypto/hpke/utils.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "oak_crypto/proto/v1/crypto.pb.h"
 #include "openssl/hpke.h"
+#include "proto/crypto/crypto.pb.h"
 
 namespace oak::crypto {
 namespace {

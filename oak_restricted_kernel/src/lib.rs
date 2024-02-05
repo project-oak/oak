@@ -66,7 +66,6 @@ extern crate alloc;
 use alloc::{alloc::Allocator, boxed::Box};
 use core::{marker::Sync, panic::PanicInfo, str::FromStr};
 
-use hkdf::Hkdf;
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
@@ -77,11 +76,10 @@ use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootParams, Ramdisk};
 use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
-use sha2::Sha256;
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 use x86_64::{
-    structures::paging::{Page, Size2MiB},
+    structures::paging::{Page, PageSize, Size2MiB, Size4KiB},
     PhysAddr, VirtAddr,
 };
 use zerocopy::FromBytes;
@@ -92,9 +90,6 @@ use crate::{
     mm::Translator,
     snp::{get_snp_page_addresses, init_snp_pages},
 };
-
-/// A derived sealing key.
-type DerivedKey = [u8; 32];
 
 /// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 512 GiB of memory, for now.
@@ -341,69 +336,62 @@ pub fn start_kernel(info: &BootParams) -> ! {
         sev_status,
     );
 
-    let application: payload::Application = {
+    let application_bytes: Box<[u8]> = {
         match ramdisk {
             Some(ramdisk) => {
-                let owned_slice: Box<[u8]> = {
-                    let virt_addr = {
-                        let pt = PAGE_TABLES.get().expect("failed to get page tables");
-                        pt.translate_physical(PhysAddr::new(ramdisk.addr.into()))
-                            .expect("failed to translate physical dice address")
-                    };
-
-                    // Safety:
-                    // We rely on the firmware to ensure this range is valid and backed by physical
-                    // memory.
-                    // We rely on the wrapper that loaded the kernel ELF file into memory, to ensure
-                    // it didn't over overwrite the ramdisk range.
-                    // We excluded this range from the frame allocator so it cannot be used by the
-                    // heap allocator.
-                    let slice: &[u8] = unsafe {
-                        core::slice::from_raw_parts::<u8>(
-                            virt_addr.as_mut_ptr(),
-                            info.hdr.ramdisk_size.try_into().unwrap(),
-                        )
-                    };
-
-                    info!("Copying application from ramdisk...");
-                    let owned_slice = Box::<[u8]>::from(slice);
-                    // Once the application has been copied onto the heap, the original ramdisk
-                    // location is marked as available.
-                    let ramdisk_range = crate::mm::ramdisk_range(&ramdisk);
-                    info!(
-                        "marking [{:#018x}..{:#018x}) as available",
-                        ramdisk_range.start.start_address().as_u64(),
-                        ramdisk_range.end.start_address().as_u64()
-                    );
-                    FRAME_ALLOCATOR.lock().mark_valid(ramdisk_range, true);
-
-                    owned_slice
+                let virt_addr = {
+                    let pt = PAGE_TABLES.get().expect("failed to get page tables");
+                    pt.translate_physical(PhysAddr::new(ramdisk.addr.into()))
+                        .expect("failed to translate physical dice address")
                 };
-                info!("Parsing application...");
-                payload::Application::new(owned_slice)
-                    .expect("failed to parse application from ramdisk")
+
+                // Safety:
+                // We rely on the firmware to ensure this range is valid and backed by physical
+                // memory.
+                // We rely on the wrapper that loaded the kernel ELF file into memory, to ensure
+                // it didn't over overwrite the ramdisk range.
+                // We excluded this range from the frame allocator so it cannot be used by the
+                // heap allocator.
+                let slice: &[u8] = unsafe {
+                    core::slice::from_raw_parts::<u8>(
+                        virt_addr.as_mut_ptr(),
+                        info.hdr.ramdisk_size.try_into().unwrap(),
+                    )
+                };
+
+                info!("Copying application from ramdisk...");
+                let owned_slice = Box::<[u8]>::from(slice);
+                // Once the application has been copied onto the heap, the original ramdisk
+                // location is marked as available.
+                let ramdisk_range = crate::mm::ramdisk_range(&ramdisk);
+                info!(
+                    "marking [{:#018x}..{:#018x}) as available",
+                    ramdisk_range.start.start_address().as_u64(),
+                    ramdisk_range.end.start_address().as_u64()
+                );
+                FRAME_ALLOCATOR.lock().mark_valid(ramdisk_range, true);
+
+                owned_slice
             }
             None => {
                 // We need to load the application binary before we hand the channel over to the
                 // syscalls, which expose it to the user space.
                 info!("Loading application binary...");
-                payload::Application::load_raw(&mut *channel)
-                    .expect("failed to load application binary from channel")
+                oak_channel::basic_framed::load_raw::<dyn Channel, { Size4KiB::SIZE as usize }>(
+                    &mut *channel,
+                )
+                .expect("failed to load application binary from channel")
+                .into_boxed_slice()
             }
         }
     };
 
-    // Mix in the application digest when deriving CDI for Layer 2.
-    let hkdf = Hkdf::<Sha256>::new(
-        Some(application.digest()),
-        &stage0_dice_data.layer_1_cdi.cdi[..],
-    );
-    let mut derived_key = DerivedKey::default();
-    hkdf.expand(b"CDI_Seal", &mut derived_key)
-        .expect("invalid length for derived key");
+    let (derived_key, restricted_kernel_dice_data) =
+        oak_restricted_kernel_dice::attest_application(stage0_dice_data, &application_bytes);
 
-    let restricted_kernel_dice_data =
-        oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, application.digest());
+    log::info!("Binary loaded, size: {}", application_bytes.len());
+    let application =
+        payload::Application::new(application_bytes).expect("failed to parse application");
 
     syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key);
 

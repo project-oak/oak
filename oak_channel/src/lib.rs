@@ -15,17 +15,16 @@
 //
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![feature(never_type)]
-#![feature(unwrap_infallible)]
 #![allow(rustdoc::private_intra_doc_links)]
+#![feature(array_chunks)]
 
 #[cfg(feature = "client")]
 pub mod client;
 
-pub mod server;
-
+pub mod basic_framed;
 mod frame;
-mod message;
+pub mod message;
+pub mod server;
 
 #[cfg(test)]
 mod tests;

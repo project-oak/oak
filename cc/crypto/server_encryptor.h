@@ -27,7 +27,7 @@
 #include "cc/crypto/common.h"
 #include "cc/crypto/encryption_key.h"
 #include "cc/crypto/hpke/recipient_context.h"
-#include "oak_crypto/proto/v1/crypto.pb.h"
+#include "proto/crypto/crypto.pb.h"
 
 namespace oak::crypto {
 

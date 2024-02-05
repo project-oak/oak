@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Generate gRPC code for exchanging messages with clients.
     generate_grpc_code(
         &[
-            "../oak_crypto/proto/v1/crypto.proto",
+            "../proto/crypto/crypto.proto",
             "../proto/attestation/evidence.proto",
             "../proto/oak_functions/service/oak_functions.proto",
         ],

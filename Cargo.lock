@@ -1508,9 +1508,9 @@ dependencies = [
 
 [[package]]
 name = "iana-time-zone"
-version = "0.1.59"
+version = "0.1.60"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6a67363e2aa4443928ce15e57ebae94fd8949958fd1223c4cfc0cd473ad7539"
+checksum = "e7ffbb5a1b541ea2561f8c41c087286cc091e21e556a4f09a8f6cbf17b69b141"
 dependencies = [
  "android_system_properties",
  "core-foundation-sys",
@@ -2036,8 +2036,6 @@ dependencies = [
  "anyhow",
  "bitflags 2.4.1",
  "bytes",
- "log",
- "micro_rpc",
  "oak_core",
  "static_assertions",
 ]
@@ -2618,7 +2616,6 @@ dependencies = [
  "coset",
  "goblin",
  "hex",
- "hkdf",
  "hpke",
  "libm",
  "linked_list_allocator",
@@ -2637,7 +2634,6 @@ dependencies = [
  "rust-hypervisor-firmware-virtio",
  "self_cell",
  "sev_serial",
- "sha2",
  "spinning_top 0.3.0",
  "static_assertions",
  "strum 0.25.0",
@@ -2653,9 +2649,11 @@ name = "oak_restricted_kernel_dice"
 version = "0.1.0"
 dependencies = [
  "coset",
+ "hkdf",
  "oak_crypto",
  "oak_dice",
  "p256",
+ "sha2",
 ]
 
 [[package]]
@@ -2687,6 +2685,7 @@ dependencies = [
  "anyhow",
  "lazy_static",
  "log",
+ "micro_rpc",
  "oak_channel",
  "oak_core",
  "oak_crypto",
@@ -2706,7 +2705,7 @@ name = "oak_restricted_kernel_sdk_proc_macro"
 version = "0.1.0"
 dependencies = [
  "quote",
- "syn 2.0.48",
+ "syn 1.0.109",
 ]
 
 [[package]]

@@ -694,8 +694,6 @@ dependencies = [
  "anyhow",
  "bitflags 2.4.0",
  "bytes",
- "log",
- "micro_rpc",
  "oak_core",
  "static_assertions",
 ]
@@ -854,6 +852,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_orchestrator"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak_channel",
+ "oak_restricted_kernel_sdk",
+]
+
+[[package]]
 name = "oak_proto_rust"
 version = "0.0.1"
 dependencies = [
@@ -876,6 +883,7 @@ dependencies = [
  "anyhow",
  "lazy_static",
  "log",
+ "micro_rpc",
  "oak_channel",
  "oak_core",
  "oak_crypto",
