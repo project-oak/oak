@@ -14,6 +14,23 @@
 // limitations under the License.
 //
 
-fn main() {
-    println!("cargo:rustc-link-arg=-zmax-page-size=0x200000");
+#![no_std]
+#![no_main]
+#![feature(alloc_error_handler)]
+
+extern crate alloc;
+
+use oak_channel::basic_framed::load_raw;
+use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel};
+
+#[entrypoint]
+fn start() -> ! {
+    log::info!("Orchestrator will load enclave app binary",);
+    let mut channel = FileDescriptorChannel::default();
+    let app = load_raw::<FileDescriptorChannel, 4096>(&mut channel).expect("failed to load");
+    log::info!(
+        "Orchestrator loaded enclave app binary, size: {}",
+        app.len()
+    );
+    unimplemented!();
 }
