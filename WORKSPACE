@@ -186,10 +186,10 @@ rules_foreign_cc_dependencies()
 
 http_archive(
     name = "cose_lib",
+    build_file = "@//:third_party/BUILD.cose_lib",
     sha256 = "e41a068b573bb07ed2a50cb3c39ae10995977cad82e24a7873223277e7fdb4e5",
     strip_prefix = "cose-lib-2023.09.08",
     url = "https://github.com/android/cose-lib/archive/refs/tags/v2023.09.08.tar.gz",
-    build_file = "@//:third_party/BUILD.cose_lib",
 )
 
 load(
