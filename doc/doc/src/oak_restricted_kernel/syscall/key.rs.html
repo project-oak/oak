@@ -74,10 +74,10 @@
 
 </span><span class="kw">use </span>alloc::boxed::Box;
 
+<span class="kw">use </span>oak_restricted_kernel_dice::DerivedKey;
 <span class="kw">use </span>oak_restricted_kernel_interface::{Errno, DERIVED_KEY_FD};
 
 <span class="kw">use </span><span class="kw">super</span>::fd::{copy_max_slice, FileDescriptor};
-<span class="kw">use </span><span class="kw">crate</span>::DerivedKey;
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">struct </span>DerivedKeyDescriptor {

@@ -266,6 +266,9 @@
 <a href="#266" id="266">266</a>
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -341,7 +344,10 @@
         oak_stage0_dice::mock_derived_key,
     );
 
-    oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, <span class="kw-2">&amp;</span>[])
+    oak_restricted_kernel_dice::generate_dice_data(
+        stage0_dice_data,
+        <span class="kw-2">&amp;</span>oak_restricted_kernel_dice::AppDigest::default(),
+    )
 }
 
 <span class="doccomment">/// Wrapper for DICE evidence and application private keys.

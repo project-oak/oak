@@ -253,6 +253,7 @@
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -285,6 +286,7 @@
 
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_dice::evidence::RestrictedKernelDiceData <span class="kw">as </span>DiceData;
+<span class="kw">use </span>oak_restricted_kernel_dice::DerivedKey;
 <span class="kw">use </span>oak_restricted_kernel_interface::{Errno, Syscall};
 <span class="kw">use </span>x86_64::{
     registers::{
@@ -299,7 +301,7 @@
     mmap::syscall_mmap,
     process::syscall_exit,
 };
-<span class="kw">use crate</span>::{mm, DerivedKey};
+<span class="kw">use </span><span class="kw">crate</span>::mm;
 
 <span class="doccomment">/// State we need to track for system calls.
 ///

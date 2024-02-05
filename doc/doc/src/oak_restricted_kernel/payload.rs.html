@@ -158,18 +158,6 @@
 <a href="#158" id="158">158</a>
 <a href="#159" id="159">159</a>
 <a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -186,7 +174,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>alloc::{boxed::Box, format};
+</span><span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>core::arch::asm;
 
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
@@ -196,7 +184,6 @@
 };
 <span class="kw">use </span>oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 <span class="kw">use </span>self_cell::self_cell;
-<span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>x86_64::{
     structures::paging::{PageSize, Size2MiB},
     VirtAddr,
@@ -217,26 +204,18 @@
 <span class="doccomment">/// Representation of an Restricted Application that the Restricted Kernel can run.
 </span><span class="kw">pub struct </span>Application {
     binary: Binary,
-    digest: [u8; <span class="number">32</span>],
 }
 
 <span class="kw">impl </span>Application {
     <span class="doccomment">/// Attempts to parse the provided binary blob as an ELF file representing an Restricted
     /// Application.
     </span><span class="kw">pub fn </span>new(blob: Box&lt;[u8]&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>digest = Sha256::digest(<span class="kw-2">&amp;</span>blob[..]).into();
-
         <span class="prelude-val">Ok</span>(Application {
             binary: Binary::try_new(blob, |boxed| {
                 goblin::elf::Elf::parse(boxed)
                     .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;failed to parse ELF file: {}&quot;</span>, err))
             })<span class="question-mark">?</span>,
-            digest,
         })
-    }
-
-    <span class="kw">pub fn </span>digest(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>[u8] {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.digest[..]
     }
 
     <span class="kw">fn </span>program_headers(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>ProgramHeaders {
@@ -322,10 +301,7 @@
         )
         .expect(<span class="string">&quot;failed to allocate memory for user stack&quot;</span>);
 
-        <span class="macro">log::info!</span>(
-            <span class="string">&quot;Running application; binary hash: {}&quot;</span>,
-            <span class="self">self</span>.digest.map(|x| <span class="macro">format!</span>(<span class="string">&quot;{:02x}&quot;</span>, x)).join(<span class="string">&quot;&quot;</span>)
-        );
+        <span class="macro">log::info!</span>(<span class="string">&quot;Running application&quot;</span>);
 
         <span class="comment">// Enter Ring 3 and jump to user code.
         // Safety: by now, if we&#39;re here, we&#39;ve loaded a valid ELF file. It&#39;s up to the user to

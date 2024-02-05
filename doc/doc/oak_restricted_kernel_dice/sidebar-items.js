@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["generate_dice_data"]};
+window.SIDEBAR_ITEMS = {"fn":["attest_application","generate_dice_data"],"type":["AppDigest","DerivedKey"]};

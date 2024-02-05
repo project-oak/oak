@@ -137,6 +137,41 @@
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -163,8 +198,43 @@
 </span><span class="kw">extern crate </span>alloc;
 
 <span class="kw">use </span>coset::{cbor::Value, cwt::ClaimName, CborSerializable};
+<span class="kw">use </span>hkdf::Hkdf;
 <span class="kw">use </span>oak_crypto::hpke::Serializable;
 <span class="kw">use </span>oak_dice::cert::{ENCLAVE_APPLICATION_LAYER_ID, LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID};
+<span class="kw">use </span>sha2::{Digest, Sha256};
+
+<span class="doccomment">/// A derived sealing key.
+</span><span class="kw">pub type </span>DerivedKey = [u8; <span class="number">32</span>];
+
+<span class="comment">// Digest of an application.
+</span><span class="kw">pub type </span>AppDigest = [u8; <span class="number">32</span>];
+
+<span class="kw">pub fn </span>attest_application(
+    stage0_dice_data: oak_dice::evidence::Stage0DiceData,
+    app_bytes: <span class="kw-2">&amp;</span>[u8],
+) -&gt; (DerivedKey, oak_dice::evidence::RestrictedKernelDiceData) {
+    <span class="kw">let </span>app_digest = measure_app_digest(app_bytes);
+    (
+        generate_derived_key(<span class="kw-2">&amp;</span>stage0_dice_data, <span class="kw-2">&amp;</span>app_digest),
+        generate_dice_data(stage0_dice_data, <span class="kw-2">&amp;</span>app_digest),
+    )
+}
+
+<span class="kw">fn </span>measure_app_digest(app_bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; AppDigest {
+    Sha256::digest(app_bytes).into()
+}
+
+<span class="kw">fn </span>generate_derived_key(
+    stage0_dice_data: <span class="kw-2">&amp;</span>oak_dice::evidence::Stage0DiceData,
+    app_digest: <span class="kw-2">&amp;</span>AppDigest,
+) -&gt; DerivedKey {
+    <span class="comment">// Mix in the application digest when deriving CDI for Layer 2.
+    </span><span class="kw">let </span>hkdf = Hkdf::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(app_digest), <span class="kw-2">&amp;</span>stage0_dice_data.layer_1_cdi.cdi[..]);
+    <span class="kw">let </span><span class="kw-2">mut </span>derived_key = DerivedKey::default();
+    hkdf.expand(<span class="string">b&quot;CDI_Seal&quot;</span>, <span class="kw-2">&amp;mut </span>derived_key)
+        .expect(<span class="string">&quot;invalid length for derived key&quot;</span>);
+    derived_key
+}
 
 <span class="kw">fn </span>certificate_to_byte_array(cert: coset::CoseSign1) -&gt; [u8; oak_dice::evidence::CERTIFICATE_SIZE] {
     <span class="kw">let </span>vec = cert.to_vec().expect(<span class="string">&quot;couldn&#39;t serialize certificate&quot;</span>);
@@ -176,7 +246,7 @@
 <span class="doccomment">/// Generates attestation evidence for the &#39;measurement&#39; of the application.
 </span><span class="kw">pub fn </span>generate_dice_data(
     stage0_dice_data: oak_dice::evidence::Stage0DiceData,
-    app_digest: <span class="kw-2">&amp;</span>[u8],
+    app_digest: <span class="kw-2">&amp;</span>AppDigest,
 ) -&gt; oak_dice::evidence::RestrictedKernelDiceData {
     <span class="kw">let </span>(application_keys, application_private_keys): (
         oak_dice::evidence::ApplicationKeys,
