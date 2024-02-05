@@ -26,6 +26,7 @@ members = [
   "oak_functions/examples/echo/module",
   "oak_functions/examples/invalid_module/module",
   "oak_functions/examples/key_value_lookup/module",
+  "oak_functions/examples/key_value_lookup_multi/module",
   "oak_functions/examples/weather_lookup/module",
   "oak_functions/load_test",
   "oak_functions/location_utils",

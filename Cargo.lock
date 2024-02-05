@@ -1636,6 +1636,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "key_value_lookup_multi"
+version = "0.1.0"
+dependencies = [
+ "oak_functions_sdk",
+ "oak_proto_rust",
+ "prost",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

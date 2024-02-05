@@ -36,12 +36,13 @@ pub mod proto {
 }
 
 use alloc::{string::ToString, vec::Vec};
+use core::ops::Deref;
 
 use micro_rpc::{Status, StatusCode};
 use proto::oak::functions::wasm::v1::{
-    LogRequest, LogResponse, LookupDataRequest, LookupDataResponse, ReadRequestRequest,
-    ReadRequestResponse, StdWasmApiClient, TestRequest, TestResponse, WriteResponseRequest,
-    WriteResponseResponse,
+    BytesValue, LogRequest, LogResponse, LookupDataMultiRequest, LookupDataMultiResponse,
+    LookupDataRequest, LookupDataResponse, ReadRequestRequest, ReadRequestResponse,
+    StdWasmApiClient, TestRequest, TestResponse, WriteResponseRequest, WriteResponseResponse,
 };
 
 /// See [`StdWasmApiClient::read_request`].
@@ -66,6 +67,31 @@ pub fn storage_get_item(key: &[u8]) -> Result<Option<Vec<u8>>, Status> {
         .lookup_data(&LookupDataRequest { key: key.to_vec() })
         .flatten()
         .map(|LookupDataResponse { value }| value)
+}
+
+/// See [`StdWasmApiClient::lookup_data_multi`].
+pub fn storage_get_items<T>(keys: T) -> Result<Vec<Option<Vec<u8>>>, Status>
+where
+    T: IntoIterator,
+    T::Item: Deref,
+    <T::Item as Deref>::Target: AsRef<[u8]>,
+{
+    client()
+        .lookup_data_multi(&LookupDataMultiRequest {
+            keys: keys.into_iter().map(|key| key.as_ref().to_vec()).collect(),
+        })
+        .flatten()
+        .map(|LookupDataMultiResponse { values }| {
+            values.into_iter().map(bytes_value_to_option).collect()
+        })
+}
+
+fn bytes_value_to_option(b: BytesValue) -> Option<Vec<u8>> {
+    if b.found {
+        Some(b.value)
+    } else {
+        None
+    }
 }
 
 /// See [`StdWasmApiClient::log`].

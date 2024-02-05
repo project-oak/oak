@@ -1,0 +1,13 @@
+[package]
+name = "key_value_lookup_multi"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+oak_functions_sdk = { workspace = true }
+oak_proto_rust = { workspace = true }
+prost = { workspace = true }

@@ -37,3 +37,16 @@ message LookupTest {
 message EchoAndPanicTest {
   bytes data = 1;
 }
+
+message LookupRequest {
+  repeated bytes keys = 1;
+  enum Mode {
+    INDIVIDUAL = 0;
+    BATCH = 1;
+  }
+  Mode mode = 2;
+}
+
+message LookupResponse {
+  repeated bytes values = 1;
+}
