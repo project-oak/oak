@@ -28,7 +28,6 @@ java_library(
         "//java/src/main/java/com/google/oak/util",
         "//proto/attestation:endorsement_java_proto",
         "//proto/attestation:evidence_java_proto",
-        "//proto/attestation:reference_value_java_proto",
         "//proto/attestation:verification_java_proto",
     ],
 )
@@ -40,7 +39,6 @@ java_library(
         "//java/src/main/java/com/google/oak/util",
         "//proto/attestation:endorsement_java_proto",
         "//proto/attestation:evidence_java_proto",
-        "//proto/attestation:reference_value_java_proto",
         "//proto/attestation:verification_java_proto",
     ],
 )
@@ -53,7 +51,6 @@ java_library(
         "//java/src/main/java/com/google/oak/util",
         "//proto/attestation:endorsement_java_proto",
         "//proto/attestation:evidence_java_proto",
-        "//proto/attestation:reference_value_java_proto",
         "//proto/attestation:verification_java_proto",
         "@co_nstant_in_cbor",
         "@com_google_protobuf//java/lite",
@@ -69,7 +66,6 @@ java_library(
         "//java/src/main/java/com/google/oak/util",
         "//proto/attestation:endorsement_java_proto",
         "//proto/attestation:evidence_java_proto",
-        "//proto/attestation:reference_value_java_proto",
         "//proto/attestation:verification_java_proto",
         "@co_nstant_in_cbor",
         "@com_google_protobuf//java/lite",
