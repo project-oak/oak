@@ -101,7 +101,6 @@ impl EncryptionKeyHandle for MockEncryptionKeyHandle {
 }
 
 /// [`EvidenceProvider`] implementation that exposes mock evidence.
-
 pub struct MockEvidenceProvider {
     evidence: &'static Evidence,
 }
