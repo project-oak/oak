@@ -16,7 +16,10 @@
 
 use alloc::boxed::Box;
 
+#[cfg(not(feature = "initrd"))]
 use oak_dice::evidence::RestrictedKernelDiceData as DiceData;
+#[cfg(feature = "initrd")]
+use oak_dice::evidence::Stage0DiceData as DiceData;
 use oak_restricted_kernel_interface::{Errno, DICE_DATA_FD};
 use zeroize::Zeroize;
 
