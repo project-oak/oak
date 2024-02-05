@@ -2036,8 +2036,6 @@ dependencies = [
  "anyhow",
  "bitflags 2.4.1",
  "bytes",
- "log",
- "micro_rpc",
  "oak_core",
  "static_assertions",
 ]
@@ -2687,6 +2685,7 @@ dependencies = [
  "anyhow",
  "lazy_static",
  "log",
+ "micro_rpc",
  "oak_channel",
  "oak_core",
  "oak_crypto",

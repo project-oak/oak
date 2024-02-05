@@ -633,15 +633,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "523dc4f511e55ab87b694dc30d0f820d60906ef06413f93d4d7a1385599cc149"
 
 [[package]]
-name = "micro_rpc"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "micro_rpc_build",
- "prost",
-]
-
-[[package]]
 name = "micro_rpc_build"
 version = "0.1.0"
 dependencies = [
@@ -662,8 +653,6 @@ dependencies = [
  "anyhow",
  "bitflags 2.4.1",
  "bytes",
- "log",
- "micro_rpc",
  "oak_core",
  "static_assertions",
 ]
