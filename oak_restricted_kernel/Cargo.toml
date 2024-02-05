@@ -27,7 +27,6 @@ goblin = { version = "*", default-features = false, features = [
   "endian_fd",
 ] }
 hex = { version = "*", default-features = false, features = ["alloc"] }
-hkdf = "*"
 linked_list_allocator = { version = "*", features = ["alloc_ref"] }
 log = "*"
 libm = "*"
@@ -45,7 +44,6 @@ oak_sev_guest = { workspace = true, features = ["rust-crypto"] }
 p256 = { version = "*", default-features = false, features = ["ecdsa"] }
 self_cell = "*"
 sev_serial = { workspace = true }
-sha2 = { version = "*", default-features = false }
 spinning_top = "*"
 static_assertions = "*"
 strum = { version = "*", default-features = false, features = ["derive"] }

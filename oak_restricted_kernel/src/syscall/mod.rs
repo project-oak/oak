@@ -30,6 +30,7 @@ use core::{arch::asm, ffi::c_void};
 
 use oak_channel::Channel;
 use oak_dice::evidence::RestrictedKernelDiceData as DiceData;
+use oak_restricted_kernel_dice::DerivedKey;
 use oak_restricted_kernel_interface::{Errno, Syscall};
 use x86_64::{
     registers::{
@@ -44,7 +45,7 @@ use self::{
     mmap::syscall_mmap,
     process::syscall_exit,
 };
-use crate::{mm, DerivedKey};
+use crate::mm;
 
 /// State we need to track for system calls.
 ///

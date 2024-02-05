@@ -73,7 +73,10 @@ fn get_mock_dice_data() -> RestrictedKernelDiceData {
         oak_stage0_dice::mock_derived_key,
     );
 
-    oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, &[])
+    oak_restricted_kernel_dice::generate_dice_data(
+        stage0_dice_data,
+        &oak_restricted_kernel_dice::AppDigest::default(),
+    )
 }
 
 /// Wrapper for DICE evidence and application private keys.

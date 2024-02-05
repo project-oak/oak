@@ -726,7 +726,6 @@ dependencies = [
  "coset",
  "goblin",
  "hex",
- "hkdf",
  "hpke",
  "libm",
  "linked_list_allocator",
@@ -745,7 +744,6 @@ dependencies = [
  "rust-hypervisor-firmware-virtio",
  "self_cell",
  "sev_serial",
- "sha2",
  "spinning_top 0.3.0",
  "static_assertions",
  "strum",
@@ -770,9 +768,11 @@ name = "oak_restricted_kernel_dice"
 version = "0.1.0"
 dependencies = [
  "coset",
+ "hkdf",
  "oak_crypto",
  "oak_dice",
  "p256",
+ "sha2",
 ]
 
 [[package]]

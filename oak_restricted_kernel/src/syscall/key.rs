@@ -16,10 +16,10 @@
 
 use alloc::boxed::Box;
 
+use oak_restricted_kernel_dice::DerivedKey;
 use oak_restricted_kernel_interface::{Errno, DERIVED_KEY_FD};
 
 use super::fd::{copy_max_slice, FileDescriptor};
-use crate::DerivedKey;
 
 #[derive(Default)]
 struct DerivedKeyDescriptor {

@@ -24,8 +24,43 @@
 extern crate alloc;
 
 use coset::{cbor::Value, cwt::ClaimName, CborSerializable};
+use hkdf::Hkdf;
 use oak_crypto::hpke::Serializable;
 use oak_dice::cert::{ENCLAVE_APPLICATION_LAYER_ID, LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID};
+use sha2::{Digest, Sha256};
+
+/// A derived sealing key.
+pub type DerivedKey = [u8; 32];
+
+// Digest of an application.
+pub type AppDigest = [u8; 32];
+
+pub fn attest_application(
+    stage0_dice_data: oak_dice::evidence::Stage0DiceData,
+    app_bytes: &[u8],
+) -> (DerivedKey, oak_dice::evidence::RestrictedKernelDiceData) {
+    let app_digest = measure_app_digest(app_bytes);
+    (
+        generate_derived_key(&stage0_dice_data, &app_digest),
+        generate_dice_data(stage0_dice_data, &app_digest),
+    )
+}
+
+fn measure_app_digest(app_bytes: &[u8]) -> AppDigest {
+    Sha256::digest(app_bytes).into()
+}
+
+fn generate_derived_key(
+    stage0_dice_data: &oak_dice::evidence::Stage0DiceData,
+    app_digest: &AppDigest,
+) -> DerivedKey {
+    // Mix in the application digest when deriving CDI for Layer 2.
+    let hkdf = Hkdf::<Sha256>::new(Some(app_digest), &stage0_dice_data.layer_1_cdi.cdi[..]);
+    let mut derived_key = DerivedKey::default();
+    hkdf.expand(b"CDI_Seal", &mut derived_key)
+        .expect("invalid length for derived key");
+    derived_key
+}
 
 fn certificate_to_byte_array(cert: coset::CoseSign1) -> [u8; oak_dice::evidence::CERTIFICATE_SIZE] {
     let vec = cert.to_vec().expect("couldn't serialize certificate");
@@ -37,7 +72,7 @@ fn certificate_to_byte_array(cert: coset::CoseSign1) -> [u8; oak_dice::evidence:
 /// Generates attestation evidence for the 'measurement' of the application.
 pub fn generate_dice_data(
     stage0_dice_data: oak_dice::evidence::Stage0DiceData,
-    app_digest: &[u8],
+    app_digest: &AppDigest,
 ) -> oak_dice::evidence::RestrictedKernelDiceData {
     let (application_keys, application_private_keys): (
         oak_dice::evidence::ApplicationKeys,
