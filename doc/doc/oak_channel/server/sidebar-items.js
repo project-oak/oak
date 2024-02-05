@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["start_blocking_server"]};
+window.SIDEBAR_ITEMS = {"struct":["ServerChannelHandle"]};

@@ -170,46 +170,6 @@
 <a href="#170" id="170">170</a>
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -226,7 +186,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">use </span>alloc::{boxed::Box, format, vec};
+</span><span class="kw">use </span>alloc::{boxed::Box, format};
 <span class="kw">use </span>core::arch::asm;
 
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
@@ -234,27 +194,15 @@
     elf::{Elf, ProgramHeader, ProgramHeaders},
     elf64::program_header::{PF_W, PF_X, PT_LOAD},
 };
-<span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 <span class="kw">use </span>self_cell::self_cell;
 <span class="kw">use </span>sha2::{Digest, Sha256};
 <span class="kw">use </span>x86_64::{
-    structures::paging::{PageSize, Size2MiB, Size4KiB},
+    structures::paging::{PageSize, Size2MiB},
     VirtAddr,
 };
 
 <span class="kw">use </span><span class="kw">crate</span>::syscall::mmap::mmap;
-
-<span class="doccomment">/// Reads a chunk of data and acknowledges the transmission by writing back the number of bytes
-/// read.
-</span><span class="kw">fn </span>read_chunk&lt;C: Channel + <span class="question-mark">?</span>Sized&gt;(channel: <span class="kw-2">&amp;mut </span>C, chunk: <span class="kw-2">&amp;mut </span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-    <span class="kw">let </span>len: u32 = chunk
-        .len()
-        .try_into()
-        .map_err(|<span class="kw">_</span>| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;chunk too big&quot;</span>))<span class="question-mark">?</span>;
-    channel.read_exact(chunk)<span class="question-mark">?</span>;
-    channel.write_all(<span class="kw-2">&amp;</span>len.to_le_bytes())
-}
 
 <span class="macro">self_cell!</span>(
     <span class="doccomment">/// Self-referential struct so that we don&#39;t have to parse the ELF file multiple times.
@@ -273,34 +221,6 @@
 }
 
 <span class="kw">impl </span>Application {
-    <span class="doccomment">/// Loads a Restricted Application over the given channel using a basic framed format.
-    ///
-    /// This is intended for use after the kernel has started up to load the Restricted Application,
-    /// before we start the application and hand off the channel to it.
-    ///
-    /// The protocol to load the application is very simple:
-    /// 1. loader sends the size of the application binary, as u32
-    /// 2. loader sends max 4 KiB of data and waits for the kernel to acknowledge
-    /// 3. kernel reads up to 4 KiB of data and acks by responding with the amount of data read
-    /// 4. repeat (2) and (3) until all the data has been transmitted
-    </span><span class="kw">pub fn </span>load_raw&lt;C: Channel + <span class="question-mark">?</span>Sized&gt;(channel: <span class="kw-2">&amp;mut </span>C) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>payload_len = {
-            <span class="kw">let </span><span class="kw-2">mut </span>buf: [u8; <span class="number">4</span>] = Default::default();
-            channel.read_exact(<span class="kw-2">&amp;mut </span>buf)<span class="question-mark">?</span>;
-            u32::from_le_bytes(buf)
-        };
-        <span class="kw">let </span><span class="kw-2">mut </span>payload = <span class="macro">vec!</span>[<span class="number">0</span>; payload_len <span class="kw">as </span>usize];
-        <span class="kw">let </span><span class="kw-2">mut </span>chunks_mut = payload.array_chunks_mut::&lt;{ Size4KiB::SIZE <span class="kw">as </span>usize }&gt;();
-
-        <span class="kw">for </span>chunk <span class="kw">in </span>chunks_mut.by_ref() {
-            read_chunk(channel, chunk)<span class="question-mark">?</span>;
-        }
-        read_chunk(channel, chunks_mut.into_remainder())<span class="question-mark">?</span>;
-        <span class="macro">log::info!</span>(<span class="string">&quot;Binary loaded, size: {}&quot;</span>, payload.len());
-
-        <span class="self">Self</span>::new(payload.into_boxed_slice())
-    }
-
     <span class="doccomment">/// Attempts to parse the provided binary blob as an ELF file representing an Restricted
     /// Application.
     </span><span class="kw">pub fn </span>new(blob: Box&lt;[u8]&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {

@@ -10,7 +10,7 @@ var srcIndex = JSON.parse('{\
 "micro_rpc_build":["",[],["lib.rs"]],\
 "oak_attestation":["",[],["attester.rs","dice.rs","handler.rs","lib.rs"]],\
 "oak_attestation_verification":["",[],["amd.rs","claims.rs","endorsement.rs","lib.rs","rekor.rs","util.rs","verifier.rs"]],\
-"oak_channel":["",[],["client.rs","frame.rs","lib.rs","message.rs","server.rs"]],\
+"oak_channel":["",[],["basic_framed.rs","client.rs","frame.rs","lib.rs","message.rs","server.rs"]],\
 "oak_client":["",[],["client.rs","lib.rs","transport.rs","verifier.rs"]],\
 "oak_containers_hello_world_trusted_app":["",[],["app_service.rs","lib.rs"]],\
 "oak_containers_hello_world_untrusted_app":["",[],["app_client.rs","lib.rs"]],\

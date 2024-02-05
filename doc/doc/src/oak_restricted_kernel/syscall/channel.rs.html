@@ -116,7 +116,7 @@
     }
 }
 
-<span class="doccomment">/// Registers a handler for the Oak communication channel file descriptor (`OAK_CHANNEL_FD`)
+<span class="doccomment">/// Registers a handler for the Oak communication channel file descriptor [`OAK_CHANNEL_FD`]
 </span><span class="kw">pub fn </span>register(channel: Box&lt;<span class="kw">dyn </span>Channel&gt;) {
     <span class="kw">super</span>::fd::register(OAK_CHANNEL_FD, Box::new(ChannelDescriptor::new(channel)))
         .map_err(|<span class="kw">_</span>| ()) <span class="comment">// throw away the box we get back
