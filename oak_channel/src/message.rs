@@ -30,7 +30,7 @@ static_assertions::assert_eq_size!([u8; INVOCATION_ID_SIZE], InvocationId);
 
 pub const BODY_OFFSET: usize = 8;
 
-// messages never have a length of zero
+// messages never have a length of zero, since it always includes a fixed size header.
 #[allow(clippy::len_without_is_empty)]
 pub trait Message {
     fn len(&self) -> usize;
