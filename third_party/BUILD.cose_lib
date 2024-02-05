@@ -1,0 +1,19 @@
+# COSE library implementation for Project Pentangle
+
+package(
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
+)
+
+java_library(
+    name = "cose_lib",
+    srcs = glob([
+        "src/**/*.java",
+    ]),
+    deps = [
+        "@co_nstant_in_cbor",
+        "@com_google_crypto_tink_tink",
+        "@com_google_guava_guava",
+        "@org_bouncycastle_bcprov_jdk18on",
+    ]
+)

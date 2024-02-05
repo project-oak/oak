@@ -20,6 +20,7 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
 import com.google.oak.attestation.v1.ApplicationKeys;
+import com.google.oak.attestation.v1.AttestationResults;
 import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
 import com.google.oak.attestation.v1.ReferenceValues;
@@ -27,8 +28,10 @@ import com.google.oak.crypto.ServerEncryptor;
 import com.google.oak.crypto.hpke.KeyPair;
 import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
-import com.google.oak.remote_attestation.InsecureAttestationVerifier;
+import com.google.oak.remote_attestation.AttestationVerifier;
 import com.google.oak.session.v1.AttestationBundle;
+import com.google.oak.session.v1.AttestationEndorsement;
+import com.google.oak.session.v1.AttestationEvidence;
 import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
@@ -45,31 +48,52 @@ public class OakClientTest {
   private static final byte[] TEST_RESPONSE = new byte[] {'R', 'e', 's', 'p', 'o', 'n', 's', 'e'};
   private static final byte[] TEST_ASSOCIATED_DATA = new byte[0];
 
+  private final KeyPair keyPair = KeyPair.generate().unwrap("couldn't create key pair");
+
   // Number of message exchanges done to test secure session handling.
   // TODO(#4157): Support crypto sessions on the server and increase the test
   // session size to 8.
   private static final int TEST_SESSION_SIZE = 1;
 
-  private static class TestTransport implements EvidenceProvider, Transport {
-    private final KeyPair keyPair;
-    private final ServerEncryptor serverEncryptor;
+  public final class TestAttestationVerifier implements AttestationVerifier {
+    private final AttestationResults attestationResults;
 
-    public TestTransport() {
-      this.keyPair = KeyPair.generate().unwrap("couldn't create key pair");
+    public TestAttestationVerifier(AttestationResults attestationResults) {
+      this.attestationResults = attestationResults;
+    }
+
+    @Override
+    public final Result<AttestationResults, Exception> verify(long nowUtcMillis,
+        final Evidence evidence, final Endorsements endorsements,
+        final ReferenceValues referenceValues) {
+      return Result.success(attestationResults);
+    }
+  }
+
+  private static class TestTransport implements EvidenceProvider, Transport {
+    private final ServerEncryptor serverEncryptor;
+    private final KeyPair keyPair;
+
+    public TestTransport(KeyPair keyPair) {
+      this.keyPair = keyPair;
       this.serverEncryptor = new ServerEncryptor(keyPair);
     }
 
     @Override
     public Result<AttestationBundle, String> getEvidence() {
-      Evidence attestationEvidence =
-          Evidence.newBuilder()
-              .setApplicationKeys(ApplicationKeys.newBuilder().setEncryptionPublicKeyCertificate(
-                  ByteString.copyFrom(keyPair.publicKey)))
+      AttestationEvidence attestationEvidence =
+          AttestationEvidence.newBuilder()
+              .setEncryptionPublicKey(ByteString.copyFrom(keyPair.publicKey))
               .build();
-      Endorsements attestationEndorsements = Endorsements.getDefaultInstance();
+
+      AttestationEndorsement attestationEndorsement = AttestationEndorsement.getDefaultInstance();
+      Evidence evidence = Evidence.getDefaultInstance();
+      Endorsements endorsements = Endorsements.getDefaultInstance();
       AttestationBundle attestationBundle = AttestationBundle.newBuilder()
-                                                .setEvidence(attestationEvidence)
-                                                .setEndorsements(attestationEndorsements)
+                                                .setAttestationEvidence(attestationEvidence)
+                                                .setAttestationEndorsement(attestationEndorsement)
+                                                .setEvidence(evidence)
+                                                .setEndorsements(endorsements)
                                                 .build();
 
       return Result.success(attestationBundle);
@@ -95,15 +119,16 @@ public class OakClientTest {
     }
   }
 
-  /**
-   * This test demonstrates the use of the {@code com.google.oak.client.OakClient}
-   * API.
-   */
+  /** This test demonstrates the use of the {@code com.google.oak.client.OakClient} API. */
   @Test
   public void testOakClient() throws Exception {
-    Result<OakClient<TestTransport>, Exception> oakClientCreateResult =
-        OakClient.create(new TestTransport(), new InsecureAttestationVerifier(), Clock.systemUTC(),
-            ReferenceValues.getDefaultInstance());
+    AttestationResults attestationResults =
+        AttestationResults.newBuilder()
+            .setEncryptionPublicKey(ByteString.copyFrom(keyPair.publicKey))
+            .build();
+    Result<OakClient<TestTransport>, Exception> oakClientCreateResult = OakClient.create(
+        new TestTransport(keyPair), new TestAttestationVerifier(attestationResults),
+        Clock.systemUTC(), ReferenceValues.getDefaultInstance());
     assertTrue(oakClientCreateResult.isSuccess());
 
     try (OakClient<TestTransport> oakClient = oakClientCreateResult.success().get()) {

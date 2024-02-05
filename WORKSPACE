@@ -135,8 +135,12 @@ load("@rules_jvm_external//:defs.bzl", "maven_install")
 
 maven_install(
     artifacts = [
-        "org.mockito:mockito-core:3.3.3",
+        "co.nstant.in:cbor:0.9",
+        "com.google.crypto.tink:tink:1.12.0",
         "org.assertj:assertj-core:3.12.1",
+        "org.bouncycastle:bcpkix-jdk18on:1.77",
+        "org.bouncycastle:bcprov-jdk18on:1.77",
+        "org.mockito:mockito-core:3.3.3",
     ] + IO_GRPC_GRPC_JAVA_ARTIFACTS,
     generate_compat_repositories = True,
     override_targets = IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS,
@@ -179,6 +183,14 @@ load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_depende
 # This sets up some common toolchains for building targets. For more details, please see
 # https://bazelbuild.github.io/rules_foreign_cc/0.9.0/flatten.html#rules_foreign_cc_dependencies
 rules_foreign_cc_dependencies()
+
+http_archive(
+    name = "cose_lib",
+    sha256 = "e41a068b573bb07ed2a50cb3c39ae10995977cad82e24a7873223277e7fdb4e5",
+    strip_prefix = "cose-lib-2023.09.08",
+    url = "https://github.com/android/cose-lib/archive/refs/tags/v2023.09.08.tar.gz",
+    build_file = "@//:third_party/BUILD.cose_lib",
+)
 
 load(
     "@bazel_tools//tools/build_defs/repo:git.bzl",

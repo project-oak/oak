@@ -16,10 +16,10 @@
 
 package com.google.oak.client;
 
-import com.google.oak.attestation.v1.AttestationResults;
 import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.crypto.ClientEncryptor;
 import com.google.oak.remote_attestation.AttestationVerifier;
+import com.google.oak.session.v1.AttestationBundle;
 import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
@@ -56,23 +56,18 @@ public class OakClient<T extends Transport> implements AutoCloseable {
     // TODO(#3641): Implement client-side attestation verification.
     return transport.getEvidence()
         .mapError(Exception::new)
-        .andThen(e
-            -> verifier
-                   .verify(clock.instant().toEpochMilli(), e.getEvidence(), e.getEndorsements(),
-                       referenceValues)
-                   .map(b
-                       -> new OakClient<E>(transport,
-                           e.hasEvidence() ? e.getEvidence()
-                                                 .getApplicationKeys()
-                                                 .getEncryptionPublicKeyCertificate()
-                                                 .toByteArray()
-                                           : e.getAttestationEvidence()
-                                                 .getEncryptionPublicKey()
-                                                 .toByteArray())));
+        .andThen(bundle
+            -> bundle.getEvidence().hasApplicationKeys()
+                ? verifier
+                      .verify(clock.instant().toEpochMilli(), bundle.getEvidence(),
+                          bundle.getEndorsements(), referenceValues)
+                      .map(b
+                          -> new OakClient<E>(transport, b.getEncryptionPublicKey().toByteArray()))
+                : Result.success(new OakClient<E>(transport,
+                      bundle.getAttestationEvidence().getEncryptionPublicKey().toByteArray())));
   }
 
-  private OakClient(T transport, byte[] serverEncryptionPublicKey) {
-    this.transport = transport;
+  private OakClient(T transport, byte[] serverEncryptionPublicKey) {    this.transport = transport;
     this.serverEncryptionPublicKey = serverEncryptionPublicKey;
   }
 

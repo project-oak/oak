@@ -50,5 +50,6 @@ java_library(
         "//java/src/main/java/com/google/oak/util",
         "//proto/attestation:reference_value_java_proto",
         "//proto/attestation:verification_java_proto",
+        "//proto/session:messages_java_proto",
     ],
 )
