@@ -12,7 +12,6 @@ client = ["std"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
-log = { version = "*", default-features = false }
 oak_core = { workspace = true }
 static_assertions = "*"
 bitflags = "*"

@@ -694,7 +694,6 @@ dependencies = [
  "anyhow",
  "bitflags 2.4.0",
  "bytes",
- "log",
  "oak_core",
  "static_assertions",
 ]
