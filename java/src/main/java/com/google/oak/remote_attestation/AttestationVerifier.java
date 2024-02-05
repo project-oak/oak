@@ -19,7 +19,6 @@ package com.google.oak.remote_attestation;
 import com.google.oak.attestation.v1.AttestationResults;
 import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
-import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.util.Result;
 import java.time.Instant;
 
