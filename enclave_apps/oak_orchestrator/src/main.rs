@@ -21,7 +21,7 @@
 extern crate alloc;
 
 use oak_channel::basic_framed::load_raw;
-use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel};
+use oak_restricted_kernel_sdk::{channel::FileDescriptorChannel, entrypoint};
 
 #[entrypoint]
 fn start() -> ! {
