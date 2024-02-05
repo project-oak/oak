@@ -32,5 +32,5 @@ fn start() -> ! {
         "Orchestrator loaded enclave app binary, size: {}",
         app.len()
     );
-    loop {}
+    unimplemented!();
 }
