@@ -386,10 +386,20 @@ pub fn start_kernel(info: &BootParams) -> ! {
         }
     };
 
-    let (derived_key, restricted_kernel_dice_data) =
-        oak_restricted_kernel_dice::attest_application(stage0_dice_data, &application_bytes);
-
     log::info!("Binary loaded, size: {}", application_bytes.len());
+
+    let app_digest = oak_restricted_kernel_dice::measure_app_digest(&application_bytes);
+
+    log::info!(
+        "Binary hash: {}",
+        app_digest.map(|x| alloc::format!("{:02x}", x)).join("")
+    );
+
+    let derived_key =
+        oak_restricted_kernel_dice::generate_derived_key(&stage0_dice_data, &app_digest);
+    let restricted_kernel_dice_data =
+        oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, &app_digest);
+
     let application =
         payload::Application::new(application_bytes).expect("failed to parse application");
 

@@ -35,22 +35,11 @@ pub type DerivedKey = [u8; 32];
 // Digest of an application.
 pub type AppDigest = [u8; 32];
 
-pub fn attest_application(
-    stage0_dice_data: oak_dice::evidence::Stage0DiceData,
-    app_bytes: &[u8],
-) -> (DerivedKey, oak_dice::evidence::RestrictedKernelDiceData) {
-    let app_digest = measure_app_digest(app_bytes);
-    (
-        generate_derived_key(&stage0_dice_data, &app_digest),
-        generate_dice_data(stage0_dice_data, &app_digest),
-    )
-}
-
-fn measure_app_digest(app_bytes: &[u8]) -> AppDigest {
+pub fn measure_app_digest(app_bytes: &[u8]) -> AppDigest {
     Sha256::digest(app_bytes).into()
 }
 
-fn generate_derived_key(
+pub fn generate_derived_key(
     stage0_dice_data: &oak_dice::evidence::Stage0DiceData,
     app_digest: &AppDigest,
 ) -> DerivedKey {
