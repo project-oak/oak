@@ -25,7 +25,7 @@
 #include "absl/strings/string_view.h"
 #include "cc/crypto/common.h"
 #include "cc/crypto/hpke/sender_context.h"
-#include "oak_crypto/proto/v1/crypto.pb.h"
+#include "proto/crypto/crypto.pb.h"
 
 namespace oak::crypto {
 

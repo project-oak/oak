@@ -30,9 +30,9 @@ proto_library(
     name = "messages_proto",
     srcs = ["messages.proto"],
     deps = [
-        "//oak_crypto/proto/v1:crypto_proto",
         "//proto/attestation:endorsement_proto",
         "//proto/attestation:evidence_proto",
+        "//proto/crypto:crypto_proto",
     ],
 )
 

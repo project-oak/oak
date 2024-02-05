@@ -14,8 +14,10 @@
 // limitations under the License.
 //
 
+//! Provides functionality to communicate with host application over the communication channel.
+
 use anyhow::anyhow;
-use oak_channel::{Read, Write};
+pub use oak_channel::{server::start_blocking_server, Read, Write};
 use oak_restricted_kernel_interface::OAK_CHANNEL_FD;
 
 /// Channel that communicates over a file descriptor.

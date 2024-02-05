@@ -14,7 +14,6 @@ prost = { workspace = true }
 micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
-hashbrown = "*"
 lazy_static = "*"
 oak_functions_test_utils = { workspace = true }
 oak_functions_service = { workspace = true }

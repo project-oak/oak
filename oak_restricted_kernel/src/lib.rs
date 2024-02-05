@@ -75,7 +75,7 @@ use mm::{
 };
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
-use oak_linux_boot_params::BootParams;
+use oak_linux_boot_params::{BootParams, Ramdisk};
 use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 use sha2::Sha256;
 use spinning_top::Spinlock;
@@ -161,8 +161,10 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // Safety: in the linker script we specify that the ELF header should be placed at 0x200000.
     let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
 
+    let ramdisk: Option<Ramdisk> = info.ramdisk();
+
     // Physical frame allocator
-    mm::init(info.e820_table(), program_headers);
+    mm::init(info.e820_table(), program_headers, &ramdisk);
 
     // Note: `info` will not be valid after calling this!
     if PAGE_TABLES
@@ -246,46 +248,53 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     let stage0_dice_data = {
         let dice_memory_slice = {
-            let e820_dice_data_entry = info
-                .e820_table()
-                .iter()
-                .find(|e| e.entry_type() == Some(oak_linux_boot_params::E820EntryType::DiceData))
-                .expect("failed to find dice data");
-
-            let phys_start_addr = PhysAddr::new_truncate(
-                e820_dice_data_entry
-                    .addr()
-                    .try_into()
-                    .expect("couldn't convert usize to u64"),
-            );
-
-            // Validate that the dice data mem address matches the kernel args if present
-            if let Some(arg) = kernel_args.get(&alloc::format!(
-                "--{}",
-                oak_dice::evidence::DICE_DATA_CMDLINE_PARAM
-            )) {
+            let dice_data_phys_addr = {
+                let arg = kernel_args
+                    .get(&alloc::format!(
+                        "--{}",
+                        oak_dice::evidence::DICE_DATA_CMDLINE_PARAM
+                    ))
+                    .expect("no dice data address supplied in the kernel args");
                 let parsed_arg = u64::from_str_radix(
                     arg.strip_prefix("0x")
                         .expect("failed stripping the hex prefix"),
                     16,
                 )
                 .expect("couldn't parse address as a hex number");
-                if parsed_arg != phys_start_addr.as_u64() {
-                    panic!("inconsistent dice data addresses supplied in the E820 table and kernel args")
-                }
-            }
+                PhysAddr::new(parsed_arg)
+            };
 
-            let virt_start_addr = {
+            // Ensure that the dice data is stored within reserved memory.
+            assert!(info.e820_table().iter().any(|entry| {
+                let dice_data_fully_contained_in_segment = {
+                    let range = PhysAddr::new(entry.addr().try_into().unwrap())
+                        ..=PhysAddr::new((entry.addr() + entry.size()).try_into().unwrap());
+                    range.contains(&dice_data_phys_addr)
+                        && range.contains(&PhysAddr::new(
+                            dice_data_phys_addr.as_u64()
+                                + u64::try_from(core::mem::size_of::<
+                                    oak_dice::evidence::Stage0DiceData,
+                                >())
+                                .unwrap(),
+                        ))
+                };
+
+                entry.entry_type().expect("failed to get type")
+                    == oak_linux_boot_params::E820EntryType::RESERVED
+                    && dice_data_fully_contained_in_segment
+            }));
+
+            let dice_data_virt_addr = {
                 let pt = PAGE_TABLES.get().expect("failed to get page tables");
-                pt.translate_physical(phys_start_addr)
+                pt.translate_physical(dice_data_phys_addr)
                     .expect("failed to translate physical dice address")
             };
 
             // Safety: the E820 table indicated that this is the corrct memory segment.
             unsafe {
                 core::slice::from_raw_parts_mut::<u8>(
-                    virt_start_addr.as_mut_ptr(),
-                    e820_dice_data_entry.size(),
+                    dice_data_virt_addr.as_mut_ptr(),
+                    core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
                 )
             }
         };
@@ -332,11 +341,57 @@ pub fn start_kernel(info: &BootParams) -> ! {
         sev_status,
     );
 
-    // We need to load the application binary before we hand the channel over to the syscalls, which
-    // expose it to the user space.
-    info!("Loading application binary...");
-    let application = payload::Application::load_raw(&mut *channel)
-        .expect("failed to load application binary from channel");
+    let application: payload::Application = {
+        match ramdisk {
+            Some(ramdisk) => {
+                let owned_slice: Box<[u8]> = {
+                    let virt_addr = {
+                        let pt = PAGE_TABLES.get().expect("failed to get page tables");
+                        pt.translate_physical(PhysAddr::new(ramdisk.addr.into()))
+                            .expect("failed to translate physical dice address")
+                    };
+
+                    // Safety:
+                    // We rely on the firmware to ensure this range is valid and backed by physical
+                    // memory.
+                    // We rely on the wrapper that loaded the kernel ELF file into memory, to ensure
+                    // it didn't over overwrite the ramdisk range.
+                    // We excluded this range from the frame allocator so it cannot be used by the
+                    // heap allocator.
+                    let slice: &[u8] = unsafe {
+                        core::slice::from_raw_parts::<u8>(
+                            virt_addr.as_mut_ptr(),
+                            info.hdr.ramdisk_size.try_into().unwrap(),
+                        )
+                    };
+
+                    info!("Copying application from ramdisk...");
+                    let owned_slice = Box::<[u8]>::from(slice);
+                    // Once the application has been copied onto the heap, the original ramdisk
+                    // location is marked as available.
+                    let ramdisk_range = crate::mm::ramdisk_range(&ramdisk);
+                    info!(
+                        "marking [{:#018x}..{:#018x}) as available",
+                        ramdisk_range.start.start_address().as_u64(),
+                        ramdisk_range.end.start_address().as_u64()
+                    );
+                    FRAME_ALLOCATOR.lock().mark_valid(ramdisk_range, true);
+
+                    owned_slice
+                };
+                info!("Parsing application...");
+                payload::Application::new(owned_slice)
+                    .expect("failed to parse application from ramdisk")
+            }
+            None => {
+                // We need to load the application binary before we hand the channel over to the
+                // syscalls, which expose it to the user space.
+                info!("Loading application binary...");
+                payload::Application::load_raw(&mut *channel)
+                    .expect("failed to load application binary from channel")
+            }
+        }
+    };
 
     // Mix in the application digest when deriving CDI for Layer 2.
     let hkdf = Hkdf::<Sha256>::new(

@@ -8,6 +8,8 @@
 rustflags = [
   "-C",
   "link-args=-Xlinker --build-id=none",
+  "-C",
+  "target-cpu=x86-64-v3",
   # Enable `tokio_unstable` so that we can access the Tokio runtime metrics.
   "--cfg",
   "tokio_unstable"
@@ -23,6 +25,8 @@ rustflags = [
 rustflags = [
   "-C",
   "link-args=-Xlinker --build-id=none",
+  "-C",
+  "target-cpu=x86-64-v3",
   # Enable `tokio_unstable` so that we can access the Tokio runtime metrics.
   "--cfg",
   "tokio_unstable"

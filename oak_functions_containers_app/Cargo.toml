@@ -31,9 +31,10 @@ opentelemetry-otlp = { version = "*", default-features = false, features = [
   "trace",
 ] }
 prost = "*"
+tikv-jemallocator = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tokio-stream = { version = "*", features = ["net"] }
-tonic = { workspace = true }
+tonic = { workspace = true, features = ["gzip"] }
 tower = { version = "*", features = ["load-shed"] }
 tower-http = { version = "*", features = ["trace"] }
 tracing = "*"

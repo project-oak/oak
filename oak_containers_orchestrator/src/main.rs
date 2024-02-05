@@ -25,6 +25,9 @@ use oak_containers_orchestrator::{
 use oak_dice::cert::generate_ecdsa_key_pair;
 use tokio_util::sync::CancellationToken;
 
+#[global_allocator]
+static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(default_value = "http://10.0.2.100:8080")]
@@ -124,9 +127,14 @@ async fn main() -> anyhow::Result<()> {
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
             &args.ipc_socket_path,
-            key_store,
+            key_store.clone(),
             application_config,
             launcher_client,
+            cancellation_token.clone(),
+        ),
+        oak_containers_orchestrator::key_provisioning::create(
+            &args.orchestrator_addr,
+            key_store,
             cancellation_token.clone(),
         ),
         oak_containers_orchestrator::container_runtime::run(

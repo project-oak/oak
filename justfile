@@ -22,11 +22,14 @@ oak_functions_insecure_enclave_app:
 oak_restricted_kernel_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --bin=oak_restricted_kernel_bin
 
+oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
+    env --chdir=oak_restricted_kernel_wrapper cargo objcopy --release --features=oak_restricted_kernel_bin -- --output-target=binary target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin
+
 oak_restricted_kernel_simple_io_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel --bin=oak_restricted_kernel_simple_io_bin
 
 oak_restricted_kernel_simple_io_wrapper: oak_restricted_kernel_simple_io_bin
-    env --chdir=oak_restricted_kernel_wrapper cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin
+    env --chdir=oak_restricted_kernel_wrapper cargo objcopy --release --no-default-features --features=oak_restricted_kernel_simple_io_bin -- --output-target=binary target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin
 
 stage0_bin:
     env --chdir=stage0_bin cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/stage0_bin
@@ -64,7 +67,7 @@ oak_functions_containers_launcher:
 all_oak_functions_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_functions_containers_container_bundle_tar oak_functions_containers_launcher
 
 ensure_no_std package:
-    cargo check --target=x86_64-unknown-none --package='{{package}}'
+    RUSTFLAGS="-C target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float" cargo build --target=x86_64-unknown-none --package='{{package}}'
 
 all_ensure_no_std: (ensure_no_std "micro_rpc") (ensure_no_std "oak_attestation_verification") (ensure_no_std "oak_restricted_kernel_sdk")
 

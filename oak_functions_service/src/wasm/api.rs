@@ -34,10 +34,10 @@ use crate::{
 /// [`StdWasmApiImpl`] for each incoming gRPC request, with an immutable snapshot of the
 /// current lookup data.
 pub struct StdWasmApiFactory {
-    pub lookup_data_manager: Arc<LookupDataManager<StandaloneLogger>>,
+    pub lookup_data_manager: Arc<LookupDataManager>,
 }
 
-impl WasmApiFactory<StandaloneLogger> for StdWasmApiFactory {
+impl WasmApiFactory for StdWasmApiFactory {
     fn create_wasm_api(
         &self,
         request: Vec<u8>,
@@ -45,7 +45,7 @@ impl WasmApiFactory<StandaloneLogger> for StdWasmApiFactory {
     ) -> Box<dyn WasmApi> {
         Box::new(StdWasmApiImpl {
             lookup_data: self.lookup_data_manager.create_lookup_data(),
-            logger: StandaloneLogger::default(),
+            logger: Arc::new(StandaloneLogger),
             request,
             response,
         })
@@ -58,8 +58,8 @@ impl WasmApiFactory<StandaloneLogger> for StdWasmApiFactory {
 /// future.
 #[derive(Clone)]
 pub struct StdWasmApiImpl {
-    lookup_data: LookupData<StandaloneLogger>,
-    logger: StandaloneLogger,
+    lookup_data: LookupData,
+    logger: Arc<dyn OakLogger>,
     /// Current request, as received from the client.
     request: Vec<u8>,
     /// Current response, as received from the Wasm module.

@@ -8,11 +8,7 @@ license = "Apache-2.0"
 [dependencies]
 log = "*"
 micro_rpc = { workspace = true }
-oak_enclave_runtime_support = { workspace = true }
-oak_channel = { workspace = true }
 oak_restricted_kernel_sdk = { workspace = true }
-oak_restricted_kernel_interface = { workspace = true }
-static_assertions = "*"
 
 [[bin]]
 name = "oak_echo_raw_enclave_app"

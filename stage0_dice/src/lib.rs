@@ -36,15 +36,12 @@ use oak_dice::{
     },
     evidence::{Stage0DiceData, TeePlatform, STAGE0_MAGIC},
 };
-use oak_sev_guest::guest::AttestationReport;
+use oak_sev_snp_attestation_report::{AttestationReport, REPORT_DATA_SIZE};
 use p256::ecdsa::SigningKey;
 use sha2::{Digest, Sha256};
 use zerocopy::{AsBytes, FromZeroes};
 
 type DerivedKey = [u8; 32];
-
-// The number of bytes of custom data that can be included in the attestation report.
-pub const REPORT_DATA_SIZE: usize = 64;
 
 /// Measurements of various components in Stage1.
 #[derive(Default)]
@@ -216,9 +213,7 @@ pub fn generate_dice_data<
 pub fn mock_attestation_report(
     report_data: [u8; REPORT_DATA_SIZE],
 ) -> Result<AttestationReport, &'static str> {
-    let mut report = AttestationReport::new_zeroed();
-    report.data.report_data = report_data;
-    Ok(report)
+    Ok(AttestationReport::from_report_data(report_data))
 }
 
 /// Returns a fixed key filled with zeros.

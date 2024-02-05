@@ -17,7 +17,7 @@
 use std::{net::SocketAddr, pin::Pin};
 
 use futures::{Future, Stream, StreamExt};
-use oak_attestation::proto::oak::attestation::v1::{Endorsements, Evidence};
+use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
 use tonic::{transport::Server, Request, Response, Status, Streaming};
 
 use crate::{
@@ -27,8 +27,9 @@ use crate::{
         session::v1::{
             request_wrapper, response_wrapper,
             streaming_session_server::{StreamingSession, StreamingSessionServer},
-            AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
-            InvokeResponse, RequestWrapper, ResponseWrapper,
+            AttestationBundle, AttestationEndorsement, AttestationEvidence, EndorsedEvidence,
+            GetEndorsedEvidenceResponse, GetPublicKeyResponse, InvokeResponse, RequestWrapper,
+            ResponseWrapper,
         },
     },
 };
@@ -71,6 +72,10 @@ impl StreamingSession for SessionProxy {
             evidence: Some(self.evidence.clone()),
             endorsements: Some(self.endorsements.clone()),
         };
+        let endorsed_evidence = EndorsedEvidence {
+            evidence: Some(self.evidence.clone()),
+            endorsements: Some(self.endorsements.clone()),
+        };
 
         let connector_handle = self.connector_handle.clone();
 
@@ -85,9 +90,13 @@ impl StreamingSession for SessionProxy {
 
                 let response = match request {
                     request_wrapper::Request::GetPublicKeyRequest(_) => {
-
                         response_wrapper::Response::GetPublicKeyResponse(GetPublicKeyResponse {
                             attestation_bundle: Some(attestation_bundle.clone()),
+                        })
+                    }
+                    request_wrapper::Request::GetEndorsedEvidenceRequest(_) => {
+                        response_wrapper::Response::GetEndorsedEvidenceResponse(GetEndorsedEvidenceResponse {
+                            endorsed_evidence: Some(endorsed_evidence.clone()),
                         })
                     }
                     request_wrapper::Request::InvokeRequest(invoke_request) => {

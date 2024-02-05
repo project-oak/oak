@@ -173,6 +173,31 @@
                 umoci
               ];
             };
+            # Shell for container kernel image provenance workflow.
+            bzImageProvenance = with pkgs; mkShell {
+              inputsFrom = [
+                rust
+              ];
+              packages = [
+                bc
+                bison
+                curl
+                elfutils
+                flex
+                libelf
+              ];
+            };
+            # Shell for container stage 1 image provenance workflow.
+            stage1Provenance = with pkgs; mkShell {
+              inputsFrom = [
+                rust
+              ];
+              packages = [
+                cpio
+                glibc
+                glibc.static
+              ];
+            };
             # Shell for most CI steps (i.e. without contaniners support).
             ci = pkgs.mkShell {
               inputsFrom = [

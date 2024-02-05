@@ -27,33 +27,39 @@ use oak_dice::cert::{
     LAYER_2_CODE_MEASUREMENT_ID, LAYER_3_CODE_MEASUREMENT_ID, LAYER_3_CONFIG_MEASUREMENT_ID,
     MEMORY_MAP_MEASUREMENT_ID, SETUP_DATA_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID,
 };
-use oak_sev_guest::guest::{AttestationReport, PolicyFlags};
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        attestation_results::Status, binary_reference_value, endorsements, reference_values,
+        AmdSevReferenceValues, ApplicationKeys, ApplicationLayerEndorsements,
+        ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue, CbEndorsements,
+        CbReferenceValues, ContainerLayerEndorsements, ContainerLayerReferenceValues, Endorsements,
+        Evidence, IntelTdxReferenceValues, KernelLayerEndorsements, KernelLayerReferenceValues,
+        LayerEvidence, OakContainersEndorsements, OakContainersReferenceValues,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
+        SystemLayerEndorsements, SystemLayerReferenceValues, TeePlatform,
+        TransparentReleaseEndorsement,
+    },
+    RawDigest,
+};
+use oak_sev_snp_attestation_report::AttestationReport;
+use x509_cert::{
+    der::{Decode, DecodePem},
+    Certificate,
+};
 use zerocopy::FromBytes;
 
 use crate::{
     alloc::string::ToString,
+    amd::{verify_attestation_report_signature, verify_cert_signature},
     claims::{get_digest, parse_endorsement_statement},
     endorsement::verify_binary_endorsement,
-    proto::oak::{
-        attestation::v1::{
-            attestation_results::Status, binary_reference_value, endorsements, reference_values,
-            AmdSevReferenceValues, ApplicationKeys, ApplicationLayerEndorsements,
-            ApplicationLayerReferenceValues, AttestationResults, BinaryReferenceValue,
-            CbEndorsements, CbReferenceValues, ContainerLayerEndorsements,
-            ContainerLayerReferenceValues, Endorsements, Evidence, IntelTdxReferenceValues,
-            KernelLayerEndorsements, KernelLayerReferenceValues, LayerEvidence,
-            OakContainersEndorsements, OakContainersReferenceValues,
-            OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
-            RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
-            SystemLayerEndorsements, SystemLayerReferenceValues, TeePlatform,
-            TransparentReleaseEndorsement,
-        },
-        RawDigest,
-    },
     util::{
         hex_to_raw_digest, is_hex_digest_match, is_raw_digest_match, raw_to_hex_digest, MatchResult,
     },
 };
+
+const ASK_MILAN_CERT_PEM: &str = include_str!("../data/ask_milan.pem");
 
 // We don't use additional authenticated data.
 const ADDITIONAL_DATA: &[u8] = b"";
@@ -63,21 +69,21 @@ pub struct DiceChainResult {
     pub signing_public_key: Vec<u8>,
 }
 
-impl From<&anyhow::Result<DiceChainResult>> for AttestationResults {
-    fn from(value: &anyhow::Result<DiceChainResult>) -> Self {
-        match value {
-            Ok(dice_chain_result) => AttestationResults {
-                status: Status::Success.into(),
-                encryption_public_key: dice_chain_result.encryption_public_key.clone(),
-                signing_public_key: dice_chain_result.signing_public_key.clone(),
-                ..Default::default()
-            },
-            Err(err) => AttestationResults {
-                status: Status::GenericFailure.into(),
-                reason: err.to_string(),
-                ..Default::default()
-            },
-        }
+pub fn to_attestation_results(
+    verify_result: &anyhow::Result<DiceChainResult>,
+) -> AttestationResults {
+    match verify_result {
+        Ok(dice_chain_result) => AttestationResults {
+            status: Status::Success.into(),
+            encryption_public_key: dice_chain_result.encryption_public_key.clone(),
+            signing_public_key: dice_chain_result.signing_public_key.clone(),
+            ..Default::default()
+        },
+        Err(err) => AttestationResults {
+            status: Status::GenericFailure.into(),
+            reason: err.to_string(),
+            ..Default::default()
+        },
     }
 }
 
@@ -108,7 +114,7 @@ pub fn verify(
             Some(reference_values::Type::OakContainers(rvs)),
         ) => verify_oak_containers(now_utc_millis, evidence, ends, rvs),
         (Some(endorsements::Type::Cb(ends)), Some(reference_values::Type::Cb(rvs))) => {
-            verify_cb(evidence, ends, rvs)
+            verify_cb(now_utc_millis, evidence, ends, rvs)
         }
         (None, None) => anyhow::bail!("Endorsements and reference values both empty"),
         (None, Some(_)) => anyhow::bail!("Endorsements are empty"),
@@ -317,32 +323,48 @@ fn verify_oak_containers(
 }
 
 fn verify_cb(
-    _evidence: &Evidence,
-    _endorsements: &CbEndorsements,
-    _reference_values: &CbReferenceValues,
+    now_utc_millis: i64,
+    evidence: &Evidence,
+    endorsements: &CbEndorsements,
+    reference_values: &CbReferenceValues,
 ) -> anyhow::Result<()> {
-    anyhow::bail!("needs implementation")
+    let l_root = evidence
+        .root_layer
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no root layer evidence"))?;
+    let e_root = endorsements
+        .root_layer
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no root layer endorsements"))?;
+    let r_root = reference_values
+        .root_layer
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("no root layer reference values"))?;
+
+    verify_root_layer(now_utc_millis, l_root, e_root, r_root)?;
+
+    anyhow::bail!("needs more implementation")
 }
 
 /// Verifies the AMD SEV attestation report.
 fn verify_amd_sev_attestation_report(
     report: &[u8],
+    vcek: &Certificate,
     reference_values: &AmdSevReferenceValues,
 ) -> anyhow::Result<()> {
     let parsed = AttestationReport::ref_from(report)
         .ok_or_else(|| anyhow::anyhow!("could not parse AMD SEV attestation report"))?;
     parsed.validate().map_err(|msg| anyhow::anyhow!(msg))?;
-    let data = &parsed.data;
+
+    // We demand that the attestation report is signed by the VCEK public key.
+    verify_attestation_report_signature(vcek, parsed)?;
 
     // Verify that we are not in debug mode.
-    if !reference_values.allow_debug {
-        let policy_flags = data
-            .policy
-            .get_flags()
-            .ok_or_else(|| anyhow::anyhow!("failed to parse flags"))?;
-        if policy_flags.bits() & PolicyFlags::DEBUG.bits() != 0 {
-            anyhow::bail!("debug mode not allowed");
-        }
+    let has_debug: bool = parsed
+        .has_debug_flag()
+        .map_err(|error| anyhow::anyhow!(error))?;
+    if !reference_values.allow_debug && has_debug {
+        anyhow::bail!("debug mode not allowed");
     }
 
     Ok(())
@@ -371,7 +393,17 @@ fn verify_root_layer(
                 .amd_sev
                 .as_ref()
                 .ok_or_else(|| anyhow::anyhow!("no AMD SEV reference values"))?;
-            verify_amd_sev_attestation_report(&l.remote_attestation_report, amd_sev)?
+
+            // We demand that product-specific ASK signs the VCEK.
+            let vcek = Certificate::from_der(&e.tee_certificate)
+                .map_err(|_err| anyhow::anyhow!("could not parse VCEK cert"))?;
+            // Right now there are only Milan CPUs, so it is not urgent to code the
+            // decision between Milan and Genoa which would appear here.
+            let ask_milan = Certificate::from_pem(ASK_MILAN_CERT_PEM)
+                .map_err(|_err| anyhow::anyhow!("could not parse ASK cert"))?;
+            verify_cert_signature(&ask_milan, &vcek)?;
+
+            verify_amd_sev_attestation_report(&l.remote_attestation_report, &vcek, amd_sev)?
         }
         TeePlatform::IntelTdx => {
             let intel_tdx = r

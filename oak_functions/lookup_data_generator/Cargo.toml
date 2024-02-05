@@ -11,7 +11,7 @@ bytes = "*"
 clap = { version = "*", features = ["derive"] }
 location_utils = { workspace = true }
 multimap = "*"
-oak_functions_abi = { workspace = true }
+oak_proto_rust = { workspace = true }
 prost = { workspace = true }
 rand = "*"
 serde = { version = "*", features = ["derive"] }

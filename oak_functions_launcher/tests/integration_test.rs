@@ -187,15 +187,16 @@ async fn test_load_large_lookup_data() {
             .expect("Failed to build oak_functions_enclave_app");
 
     let params = launcher::Params {
-        enclave_binary: workspace_path(&[
+        enclave_binary: Some(workspace_path(&[
             "oak_restricted_kernel_bin",
             "target",
             "x86_64-unknown-none",
             "debug",
             "oak_restricted_kernel_bin",
-        ]),
+        ])),
+        kernel: None,
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
-        app_binary: oak_functions_enclave_app_path.into(),
+        app_binary: Some(oak_functions_enclave_app_path.into()),
         bios_binary: workspace_path(&[
             "stage0_bin",
             "target",
@@ -204,6 +205,7 @@ async fn test_load_large_lookup_data() {
             "oak_stage0.bin",
         ]),
         gdb: None,
+        initrd: None,
         memory_size: Some("256M".to_string()),
     };
     log::debug!("launcher params: {:?}", params);
@@ -282,15 +284,16 @@ async fn test_load_two_gib_lookup_data() {
             .expect("Failed to build oak_functions_enclave_app");
 
     let params = launcher::Params {
-        enclave_binary: workspace_path(&[
+        enclave_binary: Some(workspace_path(&[
             "oak_restricted_kernel_bin",
             "target",
             "x86_64-unknown-none",
             "debug",
             "oak_restricted_kernel_bin",
-        ]),
+        ])),
+        kernel: None,
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
-        app_binary: oak_functions_enclave_app_path.into(),
+        app_binary: Some(oak_functions_enclave_app_path.into()),
         bios_binary: workspace_path(&[
             "stage0_bin",
             "target",
@@ -299,6 +302,7 @@ async fn test_load_two_gib_lookup_data() {
             "oak_stage0.bin",
         ]),
         gdb: None,
+        initrd: None,
         memory_size: Some("256M".to_string()),
     };
     log::debug!("launcher params: {:?}", params);

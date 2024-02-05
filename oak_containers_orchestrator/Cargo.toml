@@ -17,8 +17,10 @@ hpke = { version = "*", default-features = false, features = [
 log = "*"
 nix = { version = "*", features = ["user"] }
 oak_attestation = { workspace = true }
+oak_attestation_verification = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
+oak_proto_rust = { workspace = true }
 oci-spec = "*"
 opentelemetry = { version = "*", default-features = false, features = [
   "metrics",
@@ -41,6 +43,7 @@ rand_core = { version = "*", default-features = false, features = [
 sha2 = { version = "*", default-features = false }
 syslog = "*"
 tar = "*"
+tikv-jemallocator = "*"
 tokio = { version = "*", features = [
   "rt-multi-thread",
   "macros",

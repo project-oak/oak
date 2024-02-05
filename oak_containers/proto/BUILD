@@ -27,9 +27,9 @@ proto_library(
     name = "interfaces_proto",
     srcs = ["interfaces.proto"],
     deps = [
-        "//oak_crypto/proto/v1:crypto_proto",
         "//proto/attestation:endorsement_proto",
         "//proto/attestation:evidence_proto",
+        "//proto/crypto:crypto_proto",
         "//proto/session:messages_proto",
         "@com_google_protobuf//:empty_proto",
     ],

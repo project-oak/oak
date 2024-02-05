@@ -27,7 +27,7 @@ java_test(
     deps = [
         "//java/src/main/java/com/google/oak/transport:grpc_streaming_transport",
         "//java/src/main/java/com/google/oak/util",
-        "//oak_crypto/proto/v1:crypto_java_proto",
+        "//proto/crypto:crypto_java_proto",
         "//proto/session:messages_java_proto",
         "//proto/session:service_streaming_java_grpc",
         "//proto/session:service_streaming_java_proto",

@@ -14,13 +14,17 @@
 // limitations under the License.
 //
 
+use core::ops::RangeBounds;
 use std::fs::{read_dir, read_to_string, OpenOptions};
 
 use anyhow::Context;
 use ciborium::Value;
 use coset::cwt::ClaimName;
 use nix::sys::mman::{mmap, munmap, MapFlags, ProtFlags};
-use oak_attestation::{dice::DiceBuilder, proto::oak::attestation::v1::DiceData};
+use oak_attestation::{
+    dice::{stage0_dice_data_to_proto, DiceBuilder},
+    proto::oak::attestation::v1::DiceData,
+};
 use oak_dice::{
     cert::{LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID, SYSTEM_IMAGE_LAYER_ID},
     evidence::{Stage0DiceData, STAGE0_MAGIC},
@@ -32,12 +36,11 @@ use zeroize::Zeroize;
 
 use crate::try_parse_phys_addr;
 
-/// The expected string representation of the custom type for the reserved memory range that
-/// contains the DICE data.
+/// The expected string representation for reserved memory.
 ///
-/// Since we use a custom type the Linux Kernel does not recognize it. The text is defined in
+/// The text is defined in
 /// <https://github.com/torvalds/linux/blob/d88520ad73b79e71e3ddf08de335b8520ae41c5c/arch/x86/kernel/e820.c#L1086>.
-const EXPECTED_E820_TYPE: &str = "Unknown E820 type";
+const RESERVED_E820_TYPE: &str = "Reserved";
 
 /// The path for reading the memory map from the sysfs pseudo-filesystem.
 const MEMMAP_PATH: &str = "/sys/firmware/memmap";
@@ -69,11 +72,20 @@ struct MemoryRange {
     type_description: String,
 }
 
+impl core::ops::RangeBounds<PhysAddr> for MemoryRange {
+    fn start_bound(&self) -> core::ops::Bound<&PhysAddr> {
+        core::ops::Bound::Included(&self.start)
+    }
+    fn end_bound(&self) -> core::ops::Bound<&PhysAddr> {
+        core::ops::Bound::Included(&self.end)
+    }
+}
+
 /// Extracts the DICE evidence and ECA key from the Stage 0 DICE data located at the given physical
 /// address.
 pub fn extract_stage0_dice_data(start: PhysAddr) -> anyhow::Result<DiceBuilder> {
     let stage0_dice_data = read_stage0_dice_data(start)?;
-    let dice_data: DiceData = stage0_dice_data.try_into()?;
+    let dice_data: DiceData = stage0_dice_data_to_proto(stage0_dice_data)?;
     dice_data.try_into()
 }
 
@@ -84,12 +96,15 @@ fn read_stage0_dice_data(start: PhysAddr) -> anyhow::Result<Stage0DiceData> {
     let length = std::mem::size_of::<Stage0DiceData>();
     // Linux presents an inclusive end address.
     let end = start + (length as u64 - 1);
-    // Ensure that the exact memory range is marked as reserved.
-    if !read_memory_ranges()?.iter().any(|range| {
-        range.start == start && range.end == end && range.type_description == EXPECTED_E820_TYPE
-    }) {
-        anyhow::bail!("DICE data range is not reserved");
-    }
+    // Ensure that the memory range is in reserved memory.
+    anyhow::ensure!(
+        read_memory_ranges()?
+            .iter()
+            .any(|range| range.type_description == RESERVED_E820_TYPE
+                && range.contains(&start)
+                && range.contains(&end)),
+        "DICE data range is not in reserved memory"
+    );
 
     // Open a file representing the physical memory.
     let dice_file = OpenOptions::new()

@@ -40,6 +40,9 @@ impl core::fmt::Write for Stderr {
     }
 }
 
+/// [`log::Log`] implementation that outputs logs on standard error.
+///
+/// Implicitly declared as the global logger when using the [`crate::entrypoint`] macro.
 pub struct StderrLogger {}
 
 impl log::Log for StderrLogger {
