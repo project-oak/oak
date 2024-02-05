@@ -20,15 +20,14 @@ use std::{
     path::PathBuf,
 };
 
+const ENV_FILE_NAME: &'static str = "OAK_RESTRICTED_KERNEL_FILE_NAME";
+
 // returns source_path if it can be constructed and if it points to a valid file
 fn try_source_path() -> Result<PathBuf, &'static str> {
     let kernel_directory = "oak_restricted_kernel_bin";
-    let file_name = match (cfg!(feature = "oak_restricted_kernel_bin"), cfg!(feature = "oak_restricted_kernel_simple_io_bin")) {
-        (true, false) => Ok("oak_restricted_kernel_bin"),
-        (false, true) => Ok("oak_restricted_kernel_simple_io_bin"),
-        (true, true) => Err("Feature oak_restricted_kernel_simple_io_bin and feature oak_restricted_kernel_bin cannot be enabled at the same time. Only either version can be built."),
-        (false, false) => Err("One of feature oak_restricted_kernel_simple_io_bin or feature oak_restricted_kernel_bin must be enabled.")
-    }?;
+    let file_name = std::env::var(ENV_FILE_NAME).map_err(|_| {
+            "the correct env variable must be set with the file name of the kernel build. See build file."
+    })?;
 
     // The source file is the output from building "../oak_restricted_kernel_bin" in release mode.
     let mut source_path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
