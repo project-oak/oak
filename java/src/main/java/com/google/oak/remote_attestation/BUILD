@@ -46,19 +46,6 @@ java_library(
 )
 
 java_library(
-    name = "amd_attestation_verifier",
-    srcs = ["AmdAttestationVerifier.java"],
-    deps = [
-        ":attestation_verifier",
-        "//java/src/main/java/com/google/oak/util",
-        "//proto/attestation:endorsement_java_proto",
-        "//proto/attestation:evidence_java_proto",
-        "//proto/attestation:reference_value_java_proto",
-        "//proto/attestation:verification_java_proto",
-    ],
-)
-
-java_library(
     name = "insecure_attestation_verifier",
     srcs = ["InsecureAttestationVerifier.java"],
     deps = [
