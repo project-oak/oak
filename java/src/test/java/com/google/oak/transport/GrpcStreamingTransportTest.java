@@ -19,9 +19,13 @@ package com.google.oak.transport;
 import static org.mockito.AdditionalAnswers.delegatesTo;
 import static org.mockito.Mockito.mock;
 
+import com.google.oak.attestation.v1.Endorsements;
+import com.google.oak.attestation.v1.Evidence;
 import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.session.v1.AttestationBundle;
+import com.google.oak.session.v1.EndorsedEvidence;
+import com.google.oak.session.v1.GetEndorsedEvidenceResponse;
 import com.google.oak.session.v1.GetPublicKeyResponse;
 import com.google.oak.session.v1.InvokeResponse;
 import com.google.oak.session.v1.RequestWrapper;
@@ -29,7 +33,6 @@ import com.google.oak.session.v1.ResponseWrapper;
 import com.google.oak.session.v1.StreamingSessionGrpc;
 import com.google.oak.transport.GrpcStreamingTransport;
 import com.google.oak.util.Result;
-import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
@@ -62,6 +65,20 @@ public class GrpcStreamingTransportTest {
               ResponseWrapper.newBuilder()
                   .setGetPublicKeyResponse(GetPublicKeyResponse.newBuilder().setAttestationBundle(
                       AttestationBundle.getDefaultInstance()))
+                  .build();
+          responseObserver.onNext(responseWrapper);
+          break;
+        case GET_ENDORSED_EVIDENCE_REQUEST:
+          responseWrapper =
+              ResponseWrapper.newBuilder()
+                  .setGetEndorsedEvidenceResponse(
+                      GetEndorsedEvidenceResponse
+                          .newBuilder()
+                          .setEndorsedEvidence(
+                              EndorsedEvidence
+                              .newBuilder()
+                              .setEvidence(Evidence.getDefaultInstance())
+                              .setEndorsements(Endorsements.getDefaultInstance())))
                   .build();
           responseObserver.onNext(responseWrapper);
           break;
