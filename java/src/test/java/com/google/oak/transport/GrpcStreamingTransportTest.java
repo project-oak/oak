@@ -69,17 +69,13 @@ public class GrpcStreamingTransportTest {
           responseObserver.onNext(responseWrapper);
           break;
         case GET_ENDORSED_EVIDENCE_REQUEST:
-          responseWrapper =
-              ResponseWrapper.newBuilder()
-                  .setGetEndorsedEvidenceResponse(
-                      GetEndorsedEvidenceResponse
-                          .newBuilder()
-                          .setEndorsedEvidence(
-                              EndorsedEvidence
-                              .newBuilder()
-                              .setEvidence(Evidence.getDefaultInstance())
-                              .setEndorsements(Endorsements.getDefaultInstance())))
-                  .build();
+          responseWrapper = ResponseWrapper.newBuilder()
+                                .setGetEndorsedEvidenceResponse(
+                                    GetEndorsedEvidenceResponse.newBuilder().setEndorsedEvidence(
+                                        EndorsedEvidence.newBuilder()
+                                            .setEvidence(Evidence.getDefaultInstance())
+                                            .setEndorsements(Endorsements.getDefaultInstance())))
+                                .build();
           responseObserver.onNext(responseWrapper);
           break;
         case INVOKE_REQUEST:
