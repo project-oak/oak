@@ -14,13 +14,15 @@
 // limitations under the License.
 //
 
+#![feature(doc_cfg)]
 #![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
 
 pub mod channel;
 pub mod instance_attestation;
-#[cfg(feature = "mock_attestation")]
+#[cfg(any(feature = "mock_attestation", doc))]
+#[doc(cfg(feature = "mock_attestation"))]
 pub mod mock_attestation;
 pub mod utils;
 pub use oak_crypto::encryptor::EncryptionKeyHandle;
