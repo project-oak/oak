@@ -23,7 +23,6 @@ import com.google.oak.attestation.v1.ApplicationKeys;
 import com.google.oak.attestation.v1.AttestationResults;
 import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
-import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.crypto.ServerEncryptor;
 import com.google.oak.crypto.hpke.KeyPair;
 import com.google.oak.crypto.v1.EncryptedRequest;
@@ -37,6 +36,7 @@ import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
 import com.google.protobuf.ByteString;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Arrays;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -63,9 +63,8 @@ public class OakClientTest {
     }
 
     @Override
-    public final Result<AttestationResults, Exception> verify(long nowUtcMillis,
-        final Evidence evidence, final Endorsements endorsements,
-        final ReferenceValues referenceValues) {
+    public final Result<AttestationResults, Exception> verify(
+        Instant now, final Evidence evidence, final Endorsements endorsements) {
       return Result.success(attestationResults);
     }
   }
@@ -126,9 +125,9 @@ public class OakClientTest {
         AttestationResults.newBuilder()
             .setEncryptionPublicKey(ByteString.copyFrom(keyPair.publicKey))
             .build();
-    Result<OakClient<TestTransport>, Exception> oakClientCreateResult = OakClient.create(
-        new TestTransport(keyPair), new TestAttestationVerifier(attestationResults),
-        Clock.systemUTC(), ReferenceValues.getDefaultInstance());
+    Result<OakClient<TestTransport>, Exception> oakClientCreateResult =
+        OakClient.create(new TestTransport(keyPair),
+            new TestAttestationVerifier(attestationResults), Clock.systemUTC());
     assertTrue(oakClientCreateResult.isSuccess());
 
     try (OakClient<TestTransport> oakClient = oakClientCreateResult.success().get()) {

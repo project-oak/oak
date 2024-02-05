@@ -21,6 +21,7 @@ import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
 import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.util.Result;
+import java.time.Instant;
 
 /**
  * An interface implementing the functionality of a verifier that appraises the attestation evidence
@@ -37,6 +38,6 @@ public interface AttestationVerifier {
    * <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
    * @return boolean corresponding to the sussess of the verification wrapped in a {@code Result}
    */
-  Result<AttestationResults, Exception> verify(long nowUtcMillis, final Evidence evidence,
-      final Endorsements endorsements, final ReferenceValues referenceValues);
+  Result<AttestationResults, Exception> verify(
+      final Instant now, final Evidence evidence, final Endorsements endorsements);
 }

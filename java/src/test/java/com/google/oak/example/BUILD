@@ -31,7 +31,6 @@ java_test(
         "//java/src/main/java/com/google/oak/example",
         "//java/src/main/java/com/google/oak/remote_attestation:insecure_attestation_verifier",
         "//java/src/main/java/com/google/oak/transport:grpc_streaming_transport",
-        "//proto/attestation:reference_value_java_proto",
         "@com_google_protobuf//:protobuf_javalite",
         "@io_grpc_grpc_java//api",
         "@io_grpc_grpc_java//core:inprocess",

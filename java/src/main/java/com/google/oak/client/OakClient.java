@@ -16,7 +16,6 @@
 
 package com.google.oak.client;
 
-import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.crypto.ClientEncryptor;
 import com.google.oak.remote_attestation.AttestationVerifier;
 import com.google.oak.session.v1.AttestationBundle;
@@ -39,7 +38,7 @@ public class OakClient<T extends Transport> implements AutoCloseable {
   @Deprecated
   public static <E extends EvidenceProvider & Transport, V extends AttestationVerifier>
       Result<OakClient<E>, Exception> create(E transport, V verifier) {
-    return create(transport, verifier, Clock.systemUTC(), ReferenceValues.getDefaultInstance());
+    return create(transport, verifier, Clock.systemUTC());
   }
 
   /**
@@ -52,22 +51,22 @@ public class OakClient<T extends Transport> implements AutoCloseable {
    */
   public static <E extends EvidenceProvider & Transport, V extends AttestationVerifier>
       Result<OakClient<E>, Exception> create(
-          E transport, V verifier, Clock clock, ReferenceValues referenceValues) {
+          E transport, V verifier, Clock clock) {
     // TODO(#3641): Implement client-side attestation verification.
     return transport.getEvidence()
         .mapError(Exception::new)
         .andThen(bundle
             -> bundle.getEvidence().hasApplicationKeys()
                 ? verifier
-                      .verify(clock.instant().toEpochMilli(), bundle.getEvidence(),
-                          bundle.getEndorsements(), referenceValues)
+                      .verify(clock.instant(), bundle.getEvidence(), bundle.getEndorsements())
                       .map(b
                           -> new OakClient<E>(transport, b.getEncryptionPublicKey().toByteArray()))
                 : Result.success(new OakClient<E>(transport,
                       bundle.getAttestationEvidence().getEncryptionPublicKey().toByteArray())));
   }
 
-  private OakClient(T transport, byte[] serverEncryptionPublicKey) {    this.transport = transport;
+  private OakClient(T transport, byte[] serverEncryptionPublicKey) {
+    this.transport = transport;
     this.serverEncryptionPublicKey = serverEncryptionPublicKey;
   }
 

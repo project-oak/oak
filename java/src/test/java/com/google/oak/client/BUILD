@@ -34,7 +34,6 @@ java_test(
         "//oak_crypto/proto/v1:crypto_java_proto",
         "//proto/attestation:endorsement_java_proto",
         "//proto/attestation:evidence_java_proto",
-        "//proto/attestation:reference_value_java_proto",
         "//proto/attestation:verification_java_proto",
         "//proto/session:messages_java_proto",
         "@com_google_protobuf//:protobuf_javalite",

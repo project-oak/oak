@@ -37,13 +37,17 @@ import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
 import com.google.oak.attestation.v1.ReferenceValues;
 import com.google.oak.util.Result;
+import java.time.Instant;
 import java.util.List;
 
 /**
  * Verifier implementation that doesn't verify attestation evidence and is used for testing.
  */
 public class InsecureAttestationVerifier implements AttestationVerifier {
-
+  /**
+   * ID for the CWT private claim corresponding to the subject public key.
+   * <https://github.com/google/open-dice/blob/main/docs/specification.md#additional-fields>
+   */
   private static final DataItem SUBJECT_PUBLIC_KEY_ID = new NegativeInteger(-4670552);
 
   /**
@@ -57,10 +61,8 @@ public class InsecureAttestationVerifier implements AttestationVerifier {
    * @return success value wrapped in a {@code Result}
    */
   @Override
-  public final Result<AttestationResults, Exception> verify(long nowUtcMillis,
-      final Evidence evidence, final Endorsements endorsements,
-      final ReferenceValues referenceValues) {
-
+  public final Result<AttestationResults, Exception> verify(
+      final Instant now, final Evidence evidence, final Endorsements endorsements) {
     return Result.success(
         AttestationResults.newBuilder()
             .setEncryptionPublicKey(com.google.protobuf.ByteString.copyFrom(extractPublicKey(
