@@ -449,6 +449,32 @@
 <a href="#449" id="449">449</a>
 <a href="#450" id="450">450</a>
 <a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -525,12 +551,14 @@
 };
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_core::sync::OnceCell;
-<span class="kw">use </span>oak_linux_boot_params::{BootParams, Ramdisk};
+<span class="kw">use </span>oak_linux_boot_params::BootParams;
 <span class="kw">use </span>oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 <span class="kw">use </span>spinning_top::Spinlock;
 <span class="kw">use </span>strum::{EnumIter, EnumString, IntoEnumIterator};
+<span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+</span><span class="kw">use </span>x86_64::structures::paging::{PageSize, Size4KiB};
 <span class="kw">use </span>x86_64::{
-    structures::paging::{Page, PageSize, Size2MiB, Size4KiB},
+    structures::paging::{Page, Size2MiB},
     PhysAddr, VirtAddr,
 };
 <span class="kw">use </span>zerocopy::FromBytes;
@@ -607,10 +635,16 @@
     <span class="comment">// Safety: in the linker script we specify that the ELF header should be placed at 0x200000.
     </span><span class="kw">let </span>program_headers = <span class="kw">unsafe </span>{ elf::get_phdrs(VirtAddr::new(<span class="number">0x20_0000</span>)) };
 
-    <span class="kw">let </span>ramdisk: <span class="prelude-ty">Option</span>&lt;Ramdisk&gt; = info.ramdisk();
+    <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+    </span><span class="kw">let </span>ramdisk = info.ramdisk().expect(<span class="string">&quot;expected to find a ramdisk&quot;</span>);
 
     <span class="comment">// Physical frame allocator
-    </span>mm::init(info.e820_table(), program_headers, <span class="kw-2">&amp;</span>ramdisk);
+    </span>mm::init(
+        info.e820_table(),
+        program_headers,
+        <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+        </span><span class="kw-2">&amp;</span>ramdisk,
+    );
 
     <span class="comment">// Note: `info` will not be valid after calling this!
     </span><span class="kw">if </span>PAGE_TABLES
@@ -780,71 +814,89 @@
         }
     };
 
-    <span class="kw">let </span><span class="kw-2">mut </span>channel = get_channel(
+    <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+    </span><span class="kw">let </span><span class="kw-2">mut </span>channel = get_channel(
         <span class="kw-2">&amp;</span>kernel_args,
         GUEST_HOST_HEAP.get().unwrap(),
         acpi.as_mut(),
         sev_status,
     );
 
-    <span class="kw">let </span>application_bytes: Box&lt;[u8]&gt; = {
-        <span class="kw">match </span>ramdisk {
-            <span class="prelude-val">Some</span>(ramdisk) =&gt; {
-                <span class="kw">let </span>virt_addr = {
-                    <span class="kw">let </span>pt = PAGE_TABLES.get().expect(<span class="string">&quot;failed to get page tables&quot;</span>);
-                    pt.translate_physical(PhysAddr::new(ramdisk.addr.into()))
-                        .expect(<span class="string">&quot;failed to translate physical dice address&quot;</span>)
-                };
+    <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+    </span><span class="kw">let </span>channel = get_channel(
+        <span class="kw-2">&amp;</span>kernel_args,
+        GUEST_HOST_HEAP.get().unwrap(),
+        acpi.as_mut(),
+        sev_status,
+    );
 
-                <span class="comment">// Safety:
-                // We rely on the firmware to ensure this range is valid and backed by physical
-                // memory.
-                // We rely on the wrapper that loaded the kernel ELF file into memory, to ensure
-                // it didn&#39;t over overwrite the ramdisk range.
-                // We excluded this range from the frame allocator so it cannot be used by the
-                // heap allocator.
-                </span><span class="kw">let </span>slice: <span class="kw-2">&amp;</span>[u8] = <span class="kw">unsafe </span>{
-                    core::slice::from_raw_parts::&lt;u8&gt;(
-                        virt_addr.as_mut_ptr(),
-                        info.hdr.ramdisk_size.try_into().unwrap(),
-                    )
-                };
+    <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+    </span><span class="kw">let </span>application_bytes: Box&lt;[u8]&gt; = {
+        <span class="kw">let </span>virt_addr = {
+            <span class="kw">let </span>pt = PAGE_TABLES.get().expect(<span class="string">&quot;failed to get page tables&quot;</span>);
+            pt.translate_physical(PhysAddr::new(ramdisk.addr.into()))
+                .expect(<span class="string">&quot;failed to translate physical dice address&quot;</span>)
+        };
 
-                <span class="macro">info!</span>(<span class="string">&quot;Copying application from ramdisk...&quot;</span>);
-                <span class="kw">let </span>owned_slice = Box::&lt;[u8]&gt;::from(slice);
-                <span class="comment">// Once the application has been copied onto the heap, the original ramdisk
-                // location is marked as available.
-                </span><span class="kw">let </span>ramdisk_range = <span class="kw">crate</span>::mm::ramdisk_range(<span class="kw-2">&amp;</span>ramdisk);
-                <span class="macro">info!</span>(
-                    <span class="string">&quot;marking [{:#018x}..{:#018x}) as available&quot;</span>,
-                    ramdisk_range.start.start_address().as_u64(),
-                    ramdisk_range.end.start_address().as_u64()
-                );
-                FRAME_ALLOCATOR.lock().mark_valid(ramdisk_range, <span class="bool-val">true</span>);
+        <span class="comment">// Safety:
+        // We rely on the firmware to ensure this range is valid and backed by physical
+        // memory.
+        // We rely on the wrapper that loaded the kernel ELF file into memory, to ensure
+        // it didn&#39;t over overwrite the ramdisk range.
+        // We excluded this range from the frame allocator so it cannot be used by the
+        // heap allocator.
+        </span><span class="kw">let </span>slice: <span class="kw-2">&amp;</span>[u8] = <span class="kw">unsafe </span>{
+            core::slice::from_raw_parts::&lt;u8&gt;(
+                virt_addr.as_mut_ptr(),
+                info.hdr.ramdisk_size.try_into().unwrap(),
+            )
+        };
 
-                owned_slice
-            }
-            <span class="prelude-val">None </span>=&gt; {
-                <span class="comment">// We need to load the application binary before we hand the channel over to the
-                // syscalls, which expose it to the user space.
-                </span><span class="macro">info!</span>(<span class="string">&quot;Loading application binary...&quot;</span>);
-                oak_channel::basic_framed::load_raw::&lt;<span class="kw">dyn </span>Channel, { Size4KiB::SIZE <span class="kw">as </span>usize }&gt;(
-                    <span class="kw-2">&amp;mut *</span>channel,
-                )
-                .expect(<span class="string">&quot;failed to load application binary from channel&quot;</span>)
-                .into_boxed_slice()
-            }
-        }
+        <span class="macro">info!</span>(<span class="string">&quot;Copying application from ramdisk...&quot;</span>);
+        <span class="kw">let </span>owned_slice = Box::&lt;[u8]&gt;::from(slice);
+        <span class="comment">// Once the application has been copied onto the heap, the original ramdisk
+        // location is marked as available.
+        </span><span class="kw">let </span>ramdisk_range = <span class="kw">crate</span>::mm::ramdisk_range(<span class="kw-2">&amp;</span>ramdisk);
+        <span class="macro">info!</span>(
+            <span class="string">&quot;marking [{:#018x}..{:#018x}) as available&quot;</span>,
+            ramdisk_range.start.start_address().as_u64(),
+            ramdisk_range.end.start_address().as_u64()
+        );
+        FRAME_ALLOCATOR.lock().mark_valid(ramdisk_range, <span class="bool-val">true</span>);
+
+        owned_slice
     };
 
-    <span class="kw">let </span>(derived_key, restricted_kernel_dice_data) =
-        oak_restricted_kernel_dice::attest_application(stage0_dice_data, <span class="kw-2">&amp;</span>application_bytes);
+    <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+    </span><span class="kw">let </span>application_bytes: Box&lt;[u8]&gt; = {
+        <span class="comment">// We need to load the application binary before we hand the channel over to the
+        // syscalls, which expose it to the user space.
+        </span><span class="macro">info!</span>(<span class="string">&quot;Loading application binary...&quot;</span>);
+        oak_channel::basic_framed::load_raw::&lt;<span class="kw">dyn </span>Channel, { Size4KiB::SIZE <span class="kw">as </span>usize }&gt;(
+            <span class="kw-2">&amp;mut *</span>channel,
+        )
+        .expect(<span class="string">&quot;failed to load application binary from channel&quot;</span>)
+        .into_boxed_slice()
+    };
 
     <span class="macro">log::info!</span>(<span class="string">&quot;Binary loaded, size: {}&quot;</span>, application_bytes.len());
+
+    <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+    </span><span class="kw">let </span>(derived_key, restricted_kernel_dice_data) =
+        oak_restricted_kernel_dice::attest_application(stage0_dice_data, <span class="kw-2">&amp;</span>application_bytes);
+
     <span class="kw">let </span>application =
         payload::Application::new(application_bytes).expect(<span class="string">&quot;failed to parse application&quot;</span>);
 
-    syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key);
+    syscall::enable_syscalls(
+        channel,
+        <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+        </span>stage0_dice_data,
+        <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+        </span>restricted_kernel_dice_data,
+        <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+        </span>derived_key,
+    );
 
     <span class="comment">// Safety: we&#39;ve loaded the Restricted Application. Whether that&#39;s valid or not is no longer
     // under the kernel&#39;s control.

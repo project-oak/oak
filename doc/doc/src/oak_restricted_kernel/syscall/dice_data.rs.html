@@ -62,6 +62,9 @@
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
 <a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -80,7 +83,10 @@
 
 </span><span class="kw">use </span>alloc::boxed::Box;
 
-<span class="kw">use </span>oak_dice::evidence::RestrictedKernelDiceData <span class="kw">as </span>DiceData;
+<span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+</span><span class="kw">use </span>oak_dice::evidence::RestrictedKernelDiceData <span class="kw">as </span>DiceData;
+<span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+</span><span class="kw">use </span>oak_dice::evidence::Stage0DiceData <span class="kw">as </span>DiceData;
 <span class="kw">use </span>oak_restricted_kernel_interface::{Errno, DICE_DATA_FD};
 <span class="kw">use </span>zeroize::Zeroize;
 
