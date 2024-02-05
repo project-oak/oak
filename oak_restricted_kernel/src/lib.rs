@@ -411,11 +411,12 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let application =
         payload::Application::new(application_bytes).expect("failed to parse application");
 
-    #[cfg(not(feature = "initrd"))]
-    syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key);
-
-    #[cfg(feature = "initrd")]
-    syscall::enable_syscalls(channel, stage0_dice_data);
+    syscall::enable_syscalls(
+        channel,
+        restricted_kernel_dice_data,
+        #[cfg(not(feature = "initrd"))]
+        derived_key,
+    );
 
     // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
     // under the kernel's control.
