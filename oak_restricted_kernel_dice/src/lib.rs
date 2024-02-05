@@ -47,7 +47,7 @@ pub fn attest_application(
 }
 
 fn measure_app_digest(app_bytes: &[u8]) -> AppDigest {
-    Sha256::digest(&app_bytes[..]).into()
+    Sha256::digest(app_bytes).into()
 }
 
 fn generate_derived_key(
