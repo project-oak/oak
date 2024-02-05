@@ -34,6 +34,7 @@ lazy_static::lazy_static! {
   };
 }
 
+#[cfg(feature = "mock_attestation")]
 fn get_mock_dice_data() -> RestrictedKernelDiceData {
     let stage0_dice_data = oak_stage0_dice::generate_dice_data(
         &oak_stage0_dice::Measurements::default(),
@@ -41,7 +42,10 @@ fn get_mock_dice_data() -> RestrictedKernelDiceData {
         oak_stage0_dice::mock_derived_key,
     );
 
-    oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, &[])
+    oak_restricted_kernel_dice::generate_dice_data(
+        stage0_dice_data,
+        &oak_restricted_kernel_dice::AppDigest::default(),
+    )
 }
 
 /// [`Signer`] implementation that using mock evidence and corresponding mock private keys.
@@ -55,10 +59,8 @@ impl MockSigner {
         MOCK_DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
-            .and_then(|d| {
-                Ok(MockSigner {
-                    key: &d.signing_key,
-                })
+            .map(|d| MockSigner {
+                key: &d.signing_key,
             })
     }
 }
@@ -83,10 +85,8 @@ impl MockEncryptionKeyHandle {
         MOCK_DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
-            .and_then(|d| {
-                Ok(MockEncryptionKeyHandle {
-                    key: &d.encryption_key,
-                })
+            .map(|d| MockEncryptionKeyHandle {
+                key: &d.encryption_key,
             })
     }
 }
@@ -110,10 +110,8 @@ impl MockEvidenceProvider {
         MOCK_DICE_WRAPPER
             .as_ref()
             .map_err(anyhow::Error::msg)
-            .and_then(|d| {
-                Ok(MockEvidenceProvider {
-                    evidence: &d.evidence,
-                })
+            .map(|d| MockEvidenceProvider {
+                evidence: &d.evidence,
             })
     }
 }
