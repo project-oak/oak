@@ -25,6 +25,7 @@ use alloc::{boxed::Box, sync::Arc};
 use oak_restricted_kernel_sdk::{
     channel::{start_blocking_server, FileDescriptorChannel},
     entrypoint,
+    instance_attestation::{InstanceEncryptionKeyHandle, InstanceEvidenceProvider},
     utils::samplestore::StaticSampleStore,
 };
 
@@ -38,10 +39,9 @@ fn main() -> ! {
     }
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
 
-    let encryption_key_handle = oak_restricted_kernel_sdk::InstanceEncryptionKeyHandle::create()
-        .expect("couldn't encryption key");
-    let evidencer = oak_restricted_kernel_sdk::InstanceEvidenceProvider::create()
-        .expect("couldn't get evidence");
+    let encryption_key_handle =
+        InstanceEncryptionKeyHandle::create().expect("couldn't encryption key");
+    let evidencer = InstanceEvidenceProvider::create().expect("couldn't get evidence");
     let service = oak_functions_enclave_service::OakFunctionsService::new(
         evidencer,
         Arc::new(encryption_key_handle),
