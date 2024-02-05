@@ -23,8 +23,6 @@ extern crate alloc;
 use oak_channel::basic_framed::load_raw;
 use oak_restricted_kernel_sdk::{entrypoint, FileDescriptorChannel};
 
-// Starts an echo server that reads single bytes from the channel and writes
-// them back.
 #[entrypoint]
 fn start() -> ! {
     log::info!("Orchestrator will load enclave app binary",);
