@@ -74,12 +74,14 @@ use mm::{
 };
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
-use oak_linux_boot_params::{BootParams, Ramdisk};
+use oak_linux_boot_params::BootParams;
 use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
+#[cfg(not(feature = "initrd"))]
+use x86_64::structures::paging::{PageSize, Size4KiB};
 use x86_64::{
-    structures::paging::{Page, PageSize, Size2MiB, Size4KiB},
+    structures::paging::{Page, Size2MiB},
     PhysAddr, VirtAddr,
 };
 use zerocopy::FromBytes;
@@ -156,10 +158,16 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // Safety: in the linker script we specify that the ELF header should be placed at 0x200000.
     let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
 
-    let ramdisk: Option<Ramdisk> = info.ramdisk();
+    #[cfg(feature = "initrd")]
+    let ramdisk = info.ramdisk().expect("expected to find a ramdisk");
 
     // Physical frame allocator
-    mm::init(info.e820_table(), program_headers, &ramdisk);
+    mm::init(
+        info.e820_table(),
+        program_headers,
+        #[cfg(feature = "initrd")]
+        &ramdisk,
+    );
 
     // Note: `info` will not be valid after calling this!
     if PAGE_TABLES
@@ -329,6 +337,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
         }
     };
 
+    #[cfg(not(feature = "initrd"))]
     let mut channel = get_channel(
         &kernel_args,
         GUEST_HOST_HEAP.get().unwrap(),
@@ -336,64 +345,81 @@ pub fn start_kernel(info: &BootParams) -> ! {
         sev_status,
     );
 
+    #[cfg(feature = "initrd")]
+    let channel = get_channel(
+        &kernel_args,
+        GUEST_HOST_HEAP.get().unwrap(),
+        acpi.as_mut(),
+        sev_status,
+    );
+
+    #[cfg(feature = "initrd")]
     let application_bytes: Box<[u8]> = {
-        match ramdisk {
-            Some(ramdisk) => {
-                let virt_addr = {
-                    let pt = PAGE_TABLES.get().expect("failed to get page tables");
-                    pt.translate_physical(PhysAddr::new(ramdisk.addr.into()))
-                        .expect("failed to translate physical dice address")
-                };
+        let virt_addr = {
+            let pt = PAGE_TABLES.get().expect("failed to get page tables");
+            pt.translate_physical(PhysAddr::new(ramdisk.addr.into()))
+                .expect("failed to translate physical dice address")
+        };
 
-                // Safety:
-                // We rely on the firmware to ensure this range is valid and backed by physical
-                // memory.
-                // We rely on the wrapper that loaded the kernel ELF file into memory, to ensure
-                // it didn't over overwrite the ramdisk range.
-                // We excluded this range from the frame allocator so it cannot be used by the
-                // heap allocator.
-                let slice: &[u8] = unsafe {
-                    core::slice::from_raw_parts::<u8>(
-                        virt_addr.as_mut_ptr(),
-                        info.hdr.ramdisk_size.try_into().unwrap(),
-                    )
-                };
+        // Safety:
+        // We rely on the firmware to ensure this range is valid and backed by physical
+        // memory.
+        // We rely on the wrapper that loaded the kernel ELF file into memory, to ensure
+        // it didn't over overwrite the ramdisk range.
+        // We excluded this range from the frame allocator so it cannot be used by the
+        // heap allocator.
+        let slice: &[u8] = unsafe {
+            core::slice::from_raw_parts::<u8>(
+                virt_addr.as_mut_ptr(),
+                info.hdr.ramdisk_size.try_into().unwrap(),
+            )
+        };
 
-                info!("Copying application from ramdisk...");
-                let owned_slice = Box::<[u8]>::from(slice);
-                // Once the application has been copied onto the heap, the original ramdisk
-                // location is marked as available.
-                let ramdisk_range = crate::mm::ramdisk_range(&ramdisk);
-                info!(
-                    "marking [{:#018x}..{:#018x}) as available",
-                    ramdisk_range.start.start_address().as_u64(),
-                    ramdisk_range.end.start_address().as_u64()
-                );
-                FRAME_ALLOCATOR.lock().mark_valid(ramdisk_range, true);
+        info!("Copying application from ramdisk...");
+        let owned_slice = Box::<[u8]>::from(slice);
+        // Once the application has been copied onto the heap, the original ramdisk
+        // location is marked as available.
+        let ramdisk_range = crate::mm::ramdisk_range(&ramdisk);
+        info!(
+            "marking [{:#018x}..{:#018x}) as available",
+            ramdisk_range.start.start_address().as_u64(),
+            ramdisk_range.end.start_address().as_u64()
+        );
+        FRAME_ALLOCATOR.lock().mark_valid(ramdisk_range, true);
 
-                owned_slice
-            }
-            None => {
-                // We need to load the application binary before we hand the channel over to the
-                // syscalls, which expose it to the user space.
-                info!("Loading application binary...");
-                oak_channel::basic_framed::load_raw::<dyn Channel, { Size4KiB::SIZE as usize }>(
-                    &mut *channel,
-                )
-                .expect("failed to load application binary from channel")
-                .into_boxed_slice()
-            }
-        }
+        owned_slice
     };
 
+    #[cfg(not(feature = "initrd"))]
+    let application_bytes: Box<[u8]> = {
+        // We need to load the application binary before we hand the channel over to the
+        // syscalls, which expose it to the user space.
+        info!("Loading application binary...");
+        oak_channel::basic_framed::load_raw::<dyn Channel, { Size4KiB::SIZE as usize }>(
+            &mut *channel,
+        )
+        .expect("failed to load application binary from channel")
+        .into_boxed_slice()
+    };
+
+    log::info!("Binary loaded, size: {}", application_bytes.len());
+
+    #[cfg(not(feature = "initrd"))]
     let (derived_key, restricted_kernel_dice_data) =
         oak_restricted_kernel_dice::attest_application(stage0_dice_data, &application_bytes);
 
-    log::info!("Binary loaded, size: {}", application_bytes.len());
     let application =
         payload::Application::new(application_bytes).expect("failed to parse application");
 
-    syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key);
+    syscall::enable_syscalls(
+        channel,
+        #[cfg(feature = "initrd")]
+        stage0_dice_data,
+        #[cfg(not(feature = "initrd"))]
+        restricted_kernel_dice_data,
+        #[cfg(not(feature = "initrd"))]
+        derived_key,
+    );
 
     // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
     // under the kernel's control.

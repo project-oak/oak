@@ -16,8 +16,12 @@
 
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
-use oak_linux_boot_params::{BootE820Entry, E820EntryType, Ramdisk};
+#[cfg(feature = "initrd")]
+use oak_linux_boot_params::Ramdisk;
+use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::msr::{get_sev_status, SevStatus};
+#[cfg(feature = "initrd")]
+use x86_64::structures::paging::frame::PhysFrameRange;
 use x86_64::{
     addr::{align_down, align_up},
     registers::{
@@ -25,7 +29,6 @@ use x86_64::{
         model_specific::{Efer, EferFlags},
     },
     structures::paging::{
-        frame::PhysFrameRange,
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
         FrameAllocator, Page, PageSize, PageTable, PageTableFlags as BasePageTableFlags, PhysFrame,
         Size2MiB,
@@ -171,7 +174,7 @@ pub trait Mapper<S: PageSize> {
 pub fn init(
     memory_map: &[BootE820Entry],
     program_headers: &[ProgramHeader],
-    ramdisk: &Option<Ramdisk>,
+    #[cfg(feature = "initrd")] ramdisk: &Ramdisk,
 ) {
     let mut alloc = FRAME_ALLOCATOR.lock();
 
@@ -246,7 +249,8 @@ pub fn init(
         });
 
     // Thirdly, mark the ramdisk as reserved.
-    if let Some(ramdisk) = ramdisk {
+    #[cfg(feature = "initrd")]
+    {
         let ramdisk_range = ramdisk_range(ramdisk);
         info!(
             "marking [{:#018x}..{:#018x}) as reserved (ramdisk)",
@@ -257,6 +261,7 @@ pub fn init(
     };
 }
 
+#[cfg(feature = "initrd")]
 pub fn ramdisk_range(ramdisk: &Ramdisk) -> PhysFrameRange<Size2MiB> {
     PhysFrame::range(
         PhysFrame::<x86_64::structures::paging::Size2MiB>::from_start_address(PhysAddr::new(
