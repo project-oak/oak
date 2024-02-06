@@ -388,10 +388,10 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     log::info!("Binary loaded, size: {}", application_bytes.len());
 
-    let app_digest = oak_restricted_kernel_dice::measure_app_digest(&application_bytes);
+    let app_digest = oak_restricted_kernel_dice::measure_app_digest_sha2_256(&application_bytes);
 
     log::info!(
-        "Binary hash: {}",
+        "Application digest (sha2-256): {}",
         app_digest.map(|x| alloc::format!("{:02x}", x)).join("")
     );
 
