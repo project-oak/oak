@@ -33,6 +33,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.Server;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
+import java.time.Clock;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -87,7 +88,7 @@ public final class SecureProxyImplTest {
     GrpcStreamingTransport transport = new GrpcStreamingTransport(stub::encryptedConnect);
 
     try (OakClient<GrpcStreamingTransport> oakClient =
-             OakClient.create(transport, new InsecureAttestationVerifier())
+             OakClient.create(transport, new InsecureAttestationVerifier(), Clock.systemUTC())
                  .unwrap("creating client")) {
       Request request = Request.newBuilder().setData(ByteString.copyFromUtf8(message)).build();
       byte[] bytes = oakClient.invoke(request.toByteArray()).unwrap("invoking client");

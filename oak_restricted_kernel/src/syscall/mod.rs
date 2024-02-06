@@ -17,6 +17,7 @@
 mod channel;
 mod dice_data;
 mod fd;
+#[cfg(not(feature = "initrd"))]
 mod key;
 pub mod mmap;
 mod process;
@@ -29,7 +30,11 @@ use alloc::boxed::Box;
 use core::{arch::asm, ffi::c_void};
 
 use oak_channel::Channel;
+#[cfg(not(feature = "initrd"))]
 use oak_dice::evidence::RestrictedKernelDiceData as DiceData;
+#[cfg(feature = "initrd")]
+use oak_dice::evidence::Stage0DiceData as DiceData;
+#[cfg(not(feature = "initrd"))]
 use oak_restricted_kernel_dice::DerivedKey;
 use oak_restricted_kernel_interface::{Errno, Syscall};
 use x86_64::{
@@ -66,9 +71,14 @@ struct GsData {
     user_flags: usize,
 }
 
-pub fn enable_syscalls(channel: Box<dyn Channel>, dice_data: DiceData, derived_key: DerivedKey) {
+pub fn enable_syscalls(
+    channel: Box<dyn Channel>,
+    dice_data: DiceData,
+    #[cfg(not(feature = "initrd"))] derived_key: DerivedKey,
+) {
     channel::register(channel);
     stdio::register();
+    #[cfg(not(feature = "initrd"))]
     key::register(derived_key);
     dice_data::register(dice_data);
 

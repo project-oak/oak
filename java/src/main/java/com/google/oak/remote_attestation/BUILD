@@ -26,7 +26,9 @@ java_library(
     srcs = ["AttestationVerifier.java"],
     deps = [
         "//java/src/main/java/com/google/oak/util",
-        "//proto/session:messages_java_proto",
+        "//proto/attestation:endorsement_java_proto",
+        "//proto/attestation:evidence_java_proto",
+        "//proto/attestation:verification_java_proto",
     ],
 )
 
@@ -35,17 +37,9 @@ java_library(
     srcs = ["AttestationVerifier.java"],
     deps = [
         "//java/src/main/java/com/google/oak/util",
-        "//proto/session:messages_java_proto",
-    ],
-)
-
-java_library(
-    name = "amd_attestation_verifier",
-    srcs = ["AmdAttestationVerifier.java"],
-    deps = [
-        ":attestation_verifier",
-        "//java/src/main/java/com/google/oak/util",
-        "//proto/session:messages_java_proto",
+        "//proto/attestation:endorsement_java_proto",
+        "//proto/attestation:evidence_java_proto",
+        "//proto/attestation:verification_java_proto",
     ],
 )
 
@@ -55,7 +49,12 @@ java_library(
     deps = [
         ":attestation_verifier",
         "//java/src/main/java/com/google/oak/util",
-        "//proto/session:messages_java_proto",
+        "//proto/attestation:endorsement_java_proto",
+        "//proto/attestation:evidence_java_proto",
+        "//proto/attestation:verification_java_proto",
+        "@co_nstant_in_cbor",
+        "@com_google_protobuf//java/lite",
+        "@cose_lib",
     ],
 )
 
@@ -65,6 +64,11 @@ java_library(
     deps = [
         ":attestation_verifier_android",
         "//java/src/main/java/com/google/oak/util",
-        "//proto/session:messages_java_proto",
+        "//proto/attestation:endorsement_java_proto",
+        "//proto/attestation:evidence_java_proto",
+        "//proto/attestation:verification_java_proto",
+        "@co_nstant_in_cbor",
+        "@com_google_protobuf//java/lite",
+        "@cose_lib",
     ],
 )
