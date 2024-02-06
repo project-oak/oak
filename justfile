@@ -23,16 +23,18 @@ oak_functions_insecure_enclave_app:
 oak_restricted_kernel_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --bin=oak_restricted_kernel_bin
 
-oak_restricted_kernel_wrapper kernel_file_name="oak_restricted_kernel_bin": oak_restricted_kernel_bin
+_wrap_kernel kernel_file_name:
     env --chdir=oak_restricted_kernel_wrapper OAK_RESTRICTED_KERNEL_FILE_NAME={{kernel_file_name}} cargo build --release
     rust-objcopy --output-target=binary oak_restricted_kernel_bin/target/x86_64-unknown-none/release/{{kernel_file_name}} oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_file_name}}_bin
+
+oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
+    just _wrap_kernel oak_restricted_kernel_bin
 
 oak_restricted_kernel_simple_io_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel --bin=oak_restricted_kernel_simple_io_bin
 
-oak_restricted_kernel_simple_io_wrapper kernel_file_name="oak_restricted_kernel_simple_io_bin": oak_restricted_kernel_simple_io_bin
-    env --chdir=oak_restricted_kernel_wrapper OAK_RESTRICTED_KERNEL_FILE_NAME={{kernel_file_name}} cargo build --release
-    rust-objcopy --output-target=binary oak_restricted_kernel_bin/target/x86_64-unknown-none/release/{{kernel_file_name}} oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_file_name}}_bin
+oak_restricted_kernel_simple_io_wrapper: oak_restricted_kernel_simple_io_bin
+    just _wrap_kernel oak_restricted_kernel_simple_io_bin
 
 stage0_bin:
     env --chdir=stage0_bin cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/stage0_bin
