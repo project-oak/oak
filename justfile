@@ -25,7 +25,7 @@ oak_restricted_kernel_bin:
 
 _wrap_kernel kernel_bin_prefix:
     env --chdir=oak_restricted_kernel_wrapper OAK_RESTRICTED_KERNEL_FILE_NAME={{kernel_bin_prefix}}_bin cargo build --release
-    rust-objcopy --output-target=binary oak_restricted_kernel_bin/target/x86_64-unknown-none/release/{{kernel_bin_prefix}}_bin oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_bin_prefix}}_wrapper_bin
+    rust-objcopy --output-target=binary oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/{{kernel_bin_prefix}}_wrapper_bin
 
 oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
     just _wrap_kernel oak_restricted_kernel
