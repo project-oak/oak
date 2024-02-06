@@ -20,13 +20,11 @@ use std::{
     path::PathBuf,
 };
 
-const ENV_FILE_NAME: &str = "OAK_RESTRICTED_KERNEL_FILE_NAME";
-
 // returns source_path if it can be constructed and if it points to a valid file
 fn try_source_path() -> Result<PathBuf, &'static str> {
     let kernel_directory = "oak_restricted_kernel_bin";
-    let file_name = std::env::var(ENV_FILE_NAME).map_err(|_| {
-            "the correct env variable must be set with the file name of the kernel build. See build file."
+    let file_name = std::env::var("OAK_RESTRICTED_KERNEL_FILE_NAME").map_err(|_| {
+            "the correct env variable OAK_RESTRICTED_KERNEL_FILE_NAME must be set with the file name of the kernel build."
     })?;
 
     // The source file is the output from building "../oak_restricted_kernel_bin" in release mode.
@@ -43,6 +41,7 @@ fn try_source_path() -> Result<PathBuf, &'static str> {
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=cargo:rerun-if-env-changed=OAK_RESTRICTED_KERNEL_FILE_NAME");
     println!("cargo:rerun-if-changed=layout.ld");
     println!("cargo:rustc-link-arg=--script=layout.ld");
     let mut destination_path = PathBuf::from(std::env::var("OUT_DIR").unwrap());
