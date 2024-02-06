@@ -929,21 +929,16 @@ fn claims_set_from_serialized_cert(slice: &[u8]) -> anyhow::Result<ClaimsSet> {
         .map_err(|_cose_err| anyhow::anyhow!("could not parse claims set"))
 }
 
-extern crate std;
-
 /// Extracts the claim that contains the values for the specified layer.
 fn extract_layer_values(claims: &ClaimsSet, layer_id: i64) -> anyhow::Result<&Vec<(Value, Value)>> {
-    std::println!("chekcing");
     let target = RegisteredLabelWithPrivate::PrivateUse(layer_id);
     claims
         .rest
         .iter()
         .find_map(|(label, value)| {
-            std::println!("label: {label:?}");
             if let Value::Map(map) = value
                 && label == &target
             {
-                std::println!("found");
                 Some(map)
             } else {
                 None
