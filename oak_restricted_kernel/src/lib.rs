@@ -405,8 +405,21 @@ pub fn start_kernel(info: &BootParams) -> ! {
     log::info!("Binary loaded, size: {}", application_bytes.len());
 
     #[cfg(not(feature = "initrd"))]
-    let (derived_key, restricted_kernel_dice_data) =
-        oak_restricted_kernel_dice::attest_application(stage0_dice_data, &application_bytes);
+    let (derived_key, restricted_kernel_dice_data) = {
+        let app_digest =
+            oak_restricted_kernel_dice::measure_app_digest_sha2_256(&application_bytes);
+        log::info!(
+            "Application digest (sha2-256): {}",
+            app_digest.map(|x| alloc::format!("{:02x}", x)).join("")
+        );
+
+        let derived_key =
+            oak_restricted_kernel_dice::generate_derived_key(&stage0_dice_data, &app_digest);
+        let restricted_kernel_dice_data =
+            oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, &app_digest);
+
+        (derived_key, restricted_kernel_dice_data)
+    };
 
     let application =
         payload::Application::new(application_bytes).expect("failed to parse application");

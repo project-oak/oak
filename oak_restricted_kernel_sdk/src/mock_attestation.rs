@@ -44,7 +44,7 @@ fn get_mock_dice_data() -> RestrictedKernelDiceData {
 
     oak_restricted_kernel_dice::generate_dice_data(
         stage0_dice_data,
-        &oak_restricted_kernel_dice::AppDigest::default(),
+        &oak_restricted_kernel_dice::AppDigestSha2_256::default(),
     )
 }
 

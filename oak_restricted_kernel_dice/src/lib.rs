@@ -33,26 +33,15 @@ use sha2::{Digest, Sha256};
 pub type DerivedKey = [u8; 32];
 
 // Digest of an application.
-pub type AppDigest = [u8; 32];
+pub type AppDigestSha2_256 = [u8; 32];
 
-pub fn attest_application(
-    stage0_dice_data: oak_dice::evidence::Stage0DiceData,
-    app_bytes: &[u8],
-) -> (DerivedKey, oak_dice::evidence::RestrictedKernelDiceData) {
-    let app_digest = measure_app_digest(app_bytes);
-    (
-        generate_derived_key(&stage0_dice_data, &app_digest),
-        generate_dice_data(stage0_dice_data, &app_digest),
-    )
-}
-
-fn measure_app_digest(app_bytes: &[u8]) -> AppDigest {
+pub fn measure_app_digest_sha2_256(app_bytes: &[u8]) -> AppDigestSha2_256 {
     Sha256::digest(app_bytes).into()
 }
 
-fn generate_derived_key(
+pub fn generate_derived_key(
     stage0_dice_data: &oak_dice::evidence::Stage0DiceData,
-    app_digest: &AppDigest,
+    app_digest: &AppDigestSha2_256,
 ) -> DerivedKey {
     // Mix in the application digest when deriving CDI for Layer 2.
     let hkdf = Hkdf::<Sha256>::new(Some(app_digest), &stage0_dice_data.layer_1_cdi.cdi[..]);
@@ -72,7 +61,7 @@ fn certificate_to_byte_array(cert: coset::CoseSign1) -> [u8; oak_dice::evidence:
 /// Generates attestation evidence for the 'measurement' of the application.
 pub fn generate_dice_data(
     stage0_dice_data: oak_dice::evidence::Stage0DiceData,
-    app_digest: &AppDigest,
+    app_digest: &AppDigestSha2_256,
 ) -> oak_dice::evidence::RestrictedKernelDiceData {
     let (application_keys, application_private_keys): (
         oak_dice::evidence::ApplicationKeys,
