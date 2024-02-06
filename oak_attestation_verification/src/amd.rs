@@ -18,7 +18,7 @@
 
 use alloc::string::String;
 
-use oak_sev_snp_attestation_report::{AttestationReport, TcbVersion};
+use oak_sev_snp_attestation_report::{AttestationReport, SigningAlgorithm, TcbVersion};
 use p256::pkcs8::ObjectIdentifier;
 use rsa::{pss::Signature, signature::Verifier, RsaPublicKey};
 use sha2::Sha384;
@@ -187,6 +187,11 @@ pub fn verify_attestation_report_signature(
         "mismatch in boot_loader field of TCB version: report={} vcek={}",
         arpt_tcb.boot_loader,
         vcek_tcb.boot_loader
+    );
+    anyhow::ensure!(
+        report.data.get_signature_algo() == Some(SigningAlgorithm::EcdsaP384Sha384),
+        "invalid signature algoritm: {:?}",
+        report.data.get_signature_algo(),
     );
 
     let verifying_key = {
