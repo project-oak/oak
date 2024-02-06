@@ -20,7 +20,7 @@ use std::{
     path::PathBuf,
 };
 
-const ENV_FILE_NAME: &'static str = "OAK_RESTRICTED_KERNEL_FILE_NAME";
+const ENV_FILE_NAME: &str = "OAK_RESTRICTED_KERNEL_FILE_NAME";
 
 // returns source_path if it can be constructed and if it points to a valid file
 fn try_source_path() -> Result<PathBuf, &'static str> {
