@@ -425,7 +425,7 @@ fn verify_root_attestation_signature(
     }
 }
 
-/// Verifies the values of the root layer containing the attestation report.
+/// Verifies the measurement values of the root layer containing the attestation report.
 fn verify_root_layer(
     _now_utc_millis: i64,
     values: &RootLayerValues,
@@ -451,8 +451,8 @@ fn verify_root_layer(
     }
 }
 
-/// Verifies the value of the kernel layer, which is common to both
-/// Oak Restricted Kernel and Oak Containers setups.
+/// Verifies the measurement values of the kernel layer, which is common to both the  Oak Restricted
+/// Kernel and Oak Containers setups.
 fn verify_kernel_layer(
     now_utc_millis: i64,
     values: &KernelLayerValues,
@@ -541,7 +541,7 @@ fn verify_kernel_layer(
     .context("ACPI table building commands failed verification")
 }
 
-/// Verifies all ingredients of the system image layer for Oak Containers.
+/// Verifies the measurement values of the system image layer for Oak Containers.
 fn verify_system_layer(
     now_utc_millis: i64,
     values: &SystemLayerValues,
@@ -563,7 +563,7 @@ fn verify_system_layer(
     .context("system image failed verification")
 }
 
-/// Verifies all ingredients of the application layer for Oak Restricted Kernel.
+/// Verifies the measurement values of the application layer for Oak Restricted Kernel.
 fn verify_application_layer(
     now_utc_millis: i64,
     values: &ApplicationLayerValues,
@@ -593,7 +593,7 @@ fn verify_application_layer(
     .context("configuration failed verification")
 }
 
-/// Verifies all ingredients of the container layer for Oak Containers.
+/// Verifies the measurement values of the container layer for Oak Containers.
 fn verify_container_layer(
     now_utc_millis: i64,
     values: &ContainerLayerValues,

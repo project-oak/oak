@@ -175,8 +175,7 @@ fn verify_succeeds() {
     eprintln!("======================================");
     eprintln!("code={} reason={}", p.status as i32, p.reason);
     eprintln!("======================================");
-    r.unwrap();
-    //assert!(r.is_ok());
+    assert!(r.is_ok());
     assert!(p.status() == Status::Success);
 }
 
