@@ -11,5 +11,7 @@ members = [
 [workspace.dependencies]
 micro_rpc = { path = "../micro_rpc" }
 oak_channel = { path = "../oak_channel" }
+oak_dice = { path = "../oak_dice" }
 oak_restricted_kernel_sdk = { path = "../oak_restricted_kernel_sdk" }
 oak_restricted_kernel_interface = { path = "../oak_restricted_kernel_interface" }
+zerocopy = "*"

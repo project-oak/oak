@@ -2679,6 +2679,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_restricted_kernel_orchestrator"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak_channel",
+ "oak_dice",
+ "oak_restricted_kernel_dice",
+ "oak_restricted_kernel_sdk",
+]
+
+[[package]]
 name = "oak_restricted_kernel_sdk"
 version = "0.1.0"
 dependencies = [

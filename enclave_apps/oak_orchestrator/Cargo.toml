@@ -7,8 +7,12 @@ license = "Apache-2.0"
 
 [dependencies]
 oak_restricted_kernel_sdk = { workspace = true }
+oak_restricted_kernel_interface = { workspace = true }
+oak_restricted_kernel_orchestrator = { path = "../../oak_restricted_kernel_orchestrator" }
 oak_channel = { workspace = true }
+oak_dice = { workspace = true }
 log = "*"
+zerocopy = "*"
 
 [[bin]]
 name = "oak_orchestrator"

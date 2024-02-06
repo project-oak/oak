@@ -21,16 +21,22 @@
 extern crate alloc;
 
 use oak_channel::basic_framed::load_raw;
-use oak_restricted_kernel_sdk::{channel::FileDescriptorChannel, entrypoint};
+use oak_dice::evidence::Stage0DiceData;
+use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
+use oak_restricted_kernel_sdk::{channel::FileDescriptorChannel, entrypoint, utils::StderrLogger};
+use zerocopy::{AsBytes, FromZeroes};
+
+fn read_stage0_dice_data() -> Stage0DiceData {
+    let mut result = Stage0DiceData::new_zeroed();
+    let buffer = result.as_bytes_mut();
+    let len = read(DICE_DATA_FD, buffer).expect("failed to read dice data");
+    assert!(len == buffer.len(), "invalid dice data size");
+    result
+}
 
 #[entrypoint]
 fn start() -> ! {
-    log::info!("Orchestrator will load enclave app binary",);
-    let mut channel = FileDescriptorChannel::default();
-    let app = load_raw::<FileDescriptorChannel, 4096>(&mut channel).expect("failed to load");
-    log::info!(
-        "Orchestrator loaded enclave app binary, size: {}",
-        app.len()
-    );
-    unimplemented!();
+    let dice_data = read_stage0_dice_data();
+    let channel = FileDescriptorChannel::default();
+    oak_restricted_kernel_orchestrator::entrypoint(channel, dice_data)
 }
