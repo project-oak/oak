@@ -55,6 +55,11 @@ java_proto_library(
     deps = [":endorsement_proto"],
 )
 
+java_lite_proto_library(
+    name = "endorsement_java_proto_lite",
+    deps = [":endorsement_proto"],
+)
+
 proto_library(
     name = "evidence_proto",
     srcs = ["evidence.proto"],
@@ -67,6 +72,11 @@ cc_proto_library(
 
 java_proto_library(
     name = "evidence_java_proto",
+    deps = [":evidence_proto"],
+)
+
+java_lite_proto_library(
+    name = "evidence_java_proto_lite",
     deps = [":evidence_proto"],
 )
 
@@ -86,6 +96,11 @@ java_proto_library(
     deps = [":reference_value_proto"],
 )
 
+java_lite_proto_library(
+    name = "reference_value_java_proto_lite",
+    deps = [":reference_value_proto"],
+)
+
 proto_library(
     name = "verification_proto",
     srcs = ["verification.proto"],
@@ -98,6 +113,11 @@ cc_proto_library(
 
 java_proto_library(
     name = "verification_java_proto",
+    deps = [":verification_proto"],
+)
+
+java_lite_proto_library(
+    name = "verification_java_proto_lite",
     deps = [":verification_proto"],
 )
 

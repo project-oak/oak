@@ -29,6 +29,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -52,7 +53,7 @@ public class Main {
     // Create Oak Client.
     GrpcStreamingTransport transport = new GrpcStreamingTransport(client::stream);
     Result<OakClient<GrpcStreamingTransport>, Exception> oakClientCreateResult =
-        OakClient.create(transport, new InsecureAttestationVerifier());
+        OakClient.create(transport, new InsecureAttestationVerifier(), Clock.systemUTC());
     OakClient<GrpcStreamingTransport> oakClient = oakClientCreateResult.unwrap("creating client");
 
     // Test request coordinates are defined in `oak_functions/lookup_data_generator/src/data.rs`.

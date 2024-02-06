@@ -16,9 +16,11 @@
 
 package com.google.oak.remote_attestation;
 
-import com.google.oak.session.v1.AttestationEndorsement;
-import com.google.oak.session.v1.AttestationEvidence;
+import com.google.oak.attestation.v1.AttestationResults;
+import com.google.oak.attestation.v1.Endorsements;
+import com.google.oak.attestation.v1.Evidence;
 import com.google.oak.util.Result;
+import java.time.Instant;
 
 /**
  * An interface implementing the functionality of a verifier that appraises the attestation evidence
@@ -35,6 +37,6 @@ public interface AttestationVerifier {
    * <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
    * @return boolean corresponding to the sussess of the verification wrapped in a {@code Result}
    */
-  Result<Boolean, Exception> verify(
-      final AttestationEvidence evidence, final AttestationEndorsement endorsement);
+  Result<AttestationResults, Exception> verify(
+      final Instant now, final Evidence evidence, final Endorsements endorsements);
 }
