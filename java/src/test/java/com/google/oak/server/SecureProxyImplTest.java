@@ -88,8 +88,7 @@ public final class SecureProxyImplTest {
     GrpcStreamingTransport transport = new GrpcStreamingTransport(stub::encryptedConnect);
 
     try (OakClient<GrpcStreamingTransport> oakClient =
-             OakClient
-                 .create(transport, new InsecureAttestationVerifier(), Clock.systemUTC())
+             OakClient.create(transport, new InsecureAttestationVerifier(), Clock.systemUTC())
                  .unwrap("creating client")) {
       Request request = Request.newBuilder().setData(ByteString.copyFromUtf8(message)).build();
       byte[] bytes = oakClient.invoke(request.toByteArray()).unwrap("invoking client");
