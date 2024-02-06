@@ -154,24 +154,24 @@
         <span class="attr">#[global_allocator]
         </span><span class="kw">static </span>ALLOCATOR: oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap = oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap::empty();
 
-        <span class="kw">static </span>LOGGER: oak_restricted_kernel_sdk::StderrLogger = oak_restricted_kernel_sdk::StderrLogger {};
+        <span class="kw">static </span>LOGGER: oak_restricted_kernel_sdk::utils::StderrLogger = oak_restricted_kernel_sdk::utils::StderrLogger {};
 
         <span class="attr">#[no_mangle]
         </span><span class="kw">fn </span>_start() -&gt; ! {
-            log::set_logger(<span class="kw-2">&amp;</span>LOGGER).expect(<span class="string">&quot;failed to set logger&quot;</span>);
-            log::set_max_level(log::LevelFilter::Debug);
-            <span class="macro">log::info!</span>(<span class="string">&quot;In main!&quot;</span>);
+            oak_restricted_kernel_sdk::utils::log::set_logger(<span class="kw-2">&amp;</span>LOGGER).expect(<span class="string">&quot;failed to set logger&quot;</span>);
+            oak_restricted_kernel_sdk::utils::log::set_max_level(oak_restricted_kernel_sdk::utils::log::LevelFilter::Debug);
+            <span class="macro">oak_restricted_kernel_sdk::utils::log::info!</span>(<span class="string">&quot;In main!&quot;</span>);
             #entry_fn_name();
         }
 
         <span class="attr">#[alloc_error_handler]
         </span><span class="kw">fn </span>out_of_memory(layout: ::core::alloc::Layout) -&gt; ! {
-            oak_restricted_kernel_sdk::alloc_error_handler(layout);
+            oak_restricted_kernel_sdk::utils::alloc_error_handler(layout);
         }
 
         <span class="attr">#[panic_handler]
         </span><span class="kw">fn </span>panic(info: <span class="kw-2">&amp;</span>core::panic::PanicInfo) -&gt; ! {
-            oak_restricted_kernel_sdk::panic_handler(info);
+            oak_restricted_kernel_sdk::utils::panic_handler(info);
         }
     };
     TokenStream::from(generated)

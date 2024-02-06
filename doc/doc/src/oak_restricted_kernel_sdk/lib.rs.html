@@ -81,6 +81,8 @@
 <a href="#81" id="81">81</a>
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -97,29 +99,27 @@
 // limitations under the License.
 //
 
-</span><span class="attr">#![cfg_attr(not(test), no_std)]
+</span><span class="attr">#![feature(doc_cfg)]
+#![cfg_attr(not(test), no_std)]
 #![feature(never_type)]
 #![feature(unwrap_infallible)]
 
 </span><span class="kw">extern crate </span>alloc;
 
-<span class="kw">mod </span>channel;
-<span class="kw">mod </span>dice;
-<span class="kw">mod </span>logging;
-
-<span class="kw">pub mod </span>utils {
-    <span class="kw">pub use </span>oak_core::<span class="kw-2">*</span>;
-    <span class="kw">pub use </span>oak_enclave_runtime_support::heap;
-}
-
-<span class="kw">pub use </span>channel::<span class="kw-2">*</span>;
-<span class="kw">pub use </span>dice::<span class="kw-2">*</span>;
-<span class="kw">pub use </span>logging::StderrLogger;
+<span class="kw">pub mod </span>channel;
+<span class="kw">pub mod </span>instance_attestation;
+<span class="attr">#[cfg(any(feature = <span class="string">&quot;mock_attestation&quot;</span>, doc))]
+#[doc(cfg(feature = <span class="string">&quot;mock_attestation&quot;</span>))]
+</span><span class="kw">pub mod </span>mock_attestation;
+<span class="kw">pub mod </span>utils;
+<span class="kw">pub use </span>oak_crypto::encryptor::EncryptionKeyHandle;
+<span class="kw">use </span>oak_crypto::encryptor::EncryptionKeyProvider;
+<span class="kw">use </span>oak_dice::evidence::Evidence;
 <span class="doccomment">/// Marks a function as the entrypoint to an enclave app and sets up an conviences such an
 /// allocator, logger, panic handler.
 ///
 /// This macro assumes that crates using it have declared the [`no_std`] and [`no_main`]
-/// attributes, and the [`alloc_error_handler`] unstable feature of the rust compiler.
+/// attributes, and enabled the [`alloc_error_handler`] unstable feature of the rust compiler.
 ///
 /// [`no_std`]: &lt;https://github.com/rust-lang/rust/issues/51540&gt;
 /// [`no_main`]: &lt;https://docs.rust-embedded.org/embedonomicon/smallest-no-std.html#the-code&gt;
@@ -146,22 +146,26 @@
 /// ```
 </span><span class="kw">pub use </span>oak_restricted_kernel_sdk_proc_macro::entrypoint;
 
-<span class="doccomment">/// Provides a default implementation for [`alloc_error_handler`] attribute.
-///
-/// This handler is declared implicitly when using the [`entrypoint`] macro.
-///
-/// [`alloc_error_handler`]: &lt;https://github.com/rust-lang/rust/issues/51540&gt;
-</span><span class="kw">pub fn </span>alloc_error_handler(layout: ::core::alloc::Layout) -&gt; ! {
-    <span class="macro">panic!</span>(<span class="string">&quot;error allocating memory: {:#?}&quot;</span>, layout);
+<span class="doccomment">/// Exposes the ability to sign bytestrings using a private key that has been endorsed in
+/// the Attestation Evidence.
+</span><span class="kw">pub trait </span>Signer {
+    <span class="doccomment">/// Attempt to sign the provided message bytestring using a signing private key, a
+    /// corresponding public key of which is contained in the Attestation Evidence.
+    </span><span class="kw">fn </span>sign(<span class="kw-2">&amp;</span><span class="self">self</span>, message: <span class="kw-2">&amp;</span>[u8]) -&gt; anyhow::Result&lt;oak_crypto::signer::Signature&gt;;
 }
 
-<span class="doccomment">/// Provides a default implementation for [`panic_handler`] attribute.
-///
-/// This handler is declared implicitly when using the [`entrypoint`] macro.
-///
-/// [`panic_handler`]: &lt;https://doc.rust-lang.org/reference/runtime.html#the-panic_handler-attribute&gt;
-</span><span class="kw">pub fn </span>panic_handler(info: <span class="kw-2">&amp;</span>core::panic::PanicInfo) -&gt; ! {
-    <span class="macro">log::error!</span>(<span class="string">&quot;PANIC: {}&quot;</span>, info);
-    oak_restricted_kernel_interface::syscall::exit(-<span class="number">1</span>);
+<span class="doccomment">/// Exposes the ability to read the Attestation Evidence.
+/// Note: Applications should only use the evidence to initially send it to the host application
+/// once, which then sends it to the clients. It is discouraged for enclave applications to operate
+/// directly with evidences.
+</span><span class="kw">pub trait </span>EvidenceProvider {
+    <span class="kw">fn </span>get_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Evidence;
+}
+
+<span class="doccomment">/// Wrapper for DICE evidence and application private keys.
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>DiceWrapper {
+    <span class="kw">pub </span>evidence: Evidence,
+    <span class="kw">pub </span>encryption_key: EncryptionKeyProvider,
+    <span class="kw">pub </span>signing_key: p256::ecdsa::SigningKey,
 }
 </code></pre></div></section></main></body></html>

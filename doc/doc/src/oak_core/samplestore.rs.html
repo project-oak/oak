@@ -147,6 +147,8 @@
 <a href="#147" id="147">147</a>
 <a href="#148" id="148">148</a>
 <a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -163,7 +165,9 @@
 // limitations under the License.
 //
 
-</span><span class="doccomment">/// Basic probabilisting sample store to compute percentiles over some measurement.
+</span><span class="doccomment">//! Probabilistic sample store to compute percentiles over some measurement.
+
+/// Basic Probabilistic sample store to compute percentiles over some measurement.
 /// N is the number of elements kept in memory; it must be larger than 0.
 /// The array is allocated statically; SampleStore does not use heap allocation.
 </span><span class="attr">#[derive(Debug, PartialEq)]

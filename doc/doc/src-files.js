@@ -47,7 +47,7 @@ var srcIndex = JSON.parse('{\
 "oak_restricted_kernel_dice":["",[],["lib.rs"]],\
 "oak_restricted_kernel_interface":["",[],["errno.rs","lib.rs","raw_syscall.rs","syscall.rs","syscalls.rs"]],\
 "oak_restricted_kernel_launcher":["",[],["lib.rs"]],\
-"oak_restricted_kernel_sdk":["",[],["channel.rs","dice.rs","lib.rs","logging.rs"]],\
+"oak_restricted_kernel_sdk":["",[],["channel.rs","instance_attestation.rs","lib.rs","mock_attestation.rs","utils.rs"]],\
 "oak_sev_guest":["",[],["ap_jump_table.rs","cpuid.rs","crypto.rs","ghcb.rs","guest.rs","instructions.rs","interrupts.rs","io.rs","lib.rs","msr.rs","secrets.rs","vmsa.rs"]],\
 "oak_sev_snp_attestation_report":["",[],["lib.rs"]],\
 "oak_simple_io":["",[],["lib.rs"]],\
