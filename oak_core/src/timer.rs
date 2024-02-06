@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+//! Utils to read the CPUs timestamp counter.
+
 /// Read the timestamp counter register from the CPU.
 ///
 /// The timestamp counter is incremented once every CPU clock cycle, and how it behaves across power
