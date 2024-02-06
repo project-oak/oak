@@ -475,6 +475,19 @@
 <a href="#475" id="475">475</a>
 <a href="#476" id="476">476</a>
 <a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -882,8 +895,21 @@
     <span class="macro">log::info!</span>(<span class="string">&quot;Binary loaded, size: {}&quot;</span>, application_bytes.len());
 
     <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
-    </span><span class="kw">let </span>(derived_key, restricted_kernel_dice_data) =
-        oak_restricted_kernel_dice::attest_application(stage0_dice_data, <span class="kw-2">&amp;</span>application_bytes);
+    </span><span class="kw">let </span>(derived_key, restricted_kernel_dice_data) = {
+        <span class="kw">let </span>app_digest =
+            oak_restricted_kernel_dice::measure_app_digest_sha2_256(<span class="kw-2">&amp;</span>application_bytes);
+        <span class="macro">log::info!</span>(
+            <span class="string">&quot;Application digest (sha2-256): {}&quot;</span>,
+            app_digest.map(|x| <span class="macro">alloc::format!</span>(<span class="string">&quot;{:02x}&quot;</span>, x)).join(<span class="string">&quot;&quot;</span>)
+        );
+
+        <span class="kw">let </span>derived_key =
+            oak_restricted_kernel_dice::generate_derived_key(<span class="kw-2">&amp;</span>stage0_dice_data, <span class="kw-2">&amp;</span>app_digest);
+        <span class="kw">let </span>restricted_kernel_dice_data =
+            oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, <span class="kw-2">&amp;</span>app_digest);
+
+        (derived_key, restricted_kernel_dice_data)
+    };
 
     <span class="kw">let </span>application =
         payload::Application::new(application_bytes).expect(<span class="string">&quot;failed to parse application&quot;</span>);
