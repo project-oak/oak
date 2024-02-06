@@ -18,21 +18,33 @@ pub mod proto {
         pub mod containers {
             #![allow(clippy::return_self_not_must_use)]
             tonic::include_proto!("oak.containers");
+            pub mod v1 {
+                #![allow(clippy::return_self_not_must_use)]
+                tonic::include_proto!("oak.containers.v1");
+            }
         }
+        pub use oak_attestation::proto::oak::{attestation, session};
         pub use oak_crypto::proto::oak::crypto;
-        pub use oak_remote_attestation::proto::oak::session;
+        pub mod key_provisioning {
+            pub mod v1 {
+                #![allow(clippy::return_self_not_must_use)]
+                tonic::include_proto!("oak.key_provisioning.v1");
+            }
+        }
     }
 }
 
 mod qemu;
 mod server;
 
-use crate::proto::oak::session::v1::{
-    AttestationBundle, AttestationEndorsement, AttestationEvidence,
-};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use anyhow::Context;
 use clap::Parser;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use oak_proto_rust::oak::attestation::v1::{
+    endorsements, Endorsements, Evidence, OakRestrictedKernelEndorsements,
+};
+pub use qemu::Params as QemuParams;
 use tokio::{
     net::TcpListener,
     sync::oneshot::{channel, Receiver, Sender},
@@ -40,11 +52,18 @@ use tokio::{
     time::{timeout, Duration},
 };
 
+use crate::proto::oak::session::v1::{
+    AttestationBundle, AttestationEndorsement, AttestationEvidence,
+};
+
 /// The local IP address assigned to the VM guest.
 const VM_LOCAL_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(10, 0, 2, 15));
 
 /// The local port that the VM guest should be listening on.
 const VM_LOCAL_PORT: u16 = 8080;
+
+/// The local port that the Orchestrator should be listening on.
+const VM_ORCHESTRATOR_LOCAL_PORT: u16 = 4000;
 
 /// The local address that will be forwarded by the VMM to the guest's IP adress.
 const PROXY_ADDRESS: Ipv4Addr = Ipv4Addr::LOCALHOST;
@@ -56,31 +75,26 @@ const VM_START_TIMEOUT: u64 = 300;
 #[group(skip)]
 pub struct Args {
     #[arg(long, required = true, value_parser = path_exists,)]
-    system_image: std::path::PathBuf,
+    pub system_image: std::path::PathBuf,
     #[arg(long, required = true, value_parser = path_exists,)]
-    container_bundle: std::path::PathBuf,
+    pub container_bundle: std::path::PathBuf,
     #[arg(long, value_parser = path_exists,)]
-    application_config: Option<std::path::PathBuf>,
+    pub application_config: Option<std::path::PathBuf>,
     #[command(flatten)]
-    qemu_params: qemu::Params,
+    pub qemu_params: qemu::Params,
 }
 
 impl Args {
-    pub fn default_for_test() -> Self {
-        let system_image = format!(
-            "{}oak_containers_system_image/target/image.tar.xz",
-            env!("WORKSPACE_ROOT")
-        )
-        .into();
+    pub fn default_for_root(root: &str) -> Self {
+        let system_image = format!("{root}oak_containers_system_image/target/image.tar.xz",).into();
         let container_bundle = format!(
-            "{}oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar",
-            env!("WORKSPACE_ROOT")
+            "{root}oak_containers_hello_world_container/target/oak_container_example_oci_filesystem_bundle.tar",
         ).into();
         Self {
             system_image,
             container_bundle,
             application_config: None,
-            qemu_params: qemu::Params::default_for_test(),
+            qemu_params: qemu::Params::default_for_root(root),
         }
     }
 }
@@ -106,7 +120,7 @@ pub struct Launcher {
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
     endorsed_attestation_evidence: Option<AttestationBundle>,
     // Receiver that is used to get the Attestation Evidence from the server implementation.
-    attestation_evidence_receiver: Option<Receiver<AttestationEvidence>>,
+    attestation_evidence_receiver: Option<Receiver<(AttestationEvidence, Evidence)>>,
     app_ready_notifier: Option<Receiver<()>>,
     trusted_app_address: Option<SocketAddr>,
     shutdown: Option<Sender<()>>,
@@ -116,11 +130,12 @@ impl Launcher {
     pub async fn create(args: Args) -> Result<Self, anyhow::Error> {
         // Let the OS assign an open port for the launcher service.
         let sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
+        let orchestrator_sockaddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
         let listener = TcpListener::bind(sockaddr).await?;
         let port = listener.local_addr()?.port();
         log::info!("Launcher service listening on port {port}");
         let (attestation_evidence_sender, attestation_evidence_receiver) =
-            channel::<AttestationEvidence>();
+            channel::<(AttestationEvidence, Evidence)>();
         let (shutdown_sender, shutdown_receiver) = channel::<()>();
         let (app_notifier_sender, app_notifier_receiver) = channel::<()>();
         let server = tokio::spawn(server::new(
@@ -138,7 +153,18 @@ impl Launcher {
         // There is a small window for a race condition, but since the assigned port will be random
         // the probability of another process grabbing the port before QEMU can should be very low.
         let host_proxy_port = { TcpListener::bind(sockaddr).await?.local_addr()?.port() };
-        let vmm = qemu::Qemu::start(args.qemu_params, port, host_proxy_port)?;
+        let host_orchestrator_proxy_port = {
+            TcpListener::bind(orchestrator_sockaddr)
+                .await?
+                .local_addr()?
+                .port()
+        };
+        let vmm = qemu::Qemu::start(
+            args.qemu_params,
+            port,
+            host_proxy_port,
+            host_orchestrator_proxy_port,
+        )?;
 
         Ok(Self {
             vmm,
@@ -186,15 +212,34 @@ impl Launcher {
     /// clients, which will verify it before connecting.
     pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<AttestationBundle> {
         // If we haven't received an attestation evidence, wait for it.
+        #[allow(deprecated)]
         if let Some(receiver) = self.attestation_evidence_receiver.take() {
             // Set a timeout since we don't want to wait forever if the VM didn't start properly.
-            let evidence = timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
-                .await
-                .context("couldn't get attestation evidence before timeout")?
-                .context("no attestation evidence available")?;
+            let (deprecated_evidence, evidence) =
+                timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
+                    .await
+                    .context("couldn't get attestation evidence before timeout")?
+                    .context("no attestation evidence available")?;
+
+            // Initialize attestation endorsements.
+            // TODO(#4074): Add layer endorsements.
+            let oak_restricted_kernel_endorsements = OakRestrictedKernelEndorsements {
+                root_layer: None,
+                kernel_layer: None,
+                application_layer: None,
+            };
+            let endorsements = Endorsements {
+                r#type: Some(endorsements::Type::OakRestrictedKernel(
+                    oak_restricted_kernel_endorsements,
+                )),
+            };
+
+            #[allow(deprecated)]
             let endorsed_attestation_evidence = AttestationBundle {
-                attestation_evidence: Some(evidence),
+                attestation_evidence: Some(deprecated_evidence),
                 attestation_endorsement: Some(self.attestation_endorsement.clone()),
+                evidence: Some(evidence),
+                endorsements: Some(endorsements),
             };
             self.endorsed_attestation_evidence
                 .replace(endorsed_attestation_evidence);

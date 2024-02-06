@@ -1,0 +1,19 @@
+[package]
+name = "oak_stage0_dice"
+version = "0.1.0"
+edition = "2021"
+authors = ["Juliette Pluto <julsh@google.com>"]
+license = "Apache-2.0"
+
+[dependencies]
+coset = { version = "*", default-features = false }
+hkdf = { version = "*", default-features = false }
+hex = { version = "*", default-features = false, features = ["alloc"] }
+oak_dice = { workspace = true }
+oak_sev_snp_attestation_report = { workspace = true }
+p256 = { version = "*", default-features = false, features = ["ecdsa"] }
+rand_core = { version = "*", default-features = false, features = [
+  "getrandom",
+] }
+sha2 = { version = "*", default-features = false, features = ["force-soft"] }
+zerocopy = "*"

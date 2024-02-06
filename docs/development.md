@@ -167,10 +167,6 @@ repository, and it has a number of flags and sub-commands available, which
 should be self-explanatory, and it also supports flag autocompletion when
 invoked from inside a Nix shell.
 
-For commands that use `cargo`, by default the `xtask` runs the command only for
-the modified files and the crates affected by those changes. Use `--scope=all`
-to run the command for the entire code base.
-
 ## Run Oak Functions Examples
 
 Running the integration tests for Oak Functions will confirm that all core

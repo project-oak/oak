@@ -16,16 +16,18 @@
 
 //! Test utilities to help with unit testing of Oak Functions code.
 
-use anyhow::Context;
-use log::info;
-use nix::unistd::Pid;
-use oak_functions_abi::Response;
-use oak_functions_client::OakFunctionsClient;
-use prost::Message;
 use std::{
     collections::HashMap, future::Future, io::Write, pin::Pin, process::Command, task::Poll,
     time::Duration,
 };
+
+use anyhow::Context;
+use log::info;
+use nix::unistd::Pid;
+use oak_client::verifier::InsecureAttestationVerifier;
+use oak_functions_abi::Response;
+use oak_functions_client::OakFunctionsClient;
+use prost::Message;
 use tokio::{sync::oneshot, task::JoinHandle};
 use ubyte::ByteUnit;
 
@@ -73,11 +75,11 @@ pub fn compile_rust_wasm(manifest_path: &str, release: bool) -> anyhow::Result<V
 }
 
 /// Serializes the provided map as a contiguous buffer of length-delimited protobuf messages of type
-/// [`Entry`](https://github.com/project-oak/oak/blob/main/oak_functions/proto/lookup_data.proto).
+/// [`Entry`](https://github.com/project-oak/oak/blob/main/proto/oak_functions/lookup_data.proto).
 pub fn serialize_entries(entries: HashMap<Vec<u8>, Vec<u8>>) -> Vec<u8> {
     let mut buf = Vec::new();
     for (key, value) in entries.into_iter() {
-        let entry_proto = oak_functions_abi::proto::Entry { key, value };
+        let entry_proto = oak_proto_rust::oak::oak_functions::lookup_data::Entry { key, value };
         entry_proto
             .encode_length_delimited(&mut buf)
             .expect("couldn't encode entry as length delimited");
@@ -261,7 +263,7 @@ pub async fn make_request(port: u16, request_body: &[u8]) -> Vec<u8> {
     let uri = format!("http://localhost:{port}/");
 
     // Create client
-    let mut client = OakFunctionsClient::new(&uri)
+    let mut client = OakFunctionsClient::new(&uri, &InsecureAttestationVerifier {})
         .await
         .expect("couldn't create client");
 

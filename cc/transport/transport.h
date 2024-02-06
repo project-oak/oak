@@ -21,8 +21,8 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "oak_crypto/proto/v1/crypto.pb.h"
-#include "oak_remote_attestation/proto/v1/messages.pb.h"
+#include "proto/crypto/crypto.pb.h"
+#include "proto/session/messages.pb.h"
 
 namespace oak::transport {
 

@@ -16,16 +16,19 @@
 
 #include "cc/crypto/server_encryptor.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "cc/crypto/common.h"
 #include "cc/crypto/hpke/recipient_context.h"
-#include "oak_crypto/proto/v1/crypto.pb.h"
+#include "cc/crypto/hpke/utils.h"
+#include "proto/crypto/crypto.pb.h"
 
 namespace oak::crypto {
 
@@ -44,8 +47,10 @@ absl::StatusOr<DecryptionResult> ServerEncryptor::Decrypt(EncryptedRequest encry
   }
 
   // Decrypt request.
+  const std::vector<uint8_t> nonce(encrypted_request.encrypted_message().nonce().begin(),
+                                   encrypted_request.encrypted_message().nonce().end());
   absl::StatusOr<std::string> plaintext =
-      recipient_context_->Open(encrypted_request.encrypted_message().ciphertext(),
+      recipient_context_->Open(nonce, encrypted_request.encrypted_message().ciphertext(),
                                encrypted_request.encrypted_message().associated_data());
   if (!plaintext.ok()) {
     return plaintext.status();
@@ -62,13 +67,20 @@ absl::StatusOr<EncryptedResponse> ServerEncryptor::Encrypt(absl::string_view pla
   }
 
   // Encrypt response.
-  absl::StatusOr<std::string> ciphertext = recipient_context_->Seal(plaintext, associated_data);
+  absl::StatusOr<const std::vector<uint8_t>> nonce = GenerateRandomNonce();
+  if (!nonce.ok()) {
+    return nonce.status();
+  }
+  absl::StatusOr<std::string> ciphertext =
+      recipient_context_->Seal(*nonce, plaintext, associated_data);
   if (!ciphertext.ok()) {
     return ciphertext.status();
   }
 
   // Create response message.
   EncryptedResponse encrypted_response;
+  *encrypted_response.mutable_encrypted_message()->mutable_nonce() =
+      std::string(nonce->begin(), nonce->end());
   *encrypted_response.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
   *encrypted_response.mutable_encrypted_message()->mutable_associated_data() = associated_data;
 
@@ -85,7 +97,7 @@ absl::Status ServerEncryptor::InitializeRecipientContexts(const EncryptedRequest
 
   // Create recipient contexts.
   absl::StatusOr<std::unique_ptr<RecipientContext>> recipient_context =
-      recipient_context_generator_.GenerateRecipientContext(serialized_encapsulated_public_key);
+      encryption_key_handle_.GenerateRecipientContext(serialized_encapsulated_public_key);
   if (!recipient_context.ok()) {
     return recipient_context.status();
   }

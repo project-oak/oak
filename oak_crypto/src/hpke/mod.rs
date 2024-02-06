@@ -16,43 +16,55 @@
 
 pub(crate) mod aead;
 
-use crate::{
-    hpke::aead::{AeadKey, AeadNonce, AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
-    proto::oak::crypto::v1::CryptoContext,
-    util::{i2osp, xor},
-};
 use alloc::vec::Vec;
+
 use anyhow::{anyhow, Context};
 use hpke::{
-    aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Deserializable, Kem as KemTrait,
-    OpModeR, OpModeS, Serializable,
+    aead::AesGcm256, kdf::HkdfSha256, kem::X25519HkdfSha256, Kem as KemTrait, OpModeR, OpModeS,
 };
-use rand_core::OsRng;
+pub use hpke::{Deserializable, Serializable};
+use rand_core::{OsRng, RngCore};
+
+use crate::{
+    hpke::aead::{AeadKey, AeadNonce, AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
+    proto::oak::crypto::v1::SessionKeys,
+};
 
 type Aead = AesGcm256;
 type Kdf = HkdfSha256;
 type Kem = X25519HkdfSha256;
-pub(crate) type PrivateKey = <Kem as KemTrait>::PrivateKey;
-pub(crate) type PublicKey = <Kem as KemTrait>::PublicKey;
+pub type PrivateKey = <Kem as KemTrait>::PrivateKey;
+pub type PublicKey = <Kem as KemTrait>::PublicKey;
 pub(crate) type EncappedKey = <Kem as KemTrait>::EncappedKey;
 
-/// Maximum sequence number which can fit in [`AEAD_NONCE_SIZE_BYTES`] bytes.
-/// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
-const MAX_SEQUENCE_NUMBER: u128 = (1 << (8 * AEAD_NONCE_SIZE_BYTES)) - 1;
+pub fn gen_kem_keypair() -> (PrivateKey, PublicKey) {
+    Kem::gen_keypair(&mut OsRng)
+}
 
-pub(crate) struct KeyPair {
+pub struct KeyPair {
     pub(crate) private_key: PrivateKey,
     pub(crate) public_key: PublicKey,
 }
 
 impl KeyPair {
     /// Randomly generates a key pair.
-    pub(crate) fn generate() -> Self {
-        let (private_key, public_key) = Kem::gen_keypair(&mut OsRng);
+    pub fn generate() -> Self {
+        let (private_key, public_key) = gen_kem_keypair();
         Self {
             private_key,
             public_key,
         }
+    }
+
+    pub fn new(private_key: PrivateKey, public_key: PublicKey) -> Self {
+        Self {
+            private_key,
+            public_key,
+        }
+    }
+
+    pub fn get_private_key(&self) -> Vec<u8> {
+        self.private_key.to_bytes().to_vec()
     }
 
     /// Returns a NIST P-256 SEC1 encoded point public key.
@@ -61,6 +73,7 @@ impl KeyPair {
         self.public_key.to_bytes().to_vec()
     }
 }
+
 /// Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
 /// public key) and creating a sender context.
 /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
@@ -90,31 +103,17 @@ pub(crate) fn setup_base_sender(
         .export(b"request_key", &mut request_key)
         .map_err(|error| anyhow!("couldn't export request key: {}", error))?;
 
-    let mut request_base_nonce = [0u8; AEAD_NONCE_SIZE_BYTES];
-    sender_context
-        .export(b"request_nonce", &mut request_base_nonce)
-        .map_err(|error| anyhow!("couldn't export request nonce: {}", error))?;
-
     // Derive response key and nonce.
     let mut response_key = [0u8; AEAD_ALGORITHM_KEY_SIZE_BYTES];
     sender_context
         .export(b"response_key", &mut response_key)
         .map_err(|error| anyhow!("couldn't export response key: {}", error))?;
 
-    let mut response_base_nonce = [0u8; AEAD_NONCE_SIZE_BYTES];
-    sender_context
-        .export(b"response_nonce", &mut response_base_nonce)
-        .map_err(|error| anyhow!("couldn't export response nonce: {}", error))?;
-
     Ok((
         encapsulated_public_key.to_bytes().to_vec(),
         SenderContext {
             request_key,
-            request_base_nonce,
-            request_sequence_number: 0,
             response_key,
-            response_base_nonce,
-            response_sequence_number: 0,
         },
     ))
 }
@@ -153,61 +152,35 @@ pub(crate) fn setup_base_recipient(
         .export(b"request_key", &mut request_key)
         .map_err(|error| anyhow!("couldn't export request key: {}", error))?;
 
-    let mut request_base_nonce = [0u8; AEAD_NONCE_SIZE_BYTES];
-    recipient_context
-        .export(b"request_nonce", &mut request_base_nonce)
-        .map_err(|error| anyhow!("couldn't export request nonce: {}", error))?;
-
     // Derive response key and nonce.
     let mut response_key = [0u8; AEAD_ALGORITHM_KEY_SIZE_BYTES];
     recipient_context
         .export(b"response_key", &mut response_key)
         .map_err(|error| anyhow!("couldn't export response key: {}", error))?;
 
-    let mut response_base_nonce = [0u8; AEAD_NONCE_SIZE_BYTES];
-    recipient_context
-        .export(b"response_nonce", &mut response_base_nonce)
-        .map_err(|error| anyhow!("couldn't export response nonce: {}", error))?;
-
     Ok(RecipientContext {
         request_key,
-        request_base_nonce,
-        request_sequence_number: 0,
         response_key,
-        response_base_nonce,
-        response_sequence_number: 0,
     })
 }
 
 pub struct SenderContext {
     request_key: AeadKey,
-    request_base_nonce: AeadNonce,
-    /// Request sequence number that is XORed with the base nonce values to get AEAD nonces.
-    /// Is represented as [`u128`] because the [`AEAD_NONCE_SIZE_BYTES`] is 12 bytes.
-    request_sequence_number: u128,
-
     response_key: AeadKey,
-    response_base_nonce: AeadNonce,
-    /// Response sequence number that is XORed with the base nonce values to get AEAD nonces.
-    /// Is represented as [`u128`] because the [`AEAD_NONCE_SIZE_BYTES`] is 12 bytes.
-    response_sequence_number: u128,
 }
 
 impl SenderContext {
     /// Encrypts request message with associated data using AEAD.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
     pub(crate) fn seal(
-        &mut self,
+        &self,
+        nonce: &AeadNonce,
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        let nonce = compute_nonce(self.request_sequence_number, &self.request_base_nonce)
-            .context("couldn't compute nonce")?;
         let ciphertext =
-            crate::hpke::aead::encrypt(&self.request_key, &nonce, plaintext, associated_data)
+            crate::hpke::aead::encrypt(&self.request_key, nonce, plaintext, associated_data)
                 .context("couldn't encrypt request message")?;
-        increment_sequence_number(&mut self.request_sequence_number)
-            .context("couldn't increment sequence number")?;
         Ok(ciphertext)
     }
 
@@ -215,50 +188,35 @@ impl SenderContext {
     /// communication.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
     pub(crate) fn open(
-        &mut self,
+        &self,
+        nonce: &AeadNonce,
         ciphertext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        let nonce = compute_nonce(self.response_sequence_number, &self.response_base_nonce)
-            .context("couldn't compute nonce")?;
         let plaintext =
-            crate::hpke::aead::decrypt(&self.response_key, &nonce, ciphertext, associated_data)
+            crate::hpke::aead::decrypt(&self.response_key, nonce, ciphertext, associated_data)
                 .context("couldn't decrypt response message")?;
-        increment_sequence_number(&mut self.response_sequence_number)
-            .context("couldn't increment sequence number")?;
         Ok(plaintext)
     }
 }
 
 pub struct RecipientContext {
     request_key: AeadKey,
-    request_base_nonce: AeadNonce,
-    /// Request sequence number that is XORed with the base nonce values to get AEAD nonces.
-    /// Is represented as [`u128`] because the [`AEAD_NONCE_SIZE_BYTES`] is 12 bytes.
-    request_sequence_number: u128,
-
     response_key: AeadKey,
-    response_base_nonce: AeadNonce,
-    /// Response sequence number that is XORed with the base nonce values to get AEAD nonces.
-    /// Is represented as [`u128`] because the [`AEAD_NONCE_SIZE_BYTES`] is 12 bytes.
-    response_sequence_number: u128,
 }
 
 impl RecipientContext {
     /// Decrypts request message and validates associated data using AEAD.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
     pub(crate) fn open(
-        &mut self,
+        &self,
+        nonce: &AeadNonce,
         ciphertext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        let nonce = compute_nonce(self.request_sequence_number, &self.request_base_nonce)
-            .context("couldn't compute nonce")?;
         let plaintext =
-            crate::hpke::aead::decrypt(&self.request_key, &nonce, ciphertext, associated_data)
+            crate::hpke::aead::decrypt(&self.request_key, nonce, ciphertext, associated_data)
                 .context("couldn't decrypt request message")?;
-        increment_sequence_number(&mut self.request_sequence_number)
-            .context("couldn't increment sequence number")?;
         Ok(plaintext)
     }
 
@@ -266,35 +224,27 @@ impl RecipientContext {
     /// communication.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
     pub(crate) fn seal(
-        &mut self,
+        &self,
+        nonce: &AeadNonce,
         plaintext: &[u8],
         associated_data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
-        let nonce = compute_nonce(self.response_sequence_number, &self.response_base_nonce)
-            .context("couldn't compute nonce")?;
         let ciphertext =
-            crate::hpke::aead::encrypt(&self.response_key, &nonce, plaintext, associated_data)
+            crate::hpke::aead::encrypt(&self.response_key, nonce, plaintext, associated_data)
                 .context("couldn't encrypt response message")?;
-        increment_sequence_number(&mut self.response_sequence_number)
-            .context("couldn't increment sequence number")?;
         Ok(ciphertext)
     }
 
-    /// Serializes recipient context into a `CryptoContext` Protobuf message.
-    pub fn serialize(self) -> anyhow::Result<CryptoContext> {
-        Ok(CryptoContext {
+    /// Serializes recipient context into a `SessionKeys` Protobuf message.
+    pub fn serialize(self) -> anyhow::Result<SessionKeys> {
+        Ok(SessionKeys {
             request_key: self.request_key.to_vec(),
-            request_base_nonce: self.request_base_nonce.to_vec(),
-            request_sequence_number: self.request_sequence_number as u64,
-
             response_key: self.response_key.to_vec(),
-            response_base_nonce: self.response_base_nonce.to_vec(),
-            response_sequence_number: self.response_sequence_number as u64,
         })
     }
 
-    /// Deserializes recipient context from a `CryptoContext` Protobuf message.
-    pub fn deserialize(context: CryptoContext) -> anyhow::Result<Self> {
+    /// Deserializes recipient context from a `SessionKeys` Protobuf message.
+    pub fn deserialize(context: SessionKeys) -> anyhow::Result<Self> {
         Ok(Self {
             request_key: context.request_key.try_into().map_err(|v: Vec<u8>| {
                 anyhow!(
@@ -303,18 +253,6 @@ impl RecipientContext {
                     v.len()
                 )
             })?,
-            request_base_nonce: context
-                .request_base_nonce
-                .try_into()
-                .map_err(|v: Vec<u8>| {
-                    anyhow!(
-                        "incorrect request key size, expected {}, got {}",
-                        AEAD_NONCE_SIZE_BYTES,
-                        v.len()
-                    )
-                })?,
-            request_sequence_number: context.request_sequence_number as u128,
-
             response_key: context.response_key.try_into().map_err(|v: Vec<u8>| {
                 anyhow!(
                     "incorrect response key size, expected {}, got {}",
@@ -322,34 +260,23 @@ impl RecipientContext {
                     v.len()
                 )
             })?,
-            response_base_nonce: context
-                .response_base_nonce
-                .try_into()
-                .map_err(|v: Vec<u8>| {
-                    anyhow!(
-                        "incorrect response key size, expected {}, got {}",
-                        AEAD_NONCE_SIZE_BYTES,
-                        v.len()
-                    )
-                })?,
-            response_sequence_number: context.response_sequence_number as u128,
         })
     }
 }
 
-fn compute_nonce(sequence_number: u128, base_nonce: &AeadNonce) -> anyhow::Result<AeadNonce> {
-    let sequence_number_bytes = i2osp::<AEAD_NONCE_SIZE_BYTES>(sequence_number)
-        .context("couldn't convert sequence number to bytes")?;
-    let nonce = xor::<AEAD_NONCE_SIZE_BYTES>(base_nonce, &sequence_number_bytes);
-    Ok(nonce)
+// Generate a random nonce for AEAD.
+pub(crate) fn generate_random_nonce() -> AeadNonce {
+    let mut nonce = AeadNonce::default();
+    OsRng.fill_bytes(&mut nonce);
+    nonce
 }
 
-fn increment_sequence_number(sequence_number: &mut u128) -> anyhow::Result<()> {
-    if *sequence_number >= MAX_SEQUENCE_NUMBER {
-        return Err(anyhow!("reached message limit"));
-    }
-    *sequence_number = sequence_number
-        .checked_add(1)
-        .context("couldn't increment sequence number")?;
-    Ok(())
+pub(crate) fn deserialize_nonce(nonce: &[u8]) -> anyhow::Result<AeadNonce> {
+    nonce.try_into().map_err(|_| {
+        anyhow!(
+            "incorrect nonce size, expected {}, found {}",
+            AEAD_NONCE_SIZE_BYTES,
+            nonce.len()
+        )
+    })
 }

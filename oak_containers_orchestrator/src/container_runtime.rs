@@ -13,14 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::Context;
-use nix::unistd::{Gid, Uid};
-use oci_spec::runtime::{LinuxIdMapping, LinuxIdMappingBuilder, Mount, Spec};
 use std::{
     os::unix::fs::lchown,
     path::{Path, PathBuf},
 };
-use tokio::sync::oneshot::Sender;
+
+use anyhow::Context;
+use nix::unistd::{Gid, Uid};
+use oci_spec::runtime::{LinuxIdMapping, LinuxIdMappingBuilder, Mount, Spec};
+use tokio_util::sync::CancellationToken;
 
 pub async fn run(
     container_bundle: &[u8],
@@ -28,7 +29,7 @@ pub async fn run(
     runtime_uid: Uid,
     runtime_gid: Gid,
     ipc_socket_path: &Path,
-    exit_notification_sender: Sender<()>,
+    cancellation_token: CancellationToken,
 ) -> Result<(), anyhow::Error> {
     tokio::fs::create_dir_all(container_dir).await?;
     log::info!("Unpacking container bundle");
@@ -118,6 +119,6 @@ pub async fn run(
     ))?;
     log::info!("Container exited with status {status:?}");
 
-    let _ = exit_notification_sender.send(());
+    cancellation_token.cancel();
     Ok(())
 }

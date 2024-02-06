@@ -14,11 +14,12 @@
 // limitations under the License.
 //
 
+use std::path::PathBuf;
+
 use anyhow::Context;
 use goblin::elf::{program_header::PT_LOAD, Elf};
 use log::{debug, info};
 use sha2::{Digest, Sha256};
-use std::path::PathBuf;
 use x86_64::PhysAddr;
 
 /// A memory segment extracted from an ELF file.

@@ -17,8 +17,9 @@
 //! This module contains structs that can be used to interpret the contents of the CPUID page that
 //! is provisioned into the VM guest memory during SEV-SNP startup.
 
-use crate::interrupts::MutableInterruptStackFrame;
 use zerocopy::{FromBytes, FromZeroes};
+
+use crate::interrupts::MutableInterruptStackFrame;
 
 /// The maximum number of CPUID functions that can be included in the page.
 pub const CPUID_COUNT_MAX: usize = 64;

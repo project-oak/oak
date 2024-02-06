@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034  # Unused variables OK as this script is `source`d.
 
+set -o xtrace
 set -o errexit
 set -o nounset
-set -o xtrace
 set -o pipefail
 
 # Set the default Rust log level to info if unset.
@@ -20,10 +20,10 @@ readonly DOCKER_IMAGE_NAME='europe-west2-docker.pkg.dev/oak-ci/oak-development/o
 # from a registry first.
 
 # Do not modify manually. This value is automatically updated by ./scripts/docker_build .
-readonly DOCKER_IMAGE_ID='sha256:963c4d4b0e029725153814fc88528597fc66dac652758849db3b83fafa227786'
+readonly DOCKER_IMAGE_ID='sha256:0eaee35dde1820758b59c6c92069e1b23f236d74120e19168134380cd4e97f7b'
 
 # Do not modify manually. This value is automatically updated by ./scripts/docker_push .
-readonly DOCKER_IMAGE_REPO_DIGEST='europe-west2-docker.pkg.dev/oak-ci/oak-development/oak-development@sha256:a1ab2e25aa11e3e36900a0131f7430aa8cb11a38d0827c5e8c8c4d08470db6d0'
+readonly DOCKER_IMAGE_REPO_DIGEST='europe-west2-docker.pkg.dev/oak-ci/oak-development/oak-development@sha256:59f3914b8237601bcacdb6ba86c6aebe9f5fcc49c9ed377e281ed1e852bc7faa'
 
 readonly CACHE_DIR='bazel-cache'
 readonly SERVER_BIN_DIR="${PWD}/oak_loader/bin"

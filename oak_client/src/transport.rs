@@ -14,14 +14,14 @@
 // limitations under the License.
 //
 
+use anyhow::Context;
+use oak_crypto::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
+use tonic::transport::Channel;
+
 use crate::proto::oak::session::v1::{
     request_wrapper, response_wrapper, streaming_session_client::StreamingSessionClient,
-    AttestationEvidence, GetPublicKeyRequest, InvokeRequest, RequestWrapper,
+    EndorsedEvidence, GetEndorsedEvidenceRequest, InvokeRequest, RequestWrapper,
 };
-use anyhow::{anyhow, Context};
-use oak_crypto::proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse};
-use prost::Message;
-use tonic::transport::Channel;
 
 pub struct GrpcStreamingTransport {
     rpc_client: StreamingSessionClient<Channel>,
@@ -47,20 +47,13 @@ impl Transport for GrpcStreamingTransport {
         &mut self,
         encrypted_request: &EncryptedRequest,
     ) -> anyhow::Result<EncryptedResponse> {
-        // TODO(#4037): Use explicit crypto protos.
-        let mut serialized_request = vec![];
-        encrypted_request
-            .encode(&mut serialized_request)
-            .map_err(|error| anyhow!("couldn't serialize request: {:?}", error))?;
-
         let mut response_stream = self
             .rpc_client
             .stream(futures_util::stream::iter(vec![RequestWrapper {
+                #[allow(clippy::needless_update)]
                 request: Some(request_wrapper::Request::InvokeRequest(InvokeRequest {
-                    // TODO(#4037): Remove once explicit protos are used end-to-end.
-                    encrypted_body: serialized_request,
-                    // TODO(#4037): Use explicit crypto protos.
-                    encrypted_request: None,
+                    encrypted_request: Some(encrypted_request.clone()),
+                    ..Default::default()
                 })),
             }]))
             .await
@@ -82,53 +75,49 @@ impl Transport for GrpcStreamingTransport {
             ));
         };
 
-        // TODO(#4037): Use explicit crypto protos.
-        let encrypted_response = EncryptedResponse::decode(invoke_response.encrypted_body.as_ref())
-            .map_err(|error| anyhow!("couldn't deserialize response: {:?}", error))?;
-
-        Ok(encrypted_response)
+        invoke_response
+            .encrypted_response
+            .context("InvokeResponse does not include an encrypted message")
     }
 }
 
 #[async_trait::async_trait]
 pub trait EvidenceProvider {
-    async fn get_evidence(&mut self) -> anyhow::Result<AttestationEvidence>;
+    async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence>;
 }
 
 #[async_trait::async_trait]
 impl EvidenceProvider for GrpcStreamingTransport {
-    async fn get_evidence(&mut self) -> anyhow::Result<AttestationEvidence> {
+    async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence> {
         let mut response_stream = self
             .rpc_client
             .stream(futures_util::stream::iter(vec![RequestWrapper {
-                // TODO(#3641): Rename the corresponding message to `GetEvidence`.
-                request: Some(request_wrapper::Request::GetPublicKeyRequest(
-                    GetPublicKeyRequest {},
+                request: Some(request_wrapper::Request::GetEndorsedEvidenceRequest(
+                    GetEndorsedEvidenceRequest {},
                 )),
             }]))
             .await
-            .context("couldn't get attestation evidence")?
+            .context("couldn't get endorsed evidence")?
             .into_inner();
 
         // Read the next (and only) message from the response stream.
         let response_wrapper = response_stream
             .message()
             .await
-            .context("gRPC server error when requesting attestation evidence")?
+            .context("gRPC server error when requesting endorsed evidence")?
             .context("received empty response stream")?;
 
-        let Some(response_wrapper::Response::GetPublicKeyResponse(get_evidence_response)) =
-            response_wrapper.response
+        let Some(response_wrapper::Response::GetEndorsedEvidenceResponse(
+            get_endorsed_evidence_response,
+        )) = response_wrapper.response
         else {
             return Err(anyhow::anyhow!(
-                "response_wrapper doesn't contain a valid get_evidence_response message"
+                "response_wrapper doesn't contain a valid get_endorsed_evidence_response message"
             ));
         };
 
-        get_evidence_response
-            .attestation_bundle
-            .context("get_evidence_response message doesn't contain an attestation bundle")?
-            .attestation_evidence
-            .context("get_evidence_response message doesn't contain an attestation evidence")
+        get_endorsed_evidence_response
+            .endorsed_evidence
+            .context("get_endorsed_evidence_response message doesn't contain endorsed evidence")
     }
 }

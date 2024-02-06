@@ -22,11 +22,12 @@
 #include "jni_helper.h"
 
 JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativeSeal(
-    JNIEnv* env, jobject obj, jbyteArray plaintext, jbyteArray associated_data) {
-  if (plaintext == NULL || associated_data == NULL) {
+    JNIEnv* env, jobject obj, jbyteArray nonce, jbyteArray plaintext, jbyteArray associated_data) {
+  if (nonce == NULL || plaintext == NULL || associated_data == NULL) {
     return {};
   }
 
+  std::string nonce_str = convert_jbytearray_to_string(env, nonce);
   std::string plaintext_str = convert_jbytearray_to_string(env, plaintext);
   std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
@@ -38,7 +39,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativ
     return {};
   }
 
-  absl::StatusOr<std::string> result = sender_context->Seal(plaintext_str, associated_data_str);
+  const std::vector<uint8_t> nonce_bytes(nonce_str.begin(), nonce_str.end());
+  absl::StatusOr<std::string> result =
+      sender_context->Seal(nonce_bytes, plaintext_str, associated_data_str);
   if (!result.ok()) {
     return {};
   }
@@ -50,11 +53,12 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativ
 }
 
 JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativeOpen(
-    JNIEnv* env, jobject obj, jbyteArray ciphertext, jbyteArray associated_data) {
+    JNIEnv* env, jobject obj, jbyteArray nonce, jbyteArray ciphertext, jbyteArray associated_data) {
   if (ciphertext == NULL || associated_data == NULL) {
     return {};
   }
 
+  std::string nonce_str = convert_jbytearray_to_string(env, nonce);
   std::string ciphertext_str = convert_jbytearray_to_string(env, ciphertext);
   std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
@@ -66,7 +70,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativ
     return {};
   }
 
-  absl::StatusOr<std::string> result = sender_context->Open(ciphertext_str, associated_data_str);
+  const std::vector<uint8_t> nonce_bytes(nonce_str.begin(), nonce_str.end());
+  absl::StatusOr<std::string> result =
+      sender_context->Open(nonce_bytes, ciphertext_str, associated_data_str);
   if (!result.ok()) {
     return {};
   }
@@ -78,11 +84,12 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_SenderContext_nativ
 }
 
 JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_nativeOpen(
-    JNIEnv* env, jobject obj, jbyteArray ciphertext, jbyteArray associated_data) {
+    JNIEnv* env, jobject obj, jbyteArray nonce, jbyteArray ciphertext, jbyteArray associated_data) {
   if (ciphertext == NULL || associated_data == NULL) {
     return {};
   }
 
+  std::string nonce_str = convert_jbytearray_to_string(env, nonce);
   std::string ciphertext_str = convert_jbytearray_to_string(env, ciphertext);
   std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
@@ -94,7 +101,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_na
     return {};
   }
 
-  absl::StatusOr<std::string> result = recipient_context->Open(ciphertext_str, associated_data_str);
+  const std::vector<uint8_t> nonce_bytes(nonce_str.begin(), nonce_str.end());
+  absl::StatusOr<std::string> result =
+      recipient_context->Open(nonce_bytes, ciphertext_str, associated_data_str);
   if (!result.ok()) {
     return {};
   }
@@ -106,11 +115,12 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_na
 }
 
 JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_nativeSeal(
-    JNIEnv* env, jobject obj, jbyteArray plaintext, jbyteArray associated_data) {
-  if (plaintext == NULL || associated_data == NULL) {
+    JNIEnv* env, jobject obj, jbyteArray nonce, jbyteArray plaintext, jbyteArray associated_data) {
+  if (nonce == NULL || plaintext == NULL || associated_data == NULL) {
     return {};
   }
 
+  std::string nonce_str = convert_jbytearray_to_string(env, nonce);
   std::string plaintext_str = convert_jbytearray_to_string(env, plaintext);
   std::string associated_data_str = convert_jbytearray_to_string(env, associated_data);
 
@@ -122,7 +132,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_google_oak_crypto_hpke_RecipientContext_na
     return {};
   }
 
-  absl::StatusOr<std::string> result = recipient_context->Seal(plaintext_str, associated_data_str);
+  const std::vector<uint8_t> nonce_bytes(nonce_str.begin(), nonce_str.end());
+  absl::StatusOr<std::string> result =
+      recipient_context->Seal(nonce_bytes, plaintext_str, associated_data_str);
   if (!result.ok()) {
     return {};
   }

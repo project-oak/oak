@@ -14,18 +14,19 @@
 // limitations under the License.
 //
 
+use alloc::collections::VecDeque;
 use core::alloc::Allocator;
 
-use crate::{
-    queue::{DeviceWriteOnlyQueue, DriverWriteOnlyQueue},
-    InverseTranslator, Read, Translator, Write,
-};
-use alloc::collections::VecDeque;
 use anyhow::Context;
 use rust_hypervisor_firmware_virtio::{
     device::VirtioBaseDevice,
     pci::{find_device, VirtioPciTransport},
     virtio::VirtioTransport,
+};
+
+use crate::{
+    queue::{DeviceWriteOnlyQueue, DriverWriteOnlyQueue},
+    InverseTranslator, Read, Translator, Write,
 };
 
 /// The number of buffer descriptors in each of the queues.

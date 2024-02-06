@@ -92,22 +92,14 @@ public final class EncryptedStreamObserver<I, O> implements StreamObserver<Reque
     } else if (message.hasInvokeRequest()) {
       logger.log(Level.INFO, "Received InvokeRequest request");
 
-      // TODO(#4037): Use explicit crypto protos.
-      EncryptedRequest encryptedRequest;
-      try {
-        encryptedRequest = EncryptedRequest.parseFrom(
-            message.getInvokeRequest().getEncryptedBody(), ExtensionRegistry.getEmptyRegistry());
-
-        Result<ResponseWrapper, Exception> result =
-            encryptor.decrypt(encryptedRequest).andThen(this::processMessage);
-        result.ifError(this::onError);
-        result.ifSuccess(msg -> {
-          logger.log(Level.INFO, "Sending Processed response");
-          outboundObserver.onNext(msg);
-        });
-      } catch (InvalidProtocolBufferException e) {
-        onError(e);
-      }
+      EncryptedRequest encryptedRequest = message.getInvokeRequest().getEncryptedRequest();
+      Result<ResponseWrapper, Exception> result =
+          encryptor.decrypt(encryptedRequest).andThen(this::processMessage);
+      result.ifError(this::onError);
+      result.ifSuccess(msg -> {
+        logger.log(Level.INFO, "Sending Processed response");
+        outboundObserver.onNext(msg);
+      });
     } else {
       onError(new InvalidProtocolBufferException(
           "Got unexpected RequestWrapper that is neither an InvokeRequest nor a"
@@ -150,12 +142,9 @@ public final class EncryptedStreamObserver<I, O> implements StreamObserver<Reque
       Result<EncryptedResponse, Exception> encryptedResponse =
           encryptor.encrypt(connectionAdapter.serialize(response), decrypted.associatedData);
 
-      // TODO(#4037): Use explicit crypto protos.
       return encryptedResponse.map(encrypted -> {
         InvokeResponse invokeResponse =
-            InvokeResponse.newBuilder()
-                .setEncryptedBody(ByteString.copyFrom(encrypted.toByteArray()))
-                .build();
+            InvokeResponse.newBuilder().setEncryptedResponse(encrypted).build();
         return ResponseWrapper.newBuilder().setInvokeResponse(invokeResponse).build();
       });
     } catch (InterruptedException e) {

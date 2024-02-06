@@ -14,10 +14,12 @@
 // limitations under the License.
 //
 
-use super::fd::FileDescriptor;
 use alloc::boxed::Box;
+
 use oak_channel::Channel;
 use oak_restricted_kernel_interface::{Errno, OAK_CHANNEL_FD};
+
+use super::fd::FileDescriptor;
 
 #[repr(transparent)]
 pub struct ChannelDescriptor {
@@ -52,7 +54,7 @@ impl FileDescriptor for ChannelDescriptor {
     }
 }
 
-/// Registers a handler for the Oak communication channel file descriptor (`OAK_CHANNEL_FD`)
+/// Registers a handler for the Oak communication channel file descriptor [`OAK_CHANNEL_FD`]
 pub fn register(channel: Box<dyn Channel>) {
     super::fd::register(OAK_CHANNEL_FD, Box::new(ChannelDescriptor::new(channel)))
         .map_err(|_| ()) // throw away the box we get back

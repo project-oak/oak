@@ -14,10 +14,11 @@
 // limitations under the License.
 //
 
-use crate::sev::GHCB_WRAPPER;
 use bitflags::bitflags;
 use strum::FromRepr;
 use x86_64::{registers::model_specific::Msr as DirectMsr, PhysAddr};
+
+use crate::sev::GHCB_WRAPPER;
 
 /// Wrapper that can access a MSR either directly or through the GHCB, depending on the environment.
 pub struct Msr {

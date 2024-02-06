@@ -14,15 +14,14 @@
 // limitations under the License.
 //
 
-use self::{
-    encrypted_mapper::{EncryptedPageTable, MemoryEncryption},
-    page_tables::RootPageTable,
-};
-use crate::{FRAME_ALLOCATOR, PAGE_TABLES, VMA_ALLOCATOR};
 use goblin::{elf32::program_header::PT_LOAD, elf64::program_header::ProgramHeader};
 use log::info;
+#[cfg(feature = "initrd")]
+use oak_linux_boot_params::Ramdisk;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::msr::{get_sev_status, SevStatus};
+#[cfg(feature = "initrd")]
+use x86_64::structures::paging::frame::PhysFrameRange;
 use x86_64::{
     addr::{align_down, align_up},
     registers::{
@@ -36,6 +35,12 @@ use x86_64::{
     },
     PhysAddr, VirtAddr,
 };
+
+use self::{
+    encrypted_mapper::{EncryptedPageTable, MemoryEncryption},
+    page_tables::RootPageTable,
+};
+use crate::{FRAME_ALLOCATOR, PAGE_TABLES, VMA_ALLOCATOR};
 
 mod bitmap_frame_allocator;
 pub mod encrypted_mapper;
@@ -166,7 +171,11 @@ pub trait Mapper<S: PageSize> {
     ) -> Result<MapperFlush<S>, FlagUpdateError>;
 }
 
-pub fn init(memory_map: &[BootE820Entry], program_headers: &[ProgramHeader]) {
+pub fn init(
+    memory_map: &[BootE820Entry],
+    program_headers: &[ProgramHeader],
+    #[cfg(feature = "initrd")] ramdisk: &Ramdisk,
+) {
     let mut alloc = FRAME_ALLOCATOR.lock();
 
     /* Step 1: mark all RAM as available (event though it may contain data!) */
@@ -238,6 +247,33 @@ pub fn init(memory_map: &[BootE820Entry], program_headers: &[ProgramHeader]) {
             );
             alloc.mark_valid(range, false)
         });
+
+    // Thirdly, mark the ramdisk as reserved.
+    #[cfg(feature = "initrd")]
+    {
+        let ramdisk_range = ramdisk_range(ramdisk);
+        info!(
+            "marking [{:#018x}..{:#018x}) as reserved (ramdisk)",
+            ramdisk_range.start.start_address().as_u64(),
+            ramdisk_range.end.start_address().as_u64()
+        );
+        alloc.mark_valid(ramdisk_range, false);
+    };
+}
+
+#[cfg(feature = "initrd")]
+pub fn ramdisk_range(ramdisk: &Ramdisk) -> PhysFrameRange<Size2MiB> {
+    PhysFrame::range(
+        PhysFrame::<x86_64::structures::paging::Size2MiB>::from_start_address(PhysAddr::new(
+            align_down(ramdisk.addr.into(), Size2MiB::SIZE),
+        ))
+        .unwrap(),
+        PhysFrame::from_start_address(PhysAddr::new(align_up(
+            (ramdisk.addr + ramdisk.size).into(),
+            Size2MiB::SIZE,
+        )))
+        .unwrap(),
+    )
 }
 
 /// Initializes the page tables used by the kernel.

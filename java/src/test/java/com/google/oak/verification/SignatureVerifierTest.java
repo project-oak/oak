@@ -28,11 +28,11 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class SignatureVerifierTest {
   private static final String SIGNATURE_PATH =
-      "oak_remote_attestation_verification/testdata/endorsement.json.sig";
+      "oak_attestation_verification/testdata/endorsement.json.sig";
   private static final String PUBLIC_KEY_PATH =
-      "oak_remote_attestation_verification/testdata/oak-development.pem";
+      "oak_attestation_verification/testdata/oak-development.pem";
   private static final String CONTENT_PATH =
-      "oak_remote_attestation_verification/testdata/endorsement.json";
+      "oak_attestation_verification/testdata/endorsement.json";
 
   private byte[] signatureBytes;
   private byte[] publicKeyBytes;

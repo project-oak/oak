@@ -20,8 +20,9 @@
 //! Extensions (Intel® TDX)](https://www.intel.com/content/dam/develop/external/us/en/documents/intel-tdx-guest-hypervisor-communication-interface.pdf)
 //! for more information.
 
-use bitflags::bitflags;
 use core::arch::{asm, x86_64::CpuidResult};
+
+use bitflags::bitflags;
 use x86_64::{
     structures::paging::{frame::PhysFrameRange, page::Size4KiB},
     PhysAddr,

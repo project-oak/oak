@@ -33,3 +33,17 @@ java_library(
         "//java/src/main/java/com/google/oak/util",
     ],
 )
+
+# Clients are responsible for bundling in "libhpke-jni.so".
+java_library(
+    name = "client_android",
+    srcs = [
+        "OakClient.java",
+    ],
+    deps = [
+        "//java/src/main/java/com/google/oak/crypto:client_encryptor_android",
+        "//java/src/main/java/com/google/oak/remote_attestation:attestation_verifier_android",
+        "//java/src/main/java/com/google/oak/transport:transport_android",
+        "//java/src/main/java/com/google/oak/util",
+    ],
+)

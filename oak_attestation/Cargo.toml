@@ -1,0 +1,24 @@
+[package]
+name = "oak_attestation"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = { version = "*", default-features = false }
+ciborium = { version = "*", default-features = false }
+coset = { version = "*", default-features = false }
+log = { version = "*", default-features = false }
+oak_crypto = { workspace = true }
+oak_dice = { workspace = true }
+oak_proto_rust = { workspace = true }
+prost = { workspace = true }
+p256 = { version = "*", default-features = false, features = ["ecdsa"] }
+rand_core = { version = "*", default-features = false, features = [
+  "getrandom",
+] }
+sha2 = { version = "*", default-features = false }
+zeroize = "*"
+
+[build-dependencies]
+micro_rpc_build = { workspace = true }

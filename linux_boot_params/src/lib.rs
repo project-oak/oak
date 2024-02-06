@@ -16,11 +16,12 @@
 
 #![no_std]
 
-use bitflags::bitflags;
 use core::{
     ffi::{c_char, CStr},
     mem::size_of,
 };
+
+use bitflags::bitflags;
 use strum::{Display, FromRepr};
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
@@ -45,9 +46,6 @@ pub enum E820EntryType {
     DISABLED = 6,
     /// Persistent memory: must be handled distinct from conventional volatile memory.
     PMEM = 7,
-    /// Custom implementation-defined value indicating that the memory region is used to pass
-    /// DICE-related information from Stage 0 to the next DICE stage.
-    DiceData = 0xFF000001,
 }
 
 bitflags! {
@@ -495,6 +493,17 @@ impl SetupHeader {
     pub fn x_load_flags(&self) -> Option<XLoadFlags> {
         XLoadFlags::from_bits(self.xloadflags)
     }
+
+    pub fn ramdisk(&self) -> Option<Ramdisk> {
+        let size = self.ramdisk_size;
+        match size {
+            0 => None,
+            _ => {
+                let addr = self.ramdisk_image;
+                Some(Ramdisk { addr, size })
+            }
+        }
+    }
 }
 
 #[repr(C, packed)]
@@ -645,6 +654,11 @@ pub struct EDIDInfo {
     pub dummy: [u8; 128usize],
 }
 
+pub struct Ramdisk {
+    pub addr: u32,
+    pub size: u32,
+}
+
 #[repr(C, align(4096))]
 #[derive(Copy, Clone, Debug)]
 pub struct BootParams {
@@ -739,6 +753,10 @@ impl BootParams {
             // args.
             unsafe { CStr::from_ptr(self.hdr.cmd_line_ptr as *const c_char) }
         }
+    }
+
+    pub fn ramdisk(&self) -> Option<Ramdisk> {
+        self.hdr.ramdisk()
     }
 }
 

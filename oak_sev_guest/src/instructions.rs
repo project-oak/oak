@@ -16,8 +16,9 @@
 
 //! Rust instruction wrappers for managing page state and interacting with the hypervisor.
 
-use bitflags::bitflags;
 use core::arch::asm;
+
+use bitflags::bitflags;
 use strum::FromRepr;
 
 /// Whether a page is in the validated state or not.
@@ -41,7 +42,7 @@ pub enum PageSize {
 }
 
 /// The potential errors when calling the PVALIDATE or RMPADJUST instructions.
-#[derive(Debug, FromRepr)]
+#[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 pub enum InstructionError {
     /// The input parameters were invalid.

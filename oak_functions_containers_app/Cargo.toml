@@ -9,15 +9,35 @@ oak_grpc_utils = { workspace = true }
 
 [dependencies]
 anyhow = "*"
-oak_functions_service = { workspace = true }
+clap = { version = "*", features = ["derive"] }
+http = "*"
+oak_attestation = { workspace = true }
+oak_containers_orchestrator = { workspace = true }
+oak_containers_sdk = { workspace = true }
+oak_functions_service = { workspace = true, features = ["std"] }
 oak_crypto = { workspace = true }
-oak_remote_attestation = { workspace = true }
 micro_rpc = { workspace = true }
+opentelemetry = { version = "*", default-features = false, features = [
+  "metrics",
+  "trace",
+] }
+opentelemetry_sdk = { version = "*", default-features = false, features = [
+  "metrics",
+  "trace",
+  "rt-tokio",
+] }
+opentelemetry-otlp = { version = "*", default-features = false, features = [
+  "metrics",
+  "trace",
+] }
 prost = "*"
+tikv-jemallocator = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tokio-stream = { version = "*", features = ["net"] }
-tonic = { workspace = true }
-tower = "*"
+tonic = { workspace = true, features = ["gzip"] }
+tower = { version = "*", features = ["load-shed"] }
+tower-http = { version = "*", features = ["trace"] }
+tracing = "*"
 
 [dev-dependencies]
 oak_functions_test_utils = { workspace = true }

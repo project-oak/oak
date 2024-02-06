@@ -17,8 +17,9 @@
 extern crate alloc;
 
 use alloc::collections::btree_map::BTreeMap;
-use arrayvec::ArrayString;
 use core::{cell::LazyCell, ffi::CStr};
+
+use arrayvec::ArrayString;
 
 static mut ARGS: ArrayString<512> = ArrayString::new_const();
 

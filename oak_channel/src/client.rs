@@ -16,12 +16,14 @@
 
 extern crate alloc;
 
+use alloc::boxed::Box;
+
+use oak_core::timer::Timer;
+
 use crate::{
     message::{InvocationId, RequestMessage, ResponseMessage},
     Channel, InvocationChannel,
 };
-use alloc::boxed::Box;
-use oak_core::timer::Timer;
 
 pub struct ClientChannelHandle {
     inner: InvocationChannel,

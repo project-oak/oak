@@ -21,6 +21,7 @@ mod asm;
 mod elf;
 
 use core::panic::PanicInfo;
+
 use elf::parse_elf_file;
 use oak_linux_boot_params::BootParams;
 use x86_64::{
@@ -34,7 +35,7 @@ use x86_64::{
 #[no_mangle]
 pub extern "C" fn rust64_start(_rdi: u64, boot_params: &BootParams) -> ! {
     let payload = include_bytes!(env!("PAYLOAD_PATH"));
-    let entry = parse_elf_file(payload, boot_params.e820_table());
+    let entry = parse_elf_file(payload, boot_params.e820_table(), boot_params.ramdisk());
     // Safety: we successfully parsed the ELF file and found the entry point for it.
     unsafe { jump_to_kernel(entry, boot_params as *const _ as usize) }
 }

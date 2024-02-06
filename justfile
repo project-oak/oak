@@ -9,9 +9,9 @@ key_xor_test_app: (build_enclave_app "key_xor_test_app")
 oak_echo_enclave_app: (build_enclave_app "oak_echo_enclave_app")
 oak_echo_raw_enclave_app: (build_enclave_app "oak_echo_raw_enclave_app")
 oak_functions_enclave_app: (build_enclave_app "oak_functions_enclave_app")
-quirk_echo_enclave_app: (build_enclave_app "quirk_echo_enclave_app")
+oak_orchestrator: (build_enclave_app "oak_orchestrator")
 
-all_enclave_apps: key_xor_test_app oak_echo_enclave_app oak_echo_raw_enclave_app oak_functions_enclave_app oak_functions_insecure_enclave_app quirk_echo_enclave_app
+all_enclave_apps: key_xor_test_app oak_echo_enclave_app oak_echo_raw_enclave_app oak_functions_enclave_app oak_functions_insecure_enclave_app oak_orchestrator
 
 # Build a single enclave app, given its name.
 build_enclave_app name:
@@ -23,11 +23,14 @@ oak_functions_insecure_enclave_app:
 oak_restricted_kernel_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --bin=oak_restricted_kernel_bin
 
+oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
+    env --chdir=oak_restricted_kernel_wrapper cargo objcopy --release --features=oak_restricted_kernel_bin -- --output-target=binary target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin
+
 oak_restricted_kernel_simple_io_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel --bin=oak_restricted_kernel_simple_io_bin
 
-oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
-    env --chdir=oak_restricted_kernel_wrapper cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin
+oak_restricted_kernel_simple_io_wrapper: oak_restricted_kernel_simple_io_bin
+    env --chdir=oak_restricted_kernel_wrapper cargo objcopy --release --no-default-features --features=oak_restricted_kernel_simple_io_bin -- --output-target=binary target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin
 
 stage0_bin:
     env --chdir=stage0_bin cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/stage0_bin
@@ -46,10 +49,13 @@ oak_containers_system_image:
 oak_containers_hello_world_container_bundle_tar:
     env --chdir=oak_containers_hello_world_container DOCKER_BUILDKIT=0 bash build_container_bundle
 
+cc_oak_containers_hello_world_container_bundle_tar:
+    env bazel build -c opt //cc/containers/hello_world_trusted_app:bundle.tar
+
 oak_containers_hello_world_untrusted_app:
     env cargo build --release --package='oak_containers_hello_world_untrusted_app'
 
-all_oak_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_containers_hello_world_container_bundle_tar oak_containers_hello_world_untrusted_app
+all_oak_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_containers_hello_world_container_bundle_tar cc_oak_containers_hello_world_container_bundle_tar oak_containers_hello_world_untrusted_app
 
 # Oak Functions Containers entry point.
 
@@ -61,12 +67,20 @@ oak_functions_containers_launcher:
 
 all_oak_functions_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_functions_containers_container_bundle_tar oak_functions_containers_launcher
 
+ensure_no_std package:
+    RUSTFLAGS="-C target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float" cargo build --target=x86_64-unknown-none --package='{{package}}'
+
+all_ensure_no_std: (ensure_no_std "micro_rpc") (ensure_no_std "oak_attestation_verification") (ensure_no_std "oak_restricted_kernel_sdk")
+
 # Entry points for Kokoro CI.
 
-kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin oak_restricted_kernel_simple_io_bin stage0_bin
+kokoro_build_binaries_rust: all_enclave_apps oak_restricted_kernel_bin oak_restricted_kernel_simple_io_bin oak_restricted_kernel_simple_io_wrapper stage0_bin
 
 kokoro_oak_containers: all_oak_containers_binaries oak_functions_containers_container_bundle_tar
-    cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
+    RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --package='oak_containers_hello_world_untrusted_app'
 
-kokoro_run_tests:
-    cargo nextest run --all-targets --hide-progress-bar --workspace --exclude='oak_containers_hello_world_untrusted_app'
+kokoro_run_tests: all_ensure_no_std
+    RUST_LOG="debug" cargo nextest run --all-targets --hide-progress-bar --workspace --exclude='oak_containers_hello_world_untrusted_app'
+
+clang-tidy:
+    bazel build --config=clang-tidy //cc/...

@@ -2,7 +2,7 @@
 target = "x86_64-unknown-none"
 
 [target.x86_64-unknown-none]
-rustflags = "-C relocation-model=static -C code-model=large"
+rustflags = "-C relocation-model=static -C code-model=large -C target-feature=+rdrand --cfg aes_force_soft --cfg polyval_force_soft"
 
 [unstable]
 # We need to build std / core because of the code model. This may be removed if / when it's possible to build stage0 without it in the future.

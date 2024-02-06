@@ -20,11 +20,15 @@ use std::{
     path::PathBuf,
 };
 
-fn main() {
-    println!("cargo:rerun-if-changed=layout.ld");
-    println!("cargo:rustc-link-arg=--script=layout.ld");
+// returns source_path if it can be constructed and if it points to a valid file
+fn try_source_path() -> Result<PathBuf, &'static str> {
     let kernel_directory = "oak_restricted_kernel_bin";
-    let file_name = "oak_restricted_kernel_bin";
+    let file_name = match (cfg!(feature = "oak_restricted_kernel_bin"), cfg!(feature = "oak_restricted_kernel_simple_io_bin")) {
+        (true, false) => Ok("oak_restricted_kernel_bin"),
+        (false, true) => Ok("oak_restricted_kernel_simple_io_bin"),
+        (true, true) => Err("Feature oak_restricted_kernel_simple_io_bin and feature oak_restricted_kernel_bin cannot be enabled at the same time. Only either version can be built."),
+        (false, false) => Err("One of feature oak_restricted_kernel_simple_io_bin or feature oak_restricted_kernel_bin must be enabled.")
+    }?;
 
     // The source file is the output from building "../oak_restricted_kernel_bin" in release mode.
     let mut source_path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -32,16 +36,35 @@ fn main() {
     source_path.push(kernel_directory);
     source_path.push("target/x86_64-unknown-none/release");
     source_path.push(file_name);
+    println!("cargo:rerun-if-changed={:?}", &source_path);
+    match source_path.exists() {
+        true => Ok(source_path),
+        false => Err("contructed source_path does not exist"),
+    }
+}
+
+fn main() {
+    println!("cargo:rerun-if-changed=layout.ld");
+    println!("cargo:rustc-link-arg=--script=layout.ld");
     let mut destination_path = PathBuf::from(std::env::var("OUT_DIR").unwrap());
-    destination_path.push(file_name);
-    if source_path.exists() {
-        copy(&source_path, &destination_path).unwrap();
-    } else {
-        // Create a fake file so cargo clippy doesn't break if the kernel was not built.
-        File::create(&destination_path)
-            .unwrap()
-            .write_all(b"invalid")
-            .unwrap();
+    match try_source_path() {
+        Ok(source_path) => {
+            destination_path.push(source_path.file_name().unwrap());
+            copy(&source_path, &destination_path).unwrap();
+        }
+        Err(msg) => {
+            let msg = format!(
+                "Kernel could not be built! An error occured when building: {}",
+                msg
+            );
+            println!("cargo:warning={}", msg.as_str());
+            // Create a fake file so cargo clippy doesn't break if the kernel was not built.
+            destination_path.push("invalid_build");
+            File::create(&destination_path)
+                .unwrap()
+                .write_all(msg.as_bytes())
+                .unwrap();
+        }
     }
 
     println!(

@@ -17,14 +17,15 @@
 #ifndef CC_CRYPTO_HPKE_RECIPIENT_CONTEXT_H_
 #define CC_CRYPTO_HPKE_RECIPIENT_CONTEXT_H_
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "oak_crypto/proto/v1/crypto.pb.h"
 #include "openssl/hpke.h"
+#include "proto/crypto/crypto.pb.h"
 
 namespace oak::crypto {
 
@@ -39,38 +40,29 @@ struct KeyPair {
 class RecipientContext {
  public:
   RecipientContext(std::unique_ptr<EVP_AEAD_CTX> request_aead_context,
-                   std::vector<uint8_t> request_base_nonce, uint64_t request_sequence_number,
-                   std::unique_ptr<EVP_AEAD_CTX> response_aead_context,
-                   std::vector<uint8_t> response_base_nonce, uint64_t response_sequence_number)
+                   std::unique_ptr<EVP_AEAD_CTX> response_aead_context)
       : request_aead_context_(std::move(request_aead_context)),
-        request_base_nonce_(request_base_nonce),
-        request_sequence_number_(request_sequence_number),
-        response_aead_context_(std::move(response_aead_context)),
-        response_base_nonce_(response_base_nonce),
-        response_sequence_number_(response_sequence_number) {}
+        response_aead_context_(std::move(response_aead_context)) {}
 
   static absl::StatusOr<std::unique_ptr<RecipientContext>> Deserialize(
-      ::oak::crypto::v1::CryptoContext serialized_recipient_context);
+      ::oak::crypto::v1::SessionKeys session_keys);
 
   // Decrypts message and validates associated data using AEAD.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
-  absl::StatusOr<std::string> Open(absl::string_view ciphertext, absl::string_view associated_data);
+  absl::StatusOr<std::string> Open(const std::vector<uint8_t>& nonce, absl::string_view ciphertext,
+                                   absl::string_view associated_data);
 
   // Encrypts response message with associated data using AEAD as part of bidirectional
   // communication.
   // <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
-  absl::StatusOr<std::string> Seal(absl::string_view plaintext, absl::string_view associated_data);
+  absl::StatusOr<std::string> Seal(const std::vector<uint8_t>& nonce, absl::string_view plaintext,
+                                   absl::string_view associated_data);
 
   ~RecipientContext();
 
  private:
   std::unique_ptr<EVP_AEAD_CTX> request_aead_context_;
-  std::vector<uint8_t> request_base_nonce_;
-  uint64_t request_sequence_number_;
-
   std::unique_ptr<EVP_AEAD_CTX> response_aead_context_;
-  std::vector<uint8_t> response_base_nonce_;
-  uint64_t response_sequence_number_;
 };
 
 // Sets up an HPKE recipient by creating a recipient context.

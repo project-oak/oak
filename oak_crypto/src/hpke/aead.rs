@@ -17,8 +17,12 @@
 //! Implementation of Authenticated Encryption with Associated Data (AEAD).
 //! <https://datatracker.ietf.org/doc/html/rfc5116>
 
-use aes_gcm::{aead::AeadInPlace, Aes256Gcm, Key, KeyInit, Nonce};
 use alloc::vec::Vec;
+
+use aes_gcm::{
+    aead::{Aead, Payload},
+    Aes256Gcm, Key, KeyInit,
+};
 use anyhow::anyhow;
 
 /// Represents `N_k` from RFC9180.
@@ -43,11 +47,15 @@ pub(crate) fn encrypt(
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(secret_key));
 
     // Encrypt message.
-    let mut ciphertext = plaintext.to_vec();
     cipher
-        .encrypt_in_place(Nonce::from_slice(nonce), associated_data, &mut ciphertext)
-        .map_err(|error| anyhow!("couldn't encrypt data: {}", error))?;
-    Ok(ciphertext)
+        .encrypt(
+            nonce.into(),
+            Payload {
+                msg: plaintext,
+                aad: associated_data,
+            },
+        )
+        .map_err(|error| anyhow!("couldn't encrypt data: {}", error))
 }
 
 /// Decrypts `ciphertext` and authenticates `associated_data` using AES-GCM encryption scheme.
@@ -60,10 +68,13 @@ pub(crate) fn decrypt(
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(secret_key));
 
     // Decrypt message.
-    let mut plaintext = ciphertext.to_vec();
     cipher
-        .decrypt_in_place(Nonce::from_slice(nonce), associated_data, &mut plaintext)
-        .map_err(|error| anyhow!("couldn't decrypt data: {}", error))?;
-
-    Ok(plaintext)
+        .decrypt(
+            nonce.into(),
+            Payload {
+                msg: ciphertext,
+                aad: associated_data,
+            },
+        )
+        .map_err(|error| anyhow!("couldn't decrypt data: {}", error))
 }

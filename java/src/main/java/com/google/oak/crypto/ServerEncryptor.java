@@ -78,6 +78,7 @@ public class ServerEncryptor implements AutoCloseable {
   public final Result<DecryptionResult, Exception> decrypt(
       final EncryptedRequest encryptedRequest) {
     AeadEncryptedMessage aeadEncryptedMessage = encryptedRequest.getEncryptedMessage();
+    byte[] nonce = aeadEncryptedMessage.getNonce().toByteArray();
     byte[] ciphertext = aeadEncryptedMessage.getCiphertext().toByteArray();
     byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
 
@@ -100,7 +101,7 @@ public class ServerEncryptor implements AutoCloseable {
 
     // Decrypt request.
     return recipientContext.get()
-        .open(ciphertext, associatedData)
+        .open(nonce, ciphertext, associatedData)
         .map(plaintext -> new DecryptionResult(plaintext, associatedData));
   }
 
@@ -120,15 +121,18 @@ public class ServerEncryptor implements AutoCloseable {
     }
 
     // Encrypt response.
-    return recipientContext.get()
-        .seal(plaintext, associatedData)
-        // Create response message.
-        .map(ciphertext
-            -> EncryptedResponse.newBuilder()
-                   .setEncryptedMessage(AeadEncryptedMessage.newBuilder()
-                                            .setCiphertext(ByteString.copyFrom(ciphertext))
-                                            .setAssociatedData(ByteString.copyFrom(associatedData))
-                                            .build())
-                   .build());
+    return Hpke.generateRandomNonce().andThen(nonce
+        -> recipientContext.get()
+               .seal(nonce, plaintext, associatedData)
+               // Create response message.
+               .map(ciphertext
+                   -> EncryptedResponse.newBuilder()
+                          .setEncryptedMessage(
+                              AeadEncryptedMessage.newBuilder()
+                                  .setNonce(ByteString.copyFrom(nonce))
+                                  .setCiphertext(ByteString.copyFrom(ciphertext))
+                                  .setAssociatedData(ByteString.copyFrom(associatedData))
+                                  .build())
+                          .build()));
   }
 }

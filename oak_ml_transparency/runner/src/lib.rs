@@ -17,23 +17,22 @@
 extern crate alloc;
 
 use alloc::{collections::BTreeMap, string::String};
-use anyhow::Result;
-use log::warn;
-use oak_transparency_claims::{
-    claims::{ClaimPredicate, CLAIM_V1},
-    intoto::{Statement, Subject, STATEMENT_INTOTO_V01},
-};
-use serde::{Deserialize, Serialize};
-use serde_json::{self, Value};
-use sha2::{Digest, Sha256};
-use time::OffsetDateTime;
-
 use std::{
     fs::{remove_file, File},
     io::{self, Read, Write},
     path::PathBuf,
     process::Command,
 };
+
+use anyhow::Result;
+use log::warn;
+use oak_attestation_verification::claims::{
+    ClaimPredicate, Statement, Subject, CLAIM_V1, STATEMENT_INTOTO_V01,
+};
+use serde::{Deserialize, Serialize};
+use serde_json::{self, Value};
+use sha2::{Digest, Sha256};
+use time::OffsetDateTime;
 
 const RESULT_PATH: &str = "result.json";
 
@@ -120,8 +119,9 @@ pub fn get_sha256_hex(input: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
+    use oak_attestation_verification::claims::validate_claim;
+
     use super::*;
-    use oak_transparency_claims::claims::validate_claim;
 
     #[test]
     fn generate_claim_is_valid_json() {

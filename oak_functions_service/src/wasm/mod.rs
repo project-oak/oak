@@ -22,18 +22,23 @@ pub mod api;
 #[cfg(test)]
 mod tests;
 
-use crate::{
-    logger::{OakLogger, StandaloneLogger},
-    lookup::LookupDataManager,
-};
 use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
+#[cfg(feature = "std")]
+use std::time::Instant;
+
 use api::StdWasmApiFactory;
 use byteorder::{ByteOrder, LittleEndian};
 use log::Level;
 use micro_rpc::StatusCode;
 use oak_functions_abi::{Request, Response};
 use spinning_top::Spinlock;
-use wasmi::{MemoryType, Store};
+use wasmi::Store;
+
+use crate::{
+    logger::{OakLogger, StandaloneLogger},
+    lookup::LookupDataManager,
+    Observer,
+};
 
 /// Fixed name of the function to start a Wasm. Every Oak Wasm module must provide this function.
 pub const MAIN_FUNCTION_NAME: &str = "main";
@@ -54,9 +59,9 @@ pub type AbiPointerOffset = u32;
 
 /// `UserState` holds the user request bytes and response bytes for a particular execution of an Oak
 /// Wasm module. The `UserState` also holds a reference to the logger and the enabled extensions.
-pub struct UserState<L: OakLogger> {
+pub struct UserState {
     wasm_api_transport: Box<dyn micro_rpc::Transport<Error = !>>,
-    logger: L,
+    logger: Arc<dyn OakLogger>,
 }
 
 /// Stubs a Wasm imported function in the provided linker.
@@ -68,7 +73,7 @@ macro_rules! stub_wasm_function {
         $linker.func_wrap(
             stringify!($function_mod),
             stringify!($function_name),
-            |caller: wasmi::Caller<'_, UserState<L>>, $(_: $t),*| {
+            |caller: wasmi::Caller<'_, UserState>, $(_: $t),*| {
                 caller
                     .data()
                     .log_error(concat!("called stubbed ", stringify!($function_mod), ".", stringify!($function_name)));
@@ -81,14 +86,14 @@ macro_rules! stub_wasm_function {
     };
 }
 
-impl<L> UserState<L>
-where
-    L: OakLogger,
-{
+impl UserState {
     /// Stores the user request bytes, extensions, and logger. The response bytes are initialized
     /// with the empty response because every request needs to have a response and we fixed the
     /// empty response as the default response.
-    fn new(wasm_api_transport: Box<dyn micro_rpc::Transport<Error = !>>, logger: L) -> Self {
+    fn new(
+        wasm_api_transport: Box<dyn micro_rpc::Transport<Error = !>>,
+        logger: Arc<dyn OakLogger>,
+    ) -> Self {
         UserState {
             wasm_api_transport,
             logger,
@@ -106,27 +111,13 @@ where
 /// the [`OakCaller`]) to provide `alloc` for allocating memory. The [`OakLinker`] checks that the
 /// Wasm module provides `alloc` and `main`, which every Oak Wasm module must provide, and defines
 /// the memory which the [`OakCaller`] uses.
-struct OakLinker<L: OakLogger> {
-    linker: wasmi::Linker<UserState<L>>,
+struct OakLinker {
+    linker: wasmi::Linker<UserState>,
 }
 
-impl<L> OakLinker<L>
-where
-    L: OakLogger,
-{
-    fn new(engine: &wasmi::Engine, store: &mut Store<UserState<L>>) -> Self {
-        let mut linker: wasmi::Linker<UserState<L>> = wasmi::Linker::new(engine);
-
-        // Add memory to linker.
-        // TODO(#3783): Find a sensible value for initial pages.
-        let initial_pages = 100;
-        let memory_type =
-            MemoryType::new(initial_pages, None).expect("failed to define Wasm memory type");
-        let memory =
-            wasmi::Memory::new(store, memory_type).expect("failed to initialize Wasm memory");
-        linker
-            .define(OAK_FUNCTIONS, MEMORY_NAME, wasmi::Extern::Memory(memory))
-            .expect("failed to define Wasm memory in linker");
+impl OakLinker {
+    fn new(engine: &wasmi::Engine) -> Self {
+        let mut linker: wasmi::Linker<UserState> = wasmi::Linker::new(engine);
 
         linker
             .func_wrap(
@@ -135,7 +126,7 @@ where
                 "invoke",
                 // The types in the signatures correspond to the parameters from
                 // oak_functions_abi/src/lib.rs.
-                |caller: wasmi::Caller<'_, UserState<L>>,
+                |caller: wasmi::Caller<'_, UserState>,
                  request_ptr: AbiPointer,
                  request_len: AbiPointerOffset,
                  response_ptr_ptr: AbiPointer,
@@ -213,13 +204,11 @@ where
 
     /// Instantiates the Oak Linker and checks whether the instance exports `main`, `alloc` and a
     /// memory is attached.
-    ///
-    /// Use the same store used when creating the linker.
     fn instantiate(
-        self,
-        mut store: Store<UserState<L>>,
+        &self,
+        mut store: &mut Store<UserState>,
         module: Arc<wasmi::Module>,
-    ) -> Result<(wasmi::Instance, Store<UserState<L>>), micro_rpc::Status> {
+    ) -> Result<wasmi::Instance, micro_rpc::Status> {
         let instance = self
             .linker
             .instantiate(&mut store, &module)
@@ -240,7 +229,7 @@ where
 
         // Check that the instance exports "main".
         let _ = &instance
-            .get_typed_func::<(), ()>(&store, MAIN_FUNCTION_NAME)
+            .get_typed_func::<(), ()>(&mut store, MAIN_FUNCTION_NAME)
             .map_err(|err| {
                 micro_rpc::Status::new_with_message(
                     micro_rpc::StatusCode::Internal,
@@ -250,7 +239,7 @@ where
 
         // Check that the instance exports "alloc".
         let _ = &instance
-            .get_typed_func::<i32, AbiPointer>(&store, ALLOC_FUNCTION_NAME)
+            .get_typed_func::<i32, AbiPointer>(&mut store, ALLOC_FUNCTION_NAME)
             .map_err(|err| {
                 micro_rpc::Status::new_with_message(
                     micro_rpc::StatusCode::Internal,
@@ -267,24 +256,21 @@ where
             )
         })?;
 
-        Ok((instance, store))
+        Ok(instance)
     }
 }
 
 /// Provides functionality for reading from the Wasm memory, as well as allocating and writing to
 /// the Wasm memory. The Wasm memory is defined by the [`OakLinker`]. [`OakCaller`]
 /// relies on `alloc`, which every Oak Wasm module must provide.
-struct OakCaller<'a, L: OakLogger> {
-    caller: wasmi::Caller<'a, UserState<L>>,
+struct OakCaller<'a> {
+    caller: wasmi::Caller<'a, UserState>,
     alloc: wasmi::TypedFunc<i32, AbiPointer>,
     memory: wasmi::Memory,
 }
 
-impl<'a, L> OakCaller<'a, L>
-where
-    L: OakLogger,
-{
-    fn new(caller: wasmi::Caller<'a, UserState<L>>) -> Result<Self, StatusCode> {
+impl<'a> OakCaller<'a> {
+    fn new(caller: wasmi::Caller<'a, UserState>) -> Result<Self, StatusCode> {
         // Get typed `alloc` to store.
         let ext = caller.get_export(ALLOC_FUNCTION_NAME).ok_or_else(|| {
             caller
@@ -408,21 +394,23 @@ where
         })
     }
 
-    fn data_mut(&mut self) -> &mut UserState<L> {
+    fn data_mut(&mut self) -> &mut UserState {
         self.caller.data_mut()
     }
 
-    fn data(&mut self) -> &UserState<L> {
+    fn data(&mut self) -> &UserState {
         self.caller.data()
     }
 }
 
 // A request handler with a Wasm module for handling multiple requests.
-#[derive(Clone)]
-pub struct WasmHandler<L: OakLogger> {
+pub struct WasmHandler {
     wasm_module: Arc<wasmi::Module>,
-    wasm_api_factory: Arc<dyn WasmApiFactory<L> + Send + Sync>,
-    logger: L,
+    linker: OakLinker,
+    wasm_api_factory: Arc<dyn WasmApiFactory + Send + Sync>,
+    logger: Arc<dyn OakLogger>,
+    #[cfg_attr(not(feature = "std"), allow(dead_code))]
+    observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
 /// A trait for creating Wasm APIs that can be called from Wasm modules.
@@ -430,7 +418,7 @@ pub struct WasmHandler<L: OakLogger> {
 /// An instance of [`WasmApiFactory`] is expected to live for the lifetime of the server, while
 /// each instance of the created [`WasmApi`] is expected to live for the lifetime of a single
 /// request.
-pub trait WasmApiFactory<L: OakLogger> {
+pub trait WasmApiFactory {
     fn create_wasm_api(
         &self,
         request: Vec<u8>,
@@ -445,29 +433,33 @@ pub trait WasmApi {
     fn transport(&mut self) -> Box<dyn micro_rpc::Transport<Error = !>>;
 }
 
-impl<L> WasmHandler<L>
-where
-    L: OakLogger,
-{
+impl WasmHandler {
     pub fn create(
         wasm_module_bytes: &[u8],
-        wasm_api_factory: Arc<dyn WasmApiFactory<L> + Send + Sync>,
-        logger: L,
+        wasm_api_factory: Arc<dyn WasmApiFactory + Send + Sync>,
+        logger: Arc<dyn OakLogger>,
+        observer: Option<Arc<dyn Observer + Send + Sync>>,
     ) -> anyhow::Result<Self> {
         let engine = wasmi::Engine::default();
         let module = wasmi::Module::new(&engine, wasm_module_bytes)
             .map_err(|err| anyhow::anyhow!("couldn't load module from buffer: {:?}", err))?;
 
+        let linker = OakLinker::new(module.engine());
+
         Ok(WasmHandler {
             wasm_module: Arc::new(module),
+            linker,
             wasm_api_factory,
             logger,
+            observer,
         })
     }
 
     /// Handles a call to invoke by getting the raw request bytes from the body of the request to
     /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
     pub fn handle_invoke(&self, invoke_request: Request) -> Result<Response, micro_rpc::Status> {
+        #[cfg(feature = "std")]
+        let now = Instant::now();
         let module = self.wasm_module.clone();
 
         let request = invoke_request.body;
@@ -478,8 +470,7 @@ where
         let user_state = UserState::new(wasm_api.transport(), self.logger.clone());
         // For isolated requests we need to create a new store for every request.
         let mut store = wasmi::Store::new(module.engine(), user_state);
-        let linker = OakLinker::new(module.engine(), &mut store);
-        let (instance, mut store) = linker.instantiate(store, module)?;
+        let instance = self.linker.instantiate(&mut store, module)?;
 
         instance.exports(&store).for_each(|export| {
             store
@@ -492,7 +483,22 @@ where
         let main = instance
             .get_typed_func::<(), ()>(&store, MAIN_FUNCTION_NAME)
             .expect("couldn't get `main` export");
+
+        #[cfg(feature = "std")]
+        if let Some(ref observer) = self.observer {
+            observer.wasm_initialization(now.elapsed());
+        }
+
+        // Warning: if we implement constant-time execution policies, this metric can leak the real
+        // execution time, so be sure that any time padding is included in the metric.
+        #[cfg(feature = "std")]
+        let now = Instant::now();
         let result = main.call(&mut store, ());
+        #[cfg(feature = "std")]
+        if let Some(ref observer) = self.observer {
+            observer.wasm_invocation(now.elapsed());
+        }
+
         store.data().logger.log_sensitive(
             Level::Info,
             &format!("running Wasm module completed with result: {:?}", result),
@@ -520,11 +526,17 @@ fn from_status_code(result: Result<(), StatusCode>) -> Result<i32, wasmi::core::
 /// Creates a new `WasmHandler` instance.
 pub fn new_wasm_handler(
     wasm_module_bytes: &[u8],
-    lookup_data_manager: Arc<LookupDataManager<StandaloneLogger>>,
-) -> anyhow::Result<WasmHandler<StandaloneLogger>> {
-    let logger = StandaloneLogger::default();
+    lookup_data_manager: Arc<LookupDataManager>,
+    observer: Option<Arc<dyn Observer + Send + Sync>>,
+) -> anyhow::Result<WasmHandler> {
+    let logger = Arc::new(StandaloneLogger);
     let wasm_api_factory = StdWasmApiFactory {
         lookup_data_manager,
     };
-    WasmHandler::create(wasm_module_bytes, Arc::new(wasm_api_factory), logger)
+    WasmHandler::create(
+        wasm_module_bytes,
+        Arc::new(wasm_api_factory),
+        logger,
+        observer,
+    )
 }

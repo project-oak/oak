@@ -13,24 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::proto::oak::containers::{
-    orchestrator_server::{Orchestrator, OrchestratorServer},
-    GetApplicationConfigResponse, GetAttestationEvidenceResponse, GetCryptoContextRequest,
-    GetCryptoContextResponse,
-};
-use anyhow::Context;
-use futures::FutureExt;
-use oak_containers_orchestrator_client::LauncherClient;
-use oak_crypto::encryptor::{EncryptionKeyProvider, RecipientContextGenerator};
-use oak_remote_attestation::attester::Attester;
 use std::{fs::Permissions, os::unix::prelude::PermissionsExt, sync::Arc};
-use tokio::{fs::set_permissions, net::UnixListener, sync::oneshot::Receiver};
+
+use anyhow::Context;
+use tokio::{fs::set_permissions, net::UnixListener};
 use tokio_stream::wrappers::UnixListenerStream;
+use tokio_util::sync::CancellationToken;
 use tonic::{transport::Server, Request, Response};
 
+use crate::{
+    crypto::{CryptoService, KeyStore},
+    launcher_client::LauncherClient,
+    proto::oak::containers::{
+        orchestrator_server::{Orchestrator, OrchestratorServer},
+        v1::orchestrator_crypto_server::OrchestratorCryptoServer,
+        GetApplicationConfigResponse,
+    },
+};
+
 pub struct ServiceImplementation {
-    attester: Attester,
-    encryption_key_provider: Arc<EncryptionKeyProvider>,
     application_config: Vec<u8>,
     launcher_client: Arc<LauncherClient>,
 }
@@ -53,57 +54,25 @@ impl Orchestrator for ServiceImplementation {
             .map_err(|err| tonic::Status::internal(format!("couldn't send notification: {err}")))?;
         Ok(tonic::Response::new(()))
     }
-
-    async fn get_attestation_evidence(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<GetAttestationEvidenceResponse>, tonic::Status> {
-        let evidence = self
-            .attester
-            .generate_attestation_evidence()
-            .map_err(|err| tonic::Status::internal(format!("couldn't generate evidence: {err}")))?;
-        Ok(tonic::Response::new(GetAttestationEvidenceResponse {
-            evidence: Some(evidence),
-        }))
-    }
-
-    async fn get_crypto_context(
-        &self,
-        request: Request<GetCryptoContextRequest>,
-    ) -> Result<Response<GetCryptoContextResponse>, tonic::Status> {
-        let context = self
-            .encryption_key_provider
-            .generate_recipient_context(&request.into_inner().serialized_encapsulated_public_key)
-            .map_err(|err| {
-                tonic::Status::internal(format!("couldn't generate crypto context: {err}"))
-            })?
-            .serialize()
-            .map_err(|err| {
-                tonic::Status::internal(format!("couldn't serialize crypto context: {err}"))
-            })?;
-        Ok(tonic::Response::new(GetCryptoContextResponse {
-            context: Some(context),
-        }))
-    }
 }
 
 pub async fn create<P>(
     socket_address: P,
-    encryption_key_provider: Arc<EncryptionKeyProvider>,
-    attester: Attester,
+    key_store: Arc<KeyStore>,
     application_config: Vec<u8>,
     launcher_client: Arc<LauncherClient>,
-    shutdown_receiver: Receiver<()>,
+    cancellation_token: CancellationToken,
 ) -> Result<(), anyhow::Error>
 where
     P: AsRef<std::path::Path> + Clone,
 {
     let service_instance = ServiceImplementation {
-        attester,
-        encryption_key_provider,
+        // TODO(#4442): Remove once apps use the new crypto service.
         application_config,
         launcher_client,
     };
+    let crypto_service_instance = CryptoService::new(key_store);
+
     let uds = UnixListener::bind(socket_address.clone())
         .context("could not bind to the supplied address")?;
     let uds_stream = UnixListenerStream::new(uds);
@@ -113,7 +82,8 @@ where
 
     Server::builder()
         .add_service(OrchestratorServer::new(service_instance))
-        .serve_with_incoming_shutdown(uds_stream, shutdown_receiver.map(|_| ()))
+        .add_service(OrchestratorCryptoServer::new(crypto_service_instance))
+        .serve_with_incoming_shutdown(uds_stream, cancellation_token.cancelled())
         .await?;
 
     Ok(())

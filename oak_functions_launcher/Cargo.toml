@@ -32,6 +32,7 @@ oak_launcher_utils = { workspace = true }
 micro_rpc = { workspace = true }
 oak_channel = { workspace = true, features = ["client"] }
 oak_crypto = { workspace = true }
+oak_proto_rust = { workspace = true }
 hashbrown = "*"
 ubyte = "*"
 
@@ -40,6 +41,7 @@ micro_rpc_build = { workspace = true }
 oak_grpc_utils = { workspace = true }
 
 [dev-dependencies]
+oak_client = { workspace = true }
 oak_crypto = { workspace = true }
 oak_functions_client = { workspace = true }
 oak_functions_test_utils = { workspace = true }

@@ -25,11 +25,16 @@ option java_package = "com.google.oak.attestation.v1";
 // Endorsement for binaries from the Transparent Release process.
 // <https://github.com/project-oak/oak/blob/main/docs/release.md>
 message TransparentReleaseEndorsement {
-  // The endorsement statement for the underlying binary.
+  // JSON string comtaining the endorsement statement for the underlying binary.
+  // The format is described here:
+  // https://github.com/project-oak/transparent-release/blob/main/docs/claim-transparency.md#the-claim-format
   bytes endorsement = 1;
 
+  // The signature for the endorsement.
+  bytes endorsement_signature = 2;
+
   // The log entry as proof of inclusion of the endorsement statement in Rekor.
-  bytes rekor_log_entry = 2;
+  bytes rekor_log_entry = 3;
 }
 
 message RootLayerEndorsements {
@@ -40,37 +45,49 @@ message RootLayerEndorsements {
   // different certificates packaged in two different files.
   bytes tee_certificate = 1;
 
-  TransparentReleaseEndorsement stage0_endorsement = 2;
-};
+  // Endorsement of the Stage0 binary.
+  TransparentReleaseEndorsement stage0 = 2;
+}
 
-message LinuxKernelEndorsement {
-  TransparentReleaseEndorsement kernel_binary = 1;
+message KernelLayerEndorsements {
+  TransparentReleaseEndorsement kernel_image = 1;
   TransparentReleaseEndorsement kernel_cmd_line = 2;
-  TransparentReleaseEndorsement acpi = 3;
+  TransparentReleaseEndorsement kernel_setup_data = 3;
+  TransparentReleaseEndorsement init_ram_fs = 4;
+  TransparentReleaseEndorsement memory_map = 5;
+  TransparentReleaseEndorsement acpi = 6;
 }
 
-message OakRestrictedKernelEndorsement {
-  TransparentReleaseEndorsement oak_restricted_kernel = 1;
+message SystemLayerEndorsements {
+  TransparentReleaseEndorsement system_image = 1;
 }
 
-message CborFieldsEndorsement {
-  // Map from an OpenDICE binary label to a Transparent Release endorsement.
-  map<int32, TransparentReleaseEndorsement> endorsements = 1;
+message ApplicationLayerEndorsements {
+  TransparentReleaseEndorsement binary = 1;
+  TransparentReleaseEndorsement configuration = 2;
 }
 
-message LayerEndorsements {
-  oneof layer_type {
-    LinuxKernelEndorsement linux_kernel = 1;
+message ContainerLayerEndorsements {
+  TransparentReleaseEndorsement binary = 1;
+  TransparentReleaseEndorsement configuration = 2;
+}
 
-    OakRestrictedKernelEndorsement oak_restricted_kernel = 2;
+message OakRestrictedKernelEndorsements {
+  RootLayerEndorsements root_layer = 1;
+  KernelLayerEndorsements kernel_layer = 2;
+  ApplicationLayerEndorsements application_layer = 3;
+}
 
-    TransparentReleaseEndorsement generic_binary = 3;
+message OakContainersEndorsements {
+  RootLayerEndorsements root_layer = 1;
+  KernelLayerEndorsements kernel_layer = 2;
+  SystemLayerEndorsements system_layer = 3;
+  ContainerLayerEndorsements container_layer = 4;
+}
 
-    // Ideally, we would only use the concrete endorsements and make this
-    // obsolete. But it should remain here so no one is blocked.
-    CborFieldsEndorsement cbor_fields = 4;
-  }
-};
+message CBEndorsements {
+  RootLayerEndorsements root_layer = 1;
+}
 
 // Endorsement contains statements that some entity (e.g. a hardware provider)
 // vouches for the integrity of claims about the TEE or the software running
@@ -79,6 +96,9 @@ message LayerEndorsements {
 // The name is chosen to match the RATS terminology:
 // <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
 message Endorsements {
-  RootLayerEndorsements root_layer = 1;
-  repeated LayerEndorsements layers = 2;
+  oneof type {
+    OakRestrictedKernelEndorsements oak_restricted_kernel = 1;
+    OakContainersEndorsements oak_containers = 2;
+    CBEndorsements cb = 3;
+  }
 };

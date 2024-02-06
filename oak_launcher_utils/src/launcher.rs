@@ -14,21 +14,26 @@
 // limitations under the License.
 //
 
-use crate::channel::{Connector, ConnectorHandle};
-use anyhow::{Context, Result};
-use async_trait::async_trait;
-use clap::Parser;
-use command_fds::tokio::CommandFdAsyncExt;
-use log::info;
-use oak_channel::Write;
 use std::{
     fs,
     io::{BufRead, BufReader},
     net::Shutdown,
-    os::unix::{io::AsRawFd, net, net::UnixStream},
+    os::{
+        fd::AsRawFd,
+        unix::{net, net::UnixStream},
+    },
     path::PathBuf,
     process::Stdio,
 };
+
+use anyhow::{Context, Result};
+use async_trait::async_trait;
+use clap::Parser;
+use command_fds::CommandFdExt;
+use log::info;
+use oak_channel::Write;
+
+use crate::channel::{Connector, ConnectorHandle};
 
 const PAGE_SIZE: usize = 4096;
 
@@ -40,12 +45,16 @@ pub struct Params {
     pub vmm_binary: PathBuf,
 
     /// Path to the enclave binary to load into the VM.
-    #[arg(long, value_parser = path_exists)]
-    pub enclave_binary: PathBuf,
+    #[arg(long, value_parser = path_exists, conflicts_with_all = &["kernel", "initrd"])]
+    pub enclave_binary: Option<PathBuf>,
+
+    /// Path to the enclave binary to load into the VM.
+    #[arg(long, value_parser = path_exists, conflicts_with_all = &["enclave_binary"])]
+    pub kernel: Option<PathBuf>,
 
     /// Path to the Oak Functions application binary to be loaded into the enclave.
     #[arg(long, value_parser = path_exists)]
-    pub app_binary: PathBuf,
+    pub app_binary: Option<PathBuf>,
 
     /// Path to the BIOS image to use.
     #[arg(long, value_parser = path_exists)]
@@ -59,6 +68,10 @@ pub struct Params {
     /// Gigabyte).
     #[arg(long)]
     pub memory_size: Option<String>,
+
+    /// Path to the initrd image to use.
+    #[arg(long, value_parser = path_exists, requires_all = &["kernel"])]
+    pub initrd: Option<PathBuf>,
 }
 
 /// Checks if file with a given path exists.
@@ -81,25 +94,36 @@ pub struct Instance {
 impl Instance {
     /// Starts virtualized instance with given parameters and stream to write console logs to.
     pub fn start(params: Params, guest_console: net::UnixStream) -> Result<Self> {
-        let app_bytes = fs::read(&params.app_binary).with_context(|| {
-            format!(
-                "couldn't read application binary {}",
-                &params.app_binary.display()
-            )
-        })?;
-        log::info!(
-            "read application binary from disk {} ({} bytes)",
-            &params.app_binary.display(),
-            app_bytes.len()
-        );
+        let app_bytes = if let Some(app_binary) = params.app_binary {
+            let bytes = fs::read(&app_binary).with_context(|| {
+                format!("couldn't read application binary {}", app_binary.display())
+            })?;
+            log::info!(
+                "read application binary from disk {} ({} bytes)",
+                app_binary.display(),
+                bytes.len()
+            );
+            Some(bytes)
+        } else {
+            None
+        };
 
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
         let (guest_socket, mut host_socket) = net::UnixStream::pair()?;
 
+        // Clone the console stream so we can use it in the child process and also return it from
+        // this method.
+        let guest_console_clone = guest_console.try_clone().unwrap();
+
+        // Extract the raw file descriptor numbers from the streams before passing them to the child
+        // process, since that takes ownership of them.
+        let guest_console_fd = guest_console.as_raw_fd();
+        let guest_socket_fd = guest_socket.as_raw_fd();
+
         cmd.stderr(Stdio::inherit());
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::inherit());
-        cmd.preserved_fds(vec![guest_console.as_raw_fd(), guest_socket.as_raw_fd()]);
+        cmd.preserved_fds(vec![guest_console.into(), guest_socket.into()]);
 
         // Construct the command-line arguments for `qemu`.
         cmd.arg("-enable-kvm");
@@ -121,22 +145,17 @@ impl Instance {
         // Route first serial port to console.
         cmd.args([
             "-chardev",
-            format!("socket,id=consock,fd={}", guest_console.as_raw_fd()).as_str(),
+            format!("socket,id=consock,fd={guest_console_fd}").as_str(),
         ]);
         cmd.args(["-serial", "chardev:consock"]);
         // Add the virtio device.
         cmd.args([
             "-chardev",
-            format!("socket,id=commsock,fd={}", guest_socket.as_raw_fd()).as_str(),
+            format!("socket,id=commsock,fd={guest_socket_fd}").as_str(),
         ]);
         cmd.args(["-device", "virtio-serial-device,max_ports=1"]);
         cmd.args(["-device", "virtconsole,chardev=commsock"]);
-        // Load the kernel ELF via the loader device.
-        cmd.args([
-            "-device",
-            format!("loader,file={}", params.enclave_binary.display()).as_str(),
-        ]);
-        // And yes, use stage0 as the BIOS.
+        // Use stage0 as the BIOS.
         cmd.args([
             "-bios",
             params
@@ -146,32 +165,55 @@ impl Instance {
                 .unwrap()
                 .as_str(),
         ]);
+        if let Some(enclave_binary) = params.enclave_binary {
+            // Load the kernel ELF via the loader device.
+            cmd.args([
+                "-device",
+                format!("loader,file={}", enclave_binary.display()).as_str(),
+            ]);
+        }
+        if let Some(kernel) = params.kernel {
+            // stage0 accoutrements: kernel that's compatible with the linux boot protocol
+            cmd.args([
+                "-kernel",
+                kernel.into_os_string().into_string().unwrap().as_str(),
+            ]);
+        }
 
         if let Some(gdb_port) = params.gdb {
             // Listen for a gdb connection on the provided port and wait for debugger before booting
-            cmd.args(["-gdb", format!("tcp::{}", gdb_port).as_str()]);
+            cmd.args(["-gdb", format!("tcp::{gdb_port}").as_str()]);
             cmd.arg("-S");
+        }
+
+        if let Some(initrd) = params.initrd {
+            cmd.args([
+                "-initrd",
+                initrd.into_os_string().into_string().unwrap().as_str(),
+            ]);
         }
 
         info!("executing: {:?}", cmd);
 
         let instance = cmd.spawn()?;
 
-        // Loading the application binary needs to happen before we start using microrpc over the
-        // channel.
-        host_socket
-            .write_all(&(app_bytes.len() as u32).to_le_bytes())
-            .expect("failed to send application binary length to enclave");
+        if let Some(app_bytes) = app_bytes {
+            // Loading the application binary needs to happen before we start using microrpc over
+            // the channel.
+            host_socket
+                .write_all(&(app_bytes.len() as u32).to_le_bytes())
+                .expect("failed to send application binary length to enclave");
 
-        // The kernel expects data to be transmitted in chunks of one page.
-        let mut chunks = app_bytes.array_chunks::<PAGE_SIZE>();
-        for chunk in chunks.by_ref() {
-            Self::write_chunk(&mut host_socket, chunk)?;
+            // The kernel expects data to be transmitted in chunks of one page.
+            let mut chunks = app_bytes.array_chunks::<PAGE_SIZE>();
+            for chunk in chunks.by_ref() {
+                Self::write_chunk(&mut host_socket, chunk)?;
+            }
+            Self::write_chunk(&mut host_socket, chunks.remainder())?;
         }
-        Self::write_chunk(&mut host_socket, chunks.remainder())?;
 
         Ok(Self {
-            guest_console,
+            guest_console: guest_console_clone,
             host_socket,
             instance,
         })

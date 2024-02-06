@@ -16,13 +16,17 @@
 
 #include "cc/crypto/client_encryptor.h"
 
+#include <cstdint>
 #include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "absl/status/statusor.h"
 #include "cc/crypto/common.h"
 #include "cc/crypto/hpke/sender_context.h"
-#include "oak_crypto/proto/v1/crypto.pb.h"
+#include "cc/crypto/hpke/utils.h"
+#include "proto/crypto/crypto.pb.h"
 
 namespace oak::crypto {
 
@@ -44,13 +48,20 @@ absl::StatusOr<std::unique_ptr<ClientEncryptor>> ClientEncryptor::Create(
 absl::StatusOr<EncryptedRequest> ClientEncryptor::Encrypt(absl::string_view plaintext,
                                                           absl::string_view associated_data) {
   // Encrypt request.
-  absl::StatusOr<std::string> ciphertext = sender_context_->Seal(plaintext, associated_data);
+  absl::StatusOr<const std::vector<uint8_t>> nonce = GenerateRandomNonce();
+  if (!nonce.ok()) {
+    return nonce.status();
+  }
+  absl::StatusOr<std::string> ciphertext =
+      sender_context_->Seal(*nonce, plaintext, associated_data);
   if (!ciphertext.ok()) {
     return ciphertext.status();
   }
 
   // Create request message.
   EncryptedRequest encrypted_request;
+  *encrypted_request.mutable_encrypted_message()->mutable_nonce() =
+      std::string(nonce->begin(), nonce->end());
   *encrypted_request.mutable_encrypted_message()->mutable_ciphertext() = *ciphertext;
   *encrypted_request.mutable_encrypted_message()->mutable_associated_data() = associated_data;
 
@@ -66,8 +77,10 @@ absl::StatusOr<EncryptedRequest> ClientEncryptor::Encrypt(absl::string_view plai
 
 absl::StatusOr<DecryptionResult> ClientEncryptor::Decrypt(EncryptedResponse encrypted_response) {
   // Decrypt response.
+  const std::vector<uint8_t> nonce(encrypted_response.encrypted_message().nonce().begin(),
+                                   encrypted_response.encrypted_message().nonce().end());
   absl::StatusOr<std::string> plaintext =
-      sender_context_->Open(encrypted_response.encrypted_message().ciphertext(),
+      sender_context_->Open(nonce, encrypted_response.encrypted_message().ciphertext(),
                             encrypted_response.encrypted_message().associated_data());
   if (!plaintext.ok()) {
     return plaintext.status();

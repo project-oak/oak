@@ -1,1 +1,0 @@
-# Quirk Echo Launcher

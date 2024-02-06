@@ -14,39 +14,44 @@
 // limitations under the License.
 //
 
-use crate::{
-    logger::StandaloneLogger,
-    lookup::{Data, LookupDataManager},
-    proto::oak::functions::{
-        AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
-        ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
-        InitializeRequest, LookupDataChunk,
-    },
-    wasm,
-};
 use alloc::{format, sync::Arc};
+
+use bytes::Bytes;
 use micro_rpc::{Status, Vec};
 use oak_functions_abi::Request;
 
+use crate::{
+    logger::StandaloneLogger,
+    lookup::LookupDataManager,
+    proto::oak::functions::{
+        AbortNextLookupDataResponse, Empty, ExtendNextLookupDataRequest,
+        ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
+        InitializeRequest, LookupDataChunk, ReserveRequest, ReserveResponse,
+    },
+    wasm, Observer,
+};
+
 pub struct OakFunctionsInstance {
-    lookup_data_manager: Arc<LookupDataManager<StandaloneLogger>>,
-    wasm_handler: wasm::WasmHandler<StandaloneLogger>,
+    lookup_data_manager: Arc<LookupDataManager>,
+    wasm_handler: wasm::WasmHandler,
 }
 
 impl OakFunctionsInstance {
     /// See [`crate::proto::oak::functions::OakFunctions::initialize`].
-    pub fn new(request: &InitializeRequest) -> Result<Self, micro_rpc::Status> {
+    pub fn new(
+        request: &InitializeRequest,
+        observer: Option<Arc<dyn Observer + Send + Sync>>,
+    ) -> Result<Self, micro_rpc::Status> {
         let lookup_data_manager =
-            Arc::new(LookupDataManager::new_empty(StandaloneLogger::default()));
+            Arc::new(LookupDataManager::new_empty(Arc::new(StandaloneLogger)));
         let wasm_handler =
-            wasm::new_wasm_handler(&request.wasm_module, lookup_data_manager.clone()).map_err(
-                |err| {
+            wasm::new_wasm_handler(&request.wasm_module, lookup_data_manager.clone(), observer)
+                .map_err(|err| {
                     micro_rpc::Status::new_with_message(
                         micro_rpc::StatusCode::Internal,
                         format!("couldn't initialize Wasm handler: {:?}", err),
                     )
-                },
-            )?;
+                })?;
         Ok(Self {
             lookup_data_manager,
             wasm_handler,
@@ -65,9 +70,20 @@ impl OakFunctionsInstance {
         request: ExtendNextLookupDataRequest,
     ) -> Result<ExtendNextLookupDataResponse, micro_rpc::Status> {
         self.lookup_data_manager
-            .extend_next_lookup_data(to_data(request.chunk));
+            .extend_next_lookup_data(to_data(request.chunk.ok_or(
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::InvalidArgument,
+                    "no chunk in extend request",
+                ),
+            )?));
         Ok(ExtendNextLookupDataResponse {})
     }
+
+    pub fn extend_lookup_data_chunk(&self, chunk: LookupDataChunk) {
+        self.lookup_data_manager
+            .extend_next_lookup_data(to_data(chunk))
+    }
+
     /// See [`crate::proto::oak::functions::OakFunctions::finish_next_lookup_data`].
     pub fn finish_next_lookup_data(
         &self,
@@ -84,14 +100,24 @@ impl OakFunctionsInstance {
         self.lookup_data_manager.abort_next_lookup_data();
         Ok(AbortNextLookupDataResponse {})
     }
+
+    pub fn reserve(&self, request: ReserveRequest) -> Result<ReserveResponse, Status> {
+        self.lookup_data_manager
+            .reserve(request.additional_entries)
+            .map(|()| ReserveResponse {})
+            .map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::ResourceExhausted,
+                    format!("failed to reserve memory: {:?}", err),
+                )
+            })
+    }
 }
 
 // Helper function to convert [`LookupDataChunk`] to [`Data`].
-fn to_data(chunk: Option<LookupDataChunk>) -> Data {
+fn to_data(chunk: LookupDataChunk) -> impl Iterator<Item = (Bytes, Bytes)> {
     chunk
-        .unwrap()
         .items
         .into_iter()
         .map(|entry| (entry.key, entry.value))
-        .collect()
 }

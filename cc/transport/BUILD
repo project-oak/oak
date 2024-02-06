@@ -23,8 +23,8 @@ cc_library(
     name = "transport",
     hdrs = ["transport.h"],
     deps = [
-        "//oak_crypto/proto/v1:crypto_cc_proto",
-        "//oak_remote_attestation/proto/v1:messages_cc_proto",
+        "//proto/crypto:crypto_cc_proto",
+        "//proto/session:messages_cc_proto",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
@@ -36,14 +36,31 @@ cc_library(
     hdrs = ["grpc_streaming_transport.h"],
     deps = [
         ":transport",
-        "//oak_crypto/proto/v1:crypto_cc_proto",
-        "//oak_remote_attestation/proto/v1:messages_cc_proto",
-        "//oak_remote_attestation/proto/v1:service_streaming_cc_grpc",
-        "//oak_remote_attestation/proto/v1:service_streaming_cc_proto",
+        "//proto/crypto:crypto_cc_proto",
+        "//proto/session:messages_cc_proto",
+        "//proto/session:service_streaming_cc_grpc",
+        "//proto/session:service_streaming_cc_proto",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/log",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "grpc_streaming_transport_test",
+    srcs = ["grpc_streaming_transport_test.cc"],
+    deps = [
+        ":grpc_streaming_transport",
+        "//proto/crypto:crypto_cc_proto",
+        "//proto/session:messages_cc_proto",
+        "//proto/session:service_streaming_cc_grpc",
+        "//proto/session:service_streaming_cc_proto",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/log",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/status",
+        "@com_google_googletest//:gtest_main",
     ],
 )

@@ -39,8 +39,8 @@ async fn main() -> Result<(), anyhow::Error> {
         lookup_data_path: args.functions_args.lookup_data,
         // Hard-coded because we are not sure whether we want to configure the update interval.
         update_interval: Some(std::time::Duration::from_secs(60 * 10)),
-        // Fix the maximum size of a chunk to the proto limit size of 2 GiB.
-        max_chunk_size: ByteUnit::Gibibyte(2),
+        // gRPC messages are limited to 4 MiB.
+        max_chunk_size: ByteUnit::Mebibyte(4),
     };
 
     let mut untrusted_app =
@@ -58,7 +58,7 @@ async fn main() -> Result<(), anyhow::Error> {
         })
         .unwrap();
 
-    let initialize_response = untrusted_app
+    let _ = untrusted_app
         .initialize_enclave(InitializeRequest {
             wasm_module: wasm_bytes,
             constant_response_size: args.functions_args.constant_response_size,
@@ -69,13 +69,25 @@ async fn main() -> Result<(), anyhow::Error> {
             anyhow::anyhow!("couldn't get encrypted response: {}", error)
         })?;
 
-    let public_key_info = initialize_response
-        .public_key_info
-        .as_ref()
-        .expect("no public key info returned");
+    let endorsed_evidence = untrusted_app
+        .launcher
+        .get_endorsed_evidence()
+        .await
+        .context("couldn't get endorsed evidence")?;
+    let evidence = endorsed_evidence
+        .evidence
+        .context("endorsed evidence message doesn't contain evidence")?;
+    let endorsements = endorsed_evidence
+        .endorsements
+        .context("endorsed evidence message doesn't contain endorsements")?;
+
+    // TODO(#4627): Remove deprecated attestation evidence.
+    #[allow(deprecated)]
+    let deprecated_evidence = endorsed_evidence.attestation_evidence.unwrap();
+
     log::info!(
         "obtained public key ({} bytes)",
-        public_key_info.public_key.len()
+        deprecated_evidence.encryption_public_key.len()
     );
 
     untrusted_app.setup_lookup_data(lookup_data_config).await?;
@@ -83,8 +95,10 @@ async fn main() -> Result<(), anyhow::Error> {
     let server_future = oak_functions_containers_launcher::server::new(
         SocketAddr::from((Ipv6Addr::UNSPECIFIED, args.functions_args.port)),
         untrusted_app.oak_functions_client.clone(),
-        public_key_info.public_key.clone(),
-        public_key_info.attestation.clone(),
+        evidence,
+        endorsements,
+        deprecated_evidence.encryption_public_key.clone(),
+        deprecated_evidence.attestation.clone(),
     );
 
     // Wait until something dies or we get a signal to terminate.

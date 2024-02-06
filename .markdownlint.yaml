@@ -23,3 +23,8 @@ MD033:
 #
 # https://github.com/DavidAnson/markdownlint/blob/master/doc/Rules.md#md034
 MD034: false
+
+# Images should have alternate text (alt text)
+#
+# https://github.com/DavidAnson/markdownlint/blob/master/doc/Rules.md#md045
+MD045: false

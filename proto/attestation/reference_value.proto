@@ -25,78 +25,154 @@ option go_package = "proto/oak/attestation/v1";
 option java_multiple_files = true;
 option java_package = "com.google.oak.attestation.v1";
 
-message ReferenceValues {
-  RootLayerReferenceValues root_layer = 1;   // Layer 0
-  repeated LayerReferenceValues layers = 2;  // Layers 1 through N.
+message SkipVerification {}
+
+// Verifies the transparency log entry, including signatures and the digest.
+message EndorsementReferenceValue {
+  // The endorser's public signing key for signature verification.
+  bytes endorser_public_key = 1;
+
+  // Rekor's public signing key for signature verification.
+  bytes rekor_public_key = 2;
+}
+
+message BinaryReferenceValue {
+  oneof type {
+    // Deliberately skips a verification step, rather than failing. For example:
+    //     root_layer { stage0 { skip {} } }
+    // will skip the verification, contrasting
+    //     root_layer { stage0 {} }
+    // which will make the verification fail.
+    SkipVerification skip = 1;
+
+    // Verifies the endorsement of the underlying binary.
+    EndorsementReferenceValue endorsement = 2;
+
+    // Explicitly verifies digests if the client has them.
+    Digests digests = 3;
+  }
+}
+
+// Reference value for a file including its digests.
+message FileReferenceValue {
+  // Allowable digests for the file.
+  Digests digests = 1;
+
+  // Absolute path to the file in question, or just the file name. Relative paths are
+  // not supported.
+  string path = 2;
+}
+
+// Verifies that a particular string is equal to at least one of the specified ones.
+// No checks are performed if this is empty.
+message StringReferenceValue {
+  repeated string values = 1;
 }
 
 message RootLayerReferenceValues {
   // Switches between AMD and Intel based on TeePlatform value.
-  VerifyAmdSevAttestationReport amd_sev_attestation_report = 1;
-  VerifyIntelTdxAttestationReport intel_tdx_attestation_report = 2;
+  AmdSevReferenceValues amd_sev = 1;
+  IntelTdxReferenceValues intel_tdx = 2;
 }
 
-message VerifyAmdSevAttestationReport {
+message AmdSevReferenceValues {
   bytes amd_root_public_key = 1;
 
   // TBD: Add conditions on all kinds of fields contained in the
   // attestation report.
-  string firmware_version = 2;
+  StringReferenceValue firmware_version = 2;
 
   // If true, will skip the check that the TEE is not in debug mode.
   bool allow_debug = 3;
 
-  optional VerifyLogEntry stage0_binary = 4;
+  // Verifies the stage0 binary implicitly contained in the root layer.
+  BinaryReferenceValue stage0 = 4;
 }
 
-message VerifyIntelTdxAttestationReport {
+message IntelTdxReferenceValues {
   // TBD
 }
 
-// Verifies the log entry, including signatures and the digest.
-message VerifyLogEntry {
-  // The endorser’s public signing key for signature verification.
-  bytes endorser_public_key = 1;
-
-  // Rekor’s public signing key for signature verification.
-  bytes rekor_public_key = 2;
-}
-
 // Verifies that the field contains at least one of the given digests.
-// No checks are performed if this is empty.
-message Measurements {
+// No checks are performed if this is empty. A match in at least one
+// digest is considered a success.
+message Digests {
   repeated RawDigest digests = 1;
 }
 
-message VerifyLinuxKernel {
-  // Each field is in a 1:1 correspondence to a CBOR key.
-  optional VerifyLogEntry kernel_binary = 1;
-  optional VerifyLogEntry kernel_cmd_line = 2;
-  optional VerifyLogEntry acpi = 3;
+// Reference values of the kernel layer, as measured by stage0.
+message KernelLayerReferenceValues {
+  // Verifies the kernel binary based on endorsement.
+  BinaryReferenceValue kernel_image = 1;
+
+  // Verifies the command line by which the kernel was built. The command
+  // line is treated as a binary blob, as if it were a binary.
+  BinaryReferenceValue kernel_cmd_line = 2;
+
+  // One part of the kernel is modified by the system after loading. Verifies
+  // that part after these modifications.
+  BinaryReferenceValue kernel_setup_data = 3;
+
+  BinaryReferenceValue init_ram_fs = 4;
+
+  BinaryReferenceValue memory_map = 5;
+
+  BinaryReferenceValue acpi = 6;
 }
 
-message VerifyOakRestrictedKernel {
-  // TBD, but similar to Linux kernel
+message SystemLayerReferenceValues {
+  // Verifies the system image binary based on endorsement.
+  BinaryReferenceValue system_image = 1;
 }
 
-// Alternatively, verify the contents of the map explicitly. Checks that the
-// specified entries are contained in the endorsement (subset). Additional
-// fields stated in the endorsement are ignored. Ideally this would never be
-// used if we manage to provide oneof members for all practical layer use
-// cases.
-message VerifyCborFields {
-  map<int32, Measurements> cbor_fields = 1;
+// Represents an application running under Oak Restricted Kernel.
+message ApplicationLayerReferenceValues {
+  // Verifies the application binary based on endorsement.
+  BinaryReferenceValue binary = 1;
+
+  // Verifies configuration with respect to the application binary.
+  BinaryReferenceValue configuration = 2;
 }
 
-// Verifies certificate contents for layers 1 through N.
-message LayerReferenceValues {
-  oneof layer_type {
-    VerifyLinuxKernel linux_kernel = 1;
+message ContainerLayerReferenceValues {
+  // Verifies the container binary based on endorsement.
+  BinaryReferenceValue binary = 1;
 
-    VerifyOakRestrictedKernel oak_restricted_kernel = 2;
+  // Verifies configuration with respect to the container binary.
+  BinaryReferenceValue configuration = 2;
+}
 
-    VerifyLogEntry generic_binary = 3;
+message OakRestrictedKernelReferenceValues {
+  RootLayerReferenceValues root_layer = 1;
+  KernelLayerReferenceValues kernel_layer = 2;
+  ApplicationLayerReferenceValues application_layer = 3;
+}
 
-    VerifyCborFields cbor_fields = 4;
+message OakContainersReferenceValues {
+  RootLayerReferenceValues root_layer = 1;
+  KernelLayerReferenceValues kernel_layer = 2;
+  SystemLayerReferenceValues system_layer = 3;
+  ContainerLayerReferenceValues container_layer = 4;
+}
+
+message CBLayerReferenceValues {
+  string layer_name = 1;
+  repeated FileReferenceValue files = 2;
+  StringReferenceValue config = 3;
+  StringReferenceValue command_line = 4;
+}
+
+message CBReferenceValues {
+  RootLayerReferenceValues root_layer = 1;
+
+  // Generic reference values starting from the second layer.
+  repeated CBLayerReferenceValues layers = 2;
+}
+
+message ReferenceValues {
+  oneof type {
+    OakRestrictedKernelReferenceValues oak_restricted_kernel = 1;
+    OakContainersReferenceValues oak_containers = 2;
+    CBReferenceValues cb = 3;
   }
 }

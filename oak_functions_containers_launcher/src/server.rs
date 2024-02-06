@@ -17,21 +17,27 @@
 // TODO(#4409): this duplicates `oak_functions_launcher/src/server.rs`. Refactor these to share
 // code.
 
-use crate::proto::oak::functions::{
-    oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient, InvokeRequest,
-};
+use std::{net::SocketAddr, pin::Pin};
+
 use futures::{Future, Stream, StreamExt};
 use oak_functions_launcher::proto::oak::session::v1::{
     request_wrapper, response_wrapper,
     streaming_session_server::{StreamingSession, StreamingSessionServer},
-    AttestationBundle, AttestationEndorsement, AttestationEvidence, GetPublicKeyResponse,
-    InvokeResponse, RequestWrapper, ResponseWrapper,
+    AttestationBundle, AttestationEndorsement, AttestationEvidence, EndorsedEvidence,
+    GetEndorsedEvidenceResponse, GetPublicKeyResponse, InvokeResponse, RequestWrapper,
+    ResponseWrapper,
 };
-use std::{net::SocketAddr, pin::Pin};
+use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
 use tonic::{transport::Server, Request, Response, Status, Streaming};
+
+use crate::proto::oak::functions::{
+    oak_functions_client::OakFunctionsClient as GrpcOakFunctionsClient, InvokeRequest,
+};
 
 pub struct SessionProxy {
     connector_handle: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    evidence: Evidence,
+    endorsements: Endorsements,
     encryption_public_key: Vec<u8>,
     attestation: Vec<u8>,
 }
@@ -57,12 +63,18 @@ impl StreamingSession for SessionProxy {
         };
         let attestation_endorsement = AttestationEndorsement {
             tee_certificates: vec![],
-            binary_attestation: None,
             application_data: None,
         };
+        #[allow(deprecated)]
         let attestation_bundle = AttestationBundle {
             attestation_evidence: Some(attestation_evidence),
             attestation_endorsement: Some(attestation_endorsement),
+            evidence: Some(self.evidence.clone()),
+            endorsements: Some(self.endorsements.clone()),
+        };
+        let endorsed_evidence = EndorsedEvidence {
+            evidence: Some(self.evidence.clone()),
+            endorsements: Some(self.endorsements.clone()),
         };
 
         let mut connector_handle = self.connector_handle.clone();
@@ -78,17 +90,20 @@ impl StreamingSession for SessionProxy {
 
                 let response = match request {
                     request_wrapper::Request::GetPublicKeyRequest(_) => {
-
                         response_wrapper::Response::GetPublicKeyResponse(GetPublicKeyResponse {
                             attestation_bundle: Some(attestation_bundle.clone()),
                         })
                     }
+                    request_wrapper::Request::GetEndorsedEvidenceRequest(_) => {
+                        response_wrapper::Response::GetEndorsedEvidenceResponse(GetEndorsedEvidenceResponse {
+                            endorsed_evidence: Some(endorsed_evidence.clone()),
+                        })
+                    }
                     request_wrapper::Request::InvokeRequest(invoke_request) => {
+                        #[allow(clippy::needless_update)]
                         let enclave_invoke_request = InvokeRequest {
-                            // TODO(#4037): Remove once explicit protos are used end-to-end.
-                            body: invoke_request.encrypted_body,
-                            // TODO(#4037): Use explicit crypto protos.
-                            encrypted_request: None,
+                            encrypted_request: invoke_request.encrypted_request,
+                            ..Default::default()
                         };
                         let enclave_invoke_response = connector_handle
                             .handle_user_request(enclave_invoke_request)
@@ -96,11 +111,10 @@ impl StreamingSession for SessionProxy {
                             .map_err(|err| tonic::Status::internal(format!("error handling client request: {:?}", err)))?
                             .into_inner();
 
+                        #[allow(clippy::needless_update)]
                         response_wrapper::Response::InvokeResponse(InvokeResponse {
-                            // TODO(#4037): Remove once explicit protos are used end-to-end.
-                            encrypted_body: enclave_invoke_response.body,
-                            // TODO(#4037): Use explicit crypto protos.
-                            encrypted_response: None,
+                            encrypted_response: enclave_invoke_response.encrypted_response,
+                            ..Default::default()
                         })
                     }
                 };
@@ -119,11 +133,15 @@ impl StreamingSession for SessionProxy {
 pub fn new(
     addr: SocketAddr,
     connector_handle: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
+    evidence: Evidence,
+    endorsements: Endorsements,
     encryption_public_key: Vec<u8>,
     attestation: Vec<u8>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
     let server_impl = SessionProxy {
         connector_handle,
+        evidence,
+        endorsements,
         encryption_public_key,
         attestation,
     };

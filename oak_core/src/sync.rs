@@ -19,7 +19,8 @@ use core::{
     mem::MaybeUninit,
     sync::atomic::{AtomicBool, Ordering},
 };
-use spinning_top::{const_spinlock, Spinlock};
+
+use spinning_top::Spinlock;
 
 /// A synchronised implementation of a cell that can be initialized only once.
 ///
@@ -35,7 +36,7 @@ impl<T> OnceCell<T> {
     pub const fn new() -> Self {
         Self {
             initialized: AtomicBool::new(false),
-            lock: const_spinlock(()),
+            lock: Spinlock::new(()),
             value: UnsafeCell::new(MaybeUninit::uninit()),
         }
     }

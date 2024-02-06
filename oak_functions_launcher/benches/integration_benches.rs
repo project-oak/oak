@@ -19,14 +19,15 @@
 
 extern crate test;
 
-use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedResponse};
+use std::path::PathBuf;
+
+use oak_crypto::encryptor::ClientEncryptor;
 use oak_functions_launcher::{
     proto::oak::functions::{InvokeRequest, OakFunctionsAsyncClient},
     LookupDataConfig,
 };
 use oak_launcher_utils::launcher;
 use prost::Message;
-use std::path::PathBuf;
 use test::Bencher;
 use ubyte::ByteUnit;
 use xtask::workspace_path;
@@ -62,15 +63,16 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
             .expect("Failed to build oak_functions_enclave_app");
 
     let params = launcher::Params {
-        enclave_binary: workspace_path(&[
+        enclave_binary: Some(workspace_path(&[
             "oak_restricted_kernel_bin",
             "target",
             "x86_64-unknown-none",
             "debug",
             "oak_restricted_kernel_bin",
-        ]),
+        ])),
+        kernel: None,
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
-        app_binary: oak_functions_enclave_app_path.into(),
+        app_binary: Some(oak_functions_enclave_app_path.into()),
         bios_binary: workspace_path(&[
             "stage0_bin",
             "target",
@@ -79,6 +81,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
             "oak_stage0.bin",
         ]),
         gdb: None,
+        initrd: None,
         memory_size: Some("256M".to_string()),
     };
     log::debug!("launcher params: {:?}", params);
@@ -102,6 +105,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         .expect("Failed to create launcher");
     log::info!("created launcher instance");
 
+    #[allow(deprecated)]
     let serialized_server_public_key = initialize_response
         .public_key_info
         .expect("initialize response doesn't have public key info")
@@ -114,11 +118,10 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
     let encrypted_request = client_encryptor
         .encrypt(&config.request, &[])
         .expect("could not encrypt request");
+    #[allow(clippy::needless_update)]
     let invoke_request = InvokeRequest {
-        // TODO(#4037): Remove once explicit protos are used end-to-end.
-        body: encrypted_request.encode_to_vec(),
-        // TODO(#4037): Use explicit crypto protos.
-        encrypted_request: None,
+        encrypted_request: Some(encrypted_request),
+        ..Default::default()
     };
 
     // Invoke the function once outside of the benchmark loop to make sure it's ready.
@@ -131,8 +134,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         assert!(response.is_ok());
 
         // Only check this outside of the benchmark loop.
-        let encrypted_response =
-            EncryptedResponse::decode(response.unwrap().body.as_ref()).unwrap();
+        let encrypted_response = response.unwrap().encrypted_response.unwrap();
         let (decrypted_response, _authenticated_data) = client_encryptor
             .decrypt(&encrypted_response)
             .expect("could not decrypt response");

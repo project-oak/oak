@@ -14,10 +14,11 @@ ciborium = { version = "*", default-features = false }
 clap = { version = "*", features = ["derive"] }
 coset = { version = "*", features = ["std"] }
 futures-util = "*"
+oak_attestation = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
-oak_remote_attestation = { workspace = true }
-nix = "*"
+oak_proto_rust = { workspace = true }
+nix = { version = "*", features = ["mman"] }
 p256 = { version = "*" }
 prost = { workspace = true }
 prost-types = "*"
@@ -38,3 +39,4 @@ tower = "*"
 x86_64 = "*"
 xz2 = "*"
 zerocopy = "*"
+zeroize = "*"

@@ -14,10 +14,8 @@
 // limitations under the License.
 //
 
-use crate::FRAME_ALLOCATOR;
-
-use super::{Mapper, PageTableFlags, Translator};
 use core::ops::DerefMut;
+
 use spinning_top::Spinlock;
 use x86_64::{
     structures::paging::{
@@ -30,6 +28,9 @@ use x86_64::{
     },
     PhysAddr, VirtAddr,
 };
+
+use super::{Mapper, PageTableFlags, Translator};
+use crate::FRAME_ALLOCATOR;
 
 #[derive(Clone, Copy)]
 pub enum MemoryEncryption {

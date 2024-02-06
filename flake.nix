@@ -35,7 +35,7 @@
               includeSystemImages = false;
             }).androidsdk;
           rustToolchain =
-            pkgs.rust-bin.nightly.latest.default.override {
+            pkgs.rust-bin.nightly."2023-11-15".default.override {
               extensions = [
                 "clippy"
                 "llvm-tools-preview"
@@ -152,6 +152,7 @@
             containers = with pkgs; mkShell {
               inputsFrom = [
                 base
+                bazelShell
                 rust
               ];
               packages = [
@@ -170,6 +171,31 @@
                 ncurses
                 netcat
                 umoci
+              ];
+            };
+            # Shell for container kernel image provenance workflow.
+            bzImageProvenance = with pkgs; mkShell {
+              inputsFrom = [
+                rust
+              ];
+              packages = [
+                bc
+                bison
+                curl
+                elfutils
+                flex
+                libelf
+              ];
+            };
+            # Shell for container stage 1 image provenance workflow.
+            stage1Provenance = with pkgs; mkShell {
+              inputsFrom = [
+                rust
+              ];
+              packages = [
+                cpio
+                glibc
+                glibc.static
               ];
             };
             # Shell for most CI steps (i.e. without contaniners support).

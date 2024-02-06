@@ -14,10 +14,6 @@
 // limitations under the License.
 //
 
-use crate::path_exists;
-use anyhow::Result;
-use clap::Parser;
-use command_fds::tokio::CommandFdAsyncExt;
 use std::{
     io::{BufRead, BufReader},
     net::Ipv4Addr,
@@ -25,6 +21,12 @@ use std::{
     path::PathBuf,
     process::Stdio,
 };
+
+use anyhow::Result;
+use clap::Parser;
+use command_fds::CommandFdExt;
+
+use crate::path_exists;
 
 /// Represents parameters used for launching VM instances.
 #[derive(Parser, Clone, Debug, PartialEq)]
@@ -65,19 +67,12 @@ pub struct Params {
 }
 
 impl Params {
-    pub fn default_for_test() -> Self {
+    pub fn default_for_root(root: &str) -> Self {
         let vmm_binary = which::which("qemu-system-x86_64").expect("could not find qemu path");
-        let stage0_binary = format!(
-            "{}stage0_bin/target/x86_64-unknown-none/release/stage0_bin",
-            env!("WORKSPACE_ROOT")
-        )
-        .into();
-        let kernel = format!(
-            "{}oak_containers_kernel/target/bzImage",
-            env!("WORKSPACE_ROOT")
-        )
-        .into();
-        let initrd = format!("{}/target/stage1.cpio", env!("WORKSPACE_ROOT")).into();
+        let stage0_binary =
+            format!("{root}stage0_bin/target/x86_64-unknown-none/release/stage0_bin",).into();
+        let kernel = format!("{root}oak_containers_kernel/target/bzImage",).into();
+        let initrd = format!("{root}/target/stage1.cpio").into();
         Self {
             vmm_binary,
             stage0_binary,
@@ -96,14 +91,24 @@ pub struct Qemu {
 }
 
 impl Qemu {
-    pub fn start(params: Params, launcher_service_port: u16, host_proxy_port: u16) -> Result<Self> {
+    pub fn start(
+        params: Params,
+        launcher_service_port: u16,
+        host_proxy_port: u16,
+        host_orchestrator_proxy_port: u16,
+    ) -> Result<Self> {
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
         let (guest_socket, host_socket) = UnixStream::pair()?;
         cmd.kill_on_drop(true);
         cmd.stderr(Stdio::inherit());
         cmd.stdin(Stdio::null());
         cmd.stdout(Stdio::inherit());
-        cmd.preserved_fds(vec![guest_socket.as_raw_fd()]);
+
+        // Extract the raw file descriptor numbers from the streams before passing them to the child
+        // process, since that takes ownership of them.
+        let guest_socket_fd = guest_socket.as_raw_fd();
+
+        cmd.preserved_fds(vec![guest_socket.into()]);
 
         // Construct the command-line arguments for `qemu`.
         cmd.arg("-enable-kvm");
@@ -128,12 +133,12 @@ impl Qemu {
         if let Some(port) = params.telnet_console {
             cmd.args([
                 "-serial",
-                format!("telnet:localhost:{},server", port).as_str(),
+                format!("telnet:localhost:{port},server").as_str(),
             ]);
         } else {
             cmd.args([
                 "-chardev",
-                format!("socket,id=consock,fd={}", guest_socket.as_raw_fd()).as_str(),
+                format!("socket,id=consock,fd={guest_socket_fd}").as_str(),
             ]);
             cmd.args(["-serial", "chardev:consock"]);
         }
@@ -141,6 +146,7 @@ impl Qemu {
         // `efi-virtio.rom` file, as we're not using EFI anyway.
         let vm_address = crate::VM_LOCAL_ADDRESS;
         let vm_port = crate::VM_LOCAL_PORT;
+        let vm_orchestrator_port = crate::VM_ORCHESTRATOR_LOCAL_PORT;
         let host_address = Ipv4Addr::LOCALHOST;
         cmd.args([
             "-netdev",
@@ -151,6 +157,7 @@ impl Qemu {
                     "guestfwd=tcp:10.0.2.100:8080-cmd:nc {host_address} {launcher_service_port}"
                 ),
                 &format!("hostfwd=tcp:{host_address}:{host_proxy_port}-{vm_address}:{vm_port}"),
+                &format!("hostfwd=tcp:{host_address}:{host_orchestrator_proxy_port}-{vm_address}:{vm_orchestrator_port}"),
             ]
             .join(",")
             .as_str(),

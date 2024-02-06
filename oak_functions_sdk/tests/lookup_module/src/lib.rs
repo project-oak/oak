@@ -16,10 +16,11 @@
 
 //! Oak Functions ABI test.
 
+use std::collections::HashMap;
+
 use anyhow::{anyhow, Context};
 use assert_matches::assert_matches;
 use maplit::hashmap;
-use std::collections::HashMap;
 
 type TestFn = fn(&str) -> ();
 

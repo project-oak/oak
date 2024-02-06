@@ -31,18 +31,12 @@ static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
         "oak_functions_launcher",
     ])
 });
-pub static QUIRK_ECHO_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
-    workspace_path(&[
-        "target",
-        "x86_64-unknown-linux-gnu",
-        "debug",
-        "quirk_echo_launcher",
-    ])
-});
+
+use std::path::{Path, PathBuf};
+
+use once_cell::sync::Lazy;
 
 use crate::{internal::*, workspace_path};
-use once_cell::sync::Lazy;
-use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct App {

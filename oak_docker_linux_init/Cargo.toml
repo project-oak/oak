@@ -11,6 +11,6 @@ license = "Apache-2.0"
 [dependencies]
 anyhow = "*"
 log = "*"
-nix = "*"
+nix = { version = "*", features = ["mount"] }
 simple_logger = "*"
 subprocess = "*"

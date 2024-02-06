@@ -15,11 +15,12 @@
 
 extern crate log;
 
+use anyhow::anyhow;
 use log::LevelFilter;
 use syslog::{BasicLogger, Facility, Formatter3164};
 
 /// Setup logging to syslog.
-pub fn setup() -> Result<(), Box<dyn std::error::Error>> {
+pub fn setup() -> anyhow::Result<()> {
     // Based on syslog's example of integrating with the log crate.
     // Ref: https://docs.rs/syslog/6.1.0/syslog/
 
@@ -31,11 +32,11 @@ pub fn setup() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let logger =
-        syslog::unix(formatter).map_err(|e| format!("impossible to connect to syslog: {:?}", e))?;
+        syslog::unix(formatter).map_err(|e| anyhow!("impossible to connect to syslog: {:?}", e))?;
 
     log::set_boxed_logger(Box::new(BasicLogger::new(logger)))
-        .map(|()| log::set_max_level(LevelFilter::Trace))
-        .map_err(|e| format!("failed to set logger: {:?}", e))?;
+        .map(|()| log::set_max_level(LevelFilter::Debug))
+        .map_err(|e| anyhow!("failed to set logger: {:?}", e))?;
 
     Ok(())
 }

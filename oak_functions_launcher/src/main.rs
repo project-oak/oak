@@ -18,9 +18,13 @@
 #![feature(result_flattening)]
 #![feature(array_chunks)]
 
+use std::net::{Ipv6Addr, SocketAddr};
+
 use clap::Parser;
 use oak_functions_launcher::LookupDataConfig;
-use std::net::{Ipv6Addr, SocketAddr};
+use oak_proto_rust::oak::attestation::v1::{
+    endorsements, Endorsements, OakRestrictedKernelEndorsements,
+};
 use tokio::signal;
 use ubyte::ByteUnit;
 
@@ -57,6 +61,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .await?;
 
+    let evidence = initialize_response
+        .evidence
+        .expect("no evidence provided in the initialize response");
+
+    // Initialize attestation endorsements.
+    // TODO(#4074): Add layer endorsements.
+    let oak_restricted_kernel_endorsements = OakRestrictedKernelEndorsements {
+        root_layer: None,
+        kernel_layer: None,
+        application_layer: None,
+    };
+    let endorsements = Endorsements {
+        r#type: Some(endorsements::Type::OakRestrictedKernel(
+            oak_restricted_kernel_endorsements,
+        )),
+    };
+
+    #[allow(deprecated)]
     let public_key_info = initialize_response
         .public_key_info
         .expect("no public key info returned");
@@ -68,6 +90,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let server_future = oak_functions_launcher::server::new(
         SocketAddr::from((Ipv6Addr::UNSPECIFIED, cli.functions_params.port)),
         connector_handle,
+        evidence,
+        endorsements,
         public_key_info.public_key,
         public_key_info.attestation,
     );

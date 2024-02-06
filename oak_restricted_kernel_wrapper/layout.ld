@@ -17,9 +17,9 @@
 ENTRY(_wrapper_entry)
 
 SECTIONS {
-    /* 
+    /*
      * The setup-data for the kernel. In the Linux kernel this also includes
-     * the real-mode code, which we don't support. 
+     * the real-mode code, which we don't support.
      *
      * This section will be split off by the hypervisor and loaded separately.
      * It acts as the initial values for the setup_data field in the boot
@@ -32,7 +32,7 @@ SECTIONS {
         FILL(0x00)
         /* Padding until the setup struct starts. */
         . += 0x1F1;
-        /* Number of 512B sectors -1. Setup section is 4KiB. */ 
+        /* Number of 512B sectors -1. Setup section is 4KiB. */
         BYTE(0x07)
         /* Padding for ignored fields. */
         . += 0xC;
@@ -50,7 +50,18 @@ SECTIONS {
         /* Boot protocol version (2.15) */
         SHORT(0x020F)
         /*
-         * We ignore all further fields since the relevant ones will be
+         * We ignore most further fields since the relevant ones will be
+         * populated by Stage 0.
+         */
+        . += 0x2E;
+        /*
+         * Set xloadflags to indicate that kernel/boot_params/cmdline/ramdisk
+         * can be above 4G. This provides plenty of space for the VMM to load
+         * an initial ramdisk.
+         */
+        SHORT(0x02)
+        /*
+         * We again ignore all subsequent fields since the relevant ones will be
          * populated by Stage 0.
          */
     } : setupdata

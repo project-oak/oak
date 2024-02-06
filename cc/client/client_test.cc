@@ -16,25 +16,26 @@
 
 #include "cc/client/client.h"
 
+#include <cstdint>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "cc/crypto/encryption_key_provider.h"
+#include "cc/crypto/encryption_key.h"
 #include "cc/crypto/hpke/recipient_context.h"
 #include "cc/crypto/server_encryptor.h"
 #include "cc/remote_attestation/insecure_attestation_verifier.h"
 #include "cc/transport/transport.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "oak_remote_attestation/proto/v1/messages.pb.h"
+#include "proto/session/messages.pb.h"
 
 namespace oak::client {
 namespace {
 
 using ::oak::crypto::EncryptionKeyProvider;
-using ::oak::crypto::KeyPair;
 using ::oak::crypto::ServerEncryptor;
 using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
@@ -54,25 +55,24 @@ constexpr uint8_t kTestSessionSize = 8;
 class TestTransport : public TransportWrapper {
  public:
   static absl::StatusOr<std::unique_ptr<TestTransport>> Create() {
-    auto encryption_key_provider = EncryptionKeyProvider::Create();
-    if (!encryption_key_provider.ok()) {
-      return encryption_key_provider.status();
+    auto encryption_key = EncryptionKeyProvider::Create();
+    if (!encryption_key.ok()) {
+      return encryption_key.status();
     }
-    return std::make_unique<TestTransport>(*encryption_key_provider);
+    return std::make_unique<TestTransport>(*encryption_key);
   }
 
-  explicit TestTransport(EncryptionKeyProvider encryption_key_provider)
-      : encryption_key_provider_(encryption_key_provider) {}
+  explicit TestTransport(EncryptionKeyProvider encryption_key) : encryption_key_(encryption_key) {}
 
   absl::StatusOr<AttestationBundle> GetEvidence() override {
     AttestationBundle endorsed_evidence;
     endorsed_evidence.mutable_attestation_evidence()->set_encryption_public_key(
-        encryption_key_provider_.GetSerializedPublicKey());
+        encryption_key_.GetSerializedPublicKey());
     return endorsed_evidence;
   }
 
   absl::StatusOr<EncryptedResponse> Invoke(const EncryptedRequest& encrypted_request) override {
-    ServerEncryptor server_encryptor = ServerEncryptor(encryption_key_provider_);
+    ServerEncryptor server_encryptor = ServerEncryptor(encryption_key_);
     auto decrypted_request = server_encryptor.Decrypt(encrypted_request);
     if (!decrypted_request.ok()) {
       return decrypted_request.status();
@@ -88,7 +88,7 @@ class TestTransport : public TransportWrapper {
   }
 
  private:
-  EncryptionKeyProvider encryption_key_provider_;
+  EncryptionKeyProvider encryption_key_;
 };
 
 // Client can process attestation evidence and invoke the backend.

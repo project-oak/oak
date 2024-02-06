@@ -30,8 +30,10 @@ public final class SenderContext implements AutoCloseable {
     this.nativePtr = nativePtr;
   }
 
-  private native byte[] nativeSeal(final byte[] plaintext, final byte[] associatedData);
-  private native byte[] nativeOpen(final byte[] ciphertext, final byte[] associatedData);
+  private native byte[] nativeSeal(
+      final byte[] nonce, final byte[] plaintext, final byte[] associatedData);
+  private native byte[] nativeOpen(
+      final byte[] nonce, final byte[] ciphertext, final byte[] associatedData);
   private native void nativeDestroy();
 
   public final byte[] getSerializedEncapsulatedPublicKey() {
@@ -42,8 +44,9 @@ public final class SenderContext implements AutoCloseable {
    * Encrypts message with associated data using AEAD.
    * <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
    */
-  public final Result<byte[], Exception> seal(final byte[] plaintext, final byte[] associatedData) {
-    byte[] nativeResult = nativeSeal(plaintext, associatedData);
+  public final Result<byte[], Exception> seal(
+      final byte[] nonce, final byte[] plaintext, final byte[] associatedData) {
+    byte[] nativeResult = nativeSeal(nonce, plaintext, associatedData);
     if (nativeResult == null) {
       return Result.error(new Exception("SenderContext seal failed"));
     }
@@ -55,8 +58,8 @@ public final class SenderContext implements AutoCloseable {
    * communication. <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
    */
   public final Result<byte[], Exception> open(
-      final byte[] ciphertext, final byte[] associatedData) {
-    byte[] nativeResult = nativeOpen(ciphertext, associatedData);
+      final byte[] nonce, final byte[] ciphertext, final byte[] associatedData) {
+    byte[] nativeResult = nativeOpen(nonce, ciphertext, associatedData);
     if (nativeResult == null) {
       return Result.error(new Exception("SenderContext open failed"));
     }

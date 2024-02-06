@@ -14,12 +14,8 @@
 // limitations under the License.
 //
 
-use super::{WasmApi, WasmApiFactory};
-use crate::{
-    logger::{OakLogger, StandaloneLogger},
-    lookup::{format_bytes, LookupData, LookupDataManager},
-};
 use alloc::{boxed::Box, format, sync::Arc, vec::Vec};
+
 use log::Level;
 use oak_functions_sdk::proto::oak::functions::wasm::v1::{
     LogRequest, LogResponse, LookupDataRequest, LookupDataResponse, ReadRequestRequest,
@@ -28,14 +24,20 @@ use oak_functions_sdk::proto::oak::functions::wasm::v1::{
 };
 use spinning_top::Spinlock;
 
+use super::{WasmApi, WasmApiFactory};
+use crate::{
+    logger::{OakLogger, StandaloneLogger},
+    lookup::{format_bytes, limit, LookupData, LookupDataManager},
+};
+
 /// The main purpose of this factory is to allow creating a new instance of the
 /// [`StdWasmApiImpl`] for each incoming gRPC request, with an immutable snapshot of the
 /// current lookup data.
 pub struct StdWasmApiFactory {
-    pub lookup_data_manager: Arc<LookupDataManager<StandaloneLogger>>,
+    pub lookup_data_manager: Arc<LookupDataManager>,
 }
 
-impl WasmApiFactory<StandaloneLogger> for StdWasmApiFactory {
+impl WasmApiFactory for StdWasmApiFactory {
     fn create_wasm_api(
         &self,
         request: Vec<u8>,
@@ -43,7 +45,7 @@ impl WasmApiFactory<StandaloneLogger> for StdWasmApiFactory {
     ) -> Box<dyn WasmApi> {
         Box::new(StdWasmApiImpl {
             lookup_data: self.lookup_data_manager.create_lookup_data(),
-            logger: StandaloneLogger::default(),
+            logger: Arc::new(StandaloneLogger),
             request,
             response,
         })
@@ -56,8 +58,8 @@ impl WasmApiFactory<StandaloneLogger> for StdWasmApiFactory {
 /// future.
 #[derive(Clone)]
 pub struct StdWasmApiImpl {
-    lookup_data: LookupData<StandaloneLogger>,
-    logger: StandaloneLogger,
+    lookup_data: LookupData,
+    logger: Arc<dyn OakLogger>,
     /// Current request, as received from the client.
     request: Vec<u8>,
     /// Current response, as received from the Wasm module.
@@ -100,25 +102,25 @@ impl StdWasmApi for StdWasmApiImpl {
             .log_sensitive(Level::Debug, "invoked lookup_data");
         // The request is the key to lookup.
         let key = request.key;
-        let key_to_log = key.iter().take(512).cloned().collect::<Vec<_>>();
+        let key_to_log = limit(&key, 512);
         self.logger.log_sensitive(
             Level::Debug,
-            &format!("storage_get_item(): key: {}", format_bytes(&key_to_log)),
+            &format!("storage_get_item(): key: {}", format_bytes(key_to_log)),
         );
         let value = self.lookup_data.get(&key);
 
         // Log found value.
-        value.clone().map_or_else(
+        value.as_ref().map_or_else(
             || {
                 self.logger
                     .log_sensitive(Level::Debug, "storage_get_item(): value not found");
             },
             |value| {
                 // Truncate value for logging.
-                let value_to_log = value.into_iter().take(512).collect::<Vec<_>>();
+                let value_to_log = limit(value, 512);
                 self.logger.log_sensitive(
                     Level::Debug,
-                    &format!("storage_get_item(): value: {}", format_bytes(&value_to_log)),
+                    &format!("storage_get_item(): value: {}", format_bytes(value_to_log)),
                 );
             },
         );

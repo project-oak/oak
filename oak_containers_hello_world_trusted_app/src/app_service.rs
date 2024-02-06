@@ -13,30 +13,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{
-    orchestrator_client::OrchestratorClient,
-    proto::oak::containers::example::{
-        trusted_application_server::{TrustedApplication, TrustedApplicationServer},
-        HelloRequest, HelloResponse,
-    },
-};
 use anyhow::anyhow;
-use oak_crypto::{encryptor::ServerEncryptor, hpke::RecipientContext};
+use oak_containers_sdk::InstanceEncryptionKeyHandle;
+use oak_crypto::encryptor::ServerEncryptor;
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
+
+use crate::proto::oak::containers::example::{
+    trusted_application_server::{TrustedApplication, TrustedApplicationServer},
+    HelloRequest, HelloResponse,
+};
 
 const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 struct TrustedApplicationImplementation {
-    orchestrator_client: OrchestratorClient,
     application_config: Vec<u8>,
+    encryption_key_handle: InstanceEncryptionKeyHandle,
 }
 
 impl TrustedApplicationImplementation {
-    pub fn new(orchestrator_client: OrchestratorClient, application_config: Vec<u8>) -> Self {
+    pub fn new(
+        application_config: Vec<u8>,
+        encryption_key_handle: InstanceEncryptionKeyHandle,
+    ) -> Self {
         Self {
-            orchestrator_client,
             application_config,
+            encryption_key_handle,
         }
     }
 }
@@ -52,35 +54,13 @@ impl TrustedApplication for TrustedApplicationImplementation {
             .encrypted_request
             .ok_or(tonic::Status::internal("encrypted request wasn't provided"))?;
 
-        // Initialize server encryptor.
-        let serialized_encapsulated_public_key = encrypted_request
-            .serialized_encapsulated_public_key
-            .as_ref()
-            .ok_or(tonic::Status::invalid_argument(
-                "initial request message doesn't contain encapsulated public key",
-            ))?;
-        let serialized_crypto_context = self
-            .orchestrator_client
-            .get_crypto_context(serialized_encapsulated_public_key)
-            .await
-            .map_err(|error| {
-                tonic::Status::internal(format!(
-                    "couldn't get crypto context from the Orchestrator: {:?}",
-                    error
-                ))
-            })?;
-        let crypto_context =
-            RecipientContext::deserialize(serialized_crypto_context).map_err(|error| {
-                tonic::Status::internal(format!("couldn't deserialize crypto context: {:?}", error))
-            })?;
-        let mut server_encryptor = ServerEncryptor::new(crypto_context);
-
         // Associated data is ignored.
-        let (name_bytes, _) = server_encryptor
-            .decrypt(&encrypted_request)
-            .map_err(|error| {
-                tonic::Status::internal(format!("couldn't decrypt request: {:?}", error))
-            })?;
+        let (server_encryptor, name_bytes, _) =
+            ServerEncryptor::decrypt_async(&encrypted_request, &self.encryption_key_handle)
+                .await
+                .map_err(|error| {
+                    tonic::Status::internal(format!("couldn't decrypt request: {:?}", error))
+                })?;
 
         let name = String::from_utf8(name_bytes)
             .map_err(|error| tonic::Status::internal(format!("name is not UTF-8: {:?}", error)))?;
@@ -99,12 +79,12 @@ impl TrustedApplication for TrustedApplicationImplementation {
 
 pub async fn create(
     listener: TcpListener,
-    orchestrator_client: OrchestratorClient,
     application_config: Vec<u8>,
+    encryption_key_handle: InstanceEncryptionKeyHandle,
 ) -> Result<(), anyhow::Error> {
     tonic::transport::Server::builder()
         .add_service(TrustedApplicationServer::new(
-            TrustedApplicationImplementation::new(orchestrator_client, application_config),
+            TrustedApplicationImplementation::new(application_config, encryption_key_handle),
         ))
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await

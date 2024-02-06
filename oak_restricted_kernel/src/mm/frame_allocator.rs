@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-use super::bitmap_frame_allocator::BitmapAllocator;
 use x86_64::{
     structures::paging::{
         frame::PhysFrameRange, FrameAllocator, FrameDeallocator, PageSize, PhysFrame, Size2MiB,
@@ -22,6 +21,8 @@ use x86_64::{
     },
     PhysAddr,
 };
+
+use super::bitmap_frame_allocator::BitmapAllocator;
 
 /// Allocator to track physical memory frames.
 ///
@@ -142,8 +143,9 @@ impl<const N: usize> FrameDeallocator<Size4KiB> for PhysicalMemoryAllocator<N> {
 mod tests {
     extern crate std;
 
-    use super::*;
     use x86_64::{structures::paging::PageSize, PhysAddr};
+
+    use super::*;
 
     fn create_frame(start: u64) -> PhysFrame<Size2MiB> {
         PhysFrame::from_start_address(PhysAddr::new(start)).unwrap()

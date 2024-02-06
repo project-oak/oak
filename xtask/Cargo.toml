@@ -16,7 +16,6 @@ clap = { version = "*", features = ["derive"] }
 clap_complete = "*"
 colored = "*"
 itertools = "*"
-maplit = "*"
 nix = "*"
 oak_functions_test_utils = { workspace = true }
 once_cell = "*"
@@ -30,6 +29,7 @@ tokio = { version = "*", features = [
   "fs",
   "io-util",
   "macros",
+  "parking_lot",
   "process",
   "rt-multi-thread",
   "signal",

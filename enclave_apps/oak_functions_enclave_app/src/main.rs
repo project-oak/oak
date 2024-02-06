@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,24 +21,13 @@
 extern crate alloc;
 
 use alloc::{boxed::Box, sync::Arc};
-use core::panic::PanicInfo;
-use log::info;
-use oak_core::samplestore::StaticSampleStore;
-use oak_remote_attestation::attester::EmptyAttestationReportGenerator;
-use oak_restricted_kernel_api::{FileDescriptorChannel, StderrLogger};
 
-static LOGGER: StderrLogger = StderrLogger {};
+use oak_restricted_kernel_sdk::{
+    entrypoint, start_blocking_server, utils::samplestore::StaticSampleStore, FileDescriptorChannel,
+};
 
-#[no_mangle]
-fn _start() -> ! {
-    log::set_logger(&LOGGER).unwrap();
-    log::set_max_level(log::LevelFilter::Debug);
-    oak_enclave_runtime_support::init();
-    main();
-}
-
+#[entrypoint]
 fn main() -> ! {
-    info!("In main!");
     #[cfg(feature = "deny_sensitive_logging")]
     {
         // Only log warnings and errors to reduce the risk of accidentally leaking execution
@@ -46,24 +35,22 @@ fn main() -> ! {
         log::set_max_level(log::LevelFilter::Warn);
     }
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
-    let service =
-        oak_functions_service::OakFunctionsService::new(Arc::new(EmptyAttestationReportGenerator));
-    let server = oak_functions_service::proto::oak::functions::OakFunctionsServer::new(service);
-    oak_channel::server::start_blocking_server(
+
+    let encryption_key_handle = oak_restricted_kernel_sdk::InstanceEncryptionKeyHandle::create()
+        .expect("couldn't encryption key");
+    let evidencer = oak_restricted_kernel_sdk::InstanceEvidenceProvider::create()
+        .expect("couldn't get evidence");
+    let service = oak_functions_enclave_service::OakFunctionsService::new(
+        evidencer,
+        Arc::new(encryption_key_handle),
+        None,
+    );
+    let server =
+        oak_functions_enclave_service::proto::oak::functions::OakFunctionsServer::new(service);
+    start_blocking_server(
         Box::<FileDescriptorChannel>::default(),
         server,
         &mut invocation_stats,
     )
     .expect("server encountered an unrecoverable error");
-}
-
-#[alloc_error_handler]
-fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
-    panic!("error allocating memory: {:#?}", layout);
-}
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    log::error!("PANIC: {}", info);
-    oak_restricted_kernel_api::syscall::exit(-1);
 }

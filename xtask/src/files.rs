@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-use crate::{diffs::all_affected_crates, internal::Scope};
 use std::{
     io::Read,
     path::{Path, PathBuf},
@@ -53,40 +52,12 @@ pub fn file_contains(path: &Path, pattern: &str) -> bool {
     }
 }
 
-pub fn example_toml_files(scope: &Scope) -> Box<dyn Iterator<Item = PathBuf>> {
-    all_affected_crates(scope)
-        .files
-        .map(affected_example_toml_filles)
-        .unwrap_or_else(|| Box::new(source_files().filter(|p| is_example_toml_file(p))))
-}
-
-fn affected_example_toml_filles(affected_crates: Vec<String>) -> Box<dyn Iterator<Item = PathBuf>> {
-    // Pattern for matching the path to a file belonging to an example. The pattern has a capturing
-    // group after `examples` to capture the name of the example.
-    let re = regex::Regex::new(r#"(.*)/examples/([^/]*)/(.*)"#).unwrap();
-
-    // Using the regular expression above, find paths to the root folders of all examples that are
-    // affected by recent changes.
-    let modified_examples = affected_crates.into_iter().filter_map(move |path| {
-        re.captures(&path)
-            .map(|caps| format!("{}/examples/{}", &caps[1], &caps[2]))
-    });
-
-    // Iterate through all `example.toml` files and choose and return the ones that belong to the
-    // affected examples
-    let example_toml_files = source_files().filter(|p| is_example_toml_file(p));
-    Box::new(example_toml_files.filter(move |path| {
-        modified_examples
-            .clone()
-            .any(|example_root| to_string(path.clone()).starts_with(&example_root))
-    }))
-}
-
 /// Return an iterator of all known Cargo Manifest files that define crates.
 pub fn crate_manifest_files() -> impl Iterator<Item = PathBuf> {
     source_files()
         .filter(|p| is_cargo_toml_file(p))
         .filter(|p| is_cargo_package_file(p))
+        .filter(|p| !p.ends_with("fuzz/Cargo.toml"))
 }
 
 /// Return an iterator of all known Cargo Manifest files that define workspaces.
@@ -205,11 +176,6 @@ fn is_cargo_package_file(path: &Path) -> bool {
     // alternative would be to actually parse the file as `toml` and figure out whether it has a
     // `package` section, but it seems overkill for now.
     file_contains(path, "[package]")
-}
-
-fn is_example_toml_file(path: &Path) -> bool {
-    let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-    filename == "example.toml"
 }
 
 fn is_ignored_entry(entry: &walkdir::DirEntry) -> bool {

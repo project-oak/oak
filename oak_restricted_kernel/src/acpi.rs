@@ -14,15 +14,16 @@
 // limitations under the License.
 //
 
-use acpi::{AcpiHandler, AcpiTables, AmlTable, PhysicalMapping};
 use alloc::{boxed::Box, string::String, vec::Vec};
+use core::ptr::NonNull;
+
+use acpi::{AcpiHandler, AcpiTables, AmlTable, PhysicalMapping};
 use aml::{
     resource::{resource_descriptor_list, MemoryRangeDescriptor, Resource},
     value::Args,
     AmlContext, AmlError, AmlName, AmlValue, LevelType, NamespaceLevel,
 };
 use anyhow::{anyhow, bail, Result};
-use core::ptr::NonNull;
 use oak_linux_boot_params::BootParams;
 use x86_64::PhysAddr;
 
@@ -314,7 +315,7 @@ impl Acpi {
         };
 
         // Parse the DSDT and all SSDTs.
-        if let Some(ref dsdt) = acpi.tables.dsdt {
+        if let Ok(ref dsdt) = acpi.tables.dsdt() {
             acpi.aml
                 .parse_table(dsdt.contents())
                 .map_err(|err| anyhow!("failed to parse ACPI DSDT: {:?}", err))?;
@@ -322,7 +323,7 @@ impl Acpi {
             bail!("no DSDT found in ACPI tables");
         }
 
-        for ssdt in &acpi.tables.ssdts {
+        for ssdt in acpi.tables.ssdts() {
             acpi.aml.parse_table(ssdt.contents()).map_err(|err| {
                 anyhow!(
                     "failed to parse ACPI SSDT at address {}: {:?}",

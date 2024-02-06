@@ -19,8 +19,10 @@ syntax = "proto3";
 package oak.containers;
 
 import "google/protobuf/empty.proto";
-import "oak_crypto/proto/v1/crypto.proto";
-import "oak_remote_attestation/proto/v1/messages.proto";
+import "proto/crypto/crypto.proto";
+import "proto/attestation/endorsement.proto";
+import "proto/attestation/evidence.proto";
+import "proto/session/messages.proto";
 
 // As images can be large (hundreds of megabytes), the launcher chunks up the response into smaller
 // pieces to respect proto/gRPC limits. The image needs to be reassembled in the stage1 or the
@@ -36,39 +38,8 @@ message GetApplicationConfigResponse {
 }
 
 message SendAttestationEvidenceRequest {
-  oak.session.v1.AttestationEvidence evidence = 1;
-}
-
-message GetAttestationEvidenceResponse {
-  oak.session.v1.AttestationEvidence evidence = 1;
-}
-
-message GetProvisionSecretsRequest {
-  // Endorsed evidence of the enclave that requests a new encryption key using Key Provisioning.
-  // TODO(#4074): Replace with `oak.attestation.v1.EndorsedEvidence` once DICE is implemented.
-  oak.session.v1.AttestationBundle endorsed_evidence = 1;
-}
-
-message GetProvisionSecretsResponse {
-  // Encryption private key that was encrypted with HPKE using the encryption public key provided
-  // in the endorsed evidence.
-  oak.crypto.v1.EncryptedRequest encrypted_encryption_key = 1;
-}
-
-message SendProvisionSecretsRequest {
-  // Enclave group encryption private key that was encrypted with HPKE using enclave's encryption
-  // key.
-  oak.crypto.v1.EncryptedRequest encrypted_encryption_key = 1;
-}
-
-message GetCryptoContextRequest {
-  // Ephemeral Diffie-Hellman client public key that is needed to derive a session key.
-  bytes serialized_encapsulated_public_key = 1;
-}
-
-message GetCryptoContextResponse {
-  // Session keys for decrypting client requests and encrypting enclave responses.
-  oak.crypto.v1.CryptoContext context = 1;
+  oak.session.v1.AttestationEvidence evidence = 1 [deprecated = true];
+  oak.attestation.v1.Evidence dice_evidence = 2;
 }
 
 // Defines the service exposed by the launcher, that can be invoked by the stage1 and the
@@ -98,15 +69,6 @@ service Launcher {
 }
 
 // Defines the service exposed by the orchestrator, that can be invoked by the application.
-service KeyProvisioning {
-  // Request provision secrets from for other enclaves as part of Key Provisioning.
-  rpc GetProvisionSecrets(GetProvisionSecretsRequest) returns (GetProvisionSecretsResponse) {}
-
-  // Send provision secrets to the enclave as part of Key Provisioning.
-  rpc SendProvisionSecrets(SendProvisionSecretsRequest) returns (google.protobuf.Empty) {}
-}
-
-// Defines the service exposed by the orchestrator, that can be invoked by the application.
 service Orchestrator {
   // Exposes the previously loaded trusted application config to the application,
   // which may choose to retrieve it.
@@ -115,11 +77,4 @@ service Orchestrator {
   // Notifies the orchestrator that the trusted app is ready to serve requests and listening on the
   // pre-arranged port (8080).
   rpc NotifyAppReady(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-
-  // Returns Attestation Evidence containing the Attestation Report with corresponding measurements.
-  rpc GetAttestationEvidence(google.protobuf.Empty) returns (GetAttestationEvidenceResponse) {}
-
-  // Returns crypto context for decrypting client requests and encrypting enclave responses.
-  // TODO(#3841): Store private key in the Orchestrator and generate session keys for each session.
-  rpc GetCryptoContext(GetCryptoContextRequest) returns (GetCryptoContextResponse) {}
 }

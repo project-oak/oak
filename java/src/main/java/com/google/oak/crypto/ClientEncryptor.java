@@ -82,24 +82,26 @@ public class ClientEncryptor implements AutoCloseable {
   public final Result<EncryptedRequest, Exception> encrypt(
       final byte[] plaintext, final byte[] associatedData) {
     // Encrypt request.
-    return senderContext.seal(plaintext, associatedData).map(ciphertext -> {
-      // Create request message.
-      EncryptedRequest.Builder encryptedRequestBuilder =
-          EncryptedRequest.newBuilder().setEncryptedMessage(
-              AeadEncryptedMessage.newBuilder()
-                  .setCiphertext(ByteString.copyFrom(ciphertext))
-                  .setAssociatedData(ByteString.copyFrom(associatedData))
-                  .build());
+    return Hpke.generateRandomNonce().andThen(
+        nonce -> senderContext.seal(nonce, plaintext, associatedData).map(ciphertext -> {
+          // Create request message.
+          EncryptedRequest.Builder encryptedRequestBuilder =
+              EncryptedRequest.newBuilder().setEncryptedMessage(
+                  AeadEncryptedMessage.newBuilder()
+                      .setNonce(ByteString.copyFrom(nonce))
+                      .setCiphertext(ByteString.copyFrom(ciphertext))
+                      .setAssociatedData(ByteString.copyFrom(associatedData))
+                      .build());
 
-      // Encapsulated public key is only sent in the initial request message of the session.
-      if (!serializedEncapsulatedPublicKeyHasBeenSent) {
-        encryptedRequestBuilder.setSerializedEncapsulatedPublicKey(
-            ByteString.copyFrom(senderContext.getSerializedEncapsulatedPublicKey()));
-        serializedEncapsulatedPublicKeyHasBeenSent = true;
-      }
+          // Encapsulated public key is only sent in the initial request message of the session.
+          if (!serializedEncapsulatedPublicKeyHasBeenSent) {
+            encryptedRequestBuilder.setSerializedEncapsulatedPublicKey(
+                ByteString.copyFrom(senderContext.getSerializedEncapsulatedPublicKey()));
+            serializedEncapsulatedPublicKeyHasBeenSent = true;
+          }
 
-      return encryptedRequestBuilder.build();
-    });
+          return encryptedRequestBuilder.build();
+        }));
   }
 
   /**
@@ -112,11 +114,12 @@ public class ClientEncryptor implements AutoCloseable {
   public final Result<DecryptionResult, Exception> decrypt(
       final EncryptedResponse encryptedResponse) {
     AeadEncryptedMessage aeadEncryptedMessage = encryptedResponse.getEncryptedMessage();
+    byte[] nonce = aeadEncryptedMessage.getNonce().toByteArray();
     byte[] ciphertext = aeadEncryptedMessage.getCiphertext().toByteArray();
     byte[] associatedData = aeadEncryptedMessage.getAssociatedData().toByteArray();
 
     // Decrypt response.
-    return senderContext.open(ciphertext, associatedData)
+    return senderContext.open(nonce, ciphertext, associatedData)
         .map(plaintext -> new DecryptionResult(plaintext, associatedData));
   }
 }

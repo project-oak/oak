@@ -13,7 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "cc/crypto/hpke/jni/jni_helper.h"
+
+#include <memory>
+#include <string>
+#include <vector>
 
 std::string convert_jbytearray_to_string(JNIEnv* env, jbyteArray arr) {
   int len = env->GetArrayLength(arr);

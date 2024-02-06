@@ -86,6 +86,21 @@ java_proto_library(
     deps = [":reference_value_proto"],
 )
 
+proto_library(
+    name = "verification_proto",
+    srcs = ["verification.proto"],
+)
+
+cc_proto_library(
+    name = "verification_cc_proto",
+    deps = [":verification_proto"],
+)
+
+java_proto_library(
+    name = "verification_java_proto",
+    deps = [":verification_proto"],
+)
+
 build_test(
     name = "build_test",
     targets = [
@@ -101,5 +116,8 @@ build_test(
         ":reference_value_proto",
         ":reference_value_cc_proto",
         ":reference_value_java_proto",
+        ":verification_proto",
+        ":verification_cc_proto",
+        ":verification_java_proto",
     ],
 )

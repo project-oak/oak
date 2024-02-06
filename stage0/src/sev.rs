@@ -14,19 +14,20 @@
 // limitations under the License.
 //
 
+use alloc::boxed::Box;
 use core::{
     alloc::{AllocError, Allocator, Layout},
     ops::{Deref, DerefMut},
     ptr::NonNull,
 };
 
-use crate::{sev_status, BootAllocator};
-use alloc::boxed::Box;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 pub use oak_sev_guest::ghcb::Ghcb;
 use oak_sev_guest::{
+    crypto::GuestMessageEncryptor,
     ghcb::GhcbProtocol,
+    guest::{GuestMessage, Message},
     instructions::{pvalidate, InstructionError, PageSize as SevPageSize, Validation},
     msr::{
         change_snp_page_state, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,
@@ -42,8 +43,15 @@ use x86_64::{
     },
     PhysAddr, VirtAddr,
 };
+use zerocopy::{AsBytes, FromBytes};
+use zeroize::Zeroize;
+
+use crate::{sev_status, BootAllocator};
 
 pub static GHCB_WRAPPER: OnceCell<Spinlock<GhcbProtocol<'static, Ghcb>>> = OnceCell::new();
+
+/// Cryptographic helper to encrypt and decrypt messages for the GHCB guest message protocol.
+static GUEST_MESSAGE_ENCRYPTOR: Spinlock<Option<GuestMessageEncryptor>> = Spinlock::new(None);
 
 /// Allocator that forces allocations to be 4K-aligned (and sized) and marks the pages as shared.
 ///
@@ -136,6 +144,12 @@ impl<T, A: Allocator> AsRef<T> for Shared<T, A> {
     }
 }
 
+impl<T, A: Allocator> AsMut<T> for Shared<T, A> {
+    fn as_mut(&mut self) -> &mut T {
+        &mut self.inner
+    }
+}
+
 pub fn init_ghcb(alloc: &'static BootAllocator) {
     let ghcb = Box::leak(Box::new_in(Ghcb::default(), alloc));
     let ghcb_addr = VirtAddr::from_ptr(ghcb);
@@ -178,8 +192,7 @@ pub fn share_page(page: Page<Size4KiB>) {
     {
         let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
         let pt = &mut page_tables.pt_0;
-        let idx = (page_start / Size4KiB::SIZE) as usize;
-        pt[idx].set_addr(
+        pt[page.p1_index()].set_addr(
             PhysAddr::new(page_start),
             PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
         );
@@ -196,11 +209,29 @@ pub fn share_page(page: Page<Size4KiB>) {
 
 /// Stops sharing a single 4KiB page with the hypervisor when running with AMD SEV-SNP enabled.
 pub fn unshare_page(page: Page<Size4KiB>) {
+    let page_start = page.start_address().as_u64();
+    // Only the first 2MiB is mapped as 4KiB pages, so make sure we fall in that range.
+    assert!(page_start < Size2MiB::SIZE);
     if sev_status().contains(SevStatus::SNP_ACTIVE) {
-        let page_start = page.start_address().as_u64();
         let request = SnpPageStateChangeRequest::new(page_start as usize, PageAssignment::Private)
             .expect("invalid address for page location");
         change_snp_page_state(request).expect("couldn't change SNP state for page");
+    }
+    // Mark the page as encrypted.
+    {
+        let mut page_tables = crate::paging::PAGE_TABLE_REFS.get().unwrap().lock();
+        let pt = &mut page_tables.pt_0;
+        pt[page.p1_index()].set_addr(
+            PhysAddr::new(page_start | crate::ENCRYPTED.get().unwrap_or(&0)),
+            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+        );
+    }
+    tlb::flush_all();
+    // We have to revalidate the page again after un-sharing it.
+    if let Err(err) = page.pvalidate() {
+        if err != InstructionError::ValidationStatusNotUpdated {
+            panic!("shared page revalidation failed");
+        }
     }
 }
 
@@ -467,8 +498,55 @@ pub fn validate_memory(e820_table: &[BootE820Entry], encrypted: u64) {
         }
         .expect("failed to validate memory");
     }
+
     page_tables.pd_0[1].set_unused();
     page_tables.pdpt[1].set_unused();
     tlb::flush_all();
     log::info!("SEV-SNP memory validation complete.");
+}
+
+/// Initializes the Guest Message encryptor using VMPCK0.
+pub fn init_guest_message_encryptor() -> Result<(), &'static str> {
+    // Safety: `SecretsPage` implements `FromBytes` which ensures that it has no requirements on the
+    // underlying bytes.
+    let key = &mut unsafe { crate::SEV_SECRETS.assume_init_mut() }.vmpck_0[..];
+    GUEST_MESSAGE_ENCRYPTOR
+        .lock()
+        .replace(GuestMessageEncryptor::new(key)?);
+    // Once the we have read VMPCK0 we wipe it so that later boot stages cannot request attestation
+    // reports or derived sealing keys for VMPL0. This stops later boot stages from creating
+    // counterfeit DICE chains.
+    key.zeroize();
+    Ok(())
+}
+
+/// Sends a request to the Secure Processor using the Guest Message Protocol.
+pub fn send_guest_message_request<
+    Request: AsBytes + FromBytes + Message,
+    Response: AsBytes + FromBytes + Message,
+>(
+    request: Request,
+) -> Result<Response, &'static str> {
+    let mut guard = GUEST_MESSAGE_ENCRYPTOR.lock();
+    let encryptor = guard
+        .as_mut()
+        .ok_or("guest message encryptor is not initialized")?;
+    let alloc = &crate::SHORT_TERM_ALLOC;
+    let mut request_message = Shared::new_in(GuestMessage::new(), alloc);
+    encryptor.encrypt_message(request, request_message.as_mut())?;
+    let response_message = Shared::new_in(GuestMessage::new(), alloc);
+
+    let request_address =
+        PhysAddr::new(VirtAddr::from_ptr(request_message.as_ref() as *const GuestMessage).as_u64());
+    let response_address = PhysAddr::new(
+        VirtAddr::from_ptr(response_message.as_ref() as *const GuestMessage).as_u64(),
+    );
+
+    GHCB_WRAPPER
+        .get()
+        .ok_or("GHCB not initialized")?
+        .lock()
+        .do_guest_message_request(request_address, response_address)?;
+    response_message.validate()?;
+    encryptor.decrypt_message::<Response>(response_message.as_ref())
 }

@@ -14,8 +14,9 @@
 // limitations under the License.
 //
 
-use crate::io_port_factory;
 use oak_sev_guest::io::{IoPortFactory, PortReader, PortWrapper, PortWriter};
+
+use crate::io_port_factory;
 
 const CMOS_INDEX_PORT: u16 = 0x0070;
 const CMOS_DATA_PORT: u16 = 0x0071;
