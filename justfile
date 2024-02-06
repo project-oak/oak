@@ -24,16 +24,19 @@ oak_restricted_kernel_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --bin=oak_restricted_kernel_bin
 
 oak_restricted_kernel_wrapper: oak_restricted_kernel_bin
-    env --chdir=oak_restricted_kernel_wrapper OAK_RESTRICTED_KERNEL_FILE_NAME=oak_restricted_kernel_bin cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin
+    env --chdir=oak_restricted_kernel_wrapper OAK_RESTRICTED_KERNEL_FILE_NAME=oak_restricted_kernel_bin cargo build --release
+    env --chdir=oak_restricted_kernel_wrapper rust-objcopy --output-target=binary target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin
 
 oak_restricted_kernel_simple_io_bin:
     env --chdir=oak_restricted_kernel_bin cargo build --release --no-default-features --features=simple_io_channel --bin=oak_restricted_kernel_simple_io_bin
 
 oak_restricted_kernel_simple_io_wrapper: oak_restricted_kernel_simple_io_bin
-    env --chdir=oak_restricted_kernel_wrapper OAK_RESTRICTED_KERNEL_FILE_NAME=oak_restricted_kernel_simple_io_bin cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin
+    env --chdir=oak_restricted_kernel_wrapper OAK_RESTRICTED_KERNEL_FILE_NAME=oak_restricted_kernel_simple_io_bin cargo build --release
+    env --chdir=oak_restricted_kernel_wrapper rust-objcopy --output-target=binary target/x86_64-unknown-none/release/oak_restricted_kernel_simple_io_wrapper_bin
 
 stage0_bin:
-    env --chdir=stage0_bin cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/stage0_bin
+    env --chdir=stage0_bin cargo build --release
+    rust-objcopy --output-target=binary target/x86_64-unknown-none/release/stage0_bin
 
 stage1_cpio:
     env --chdir=oak_containers_stage1 make
