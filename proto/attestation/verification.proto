@@ -50,7 +50,7 @@ message AttestationResults {
   bytes signing_public_key = 4;
 }
 
-// Evidence values extracted from a DICE certificate chain during verification.
+// Evidence values extracted from attestatoin evidence during verification.
 message ExtractedEvidence {
   oneof evidence_values {
     OakRestrictedKernelValues oak_restricted_kernel = 1;
@@ -67,7 +67,7 @@ message ExtractedEvidence {
   bytes signing_public_key = 5;
 }
 
-// Values extracted from the root layer evidence
+// Values extracted from the root layer evidence.
 message RootLayerValues {
   oneof report {
     // Values extracted from an AMD SEV-SNP attestation report.
@@ -102,7 +102,6 @@ message AmdAttestationReportValues {
 message IntelTdxAttestationValues {
   // The custom bytes that were passed to the report when it was requested.
   bytes report_data = 1;
-  // TBD.
 }
 
 // The versions of the components in the AMD SEV-SNP platform Trusted Compute
@@ -121,25 +120,25 @@ message TcbVersion {
 
 // Values extracted from the the kernel layer evidence, as measured by stage0.
 message KernelLayerValues {
-  // Measurement RawDigest for the kernel image that was extracted from the
+  // Measured digests for the kernel image that was extracted from the
   // compressed kernel.
   RawDigest kernel_image = 1;
 
-  // Measurement RawDigest of the command-line that was passed to the kernel
+  // Measured digests of the command-line that was passed to the kernel
   // during startup.
   RawDigest kernel_cmd_line = 2;
 
-  // Measurement RawDigest of the kernel setup data that was extracted from the
+  // Measured digests of the kernel setup data that was extracted from the
   // compressed kernel.
   RawDigest kernel_setup_data = 3;
 
-  // Measurement RawDigest of the initial RAM disk.
+  // Measured digests of the initial RAM disk.
   RawDigest init_ram_fs = 4;
 
-  // Measurement RawDigest of the physical memory map.
+  // Measured digests of the physical memory map.
   RawDigest memory_map = 5;
 
-  // Measurement RawDigest of the commands for building the ACPI tables.
+  // Measured digests of the commands for building the ACPI tables.
   RawDigest acpi = 6;
 }
 
@@ -188,5 +187,4 @@ message OakContainersValues {
 // Reserved for future use.
 message CbValues {
   RootLayerValues root_layer = 1;
-  // TBD.
 }

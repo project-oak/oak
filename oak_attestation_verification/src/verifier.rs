@@ -144,6 +144,8 @@ pub fn verify(
         Report::SevSnp(values) => values.report_data.as_ref(),
         Report::Tdx(values) => values.report_data.as_ref(),
     };
+    // The report data contains 64 bytes by default, but we only use the first 32 bytes at the
+    // moment.
     if expected.len() > actual.len() || expected != &actual[..expected.len()] {
         anyhow::bail!("DICE chain is not bound to the attestation report");
     }
@@ -260,7 +262,8 @@ fn verify_oak_restricted_kernel(
             .root_layer
             .as_ref()
             .context("no root layer reference values")?,
-    )?;
+    )
+    .context("root layer verification failed")?;
 
     verify_kernel_layer(
         now_utc_millis,
@@ -273,7 +276,8 @@ fn verify_oak_restricted_kernel(
             .kernel_layer
             .as_ref()
             .context("no kernel layer reference values")?,
-    )?;
+    )
+    .context("kernel layer verification failed")?;
 
     verify_application_layer(
         now_utc_millis,
@@ -287,6 +291,7 @@ fn verify_oak_restricted_kernel(
             .as_ref()
             .context("no application layer reference values")?,
     )
+    .context("application layer verification failed")
 }
 
 /// Validates the values extracted from the evidence against the reference values and endorsements
@@ -308,7 +313,8 @@ fn verify_oak_containers(
             .root_layer
             .as_ref()
             .context("no root layer reference values")?,
-    )?;
+    )
+    .context("root layer verification failed")?;
 
     verify_kernel_layer(
         now_utc_millis,
@@ -321,7 +327,8 @@ fn verify_oak_containers(
             .kernel_layer
             .as_ref()
             .context("no kernel layer reference values")?,
-    )?;
+    )
+    .context("kernel layer verification failed")?;
 
     verify_system_layer(
         now_utc_millis,
@@ -334,7 +341,8 @@ fn verify_oak_containers(
             .system_layer
             .as_ref()
             .context("no system layer reference values")?,
-    )?;
+    )
+    .context("system layer verification failed")?;
 
     verify_container_layer(
         now_utc_millis,
@@ -348,6 +356,7 @@ fn verify_oak_containers(
             .as_ref()
             .context("no container layer reference values")?,
     )
+    .context("container layer verification failed")
 }
 
 /// Validates the values extracted from the evidence against the reference values and endorsements
@@ -369,7 +378,8 @@ fn verify_cb(
             .root_layer
             .as_ref()
             .context("no root layer reference values")?,
-    )?;
+    )
+    .context("root layer verification failed")?;
 
     anyhow::bail!("needs more implementation")
 }
@@ -708,19 +718,6 @@ fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues
             .as_ref()
             .context("no root layer evidence")?,
     )?);
-    let mut layers = evidence.layers.iter();
-    let kernel_layer = Some(
-        extract_kernel_values(
-            &claims_set_from_serialized_cert(
-                &layers
-                    .next()
-                    .context("kernel DICE layer not found")?
-                    .eca_certificate,
-            )
-            .context("couldn't parse kernel DICE layer certificate")?,
-        )
-        .context("couldn't extract kernel values")?,
-    );
 
     let final_layer_claims = &claims_set_from_serialized_cert(
         &evidence
@@ -733,44 +730,61 @@ fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues
 
     // Determine the type of evidence from the claims in the certificate for the final.
     if let Ok(container_layer_values) = extract_container_layer_values(final_layer_claims) {
-        let system_layer = Some(
-            extract_system_layer_values(
-                &claims_set_from_serialized_cert(
-                    &layers
-                        .next()
-                        .context("second DICE layer not found")?
-                        .eca_certificate,
-                )
-                .context("couldn't parse system DICE layer certificate")?,
-            )
-            .context("couldn't extract system layer values")?,
-        );
+        match &evidence.layers[..] {
+            [kernel_layer, system_layer] => {
+                let kernel_layer = Some(
+                    extract_kernel_values(
+                        &claims_set_from_serialized_cert(&kernel_layer.eca_certificate)
+                            .context("couldn't parse kernel DICE layer certificate")?,
+                    )
+                    .context("couldn't extract kernel values")?,
+                );
+                let system_layer = Some(
+                    extract_system_layer_values(
+                        &claims_set_from_serialized_cert(&system_layer.eca_certificate)
+                            .context("couldn't parse system DICE layer certificate")?,
+                    )
+                    .context("couldn't extract system layer values")?,
+                );
 
-        if layers.next().is_some() {
-            anyhow::bail!("too many DICE layers for Oak Containers");
+                let container_layer = Some(container_layer_values);
+                Ok(EvidenceValues::OakContainers(OakContainersValues {
+                    root_layer,
+                    kernel_layer,
+                    system_layer,
+                    container_layer,
+                }))
+            }
+            _ => Err(anyhow::anyhow!(
+                "incorrect number of DICE layers for Oak Containers"
+            )),
         }
-
-        let container_layer = Some(container_layer_values);
-        Ok(EvidenceValues::OakContainers(OakContainersValues {
-            root_layer,
-            kernel_layer,
-            system_layer,
-            container_layer,
-        }))
     } else if let Ok(application_layer_values) =
         extract_application_layer_values(final_layer_claims)
     {
-        let application_layer = Some(application_layer_values);
-        if layers.next().is_some() {
-            anyhow::bail!("too many DICE layers for Oak Restricted Kernel");
+        match &evidence.layers[..] {
+            [kernel_layer] => {
+                let kernel_layer = Some(
+                    extract_kernel_values(
+                        &claims_set_from_serialized_cert(&kernel_layer.eca_certificate)
+                            .context("couldn't parse kernel DICE layer certificate")?,
+                    )
+                    .context("couldn't extract kernel values")?,
+                );
+
+                let application_layer = Some(application_layer_values);
+                Ok(EvidenceValues::OakRestrictedKernel(
+                    OakRestrictedKernelValues {
+                        root_layer,
+                        kernel_layer,
+                        application_layer,
+                    },
+                ))
+            }
+            _ => Err(anyhow::anyhow!(
+                "incorrect number of DICE layers for Oak Containers"
+            )),
         }
-        Ok(EvidenceValues::OakRestrictedKernel(
-            OakRestrictedKernelValues {
-                root_layer,
-                kernel_layer,
-                application_layer,
-            },
-        ))
     } else {
         // Assume for now this is CB evidence until the CB fields are better defined.
         Ok(EvidenceValues::Cb(CbValues { root_layer }))
