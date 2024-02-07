@@ -898,7 +898,6 @@ dependencies = [
  "oak_channel",
  "oak_dice",
  "oak_restricted_kernel_dice",
- "oak_restricted_kernel_sdk",
 ]
 
 [[package]]
