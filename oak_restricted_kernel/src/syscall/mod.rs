@@ -69,7 +69,7 @@ struct GsData {
 
 pub fn enable_syscalls(
     channel: Box<dyn Channel>,
-    dice_data: dice_data::DiceData,
+    dice_data: dice_data::DiceLayer,
     #[cfg(not(feature = "initrd"))] derived_key: DerivedKey,
 ) {
     channel::register(channel);
