@@ -32,7 +32,7 @@ java_library(
     ],
 )
 
-java_library(
+android_library(
     name = "attestation_verifier_android",
     srcs = ["AttestationVerifier.java"],
     deps = [
@@ -58,7 +58,7 @@ java_library(
     ],
 )
 
-java_library(
+android_library(
     name = "insecure_attestation_verifier_android",
     srcs = ["InsecureAttestationVerifier.java"],
     deps = [

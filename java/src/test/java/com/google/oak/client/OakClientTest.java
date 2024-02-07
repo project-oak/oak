@@ -19,7 +19,6 @@ package com.google.oak.client;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.google.oak.attestation.v1.ApplicationKeys;
 import com.google.oak.attestation.v1.AttestationResults;
 import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
@@ -55,7 +54,7 @@ public class OakClientTest {
   // session size to 8.
   private static final int TEST_SESSION_SIZE = 1;
 
-  public final class TestAttestationVerifier implements AttestationVerifier {
+  public static class TestAttestationVerifier implements AttestationVerifier {
     private final AttestationResults attestationResults;
 
     public TestAttestationVerifier(AttestationResults attestationResults) {
