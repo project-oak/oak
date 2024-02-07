@@ -283,6 +283,8 @@ pub async fn launch(
 
             let mut line = String::new();
             while reader.read_line(&mut line).expect("couldn't read line") > 0 {
+                // remove the new line character
+                line.pop();
                 log::info!("console: {:?}", line);
                 line.clear();
             }
