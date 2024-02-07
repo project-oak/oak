@@ -427,9 +427,9 @@ pub fn start_kernel(info: &BootParams) -> ! {
     syscall::enable_syscalls(
         channel,
         #[cfg(feature = "initrd")]
-        stage0_dice_data,
+        syscall::dice_data::DiceData::Layer0(Box::new(stage0_dice_data)),
         #[cfg(not(feature = "initrd"))]
-        restricted_kernel_dice_data,
+        syscall::dice_data::DiceData::Layer1(Box::new(restricted_kernel_dice_data)),
         #[cfg(not(feature = "initrd"))]
         derived_key,
     );
