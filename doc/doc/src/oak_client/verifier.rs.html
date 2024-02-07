@@ -53,15 +53,15 @@
 //
 
 </span><span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_attestation_verification::verifier::{verify_dice_chain, DiceChainResult};
-<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
+<span class="kw">use </span>oak_attestation_verification::verifier::verify_dice_chain;
+<span class="kw">use </span>oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence, ExtractedEvidence};
 
 <span class="kw">pub trait </span>AttestationVerifier {
     <span class="kw">fn </span>verify(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         evidence: <span class="kw-2">&amp;</span>Evidence,
         endorsements: <span class="kw-2">&amp;</span>Endorsements,
-    ) -&gt; anyhow::Result&lt;DiceChainResult&gt;;
+    ) -&gt; anyhow::Result&lt;ExtractedEvidence&gt;;
 }
 
 <span class="doccomment">/// Verifier that doesn&#39;t check the Evidence against Reference Values and only checks the DICE chain
@@ -70,7 +70,7 @@
 </span><span class="kw">pub struct </span>InsecureAttestationVerifier;
 
 <span class="kw">impl </span>AttestationVerifier <span class="kw">for </span>InsecureAttestationVerifier {
-    <span class="kw">fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, evidence: <span class="kw-2">&amp;</span>Evidence, <span class="kw">_</span>: <span class="kw-2">&amp;</span>Endorsements) -&gt; anyhow::Result&lt;DiceChainResult&gt; {
+    <span class="kw">fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, evidence: <span class="kw-2">&amp;</span>Evidence, <span class="kw">_</span>: <span class="kw-2">&amp;</span>Endorsements) -&gt; anyhow::Result&lt;ExtractedEvidence&gt; {
         verify_dice_chain(evidence).context(<span class="string">&quot;couldn&#39;t verify the DICE chain&quot;</span>)
     }
 }

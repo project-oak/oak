@@ -407,12 +407,7 @@
             .get_flags()
             .ok_or(<span class="string">&quot;Failed to parse flags&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(policy_flags.bits() &amp; PolicyFlags::DEBUG.bits() != <span class="number">0</span>)
-    }
-
-    <span class="doccomment">/// Gets the signing algorithm field as a `SigningAlgorithm` enum if possible.
-    </span><span class="kw">pub fn </span>get_signature_algo(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SigningAlgorithm&gt; {
-        SigningAlgorithm::from_repr(<span class="self">self</span>.data.signature_algo)
+        <span class="prelude-val">Ok</span>(policy_flags.contains(PolicyFlags::DEBUG))
     }
 }
 
@@ -522,6 +517,11 @@
         AuthorKey::from_repr(<span class="self">self</span>.author_key_en)
     }
 
+    <span class="doccomment">/// Gets the signing algorithm field as a `SigningAlgorithm` enum if possible.
+    </span><span class="kw">pub fn </span>get_signature_algo(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;SigningAlgorithm&gt; {
+        SigningAlgorithm::from_repr(<span class="self">self</span>.signature_algo)
+    }
+
     <span class="doccomment">/// Checks that fields with specific expected values or ranges are valid and the reserved bytes
     /// are all zero.
     </span><span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
@@ -541,7 +541,7 @@
         <span class="kw">if </span><span class="self">self</span>._reserved_3.iter().any(|<span class="kw-2">&amp;</span>value| value != <span class="number">0</span>) {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;nonzero value in _reserved_3&quot;</span>);
         }
-        <span class="kw">if </span><span class="self">self</span>.signature_algo != SigningAlgorithm::EcdsaP384Sha384 <span class="kw">as </span>u32 {
+        <span class="kw">if </span><span class="self">self</span>.get_signature_algo().is_none() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid signature algorithm&quot;</span>);
         }
         <span class="kw">if </span><span class="self">self</span>.get_platform_info().is_none() {
@@ -568,7 +568,7 @@
 <span class="doccomment">/// The signing algorithm used for the report signature.
 ///
 /// See Table 117 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
-</span><span class="attr">#[derive(Debug, FromRepr)]
+</span><span class="attr">#[derive(Debug, FromRepr, PartialEq)]
 #[repr(u32)]
 </span><span class="kw">pub enum </span>SigningAlgorithm {
     <span class="doccomment">/// Invalid.
