@@ -20,10 +20,9 @@
 
 extern crate alloc;
 
-use oak_channel::basic_framed::load_raw;
 use oak_dice::evidence::Stage0DiceData;
 use oak_restricted_kernel_interface::{syscall::read, DICE_DATA_FD};
-use oak_restricted_kernel_sdk::{channel::FileDescriptorChannel, entrypoint, utils::StderrLogger};
+use oak_restricted_kernel_sdk::{channel::FileDescriptorChannel, entrypoint};
 use zerocopy::{AsBytes, FromZeroes};
 
 fn read_stage0_dice_data() -> Stage0DiceData {
