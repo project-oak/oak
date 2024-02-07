@@ -351,15 +351,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7dfdb4953a096c551ce9ace855a604d702e6e62d77fac690575ae347571717f5"
 
 [[package]]
-name = "benchmark"
-version = "0.1.0"
-dependencies = [
- "oak_functions_sdk",
- "oak_proto_rust",
- "prost",
-]
-
-[[package]]
 name = "bigdecimal"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1636,15 +1627,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "key_value_lookup_multi"
-version = "0.1.0"
-dependencies = [
- "oak_functions_sdk",
- "oak_proto_rust",
- "prost",
-]
-
-[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2533,6 +2515,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_functions_test_module"
+version = "0.1.0"
+dependencies = [
+ "micro_rpc",
+ "micro_rpc_build",
+ "oak_functions_sdk",
+ "oak_proto_rust",
+ "prost",
+]
+
+[[package]]
 name = "oak_functions_test_utils"
 version = "0.1.0"
 dependencies = [
@@ -2606,6 +2599,8 @@ dependencies = [
 name = "oak_proto_rust"
 version = "0.0.1"
 dependencies = [
+ "micro_rpc",
+ "micro_rpc_build",
  "prost",
  "prost-build",
 ]

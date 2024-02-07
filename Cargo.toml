@@ -22,11 +22,9 @@ members = [
   "oak_docker_linux_init",
   "oak_echo_linux_init",
   "oak_enclave_runtime_support",
-  "oak_functions/examples/benchmark/module",
   "oak_functions/examples/echo/module",
   "oak_functions/examples/invalid_module/module",
   "oak_functions/examples/key_value_lookup/module",
-  "oak_functions/examples/key_value_lookup_multi/module",
   "oak_functions/examples/weather_lookup/module",
   "oak_functions/load_test",
   "oak_functions/location_utils",
@@ -42,6 +40,7 @@ members = [
   "oak_functions_sdk/tests/testing_module",
   "oak_functions_service",
   "oak_functions_enclave_service",
+  "oak_functions_test_module",
   "oak_functions_test_utils",
   "oak_hello_world_linux_init",
   "oak_launcher_utils",
@@ -113,6 +112,7 @@ oak_functions_lookup = { path = "./oak_functions/lookup" }
 oak_functions_sdk = { path = "./oak_functions_sdk" }
 oak_functions_service = { path = "./oak_functions_service", default-features = false }
 oak_functions_enclave_service = { path = "./oak_functions_enclave_service", default-features = false }
+oak_functions_test_module = { path = "./oak_functions_test_module" }
 oak_functions_test_utils = { path = "./oak_functions_test_utils" }
 oak_functions_wasm = { path = "./oak_functions/wasm" }
 oak_grpc_utils = { path = "./oak_grpc_utils" }

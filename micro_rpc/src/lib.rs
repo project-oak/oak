@@ -118,21 +118,22 @@ pub fn client_invoke<T: Transport, Req: prost::Message, Res: prost::Message + De
     request: &Req,
 ) -> Result<Result<Res, Status>, T::Error> {
     let request_body = request.encode_to_vec();
-    let request = RequestWrapper {
+    let request_wrapper = RequestWrapper {
         method_id,
         body: request_body,
     };
-    let request_bytes = request.encode_to_vec();
+    let request_wrapper_bytes = request_wrapper.encode_to_vec();
     // This may result in tranport errors, corresponding to the outer Result layer.
-    let response_bytes = transport.invoke(&request_bytes)?;
+    let response_wrapper_bytes = transport.invoke(&request_wrapper_bytes)?;
     let result: Result<Res, Status> = try {
-        let response = ResponseWrapper::decode(response_bytes.as_ref()).map_err(|err| {
-            Status::new_with_message(
-                StatusCode::Internal,
-                format!("Client failed to deserialize response wrapper: {}", err),
-            )
-        })?;
-        let response_result: Result<Vec<u8>, Status> = response.into();
+        let response_wrapper =
+            ResponseWrapper::decode(response_wrapper_bytes.as_ref()).map_err(|err| {
+                Status::new_with_message(
+                    StatusCode::Internal,
+                    format!("Client failed to deserialize response wrapper: {}", err),
+                )
+            })?;
+        let response_result: Result<Vec<u8>, Status> = response_wrapper.into();
         response_result.and_then(|body| {
             Res::decode(body.as_ref()).map_err(|err| {
                 Status::new_with_message(

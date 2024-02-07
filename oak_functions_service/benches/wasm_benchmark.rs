@@ -14,6 +14,9 @@
 // limitations under the License.
 //
 
+#![feature(never_type)]
+#![feature(unwrap_infallible)]
+
 use std::sync::Arc;
 
 use bytes::Bytes;
@@ -25,10 +28,9 @@ use oak_functions_service::{
     lookup::{Data, LookupDataManager},
     wasm::WasmHandler,
 };
-use oak_proto_rust::oak::oak_functions::benchmark::{
-    lookup_request::Mode, LookupRequest, LookupResponse,
+use oak_proto_rust::oak::oak_functions::testing::{
+    lookup_request::Mode, LookupRequest, LookupResponse, TestModuleClient,
 };
-use prost::Message;
 
 fn bench_invoke_echo(c: &mut Criterion) {
     let test_state = create_test_state_with_wasm_module_name("echo");
@@ -90,8 +92,24 @@ fn bench_invoke_lookup(c: &mut Criterion) {
     });
 }
 
+struct Transport<'a> {
+    wasm_handler: &'a mut WasmHandler,
+}
+
+impl<'a> micro_rpc::Transport for Transport<'a> {
+    fn invoke(&mut self, request: &[u8]) -> Result<Vec<u8>, !> {
+        Ok(self
+            .wasm_handler
+            .handle_invoke(Request {
+                body: request.to_vec(),
+            })
+            .unwrap()
+            .body)
+    }
+}
+
 fn bench_invoke_lookup_multi(c: &mut Criterion) {
-    let test_state = create_test_state_with_wasm_module_name("key_value_lookup_multi");
+    let mut test_state = create_test_state_with_wasm_module_name("oak_functions_test_module");
 
     const MAX_DATA_SIZE: i32 = 1_000_000;
     const START_KEY_INDEX: i32 = 100;
@@ -104,7 +122,7 @@ fn bench_invoke_lookup_multi(c: &mut Criterion) {
 
     fn run_lookup_with_items(
         b: &mut criterion::Bencher,
-        test_state: &TestState,
+        test_state: &mut TestState,
         items: i32,
         mode: Mode,
     ) {
@@ -114,33 +132,30 @@ fn bench_invoke_lookup_multi(c: &mut Criterion) {
                 .collect(),
             mode: mode.into(),
         };
-        let request_bytes = lookup_request.encode_to_vec();
 
         let expected_response = LookupResponse {
             values: (START_KEY_INDEX..START_KEY_INDEX + items)
                 .map(|i| format!("value{}", i).into_bytes())
                 .collect(),
         };
-        let expected_response_bytes = expected_response.encode_to_vec();
+
+        let mut client = TestModuleClient::new(Transport {
+            wasm_handler: &mut test_state.wasm_handler,
+        });
 
         b.iter(|| {
-            let response = test_state
-                .wasm_handler
-                .handle_invoke(Request {
-                    body: request_bytes.clone(),
-                })
-                .unwrap();
-            assert_eq!(response.body, expected_response_bytes);
+            let response = client.lookup(&lookup_request).into_ok().unwrap();
+            assert_eq!(response, expected_response);
         })
     }
 
     let mut group = c.benchmark_group("lookup_multi wasm");
     for i in [1, 1000, 2000, 3000, 4000].iter() {
         group.bench_with_input(BenchmarkId::new("Individual", i), i, |b, &i| {
-            run_lookup_with_items(b, &test_state, i, Mode::Individual);
+            run_lookup_with_items(b, &mut test_state, i, Mode::Individual);
         });
         group.bench_with_input(BenchmarkId::new("Batch", i), i, |b, &i| {
-            run_lookup_with_items(b, &test_state, i, Mode::Batch);
+            run_lookup_with_items(b, &mut test_state, i, Mode::Batch);
         });
     }
     group.finish();
