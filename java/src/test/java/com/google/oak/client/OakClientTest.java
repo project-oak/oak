@@ -87,32 +87,28 @@ public class OakClientTest {
       AttestationEndorsement attestationEndorsement = AttestationEndorsement.getDefaultInstance();
       Evidence evidence = Evidence.getDefaultInstance();
       Endorsements endorsements = Endorsements.getDefaultInstance();
-      AttestationBundle attestationBundle =
-          AttestationBundle.newBuilder()
-              .setAttestationEvidence(attestationEvidence)
-              .setAttestationEndorsement(attestationEndorsement)
-              .setEvidence(evidence)
-              .setEndorsements(endorsements)
-              .build();
+      AttestationBundle attestationBundle = AttestationBundle.newBuilder()
+                                                .setAttestationEvidence(attestationEvidence)
+                                                .setAttestationEndorsement(attestationEndorsement)
+                                                .setEvidence(evidence)
+                                                .setEndorsements(endorsements)
+                                                .build();
 
       return Result.success(attestationBundle);
     }
 
     @Override
     public Result<EncryptedResponse, String> invoke(EncryptedRequest encryptedRequest) {
-      return serverEncryptor
-          .decrypt(encryptedRequest)
+      return serverEncryptor.decrypt(encryptedRequest)
           .mapError(err -> "couldn't decrypt request: " + err)
-          .andThen(
-              decryptedRequest -> {
-                if (!Arrays.equals(decryptedRequest.plaintext, TEST_REQUEST)
-                    || !Arrays.equals(decryptedRequest.associatedData, TEST_ASSOCIATED_DATA)) {
-                  return Result.error("incorrect request");
-                }
-                return serverEncryptor
-                    .encrypt(TEST_RESPONSE, TEST_ASSOCIATED_DATA)
-                    .mapError(err -> "couldn't encrypt response: " + err);
-              });
+          .andThen(decryptedRequest -> {
+            if (!Arrays.equals(decryptedRequest.plaintext, TEST_REQUEST)
+                || !Arrays.equals(decryptedRequest.associatedData, TEST_ASSOCIATED_DATA)) {
+              return Result.error("incorrect request");
+            }
+            return serverEncryptor.encrypt(TEST_RESPONSE, TEST_ASSOCIATED_DATA)
+                .mapError(err -> "couldn't encrypt response: " + err);
+          });
     }
 
     @Override
@@ -129,10 +125,8 @@ public class OakClientTest {
             .setEncryptionPublicKey(ByteString.copyFrom(keyPair.publicKey))
             .build();
     Result<OakClient<TestTransport>, Exception> oakClientCreateResult =
-        OakClient.create(
-            new TestTransport(keyPair),
-            new TestAttestationVerifier(attestationResults),
-            Clock.systemUTC());
+        OakClient.create(new TestTransport(keyPair),
+            new TestAttestationVerifier(attestationResults), Clock.systemUTC());
     assertTrue(oakClientCreateResult.isSuccess());
 
     try (OakClient<TestTransport> oakClient = oakClientCreateResult.success().get()) {

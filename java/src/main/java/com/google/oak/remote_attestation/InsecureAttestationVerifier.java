@@ -55,13 +55,8 @@ public class InsecureAttestationVerifier implements AttestationVerifier {
       final Instant now, final Evidence evidence, final Endorsements endorsements) {
     return Result.success(
         AttestationResults.newBuilder()
-            .setEncryptionPublicKey(
-                com.google.protobuf.ByteString.copyFrom(
-                    extractPublicKey(
-                        evidence
-                            .getApplicationKeys()
-                            .getEncryptionPublicKeyCertificate()
-                            .toByteArray())))
+            .setEncryptionPublicKey(com.google.protobuf.ByteString.copyFrom(extractPublicKey(
+                evidence.getApplicationKeys().getEncryptionPublicKeyCertificate().toByteArray())))
             .build());
   }
 
