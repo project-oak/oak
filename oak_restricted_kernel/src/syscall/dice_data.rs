@@ -22,20 +22,20 @@ use zeroize::Zeroize;
 
 use super::fd::{copy_max_slice, FileDescriptor};
 
-pub enum DiceLayer {
+pub enum DiceData {
     #[cfg(feature = "initrd")]
     Layer0(Box<Stage0DiceData>),
     Layer1(Box<RestrictedKernelDiceData>),
 }
 
-impl DiceLayer {
+impl DiceData {
     fn as_mut_slice(&mut self) -> &mut [u8] {
         match self {
             #[cfg(feature = "initrd")]
-            DiceLayer::Layer0(stage0_dice_data) => {
+            DiceData::Layer0(stage0_dice_data) => {
                 <Stage0DiceData as zerocopy::AsBytes>::as_bytes_mut(stage0_dice_data)
             }
-            DiceLayer::Layer1(stage1_dice_data) => {
+            DiceData::Layer1(stage1_dice_data) => {
                 <RestrictedKernelDiceData as zerocopy::AsBytes>::as_bytes_mut(stage1_dice_data)
             }
         }
@@ -43,7 +43,7 @@ impl DiceLayer {
 }
 
 struct ReadState {
-    data: DiceLayer,
+    data: DiceData,
     index: usize,
 }
 
@@ -59,7 +59,7 @@ enum DiceDataDescriptor {
 }
 
 impl DiceDataDescriptor {
-    fn new(data: DiceLayer) -> Self {
+    fn new(data: DiceData) -> Self {
         Self::Readable(Box::new(ReadState { index: 0, data }))
     }
 }
@@ -88,7 +88,7 @@ impl FileDescriptor for DiceDataDescriptor {
         match self {
             DiceDataDescriptor::Readable(read_state) => match &mut read_state.data {
                 #[cfg(feature = "initrd")]
-                DiceLayer::Layer0(stage0_dice_data) => {
+                DiceData::Layer0(stage0_dice_data) => {
                     <Stage0DiceData as zerocopy::AsBytes>::as_bytes_mut(stage0_dice_data).zeroize();
                     let _ = core::mem::replace(
                         self,
@@ -121,7 +121,7 @@ impl FileDescriptor for DiceDataDescriptor {
                         self,
                         Self::Readable(Box::new(ReadState {
                             index: 0,
-                            data: DiceLayer::Layer1(Box::new(write_state.data)),
+                            data: DiceData::Layer1(Box::new(write_state.data)),
                         })),
                     );
                 }
@@ -137,7 +137,7 @@ impl FileDescriptor for DiceDataDescriptor {
 }
 
 /// Registers a file descriptor for reading dice data
-pub fn register(data: DiceLayer) {
+pub fn register(data: DiceData) {
     super::fd::register(DICE_DATA_FD, Box::new(DiceDataDescriptor::new(data)))
         .map_err(|_| ()) // throw away the box
         .expect("DiceDataDescriptor already registered");
@@ -149,7 +149,7 @@ fn fd_permits_one_full_write() {
     let layer0 = <Stage0DiceData as zerocopy::FromZeroes>::new_zeroed();
     let layer1 = <RestrictedKernelDiceData as zerocopy::FromZeroes>::new_zeroed();
 
-    let mut fd = DiceDataDescriptor::new(DiceLayer::Layer0(Box::new(layer0)));
+    let mut fd = DiceDataDescriptor::new(DiceData::Layer0(Box::new(layer0)));
 
     {
         let mut buf: [u8; 1] = [5; 1];
@@ -182,7 +182,7 @@ fn fd_supports_partial_writes() {
     let layer0 = <Stage0DiceData as zerocopy::FromZeroes>::new_zeroed();
     let layer1 = <RestrictedKernelDiceData as zerocopy::FromZeroes>::new_zeroed();
 
-    let mut fd = DiceDataDescriptor::new(DiceLayer::Layer0(Box::new(layer0)));
+    let mut fd = DiceDataDescriptor::new(DiceData::Layer0(Box::new(layer0)));
 
     let layer1_bytes = <RestrictedKernelDiceData as zerocopy::AsBytes>::as_bytes(&layer1);
     let halfway_point = layer1_bytes.len() / 2;
