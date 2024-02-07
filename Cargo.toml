@@ -51,6 +51,7 @@ members = [
   "oak_restricted_kernel_interface",
   "oak_restricted_kernel_sdk",
   "oak_restricted_kernel_launcher",
+  "oak_restricted_kernel_orchestrator",
   "oak_sev_guest",
   "oak_sev_snp_attestation_report",
   "oak_simple_io",
@@ -123,6 +124,7 @@ oak_restricted_kernel_dice = { path = "./oak_restricted_kernel_dice" }
 oak_restricted_kernel_sdk = { path = "./oak_restricted_kernel_sdk" }
 oak_restricted_kernel_sdk_proc_macro = { path = "./oak_restricted_kernel_sdk_proc_macro" }
 oak_restricted_kernel_interface = { path = "./oak_restricted_kernel_interface" }
+oak_restricted_kernel_orchestrator = { path = "./oak_restricted_kernel_orchestrator" }
 oak_sev_guest = { path = "./oak_sev_guest", default-features = false }
 oak_sev_snp_attestation_report = { path = "./oak_sev_snp_attestation_report" }
 oak_stage0_dice = { path = "./stage0_dice" }
