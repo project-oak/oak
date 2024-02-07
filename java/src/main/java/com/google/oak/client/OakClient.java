@@ -35,6 +35,15 @@ public class OakClient<T extends Transport> implements AutoCloseable {
   private final byte[] serverEncryptionPublicKey;
 
   @Deprecated
+  /**
+   * Create an instance of the Oak Client by remotely attesting an Oak Enclave and creating an
+   * encrypted channel.
+   *
+   * @param <E> type that implements interfaces for the transport and for the evidence provider.
+   * @param <V> type that implements an interface for the attestation verifier.
+   * @return an instance of the {@code OakClient} wrapped in a {@code Result}
+   * @deprecated prefer the create method that accepts the clock explicitly
+   */
   public static <E extends EvidenceProvider & Transport, V extends AttestationVerifier>
       Result<OakClient<E>, Exception> create(E transport, V verifier) {
     return create(transport, verifier, Clock.systemUTC());
