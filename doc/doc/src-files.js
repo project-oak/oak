@@ -3,6 +3,7 @@ var srcIndex = JSON.parse('{\
 "echo":["",[],["lib.rs"]],\
 "invalid_module":["",[],["lib.rs"]],\
 "key_value_lookup":["",[],["lib.rs"]],\
+"key_value_lookup_multi":["",[],["lib.rs"]],\
 "location_utils":["",[],["lib.rs"]],\
 "lookup_data_checker":["",[],["main.rs"]],\
 "lookup_data_generator":["",[],["data.rs","lib.rs"]],\
