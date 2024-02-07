@@ -19,7 +19,6 @@ package com.google.oak.client;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.google.oak.attestation.v1.ApplicationKeys;
 import com.google.oak.attestation.v1.AttestationResults;
 import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
@@ -55,7 +54,7 @@ public class OakClientTest {
   // session size to 8.
   private static final int TEST_SESSION_SIZE = 1;
 
-  public final class TestAttestationVerifier implements AttestationVerifier {
+  public static class TestAttestationVerifier implements AttestationVerifier {
     private final AttestationResults attestationResults;
 
     public TestAttestationVerifier(AttestationResults attestationResults) {
@@ -88,28 +87,32 @@ public class OakClientTest {
       AttestationEndorsement attestationEndorsement = AttestationEndorsement.getDefaultInstance();
       Evidence evidence = Evidence.getDefaultInstance();
       Endorsements endorsements = Endorsements.getDefaultInstance();
-      AttestationBundle attestationBundle = AttestationBundle.newBuilder()
-                                                .setAttestationEvidence(attestationEvidence)
-                                                .setAttestationEndorsement(attestationEndorsement)
-                                                .setEvidence(evidence)
-                                                .setEndorsements(endorsements)
-                                                .build();
+      AttestationBundle attestationBundle =
+          AttestationBundle.newBuilder()
+              .setAttestationEvidence(attestationEvidence)
+              .setAttestationEndorsement(attestationEndorsement)
+              .setEvidence(evidence)
+              .setEndorsements(endorsements)
+              .build();
 
       return Result.success(attestationBundle);
     }
 
     @Override
     public Result<EncryptedResponse, String> invoke(EncryptedRequest encryptedRequest) {
-      return serverEncryptor.decrypt(encryptedRequest)
+      return serverEncryptor
+          .decrypt(encryptedRequest)
           .mapError(err -> "couldn't decrypt request: " + err)
-          .andThen(decryptedRequest -> {
-            if (!Arrays.equals(decryptedRequest.plaintext, TEST_REQUEST)
-                || !Arrays.equals(decryptedRequest.associatedData, TEST_ASSOCIATED_DATA)) {
-              return Result.error("incorrect request");
-            }
-            return serverEncryptor.encrypt(TEST_RESPONSE, TEST_ASSOCIATED_DATA)
-                .mapError(err -> "couldn't encrypt response: " + err);
-          });
+          .andThen(
+              decryptedRequest -> {
+                if (!Arrays.equals(decryptedRequest.plaintext, TEST_REQUEST)
+                    || !Arrays.equals(decryptedRequest.associatedData, TEST_ASSOCIATED_DATA)) {
+                  return Result.error("incorrect request");
+                }
+                return serverEncryptor
+                    .encrypt(TEST_RESPONSE, TEST_ASSOCIATED_DATA)
+                    .mapError(err -> "couldn't encrypt response: " + err);
+              });
     }
 
     @Override
@@ -126,8 +129,10 @@ public class OakClientTest {
             .setEncryptionPublicKey(ByteString.copyFrom(keyPair.publicKey))
             .build();
     Result<OakClient<TestTransport>, Exception> oakClientCreateResult =
-        OakClient.create(new TestTransport(keyPair),
-            new TestAttestationVerifier(attestationResults), Clock.systemUTC());
+        OakClient.create(
+            new TestTransport(keyPair),
+            new TestAttestationVerifier(attestationResults),
+            Clock.systemUTC());
     assertTrue(oakClientCreateResult.isSuccess());
 
     try (OakClient<TestTransport> oakClient = oakClientCreateResult.success().get()) {

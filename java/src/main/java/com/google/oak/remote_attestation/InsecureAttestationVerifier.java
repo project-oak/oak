@@ -16,22 +16,16 @@
 
 package com.google.oak.remote_attestation;
 
-import co.nstant.in.cbor.CborBuilder;
 import co.nstant.in.cbor.CborDecoder;
-import co.nstant.in.cbor.CborEncoder;
 import co.nstant.in.cbor.CborException;
 import co.nstant.in.cbor.model.ByteString;
 import co.nstant.in.cbor.model.DataItem;
 import co.nstant.in.cbor.model.MajorType;
 import co.nstant.in.cbor.model.Map;
 import co.nstant.in.cbor.model.NegativeInteger;
-import com.google.cose.CoseKey;
-import com.google.cose.Ec2SigningKey;
 import com.google.cose.OkpKeyAgreementKey;
 import com.google.cose.Sign1Message;
 import com.google.cose.exceptions.CoseException;
-import com.google.cose.utils.Algorithm;
-import com.google.cose.utils.CoseUtils;
 import com.google.oak.attestation.v1.AttestationResults;
 import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
@@ -39,9 +33,7 @@ import com.google.oak.util.Result;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * Verifier implementation that doesn't verify attestation evidence and is used for testing.
- */
+/** Verifier implementation that doesn't verify attestation evidence and is used for testing. */
 public class InsecureAttestationVerifier implements AttestationVerifier {
   /**
    * ID for the CWT private claim corresponding to the subject public key.
@@ -53,10 +45,9 @@ public class InsecureAttestationVerifier implements AttestationVerifier {
    * Doesn't perform attestation verification and just returns a success value.
    *
    * @param evidence contains claims about the Trusted Execution Environment
-   * <https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence>
+   *     <https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence>
    * @param endorsement contains statements that the endorsers vouch for the integrity of claims
-   * provided in the evidence
-   * <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
+   *     provided in the evidence <https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements>
    * @return success value wrapped in a {@code Result}
    */
   @Override
@@ -64,8 +55,13 @@ public class InsecureAttestationVerifier implements AttestationVerifier {
       final Instant now, final Evidence evidence, final Endorsements endorsements) {
     return Result.success(
         AttestationResults.newBuilder()
-            .setEncryptionPublicKey(com.google.protobuf.ByteString.copyFrom(extractPublicKey(
-                evidence.getApplicationKeys().getEncryptionPublicKeyCertificate().toByteArray())))
+            .setEncryptionPublicKey(
+                com.google.protobuf.ByteString.copyFrom(
+                    extractPublicKey(
+                        evidence
+                            .getApplicationKeys()
+                            .getEncryptionPublicKeyCertificate()
+                            .toByteArray())))
             .build());
   }
 
