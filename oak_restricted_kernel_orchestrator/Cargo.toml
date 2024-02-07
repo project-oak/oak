@@ -6,7 +6,6 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-oak_restricted_kernel_sdk = { workspace = true }
 oak_channel = { workspace = true }
 oak_dice = { workspace = true }
 oak_restricted_kernel_dice = { workspace = true }
