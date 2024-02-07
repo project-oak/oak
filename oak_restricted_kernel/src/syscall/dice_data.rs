@@ -117,6 +117,9 @@ impl FileDescriptor for DiceDataDescriptor {
                 }
 
                 if write_state.index == data_as_slice.len() {
+                    let read_data =
+                        <RestrictedKernelDiceData as zerocopy::FromBytes>::read_from(data_as_slice)
+                            .unwrap();
                     let _ = core::mem::replace(
                         self,
                         Self::Readable(Box::new(ReadState {
