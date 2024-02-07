@@ -53,9 +53,9 @@ message AttestationResults {
 // Evidence values extracted from attestatoin evidence during verification.
 message ExtractedEvidence {
   oneof evidence_values {
-    OakRestrictedKernelValues oak_restricted_kernel = 1;
-    OakContainersValues oak_containers = 2;
-    CbValues cb = 3;
+    OakRestrictedKernelData oak_restricted_kernel = 1;
+    OakContainersData oak_containers = 2;
+    CbData cb = 3;
   }
 
   // Contains the public key for encryption. The key is serialized as an X25519
@@ -68,17 +68,17 @@ message ExtractedEvidence {
 }
 
 // Values extracted from the root layer evidence.
-message RootLayerValues {
+message RootLayerData {
   oneof report {
     // Values extracted from an AMD SEV-SNP attestation report.
-    AmdAttestationReportValues sev_snp = 1;
+    AmdAttestationReport sev_snp = 1;
     // Values extracted from an Intel TDX attestation report.
-    IntelTdxAttestationValues tdx = 2;
+    IntelTdxAttestationReport tdx = 2;
   }
 }
 
 // Values extracted from an AMD SEV-SNP attestation report.
-message AmdAttestationReportValues {
+message AmdAttestationReport {
   // The custom bytes that were passed to the report when it was requested.
   bytes report_data = 1;
 
@@ -99,7 +99,7 @@ message AmdAttestationReportValues {
 }
 
 // Values extracted from an Intel TDX attestation report.
-message IntelTdxAttestationValues {
+message IntelTdxAttestationReport {
   // The custom bytes that were passed to the report when it was requested.
   bytes report_data = 1;
 }
@@ -119,7 +119,7 @@ message TcbVersion {
 }
 
 // Values extracted from the the kernel layer evidence, as measured by stage0.
-message KernelLayerValues {
+message KernelLayerData {
   // Measured digests for the kernel image that was extracted from the
   // compressed kernel.
   RawDigest kernel_image = 1;
@@ -144,7 +144,7 @@ message KernelLayerValues {
 
 // Values extracted from the evidence that represents an application running
 // under the Oak Restricted Kernel.
-message ApplicationLayerValues {
+message ApplicationLayerData {
   // Measurement RawDigest of the application binary.
   RawDigest binary = 1;
 
@@ -154,14 +154,14 @@ message ApplicationLayerValues {
 
 // Values extracted from the evidence that represents the Oak Containers system
 // image.
-message SystemLayerValues {
+message SystemLayerData {
   // Measurement RawDigest of the system image.
   RawDigest system_image = 1;
 }
 
 // Values extracted from the evidence that represents the Container Runtime
 // Bundle used in Oak Containers.
-message ContainerLayerValues {
+message ContainerLayerData {
   // Measurement RawDigest of the container bundle.
   RawDigest bundle = 1;
 
@@ -170,21 +170,21 @@ message ContainerLayerValues {
 }
 
 // Values extracted from the evidence for a restricted kernel application.
-message OakRestrictedKernelValues {
-  RootLayerValues root_layer = 1;
-  KernelLayerValues kernel_layer = 2;
-  ApplicationLayerValues application_layer = 3;
+message OakRestrictedKernelData {
+  RootLayerData root_layer = 1;
+  KernelLayerData kernel_layer = 2;
+  ApplicationLayerData application_layer = 3;
 }
 
 // Values extracted from the evidence for an Oak Containers instance.
-message OakContainersValues {
-  RootLayerValues root_layer = 1;
-  KernelLayerValues kernel_layer = 2;
-  SystemLayerValues system_layer = 3;
-  ContainerLayerValues container_layer = 4;
+message OakContainersData {
+  RootLayerData root_layer = 1;
+  KernelLayerData kernel_layer = 2;
+  SystemLayerData system_layer = 3;
+  ContainerLayerData container_layer = 4;
 }
 
 // Reserved for future use.
-message CbValues {
-  RootLayerValues root_layer = 1;
+message CbData {
+  RootLayerData root_layer = 1;
 }

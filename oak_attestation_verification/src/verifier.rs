@@ -32,19 +32,18 @@ use oak_dice::cert::{
 use oak_proto_rust::oak::{
     attestation::v1::{
         attestation_results::Status, binary_reference_value, endorsements,
-        extracted_evidence::EvidenceValues, reference_values, root_layer_values::Report,
-        AmdAttestationReportValues, AmdSevReferenceValues, ApplicationKeys,
-        ApplicationLayerEndorsements, ApplicationLayerReferenceValues, ApplicationLayerValues,
-        AttestationResults, BinaryReferenceValue, CbEndorsements, CbReferenceValues, CbValues,
-        ContainerLayerEndorsements, ContainerLayerReferenceValues, ContainerLayerValues,
-        Endorsements, Evidence, ExtractedEvidence, IntelTdxAttestationValues,
-        IntelTdxReferenceValues, KernelLayerEndorsements, KernelLayerReferenceValues,
-        KernelLayerValues, OakContainersEndorsements, OakContainersReferenceValues,
-        OakContainersValues, OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues,
-        OakRestrictedKernelValues, ReferenceValues, RootLayerEndorsements, RootLayerEvidence,
-        RootLayerReferenceValues, RootLayerValues, SystemLayerEndorsements,
-        SystemLayerReferenceValues, SystemLayerValues, TcbVersion, TeePlatform,
-        TransparentReleaseEndorsement,
+        extracted_evidence::EvidenceValues, reference_values, root_layer_data::Report,
+        AmdAttestationReport, AmdSevReferenceValues, ApplicationKeys, ApplicationLayerData,
+        ApplicationLayerEndorsements, ApplicationLayerReferenceValues, AttestationResults,
+        BinaryReferenceValue, CbData, CbEndorsements, CbReferenceValues, ContainerLayerData,
+        ContainerLayerEndorsements, ContainerLayerReferenceValues, Endorsements, Evidence,
+        ExtractedEvidence, IntelTdxAttestationReport, IntelTdxReferenceValues, KernelLayerData,
+        KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersData,
+        OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelData,
+        OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
+        RootLayerData, RootLayerEndorsements, RootLayerEvidence, RootLayerReferenceValues,
+        SystemLayerData, SystemLayerEndorsements, SystemLayerReferenceValues, TcbVersion,
+        TeePlatform, TransparentReleaseEndorsement,
     },
     HexDigest, RawDigest,
 };
@@ -247,7 +246,7 @@ pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidenc
 /// for Oak Restricted Kernel applications.
 fn verify_oak_restricted_kernel(
     now_utc_millis: i64,
-    values: &OakRestrictedKernelValues,
+    values: &OakRestrictedKernelData,
     endorsements: &OakRestrictedKernelEndorsements,
     reference_values: &OakRestrictedKernelReferenceValues,
 ) -> anyhow::Result<()> {
@@ -298,7 +297,7 @@ fn verify_oak_restricted_kernel(
 /// for Oak Restricted Containers applications.
 fn verify_oak_containers(
     now_utc_millis: i64,
-    values: &OakContainersValues,
+    values: &OakContainersData,
     endorsements: &OakContainersEndorsements,
     reference_values: &OakContainersReferenceValues,
 ) -> anyhow::Result<()> {
@@ -363,7 +362,7 @@ fn verify_oak_containers(
 /// for CB workloads.
 fn verify_cb(
     now_utc_millis: i64,
-    values: &CbValues,
+    values: &CbData,
     endorsements: &CbEndorsements,
     reference_values: &CbReferenceValues,
 ) -> anyhow::Result<()> {
@@ -386,7 +385,7 @@ fn verify_cb(
 
 /// Verifies the AMD SEV attestation report.
 fn verify_amd_sev_attestation_report(
-    attestation_report_values: &AmdAttestationReportValues,
+    attestation_report_values: &AmdAttestationReport,
     reference_values: &AmdSevReferenceValues,
 ) -> anyhow::Result<()> {
     if !reference_values.allow_debug && attestation_report_values.debug {
@@ -398,7 +397,7 @@ fn verify_amd_sev_attestation_report(
 
 /// Verifies the Intel TDX attestation report.
 fn verify_intel_tdx_attestation_report(
-    _attestation_report_values: &IntelTdxAttestationValues,
+    _attestation_report_values: &IntelTdxAttestationReport,
     _reference_values: &IntelTdxReferenceValues,
 ) -> anyhow::Result<()> {
     anyhow::bail!("needs implementation")
@@ -438,7 +437,7 @@ fn verify_root_attestation_signature(
 /// Verifies the measurement values of the root layer containing the attestation report.
 fn verify_root_layer(
     _now_utc_millis: i64,
-    values: &RootLayerValues,
+    values: &RootLayerData,
     _endorsements: Option<&RootLayerEndorsements>,
     reference_values: &RootLayerReferenceValues,
 ) -> anyhow::Result<()> {
@@ -465,7 +464,7 @@ fn verify_root_layer(
 /// Kernel and Oak Containers setups.
 fn verify_kernel_layer(
     now_utc_millis: i64,
-    values: &KernelLayerValues,
+    values: &KernelLayerData,
     endorsements: Option<&KernelLayerEndorsements>,
     reference_values: &KernelLayerReferenceValues,
 ) -> anyhow::Result<()> {
@@ -554,7 +553,7 @@ fn verify_kernel_layer(
 /// Verifies the measurement values of the system image layer for Oak Containers.
 fn verify_system_layer(
     now_utc_millis: i64,
-    values: &SystemLayerValues,
+    values: &SystemLayerData,
     endorsements: Option<&SystemLayerEndorsements>,
     reference_values: &SystemLayerReferenceValues,
 ) -> anyhow::Result<()> {
@@ -576,7 +575,7 @@ fn verify_system_layer(
 /// Verifies the measurement values of the application layer for Oak Restricted Kernel.
 fn verify_application_layer(
     now_utc_millis: i64,
-    values: &ApplicationLayerValues,
+    values: &ApplicationLayerData,
     endorsements: Option<&ApplicationLayerEndorsements>,
     reference_values: &ApplicationLayerReferenceValues,
 ) -> anyhow::Result<()> {
@@ -606,7 +605,7 @@ fn verify_application_layer(
 /// Verifies the measurement values of the container layer for Oak Containers.
 fn verify_container_layer(
     now_utc_millis: i64,
-    values: &ContainerLayerValues,
+    values: &ContainerLayerData,
     endorsements: Option<&ContainerLayerEndorsements>,
     reference_values: &ContainerLayerReferenceValues,
 ) -> anyhow::Result<()> {
@@ -729,7 +728,7 @@ fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues
     .context("couldn't parse final DICE layer certificate")?;
 
     // Determine the type of evidence from the claims in the certificate for the final.
-    if let Ok(container_layer_values) = extract_container_layer_values(final_layer_claims) {
+    if let Ok(container_layer_data) = extract_container_layer_data(final_layer_claims) {
         match &evidence.layers[..] {
             [kernel_layer, system_layer] => {
                 let kernel_layer = Some(
@@ -740,15 +739,15 @@ fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues
                     .context("couldn't extract kernel values")?,
                 );
                 let system_layer = Some(
-                    extract_system_layer_values(
+                    extract_system_layer_data(
                         &claims_set_from_serialized_cert(&system_layer.eca_certificate)
                             .context("couldn't parse system DICE layer certificate")?,
                     )
                     .context("couldn't extract system layer values")?,
                 );
 
-                let container_layer = Some(container_layer_values);
-                Ok(EvidenceValues::OakContainers(OakContainersValues {
+                let container_layer = Some(container_layer_data);
+                Ok(EvidenceValues::OakContainers(OakContainersData {
                     root_layer,
                     kernel_layer,
                     system_layer,
@@ -759,9 +758,7 @@ fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues
                 "incorrect number of DICE layers for Oak Containers"
             )),
         }
-    } else if let Ok(application_layer_values) =
-        extract_application_layer_values(final_layer_claims)
-    {
+    } else if let Ok(application_layer_data) = extract_application_layer_data(final_layer_claims) {
         match &evidence.layers[..] {
             [kernel_layer] => {
                 let kernel_layer = Some(
@@ -772,9 +769,9 @@ fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues
                     .context("couldn't extract kernel values")?,
                 );
 
-                let application_layer = Some(application_layer_values);
+                let application_layer = Some(application_layer_data);
                 Ok(EvidenceValues::OakRestrictedKernel(
-                    OakRestrictedKernelValues {
+                    OakRestrictedKernelData {
                         root_layer,
                         kernel_layer,
                         application_layer,
@@ -787,12 +784,12 @@ fn extract_evidence_values(evidence: &Evidence) -> anyhow::Result<EvidenceValues
         }
     } else {
         // Assume for now this is CB evidence until the CB fields are better defined.
-        Ok(EvidenceValues::Cb(CbValues { root_layer }))
+        Ok(EvidenceValues::Cb(CbData { root_layer }))
     }
 }
 
 /// Extracts values from the attestation report.
-fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLayerValues> {
+fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLayerData> {
     match root_layer.platform() {
         TeePlatform::Unspecified => Err(anyhow::anyhow!("unspecified TEE platform")),
         TeePlatform::AmdSevSnp => {
@@ -814,8 +811,8 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
             let initial_measurement = report.data.measurement.as_ref().to_vec();
             let report_data = report.data.report_data.as_ref().to_vec();
 
-            Ok(RootLayerValues {
-                report: Some(Report::SevSnp(AmdAttestationReportValues {
+            Ok(RootLayerData {
+                report: Some(Report::SevSnp(AmdAttestationReport {
                     current_tcb,
                     debug,
                     initial_measurement,
@@ -854,9 +851,9 @@ fn extract_application_key_values(
 }
 
 /// Extracts the measurement values for the kernel layer.
-fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerValues> {
+fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerData> {
     let values =
-        extract_layer_values(claims, KERNEL_LAYER_ID).context("kernel layer ID not found")?;
+        extract_layer_data(claims, KERNEL_LAYER_ID).context("kernel layer ID not found")?;
     let kernel_image = Some(value_to_raw_digest(extract_value(
         values,
         KERNEL_MEASUREMENT_ID,
@@ -881,7 +878,7 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerValues
         values,
         ACPI_MEASUREMENT_ID,
     )?)?);
-    Ok(KernelLayerValues {
+    Ok(KernelLayerData {
         kernel_image,
         kernel_cmd_line,
         kernel_setup_data,
@@ -892,19 +889,19 @@ fn extract_kernel_values(claims: &ClaimsSet) -> anyhow::Result<KernelLayerValues
 }
 
 /// Extracts the measurement values for the system image layer.
-fn extract_system_layer_values(claims: &ClaimsSet) -> anyhow::Result<SystemLayerValues> {
+fn extract_system_layer_data(claims: &ClaimsSet) -> anyhow::Result<SystemLayerData> {
     let values =
-        extract_layer_values(claims, SYSTEM_IMAGE_LAYER_ID).context("system layer ID not found")?;
+        extract_layer_data(claims, SYSTEM_IMAGE_LAYER_ID).context("system layer ID not found")?;
     let system_image = Some(value_to_raw_digest(extract_value(
         values,
         LAYER_2_CODE_MEASUREMENT_ID,
     )?)?);
-    Ok(SystemLayerValues { system_image })
+    Ok(SystemLayerData { system_image })
 }
 
 /// Extracts the measurement values for the system image layer.
-fn extract_container_layer_values(claims: &ClaimsSet) -> anyhow::Result<ContainerLayerValues> {
-    let values = extract_layer_values(claims, CONTAINER_IMAGE_LAYER_ID)
+fn extract_container_layer_data(claims: &ClaimsSet) -> anyhow::Result<ContainerLayerData> {
+    let values = extract_layer_data(claims, CONTAINER_IMAGE_LAYER_ID)
         .context("system layer ID not found")?;
     let bundle = Some(value_to_raw_digest(extract_value(
         values,
@@ -914,12 +911,12 @@ fn extract_container_layer_values(claims: &ClaimsSet) -> anyhow::Result<Containe
         values,
         FINAL_LAYER_CONFIG_MEASUREMENT_ID,
     )?)?);
-    Ok(ContainerLayerValues { bundle, config })
+    Ok(ContainerLayerData { bundle, config })
 }
 
 /// Extracts the measurement values for the enclave application layer.
-fn extract_application_layer_values(claims: &ClaimsSet) -> anyhow::Result<ApplicationLayerValues> {
-    let values = extract_layer_values(claims, ENCLAVE_APPLICATION_LAYER_ID)
+fn extract_application_layer_data(claims: &ClaimsSet) -> anyhow::Result<ApplicationLayerData> {
+    let values = extract_layer_data(claims, ENCLAVE_APPLICATION_LAYER_ID)
         .context("system layer ID not found")?;
     let binary = Some(value_to_raw_digest(extract_value(
         values,
@@ -929,7 +926,7 @@ fn extract_application_layer_values(claims: &ClaimsSet) -> anyhow::Result<Applic
         values,
         FINAL_LAYER_CONFIG_MEASUREMENT_ID,
     )?)?);
-    Ok(ApplicationLayerValues { binary, config })
+    Ok(ApplicationLayerData { binary, config })
 }
 
 /// Parses the CBOR map from a serialized certificate.
@@ -944,7 +941,7 @@ fn claims_set_from_serialized_cert(slice: &[u8]) -> anyhow::Result<ClaimsSet> {
 }
 
 /// Extracts the claim that contains the values for the specified layer.
-fn extract_layer_values(claims: &ClaimsSet, layer_id: i64) -> anyhow::Result<&Vec<(Value, Value)>> {
+fn extract_layer_data(claims: &ClaimsSet, layer_id: i64) -> anyhow::Result<&Vec<(Value, Value)>> {
     let target = RegisteredLabelWithPrivate::PrivateUse(layer_id);
     claims
         .rest
