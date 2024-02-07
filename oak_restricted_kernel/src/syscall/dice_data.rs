@@ -124,7 +124,7 @@ impl FileDescriptor for DiceDataDescriptor {
                         self,
                         Self::Readable(Box::new(ReadState {
                             index: 0,
-                            data: DiceData::Layer1(Box::new(write_state.data)),
+                            data: DiceData::Layer1(Box::new(read_data)),
                         })),
                     );
                 }
