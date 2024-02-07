@@ -117,15 +117,11 @@ impl FileDescriptor for DiceDataDescriptor {
                 }
 
                 if write_state.index == data_as_slice.len() {
-                    let read_data =
-                        <RestrictedKernelDiceData as zerocopy::FromBytes>::read_from(data_as_slice)
-                            .unwrap();
-
                     let _ = core::mem::replace(
                         self,
                         Self::Readable(Box::new(ReadState {
                             index: 0,
-                            data: DiceData::Layer1(Box::new(read_data)),
+                            data: DiceData::Layer1(Box::new(write_state.data)),
                         })),
                     );
                 }
@@ -147,6 +143,7 @@ pub fn register(data: DiceData) {
         .expect("DiceDataDescriptor already registered");
 }
 
+#[cfg(feature = "initrd")]
 #[test]
 fn fd_permits_one_full_write() {
     let layer0 = <Stage0DiceData as zerocopy::FromZeroes>::new_zeroed();
@@ -179,6 +176,7 @@ fn fd_permits_one_full_write() {
         .is_err());
 }
 
+#[cfg(feature = "initrd")]
 #[test]
 fn fd_supports_partial_writes() {
     let layer0 = <Stage0DiceData as zerocopy::FromZeroes>::new_zeroed();
