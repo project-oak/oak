@@ -1,7 +1,6 @@
 [package]
 name = "key_value_lookup"
 version = "0.1.0"
-authors = ["Tiziano Santoro <tzn@google.com>"]
 edition = "2021"
 license = "Apache-2.0"
 
