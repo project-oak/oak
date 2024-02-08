@@ -21,7 +21,8 @@ use oak_attestation_verification::{
     verifier::{to_attestation_results, verify},
 };
 use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, AmdSevReferenceValues, BinaryReferenceValue,
+    attestation_results::Status, binary_reference_value, reference_values,
+    root_layer_reference_values, AmdSevReferenceValues, BinaryReferenceValue,
     ContainerLayerEndorsements, ContainerLayerReferenceValues, EndorsementReferenceValue,
     Endorsements, Evidence, KernelLayerEndorsements, KernelLayerReferenceValues,
     OakContainersEndorsements, OakContainersReferenceValues, ReferenceValues,
@@ -37,13 +38,20 @@ const VCEK_MILAN_CERT_DER: &str = "testdata/vcek_milan.der";
 const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 const EVIDENCE_PATH: &str = "testdata/evidence.binarypb";
+const MOCK_EVIDENCE_PATH: &str = "testdata/mock_evidence.binarypb";
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
 
-// Creates a valid evidence instance.
+// Creates a valid AMD SEV-SNP evidence instance.
 fn create_evidence() -> Evidence {
     let serialized = fs::read(EVIDENCE_PATH).expect("could not read evidence");
+    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
+}
+
+// Creates a valid mock evidence instance.
+fn create_mock_evidence() -> Evidence {
+    let serialized = fs::read(MOCK_EVIDENCE_PATH).expect("could not read evidence");
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
@@ -109,11 +117,7 @@ fn create_reference_values() -> ReferenceValues {
         rekor_public_key,
     };
     let skip = BinaryReferenceValue {
-        r#type: Some(
-            oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Skip(
-                SkipVerification {},
-            ),
-        ),
+        r#type: Some(binary_reference_value::Type::Skip(SkipVerification {})),
     };
     let brv = BinaryReferenceValue {
         r#type: Some(
@@ -132,8 +136,7 @@ fn create_reference_values() -> ReferenceValues {
     };
 
     let root_layer = RootLayerReferenceValues {
-        amd_sev: Some(amd_sev),
-        intel_tdx: None,
+        r#type: Some(root_layer_reference_values::Type::AmdSev(amd_sev)),
     };
     let kernel_layer = KernelLayerReferenceValues {
         kernel_image: Some(skip.clone()),
@@ -157,9 +160,7 @@ fn create_reference_values() -> ReferenceValues {
         container_layer: Some(container_layer),
     };
     ReferenceValues {
-        r#type: Some(
-            oak_proto_rust::oak::attestation::v1::reference_values::Type::OakContainers(vs),
-        ),
+        r#type: Some(reference_values::Type::OakContainers(vs)),
     }
 }
 
@@ -168,6 +169,30 @@ fn verify_succeeds() {
     let evidence = create_evidence();
     let endorsements = create_endorsements();
     let reference_values = create_reference_values();
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_ok());
+    assert!(p.status() == Status::Success);
+}
+
+#[test]
+fn verify_mock_evidence() {
+    let evidence = create_mock_evidence();
+    let endorsements = create_endorsements();
+    let mut reference_values = create_reference_values();
+    if let Some(reference_values::Type::OakContainers(reference)) = reference_values.r#type.as_mut()
+    {
+        reference.root_layer = Some(RootLayerReferenceValues {
+            r#type: Some(root_layer_reference_values::Type::Skip(SkipVerification {})),
+        });
+    } else {
+        panic!("invalid reference value type");
+    }
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);

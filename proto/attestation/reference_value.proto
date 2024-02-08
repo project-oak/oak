@@ -70,9 +70,13 @@ message StringReferenceValue {
 }
 
 message RootLayerReferenceValues {
-  // Switches between AMD and Intel based on TeePlatform value.
-  AmdSevReferenceValues amd_sev = 1;
-  IntelTdxReferenceValues intel_tdx = 2;
+  oneof type {
+    // Switches between AMD SEV-SNP and Intel TDX based on TeePlatform value.
+    // Verification is skipped when not running in a TEE.
+    AmdSevReferenceValues amd_sev = 1;
+    IntelTdxReferenceValues intel_tdx = 2;
+    SkipVerification skip = 3;
+  }
 }
 
 message AmdSevReferenceValues {
