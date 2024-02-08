@@ -16,6 +16,7 @@
 
 #![no_std]
 
+#[cfg(feature = "global_allocator")]
 use heap::LockedGrowableHeap;
 
 pub mod heap;

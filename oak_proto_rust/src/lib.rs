@@ -16,6 +16,7 @@
 // structure to include! it.
 
 #![no_std]
+#![feature(never_type)]
 
 // Inlined from tonic::include_proto in order to cut dependency on tonic.
 macro_rules! include_proto {
@@ -38,11 +39,12 @@ pub mod oak {
         pub mod abi {
             include_proto!("oak.functions.abi");
         }
-        pub mod benchmark {
-            include_proto!("oak.functions.benchmark");
-        }
         pub mod lookup_data {
             include_proto!("oak.functions.lookup_data");
+        }
+        pub mod testing {
+            use prost::Message;
+            include_proto!("oak.functions.testing");
         }
     }
 }
