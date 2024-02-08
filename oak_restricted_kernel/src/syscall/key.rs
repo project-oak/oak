@@ -36,7 +36,10 @@ enum DerivedKeyDescriptor {
 impl DerivedKeyDescriptor {
     #[cfg(not(feature = "initrd"))]
     fn new(key: DerivedKey) -> Self {
-        Self::Readable(DerivedKeyState { index: 0, key })
+        Self::Readable(DerivedKeyState {
+            index: 0,
+            data: key,
+        })
     }
 
     #[cfg(feature = "initrd")]
