@@ -537,9 +537,6 @@
 <a href="#537" id="537">537</a>
 <a href="#538" id="538">538</a>
 <a href="#539" id="539">539</a>
-<a href="#540" id="540">540</a>
-<a href="#541" id="541">541</a>
-<a href="#542" id="542">542</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -579,7 +576,7 @@
 <span class="kw">use crate</span>::{
     logger::{OakLogger, StandaloneLogger},
     lookup::LookupDataManager,
-    Observer,
+    Handler, Observer,
 };
 
 <span class="doccomment">/// Fixed name of the function to start a Wasm. Every Oak Wasm module must provide this function.
@@ -996,10 +993,25 @@
             observer,
         })
     }
+}
 
-    <span class="doccomment">/// Handles a call to invoke by getting the raw request bytes from the body of the request to
-    /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
-    </span><span class="kw">pub fn </span>handle_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, invoke_request: Request) -&gt; <span class="prelude-ty">Result</span>&lt;Response, micro_rpc::Status&gt; {
+<span class="kw">impl </span>Handler <span class="kw">for </span>WasmHandler {
+    <span class="kw">type </span>HandlerType = WasmHandler;
+
+    <span class="kw">fn </span>new_handler(
+        wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
+        lookup_data_manager: Arc&lt;LookupDataManager&gt;,
+        observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
+    ) -&gt; anyhow::Result&lt;WasmHandler&gt; {
+        <span class="kw">let </span>logger = Arc::new(StandaloneLogger);
+        <span class="kw">let </span>wasm_api_factory = Arc::new(StdWasmApiFactory {
+            lookup_data_manager,
+        });
+
+        <span class="self">Self</span>::create(wasm_module_bytes, wasm_api_factory, logger, observer)
+    }
+
+    <span class="kw">fn </span>handle_invoke(<span class="kw-2">&amp;</span><span class="self">self</span>, invoke_request: Request) -&gt; <span class="prelude-ty">Result</span>&lt;Response, micro_rpc::Status&gt; {
         <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]
         </span><span class="kw">let </span>now = Instant::now();
         <span class="kw">let </span>module = <span class="self">self</span>.wasm_module.clone();
@@ -1063,23 +1075,5 @@
 </span><span class="kw">fn </span>from_status_code(result: <span class="prelude-ty">Result</span>&lt;(), StatusCode&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;i32, wasmi::core::Trap&gt; {
     <span class="kw">let </span>status_code = result.err().unwrap_or(StatusCode::Ok);
     <span class="prelude-val">Ok</span>(status_code <span class="kw">as </span>i32)
-}
-
-<span class="doccomment">/// Creates a new `WasmHandler` instance.
-</span><span class="kw">pub fn </span>new_wasm_handler(
-    wasm_module_bytes: <span class="kw-2">&amp;</span>[u8],
-    lookup_data_manager: Arc&lt;LookupDataManager&gt;,
-    observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
-) -&gt; anyhow::Result&lt;WasmHandler&gt; {
-    <span class="kw">let </span>logger = Arc::new(StandaloneLogger);
-    <span class="kw">let </span>wasm_api_factory = StdWasmApiFactory {
-        lookup_data_manager,
-    };
-    WasmHandler::create(
-        wasm_module_bytes,
-        Arc::new(wasm_api_factory),
-        logger,
-        observer,
-    )
 }
 </code></pre></div></section></main></body></html>

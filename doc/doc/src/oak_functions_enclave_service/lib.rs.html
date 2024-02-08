@@ -220,6 +220,14 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -254,22 +262,27 @@
         InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
         OakFunctions, PublicKeyInfo, ReserveRequest, ReserveResponse,
     },
-    Observer,
+    Handler, Observer,
 };
 <span class="kw">use </span>prost::Message;
 
-<span class="kw">pub struct </span>OakFunctionsService&lt;
-    EKH: EncryptionKeyHandle + <span class="lifetime">&#39;static</span>,
+<span class="kw">pub struct </span>OakFunctionsService&lt;EKH, EP, H&gt;
+<span class="kw">where
+    </span>EKH: EncryptionKeyHandle + <span class="lifetime">&#39;static</span>,
     EP: oak_restricted_kernel_sdk::EvidenceProvider,
-&gt; {
+    H: Handler,
+{
     evidence_provider: EP,
     encryption_key_handle: Arc&lt;EKH&gt;,
-    instance: OnceCell&lt;OakFunctionsInstance&gt;,
+    instance: OnceCell&lt;OakFunctionsInstance&lt;H&gt;&gt;,
     observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
 }
 
-<span class="kw">impl</span>&lt;EKH: EncryptionKeyHandle + <span class="lifetime">&#39;static</span>, EP: oak_restricted_kernel_sdk::EvidenceProvider&gt;
-    OakFunctionsService&lt;EKH, EP&gt;
+<span class="kw">impl</span>&lt;EKH, EP, H&gt; OakFunctionsService&lt;EKH, EP, H&gt;
+<span class="kw">where
+    </span>EKH: EncryptionKeyHandle + <span class="lifetime">&#39;static</span>,
+    EP: oak_restricted_kernel_sdk::EvidenceProvider,
+    H: Handler,
 {
     <span class="kw">pub fn </span>new(
         evidence_provider: EP,
@@ -283,7 +296,7 @@
             observer,
         }
     }
-    <span class="kw">fn </span>get_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>OakFunctionsInstance, micro_rpc::Status&gt; {
+    <span class="kw">fn </span>get_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span>OakFunctionsInstance&lt;H&gt;, micro_rpc::Status&gt; {
         <span class="self">self</span>.instance.get().ok_or_else(|| {
             micro_rpc::Status::new_with_message(
                 micro_rpc::StatusCode::FailedPrecondition,
@@ -314,8 +327,11 @@
     }
 }
 
-<span class="kw">impl</span>&lt;EKH: EncryptionKeyHandle + <span class="lifetime">&#39;static</span>, EP: oak_restricted_kernel_sdk::EvidenceProvider&gt;
-    OakFunctions <span class="kw">for </span>OakFunctionsService&lt;EKH, EP&gt;
+<span class="kw">impl</span>&lt;EKH, EP, H&gt; OakFunctions <span class="kw">for </span>OakFunctionsService&lt;EKH, EP, H&gt;
+<span class="kw">where
+    </span>EKH: EncryptionKeyHandle + <span class="lifetime">&#39;static</span>,
+    EP: oak_restricted_kernel_sdk::EvidenceProvider,
+    H: Handler,
 {
     <span class="kw">fn </span>initialize(
         <span class="kw-2">&amp;</span><span class="self">self</span>,

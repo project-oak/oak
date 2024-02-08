@@ -121,6 +121,7 @@
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
 <a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -151,15 +152,15 @@
         ExtendNextLookupDataResponse, FinishNextLookupDataRequest, FinishNextLookupDataResponse,
         InitializeRequest, LookupDataChunk, ReserveRequest, ReserveResponse,
     },
-    wasm, Observer,
+    Handler, Observer,
 };
 
-<span class="kw">pub struct </span>OakFunctionsInstance {
+<span class="kw">pub struct </span>OakFunctionsInstance&lt;H: Handler&gt; {
     lookup_data_manager: Arc&lt;LookupDataManager&gt;,
-    wasm_handler: wasm::WasmHandler,
+    wasm_handler: H::HandlerType,
 }
 
-<span class="kw">impl </span>OakFunctionsInstance {
+<span class="kw">impl</span>&lt;H: Handler&gt; OakFunctionsInstance&lt;H&gt; {
     <span class="doccomment">/// See [`crate::proto::oak::functions::OakFunctions::initialize`].
     </span><span class="kw">pub fn </span>new(
         request: <span class="kw-2">&amp;</span>InitializeRequest,
@@ -168,13 +169,14 @@
         <span class="kw">let </span>lookup_data_manager =
             Arc::new(LookupDataManager::new_empty(Arc::new(StandaloneLogger)));
         <span class="kw">let </span>wasm_handler =
-            wasm::new_wasm_handler(<span class="kw-2">&amp;</span>request.wasm_module, lookup_data_manager.clone(), observer)
-                .map_err(|err| {
+            H::new_handler(<span class="kw-2">&amp;</span>request.wasm_module, lookup_data_manager.clone(), observer).map_err(
+                |err| {
                     micro_rpc::Status::new_with_message(
                         micro_rpc::StatusCode::Internal,
                         <span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t initialize Wasm handler: {:?}&quot;</span>, err),
                     )
-                })<span class="question-mark">?</span>;
+                },
+            )<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
             lookup_data_manager,
             wasm_handler,

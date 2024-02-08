@@ -415,6 +415,10 @@
 <a href="#415" id="415">415</a>
 <a href="#416" id="416">416</a>
 <a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -449,7 +453,8 @@
         InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
         ReserveRequest, ReserveResponse,
     },
-    Observer,
+    wasm::WasmHandler,
+    Handler, Observer,
 };
 <span class="kw">use </span>opentelemetry::{
     metrics::{Histogram, Meter, Unit},
@@ -479,13 +484,13 @@
 }
 
 <span class="comment">// Instance of the OakFunctions service for Oak Containers.
-</span><span class="kw">pub struct </span>OakFunctionsContainersService&lt;G: AsyncEncryptionKeyHandle + Send + Sync&gt; {
-    instance: OnceLock&lt;OakFunctionsInstance&gt;,
+</span><span class="kw">pub struct </span>OakFunctionsContainersService&lt;G: AsyncEncryptionKeyHandle + Send + Sync, H: Handler&gt; {
+    instance: OnceLock&lt;OakFunctionsInstance&lt;H&gt;&gt;,
     encryption_key_handle: Arc&lt;G&gt;,
     observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
 }
 
-<span class="kw">impl</span>&lt;G: AsyncEncryptionKeyHandle + Send + Sync&gt; OakFunctionsContainersService&lt;G&gt; {
+<span class="kw">impl</span>&lt;G: AsyncEncryptionKeyHandle + Send + Sync, H: Handler&gt; OakFunctionsContainersService&lt;G, H&gt; {
     <span class="kw">pub fn </span>new(
         encryption_key_handle: Arc&lt;G&gt;,
         observer: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Observer + Send + Sync&gt;&gt;,
@@ -497,7 +502,7 @@
         }
     }
 
-    <span class="kw">fn </span>get_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; tonic::Result&lt;<span class="kw-2">&amp;</span>OakFunctionsInstance&gt; {
+    <span class="kw">fn </span>get_instance(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; tonic::Result&lt;<span class="kw-2">&amp;</span>OakFunctionsInstance&lt;H&gt;&gt; {
         <span class="self">self</span>.instance
             .get()
             .ok_or_else(|| tonic::Status::failed_precondition(<span class="string">&quot;not initialized&quot;</span>))
@@ -528,8 +533,11 @@
 }
 
 <span class="attr">#[tonic::async_trait]
-</span><span class="kw">impl</span>&lt;G: AsyncEncryptionKeyHandle + Send + Sync + <span class="lifetime">&#39;static</span>&gt; OakFunctions
-    <span class="kw">for </span>OakFunctionsContainersService&lt;G&gt;
+</span><span class="kw">impl</span>&lt;G, H&gt; OakFunctions <span class="kw">for </span>OakFunctionsContainersService&lt;G, H&gt;
+<span class="kw">where
+    </span>G: AsyncEncryptionKeyHandle + Send + Sync + <span class="lifetime">&#39;static</span>,
+    H: Handler + <span class="lifetime">&#39;static</span>,
+    H::HandlerType: Send + Sync,
 {
     <span class="kw">async fn </span>initialize(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -821,7 +829,7 @@
         .layer(tower::load_shed::LoadShedLayer::new())
         .layer(MonitoringLayer::new(meter.clone()))
         .add_service(
-            OakFunctionsServer::new(OakFunctionsContainersService::new(
+            OakFunctionsServer::new(OakFunctionsContainersService::&lt;<span class="kw">_</span>, WasmHandler&gt;::new(
                 encryption_key_handle,
                 <span class="prelude-val">Some</span>(Arc::new(OtelObserver::new(meter))),
             ))
