@@ -35,10 +35,11 @@ fn read_stage0_dice_data() -> Stage0DiceData {
 
 #[entrypoint]
 fn start() -> ! {
-    let dice_data = read_stage0_dice_data();
-    let channel = FileDescriptorChannel::default();
-    let (derived_key, dice_data) =
-        oak_restricted_kernel_orchestrator::load_and_attest_app(channel, dice_data);
+    let (derived_key, dice_data) = {
+        let stage0_dice_data = read_stage0_dice_data();
+        let channel = FileDescriptorChannel::default();
+        oak_restricted_kernel_orchestrator::load_and_attest_app(channel, stage0_dice_data)
+    };
 
     syscall::write(DERIVED_KEY_FD, derived_key.as_bytes()).expect("failed to write derived key");
     syscall::write(DICE_DATA_FD, dice_data.as_bytes()).expect("failed to write dice data");
