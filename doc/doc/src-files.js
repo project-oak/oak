@@ -2,8 +2,6 @@ var srcIndex = JSON.parse('{\
 "echo":["",[],["lib.rs"]],\
 "invalid_module":["",[],["lib.rs"]],\
 "key_value_lookup":["",[],["lib.rs"]],\
-"location_utils":["",[],["lib.rs"]],\
-"lookup_data_checker":["",[],["main.rs"]],\
 "lookup_data_generator":["",[],["data.rs","lib.rs"]],\
 "micro_rpc":["",[],["lib.rs","status.rs"]],\
 "micro_rpc_build":["",[],["lib.rs"]],\
@@ -31,7 +29,6 @@ var srcIndex = JSON.parse('{\
 "oak_functions_containers_launcher":["",[],["lib.rs","lookup.rs","server.rs"]],\
 "oak_functions_enclave_service":["",[],["lib.rs"]],\
 "oak_functions_launcher":["",[],["lib.rs","lookup.rs","server.rs"]],\
-"oak_functions_load_test":["",[],["main.rs"]],\
 "oak_functions_sdk":["",[],["lib.rs"]],\
 "oak_functions_sdk_abi_test_get_storage_item":["",[],["lib.rs"]],\
 "oak_functions_sdk_abi_test_invoke_testing":["",[],["lib.rs"]],\
@@ -58,7 +55,6 @@ var srcIndex = JSON.parse('{\
 "oak_virtio":["",[["console",[],["mod.rs"]],["queue",[],["mod.rs","virtq.rs"]],["vsock",[["socket",[],["mod.rs"]]],["mod.rs","packet.rs"]]],["lib.rs"]],\
 "sev_serial":["",[],["lib.rs"]],\
 "snp_measurement":["",[],["elf.rs","main.rs","page.rs","stage0.rs","vmsa.rs"]],\
-"weather_lookup":["",[],["lib.rs"]],\
 "xtask":["",[],["check_build_licenses.rs","check_license.rs","check_todo.rs","containers.rs","examples.rs","files.rs","internal.rs","launcher.rs","lib.rs","testing.rs"]]\
 }');
 createSrcSidebar();
