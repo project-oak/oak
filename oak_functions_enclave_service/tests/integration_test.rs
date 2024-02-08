@@ -50,6 +50,7 @@ fn init() {
 fn new_service_for_testing() -> OakFunctionsService<
     oak_restricted_kernel_sdk::mock_attestation::MockEncryptionKeyHandle,
     oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider,
+    oak_functions_service::wasm::WasmHandler,
 > {
     OakFunctionsService::new(
         oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider::create()
@@ -328,6 +329,7 @@ fn it_should_handle_wasm_panic() {
                 OakFunctionsService<
                     oak_restricted_kernel_sdk::mock_attestation::MockEncryptionKeyHandle,
                     oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider,
+                    oak_functions_service::wasm::WasmHandler,
                 >,
             >,
         >,

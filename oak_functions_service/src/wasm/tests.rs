@@ -31,6 +31,7 @@ use crate::{
     logger::StandaloneLogger,
     lookup::LookupDataManager,
     wasm::{AbiPointer, AbiPointerOffset},
+    Handler,
 };
 
 #[test]

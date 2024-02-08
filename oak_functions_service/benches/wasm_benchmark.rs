@@ -27,6 +27,7 @@ use oak_functions_service::{
     logger::StandaloneLogger,
     lookup::{Data, LookupDataManager},
     wasm::WasmHandler,
+    Handler,
 };
 use oak_proto_rust::oak::oak_functions::testing::{
     lookup_request::Mode, LookupRequest, LookupResponse, TestModuleClient,
@@ -182,7 +183,7 @@ fn create_test_state_with_wasm_module_name(wasm_module_name: &str) -> TestState 
         oak_functions_test_utils::build_rust_crate_wasm(wasm_module_name).unwrap();
     let wasm_module_bytes = std::fs::read(wasm_module_path).unwrap();
 
-    let wasm_handler = oak_functions_service::wasm::new_wasm_handler(
+    let wasm_handler = oak_functions_service::wasm::WasmHandler::new_handler(
         &wasm_module_bytes,
         lookup_data_manager.clone(),
         None,
