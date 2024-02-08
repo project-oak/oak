@@ -19,10 +19,9 @@ use anyhow::{anyhow, Context};
 use clap::Parser;
 use oak_attestation::attester::{Attester, EmptyAttestationReportGenerator};
 use oak_containers_orchestrator::{
-    crypto::InstanceKeyStore, launcher_client::LauncherClient,
+    crypto::generate_instance_keys, launcher_client::LauncherClient,
     proto::oak::containers::v1::KeyProvisioningRole,
 };
-use oak_dice::cert::generate_ecdsa_key_pair;
 use tokio_util::sync::CancellationToken;
 
 #[global_allocator]
@@ -73,19 +72,18 @@ async fn main() -> anyhow::Result<()> {
         &container_bundle,
         &application_config,
     );
-    let (signing_key, verifying_key) = generate_ecdsa_key_pair();
-    let instance_key_store = InstanceKeyStore::new(signing_key);
+    let (instance_keys, instance_public_keys) = generate_instance_keys();
 
     let dice_evidence = dice_builder.add_application_keys(
         additional_claims,
-        &instance_key_store.instance_encryption_public_key(),
-        &verifying_key,
+        &instance_public_keys.encryption_public_key,
+        &instance_public_keys.signing_public_key,
     )?;
     // TODO(#4074): Remove once DICE attestation is fully implemented.
     let attestation_report_generator = Arc::new(EmptyAttestationReportGenerator);
     let attester = Attester::new(
         attestation_report_generator,
-        instance_key_store.instance_encryption_key(),
+        &instance_public_keys.encryption_public_key,
     );
     let evidence = attester
         .generate_attestation_evidence()
@@ -103,16 +101,20 @@ async fn main() -> anyhow::Result<()> {
         .get_key_provisioning_role()
         .await
         .map_err(|error| anyhow!("couldn't get key provisioning role: {:?}", error))?;
-    let key_store = Arc::new(match key_provisioning_role {
+    let group_keys = Arc::new(match key_provisioning_role {
         KeyProvisioningRole::Unspecified => anyhow::bail!("unspecified key provisioning role"),
-        KeyProvisioningRole::Leader => instance_key_store.generate_group_keys(),
+        KeyProvisioningRole::Leader => {
+            // TODO(#4442): Sign group public keys in the enclave evidence.
+            let (group_keys, _) = instance_keys.generate_group_keys();
+            group_keys
+        }
         KeyProvisioningRole::Dependant => {
-            let group_keys = launcher_client
+            let get_group_keys_response = launcher_client
                 .get_group_keys()
                 .await
                 .map_err(|error| anyhow!("couldn't get group keys: {:?}", error))?;
-            instance_key_store
-                .provide_group_keys(group_keys)
+            instance_keys
+                .provide_group_keys(get_group_keys_response)
                 .context("couldn't provide group keys")?
         }
     });
@@ -127,14 +129,15 @@ async fn main() -> anyhow::Result<()> {
     tokio::try_join!(
         oak_containers_orchestrator::ipc_server::create(
             &args.ipc_socket_path,
-            key_store.clone(),
+            instance_keys,
+            group_keys.clone(),
             application_config,
             launcher_client,
             cancellation_token.clone(),
         ),
         oak_containers_orchestrator::key_provisioning::create(
             &args.orchestrator_addr,
-            key_store,
+            group_keys,
             cancellation_token.clone(),
         ),
         oak_containers_orchestrator::container_runtime::run(
