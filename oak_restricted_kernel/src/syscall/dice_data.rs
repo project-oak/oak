@@ -106,15 +106,16 @@ impl FileDescriptor for DiceDataDescriptor {
                 let data_as_slice = <RestrictedKernelDiceData as zerocopy::AsBytes>::as_bytes_mut(
                     &mut write_state.data,
                 );
-                let length = copy_max_slice(buf, &mut data_as_slice[write_state.index..]);
 
-                write_state.index += length;
-
-                if write_state.index > data_as_slice.len() {
+                if buf.len() > data_as_slice[write_state.index..].len() {
                     // the dice data the app may write has a known size. If the app keeps writing to
                     // this FD after it has written all of it, it's doing something wrong.
                     return Err(Errno::EINVAL);
                 }
+
+                let length = copy_max_slice(buf, &mut data_as_slice[write_state.index..]);
+
+                write_state.index += length;
 
                 if write_state.index == data_as_slice.len() {
                     let read_data =
