@@ -86,57 +86,12 @@ async fn test_launcher_echo() {
 
     let response = client.invoke(b"xxxyyyzzz").await.expect("failed to invoke");
     assert_eq!(std::str::from_utf8(&response).unwrap(), "xxxyyyzzz");
-}
-
-// Allow enough worker threads to collect output from background tasks.
-#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
-async fn test_launcher_weather_lookup() {
-    if xtask::testing::skip_test() {
-        log::info!("skipping test");
-        return;
-    }
-
-    let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("weather_lookup")
-        .expect("Failed to build Wasm module");
-
-    let (_background, port) = xtask::launcher::run_oak_functions_example_in_background(
-        &wasm_path,
-        workspace_path(&[
-            "oak_functions",
-            "examples",
-            "weather_lookup",
-            "testdata",
-            "lookup_data_weather_sparse_s2",
-        ])
-        .to_str()
-        .unwrap(),
-    )
-    .await;
-
-    // Wait for the server to start up.
-    tokio::time::sleep(Duration::from_secs(20)).await;
-
-    let mut client = OakFunctionsClient::new(
-        &format!("http://localhost:{port}"),
-        &InsecureAttestationVerifier {},
-    )
-    .await
-    .expect("failed to create client");
-
-    let response = client
-        .invoke(br#"{"lat":0,"lng":0}"#)
-        .await
-        .expect("failed to invoke");
-    assert_eq!(
-        std::str::from_utf8(&response).unwrap(),
-        r#"{"temperature_degrees_celsius":29}"#
-    );
 
     // TODO(#4177): Check response in the integration test.
     // Run Java client via Bazel.
     let status = tokio::process::Command::new("bazel")
         .arg("run")
-        .arg("//java/src/main/java/com/google/oak/client/weather_lookup_client")
+        .arg("//java/src/main/java/com/google/oak/client/oak_functions_client")
         .arg("--")
         .arg(format!("http://localhost:{port}"))
         .current_dir(workspace_path(&[]))
