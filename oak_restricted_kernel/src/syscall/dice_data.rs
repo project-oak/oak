@@ -47,6 +47,7 @@ struct ReadState {
     index: usize,
 }
 
+#[cfg(feature = "initrd")]
 struct WriteState {
     data: RestrictedKernelDiceData,
     index: usize,
