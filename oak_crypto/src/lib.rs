@@ -32,9 +32,12 @@ pub mod proto {
     }
 }
 
+pub mod encryption_key;
 pub mod encryptor;
 pub mod hpke;
 pub mod signer;
 #[cfg(test)]
 mod tests;
 pub mod verifier;
+
+pub const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
