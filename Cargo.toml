@@ -25,10 +25,6 @@ members = [
   "oak_functions/examples/echo/module",
   "oak_functions/examples/invalid_module/module",
   "oak_functions/examples/key_value_lookup/module",
-  "oak_functions/examples/weather_lookup/module",
-  "oak_functions/load_test",
-  "oak_functions/location_utils",
-  "oak_functions/lookup_data_checker",
   "oak_functions/lookup_data_generator",
   "oak_functions_abi",
   "oak_functions_client",
@@ -91,7 +87,6 @@ codegen-units = 1
 # Declare workspace-wide dependencies so that they don't need to use relative paths to refer to each other, and they are always kept in sync.
 # Local crates.
 benchmark = { path = "./oak_functions/examples/benchmark/module" }
-location_utils = { path = "./oak_functions/location_utils" }
 micro_rpc = { path = "./micro_rpc" }
 micro_rpc_build = { path = "./micro_rpc_build" }
 oak_attestation = { path = "./oak_attestation" }
