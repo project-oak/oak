@@ -18,8 +18,10 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context};
 use hpke::{kem::X25519HkdfSha256, Deserializable, Kem};
 use oak_crypto::{
-    encryptor::{ClientEncryptor, EncryptionKeyHandle, EncryptionKeyProvider, ServerEncryptor},
+    encryption_key::{EncryptionKey, EncryptionKeyHandle},
+    encryptor::{ClientEncryptor, ServerEncryptor},
     proto::oak::crypto::v1::EncryptedRequest,
+    EMPTY_ASSOCIATED_DATA,
 };
 use tonic::{Request, Response};
 
@@ -31,25 +33,23 @@ use crate::proto::oak::{
     key_provisioning::v1::GroupKeys,
 };
 
-const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
-
 /// An implementation of the Key Store without group keys.
 pub struct InstanceKeyStore {
     // TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
-    instance_encryption_key: Arc<EncryptionKeyProvider>,
+    instance_encryption_key: Arc<EncryptionKey>,
     instance_signing_key: p256::ecdsa::SigningKey,
 }
 
 impl InstanceKeyStore {
     pub fn new(instance_signing_key: p256::ecdsa::SigningKey) -> Self {
         Self {
-            instance_encryption_key: Arc::new(EncryptionKeyProvider::generate()),
+            instance_encryption_key: Arc::new(EncryptionKey::generate()),
             instance_signing_key,
         }
     }
 
-    pub fn instance_encryption_key(&self) -> Arc<EncryptionKeyProvider> {
-        // TODO(#4442): Currently we have to give the encryption key provider to the `ipc_server`.
+    pub fn instance_encryption_key(&self) -> Arc<EncryptionKey> {
+        // TODO(#4442): Currently we have to give the encryption key to the `ipc_server`.
         // Once we move all enclave apps to the new crypto service and update the `Attester` to not
         // have the private key - this function should be removed.
         self.instance_encryption_key.clone()
@@ -62,7 +62,7 @@ impl InstanceKeyStore {
     pub fn generate_group_keys(self) -> KeyStore {
         KeyStore {
             instance_encryption_key: self.instance_encryption_key,
-            group_encryption_key: EncryptionKeyProvider::generate(),
+            group_encryption_key: EncryptionKey::generate(),
             instance_signing_key: self.instance_signing_key,
         }
     }
@@ -87,7 +87,7 @@ impl InstanceKeyStore {
                 .map_err(|err| anyhow!("couldn't deserialize private key: {:?}", err))?;
         let encryption_public_key = X25519HkdfSha256::sk_to_pk(&encryption_private_key);
         let group_encryption_key =
-            EncryptionKeyProvider::new(encryption_private_key, encryption_public_key);
+            EncryptionKey::new(encryption_private_key, encryption_public_key);
 
         // Add group keys to the Orchestrator key store.
         Ok(KeyStore {
@@ -101,14 +101,14 @@ impl InstanceKeyStore {
 /// An implementation of the Key Store with initialized group keys.
 pub struct KeyStore {
     // TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
-    instance_encryption_key: Arc<EncryptionKeyProvider>,
+    instance_encryption_key: Arc<EncryptionKey>,
     instance_signing_key: p256::ecdsa::SigningKey,
-    group_encryption_key: EncryptionKeyProvider,
+    group_encryption_key: EncryptionKey,
 }
 
 impl KeyStore {
-    pub fn instance_encryption_key(&self) -> Arc<EncryptionKeyProvider> {
-        // TODO(#4442): Currently we have to give the encryption key provider to the `ipc_server`.
+    pub fn instance_encryption_key(&self) -> Arc<EncryptionKey> {
+        // TODO(#4442): Currently we have to give the encryption key to the `ipc_server`.
         // Once we move all enclave apps to the new crypto service and update the `Attester` to not
         // have the private key - this function should be removed.
         self.instance_encryption_key.clone()
