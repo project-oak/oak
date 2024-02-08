@@ -32,7 +32,7 @@ use oak_functions_service::{
         InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
         ReserveRequest, ReserveResponse,
     },
-    wasm::WasmHandler,
+    wasm::wasmtime::WasmtimeHandler,
     Handler, Observer,
 };
 use opentelemetry::{
@@ -408,7 +408,7 @@ pub async fn serve<G: AsyncEncryptionKeyHandle + Send + Sync + 'static>(
         .layer(tower::load_shed::LoadShedLayer::new())
         .layer(MonitoringLayer::new(meter.clone()))
         .add_service(
-            OakFunctionsServer::new(OakFunctionsContainersService::<_, WasmHandler>::new(
+            OakFunctionsServer::new(OakFunctionsContainersService::<_, WasmtimeHandler>::new(
                 encryption_key_handle,
                 Some(Arc::new(OtelObserver::new(meter))),
             ))

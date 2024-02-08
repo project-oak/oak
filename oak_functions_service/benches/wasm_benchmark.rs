@@ -26,7 +26,7 @@ use oak_functions_abi::Request;
 use oak_functions_service::{
     logger::StandaloneLogger,
     lookup::{Data, LookupDataManager},
-    wasm::WasmHandler,
+    wasm::{wasmtime::WasmtimeHandler, WasmHandler},
     Handler,
 };
 use oak_proto_rust::oak::oak_functions::testing::{
@@ -34,7 +34,7 @@ use oak_proto_rust::oak::oak_functions::testing::{
 };
 
 fn bench_invoke_echo(c: &mut Criterion) {
-    let test_state = create_test_state_with_wasm_module_name("echo");
+    let test_state = create_test_state_with_wasm_module_name::<WasmHandler>("echo");
 
     // Measure throughput for different data sizes.
     let mut group = c.benchmark_group("echo wasm");
@@ -57,7 +57,7 @@ fn bench_invoke_echo(c: &mut Criterion) {
 }
 
 fn bench_invoke_lookup(c: &mut Criterion) {
-    let test_state = create_test_state_with_wasm_module_name("key_value_lookup");
+    let test_state = create_test_state_with_wasm_module_name::<WasmHandler>("key_value_lookup");
 
     const MAX_DATA_SIZE: i32 = 1000;
     const KEY_INDEX: i32 = 100;
@@ -93,11 +93,11 @@ fn bench_invoke_lookup(c: &mut Criterion) {
     });
 }
 
-struct Transport<'a> {
-    wasm_handler: &'a mut WasmHandler,
+struct Transport<'a, H: Handler> {
+    wasm_handler: &'a mut H,
 }
 
-impl<'a> micro_rpc::Transport for Transport<'a> {
+impl<'a, H: Handler> micro_rpc::Transport for Transport<'a, H> {
     fn invoke(&mut self, request: &[u8]) -> Result<Vec<u8>, !> {
         Ok(self
             .wasm_handler
@@ -110,20 +110,32 @@ impl<'a> micro_rpc::Transport for Transport<'a> {
 }
 
 fn bench_invoke_lookup_multi(c: &mut Criterion) {
-    let mut test_state = create_test_state_with_wasm_module_name("oak_functions_test_module");
+    let mut test_state_wasmi =
+        create_test_state_with_wasm_module_name::<WasmHandler>("oak_functions_test_module");
+    let mut test_state_wasmtime =
+        create_test_state_with_wasm_module_name::<WasmtimeHandler>("oak_functions_test_module");
 
     const MAX_DATA_SIZE: i32 = 1_000_000;
     const START_KEY_INDEX: i32 = 100;
 
     let test_data = create_test_data(0, MAX_DATA_SIZE);
-    test_state
+    test_state_wasmi
         .lookup_data_manager
         .extend_next_lookup_data(test_data.clone());
-    test_state.lookup_data_manager.finish_next_lookup_data();
+    test_state_wasmi
+        .lookup_data_manager
+        .finish_next_lookup_data();
 
-    fn run_lookup_with_items(
+    test_state_wasmtime
+        .lookup_data_manager
+        .extend_next_lookup_data(test_data.clone());
+    test_state_wasmtime
+        .lookup_data_manager
+        .finish_next_lookup_data();
+
+    fn run_lookup_with_items<H: Handler>(
         b: &mut criterion::Bencher,
-        test_state: &mut TestState,
+        test_state: &mut TestState<H>,
         items: i32,
         mode: Mode,
     ) {
@@ -152,11 +164,17 @@ fn bench_invoke_lookup_multi(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("lookup_multi wasm");
     for i in [1, 1000, 2000, 3000, 4000].iter() {
-        group.bench_with_input(BenchmarkId::new("Individual", i), i, |b, &i| {
-            run_lookup_with_items(b, &mut test_state, i, Mode::Individual);
+        group.bench_with_input(BenchmarkId::new("wasmtime batch", i), i, |b, &i| {
+            run_lookup_with_items(b, &mut test_state_wasmtime, i, Mode::Batch);
         });
-        group.bench_with_input(BenchmarkId::new("Batch", i), i, |b, &i| {
-            run_lookup_with_items(b, &mut test_state, i, Mode::Batch);
+        group.bench_with_input(BenchmarkId::new("wasmtime individual", i), i, |b, &i| {
+            run_lookup_with_items(b, &mut test_state_wasmtime, i, Mode::Individual);
+        });
+        group.bench_with_input(BenchmarkId::new("wasmi batch", i), i, |b, &i| {
+            run_lookup_with_items(b, &mut test_state_wasmi, i, Mode::Batch);
+        });
+        group.bench_with_input(BenchmarkId::new("wasmi individual", i), i, |b, &i| {
+            run_lookup_with_items(b, &mut test_state_wasmi, i, Mode::Individual);
         });
     }
     group.finish();
@@ -171,24 +189,20 @@ fn create_test_data(start: i32, end: i32) -> Data {
     }))
 }
 
-struct TestState {
-    wasm_handler: WasmHandler,
+struct TestState<H: Handler> {
+    wasm_handler: H::HandlerType,
     lookup_data_manager: Arc<LookupDataManager>,
 }
 
-fn create_test_state_with_wasm_module_name(wasm_module_name: &str) -> TestState {
+fn create_test_state_with_wasm_module_name<H: Handler>(wasm_module_name: &str) -> TestState<H> {
     let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
     let wasm_module_path =
         oak_functions_test_utils::build_rust_crate_wasm(wasm_module_name).unwrap();
     let wasm_module_bytes = std::fs::read(wasm_module_path).unwrap();
 
-    let wasm_handler = oak_functions_service::wasm::WasmHandler::new_handler(
-        &wasm_module_bytes,
-        lookup_data_manager.clone(),
-        None,
-    )
-    .unwrap();
+    let wasm_handler =
+        H::new_handler(&wasm_module_bytes, lookup_data_manager.clone(), None).unwrap();
 
     TestState {
         wasm_handler,

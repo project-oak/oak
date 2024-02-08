@@ -928,7 +928,7 @@ name = "oak_restricted_kernel_sdk_proc_macro"
 version = "0.1.0"
 dependencies = [
  "quote",
- "syn 1.0.102",
+ "syn 2.0.32",
 ]
 
 [[package]]
