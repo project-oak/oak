@@ -18,7 +18,7 @@
 //! TEE may not be available.
 
 use oak_crypto::{
-    encryptor::{EncryptionKeyHandle, EncryptionKeyProvider},
+    encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
 };
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData};
@@ -77,7 +77,7 @@ impl Signer for MockSigner {
 /// private keys.
 #[derive(Clone)]
 pub struct MockEncryptionKeyHandle {
-    key: &'static EncryptionKeyProvider,
+    key: &'static EncryptionKey,
 }
 
 impl MockEncryptionKeyHandle {

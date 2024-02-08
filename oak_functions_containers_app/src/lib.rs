@@ -23,7 +23,7 @@ use std::{
 
 use anyhow::Context;
 use oak_attestation::handler::AsyncEncryptionHandler;
-use oak_crypto::encryptor::AsyncEncryptionKeyHandle;
+use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
 use oak_functions_service::{
     instance::OakFunctionsInstance,
     proto::oak::functions::{

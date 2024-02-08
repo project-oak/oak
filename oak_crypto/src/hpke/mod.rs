@@ -40,7 +40,7 @@ pub(crate) type EncappedKey = <Kem as KemTrait>::EncappedKey;
 /// Info string used by Hybrid Public Key Encryption;
 pub(crate) const OAK_HPKE_INFO: &[u8] = b"Oak Hybrid Public Key Encryption v1";
 
-pub(crate) fn generate_kem_keypair() -> (PrivateKey, PublicKey) {
+pub(crate) fn generate_kem_key_pair() -> (PrivateKey, PublicKey) {
     Kem::gen_keypair(&mut OsRng)
 }
 

@@ -23,7 +23,7 @@ use zeroize::Zeroizing;
 use crate::{
     encryptor::ClientEncryptor,
     hpke::{
-        generate_kem_keypair, setup_base_recipient, Deserializable, PrivateKey, RecipientContext,
+        generate_kem_key_pair, setup_base_recipient, Deserializable, PrivateKey, RecipientContext,
         Serializable, OAK_HPKE_INFO,
     },
     proto::oak::crypto::v1::EncryptedRequest,
@@ -34,7 +34,7 @@ use crate::{
 /// NIST P-256 SEC1 encoded point public key.
 /// <https://secg.org/sec1-v2.pdf>
 pub fn generate_encryption_key_pair() -> (EncryptionKey, Vec<u8>) {
-    let (private_key, public_key) = generate_kem_keypair();
+    let (private_key, public_key) = generate_kem_key_pair();
     (
         EncryptionKey::new(private_key),
         public_key.to_bytes().to_vec(),

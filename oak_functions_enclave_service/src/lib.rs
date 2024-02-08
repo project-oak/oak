@@ -22,7 +22,7 @@ use alloc::{format, string::ToString, sync::Arc, vec::Vec};
 
 use oak_attestation::{dice::evidence_to_proto, handler::EncryptionHandler};
 use oak_core::sync::OnceCell;
-use oak_crypto::encryptor::EncryptionKeyHandle;
+use oak_crypto::encryption_key::EncryptionKeyHandle;
 pub use oak_functions_service::proto;
 use oak_functions_service::{
     instance::OakFunctionsInstance,
