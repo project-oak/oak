@@ -101,10 +101,16 @@ impl RootLayerEvidence {
 
     pub fn get_remote_attestation_report(&self) -> Result<&[u8], &'static str> {
         match self.get_tee_platform()? {
+            TeePlatform::None => {
+                // We use a mock attestation report based on the AMD SEV-SNP report when we run
+                // without a TEE.
+                Ok(&self.remote_attestation_report[..AMD_SEV_SNP_ATTESTATION_REPORT_SIZE])
+            }
             TeePlatform::AmdSevSnp => {
                 Ok(&self.remote_attestation_report[..AMD_SEV_SNP_ATTESTATION_REPORT_SIZE])
             }
-            _ => Ok(&self.remote_attestation_report),
+            TeePlatform::IntelTdx => Ok(&self.remote_attestation_report),
+            TeePlatform::Unspecified => Err("TEE platform not specified"),
         }
     }
 
