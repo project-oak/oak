@@ -260,10 +260,6 @@
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
-<a href="#266" id="266">266</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -281,7 +277,7 @@
 //
 
 </span><span class="kw">mod </span>channel;
-<span class="kw">mod </span>dice_data;
+<span class="kw">pub mod </span>dice_data;
 <span class="kw">mod </span>fd;
 <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
 </span><span class="kw">mod </span>key;
@@ -296,10 +292,6 @@
 <span class="kw">use </span>core::{arch::asm, ffi::c_void};
 
 <span class="kw">use </span>oak_channel::Channel;
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
-</span><span class="kw">use </span>oak_dice::evidence::RestrictedKernelDiceData <span class="kw">as </span>DiceData;
-<span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
-</span><span class="kw">use </span>oak_dice::evidence::Stage0DiceData <span class="kw">as </span>DiceData;
 <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
 </span><span class="kw">use </span>oak_restricted_kernel_dice::DerivedKey;
 <span class="kw">use </span>oak_restricted_kernel_interface::{Errno, Syscall};
@@ -339,7 +331,7 @@
 
 <span class="kw">pub fn </span>enable_syscalls(
     channel: Box&lt;<span class="kw">dyn </span>Channel&gt;,
-    dice_data: DiceData,
+    dice_data: dice_data::DiceData,
     <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))] </span>derived_key: DerivedKey,
 ) {
     channel::register(channel);
