@@ -1,9 +1,7 @@
 var srcIndex = JSON.parse('{\
-"benchmark":["",[],["lib.rs"]],\
 "echo":["",[],["lib.rs"]],\
 "invalid_module":["",[],["lib.rs"]],\
 "key_value_lookup":["",[],["lib.rs"]],\
-"key_value_lookup_multi":["",[],["lib.rs"]],\
 "location_utils":["",[],["lib.rs"]],\
 "lookup_data_checker":["",[],["main.rs"]],\
 "lookup_data_generator":["",[],["data.rs","lib.rs"]],\
@@ -38,6 +36,7 @@ var srcIndex = JSON.parse('{\
 "oak_functions_sdk_abi_test_get_storage_item":["",[],["lib.rs"]],\
 "oak_functions_sdk_abi_test_invoke_testing":["",[],["lib.rs"]],\
 "oak_functions_service":["",[["wasm",[],["api.rs","mod.rs"]]],["instance.rs","lib.rs","logger.rs","lookup.rs"]],\
+"oak_functions_test_module":["",[],["lib.rs"]],\
 "oak_functions_test_utils":["",[],["lib.rs"]],\
 "oak_grpc_utils":["",[],["lib.rs"]],\
 "oak_hello_world_linux_init":["",[],["init.rs","main.rs"]],\
@@ -48,6 +47,7 @@ var srcIndex = JSON.parse('{\
 "oak_restricted_kernel_dice":["",[],["lib.rs"]],\
 "oak_restricted_kernel_interface":["",[],["errno.rs","lib.rs","raw_syscall.rs","syscall.rs","syscalls.rs"]],\
 "oak_restricted_kernel_launcher":["",[],["lib.rs"]],\
+"oak_restricted_kernel_orchestrator":["",[],["lib.rs"]],\
 "oak_restricted_kernel_sdk":["",[],["channel.rs","instance_attestation.rs","lib.rs","mock_attestation.rs","utils.rs"]],\
 "oak_sev_guest":["",[],["ap_jump_table.rs","cpuid.rs","crypto.rs","ghcb.rs","guest.rs","instructions.rs","interrupts.rs","io.rs","lib.rs","msr.rs","secrets.rs","vmsa.rs"]],\
 "oak_sev_snp_attestation_report":["",[],["lib.rs"]],\

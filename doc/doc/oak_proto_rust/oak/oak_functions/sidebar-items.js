@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["abi","benchmark","lookup_data"]};
+window.SIDEBAR_ITEMS = {"mod":["abi","lookup_data","testing"]};

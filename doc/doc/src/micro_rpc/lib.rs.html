@@ -185,6 +185,7 @@
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -305,21 +306,22 @@
     request: <span class="kw-2">&amp;</span>Req,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Result</span>&lt;Res, Status&gt;, T::Error&gt; {
     <span class="kw">let </span>request_body = request.encode_to_vec();
-    <span class="kw">let </span>request = RequestWrapper {
+    <span class="kw">let </span>request_wrapper = RequestWrapper {
         method_id,
         body: request_body,
     };
-    <span class="kw">let </span>request_bytes = request.encode_to_vec();
+    <span class="kw">let </span>request_wrapper_bytes = request_wrapper.encode_to_vec();
     <span class="comment">// This may result in tranport errors, corresponding to the outer Result layer.
-    </span><span class="kw">let </span>response_bytes = transport.invoke(<span class="kw-2">&amp;</span>request_bytes)<span class="question-mark">?</span>;
+    </span><span class="kw">let </span>response_wrapper_bytes = transport.invoke(<span class="kw-2">&amp;</span>request_wrapper_bytes)<span class="question-mark">?</span>;
     <span class="kw">let </span>result: <span class="prelude-ty">Result</span>&lt;Res, Status&gt; = <span class="kw">try </span>{
-        <span class="kw">let </span>response = ResponseWrapper::decode(response_bytes.as_ref()).map_err(|err| {
-            Status::new_with_message(
-                StatusCode::Internal,
-                <span class="macro">format!</span>(<span class="string">&quot;Client failed to deserialize response wrapper: {}&quot;</span>, err),
-            )
-        })<span class="question-mark">?</span>;
-        <span class="kw">let </span>response_result: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt; = response.into();
+        <span class="kw">let </span>response_wrapper =
+            ResponseWrapper::decode(response_wrapper_bytes.as_ref()).map_err(|err| {
+                Status::new_with_message(
+                    StatusCode::Internal,
+                    <span class="macro">format!</span>(<span class="string">&quot;Client failed to deserialize response wrapper: {}&quot;</span>, err),
+                )
+            })<span class="question-mark">?</span>;
+        <span class="kw">let </span>response_result: <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Status&gt; = response_wrapper.into();
         response_result.and_then(|body| {
             Res::decode(body.as_ref()).map_err(|err| {
                 Status::new_with_message(
