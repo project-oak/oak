@@ -14,6 +14,7 @@ http = "*"
 oak_attestation = { workspace = true }
 oak_containers_orchestrator = { workspace = true }
 oak_containers_sdk = { workspace = true }
+oak_functions_abi = { workspace = true }
 oak_functions_service = { workspace = true, features = ["std"] }
 oak_crypto = { workspace = true }
 micro_rpc = { workspace = true }
@@ -31,6 +32,7 @@ opentelemetry-otlp = { version = "*", default-features = false, features = [
   "trace",
 ] }
 prost = "*"
+strum = { version = "*", features = ["derive"] }
 tikv-jemallocator = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tokio-stream = { version = "*", features = ["net"] }
