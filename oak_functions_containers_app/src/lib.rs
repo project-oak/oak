@@ -32,7 +32,8 @@ use oak_functions_service::{
         InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
         ReserveRequest, ReserveResponse,
     },
-    Observer,
+    wasm::WasmHandler,
+    Handler, Observer,
 };
 use opentelemetry::{
     metrics::{Histogram, Meter, Unit},
@@ -62,13 +63,13 @@ pub mod proto {
 }
 
 // Instance of the OakFunctions service for Oak Containers.
-pub struct OakFunctionsContainersService<G: AsyncEncryptionKeyHandle + Send + Sync> {
-    instance: OnceLock<OakFunctionsInstance>,
+pub struct OakFunctionsContainersService<G: AsyncEncryptionKeyHandle + Send + Sync, H: Handler> {
+    instance: OnceLock<OakFunctionsInstance<H>>,
     encryption_key_handle: Arc<G>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
-impl<G: AsyncEncryptionKeyHandle + Send + Sync> OakFunctionsContainersService<G> {
+impl<G: AsyncEncryptionKeyHandle + Send + Sync, H: Handler> OakFunctionsContainersService<G, H> {
     pub fn new(
         encryption_key_handle: Arc<G>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
@@ -80,7 +81,7 @@ impl<G: AsyncEncryptionKeyHandle + Send + Sync> OakFunctionsContainersService<G>
         }
     }
 
-    fn get_instance(&self) -> tonic::Result<&OakFunctionsInstance> {
+    fn get_instance(&self) -> tonic::Result<&OakFunctionsInstance<H>> {
         self.instance
             .get()
             .ok_or_else(|| tonic::Status::failed_precondition("not initialized"))
@@ -111,8 +112,11 @@ fn map_status(status: micro_rpc::Status) -> tonic::Status {
 }
 
 #[tonic::async_trait]
-impl<G: AsyncEncryptionKeyHandle + Send + Sync + 'static> OakFunctions
-    for OakFunctionsContainersService<G>
+impl<G, H> OakFunctions for OakFunctionsContainersService<G, H>
+where
+    G: AsyncEncryptionKeyHandle + Send + Sync + 'static,
+    H: Handler + 'static,
+    H::HandlerType: Send + Sync,
 {
     async fn initialize(
         &self,
@@ -404,7 +408,7 @@ pub async fn serve<G: AsyncEncryptionKeyHandle + Send + Sync + 'static>(
         .layer(tower::load_shed::LoadShedLayer::new())
         .layer(MonitoringLayer::new(meter.clone()))
         .add_service(
-            OakFunctionsServer::new(OakFunctionsContainersService::new(
+            OakFunctionsServer::new(OakFunctionsContainersService::<_, WasmHandler>::new(
                 encryption_key_handle,
                 Some(Arc::new(OtelObserver::new(meter))),
             ))

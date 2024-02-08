@@ -22,6 +22,7 @@ use oak_functions_service::{
     logger::StandaloneLogger,
     lookup::{Data, LookupDataManager},
     wasm::{api::StdWasmApiFactory, WasmHandler},
+    Handler,
 };
 
 lazy_static! {

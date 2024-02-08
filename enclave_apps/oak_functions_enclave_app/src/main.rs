@@ -22,6 +22,7 @@ extern crate alloc;
 
 use alloc::{boxed::Box, sync::Arc};
 
+use oak_functions_service::wasm::WasmHandler;
 use oak_restricted_kernel_sdk::{
     channel::{start_blocking_server, FileDescriptorChannel},
     entrypoint,
@@ -42,7 +43,7 @@ fn main() -> ! {
     let encryption_key_handle =
         InstanceEncryptionKeyHandle::create().expect("couldn't encryption key");
     let evidencer = InstanceEvidenceProvider::create().expect("couldn't get evidence");
-    let service = oak_functions_enclave_service::OakFunctionsService::new(
+    let service = oak_functions_enclave_service::OakFunctionsService::<_, _, WasmHandler>::new(
         evidencer,
         Arc::new(encryption_key_handle),
         None,
