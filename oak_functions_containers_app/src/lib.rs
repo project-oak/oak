@@ -32,7 +32,6 @@ use oak_functions_service::{
         InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
         ReserveRequest, ReserveResponse,
     },
-    wasm::wasmtime::WasmtimeHandler,
     Handler, Observer,
 };
 use opentelemetry::{
@@ -44,6 +43,8 @@ use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 use tonic::codec::CompressionEncoding;
 use tracing::Span;
+
+pub mod native_handler;
 
 use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
 
@@ -384,11 +385,16 @@ const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 const MAX_DECODING_MESSAGE_SIZE: usize = 1024 * 1024 * 1024;
 
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-pub async fn serve<G: AsyncEncryptionKeyHandle + Send + Sync + 'static>(
+pub async fn serve<G, H: Handler>(
     listener: TcpListener,
     encryption_key_handle: Arc<G>,
     meter: Meter,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<()>
+where
+    G: AsyncEncryptionKeyHandle + Send + Sync + 'static,
+    H: Handler + 'static,
+    H::HandlerType: Send + Sync,
+{
     tonic::transport::Server::builder()
         .layer(
             tower_http::trace::TraceLayer::new_for_grpc()
@@ -408,7 +414,7 @@ pub async fn serve<G: AsyncEncryptionKeyHandle + Send + Sync + 'static>(
         .layer(tower::load_shed::LoadShedLayer::new())
         .layer(MonitoringLayer::new(meter.clone()))
         .add_service(
-            OakFunctionsServer::new(OakFunctionsContainersService::<_, WasmtimeHandler>::new(
+            OakFunctionsServer::new(OakFunctionsContainersService::<_, H>::new(
                 encryption_key_handle,
                 Some(Arc::new(OtelObserver::new(meter))),
             ))
