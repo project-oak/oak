@@ -17,6 +17,9 @@
 use bitflags::bitflags;
 use strum::FromRepr;
 
+/// Syscalls above this are unsafe, their behavior and availability cannot be relied upon.
+pub const UNSTABLE_SYSCALL_SPACE: usize = i32::MAX as usize - (10 ^ 3);
+
 /// System calls implemented by Oak Restricted Kernel.
 ///
 /// In general, the system calls are inpired by and look similar to the Linux/POSIX ABI, but we make
@@ -68,7 +71,7 @@ pub enum Syscall {
     ///   - We do not support PROT_NONE; PROT_READ is always implied.
     Mmap = 9,
 
-    /// Terminates he calling process.
+    /// Terminates the calling process.
     /// Arguments:
     ///   - arg0 (c_int): error code
     /// Oak Restricted Kernel considerations:
@@ -83,6 +86,15 @@ pub enum Syscall {
     /// Returns:
     ///   a value of <errno::Errno> on failure; 0, otherwise.
     Fsync = 74,
+
+    /// Terminates the calling process and executes the supplied ELF binary instead.
+    ///
+    /// Arguments:
+    ///   - arg0 (*mut c_void): pointer to the a buffer holding an ELF file
+    ///   - arg1 (c_size_t): size of the buffer
+    /// Returns:
+    ///   a value of <errno::Errno> on failure; 0, otherwise.
+    UnstableSwitchProcess = UNSTABLE_SYSCALL_SPACE + 1,
 }
 
 bitflags! {

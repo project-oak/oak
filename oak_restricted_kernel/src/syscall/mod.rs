@@ -15,6 +15,8 @@
 //
 
 mod channel;
+#[cfg(feature = "initrd")]
+mod create_process;
 pub mod dice_data;
 mod fd;
 mod key;
@@ -40,6 +42,8 @@ use x86_64::{
     VirtAddr,
 };
 
+#[cfg(feature = "initrd")]
+use self::create_process::syscall_unstable_switch_proccess;
 use self::{
     fd::{syscall_fsync, syscall_read, syscall_write},
     mmap::syscall_mmap,
@@ -123,6 +127,12 @@ extern "sysv64" fn syscall_handler(
             syscall_mmap(arg1 as *const c_void, arg2, arg3, arg4, arg5 as i32, arg6)
         }
         Some(Syscall::Fsync) => syscall_fsync(arg1 as i32),
+        #[cfg(feature = "initrd")]
+        Some(Syscall::UnstableSwitchProcess) => {
+            syscall_unstable_switch_proccess(arg1 as *mut c_void, arg2)
+        }
+        #[cfg(not(feature = "initrd"))]
+        Some(Syscall::UnstableSwitchProcess) => Errno::ENOSYS as isize,
         None => Errno::ENOSYS as isize,
     }
 }

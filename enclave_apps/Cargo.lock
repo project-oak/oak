@@ -856,6 +856,7 @@ dependencies = [
 name = "oak_orchestrator"
 version = "0.1.0"
 dependencies = [
+ "log",
  "oak_dice",
  "oak_restricted_kernel_interface",
  "oak_restricted_kernel_orchestrator",
