@@ -15,14 +15,14 @@
 //
 
 mod channel;
-#[cfg(feature = "initrd")]
-mod create_process;
 pub mod dice_data;
 mod fd;
 mod key;
 pub mod mmap;
 mod process;
 mod stdio;
+#[cfg(feature = "initrd")]
+mod switch_process;
 
 #[cfg(test)]
 mod tests;
@@ -43,7 +43,7 @@ use x86_64::{
 };
 
 #[cfg(feature = "initrd")]
-use self::create_process::syscall_unstable_switch_proccess;
+use self::switch_process::syscall_unstable_switch_proccess;
 use self::{
     fd::{syscall_fsync, syscall_read, syscall_write},
     mmap::syscall_mmap,

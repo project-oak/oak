@@ -31,6 +31,14 @@ pub fn syscall_unstable_switch_proccess(buf: *mut c_void, count: c_size_t) -> ! 
     let application = crate::payload::Application::new(copied_elf_binary.into_boxed_slice())
         .expect("failed to parse application");
 
+    {
+        let program_headers = unsafe { crate::elf::get_phdrs(x86_64::VirtAddr::new(0x20_0000)) };
+        log::info!("creating new page table");
+        let new_page_table = crate::mm::init_paging(program_headers).unwrap();
+        log::info!("swapping in new page table");
+        let _prev_page_table = crate::PAGE_TABLES.lock().replace(new_page_table);
+    };
+
     // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
     // under the kernel's control.
     unsafe { application.run() }

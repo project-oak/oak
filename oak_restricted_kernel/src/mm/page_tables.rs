@@ -279,7 +279,8 @@ impl CurrentPageTable {
     }
 
     /// Replaces the current pagetable with the parameter, returning the old
-    /// pagetable if there was one.
+    /// pagetable if there was one. Does not update the page table on the CPU
+    /// level.
     pub fn replace(&mut self, new_pt: RootPageTable) -> Option<RootPageTable> {
         self.inner.replace(new_pt)
     }

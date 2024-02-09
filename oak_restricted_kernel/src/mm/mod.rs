@@ -295,12 +295,17 @@ pub fn init_paging(program_headers: &[ProgramHeader]) -> Result<RootPageTable, &
     // Safety: this expects the frame allocator to be initialized and the memory region it's handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     // This reference will no longer be valid after we reload the page tables!
+    log::info!("about to alloc frame");
     let pml4_frame = FRAME_ALLOCATOR
         .lock()
         .allocate_frame()
         .ok_or("couldn't allocate a frame for PML4")?;
+    log::info!("about to unsafe pt");
     let pml4 = unsafe { &mut *(pml4_frame.start_address().as_u64() as *mut PageTable) };
+    log::info!("about to zero pt");
     pml4.zero();
+
+    log::info!("zeroed new pt");
 
     // Should we set the C-bit (encrypted memory for SEV)? For now, let's assume it's bit 51.
     let encrypted = if get_sev_status()
@@ -313,7 +318,7 @@ pub fn init_paging(program_headers: &[ProgramHeader]) -> Result<RootPageTable, &
     };
 
     let mut page_table = EncryptedPageTable::new(pml4, VirtAddr::new(0), encrypted);
-
+    log::info!("about to map physical mem in pt");
     // Safety: these operations are safe as they're not done on active page tables.
     unsafe {
         // Create a direct map for all physical memory, marking it NO_EXECUTE. The size (128 GB) has
@@ -332,13 +337,13 @@ pub fn init_paging(program_headers: &[ProgramHeader]) -> Result<RootPageTable, &
             &mut page_table,
         )
         .map_err(|_| "couldn't set up paging for physical memory")?;
-
+        log::info!("about to map kernel");
         // Mapping for the kernel itself in the upper -2G of memory, based on the mappings (and
         // permissions) in the program header.
         page_tables::create_kernel_map(program_headers, &mut page_table)
             .map_err(|_| "couldn't set up paging for the kernel")?;
     }
-
+    log::info!("about to update pt");
     // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to load
     // the new page tables.
     // This validates any references that expect boot page tables to be valid!
@@ -347,6 +352,7 @@ pub fn init_paging(program_headers: &[ProgramHeader]) -> Result<RootPageTable, &
         Cr3::write(pml4_frame, Cr3Flags::empty());
     }
 
+    log::info!("about to reload refs");
     // Reload the pml4 reference based on the `DIRECT_MAPPING_OFFSET` value, in case the offset is
     // not zero and the reference is no longer valid.
     // Safety: we've reloaded page tables that place the direct mapping region at that offset, so
