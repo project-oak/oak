@@ -9,11 +9,12 @@ license = "Apache-2.0"
 default = ["deny_sensitive_logging"]
 # Disable sensitive logging.
 deny_sensitive_logging = []
-std = ["anyhow/std", "wasmi/std"]
+std = ["anyhow/std", "wasmi/std", "wasmtime"]
 
 [[bench]]
 name = "wasm_benchmark"
 harness = false
+required-features = ["wasmtime"]
 
 [dependencies]
 anyhow = { version = "*", default-features = false }
@@ -30,6 +31,7 @@ oak_functions_sdk = { workspace = true }
 oak_proto_rust = { workspace = true }
 spinning_top = "*"
 wasmi = { version = "*", default-features = false }
+wasmtime = { version = "*", optional = true }
 
 [build-dependencies]
 micro_rpc_build = { workspace = true }
