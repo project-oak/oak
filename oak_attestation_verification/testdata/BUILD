@@ -24,6 +24,8 @@ exports_files([
     "endorsement.json.sig",
     "evidence.binarypb",
     "evidence.textproto",
+    "fake_evidence.binarypb",
+    "fake_evidence.textproto",
     "logentry.json",
     "oak-development.pem",
     "rekor_public_key.pem",
