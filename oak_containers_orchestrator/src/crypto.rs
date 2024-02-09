@@ -81,8 +81,9 @@ impl InstanceKeys {
             ServerEncryptor::decrypt(&encrypted_encryption_private_key, &self.encryption_key)
                 .context("couldn't decrypt the encryption private key")?;
 
-        let group_encryption_key = EncryptionKey::deserialize(&mut decrypted_encryption_private_key)
-            .context("couldn't deserialize private key")?;
+        let group_encryption_key =
+            EncryptionKey::deserialize(&mut decrypted_encryption_private_key)
+                .context("couldn't deserialize private key")?;
 
         Ok(GroupKeys {
             encryption_key: group_encryption_key,
