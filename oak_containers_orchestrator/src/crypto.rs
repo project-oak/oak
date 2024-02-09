@@ -23,7 +23,6 @@ use oak_crypto::{
 };
 use oak_dice::cert::generate_ecdsa_key_pair;
 use tonic::{Request, Response};
-use zeroize::Zeroizing;
 
 use crate::proto::oak::{
     containers::v1::{
@@ -78,12 +77,11 @@ impl InstanceKeys {
             .context("encrypted encryption key wasn't provided")?;
 
         // Decrypt group keys.
-        let (_, decrypted_encryption_private_key, _) =
+        let (_, mut decrypted_encryption_private_key, _) =
             ServerEncryptor::decrypt(&encrypted_encryption_private_key, &self.encryption_key)
                 .context("couldn't decrypt the encryption private key")?;
-        let decrypted_encryption_private_key = Zeroizing::new(decrypted_encryption_private_key);
 
-        let group_encryption_key = EncryptionKey::deserialize(&decrypted_encryption_private_key)
+        let group_encryption_key = EncryptionKey::deserialize(&mut decrypted_encryption_private_key)
             .context("couldn't deserialize private key")?;
 
         Ok(GroupKeys {

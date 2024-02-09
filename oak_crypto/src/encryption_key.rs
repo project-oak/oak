@@ -18,7 +18,7 @@ use alloc::{boxed::Box, vec::Vec};
 
 use anyhow::Context;
 use async_trait::async_trait;
-use zeroize::Zeroizing;
+use zeroize::{Zeroize, Zeroizing};
 
 use crate::{
     encryptor::ClientEncryptor,
@@ -41,7 +41,6 @@ pub fn generate_encryption_key_pair() -> (EncryptionKey, Vec<u8>) {
     )
 }
 
-// TODO(#4513): Implement `Zeroize` for `EncryptionKey`.
 pub struct EncryptionKey {
     private_key: PrivateKey,
 }
@@ -55,9 +54,10 @@ impl EncryptionKey {
         self.private_key.to_bytes().to_vec()
     }
 
-    pub fn deserialize(serialized_private_key: &[u8]) -> anyhow::Result<Self> {
+    pub fn deserialize(serialized_private_key: &mut [u8]) -> anyhow::Result<Self> {
         let private_key = PrivateKey::from_bytes(serialized_private_key)
             .map_err(|error| anyhow::anyhow!("couldn't deserialize private key: {}", error))?;
+        serialized_private_key.zeroize();
         Ok(Self { private_key })
     }
 
