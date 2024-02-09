@@ -21,7 +21,13 @@ extern crate alloc;
 use oak_channel::basic_framed::load_raw;
 use oak_dice::evidence::Stage0DiceData;
 
-pub fn entrypoint<C: oak_channel::Channel>(mut channel: C, _stage0_dice_data: Stage0DiceData) -> ! {
+pub fn load_and_attest_app<C: oak_channel::Channel>(
+    mut channel: C,
+    stage0_dice_data: Stage0DiceData,
+) -> (
+    oak_restricted_kernel_dice::DerivedKey,
+    oak_dice::evidence::RestrictedKernelDiceData,
+) {
     let application_bytes = load_raw::<C, 4096>(&mut channel).expect("failed to load");
     log::info!("Binary loaded, size: {}", application_bytes.len());
     let app_digest = oak_restricted_kernel_dice::measure_app_digest_sha2_256(&application_bytes);
@@ -29,5 +35,8 @@ pub fn entrypoint<C: oak_channel::Channel>(mut channel: C, _stage0_dice_data: St
         "Application digest (sha2-256): {}",
         app_digest.map(|x| alloc::format!("{:02x}", x)).join("")
     );
-    unimplemented!();
+    let derived_key =
+        oak_restricted_kernel_dice::generate_derived_key(&stage0_dice_data, &app_digest);
+    let dice_data = oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, &app_digest);
+    (derived_key, dice_data)
 }

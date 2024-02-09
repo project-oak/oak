@@ -22,27 +22,79 @@ use oak_restricted_kernel_interface::{Errno, DERIVED_KEY_FD};
 use super::fd::{copy_max_slice, FileDescriptor};
 
 #[derive(Default)]
-struct DerivedKeyDescriptor {
-    key: DerivedKey,
+struct DerivedKeyState {
+    data: DerivedKey,
     index: usize,
 }
 
+enum DerivedKeyDescriptor {
+    Readable(DerivedKeyState),
+    #[cfg(feature = "initrd")]
+    Writeable(DerivedKeyState),
+}
+
 impl DerivedKeyDescriptor {
+    #[cfg(not(feature = "initrd"))]
     fn new(key: DerivedKey) -> Self {
-        Self { index: 0, key }
+        Self::Readable(DerivedKeyState {
+            index: 0,
+            data: key,
+        })
+    }
+
+    #[cfg(feature = "initrd")]
+    fn new() -> Self {
+        Self::Writeable(DerivedKeyState::default())
     }
 }
 
 impl FileDescriptor for DerivedKeyDescriptor {
     fn read(&mut self, buf: &mut [u8]) -> Result<isize, oak_restricted_kernel_interface::Errno> {
-        let length = copy_max_slice(&self.key[self.index..], buf);
-        self.index += length;
-        Ok(length as isize)
+        match self {
+            #[cfg(feature = "initrd")]
+            DerivedKeyDescriptor::Writeable(_write_state) => Err(Errno::EINVAL),
+            DerivedKeyDescriptor::Readable(read_state) => {
+                let data_as_slice = read_state.data.as_mut_slice();
+                let length = copy_max_slice(&data_as_slice[read_state.index..], buf);
+                read_state.index += length;
+                Ok(length as isize)
+            }
+        }
     }
 
-    fn write(&mut self, _buf: &[u8]) -> Result<isize, oak_restricted_kernel_interface::Errno> {
-        // Writing is not supported.
-        Err(Errno::EINVAL)
+    fn write(&mut self, buf: &[u8]) -> Result<isize, oak_restricted_kernel_interface::Errno> {
+        match self {
+            DerivedKeyDescriptor::Readable(_read_state) => Err(Errno::EINVAL),
+            #[cfg(feature = "initrd")]
+            DerivedKeyDescriptor::Writeable(write_state) => {
+                let data_as_slice =
+                    <DerivedKey as zerocopy::AsBytes>::as_bytes_mut(&mut write_state.data);
+
+                if buf.len() > data_as_slice[write_state.index..].len() {
+                    // the key has a known size. If the app keeps writing to
+                    // this FD after it has written all of it, it's doing something wrong.
+                    return Err(Errno::EINVAL);
+                }
+
+                let length = copy_max_slice(buf, &mut data_as_slice[write_state.index..]);
+
+                write_state.index += length;
+
+                if write_state.index == data_as_slice.len() {
+                    let derived_key =
+                        <DerivedKey as zerocopy::FromBytes>::read_from(data_as_slice).unwrap();
+                    let _ = core::mem::replace(
+                        self,
+                        Self::Readable(DerivedKeyState {
+                            index: 0,
+                            data: derived_key,
+                        }),
+                    );
+                }
+
+                Ok(length as isize)
+            }
+        }
     }
 
     fn sync(&mut self) -> Result<(), oak_restricted_kernel_interface::Errno> {
@@ -51,8 +103,14 @@ impl FileDescriptor for DerivedKeyDescriptor {
 }
 
 /// Registers a file descriptor for reading a derived key (0x21)
-pub fn register(key: DerivedKey) {
-    super::fd::register(DERIVED_KEY_FD, Box::new(DerivedKeyDescriptor::new(key)))
-        .map_err(|_| ()) // throw away the box
-        .expect("DerivedKeyDescriptor already registered");
+pub fn register(#[cfg(not(feature = "initrd"))] key: DerivedKey) {
+    super::fd::register(
+        DERIVED_KEY_FD,
+        Box::new(DerivedKeyDescriptor::new(
+            #[cfg(not(feature = "initrd"))]
+            key,
+        )),
+    )
+    .map_err(|_| ()) // throw away the box
+    .expect("DerivedKeyDescriptor already registered");
 }

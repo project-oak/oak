@@ -17,7 +17,6 @@
 mod channel;
 pub mod dice_data;
 mod fd;
-#[cfg(not(feature = "initrd"))]
 mod key;
 pub mod mmap;
 mod process;
@@ -74,8 +73,10 @@ pub fn enable_syscalls(
 ) {
     channel::register(channel);
     stdio::register();
-    #[cfg(not(feature = "initrd"))]
-    key::register(derived_key);
+    key::register(
+        #[cfg(not(feature = "initrd"))]
+        derived_key,
+    );
     dice_data::register(dice_data);
 
     // Allocate a stack for the system call handler.
