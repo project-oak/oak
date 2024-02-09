@@ -21,13 +21,13 @@ use oak_attestation_verification::{
     verifier::{to_attestation_results, verify},
 };
 use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, binary_reference_value, reference_values,
-    root_layer_reference_values, AmdSevReferenceValues, BinaryReferenceValue,
-    ContainerLayerEndorsements, ContainerLayerReferenceValues, EndorsementReferenceValue,
-    Endorsements, Evidence, KernelLayerEndorsements, KernelLayerReferenceValues,
-    OakContainersEndorsements, OakContainersReferenceValues, ReferenceValues,
-    RootLayerEndorsements, RootLayerReferenceValues, SkipVerification, StringReferenceValue,
-    SystemLayerEndorsements, SystemLayerReferenceValues, TransparentReleaseEndorsement,
+    attestation_results::Status, binary_reference_value, reference_values, AmdSevReferenceValues,
+    BinaryReferenceValue, ContainerLayerEndorsements, ContainerLayerReferenceValues,
+    EndorsementReferenceValue, Endorsements, Evidence, InsecureReferenceValues,
+    KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersEndorsements,
+    OakContainersReferenceValues, ReferenceValues, RootLayerEndorsements, RootLayerReferenceValues,
+    SkipVerification, StringReferenceValue, SystemLayerEndorsements, SystemLayerReferenceValues,
+    TransparentReleaseEndorsement,
 };
 use prost::Message;
 
@@ -38,7 +38,7 @@ const VCEK_MILAN_CERT_DER: &str = "testdata/vcek_milan.der";
 const ENDORSER_PUBLIC_KEY_PATH: &str = "testdata/oak-development.pem";
 const REKOR_PUBLIC_KEY_PATH: &str = "testdata/rekor_public_key.pem";
 const EVIDENCE_PATH: &str = "testdata/evidence.binarypb";
-const MOCK_EVIDENCE_PATH: &str = "testdata/mock_evidence.binarypb";
+const FAKE_EVIDENCE_PATH: &str = "testdata/fake_evidence.binarypb";
 
 // Pretend the tests run at this time: 1 Nov 2023, 9:00 UTC
 const NOW_UTC_MILLIS: i64 = 1698829200000;
@@ -49,10 +49,10 @@ fn create_evidence() -> Evidence {
     Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
 }
 
-// Creates a valid mock evidence instance.
-fn create_mock_evidence() -> Evidence {
-    let serialized = fs::read(MOCK_EVIDENCE_PATH).expect("could not read evidence");
-    Evidence::decode(serialized.as_slice()).expect("could not decode evidence")
+// Creates a valid fake evidence instance.
+fn create_fake_evidence() -> Evidence {
+    let serialized = fs::read(FAKE_EVIDENCE_PATH).expect("could not read fake evidence");
+    Evidence::decode(serialized.as_slice()).expect("could not decode fake evidence")
 }
 
 // Creates valid endorsements for an Oak Containers chain.
@@ -136,7 +136,8 @@ fn create_reference_values() -> ReferenceValues {
     };
 
     let root_layer = RootLayerReferenceValues {
-        r#type: Some(root_layer_reference_values::Type::AmdSev(amd_sev)),
+        amd_sev: Some(amd_sev),
+        ..Default::default()
     };
     let kernel_layer = KernelLayerReferenceValues {
         kernel_image: Some(skip.clone()),
@@ -181,14 +182,15 @@ fn verify_succeeds() {
 }
 
 #[test]
-fn verify_mock_evidence() {
-    let evidence = create_mock_evidence();
+fn verify_fake_evidence() {
+    let evidence = create_fake_evidence();
     let endorsements = create_endorsements();
     let mut reference_values = create_reference_values();
     if let Some(reference_values::Type::OakContainers(reference)) = reference_values.r#type.as_mut()
     {
         reference.root_layer = Some(RootLayerReferenceValues {
-            r#type: Some(root_layer_reference_values::Type::Skip(SkipVerification {})),
+            insecure: Some(InsecureReferenceValues {}),
+            ..Default::default()
         });
     } else {
         panic!("invalid reference value type");
