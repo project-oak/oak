@@ -537,6 +537,9 @@
 <a href="#537" id="537">537</a>
 <a href="#538" id="538">538</a>
 <a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -560,6 +563,9 @@
 <span class="kw">pub mod </span>api;
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests;
+
+<span class="attr">#[cfg(feature = <span class="string">&quot;wasmtime&quot;</span>)]
+</span><span class="kw">pub mod </span>wasmtime;
 
 <span class="kw">use </span>alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 <span class="attr">#[cfg(feature = <span class="string">&quot;std&quot;</span>)]

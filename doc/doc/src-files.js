@@ -32,7 +32,7 @@ var srcIndex = JSON.parse('{\
 "oak_functions_sdk":["",[],["lib.rs"]],\
 "oak_functions_sdk_abi_test_get_storage_item":["",[],["lib.rs"]],\
 "oak_functions_sdk_abi_test_invoke_testing":["",[],["lib.rs"]],\
-"oak_functions_service":["",[["wasm",[],["api.rs","mod.rs"]]],["instance.rs","lib.rs","logger.rs","lookup.rs"]],\
+"oak_functions_service":["",[["wasm",[],["api.rs","mod.rs","wasmtime.rs"]]],["instance.rs","lib.rs","logger.rs","lookup.rs"]],\
 "oak_functions_test_module":["",[],["lib.rs"]],\
 "oak_functions_test_utils":["",[],["lib.rs"]],\
 "oak_grpc_utils":["",[],["lib.rs"]],\

@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"oak_functions_service":[["impl StdWasmApi for <a class=\"struct\" href=\"oak_functions_service/wasm/api/struct.StdWasmApiImpl.html\" title=\"struct oak_functions_service::wasm::api::StdWasmApiImpl\">StdWasmApiImpl</a>"]]
+"oak_functions_service":[["impl <a class=\"trait\" href=\"oak_functions_sdk/proto/oak/functions/wasm/v1/trait.StdWasmApi.html\" title=\"trait oak_functions_sdk::proto::oak::functions::wasm::v1::StdWasmApi\">StdWasmApi</a> for <a class=\"struct\" href=\"oak_functions_service/wasm/api/struct.StdWasmApiImpl.html\" title=\"struct oak_functions_service::wasm::api::StdWasmApiImpl\">StdWasmApiImpl</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
