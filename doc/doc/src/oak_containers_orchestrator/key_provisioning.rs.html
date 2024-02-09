@@ -96,7 +96,6 @@
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
-<a href="#99" id="99">99</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -121,20 +120,20 @@
 <span class="kw">use </span>tonic::{transport::Server, Request, Response};
 
 <span class="kw">use crate</span>::{
-    crypto::KeyStore,
+    crypto::GroupKeys,
     proto::oak::key_provisioning::v1::{
         key_provisioning_server::{KeyProvisioning, KeyProvisioningServer},
-        GetGroupKeysRequest, GetGroupKeysResponse, GroupKeys,
+        GetGroupKeysRequest, GetGroupKeysResponse, GroupKeys <span class="kw">as </span>GroupKeysProto,
     },
 };
 
 <span class="kw">struct </span>KeyProvisioningService {
-    key_store: Arc&lt;KeyStore&gt;,
+    group_keys: Arc&lt;GroupKeys&gt;,
 }
 
 <span class="kw">impl </span>KeyProvisioningService {
-    <span class="kw">pub fn </span>new(key_store: Arc&lt;KeyStore&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ key_store }
+    <span class="kw">pub fn </span>new(group_keys: Arc&lt;GroupKeys&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ group_keys }
     }
 }
 
@@ -161,26 +160,25 @@
 
         <span class="comment">// Encrypt group keys.
         </span><span class="kw">let </span>encrypted_encryption_private_key = <span class="self">self
-            </span>.key_store
+            </span>.group_keys
             .encrypted_group_encryption_key(<span class="kw-2">&amp;</span>attestation_results.encryption_public_key)
             .map_err(|err| {
                 tonic::Status::internal(<span class="macro">format!</span>(<span class="string">&quot;couldn&#39;t encrypt encryption private key: {err}&quot;</span>))
             })<span class="question-mark">?</span>;
-        <span class="kw">let </span>group_keys = GroupKeys {
-            encrypted_encryption_private_key: <span class="prelude-val">Some</span>(encrypted_encryption_private_key),
-        };
         <span class="prelude-val">Ok</span>(tonic::Response::new(GetGroupKeysResponse {
-            group_keys: <span class="prelude-val">Some</span>(group_keys),
+            group_keys: <span class="prelude-val">Some</span>(GroupKeysProto {
+                encrypted_encryption_private_key: <span class="prelude-val">Some</span>(encrypted_encryption_private_key),
+            }),
         }))
     }
 }
 
 <span class="kw">pub async fn </span>create(
     address: <span class="kw-2">&amp;</span>str,
-    key_store: Arc&lt;KeyStore&gt;,
+    group_keys: Arc&lt;GroupKeys&gt;,
     cancellation_token: CancellationToken,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
-    <span class="kw">let </span>key_provisioning_service_instance = KeyProvisioningService::new(key_store);
+    <span class="kw">let </span>key_provisioning_service_instance = KeyProvisioningService::new(group_keys);
 
     <span class="kw">let </span>listener = TcpListener::bind(address).<span class="kw">await</span><span class="question-mark">?</span>;
 

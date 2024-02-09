@@ -77,8 +77,6 @@
 <a href="#77" id="77">77</a>
 <a href="#78" id="78">78</a>
 <a href="#79" id="79">79</a>
-<a href="#80" id="80">80</a>
-<a href="#81" id="81">81</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -98,7 +96,6 @@
 </span><span class="kw">use </span>alloc::{sync::Arc, vec::Vec};
 
 <span class="kw">use </span>anyhow::Context;
-<span class="kw">use </span>oak_crypto::encryptor::EncryptionKeyProvider;
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::session::v1::AttestationEvidence;
 
@@ -128,31 +125,30 @@
 /// &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-attester&gt;
 </span><span class="kw">pub struct </span>Attester {
     attestation_report_generator: Arc&lt;<span class="kw">dyn </span>AttestationReportGenerator&gt;,
-    encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;,
+    encryption_public_key: Vec&lt;u8&gt;,
 }
 
 <span class="kw">impl </span>Attester {
     <span class="kw">pub fn </span>new(
         attestation_report_generator: Arc&lt;<span class="kw">dyn </span>AttestationReportGenerator&gt;,
-        encryption_key_provider: Arc&lt;EncryptionKeyProvider&gt;,
+        encryption_public_key: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             attestation_report_generator,
-            encryption_key_provider,
+            encryption_public_key: encryption_public_key.to_vec(),
         }
     }
 
     <span class="doccomment">/// Generate an attestation evidence containing a remote attestation report and ensuring that
     /// `attested_data` is cryptographically bound to the result (e.g. via a signature).
     </span><span class="kw">pub fn </span>generate_attestation_evidence(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;AttestationEvidence&gt; {
-        <span class="kw">let </span>encryption_public_key = <span class="self">self</span>.encryption_key_provider.get_serialized_public_key();
         <span class="kw">let </span>attestation_report = <span class="self">self
             </span>.attestation_report_generator
-            .generate_attestation_report(<span class="kw-2">&amp;</span>encryption_public_key)
+            .generate_attestation_report(<span class="kw-2">&amp;</span><span class="self">self</span>.encryption_public_key)
             .context(<span class="string">&quot;couldn&#39;t generate attestation report&quot;</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(AttestationEvidence {
             attestation: attestation_report,
-            encryption_public_key,
+            encryption_public_key: <span class="self">self</span>.encryption_public_key.to_vec(),
             <span class="comment">// TODO(#3836): Implement signature generation and add the signing key.
             </span>signing_public_key: Vec::new(),
             <span class="comment">// TODO(#3640): Sign application data.

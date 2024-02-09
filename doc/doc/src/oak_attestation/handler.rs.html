@@ -140,11 +140,11 @@
 
 <span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_crypto::{
-    encryptor::{AsyncEncryptionKeyHandle, EncryptionKeyHandle, ServerEncryptor},
+    encryption_key::{AsyncEncryptionKeyHandle, EncryptionKeyHandle},
+    encryptor::ServerEncryptor,
     proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
+    EMPTY_ASSOCIATED_DATA,
 };
-
-<span class="kw">const </span>EMPTY_ASSOCIATED_DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;&quot;</span>;
 
 <span class="doccomment">/// Information about a public key.
 </span><span class="attr">#[derive(Debug, Clone)]

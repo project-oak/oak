@@ -161,6 +161,8 @@
 <a href="#161" id="161">161</a>
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -188,7 +190,7 @@
 
 <span class="kw">use </span>coset::{cbor::Value, cwt::ClaimName, CborSerializable};
 <span class="kw">use </span>hkdf::Hkdf;
-<span class="kw">use </span>oak_crypto::hpke::Serializable;
+<span class="kw">use </span>oak_crypto::encryption_key::generate_encryption_key_pair;
 <span class="kw">use </span>oak_dice::cert::{ENCLAVE_APPLICATION_LAYER_ID, LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID};
 <span class="kw">use </span>sha2::{Digest, Sha256};
 
@@ -269,13 +271,13 @@
             .expect(<span class="string">&quot;couldn&#39;t generate signing certificate&quot;</span>);
 
         <span class="kw">let </span>(application_encryption_private_key, application_encryption_public_key) =
-            oak_crypto::hpke::gen_kem_keypair();
+            generate_encryption_key_pair();
 
         <span class="kw">let </span>application_encryption_public_key_certificate =
             oak_dice::cert::generate_kem_certificate(
                 <span class="kw-2">&amp;</span>kernel_signing_key,
                 kernel_cert_issuer,
-                application_encryption_public_key.to_bytes().as_slice(),
+                <span class="kw-2">&amp;</span>application_encryption_public_key,
                 additional_claims,
             )
             .expect(<span class="string">&quot;couldn&#39;t generate encryption public certificate&quot;</span>);
@@ -298,9 +300,11 @@
             };
 
             <span class="kw">let </span>encryption_private_key = {
+                <span class="kw">let </span>serialized_application_encryption_private_key =
+                    application_encryption_private_key.serialize();
                 <span class="kw">let </span><span class="kw-2">mut </span>slice = [<span class="number">0</span>; oak_dice::evidence::PRIVATE_KEY_SIZE];
-                slice[..application_encryption_private_key.to_bytes().len()]
-                    .copy_from_slice(<span class="kw-2">&amp;</span>application_encryption_private_key.to_bytes());
+                slice[..serialized_application_encryption_private_key.len()]
+                    .copy_from_slice(<span class="kw-2">&amp;</span>serialized_application_encryption_private_key);
                 slice
             };
 

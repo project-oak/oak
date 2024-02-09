@@ -142,7 +142,7 @@
 //! TEE may not be available.
 
 </span><span class="kw">use </span>oak_crypto::{
-    encryptor::{EncryptionKeyHandle, EncryptionKeyProvider},
+    encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
 };
 <span class="kw">use </span>oak_dice::evidence::{Evidence, RestrictedKernelDiceData, TeePlatform};
@@ -202,7 +202,7 @@
 /// private keys.
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>MockEncryptionKeyHandle {
-    key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>EncryptionKeyProvider,
+    key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>EncryptionKey,
 }
 
 <span class="kw">impl </span>MockEncryptionKeyHandle {

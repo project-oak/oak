@@ -112,8 +112,8 @@
 #[doc(cfg(feature = <span class="string">&quot;mock_attestation&quot;</span>))]
 </span><span class="kw">pub mod </span>mock_attestation;
 <span class="kw">pub mod </span>utils;
-<span class="kw">pub use </span>oak_crypto::encryptor::EncryptionKeyHandle;
-<span class="kw">use </span>oak_crypto::encryptor::EncryptionKeyProvider;
+<span class="kw">use </span>oak_crypto::encryption_key::EncryptionKey;
+<span class="kw">pub use </span>oak_crypto::encryption_key::EncryptionKeyHandle;
 <span class="kw">use </span>oak_dice::evidence::Evidence;
 <span class="doccomment">/// Marks a function as the entrypoint to an enclave app and sets up an conviences such an
 /// allocator, logger, panic handler.
@@ -165,7 +165,7 @@
 <span class="doccomment">/// Wrapper for DICE evidence and application private keys.
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>DiceWrapper {
     <span class="kw">pub </span>evidence: Evidence,
-    <span class="kw">pub </span>encryption_key: EncryptionKeyProvider,
+    <span class="kw">pub </span>encryption_key: EncryptionKey,
     <span class="kw">pub </span>signing_key: p256::ecdsa::SigningKey,
 }
 </code></pre></div></section></main></body></html>

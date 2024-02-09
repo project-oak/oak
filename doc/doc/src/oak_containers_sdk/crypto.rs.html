@@ -172,7 +172,7 @@
 </span><span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>oak_crypto::{
-    encryptor::AsyncEncryptionKeyHandle, hpke::RecipientContext,
+    encryption_key::AsyncEncryptionKeyHandle, hpke::RecipientContext,
     proto::oak::crypto::v1::SessionKeys,
 };
 <span class="kw">use </span>tonic::transport::{Endpoint, Uri};

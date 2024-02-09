@@ -185,21 +185,6 @@
 <a href="#185" id="185">185</a>
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -217,12 +202,13 @@
 
 </span><span class="kw">use </span>std::sync::Arc;
 
-<span class="kw">use </span>anyhow::{anyhow, Context};
-<span class="kw">use </span>hpke::{kem::X25519HkdfSha256, Deserializable, Kem};
+<span class="kw">use </span>anyhow::Context;
 <span class="kw">use </span>oak_crypto::{
-    encryptor::{ClientEncryptor, EncryptionKeyHandle, EncryptionKeyProvider, ServerEncryptor},
+    encryption_key::{generate_encryption_key_pair, EncryptionKey, EncryptionKeyHandle},
+    encryptor::ServerEncryptor,
     proto::oak::crypto::v1::EncryptedRequest,
 };
+<span class="kw">use </span>oak_dice::cert::generate_ecdsa_key_pair;
 <span class="kw">use </span>tonic::{Request, Response};
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
@@ -230,113 +216,97 @@
         orchestrator_crypto_server::OrchestratorCrypto, DeriveSessionKeysRequest,
         DeriveSessionKeysResponse, KeyOrigin, SignRequest, SignResponse,
     },
-    key_provisioning::v1::GroupKeys,
+    key_provisioning::v1::GroupKeys <span class="kw">as </span>GroupKeysProto,
 };
 
-<span class="kw">const </span>EMPTY_ASSOCIATED_DATA: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;&quot;</span>;
-
-<span class="doccomment">/// An implementation of the Key Store without group keys.
-</span><span class="kw">pub struct </span>InstanceKeyStore {
-    <span class="comment">// TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
-    </span>instance_encryption_key: Arc&lt;EncryptionKeyProvider&gt;,
-    instance_signing_key: p256::ecdsa::SigningKey,
+<span class="kw">pub fn </span>generate_instance_keys() -&gt; (InstanceKeys, InstancePublicKeys) {
+    <span class="kw">let </span>(encryption_key, encryption_public_key) = generate_encryption_key_pair();
+    <span class="kw">let </span>(signing_key, signing_public_key) = generate_ecdsa_key_pair();
+    (
+        InstanceKeys {
+            encryption_key,
+            signing_key,
+        },
+        InstancePublicKeys {
+            encryption_public_key,
+            signing_public_key,
+        },
+    )
 }
 
-<span class="kw">impl </span>InstanceKeyStore {
-    <span class="kw">pub fn </span>new(instance_signing_key: p256::ecdsa::SigningKey) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            instance_encryption_key: Arc::new(EncryptionKeyProvider::generate()),
-            instance_signing_key,
-        }
+<span class="kw">pub struct </span>InstanceKeys {
+    encryption_key: EncryptionKey,
+    signing_key: p256::ecdsa::SigningKey,
+}
+
+<span class="kw">pub struct </span>InstancePublicKeys {
+    <span class="kw">pub </span>encryption_public_key: Vec&lt;u8&gt;,
+    <span class="kw">pub </span>signing_public_key: p256::ecdsa::VerifyingKey,
+}
+
+<span class="kw">impl </span>InstanceKeys {
+    <span class="kw">pub fn </span>generate_group_keys(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (GroupKeys, GroupPublicKeys) {
+        <span class="kw">let </span>(group_encryption_key, group_encryption_public_key) = generate_encryption_key_pair();
+        (
+            GroupKeys {
+                encryption_key: group_encryption_key,
+            },
+            GroupPublicKeys {
+                encryption_public_key: group_encryption_public_key,
+            },
+        )
     }
 
-    <span class="kw">pub fn </span>instance_encryption_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;EncryptionKeyProvider&gt; {
-        <span class="comment">// TODO(#4442): Currently we have to give the encryption key provider to the `ipc_server`.
-        // Once we move all enclave apps to the new crypto service and update the `Attester` to not
-        // have the private key - this function should be removed.
-        </span><span class="self">self</span>.instance_encryption_key.clone()
-    }
-
-    <span class="kw">pub fn </span>instance_encryption_public_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
-        <span class="self">self</span>.instance_encryption_key.get_serialized_public_key()
-    }
-
-    <span class="kw">pub fn </span>generate_group_keys(<span class="self">self</span>) -&gt; KeyStore {
-        KeyStore {
-            instance_encryption_key: <span class="self">self</span>.instance_encryption_key,
-            group_encryption_key: EncryptionKeyProvider::generate(),
-            instance_signing_key: <span class="self">self</span>.instance_signing_key,
-        }
-    }
-
-    <span class="kw">pub fn </span>provide_group_keys(<span class="self">self</span>, group_keys: GroupKeys) -&gt; anyhow::Result&lt;KeyStore&gt; {
+    <span class="kw">pub fn </span>provide_group_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, group_keys: GroupKeysProto) -&gt; anyhow::Result&lt;GroupKeys&gt; {
         <span class="comment">// Create server encryptor for decrypting the group keys received from the leader enclave.
         </span><span class="kw">let </span>encrypted_encryption_private_key = group_keys
             .encrypted_encryption_private_key
             .context(<span class="string">&quot;encrypted encryption key wasn&#39;t provided&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Decrypt group keys.
-        </span><span class="kw">let </span>(<span class="kw">_</span>, decrypted_encryption_private_key, <span class="kw">_</span>) = ServerEncryptor::decrypt(
-            <span class="kw-2">&amp;</span>encrypted_encryption_private_key,
-            <span class="self">self</span>.instance_encryption_key.as_ref(),
-        )
-        .context(<span class="string">&quot;couldn&#39;t decrypt the encryption private key&quot;</span>)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>(<span class="kw">_</span>, <span class="kw-2">mut </span>decrypted_encryption_private_key, <span class="kw">_</span>) =
+            ServerEncryptor::decrypt(<span class="kw-2">&amp;</span>encrypted_encryption_private_key, <span class="kw-2">&amp;</span><span class="self">self</span>.encryption_key)
+                .context(<span class="string">&quot;couldn&#39;t decrypt the encryption private key&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Parse private key and derive public key.
-        // TODO(#4513): We shouldn&#39;t store the public key, only the private key.
-        </span><span class="kw">let </span>encryption_private_key =
-            &lt;X25519HkdfSha256 <span class="kw">as </span>Kem&gt;::PrivateKey::from_bytes(<span class="kw-2">&amp;</span>decrypted_encryption_private_key)
-                .map_err(|err| <span class="macro">anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialize private key: {:?}&quot;</span>, err))<span class="question-mark">?</span>;
-        <span class="kw">let </span>encryption_public_key = X25519HkdfSha256::sk_to_pk(<span class="kw-2">&amp;</span>encryption_private_key);
         <span class="kw">let </span>group_encryption_key =
-            EncryptionKeyProvider::new(encryption_private_key, encryption_public_key);
+            EncryptionKey::deserialize(<span class="kw-2">&amp;mut </span>decrypted_encryption_private_key)
+                .context(<span class="string">&quot;couldn&#39;t deserialize private key&quot;</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Add group keys to the Orchestrator key store.
-        </span><span class="prelude-val">Ok</span>(KeyStore {
-            instance_encryption_key: <span class="self">self</span>.instance_encryption_key,
-            instance_signing_key: <span class="self">self</span>.instance_signing_key,
-            group_encryption_key,
+        <span class="prelude-val">Ok</span>(GroupKeys {
+            encryption_key: group_encryption_key,
         })
     }
 }
 
-<span class="doccomment">/// An implementation of the Key Store with initialized group keys.
-</span><span class="kw">pub struct </span>KeyStore {
-    <span class="comment">// TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
-    </span>instance_encryption_key: Arc&lt;EncryptionKeyProvider&gt;,
-    instance_signing_key: p256::ecdsa::SigningKey,
-    group_encryption_key: EncryptionKeyProvider,
+<span class="kw">pub struct </span>GroupKeys {
+    encryption_key: EncryptionKey,
 }
 
-<span class="kw">impl </span>KeyStore {
-    <span class="kw">pub fn </span>instance_encryption_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Arc&lt;EncryptionKeyProvider&gt; {
-        <span class="comment">// TODO(#4442): Currently we have to give the encryption key provider to the `ipc_server`.
-        // Once we move all enclave apps to the new crypto service and update the `Attester` to not
-        // have the private key - this function should be removed.
-        </span><span class="self">self</span>.instance_encryption_key.clone()
-    }
+<span class="kw">pub struct </span>GroupPublicKeys {
+    <span class="kw">pub </span>encryption_public_key: Vec&lt;u8&gt;,
+}
 
+<span class="kw">impl </span>GroupKeys {
     <span class="doccomment">/// Returns group encryption private key which was encrypted with the `peer_public_key`.
     </span><span class="kw">pub fn </span>encrypted_group_encryption_key(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         peer_public_key: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; anyhow::Result&lt;EncryptedRequest&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>client_encryptor =
-            ClientEncryptor::create(peer_public_key).context(<span class="string">&quot;couldn&#39;t create client encryptor&quot;</span>)<span class="question-mark">?</span>;
-        client_encryptor.encrypt(
-            <span class="kw-2">&amp;</span><span class="self">self</span>.group_encryption_key.get_private_key(),
-            EMPTY_ASSOCIATED_DATA,
-        )
+        <span class="self">self</span>.encryption_key.encrypted_private_key(peer_public_key)
     }
 }
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct </span>CryptoService {
-    key_store: Arc&lt;KeyStore&gt;,
+    instance_keys: InstanceKeys,
+    group_keys: Arc&lt;GroupKeys&gt;,
 }
 
 <span class="kw">impl </span>CryptoService {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(key_store: Arc&lt;KeyStore&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ key_store }
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(instance_keys: InstanceKeys, group_keys: Arc&lt;GroupKeys&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            instance_keys,
+            group_keys,
+        }
     }
 
     <span class="kw">fn </span>signing_key(
@@ -347,7 +317,7 @@
             KeyOrigin::Unspecified =&gt; {
                 <span class="prelude-val">Err</span>(tonic::Status::invalid_argument(<span class="string">&quot;unspecified key origin&quot;</span>))<span class="question-mark">?
             </span>}
-            KeyOrigin::Instance =&gt; <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.key_store.instance_signing_key),
+            KeyOrigin::Instance =&gt; <span class="prelude-val">Ok</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.instance_keys.signing_key),
             KeyOrigin::Group =&gt;
             <span class="comment">// TODO(#4442): Implement with key provisioning.
             </span>{
@@ -371,8 +341,8 @@
             KeyOrigin::Unspecified =&gt; {
                 <span class="prelude-val">Err</span>(tonic::Status::invalid_argument(<span class="string">&quot;unspecified key origin&quot;</span>))<span class="question-mark">?
             </span>}
-            KeyOrigin::Instance =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.key_store.instance_encryption_key,
-            KeyOrigin::Group =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.key_store.group_encryption_key,
+            KeyOrigin::Instance =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.instance_keys.encryption_key,
+            KeyOrigin::Group =&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.group_keys.encryption_key,
         };
 
         <span class="kw">let </span>session_keys = encryption_key

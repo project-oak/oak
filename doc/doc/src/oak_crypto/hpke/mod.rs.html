@@ -250,36 +250,6 @@
 <a href="#250" id="250">250</a>
 <a href="#251" id="251">251</a>
 <a href="#252" id="252">252</a>
-<a href="#253" id="253">253</a>
-<a href="#254" id="254">254</a>
-<a href="#255" id="255">255</a>
-<a href="#256" id="256">256</a>
-<a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
-<a href="#260" id="260">260</a>
-<a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
-<a href="#266" id="266">266</a>
-<a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -314,46 +284,16 @@
 
 <span class="kw">type </span>Aead = AesGcm256;
 <span class="kw">type </span>Kdf = HkdfSha256;
-<span class="kw">type </span>Kem = X25519HkdfSha256;
+<span class="kw">pub type </span>Kem = X25519HkdfSha256;
 <span class="kw">pub type </span>PrivateKey = &lt;Kem <span class="kw">as </span>KemTrait&gt;::PrivateKey;
 <span class="kw">pub type </span>PublicKey = &lt;Kem <span class="kw">as </span>KemTrait&gt;::PublicKey;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">type </span>EncappedKey = &lt;Kem <span class="kw">as </span>KemTrait&gt;::EncappedKey;
 
-<span class="kw">pub fn </span>gen_kem_keypair() -&gt; (PrivateKey, PublicKey) {
+<span class="doccomment">/// Info string used by Hybrid Public Key Encryption;
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">const </span>OAK_HPKE_INFO: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;Oak Hybrid Public Key Encryption v1&quot;</span>;
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>generate_kem_key_pair() -&gt; (PrivateKey, PublicKey) {
     Kem::gen_keypair(<span class="kw-2">&amp;mut </span>OsRng)
-}
-
-<span class="kw">pub struct </span>KeyPair {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) private_key: PrivateKey,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) public_key: PublicKey,
-}
-
-<span class="kw">impl </span>KeyPair {
-    <span class="doccomment">/// Randomly generates a key pair.
-    </span><span class="kw">pub fn </span>generate() -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>(private_key, public_key) = gen_kem_keypair();
-        <span class="self">Self </span>{
-            private_key,
-            public_key,
-        }
-    }
-
-    <span class="kw">pub fn </span>new(private_key: PrivateKey, public_key: PublicKey) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            private_key,
-            public_key,
-        }
-    }
-
-    <span class="kw">pub fn </span>get_private_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
-        <span class="self">self</span>.private_key.to_bytes().to_vec()
-    }
-
-    <span class="doccomment">/// Returns a NIST P-256 SEC1 encoded point public key.
-    /// &lt;https://secg.org/sec1-v2.pdf&gt;
-    </span><span class="kw">pub fn </span>get_serialized_public_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
-        <span class="self">self</span>.public_key.to_bytes().to_vec()
-    }
 }
 
 <span class="doccomment">/// Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
@@ -404,7 +344,7 @@
 /// &lt;https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key&gt;
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>setup_base_recipient(
     serialized_encapsulated_public_key: <span class="kw-2">&amp;</span>[u8],
-    recipient_key_pair: <span class="kw-2">&amp;</span>KeyPair,
+    recipient_private_key: <span class="kw-2">&amp;</span>PrivateKey,
     info: <span class="kw-2">&amp;</span>[u8],
 ) -&gt; anyhow::Result&lt;RecipientContext&gt; {
     <span class="kw">let </span>encapsulated_public_key = EncappedKey::from_bytes(serialized_encapsulated_public_key)
@@ -417,7 +357,7 @@
 
     <span class="kw">let </span>recipient_context = hpke::setup_receiver::&lt;Aead, Kdf, Kem&gt;(
         <span class="kw-2">&amp;</span>OpModeR::Base,
-        <span class="kw-2">&amp;</span>recipient_key_pair.private_key,
+        recipient_private_key,
         <span class="kw-2">&amp;</span>encapsulated_public_key,
         info,
     )
