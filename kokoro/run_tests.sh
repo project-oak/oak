@@ -14,7 +14,7 @@ export XDG_RUNTIME_DIR=/var/run
 cd "$(dirname "$0")/.."
 
 ./scripts/docker_pull
-./scripts/docker_run nix develop .#default --command just kokoro_run_tests
+./scripts/docker_run nix develop .#ci --command just kokoro_run_tests
 
 mkdir -p "${KOKORO_ARTIFACTS_DIR}/test_logs/"
 cp --preserve=timestamps \
