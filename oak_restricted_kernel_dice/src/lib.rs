@@ -25,7 +25,7 @@ extern crate alloc;
 
 use coset::{cbor::Value, cwt::ClaimName, CborSerializable};
 use hkdf::Hkdf;
-use oak_crypto::hpke::Serializable;
+use oak_crypto::encryption_key::generate_encryption_key_pair;
 use oak_dice::cert::{ENCLAVE_APPLICATION_LAYER_ID, LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID};
 use sha2::{Digest, Sha256};
 
@@ -106,13 +106,13 @@ pub fn generate_dice_data(
             .expect("couldn't generate signing certificate");
 
         let (application_encryption_private_key, application_encryption_public_key) =
-            oak_crypto::hpke::gen_kem_keypair();
+            generate_encryption_key_pair();
 
         let application_encryption_public_key_certificate =
             oak_dice::cert::generate_kem_certificate(
                 &kernel_signing_key,
                 kernel_cert_issuer,
-                application_encryption_public_key.to_bytes().as_slice(),
+                &application_encryption_public_key,
                 additional_claims,
             )
             .expect("couldn't generate encryption public certificate");
@@ -135,9 +135,11 @@ pub fn generate_dice_data(
             };
 
             let encryption_private_key = {
+                let serialized_application_encryption_private_key =
+                    application_encryption_private_key.serialize();
                 let mut slice = [0; oak_dice::evidence::PRIVATE_KEY_SIZE];
-                slice[..application_encryption_private_key.to_bytes().len()]
-                    .copy_from_slice(&application_encryption_private_key.to_bytes());
+                slice[..serialized_application_encryption_private_key.len()]
+                    .copy_from_slice(&serialized_application_encryption_private_key);
                 slice
             };
 

@@ -19,11 +19,11 @@ use core::future::Future;
 
 use anyhow::Context;
 use oak_crypto::{
-    encryptor::{AsyncEncryptionKeyHandle, EncryptionKeyHandle, ServerEncryptor},
+    encryption_key::{AsyncEncryptionKeyHandle, EncryptionKeyHandle},
+    encryptor::ServerEncryptor,
     proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
+    EMPTY_ASSOCIATED_DATA,
 };
-
-const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 /// Information about a public key.
 #[derive(Debug, Clone)]

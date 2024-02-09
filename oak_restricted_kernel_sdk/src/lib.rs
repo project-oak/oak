@@ -27,8 +27,8 @@ pub mod instance_attestation;
 #[doc(cfg(feature = "mock_attestation"))]
 pub mod mock_attestation;
 pub mod utils;
-pub use oak_crypto::encryptor::EncryptionKeyHandle;
-use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_crypto::encryption_key::EncryptionKey;
+pub use oak_crypto::encryption_key::EncryptionKeyHandle;
 use oak_dice::evidence::Evidence;
 /// Marks a function as the entrypoint to an enclave app and sets up an conviences such an
 /// allocator, logger, panic handler.
@@ -80,6 +80,6 @@ pub trait EvidenceProvider {
 /// Wrapper for DICE evidence and application private keys.
 pub(crate) struct DiceWrapper {
     pub evidence: Evidence,
-    pub encryption_key: EncryptionKeyProvider,
+    pub encryption_key: EncryptionKey,
     pub signing_key: p256::ecdsa::SigningKey,
 }

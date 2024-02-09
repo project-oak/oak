@@ -18,7 +18,7 @@
 
 use anyhow::Ok;
 use oak_crypto::{
-    encryptor::{EncryptionKeyHandle, EncryptionKeyProvider},
+    encryption_key::{EncryptionKey, EncryptionKeyHandle},
     hpke::RecipientContext,
 };
 use oak_dice::evidence::{Evidence, RestrictedKernelDiceData, P256_PRIVATE_KEY_SIZE};
@@ -48,8 +48,11 @@ fn get_restricted_kernel_dice_data() -> anyhow::Result<RestrictedKernelDiceData>
 
 impl TryFrom<RestrictedKernelDiceData> for DiceWrapper {
     type Error = anyhow::Error;
-    fn try_from(dice_data: RestrictedKernelDiceData) -> Result<Self, Self::Error> {
-        let encryption_key = EncryptionKeyProvider::try_from(&dice_data)?;
+    fn try_from(mut dice_data: RestrictedKernelDiceData) -> Result<Self, Self::Error> {
+        let encryption_key = EncryptionKey::deserialize(
+            &mut dice_data.application_private_keys.encryption_private_key
+                [..oak_dice::evidence::X25519_PRIVATE_KEY_SIZE],
+        )?;
         let signing_key = SigningKey::from_slice(
             &dice_data.application_private_keys.signing_private_key[..P256_PRIVATE_KEY_SIZE],
         )
@@ -94,7 +97,7 @@ impl Signer for InstanceSigner {
 /// private keys.
 #[derive(Clone)]
 pub struct InstanceEncryptionKeyHandle {
-    key: &'static EncryptionKeyProvider,
+    key: &'static EncryptionKey,
 }
 
 impl InstanceEncryptionKeyHandle {
