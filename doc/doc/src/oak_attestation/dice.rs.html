@@ -266,6 +266,7 @@
 <a href="#266" id="266">266</a>
 <a href="#267" id="267">267</a>
 <a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -478,9 +479,10 @@
 
 <span class="kw">fn </span>tee_platform_to_proto(src: oak_dice::evidence::TeePlatform) -&gt; TeePlatform {
     <span class="kw">match </span>src {
+        oak_dice::evidence::TeePlatform::Unspecified =&gt; TeePlatform::Unspecified,
         oak_dice::evidence::TeePlatform::AmdSevSnp =&gt; TeePlatform::AmdSevSnp,
         oak_dice::evidence::TeePlatform::IntelTdx =&gt; TeePlatform::IntelTdx,
-        oak_dice::evidence::TeePlatform::Unspecified =&gt; TeePlatform::Unspecified,
+        oak_dice::evidence::TeePlatform::None =&gt; TeePlatform::None,
     }
 }
 

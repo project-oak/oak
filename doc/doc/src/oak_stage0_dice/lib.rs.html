@@ -220,6 +220,7 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -359,6 +360,7 @@
     measurements: <span class="kw-2">&amp;</span>Measurements,
     get_attestation: F,
     get_derived_key: G,
+    tee_platform: TeePlatform,
 ) -&gt; Stage0DiceData {
     <span class="kw">let </span><span class="kw-2">mut </span>result = Stage0DiceData::new_zeroed();
     <span class="comment">// Generate ECA Stage0 key pair. This key will be used to sign Stage1 ECA certificate.
@@ -404,7 +406,7 @@
     <span class="kw">let </span>hkdf = Hkdf::&lt;Sha256&gt;::new(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>salt), <span class="kw-2">&amp;</span>ikm[..]);
 
     result.magic = STAGE0_MAGIC;
-    result.root_layer_evidence.tee_platform = TeePlatform::AmdSevSnp <span class="kw">as </span>u64;
+    result.root_layer_evidence.tee_platform = tee_platform <span class="kw">as </span>u64;
     result
         .root_layer_evidence
         .set_remote_attestation_report(report_bytes)

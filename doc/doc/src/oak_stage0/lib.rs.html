@@ -425,6 +425,13 @@
 <a href="#425" id="425">425</a>
 <a href="#426" id="426">426</a>
 <a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -453,7 +460,7 @@
 
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>oak_core::sync::OnceCell;
-<span class="kw">use </span>oak_dice::evidence::DICE_DATA_CMDLINE_PARAM;
+<span class="kw">use </span>oak_dice::evidence::{TeePlatform, DICE_DATA_CMDLINE_PARAM};
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, E820EntryType};
 <span class="kw">use </span>oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
 <span class="kw">use </span>sha2::{Digest, Sha256};
@@ -762,11 +769,18 @@
         memory_map_sha2_256_digest,
     };
 
+    <span class="kw">let </span>tee_platform = <span class="kw">if </span>sev_status().contains(SevStatus::SNP_ACTIVE) {
+        TeePlatform::AmdSevSnp
+    } <span class="kw">else </span>{
+        TeePlatform::None
+    };
+
     <span class="kw">let </span>dice_data = Box::leak(Box::new_in(
         oak_stage0_dice::generate_dice_data(
             <span class="kw-2">&amp;</span>measurements,
             dice_attestation::get_attestation,
             dice_attestation::get_derived_key,
+            tee_platform,
         ),
         <span class="kw-2">&amp;</span><span class="kw">crate</span>::BOOT_ALLOC,
     ));
