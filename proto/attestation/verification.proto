@@ -74,6 +74,8 @@ message RootLayerData {
     AmdAttestationReport sev_snp = 1;
     // Values extracted from an Intel TDX attestation report.
     IntelTdxAttestationReport tdx = 2;
+    // Values extracted from a fake report when not running in a TEE.
+    FakeAttestationReport fake = 3;
   }
 }
 
@@ -100,6 +102,12 @@ message AmdAttestationReport {
 
 // Values extracted from an Intel TDX attestation report.
 message IntelTdxAttestationReport {
+  // The custom bytes that were passed to the report when it was requested.
+  bytes report_data = 1;
+}
+
+// Values extracted from a fake attestation report when not running in a TEE.
+message FakeAttestationReport {
   // The custom bytes that were passed to the report when it was requested.
   bytes report_data = 1;
 }

@@ -26,7 +26,7 @@ use core::{arch::asm, ffi::c_void, mem::MaybeUninit, panic::PanicInfo};
 
 use linked_list_allocator::LockedHeap;
 use oak_core::sync::OnceCell;
-use oak_dice::evidence::DICE_DATA_CMDLINE_PARAM;
+use oak_dice::evidence::{TeePlatform, DICE_DATA_CMDLINE_PARAM};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
 use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
 use sha2::{Digest, Sha256};
@@ -335,11 +335,18 @@ pub fn rust64_start(encrypted: u64) -> ! {
         memory_map_sha2_256_digest,
     };
 
+    let tee_platform = if sev_status().contains(SevStatus::SNP_ACTIVE) {
+        TeePlatform::AmdSevSnp
+    } else {
+        TeePlatform::None
+    };
+
     let dice_data = Box::leak(Box::new_in(
         oak_stage0_dice::generate_dice_data(
             &measurements,
             dice_attestation::get_attestation,
             dice_attestation::get_derived_key,
+            tee_platform,
         ),
         &crate::BOOT_ALLOC,
     ));

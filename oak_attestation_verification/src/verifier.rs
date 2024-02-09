@@ -37,7 +37,8 @@ use oak_proto_rust::oak::{
         ApplicationLayerEndorsements, ApplicationLayerReferenceValues, AttestationResults,
         BinaryReferenceValue, CbData, CbEndorsements, CbReferenceValues, ContainerLayerData,
         ContainerLayerEndorsements, ContainerLayerReferenceValues, Endorsements, Evidence,
-        ExtractedEvidence, IntelTdxAttestationReport, IntelTdxReferenceValues, KernelLayerData,
+        ExtractedEvidence, FakeAttestationReport, InsecureReferenceValues,
+        IntelTdxAttestationReport, IntelTdxReferenceValues, KernelLayerData,
         KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersData,
         OakContainersEndorsements, OakContainersReferenceValues, OakRestrictedKernelData,
         OakRestrictedKernelEndorsements, OakRestrictedKernelReferenceValues, ReferenceValues,
@@ -142,6 +143,7 @@ pub fn verify(
     {
         Report::SevSnp(values) => values.report_data.as_ref(),
         Report::Tdx(values) => values.report_data.as_ref(),
+        Report::Fake(values) => values.report_data.as_ref(),
     };
     // The report data contains 64 bytes by default, but we only use the first 32 bytes at the
     // moment.
@@ -403,6 +405,14 @@ fn verify_intel_tdx_attestation_report(
     anyhow::bail!("needs implementation")
 }
 
+/// Verifies a fake attestation report.
+fn verify_fake_attestation_report(
+    _attestation_report_values: &FakeAttestationReport,
+    _reference_values: &InsecureReferenceValues,
+) -> anyhow::Result<()> {
+    Ok(())
+}
+
 /// Verifies the signature chain for the attestation report included in the root.
 fn verify_root_attestation_signature(
     _now_utc_millis: i64,
@@ -431,6 +441,7 @@ fn verify_root_attestation_signature(
             verify_attestation_report_signature(&vcek, report)
         }
         TeePlatform::IntelTdx => anyhow::bail!("not supported"),
+        TeePlatform::None => Ok(()),
     }
 }
 
@@ -455,6 +466,13 @@ fn verify_root_layer(
                 .intel_tdx
                 .as_ref()
                 .context("Intel TDX reference values not found")?,
+        ),
+        Some(Report::Fake(report_values)) => verify_fake_attestation_report(
+            report_values,
+            reference_values
+                .insecure
+                .as_ref()
+                .context("insecure reference values not found")?,
         ),
         None => Err(anyhow::anyhow!("no attestation report")),
     }
@@ -822,6 +840,20 @@ fn extract_root_values(root_layer: &RootLayerEvidence) -> anyhow::Result<RootLay
             })
         }
         TeePlatform::IntelTdx => Err(anyhow::anyhow!("not supported")),
+        TeePlatform::None => {
+            // We use an unsigned, mostly empty AMD SEV-SNP attestation report as a fake when not
+            // running in a TEE.
+            let report = AttestationReport::ref_from(&root_layer.remote_attestation_report)
+                .context("invalid fake attestation report")?;
+
+            report.validate().map_err(|msg| anyhow::anyhow!(msg))?;
+
+            let report_data = report.data.report_data.as_ref().to_vec();
+
+            Ok(RootLayerData {
+                report: Some(Report::Fake(FakeAttestationReport { report_data })),
+            })
+        }
     }
 }
 

@@ -42,7 +42,9 @@ message RootLayerEndorsements {
   // certificate(s) are encoded into this byte array are implementation
   // specific. In case of AMD-SEV-SNP, as described in
   // https://www.amd.com/system/files/TechDocs/57230.pdf, there are three
-  // different certificates packaged in two different files.
+  // different certificates packaged in two different files. We only include
+  // the machine-specific VCEK certificate since the AMD Root Key (ARK) and
+  // AMD SEV Key (ASK) are long-lived.
   bytes tee_certificate = 1;
 
   // Endorsement of the Stage0 binary.
