@@ -31,6 +31,15 @@
 <a href="#31" id="31">31</a>
 <a href="#32" id="32">32</a>
 <a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
+<a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a>
+<a href="#39" id="39">39</a>
+<a href="#40" id="40">40</a>
+<a href="#41" id="41">41</a>
+<a href="#42" id="42">42</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -54,7 +63,13 @@
 <span class="kw">use </span>oak_channel::basic_framed::load_raw;
 <span class="kw">use </span>oak_dice::evidence::Stage0DiceData;
 
-<span class="kw">pub fn </span>entrypoint&lt;C: oak_channel::Channel&gt;(<span class="kw-2">mut </span>channel: C, _stage0_dice_data: Stage0DiceData) -&gt; ! {
+<span class="kw">pub fn </span>load_and_attest_app&lt;C: oak_channel::Channel&gt;(
+    <span class="kw-2">mut </span>channel: C,
+    stage0_dice_data: Stage0DiceData,
+) -&gt; (
+    oak_restricted_kernel_dice::DerivedKey,
+    oak_dice::evidence::RestrictedKernelDiceData,
+) {
     <span class="kw">let </span>application_bytes = load_raw::&lt;C, <span class="number">4096</span>&gt;(<span class="kw-2">&amp;mut </span>channel).expect(<span class="string">&quot;failed to load&quot;</span>);
     <span class="macro">log::info!</span>(<span class="string">&quot;Binary loaded, size: {}&quot;</span>, application_bytes.len());
     <span class="kw">let </span>app_digest = oak_restricted_kernel_dice::measure_app_digest_sha2_256(<span class="kw-2">&amp;</span>application_bytes);
@@ -62,6 +77,9 @@
         <span class="string">&quot;Application digest (sha2-256): {}&quot;</span>,
         app_digest.map(|x| <span class="macro">alloc::format!</span>(<span class="string">&quot;{:02x}&quot;</span>, x)).join(<span class="string">&quot;&quot;</span>)
     );
-    <span class="macro">unimplemented!</span>();
+    <span class="kw">let </span>derived_key =
+        oak_restricted_kernel_dice::generate_derived_key(<span class="kw-2">&amp;</span>stage0_dice_data, <span class="kw-2">&amp;</span>app_digest);
+    <span class="kw">let </span>dice_data = oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, <span class="kw-2">&amp;</span>app_digest);
+    (derived_key, dice_data)
 }
 </code></pre></div></section></main></body></html>

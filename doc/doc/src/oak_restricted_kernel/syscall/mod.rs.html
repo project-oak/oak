@@ -260,6 +260,7 @@
 <a href="#260" id="260">260</a>
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -279,8 +280,7 @@
 </span><span class="kw">mod </span>channel;
 <span class="kw">pub mod </span>dice_data;
 <span class="kw">mod </span>fd;
-<span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
-</span><span class="kw">mod </span>key;
+<span class="kw">mod </span>key;
 <span class="kw">pub mod </span>mmap;
 <span class="kw">mod </span>process;
 <span class="kw">mod </span>stdio;
@@ -336,8 +336,10 @@
 ) {
     channel::register(channel);
     stdio::register();
-    <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
-    </span>key::register(derived_key);
+    key::register(
+        <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+        </span>derived_key,
+    );
     dice_data::register(dice_data);
 
     <span class="comment">// Allocate a stack for the system call handler.

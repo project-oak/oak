@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["entrypoint"]};
+window.SIDEBAR_ITEMS = {"fn":["load_and_attest_app"]};
