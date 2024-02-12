@@ -50,3 +50,4 @@ tracing = "*"
 
 [dev-dependencies]
 oak_functions_test_utils = { workspace = true }
+xtask = { workspace = true }
