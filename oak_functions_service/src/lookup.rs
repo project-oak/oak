@@ -18,7 +18,6 @@ use alloc::{
     format,
     string::{String, ToString},
     sync::Arc,
-    vec::Vec,
 };
 
 use bytes::Bytes;
@@ -183,8 +182,8 @@ impl LookupData {
     }
 
     /// Gets an individual entry from the backing data.
-    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        self.data.get(key).cloned().map(Into::into)
+    pub fn get(&self, key: &[u8]) -> Option<&Bytes> {
+        self.data.get(key)
     }
 
     /// Gets the number of entries in the backing data.
