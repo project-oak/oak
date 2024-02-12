@@ -24,10 +24,6 @@ use oak_sev_guest::msr::{get_sev_status, SevStatus};
 use x86_64::structures::paging::frame::PhysFrameRange;
 use x86_64::{
     addr::{align_down, align_up},
-    registers::{
-        control::{Cr3, Cr3Flags},
-        model_specific::{Efer, EferFlags},
-    },
     structures::paging::{
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
         FrameAllocator, Page, PageSize, PageTable, PageTableFlags as BasePageTableFlags, PhysFrame,
@@ -36,10 +32,7 @@ use x86_64::{
     PhysAddr, VirtAddr,
 };
 
-use self::{
-    encrypted_mapper::{EncryptedPageTable, MemoryEncryption},
-    page_tables::RootPageTable,
-};
+use self::encrypted_mapper::{EncryptedPageTable, MemoryEncryption};
 use crate::{FRAME_ALLOCATOR, PAGE_TABLES, VMA_ALLOCATOR};
 
 mod bitmap_frame_allocator;
@@ -276,7 +269,7 @@ pub fn ramdisk_range(ramdisk: &Ramdisk) -> PhysFrameRange<Size2MiB> {
     )
 }
 
-/// Initializes the page tables used by the kernel.
+/// Creates the initial page tables used by the kernel.
 ///
 /// The memory layout we follow is largely based on the Linux layout
 /// (<https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt>):
@@ -291,7 +284,9 @@ pub fn ramdisk_range(ramdisk: &Ramdisk) -> PhysFrameRange<Size2MiB> {
 /// |                     |          |                     |         | physical memory             |
 /// | FFFF_8820_0000_0000 | ~-120 TB | FFFF_FFFF_7FFF_FFFF | ~120 TB | ... unused hole             |
 /// | FFFF_FFFF_8000_0000 |    -2 GB | FFFF_FFFF_FFFF_FFFF |    2 GB | Kernel code                 |
-pub fn init_paging(program_headers: &[ProgramHeader]) -> Result<RootPageTable, &'static str> {
+pub fn initial_pml4(
+    program_headers: &[ProgramHeader],
+) -> Result<(PhysFrame, MemoryEncryption), &'static str> {
     // Safety: this expects the frame allocator to be initialized and the memory region it's handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     // This reference will no longer be valid after we reload the page tables!
@@ -339,22 +334,7 @@ pub fn init_paging(program_headers: &[ProgramHeader]) -> Result<RootPageTable, &
             .map_err(|_| "couldn't set up paging for the kernel")?;
     }
 
-    // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to load
-    // the new page tables.
-    // This validates any references that expect boot page tables to be valid!
-    unsafe {
-        Efer::update(|flags| flags.insert(EferFlags::NO_EXECUTE_ENABLE));
-        Cr3::write(pml4_frame, Cr3Flags::empty());
-    }
-
-    // Reload the pml4 reference based on the `DIRECT_MAPPING_OFFSET` value, in case the offset is
-    // not zero and the reference is no longer valid.
-    // Safety: we've reloaded page tables that place the direct mapping region at that offset, so
-    // the memory location is safe to access now.
-    let pml4 =
-        unsafe { &mut *(DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr() };
-
-    Ok(RootPageTable::new(pml4, DIRECT_MAPPING_OFFSET, encrypted))
+    Ok((pml4_frame, encrypted))
 }
 
 /// Allocates memory usable as a stack.

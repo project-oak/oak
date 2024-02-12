@@ -17,6 +17,7 @@
 use goblin::elf64::program_header::{ProgramHeader, PF_W, PF_X, PT_LOAD};
 use x86_64::{
     align_down, align_up,
+    registers::control::{Cr3, Cr3Flags},
     structures::paging::{
         frame::PhysFrameRange,
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
@@ -279,9 +280,27 @@ impl CurrentRootPageTable {
     }
 
     /// Replaces the current pagetable with the parameter, returning the old
-    /// pagetable if there was one. Does not issue the instructions update the
-    /// page table on the CPU level.
-    pub fn replace(&mut self, new_pt: RootPageTable) -> Option<RootPageTable> {
+    /// pagetable if there was one. Updates the page table on the CPU level.
+    /// Safety: The new page tables must keep the identity mapping at -2GB (kernel space) intact.
+    pub unsafe fn replace(
+        &mut self,
+        pml4_frame: PhysFrame,
+        encrypted: MemoryEncryption,
+    ) -> Option<RootPageTable> {
+        // This validates any references that expect boot page tables to be valid!
+        // Safety: Caller must ensure that the new page tables are safe.
+        unsafe {
+            Cr3::write(pml4_frame, Cr3Flags::empty());
+        };
+
+        // Safety: we've reloaded page tables that place the direct mapping region at that offset,
+        // so the memory location is safe to access now.
+        let pml4 = unsafe {
+            &mut *(super::DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr()
+        };
+
+        let new_pt = RootPageTable::new(pml4, super::DIRECT_MAPPING_OFFSET, encrypted);
+
         self.inner.replace(new_pt)
     }
 
