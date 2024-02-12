@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+#![feature(c_size_t)]
+
 use std::{
     future::Future,
     pin::Pin,
@@ -44,6 +46,7 @@ use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 use tonic::codec::CompressionEncoding;
 use tracing::Span;
 
+#[cfg(feature = "native")]
 pub mod native_handler;
 
 use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};

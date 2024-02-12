@@ -23,7 +23,9 @@ use anyhow::{anyhow, Context};
 use clap::{Parser, ValueEnum};
 use oak_containers_orchestrator::launcher_client::LauncherClient;
 use oak_containers_sdk::{InstanceEncryptionKeyHandle, OrchestratorClient};
-use oak_functions_containers_app::{native_handler::NativeHandler, serve};
+#[cfg(feature = "native")]
+use oak_functions_containers_app::native_handler::NativeHandler;
+use oak_functions_containers_app::serve;
 use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
 use opentelemetry::{global::set_error_handler, metrics::MeterProvider, KeyValue};
 use tokio::{net::TcpListener, runtime::Handle};
@@ -35,6 +37,7 @@ static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 #[derive(Clone, Debug, strum::Display, ValueEnum)]
 pub enum HandlerType {
+    #[cfg(feature = "native")]
     /// The uploaded bytecode to be a .so file that will be dynamically opened.
     Native,
 
@@ -157,6 +160,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(addr).await?;
     let server_handle = tokio::spawn(async move {
         match args.handler {
+            #[cfg(feature = "native")]
             HandlerType::Native => {
                 serve::<_, NativeHandler>(listener, Arc::new(encryption_key_handle), meter).await
             }

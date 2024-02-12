@@ -4,12 +4,17 @@ version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 
+[features]
+default = ["native"]
+native = ["dep:libloading", "dep:tempfile", "dep:ouroboros"]
+
 [build-dependencies]
 oak_grpc_utils = { workspace = true }
 
 [dependencies]
 anyhow = "*"
 clap = { version = "*", features = ["derive"] }
+libloading = { version = "*", optional = true }
 http = "*"
 oak_attestation = { workspace = true }
 oak_containers_orchestrator = { workspace = true }
@@ -31,8 +36,10 @@ opentelemetry-otlp = { version = "*", default-features = false, features = [
   "metrics",
   "trace",
 ] }
+ouroboros = { version = "*", optional = true }
 prost = "*"
 strum = { version = "*", features = ["derive"] }
+tempfile = { version = "*", optional = true }
 tikv-jemallocator = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tokio-stream = { version = "*", features = ["net"] }
