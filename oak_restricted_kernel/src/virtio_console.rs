@@ -55,6 +55,7 @@ unsafe impl Hal for OakHal {
             .expect("Failed to allocate memory for virtio MMIO")
             .cast::<u8>();
         let phys_addr = PAGE_TABLES
+            .lock()
             .get()
             .unwrap()
             .translate_virtual(VirtAddr::from_ptr(vaddr.as_ptr()))
@@ -84,6 +85,7 @@ unsafe impl Hal for OakHal {
     unsafe fn mmio_phys_to_virt(paddr: virtio_drivers::PhysAddr, _size: usize) -> NonNull<u8> {
         NonNull::new(
             PAGE_TABLES
+                .lock()
                 .get()
                 .unwrap()
                 .translate_physical(PhysAddr::new(paddr as u64))
@@ -100,6 +102,7 @@ unsafe impl Hal for OakHal {
         // No additional work needed for sharing as the buffer was allocated from the guest-host
         // allocator.
         PAGE_TABLES
+            .lock()
             .get()
             .unwrap()
             .translate_virtual(VirtAddr::from_ptr(buffer.cast::<u8>().as_ptr()))
@@ -196,6 +199,7 @@ pub fn get_console_channel(acpi: &mut Acpi) -> MmioConsoleChannel {
 
     for device in virtio_devices {
         let header = PAGE_TABLES
+            .lock()
             .get()
             .unwrap()
             .translate_physical(

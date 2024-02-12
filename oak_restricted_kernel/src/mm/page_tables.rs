@@ -267,3 +267,35 @@ impl Translator for RootPageTable {
         self.inner.translate_physical_frame(frame)
     }
 }
+
+/// Wrapper struct that holds the current page table is there one.
+pub struct CurrentRootPageTable {
+    inner: Option<RootPageTable>,
+}
+
+impl CurrentRootPageTable {
+    pub const fn empty() -> Self {
+        Self { inner: None }
+    }
+
+    /// Replaces the current pagetable with the parameter, returning the old
+    /// pagetable if there was one. Does not issue the instructions update the
+    /// page table on the CPU level.
+    pub fn replace(&mut self, new_pt: RootPageTable) -> Option<RootPageTable> {
+        self.inner.replace(new_pt)
+    }
+
+    /// Gets the reference to the underlying pagetable.
+    ///
+    /// Returns `None` if the pagetable has not yet been set.
+    pub fn get(&self) -> Option<&RootPageTable> {
+        self.inner.as_ref()
+    }
+
+    /// Gets the mutable reference to the underlying pagetable.
+    ///
+    /// Returns `None` if the pagetable has not yet been set.
+    pub fn get_mut(&mut self) -> Option<&mut RootPageTable> {
+        self.inner.as_mut()
+    }
+}
