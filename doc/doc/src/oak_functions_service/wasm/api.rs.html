@@ -168,6 +168,8 @@
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
 <a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -293,7 +295,9 @@
             },
         );
 
-        <span class="prelude-val">Ok</span>(LookupDataResponse { value })
+        <span class="prelude-val">Ok</span>(LookupDataResponse {
+            value: value.cloned().map(Into::into),
+        })
     }
 
     <span class="kw">fn </span>lookup_data_multi(
@@ -313,7 +317,7 @@
             .map(|key| <span class="kw">match </span><span class="self">self</span>.lookup_data.get(key) {
                 <span class="prelude-val">Some</span>(value) =&gt; BytesValue {
                     found: <span class="bool-val">true</span>,
-                    value: value.clone(),
+                    value: value.clone().into(),
                 },
                 <span class="prelude-val">None </span>=&gt; BytesValue {
                     found: <span class="bool-val">false</span>,
