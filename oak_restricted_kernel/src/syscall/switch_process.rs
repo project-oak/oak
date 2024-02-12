@@ -37,13 +37,13 @@ pub fn syscall_unstable_switch_proccess(buf: *mut c_void, count: c_size_t) -> ! 
         .expect("failed to parse application");
 
     // Ensure the page table is not dropped.
-    let mut pml4 = Box::leak(Box::new(PageTable::new()));
+    let pml4 = Box::leak(Box::new(PageTable::new()));
     let encryption = crate::PAGE_TABLES
         .lock()
         .get()
         .unwrap()
         .inner()
-        .copy_kernel_space(&mut pml4);
+        .copy_kernel_space(pml4);
 
     let pml4_frame = {
         let phys_addr = {
