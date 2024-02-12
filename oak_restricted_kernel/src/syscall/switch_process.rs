@@ -19,6 +19,8 @@ use core::{
     slice,
 };
 
+use x86_64::structures::paging::{FrameAllocator, PageTable};
+
 pub fn syscall_unstable_switch_proccess(buf: *mut c_void, count: c_size_t) -> ! {
     // We should validate that the pointer and count are valid, as these come from userspace and
     // therefore are not to be trusted, but right now everything is in kernel space so there is
@@ -32,11 +34,17 @@ pub fn syscall_unstable_switch_proccess(buf: *mut c_void, count: c_size_t) -> ! 
         .expect("failed to parse application");
 
     {
-        let program_headers = unsafe { crate::elf::get_phdrs(x86_64::VirtAddr::new(0x20_0000)) };
         log::info!("creating new page table");
-        let new_page_table = crate::mm::init_paging(program_headers).unwrap();
-        log::info!("swapping in new page table");
-        let _prev_page_table = crate::PAGE_TABLES.lock().replace(new_page_table);
+        let pml4_frame: x86_64::structures::paging::PhysFrame<
+            x86_64::structures::paging::Size4KiB,
+        > = crate::FRAME_ALLOCATOR
+            .lock()
+            .allocate_frame()
+            .expect("couldn't allocate a frame for PML4");
+        log::info!("about to unsafe pt");
+        let pml4 = unsafe { &mut *(pml4_frame.start_address().as_u64() as *mut PageTable) };
+        log::info!("about to zero pt");
+        pml4.zero();
     };
 
     // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
