@@ -22,6 +22,7 @@ extern crate alloc;
 
 use oak_dice::evidence::Stage0DiceData;
 use oak_restricted_kernel_interface::{syscall, DERIVED_KEY_FD, DICE_DATA_FD};
+use oak_restricted_kernel_orchestrator::AttestedApp;
 use oak_restricted_kernel_sdk::{channel::FileDescriptorChannel, entrypoint};
 use zerocopy::{AsBytes, FromZeroes};
 
@@ -35,14 +36,17 @@ fn read_stage0_dice_data() -> Stage0DiceData {
 
 #[entrypoint]
 fn start() -> ! {
-    let (derived_key, dice_data) = {
+    let attested_app = {
         let stage0_dice_data = read_stage0_dice_data();
         let channel = FileDescriptorChannel::default();
-        oak_restricted_kernel_orchestrator::load_and_attest_app(channel, stage0_dice_data)
+        AttestedApp::load_and_attest(channel, stage0_dice_data)
     };
 
-    syscall::write(DERIVED_KEY_FD, derived_key.as_bytes()).expect("failed to write derived key");
-    syscall::write(DICE_DATA_FD, dice_data.as_bytes()).expect("failed to write dice data");
+    syscall::write(DERIVED_KEY_FD, attested_app.derived_key.as_bytes())
+        .expect("failed to write derived key");
+    syscall::write(DICE_DATA_FD, attested_app.dice_data.as_bytes())
+        .expect("failed to write dice data");
 
-    unimplemented!("launch app")
+    log::info!("Exiting and launching application.");
+    unimplemented!("launch app");
 }
