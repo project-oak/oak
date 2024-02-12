@@ -17,10 +17,7 @@
 use goblin::elf64::program_header::{ProgramHeader, PF_W, PF_X, PT_LOAD};
 use x86_64::{
     align_down, align_up,
-    registers::{
-        control::{Cr3, Cr3Flags},
-        model_specific::{Efer, EferFlags},
-    },
+    registers::control::{Cr3, Cr3Flags},
     structures::paging::{
         frame::PhysFrameRange,
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
@@ -293,7 +290,6 @@ impl CurrentRootPageTable {
         // This validates any references that expect boot page tables to be valid!
         // Safety: Caller must ensure that the new page tables are safe.
         unsafe {
-            Efer::update(|flags| flags.insert(EferFlags::NO_EXECUTE_ENABLE));
             Cr3::write(pml4_frame, Cr3Flags::empty());
         };
 
