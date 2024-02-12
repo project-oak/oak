@@ -488,6 +488,17 @@
 <a href="#488" id="488">488</a>
 <a href="#489" id="489">489</a>
 <a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -554,12 +565,12 @@
 <span class="kw">extern crate </span>alloc;
 
 <span class="kw">use </span>alloc::{alloc::Allocator, boxed::Box};
-<span class="kw">use </span>core::{marker::Sync, panic::PanicInfo, str::FromStr};
+<span class="kw">use </span>core::{marker::Sync, option::Option, panic::PanicInfo, str::FromStr};
 
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>log::{error, info};
 <span class="kw">use </span>mm::{
-    frame_allocator::PhysicalMemoryAllocator, page_tables::RootPageTable,
+    frame_allocator::PhysicalMemoryAllocator, page_tables::CurrentRootPageTable,
     virtual_address_allocator::VirtualAddressAllocator,
 };
 <span class="kw">use </span>oak_channel::Channel;
@@ -592,7 +603,8 @@
 </span><span class="kw">pub static </span>GUEST_HOST_HEAP: OnceCell&lt;LockedHeap&gt; = OnceCell::new();
 
 <span class="doccomment">/// Active page tables.
-</span><span class="kw">pub static </span>PAGE_TABLES: OnceCell&lt;RootPageTable&gt; = OnceCell::new();
+</span><span class="kw">pub static </span>PAGE_TABLES: Spinlock&lt;CurrentRootPageTable&gt; =
+    Spinlock::new(CurrentRootPageTable::empty());
 
 <span class="doccomment">/// Allocator for long-lived pages in the kernel.
 </span><span class="kw">pub static </span>VMA_ALLOCATOR: Spinlock&lt;VirtualAddressAllocator&lt;Size2MiB&gt;&gt; =
@@ -660,11 +672,14 @@
     );
 
     <span class="comment">// Note: `info` will not be valid after calling this!
-    </span><span class="kw">if </span>PAGE_TABLES
-        .set(mm::init_paging(program_headers).unwrap())
-        .is_err()
-    {
-        <span class="macro">panic!</span>(<span class="string">&quot;couldn&#39;t initialize page tables&quot;</span>);
+    </span>{
+        <span class="kw">let </span>prev_page_table = PAGE_TABLES
+            .lock()
+            .replace(mm::init_paging(program_headers).unwrap());
+        <span class="macro">assert!</span>(
+            prev_page_table.is_none(),
+            <span class="string">&quot;there should be no previous page table during initialization&quot;
+        </span>);
     };
 
     <span class="comment">// Re-map boot params to the new virtual address.
@@ -673,6 +688,7 @@
     </span><span class="kw">let </span>info = <span class="kw">unsafe </span>{
         <span class="attr">#[allow(clippy::unnecessary_cast)]
         </span>(PAGE_TABLES
+            .lock()
             .get()
             .unwrap()
             .translate_physical(PhysAddr::new(info <span class="kw">as </span><span class="kw-2">*const </span><span class="kw">_ as </span>u64))
@@ -683,7 +699,8 @@
     };
 
     <span class="kw">if </span>sev_es_enabled {
-        <span class="kw">let </span>mapper = PAGE_TABLES.get().unwrap();
+        <span class="kw">let </span>pt_guard = PAGE_TABLES.lock();
+        <span class="kw">let </span>mapper = pt_guard.get().unwrap();
         <span class="comment">// Now that the page tables have been updated, we have to re-share the GHCB with the
         // hypervisor.
         </span>ghcb::reshare_ghcb(mapper);
@@ -703,7 +720,8 @@
     </span><span class="kw">let </span>guest_host_frames = FRAME_ALLOCATOR.lock().allocate_contiguous(<span class="number">2</span>).unwrap();
 
     <span class="kw">let </span>guest_host_pages = {
-        <span class="kw">let </span>pt = PAGE_TABLES.get().unwrap();
+        <span class="kw">let </span>pt_guard = PAGE_TABLES.lock();
+        <span class="kw">let </span>pt = pt_guard.get().unwrap();
         Page::range(
             pt.translate_physical_frame(guest_host_frames.start)
                 .unwrap(),
@@ -726,8 +744,10 @@
     // initialization code and thus there can be no concurrent access.
     </span><span class="kw">if </span>GUEST_HOST_HEAP
         .set(
-            <span class="kw">unsafe </span>{ memory::init_guest_host_heap(guest_host_pages, PAGE_TABLES.get().unwrap()) }
-                .unwrap(),
+            <span class="kw">unsafe </span>{
+                memory::init_guest_host_heap(guest_host_pages, PAGE_TABLES.lock().get().unwrap())
+            }
+            .unwrap(),
         )
         .is_err()
     {
@@ -778,7 +798,8 @@
             }));
 
             <span class="kw">let </span>dice_data_virt_addr = {
-                <span class="kw">let </span>pt = PAGE_TABLES.get().expect(<span class="string">&quot;failed to get page tables&quot;</span>);
+                <span class="kw">let </span>pt_guard = PAGE_TABLES.lock();
+                <span class="kw">let </span>pt = pt_guard.get().expect(<span class="string">&quot;failed to get page tables&quot;</span>);
                 pt.translate_physical(dice_data_phys_addr)
                     .expect(<span class="string">&quot;failed to translate physical dice address&quot;</span>)
             };
@@ -846,7 +867,8 @@
     <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
     </span><span class="kw">let </span>application_bytes: Box&lt;[u8]&gt; = {
         <span class="kw">let </span>virt_addr = {
-            <span class="kw">let </span>pt = PAGE_TABLES.get().expect(<span class="string">&quot;failed to get page tables&quot;</span>);
+            <span class="kw">let </span>pt_guard = PAGE_TABLES.lock();
+            <span class="kw">let </span>pt = pt_guard.get().expect(<span class="string">&quot;failed to get page tables&quot;</span>);
             pt.translate_physical(PhysAddr::new(ramdisk.addr.into()))
                 .expect(<span class="string">&quot;failed to translate physical dice address&quot;</span>)
         };

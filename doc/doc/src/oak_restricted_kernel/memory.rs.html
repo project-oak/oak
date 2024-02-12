@@ -301,8 +301,8 @@
             .lock()
             .allocate_frame()
             .ok_or(<span class="string">&quot;failed to allocate memory for kernel heap&quot;</span>)<span class="question-mark">?</span>;
-
-        <span class="kw">let </span>mapper = PAGE_TABLES.get().unwrap();
+        <span class="kw">let </span>pt_guard = PAGE_TABLES.lock();
+        <span class="kw">let </span>mapper = pt_guard.get().unwrap();
 
         <span class="comment">// Safety: if the page is already mapped, then we&#39;ll get an error and thus we won&#39;t
         // overwrite any existing mappings, Otherwise, creating a new mapping is safe as

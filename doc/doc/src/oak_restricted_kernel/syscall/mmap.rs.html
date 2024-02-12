@@ -200,6 +200,7 @@
 <a href="#200" id="200">200</a>
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -296,7 +297,8 @@
 
     <span class="kw">let </span>pages = {
         <span class="comment">// This critical section is rather long...
-        </span><span class="kw">let </span>pt = PAGE_TABLES.get().unwrap();
+        </span><span class="kw">let </span>pt_guard = PAGE_TABLES.lock();
+        <span class="kw">let </span>pt = pt_guard.get().unwrap();
 
         <span class="comment">// Now, find a gap in the page tables that satisifies the following:
         //  - in the lower half of virtual memory (user space)
