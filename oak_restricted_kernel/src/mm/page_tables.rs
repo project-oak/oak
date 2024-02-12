@@ -269,11 +269,11 @@ impl Translator for RootPageTable {
 }
 
 /// Wrapper struct that holds the current page table is there one.
-pub struct CurrentPageTable {
+pub struct CurrentRootPageTable {
     inner: Option<RootPageTable>,
 }
 
-impl CurrentPageTable {
+impl CurrentRootPageTable {
     pub const fn empty() -> Self {
         Self { inner: None }
     }
