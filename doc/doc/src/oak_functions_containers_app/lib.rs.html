@@ -425,6 +425,9 @@
 <a href="#425" id="425">425</a>
 <a href="#426" id="426">426</a>
 <a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -440,6 +443,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
+</span><span class="attr">#![feature(c_size_t)]
 
 </span><span class="kw">use </span>std::{
     future::Future,
@@ -471,7 +476,8 @@
 <span class="kw">use </span>tonic::codec::CompressionEncoding;
 <span class="kw">use </span>tracing::Span;
 
-<span class="kw">pub mod </span>native_handler;
+<span class="attr">#[cfg(feature = <span class="string">&quot;native&quot;</span>)]
+</span><span class="kw">pub mod </span>native_handler;
 
 <span class="kw">use </span><span class="kw">crate</span>::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
 
