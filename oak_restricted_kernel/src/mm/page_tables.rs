@@ -139,6 +139,9 @@ impl RootPageTable {
             inner: EncryptedPageTable::new(pml4, offset, encryption),
         }
     }
+    pub fn inner(&self) -> &EncryptedPageTable<MappedPageTable<'static, PhysOffset>> {
+        &self.inner
+    }
     /// Checks wheter all the pages in the range are unallocated.
     ///
     /// Even though the pages may be of arbitrary size, we check all 4KiB-aligned addresses in the
