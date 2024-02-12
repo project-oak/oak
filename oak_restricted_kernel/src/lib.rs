@@ -173,9 +173,6 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // Note: `info` will not be valid after calling this!
     {
         let (pml4_frame, encrypted) = mm::initial_pml4(program_headers).unwrap();
-        // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to
-        // load the new page tables.
-        let prev_page_table = unsafe { PAGE_TABLES.lock().replace(pml4_frame, encrypted) };
         // Prevent execution code in data only memory pages.
         // Safety: executeable memory is assumed to be appropiately marked in the page table.
         unsafe {
@@ -183,6 +180,9 @@ pub fn start_kernel(info: &BootParams) -> ! {
                 flags.insert(x86_64::registers::model_specific::EferFlags::NO_EXECUTE_ENABLE)
             });
         };
+        // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to
+        // load the new page tables.
+        let prev_page_table = unsafe { PAGE_TABLES.lock().replace(pml4_frame, encrypted) };
         assert!(
             prev_page_table.is_none(),
             "there should be no previous page table during initialization"
