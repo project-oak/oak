@@ -32,3 +32,13 @@ cc_library(
         "@com_google_absl//absl/strings",
     ],
 )
+
+cc_binary(
+    name = "key_value_lookup",
+    srcs = ["key_value_lookup.cc"],
+    linkshared = True,
+    deps = [
+        ":native_sdk",
+        "@com_google_absl//absl/log:check",
+    ],
+)

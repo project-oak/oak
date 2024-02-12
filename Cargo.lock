@@ -2586,6 +2586,7 @@ dependencies = [
  "tower",
  "tower-http",
  "tracing",
+ "xtask",
 ]
 
 [[package]]
