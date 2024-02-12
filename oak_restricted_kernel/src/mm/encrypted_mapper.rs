@@ -32,7 +32,7 @@ use x86_64::{
 use super::{Mapper, PageTableFlags, Translator};
 use crate::FRAME_ALLOCATOR;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum MemoryEncryption {
     /// Memory encryption is not supported. If `ENCRYPTED` page flag is set, it is ignored.
     NoEncryption,
