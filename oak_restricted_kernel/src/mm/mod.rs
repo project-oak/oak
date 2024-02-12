@@ -379,6 +379,7 @@ pub fn allocate_stack() -> VirtAddr {
     let stack_page = pages.start + 1;
     unsafe {
         PAGE_TABLES
+            .lock()
             .get()
             .unwrap()
             .map_to_with_table_flags(

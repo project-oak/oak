@@ -64,12 +64,12 @@ mod virtio_console;
 extern crate alloc;
 
 use alloc::{alloc::Allocator, boxed::Box};
-use core::{marker::Sync, panic::PanicInfo, str::FromStr};
+use core::{marker::Sync, option::Option, panic::PanicInfo, str::FromStr};
 
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
-    frame_allocator::PhysicalMemoryAllocator, page_tables::RootPageTable,
+    frame_allocator::PhysicalMemoryAllocator, page_tables::CurrentPageTable,
     virtual_address_allocator::VirtualAddressAllocator,
 };
 use oak_channel::Channel;
@@ -102,7 +102,7 @@ pub static FRAME_ALLOCATOR: Spinlock<PhysicalMemoryAllocator<4096>> =
 pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
 
 /// Active page tables.
-pub static PAGE_TABLES: OnceCell<RootPageTable> = OnceCell::new();
+pub static PAGE_TABLES: Spinlock<CurrentPageTable> = Spinlock::new(CurrentPageTable::empty());
 
 /// Allocator for long-lived pages in the kernel.
 pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
@@ -170,11 +170,14 @@ pub fn start_kernel(info: &BootParams) -> ! {
     );
 
     // Note: `info` will not be valid after calling this!
-    if PAGE_TABLES
-        .set(mm::init_paging(program_headers).unwrap())
-        .is_err()
     {
-        panic!("couldn't initialize page tables");
+        let prev_page_table = PAGE_TABLES
+            .lock()
+            .replace(mm::init_paging(program_headers).unwrap());
+        assert!(
+            prev_page_table.is_none(),
+            "there should be no previous page table during initialization"
+        );
     };
 
     // Re-map boot params to the new virtual address.
@@ -183,6 +186,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let info = unsafe {
         #[allow(clippy::unnecessary_cast)]
         (PAGE_TABLES
+            .lock()
             .get()
             .unwrap()
             .translate_physical(PhysAddr::new(info as *const _ as u64))
@@ -193,7 +197,8 @@ pub fn start_kernel(info: &BootParams) -> ! {
     };
 
     if sev_es_enabled {
-        let mapper = PAGE_TABLES.get().unwrap();
+        let pt_guard = PAGE_TABLES.lock();
+        let mapper = pt_guard.get().unwrap();
         // Now that the page tables have been updated, we have to re-share the GHCB with the
         // hypervisor.
         ghcb::reshare_ghcb(mapper);
@@ -213,7 +218,8 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let guest_host_frames = FRAME_ALLOCATOR.lock().allocate_contiguous(2).unwrap();
 
     let guest_host_pages = {
-        let pt = PAGE_TABLES.get().unwrap();
+        let pt_guard = PAGE_TABLES.lock();
+        let pt = pt_guard.get().unwrap();
         Page::range(
             pt.translate_physical_frame(guest_host_frames.start)
                 .unwrap(),
@@ -236,8 +242,10 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // initialization code and thus there can be no concurrent access.
     if GUEST_HOST_HEAP
         .set(
-            unsafe { memory::init_guest_host_heap(guest_host_pages, PAGE_TABLES.get().unwrap()) }
-                .unwrap(),
+            unsafe {
+                memory::init_guest_host_heap(guest_host_pages, PAGE_TABLES.lock().get().unwrap())
+            }
+            .unwrap(),
         )
         .is_err()
     {
@@ -288,7 +296,8 @@ pub fn start_kernel(info: &BootParams) -> ! {
             }));
 
             let dice_data_virt_addr = {
-                let pt = PAGE_TABLES.get().expect("failed to get page tables");
+                let pt_guard = PAGE_TABLES.lock();
+                let pt = pt_guard.get().expect("failed to get page tables");
                 pt.translate_physical(dice_data_phys_addr)
                     .expect("failed to translate physical dice address")
             };
@@ -356,7 +365,8 @@ pub fn start_kernel(info: &BootParams) -> ! {
     #[cfg(feature = "initrd")]
     let application_bytes: Box<[u8]> = {
         let virt_addr = {
-            let pt = PAGE_TABLES.get().expect("failed to get page tables");
+            let pt_guard = PAGE_TABLES.lock();
+            let pt = pt_guard.get().expect("failed to get page tables");
             pt.translate_physical(PhysAddr::new(ramdisk.addr.into()))
                 .expect("failed to translate physical dice address")
         };

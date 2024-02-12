@@ -63,6 +63,7 @@ impl AcpiHandler for Handler {
             physical_address,
             NonNull::new(
                 PAGE_TABLES
+                    .lock()
                     .get()
                     .unwrap()
                     .translate_physical(PhysAddr::new(physical_address as u64))
@@ -209,6 +210,7 @@ trait TableContents<'a> {
 impl<'a> TableContents<'a> for AmlTable {
     fn contents(&self) -> &'a [u8] {
         let virt_addr = PAGE_TABLES
+            .lock()
             .get()
             .unwrap()
             .translate_physical(PhysAddr::new(self.address as u64))
