@@ -123,7 +123,9 @@ impl StdWasmApi for StdWasmApiImpl {
             },
         );
 
-        Ok(LookupDataResponse { value })
+        Ok(LookupDataResponse {
+            value: value.cloned().map(Into::into),
+        })
     }
 
     fn lookup_data_multi(
@@ -143,7 +145,7 @@ impl StdWasmApi for StdWasmApiImpl {
             .map(|key| match self.lookup_data.get(key) {
                 Some(value) => BytesValue {
                     found: true,
-                    value: value.clone(),
+                    value: value.clone().into(),
                 },
                 None => BytesValue {
                     found: false,
