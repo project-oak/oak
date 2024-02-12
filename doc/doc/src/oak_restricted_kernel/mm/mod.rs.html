@@ -378,26 +378,6 @@
 <a href="#378" id="378">378</a>
 <a href="#379" id="379">379</a>
 <a href="#380" id="380">380</a>
-<a href="#381" id="381">381</a>
-<a href="#382" id="382">382</a>
-<a href="#383" id="383">383</a>
-<a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
-<a href="#389" id="389">389</a>
-<a href="#390" id="390">390</a>
-<a href="#391" id="391">391</a>
-<a href="#392" id="392">392</a>
-<a href="#393" id="393">393</a>
-<a href="#394" id="394">394</a>
-<a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
-<a href="#399" id="399">399</a>
-<a href="#400" id="400">400</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -424,10 +404,6 @@
 </span><span class="kw">use </span>x86_64::structures::paging::frame::PhysFrameRange;
 <span class="kw">use </span>x86_64::{
     addr::{align_down, align_up},
-    registers::{
-        control::{Cr3, Cr3Flags},
-        model_specific::{Efer, EferFlags},
-    },
     structures::paging::{
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
         FrameAllocator, Page, PageSize, PageTable, PageTableFlags <span class="kw">as </span>BasePageTableFlags, PhysFrame,
@@ -436,10 +412,7 @@
     PhysAddr, VirtAddr,
 };
 
-<span class="kw">use </span><span class="self">self</span>::{
-    encrypted_mapper::{EncryptedPageTable, MemoryEncryption},
-    page_tables::RootPageTable,
-};
+<span class="kw">use </span><span class="self">self</span>::encrypted_mapper::{EncryptedPageTable, MemoryEncryption};
 <span class="kw">use crate</span>::{FRAME_ALLOCATOR, PAGE_TABLES, VMA_ALLOCATOR};
 
 <span class="kw">mod </span>bitmap_frame_allocator;
@@ -676,7 +649,7 @@
     )
 }
 
-<span class="doccomment">/// Initializes the page tables used by the kernel.
+<span class="doccomment">/// Creates the initial page tables used by the kernel.
 ///
 /// The memory layout we follow is largely based on the Linux layout
 /// (&lt;https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt&gt;):
@@ -691,7 +664,9 @@
 /// |                     |          |                     |         | physical memory             |
 /// | FFFF_8820_0000_0000 | ~-120 TB | FFFF_FFFF_7FFF_FFFF | ~120 TB | ... unused hole             |
 /// | FFFF_FFFF_8000_0000 |    -2 GB | FFFF_FFFF_FFFF_FFFF |    2 GB | Kernel code                 |
-</span><span class="kw">pub fn </span>init_paging(program_headers: <span class="kw-2">&amp;</span>[ProgramHeader]) -&gt; <span class="prelude-ty">Result</span>&lt;RootPageTable, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>initial_pml4(
+    program_headers: <span class="kw-2">&amp;</span>[ProgramHeader],
+) -&gt; <span class="prelude-ty">Result</span>&lt;(PhysFrame, MemoryEncryption), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// Safety: this expects the frame allocator to be initialized and the memory region it&#39;s handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     // This reference will no longer be valid after we reload the page tables!
@@ -739,22 +714,7 @@
             .map_err(|<span class="kw">_</span>| <span class="string">&quot;couldn&#39;t set up paging for the kernel&quot;</span>)<span class="question-mark">?</span>;
     }
 
-    <span class="comment">// Safety: the new page tables keep the identity mapping at -2GB intact, so it&#39;s safe to load
-    // the new page tables.
-    // This validates any references that expect boot page tables to be valid!
-    </span><span class="kw">unsafe </span>{
-        Efer::update(|flags| flags.insert(EferFlags::NO_EXECUTE_ENABLE));
-        Cr3::write(pml4_frame, Cr3Flags::empty());
-    }
-
-    <span class="comment">// Reload the pml4 reference based on the `DIRECT_MAPPING_OFFSET` value, in case the offset is
-    // not zero and the reference is no longer valid.
-    // Safety: we&#39;ve reloaded page tables that place the direct mapping region at that offset, so
-    // the memory location is safe to access now.
-    </span><span class="kw">let </span>pml4 =
-        <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr() };
-
-    <span class="prelude-val">Ok</span>(RootPageTable::new(pml4, DIRECT_MAPPING_OFFSET, encrypted))
+    <span class="prelude-val">Ok</span>((pml4_frame, encrypted))
 }
 
 <span class="doccomment">/// Allocates memory usable as a stack.

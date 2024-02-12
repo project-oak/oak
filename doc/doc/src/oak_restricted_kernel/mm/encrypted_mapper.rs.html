@@ -732,7 +732,7 @@
 <span class="kw">use super</span>::{Mapper, PageTableFlags, Translator};
 <span class="kw">use </span><span class="kw">crate</span>::FRAME_ALLOCATOR;
 
-<span class="attr">#[derive(Clone, Copy)]
+<span class="attr">#[derive(Clone, Copy, Debug)]
 </span><span class="kw">pub enum </span>MemoryEncryption {
     <span class="doccomment">/// Memory encryption is not supported. If `ENCRYPTED` page flag is set, it is ignored.
     </span>NoEncryption,

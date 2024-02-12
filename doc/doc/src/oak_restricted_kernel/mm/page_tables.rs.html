@@ -299,6 +299,25 @@
 <a href="#299" id="299">299</a>
 <a href="#300" id="300">300</a>
 <a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -318,6 +337,7 @@
 </span><span class="kw">use </span>goblin::elf64::program_header::{ProgramHeader, PF_W, PF_X, PT_LOAD};
 <span class="kw">use </span>x86_64::{
     align_down, align_up,
+    registers::control::{Cr3, Cr3Flags},
     structures::paging::{
         frame::PhysFrameRange,
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
@@ -580,9 +600,27 @@
     }
 
     <span class="doccomment">/// Replaces the current pagetable with the parameter, returning the old
-    /// pagetable if there was one. Does not issue the instructions update the
-    /// page table on the CPU level.
-    </span><span class="kw">pub fn </span>replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new_pt: RootPageTable) -&gt; <span class="prelude-ty">Option</span>&lt;RootPageTable&gt; {
+    /// pagetable if there was one. Updates the page table on the CPU level.
+    /// Safety: The new page tables must keep the identity mapping at -2GB (kernel space) intact.
+    </span><span class="kw">pub unsafe fn </span>replace(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        pml4_frame: PhysFrame,
+        encrypted: MemoryEncryption,
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;RootPageTable&gt; {
+        <span class="comment">// This validates any references that expect boot page tables to be valid!
+        // Safety: Caller must ensure that the new page tables are safe.
+        </span><span class="kw">unsafe </span>{
+            Cr3::write(pml4_frame, Cr3Flags::empty());
+        };
+
+        <span class="comment">// Safety: we&#39;ve reloaded page tables that place the direct mapping region at that offset,
+        // so the memory location is safe to access now.
+        </span><span class="kw">let </span>pml4 = <span class="kw">unsafe </span>{
+            <span class="kw-2">&amp;mut *</span>(<span class="kw">super</span>::DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr()
+        };
+
+        <span class="kw">let </span>new_pt = RootPageTable::new(pml4, <span class="kw">super</span>::DIRECT_MAPPING_OFFSET, encrypted);
+
         <span class="self">self</span>.inner.replace(new_pt)
     }
 

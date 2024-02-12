@@ -499,6 +499,14 @@
 <a href="#499" id="499">499</a>
 <a href="#500" id="500">500</a>
 <a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
+<a href="#504" id="504">504</a>
+<a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -673,9 +681,17 @@
 
     <span class="comment">// Note: `info` will not be valid after calling this!
     </span>{
-        <span class="kw">let </span>prev_page_table = PAGE_TABLES
-            .lock()
-            .replace(mm::init_paging(program_headers).unwrap());
+        <span class="kw">let </span>(pml4_frame, encrypted) = mm::initial_pml4(program_headers).unwrap();
+        <span class="comment">// Prevent execution code in data only memory pages.
+        // Safety: executeable memory is assumed to be appropiately marked in the page table.
+        </span><span class="kw">unsafe </span>{
+            x86_64::registers::model_specific::Efer::update(|flags| {
+                flags.insert(x86_64::registers::model_specific::EferFlags::NO_EXECUTE_ENABLE)
+            });
+        };
+        <span class="comment">// Safety: the new page tables keep the identity mapping at -2GB intact, so it&#39;s safe to
+        // load the new page tables.
+        </span><span class="kw">let </span>prev_page_table = <span class="kw">unsafe </span>{ PAGE_TABLES.lock().replace(pml4_frame, encrypted) };
         <span class="macro">assert!</span>(
             prev_page_table.is_none(),
             <span class="string">&quot;there should be no previous page table during initialization&quot;
