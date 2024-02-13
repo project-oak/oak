@@ -38,6 +38,7 @@ readonly generated_binaries=(
     ./enclave_apps/target/x86_64-unknown-none/release/oak_echo_raw_enclave_app
     ./enclave_apps/target/x86_64-unknown-none/release/oak_functions_enclave_app
     ./enclave_apps/target/x86_64-unknown-none/release/oak_functions_insecure_enclave_app
+    ./enclave_apps/target/x86_64-unknown-none/release/oak_orchestrator
 )
 readonly binary_names=(
     oak_restricted_kernel_simple_io_wrapper_bin
@@ -48,6 +49,7 @@ readonly binary_names=(
     oak_echo_raw_enclave_app
     oak_functions_enclave_app
     oak_functions_insecure_enclave_app
+    oak_orchestrator
 )
 for i in "${!binary_names[@]}"; do
     cp --preserve=timestamps \
