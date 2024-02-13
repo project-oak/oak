@@ -57,7 +57,7 @@ pub fn syscall_unstable_switch_proccess(buf: *mut c_void, count: c_size_t) -> ! 
                 .expect("failed to translate virtual page table address")
         };
         PhysFrame::from_start_address(phys_addr)
-            .except("couldn't get the physical frame for page table address")
+            .expect("couldn't get the physical frame for page table address")
     };
 
     // Safety: the new page table maintains the same mappings for kernel space.
