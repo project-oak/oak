@@ -171,10 +171,7 @@ pub fn build_binary(name: &str, directory: &str) -> Step {
 pub fn just_build(just_command: &str) -> Step {
     Step::Single {
         name: format!("build {}", just_command),
-        command: Cmd::new(
-            "just",
-            vec!["oak_functions_containers_container_bundle_tar"],
-        ),
+        command: Cmd::new_in_dir("just", vec![just_command], workspace_path(&[]).as_path()),
     }
 }
 
