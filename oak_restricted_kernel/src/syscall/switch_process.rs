@@ -44,7 +44,7 @@ pub fn syscall_unstable_switch_proccess(buf: *mut c_void, count: c_size_t) -> ! 
     let encryption = crate::PAGE_TABLES
         .lock()
         .get()
-        .except("page tables must exist to switch applications")
+        .expect("page tables must exist to switch applications")
         .inner()
         .copy_kernel_space(pml4);
 
