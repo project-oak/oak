@@ -6,7 +6,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [features]
-default = ["virtio_console_channel"]
+default = ["virtio_console_channel", "initrd"]
 virtio_console_channel = ["oak_restricted_kernel/virtio_console_channel"]
 vsock_channel = ["oak_restricted_kernel/vsock_channel"]
 simple_io_channel = ["oak_restricted_kernel/simple_io_channel"]

@@ -137,6 +137,10 @@ async fn test_load_large_lookup_data() {
     ))
     .await;
 
+    let oak_restricted_kernel_orchestrator_app_path =
+        oak_functions_test_utils::build_rust_crate_enclave("oak_orchestrator")
+            .expect("Failed to build oak_orchestrator");
+
     let oak_functions_enclave_app_path =
         oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
             .expect("Failed to build oak_functions_enclave_app");
@@ -160,7 +164,7 @@ async fn test_load_large_lookup_data() {
             "oak_stage0.bin",
         ]),
         gdb: None,
-        initrd: None,
+        initrd: oak_restricted_kernel_orchestrator_app_path.into(),
         memory_size: Some("256M".to_string()),
     };
     log::debug!("launcher params: {:?}", params);
@@ -234,6 +238,10 @@ async fn test_load_two_gib_lookup_data() {
     ))
     .await;
 
+    let oak_restricted_kernel_orchestrator_app_path =
+        oak_functions_test_utils::build_rust_crate_enclave("oak_orchestrator")
+            .expect("Failed to build oak_orchestrator");
+
     let oak_functions_enclave_app_path =
         oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
             .expect("Failed to build oak_functions_enclave_app");
@@ -257,7 +265,7 @@ async fn test_load_two_gib_lookup_data() {
             "oak_stage0.bin",
         ]),
         gdb: None,
-        initrd: None,
+        initrd: oak_restricted_kernel_orchestrator_app_path.into(),
         memory_size: Some("256M".to_string()),
     };
     log::debug!("launcher params: {:?}", params);

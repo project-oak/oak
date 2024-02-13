@@ -57,7 +57,9 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
             .to_str()
             .unwrap(),
     )));
-
+    let oak_restricted_kernel_orchestrator_app_path =
+        oak_functions_test_utils::build_rust_crate_enclave("oak_orchestrator")
+            .expect("Failed to build oak_orchestrator");
     let oak_functions_enclave_app_path =
         oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
             .expect("Failed to build oak_functions_enclave_app");
@@ -81,7 +83,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
             "oak_stage0.bin",
         ]),
         gdb: None,
-        initrd: None,
+        initrd: oak_restricted_kernel_orchestrator_app_path.into(),
         memory_size: Some("256M".to_string()),
     };
     log::debug!("launcher params: {:?}", params);

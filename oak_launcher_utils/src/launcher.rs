@@ -71,7 +71,7 @@ pub struct Params {
 
     /// Path to the initrd image to use.
     #[arg(long, value_parser = path_exists, requires_all = &["kernel"])]
-    pub initrd: Option<PathBuf>,
+    pub initrd: PathBuf,
 }
 
 /// Checks if file with a given path exists.
@@ -186,12 +186,15 @@ impl Instance {
             cmd.arg("-S");
         }
 
-        if let Some(initrd) = params.initrd {
-            cmd.args([
-                "-initrd",
-                initrd.into_os_string().into_string().unwrap().as_str(),
-            ]);
-        }
+        cmd.args([
+            "-initrd",
+            params
+                .initrd
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .as_str(),
+        ]);
 
         info!("executing: {:?}", cmd);
 
