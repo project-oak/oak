@@ -25,6 +25,7 @@ use oak_restricted_kernel_interface::{syscall, DERIVED_KEY_FD, DICE_DATA_FD};
 use oak_restricted_kernel_orchestrator::AttestedApp;
 use oak_restricted_kernel_sdk::{channel::FileDescriptorChannel, entrypoint};
 use zerocopy::{AsBytes, FromZeroes};
+use zeroize::Zeroize;
 
 fn read_stage0_dice_data() -> Stage0DiceData {
     let mut result = Stage0DiceData::new_zeroed();
@@ -36,7 +37,7 @@ fn read_stage0_dice_data() -> Stage0DiceData {
 
 #[entrypoint]
 fn start() -> ! {
-    let attested_app = {
+    let mut attested_app = {
         let stage0_dice_data = read_stage0_dice_data();
         let channel = FileDescriptorChannel::default();
         AttestedApp::load_and_attest(channel, stage0_dice_data)
@@ -44,9 +45,11 @@ fn start() -> ! {
 
     syscall::write(DERIVED_KEY_FD, attested_app.derived_key.as_bytes())
         .expect("failed to write derived key");
+    attested_app.derived_key.as_bytes_mut().zeroize();
     syscall::write(DICE_DATA_FD, attested_app.dice_data.as_bytes())
         .expect("failed to write dice data");
+    attested_app.dice_data.as_bytes_mut().zeroize();
 
     log::info!("Exiting and launching application.");
-    unimplemented!("launch app");
+    syscall::unstable_switch_proccess(attested_app.elf_binary.as_slice())
 }

@@ -144,6 +144,23 @@ impl<'a> EncryptedPageTable<MappedPageTable<'a, PhysOffset>> {
             }),
         }
     }
+
+    /// Copies the kernel spaces page table entries from self into the provided [`PageTable`].
+    /// Returns the memory encryption used.
+    pub fn copy_kernel_space(&self, other_pt: &mut PageTable) -> MemoryEncryption {
+        let mut inner = self.inner.lock();
+        let own_pt = inner.level_4_table();
+
+        let kernel_entries = {
+            let zipped = own_pt.iter().zip(other_pt.iter_mut());
+            // Skip entries that describe application space.
+            zipped.skip(256)
+        };
+        for (own_entry, other_entry) in kernel_entries {
+            other_entry.set_addr(own_entry.addr(), own_entry.flags())
+        }
+        self.encryption
+    }
 }
 
 impl<S: PageSize, N: MapperAllSizes + BaseMapper<S>> Mapper<S> for EncryptedPageTable<N> {
