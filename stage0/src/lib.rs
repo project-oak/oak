@@ -50,8 +50,6 @@ mod allocator;
 mod apic;
 mod cmos;
 mod dice_attestation;
-#[cfg(feature = "efi")]
-mod efi;
 mod fw_cfg;
 mod initramfs;
 mod kernel;
@@ -371,14 +369,6 @@ pub fn rust64_start(encrypted: u64) -> ! {
         format!("{} -- {}", cmdline, extra)
     };
     zero_page.set_cmdline(cmdline);
-
-    // If required, create a fake EFI system table.
-    if cfg!(feature = "efi") {
-        let system_table = efi::create_efi_skeleton();
-        zero_page.set_efi_system_table(PhysAddr::new(
-            VirtAddr::from_ptr(Box::leak(system_table)).as_u64(),
-        ))
-    }
 
     log::info!("jumping to kernel at {:#018x}", entry.as_u64());
 
