@@ -19,8 +19,6 @@
 pub static MOCK_LOOKUP_DATA_PATH: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_functions_launcher", "mock_lookup_data"]));
 static STAGE_0_DIR: Lazy<PathBuf> = Lazy::new(|| workspace_path(&["stage0_bin"]));
-pub static OAK_RESTRICTED_KERNEL_BIN_DIR: Lazy<PathBuf> =
-    Lazy::new(|| workspace_path(&["oak_restricted_kernel_bin"]));
 static OAK_FUNCTIONS_LAUNCHER_BIN_DIR: Lazy<PathBuf> =
     Lazy::new(|| workspace_path(&["oak_functions_launcher"]));
 static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
@@ -29,6 +27,15 @@ static OAK_FUNCTIONS_LAUNCHER_BIN: Lazy<PathBuf> = Lazy::new(|| {
         "x86_64-unknown-linux-gnu",
         "debug",
         "oak_functions_launcher",
+    ])
+});
+pub static OAK_RESTRICTED_KERNEL_WRAPPER_BIN: Lazy<PathBuf> = Lazy::new(|| {
+    workspace_path(&[
+        "oak_restricted_kernel_wrapper",
+        "target",
+        "x86_64-unknown-none",
+        "release",
+        "oak_restricted_kernel_initrd_wrapper_bin",
     ])
 });
 
@@ -82,16 +89,8 @@ impl App {
     pub fn subcommand(&self) -> Vec<String> {
         vec![
             format!(
-                "--enclave-binary={}",
-                workspace_path(&[
-                    "oak_restricted_kernel_bin",
-                    "target",
-                    "x86_64-unknown-none",
-                    "debug",
-                    "oak_restricted_kernel_bin",
-                ])
-                .to_str()
-                .unwrap()
+                "--kernel={}",
+                OAK_RESTRICTED_KERNEL_WRAPPER_BIN.to_str().unwrap()
             ),
             format!(
                 "--vmm-binary={}",
@@ -102,6 +101,10 @@ impl App {
             ),
             "--memory-size=256M".to_string(),
             format!("--app-binary={}", &self.enclave_binary_path()),
+            format!(
+                "--initrd={}",
+                &App::from_crate_name("oak_orchestrator").enclave_binary_path()
+            ),
             format!(
                 "--bios-binary={}",
                 workspace_path(&[
@@ -147,10 +150,31 @@ pub fn build_stage0() -> Step {
     }
 }
 
+pub fn build_orchestrator_binary() -> Step {
+    Step::Single {
+        name: "Build orchestrator binary".to_string(),
+        command: Cmd::new_in_dir(
+            "cargo",
+            vec!["build", "--release"],
+            Path::new(&App::from_crate_name("oak_orchestrator").enclave_crate_path()),
+        ),
+    }
+}
+
 pub fn build_binary(name: &str, directory: &str) -> Step {
     Step::Single {
         name: name.to_string(),
         command: Cmd::new_in_dir("cargo", vec!["build"], Path::new(directory)),
+    }
+}
+
+pub fn just_build(just_command: &str) -> Step {
+    Step::Single {
+        name: format!("just {}", just_command),
+        command: Cmd::new(
+            "just",
+            vec!["oak_functions_containers_container_bundle_tar"],
+        ),
     }
 }
 
@@ -197,13 +221,8 @@ pub async fn run_oak_functions_example_in_background(
     lookup_data_path: &str,
 ) -> (crate::testing::BackgroundStep, u16) {
     crate::testing::run_step(crate::launcher::build_stage0()).await;
-    crate::testing::run_step(crate::launcher::build_binary(
-        "build Oak Restricted Kernel binary",
-        crate::launcher::OAK_RESTRICTED_KERNEL_BIN_DIR
-            .to_str()
-            .unwrap(),
-    ))
-    .await;
+    crate::testing::run_step(crate::launcher::just_build("oak_restricted_kernel_wrapper")).await;
+    crate::testing::run_step(crate::launcher::build_orchestrator_binary()).await;
     crate::testing::run_step(crate::launcher::build_binary(
         "build Oak Functions Launcher binary",
         crate::launcher::OAK_FUNCTIONS_LAUNCHER_BIN_DIR

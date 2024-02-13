@@ -129,13 +129,7 @@ async fn test_load_large_lookup_data() {
     }
 
     xtask::testing::run_step(xtask::launcher::build_stage0()).await;
-    xtask::testing::run_step(xtask::launcher::build_binary(
-        "build Oak Restricted Kernel binary",
-        xtask::launcher::OAK_RESTRICTED_KERNEL_BIN_DIR
-            .to_str()
-            .unwrap(),
-    ))
-    .await;
+    xtask::testing::run_step(xtask::launcher::just_build("oak_restricted_kernel_wrapper")).await;
 
     let oak_restricted_kernel_orchestrator_app_path =
         oak_functions_test_utils::build_rust_crate_enclave("oak_orchestrator")
@@ -146,14 +140,8 @@ async fn test_load_large_lookup_data() {
             .expect("Failed to build oak_functions_enclave_app");
 
     let params = launcher::Params {
-        enclave_binary: Some(workspace_path(&[
-            "oak_restricted_kernel_bin",
-            "target",
-            "x86_64-unknown-none",
-            "debug",
-            "oak_restricted_kernel_bin",
-        ])),
-        kernel: None,
+        enclave_binary: None,
+        kernel: Some(xtask::launcher::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone()),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path.into()),
         bios_binary: workspace_path(&[
@@ -230,13 +218,7 @@ async fn test_load_two_gib_lookup_data() {
     }
 
     xtask::testing::run_step(xtask::launcher::build_stage0()).await;
-    xtask::testing::run_step(xtask::launcher::build_binary(
-        "build Oak Restricted Kernel binary",
-        xtask::launcher::OAK_RESTRICTED_KERNEL_BIN_DIR
-            .to_str()
-            .unwrap(),
-    ))
-    .await;
+    xtask::testing::run_step(xtask::launcher::just_build("oak_restricted_kernel_wrapper")).await;
 
     let oak_restricted_kernel_orchestrator_app_path =
         oak_functions_test_utils::build_rust_crate_enclave("oak_orchestrator")
@@ -247,14 +229,8 @@ async fn test_load_two_gib_lookup_data() {
             .expect("Failed to build oak_functions_enclave_app");
 
     let params = launcher::Params {
-        enclave_binary: Some(workspace_path(&[
-            "oak_restricted_kernel_bin",
-            "target",
-            "x86_64-unknown-none",
-            "debug",
-            "oak_restricted_kernel_bin",
-        ])),
-        kernel: None,
+        enclave_binary: None,
+        kernel: Some(xtask::launcher::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone()),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path.into()),
         bios_binary: workspace_path(&[
