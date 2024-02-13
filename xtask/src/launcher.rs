@@ -35,7 +35,7 @@ pub static OAK_RESTRICTED_KERNEL_WRAPPER_BIN: Lazy<PathBuf> = Lazy::new(|| {
         "target",
         "x86_64-unknown-none",
         "release",
-        "oak_restricted_kernel_initrd_wrapper_bin",
+        "oak_restricted_kernel_wrapper_bin",
     ])
 });
 
