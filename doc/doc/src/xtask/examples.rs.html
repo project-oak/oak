@@ -68,6 +68,7 @@
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2021 The Project Oak Authors
 //
@@ -89,7 +90,7 @@
     launcher,
     launcher::{
         build_binary, build_stage0, run_oak_functions_launcher_example_with_lookup_data,
-        MOCK_LOOKUP_DATA_PATH, OAK_RESTRICTED_KERNEL_BIN_DIR,
+        MOCK_LOOKUP_DATA_PATH,
     },
 };
 
@@ -118,9 +119,10 @@
         name: <span class="string">&quot;run Oak Functions example&quot;</span>.to_string(),
         steps: <span class="macro">vec!</span>[
             build_stage0(),
+            <span class="kw">crate</span>::launcher::just_build(<span class="string">&quot;oak_restricted_kernel_wrapper&quot;</span>),
             build_binary(
-                <span class="string">&quot;build Oak Restricted Kernel binary&quot;</span>,
-                OAK_RESTRICTED_KERNEL_BIN_DIR.to_str().unwrap(),
+                <span class="string">&quot;build Oak Restricted Kernel orchestrator&quot;</span>,
+                <span class="kw-2">&amp;</span>launcher::App::from_crate_name(<span class="string">&quot;oak_orchestrator&quot;</span>).enclave_crate_path(),
             ),
             build_binary(<span class="string">&quot;build Oak Functions enclave app&quot;</span>, <span class="kw-2">&amp;</span>app.enclave_crate_path()),
             build_rust_crate_wasm(<span class="kw-2">&amp;</span>opt.example_name),

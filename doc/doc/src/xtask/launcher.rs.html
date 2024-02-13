@@ -235,6 +235,20 @@
 <a href="#235" id="235">235</a>
 <a href="#236" id="236">236</a>
 <a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2020 The Project Oak Authors
 //
@@ -256,8 +270,6 @@
 </span><span class="kw">pub static </span>MOCK_LOOKUP_DATA_PATH: Lazy&lt;PathBuf&gt; =
     Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;oak_functions_launcher&quot;</span>, <span class="string">&quot;mock_lookup_data&quot;</span>]));
 <span class="kw">static </span>STAGE_0_DIR: Lazy&lt;PathBuf&gt; = Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;stage0_bin&quot;</span>]));
-<span class="kw">pub static </span>OAK_RESTRICTED_KERNEL_BIN_DIR: Lazy&lt;PathBuf&gt; =
-    Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;oak_restricted_kernel_bin&quot;</span>]));
 <span class="kw">static </span>OAK_FUNCTIONS_LAUNCHER_BIN_DIR: Lazy&lt;PathBuf&gt; =
     Lazy::new(|| workspace_path(<span class="kw-2">&amp;</span>[<span class="string">&quot;oak_functions_launcher&quot;</span>]));
 <span class="kw">static </span>OAK_FUNCTIONS_LAUNCHER_BIN: Lazy&lt;PathBuf&gt; = Lazy::new(|| {
@@ -266,6 +278,24 @@
         <span class="string">&quot;x86_64-unknown-linux-gnu&quot;</span>,
         <span class="string">&quot;debug&quot;</span>,
         <span class="string">&quot;oak_functions_launcher&quot;</span>,
+    ])
+});
+<span class="kw">pub static </span>OAK_RESTRICTED_KERNEL_WRAPPER_BIN: Lazy&lt;PathBuf&gt; = Lazy::new(|| {
+    workspace_path(<span class="kw-2">&amp;</span>[
+        <span class="string">&quot;oak_restricted_kernel_wrapper&quot;</span>,
+        <span class="string">&quot;target&quot;</span>,
+        <span class="string">&quot;x86_64-unknown-none&quot;</span>,
+        <span class="string">&quot;release&quot;</span>,
+        <span class="string">&quot;oak_restricted_kernel_wrapper_bin&quot;</span>,
+    ])
+});
+<span class="kw">static </span>OAK_RESTRICTED_KERNEL_ORCHESTRATOR: Lazy&lt;PathBuf&gt; = Lazy::new(|| {
+    workspace_path(<span class="kw-2">&amp;</span>[
+        <span class="string">&quot;enclave_apps&quot;</span>,
+        <span class="string">&quot;target&quot;</span>,
+        <span class="string">&quot;x86_64-unknown-none&quot;</span>,
+        <span class="string">&quot;release&quot;</span>,
+        <span class="string">&quot;oak_orchestrator&quot;</span>,
     ])
 });
 
@@ -319,16 +349,8 @@
     </span><span class="kw">pub fn </span>subcommand(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;String&gt; {
         <span class="macro">vec!</span>[
             <span class="macro">format!</span>(
-                <span class="string">&quot;--enclave-binary={}&quot;</span>,
-                workspace_path(<span class="kw-2">&amp;</span>[
-                    <span class="string">&quot;oak_restricted_kernel_bin&quot;</span>,
-                    <span class="string">&quot;target&quot;</span>,
-                    <span class="string">&quot;x86_64-unknown-none&quot;</span>,
-                    <span class="string">&quot;debug&quot;</span>,
-                    <span class="string">&quot;oak_restricted_kernel_bin&quot;</span>,
-                ])
-                .to_str()
-                .unwrap()
+                <span class="string">&quot;--kernel={}&quot;</span>,
+                OAK_RESTRICTED_KERNEL_WRAPPER_BIN.to_str().unwrap()
             ),
             <span class="macro">format!</span>(
                 <span class="string">&quot;--vmm-binary={}&quot;</span>,
@@ -339,6 +361,10 @@
             ),
             <span class="string">&quot;--memory-size=256M&quot;</span>.to_string(),
             <span class="macro">format!</span>(<span class="string">&quot;--app-binary={}&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.enclave_binary_path()),
+            <span class="macro">format!</span>(
+                <span class="string">&quot;--initrd={}&quot;</span>,
+                OAK_RESTRICTED_KERNEL_ORCHESTRATOR.to_str().unwrap()
+            ),
             <span class="macro">format!</span>(
                 <span class="string">&quot;--bios-binary={}&quot;</span>,
                 workspace_path(<span class="kw-2">&amp;</span>[
@@ -391,6 +417,13 @@
     }
 }
 
+<span class="kw">pub fn </span>just_build(just_command: <span class="kw-2">&amp;</span>str) -&gt; Step {
+    Step::Single {
+        name: <span class="macro">format!</span>(<span class="string">&quot;build {}&quot;</span>, just_command),
+        command: Cmd::new_in_dir(<span class="string">&quot;just&quot;</span>, <span class="macro">vec!</span>[just_command], workspace_path(<span class="kw-2">&amp;</span>[]).as_path()),
+    }
+}
+
 <span class="doccomment">/// Runs the Oak Functions launcher configured with a default Wasm module for key / value lookups
 /// and mock lookup data.
 </span><span class="kw">pub fn </span>run_oak_functions_launcher_example(
@@ -434,13 +467,8 @@
     lookup_data_path: <span class="kw-2">&amp;</span>str,
 ) -&gt; (<span class="kw">crate</span>::testing::BackgroundStep, u16) {
     <span class="kw">crate</span>::testing::run_step(<span class="kw">crate</span>::launcher::build_stage0()).<span class="kw">await</span>;
-    <span class="kw">crate</span>::testing::run_step(<span class="kw">crate</span>::launcher::build_binary(
-        <span class="string">&quot;build Oak Restricted Kernel binary&quot;</span>,
-        <span class="kw">crate</span>::launcher::OAK_RESTRICTED_KERNEL_BIN_DIR
-            .to_str()
-            .unwrap(),
-    ))
-    .<span class="kw">await</span>;
+    <span class="kw">crate</span>::testing::run_step(<span class="kw">crate</span>::launcher::just_build(<span class="string">&quot;oak_restricted_kernel_wrapper&quot;</span>)).<span class="kw">await</span>;
+    <span class="kw">crate</span>::testing::run_step(<span class="kw">crate</span>::launcher::just_build(<span class="string">&quot;oak_orchestrator&quot;</span>)).<span class="kw">await</span>;
     <span class="kw">crate</span>::testing::run_step(<span class="kw">crate</span>::launcher::build_binary(
         <span class="string">&quot;build Oak Functions Launcher binary&quot;</span>,
         <span class="kw">crate</span>::launcher::OAK_FUNCTIONS_LAUNCHER_BIN_DIR

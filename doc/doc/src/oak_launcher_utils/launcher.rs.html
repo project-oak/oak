@@ -297,11 +297,6 @@
 <a href="#297" id="297">297</a>
 <a href="#298" id="298">298</a>
 <a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -349,12 +344,8 @@
     </span><span class="kw">pub </span>vmm_binary: PathBuf,
 
     <span class="doccomment">/// Path to the enclave binary to load into the VM.
-    </span><span class="attr">#[arg(long, value_parser = path_exists, conflicts_with_all = <span class="kw-2">&amp;</span>[<span class="string">&quot;kernel&quot;</span>, <span class="string">&quot;initrd&quot;</span>]</span>)]
-    <span class="kw">pub </span>enclave_binary: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
-
-    <span class="doccomment">/// Path to the enclave binary to load into the VM.
-    </span><span class="attr">#[arg(long, value_parser = path_exists, conflicts_with_all = <span class="kw-2">&amp;</span>[<span class="string">&quot;enclave_binary&quot;</span>]</span>)]
-    <span class="kw">pub </span>kernel: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
+    </span><span class="attr">#[arg(long, value_parser = path_exists)]
+    </span><span class="kw">pub </span>kernel: PathBuf,
 
     <span class="doccomment">/// Path to the Oak Functions application binary to be loaded into the enclave.
     </span><span class="attr">#[arg(long, value_parser = path_exists)]
@@ -375,7 +366,7 @@
 
     <span class="doccomment">/// Path to the initrd image to use.
     </span><span class="attr">#[arg(long, value_parser = path_exists, requires_all = <span class="kw-2">&amp;</span>[<span class="string">&quot;kernel&quot;</span>]</span>)]
-    <span class="kw">pub </span>initrd: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
+    <span class="kw">pub </span>initrd: PathBuf,
 }
 
 <span class="doccomment">/// Checks if file with a given path exists.
@@ -469,20 +460,16 @@
                 .unwrap()
                 .as_str(),
         ]);
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(enclave_binary) = params.enclave_binary {
-            <span class="comment">// Load the kernel ELF via the loader device.
-            </span>cmd.args([
-                <span class="string">&quot;-device&quot;</span>,
-                <span class="macro">format!</span>(<span class="string">&quot;loader,file={}&quot;</span>, enclave_binary.display()).as_str(),
-            ]);
-        }
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(kernel) = params.kernel {
-            <span class="comment">// stage0 accoutrements: kernel that&#39;s compatible with the linux boot protocol
-            </span>cmd.args([
-                <span class="string">&quot;-kernel&quot;</span>,
-                kernel.into_os_string().into_string().unwrap().as_str(),
-            ]);
-        }
+        <span class="comment">// stage0 accoutrements: kernel that&#39;s compatible with the linux boot protocol
+        </span>cmd.args([
+            <span class="string">&quot;-kernel&quot;</span>,
+            params
+                .kernel
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .as_str(),
+        ]);
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(gdb_port) = params.gdb {
             <span class="comment">// Listen for a gdb connection on the provided port and wait for debugger before booting
@@ -490,12 +477,15 @@
             cmd.arg(<span class="string">&quot;-S&quot;</span>);
         }
 
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(initrd) = params.initrd {
-            cmd.args([
-                <span class="string">&quot;-initrd&quot;</span>,
-                initrd.into_os_string().into_string().unwrap().as_str(),
-            ]);
-        }
+        cmd.args([
+            <span class="string">&quot;-initrd&quot;</span>,
+            params
+                .initrd
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .as_str(),
+        ]);
 
         <span class="macro">info!</span>(<span class="string">&quot;executing: {:?}&quot;</span>, cmd);
 
