@@ -20,7 +20,10 @@ use core::{
     slice,
 };
 
-use x86_64::structures::paging::PageTable;
+use x86_64::{
+    addr::VirtAddr,
+    structures::paging::{frame::PhysFrame, PageTable},
+};
 
 use crate::mm::Translator;
 
@@ -41,7 +44,7 @@ pub fn syscall_unstable_switch_proccess(buf: *mut c_void, count: c_size_t) -> ! 
     let encryption = crate::PAGE_TABLES
         .lock()
         .get()
-        .unwrap()
+        .except("page tables must exist to switch applications")
         .inner()
         .copy_kernel_space(pml4);
 
@@ -50,12 +53,14 @@ pub fn syscall_unstable_switch_proccess(buf: *mut c_void, count: c_size_t) -> ! 
             let addr = &*pml4 as *const PageTable;
             let pt_guard = crate::PAGE_TABLES.lock();
             let pt = pt_guard.get().expect("failed to get page tables");
-            pt.translate_virtual(x86_64::addr::VirtAddr::from_ptr(addr))
+            pt.translate_virtual(VirtAddr::from_ptr(addr))
                 .expect("failed to translate virtual page table address")
         };
-        x86_64::structures::paging::frame::PhysFrame::from_start_address(phys_addr).unwrap()
+        PhysFrame::from_start_address(phys_addr)
+            .except("couldn't get the physical frame for page table address")
     };
 
+    // Safety: the new page table maintains the same mappings for kernel space.
     unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame, encryption) };
     // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
     // under the kernel's control.
