@@ -261,6 +261,17 @@
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -285,6 +296,9 @@
 <span class="kw">mod </span>process;
 <span class="kw">mod </span>stdio;
 
+<span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+</span><span class="kw">mod </span>switch_process;
+
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests;
 
@@ -303,6 +317,8 @@
     VirtAddr,
 };
 
+<span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+</span><span class="kw">use </span><span class="self">self</span>::switch_process::syscall_unstable_switch_proccess;
 <span class="kw">use </span><span class="self">self</span>::{
     fd::{syscall_fsync, syscall_read, syscall_write},
     mmap::syscall_mmap,
@@ -386,6 +402,12 @@
             syscall_mmap(arg1 <span class="kw">as </span><span class="kw-2">*const </span>c_void, arg2, arg3, arg4, arg5 <span class="kw">as </span>i32, arg6)
         }
         <span class="prelude-val">Some</span>(Syscall::Fsync) =&gt; syscall_fsync(arg1 <span class="kw">as </span>i32),
+        <span class="attr">#[cfg(feature = <span class="string">&quot;initrd&quot;</span>)]
+        </span><span class="prelude-val">Some</span>(Syscall::UnstableSwitchProcess) =&gt; {
+            syscall_unstable_switch_proccess(arg1 <span class="kw">as </span><span class="kw-2">*mut </span>c_void, arg2)
+        }
+        <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
+        </span><span class="prelude-val">Some</span>(Syscall::UnstableSwitchProcess) =&gt; Errno::ENOSYS <span class="kw">as </span>isize,
         <span class="prelude-val">None </span>=&gt; Errno::ENOSYS <span class="kw">as </span>isize,
     }
 }

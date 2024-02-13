@@ -113,6 +113,18 @@
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -131,6 +143,9 @@
 
 </span><span class="kw">use </span>bitflags::bitflags;
 <span class="kw">use </span>strum::FromRepr;
+
+<span class="doccomment">/// Syscalls above this are unsafe, their behavior and availability cannot be relied upon.
+</span><span class="kw">pub const </span>UNSTABLE_SYSCALL_SPACE: usize = i32::MAX <span class="kw">as </span>usize - (<span class="number">10 </span>^ <span class="number">3</span>);
 
 <span class="doccomment">/// System calls implemented by Oak Restricted Kernel.
 ///
@@ -198,6 +213,15 @@
     /// Returns:
     ///   a value of &lt;errno::Errno&gt; on failure; 0, otherwise.
     </span>Fsync = <span class="number">74</span>,
+
+    <span class="doccomment">/// Terminates the calling process and executes the supplied ELF binary instead.
+    ///
+    /// Arguments:
+    ///   - arg0 (*mut c_void): pointer to the a buffer holding an ELF file
+    ///   - arg1 (c_size_t): size of the buffer
+    /// Returns:
+    ///   a value of &lt;errno::Errno&gt; on failure; 0, otherwise.
+    </span>UnstableSwitchProcess = UNSTABLE_SYSCALL_SPACE + <span class="number">1</span>,
 }
 
 <span class="macro">bitflags! </span>{

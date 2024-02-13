@@ -318,6 +318,9 @@
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
 <a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -458,6 +461,9 @@
         RootPageTable {
             inner: EncryptedPageTable::new(pml4, offset, encryption),
         }
+    }
+    <span class="kw">pub fn </span>inner(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;static</span>, PhysOffset&gt;&gt; {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.inner
     }
     <span class="doccomment">/// Checks wheter all the pages in the range are unallocated.
     ///
