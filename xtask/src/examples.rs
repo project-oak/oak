@@ -19,7 +19,7 @@ use crate::{
     launcher,
     launcher::{
         build_binary, build_stage0, run_oak_functions_launcher_example_with_lookup_data,
-        MOCK_LOOKUP_DATA_PATH, OAK_RESTRICTED_KERNEL_BIN_DIR,
+        MOCK_LOOKUP_DATA_PATH,
     },
 };
 
@@ -48,9 +48,10 @@ pub fn run_oak_functions_example(opt: &RunOakExampleOpt) -> Step {
         name: "run Oak Functions example".to_string(),
         steps: vec![
             build_stage0(),
+            crate::launcher::just_build("oak_restricted_kernel_wrapper"),
             build_binary(
-                "build Oak Restricted Kernel binary",
-                OAK_RESTRICTED_KERNEL_BIN_DIR.to_str().unwrap(),
+                "build Oak Restricted Kernel orchestrator",
+                &launcher::App::from_crate_name("oak_orchestrator").enclave_crate_path(),
             ),
             build_binary("build Oak Functions enclave app", &app.enclave_crate_path()),
             build_rust_crate_wasm(&opt.example_name),

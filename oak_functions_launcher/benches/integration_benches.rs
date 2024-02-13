@@ -51,26 +51,18 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         .unwrap();
 
     runtime.block_on(xtask::testing::run_step(xtask::launcher::build_stage0()));
-    runtime.block_on(xtask::testing::run_step(xtask::launcher::build_binary(
-        "build Oak Restricted Kernel binary",
-        xtask::launcher::OAK_RESTRICTED_KERNEL_BIN_DIR
-            .to_str()
-            .unwrap(),
+    runtime.block_on(xtask::testing::run_step(xtask::launcher::just_build(
+        "oak_restricted_kernel_wrapper",
     )));
-
+    let oak_restricted_kernel_orchestrator_app_path =
+        oak_functions_test_utils::build_rust_crate_enclave("oak_orchestrator")
+            .expect("Failed to build oak_orchestrator");
     let oak_functions_enclave_app_path =
         oak_functions_test_utils::build_rust_crate_enclave("oak_functions_enclave_app")
             .expect("Failed to build oak_functions_enclave_app");
 
     let params = launcher::Params {
-        enclave_binary: Some(workspace_path(&[
-            "oak_restricted_kernel_bin",
-            "target",
-            "x86_64-unknown-none",
-            "debug",
-            "oak_restricted_kernel_bin",
-        ])),
-        kernel: None,
+        kernel: xtask::launcher::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path.into()),
         bios_binary: workspace_path(&[
@@ -81,7 +73,7 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
             "oak_stage0.bin",
         ]),
         gdb: None,
-        initrd: None,
+        initrd: oak_restricted_kernel_orchestrator_app_path.into(),
         memory_size: Some("256M".to_string()),
     };
     log::debug!("launcher params: {:?}", params);

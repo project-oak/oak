@@ -18,12 +18,12 @@ must be built.
 
 ```shell
 # Stage0, the restricted kernel, and an enclave app may be built like so:
-just stage0_bin oak_restricted_kernel_initrd_bin_wrapper oak_orchestrator && \
+just stage0_bin oak_restricted_kernel_wrapper oak_orchestrator && \
 
 # After building dependencies, an enclave app may be run like so:
 RUST_LOG=DEBUG \
 cargo run --package=oak_restricted_kernel_launcher -- \
---kernel=oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_initrd_wrapper_bin \
+--kernel=oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin \
 --vmm-binary=$(which qemu-system-x86_64) \
 --memory-size=8G \
 --bios-binary=stage0_bin/target/x86_64-unknown-none/release/stage0_bin \

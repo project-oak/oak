@@ -36,12 +36,6 @@ oak_restricted_kernel_simple_io_bin:
 oak_restricted_kernel_simple_io_wrapper: oak_restricted_kernel_simple_io_bin
     just _wrap_kernel oak_restricted_kernel_simple_io
 
-oak_restricted_kernel_initrd_bin:
-    env --chdir=oak_restricted_kernel_bin cargo build --release --features=initrd --bin=oak_restricted_kernel_initrd_bin
-
-oak_restricted_kernel_initrd_bin_wrapper: oak_restricted_kernel_initrd_bin
-    just _wrap_kernel oak_restricted_kernel_initrd
-
 stage0_bin:
     env --chdir=stage0_bin cargo objcopy --release -- --output-target=binary target/x86_64-unknown-none/release/stage0_bin
 
