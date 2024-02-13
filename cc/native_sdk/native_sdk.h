@@ -26,7 +26,7 @@
 // We call oak_main without arguments, and oak_main then calls read_request,
 // processes the request, and then calls write_response.  This makes the API
 // compatible with Oak Functions.
-#define OAK_MAIN void oak_main()
+#define OAK_MAIN extern "C" void oak_main()
 
 namespace oak::functions::sdk {
 

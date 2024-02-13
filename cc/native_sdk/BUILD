@@ -36,8 +36,10 @@ cc_library(
 cc_binary(
     name = "key_value_lookup",
     srcs = ["key_value_lookup.cc"],
+    linkopts = ["-Wl,--version-script,$(location symbols.map.ld)"],
     linkshared = True,
     deps = [
+        "symbols.map.ld",
         ":native_sdk",
         "@com_google_absl//absl/log:check",
     ],
