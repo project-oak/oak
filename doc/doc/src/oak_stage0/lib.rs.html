@@ -422,16 +422,6 @@
 <a href="#422" id="422">422</a>
 <a href="#423" id="423">423</a>
 <a href="#424" id="424">424</a>
-<a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a>
-<a href="#432" id="432">432</a>
-<a href="#433" id="433">433</a>
-<a href="#434" id="434">434</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -484,8 +474,6 @@
 <span class="kw">mod </span>apic;
 <span class="kw">mod </span>cmos;
 <span class="kw">mod </span>dice_attestation;
-<span class="attr">#[cfg(feature = <span class="string">&quot;efi&quot;</span>)]
-</span><span class="kw">mod </span>efi;
 <span class="kw">mod </span>fw_cfg;
 <span class="kw">mod </span>initramfs;
 <span class="kw">mod </span>kernel;
@@ -805,14 +793,6 @@
         <span class="macro">format!</span>(<span class="string">&quot;{} -- {}&quot;</span>, cmdline, extra)
     };
     zero_page.set_cmdline(cmdline);
-
-    <span class="comment">// If required, create a fake EFI system table.
-    </span><span class="kw">if </span><span class="macro">cfg!</span>(feature = <span class="string">&quot;efi&quot;</span>) {
-        <span class="kw">let </span>system_table = efi::create_efi_skeleton();
-        zero_page.set_efi_system_table(PhysAddr::new(
-            VirtAddr::from_ptr(Box::leak(system_table)).as_u64(),
-        ))
-    }
 
     <span class="macro">log::info!</span>(<span class="string">&quot;jumping to kernel at {:#018x}&quot;</span>, entry.as_u64());
 
