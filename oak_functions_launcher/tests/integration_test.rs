@@ -140,8 +140,7 @@ async fn test_load_large_lookup_data() {
             .expect("Failed to build oak_functions_enclave_app");
 
     let params = launcher::Params {
-        enclave_binary: None,
-        kernel: Some(xtask::launcher::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone()),
+        kernel: xtask::launcher::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path.into()),
         bios_binary: workspace_path(&[
@@ -229,8 +228,7 @@ async fn test_load_two_gib_lookup_data() {
             .expect("Failed to build oak_functions_enclave_app");
 
     let params = launcher::Params {
-        enclave_binary: None,
-        kernel: Some(xtask::launcher::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone()),
+        kernel: xtask::launcher::OAK_RESTRICTED_KERNEL_WRAPPER_BIN.clone(),
         vmm_binary: which::which("qemu-system-x86_64").unwrap(),
         app_binary: Some(oak_functions_enclave_app_path.into()),
         bios_binary: workspace_path(&[

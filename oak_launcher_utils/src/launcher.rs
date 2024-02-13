@@ -45,12 +45,8 @@ pub struct Params {
     pub vmm_binary: PathBuf,
 
     /// Path to the enclave binary to load into the VM.
-    #[arg(long, value_parser = path_exists, conflicts_with_all = &["kernel", "initrd"])]
-    pub enclave_binary: Option<PathBuf>,
-
-    /// Path to the enclave binary to load into the VM.
-    #[arg(long, value_parser = path_exists, conflicts_with_all = &["enclave_binary"])]
-    pub kernel: Option<PathBuf>,
+    #[arg(long, value_parser = path_exists)]
+    pub kernel: PathBuf,
 
     /// Path to the Oak Functions application binary to be loaded into the enclave.
     #[arg(long, value_parser = path_exists)]
@@ -165,20 +161,16 @@ impl Instance {
                 .unwrap()
                 .as_str(),
         ]);
-        if let Some(enclave_binary) = params.enclave_binary {
-            // Load the kernel ELF via the loader device.
-            cmd.args([
-                "-device",
-                format!("loader,file={}", enclave_binary.display()).as_str(),
-            ]);
-        }
-        if let Some(kernel) = params.kernel {
-            // stage0 accoutrements: kernel that's compatible with the linux boot protocol
-            cmd.args([
-                "-kernel",
-                kernel.into_os_string().into_string().unwrap().as_str(),
-            ]);
-        }
+        // stage0 accoutrements: kernel that's compatible with the linux boot protocol
+        cmd.args([
+            "-kernel",
+            params
+                .kernel
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .as_str(),
+        ]);
 
         if let Some(gdb_port) = params.gdb {
             // Listen for a gdb connection on the provided port and wait for debugger before booting
