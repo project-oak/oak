@@ -150,17 +150,6 @@ pub fn build_stage0() -> Step {
     }
 }
 
-pub fn build_orchestrator_binary() -> Step {
-    Step::Single {
-        name: "Build orchestrator binary".to_string(),
-        command: Cmd::new_in_dir(
-            "cargo",
-            vec!["build", "--release"],
-            Path::new(&App::from_crate_name("oak_orchestrator").enclave_crate_path()),
-        ),
-    }
-}
-
 pub fn build_binary(name: &str, directory: &str) -> Step {
     Step::Single {
         name: name.to_string(),
@@ -219,7 +208,7 @@ pub async fn run_oak_functions_example_in_background(
 ) -> (crate::testing::BackgroundStep, u16) {
     crate::testing::run_step(crate::launcher::build_stage0()).await;
     crate::testing::run_step(crate::launcher::just_build("oak_restricted_kernel_wrapper")).await;
-    crate::testing::run_step(crate::launcher::build_orchestrator_binary()).await;
+    crate::testing::run_step(crate::launcher::just_build("oak_orchestrator")).await;
     crate::testing::run_step(crate::launcher::build_binary(
         "build Oak Functions Launcher binary",
         crate::launcher::OAK_FUNCTIONS_LAUNCHER_BIN_DIR
