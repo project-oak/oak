@@ -38,6 +38,15 @@ pub static OAK_RESTRICTED_KERNEL_WRAPPER_BIN: Lazy<PathBuf> = Lazy::new(|| {
         "oak_restricted_kernel_wrapper_bin",
     ])
 });
+static OAK_RESTRICTED_KERNEL_ORCHESTRATOR: Lazy<PathBuf> = Lazy::new(|| {
+    workspace_path(&[
+        "enclave_apps",
+        "target",
+        "x86_64-unknown-none",
+        "release",
+        "oak_orchestrator",
+    ])
+});
 
 use std::path::{Path, PathBuf};
 
@@ -103,7 +112,7 @@ impl App {
             format!("--app-binary={}", &self.enclave_binary_path()),
             format!(
                 "--initrd={}",
-                &App::from_crate_name("oak_orchestrator").enclave_binary_path()
+                OAK_RESTRICTED_KERNEL_ORCHESTRATOR.to_str().unwrap()
             ),
             format!(
                 "--bios-binary={}",
