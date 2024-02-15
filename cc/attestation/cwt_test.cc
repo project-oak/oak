@@ -38,7 +38,6 @@ namespace {
 
 using ::oak::attestation::v1::Evidence;
 using ::testing::ElementsAreArray;
-using ::testing::StrEq;
 
 constexpr absl::string_view kTestEvidencePath =
     "oak_attestation_verification/testdata/evidence.textproto";

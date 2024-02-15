@@ -64,9 +64,6 @@ class Cwt {
   std::unique_ptr<cppbor::Item> item_;
 };
 
-absl::StatusOr<std::string> ExtractPublicKeyFromCwtCertificate(
-    const std::vector<uint8_t>& certificate);
-
 }  // namespace oak::attestation
 
 #endif  // CC_ATTESTATION_CWT_H_
