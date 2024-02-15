@@ -18,6 +18,7 @@ use alloc::{
     format,
     string::{String, ToString},
     sync::Arc,
+    vec::Vec,
 };
 
 use bytes::Bytes;
@@ -103,10 +104,22 @@ impl LookupDataManager {
     }
 
     /// Creates an instance of LookupData populated with the given entries.
-    pub fn for_test(data: Data, logger: Arc<dyn OakLogger>) -> Self {
+    pub fn for_test(data: Vec<(Bytes, Bytes)>, logger: Arc<dyn OakLogger>) -> Self {
         let test_manager = Self::new_empty(logger);
-        *test_manager.data.write() = Arc::new(data);
+        let total_data = Self::find_entries_size(&data);
+        test_manager.reserve(data.len() as u64, total_data).unwrap();
+        test_manager.extend_next_lookup_data(data);
+        test_manager.finish_next_lookup_data();
         test_manager
+    }
+
+    // Return the expected total of the key and value lengths.  Only works for end < 100.
+    fn find_entries_size(entries: &Vec<(Bytes, Bytes)>) -> u64 {
+        let mut total = 0usize;
+        for (key, value) in entries {
+            total += key.len() + value.len();
+        }
+        total as u64
     }
 
     pub fn reserve(&self, additional_entries: u64, additional_data: u64) -> anyhow::Result<()> {
@@ -225,7 +238,7 @@ pub fn format_bytes(v: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloc::{vec, vec::Vec};
+    use alloc::vec;
 
     #[derive(Clone)]
     struct TestLogger;

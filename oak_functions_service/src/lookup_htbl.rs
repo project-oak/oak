@@ -156,6 +156,9 @@ impl LookupHtbl {
     }
 
     pub fn get(&self, key: &[u8]) -> Option<&[u8]> {
+        if self.num_entries == 0 {
+            return None;
+        }
         let result = self.lookup(key);
         match result {
             LookupResult::Found(data_index) => {
