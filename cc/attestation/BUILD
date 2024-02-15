@@ -22,11 +22,11 @@ package(
 # Libraries
 
 cc_library(
-    name = "cwt",
-    srcs = ["cwt.cc"],
-    hdrs = ["cwt.h"],
+    name = "cose",
+    srcs = ["cose.cc"],
+    hdrs = ["cose.h"],
     deps = [
-        ":cose",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@libcppbor",
@@ -34,11 +34,11 @@ cc_library(
 )
 
 cc_library(
-    name = "cose",
-    srcs = ["cose.cc"],
-    hdrs = ["cose.h"],
+    name = "cwt",
+    srcs = ["cwt.cc"],
+    hdrs = ["cwt.h"],
     deps = [
-        "@com_google_absl//absl/status",
+        ":cose",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@libcppbor",
