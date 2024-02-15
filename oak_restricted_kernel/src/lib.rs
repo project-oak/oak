@@ -69,8 +69,8 @@ use core::{marker::Sync, option::Option, panic::PanicInfo, str::FromStr};
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
-    frame_allocator::PhysicalMemoryAllocator, page_tables::CurrentRootPageTable,
-    virtual_address_allocator::VirtualAddressAllocator,
+    encrypted_mapper::MemoryEncryption, frame_allocator::PhysicalMemoryAllocator,
+    page_tables::CurrentRootPageTable, virtual_address_allocator::VirtualAddressAllocator,
 };
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
@@ -81,7 +81,7 @@ use strum::{EnumIter, EnumString, IntoEnumIterator};
 #[cfg(not(feature = "initrd"))]
 use x86_64::structures::paging::{PageSize, Size4KiB};
 use x86_64::{
-    structures::paging::{Page, Size2MiB},
+    structures::paging::{Page, PageTable, Size2MiB},
     PhysAddr, VirtAddr,
 };
 use zerocopy::FromBytes;
@@ -104,6 +104,11 @@ pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
 /// Active page tables.
 pub static PAGE_TABLES: Spinlock<CurrentRootPageTable> =
     Spinlock::new(CurrentRootPageTable::empty());
+
+/// Level 4 page table that is free in application space, but has all entries for kernel space
+/// populated. It can be used to create free page tables for applications, that maintain correct
+/// mapping in kernel space.
+pub static BASE_L4_PAGE_TABLE: OnceCell<(PageTable, MemoryEncryption)> = OnceCell::new();
 
 /// Allocator for long-lived pages in the kernel.
 pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
@@ -187,6 +192,20 @@ pub fn start_kernel(info: &BootParams) -> ! {
             prev_page_table.is_none(),
             "there should be no previous page table during initialization"
         );
+
+        // Safety: We just created a page table at this location.
+        let pml4: &PageTable = unsafe {
+            &*(PAGE_TABLES
+                .lock()
+                .get()
+                .unwrap()
+                .translate_physical(PhysAddr::new(pml4_frame.start_address().as_u64()))
+                .expect("page table must map to virtual address"))
+            .as_ptr()
+        };
+        BASE_L4_PAGE_TABLE
+            .set((pml4.clone(), encrypted))
+            .expect("base pml4 not unset");
     };
 
     // Re-map boot params to the new virtual address.
