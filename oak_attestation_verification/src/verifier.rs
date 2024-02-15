@@ -606,18 +606,7 @@ fn verify_application_layer(
             .as_ref()
             .context("application binary reference value")?,
     )
-    .context("application binary failed verification")?;
-
-    verify_measurement_digest(
-        values.config.as_ref().context("no config evidence value")?,
-        now_utc_millis,
-        endorsements.and_then(|value| value.configuration.as_ref()),
-        reference_values
-            .configuration
-            .as_ref()
-            .context("no configuration reference value")?,
-    )
-    .context("configuration failed verification")
+    .context("application binary failed verification")
 }
 
 /// Verifies the measurement values of the container layer for Oak Containers.
@@ -954,11 +943,7 @@ fn extract_application_layer_data(claims: &ClaimsSet) -> anyhow::Result<Applicat
         values,
         LAYER_2_CODE_MEASUREMENT_ID,
     )?)?);
-    let config = Some(value_to_raw_digest(extract_value(
-        values,
-        FINAL_LAYER_CONFIG_MEASUREMENT_ID,
-    )?)?);
-    Ok(ApplicationLayerData { binary, config })
+    Ok(ApplicationLayerData { binary })
 }
 
 /// Parses the CBOR map from a serialized certificate.

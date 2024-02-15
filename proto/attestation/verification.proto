@@ -155,9 +155,6 @@ message KernelLayerData {
 message ApplicationLayerData {
   // Measurement RawDigest of the application binary.
   RawDigest binary = 1;
-
-  // Measurement RawDigest of the application configuration.
-  RawDigest config = 2;
 }
 
 // Values extracted from the evidence that represents the Oak Containers system
