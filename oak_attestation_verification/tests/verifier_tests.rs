@@ -16,9 +16,10 @@
 
 use std::fs;
 
+use oak_attestation::dice::evidence_to_proto;
 use oak_attestation_verification::{
     util::convert_pem_to_raw,
-    verifier::{to_attestation_results, verify},
+    verifier::{to_attestation_results, verify, verify_dice_chain},
 };
 use oak_proto_rust::oak::attestation::v1::{
     attestation_results::Status, binary_reference_value, reference_values, AmdSevReferenceValues,
@@ -29,6 +30,7 @@ use oak_proto_rust::oak::attestation::v1::{
     SkipVerification, StringReferenceValue, SystemLayerEndorsements, SystemLayerReferenceValues,
     TransparentReleaseEndorsement,
 };
+use oak_restricted_kernel_sdk::EvidenceProvider;
 use prost::Message;
 
 const ENDORSEMENT_PATH: &str = "testdata/endorsement.json";
@@ -179,6 +181,20 @@ fn verify_succeeds() {
     eprintln!("======================================");
     assert!(r.is_ok());
     assert!(p.status() == Status::Success);
+}
+
+#[test]
+fn verify_mock_dice_chain() {
+    let mock_evidence_provider =
+        oak_restricted_kernel_sdk::mock_attestation::MockEvidenceProvider::create()
+            .expect("failed to create mock provider");
+    let mock_evidence = mock_evidence_provider.get_evidence();
+
+    let result = verify_dice_chain(
+        &evidence_to_proto(mock_evidence.clone()).expect("could not convert evidence to proto"),
+    );
+
+    assert!(result.is_ok())
 }
 
 #[test]

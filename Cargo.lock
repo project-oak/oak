@@ -2212,6 +2212,7 @@ dependencies = [
  "hex",
  "oak_dice",
  "oak_proto_rust",
+ "oak_restricted_kernel_sdk",
  "oak_sev_snp_attestation_report",
  "p256",
  "p384",
