@@ -195,7 +195,10 @@ fn verify_mock_dice_chain() {
         &evidence_to_proto(mock_evidence.clone()).expect("could not convert evidence to proto"),
     );
 
-    assert!(result.is_ok())
+    assert!(result.is_ok());
+    let evidence_values: oak_proto_rust::oak::attestation::v1::extracted_evidence::EvidenceValues =
+        result.unwrap().evidence_values.unwrap();
+    assert!(matches!(evidence_values, oak_proto_rust::oak::attestation::v1::extracted_evidence::EvidenceValues::OakRestrictedKernel{..}))
 }
 
 #[test]
