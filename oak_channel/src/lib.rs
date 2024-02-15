@@ -15,17 +15,16 @@
 //
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![feature(never_type)]
-#![feature(unwrap_infallible)]
 #![allow(rustdoc::private_intra_doc_links)]
+#![feature(array_chunks)]
 
 #[cfg(feature = "client")]
 pub mod client;
 
-pub mod server;
-
+pub mod basic_framed;
 mod frame;
-mod message;
+pub mod message;
+pub mod server;
 
 #[cfg(test)]
 mod tests;
@@ -37,6 +36,9 @@ use anyhow::Context;
 use bytes::BytesMut;
 use oak_core::timer::Timer;
 
+/// Simple no_std compatible equivalent of [`std::io::Read`].
+///
+/// [`std::io::Read`]: <https://doc.rust-lang.org/std/io/trait.Read.html>
 pub trait Read {
     fn read_exact(&mut self, data: &mut [u8]) -> anyhow::Result<()>;
 }
@@ -48,6 +50,9 @@ impl<T: std::io::Read> Read for T {
     }
 }
 
+/// Simple no_std compatible equivalent of [`std::io::Write`].
+///
+/// [`std::io::Write`]: <https://doc.rust-lang.org/std/io/trait.Write.html>
 pub trait Write {
     fn write_all(&mut self, data: &[u8]) -> anyhow::Result<()>;
     fn flush(&mut self) -> anyhow::Result<()>;

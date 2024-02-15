@@ -18,10 +18,7 @@ use std::{fs::File, io::Write};
 
 use anyhow::Context;
 use clap::Parser;
-use lookup_data_generator::data::{
-    generate_and_serialize_random_entries, generate_and_serialize_sparse_weather_entries,
-    generate_and_serialize_weather_entries,
-};
+use lookup_data_generator::data::generate_and_serialize_random_entries;
 
 #[derive(Parser, Clone, Debug)]
 #[command(about = "Oak Functions Lookup Data Generator")]
@@ -43,15 +40,6 @@ pub enum Command {
         #[arg(long, default_value = "100")]
         entries: usize,
     },
-    #[command(about = "Generate entries for the weather lookup example with random values")]
-    Weather {},
-    #[command(
-        about = "Generate sparse entries plus an index for the weather lookup example with random values"
-    )]
-    WeatherSparse {
-        #[arg(long, default_value = "100000")]
-        entries: usize,
-    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -69,12 +57,6 @@ fn main() -> anyhow::Result<()> {
             entries,
         )
         .context("couldn't generate random entries")?,
-        Command::Weather {} => generate_and_serialize_weather_entries(&mut rng)
-            .context("couldn't generate weather entries")?,
-        Command::WeatherSparse { entries } => {
-            generate_and_serialize_sparse_weather_entries(&mut rng, entries)
-                .context("couldn't generate sparse weather entries")?
-        }
     };
     let mut file = File::create(opt.out_file_path).context("couldn't create out file")?;
     file.write_all(&buf).context("couldn't write to file")?;

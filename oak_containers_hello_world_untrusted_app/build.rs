@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     generate_grpc_code(
         &[
             "../oak_containers_hello_world_trusted_app/proto/interface.proto",
-            "../oak_crypto/proto/v1/crypto.proto",
+            "../proto/crypto/crypto.proto",
         ],
         "..",
         CodegenOptions {

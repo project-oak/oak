@@ -16,16 +16,15 @@
 
 #![no_std]
 
+#[cfg(feature = "global_allocator")]
 use heap::LockedGrowableHeap;
 
-mod heap;
+pub mod heap;
 mod libm;
 
-#[cfg_attr(not(test), global_allocator)]
+#[cfg(feature = "global_allocator")]
+#[global_allocator]
 static ALLOCATOR: LockedGrowableHeap = LockedGrowableHeap::empty();
 
-pub fn init() {
-    unsafe {
-        ALLOCATOR.lock().init();
-    }
-}
+#[deprecated(note = "please make use of `oak_restricted_kernel_sdk::entrypoint` instead.")]
+pub fn init() {}

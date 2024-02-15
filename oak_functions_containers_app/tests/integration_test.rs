@@ -29,9 +29,11 @@ use std::{
     time::Duration,
 };
 
-use oak_crypto::encryptor::EncryptionKeyProvider;
+use oak_crypto::encryption_key::generate_encryption_key_pair;
 use oak_functions_containers_app::serve;
-use oak_functions_service::proto::oak::functions::InitializeRequest;
+use oak_functions_service::{
+    proto::oak::functions::InitializeRequest, wasm::wasmtime::WasmtimeHandler,
+};
 use opentelemetry::metrics::{noop::NoopMeterProvider, MeterProvider};
 use tokio::net::TcpListener;
 use tonic::{codec::CompressionEncoding, transport::Endpoint};
@@ -47,9 +49,11 @@ async fn test_lookup() {
     let listener = TcpListener::bind(addr).await.unwrap();
     let addr = listener.local_addr().unwrap();
 
-    let server_handle = tokio::spawn(serve(
+    let (encryption_key, _) = generate_encryption_key_pair();
+
+    let server_handle = tokio::spawn(serve::<_, WasmtimeHandler>(
         listener,
-        Arc::new(EncryptionKeyProvider::generate()),
+        Arc::new(encryption_key),
         NoopMeterProvider::new().meter(""),
     ));
 

@@ -37,7 +37,7 @@ use nix::{
     mount::{mount, umount, MsFlags},
     unistd::{chdir, chroot},
 };
-use oak_attestation::proto::oak::attestation::v1::DiceData;
+use oak_proto_rust::oak::attestation::v1::DiceData;
 use prost::Message;
 use tokio::process::Command;
 use x86_64::PhysAddr;
@@ -133,7 +133,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // system image. This consumes the `DiceBuilder` which also clears the ECA private key provided
     // by Stage 0.
     dice_builder.add_layer(system_image_claims)?;
-    let dice_data: DiceData = dice_builder.into();
+    let dice_data: DiceData = dice_builder.serialize();
 
     image::extract(&buf, Path::new("/"))
         .await

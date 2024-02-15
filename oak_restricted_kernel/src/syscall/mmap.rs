@@ -94,7 +94,8 @@ pub fn mmap(
 
     let pages = {
         // This critical section is rather long...
-        let pt = PAGE_TABLES.get().unwrap();
+        let pt_guard = PAGE_TABLES.lock();
+        let pt = pt_guard.get().unwrap();
 
         // Now, find a gap in the page tables that satisifies the following:
         //  - in the lower half of virtual memory (user space)

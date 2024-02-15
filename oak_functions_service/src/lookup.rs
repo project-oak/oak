@@ -18,13 +18,12 @@ use alloc::{
     format,
     string::{String, ToString},
     sync::Arc,
-    vec::Vec,
 };
 
 use bytes::Bytes;
 use hashbrown::HashMap;
 use log::{info, Level};
-use spinning_top::Spinlock;
+use spinning_top::{RwSpinlock, Spinlock};
 
 use crate::logger::OakLogger;
 
@@ -84,7 +83,7 @@ impl DataBuilder {
 ///
 /// In the future we may replace both the mutex and the hash map with something like RCU.
 pub struct LookupDataManager {
-    data: Spinlock<Arc<Data>>,
+    data: RwSpinlock<Arc<Data>>,
     // Behind a lock, because we have multiple references to LookupDataManager and need to mutate
     // data builder.
     data_builder: Spinlock<DataBuilder>,
@@ -95,7 +94,7 @@ impl LookupDataManager {
     /// Creates a new instance with empty backing data.
     pub fn new_empty(logger: Arc<dyn OakLogger>) -> Self {
         Self {
-            data: Spinlock::new(Arc::new(Data::new())),
+            data: RwSpinlock::new(Arc::new(Data::new())),
             // Incrementally builds the backing data that will be used by new `LookupData`
             // instances when finished.
             data_builder: Spinlock::new(DataBuilder::default()),
@@ -106,7 +105,7 @@ impl LookupDataManager {
     /// Creates an instance of LookupData populated with the given entries.
     pub fn for_test(data: Data, logger: Arc<dyn OakLogger>) -> Self {
         let test_manager = Self::new_empty(logger);
-        *test_manager.data.lock() = Arc::new(data);
+        *test_manager.data.write() = Arc::new(data);
         test_manager
     }
 
@@ -137,7 +136,7 @@ impl LookupDataManager {
             let mut data_builder = self.data_builder.lock();
             let next_data = data_builder.build();
             next_data_len = next_data.len();
-            let mut data = self.data.lock();
+            let mut data = self.data.write();
             data_len = data.len();
             *data = Arc::new(next_data);
         }
@@ -161,7 +160,7 @@ impl LookupDataManager {
     pub fn create_lookup_data(&self) -> LookupData {
         let keys;
         let data = {
-            let data = self.data.lock().clone();
+            let data = self.data.read().clone();
             keys = data.len();
             LookupData::new(data, self.logger.clone())
         };
@@ -183,8 +182,8 @@ impl LookupData {
     }
 
     /// Gets an individual entry from the backing data.
-    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        self.data.get(key).cloned().map(Into::into)
+    pub fn get(&self, key: &[u8]) -> Option<&Bytes> {
+        self.data.get(key)
     }
 
     /// Gets the number of entries in the backing data.

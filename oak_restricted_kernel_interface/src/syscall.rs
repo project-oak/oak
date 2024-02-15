@@ -120,6 +120,16 @@ pub fn exit(status: i32) -> ! {
     unreachable!();
 }
 
+#[no_mangle]
+pub extern "C" fn sys_unstable_switch_proccess(buf: *const c_void, count: c_size_t) {
+    unsafe { syscall!(Syscall::UnstableSwitchProcess, buf, count) };
+}
+
+pub fn unstable_switch_proccess(buf: &[u8]) -> ! {
+    sys_unstable_switch_proccess(buf.as_ptr() as *const c_void, buf.len());
+    unreachable!();
+}
+
 // Note that these tests are not being executed against Restricted Kernel, but rather the Linux
 // kernel of the machine cargo is running on!
 #[cfg(test)]

@@ -17,6 +17,7 @@
 use goblin::elf64::program_header::{ProgramHeader, PF_W, PF_X, PT_LOAD};
 use x86_64::{
     align_down, align_up,
+    registers::control::{Cr3, Cr3Flags},
     structures::paging::{
         frame::PhysFrameRange,
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
@@ -137,6 +138,9 @@ impl RootPageTable {
         RootPageTable {
             inner: EncryptedPageTable::new(pml4, offset, encryption),
         }
+    }
+    pub fn inner(&self) -> &EncryptedPageTable<MappedPageTable<'static, PhysOffset>> {
+        &self.inner
     }
     /// Checks wheter all the pages in the range are unallocated.
     ///
@@ -265,5 +269,55 @@ impl Translator for RootPageTable {
 
     fn translate_physical_frame<S: PageSize>(&self, frame: PhysFrame<S>) -> Option<Page<S>> {
         self.inner.translate_physical_frame(frame)
+    }
+}
+
+/// Wrapper struct that holds the current page table is there one.
+pub struct CurrentRootPageTable {
+    inner: Option<RootPageTable>,
+}
+
+impl CurrentRootPageTable {
+    pub const fn empty() -> Self {
+        Self { inner: None }
+    }
+
+    /// Replaces the current pagetable with the parameter, returning the old
+    /// pagetable if there was one. Updates the page table on the CPU level.
+    /// Safety: The new page tables must keep the identity mapping at -2GB (kernel space) intact.
+    pub unsafe fn replace(
+        &mut self,
+        pml4_frame: PhysFrame,
+        encrypted: MemoryEncryption,
+    ) -> Option<RootPageTable> {
+        // This validates any references that expect boot page tables to be valid!
+        // Safety: Caller must ensure that the new page tables are safe.
+        unsafe {
+            Cr3::write(pml4_frame, Cr3Flags::empty());
+        };
+
+        // Safety: we've reloaded page tables that place the direct mapping region at that offset,
+        // so the memory location is safe to access now.
+        let pml4 = unsafe {
+            &mut *(super::DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr()
+        };
+
+        let new_pt = RootPageTable::new(pml4, super::DIRECT_MAPPING_OFFSET, encrypted);
+
+        self.inner.replace(new_pt)
+    }
+
+    /// Gets the reference to the underlying pagetable.
+    ///
+    /// Returns `None` if the pagetable has not yet been set.
+    pub fn get(&self) -> Option<&RootPageTable> {
+        self.inner.as_ref()
+    }
+
+    /// Gets the mutable reference to the underlying pagetable.
+    ///
+    /// Returns `None` if the pagetable has not yet been set.
+    pub fn get_mut(&mut self) -> Option<&mut RootPageTable> {
+        self.inner.as_mut()
     }
 }

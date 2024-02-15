@@ -1,4 +1,4 @@
-// Copyright 2023 The Project Oak Authors
+// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 // structure to include! it.
 
 #![no_std]
+#![feature(never_type)]
 
 // Inlined from tonic::include_proto in order to cut dependency on tonic.
 macro_rules! include_proto {
@@ -29,6 +30,7 @@ pub mod oak {
 
     pub mod attestation {
         pub mod v1 {
+            #![allow(clippy::large_enum_variant)]
             include_proto!("oak.attestation.v1");
         }
     }
@@ -37,11 +39,12 @@ pub mod oak {
         pub mod abi {
             include_proto!("oak.functions.abi");
         }
-        pub mod benchmark {
-            include_proto!("oak.functions.benchmark");
-        }
         pub mod lookup_data {
             include_proto!("oak.functions.lookup_data");
+        }
+        pub mod testing {
+            use prost::Message;
+            include_proto!("oak.functions.testing");
         }
     }
 }

@@ -14,19 +14,13 @@
 // limitations under the License.
 //
 
-use alloc::{boxed::Box, sync::Arc, vec::Vec};
-
-use anyhow::Context;
-use async_trait::async_trait;
-
 use crate::{
-    encryptor::{
-        AsyncEncryptionKeyHandle, AsyncServerEncryptor, ClientEncryptor, EncryptionKeyProvider,
-        ServerEncryptor, OAK_HPKE_INFO,
-    },
+    encryption_key::generate_encryption_key_pair,
+    encryptor::{ClientEncryptor, ServerEncryptor},
     hpke::{
         aead::{AEAD_ALGORITHM_KEY_SIZE_BYTES, AEAD_NONCE_SIZE_BYTES},
-        generate_random_nonce, setup_base_recipient, setup_base_sender, KeyPair, RecipientContext,
+        generate_kem_key_pair, generate_random_nonce, setup_base_recipient, setup_base_sender,
+        Serializable,
     },
 };
 
@@ -70,15 +64,13 @@ fn test_aead() {
 
 #[test]
 fn test_hpke() {
-    let recipient_key_pair = KeyPair::generate();
-    let (serialized_encapsulated_public_key, mut sender_context) = setup_base_sender(
-        &recipient_key_pair.get_serialized_public_key(),
-        TEST_HPKE_INFO,
-    )
-    .expect("couldn't setup base sender");
-    let mut recipient_context = setup_base_recipient(
+    let (recipient_private_key, recipient_public_key) = generate_kem_key_pair();
+    let (serialized_encapsulated_public_key, sender_context) =
+        setup_base_sender(&recipient_public_key.to_bytes(), TEST_HPKE_INFO)
+            .expect("couldn't setup base sender");
+    let recipient_context = setup_base_recipient(
         &serialized_encapsulated_public_key,
-        &recipient_key_pair,
+        &recipient_private_key,
         TEST_HPKE_INFO,
     )
     .expect("couldn't setup base recipient");
@@ -125,12 +117,10 @@ fn test_hpke() {
 
 #[test]
 fn test_encryptor() {
-    let encryption_key = Arc::new(EncryptionKeyProvider::generate());
-    let serialized_server_public_key = encryption_key.get_serialized_public_key();
+    let (encryption_key, encryption_public_key) = generate_encryption_key_pair();
 
-    let mut client_encryptor = ClientEncryptor::create(&serialized_server_public_key)
-        .expect("couldn't create client encryptor");
-    let mut server_encryptor = None;
+    let mut client_encryptor =
+        ClientEncryptor::create(&encryption_public_key).expect("couldn't create client encryptor");
 
     let encrypted_request = client_encryptor
         .encrypt(TEST_REQUEST_MESSAGE, TEST_REQUEST_ASSOCIATED_DATA)
@@ -146,28 +136,13 @@ fn test_encryptor() {
     );
 
     // Initialize server encryptor.
-    if server_encryptor.is_none() {
-        let serialized_encapsulated_public_key = encrypted_request
-            .serialized_encapsulated_public_key
-            .as_ref()
-            .expect("initial request message doesn't contain encapsulated public key");
-        server_encryptor = Some(
-            ServerEncryptor::create(serialized_encapsulated_public_key, encryption_key.clone())
-                .expect("couldn't create server encryptor"),
-        );
-    }
-
-    let (decrypted_request, request_associated_data) = server_encryptor
-        .as_mut()
-        .expect("server encryptor is not initialized")
-        .decrypt(&encrypted_request)
-        .expect("server couldn't decrypt request");
+    let (server_encryptor, decrypted_request, request_associated_data) =
+        ServerEncryptor::decrypt(&encrypted_request, &encryption_key)
+            .expect("server couldn't decrypt request");
     assert_eq!(TEST_REQUEST_MESSAGE, decrypted_request);
     assert_eq!(TEST_REQUEST_ASSOCIATED_DATA, request_associated_data);
 
     let encrypted_response = server_encryptor
-        .as_mut()
-        .expect("server encryptor is not initialized")
         .encrypt(TEST_RESPONSE_MESSAGE, TEST_RESPONSE_ASSOCIATED_DATA)
         .expect("server couldn't encrypt response");
     // Check that the message was encrypted.
@@ -186,47 +161,12 @@ fn test_encryptor() {
     assert_eq!(TEST_RESPONSE_ASSOCIATED_DATA, response_associated_data);
 }
 
-struct TestEncryptionKey {
-    key_pair: KeyPair,
-}
-
-impl Default for TestEncryptionKey {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl TestEncryptionKey {
-    pub fn new() -> Self {
-        Self {
-            key_pair: KeyPair::generate(),
-        }
-    }
-
-    pub fn get_serialized_public_key(&self) -> Vec<u8> {
-        self.key_pair.get_serialized_public_key()
-    }
-}
-
-#[async_trait]
-impl AsyncEncryptionKeyHandle for TestEncryptionKey {
-    async fn generate_recipient_context(
-        &self,
-        encapsulated_public_key: &[u8],
-    ) -> anyhow::Result<RecipientContext> {
-        setup_base_recipient(encapsulated_public_key, &self.key_pair, OAK_HPKE_INFO)
-            .context("couldn't generate recipient crypto context")
-    }
-}
-
 #[tokio::test]
 async fn test_async_encryptor() {
-    let encryption_key = TestEncryptionKey::new();
-    let serialized_server_public_key = encryption_key.get_serialized_public_key();
+    let (encryption_key, encryption_public_key) = generate_encryption_key_pair();
 
-    let mut client_encryptor = ClientEncryptor::create(&serialized_server_public_key)
-        .expect("couldn't create client encryptor");
-    let mut server_encryptor = AsyncServerEncryptor::new(&encryption_key);
+    let mut client_encryptor =
+        ClientEncryptor::create(&encryption_public_key).expect("couldn't create client encryptor");
 
     let encrypted_request = client_encryptor
         .encrypt(TEST_REQUEST_MESSAGE, TEST_REQUEST_ASSOCIATED_DATA)
@@ -240,10 +180,12 @@ async fn test_async_encryptor() {
             .unwrap()
             .ciphertext
     );
-    let (decrypted_request, request_associated_data) = server_encryptor
-        .decrypt(&encrypted_request)
-        .await
-        .expect("server couldn't decrypt request");
+
+    // Initialize server encryptor.
+    let (server_encryptor, decrypted_request, request_associated_data) =
+        ServerEncryptor::decrypt_async(&encrypted_request, &encryption_key)
+            .await
+            .expect("server couldn't decrypt request");
     assert_eq!(TEST_REQUEST_MESSAGE, decrypted_request);
     assert_eq!(TEST_REQUEST_ASSOCIATED_DATA, request_associated_data);
 

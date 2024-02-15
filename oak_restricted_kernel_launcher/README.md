@@ -16,20 +16,17 @@ must be built.
 
 (instructions gained from inspecting xtask, may change in the future)
 
-Stage0, the restricted kernel, and an enclave app may be built like so:
-
 ```shell
-just stage0_bin oak_restricted_kernel_bin oak_echo_raw_enclave_app
-```
+# Stage0, the restricted kernel, and an enclave app may be built like so:
+just stage0_bin oak_restricted_kernel_wrapper oak_orchestrator && \
 
-After building dependencies, an enclave app may be run like so:
-
-```shell
+# After building dependencies, an enclave app may be run like so:
 RUST_LOG=DEBUG \
 cargo run --package=oak_restricted_kernel_launcher -- \
---enclave-binary=oak_restricted_kernel_bin/target/x86_64-unknown-none/debug/oak_restricted_kernel_bin \
+--kernel=oak_restricted_kernel_wrapper/target/x86_64-unknown-none/release/oak_restricted_kernel_wrapper_bin \
 --vmm-binary=$(which qemu-system-x86_64) \
---memory-size=256M \
---bios-binary=stage0_bin/target/x86_64-unknown-none/release/oak_stage0.bin \
---app-binary=enclave_apps/target/x86_64-unknown-none/debug/oak_echo_raw_enclave_app
+--memory-size=8G \
+--bios-binary=stage0_bin/target/x86_64-unknown-none/release/stage0_bin \
+--initrd=enclave_apps/target/x86_64-unknown-none/release/oak_orchestrator \
+--app-binary=enclave_apps/target/x86_64-unknown-none/release/oak_echo_raw_enclave_app
 ```

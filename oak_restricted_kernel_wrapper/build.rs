@@ -23,12 +23,9 @@ use std::{
 // returns source_path if it can be constructed and if it points to a valid file
 fn try_source_path() -> Result<PathBuf, &'static str> {
     let kernel_directory = "oak_restricted_kernel_bin";
-    let file_name = match (cfg!(feature = "oak_restricted_kernel_bin"), cfg!(feature = "oak_restricted_kernel_simple_io_bin")) {
-        (true, false) => Ok("oak_restricted_kernel_bin"),
-        (false, true) => Ok("oak_restricted_kernel_simple_io_bin"),
-        (true, true) => Err("Feature oak_restricted_kernel_simple_io_bin and feature oak_restricted_kernel_bin cannot be enabled at the same time. Only either version can be built."),
-        (false, false) => Err("One of feature oak_restricted_kernel_simple_io_bin or feature oak_restricted_kernel_bin must be enabled.")
-    }?;
+    let file_name = std::env::var("OAK_RESTRICTED_KERNEL_FILE_NAME").map_err(|_| {
+            "the correct env variable OAK_RESTRICTED_KERNEL_FILE_NAME must be set with the file name of the kernel build."
+    })?;
 
     // The source file is the output from building "../oak_restricted_kernel_bin" in release mode.
     let mut source_path = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -36,6 +33,7 @@ fn try_source_path() -> Result<PathBuf, &'static str> {
     source_path.push(kernel_directory);
     source_path.push("target/x86_64-unknown-none/release");
     source_path.push(file_name);
+    println!("cargo:rerun-if-changed={:?}", &source_path);
     match source_path.exists() {
         true => Ok(source_path),
         false => Err("contructed source_path does not exist"),
@@ -43,6 +41,7 @@ fn try_source_path() -> Result<PathBuf, &'static str> {
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=cargo:rerun-if-env-changed=OAK_RESTRICTED_KERNEL_FILE_NAME");
     println!("cargo:rerun-if-changed=layout.ld");
     println!("cargo:rustc-link-arg=--script=layout.ld");
     let mut destination_path = PathBuf::from(std::env::var("OUT_DIR").unwrap());

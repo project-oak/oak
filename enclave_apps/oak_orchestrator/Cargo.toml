@@ -1,0 +1,20 @@
+[package]
+name = "oak_orchestrator"
+version = "0.1.0"
+authors = ["Juliette Pluto <julh@google.com>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+oak_restricted_kernel_sdk = { workspace = true }
+oak_restricted_kernel_interface = { workspace = true }
+oak_restricted_kernel_orchestrator = { path = "../../oak_restricted_kernel_orchestrator" }
+oak_dice = { workspace = true }
+zerocopy = "*"
+log = "*"
+zeroize = "*"
+
+[[bin]]
+name = "oak_orchestrator"
+test = false
+bench = false

@@ -17,10 +17,10 @@ allow_sensitive_logging = []
 
 [dependencies]
 oak_functions_enclave_service = { path = "../../oak_functions_enclave_service", default-features = false }
+oak_functions_service = { path = "../../oak_functions_service", default-features = false }
 log = "*"
 micro_rpc = { workspace = true }
 oak_restricted_kernel_sdk = { workspace = true }
-oak_core = { workspace = true }
 
 [[bin]]
 name = "oak_functions_enclave_app"

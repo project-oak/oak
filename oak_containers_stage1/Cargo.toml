@@ -17,6 +17,7 @@ futures-util = "*"
 oak_attestation = { workspace = true }
 oak_crypto = { workspace = true }
 oak_dice = { workspace = true }
+oak_proto_rust = { workspace = true }
 nix = { version = "*", features = ["mman"] }
 p256 = { version = "*" }
 prost = { workspace = true }

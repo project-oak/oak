@@ -40,12 +40,15 @@ impl<'a, A: Allocator> SimpleIoChannel<'a, A> {
         } else {
             PortFactoryWrapper::new_raw()
         };
-        let device = SimpleIo::new_with_defaults(
-            io_port_factory,
-            |vaddr: VirtAddr| PAGE_TABLES.get().unwrap().translate_virtual(vaddr),
-            alloc,
-        )
-        .expect("couldn't create IO device");
+        let device = {
+            let pt_guard = PAGE_TABLES.lock();
+            SimpleIo::new_with_defaults(
+                io_port_factory,
+                |vaddr: VirtAddr| pt_guard.get().unwrap().translate_virtual(vaddr),
+                alloc,
+            )
+            .expect("couldn't create IO device")
+        };
         let pending_data = None;
         Self {
             device,

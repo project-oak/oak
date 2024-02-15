@@ -46,11 +46,11 @@ pub struct Params {
 
     /// Path to the enclave binary to load into the VM.
     #[arg(long, value_parser = path_exists)]
-    pub enclave_binary: PathBuf,
+    pub kernel: PathBuf,
 
     /// Path to the Oak Functions application binary to be loaded into the enclave.
     #[arg(long, value_parser = path_exists)]
-    pub app_binary: PathBuf,
+    pub app_binary: Option<PathBuf>,
 
     /// Path to the BIOS image to use.
     #[arg(long, value_parser = path_exists)]
@@ -66,8 +66,8 @@ pub struct Params {
     pub memory_size: Option<String>,
 
     /// Path to the initrd image to use.
-    #[arg(long, value_parser = path_exists)]
-    pub initrd: Option<PathBuf>,
+    #[arg(long, value_parser = path_exists, requires_all = &["kernel"])]
+    pub initrd: PathBuf,
 }
 
 /// Checks if file with a given path exists.
@@ -90,17 +90,19 @@ pub struct Instance {
 impl Instance {
     /// Starts virtualized instance with given parameters and stream to write console logs to.
     pub fn start(params: Params, guest_console: net::UnixStream) -> Result<Self> {
-        let app_bytes = fs::read(&params.app_binary).with_context(|| {
-            format!(
-                "couldn't read application binary {}",
-                &params.app_binary.display()
-            )
-        })?;
-        log::info!(
-            "read application binary from disk {} ({} bytes)",
-            &params.app_binary.display(),
-            app_bytes.len()
-        );
+        let app_bytes = if let Some(app_binary) = params.app_binary {
+            let bytes = fs::read(&app_binary).with_context(|| {
+                format!("couldn't read application binary {}", app_binary.display())
+            })?;
+            log::info!(
+                "read application binary from disk {} ({} bytes)",
+                app_binary.display(),
+                bytes.len()
+            );
+            Some(bytes)
+        } else {
+            None
+        };
 
         let mut cmd = tokio::process::Command::new(params.vmm_binary);
         let (guest_socket, mut host_socket) = net::UnixStream::pair()?;
@@ -149,16 +151,21 @@ impl Instance {
         ]);
         cmd.args(["-device", "virtio-serial-device,max_ports=1"]);
         cmd.args(["-device", "virtconsole,chardev=commsock"]);
-        // Load the kernel ELF via the loader device.
-        cmd.args([
-            "-device",
-            format!("loader,file={}", params.enclave_binary.display()).as_str(),
-        ]);
-        // And yes, use stage0 as the BIOS.
+        // Use stage0 as the BIOS.
         cmd.args([
             "-bios",
             params
                 .bios_binary
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .as_str(),
+        ]);
+        // stage0 accoutrements: kernel that's compatible with the linux boot protocol
+        cmd.args([
+            "-kernel",
+            params
+                .kernel
                 .into_os_string()
                 .into_string()
                 .unwrap()
@@ -171,29 +178,34 @@ impl Instance {
             cmd.arg("-S");
         }
 
-        if let Some(initrd) = params.initrd {
-            cmd.args([
-                "-initrd",
-                initrd.into_os_string().into_string().unwrap().as_str(),
-            ]);
-        }
+        cmd.args([
+            "-initrd",
+            params
+                .initrd
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .as_str(),
+        ]);
 
         info!("executing: {:?}", cmd);
 
         let instance = cmd.spawn()?;
 
-        // Loading the application binary needs to happen before we start using microrpc over the
-        // channel.
-        host_socket
-            .write_all(&(app_bytes.len() as u32).to_le_bytes())
-            .expect("failed to send application binary length to enclave");
+        if let Some(app_bytes) = app_bytes {
+            // Loading the application binary needs to happen before we start using microrpc over
+            // the channel.
+            host_socket
+                .write_all(&(app_bytes.len() as u32).to_le_bytes())
+                .expect("failed to send application binary length to enclave");
 
-        // The kernel expects data to be transmitted in chunks of one page.
-        let mut chunks = app_bytes.array_chunks::<PAGE_SIZE>();
-        for chunk in chunks.by_ref() {
-            Self::write_chunk(&mut host_socket, chunk)?;
+            // The kernel expects data to be transmitted in chunks of one page.
+            let mut chunks = app_bytes.array_chunks::<PAGE_SIZE>();
+            for chunk in chunks.by_ref() {
+                Self::write_chunk(&mut host_socket, chunk)?;
+            }
+            Self::write_chunk(&mut host_socket, chunks.remainder())?;
         }
-        Self::write_chunk(&mut host_socket, chunks.remainder())?;
 
         Ok(Self {
             guest_console: guest_console_clone,
@@ -266,6 +278,8 @@ pub async fn launch(
 
             let mut line = String::new();
             while reader.read_line(&mut line).expect("couldn't read line") > 0 {
+                // remove the new line character
+                line.pop();
                 log::info!("console: {:?}", line);
                 line.clear();
             }

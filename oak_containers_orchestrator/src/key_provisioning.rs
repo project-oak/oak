@@ -13,37 +13,86 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
-use tonic::{Request, Response};
+use oak_attestation_verification::verifier::verify_dice_chain;
+use tokio::net::TcpListener;
+use tokio_stream::wrappers::TcpListenerStream;
+use tokio_util::sync::CancellationToken;
+use tonic::{transport::Server, Request, Response};
 
 use crate::{
-    crypto::KeyStore,
+    crypto::GroupKeys,
     proto::oak::key_provisioning::v1::{
-        key_provisioning_server::KeyProvisioning, GetGroupKeysRequest, GetGroupKeysResponse,
+        key_provisioning_server::{KeyProvisioning, KeyProvisioningServer},
+        GetGroupKeysRequest, GetGroupKeysResponse, GroupKeys as GroupKeysProto,
     },
 };
 
-#[allow(dead_code)]
-/// Dependant is a Key Provisioning role that requests group keys from the
-/// Key Provisioning Leader.
-struct KeyProvisioningDependant {
-    _key_store: OnceLock<Arc<KeyStore>>,
+struct KeyProvisioningService {
+    group_keys: Arc<GroupKeys>,
 }
 
-struct KeyProvisioningService {
-    _key_store: Arc<KeyStore>,
+impl KeyProvisioningService {
+    pub fn new(group_keys: Arc<GroupKeys>) -> Self {
+        Self { group_keys }
+    }
 }
 
 #[tonic::async_trait]
 impl KeyProvisioning for KeyProvisioningService {
     async fn get_group_keys(
         &self,
-        _request: Request<GetGroupKeysRequest>,
+        request: Request<GetGroupKeysRequest>,
     ) -> Result<Response<GetGroupKeysResponse>, tonic::Status> {
-        // TODO(#4442): Implement generating group encryption key.
-        Err(tonic::Status::unimplemented(
-            "Key Provisioning is not implemented",
-        ))
+        let request = request.into_inner();
+
+        // Verify attestation evidence and get encryption public key, which will be used to encrypt
+        // group keys.
+        let evidence = request.evidence.ok_or(tonic::Status::invalid_argument(
+            "request message doesn't contain evidence",
+        ))?;
+        let _endorsements = request.endorsements.ok_or(tonic::Status::invalid_argument(
+            "request message doesn't contain endorsements",
+        ))?;
+        // TODO(#4442): Provide reference values by the hostlib and use `verify` function.
+        let attestation_results = verify_dice_chain(&evidence).map_err(|err| {
+            tonic::Status::invalid_argument(format!("couldn't verify endorsed evidence: {err}"))
+        })?;
+
+        // Encrypt group keys.
+        let encrypted_encryption_private_key = self
+            .group_keys
+            .encrypted_group_encryption_key(&attestation_results.encryption_public_key)
+            .map_err(|err| {
+                tonic::Status::internal(format!("couldn't encrypt encryption private key: {err}"))
+            })?;
+        Ok(tonic::Response::new(GetGroupKeysResponse {
+            group_keys: Some(GroupKeysProto {
+                encrypted_encryption_private_key: Some(encrypted_encryption_private_key),
+            }),
+        }))
     }
+}
+
+pub async fn create(
+    address: &str,
+    group_keys: Arc<GroupKeys>,
+    cancellation_token: CancellationToken,
+) -> Result<(), anyhow::Error> {
+    let key_provisioning_service_instance = KeyProvisioningService::new(group_keys);
+
+    let listener = TcpListener::bind(address).await?;
+
+    Server::builder()
+        .add_service(KeyProvisioningServer::new(
+            key_provisioning_service_instance,
+        ))
+        .serve_with_incoming_shutdown(
+            TcpListenerStream::new(listener),
+            cancellation_token.cancelled(),
+        )
+        .await?;
+
+    Ok(())
 }

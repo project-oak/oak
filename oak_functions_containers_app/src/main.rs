@@ -20,19 +20,39 @@ use std::{
 };
 
 use anyhow::{anyhow, Context};
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use oak_containers_orchestrator::launcher_client::LauncherClient;
 use oak_containers_sdk::{InstanceEncryptionKeyHandle, OrchestratorClient};
+#[cfg(feature = "native")]
+use oak_functions_containers_app::native_handler::NativeHandler;
 use oak_functions_containers_app::serve;
+use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
 use opentelemetry::{global::set_error_handler, metrics::MeterProvider, KeyValue};
 use tokio::{net::TcpListener, runtime::Handle};
 
 const OAK_FUNCTIONS_CONTAINERS_APP_PORT: u16 = 8080;
 
+#[global_allocator]
+static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
+#[derive(Clone, Debug, strum::Display, ValueEnum)]
+pub enum HandlerType {
+    #[cfg(feature = "native")]
+    /// The uploaded bytecode to be a .so file that will be dynamically opened.
+    Native,
+
+    /// The uploaded bytecode is Wasm bytecode, executed in a Wasm sandbox.
+    Wasm,
+}
+
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(default_value = "http://10.0.2.100:8080")]
     launcher_addr: String,
+
+    /// Type of request handler to use
+    #[arg(default_value = "wasm")]
+    handler: HandlerType,
 }
 
 #[tokio::main]
@@ -138,7 +158,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         OAK_FUNCTIONS_CONTAINERS_APP_PORT,
     );
     let listener = TcpListener::bind(addr).await?;
-    let server_handle = tokio::spawn(serve(listener, Arc::new(encryption_key_handle), meter));
+    let server_handle = tokio::spawn(async move {
+        match args.handler {
+            #[cfg(feature = "native")]
+            HandlerType::Native => {
+                serve::<_, NativeHandler>(listener, Arc::new(encryption_key_handle), meter).await
+            }
+            HandlerType::Wasm => {
+                serve::<_, WasmtimeHandler>(listener, Arc::new(encryption_key_handle), meter).await
+            }
+        }
+    });
 
     eprintln!("Running Oak Functions on Oak Containers at address: {addr}");
     client

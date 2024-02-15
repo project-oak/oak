@@ -22,6 +22,9 @@ pub mod api;
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "wasmtime")]
+pub mod wasmtime;
+
 use alloc::{boxed::Box, format, string::ToString, sync::Arc, vec::Vec};
 #[cfg(feature = "std")]
 use std::time::Instant;
@@ -37,7 +40,7 @@ use wasmi::Store;
 use crate::{
     logger::{OakLogger, StandaloneLogger},
     lookup::LookupDataManager,
-    Observer,
+    Handler, Observer,
 };
 
 /// Fixed name of the function to start a Wasm. Every Oak Wasm module must provide this function.
@@ -454,10 +457,25 @@ impl WasmHandler {
             observer,
         })
     }
+}
 
-    /// Handles a call to invoke by getting the raw request bytes from the body of the request to
-    /// invoke and returns a reponse to invoke setting the raw bytes in the body of the response.
-    pub fn handle_invoke(&self, invoke_request: Request) -> Result<Response, micro_rpc::Status> {
+impl Handler for WasmHandler {
+    type HandlerType = WasmHandler;
+
+    fn new_handler(
+        wasm_module_bytes: &[u8],
+        lookup_data_manager: Arc<LookupDataManager>,
+        observer: Option<Arc<dyn Observer + Send + Sync>>,
+    ) -> anyhow::Result<WasmHandler> {
+        let logger = Arc::new(StandaloneLogger);
+        let wasm_api_factory = Arc::new(StdWasmApiFactory {
+            lookup_data_manager,
+        });
+
+        Self::create(wasm_module_bytes, wasm_api_factory, logger, observer)
+    }
+
+    fn handle_invoke(&self, invoke_request: Request) -> Result<Response, micro_rpc::Status> {
         #[cfg(feature = "std")]
         let now = Instant::now();
         let module = self.wasm_module.clone();
@@ -521,22 +539,4 @@ impl WasmHandler {
 fn from_status_code(result: Result<(), StatusCode>) -> Result<i32, wasmi::core::Trap> {
     let status_code = result.err().unwrap_or(StatusCode::Ok);
     Ok(status_code as i32)
-}
-
-/// Creates a new `WasmHandler` instance.
-pub fn new_wasm_handler(
-    wasm_module_bytes: &[u8],
-    lookup_data_manager: Arc<LookupDataManager>,
-    observer: Option<Arc<dyn Observer + Send + Sync>>,
-) -> anyhow::Result<WasmHandler> {
-    let logger = Arc::new(StandaloneLogger);
-    let wasm_api_factory = StdWasmApiFactory {
-        lookup_data_manager,
-    };
-    WasmHandler::create(
-        wasm_module_bytes,
-        Arc::new(wasm_api_factory),
-        logger,
-        observer,
-    )
 }

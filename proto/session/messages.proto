@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package oak.session.v1;
 
-import "oak_crypto/proto/v1/crypto.proto";
+import "proto/crypto/crypto.proto";
 import "proto/attestation/endorsement.proto";
 import "proto/attestation/evidence.proto";
 
@@ -60,7 +60,7 @@ message AttestationBundle {
   // The DICE attestation evidence.
   oak.attestation.v1.Evidence evidence = 3;
 
-  // Thea attestation endorsements.
+  // The DICE attestation endorsements.
   oak.attestation.v1.Endorsements endorsements = 4;
 }
 
@@ -94,6 +94,19 @@ message GetPublicKeyRequest {}
 message GetPublicKeyResponse {
   // The enclave's signing and encryption public keys and attestation evidence about them.
   AttestationBundle attestation_bundle = 1;
+}
+
+// Endorsed evidence contains an attestation evidence provided by the enclave and the corresponding
+// attestation endorsements provided by the hostlib.
+message EndorsedEvidence {
+  oak.attestation.v1.Evidence evidence = 1;
+  oak.attestation.v1.Endorsements endorsements = 2;
+}
+
+message GetEndorsedEvidenceRequest {}
+
+message GetEndorsedEvidenceResponse {
+  EndorsedEvidence endorsed_evidence = 1;
 }
 
 message InvokeRequest {

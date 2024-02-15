@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+#![feature(c_size_t)]
+
 use std::{
     future::Future,
     pin::Pin,
@@ -23,7 +25,7 @@ use std::{
 
 use anyhow::Context;
 use oak_attestation::handler::AsyncEncryptionHandler;
-use oak_crypto::encryptor::AsyncEncryptionKeyHandle;
+use oak_crypto::encryption_key::AsyncEncryptionKeyHandle;
 use oak_functions_service::{
     instance::OakFunctionsInstance,
     proto::oak::functions::{
@@ -32,7 +34,7 @@ use oak_functions_service::{
         InitializeRequest, InitializeResponse, InvokeRequest, InvokeResponse, LookupDataChunk,
         ReserveRequest, ReserveResponse,
     },
-    Observer,
+    Handler, Observer,
 };
 use opentelemetry::{
     metrics::{Histogram, Meter, Unit},
@@ -43,6 +45,9 @@ use tokio::net::TcpListener;
 use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 use tonic::codec::CompressionEncoding;
 use tracing::Span;
+
+#[cfg(feature = "native")]
+pub mod native_handler;
 
 use crate::proto::oak::functions::oak_functions_server::{OakFunctions, OakFunctionsServer};
 
@@ -62,13 +67,13 @@ pub mod proto {
 }
 
 // Instance of the OakFunctions service for Oak Containers.
-pub struct OakFunctionsContainersService<G: AsyncEncryptionKeyHandle + Send + Sync> {
-    instance: OnceLock<OakFunctionsInstance>,
+pub struct OakFunctionsContainersService<G: AsyncEncryptionKeyHandle + Send + Sync, H: Handler> {
+    instance: OnceLock<OakFunctionsInstance<H>>,
     encryption_key_handle: Arc<G>,
     observer: Option<Arc<dyn Observer + Send + Sync>>,
 }
 
-impl<G: AsyncEncryptionKeyHandle + Send + Sync> OakFunctionsContainersService<G> {
+impl<G: AsyncEncryptionKeyHandle + Send + Sync, H: Handler> OakFunctionsContainersService<G, H> {
     pub fn new(
         encryption_key_handle: Arc<G>,
         observer: Option<Arc<dyn Observer + Send + Sync>>,
@@ -80,7 +85,7 @@ impl<G: AsyncEncryptionKeyHandle + Send + Sync> OakFunctionsContainersService<G>
         }
     }
 
-    fn get_instance(&self) -> tonic::Result<&OakFunctionsInstance> {
+    fn get_instance(&self) -> tonic::Result<&OakFunctionsInstance<H>> {
         self.instance
             .get()
             .ok_or_else(|| tonic::Status::failed_precondition("not initialized"))
@@ -111,8 +116,11 @@ fn map_status(status: micro_rpc::Status) -> tonic::Status {
 }
 
 #[tonic::async_trait]
-impl<G: AsyncEncryptionKeyHandle + Send + Sync + 'static> OakFunctions
-    for OakFunctionsContainersService<G>
+impl<G, H> OakFunctions for OakFunctionsContainersService<G, H>
+where
+    G: AsyncEncryptionKeyHandle + Send + Sync + 'static,
+    H: Handler + 'static,
+    H::HandlerType: Send + Sync,
 {
     async fn initialize(
         &self,
@@ -380,11 +388,16 @@ const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 const MAX_DECODING_MESSAGE_SIZE: usize = 1024 * 1024 * 1024;
 
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-pub async fn serve<G: AsyncEncryptionKeyHandle + Send + Sync + 'static>(
+pub async fn serve<G, H: Handler>(
     listener: TcpListener,
     encryption_key_handle: Arc<G>,
     meter: Meter,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<()>
+where
+    G: AsyncEncryptionKeyHandle + Send + Sync + 'static,
+    H: Handler + 'static,
+    H::HandlerType: Send + Sync,
+{
     tonic::transport::Server::builder()
         .layer(
             tower_http::trace::TraceLayer::new_for_grpc()
@@ -404,7 +417,7 @@ pub async fn serve<G: AsyncEncryptionKeyHandle + Send + Sync + 'static>(
         .layer(tower::load_shed::LoadShedLayer::new())
         .layer(MonitoringLayer::new(meter.clone()))
         .add_service(
-            OakFunctionsServer::new(OakFunctionsContainersService::new(
+            OakFunctionsServer::new(OakFunctionsContainersService::<_, H>::new(
                 encryption_key_handle,
                 Some(Arc::new(OtelObserver::new(meter))),
             ))

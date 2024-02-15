@@ -32,46 +32,16 @@ use crate::{
 
 type Aead = AesGcm256;
 type Kdf = HkdfSha256;
-type Kem = X25519HkdfSha256;
+pub type Kem = X25519HkdfSha256;
 pub type PrivateKey = <Kem as KemTrait>::PrivateKey;
 pub type PublicKey = <Kem as KemTrait>::PublicKey;
 pub(crate) type EncappedKey = <Kem as KemTrait>::EncappedKey;
 
-pub fn gen_kem_keypair() -> (PrivateKey, PublicKey) {
+/// Info string used by Hybrid Public Key Encryption;
+pub(crate) const OAK_HPKE_INFO: &[u8] = b"Oak Hybrid Public Key Encryption v1";
+
+pub(crate) fn generate_kem_key_pair() -> (PrivateKey, PublicKey) {
     Kem::gen_keypair(&mut OsRng)
-}
-
-pub struct KeyPair {
-    pub(crate) private_key: PrivateKey,
-    pub(crate) public_key: PublicKey,
-}
-
-impl KeyPair {
-    /// Randomly generates a key pair.
-    pub fn generate() -> Self {
-        let (private_key, public_key) = gen_kem_keypair();
-        Self {
-            private_key,
-            public_key,
-        }
-    }
-
-    pub fn new(private_key: PrivateKey, public_key: PublicKey) -> Self {
-        Self {
-            private_key,
-            public_key,
-        }
-    }
-
-    pub fn get_private_key(&self) -> Vec<u8> {
-        self.private_key.to_bytes().to_vec()
-    }
-
-    /// Returns a NIST P-256 SEC1 encoded point public key.
-    /// <https://secg.org/sec1-v2.pdf>
-    pub fn get_serialized_public_key(&self) -> Vec<u8> {
-        self.public_key.to_bytes().to_vec()
-    }
 }
 
 /// Sets up an HPKE sender by generating an ephemeral keypair (and serializing the corresponding
@@ -122,7 +92,7 @@ pub(crate) fn setup_base_sender(
 /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-to-a-public-key>
 pub(crate) fn setup_base_recipient(
     serialized_encapsulated_public_key: &[u8],
-    recipient_key_pair: &KeyPair,
+    recipient_private_key: &PrivateKey,
     info: &[u8],
 ) -> anyhow::Result<RecipientContext> {
     let encapsulated_public_key = EncappedKey::from_bytes(serialized_encapsulated_public_key)
@@ -135,7 +105,7 @@ pub(crate) fn setup_base_recipient(
 
     let recipient_context = hpke::setup_receiver::<Aead, Kdf, Kem>(
         &OpModeR::Base,
-        &recipient_key_pair.private_key,
+        recipient_private_key,
         &encapsulated_public_key,
         info,
     )
@@ -173,7 +143,7 @@ impl SenderContext {
     /// Encrypts request message with associated data using AEAD.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
     pub(crate) fn seal(
-        &mut self,
+        &self,
         nonce: &AeadNonce,
         plaintext: &[u8],
         associated_data: &[u8],
@@ -188,7 +158,7 @@ impl SenderContext {
     /// communication.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
     pub(crate) fn open(
-        &mut self,
+        &self,
         nonce: &AeadNonce,
         ciphertext: &[u8],
         associated_data: &[u8],
@@ -209,7 +179,7 @@ impl RecipientContext {
     /// Decrypts request message and validates associated data using AEAD.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-encryption-and-decryption>
     pub(crate) fn open(
-        &mut self,
+        &self,
         nonce: &AeadNonce,
         ciphertext: &[u8],
         associated_data: &[u8],
@@ -224,7 +194,7 @@ impl RecipientContext {
     /// communication.
     /// <https://www.rfc-editor.org/rfc/rfc9180.html#name-bidirectional-encryption>
     pub(crate) fn seal(
-        &mut self,
+        &self,
         nonce: &AeadNonce,
         plaintext: &[u8],
         associated_data: &[u8],

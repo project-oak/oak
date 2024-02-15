@@ -26,9 +26,9 @@ proto_library(
     name = "key_provisioning_proto",
     srcs = ["key_provisioning.proto"],
     deps = [
-        "//oak_crypto/proto/v1:crypto_proto",
         "//proto/attestation:endorsement_proto",
         "//proto/attestation:evidence_proto",
+        "//proto/crypto:crypto_proto",
     ],
 )
 

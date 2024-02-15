@@ -35,7 +35,7 @@ java_library(
 )
 
 # Clients are responsible for bundling in "libhpke-jni.so".
-java_library(
+android_library(
     name = "client_android",
     srcs = [
         "OakClient.java",

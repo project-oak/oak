@@ -16,7 +16,7 @@
 use anyhow::Context;
 use async_trait::async_trait;
 use oak_crypto::{
-    encryptor::AsyncEncryptionKeyHandle, hpke::RecipientContext,
+    encryption_key::AsyncEncryptionKeyHandle, hpke::RecipientContext,
     proto::oak::crypto::v1::SessionKeys,
 };
 use tonic::transport::{Endpoint, Uri};

@@ -64,22 +64,22 @@ mod virtio_console;
 extern crate alloc;
 
 use alloc::{alloc::Allocator, boxed::Box};
-use core::{marker::Sync, panic::PanicInfo, str::FromStr};
+use core::{marker::Sync, option::Option, panic::PanicInfo, str::FromStr};
 
-use hkdf::Hkdf;
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
-    frame_allocator::PhysicalMemoryAllocator, page_tables::RootPageTable,
+    frame_allocator::PhysicalMemoryAllocator, page_tables::CurrentRootPageTable,
     virtual_address_allocator::VirtualAddressAllocator,
 };
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::BootParams;
 use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
-use sha2::Sha256;
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
+#[cfg(not(feature = "initrd"))]
+use x86_64::structures::paging::{PageSize, Size4KiB};
 use x86_64::{
     structures::paging::{Page, Size2MiB},
     PhysAddr, VirtAddr,
@@ -93,9 +93,6 @@ use crate::{
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 
-/// A derived sealing key.
-type DerivedKey = [u8; 32];
-
 /// Allocator for physical memory frames in the system.
 /// We reserve enough room to handle up to 512 GiB of memory, for now.
 pub static FRAME_ALLOCATOR: Spinlock<PhysicalMemoryAllocator<4096>> =
@@ -105,7 +102,8 @@ pub static FRAME_ALLOCATOR: Spinlock<PhysicalMemoryAllocator<4096>> =
 pub static GUEST_HOST_HEAP: OnceCell<LockedHeap> = OnceCell::new();
 
 /// Active page tables.
-pub static PAGE_TABLES: OnceCell<RootPageTable> = OnceCell::new();
+pub static PAGE_TABLES: Spinlock<CurrentRootPageTable> =
+    Spinlock::new(CurrentRootPageTable::empty());
 
 /// Allocator for long-lived pages in the kernel.
 pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
@@ -161,15 +159,34 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // Safety: in the linker script we specify that the ELF header should be placed at 0x200000.
     let program_headers = unsafe { elf::get_phdrs(VirtAddr::new(0x20_0000)) };
 
+    #[cfg(feature = "initrd")]
+    let ramdisk = info.ramdisk().expect("expected to find a ramdisk");
+
     // Physical frame allocator
-    mm::init(info.e820_table(), program_headers);
+    mm::init(
+        info.e820_table(),
+        program_headers,
+        #[cfg(feature = "initrd")]
+        &ramdisk,
+    );
 
     // Note: `info` will not be valid after calling this!
-    if PAGE_TABLES
-        .set(mm::init_paging(program_headers).unwrap())
-        .is_err()
     {
-        panic!("couldn't initialize page tables");
+        let (pml4_frame, encrypted) = mm::initial_pml4(program_headers).unwrap();
+        // Prevent execution code in data only memory pages.
+        // Safety: executeable memory is assumed to be appropiately marked in the page table.
+        unsafe {
+            x86_64::registers::model_specific::Efer::update(|flags| {
+                flags.insert(x86_64::registers::model_specific::EferFlags::NO_EXECUTE_ENABLE)
+            });
+        };
+        // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to
+        // load the new page tables.
+        let prev_page_table = unsafe { PAGE_TABLES.lock().replace(pml4_frame, encrypted) };
+        assert!(
+            prev_page_table.is_none(),
+            "there should be no previous page table during initialization"
+        );
     };
 
     // Re-map boot params to the new virtual address.
@@ -178,6 +195,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let info = unsafe {
         #[allow(clippy::unnecessary_cast)]
         (PAGE_TABLES
+            .lock()
             .get()
             .unwrap()
             .translate_physical(PhysAddr::new(info as *const _ as u64))
@@ -188,7 +206,8 @@ pub fn start_kernel(info: &BootParams) -> ! {
     };
 
     if sev_es_enabled {
-        let mapper = PAGE_TABLES.get().unwrap();
+        let pt_guard = PAGE_TABLES.lock();
+        let mapper = pt_guard.get().unwrap();
         // Now that the page tables have been updated, we have to re-share the GHCB with the
         // hypervisor.
         ghcb::reshare_ghcb(mapper);
@@ -208,7 +227,8 @@ pub fn start_kernel(info: &BootParams) -> ! {
     let guest_host_frames = FRAME_ALLOCATOR.lock().allocate_contiguous(2).unwrap();
 
     let guest_host_pages = {
-        let pt = PAGE_TABLES.get().unwrap();
+        let pt_guard = PAGE_TABLES.lock();
+        let pt = pt_guard.get().unwrap();
         Page::range(
             pt.translate_physical_frame(guest_host_frames.start)
                 .unwrap(),
@@ -231,8 +251,10 @@ pub fn start_kernel(info: &BootParams) -> ! {
     // initialization code and thus there can be no concurrent access.
     if GUEST_HOST_HEAP
         .set(
-            unsafe { memory::init_guest_host_heap(guest_host_pages, PAGE_TABLES.get().unwrap()) }
-                .unwrap(),
+            unsafe {
+                memory::init_guest_host_heap(guest_host_pages, PAGE_TABLES.lock().get().unwrap())
+            }
+            .unwrap(),
         )
         .is_err()
     {
@@ -246,46 +268,54 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     let stage0_dice_data = {
         let dice_memory_slice = {
-            let e820_dice_data_entry = info
-                .e820_table()
-                .iter()
-                .find(|e| e.entry_type() == Some(oak_linux_boot_params::E820EntryType::DiceData))
-                .expect("failed to find dice data");
-
-            let phys_start_addr = PhysAddr::new_truncate(
-                e820_dice_data_entry
-                    .addr()
-                    .try_into()
-                    .expect("couldn't convert usize to u64"),
-            );
-
-            // Validate that the dice data mem address matches the kernel args if present
-            if let Some(arg) = kernel_args.get(&alloc::format!(
-                "--{}",
-                oak_dice::evidence::DICE_DATA_CMDLINE_PARAM
-            )) {
+            let dice_data_phys_addr = {
+                let arg = kernel_args
+                    .get(&alloc::format!(
+                        "--{}",
+                        oak_dice::evidence::DICE_DATA_CMDLINE_PARAM
+                    ))
+                    .expect("no dice data address supplied in the kernel args");
                 let parsed_arg = u64::from_str_radix(
                     arg.strip_prefix("0x")
                         .expect("failed stripping the hex prefix"),
                     16,
                 )
                 .expect("couldn't parse address as a hex number");
-                if parsed_arg != phys_start_addr.as_u64() {
-                    panic!("inconsistent dice data addresses supplied in the E820 table and kernel args")
-                }
-            }
+                PhysAddr::new(parsed_arg)
+            };
 
-            let virt_start_addr = {
-                let pt = PAGE_TABLES.get().expect("failed to get page tables");
-                pt.translate_physical(phys_start_addr)
+            // Ensure that the dice data is stored within reserved memory.
+            assert!(info.e820_table().iter().any(|entry| {
+                let dice_data_fully_contained_in_segment = {
+                    let range = PhysAddr::new(entry.addr().try_into().unwrap())
+                        ..=PhysAddr::new((entry.addr() + entry.size()).try_into().unwrap());
+                    range.contains(&dice_data_phys_addr)
+                        && range.contains(&PhysAddr::new(
+                            dice_data_phys_addr.as_u64()
+                                + u64::try_from(core::mem::size_of::<
+                                    oak_dice::evidence::Stage0DiceData,
+                                >())
+                                .unwrap(),
+                        ))
+                };
+
+                entry.entry_type().expect("failed to get type")
+                    == oak_linux_boot_params::E820EntryType::RESERVED
+                    && dice_data_fully_contained_in_segment
+            }));
+
+            let dice_data_virt_addr = {
+                let pt_guard = PAGE_TABLES.lock();
+                let pt = pt_guard.get().expect("failed to get page tables");
+                pt.translate_physical(dice_data_phys_addr)
                     .expect("failed to translate physical dice address")
             };
 
             // Safety: the E820 table indicated that this is the corrct memory segment.
             unsafe {
                 core::slice::from_raw_parts_mut::<u8>(
-                    virt_start_addr.as_mut_ptr(),
-                    e820_dice_data_entry.size(),
+                    dice_data_virt_addr.as_mut_ptr(),
+                    core::mem::size_of::<oak_dice::evidence::Stage0DiceData>(),
                 )
             }
         };
@@ -325,6 +355,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
         }
     };
 
+    #[cfg(not(feature = "initrd"))]
     let mut channel = get_channel(
         &kernel_args,
         GUEST_HOST_HEAP.get().unwrap(),
@@ -332,25 +363,95 @@ pub fn start_kernel(info: &BootParams) -> ! {
         sev_status,
     );
 
-    // We need to load the application binary before we hand the channel over to the syscalls, which
-    // expose it to the user space.
-    info!("Loading application binary...");
-    let application = payload::Application::load_raw(&mut *channel)
-        .expect("failed to load application binary from channel");
-
-    // Mix in the application digest when deriving CDI for Layer 2.
-    let hkdf = Hkdf::<Sha256>::new(
-        Some(application.digest()),
-        &stage0_dice_data.layer_1_cdi.cdi[..],
+    #[cfg(feature = "initrd")]
+    let channel = get_channel(
+        &kernel_args,
+        GUEST_HOST_HEAP.get().unwrap(),
+        acpi.as_mut(),
+        sev_status,
     );
-    let mut derived_key = DerivedKey::default();
-    hkdf.expand(b"CDI_Seal", &mut derived_key)
-        .expect("invalid length for derived key");
 
-    let restricted_kernel_dice_data =
-        oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, application.digest());
+    #[cfg(feature = "initrd")]
+    let application_bytes: Box<[u8]> = {
+        let virt_addr = {
+            let pt_guard = PAGE_TABLES.lock();
+            let pt = pt_guard.get().expect("failed to get page tables");
+            pt.translate_physical(PhysAddr::new(ramdisk.addr.into()))
+                .expect("failed to translate physical dice address")
+        };
 
-    syscall::enable_syscalls(channel, restricted_kernel_dice_data, derived_key);
+        // Safety:
+        // We rely on the firmware to ensure this range is valid and backed by physical
+        // memory.
+        // We rely on the wrapper that loaded the kernel ELF file into memory, to ensure
+        // it didn't over overwrite the ramdisk range.
+        // We excluded this range from the frame allocator so it cannot be used by the
+        // heap allocator.
+        let slice: &[u8] = unsafe {
+            core::slice::from_raw_parts::<u8>(
+                virt_addr.as_mut_ptr(),
+                info.hdr.ramdisk_size.try_into().unwrap(),
+            )
+        };
+
+        info!("Copying application from ramdisk...");
+        let owned_slice = Box::<[u8]>::from(slice);
+        // Once the application has been copied onto the heap, the original ramdisk
+        // location is marked as available.
+        let ramdisk_range = crate::mm::ramdisk_range(&ramdisk);
+        info!(
+            "marking [{:#018x}..{:#018x}) as available",
+            ramdisk_range.start.start_address().as_u64(),
+            ramdisk_range.end.start_address().as_u64()
+        );
+        FRAME_ALLOCATOR.lock().mark_valid(ramdisk_range, true);
+
+        owned_slice
+    };
+
+    #[cfg(not(feature = "initrd"))]
+    let application_bytes: Box<[u8]> = {
+        // We need to load the application binary before we hand the channel over to the
+        // syscalls, which expose it to the user space.
+        info!("Loading application binary...");
+        oak_channel::basic_framed::load_raw::<dyn Channel, { Size4KiB::SIZE as usize }>(
+            &mut *channel,
+        )
+        .expect("failed to load application binary from channel")
+        .into_boxed_slice()
+    };
+
+    log::info!("Binary loaded, size: {}", application_bytes.len());
+
+    #[cfg(not(feature = "initrd"))]
+    let (derived_key, restricted_kernel_dice_data) = {
+        let app_digest =
+            oak_restricted_kernel_dice::measure_app_digest_sha2_256(&application_bytes);
+        log::info!(
+            "Application digest (sha2-256): {}",
+            app_digest.map(|x| alloc::format!("{:02x}", x)).join("")
+        );
+
+        let derived_key =
+            oak_restricted_kernel_dice::generate_derived_key(&stage0_dice_data, &app_digest);
+        let restricted_kernel_dice_data =
+            oak_restricted_kernel_dice::generate_dice_data(stage0_dice_data, &app_digest);
+
+        (derived_key, restricted_kernel_dice_data)
+    };
+
+    let application =
+        payload::Application::new(application_bytes).expect("failed to parse application");
+
+    syscall::enable_syscalls(
+        channel,
+        #[cfg(feature = "initrd")]
+        syscall::dice_data::DiceData::Layer0(Box::new(stage0_dice_data)),
+        #[cfg(not(feature = "initrd"))]
+        syscall::dice_data::DiceData::Layer1(Box::new(restricted_kernel_dice_data)),
+        #[cfg(not(feature = "initrd"))]
+        derived_key,
+    );
 
     // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
     // under the kernel's control.

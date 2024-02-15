@@ -15,9 +15,13 @@
 
 use std::sync::Arc;
 
-use anyhow::{anyhow, Context};
-use hpke::{kem::X25519HkdfSha256, Deserializable, Kem};
-use oak_crypto::encryptor::{EncryptionKeyHandle, EncryptionKeyProvider, ServerEncryptor};
+use anyhow::Context;
+use oak_crypto::{
+    encryption_key::{generate_encryption_key_pair, EncryptionKey, EncryptionKeyHandle},
+    encryptor::ServerEncryptor,
+    proto::oak::crypto::v1::EncryptedRequest,
+};
+use oak_dice::cert::generate_ecdsa_key_pair;
 use tonic::{Request, Response};
 
 use crate::proto::oak::{
@@ -25,105 +29,97 @@ use crate::proto::oak::{
         orchestrator_crypto_server::OrchestratorCrypto, DeriveSessionKeysRequest,
         DeriveSessionKeysResponse, KeyOrigin, SignRequest, SignResponse,
     },
-    key_provisioning::v1::GroupKeys,
+    key_provisioning::v1::GroupKeys as GroupKeysProto,
 };
 
-/// An implementation of the Key Store without group keys.
-pub struct InstanceKeyStore {
-    // TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
-    instance_encryption_key: Arc<EncryptionKeyProvider>,
-    instance_signing_key: p256::ecdsa::SigningKey,
+pub fn generate_instance_keys() -> (InstanceKeys, InstancePublicKeys) {
+    let (encryption_key, encryption_public_key) = generate_encryption_key_pair();
+    let (signing_key, signing_public_key) = generate_ecdsa_key_pair();
+    (
+        InstanceKeys {
+            encryption_key,
+            signing_key,
+        },
+        InstancePublicKeys {
+            encryption_public_key,
+            signing_public_key,
+        },
+    )
 }
 
-impl InstanceKeyStore {
-    pub fn new(instance_signing_key: p256::ecdsa::SigningKey) -> Self {
-        Self {
-            instance_encryption_key: Arc::new(EncryptionKeyProvider::generate()),
-            instance_signing_key,
-        }
+pub struct InstanceKeys {
+    encryption_key: EncryptionKey,
+    signing_key: p256::ecdsa::SigningKey,
+}
+
+pub struct InstancePublicKeys {
+    pub encryption_public_key: Vec<u8>,
+    pub signing_public_key: p256::ecdsa::VerifyingKey,
+}
+
+impl InstanceKeys {
+    pub fn generate_group_keys(&self) -> (GroupKeys, GroupPublicKeys) {
+        let (group_encryption_key, group_encryption_public_key) = generate_encryption_key_pair();
+        (
+            GroupKeys {
+                encryption_key: group_encryption_key,
+            },
+            GroupPublicKeys {
+                encryption_public_key: group_encryption_public_key,
+            },
+        )
     }
 
-    pub fn instance_encryption_key(&self) -> Arc<EncryptionKeyProvider> {
-        // TODO(#4442): Currently we have to give the encryption key provider to the `ipc_server`.
-        // Once we move all enclave apps to the new crypto service and update the `Attester` to not
-        // have the private key - this function should be removed.
-        self.instance_encryption_key.clone()
-    }
-
-    pub fn instance_encryption_public_key(&self) -> Vec<u8> {
-        self.instance_encryption_key.get_serialized_public_key()
-    }
-
-    pub fn generate_group_keys(self) -> KeyStore {
-        KeyStore {
-            instance_encryption_key: self.instance_encryption_key,
-            group_encryption_key: EncryptionKeyProvider::generate(),
-            instance_signing_key: self.instance_signing_key,
-        }
-    }
-
-    pub fn provide_group_keys(self, group_keys: GroupKeys) -> anyhow::Result<KeyStore> {
+    pub fn provide_group_keys(&self, group_keys: GroupKeysProto) -> anyhow::Result<GroupKeys> {
         // Create server encryptor for decrypting the group keys received from the leader enclave.
         let encrypted_encryption_private_key = group_keys
             .encrypted_encryption_private_key
             .context("encrypted encryption key wasn't provided")?;
-        let encapsulated_public_key = encrypted_encryption_private_key
-            .serialized_encapsulated_public_key
-            .as_ref()
-            .context("encapsulated public key wasn't provided")?;
-        let mut server_encryptor = ServerEncryptor::create(
-            encapsulated_public_key,
-            self.instance_encryption_key.clone(),
-        )
-        .context("couldn't create server encryptor")?;
 
         // Decrypt group keys.
-        let (decrypted_encryption_private_key, _) = server_encryptor
-            .decrypt(&encrypted_encryption_private_key)
-            .context("couldn't decrypt the encryption private key")?;
+        let (_, mut decrypted_encryption_private_key, _) =
+            ServerEncryptor::decrypt(&encrypted_encryption_private_key, &self.encryption_key)
+                .context("couldn't decrypt the encryption private key")?;
 
-        // Parse private key and derive public key.
-        // TODO(#4513): We shouldn't store the public key, only the private key.
-        let encryption_private_key =
-            <X25519HkdfSha256 as Kem>::PrivateKey::from_bytes(&decrypted_encryption_private_key)
-                .map_err(|err| anyhow!("couldn't deserialize private key: {:?}", err))?;
-        let encryption_public_key = X25519HkdfSha256::sk_to_pk(&encryption_private_key);
         let group_encryption_key =
-            EncryptionKeyProvider::new(encryption_private_key, encryption_public_key);
+            EncryptionKey::deserialize(&mut decrypted_encryption_private_key)
+                .context("couldn't deserialize private key")?;
 
-        // Add group keys to the Orchestrator key store.
-        Ok(KeyStore {
-            instance_encryption_key: self.instance_encryption_key,
-            instance_signing_key: self.instance_signing_key,
-            group_encryption_key,
+        Ok(GroupKeys {
+            encryption_key: group_encryption_key,
         })
     }
 }
 
-/// An implementation of the Key Store with initialized group keys.
-pub struct KeyStore {
-    // TODO(#4507): Remove `Arc` once the key is no longer required by the `Attester`.
-    instance_encryption_key: Arc<EncryptionKeyProvider>,
-    group_encryption_key: EncryptionKeyProvider,
-    instance_signing_key: p256::ecdsa::SigningKey,
+pub struct GroupKeys {
+    encryption_key: EncryptionKey,
 }
 
-impl KeyStore {
-    pub fn instance_encryption_key(&self) -> Arc<EncryptionKeyProvider> {
-        // TODO(#4442): Currently we have to give the encryption key provider to the `ipc_server`.
-        // Once we move all enclave apps to the new crypto service and update the `Attester` to not
-        // have the private key - this function should be removed.
-        self.instance_encryption_key.clone()
+pub struct GroupPublicKeys {
+    pub encryption_public_key: Vec<u8>,
+}
+
+impl GroupKeys {
+    /// Returns group encryption private key which was encrypted with the `peer_public_key`.
+    pub fn encrypted_group_encryption_key(
+        &self,
+        peer_public_key: &[u8],
+    ) -> anyhow::Result<EncryptedRequest> {
+        self.encryption_key.encrypted_private_key(peer_public_key)
     }
 }
 
 pub(crate) struct CryptoService {
-    key_store: Arc<KeyStore>,
+    instance_keys: InstanceKeys,
+    group_keys: Arc<GroupKeys>,
 }
 
 impl CryptoService {
-    pub(crate) fn new(key_store: Arc<KeyStore>) -> Self {
-        Self { key_store }
+    pub(crate) fn new(instance_keys: InstanceKeys, group_keys: Arc<GroupKeys>) -> Self {
+        Self {
+            instance_keys,
+            group_keys,
+        }
     }
 
     fn signing_key(
@@ -134,7 +130,7 @@ impl CryptoService {
             KeyOrigin::Unspecified => {
                 Err(tonic::Status::invalid_argument("unspecified key origin"))?
             }
-            KeyOrigin::Instance => Ok(&self.key_store.instance_signing_key),
+            KeyOrigin::Instance => Ok(&self.instance_keys.signing_key),
             KeyOrigin::Group =>
             // TODO(#4442): Implement with key provisioning.
             {
@@ -158,8 +154,8 @@ impl OrchestratorCrypto for CryptoService {
             KeyOrigin::Unspecified => {
                 Err(tonic::Status::invalid_argument("unspecified key origin"))?
             }
-            KeyOrigin::Instance => &self.key_store.instance_encryption_key,
-            KeyOrigin::Group => &self.key_store.group_encryption_key,
+            KeyOrigin::Instance => &self.instance_keys.encryption_key,
+            KeyOrigin::Group => &self.group_keys.encryption_key,
         };
 
         let session_keys = encryption_key

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use alloc::{boxed::Box, format, vec};
+use alloc::boxed::Box;
 use core::arch::asm;
 
 use anyhow::{anyhow, Result};
@@ -22,27 +22,14 @@ use goblin::{
     elf::{Elf, ProgramHeader, ProgramHeaders},
     elf64::program_header::{PF_W, PF_X, PT_LOAD},
 };
-use oak_channel::Channel;
 use oak_restricted_kernel_interface::syscalls::{MmapFlags, MmapProtection};
 use self_cell::self_cell;
-use sha2::{Digest, Sha256};
 use x86_64::{
-    structures::paging::{PageSize, Size2MiB, Size4KiB},
+    structures::paging::{PageSize, Size2MiB},
     VirtAddr,
 };
 
 use crate::syscall::mmap::mmap;
-
-/// Reads a chunk of data and acknowledges the transmission by writing back the number of bytes
-/// read.
-fn read_chunk<C: Channel + ?Sized>(channel: &mut C, chunk: &mut [u8]) -> Result<()> {
-    let len: u32 = chunk
-        .len()
-        .try_into()
-        .map_err(|_| anyhow::anyhow!("chunk too big"))?;
-    channel.read_exact(chunk)?;
-    channel.write_all(&len.to_le_bytes())
-}
 
 self_cell!(
     /// Self-referential struct so that we don't have to parse the ELF file multiple times.
@@ -57,54 +44,18 @@ self_cell!(
 /// Representation of an Restricted Application that the Restricted Kernel can run.
 pub struct Application {
     binary: Binary,
-    digest: [u8; 32],
 }
 
 impl Application {
-    /// Loads a Restricted Application over the given channel using a basic framed format.
-    ///
-    /// This is intended for use after the kernel has started up to load the Restricted Application,
-    /// before we start the application and hand off the channel to it.
-    ///
-    /// The protocol to load the application is very simple:
-    /// 1. loader sends the size of the application binary, as u32
-    /// 2. loader sends max 4 KiB of data and waits for the kernel to acknowledge
-    /// 3. kernel reads up to 4 KiB of data and acks by responding with the amount of data read
-    /// 4. repeat (2) and (3) until all the data has been transmitted
-    pub fn load_raw<C: Channel + ?Sized>(channel: &mut C) -> Result<Self> {
-        let payload_len = {
-            let mut buf: [u8; 4] = Default::default();
-            channel.read_exact(&mut buf)?;
-            u32::from_le_bytes(buf)
-        };
-        let mut payload = vec![0; payload_len as usize];
-        let mut chunks_mut = payload.array_chunks_mut::<{ Size4KiB::SIZE as usize }>();
-
-        for chunk in chunks_mut.by_ref() {
-            read_chunk(channel, chunk)?;
-        }
-        read_chunk(channel, chunks_mut.into_remainder())?;
-        log::info!("Binary loaded, size: {}", payload.len());
-
-        Self::new(payload.into_boxed_slice())
-    }
-
     /// Attempts to parse the provided binary blob as an ELF file representing an Restricted
     /// Application.
     pub fn new(blob: Box<[u8]>) -> Result<Self> {
-        let digest = Sha256::digest(&blob[..]).into();
-
         Ok(Application {
             binary: Binary::try_new(blob, |boxed| {
                 goblin::elf::Elf::parse(boxed)
                     .map_err(|err| anyhow!("failed to parse ELF file: {}", err))
             })?,
-            digest,
         })
-    }
-
-    pub fn digest(&self) -> &[u8] {
-        &self.digest[..]
     }
 
     fn program_headers(&self) -> &ProgramHeaders {
@@ -190,10 +141,7 @@ impl Application {
         )
         .expect("failed to allocate memory for user stack");
 
-        log::info!(
-            "Running application; binary hash: {}",
-            self.digest.map(|x| format!("{:02x}", x)).join("")
-        );
+        log::info!("Running application");
 
         // Enter Ring 3 and jump to user code.
         // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the user to

@@ -62,23 +62,27 @@ fn process_entry_fn(entry_fn: ItemFn) -> TokenStream {
     let generated = quote! {
         #entry_fn
 
-        static LOGGER: oak_restricted_kernel_sdk::StderrLogger = oak_restricted_kernel_sdk::StderrLogger {};
+        #[global_allocator]
+        static ALLOCATOR: oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap = oak_restricted_kernel_sdk::utils::heap::LockedGrowableHeap::empty();
+
+        static LOGGER: oak_restricted_kernel_sdk::utils::StderrLogger = oak_restricted_kernel_sdk::utils::StderrLogger {};
 
         #[no_mangle]
         fn _start() -> ! {
-            oak_restricted_kernel_sdk::init(log::LevelFilter::Debug);
-            log::info!("In main!");
+            oak_restricted_kernel_sdk::utils::log::set_logger(&LOGGER).expect("failed to set logger");
+            oak_restricted_kernel_sdk::utils::log::set_max_level(oak_restricted_kernel_sdk::utils::log::LevelFilter::Debug);
+            oak_restricted_kernel_sdk::utils::log::info!("In main!");
             #entry_fn_name();
         }
 
         #[alloc_error_handler]
         fn out_of_memory(layout: ::core::alloc::Layout) -> ! {
-            oak_restricted_kernel_sdk::alloc_error_handler(layout);
+            oak_restricted_kernel_sdk::utils::alloc_error_handler(layout);
         }
 
         #[panic_handler]
         fn panic(info: &core::panic::PanicInfo) -> ! {
-            oak_restricted_kernel_sdk::panic_handler(info);
+            oak_restricted_kernel_sdk::utils::panic_handler(info);
         }
     };
     TokenStream::from(generated)

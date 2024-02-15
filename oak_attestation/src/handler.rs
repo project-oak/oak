@@ -19,13 +19,11 @@ use core::future::Future;
 
 use anyhow::Context;
 use oak_crypto::{
-    encryptor::{
-        AsyncEncryptionKeyHandle, AsyncServerEncryptor, EncryptionKeyHandle, ServerEncryptor,
-    },
+    encryption_key::{AsyncEncryptionKeyHandle, EncryptionKeyHandle},
+    encryptor::ServerEncryptor,
     proto::oak::crypto::v1::{EncryptedRequest, EncryptedResponse},
+    EMPTY_ASSOCIATED_DATA,
 };
-
-const EMPTY_ASSOCIATED_DATA: &[u8] = b"";
 
 /// Information about a public key.
 #[derive(Debug, Clone)]
@@ -56,21 +54,10 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
 
 impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
     pub fn invoke(self, encrypted_request: &EncryptedRequest) -> anyhow::Result<EncryptedResponse> {
-        // Initialize server encryptor.
-        let serialized_encapsulated_public_key = encrypted_request
-            .serialized_encapsulated_public_key
-            .as_ref()
-            .context("initial request message doesn't contain encapsulated public key")?;
-        let mut server_encryptor = ServerEncryptor::create(
-            serialized_encapsulated_public_key,
-            self.encryption_key_handle.clone(),
-        )
-        .context("couldn't create server encryptor")?;
-
         // Decrypt request.
-        let (request, _) = server_encryptor
-            .decrypt(encrypted_request)
-            .context("couldn't decrypt request")?;
+        let (server_encryptor, request, _) =
+            ServerEncryptor::decrypt(encrypted_request, self.encryption_key_handle.as_ref())
+                .context("couldn't create server encryptor")?;
 
         // Handle request.
         let response = (self.request_handler)(request);
@@ -115,14 +102,11 @@ where
         self,
         encrypted_request: &EncryptedRequest,
     ) -> anyhow::Result<EncryptedResponse> {
-        // Initialize server encryptor.
-        let mut server_encryptor = AsyncServerEncryptor::new(self.encryption_key_handle.as_ref());
-
         // Decrypt request.
-        let (request, _associated_data) = server_encryptor
-            .decrypt(encrypted_request)
-            .await
-            .context("couldn't decrypt request")?;
+        let (server_encryptor, request, _associated_data) =
+            ServerEncryptor::decrypt_async(encrypted_request, self.encryption_key_handle.as_ref())
+                .await
+                .context("couldn't decrypt request")?;
 
         // Handle request.
         let response = (self.request_handler)(request).await;

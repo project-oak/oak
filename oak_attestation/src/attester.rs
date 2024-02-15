@@ -17,7 +17,6 @@
 use alloc::{sync::Arc, vec::Vec};
 
 use anyhow::Context;
-use oak_crypto::encryptor::EncryptionKeyProvider;
 
 use crate::proto::oak::session::v1::AttestationEvidence;
 
@@ -47,31 +46,30 @@ impl AttestationReportGenerator for EmptyAttestationReportGenerator {
 /// <https://www.rfc-editor.org/rfc/rfc9334.html#name-attester>
 pub struct Attester {
     attestation_report_generator: Arc<dyn AttestationReportGenerator>,
-    encryption_key_provider: Arc<EncryptionKeyProvider>,
+    encryption_public_key: Vec<u8>,
 }
 
 impl Attester {
     pub fn new(
         attestation_report_generator: Arc<dyn AttestationReportGenerator>,
-        encryption_key_provider: Arc<EncryptionKeyProvider>,
+        encryption_public_key: &[u8],
     ) -> Self {
         Self {
             attestation_report_generator,
-            encryption_key_provider,
+            encryption_public_key: encryption_public_key.to_vec(),
         }
     }
 
     /// Generate an attestation evidence containing a remote attestation report and ensuring that
     /// `attested_data` is cryptographically bound to the result (e.g. via a signature).
     pub fn generate_attestation_evidence(&self) -> anyhow::Result<AttestationEvidence> {
-        let encryption_public_key = self.encryption_key_provider.get_serialized_public_key();
         let attestation_report = self
             .attestation_report_generator
-            .generate_attestation_report(&encryption_public_key)
+            .generate_attestation_report(&self.encryption_public_key)
             .context("couldn't generate attestation report")?;
         Ok(AttestationEvidence {
             attestation: attestation_report,
-            encryption_public_key,
+            encryption_public_key: self.encryption_public_key.to_vec(),
             // TODO(#3836): Implement signature generation and add the signing key.
             signing_public_key: Vec::new(),
             // TODO(#3640): Sign application data.

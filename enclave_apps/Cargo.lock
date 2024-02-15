@@ -679,6 +679,7 @@ dependencies = [
  "micro_rpc_build",
  "oak_crypto",
  "oak_dice",
+ "oak_proto_rust",
  "p256",
  "prost",
  "rand_core",
@@ -693,8 +694,6 @@ dependencies = [
  "anyhow",
  "bitflags 2.4.0",
  "bytes",
- "log",
- "micro_rpc",
  "oak_core",
  "static_assertions",
 ]
@@ -719,11 +718,11 @@ dependencies = [
  "hkdf",
  "hpke",
  "micro_rpc_build",
- "oak_dice",
  "p256",
  "prost",
  "rand_core",
  "sha2",
+ "zeroize",
 ]
 
 [[package]]
@@ -750,7 +749,6 @@ version = "0.1.0"
 dependencies = [
  "log",
  "micro_rpc",
- "oak_core",
  "oak_echo_service",
  "oak_restricted_kernel_sdk",
 ]
@@ -801,8 +799,8 @@ version = "0.1.0"
 dependencies = [
  "log",
  "micro_rpc",
- "oak_core",
  "oak_functions_enclave_service",
+ "oak_functions_service",
  "oak_restricted_kernel_sdk",
 ]
 
@@ -844,7 +842,6 @@ dependencies = [
  "log",
  "micro_rpc",
  "micro_rpc_build",
- "oak_attestation",
  "oak_crypto",
  "oak_dice",
  "oak_functions_abi",
@@ -856,11 +853,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_orchestrator"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak_dice",
+ "oak_restricted_kernel_interface",
+ "oak_restricted_kernel_orchestrator",
+ "oak_restricted_kernel_sdk",
+ "zerocopy",
+ "zeroize",
+]
+
+[[package]]
 name = "oak_proto_rust"
 version = "0.0.1"
 dependencies = [
+ "micro_rpc",
+ "micro_rpc_build",
  "prost",
  "prost-build",
+]
+
+[[package]]
+name = "oak_restricted_kernel_dice"
+version = "0.1.0"
+dependencies = [
+ "coset",
+ "hkdf",
+ "oak_crypto",
+ "oak_dice",
+ "p256",
+ "sha2",
 ]
 
 [[package]]
@@ -872,13 +896,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_restricted_kernel_orchestrator"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oak_channel",
+ "oak_dice",
+ "oak_restricted_kernel_dice",
+]
+
+[[package]]
 name = "oak_restricted_kernel_sdk"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "lazy_static",
  "log",
+ "micro_rpc",
  "oak_channel",
+ "oak_core",
  "oak_crypto",
  "oak_dice",
  "oak_enclave_runtime_support",
@@ -894,7 +930,7 @@ name = "oak_restricted_kernel_sdk_proc_macro"
 version = "0.1.0"
 dependencies = [
  "quote",
- "syn 1.0.102",
+ "syn 2.0.32",
 ]
 
 [[package]]
@@ -1221,9 +1257,9 @@ checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 
 [[package]]
 name = "spinning_top"
-version = "0.2.4"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75adad84ee84b521fb2cca2d4fd0f1dab1d8d026bda3c5bea4ca63b5f9f9293c"
+checksum = "d96d2d1d716fb500937168cc09353ffdc7a012be8475ac7308e1bdf0e3923300"
 dependencies = [
  "lock_api",
 ]

@@ -24,8 +24,32 @@
 extern crate alloc;
 
 use coset::{cbor::Value, cwt::ClaimName, CborSerializable};
-use oak_crypto::hpke::Serializable;
+use hkdf::Hkdf;
+use oak_crypto::encryption_key::generate_encryption_key_pair;
 use oak_dice::cert::{ENCLAVE_APPLICATION_LAYER_ID, LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID};
+use sha2::{Digest, Sha256};
+
+/// A derived sealing key.
+pub type DerivedKey = [u8; 32];
+
+// Digest of an application.
+pub type AppDigestSha2_256 = [u8; 32];
+
+pub fn measure_app_digest_sha2_256(app_bytes: &[u8]) -> AppDigestSha2_256 {
+    Sha256::digest(app_bytes).into()
+}
+
+pub fn generate_derived_key(
+    stage0_dice_data: &oak_dice::evidence::Stage0DiceData,
+    app_digest: &AppDigestSha2_256,
+) -> DerivedKey {
+    // Mix in the application digest when deriving CDI for Layer 2.
+    let hkdf = Hkdf::<Sha256>::new(Some(app_digest), &stage0_dice_data.layer_1_cdi.cdi[..]);
+    let mut derived_key = DerivedKey::default();
+    hkdf.expand(b"CDI_Seal", &mut derived_key)
+        .expect("invalid length for derived key");
+    derived_key
+}
 
 fn certificate_to_byte_array(cert: coset::CoseSign1) -> [u8; oak_dice::evidence::CERTIFICATE_SIZE] {
     let vec = cert.to_vec().expect("couldn't serialize certificate");
@@ -37,7 +61,7 @@ fn certificate_to_byte_array(cert: coset::CoseSign1) -> [u8; oak_dice::evidence:
 /// Generates attestation evidence for the 'measurement' of the application.
 pub fn generate_dice_data(
     stage0_dice_data: oak_dice::evidence::Stage0DiceData,
-    app_digest: &[u8],
+    app_digest: &AppDigestSha2_256,
 ) -> oak_dice::evidence::RestrictedKernelDiceData {
     let (application_keys, application_private_keys): (
         oak_dice::evidence::ApplicationKeys,
@@ -82,13 +106,13 @@ pub fn generate_dice_data(
             .expect("couldn't generate signing certificate");
 
         let (application_encryption_private_key, application_encryption_public_key) =
-            oak_crypto::hpke::gen_kem_keypair();
+            generate_encryption_key_pair();
 
         let application_encryption_public_key_certificate =
             oak_dice::cert::generate_kem_certificate(
                 &kernel_signing_key,
                 kernel_cert_issuer,
-                application_encryption_public_key.to_bytes().as_slice(),
+                &application_encryption_public_key,
                 additional_claims,
             )
             .expect("couldn't generate encryption public certificate");
@@ -111,9 +135,11 @@ pub fn generate_dice_data(
             };
 
             let encryption_private_key = {
+                let serialized_application_encryption_private_key =
+                    application_encryption_private_key.serialize();
                 let mut slice = [0; oak_dice::evidence::PRIVATE_KEY_SIZE];
-                slice[..application_encryption_private_key.to_bytes().len()]
-                    .copy_from_slice(&application_encryption_private_key.to_bytes());
+                slice[..serialized_application_encryption_private_key.len()]
+                    .copy_from_slice(&serialized_application_encryption_private_key);
                 slice
             };
 

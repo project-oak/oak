@@ -5,10 +5,13 @@ members = [
   "oak_echo_enclave_app",
   "oak_functions_enclave_app",
   "oak_echo_raw_enclave_app",
+  "oak_orchestrator",
 ]
 
 [workspace.dependencies]
 micro_rpc = { path = "../micro_rpc" }
+oak_channel = { path = "../oak_channel" }
+oak_dice = { path = "../oak_dice" }
 oak_restricted_kernel_sdk = { path = "../oak_restricted_kernel_sdk" }
 oak_restricted_kernel_interface = { path = "../oak_restricted_kernel_interface" }
-oak_core = { path = "../oak_core" }
+zerocopy = "*"

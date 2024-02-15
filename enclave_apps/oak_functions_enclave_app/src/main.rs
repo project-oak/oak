@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,8 +22,13 @@ extern crate alloc;
 
 use alloc::{boxed::Box, sync::Arc};
 
-use oak_core::samplestore::StaticSampleStore;
-use oak_restricted_kernel_sdk::{entrypoint, start_blocking_server, FileDescriptorChannel};
+use oak_functions_service::wasm::WasmHandler;
+use oak_restricted_kernel_sdk::{
+    channel::{start_blocking_server, FileDescriptorChannel},
+    entrypoint,
+    instance_attestation::{InstanceEncryptionKeyHandle, InstanceEvidenceProvider},
+    utils::samplestore::StaticSampleStore,
+};
 
 #[entrypoint]
 fn main() -> ! {
@@ -35,11 +40,10 @@ fn main() -> ! {
     }
     let mut invocation_stats = StaticSampleStore::<1000>::new().unwrap();
 
-    let encryption_key_handle = oak_restricted_kernel_sdk::InstanceEncryptionKeyHandle::create()
-        .expect("couldn't encryption key");
-    let evidencer = oak_restricted_kernel_sdk::InstanceEvidenceProvider::create()
-        .expect("couldn't get evidence");
-    let service = oak_functions_enclave_service::OakFunctionsService::new(
+    let encryption_key_handle =
+        InstanceEncryptionKeyHandle::create().expect("couldn't encryption key");
+    let evidencer = InstanceEvidenceProvider::create().expect("couldn't get evidence");
+    let service = oak_functions_enclave_service::OakFunctionsService::<_, _, WasmHandler>::new(
         evidencer,
         Arc::new(encryption_key_handle),
         None,

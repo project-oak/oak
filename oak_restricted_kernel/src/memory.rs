@@ -77,8 +77,8 @@ impl GrowableHeap {
             .lock()
             .allocate_frame()
             .ok_or("failed to allocate memory for kernel heap")?;
-
-        let mapper = PAGE_TABLES.get().unwrap();
+        let pt_guard = PAGE_TABLES.lock();
+        let mapper = pt_guard.get().unwrap();
 
         // Safety: if the page is already mapped, then we'll get an error and thus we won't
         // overwrite any existing mappings, Otherwise, creating a new mapping is safe as
