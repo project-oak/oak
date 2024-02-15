@@ -21,6 +21,7 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "cc/attestation/cose.h"
 #include "libcppbor/include/cppbor/cppbor.h"
 #include "libcppbor/include/cppbor/cppbor_parse.h"
 
@@ -29,11 +30,12 @@ namespace oak::attestation {
 // CBOR Web Token (CWT).
 // <https://datatracker.ietf.org/doc/html/rfc8392>
 //
-// This struct is a wrapper and doesn't take ownership of the corresponding CBOR fields.
 // Note: Oak only uses a subset of CBOR keys with an addition of custom keys.
 struct Cwt {
-  const cppbor::Bstr* iss;
-  const cppbor::Bstr* sub;
+  //  public:
+  // CoseSign1 cose_sign1;
+  const cppbor::Tstr* iss;
+  const cppbor::Tstr* sub;
   CoseKey subject_public_key;
 
   static absl::StatusOr<Cwt> Deserialize(const std::vector<uint8_t>& data);
@@ -53,9 +55,13 @@ struct Cwt {
     // Custom Oak key representing serialized public key for the certificate.
     SUBJECT_PUBLIC_KEY_ID = -4670552,
   };
+
+  // Parsed CBOR item containing CWT object.
+  // std::unique_ptr<cppbor::Item> item_;
 };
 
-absl::StatusOr<std::string> ExtractPublicKeyFromCwtCertificate(const std::vector<uint8_t>& certificate);
+absl::StatusOr<std::string> ExtractPublicKeyFromCwtCertificate(
+    const std::vector<uint8_t>& certificate);
 
 }  // namespace oak::attestation
 

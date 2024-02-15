@@ -38,9 +38,7 @@ static constexpr int kSubjectPublicKeyId = -4670552;
 //   CwtClaimSubjectPublicKeyId = -4670552,  // Serialized  public key for this certificate.
 // };
 
-namespace {
-
-}  // namespace
+namespace {}  // namespace
 
 absl::StatusOr<Cwt> Cwt::Deserialize(const std::vector<uint8_t>& data) {
   // Deserialize COSE Sign1.
@@ -48,27 +46,82 @@ absl::StatusOr<Cwt> Cwt::Deserialize(const std::vector<uint8_t>& data) {
   if (!cose_sign1.ok()) {
     return cose_sign1.status();
   }
+  // if (!cose_sign1->payload) {
+  //   return absl::InvalidArgumentError("empty COSE Sign1 payload");
+  // }
 
-  // Extract serialized COSE Key from COSE Sign1 payload.
-  auto [item, end, error] = cppbor::parse(cose_sign1->payload);
+  std::cerr << "Parsed COSE Sign1" << std::endl;
+
+  // Deserialize COSE Sign1 payload.
+  auto [item, end, error] = cppbor::parse(cose_sign1->payload->value());
   if (!error.empty()) {
-    return absl::InvalidArgumentError(absl::StrCat("couldn't parse COSE Sign1 payload: ", error));
+    return absl::InvalidArgumentError(absl::StrCat("couldn't deserialize CWT: ", error));
   }
+  // if (item->type() != cppbor::ARRAY) {
+  //   return UnexpectedCborTypeError("CWT", cppbor::ARRAY, item->type());
+  // }
+  // const cppbor::Array* array = item->asArray();
+  // if (array->size() != 1) {
+  //   return absl::InvalidArgumentError(
+  //       absl::StrCat("invalid CWT array size, expected 1, found ", array->size()));
+  // }
+  // if (array->get(0)->type() != cppbor::MAP) {
+  //   return UnexpectedCborTypeError("CWT map", cppbor::MAP, array->get(0)->type());
+  // }
   if (item->type() != cppbor::MAP) {
-    return UnexpectedTypeError("COSE Sign1", cppbor::MAP, item->type());
+    return UnexpectedCborTypeError("CWT", cppbor::ARRAY, item->type());
   }
-  const cppbor::Array* array = item->asArray();
-  if (array->size() != 1) {
+  const cppbor::Map* map = item->asMap();
+  if (map->size() < 3) {
     return absl::InvalidArgumentError(
-        absl::StrCat("invalid COSE Sign1 payload size, expected 1, found ", array->size()));
+        absl::StrCat("invalid CWT map size, expected >= 3, found ", map->size()));
   }
+
+  std::cerr << "Deserialized COSE Sign1 payload" << std::endl;
+
+  // Get CWT claims.
+  const std::unique_ptr<cppbor::Item>& iss = map->get<int, int>(ISS);
+  if (!iss) {
+    return absl::InvalidArgumentError("ISS not found");
+  }
+  if (iss->type() != cppbor::TSTR) {
+    return UnexpectedCborTypeError("iss", cppbor::TSTR, iss->type());
+  }
+  const std::unique_ptr<cppbor::Item>& sub = map->get<int, int>(SUB);
+  if (!sub) {
+    return absl::InvalidArgumentError("SUB not found");
+  }
+  if (sub->type() != cppbor::TSTR) {
+    return UnexpectedCborTypeError("sub", cppbor::TSTR, sub->type());
+  }
+  const std::unique_ptr<cppbor::Item>& subject_public_key_item =
+      map->get<int, int>(SUBJECT_PUBLIC_KEY_ID);
+  if (!subject_public_key_item) {
+    return absl::InvalidArgumentError("SUB not found");
+  }
+  if (subject_public_key_item->type() != cppbor::BSTR) {
+    return UnexpectedCborTypeError("SUBJECT_PUBLIC_KEY_ID", cppbor::BSTR,
+                                   subject_public_key_item->type());
+  }
+  // const cppbor::Map* subject_public_key_map = subject_public_key_item->asMap();
+
+  std::cerr << "Got CWT claims" << std::endl;
 
   // Deserialize Cose Key.
-  absl::StatusOr<CoseKey> cose_key = CoseKey::Deserialize(array->get(0));
-  if (!cose_key.ok()) {
-    return cose_key.status();
+  absl::StatusOr<CoseKey> subject_public_key =
+      CoseKey::Deserialize(subject_public_key_item->asBstr()->value());
+  // absl::StatusOr<CoseKey> subject_public_key = CoseKey::Deserialize(subject_public_key_map);
+  if (!subject_public_key.ok()) {
+    return subject_public_key.status();
   }
 
+  std::cerr << "Deserialized Cose Key" << std::endl;
+
+  return Cwt{
+      .iss = iss->asTstr(),
+      .sub = sub->asTstr(),
+      .subject_public_key = std::move(*subject_public_key),
+  };
 }
 
 // absl::StatusOr<std::string>
