@@ -21,15 +21,15 @@ use alloc::{
 };
 
 use bytes::Bytes;
-use hashbrown::HashMap;
 use log::{info, Level};
 use spinning_top::{RwSpinlock, Spinlock};
 
 use crate::logger::OakLogger;
+use crate::lookup_htbl::LookupHtbl;
 
 // Data maintains the invariant on lookup data to have [at most one
 // value](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md#invariant-at-most-one-value)
-pub type Data = HashMap<Bytes, Bytes>;
+pub type Data = LookupHtbl;
 
 #[derive(Default)]
 enum BuilderState {
@@ -61,9 +61,9 @@ impl DataBuilder {
         self.data.extend(new_data);
     }
 
-    fn reserve(&mut self, additional: usize) -> anyhow::Result<()> {
+    fn reserve(&mut self, additional_entries: u64, additional_data: u64) -> anyhow::Result<()> {
         self.data
-            .try_reserve(additional)
+            .try_reserve(additional_entries, additional_data)
             .map_err(|err| anyhow::anyhow!("failed to reserve memory: {:?}", err))
     }
 }
@@ -109,13 +109,11 @@ impl LookupDataManager {
         test_manager
     }
 
-    pub fn reserve(&self, additional: u64) -> anyhow::Result<()> {
+    pub fn reserve(&self, additional_entries: u64, additional_data: u64) -> anyhow::Result<()> {
         let mut data_builder = self.data_builder.lock();
-        data_builder.reserve(
-            additional
+        data_builder.reserve(additional_entries, additional_data)
                 .try_into()
-                .map_err(|err| anyhow::anyhow!("error converting integer: {:?}", err))?,
-        )
+                .map_err(|err| anyhow::anyhow!("error converting integer: {:?}", err))?
     }
 
     pub fn extend_next_lookup_data<T: IntoIterator<Item = (Bytes, Bytes)>>(&self, new_data: T) {
@@ -182,7 +180,7 @@ impl LookupData {
     }
 
     /// Gets an individual entry from the backing data.
-    pub fn get(&self, key: &[u8]) -> Option<&Bytes> {
+    pub fn get(&self, key: &[u8]) -> Option<&[u8]> {
         self.data.get(key)
     }
 
@@ -227,6 +225,7 @@ pub fn format_bytes(v: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::{vec, vec::Vec};
 
     #[derive(Clone)]
     struct TestLogger;
@@ -244,15 +243,13 @@ mod tests {
         let lookup_data_0 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
 
-        manager.extend_next_lookup_data(create_test_data(0, 1));
-        manager.finish_next_lookup_data();
+        reserve_and_extend_test_data(&manager, 0, 1);
         let lookup_data_1 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);
 
         // Creating test data in the same range replaces some keys.
-        manager.extend_next_lookup_data(create_test_data(0, 2));
-        manager.finish_next_lookup_data();
+        reserve_and_extend_test_data(&manager, 0, 2);
 
         let lookup_data_2 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
@@ -263,8 +260,7 @@ mod tests {
     #[test]
     fn test_update_lookup_data_one_chunk() {
         let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
-        manager.extend_next_lookup_data(create_test_data(0, 2));
-        manager.finish_next_lookup_data();
+        reserve_and_extend_test_data(&manager, 0, 2);
         let lookup_data = manager.create_lookup_data();
         assert_eq!(lookup_data.len(), 2);
     }
@@ -274,6 +270,7 @@ mod tests {
         let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
         let lookup_data_0 = manager.create_lookup_data();
 
+        manager.reserve(4, find_test_data_size(0, 4)).unwrap();
         manager.extend_next_lookup_data(create_test_data(0, 2));
         let lookup_data_1 = manager.create_lookup_data();
 
@@ -290,10 +287,11 @@ mod tests {
     fn test_update_lookup_four_chunks() {
         let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
 
+        manager.reserve(7, find_test_data_size(0, 7)).unwrap();
         manager.extend_next_lookup_data(create_test_data(0, 2));
         manager.extend_next_lookup_data(create_test_data(2, 3));
-        // We have one key overlapping here.
-        manager.extend_next_lookup_data(create_test_data(2, 6));
+        // Key overlaps are not allowed and result in panic.
+        manager.extend_next_lookup_data(create_test_data(3, 6));
         manager.extend_next_lookup_data(create_test_data(6, 7));
         manager.finish_next_lookup_data();
 
@@ -307,10 +305,12 @@ mod tests {
         let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
         let lookup_data_0 = manager.create_lookup_data();
 
+        manager.reserve(2, find_test_data_size(0, 2)).unwrap();
         manager.extend_next_lookup_data(create_test_data(0, 2));
         manager.abort_next_lookup_data();
         let lookup_data_1 = manager.create_lookup_data();
 
+        manager.reserve(1, find_test_data_size(0, 1)).unwrap();
         manager.extend_next_lookup_data(create_test_data(0, 1));
         manager.finish_next_lookup_data();
         let lookup_data_2 = manager.create_lookup_data();
@@ -329,12 +329,23 @@ mod tests {
     }
 
     // Create test data with size distinct keys between inclusive start and exclusive end.
-    fn create_test_data(start: i32, end: i32) -> Data {
-        HashMap::from_iter((start..end).map(|i| {
-            (
-                format!("key{}", i).into_bytes().into(),
-                format!("value{}", i).into_bytes().into(),
-            )
-        }))
+    fn create_test_data(start: i32, end: i32) -> Vec<(Bytes, Bytes)> {
+        let mut vec: Vec<(Bytes, Bytes)> = vec![];
+        for i in start..end {
+            vec.push((format!("key{}", i).into_bytes().into(), format!("value{}", i).into_bytes().into()));
+        }
+        vec
+    }
+
+    fn reserve_and_extend_test_data(manager: &LookupDataManager, start: i32, end:i32) {
+        manager.reserve((end - start) as u64, find_test_data_size(start, end)).unwrap();
+        manager.extend_next_lookup_data(create_test_data(start, end));
+        manager.finish_next_lookup_data();
+    }
+
+    // Return the expected total of the key and value lengths.  Only works for end < 100.
+    fn find_test_data_size(start: i32, end: i32) -> u64 {
+        assert!(end < 10);
+        return (end - start) as u64 * (4 + 6);
     }
 }

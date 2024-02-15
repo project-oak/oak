@@ -45,6 +45,7 @@ pub mod proto {
 pub mod instance;
 pub mod logger;
 pub mod lookup;
+pub mod lookup_htbl;
 pub mod wasm;
 
 pub trait Observer {

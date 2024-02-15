@@ -116,8 +116,11 @@ message AbortNextLookupDataResponse {}
 
 message Empty {}
 
+// The LookupHtbl implementation assumes this is called up-front, and that no
+// duplicate keys exist.
 message ReserveRequest {
   uint64 additional_entries = 1;
+  uint64 additional_data = 2;
 }
 
 message ReserveResponse {}
