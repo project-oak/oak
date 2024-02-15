@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef CC_ATTESTATION_CERTIFICATE_H_
-#define CC_ATTESTATION_CERTIFICATE_H_
+#ifndef CC_ATTESTATION_CWT_H_
+#define CC_ATTESTATION_CWT_H_
 
 #include <string>
 
@@ -29,14 +29,18 @@ namespace oak::attestation {
 
 // CBOR Web Token (CWT).
 // <https://datatracker.ietf.org/doc/html/rfc8392>
-//
-// Note: Oak only uses a subset of CBOR keys with an addition of custom keys.
-struct Cwt {
-  //  public:
-  // CoseSign1 cose_sign1;
+class Cwt {
+ public:
   const cppbor::Tstr* iss;
   const cppbor::Tstr* sub;
   CoseKey subject_public_key;
+
+  Cwt(const cppbor::Tstr* iss, const cppbor::Tstr* sub, CoseKey&& subject_public_key,
+      std::unique_ptr<cppbor::Item>&& item)
+      : iss(iss),
+        sub(sub),
+        subject_public_key(std::move(subject_public_key)),
+        item_(std::move(item)) {}
 
   static absl::StatusOr<Cwt> Deserialize(const std::vector<uint8_t>& data);
 
@@ -52,12 +56,12 @@ struct Cwt {
     IAT = 6,
     CTI = 7,
 
-    // Custom Oak key representing serialized public key for the certificate.
+    // Custom Oak claim representing serialized public key for the certificate.
     SUBJECT_PUBLIC_KEY_ID = -4670552,
   };
 
   // Parsed CBOR item containing CWT object.
-  // std::unique_ptr<cppbor::Item> item_;
+  std::unique_ptr<cppbor::Item> item_;
 };
 
 absl::StatusOr<std::string> ExtractPublicKeyFromCwtCertificate(
@@ -65,4 +69,4 @@ absl::StatusOr<std::string> ExtractPublicKeyFromCwtCertificate(
 
 }  // namespace oak::attestation
 
-#endif  // CC_ATTESTATION_CERTIFICATE_H_
+#endif  // CC_ATTESTATION_CWT_H_

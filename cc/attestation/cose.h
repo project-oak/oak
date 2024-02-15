@@ -55,36 +55,24 @@ class CoseSign1 {
 
 // COSE Key object.
 // <https://www.rfc-editor.org/rfc/rfc8152#section-7>
-//
-// This struct is a wrapper and doesn't take ownership of the corresponding CBOR fields.
-// Note: Oak only uses a subset of CBOR keys defined for the COSE Key object.
 class CoseKey {
  public:
   const cppbor::Uint* kty;
   const cppbor::Bstr* kid;
   const cppbor::Nint* alg;
   const cppbor::Array* key_ops;
-  // const cppbor::Bstr* base_iv;
 
   const cppbor::Uint* crv;
   const cppbor::Bstr* x;
-  const cppbor::Bstr* y;
 
   CoseKey(const cppbor::Uint* kty, const cppbor::Bstr* kid, const cppbor::Nint* alg,
           const cppbor::Array* key_ops, const cppbor::Uint* crv, const cppbor::Bstr* x,
-          const cppbor::Bstr* y, std::unique_ptr<cppbor::Item>&& item)
-      : kty(kty),
-        kid(kid),
-        alg(alg),
-        key_ops(key_ops),
-        crv(crv),
-        x(x),
-        y(y),
-        item_(std::move(item)) {}
+          std::unique_ptr<cppbor::Item>&& item)
+      : kty(kty), kid(kid), alg(alg), key_ops(key_ops), crv(crv), x(x), item_(std::move(item)) {}
 
   static absl::StatusOr<CoseKey> Deserialize(const std::vector<uint8_t>& data);
 
-  const std::vector<uint8_t>& GetPublicKey() const;
+  const std::vector<uint8_t>& GetPublicKey() const { return x->value(); }
 
  private:
   enum Parameter : int {
@@ -97,8 +85,7 @@ class CoseKey {
     // IANA COSE Key parameters.
     // <https://www.iana.org/assignments/cose/cose.xhtml#key-common-parameters>
     CRV = -1,  // EC identifier.
-    X = -2,    // X-coordinate.
-    Y = -3,    // Y-coordinate.
+    X = -2,    // Public key.
   };
 
   // Parsed CBOR item containing COSE Key object.
@@ -134,16 +121,6 @@ absl::Status UnexpectedCborTypeError(std::string_view name, cppbor::MajorType ex
                                                  CborTypeToString(expected), " CBOR type, found ",
                                                  CborTypeToString(found)));
 }
-
-// template<typename T> absl::Status CheckCborItemType(const cppbor::Item* item) {
-//   if (item->type() == T::kMajorType) {
-//     return absl::OkStatus();
-//   } else {
-//     return absl::InvalidArgumentError(
-//         absl::StrCat("expected ", CborTypeToString(T::kMajorType) ," CBOR type, found ",
-//         CborTypeToString(item->type())));
-//   }
-// }
 
 }  // namespace oak::attestation
 

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "cc/attestation/cwt.h"
 
 #include <memory>
@@ -27,47 +28,18 @@
 
 namespace oak::attestation {
 
-// CBOR Web Token (CWT) claim representing a serialized public key for the certificate.
-// <https://www.iana.org/assignments/cwt/cwt.xhtml>
-static constexpr int kSubjectPublicKeyId = -4670552;
-// static constexpr int kSubjectPublicKeyId = -4670552;
-
-// // Set of custom CBOR Web Token (CWT) claims used by Oak.
-// // <https://www.iana.org/assignments/cwt/cwt.xhtml>
-// enum CwtClaim : int {
-//   CwtClaimSubjectPublicKeyId = -4670552,  // Serialized  public key for this certificate.
-// };
-
-namespace {}  // namespace
-
 absl::StatusOr<Cwt> Cwt::Deserialize(const std::vector<uint8_t>& data) {
   // Deserialize COSE Sign1.
   absl::StatusOr<CoseSign1> cose_sign1 = CoseSign1::Deserialize(data);
   if (!cose_sign1.ok()) {
     return cose_sign1.status();
   }
-  // if (!cose_sign1->payload) {
-  //   return absl::InvalidArgumentError("empty COSE Sign1 payload");
-  // }
-
-  std::cerr << "Parsed COSE Sign1" << std::endl;
 
   // Deserialize COSE Sign1 payload.
   auto [item, end, error] = cppbor::parse(cose_sign1->payload->value());
   if (!error.empty()) {
     return absl::InvalidArgumentError(absl::StrCat("couldn't deserialize CWT: ", error));
   }
-  // if (item->type() != cppbor::ARRAY) {
-  //   return UnexpectedCborTypeError("CWT", cppbor::ARRAY, item->type());
-  // }
-  // const cppbor::Array* array = item->asArray();
-  // if (array->size() != 1) {
-  //   return absl::InvalidArgumentError(
-  //       absl::StrCat("invalid CWT array size, expected 1, found ", array->size()));
-  // }
-  // if (array->get(0)->type() != cppbor::MAP) {
-  //   return UnexpectedCborTypeError("CWT map", cppbor::MAP, array->get(0)->type());
-  // }
   if (item->type() != cppbor::MAP) {
     return UnexpectedCborTypeError("CWT", cppbor::ARRAY, item->type());
   }
@@ -76,8 +48,6 @@ absl::StatusOr<Cwt> Cwt::Deserialize(const std::vector<uint8_t>& data) {
     return absl::InvalidArgumentError(
         absl::StrCat("invalid CWT map size, expected >= 3, found ", map->size()));
   }
-
-  std::cerr << "Deserialized COSE Sign1 payload" << std::endl;
 
   // Get CWT claims.
   const std::unique_ptr<cppbor::Item>& iss = map->get<int, int>(ISS);
@@ -103,29 +73,15 @@ absl::StatusOr<Cwt> Cwt::Deserialize(const std::vector<uint8_t>& data) {
     return UnexpectedCborTypeError("SUBJECT_PUBLIC_KEY_ID", cppbor::BSTR,
                                    subject_public_key_item->type());
   }
-  // const cppbor::Map* subject_public_key_map = subject_public_key_item->asMap();
-
-  std::cerr << "Got CWT claims" << std::endl;
 
   // Deserialize Cose Key.
   absl::StatusOr<CoseKey> subject_public_key =
       CoseKey::Deserialize(subject_public_key_item->asBstr()->value());
-  // absl::StatusOr<CoseKey> subject_public_key = CoseKey::Deserialize(subject_public_key_map);
   if (!subject_public_key.ok()) {
     return subject_public_key.status();
   }
 
-  std::cerr << "Deserialized Cose Key" << std::endl;
-
-  return Cwt{
-      .iss = iss->asTstr(),
-      .sub = sub->asTstr(),
-      .subject_public_key = std::move(*subject_public_key),
-  };
+  return Cwt(iss->asTstr(), sub->asTstr(), std::move(*subject_public_key), std::move(item));
 }
-
-// absl::StatusOr<std::string>
-// ExtractPublicKeyFromCwtCertificate(const std::vector<uint8_t>& certificate) {
-// }
 
 }  // namespace oak::attestation

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "cc/attestation/cwt.h"
 
 #include <fstream>
@@ -58,16 +59,15 @@ class CertificateTest : public testing::Test {
         google::protobuf::TextFormat::Parse(&test_evidence_protobuf_stream, test_evidence.get());
     ASSERT_TRUE(parse_success);
 
-    test_evidence_ = std::move(test_evidence);
+    public_key_certificate_ = test_evidence->application_keys().encryption_public_key_certificate();
   }
 
-  std::unique_ptr<Evidence> test_evidence_;
+  std::string public_key_certificate_;
 };
 
 TEST_F(CertificateTest, CwtDeserializeSuccess) {
-  auto certificate_proto = test_evidence_->application_keys().encryption_public_key_certificate();
   auto certificate_vector =
-      std::vector<uint8_t>(certificate_proto.begin(), certificate_proto.end());
+      std::vector<uint8_t>(public_key_certificate_.begin(), public_key_certificate_.end());
   auto cwt = Cwt::Deserialize(certificate_vector);
   if (!cwt.ok()) {
     std::cerr << "Error: " << cwt.status() << std::endl;

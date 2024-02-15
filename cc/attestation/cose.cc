@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "cc/attestation/cose.h"
 
 #include <memory>
@@ -25,7 +26,6 @@
 #include "libcppbor/include/cppbor/cppbor_parse.h"
 
 namespace oak::attestation {
-namespace {}  // namespace
 
 absl::StatusOr<CoseSign1> CoseSign1::Deserialize(const std::vector<uint8_t>& data) {
   auto [item, end, error] = cppbor::parse(data);
@@ -57,14 +57,6 @@ absl::StatusOr<CoseSign1> CoseSign1::Deserialize(const std::vector<uint8_t>& dat
   if (signature->type() != cppbor::BSTR) {
     return UnexpectedCborTypeError("signature", cppbor::BSTR, signature->type());
   }
-
-  // return CoseSign1 {
-  //   .protected_headers = protected_headers->asBstr(),
-  //   .unprotected_headers = unprotected_headers->asMap(),
-  //   .payload = payload->asBstr(),
-  //   .signature = signature->asBstr(),
-  //   .item_ = item,
-  // };
 
   return CoseSign1(protected_headers->asBstr(), unprotected_headers->asMap(), payload->asBstr(),
                    signature->asBstr(), std::move(item));
@@ -112,13 +104,6 @@ absl::StatusOr<CoseKey> CoseKey::Deserialize(const std::vector<uint8_t>& data) {
   if (key_ops->type() != cppbor::ARRAY) {
     return UnexpectedCborTypeError("key_ops", cppbor::ARRAY, key_ops->type());
   }
-  // const std::unique_ptr<cppbor::Item>& base_iv = map->get<int, int>(BASE_IV);
-  // if (!base_iv) {
-  //   return absl::InvalidArgumentError("BASE_IV not found");
-  // }
-  // if (base_iv->type() != cppbor::BSTR) {
-  //   return UnexpectedCborTypeError("BASE_IV", cppbor::BSTR, base_iv->type());
-  // }
 
   const std::unique_ptr<cppbor::Item>& crv = map->get<int, int>(CRV);
   if (!crv) {
@@ -134,19 +119,9 @@ absl::StatusOr<CoseKey> CoseKey::Deserialize(const std::vector<uint8_t>& data) {
   if (x->type() != cppbor::BSTR) {
     return UnexpectedCborTypeError("X", cppbor::BSTR, x->type());
   }
-  // const std::unique_ptr<cppbor::Item>& y = map->get<int, int>(Y);
-  // if (!y) {
-  //   return absl::InvalidArgumentError("Y not found");
-  // }
-  // if (y->type() != cppbor::BSTR) {
-  //   return UnexpectedCborTypeError("Y", cppbor::BSTR, y->type());
-  // }
 
-  return CoseKey(kty->asUint(), kid->asBstr(), alg->asNint(),
-                 key_ops->asArray(), /*base_vi->asBstr(),*/
-                 crv->asUint(), x->asBstr(), nullptr, /*y->asBstr(),*/ std::move(item));
+  return CoseKey(kty->asUint(), kid->asBstr(), alg->asNint(), key_ops->asArray(), crv->asUint(),
+                 x->asBstr(), std::move(item));
 }
-
-const std::vector<uint8_t>& CoseKey::GetPublicKey() const { return x->value(); }
 
 }  // namespace oak::attestation
