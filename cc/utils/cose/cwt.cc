@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "cc/attestation/cwt.h"
+#include "cc/utils/cose/cwt.h"
 
 #include <memory>
 #include <string>
@@ -22,20 +22,20 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "cc/attestation/cose.h"
+#include "cc/utils/cose/cose.h"
 #include "libcppbor/include/cppbor/cppbor.h"
 #include "libcppbor/include/cppbor/cppbor_parse.h"
 
-namespace oak::attestation {
+namespace oak::utils::cose {
 
 absl::StatusOr<Cwt> Cwt::Deserialize(const std::vector<uint8_t>& data) {
-  // Deserialize COSE Sign1.
+  // Deserialize COSE_Sign1.
   absl::StatusOr<CoseSign1> cose_sign1 = CoseSign1::Deserialize(data);
   if (!cose_sign1.ok()) {
     return cose_sign1.status();
   }
 
-  // Deserialize COSE Sign1 payload.
+  // Deserialize COSE_Sign1 payload.
   auto [item, end, error] = cppbor::parse(cose_sign1->payload->value());
   if (!error.empty()) {
     return absl::InvalidArgumentError(absl::StrCat("couldn't deserialize CWT: ", error));
@@ -50,23 +50,22 @@ absl::StatusOr<Cwt> Cwt::Deserialize(const std::vector<uint8_t>& data) {
   }
 
   // Get CWT claims.
-  const std::unique_ptr<cppbor::Item>& iss = map->get<int, int>(ISS);
-  if (!iss) {
+  auto& iss = map->get<int, int>(ISS);
+  if (iss == nullptr) {
     return absl::InvalidArgumentError("ISS not found");
   }
   if (iss->type() != cppbor::TSTR) {
     return UnexpectedCborTypeError("iss", cppbor::TSTR, iss->type());
   }
-  const std::unique_ptr<cppbor::Item>& sub = map->get<int, int>(SUB);
-  if (!sub) {
+  auto& sub = map->get<int, int>(SUB);
+  if (sub == nullptr) {
     return absl::InvalidArgumentError("SUB not found");
   }
   if (sub->type() != cppbor::TSTR) {
     return UnexpectedCborTypeError("sub", cppbor::TSTR, sub->type());
   }
-  const std::unique_ptr<cppbor::Item>& subject_public_key_item =
-      map->get<int, int>(SUBJECT_PUBLIC_KEY_ID);
-  if (!subject_public_key_item) {
+  auto& subject_public_key_item = map->get<int, int>(SUBJECT_PUBLIC_KEY_ID);
+  if (subject_public_key_item == nullptr) {
     return absl::InvalidArgumentError("SUB not found");
   }
   if (subject_public_key_item->type() != cppbor::BSTR) {
@@ -74,7 +73,7 @@ absl::StatusOr<Cwt> Cwt::Deserialize(const std::vector<uint8_t>& data) {
                                    subject_public_key_item->type());
   }
 
-  // Deserialize Cose Key.
+  // Deserialize COSE_Key.
   absl::StatusOr<CoseKey> subject_public_key =
       CoseKey::Deserialize(subject_public_key_item->asBstr()->value());
   if (!subject_public_key.ok()) {
@@ -84,4 +83,4 @@ absl::StatusOr<Cwt> Cwt::Deserialize(const std::vector<uint8_t>& data) {
   return Cwt(iss->asTstr(), sub->asTstr(), std::move(*subject_public_key), std::move(item));
 }
 
-}  // namespace oak::attestation
+}  // namespace oak::utils::cose

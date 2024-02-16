@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "cc/attestation/cwt.h"
+#include "cc/utils/cose/cwt.h"
 
 #include <fstream>
 #include <iostream>
@@ -33,7 +33,7 @@
 #include "libcppbor/include/cppbor/cppbor_parse.h"
 #include "proto/attestation/evidence.pb.h"
 
-namespace oak::attestation {
+namespace oak::utils::cose {
 namespace {
 
 using ::oak::attestation::v1::Evidence;
@@ -42,9 +42,9 @@ using ::testing::ElementsAreArray;
 constexpr absl::string_view kTestEvidencePath =
     "oak_attestation_verification/testdata/evidence.textproto";
 // Public key extracted from the `kTestEvidencePath` `encryption_public_key_certificate`.
-const std::vector<uint8_t> kTestPublicKey = {65,  95,  220, 63,  244, 115, 90,  84,  22,  86,  100,
-                                             25,  28,  49,  23,  28,  10,  131, 44,  179, 186, 171,
-                                             159, 208, 145, 185, 66,  108, 141, 136, 152, 59};
+constexpr uint8_t kTestPublicKey[] = {65,  95,  220, 63,  244, 115, 90,  84,  22,  86,  100,
+                                      25,  28,  49,  23,  28,  10,  131, 44,  179, 186, 171,
+                                      159, 208, 145, 185, 66,  108, 141, 136, 152, 59};
 
 class CertificateTest : public testing::Test {
  protected:
@@ -68,12 +68,9 @@ TEST_F(CertificateTest, CwtDeserializeSuccess) {
   auto certificate_vector =
       std::vector<uint8_t>(public_key_certificate_.begin(), public_key_certificate_.end());
   auto cwt = Cwt::Deserialize(certificate_vector);
-  if (!cwt.ok()) {
-    std::cerr << "Error: " << cwt.status() << std::endl;
-  }
-  ASSERT_TRUE(cwt.ok());
+  ASSERT_TRUE(cwt.ok()) << cwt.status();
   EXPECT_THAT(cwt->subject_public_key.GetPublicKey(), ElementsAreArray(kTestPublicKey));
 }
 
 }  // namespace
-}  // namespace oak::attestation
+}  // namespace oak::utils::cose

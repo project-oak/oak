@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
-#ifndef CC_ATTESTATION_CWT_H_
-#define CC_ATTESTATION_CWT_H_
+#ifndef CC_UTILS_COSE_CWT_H_
+#define CC_UTILS_COSE_CWT_H_
 
 #include <string>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "cc/attestation/cose.h"
+#include "cc/utils/cose/cose.h"
 #include "libcppbor/include/cppbor/cppbor.h"
 #include "libcppbor/include/cppbor/cppbor_parse.h"
 
-namespace oak::attestation {
+namespace oak::utils::cose {
 
 // CBOR Web Token (CWT).
 // <https://datatracker.ietf.org/doc/html/rfc8392>
-class Cwt {
- public:
+struct Cwt {
   const cppbor::Tstr* iss;
   const cppbor::Tstr* sub;
+  // Public key associated with the subject in the form of a COSE_Key structure.
   CoseKey subject_public_key;
 
   Cwt(const cppbor::Tstr* iss, const cppbor::Tstr* sub, CoseKey&& subject_public_key,
@@ -56,7 +56,8 @@ class Cwt {
     IAT = 6,
     CTI = 7,
 
-    // Custom Oak claim representing serialized public key for the certificate.
+    // Public key associated with the subject in the form of a COSE_Key structure.
+    // <https://pigweed.googlesource.com/open-dice/+/refs/heads/main/docs/specification.md#cbor-uds-certificates>
     SUBJECT_PUBLIC_KEY_ID = -4670552,
   };
 
@@ -64,6 +65,6 @@ class Cwt {
   std::unique_ptr<cppbor::Item> item_;
 };
 
-}  // namespace oak::attestation
+}  // namespace oak::utils::cose
 
-#endif  // CC_ATTESTATION_CWT_H_
+#endif  // CC_UTILS_COSE_CWT_H_

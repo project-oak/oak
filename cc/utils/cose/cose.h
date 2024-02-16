@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef CC_ATTESTATION_COSE_H_
-#define CC_ATTESTATION_COSE_H_
+#ifndef CC_UTILS_COSE_COSE_H_
+#define CC_UTILS_COSE_COSE_H_
 
 #include <memory>
 #include <string>
@@ -26,15 +26,18 @@
 #include "libcppbor/include/cppbor/cppbor.h"
 #include "libcppbor/include/cppbor/cppbor_parse.h"
 
-namespace oak::attestation {
+namespace oak::utils::cose {
 
-// COSE Sign1 object.
+// COSE_Sign1 object.
 // <https://datatracker.ietf.org/doc/html/rfc8152#section-4.2>
-class CoseSign1 {
- public:
+struct CoseSign1 {
+  // Parameters about the current layer that are to be cryptographically protected.
   const cppbor::Bstr* protected_headers;
+  // Parameters about the current layer that are not cryptographically protected.
   const cppbor::Map* unprotected_headers;
+  // Serialized content to be signed.
   const cppbor::Bstr* payload;
+  // Array of signatures. Each signature is represented as a COSE_Signature structure.
   const cppbor::Bstr* signature;
 
   CoseSign1(const cppbor::Bstr* protected_headers, const cppbor::Map* unprotected_headers,
@@ -49,20 +52,25 @@ class CoseSign1 {
   static absl::StatusOr<CoseSign1> Deserialize(const std::vector<uint8_t>& data);
 
  private:
-  // Parsed CBOR item containing COSE Sign1 object.
+  // Parsed CBOR item containing COSE_Sign1 object.
   std::unique_ptr<cppbor::Item> item_;
 };
 
-// COSE Key object.
+// COSE_Key object.
 // <https://www.rfc-editor.org/rfc/rfc8152#section-7>
-class CoseKey {
- public:
+struct CoseKey {
+  // Identification of the key type.
   const cppbor::Uint* kty;
+  // Key identification value.
   const cppbor::Bstr* kid;
+  // Key usage restriction to this algorithm.
   const cppbor::Nint* alg;
+  // Restrict set of permissible operations.
   const cppbor::Array* key_ops;
 
+  // EC identifier.
   const cppbor::Uint* crv;
+  // Public key.
   const cppbor::Bstr* x;
 
   CoseKey(const cppbor::Uint* kty, const cppbor::Bstr* kid, const cppbor::Nint* alg,
@@ -82,13 +90,13 @@ class CoseKey {
     KEY_OPS = 4,
     BASE_IV = 5,
 
-    // IANA COSE Key parameters.
+    // IANA COSE_Key parameters.
     // <https://www.iana.org/assignments/cose/cose.xhtml#key-common-parameters>
     CRV = -1,  // EC identifier.
     X = -2,    // Public key.
   };
 
-  // Parsed CBOR item containing COSE Key object.
+  // Parsed CBOR item containing COSE_Key object.
   std::unique_ptr<cppbor::Item> item_;
 };
 
@@ -122,6 +130,6 @@ absl::Status UnexpectedCborTypeError(std::string_view name, cppbor::MajorType ex
                                                  CborTypeToString(found)));
 }
 
-}  // namespace oak::attestation
+}  // namespace oak::utils::cose
 
-#endif  // CC_ATTESTATION_COSE_H_
+#endif  // CC_UTILS_COSE_COSE_H_
