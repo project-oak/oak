@@ -75,7 +75,7 @@ absl::StatusOr<Cwt> Cwt::Deserialize(const std::vector<uint8_t>& data) {
 
   // Deserialize COSE_Key.
   absl::StatusOr<CoseKey> subject_public_key =
-      CoseKey::Deserialize(subject_public_key_item->asBstr()->value());
+      CoseKey::DeserializeHpkePublicKey(subject_public_key_item->asBstr()->value());
   if (!subject_public_key.ok()) {
     return subject_public_key.status();
   }

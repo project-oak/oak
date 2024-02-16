@@ -62,7 +62,7 @@ absl::StatusOr<CoseSign1> CoseSign1::Deserialize(const std::vector<uint8_t>& dat
                    signature->asBstr(), std::move(item));
 }
 
-absl::StatusOr<CoseKey> CoseKey::Deserialize(const std::vector<uint8_t>& data) {
+absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(const std::vector<uint8_t>& data) {
   auto [item, end, error] = cppbor::parse(data);
   if (!error.empty()) {
     return absl::InvalidArgumentError(absl::StrCat("couldn't parse COSE_Key: ", error));
