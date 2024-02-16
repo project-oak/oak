@@ -35,13 +35,6 @@ struct Cwt {
   // Public key associated with the subject in the form of a COSE_Key structure.
   CoseKey subject_public_key;
 
-  Cwt(const cppbor::Tstr* iss, const cppbor::Tstr* sub, CoseKey&& subject_public_key,
-      std::unique_ptr<cppbor::Item>&& item)
-      : iss(iss),
-        sub(sub),
-        subject_public_key(std::move(subject_public_key)),
-        item_(std::move(item)) {}
-
   static absl::StatusOr<Cwt> Deserialize(const std::vector<uint8_t>& data);
 
  private:
@@ -63,6 +56,13 @@ struct Cwt {
 
   // Parsed CBOR item containing CWT object.
   std::unique_ptr<cppbor::Item> item_;
+
+  Cwt(const cppbor::Tstr* iss, const cppbor::Tstr* sub, CoseKey&& subject_public_key,
+      std::unique_ptr<cppbor::Item>&& item)
+      : iss(iss),
+        sub(sub),
+        subject_public_key(std::move(subject_public_key)),
+        item_(std::move(item)) {}
 };
 
 }  // namespace oak::utils::cose

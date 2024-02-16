@@ -41,19 +41,19 @@ absl::StatusOr<CoseSign1> CoseSign1::Deserialize(const std::vector<uint8_t>& dat
         absl::StrCat("invalid COSE_Sign1 CBOR array size, expected 4, found ", array->size()));
   }
 
-  auto& protected_headers = array->get(0);
+  const auto& protected_headers = array->get(0);
   if (protected_headers->type() != cppbor::BSTR) {
     return UnexpectedCborTypeError("protected_headers", cppbor::BSTR, protected_headers->type());
   }
-  auto& unprotected_headers = array->get(1);
+  const auto& unprotected_headers = array->get(1);
   if (unprotected_headers->type() != cppbor::MAP) {
     return UnexpectedCborTypeError("unprotected_headers", cppbor::MAP, unprotected_headers->type());
   }
-  auto& payload = array->get(2);
+  const auto& payload = array->get(2);
   if (payload->type() != cppbor::BSTR) {
     return UnexpectedCborTypeError("payload", cppbor::BSTR, payload->type());
   }
-  auto& signature = array->get(3);
+  const auto& signature = array->get(3);
   if (signature->type() != cppbor::BSTR) {
     return UnexpectedCborTypeError("signature", cppbor::BSTR, signature->type());
   }
@@ -76,28 +76,28 @@ absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(const std::vector<uint
         absl::StrCat("invalid COSE_Key CBOR map size, expected >= 5, found ", map->size()));
   }
 
-  auto& kty = map->get<int, int>(KTY);
+  const auto& kty = map->get<int, int>(KTY);
   if (kty == nullptr) {
     return absl::InvalidArgumentError("KTY not found");
   }
   if (kty->type() != cppbor::UINT) {
     return UnexpectedCborTypeError("KTY", cppbor::UINT, kty->type());
   }
-  auto& kid = map->get<int, int>(KID);
+  const auto& kid = map->get<int, int>(KID);
   if (kid == nullptr) {
     return absl::InvalidArgumentError("KID not found");
   }
   if (kid->type() != cppbor::BSTR) {
     return UnexpectedCborTypeError("KID", cppbor::BSTR, kid->type());
   }
-  auto& alg = map->get<int, int>(ALG);
+  const auto& alg = map->get<int, int>(ALG);
   if (alg == nullptr) {
     return absl::InvalidArgumentError("ALG not found");
   }
   if (alg->type() != cppbor::NINT) {
     return UnexpectedCborTypeError("ALG", cppbor::NINT, alg->type());
   }
-  auto& key_ops = map->get<int, int>(KEY_OPS);
+  const auto& key_ops = map->get<int, int>(KEY_OPS);
   if (key_ops == nullptr) {
     return absl::InvalidArgumentError("KEY_OPS not found");
   }
@@ -105,14 +105,14 @@ absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(const std::vector<uint
     return UnexpectedCborTypeError("key_ops", cppbor::ARRAY, key_ops->type());
   }
 
-  auto& crv = map->get<int, int>(CRV);
+  const auto& crv = map->get<int, int>(CRV);
   if (crv == nullptr) {
     return absl::InvalidArgumentError("CRV not found");
   }
   if (crv->type() != cppbor::UINT) {
     return UnexpectedCborTypeError("CRV", cppbor::UINT, crv->type());
   }
-  auto& x = map->get<int, int>(X);
+  const auto& x = map->get<int, int>(X);
   if (x == nullptr) {
     return absl::InvalidArgumentError("X not found");
   }

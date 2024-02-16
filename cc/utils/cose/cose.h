@@ -40,6 +40,12 @@ struct CoseSign1 {
   // Array of signatures. Each signature is represented as a COSE_Signature structure.
   const cppbor::Bstr* signature;
 
+  static absl::StatusOr<CoseSign1> Deserialize(const std::vector<uint8_t>& data);
+
+ private:
+  // Parsed CBOR item containing COSE_Sign1 object.
+  std::unique_ptr<cppbor::Item> item_;
+
   CoseSign1(const cppbor::Bstr* protected_headers, const cppbor::Map* unprotected_headers,
             const cppbor::Bstr* payload, const cppbor::Bstr* signature,
             std::unique_ptr<cppbor::Item>&& item)
@@ -48,12 +54,6 @@ struct CoseSign1 {
         payload(payload),
         signature(signature),
         item_(std::move(item)) {}
-
-  static absl::StatusOr<CoseSign1> Deserialize(const std::vector<uint8_t>& data);
-
- private:
-  // Parsed CBOR item containing COSE_Sign1 object.
-  std::unique_ptr<cppbor::Item> item_;
 };
 
 // COSE_Key object.
@@ -72,11 +72,6 @@ struct CoseKey {
   const cppbor::Uint* crv;
   // Public key.
   const cppbor::Bstr* x;
-
-  CoseKey(const cppbor::Uint* kty, const cppbor::Bstr* kid, const cppbor::Nint* alg,
-          const cppbor::Array* key_ops, const cppbor::Uint* crv, const cppbor::Bstr* x,
-          std::unique_ptr<cppbor::Item>&& item)
-      : kty(kty), kid(kid), alg(alg), key_ops(key_ops), crv(crv), x(x), item_(std::move(item)) {}
 
   // Deserializes HPKE public key as a COSE_Key.
   // <https://www.rfc-editor.org/rfc/rfc9180.html>
@@ -100,6 +95,11 @@ struct CoseKey {
 
   // Parsed CBOR item containing COSE_Key object.
   std::unique_ptr<cppbor::Item> item_;
+
+  CoseKey(const cppbor::Uint* kty, const cppbor::Bstr* kid, const cppbor::Nint* alg,
+          const cppbor::Array* key_ops, const cppbor::Uint* crv, const cppbor::Bstr* x,
+          std::unique_ptr<cppbor::Item>&& item)
+      : kty(kty), kid(kid), alg(alg), key_ops(key_ops), crv(crv), x(x), item_(std::move(item)) {}
 };
 
 std::string CborTypeToString(cppbor::MajorType cbor_type) {

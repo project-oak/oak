@@ -50,21 +50,21 @@ absl::StatusOr<Cwt> Cwt::Deserialize(const std::vector<uint8_t>& data) {
   }
 
   // Get CWT claims.
-  auto& iss = map->get<int, int>(ISS);
+  const auto& iss = map->get<int, int>(ISS);
   if (iss == nullptr) {
     return absl::InvalidArgumentError("ISS not found");
   }
   if (iss->type() != cppbor::TSTR) {
     return UnexpectedCborTypeError("iss", cppbor::TSTR, iss->type());
   }
-  auto& sub = map->get<int, int>(SUB);
+  const auto& sub = map->get<int, int>(SUB);
   if (sub == nullptr) {
     return absl::InvalidArgumentError("SUB not found");
   }
   if (sub->type() != cppbor::TSTR) {
     return UnexpectedCborTypeError("sub", cppbor::TSTR, sub->type());
   }
-  auto& subject_public_key_item = map->get<int, int>(SUBJECT_PUBLIC_KEY_ID);
+  const auto& subject_public_key_item = map->get<int, int>(SUBJECT_PUBLIC_KEY_ID);
   if (subject_public_key_item == nullptr) {
     return absl::InvalidArgumentError("SUB not found");
   }
