@@ -507,6 +507,25 @@
 <a href="#507" id="507">507</a>
 <a href="#508" id="508">508</a>
 <a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -578,8 +597,8 @@
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>log::{error, info};
 <span class="kw">use </span>mm::{
-    frame_allocator::PhysicalMemoryAllocator, page_tables::CurrentRootPageTable,
-    virtual_address_allocator::VirtualAddressAllocator,
+    encrypted_mapper::MemoryEncryption, frame_allocator::PhysicalMemoryAllocator,
+    page_tables::CurrentRootPageTable, virtual_address_allocator::VirtualAddressAllocator,
 };
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_core::sync::OnceCell;
@@ -590,7 +609,7 @@
 <span class="attr">#[cfg(not(feature = <span class="string">&quot;initrd&quot;</span>))]
 </span><span class="kw">use </span>x86_64::structures::paging::{PageSize, Size4KiB};
 <span class="kw">use </span>x86_64::{
-    structures::paging::{Page, Size2MiB},
+    structures::paging::{Page, PageTable, Size2MiB},
     PhysAddr, VirtAddr,
 };
 <span class="kw">use </span>zerocopy::FromBytes;
@@ -613,6 +632,11 @@
 <span class="doccomment">/// Active page tables.
 </span><span class="kw">pub static </span>PAGE_TABLES: Spinlock&lt;CurrentRootPageTable&gt; =
     Spinlock::new(CurrentRootPageTable::empty());
+
+<span class="doccomment">/// Level 4 page table that is free in application space, but has all entries for kernel space
+/// populated. It can be used to create free page tables for applications, that maintain correct
+/// mapping in kernel space.
+</span><span class="kw">pub static </span>BASE_L4_PAGE_TABLE: OnceCell&lt;(PageTable, MemoryEncryption)&gt; = OnceCell::new();
 
 <span class="doccomment">/// Allocator for long-lived pages in the kernel.
 </span><span class="kw">pub static </span>VMA_ALLOCATOR: Spinlock&lt;VirtualAddressAllocator&lt;Size2MiB&gt;&gt; =
@@ -696,6 +720,20 @@
             prev_page_table.is_none(),
             <span class="string">&quot;there should be no previous page table during initialization&quot;
         </span>);
+
+        <span class="comment">// Safety: We just created a page table at this location.
+        </span><span class="kw">let </span>pml4: <span class="kw-2">&amp;</span>PageTable = <span class="kw">unsafe </span>{
+            <span class="kw-2">&amp;*</span>(PAGE_TABLES
+                .lock()
+                .get()
+                .unwrap()
+                .translate_physical(PhysAddr::new(pml4_frame.start_address().as_u64()))
+                .expect(<span class="string">&quot;page table must map to virtual address&quot;</span>))
+            .as_ptr()
+        };
+        BASE_L4_PAGE_TABLE
+            .set((pml4.clone(), encrypted))
+            .expect(<span class="string">&quot;base pml4 not unset&quot;</span>);
     };
 
     <span class="comment">// Re-map boot params to the new virtual address.

@@ -378,6 +378,23 @@
 <a href="#378" id="378">378</a>
 <a href="#379" id="379">379</a>
 <a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -407,7 +424,7 @@
     structures::paging::{
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
         FrameAllocator, Page, PageSize, PageTable, PageTableFlags <span class="kw">as </span>BasePageTableFlags, PhysFrame,
-        Size2MiB,
+        Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
@@ -670,7 +687,7 @@
     <span class="comment">// Safety: this expects the frame allocator to be initialized and the memory region it&#39;s handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     // This reference will no longer be valid after we reload the page tables!
-    </span><span class="kw">let </span>pml4_frame = FRAME_ALLOCATOR
+    </span><span class="kw">let </span>pml4_frame: PhysFrame&lt;Size4KiB&gt; = FRAME_ALLOCATOR
         .lock()
         .allocate_frame()
         .ok_or(<span class="string">&quot;couldn&#39;t allocate a frame for PML4&quot;</span>)<span class="question-mark">?</span>;
@@ -685,6 +702,23 @@
         MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION)
     } <span class="kw">else </span>{
         MemoryEncryption::NoEncryption
+    };
+
+    <span class="comment">// Populate all the kernel space entries of the level 4 page table. This means that these
+    // entries should never change, memory allocation will happen on lower level page tables. This
+    // is done to permit the kernel to switch between different level 4 page tables in the future.
+    // All page tables that include these mappings will point to the same lower level page tables /
+    // memory in kernel space.
+    </span>{
+        <span class="kw">let </span><span class="kw-2">mut </span>fa = FRAME_ALLOCATOR.lock();
+        <span class="kw">for </span>entry <span class="kw">in </span>pml4.iter_mut().skip(<span class="number">256</span>) {
+            <span class="kw">let </span>pml3_frame: PhysFrame&lt;Size4KiB&gt; = fa
+                .allocate_frame()
+                .ok_or(<span class="string">&quot;couldn&#39;t allocate a frame for PML3&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>pml3 = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(pml3_frame.start_address().as_u64() <span class="kw">as </span><span class="kw-2">*mut </span>PageTable) };
+            pml3.zero();
+            entry.set_frame(pml3_frame, PageTableFlags::PRESENT.into());
+        }
     };
 
     <span class="kw">let </span><span class="kw-2">mut </span>page_table = EncryptedPageTable::new(pml4, VirtAddr::new(<span class="number">0</span>), encrypted);
