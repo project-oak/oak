@@ -62,10 +62,8 @@ impl DataBuilder {
         self.data.extend(new_data);
     }
 
-    fn reserve(&mut self, additional_entries: u64, additional_data: u64) -> anyhow::Result<()> {
-        self.data
-            .try_reserve(additional_entries, additional_data)
-            .map_err(|err| anyhow::anyhow!("failed to reserve memory: {:?}", err))
+    fn reserve(&mut self, additional_entries: usize, additional_data: usize) {
+        self.data.reserve(additional_entries, additional_data)
     }
 }
 
@@ -124,9 +122,8 @@ impl LookupDataManager {
 
     pub fn reserve(&self, additional_entries: u64, additional_data: u64) -> anyhow::Result<()> {
         let mut data_builder = self.data_builder.lock();
-        data_builder.reserve(additional_entries, additional_data)
-                .try_into()
-                .map_err(|err| anyhow::anyhow!("error converting integer: {:?}", err))?
+        data_builder.reserve(additional_entries as usize, additional_data as usize);
+        Ok(())
     }
 
     pub fn extend_next_lookup_data<T: IntoIterator<Item = (Bytes, Bytes)>>(&self, new_data: T) {
