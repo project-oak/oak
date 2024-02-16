@@ -45,3 +45,7 @@ zerocopy = "*"
 
 [dev-dependencies]
 prost = { workspace = true }
+oak_restricted_kernel_sdk = { workspace = true, features = [
+  "mock_attestation"
+] }
+oak_attestation = { workspace = true }
