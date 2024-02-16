@@ -27,7 +27,7 @@ use x86_64::{
     structures::paging::{
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
         FrameAllocator, Page, PageSize, PageTable, PageTableFlags as BasePageTableFlags, PhysFrame,
-        Size2MiB,
+        Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
@@ -290,7 +290,7 @@ pub fn initial_pml4(
     // Safety: this expects the frame allocator to be initialized and the memory region it's handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     // This reference will no longer be valid after we reload the page tables!
-    let pml4_frame = FRAME_ALLOCATOR
+    let pml4_frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR
         .lock()
         .allocate_frame()
         .ok_or("couldn't allocate a frame for PML4")?;
@@ -305,6 +305,23 @@ pub fn initial_pml4(
         MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION)
     } else {
         MemoryEncryption::NoEncryption
+    };
+
+    // Populate all the kernel space entries of the level 4 page table. This means that these
+    // entries should never change, memory allocation will happen on lower level page tables. This
+    // is done to permit the kernel to switch between different level 4 page tables in the future.
+    // All page tables that include these mappings will point to the same lower level page tables /
+    // memory in kernel space.
+    {
+        let mut fa = FRAME_ALLOCATOR.lock();
+        for entry in pml4.iter_mut().skip(256) {
+            let pml3_frame: PhysFrame<Size4KiB> = fa
+                .allocate_frame()
+                .ok_or("couldn't allocate a frame for PML3")?;
+            let pml3 = unsafe { &mut *(pml3_frame.start_address().as_u64() as *mut PageTable) };
+            pml3.zero();
+            entry.set_frame(pml3_frame, PageTableFlags::PRESENT.into());
+        }
     };
 
     let mut page_table = EncryptedPageTable::new(pml4, VirtAddr::new(0), encrypted);
