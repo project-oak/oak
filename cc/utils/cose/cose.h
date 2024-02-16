@@ -78,7 +78,9 @@ struct CoseKey {
           std::unique_ptr<cppbor::Item>&& item)
       : kty(kty), kid(kid), alg(alg), key_ops(key_ops), crv(crv), x(x), item_(std::move(item)) {}
 
-  static absl::StatusOr<CoseKey> Deserialize(const std::vector<uint8_t>& data);
+  // Deserializes HPKE public key as a COSE_Key.
+  // <https://www.rfc-editor.org/rfc/rfc9180.html>
+  static absl::StatusOr<CoseKey> DeserializeHpkePublicKey(const std::vector<uint8_t>& data);
 
   const std::vector<uint8_t>& GetPublicKey() const { return x->value(); }
 
