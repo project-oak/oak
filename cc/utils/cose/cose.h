@@ -30,7 +30,8 @@ namespace oak::utils::cose {
 
 // COSE_Sign1 object.
 // <https://datatracker.ietf.org/doc/html/rfc8152#section-4.2>
-struct CoseSign1 {
+class CoseSign1 {
+ public:
   // Parameters about the current layer that are to be cryptographically protected.
   const cppbor::Bstr* protected_headers;
   // Parameters about the current layer that are not cryptographically protected.
@@ -58,7 +59,8 @@ struct CoseSign1 {
 
 // COSE_Key object.
 // <https://www.rfc-editor.org/rfc/rfc8152#section-7>
-struct CoseKey {
+class CoseKey {
+ public:
   // Identification of the key type.
   const cppbor::Uint* kty;
   // Key identification value.

@@ -29,7 +29,8 @@ namespace oak::utils::cose {
 
 // CBOR Web Token (CWT).
 // <https://datatracker.ietf.org/doc/html/rfc8392>
-struct Cwt {
+class Cwt {
+ public:
   const cppbor::Tstr* iss;
   const cppbor::Tstr* sub;
   // Public key associated with the subject in the form of a COSE_Key structure.
