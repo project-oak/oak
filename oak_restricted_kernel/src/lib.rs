@@ -90,6 +90,7 @@ use zeroize::Zeroize;
 use crate::{
     acpi::Acpi,
     mm::Translator,
+    payload::Process,
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 
@@ -472,9 +473,15 @@ pub fn start_kernel(info: &BootParams) -> ! {
         derived_key,
     );
 
+    // Ensure new process is not dropped. Safety: the ELF file must be valid.
+    let process = Box::leak(Box::new(
+        // Safety: application must be valid.
+        unsafe { Process::from_application(&application).expect("failed to create process") },
+    ));
+
     // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
     // under the kernel's control.
-    unsafe { application.run() }
+    unsafe { process.execute() }
 }
 
 #[derive(EnumIter, EnumString)]
