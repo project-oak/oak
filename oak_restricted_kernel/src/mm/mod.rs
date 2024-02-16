@@ -27,7 +27,7 @@ use x86_64::{
     structures::paging::{
         mapper::{FlagUpdateError, MapToError, MapperFlush, UnmapError},
         FrameAllocator, Page, PageSize, PageTable, PageTableFlags as BasePageTableFlags, PhysFrame,
-        Size2MiB,
+        Size2MiB, Size4KiB,
     },
     PhysAddr, VirtAddr,
 };
@@ -290,7 +290,7 @@ pub fn initial_pml4(
     // Safety: this expects the frame allocator to be initialized and the memory region it's handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     // This reference will no longer be valid after we reload the page tables!
-    let pml4_frame = FRAME_ALLOCATOR
+    let pml4_frame: PhysFrame<Size4KiB> = FRAME_ALLOCATOR
         .lock()
         .allocate_frame()
         .ok_or("couldn't allocate a frame for PML4")?;
@@ -315,7 +315,7 @@ pub fn initial_pml4(
     {
         let mut fa = FRAME_ALLOCATOR.lock();
         for entry in pml4.iter_mut().skip(256) {
-            let pml3_frame = fa
+            let pml3_frame: PhysFrame<Size4KiB> = fa
                 .allocate_frame()
                 .ok_or("couldn't allocate a frame for PML3")?;
             let pml3 = unsafe { &mut *(pml3_frame.start_address().as_u64() as *mut PageTable) };
