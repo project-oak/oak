@@ -39,7 +39,7 @@ pub fn syscall_unstable_switch_proccess(buf: *mut c_void, count: c_size_t) -> ! 
     let application = crate::payload::Application::new(copied_elf_binary.into_boxed_slice())
         .expect("failed to parse application");
 
-    let (base_pml4, encrypted) = crate::BASE_L4_PAGE_TABLE
+    let base_pml4 = crate::BASE_L4_PAGE_TABLE
         .get()
         .expect("base l4 table should be set");
     // Ensure the new page table is not dropped.
@@ -58,7 +58,7 @@ pub fn syscall_unstable_switch_proccess(buf: *mut c_void, count: c_size_t) -> ! 
     };
 
     // Safety: the new page table maintains the same mappings for kernel space.
-    unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame, *encrypted) };
+    unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) };
     // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
     // under the kernel's control.
     unsafe { application.run() }

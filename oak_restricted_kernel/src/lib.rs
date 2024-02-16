@@ -69,8 +69,8 @@ use core::{marker::Sync, option::Option, panic::PanicInfo, str::FromStr};
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
-    encrypted_mapper::MemoryEncryption, frame_allocator::PhysicalMemoryAllocator,
-    page_tables::CurrentRootPageTable, virtual_address_allocator::VirtualAddressAllocator,
+    frame_allocator::PhysicalMemoryAllocator, page_tables::CurrentRootPageTable,
+    virtual_address_allocator::VirtualAddressAllocator,
 };
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
@@ -108,7 +108,7 @@ pub static PAGE_TABLES: Spinlock<CurrentRootPageTable> =
 /// Level 4 page table that is free in application space, but has all entries for kernel space
 /// populated. It can be used to create free page tables for applications, that maintain correct
 /// mapping in kernel space.
-pub static BASE_L4_PAGE_TABLE: OnceCell<(PageTable, MemoryEncryption)> = OnceCell::new();
+pub static BASE_L4_PAGE_TABLE: OnceCell<PageTable> = OnceCell::new();
 
 /// Allocator for long-lived pages in the kernel.
 pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
@@ -177,7 +177,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     // Note: `info` will not be valid after calling this!
     {
-        let (pml4_frame, encrypted) = mm::initial_pml4(program_headers).unwrap();
+        let pml4_frame = mm::initial_pml4(program_headers).unwrap();
         // Prevent execution code in data only memory pages.
         // Safety: executeable memory is assumed to be appropiately marked in the page table.
         unsafe {
@@ -187,7 +187,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
         };
         // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to
         // load the new page tables.
-        let prev_page_table = unsafe { PAGE_TABLES.lock().replace(pml4_frame, encrypted) };
+        let prev_page_table = unsafe { PAGE_TABLES.lock().replace(pml4_frame) };
         assert!(
             prev_page_table.is_none(),
             "there should be no previous page table during initialization"
@@ -204,7 +204,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
             .as_ptr()
         };
         BASE_L4_PAGE_TABLE
-            .set((pml4.clone(), encrypted))
+            .set(pml4.clone())
             .expect("base pml4 not unset");
     };
 

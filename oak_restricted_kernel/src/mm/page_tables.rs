@@ -285,11 +285,7 @@ impl CurrentRootPageTable {
     /// Replaces the current pagetable with the parameter, returning the old
     /// pagetable if there was one. Updates the page table on the CPU level.
     /// Safety: The new page tables must keep the identity mapping at -2GB (kernel space) intact.
-    pub unsafe fn replace(
-        &mut self,
-        pml4_frame: PhysFrame,
-        encrypted: MemoryEncryption,
-    ) -> Option<RootPageTable> {
+    pub unsafe fn replace(&mut self, pml4_frame: PhysFrame) -> Option<RootPageTable> {
         // This validates any references that expect boot page tables to be valid!
         // Safety: Caller must ensure that the new page tables are safe.
         unsafe {
@@ -302,7 +298,7 @@ impl CurrentRootPageTable {
             &mut *(super::DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr()
         };
 
-        let new_pt = RootPageTable::new(pml4, super::DIRECT_MAPPING_OFFSET, encrypted);
+        let new_pt = RootPageTable::new(pml4, super::DIRECT_MAPPING_OFFSET, super::encryption());
 
         self.inner.replace(new_pt)
     }
