@@ -25,8 +25,9 @@
 // is about 2.5X more memory efficient.
 
 use alloc::{vec, vec::Vec};
-use bytes::Bytes;
 use core::mem;
+
+use bytes::Bytes;
 
 // To save memory, we use 5 byte array index values instead of 8 bytes.  This saves 12 bytes per
 // k/v pair.  It is referred to as u40 below.
@@ -66,8 +67,8 @@ const ENTRY_SIZE: usize = INDEX_SIZE + 1;
 pub struct LookupHtbl {
     table: Vec<u8>,
     data: Vec<u8>,
-    max_entries: usize,  // The number at which we must grow the table.
-    allocated_entries: usize,  // This is self.table.len() * ENTRY_SIZE.
+    max_entries: usize,       // The number at which we must grow the table.
+    allocated_entries: usize, // This is self.table.len() * ENTRY_SIZE.
     used_data: usize,
     used_entries: usize,
 }
@@ -94,7 +95,7 @@ impl LookupHtbl {
     pub fn reserve(&mut self, max_entries: usize, total_data: usize) {
         assert!(self.used_entries == 0 && self.used_data == 0);
         // Use a load factor of 60%.
-        let allocated_entries = (5 * max_entries + 1)/ 3;
+        let allocated_entries = (5 * max_entries + 1) / 3;
         self.max_entries = max_entries;
         self.table = vec![0u8; ENTRY_SIZE * allocated_entries];
         self.allocated_entries = allocated_entries;
@@ -193,10 +194,11 @@ impl LookupHtbl {
                     self.grow_table();
                 }
                 // This much data is appended by self.new_data().
-                let additional_data = 2 * INDEX_SIZE +  value.len() + key.len();
+                let additional_data = 2 * INDEX_SIZE + value.len() + key.len();
                 if self.used_data + additional_data > self.data.len() {
                     // This should never happen if the needed space is reserved first.
-                    self.data.resize((self.data.len() << 1) + additional_data, 0u8);
+                    self.data
+                        .resize((self.data.len() << 1) + additional_data, 0u8);
                 }
                 let data_index = self.new_data(key, value);
                 self.table[table_index] = hash_byte;
@@ -259,10 +261,10 @@ impl LookupHtbl {
     }
 
     pub fn is_empty(&self) -> bool {
-        return self.used_entries == 0
+        return self.used_entries == 0;
     }
 
-     pub fn iter(&self) -> LookupHtblIter {
+    pub fn iter(&self) -> LookupHtblIter {
         LookupHtblIter {
             htbl: &self,
             table_index: 0,
@@ -291,7 +293,10 @@ impl<'a> Iterator for LookupHtblIter<'a> {
                 let value_len_index = key_index + key_len;
                 let value_len = read_index(&self.htbl.data, value_len_index);
                 let value_index = value_len_index + INDEX_SIZE;
-                return Some((&self.htbl.data[key_index..key_index + key_len], &self.htbl.data[value_index..value_index + value_len]));
+                return Some((
+                    &self.htbl.data[key_index..key_index + key_len],
+                    &self.htbl.data[value_index..value_index + value_len],
+                ));
             }
         }
     }
@@ -409,7 +414,11 @@ mod tests {
     #[test]
     fn test_for_loop() {
         let keys = ["key1".as_bytes(), "key2".as_bytes(), "key3".as_bytes()];
-        let values = ["value1".as_bytes(), "value2".as_bytes(), "value3".as_bytes()];
+        let values = [
+            "value1".as_bytes(),
+            "value2".as_bytes(),
+            "value3".as_bytes(),
+        ];
         let mut table = LookupHtbl::new();
         table.reserve(3, 3 * 10);
         for i in 0..3 {
@@ -434,7 +443,11 @@ mod tests {
     #[test]
     fn test_grow_table() {
         let keys = ["key1".as_bytes(), "key2".as_bytes(), "key3".as_bytes()];
-        let values = ["value1".as_bytes(), "value2".as_bytes(), "value3".as_bytes()];
+        let values = [
+            "value1".as_bytes(),
+            "value2".as_bytes(),
+            "value3".as_bytes(),
+        ];
         let mut table = LookupHtbl::new();
         for i in 0..3 {
             table.insert(keys[i], values[i]);

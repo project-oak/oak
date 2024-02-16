@@ -25,8 +25,7 @@ use bytes::Bytes;
 use log::{info, Level};
 use spinning_top::{RwSpinlock, Spinlock};
 
-use crate::logger::OakLogger;
-use crate::lookup_htbl::LookupHtbl;
+use crate::{logger::OakLogger, lookup_htbl::LookupHtbl};
 
 // Data maintains the invariant on lookup data to have [at most one
 // value](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md#invariant-at-most-one-value)
@@ -234,8 +233,9 @@ pub fn format_bytes(v: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use alloc::vec;
+
+    use super::*;
 
     #[derive(Clone)]
     struct TestLogger;
@@ -342,13 +342,18 @@ mod tests {
     fn create_test_data(start: i32, end: i32) -> Vec<(Bytes, Bytes)> {
         let mut vec: Vec<(Bytes, Bytes)> = vec![];
         for i in start..end {
-            vec.push((format!("key{}", i).into_bytes().into(), format!("value{}", i).into_bytes().into()));
+            vec.push((
+                format!("key{}", i).into_bytes().into(),
+                format!("value{}", i).into_bytes().into(),
+            ));
         }
         vec
     }
 
-    fn reserve_and_extend_test_data(manager: &LookupDataManager, start: i32, end:i32) {
-        manager.reserve((end - start) as u64, find_test_data_size(start, end)).unwrap();
+    fn reserve_and_extend_test_data(manager: &LookupDataManager, start: i32, end: i32) {
+        manager
+            .reserve((end - start) as u64, find_test_data_size(start, end))
+            .unwrap();
         manager.extend_next_lookup_data(create_test_data(start, end));
         manager.finish_next_lookup_data();
     }
