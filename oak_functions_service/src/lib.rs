@@ -16,6 +16,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(never_type)]
+#![feature(new_uninit)]
 #![feature(unwrap_infallible)]
 // Required for enabling benchmark tests.
 #![feature(test)]

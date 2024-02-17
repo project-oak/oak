@@ -23,10 +23,9 @@
 // pair (21 bytes vs ~128 bytes for hashbrown<Bytes, Bytes>).  Speed for k/v lookups is ~90ns on
 // manual tests.
 
-use alloc::{vec, vec::Vec};
-use core::mem;
-
+use alloc::{boxed::Box, vec, vec::Vec};
 use bytes::Bytes;
+use core::mem;
 
 // To save memory, we use 5 byte array index values instead of 8 bytes.  This saves 12 bytes per
 // k/v pair.  It is referred to as u40 below.
@@ -76,7 +75,7 @@ const CHUNK_MASK: usize = CHUNK_SIZE - 1;
 #[derive(Default)]
 pub struct LookupHtbl {
     table: Vec<u8>,  // Contains fixed-size entries with index of k/v data in data_chunks.
-    data_chunks: Vec<[u8; CHUNK_SIZE]>,
+    data_chunks: Vec<Box<[u8]>>,
     max_entries: usize,       // The number at which we must grow the table.
     allocated_entries: usize, // This is self.table.len() * ENTRY_SIZE.
     used_data: usize,
@@ -136,7 +135,7 @@ impl LookupHtbl {
                 // This only happens if the key hash byte is 0.
                 return LookupResult::NotFound(table_index, key_hash_byte);
             }
-            let chunk = &self.data_chunks[data_index >> CHUNK_BITS];
+            let chunk: &[u8] = &*self.data_chunks[data_index >> CHUNK_BITS];
             let index = data_index & CHUNK_MASK;
             let (key_len, key_len_size) = read_len(chunk, index);
             let key_index = index + key_len_size;
@@ -165,13 +164,10 @@ impl LookupHtbl {
         if self.used_entries == 0 {
             return None;
         }
-        if self.table.is_empty() {
-            return None;
-        }
         let result = self.lookup(key);
         match result {
             LookupResult::Found(data_index) => {
-                let chunk = &self.data_chunks[data_index >> CHUNK_BITS];
+                let chunk: &[u8] = &*self.data_chunks[data_index >> CHUNK_BITS];
                 let index = data_index & CHUNK_MASK;
                 let (key_len, key_len_size) = read_len(chunk, index);
                 let value_len_index = index + key_len_size + key_len;
@@ -218,7 +214,7 @@ impl LookupHtbl {
         while i < old_table.len() {
             let raw_index = read_index(&old_table, i);
             if raw_index != 0 {
-                let chunk = &self.data_chunks[raw_index >> CHUNK_BITS];
+                let chunk: &[u8] = &*self.data_chunks[raw_index >> CHUNK_BITS];
                 let index = raw_index & CHUNK_MASK;
                 let (key_len, key_len_size) = read_len(chunk, index);
                 let key_index = index + key_len_size;
@@ -242,29 +238,25 @@ impl LookupHtbl {
         let end_index = self.used_data + additional_data_len;
         let chunk_index = end_index >> CHUNK_BITS;
         if self.data_chunks.len() <= chunk_index {
-            // We've overflowed into the next chunk.  Allocate the chunk and set used_data to the
-            // star of the new chunk.  Calling resize causes a stack overflow, so we have to use
-            // this unsafe version.  It seems to leave garbage in the chunk, but we never read it.
-            self.data_chunks.reserve(chunk_index + 1);
-            unsafe {
-                self.data_chunks.set_len(chunk_index + 1);
-            }
+            let values = Box::<[u8]>::new_zeroed_slice(CHUNK_SIZE);
+            let values = unsafe { values.assume_init() };
+            self.data_chunks.push(values);
             if chunk_index == 0 {
                 self.used_data = 1;  // Address 0 is NULL.
             } else {
                 self.used_data = CHUNK_SIZE * chunk_index;
             }
         }
-        let chunk = &mut self.data_chunks[chunk_index];
+        let chunk: &mut [u8] = &mut *self.data_chunks[chunk_index];
         let index = self.used_data & CHUNK_MASK;
         let key_index = index + write_len(chunk, index, key.len());
         chunk[key_index..key_index + key.len()].copy_from_slice(key);
         let value_len_index = key_index + key.len();
         let value_index = value_len_index + write_len(chunk, value_len_index, value.len());
         chunk[value_index..value_index + value.len()].copy_from_slice(value);
-        let index = self.used_data;
-        self.used_data = value_index + value.len();
-        index
+        let used_data = self.used_data;
+        self.used_data += value_index + value.len() - index;
+        used_data
     }
 
     pub fn extend<T: IntoIterator<Item = (Bytes, Bytes)>>(&mut self, new_data: T) {
@@ -305,7 +297,7 @@ impl<'a> Iterator for LookupHtblIter<'a> {
             let raw_index = read_index(&self.htbl.table, self.table_index + 1);
             self.table_index += ENTRY_SIZE;
             if raw_index != 0usize {
-                let chunk = &self.htbl.data_chunks[raw_index >> CHUNK_BITS];
+                let chunk: &[u8] = &*self.htbl.data_chunks[raw_index >> CHUNK_BITS];
                 let index = raw_index & CHUNK_MASK;
                 let (key_len, key_len_size) = read_len(chunk, index);
                 let key_index = index + key_len_size;
@@ -426,9 +418,9 @@ fn hash(v: &[u8]) -> u64 {
 mod tests {
     use super::*;
 
-    const NUM_KEYS: usize = 10_000_000usize;
+    const NUM_KEYS: usize = 100_000_000usize;
     const NUM_LOOKUPS: usize = 10_000_000usize;
-    const AVE_VALUE_SIZE: usize = 600usize;
+    const AVE_VALUE_SIZE: usize = 60usize;
 
     #[test]
     fn test_lookup_htbl() {
@@ -446,6 +438,8 @@ mod tests {
                 value[AVE_VALUE_SIZE - 1] = key_bytes[7];
                 table.insert(&key_bytes, &value);
                 num_keys += 1;
+            } else {
+                panic!("Should not already have this key");
             }
         }
         let mut hits = 0;
