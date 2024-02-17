@@ -138,8 +138,8 @@ impl LookupHtbl {
             }
             let chunk = &self.data_chunks[data_index >> CHUNK_BITS];
             let index = data_index & CHUNK_MASK;
-            let key_len = read_index(chunk, index);
-            let key_index = index + INDEX_SIZE;
+            let (key_len, key_len_size) = read_len(chunk, index);
+            let key_index = index + key_len_size;
             let entry_key: &[u8] = &chunk[key_index..key_index + key_len];
             if entry_key == key {
                 return LookupResult::Found(data_index);
@@ -173,10 +173,10 @@ impl LookupHtbl {
             LookupResult::Found(data_index) => {
                 let chunk = &self.data_chunks[data_index >> CHUNK_BITS];
                 let index = data_index & CHUNK_MASK;
-                let key_len = read_index(chunk, index);
-                let value_len_index = index + INDEX_SIZE + key_len;
-                let value_len = read_index(chunk, value_len_index);
-                let value_index = value_len_index + INDEX_SIZE;
+                let (key_len, key_len_size) = read_len(chunk, index);
+                let value_len_index = index + key_len_size + key_len;
+                let (value_len, value_len_size) = read_len(chunk, value_len_index);
+                let value_index = value_len_index + value_len_size;
                 Some(&chunk[value_index..value_index + value_len])
             }
             LookupResult::NotFound(_, _) => None,
@@ -220,8 +220,8 @@ impl LookupHtbl {
             if raw_index != 0 {
                 let chunk = &self.data_chunks[raw_index >> CHUNK_BITS];
                 let index = raw_index & CHUNK_MASK;
-                let key_len = read_index(chunk, index);
-                let key_index = index + INDEX_SIZE;
+                let (key_len, key_len_size) = read_len(chunk, index);
+                let key_index = index + key_len_size;
                 let key: &[u8] = &chunk[key_index..key_index + key_len];
                 match self.lookup(key) {
                     LookupResult::NotFound(table_index, hash_byte) => {
@@ -236,7 +236,7 @@ impl LookupHtbl {
     }
 
     pub fn new_data(&mut self, key: &[u8], value: &[u8]) -> usize {
-        // Check to see if we need a new chunk.
+        // Check to see if we need a new chunk.  INDEX_SIZE is also the max for compressed ints.
         let additional_data_len = 2 * INDEX_SIZE + key.len() + value.len();
         assert!(additional_data_len < CHUNK_SIZE);
         let end_index = self.used_data + additional_data_len;
@@ -257,15 +257,13 @@ impl LookupHtbl {
         }
         let chunk = &mut self.data_chunks[chunk_index];
         let index = self.used_data & CHUNK_MASK;
-        write_index(chunk, index, key.len());
-        let key_index = index + INDEX_SIZE;
+        let key_index = index + write_len(chunk, index, key.len());
         chunk[key_index..key_index + key.len()].copy_from_slice(key);
         let value_len_index = key_index + key.len();
-        write_index(chunk, value_len_index, value.len());
-        let value_index = value_len_index + INDEX_SIZE;
+        let value_index = value_len_index + write_len(chunk, value_len_index, value.len());
         chunk[value_index..value_index + value.len()].copy_from_slice(value);
         let index = self.used_data;
-        self.used_data += additional_data_len;
+        self.used_data = value_index + value.len();
         index
     }
 
@@ -309,11 +307,11 @@ impl<'a> Iterator for LookupHtblIter<'a> {
             if raw_index != 0usize {
                 let chunk = &self.htbl.data_chunks[raw_index >> CHUNK_BITS];
                 let index = raw_index & CHUNK_MASK;
-                let key_len = read_index(chunk, index);
-                let key_index = index + INDEX_SIZE;
+                let (key_len, key_len_size) = read_len(chunk, index);
+                let key_index = index + key_len_size;
                 let value_len_index = key_index + key_len;
-                let value_len = read_index(chunk, value_len_index);
-                let value_index = value_len_index + INDEX_SIZE;
+                let (value_len, value_len_size) = read_len(chunk, value_len_index);
+                let value_index = value_len_index + value_len_size;
                 return Some((
                     &chunk[key_index..key_index + key_len],
                     &chunk[value_index..value_index + value_len],
@@ -355,6 +353,42 @@ fn read_index(data: &[u8], index: usize) -> usize {
 fn write_index(data: &mut [u8], index: usize, value: usize) {
     let data = &mut data[index..index + INDEX_SIZE];
     data.copy_from_slice(&value.to_le_bytes()[0..INDEX_SIZE]);
+}
+
+// Read a compressed integer length.  Returns (length, num bytes of length) Compressed integers for
+// lengths are <2-bit num_bytes><6-bit MSBs>.  num_bytes is 0 for small integers <= 64.  Lengths
+// up to 2^30 can be represented, limiting keys and values to 1GiB each.
+#[inline]
+fn read_len(data: &[u8], index: usize) -> (usize, usize) {
+    let first_byte = data[index] as usize;
+    if first_byte < 64 {
+        return (first_byte, 1usize);
+    }
+    let num_bytes = first_byte >> 6;
+    let mut val = [0u8; 8];
+    (&mut val[0..num_bytes]).copy_from_slice(&data[index + 1..index + 1 + num_bytes]);
+    let len = u64::from_le_bytes(val) as usize;
+    let len = len | ((first_byte & 0x3f) << (8 * num_bytes));
+    return (len, 1 + num_bytes)
+}
+
+// Write a compressed length to data.  Return the number of bytes used to represent the length.
+#[inline]
+fn write_len(data: &mut [u8], index: usize, len: usize) -> usize {
+    if len < 64 {
+        data[index] = len as u8;
+        return 1usize;
+    }
+    let mut l = len;
+    let mut num_bytes = 1usize;
+    while l >= 64 {
+        data[num_bytes] = l as u8;
+        l >>= 8;
+        num_bytes += 1;
+    }
+    let first_byte = ((num_bytes - 1) << 6 | l) as u8;
+    data[index] = first_byte;
+    num_bytes
 }
 
 // Multiplication is our best fast mixing primitive, and with XOR, we have a non-linear hash.  We
