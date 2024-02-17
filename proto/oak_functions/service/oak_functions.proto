@@ -120,7 +120,6 @@ message Empty {}
 // duplicate keys exist.
 message ReserveRequest {
   uint64 additional_entries = 1;
-  uint64 additional_data = 2;
 }
 
 message ReserveResponse {}

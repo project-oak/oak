@@ -61,8 +61,8 @@ impl DataBuilder {
         self.data.extend(new_data);
     }
 
-    fn reserve(&mut self, additional_entries: usize, additional_data: usize) {
-        self.data.reserve(additional_entries, additional_data)
+    fn reserve(&mut self, additional_entries: usize) {
+        self.data.reserve(additional_entries)
     }
 }
 
@@ -92,7 +92,7 @@ impl LookupDataManager {
     /// Creates a new instance with empty backing data.
     pub fn new_empty(logger: Arc<dyn OakLogger>) -> Self {
         Self {
-            data: RwSpinlock::new(Arc::new(Data::new())),
+            data: RwSpinlock::new(Arc::new(Data::default())),
             // Incrementally builds the backing data that will be used by new `LookupData`
             // instances when finished.
             data_builder: Spinlock::new(DataBuilder::default()),
@@ -103,25 +103,15 @@ impl LookupDataManager {
     /// Creates an instance of LookupData populated with the given entries.
     pub fn for_test(data: Vec<(Bytes, Bytes)>, logger: Arc<dyn OakLogger>) -> Self {
         let test_manager = Self::new_empty(logger);
-        let total_data = Self::find_entries_size(&data);
-        test_manager.reserve(data.len() as u64, total_data).unwrap();
+        test_manager.reserve(data.len() as u64).unwrap();
         test_manager.extend_next_lookup_data(data);
         test_manager.finish_next_lookup_data();
         test_manager
     }
 
-    // Return the expected total of the key and value lengths.  Only works for end < 100.
-    fn find_entries_size(entries: &Vec<(Bytes, Bytes)>) -> u64 {
-        let mut total = 0usize;
-        for (key, value) in entries {
-            total += key.len() + value.len();
-        }
-        total as u64
-    }
-
-    pub fn reserve(&self, additional_entries: u64, additional_data: u64) -> anyhow::Result<()> {
+    pub fn reserve(&self, additional_entries: u64) -> anyhow::Result<()> {
         let mut data_builder = self.data_builder.lock();
-        data_builder.reserve(additional_entries as usize, additional_data as usize);
+        data_builder.reserve(additional_entries as usize);
         Ok(())
     }
 
@@ -280,7 +270,7 @@ mod tests {
         let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
         let lookup_data_0 = manager.create_lookup_data();
 
-        manager.reserve(4, find_test_data_size(0, 4)).unwrap();
+        manager.reserve(4).unwrap();
         manager.extend_next_lookup_data(create_test_data(0, 2));
         let lookup_data_1 = manager.create_lookup_data();
 
@@ -297,7 +287,7 @@ mod tests {
     fn test_update_lookup_four_chunks() {
         let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
 
-        manager.reserve(7, find_test_data_size(0, 7)).unwrap();
+        manager.reserve(7).unwrap();
         manager.extend_next_lookup_data(create_test_data(0, 2));
         manager.extend_next_lookup_data(create_test_data(2, 3));
         // Key overlaps are not allowed and result in panic.
@@ -315,12 +305,12 @@ mod tests {
         let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
         let lookup_data_0 = manager.create_lookup_data();
 
-        manager.reserve(2, find_test_data_size(0, 2)).unwrap();
+        manager.reserve(2).unwrap();
         manager.extend_next_lookup_data(create_test_data(0, 2));
         manager.abort_next_lookup_data();
         let lookup_data_1 = manager.create_lookup_data();
 
-        manager.reserve(1, find_test_data_size(0, 1)).unwrap();
+        manager.reserve(1).unwrap();
         manager.extend_next_lookup_data(create_test_data(0, 1));
         manager.finish_next_lookup_data();
         let lookup_data_2 = manager.create_lookup_data();
@@ -352,15 +342,9 @@ mod tests {
 
     fn reserve_and_extend_test_data(manager: &LookupDataManager, start: i32, end: i32) {
         manager
-            .reserve((end - start) as u64, find_test_data_size(start, end))
+            .reserve((end - start) as u64)
             .unwrap();
         manager.extend_next_lookup_data(create_test_data(start, end));
         manager.finish_next_lookup_data();
-    }
-
-    // Return the expected total of the key and value lengths.  Only works for end < 100.
-    fn find_test_data_size(start: i32, end: i32) -> u64 {
-        assert!(end < 10);
-        return (end - start) as u64 * (4 + 6);
     }
 }

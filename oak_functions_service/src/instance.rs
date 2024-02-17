@@ -104,7 +104,7 @@ impl<H: Handler> OakFunctionsInstance<H> {
 
     pub fn reserve(&self, request: ReserveRequest) -> Result<ReserveResponse, Status> {
         self.lookup_data_manager
-            .reserve(request.additional_entries, request.additional_data)
+            .reserve(request.additional_entries)
             .map(|()| ReserveResponse {})
             .map_err(|err| {
                 micro_rpc::Status::new_with_message(
