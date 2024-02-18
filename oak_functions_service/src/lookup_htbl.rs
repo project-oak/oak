@@ -523,7 +523,7 @@ mod tests {
 
     #[test]
     fn test_rand_vals() {
-        let mut r = Rand {seed: 0u64};
+        let mut r = Rand { seed: 0u64 };
         let mut kv_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
         let mut table = LookupHtbl::default();
         for _ in 0..100_000 {
@@ -551,7 +551,7 @@ mod tests {
     fn test_rng_sequence_len() {
         // If the sequence length < 2^30, we can find it by stepping 2^30, and then stepping
         // another 2^30 looking for the value we saw at 2^30.
-        let mut r = Rand {seed: 0u64};
+        let mut r = Rand { seed: 0u64 };
         for _ in 0usize..1usize << 30 {
             r.rand64();
         }
