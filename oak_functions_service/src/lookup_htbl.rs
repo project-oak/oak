@@ -24,8 +24,9 @@
 // manual tests.
 
 use alloc::{boxed::Box, vec, vec::Vec};
-use bytes::Bytes;
 use core::mem;
+
+use bytes::Bytes;
 
 // To save memory, we use 5 byte array index values instead of 8 bytes.  This saves 12 bytes per
 // k/v pair.  It is referred to as u40 below.
@@ -74,7 +75,7 @@ const CHUNK_MASK: usize = CHUNK_SIZE - 1;
 
 #[derive(Default)]
 pub struct LookupHtbl {
-    table: Vec<u8>,  // Contains fixed-size entries with index of k/v data in data_chunks.
+    table: Vec<u8>, // Contains fixed-size entries with index of k/v data in data_chunks.
     data_chunks: Vec<Box<[u8]>>,
     max_entries: usize,       // The number at which we must grow the table.
     allocated_entries: usize, // This is self.table.len() * ENTRY_SIZE.
@@ -242,7 +243,7 @@ impl LookupHtbl {
             let values = unsafe { values.assume_init() };
             self.data_chunks.push(values);
             if chunk_index == 0 {
-                self.used_data = 1;  // Address 0 is NULL.
+                self.used_data = 1; // Address 0 is NULL.
             } else {
                 self.used_data = CHUNK_SIZE * chunk_index;
             }
@@ -361,7 +362,7 @@ fn read_len(data: &[u8], index: usize) -> (usize, usize) {
     (&mut val[0..num_bytes]).copy_from_slice(&data[index + 1..index + 1 + num_bytes]);
     let len = u64::from_le_bytes(val) as usize;
     let len = len | ((first_byte & 0x3f) << (8 * num_bytes));
-    return (len, 1 + num_bytes)
+    return (len, 1 + num_bytes);
 }
 
 // Write a compressed length to data.  Return the number of bytes used to represent the length.
