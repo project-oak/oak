@@ -76,11 +76,14 @@ impl<H: Handler> OakFunctionsInstance<H> {
                     micro_rpc::StatusCode::InvalidArgument,
                     "no chunk in extend request",
                 ),
-            )?));
+            )?))
+            .map_err(|msg| {
+                micro_rpc::Status::new_with_message(micro_rpc::StatusCode::InvalidArgument, msg)
+            })?;
         Ok(ExtendNextLookupDataResponse {})
     }
 
-    pub fn extend_lookup_data_chunk(&self, chunk: LookupDataChunk) {
+    pub fn extend_lookup_data_chunk(&self, chunk: LookupDataChunk) -> Result<(), &'static str> {
         self.lookup_data_manager
             .extend_next_lookup_data(to_data(chunk))
     }

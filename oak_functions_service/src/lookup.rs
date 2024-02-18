@@ -56,9 +56,12 @@ impl DataBuilder {
     ///
     /// Note, if new data contains a key already present in the existing data, calling extend
     /// overwrites the value.
-    fn extend<T: IntoIterator<Item = (Bytes, Bytes)>>(&mut self, new_data: T) {
+    fn extend<T: IntoIterator<Item = (Bytes, Bytes)>>(
+        &mut self,
+        new_data: T,
+    ) -> Result<(), &'static str> {
         self.state = BuilderState::Extending;
-        self.data.extend(new_data);
+        self.data.extend(new_data)
     }
 
     fn reserve(&mut self, additional_entries: usize) {
@@ -104,7 +107,7 @@ impl LookupDataManager {
     pub fn for_test(data: Vec<(Bytes, Bytes)>, logger: Arc<dyn OakLogger>) -> Self {
         let test_manager = Self::new_empty(logger);
         test_manager.reserve(data.len() as u64).unwrap();
-        test_manager.extend_next_lookup_data(data);
+        test_manager.extend_next_lookup_data(data).unwrap();
         test_manager.finish_next_lookup_data();
         test_manager
     }
@@ -115,13 +118,17 @@ impl LookupDataManager {
         Ok(())
     }
 
-    pub fn extend_next_lookup_data<T: IntoIterator<Item = (Bytes, Bytes)>>(&self, new_data: T) {
+    pub fn extend_next_lookup_data<T: IntoIterator<Item = (Bytes, Bytes)>>(
+        &self,
+        new_data: T,
+    ) -> Result<(), &'static str> {
         info!("Start extending next lookup data");
         {
             let mut data_builder = self.data_builder.lock();
-            data_builder.extend(new_data);
+            data_builder.extend(new_data)?;
         }
         info!("Finish extending next lookup data");
+        Ok(())
     }
 
     // Finish building the next lookup data and replace the current lookup data in place.
@@ -271,10 +278,14 @@ mod tests {
         let lookup_data_0 = manager.create_lookup_data();
 
         manager.reserve(4).unwrap();
-        manager.extend_next_lookup_data(create_test_data(0, 2));
+        manager
+            .extend_next_lookup_data(create_test_data(0, 2))
+            .unwrap();
         let lookup_data_1 = manager.create_lookup_data();
 
-        manager.extend_next_lookup_data(create_test_data(2, 4));
+        manager
+            .extend_next_lookup_data(create_test_data(2, 4))
+            .unwrap();
         manager.finish_next_lookup_data();
         let lookup_data_2 = manager.create_lookup_data();
 
@@ -288,11 +299,19 @@ mod tests {
         let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
 
         manager.reserve(7).unwrap();
-        manager.extend_next_lookup_data(create_test_data(0, 2));
-        manager.extend_next_lookup_data(create_test_data(2, 3));
+        manager
+            .extend_next_lookup_data(create_test_data(0, 2))
+            .unwrap();
+        manager
+            .extend_next_lookup_data(create_test_data(2, 3))
+            .unwrap();
         // Key overlaps are not allowed and result in panic.
-        manager.extend_next_lookup_data(create_test_data(3, 6));
-        manager.extend_next_lookup_data(create_test_data(6, 7));
+        manager
+            .extend_next_lookup_data(create_test_data(3, 6))
+            .unwrap();
+        manager
+            .extend_next_lookup_data(create_test_data(6, 7))
+            .unwrap();
         manager.finish_next_lookup_data();
 
         let lookup_data = manager.create_lookup_data();
@@ -306,12 +325,16 @@ mod tests {
         let lookup_data_0 = manager.create_lookup_data();
 
         manager.reserve(2).unwrap();
-        manager.extend_next_lookup_data(create_test_data(0, 2));
+        manager
+            .extend_next_lookup_data(create_test_data(0, 2))
+            .unwrap();
         manager.abort_next_lookup_data();
         let lookup_data_1 = manager.create_lookup_data();
 
         manager.reserve(1).unwrap();
-        manager.extend_next_lookup_data(create_test_data(0, 1));
+        manager
+            .extend_next_lookup_data(create_test_data(0, 1))
+            .unwrap();
         manager.finish_next_lookup_data();
         let lookup_data_2 = manager.create_lookup_data();
 
@@ -342,7 +365,9 @@ mod tests {
 
     fn reserve_and_extend_test_data(manager: &LookupDataManager, start: i32, end: i32) {
         manager.reserve((end - start) as u64).unwrap();
-        manager.extend_next_lookup_data(create_test_data(start, end));
+        manager
+            .extend_next_lookup_data(create_test_data(start, end))
+            .unwrap();
         manager.finish_next_lookup_data();
     }
 }

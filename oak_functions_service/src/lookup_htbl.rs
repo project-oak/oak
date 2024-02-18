@@ -180,8 +180,8 @@ impl LookupHtbl {
         }
     }
 
-    // Insert a k/v pair into the table.  Panics if it is already in the table.
-    pub fn insert(&mut self, key: &[u8], value: &[u8]) {
+    // Insert a k/v pair into the table.  Returns Err(()) if it is already in the table.
+    pub fn insert(&mut self, key: &[u8], value: &[u8]) -> Result<(), &'static str> {
         if self.table.is_empty() {
             self.reserve(1);
         } else if self.used_entries >= self.max_entries {
@@ -190,7 +190,7 @@ impl LookupHtbl {
         }
         let result = self.lookup(key);
         match result {
-            LookupResult::Found(_) => panic!("Key already in table"),
+            LookupResult::Found(_) => return Err("Key already in hash table"),
             LookupResult::NotFound(table_index, hash_byte) => {
                 let data_index = self.new_data(key, value);
                 self.table[table_index] = hash_byte;
@@ -198,6 +198,7 @@ impl LookupHtbl {
                 self.used_entries += 1;
             }
         }
+        Ok(())
     }
 
     // This increases memory for the table temporarily increase 3X, and permanently by 2X.
@@ -259,10 +260,14 @@ impl LookupHtbl {
         used_data
     }
 
-    pub fn extend<T: IntoIterator<Item = (Bytes, Bytes)>>(&mut self, new_data: T) {
+    pub fn extend<T: IntoIterator<Item = (Bytes, Bytes)>>(
+        &mut self,
+        new_data: T,
+    ) -> Result<(), &'static str> {
         for (key, value) in new_data {
-            self.insert(&key, &value);
+            self.insert(&key, &value)?;
         }
+        Ok(())
     }
 
     pub fn len(&self) -> usize {
@@ -436,7 +441,7 @@ mod tests {
                 let mut value = [key_bytes[1]; AVE_VALUE_SIZE];
                 value[0] = key_bytes[0] as u8;
                 value[AVE_VALUE_SIZE - 1] = key_bytes[7];
-                table.insert(&key_bytes, &value);
+                table.insert(&key_bytes, &value).unwrap();
                 num_keys += 1;
             } else {
                 panic!("Should not already have this key");
@@ -470,7 +475,7 @@ mod tests {
         let mut table = LookupHtbl::default();
         table.reserve(3);
         for i in 0..3 {
-            table.insert(keys[i], values[i]);
+            table.insert(keys[i], values[i]).unwrap();
         }
         let mut found = [false, false, false];
         for (key, value) in &table {
@@ -530,7 +535,7 @@ mod tests {
             loop {
                 let kv_pair = r.rand_kv_pair(100, 1000);
                 if !table.contains_key(&kv_pair.0) {
-                    table.insert(&kv_pair.0, &kv_pair.1);
+                    table.insert(&kv_pair.0, &kv_pair.1).unwrap();
                     kv_pairs.push(kv_pair);
                     break;
                 }
@@ -561,5 +566,14 @@ mod tests {
                 panic!("RNG sequence too short");
             }
         }
+    }
+
+    #[test]
+    fn test_dumplicate_key() {
+        let mut table = LookupHtbl::default();
+        table.insert("key".as_bytes(), "value1".as_bytes()).unwrap();
+        table
+            .insert("key".as_bytes(), "value2".as_bytes())
+            .expect_err("Expected an error");
     }
 }
