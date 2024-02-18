@@ -341,9 +341,7 @@ mod tests {
     }
 
     fn reserve_and_extend_test_data(manager: &LookupDataManager, start: i32, end: i32) {
-        manager
-            .reserve((end - start) as u64)
-            .unwrap();
+        manager.reserve((end - start) as u64).unwrap();
         manager.extend_next_lookup_data(create_test_data(start, end));
         manager.finish_next_lookup_data();
     }

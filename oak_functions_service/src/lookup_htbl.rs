@@ -55,9 +55,9 @@ const ENTRY_SIZE: usize = INDEX_SIZE + 1;
 // data_chunks starts empty, and as data is added to the table, we allocat another chunk.
 // The format for each k/v pair of data in each chunk is:
 //
-//     key_len: u40  // TODO: replace with compressed integer.
+//     key_len: <compressed u30>
 //     key: [u8]
-//     value_len: u40  // TODO: replace with compressed integer.
+//     value_len: <compressed u30>
 //     value: [u8]
 //
 // Another memory savings comes from using a swiss table with exactly a 60% load factor.  Swiss
