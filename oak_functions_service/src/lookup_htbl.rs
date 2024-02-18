@@ -184,15 +184,14 @@ impl LookupHtbl {
     pub fn insert(&mut self, key: &[u8], value: &[u8]) {
         if self.table.is_empty() {
             self.reserve(1);
+        } else if self.used_entries >= self.max_entries {
+            // This should never happen if the needed space is reserved first.
+            self.grow_table();
         }
         let result = self.lookup(key);
         match result {
             LookupResult::Found(_) => panic!("Key already in table"),
             LookupResult::NotFound(table_index, hash_byte) => {
-                if self.used_entries >= self.max_entries {
-                    // This should never happen if the needed space is reserved first.
-                    self.grow_table();
-                }
                 let data_index = self.new_data(key, value);
                 self.table[table_index] = hash_byte;
                 write_index(&mut self.table, table_index + 1, data_index);
@@ -375,7 +374,7 @@ fn write_len(data: &mut [u8], index: usize, len: usize) -> usize {
     let mut l = len;
     let mut num_bytes = 1usize;
     while l >= 64 {
-        data[num_bytes] = l as u8;
+        data[index + num_bytes] = l as u8;
         l >>= 8;
         num_bytes += 1;
     }
@@ -419,9 +418,9 @@ fn hash(v: &[u8]) -> u64 {
 mod tests {
     use super::*;
 
-    const NUM_KEYS: usize = 100_000_000usize;
-    const NUM_LOOKUPS: usize = 10_000_000usize;
-    const AVE_VALUE_SIZE: usize = 60usize;
+    const NUM_KEYS: usize = 1_000_000usize;
+    const NUM_LOOKUPS: usize = 1_000_000usize;
+    const AVE_VALUE_SIZE: usize = 6000usize;
 
     #[test]
     fn test_lookup_htbl() {
@@ -489,31 +488,78 @@ mod tests {
         assert!(found[0] && found[1] && found[2]);
     }
 
-    #[test]
-    fn test_grow_table() {
-        let keys = ["key1".as_bytes(), "key2".as_bytes(), "key3".as_bytes()];
-        let values = [
-            "value1".as_bytes(),
-            "value2".as_bytes(),
-            "value3".as_bytes(),
-        ];
-        let mut table = LookupHtbl::default();
-        for i in 0..3 {
-            table.insert(keys[i], values[i]);
+    // This further tests the hash function.
+    struct Rand {
+        seed: u64,
+    }
+
+    impl Rand {
+        fn rand64(&mut self) -> u64 {
+            self.seed = hash_u64(self.seed);
+            self.seed
         }
-        let mut found = [false, false, false];
-        for (key, value) in &table {
-            if key == keys[0] {
-                found[0] = true;
-                assert!(value == values[0]);
-            } else if key == keys[1] {
-                found[1] = true;
-                assert!(value == values[1]);
-            } else if key == keys[2] {
-                found[2] = true;
-                assert!(value == values[2]);
+
+        fn rand_range(&mut self, n: usize) -> usize {
+            self.rand64() as usize % n
+        }
+
+        fn rand_bytes(&mut self, len: usize) -> Vec<u8> {
+            let mut v = vec![];
+            for _ in 0..len {
+                v.push(self.seed as u8);
+                self.seed = hash_u64(self.seed);
+            }
+            v
+        }
+
+        fn rand_kv_pair(&mut self, key_len: usize, value_len: usize) -> (Vec<u8>, Vec<u8>) {
+            let key_len = self.rand_range(key_len);
+            let value_len = self.rand_range(value_len);
+            let key = self.rand_bytes(key_len);
+            let value = self.rand_bytes(value_len);
+            (key, value)
+        }
+    }
+
+    #[test]
+    fn test_rand_vals() {
+        let mut r = Rand {seed: 0u64};
+        let mut kv_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
+        let mut table = LookupHtbl::default();
+        for _ in 0..100_000 {
+            loop {
+                let kv_pair = r.rand_kv_pair(100, 1000);
+                if !table.contains_key(&kv_pair.0) {
+                    table.insert(&kv_pair.0, &kv_pair.1);
+                    kv_pairs.push(kv_pair);
+                    break;
+                }
             }
         }
-        assert!(found[0] && found[1] && found[2]);
+        for i in 0..kv_pairs.len() {
+            let pair = &kv_pairs[i];
+            assert!(table.get(&pair.0).unwrap() == &pair.1);
+        }
+    }
+
+    // The hash function should act like a random oracle, in which case the odds of seeing the same
+    // value as one that came before is determined by the Birthday Problem.  Using the rule of
+    // thumb for how large the sequence needs to be to have a .5 probability of collision:
+    // sqrt(0.5 * ln(2) * 2^64) = 2.5e9.  This test just checks that one seed leads to a sequence
+    // longer than 2^30 without collisions.
+    #[test]
+    fn test_rng_sequence_len() {
+        // If the sequence length < 2^30, we can find it by stepping 2^30, and then stepping
+        // another 2^30 looking for the value we saw at 2^30.
+        let mut r = Rand {seed: 0u64};
+        for _ in 0usize..1usize << 30 {
+            r.rand64();
+        }
+        let target = r.rand64();
+        for _ in 0usize..1usize << 30 {
+            if r.rand64() == target {
+                panic!("RNG sequence too short");
+            }
+        }
     }
 }
