@@ -65,8 +65,6 @@ class CertificateTest : public testing::Test {
 };
 
 TEST_F(CertificateTest, CwtDeserializeSuccess) {
-  // auto certificate_vector =
-  //     std::vector<uint8_t>(public_key_certificate_.begin(), public_key_certificate_.end());
   auto cwt = Cwt::Deserialize(public_key_certificate_);
   ASSERT_TRUE(cwt.ok()) << cwt.status();
   EXPECT_THAT(cwt->subject_public_key.GetPublicKey(), ElementsAreArray(kTestPublicKey));
