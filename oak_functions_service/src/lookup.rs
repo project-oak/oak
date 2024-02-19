@@ -18,17 +18,17 @@ use alloc::{
     format,
     string::{String, ToString},
     sync::Arc,
-    vec::Vec,
 };
 
 use bytes::Bytes;
+use hashbrown::HashMap;
 use log::{info, Level};
 use spinning_top::{RwSpinlock, Spinlock};
 
 use crate::{logger::OakLogger, lookup_htbl::LookupHtbl};
 
 // This is used to pass data to the lookup data module for tests.
-pub type Data = Vec<(Bytes, Bytes)>;
+pub type Data = HashMap<Bytes, Bytes>;
 
 // Data maintains the invariant on lookup data to have [at most one
 // value](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md#invariant-at-most-one-value)
@@ -107,7 +107,7 @@ impl LookupDataManager {
     }
 
     /// Creates an instance of LookupData populated with the given entries.
-    pub fn for_test(data: Vec<(Bytes, Bytes)>, logger: Arc<dyn OakLogger>) -> Self {
+    pub fn for_test(data: Data, logger: Arc<dyn OakLogger>) -> Self {
         let test_manager = Self::new_empty(logger);
         test_manager.reserve(data.len() as u64).unwrap();
         test_manager.extend_next_lookup_data(data).unwrap();
@@ -233,7 +233,7 @@ pub fn format_bytes(v: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use alloc::vec;
+    use alloc::{vec, vec::Vec};
 
     use super::*;
 

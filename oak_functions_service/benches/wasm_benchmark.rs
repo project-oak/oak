@@ -65,7 +65,8 @@ fn bench_invoke_lookup(c: &mut Criterion) {
     let test_data = create_test_data(0, MAX_DATA_SIZE);
     test_state
         .lookup_data_manager
-        .extend_next_lookup_data(test_data.clone());
+        .extend_next_lookup_data(test_data.clone())
+        .unwrap();
     test_state.lookup_data_manager.finish_next_lookup_data();
 
     c.bench_function("lookup wasm", |b| {
@@ -121,14 +122,16 @@ fn bench_invoke_lookup_multi(c: &mut Criterion) {
     let test_data = create_test_data(0, MAX_DATA_SIZE);
     test_state_wasmi
         .lookup_data_manager
-        .extend_next_lookup_data(test_data.clone());
+        .extend_next_lookup_data(test_data.clone())
+        .unwrap();
     test_state_wasmi
         .lookup_data_manager
         .finish_next_lookup_data();
 
     test_state_wasmtime
         .lookup_data_manager
-        .extend_next_lookup_data(test_data.clone());
+        .extend_next_lookup_data(test_data.clone())
+        .unwrap();
     test_state_wasmtime
         .lookup_data_manager
         .finish_next_lookup_data();
