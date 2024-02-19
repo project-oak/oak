@@ -20,14 +20,18 @@ use std::{
 };
 
 use anyhow::{anyhow, Context};
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use oak_containers_orchestrator::launcher_client::LauncherClient;
 use oak_containers_sdk::{InstanceEncryptionKeyHandle, OrchestratorClient};
 #[cfg(feature = "native")]
 use oak_functions_containers_app::native_handler::NativeHandler;
 use oak_functions_containers_app::serve;
-use oak_functions_service::wasm::wasmtime::WasmtimeHandler;
+use oak_functions_service::{
+    proto::oak::functions::config::{ApplicationConfig, HandlerType},
+    wasm::wasmtime::WasmtimeHandler,
+};
 use opentelemetry::{global::set_error_handler, metrics::MeterProvider, KeyValue};
+use prost::Message;
 use tokio::{net::TcpListener, runtime::Handle};
 
 const OAK_FUNCTIONS_CONTAINERS_APP_PORT: u16 = 8080;
@@ -35,24 +39,10 @@ const OAK_FUNCTIONS_CONTAINERS_APP_PORT: u16 = 8080;
 #[global_allocator]
 static ALLOCATOR: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
-#[derive(Clone, Debug, strum::Display, ValueEnum)]
-pub enum HandlerType {
-    #[cfg(feature = "native")]
-    /// The uploaded bytecode to be a .so file that will be dynamically opened.
-    Native,
-
-    /// The uploaded bytecode is Wasm bytecode, executed in a Wasm sandbox.
-    Wasm,
-}
-
 #[derive(Parser, Debug)]
 struct Args {
     #[arg(default_value = "http://10.0.2.100:8080")]
     launcher_addr: String,
-
-    /// Type of request handler to use
-    #[arg(default_value = "wasm")]
-    handler: HandlerType,
 }
 
 #[tokio::main]
@@ -148,10 +138,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map_err(|error| anyhow!("couldn't create encryption key handle: {:?}", error))?;
 
     // To be used when connecting trusted app to orchestrator.
-    let _application_config = client
-        .get_application_config()
-        .await
-        .context("failed to get application config")?;
+    let application_config = {
+        let bytes = client
+            .get_application_config()
+            .await
+            .context("failed to get application config")?;
+
+        // If we don't get a config at all, treat it as if it had defaults. Otherwise, try parsing
+        // the message and fail if it doesn't make sense.
+        if bytes.is_empty() {
+            ApplicationConfig::default()
+        } else {
+            ApplicationConfig::decode(&bytes[..])?
+        }
+    };
 
     let addr = SocketAddr::new(
         IpAddr::V4(Ipv4Addr::UNSPECIFIED),
@@ -159,13 +159,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     let listener = TcpListener::bind(addr).await?;
     let server_handle = tokio::spawn(async move {
-        match args.handler {
-            #[cfg(feature = "native")]
-            HandlerType::Native => {
-                serve::<_, NativeHandler>(listener, Arc::new(encryption_key_handle), meter).await
-            }
-            HandlerType::Wasm => {
+        match application_config.handler_type() {
+            HandlerType::HandlerUnspecified | HandlerType::HandlerWasm => {
                 serve::<_, WasmtimeHandler>(listener, Arc::new(encryption_key_handle), meter).await
+            }
+            HandlerType::HandlerNative => {
+                if cfg!(feature = "native") {
+                    serve::<_, NativeHandler>(listener, Arc::new(encryption_key_handle), meter)
+                        .await
+                } else {
+                    panic!("Application config specified `native` handler type, but this binary does not support that feature");
+                }
             }
         }
     });
