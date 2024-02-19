@@ -69,7 +69,7 @@ const ENTRY_SIZE: usize = INDEX_SIZE + 1;
 //
 // This reduce scheme currently limits the number of entries to 2^32.
 
-const CHUNK_BITS: usize = 32;
+const CHUNK_BITS: usize = 30;
 const CHUNK_SIZE: usize = 1 << CHUNK_BITS;
 const CHUNK_MASK: usize = CHUNK_SIZE - 1;
 
@@ -425,7 +425,7 @@ mod tests {
 
     const NUM_KEYS: usize = 1_000_000usize;
     const NUM_LOOKUPS: usize = 1_000_000usize;
-    const AVE_VALUE_SIZE: usize = 6000usize;
+    const AVE_VALUE_SIZE: usize = 3000usize;
 
     #[test]
     fn test_lookup_htbl() {
