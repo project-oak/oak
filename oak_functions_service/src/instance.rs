@@ -83,9 +83,18 @@ impl<H: Handler> OakFunctionsInstance<H> {
         Ok(ExtendNextLookupDataResponse {})
     }
 
-    pub fn extend_lookup_data_chunk(&self, chunk: LookupDataChunk) -> Result<(), &'static str> {
+    pub fn extend_lookup_data_chunk(
+        &self,
+        chunk: LookupDataChunk,
+    ) -> Result<(), micro_rpc::Status> {
         self.lookup_data_manager
             .extend_next_lookup_data(to_data(chunk))
+            .map_err(|err| {
+                micro_rpc::Status::new_with_message(
+                    micro_rpc::StatusCode::InvalidArgument,
+                    format!("Was there a duplicate key?: {:?}", err),
+                )
+            })
     }
 
     /// See [`crate::proto::oak::functions::OakFunctions::finish_next_lookup_data`].
