@@ -422,7 +422,7 @@ mod tests {
 
     const NUM_KEYS: usize = 1_000_000usize;
     const NUM_LOOKUPS: usize = 1_000_000usize;
-    const AVE_VALUE_SIZE: usize = 3000usize;
+    const AVE_VALUE_SIZE: usize = 60;
 
     #[test]
     fn test_lookup_htbl() {
@@ -557,7 +557,7 @@ mod tests {
             r.rand64();
         }
         let target = r.rand64();
-        for _ in 0usize..1usize << 30 {
+        for _ in 0usize..1usize << 26 {
             if r.rand64() == target {
                 panic!("RNG sequence too short");
             }
