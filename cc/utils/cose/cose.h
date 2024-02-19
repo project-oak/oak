@@ -41,7 +41,7 @@ class CoseSign1 {
   // Array of signatures. Each signature is represented as a COSE_Signature structure.
   const cppbor::Bstr* signature;
 
-  static absl::StatusOr<CoseSign1> Deserialize(const std::vector<uint8_t>& data);
+  static absl::StatusOr<CoseSign1> Deserialize(absl::string_view data);
 
  private:
   // Parsed CBOR item containing COSE_Sign1 object.
@@ -77,6 +77,7 @@ class CoseKey {
 
   // Deserializes HPKE public key as a COSE_Key.
   // <https://www.rfc-editor.org/rfc/rfc9180.html>
+  static absl::StatusOr<CoseKey> DeserializeHpkePublicKey(absl::string_view data);
   static absl::StatusOr<CoseKey> DeserializeHpkePublicKey(const std::vector<uint8_t>& data);
 
   const std::vector<uint8_t>& GetPublicKey() const { return x->value(); }
@@ -102,6 +103,8 @@ class CoseKey {
           const cppbor::Array* key_ops, const cppbor::Uint* crv, const cppbor::Bstr* x,
           std::unique_ptr<cppbor::Item>&& item)
       : kty(kty), kid(kid), alg(alg), key_ops(key_ops), crv(crv), x(x), item_(std::move(item)) {}
+
+  static absl::StatusOr<CoseKey> DeserializeHpkePublicKey(std::unique_ptr<cppbor::Item>&& item);
 };
 
 std::string CborTypeToString(cppbor::MajorType cbor_type) {

@@ -36,7 +36,7 @@ class Cwt {
   // Public key associated with the subject in the form of a COSE_Key structure.
   CoseKey subject_public_key;
 
-  static absl::StatusOr<Cwt> Deserialize(const std::vector<uint8_t>& data);
+  static absl::StatusOr<Cwt> Deserialize(absl::string_view data);
 
  private:
   // CBOR map keys.

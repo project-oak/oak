@@ -28,7 +28,7 @@
 
 namespace oak::utils::cose {
 
-absl::StatusOr<Cwt> Cwt::Deserialize(const std::vector<uint8_t>& data) {
+absl::StatusOr<Cwt> Cwt::Deserialize(absl::string_view data) {
   // Deserialize COSE_Sign1.
   absl::StatusOr<CoseSign1> cose_sign1 = CoseSign1::Deserialize(data);
   if (!cose_sign1.ok()) {

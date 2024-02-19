@@ -27,8 +27,9 @@
 
 namespace oak::utils::cose {
 
-absl::StatusOr<CoseSign1> CoseSign1::Deserialize(const std::vector<uint8_t>& data) {
-  auto [item, end, error] = cppbor::parse(data);
+absl::StatusOr<CoseSign1> CoseSign1::Deserialize(absl::string_view data) {
+  auto [item, end, error] =
+      cppbor::parse(reinterpret_cast<const uint8_t*>(data.data()), data.size());
   if (!error.empty()) {
     return absl::InvalidArgumentError(absl::StrCat("couldn't parse COSE_Sign1: ", error));
   }
@@ -62,11 +63,24 @@ absl::StatusOr<CoseSign1> CoseSign1::Deserialize(const std::vector<uint8_t>& dat
                    signature->asBstr(), std::move(item));
 }
 
+absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(absl::string_view data) {
+  auto [item, end, error] =
+      cppbor::parse(reinterpret_cast<const uint8_t*>(data.data()), data.size());
+  if (!error.empty()) {
+    return absl::InvalidArgumentError(absl::StrCat("couldn't parse COSE_Key: ", error));
+  }
+  return DeserializeHpkePublicKey(std::move(item));
+}
+
 absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(const std::vector<uint8_t>& data) {
   auto [item, end, error] = cppbor::parse(data);
   if (!error.empty()) {
     return absl::InvalidArgumentError(absl::StrCat("couldn't parse COSE_Key: ", error));
   }
+  return DeserializeHpkePublicKey(std::move(item));
+}
+
+absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(std::unique_ptr<cppbor::Item>&& item) {
   if (item->type() != cppbor::MAP) {
     return UnexpectedCborTypeError("COSE_Key", cppbor::MAP, item->type());
   }
