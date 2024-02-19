@@ -69,7 +69,7 @@ const ENTRY_SIZE: usize = INDEX_SIZE + 1;
 //
 // This reduce scheme currently limits the number of entries to 2^32.
 
-const CHUNK_BITS: usize = 30;
+const CHUNK_BITS: usize = 21;
 const CHUNK_SIZE: usize = 1 << CHUNK_BITS;
 const CHUNK_MASK: usize = CHUNK_SIZE - 1;
 
