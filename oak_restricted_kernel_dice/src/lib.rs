@@ -23,10 +23,15 @@
 
 extern crate alloc;
 
+use alloc::vec;
+
 use coset::{cbor::Value, cwt::ClaimName, CborSerializable};
 use hkdf::Hkdf;
 use oak_crypto::encryption_key::generate_encryption_key_pair;
-use oak_dice::cert::{ENCLAVE_APPLICATION_LAYER_ID, LAYER_2_CODE_MEASUREMENT_ID, SHA2_256_ID};
+use oak_dice::cert::{
+    ENCLAVE_APPLICATION_LAYER_ID, FINAL_LAYER_CONFIG_MEASUREMENT_ID, LAYER_2_CODE_MEASUREMENT_ID,
+    SHA2_256_ID,
+};
 use sha2::{Digest, Sha256};
 
 /// A derived sealing key.
@@ -85,15 +90,27 @@ pub fn generate_dice_data(
         let (application_private_signing_key, application_public_verifying_key) =
             oak_dice::cert::generate_ecdsa_key_pair();
 
-        let additional_claims = alloc::vec![(
+        let additional_claims = vec![(
             ClaimName::PrivateUse(ENCLAVE_APPLICATION_LAYER_ID),
-            Value::Map(alloc::vec![(
-                Value::Integer(LAYER_2_CODE_MEASUREMENT_ID.into()),
-                Value::Map(alloc::vec![(
-                    Value::Integer(SHA2_256_ID.into()),
-                    Value::Bytes(app_digest.into()),
-                )]),
-            ),]),
+            Value::Map(vec![
+                (
+                    Value::Integer(LAYER_2_CODE_MEASUREMENT_ID.into()),
+                    Value::Map(vec![(
+                        Value::Integer(SHA2_256_ID.into()),
+                        Value::Bytes(app_digest.into()),
+                    )]),
+                ),
+                (
+                    Value::Integer(FINAL_LAYER_CONFIG_MEASUREMENT_ID.into()),
+                    Value::Map(vec![(
+                        Value::Integer(SHA2_256_ID.into()),
+                        // There currently exists no application config for enclave
+                        // applications. Hence this field should
+                        // always be empty.
+                        Value::Bytes([0; 0].into()),
+                    )]),
+                ),
+            ]),
         )];
 
         let application_signing_public_key_certificate =
