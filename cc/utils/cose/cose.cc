@@ -16,11 +16,13 @@
 
 #include "cc/utils/cose/cose.h"
 
+#include <cstdint>
 #include <memory>
-#include <string>
+#include <utility>
 #include <vector>
 
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "libcppbor/include/cppbor/cppbor.h"
 #include "libcppbor/include/cppbor/cppbor_parse.h"

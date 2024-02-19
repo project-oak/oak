@@ -17,10 +17,10 @@
 #include "cc/utils/cose/cwt.h"
 
 #include <memory>
-#include <string>
-#include <vector>
+#include <utility>
 
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "cc/utils/cose/cose.h"
 #include "libcppbor/include/cppbor/cppbor.h"

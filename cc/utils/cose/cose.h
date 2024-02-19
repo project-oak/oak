@@ -17,6 +17,7 @@
 #ifndef CC_UTILS_COSE_COSE_H_
 #define CC_UTILS_COSE_COSE_H_
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
