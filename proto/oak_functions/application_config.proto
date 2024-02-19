@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,19 +14,22 @@
 // limitations under the License.
 //
 
-use micro_rpc_build::ReceiverType;
+syntax = "proto3";
 
-fn main() {
-    micro_rpc_build::compile(
-        &[
-            "../proto/oak_functions/application_config.proto",
-            "../proto/oak_functions/service/oak_functions.proto",
-        ],
-        &[".."],
-        micro_rpc_build::CompileOptions {
-            receiver_type: ReceiverType::RefSelf,
-            bytes: vec![".oak.functions.LookupDataEntry".to_string()],
-            ..Default::default()
-        },
-    );
+package oak.functions.config;
+
+enum HandlerType {
+  // Defaults to WASM.
+  HANDLER_UNSPECIFIED = 0;
+
+  // Use a wasm interpreter to load the module.
+  HANDLER_WASM = 1;
+
+  // Interpret the module as a native .so file. Only supported when running on Oak Containers.
+  HANDLER_NATIVE = 2;
+}
+
+message ApplicationConfig {
+  // How to load the provided module.
+  HandlerType handler_type = 1;
 }

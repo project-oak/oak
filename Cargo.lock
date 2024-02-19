@@ -2564,7 +2564,6 @@ dependencies = [
  "opentelemetry_sdk",
  "ouroboros",
  "prost",
- "strum 0.25.0",
  "tempfile",
  "tikv-jemallocator",
  "tokio",

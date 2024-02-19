@@ -33,7 +33,9 @@ extern crate std;
 pub mod proto {
     pub mod oak {
         pub mod functions {
-            #![allow(dead_code)]
+            pub mod config {
+                include!(concat!(env!("OUT_DIR"), "/oak.functions.config.rs"));
+            }
             use prost::Message;
             include!(concat!(env!("OUT_DIR"), "/oak.functions.rs"));
         }

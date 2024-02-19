@@ -38,7 +38,6 @@ opentelemetry-otlp = { version = "*", default-features = false, features = [
 ] }
 ouroboros = { version = "*", optional = true }
 prost = "*"
-strum = { version = "*", features = ["derive"] }
 tempfile = { version = "*", optional = true }
 tikv-jemallocator = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
