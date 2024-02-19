@@ -219,7 +219,7 @@ where
         while let Some(chunk) = request.next().await {
             instance
                 .extend_lookup_data_chunk(chunk?)
-                .map_err(|e| tonic::Status::failed_precondition(e))?;
+                .map_err(|e| tonic::Status::failed_precondition(e.to_string()))?;
         }
         instance
             .finish_next_lookup_data(FinishNextLookupDataRequest {})

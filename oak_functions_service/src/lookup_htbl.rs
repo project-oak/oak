@@ -136,7 +136,7 @@ impl LookupHtbl {
                 // This only happens if the key hash byte is 0.
                 return LookupResult::NotFound(table_index, key_hash_byte);
             }
-            let chunk: &[u8] = &*self.data_chunks[data_index >> CHUNK_BITS];
+            let chunk: &[u8] = &self.data_chunks[data_index >> CHUNK_BITS];
             let index = data_index & CHUNK_MASK;
             let (key_len, key_len_size) = read_len(chunk, index);
             let key_index = index + key_len_size;
@@ -155,10 +155,7 @@ impl LookupHtbl {
         if self.table.is_empty() {
             return false;
         }
-        match self.lookup(key) {
-            LookupResult::Found(_) => true,
-            _ => false,
-        }
+        matches!(self.lookup(key), LookupResult::Found(_))
     }
 
     pub fn get(&self, key: &[u8]) -> Option<&[u8]> {
@@ -168,7 +165,7 @@ impl LookupHtbl {
         let result = self.lookup(key);
         match result {
             LookupResult::Found(data_index) => {
-                let chunk: &[u8] = &*self.data_chunks[data_index >> CHUNK_BITS];
+                let chunk: &[u8] = &self.data_chunks[data_index >> CHUNK_BITS];
                 let index = data_index & CHUNK_MASK;
                 let (key_len, key_len_size) = read_len(chunk, index);
                 let value_len_index = index + key_len_size + key_len;
@@ -209,13 +206,13 @@ impl LookupHtbl {
         }
         let old_table = mem::take(&mut self.table);
         self.table = vec![0u8; old_table.len() << 1];
-        self.max_entries = self.max_entries << 1;
+        self.max_entries <<= 1;
         self.allocated_entries <<= 1;
         let mut i = 1usize;
         while i < old_table.len() {
             let raw_index = read_index(&old_table, i);
             if raw_index != 0 {
-                let chunk: &[u8] = &*self.data_chunks[raw_index >> CHUNK_BITS];
+                let chunk: &[u8] = &self.data_chunks[raw_index >> CHUNK_BITS];
                 let index = raw_index & CHUNK_MASK;
                 let (key_len, key_len_size) = read_len(chunk, index);
                 let key_index = index + key_len_size;
@@ -248,7 +245,7 @@ impl LookupHtbl {
                 self.used_data = CHUNK_SIZE * chunk_index;
             }
         }
-        let chunk: &mut [u8] = &mut *self.data_chunks[chunk_index];
+        let chunk: &mut [u8] = &mut self.data_chunks[chunk_index];
         let index = self.used_data & CHUNK_MASK;
         let key_index = index + write_len(chunk, index, key.len());
         chunk[key_index..key_index + key.len()].copy_from_slice(key);
@@ -275,12 +272,12 @@ impl LookupHtbl {
     }
 
     pub fn is_empty(&self) -> bool {
-        return self.used_entries == 0;
+        self.used_entries == 0
     }
 
     pub fn iter(&self) -> LookupHtblIter {
         LookupHtblIter {
-            htbl: &self,
+            htbl: self,
             table_index: 0,
         }
     }
@@ -302,7 +299,7 @@ impl<'a> Iterator for LookupHtblIter<'a> {
             let raw_index = read_index(&self.htbl.table, self.table_index + 1);
             self.table_index += ENTRY_SIZE;
             if raw_index != 0usize {
-                let chunk: &[u8] = &*self.htbl.data_chunks[raw_index >> CHUNK_BITS];
+                let chunk: &[u8] = &self.htbl.data_chunks[raw_index >> CHUNK_BITS];
                 let index = raw_index & CHUNK_MASK;
                 let (key_len, key_len_size) = read_len(chunk, index);
                 let key_index = index + key_len_size;
@@ -325,7 +322,7 @@ impl<'a> IntoIterator for &'a LookupHtbl {
     // Required method
     fn into_iter(self) -> Self::IntoIter {
         LookupHtblIter {
-            htbl: &self,
+            htbl: self,
             table_index: 0usize,
         }
     }
@@ -341,7 +338,7 @@ fn reduce(x: u32, n: u32) -> usize {
 #[inline]
 fn read_index(data: &[u8], index: usize) -> usize {
     let mut val = [0u8; 8];
-    (&mut val[0..INDEX_SIZE]).copy_from_slice(&data[index..index + INDEX_SIZE]);
+    val[0..INDEX_SIZE].copy_from_slice(&data[index..index + INDEX_SIZE]);
     u64::from_le_bytes(val) as usize
 }
 
@@ -363,10 +360,10 @@ fn read_len(data: &[u8], index: usize) -> (usize, usize) {
     }
     let num_bytes = first_byte >> 6;
     let mut val = [0u8; 8];
-    (&mut val[0..num_bytes]).copy_from_slice(&data[index + 1..index + 1 + num_bytes]);
+    val[0..num_bytes].copy_from_slice(&data[index + 1..index + 1 + num_bytes]);
     let len = u64::from_le_bytes(val) as usize;
     let len = len | ((first_byte & 0x3f) << (8 * num_bytes));
-    return (len, 1 + num_bytes);
+    (len, 1 + num_bytes)
 }
 
 // Write a compressed length to data.  Return the number of bytes used to represent the length.
@@ -439,7 +436,7 @@ mod tests {
             key_bytes.copy_from_slice(&key.to_le_bytes());
             if !table.contains_key(&key_bytes) {
                 let mut value = [key_bytes[1]; AVE_VALUE_SIZE];
-                value[0] = key_bytes[0] as u8;
+                value[0] = key_bytes[0];
                 value[AVE_VALUE_SIZE - 1] = key_bytes[7];
                 table.insert(&key_bytes, &value).unwrap();
                 num_keys += 1;
@@ -541,9 +538,8 @@ mod tests {
                 }
             }
         }
-        for i in 0..kv_pairs.len() {
-            let pair = &kv_pairs[i];
-            assert!(table.get(&pair.0).unwrap() == &pair.1);
+        for kv_pair in kv_pairs {
+            assert!(table.get(&kv_pair.0).unwrap() == kv_pair.1);
         }
     }
 
