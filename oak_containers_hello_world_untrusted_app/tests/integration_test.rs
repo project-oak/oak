@@ -17,7 +17,10 @@
 
 use std::sync::Once;
 
-use oak_containers_launcher::Args;
+use oak_containers_launcher::{
+    Args,
+    proto::oak::key_provisioning::v1::GetGroupKeysRequest,
+};
 use oak_crypto::encryptor::ClientEncryptor;
 use once_cell::sync::Lazy;
 
@@ -68,6 +71,18 @@ async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
     let get_endorsed_evidence_result = untrusted_app.get_endorsed_evidence().await;
     assert!(get_endorsed_evidence_result.is_ok());
     let endorsed_evidence = get_endorsed_evidence_result.unwrap();
+
+    // Use enclave's own endorsed evidence to verify that Key Provisioning works
+    // and returns an encrypted key.
+    let get_group_keys_request = GetGroupKeysRequest {
+        evidence: endorsed_evidence.evidence.clone(),
+        endorsements: endorsed_evidence.endorsements.clone(),
+    };
+    untrusted_app
+        .get_group_keys(get_group_keys_request)
+        .await
+        .expect("couldn't get group keys for key provisioning");
+
     #[allow(deprecated)]
     let encryption_public_key = endorsed_evidence
         .attestation_evidence
