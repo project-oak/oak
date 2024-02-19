@@ -27,9 +27,12 @@ use spinning_top::{RwSpinlock, Spinlock};
 
 use crate::{logger::OakLogger, lookup_htbl::LookupHtbl};
 
+// This is used to pass data to the lookup data module for tests.
+pub type Data = Vec<(Bytes, Bytes)>;
+
 // Data maintains the invariant on lookup data to have [at most one
 // value](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md#invariant-at-most-one-value)
-pub type Data = LookupHtbl;
+type DataInternal = LookupHtbl;
 
 #[derive(Default)]
 enum BuilderState {
@@ -41,13 +44,13 @@ enum BuilderState {
 // Incrementally build next lookup data keeping track of the state.
 #[derive(Default)]
 struct DataBuilder {
-    data: Data,
+    data: DataInternal,
     state: BuilderState,
 }
 
 impl DataBuilder {
     /// Build data from the builder and set the builder back to the initial state.
-    fn build(&mut self) -> Data {
+    fn build(&mut self) -> DataInternal {
         self.state = BuilderState::Empty;
         core::mem::take(&mut self.data)
     }
@@ -84,7 +87,7 @@ impl DataBuilder {
 ///
 /// In the future we may replace both the mutex and the hash map with something like RCU.
 pub struct LookupDataManager {
-    data: RwSpinlock<Arc<Data>>,
+    data: RwSpinlock<Arc<DataInternal>>,
     // Behind a lock, because we have multiple references to LookupDataManager and need to mutate
     // data builder.
     data_builder: Spinlock<DataBuilder>,
@@ -95,7 +98,7 @@ impl LookupDataManager {
     /// Creates a new instance with empty backing data.
     pub fn new_empty(logger: Arc<dyn OakLogger>) -> Self {
         Self {
-            data: RwSpinlock::new(Arc::new(Data::default())),
+            data: RwSpinlock::new(Arc::new(DataInternal::default())),
             // Incrementally builds the backing data that will be used by new `LookupData`
             // instances when finished.
             data_builder: Spinlock::new(DataBuilder::default()),
@@ -176,12 +179,12 @@ impl LookupDataManager {
 /// Provides access to shared lookup data.
 #[derive(Clone)]
 pub struct LookupData {
-    data: Arc<Data>,
+    data: Arc<DataInternal>,
     logger: Arc<dyn OakLogger>,
 }
 
 impl LookupData {
-    fn new(data: Arc<Data>, logger: Arc<dyn OakLogger>) -> Self {
+    fn new(data: Arc<DataInternal>, logger: Arc<dyn OakLogger>) -> Self {
         Self { data, logger }
     }
 

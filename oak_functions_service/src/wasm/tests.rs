@@ -28,7 +28,7 @@ use super::{
 };
 use crate::{
     logger::StandaloneLogger,
-    lookup::LookupDataManager,
+    lookup::{Data, LookupDataManager},
     wasm::{AbiPointer, AbiPointerOffset},
     Handler,
 };
@@ -150,7 +150,8 @@ struct TestState {
 
 fn create_test_state() -> TestState {
     let logger = Arc::new(StandaloneLogger);
-    let lookup_data_manager = Arc::new(LookupDataManager::for_test(Vec::new(), logger.clone()));
+    let lookup_data_manager =
+        Arc::new(LookupDataManager::for_test(Data::default(), logger.clone()));
     let api_factory = Arc::new(StdWasmApiFactory {
         lookup_data_manager: lookup_data_manager.clone(),
     });
