@@ -16,20 +16,16 @@
 
 #include "cc/utils/cose/cwt.h"
 
+#include <cstdint>
 #include <fstream>
-#include <iostream>
 #include <memory>
-#include <sstream>
 #include <string>
 
-#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "gmock/gmock.h"
 #include "google/protobuf/io/zero_copy_stream_impl.h"
 #include "google/protobuf/text_format.h"
 #include "gtest/gtest.h"
-#include "libcppbor/include/cppbor/cppbor.h"
-#include "libcppbor/include/cppbor/cppbor_parse.h"
 #include "proto/attestation/evidence.pb.h"
 
 namespace oak::utils::cose {

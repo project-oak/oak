@@ -39,6 +39,7 @@ cc_library(
     hdrs = ["cwt.h"],
     deps = [
         ":cose",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@libcppbor",
@@ -57,10 +58,8 @@ cc_test(
     deps = [
         ":cwt",
         "//proto/attestation:evidence_cc_proto",
-        "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_googletest//:gtest_main",
         "@com_google_protobuf//:protobuf",
-        "@libcppbor",
     ],
 )
