@@ -18,6 +18,7 @@ members = [
   "oak_containers_syslogd",
   "oak_core",
   "oak_crypto",
+  "oak_debug_service",
   "oak_dice",
   "oak_docker_linux_init",
   "oak_echo_linux_init",
@@ -98,6 +99,7 @@ oak_containers_launcher = { path = "./oak_containers_launcher" }
 oak_containers_sdk = { path = "./oak_containers_sdk" }
 oak_core = { path = "./oak_core" }
 oak_crypto = { path = "./oak_crypto" }
+oak_debug_service = { path = "./oak_debug_service" }
 oak_dice = { path = "./oak_dice" }
 oak_enclave_runtime_support = { path = "./oak_enclave_runtime_support", default-features = false }
 oak_functions_abi = { path = "./oak_functions_abi" }
