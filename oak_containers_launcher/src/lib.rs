@@ -37,16 +37,14 @@ pub mod proto {
 mod qemu;
 mod server;
 
-use crate::proto::oak::{
-    key_provisioning::v1::{key_provisioning_client::KeyProvisioningClient, GetGroupKeysRequest, GetGroupKeysResponse},
-    session::v1::{AttestationBundle, AttestationEndorsement, AttestationEvidence},
-};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use anyhow::Context;
 use clap::Parser;
 use oak_proto_rust::oak::attestation::v1::{
     endorsements, Endorsements, Evidence, OakRestrictedKernelEndorsements,
 };
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+pub use qemu::Params as QemuParams;
 use tokio::{
     net::TcpListener,
     sync::oneshot::{channel, Receiver, Sender},
@@ -54,7 +52,13 @@ use tokio::{
     time::{timeout, Duration},
 };
 use tonic::transport::Channel as TonicChannel;
-pub use qemu::Params as QemuParams;
+
+use crate::proto::oak::{
+    key_provisioning::v1::{
+        key_provisioning_client::KeyProvisioningClient, GetGroupKeysRequest, GetGroupKeysResponse,
+    },
+    session::v1::{AttestationBundle, AttestationEndorsement, AttestationEvidence},
+};
 
 /// The local IP address assigned to the VM guest.
 const VM_LOCAL_ADDRESS: IpAddr = IpAddr::V4(Ipv4Addr::new(10, 0, 2, 15));
@@ -168,7 +172,7 @@ impl Launcher {
         )?;
 
         // Create Orchestrator Key Provisioning gRPC client.
-        let orchestrator_uri = format!("127.0.0.1:{}", host_orchestrator_proxy_port)
+        let orchestrator_uri = format!("http://127.0.0.1:{}", host_orchestrator_proxy_port)
             .parse()
             .context("couldn't parse orchestrator URI")?;
         let orchestrator_channel = TonicChannel::builder(orchestrator_uri)
@@ -262,8 +266,12 @@ impl Launcher {
     }
 
     // Gets enclave group keys as part of Key Provisioning.
-    pub async fn get_group_keys(&mut self, request: GetGroupKeysRequest) -> anyhow::Result<GetGroupKeysResponse> {
-        let get_group_keys_response = self.orchestrator_key_provisioning_client
+    pub async fn get_group_keys(
+        &mut self,
+        request: GetGroupKeysRequest,
+    ) -> anyhow::Result<GetGroupKeysResponse> {
+        let get_group_keys_response = self
+            .orchestrator_key_provisioning_client
             .get_group_keys(request)
             .await
             .context("couldn't get group keys")?

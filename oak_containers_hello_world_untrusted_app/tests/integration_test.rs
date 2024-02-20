@@ -17,10 +17,7 @@
 
 use std::sync::Once;
 
-use oak_containers_launcher::{
-    Args,
-    proto::oak::key_provisioning::v1::GetGroupKeysRequest,
-};
+use oak_containers_launcher::{proto::oak::key_provisioning::v1::GetGroupKeysRequest, Args};
 use oak_crypto::encryptor::ClientEncryptor;
 use once_cell::sync::Lazy;
 

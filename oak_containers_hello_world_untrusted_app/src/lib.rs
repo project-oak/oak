@@ -60,7 +60,10 @@ impl UntrustedApp {
         self.launcher.get_endorsed_evidence().await
     }
 
-    pub async fn get_group_keys(&mut self, request: GetGroupKeysRequest) -> anyhow::Result<GetGroupKeysResponse> {
+    pub async fn get_group_keys(
+        &mut self,
+        request: GetGroupKeysRequest,
+    ) -> anyhow::Result<GetGroupKeysResponse> {
         self.launcher.get_group_keys(request).await
     }
 
