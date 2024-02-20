@@ -21,6 +21,8 @@ use x86_64::{
     PhysAddr,
 };
 
+use crate::stage0::SevEsResetBlock;
+
 /// The CPU family of the vCPU we expect to be running on.
 const CPU_FAMILY: u8 = 6;
 
@@ -52,5 +54,14 @@ pub fn get_boot_vmsa() -> VmsaPage {
     result.vmsa.sev_features = 0x00000001;
 
     trace!("Boot VMSA: {:?}", result);
+    result
+}
+
+/// Gets the initial VMSA for additional vCPUs that are not the boot vCPU.
+pub fn get_ap_vmsa(reset_block: &SevEsResetBlock) -> VmsaPage {
+    let mut result = get_boot_vmsa();
+    result.vmsa.rip = reset_block.rip;
+    result.vmsa.cs.base = reset_block.segment_base;
+    trace!("AP VMSA: {:?}", result);
     result
 }
