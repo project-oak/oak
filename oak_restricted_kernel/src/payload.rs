@@ -188,7 +188,8 @@ impl Process {
                 .into_inner()
         };
 
-        // Safety: the application must be valid.
+        // Safety: caller ensured the application is a valid ELF file representing an Oak Restricted
+        // Application.
         let entry = unsafe { application.map_into_memory() };
 
         // We've mapped the memory into the process page tables. Let's revert to the previous page
@@ -198,24 +199,23 @@ impl Process {
             let prev_page_table = mapped_prev_pt.level_4_table();
             let pml4_frame =
                 identify_pml4_frame(prev_page_table).context("could not get pml4 frame")?;
+            // Safety: the new page table maintains the same mappings for kernel space.
             unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) };
         }
 
         Ok(Self { pml4, entry })
     }
     /// Executes the process.
-    ///
-    /// # Safety
-    ///
-    /// The process must be in a valid state.
-    pub unsafe fn execute(&self) -> ! {
+    pub fn execute(&self) -> ! {
         let pml4_frame = identify_pml4_frame(&self.pml4).expect("could not get pml4 frame");
+        // Safety: the new page table maintains the same mappings for kernel space.
         unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) };
 
         let entry = self.entry;
         log::info!("Running application");
         // Enter Ring 3 and jump to user code.
-        // Safety: It's up the process's memory mappings to make sense.
+        // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the user to
+        // guarantee that the file made sense.
         unsafe {
             asm! {
                 "mov rsp, {}", // user stack
@@ -224,7 +224,7 @@ impl Process {
                 in("rcx") entry.as_u64(), // initial RIP
                 in("r11") 0x202, // initial RFLAGS (interrupts enabled)
                 options(noreturn)
-            };
+            }
         }
     }
 }

@@ -478,15 +478,13 @@ pub fn start_kernel(info: &BootParams) -> ! {
         derived_key,
     );
 
-    // Ensure new process is not dropped. Safety: the ELF file must be valid.
-    let process = Box::leak(Box::new(
-        // Safety: application must be valid.
-        unsafe { Process::from_application(&application).expect("failed to create process") },
-    ));
+    // Ensure new process is not dropped.
+    // Safety: The application is assumed to be a valid ELF file.
+    let process = Box::leak(Box::new(unsafe {
+        Process::from_application(&application).expect("failed to create process")
+    }));
 
-    // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
-    // under the kernel's control.
-    unsafe { process.execute() }
+    process.execute()
 }
 
 #[derive(EnumIter, EnumString)]

@@ -34,13 +34,11 @@ pub fn syscall_unstable_switch_proccess(buf: *mut c_void, count: c_size_t) -> ! 
     let application = crate::payload::Application::new(copied_elf_binary.into_boxed_slice())
         .expect("failed to parse application");
 
-    // Ensure the new process is not dropped. Safety: the ELF file must be valid.
+    // Ensure the new process is not dropped.
     let process = Box::leak(Box::new(
-        // Safety: application must be valid.
+        // Safety: application is assumed to be a valid ELF file.
         unsafe { Process::from_application(&application).expect("failed to create process") },
     ));
 
-    // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
-    // under the kernel's control.
-    unsafe { process.execute() }
+    process.execute()
 }
