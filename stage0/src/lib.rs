@@ -28,7 +28,7 @@ use linked_list_allocator::LockedHeap;
 use oak_core::sync::OnceCell;
 use oak_dice::evidence::{TeePlatform, DICE_DATA_CMDLINE_PARAM};
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
-use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
+use oak_sev_snp_guest::{io::PortFactoryWrapper, msr::SevStatus};
 use sha2::{Digest, Sha256};
 use x86_64::{
     instructions::{hlt, interrupts::int3, segmentation::Segment},
@@ -73,10 +73,11 @@ static SHORT_TERM_ALLOC: LockedHeap = LockedHeap::empty();
 
 #[link_section = ".boot"]
 #[no_mangle]
-static mut SEV_SECRETS: MaybeUninit<oak_sev_guest::secrets::SecretsPage> = MaybeUninit::uninit();
+static mut SEV_SECRETS: MaybeUninit<oak_sev_snp_guest::secrets::SecretsPage> =
+    MaybeUninit::uninit();
 #[link_section = ".boot"]
 #[no_mangle]
-static SEV_CPUID: MaybeUninit<oak_sev_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
+static SEV_CPUID: MaybeUninit<oak_sev_snp_guest::cpuid::CpuidPage> = MaybeUninit::uninit();
 
 /// We create an identity map for the first 1GiB of memory.
 const TOP_OF_VIRTUAL_MEMORY: u64 = Size1GiB::SIZE;

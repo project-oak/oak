@@ -16,7 +16,7 @@
 
 use core::arch::x86_64::__cpuid;
 
-use oak_sev_guest::cpuid::CpuidInput;
+use oak_sev_snp_guest::cpuid::CpuidInput;
 use x86_64::PhysAddr;
 
 use crate::{

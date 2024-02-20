@@ -26,7 +26,7 @@
 //! #![feature(naked_functions)]
 //! #![feature(asm_sym)]
 //!
-//! use oak_sev_guest::interrupts::{
+//! use oak_sev_snp_guest::interrupts::{
 //!     mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame,
 //! };
 //!

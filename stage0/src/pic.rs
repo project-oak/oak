@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-use oak_sev_guest::io::{IoPortFactory, PortWrapper, PortWriter};
+use oak_sev_snp_guest::io::{IoPortFactory, PortWrapper, PortWriter};
 
 use crate::io_port_factory;
 

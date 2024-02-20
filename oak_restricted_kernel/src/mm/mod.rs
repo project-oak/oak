@@ -19,7 +19,7 @@ use log::info;
 #[cfg(feature = "initrd")]
 use oak_linux_boot_params::Ramdisk;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
-use oak_sev_guest::msr::{get_sev_status, SevStatus};
+use oak_sev_snp_guest::msr::{get_sev_status, SevStatus};
 #[cfg(feature = "initrd")]
 use x86_64::structures::paging::frame::PhysFrameRange;
 use x86_64::{

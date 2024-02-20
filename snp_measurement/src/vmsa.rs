@@ -15,7 +15,7 @@
 //
 
 use log::trace;
-use oak_sev_guest::vmsa::{calculate_rdx_from_fms, Vmsa, VmsaPage};
+use oak_sev_snp_guest::vmsa::{calculate_rdx_from_fms, Vmsa, VmsaPage};
 use x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr,

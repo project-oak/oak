@@ -17,7 +17,7 @@
 use core::{arch::asm, ops::Deref};
 
 use log::error;
-use oak_sev_guest::{
+use oak_sev_snp_guest::{
     interrupts::{mutable_interrupt_handler_with_error_code, MutableInterruptStackFrame},
     io::{IoPortFactory, PortFactoryWrapper, PortWrapper, PortWriter},
     msr::{get_cpuid_for_vc_exception, SevStatus},

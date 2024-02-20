@@ -17,7 +17,7 @@
 use alloc::collections::VecDeque;
 use core::alloc::Allocator;
 
-use oak_sev_guest::{io::PortFactoryWrapper, msr::SevStatus};
+use oak_sev_snp_guest::{io::PortFactoryWrapper, msr::SevStatus};
 use oak_simple_io::SimpleIo;
 use x86_64::VirtAddr;
 

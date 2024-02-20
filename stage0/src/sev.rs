@@ -23,8 +23,8 @@ use core::{
 
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
-pub use oak_sev_guest::ghcb::Ghcb;
-use oak_sev_guest::{
+pub use oak_sev_snp_guest::ghcb::Ghcb;
+use oak_sev_snp_guest::{
     crypto::GuestMessageEncryptor,
     ghcb::GhcbProtocol,
     guest::{GuestMessage, Message},
@@ -238,8 +238,8 @@ pub fn unshare_page(page: Page<Size4KiB>) {
 // Page tables come in three sizes: for 1 GiB, 2 MiB and 4 KiB pages. However, `PVALIDATE` can only
 // be invoked on 2 MiB and 4 KiB pages.
 // This trait translates between the page sizes defined in the x86_64 crate (`Size4KiB`, `Size2MiB`)
-// and the sizes defined in `oak_sev_guest` crate (`Page4KiB`, `Page2MiB`). There is no mapping for
-// `Size1GiB` as pages of that size can't be used for valitation.
+// and the sizes defined in `oak_sev_snp_guest` crate (`Page4KiB`, `Page2MiB`). There is no mapping
+// for `Size1GiB` as pages of that size can't be used for valitation.
 pub trait ValidatablePageSize {
     const SEV_PAGE_SIZE: SevPageSize;
 }

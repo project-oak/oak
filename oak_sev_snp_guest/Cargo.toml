@@ -1,5 +1,5 @@
 [package]
-name = "oak_sev_guest"
+name = "oak_sev_snp_guest"
 version = "0.1.0"
 authors = ["Conrad Grobler <grobler@google.com>"]
 edition = "2021"

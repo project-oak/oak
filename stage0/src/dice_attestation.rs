@@ -14,14 +14,14 @@
 // limitations under the License.
 //
 
-use oak_sev_guest::{
+use oak_sev_snp_attestation_report::AttestationReport;
+use oak_sev_snp_guest::{
     guest::{
         AttestationRequest, AttestationResponse, GuestFieldFlags, KeyRequest, KeyResponse,
         ReportStatus,
     },
     msr::SevStatus,
 };
-use oak_sev_snp_attestation_report::AttestationReport;
 
 use crate::sev::send_guest_message_request;
 

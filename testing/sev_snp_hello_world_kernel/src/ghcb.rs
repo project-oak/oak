@@ -16,7 +16,7 @@
 
 use core::mem::MaybeUninit;
 
-use oak_sev_guest::{
+use oak_sev_snp_guest::{
     ghcb::{Ghcb, GhcbProtocol},
     msr::{
         change_snp_page_state, register_ghcb_location, PageAssignment, RegisterGhcbGpaRequest,

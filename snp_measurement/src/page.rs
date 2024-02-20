@@ -18,7 +18,7 @@
 #![allow(clippy::extra_unused_type_parameters)]
 
 use log::{debug, trace};
-use oak_sev_guest::vmsa::VmsaPage;
+use oak_sev_snp_guest::vmsa::VmsaPage;
 use sha2::{Digest, Sha384};
 use strum::FromRepr;
 use x86_64::{

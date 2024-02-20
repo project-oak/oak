@@ -17,7 +17,7 @@
 use core::fmt::Write;
 
 use log::info;
-use oak_sev_guest::io::PortFactoryWrapper;
+use oak_sev_snp_guest::io::PortFactoryWrapper;
 use sev_serial::SerialPort;
 use spinning_top::Spinlock;
 

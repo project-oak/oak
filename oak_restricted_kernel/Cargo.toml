@@ -43,7 +43,7 @@ oak_linux_boot_params = { workspace = true }
 oak_restricted_kernel_dice = { workspace = true }
 oak_restricted_kernel_interface = { workspace = true }
 rust-hypervisor-firmware-virtio = { path = "../third_party/rust-hypervisor-firmware-virtio" }
-oak_sev_guest = { workspace = true, features = ["rust-crypto"] }
+oak_sev_snp_guest = { workspace = true, features = ["rust-crypto"] }
 p256 = { version = "*", default-features = false, features = ["ecdsa"] }
 self_cell = "*"
 sev_serial = { workspace = true }

@@ -47,7 +47,7 @@ criteria = ["safe-to-deploy", "crypto-safe"]
 [policy.oak_linux_boot_params]
 criteria = ["safe-to-deploy", "crypto-safe"]
 
-[policy.oak_sev_guest]
+[policy.oak_sev_snp_guest]
 criteria = ["safe-to-deploy", "crypto-safe"]
 
 [policy.sev_serial]

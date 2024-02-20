@@ -16,7 +16,7 @@ log = "*"
 oak_linux_boot_params = { path = "../../linux_boot_params" }
 spinning_top = "*"
 x86_64 = "*"
-oak_sev_guest = { path = "../../oak_sev_guest", default-features = false }
+oak_sev_snp_guest = { path = "../../oak_sev_snp_guest", default-features = false }
 sev_serial = { path = "../../sev_serial" }
 
 [[bin]]

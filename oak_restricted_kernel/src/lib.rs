@@ -75,7 +75,9 @@ use mm::{
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::BootParams;
-use oak_sev_guest::msr::{change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus};
+use oak_sev_snp_guest::msr::{
+    change_snp_state_for_frame, get_sev_status, PageAssignment, SevStatus,
+};
 use spinning_top::Spinlock;
 use strum::{EnumIter, EnumString, IntoEnumIterator};
 #[cfg(not(feature = "initrd"))]

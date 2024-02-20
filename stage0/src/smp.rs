@@ -21,7 +21,7 @@ use core::{
     sync::atomic::{AtomicU32, Ordering},
 };
 
-use oak_sev_guest::ap_jump_table::ApJumpTable;
+use oak_sev_snp_guest::ap_jump_table::ApJumpTable;
 use x86_64::PhysAddr;
 
 use crate::{

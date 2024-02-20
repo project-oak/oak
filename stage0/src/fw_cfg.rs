@@ -22,7 +22,7 @@ use core::{cmp::min, ffi::CStr};
 
 use bitflags::bitflags;
 use oak_linux_boot_params::{BootE820Entry, E820EntryType};
-use oak_sev_guest::io::{IoPortFactory, PortReader, PortWrapper, PortWriter};
+use oak_sev_snp_guest::io::{IoPortFactory, PortReader, PortWrapper, PortWriter};
 use x86_64::{
     structures::paging::{PageSize, Size2MiB, Size4KiB},
     PhysAddr, VirtAddr,

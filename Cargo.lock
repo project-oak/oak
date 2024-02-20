@@ -2832,7 +2832,7 @@ dependencies = [
  "oak_linux_boot_params",
  "oak_restricted_kernel_dice",
  "oak_restricted_kernel_interface",
- "oak_sev_guest",
+ "oak_sev_snp_guest",
  "oak_simple_io",
  "oak_virtio",
  "p256",
@@ -2924,7 +2924,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_sev_guest"
+name = "oak_sev_snp_attestation_report"
+version = "0.0.0"
+dependencies = [
+ "bitflags 2.4.1",
+ "static_assertions",
+ "strum 0.25.0",
+ "zerocopy",
+]
+
+[[package]]
+name = "oak_sev_snp_guest"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
@@ -2940,20 +2950,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "oak_sev_snp_attestation_report"
-version = "0.0.0"
-dependencies = [
- "bitflags 2.4.1",
- "static_assertions",
- "strum 0.25.0",
- "zerocopy",
-]
-
-[[package]]
 name = "oak_simple_io"
 version = "0.1.0"
 dependencies = [
- "oak_sev_guest",
+ "oak_sev_snp_guest",
  "x86_64",
 ]
 
@@ -2971,8 +2971,8 @@ dependencies = [
  "oak_core",
  "oak_dice",
  "oak_linux_boot_params",
- "oak_sev_guest",
  "oak_sev_snp_attestation_report",
+ "oak_sev_snp_guest",
  "oak_stage0_dice",
  "p256",
  "rand_core",
@@ -4048,7 +4048,7 @@ dependencies = [
 name = "sev_serial"
 version = "0.1.0"
 dependencies = [
- "oak_sev_guest",
+ "oak_sev_snp_guest",
  "x86_64",
 ]
 
@@ -4177,7 +4177,7 @@ dependencies = [
  "env_logger",
  "hex",
  "log",
- "oak_sev_guest",
+ "oak_sev_snp_guest",
  "sha2",
  "static_assertions",
  "strum 0.25.0",

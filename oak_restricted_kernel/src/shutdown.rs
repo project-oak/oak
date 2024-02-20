@@ -16,7 +16,7 @@
 
 use core::arch::asm;
 
-use oak_sev_guest::{
+use oak_sev_snp_guest::{
     io::{IoPortFactory, PortFactoryWrapper, PortWrapper, PortWriter},
     msr::{get_sev_status, request_termination, SevStatus, TerminationReason, TerminationRequest},
 };

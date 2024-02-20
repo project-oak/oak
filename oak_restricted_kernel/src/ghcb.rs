@@ -15,7 +15,7 @@
 //
 
 use oak_core::sync::OnceCell;
-use oak_sev_guest::{
+use oak_sev_snp_guest::{
     ghcb::{Ghcb, GhcbProtocol},
     io::{GhcbIoFactory, PortFactoryWrapper},
     msr::{

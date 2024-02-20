@@ -10,7 +10,7 @@ anyhow = "*"
 clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 hex = "*"
-oak_sev_guest = { workspace = true }
+oak_sev_snp_guest = { workspace = true }
 log = "*"
 sha2 = "*"
 static_assertions = "*"

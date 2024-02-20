@@ -18,7 +18,7 @@ use core::{panic, slice::from_raw_parts};
 
 use oak_core::sync::OnceCell;
 use oak_linux_boot_params::{BootParams, CCBlobSevInfo, CCSetupData, SetupDataType};
-use oak_sev_guest::{cpuid::CpuidPage, secrets::SecretsPage};
+use oak_sev_snp_guest::{cpuid::CpuidPage, secrets::SecretsPage};
 use x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
