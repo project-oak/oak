@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["CPU_FAMILY","CPU_MODEL","CPU_STEPPING","VMSA_ADDRESS"],"fn":["get_boot_vmsa"]};
+window.SIDEBAR_ITEMS = {"constant":["CPU_FAMILY","CPU_MODEL","CPU_STEPPING","VMSA_ADDRESS"],"fn":["get_ap_vmsa","get_boot_vmsa"]};

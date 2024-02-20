@@ -393,7 +393,7 @@
 <span class="doccomment">/// The type of page being measured.
 ///
 /// See table 65 in &lt;https://www.amd.com/system/files/TechDocs/56860.pdf&gt;.
-</span><span class="attr">#[derive(Debug, FromRepr, AsBytes)]
+</span><span class="attr">#[derive(Debug, FromRepr, AsBytes, Clone)]
 #[repr(u8)]
 #[allow(unused)]
 </span><span class="kw">pub enum </span>PageType {

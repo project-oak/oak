@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["DEFAULT_ENCLAVE_BINARY","DEFAULT_STAGE0_ROM"],"fn":["main"],"mod":["elf","page","stage0","vmsa"],"struct":["Cli"]};
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_STAGE0_ROM"],"fn":["main"],"mod":["page","stage0","vmsa"],"struct":["Cli"]};

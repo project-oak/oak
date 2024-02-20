@@ -99,9 +99,6 @@
 <a href="#99" id="99">99</a>
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
-<a href="#102" id="102">102</a>
-<a href="#103" id="103">103</a>
-<a href="#104" id="104">104</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -118,8 +115,7 @@
 // limitations under the License.
 //
 
-</span><span class="kw">mod </span>elf;
-<span class="kw">mod </span>page;
+</span><span class="kw">mod </span>page;
 <span class="kw">mod </span>stage0;
 <span class="kw">mod </span>vmsa;
 
@@ -128,29 +124,29 @@
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>log::trace;
 <span class="kw">use </span>page::PageInfo;
+<span class="kw">use </span>x86_64::structures::paging::{PageSize, Size4KiB};
 
 <span class="kw">use crate</span>::{
-    elf::load_elf_segments,
     stage0::load_stage0,
-    vmsa::{get_boot_vmsa, VMSA_ADDRESS},
+    vmsa::{get_ap_vmsa, get_boot_vmsa, VMSA_ADDRESS},
 };
 
 <span class="doccomment">/// The default workspace-relative path to the Stage 0 firmware ROM image.
-</span><span class="kw">const </span>DEFAULT_STAGE0_ROM: <span class="kw-2">&amp;</span>str = <span class="string">&quot;stage0_bin/target/x86_64-unknown-none/release/oak_stage0.bin&quot;</span>;
-
-<span class="doccomment">/// The default workspace-relative path to the Oak Restricted Kernel.
-</span><span class="kw">const </span>DEFAULT_ENCLAVE_BINARY: <span class="kw-2">&amp;</span>str =
-    <span class="string">&quot;oak_restricted_kernel_bin/target/x86_64-unknown-none/release/oak_restricted_kernel_bin&quot;</span>;
+</span><span class="kw">const </span>DEFAULT_STAGE0_ROM: <span class="kw-2">&amp;</span>str = <span class="string">&quot;stage0_bin/target/x86_64-unknown-none/release/stage0_bin&quot;</span>;
 
 <span class="attr">#[derive(Parser, Clone)]
 #[command(about = <span class="string">&quot;Oak SEV-SNP Measurement Calculator&quot;</span>)]
 </span><span class="kw">struct </span>Cli {
     <span class="attr">#[arg(long, help = <span class="string">&quot;The location of the Stage 0 firmware ROM image&quot;</span>)]
     </span>stage0_rom: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
-    <span class="attr">#[arg(long, help = <span class="string">&quot;The location of the enclave binary&quot;</span>)]
-    </span>enclave_binary: <span class="prelude-ty">Option</span>&lt;PathBuf&gt;,
     <span class="attr">#[arg(long, help = <span class="string">&quot;Whether the firwmare is shadowed to support legacy boot&quot;</span>)]
     </span>legacy_boot: bool,
+    <span class="attr">#[arg(
+        long,
+        help = <span class="string">&quot;The number of vCPUs available to the VM at boot&quot;</span>,
+        default_value_t = <span class="number">1
+    </span>)]
+    </span>vcpu_count: usize,
 }
 
 <span class="kw">impl </span>Cli {
@@ -158,12 +154,6 @@
         <span class="self">self</span>.stage0_rom
             .clone()
             .unwrap_or_else(|| <span class="macro">format!</span>(<span class="string">&quot;{}/{}&quot;</span>, <span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>), DEFAULT_STAGE0_ROM).into())
-    }
-
-    <span class="kw">fn </span>enclave_binary_path(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PathBuf {
-        <span class="self">self</span>.stage0_rom.clone().unwrap_or_else(|| {
-            <span class="macro">format!</span>(<span class="string">&quot;{}/{}&quot;</span>, <span class="macro">env!</span>(<span class="string">&quot;WORKSPACE_ROOT&quot;</span>), DEFAULT_ENCLAVE_BINARY).into()
-        })
     }
 }
 
@@ -174,10 +164,6 @@
     <span class="kw">let </span>stage0 = load_stage0(cli.stage0_path())<span class="question-mark">?</span>;
 
     <span class="kw">let </span><span class="kw-2">mut </span>page_info = PageInfo::new();
-    <span class="comment">// Add all non-zero loadable segments from the enclave binary.
-    </span><span class="kw">for </span>memory_segment <span class="kw">in </span>load_elf_segments(cli.enclave_binary_path())<span class="question-mark">? </span>{
-        page_info.update_from_data(<span class="kw-2">&amp;</span>memory_segment.data, memory_segment.start_address);
-    }
 
     <span class="comment">// Add the Stage 0 firmware ROM image.
     </span>page_info.update_from_data(stage0.rom_bytes(), stage0.start_address);
@@ -187,16 +173,24 @@
     }
 
     <span class="kw">for </span>snp_page <span class="kw">in </span>stage0.get_snp_pages() {
-        <span class="comment">// For now we expect each entry to cover only one page.
-        </span><span class="macro">assert_eq!</span>(
-            snp_page.page_count, <span class="number">1</span>,
-            <span class="string">&quot;invalid page for for SNP-specific page&quot;
-        </span>);
-        page_info.update_from_snp_page(snp_page.page_type, snp_page.start_address);
+        <span class="kw">for </span>page_number <span class="kw">in </span><span class="number">0</span>..snp_page.page_count {
+            page_info.update_from_snp_page(
+                snp_page.page_type.clone(),
+                snp_page.start_address + (page_number <span class="kw">as </span>u64) * Size4KiB::SIZE,
+            );
+        }
     }
 
-    <span class="comment">// For now we assume there will only be one vCPU in the VM.
+    <span class="comment">// The boot vCPU has the default VMSA configured.
     </span>page_info.update_from_vmsa(<span class="kw-2">&amp;</span>get_boot_vmsa(), VMSA_ADDRESS);
+
+    <span class="comment">// Subsequent vCPUs use the IP and CS segment specified in the SEV-ES reset block table in the
+    // firmware.
+    </span><span class="kw">let </span>sev_es_reset_block = stage0.get_sev_es_reset_block();
+    <span class="kw">let </span>ap_vmsa = get_ap_vmsa(<span class="kw-2">&amp;</span>sev_es_reset_block);
+    <span class="kw">for _ in </span><span class="number">1</span>..cli.vcpu_count {
+        page_info.update_from_vmsa(<span class="kw-2">&amp;</span>ap_vmsa, VMSA_ADDRESS);
+    }
 
     <span class="macro">trace!</span>(<span class="string">&quot;raw measurement: {:?}&quot;</span>, page_info.digest_cur);
 

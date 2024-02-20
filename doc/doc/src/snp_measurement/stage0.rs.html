@@ -361,6 +361,51 @@
 <a href="#361" id="361">361</a>
 <a href="#362" id="362">362</a>
 <a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -437,6 +482,15 @@
     <span class="number">0x66</span>, <span class="number">0x65</span>, <span class="number">0x88</span>, <span class="number">0xdc</span>, <span class="number">0x4a</span>, <span class="number">0x98</span>, <span class="number">0x98</span>, <span class="number">0x47</span>, <span class="number">0xA7</span>, <span class="number">0x5e</span>, <span class="number">0x55</span>, <span class="number">0x85</span>, <span class="number">0xa7</span>, <span class="number">0xbf</span>, <span class="number">0x67</span>, <span class="number">0xcc</span>,
 ]);
 
+<span class="doccomment">/// The GUID identifying the SEV ES reset block GUID table entry.
+///
+/// This matches the SEV ES reset block GUID used in OVMF (00f771de-1a7e-4fcb-890e-68c77e2fb44e).
+///
+/// See &lt;https://github.com/tianocore/edk2/blob/fff6d81270b57ee786ea18ad74f43149b9f03494/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm&gt;.
+</span><span class="kw">const </span>SEV_ES_RESET_GUID: u128 = u128::from_le_bytes([
+    <span class="number">0xde</span>, <span class="number">0x71</span>, <span class="number">0xf7</span>, <span class="number">0x00</span>, <span class="number">0x7e</span>, <span class="number">0x1a</span>, <span class="number">0xcb</span>, <span class="number">0x4f</span>, <span class="number">0x89</span>, <span class="number">0x0e</span>, <span class="number">0x68</span>, <span class="number">0xc7</span>, <span class="number">0x7e</span>, <span class="number">0x2f</span>, <span class="number">0xb4</span>, <span class="number">0x4e</span>,
+]);
+
 <span class="doccomment">/// The expected first 4 bytes of the SEV metadata section header.
 </span><span class="kw">const </span>SEV_SECTION_SIGNATURE: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;ASEV&quot;</span>;
 
@@ -501,6 +555,26 @@
             .chunks(SEV_METADATA_ENTRY_SIZE)
             .map(SevMetadataPageInfo::parse)
             .collect()
+    }
+
+    <span class="doccomment">/// Gets the SEV-ES reset block from the firmware image.
+    </span><span class="kw">pub fn </span>get_sev_es_reset_block(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; SevEsResetBlock {
+        <span class="kw">let </span>sev_es_reset_block_content = <span class="kw-2">*</span><span class="self">self
+            </span>.parse_firmware_guid_table()
+            .get(<span class="kw-2">&amp;</span>SEV_ES_RESET_GUID)
+            .expect(<span class="string">&quot;couldn&#39;t find SEV-ES reset block entry in GUID table&quot;</span>);
+        <span class="macro">assert_eq!</span>(
+            sev_es_reset_block_content.len(),
+            size_of::&lt;u32&gt;(),
+            <span class="string">&quot;invalid length for SEV-ES reset block entry&quot;
+        </span>);
+        <span class="comment">// We expect the SEV-ES reset block entry in the GUID table to contain only 4 bytes that
+        // represent the 32-bit unsigned little-endian encoding of the reset address.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>sev_es_reset_address: u32 = <span class="number">0</span>;
+        sev_es_reset_address
+            .as_bytes_mut()
+            .copy_from_slice(sev_es_reset_block_content);
+        sev_es_reset_address.into()
     }
 
     <span class="doccomment">/// Parses the GUID table from the firmware image as a map.
@@ -657,6 +731,22 @@
             SevMetadataPageType::Secrets =&gt; PageType::Secrets,
             SevMetadataPageType::Unmeasured =&gt; PageType::Unmeasured,
         }
+    }
+}
+
+<span class="doccomment">/// The instruction pointer and code segment base that will be set when a non-boot vCPU is reset.
+</span><span class="kw">pub struct </span>SevEsResetBlock {
+    <span class="kw">pub </span>rip: u64,
+    <span class="kw">pub </span>segment_base: u64,
+}
+
+<span class="kw">impl </span>From&lt;u32&gt; <span class="kw">for </span>SevEsResetBlock {
+    <span class="kw">fn </span>from(value: u32) -&gt; <span class="self">Self </span>{
+        <span class="comment">// The instruction pointer is the two least significant bytes of the address.
+        </span><span class="kw">let </span>rip = (value &amp; <span class="number">0x0000ffff</span>) <span class="kw">as </span>u64;
+        <span class="comment">// The code segment base is the address with the two least significant bytes zeroed out.
+        </span><span class="kw">let </span>segment_base = (value &amp; <span class="number">0xffff0000</span>) <span class="kw">as </span>u64;
+        <span class="self">Self </span>{ rip, segment_base }
     }
 }
 

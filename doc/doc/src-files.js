@@ -54,7 +54,7 @@ var srcIndex = JSON.parse('{\
 "oak_tdx_guest":["",[],["lib.rs","tdcall.rs","vmcall.rs"]],\
 "oak_virtio":["",[["console",[],["mod.rs"]],["queue",[],["mod.rs","virtq.rs"]],["vsock",[["socket",[],["mod.rs"]]],["mod.rs","packet.rs"]]],["lib.rs"]],\
 "sev_serial":["",[],["lib.rs"]],\
-"snp_measurement":["",[],["elf.rs","main.rs","page.rs","stage0.rs","vmsa.rs"]],\
+"snp_measurement":["",[],["main.rs","page.rs","stage0.rs","vmsa.rs"]],\
 "xtask":["",[],["check_build_licenses.rs","check_license.rs","check_todo.rs","containers.rs","examples.rs","files.rs","internal.rs","launcher.rs","lib.rs","testing.rs"]]\
 }');
 createSrcSidebar();
