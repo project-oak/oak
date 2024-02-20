@@ -32,7 +32,7 @@ struct Args {
     #[arg(default_value = "http://10.0.2.100:8080")]
     launcher_addr: String,
 
-    #[arg(default_value = "0.0.0.0:4000")]
+    #[arg(default_value = "10.0.2.15:4000")]
     orchestrator_addr: String,
 
     #[arg(long, default_value = "/oak_container")]
