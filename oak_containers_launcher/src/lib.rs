@@ -264,14 +264,16 @@ impl Launcher {
     ) -> anyhow::Result<GetGroupKeysResponse> {
         if self.orchestrator_key_provisioning_client.is_none() {
             // Create Orchestrator Key Provisioning gRPC client.
-                let orchestrator_uri = format!("http://127.0.0.1:{}", self.host_orchestrator_proxy_port)
-                .parse()
-                .context("couldn't parse orchestrator URI")?;
+            let orchestrator_uri =
+                format!("http://127.0.0.1:{}", self.host_orchestrator_proxy_port)
+                    .parse()
+                    .context("couldn't parse orchestrator URI")?;
             let orchestrator_channel = TonicChannel::builder(orchestrator_uri)
                 .connect()
                 .await
                 .context("couldn't connect to orchestrator")?;
-            self.orchestrator_key_provisioning_client = Some(KeyProvisioningClient::new(orchestrator_channel));
+            self.orchestrator_key_provisioning_client =
+                Some(KeyProvisioningClient::new(orchestrator_channel));
         }
 
         let get_group_keys_response = self
