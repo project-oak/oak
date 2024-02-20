@@ -203,6 +203,11 @@ pub fn start_kernel(info: &BootParams) -> ! {
                     .unwrap()
                     .translate_physical(PhysAddr::new(pml4_frame.start_address().as_u64()))
                     .expect("page table must map to virtual address"))
+                // Safety: We get a mut pointer here to satisfy the type system. However, the pml4
+                // will not be mutated. This is since while using this pml4 the kernel will not
+                // allocate memory in application space, and since all the kernel space entries of
+                // this pml4 are already populated with existing pointers to pml3 page tables. Only
+                // those pml3 tables will be modified when allocating kernel space memory.
                 .as_mut_ptr(),
             )
         };
