@@ -145,6 +145,20 @@ impl Application {
     }
 }
 
+pub fn identify_pml4_frame(
+    pml4: &x86_64::structures::paging::PageTable,
+) -> x86_64::structures::paging::PhysFrame {
+    let phys_addr = {
+        let addr = &*pml4 as *const x86_64::structures::paging::PageTable;
+        let pt_guard = crate::PAGE_TABLES.lock();
+        let pt = pt_guard.get().expect("failed to get page tables");
+        crate::mm::Translator::translate_virtual(pt, VirtAddr::from_ptr(addr))
+            .expect("failed to translate virtual page table address")
+    };
+    x86_64::structures::paging::PhysFrame::from_start_address(phys_addr)
+        .expect("couldn't get the physical frame for page table address")
+}
+
 pub struct Process {
     pml4: x86_64::structures::paging::PageTable,
     entry: VirtAddr,
@@ -166,17 +180,7 @@ impl Process {
         // onto the previous PT, so we can revert to it once the application has been mapped
         // into the process pt.
         let mut outer_prev_page_table = {
-            let pml4_frame: x86_64::structures::paging::PhysFrame = {
-                let phys_addr = {
-                    let addr = &pml4 as *const x86_64::structures::paging::PageTable;
-                    let pt_guard = crate::PAGE_TABLES.lock();
-                    let pt = pt_guard.get().expect("failed to get page tables");
-                    crate::mm::Translator::translate_virtual(pt, VirtAddr::from_ptr(addr))
-                        .expect("failed to translate virtual page table address")
-                };
-                x86_64::structures::paging::PhysFrame::from_start_address(phys_addr)
-                    .expect("couldn't get the physical frame for page table address")
-            };
+            let pml4_frame = identify_pml4_frame(&pml4);
             // Safety: the new page table maintains the same mappings for kernel space.
             unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) }
                 .expect("at this point there should be a previous root pt")
@@ -191,17 +195,7 @@ impl Process {
         {
             let mut mapped_prev_pt = outer_prev_page_table.inner().lock();
             let prev_page_table = mapped_prev_pt.level_4_table();
-            let pml4_frame: x86_64::structures::paging::PhysFrame = {
-                let phys_addr = {
-                    let addr = &*prev_page_table as *const x86_64::structures::paging::PageTable;
-                    let pt_guard = crate::PAGE_TABLES.lock();
-                    let pt = pt_guard.get().expect("failed to get page tables");
-                    crate::mm::Translator::translate_virtual(pt, VirtAddr::from_ptr(addr))
-                        .expect("failed to translate virtual page table address")
-                };
-                x86_64::structures::paging::PhysFrame::from_start_address(phys_addr)
-                    .expect("couldn't get the physical frame for page table address")
-            };
+            let pml4_frame = identify_pml4_frame(&prev_page_table);
             unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) };
         }
 
@@ -213,17 +207,7 @@ impl Process {
     ///
     /// The process must be in a valid state.
     pub unsafe fn execute(&self) -> ! {
-        let pml4_frame: x86_64::structures::paging::PhysFrame = {
-            let phys_addr = {
-                let addr = &self.pml4 as *const x86_64::structures::paging::PageTable;
-                let pt_guard = crate::PAGE_TABLES.lock();
-                let pt = pt_guard.get().expect("failed to get page tables");
-                crate::mm::Translator::translate_virtual(pt, VirtAddr::from_ptr(addr))
-                    .expect("failed to translate virtual page table address")
-            };
-            x86_64::structures::paging::PhysFrame::from_start_address(phys_addr)
-                .expect("couldn't get the physical frame for page table address")
-        };
+        let pml4_frame = identify_pml4_frame(&self.pml4);
         unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) };
 
         let entry = self.entry;
