@@ -428,6 +428,7 @@
 <a href="#428" id="428">428</a>
 <a href="#429" id="429">429</a>
 <a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -854,6 +855,7 @@
             .max_decoding_message_size(MAX_DECODING_MESSAGE_SIZE)
             .accept_compressed(CompressionEncoding::Gzip),
         )
+        .add_service(oak_debug_service::Service::new_server())
         .serve_with_incoming(TcpListenerStream::new(listener))
         .<span class="kw">await
         </span>.context(<span class="string">&quot;failed to start up the service&quot;</span>)
