@@ -149,7 +149,7 @@ pub fn identify_pml4_frame(
     pml4: &x86_64::structures::paging::PageTable,
 ) -> Result<x86_64::structures::paging::PhysFrame, anyhow::Error> {
     let phys_addr = {
-        let addr = &*pml4 as *const x86_64::structures::paging::PageTable;
+        let addr = pml4 as *const x86_64::structures::paging::PageTable;
         let pt_guard = crate::PAGE_TABLES.lock();
         let pt = pt_guard.get().context("failed to get page tables")?;
         crate::mm::Translator::translate_virtual(pt, VirtAddr::from_ptr(addr))
@@ -197,7 +197,7 @@ impl Process {
             let mut mapped_prev_pt = outer_prev_page_table.inner().lock();
             let prev_page_table = mapped_prev_pt.level_4_table();
             let pml4_frame =
-                identify_pml4_frame(&prev_page_table).context("could not get pml4 frame")?;
+                identify_pml4_frame(prev_page_table).context("could not get pml4 frame")?;
             unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) };
         }
 
