@@ -195,18 +195,18 @@ pub fn start_kernel(info: &BootParams) -> ! {
         );
 
         // Safety: We just created a page table at this location.
-        let pml4: &PageTable = unsafe {
-            &*(PAGE_TABLES
-                .lock()
-                .get()
-                .unwrap()
-                .translate_physical(PhysAddr::new(pml4_frame.start_address().as_u64()))
-                .expect("page table must map to virtual address"))
-            .as_ptr()
+        let pml4: PageTable = unsafe {
+            *Box::from_raw(
+                (PAGE_TABLES
+                    .lock()
+                    .get()
+                    .unwrap()
+                    .translate_physical(PhysAddr::new(pml4_frame.start_address().as_u64()))
+                    .expect("page table must map to virtual address"))
+                .as_mut_ptr(),
+            )
         };
-        BASE_L4_PAGE_TABLE
-            .set(pml4.clone())
-            .expect("base pml4 not unset");
+        BASE_L4_PAGE_TABLE.set(pml4).expect("base pml4 not unset");
     };
 
     // Re-map boot params to the new virtual address.
