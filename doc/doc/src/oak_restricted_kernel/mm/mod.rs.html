@@ -666,6 +666,18 @@
     )
 }
 
+<span class="kw">pub fn </span>encryption() -&gt; MemoryEncryption {
+    <span class="comment">// Should we set the C-bit (encrypted memory for SEV)? For now, let&#39;s assume it&#39;s bit 51.
+    </span><span class="kw">if </span>get_sev_status()
+        .unwrap_or(SevStatus::empty())
+        .contains(SevStatus::SEV_ENABLED)
+    {
+        MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION)
+    } <span class="kw">else </span>{
+        MemoryEncryption::NoEncryption
+    }
+}
+
 <span class="doccomment">/// Creates the initial page tables used by the kernel.
 ///
 /// The memory layout we follow is largely based on the Linux layout
@@ -681,9 +693,7 @@
 /// |                     |          |                     |         | physical memory             |
 /// | FFFF_8820_0000_0000 | ~-120 TB | FFFF_FFFF_7FFF_FFFF | ~120 TB | ... unused hole             |
 /// | FFFF_FFFF_8000_0000 |    -2 GB | FFFF_FFFF_FFFF_FFFF |    2 GB | Kernel code                 |
-</span><span class="kw">pub fn </span>initial_pml4(
-    program_headers: <span class="kw-2">&amp;</span>[ProgramHeader],
-) -&gt; <span class="prelude-ty">Result</span>&lt;(PhysFrame, MemoryEncryption), <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
+</span><span class="kw">pub fn </span>initial_pml4(program_headers: <span class="kw-2">&amp;</span>[ProgramHeader]) -&gt; <span class="prelude-ty">Result</span>&lt;PhysFrame, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; {
     <span class="comment">// Safety: this expects the frame allocator to be initialized and the memory region it&#39;s handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     // This reference will no longer be valid after we reload the page tables!
@@ -693,16 +703,6 @@
         .ok_or(<span class="string">&quot;couldn&#39;t allocate a frame for PML4&quot;</span>)<span class="question-mark">?</span>;
     <span class="kw">let </span>pml4 = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(pml4_frame.start_address().as_u64() <span class="kw">as </span><span class="kw-2">*mut </span>PageTable) };
     pml4.zero();
-
-    <span class="comment">// Should we set the C-bit (encrypted memory for SEV)? For now, let&#39;s assume it&#39;s bit 51.
-    </span><span class="kw">let </span>encrypted = <span class="kw">if </span>get_sev_status()
-        .unwrap_or(SevStatus::empty())
-        .contains(SevStatus::SEV_ENABLED)
-    {
-        MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION)
-    } <span class="kw">else </span>{
-        MemoryEncryption::NoEncryption
-    };
 
     <span class="comment">// Populate all the kernel space entries of the level 4 page table. This means that these
     // entries should never change, memory allocation will happen on lower level page tables. This
@@ -721,7 +721,7 @@
         }
     };
 
-    <span class="kw">let </span><span class="kw-2">mut </span>page_table = EncryptedPageTable::new(pml4, VirtAddr::new(<span class="number">0</span>), encrypted);
+    <span class="kw">let </span><span class="kw-2">mut </span>page_table = EncryptedPageTable::new(pml4, VirtAddr::new(<span class="number">0</span>), encryption());
 
     <span class="comment">// Safety: these operations are safe as they&#39;re not done on active page tables.
     </span><span class="kw">unsafe </span>{
@@ -748,7 +748,7 @@
             .map_err(|<span class="kw">_</span>| <span class="string">&quot;couldn&#39;t set up paging for the kernel&quot;</span>)<span class="question-mark">?</span>;
     }
 
-    <span class="prelude-val">Ok</span>((pml4_frame, encrypted))
+    <span class="prelude-val">Ok</span>(pml4_frame)
 }
 
 <span class="doccomment">/// Allocates memory usable as a stack.

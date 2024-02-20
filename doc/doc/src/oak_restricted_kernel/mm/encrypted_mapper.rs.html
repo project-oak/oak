@@ -704,17 +704,6 @@
 <a href="#704" id="704">704</a>
 <a href="#705" id="705">705</a>
 <a href="#706" id="706">706</a>
-<a href="#707" id="707">707</a>
-<a href="#708" id="708">708</a>
-<a href="#709" id="709">709</a>
-<a href="#710" id="710">710</a>
-<a href="#711" id="711">711</a>
-<a href="#712" id="712">712</a>
-<a href="#713" id="713">713</a>
-<a href="#714" id="714">714</a>
-<a href="#715" id="715">715</a>
-<a href="#716" id="716">716</a>
-<a href="#717" id="717">717</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -851,6 +840,12 @@
     inner: Spinlock&lt;N&gt;,
 }
 
+<span class="kw">impl</span>&lt;N: MapperAllSizes&gt; EncryptedPageTable&lt;N&gt; {
+    <span class="kw">pub fn </span>inner(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Spinlock&lt;N&gt; {
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.inner
+    }
+}
+
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;a</span>, PhysOffset&gt;&gt; {
     <span class="kw">pub fn </span>new(pml4: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>PageTable, offset: VirtAddr, encryption: MemoryEncryption) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
@@ -860,23 +855,6 @@
                 MappedPageTable::new(pml4, PhysOffset { offset, encryption })
             }),
         }
-    }
-
-    <span class="doccomment">/// Copies the kernel spaces page table entries from self into the provided [`PageTable`].
-    /// Returns the memory encryption used.
-    </span><span class="kw">pub fn </span>copy_kernel_space(<span class="kw-2">&amp;</span><span class="self">self</span>, other_pt: <span class="kw-2">&amp;mut </span>PageTable) -&gt; MemoryEncryption {
-        <span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.inner.lock();
-        <span class="kw">let </span>own_pt = inner.level_4_table();
-
-        <span class="kw">let </span>kernel_entries = {
-            <span class="kw">let </span>zipped = own_pt.iter().zip(other_pt.iter_mut());
-            <span class="comment">// Skip entries that describe application space.
-            </span>zipped.skip(<span class="number">256</span>)
-        };
-        <span class="kw">for </span>(own_entry, other_entry) <span class="kw">in </span>kernel_entries {
-            other_entry.set_addr(own_entry.addr(), own_entry.flags())
-        }
-        <span class="self">self</span>.encryption
     }
 }
 

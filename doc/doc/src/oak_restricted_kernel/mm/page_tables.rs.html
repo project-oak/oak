@@ -317,10 +317,6 @@
 <a href="#317" id="317">317</a>
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
-<a href="#322" id="322">322</a>
-<a href="#323" id="323">323</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -462,8 +458,8 @@
             inner: EncryptedPageTable::new(pml4, offset, encryption),
         }
     }
-    <span class="kw">pub fn </span>inner(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;static</span>, PhysOffset&gt;&gt; {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.inner
+    <span class="kw">pub fn </span>into_inner(<span class="self">self</span>) -&gt; EncryptedPageTable&lt;MappedPageTable&lt;<span class="lifetime">&#39;static</span>, PhysOffset&gt;&gt; {
+        <span class="self">self</span>.inner
     }
     <span class="doccomment">/// Checks wheter all the pages in the range are unallocated.
     ///
@@ -608,11 +604,7 @@
     <span class="doccomment">/// Replaces the current pagetable with the parameter, returning the old
     /// pagetable if there was one. Updates the page table on the CPU level.
     /// Safety: The new page tables must keep the identity mapping at -2GB (kernel space) intact.
-    </span><span class="kw">pub unsafe fn </span>replace(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        pml4_frame: PhysFrame,
-        encrypted: MemoryEncryption,
-    ) -&gt; <span class="prelude-ty">Option</span>&lt;RootPageTable&gt; {
+    </span><span class="kw">pub unsafe fn </span>replace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, pml4_frame: PhysFrame) -&gt; <span class="prelude-ty">Option</span>&lt;RootPageTable&gt; {
         <span class="comment">// This validates any references that expect boot page tables to be valid!
         // Safety: Caller must ensure that the new page tables are safe.
         </span><span class="kw">unsafe </span>{
@@ -625,7 +617,7 @@
             <span class="kw-2">&amp;mut *</span>(<span class="kw">super</span>::DIRECT_MAPPING_OFFSET + pml4_frame.start_address().as_u64()).as_mut_ptr()
         };
 
-        <span class="kw">let </span>new_pt = RootPageTable::new(pml4, <span class="kw">super</span>::DIRECT_MAPPING_OFFSET, encrypted);
+        <span class="kw">let </span>new_pt = RootPageTable::new(pml4, <span class="kw">super</span>::DIRECT_MAPPING_OFFSET, <span class="kw">super</span>::encryption());
 
         <span class="self">self</span>.inner.replace(new_pt)
     }

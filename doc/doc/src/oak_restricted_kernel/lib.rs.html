@@ -526,6 +526,16 @@
 <a href="#526" id="526">526</a>
 <a href="#527" id="527">527</a>
 <a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -597,8 +607,8 @@
 <span class="kw">use </span>linked_list_allocator::LockedHeap;
 <span class="kw">use </span>log::{error, info};
 <span class="kw">use </span>mm::{
-    encrypted_mapper::MemoryEncryption, frame_allocator::PhysicalMemoryAllocator,
-    page_tables::CurrentRootPageTable, virtual_address_allocator::VirtualAddressAllocator,
+    frame_allocator::PhysicalMemoryAllocator, page_tables::CurrentRootPageTable,
+    virtual_address_allocator::VirtualAddressAllocator,
 };
 <span class="kw">use </span>oak_channel::Channel;
 <span class="kw">use </span>oak_core::sync::OnceCell;
@@ -618,6 +628,7 @@
 <span class="kw">use crate</span>::{
     acpi::Acpi,
     mm::Translator,
+    payload::Process,
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 
@@ -636,7 +647,7 @@
 <span class="doccomment">/// Level 4 page table that is free in application space, but has all entries for kernel space
 /// populated. It can be used to create free page tables for applications, that maintain correct
 /// mapping in kernel space.
-</span><span class="kw">pub static </span>BASE_L4_PAGE_TABLE: OnceCell&lt;(PageTable, MemoryEncryption)&gt; = OnceCell::new();
+</span><span class="kw">pub static </span>BASE_L4_PAGE_TABLE: OnceCell&lt;PageTable&gt; = OnceCell::new();
 
 <span class="doccomment">/// Allocator for long-lived pages in the kernel.
 </span><span class="kw">pub static </span>VMA_ALLOCATOR: Spinlock&lt;VirtualAddressAllocator&lt;Size2MiB&gt;&gt; =
@@ -705,7 +716,7 @@
 
     <span class="comment">// Note: `info` will not be valid after calling this!
     </span>{
-        <span class="kw">let </span>(pml4_frame, encrypted) = mm::initial_pml4(program_headers).unwrap();
+        <span class="kw">let </span>pml4_frame = mm::initial_pml4(program_headers).unwrap();
         <span class="comment">// Prevent execution code in data only memory pages.
         // Safety: executeable memory is assumed to be appropiately marked in the page table.
         </span><span class="kw">unsafe </span>{
@@ -715,25 +726,30 @@
         };
         <span class="comment">// Safety: the new page tables keep the identity mapping at -2GB intact, so it&#39;s safe to
         // load the new page tables.
-        </span><span class="kw">let </span>prev_page_table = <span class="kw">unsafe </span>{ PAGE_TABLES.lock().replace(pml4_frame, encrypted) };
+        </span><span class="kw">let </span>prev_page_table = <span class="kw">unsafe </span>{ PAGE_TABLES.lock().replace(pml4_frame) };
         <span class="macro">assert!</span>(
             prev_page_table.is_none(),
             <span class="string">&quot;there should be no previous page table during initialization&quot;
         </span>);
 
         <span class="comment">// Safety: We just created a page table at this location.
-        </span><span class="kw">let </span>pml4: <span class="kw-2">&amp;</span>PageTable = <span class="kw">unsafe </span>{
-            <span class="kw-2">&amp;*</span>(PAGE_TABLES
-                .lock()
-                .get()
-                .unwrap()
-                .translate_physical(PhysAddr::new(pml4_frame.start_address().as_u64()))
-                .expect(<span class="string">&quot;page table must map to virtual address&quot;</span>))
-            .as_ptr()
+        </span><span class="kw">let </span>pml4: PageTable = <span class="kw">unsafe </span>{
+            <span class="kw-2">*</span>Box::from_raw(
+                (PAGE_TABLES
+                    .lock()
+                    .get()
+                    .unwrap()
+                    .translate_physical(PhysAddr::new(pml4_frame.start_address().as_u64()))
+                    .expect(<span class="string">&quot;page table must map to virtual address&quot;</span>))
+                <span class="comment">// Safety: We get a mut pointer here to satisfy the type system. However, the pml4
+                // will not be mutated. This is since while using this pml4 the kernel will not
+                // allocate memory in application space, and since all the kernel space entries of
+                // this pml4 are already populated with existing pointers to pml3 page tables. Only
+                // those pml3 tables will be modified when allocating kernel space memory.
+                </span>.as_mut_ptr(),
+            )
         };
-        BASE_L4_PAGE_TABLE
-            .set((pml4.clone(), encrypted))
-            .expect(<span class="string">&quot;base pml4 not unset&quot;</span>);
+        BASE_L4_PAGE_TABLE.set(pml4).expect(<span class="string">&quot;base pml4 not unset&quot;</span>);
     };
 
     <span class="comment">// Re-map boot params to the new virtual address.
@@ -1000,9 +1016,13 @@
         </span>derived_key,
     );
 
-    <span class="comment">// Safety: we&#39;ve loaded the Restricted Application. Whether that&#39;s valid or not is no longer
-    // under the kernel&#39;s control.
-    </span><span class="kw">unsafe </span>{ application.run() }
+    <span class="comment">// Ensure new process is not dropped.
+    // Safety: The application is assumed to be a valid ELF file.
+    </span><span class="kw">let </span>process = Box::leak(Box::new(<span class="kw">unsafe </span>{
+        Process::from_application(<span class="kw-2">&amp;</span>application).expect(<span class="string">&quot;failed to create process&quot;</span>)
+    }));
+
+    process.execute()
 }
 
 <span class="attr">#[derive(EnumIter, EnumString)]

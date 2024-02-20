@@ -158,6 +158,76 @@
 <a href="#158" id="158">158</a>
 <a href="#159" id="159">159</a>
 <a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -177,7 +247,7 @@
 </span><span class="kw">use </span>alloc::boxed::Box;
 <span class="kw">use </span>core::arch::asm;
 
-<span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>anyhow::{anyhow, Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>goblin::{
     elf::{Elf, ProgramHeader, ProgramHeaders},
     elf64::program_header::{PF_W, PF_X, PT_LOAD},
@@ -190,6 +260,12 @@
 };
 
 <span class="kw">use </span><span class="kw">crate</span>::syscall::mmap::mmap;
+
+<span class="comment">// Set up the userspace stack at the end of the lower half of the virtual address space.
+// Well... almost. It&#39;s one page lower than the very end, as otherwise the initial stack
+// pointer would need to be a noncanonical address, so let&#39;s avoid that whole mess
+// by moving down a bit.
+</span><span class="kw">static </span>APPLICATION_STACK_VIRT_ADDR: u64 = <span class="number">0x8000_0000_0000 </span>- Size2MiB::SIZE;
 
 <span class="macro">self_cell!</span>(
     <span class="doccomment">/// Self-referential struct so that we don&#39;t have to parse the ELF file multiple times.
@@ -272,14 +348,13 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Maps the application into virtual memory and passes control to it.
+    <span class="doccomment">/// Maps the application into virtual memory and returns the entrypoint.
     ///
     /// # Safety
     ///
     /// The application must be built from a valid ELF file representing an Oak Restricted
-    /// Application, and there must not be an active application as we alter the virtual memory
-    /// mappings.
-    </span><span class="kw">pub unsafe fn </span>run(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ! {
+    /// Application.
+    </span><span class="kw">pub</span>(<span class="self">self</span>) <span class="kw">unsafe fn </span>map_into_memory(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; VirtAddr {
         <span class="kw">for </span>phdr <span class="kw">in </span><span class="self">self
             </span>.program_headers()
             .iter()
@@ -288,21 +363,86 @@
             <span class="self">self</span>.load_segment(phdr).unwrap();
         }
 
-        <span class="comment">// Set up the userspace stack at the end of the lower half of the virtual address space.
-        // Well... almost. It&#39;s one page lower than the very end, as otherwise the initial stack
-        // pointer would need to be a noncanonical address, so let&#39;s avoid that whole mess
-        // by moving down a bit.
-        </span><span class="kw">let </span>rsp = VirtAddr::new(<span class="number">0x8000_0000_0000 </span>- Size2MiB::SIZE);
         mmap(
-            <span class="prelude-val">Some</span>(rsp - Size2MiB::SIZE),
+            <span class="prelude-val">Some</span>(VirtAddr::new(APPLICATION_STACK_VIRT_ADDR) - Size2MiB::SIZE),
             Size2MiB::SIZE <span class="kw">as </span>usize,
             MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
         )
         .expect(<span class="string">&quot;failed to allocate memory for user stack&quot;</span>);
 
-        <span class="macro">log::info!</span>(<span class="string">&quot;Running application&quot;</span>);
+        <span class="self">self</span>.entry()
+    }
+}
 
+<span class="kw">pub fn </span>identify_pml4_frame(
+    pml4: <span class="kw-2">&amp;</span>x86_64::structures::paging::PageTable,
+) -&gt; <span class="prelude-ty">Result</span>&lt;x86_64::structures::paging::PhysFrame, anyhow::Error&gt; {
+    <span class="kw">let </span>phys_addr = {
+        <span class="kw">let </span>addr = pml4 <span class="kw">as </span><span class="kw-2">*const </span>x86_64::structures::paging::PageTable;
+        <span class="kw">let </span>pt_guard = <span class="kw">crate</span>::PAGE_TABLES.lock();
+        <span class="kw">let </span>pt = pt_guard.get().context(<span class="string">&quot;failed to get page tables&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">crate</span>::mm::Translator::translate_virtual(pt, VirtAddr::from_ptr(addr))
+            .context(<span class="string">&quot;failed to translate virtual page table address&quot;</span>)<span class="question-mark">?
+    </span>};
+    x86_64::structures::paging::PhysFrame::from_start_address(phys_addr)
+        .map_err(anyhow::Error::msg)
+        .context(<span class="string">&quot;couldn&#39;t get the physical frame for page table address&quot;</span>)
+}
+
+<span class="kw">pub struct </span>Process {
+    pml4: x86_64::structures::paging::PageTable,
+    entry: VirtAddr,
+}
+
+<span class="kw">impl </span>Process {
+    <span class="doccomment">/// Creates a process from the application, without executing it.
+    ///
+    /// # Safety
+    ///
+    /// The application must be built from a valid ELF file representing an Oak Restricted
+    /// Application.
+    </span><span class="kw">pub unsafe fn </span>from_application(application: <span class="kw-2">&amp;</span>Application) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, anyhow::Error&gt; {
+        <span class="kw">let </span>pml4 = <span class="kw">crate</span>::BASE_L4_PAGE_TABLE
+            .get()
+            .context(<span class="string">&quot;base l4 table should be set&quot;</span>)<span class="question-mark">?
+            </span>.clone();
+        <span class="comment">// Load the process&#39;s page table, so the application can be loaded into its memory. Hold
+        // onto the previous PT, so we can revert to it once the application has been mapped
+        // into the process pt.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>outer_prev_page_table = {
+            <span class="kw">let </span>pml4_frame = identify_pml4_frame(<span class="kw-2">&amp;</span>pml4).context(<span class="string">&quot;could not get pml4 frame&quot;</span>)<span class="question-mark">?</span>;
+            <span class="comment">// Safety: the new page table maintains the same mappings for kernel space.
+            </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::PAGE_TABLES.lock().replace(pml4_frame) }
+                .context(<span class="string">&quot;at this point there should be a previous root pt&quot;</span>)<span class="question-mark">?
+                </span>.into_inner()
+        };
+
+        <span class="comment">// Safety: caller ensured the application is a valid ELF file representing an Oak Restricted
+        // Application.
+        </span><span class="kw">let </span>entry = <span class="kw">unsafe </span>{ application.map_into_memory() };
+
+        <span class="comment">// We&#39;ve mapped the memory into the process page tables. Let&#39;s revert to the previous page
+        // table.
+        </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>mapped_prev_pt = outer_prev_page_table.inner().lock();
+            <span class="kw">let </span>prev_page_table = mapped_prev_pt.level_4_table();
+            <span class="kw">let </span>pml4_frame =
+                identify_pml4_frame(prev_page_table).context(<span class="string">&quot;could not get pml4 frame&quot;</span>)<span class="question-mark">?</span>;
+            <span class="comment">// Safety: the new page table maintains the same mappings for kernel space.
+            </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::PAGE_TABLES.lock().replace(pml4_frame) };
+        }
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ pml4, entry })
+    }
+    <span class="doccomment">/// Executes the process.
+    </span><span class="kw">pub fn </span>execute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; ! {
+        <span class="kw">let </span>pml4_frame = identify_pml4_frame(<span class="kw-2">&amp;</span><span class="self">self</span>.pml4).expect(<span class="string">&quot;could not get pml4 frame&quot;</span>);
+        <span class="comment">// Safety: the new page table maintains the same mappings for kernel space.
+        </span><span class="kw">unsafe </span>{ <span class="kw">crate</span>::PAGE_TABLES.lock().replace(pml4_frame) };
+
+        <span class="kw">let </span>entry = <span class="self">self</span>.entry;
+        <span class="macro">log::info!</span>(<span class="string">&quot;Running application&quot;</span>);
         <span class="comment">// Enter Ring 3 and jump to user code.
         // Safety: by now, if we&#39;re here, we&#39;ve loaded a valid ELF file. It&#39;s up to the user to
         // guarantee that the file made sense.
@@ -310,8 +450,8 @@
             <span class="macro">asm! </span>{
                 <span class="string">&quot;mov rsp, {}&quot;</span>, <span class="comment">// user stack
                 </span><span class="string">&quot;sysretq&quot;</span>,
-                <span class="kw">in</span>(reg) rsp.as_u64() - <span class="number">8</span>,
-                <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) <span class="self">self</span>.entry().as_u64(), <span class="comment">// initial RIP
+                <span class="kw">in</span>(reg) APPLICATION_STACK_VIRT_ADDR - <span class="number">8</span>,
+                <span class="kw">in</span>(<span class="string">&quot;rcx&quot;</span>) entry.as_u64(), <span class="comment">// initial RIP
                 </span><span class="kw">in</span>(<span class="string">&quot;r11&quot;</span>) <span class="number">0x202</span>, <span class="comment">// initial RFLAGS (interrupts enabled)
                 </span>options(noreturn)
             }
