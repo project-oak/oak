@@ -262,6 +262,44 @@
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
 <a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -315,9 +353,13 @@
     task::JoinHandle,
     time::{timeout, Duration},
 };
+<span class="kw">use </span>tonic::transport::Channel <span class="kw">as </span>TonicChannel;
 
-<span class="kw">use </span><span class="kw">crate</span>::proto::oak::session::v1::{
-    AttestationBundle, AttestationEndorsement, AttestationEvidence,
+<span class="kw">use </span><span class="kw">crate</span>::proto::oak::{
+    key_provisioning::v1::{
+        key_provisioning_client::KeyProvisioningClient, GetGroupKeysRequest, GetGroupKeysResponse,
+    },
+    session::v1::{AttestationBundle, AttestationEndorsement, AttestationEvidence},
 };
 
 <span class="doccomment">/// The local IP address assigned to the VM guest.
@@ -379,6 +421,7 @@
     vmm: qemu::Qemu,
     server: JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt;&gt;,
     host_proxy_port: u16,
+    host_orchestrator_proxy_port: u16,
     attestation_endorsement: AttestationEndorsement,
     <span class="comment">// Endorsed Attestation Evidence consists of Attestation Evidence (initialized by the
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
@@ -386,6 +429,7 @@
     <span class="comment">// Receiver that is used to get the Attestation Evidence from the server implementation.
     </span>attestation_evidence_receiver: <span class="prelude-ty">Option</span>&lt;Receiver&lt;(AttestationEvidence, Evidence)&gt;&gt;,
     app_ready_notifier: <span class="prelude-ty">Option</span>&lt;Receiver&lt;()&gt;&gt;,
+    orchestrator_key_provisioning_client: <span class="prelude-ty">Option</span>&lt;KeyProvisioningClient&lt;TonicChannel&gt;&gt;,
     trusted_app_address: <span class="prelude-ty">Option</span>&lt;SocketAddr&gt;,
     shutdown: <span class="prelude-ty">Option</span>&lt;Sender&lt;()&gt;&gt;,
 }
@@ -434,6 +478,7 @@
             vmm,
             server,
             host_proxy_port,
+            host_orchestrator_proxy_port,
             <span class="comment">// TODO(#3640): Provide hardware manufacturer&#39;s certificates.
             </span>attestation_endorsement: AttestationEndorsement {
                 tee_certificates: <span class="macro">vec!</span>[],
@@ -445,6 +490,7 @@
             </span>endorsed_attestation_evidence: <span class="prelude-val">None</span>,
             attestation_evidence_receiver: <span class="prelude-val">Some</span>(attestation_evidence_receiver),
             app_ready_notifier: <span class="prelude-val">Some</span>(app_notifier_receiver),
+            orchestrator_key_provisioning_client: <span class="prelude-val">None</span>,
             trusted_app_address: <span class="prelude-val">None</span>,
             shutdown: <span class="prelude-val">Some</span>(shutdown_sender),
         })
@@ -511,6 +557,36 @@
         <span class="self">self</span>.endorsed_attestation_evidence
             .clone()
             .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;endorsed evidence is not set&quot;</span>))
+    }
+
+    <span class="comment">// Gets enclave group keys as part of Key Provisioning.
+    </span><span class="kw">pub async fn </span>get_group_keys(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request: GetGroupKeysRequest,
+    ) -&gt; anyhow::Result&lt;GetGroupKeysResponse&gt; {
+        <span class="kw">if </span><span class="self">self</span>.orchestrator_key_provisioning_client.is_none() {
+            <span class="comment">// Create Orchestrator Key Provisioning gRPC client.
+            </span><span class="kw">let </span>orchestrator_uri =
+                <span class="macro">format!</span>(<span class="string">&quot;http://127.0.0.1:{}&quot;</span>, <span class="self">self</span>.host_orchestrator_proxy_port)
+                    .parse()
+                    .context(<span class="string">&quot;couldn&#39;t parse orchestrator URI&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">let </span>orchestrator_channel = TonicChannel::builder(orchestrator_uri)
+                .connect()
+                .<span class="kw">await
+                </span>.context(<span class="string">&quot;couldn&#39;t connect to orchestrator&quot;</span>)<span class="question-mark">?</span>;
+            <span class="self">self</span>.orchestrator_key_provisioning_client =
+                <span class="prelude-val">Some</span>(KeyProvisioningClient::new(orchestrator_channel));
+        }
+
+        <span class="kw">let </span>get_group_keys_response = <span class="self">self
+            </span>.orchestrator_key_provisioning_client
+            .clone()
+            .context(<span class="string">&quot;couldn&#39;t get orchestrator key provisioning client&quot;</span>)<span class="question-mark">?
+            </span>.get_group_keys(request)
+            .<span class="kw">await
+            </span>.context(<span class="string">&quot;couldn&#39;t get group keys&quot;</span>)<span class="question-mark">?
+            </span>.into_inner();
+        <span class="prelude-val">Ok</span>(get_group_keys_response)
     }
 
     <span class="kw">pub async fn </span>wait(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt; {
