@@ -20,12 +20,7 @@ use core::{
     slice,
 };
 
-use x86_64::{
-    addr::VirtAddr,
-    structures::paging::{frame::PhysFrame, PageTable},
-};
-
-use crate::mm::Translator;
+use crate::payload::Process;
 
 pub fn syscall_unstable_switch_proccess(buf: *mut c_void, count: c_size_t) -> ! {
     // We should validate that the pointer and count are valid, as these come from userspace and
@@ -39,27 +34,11 @@ pub fn syscall_unstable_switch_proccess(buf: *mut c_void, count: c_size_t) -> ! 
     let application = crate::payload::Application::new(copied_elf_binary.into_boxed_slice())
         .expect("failed to parse application");
 
-    let (base_pml4, encrypted) = crate::BASE_L4_PAGE_TABLE
-        .get()
-        .expect("base l4 table should be set");
-    // Ensure the new page table is not dropped.
-    let pml4 = Box::leak(Box::new(base_pml4.clone()));
+    // Ensure the new process is not dropped.
+    let process = Box::leak(Box::new(
+        // Safety: application is assumed to be a valid ELF file.
+        unsafe { Process::from_application(&application).expect("failed to create process") },
+    ));
 
-    let pml4_frame = {
-        let phys_addr = {
-            let addr = &*pml4 as *const PageTable;
-            let pt_guard = crate::PAGE_TABLES.lock();
-            let pt = pt_guard.get().expect("failed to get page tables");
-            pt.translate_virtual(VirtAddr::from_ptr(addr))
-                .expect("failed to translate virtual page table address")
-        };
-        PhysFrame::from_start_address(phys_addr)
-            .expect("couldn't get the physical frame for page table address")
-    };
-
-    // Safety: the new page table maintains the same mappings for kernel space.
-    unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame, *encrypted) };
-    // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
-    // under the kernel's control.
-    unsafe { application.run() }
+    process.execute()
 }

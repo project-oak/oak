@@ -69,8 +69,8 @@ use core::{marker::Sync, option::Option, panic::PanicInfo, str::FromStr};
 use linked_list_allocator::LockedHeap;
 use log::{error, info};
 use mm::{
-    encrypted_mapper::MemoryEncryption, frame_allocator::PhysicalMemoryAllocator,
-    page_tables::CurrentRootPageTable, virtual_address_allocator::VirtualAddressAllocator,
+    frame_allocator::PhysicalMemoryAllocator, page_tables::CurrentRootPageTable,
+    virtual_address_allocator::VirtualAddressAllocator,
 };
 use oak_channel::Channel;
 use oak_core::sync::OnceCell;
@@ -90,6 +90,7 @@ use zeroize::Zeroize;
 use crate::{
     acpi::Acpi,
     mm::Translator,
+    payload::Process,
     snp::{get_snp_page_addresses, init_snp_pages},
 };
 
@@ -108,7 +109,7 @@ pub static PAGE_TABLES: Spinlock<CurrentRootPageTable> =
 /// Level 4 page table that is free in application space, but has all entries for kernel space
 /// populated. It can be used to create free page tables for applications, that maintain correct
 /// mapping in kernel space.
-pub static BASE_L4_PAGE_TABLE: OnceCell<(PageTable, MemoryEncryption)> = OnceCell::new();
+pub static BASE_L4_PAGE_TABLE: OnceCell<PageTable> = OnceCell::new();
 
 /// Allocator for long-lived pages in the kernel.
 pub static VMA_ALLOCATOR: Spinlock<VirtualAddressAllocator<Size2MiB>> =
@@ -177,7 +178,7 @@ pub fn start_kernel(info: &BootParams) -> ! {
 
     // Note: `info` will not be valid after calling this!
     {
-        let (pml4_frame, encrypted) = mm::initial_pml4(program_headers).unwrap();
+        let pml4_frame = mm::initial_pml4(program_headers).unwrap();
         // Prevent execution code in data only memory pages.
         // Safety: executeable memory is assumed to be appropiately marked in the page table.
         unsafe {
@@ -187,25 +188,30 @@ pub fn start_kernel(info: &BootParams) -> ! {
         };
         // Safety: the new page tables keep the identity mapping at -2GB intact, so it's safe to
         // load the new page tables.
-        let prev_page_table = unsafe { PAGE_TABLES.lock().replace(pml4_frame, encrypted) };
+        let prev_page_table = unsafe { PAGE_TABLES.lock().replace(pml4_frame) };
         assert!(
             prev_page_table.is_none(),
             "there should be no previous page table during initialization"
         );
 
         // Safety: We just created a page table at this location.
-        let pml4: &PageTable = unsafe {
-            &*(PAGE_TABLES
-                .lock()
-                .get()
-                .unwrap()
-                .translate_physical(PhysAddr::new(pml4_frame.start_address().as_u64()))
-                .expect("page table must map to virtual address"))
-            .as_ptr()
+        let pml4: PageTable = unsafe {
+            *Box::from_raw(
+                (PAGE_TABLES
+                    .lock()
+                    .get()
+                    .unwrap()
+                    .translate_physical(PhysAddr::new(pml4_frame.start_address().as_u64()))
+                    .expect("page table must map to virtual address"))
+                // Safety: We get a mut pointer here to satisfy the type system. However, the pml4
+                // will not be mutated. This is since while using this pml4 the kernel will not
+                // allocate memory in application space, and since all the kernel space entries of
+                // this pml4 are already populated with existing pointers to pml3 page tables. Only
+                // those pml3 tables will be modified when allocating kernel space memory.
+                .as_mut_ptr(),
+            )
         };
-        BASE_L4_PAGE_TABLE
-            .set((pml4.clone(), encrypted))
-            .expect("base pml4 not unset");
+        BASE_L4_PAGE_TABLE.set(pml4).expect("base pml4 not unset");
     };
 
     // Re-map boot params to the new virtual address.
@@ -472,9 +478,13 @@ pub fn start_kernel(info: &BootParams) -> ! {
         derived_key,
     );
 
-    // Safety: we've loaded the Restricted Application. Whether that's valid or not is no longer
-    // under the kernel's control.
-    unsafe { application.run() }
+    // Ensure new process is not dropped.
+    // Safety: The application is assumed to be a valid ELF file.
+    let process = Box::leak(Box::new(unsafe {
+        Process::from_application(&application).expect("failed to create process")
+    }));
+
+    process.execute()
 }
 
 #[derive(EnumIter, EnumString)]
