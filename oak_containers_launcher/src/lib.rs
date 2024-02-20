@@ -51,9 +51,13 @@ use tokio::{
     task::JoinHandle,
     time::{timeout, Duration},
 };
+use tonic::transport::Channel as TonicChannel;
 
-use crate::proto::oak::session::v1::{
-    AttestationBundle, AttestationEndorsement, AttestationEvidence,
+use crate::proto::oak::{
+    key_provisioning::v1::{
+        key_provisioning_client::KeyProvisioningClient, GetGroupKeysRequest, GetGroupKeysResponse,
+    },
+    session::v1::{AttestationBundle, AttestationEndorsement, AttestationEvidence},
 };
 
 /// The local IP address assigned to the VM guest.
@@ -115,6 +119,7 @@ pub struct Launcher {
     vmm: qemu::Qemu,
     server: JoinHandle<Result<(), anyhow::Error>>,
     host_proxy_port: u16,
+    host_orchestrator_proxy_port: u16,
     attestation_endorsement: AttestationEndorsement,
     // Endorsed Attestation Evidence consists of Attestation Evidence (initialized by the
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
@@ -122,6 +127,7 @@ pub struct Launcher {
     // Receiver that is used to get the Attestation Evidence from the server implementation.
     attestation_evidence_receiver: Option<Receiver<(AttestationEvidence, Evidence)>>,
     app_ready_notifier: Option<Receiver<()>>,
+    orchestrator_key_provisioning_client: Option<KeyProvisioningClient<TonicChannel>>,
     trusted_app_address: Option<SocketAddr>,
     shutdown: Option<Sender<()>>,
 }
@@ -170,6 +176,7 @@ impl Launcher {
             vmm,
             server,
             host_proxy_port,
+            host_orchestrator_proxy_port,
             // TODO(#3640): Provide hardware manufacturer's certificates.
             attestation_endorsement: AttestationEndorsement {
                 tee_certificates: vec![],
@@ -181,6 +188,7 @@ impl Launcher {
             endorsed_attestation_evidence: None,
             attestation_evidence_receiver: Some(attestation_evidence_receiver),
             app_ready_notifier: Some(app_notifier_receiver),
+            orchestrator_key_provisioning_client: None,
             trusted_app_address: None,
             shutdown: Some(shutdown_sender),
         })
@@ -247,6 +255,36 @@ impl Launcher {
         self.endorsed_attestation_evidence
             .clone()
             .ok_or_else(|| anyhow::anyhow!("endorsed evidence is not set"))
+    }
+
+    // Gets enclave group keys as part of Key Provisioning.
+    pub async fn get_group_keys(
+        &mut self,
+        request: GetGroupKeysRequest,
+    ) -> anyhow::Result<GetGroupKeysResponse> {
+        if self.orchestrator_key_provisioning_client.is_none() {
+            // Create Orchestrator Key Provisioning gRPC client.
+            let orchestrator_uri =
+                format!("http://127.0.0.1:{}", self.host_orchestrator_proxy_port)
+                    .parse()
+                    .context("couldn't parse orchestrator URI")?;
+            let orchestrator_channel = TonicChannel::builder(orchestrator_uri)
+                .connect()
+                .await
+                .context("couldn't connect to orchestrator")?;
+            self.orchestrator_key_provisioning_client =
+                Some(KeyProvisioningClient::new(orchestrator_channel));
+        }
+
+        let get_group_keys_response = self
+            .orchestrator_key_provisioning_client
+            .clone()
+            .context("couldn't get orchestrator key provisioning client")?
+            .get_group_keys(request)
+            .await
+            .context("couldn't get group keys")?
+            .into_inner();
+        Ok(get_group_keys_response)
     }
 
     pub async fn wait(&mut self) -> Result<(), anyhow::Error> {

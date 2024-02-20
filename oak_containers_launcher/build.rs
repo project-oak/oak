@@ -27,6 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ],
         "..",
         CodegenOptions {
+            build_client: true,
             build_server: true,
             ..Default::default()
         },
