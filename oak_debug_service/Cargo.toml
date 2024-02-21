@@ -1,0 +1,18 @@
+[package]
+name = "oak_debug_service"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[build-dependencies]
+oak_grpc_utils = { workspace = true }
+
+[dependencies]
+pprof = { version = "*", features = ["prost-codec"] }
+prost = "*"
+prost-types = "*"
+tokio = { version = "*" }
+tonic = { workspace = true }
+
+[dev-dependencies]
+tokio = { version = "*", features = ["rt-multi-thread"] }

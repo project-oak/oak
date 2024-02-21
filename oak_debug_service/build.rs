@@ -1,5 +1,5 @@
 //
-// Copyright 2023 The Project Oak Authors
+// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,22 +12,16 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
 use oak_grpc_utils::{generate_grpc_code, CodegenOptions};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Generate gRPC code for connecting to the launcher.
+    // Generate gRPC code for exchanging messages with clients.
     generate_grpc_code(
-        &[
-            "../oak_containers/proto/interfaces.proto",
-            "../proto/crypto/crypto.proto",
-            "../proto/key_provisioning/key_provisioning.proto",
-            "../proto/containers/hostlib_key_provisioning.proto",
-            "../proto/session/messages.proto",
-        ],
+        &["../proto/oak_debug/service/oak_debug.proto"],
         "..",
         CodegenOptions {
-            build_client: true,
             build_server: true,
             ..Default::default()
         },

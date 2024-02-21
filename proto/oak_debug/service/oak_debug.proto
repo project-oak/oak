@@ -14,16 +14,21 @@
 // limitations under the License.
 //
 
-use std::env;
+syntax = "proto3";
 
-fn main() {
-    println!("cargo:rerun-if-env-changed=PROFILE");
-    println!("cargo:rerun-if-changed=layout.ld");
-    println!("cargo:rustc-link-arg=--script=layout.ld");
+package oak.debug;
 
-    if env::var("PROFILE").unwrap() == "release" {
-        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=256K");
-    } else {
-        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=2048K");
-    }
+import "google/protobuf/duration.proto";
+import "third_party/google/profile.proto";
+
+service DebugService {
+  rpc CpuProfile(CpuProfileRequest) returns (CpuProfileResponse);
+}
+
+message CpuProfileRequest {
+  google.protobuf.Duration duration = 1;
+}
+
+message CpuProfileResponse {
+  .perftools.profiles.Profile profile = 1;
 }

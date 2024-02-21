@@ -17,7 +17,7 @@
 use alloc::boxed::Box;
 use core::arch::asm;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use goblin::{
     elf::{Elf, ProgramHeader, ProgramHeaders},
     elf64::program_header::{PF_W, PF_X, PT_LOAD},
@@ -30,6 +30,12 @@ use x86_64::{
 };
 
 use crate::syscall::mmap::mmap;
+
+// Set up the userspace stack at the end of the lower half of the virtual address space.
+// Well... almost. It's one page lower than the very end, as otherwise the initial stack
+// pointer would need to be a noncanonical address, so let's avoid that whole mess
+// by moving down a bit.
+static APPLICATION_STACK_VIRT_ADDR: u64 = 0x8000_0000_0000 - Size2MiB::SIZE;
 
 self_cell!(
     /// Self-referential struct so that we don't have to parse the ELF file multiple times.
@@ -112,14 +118,13 @@ impl Application {
         Ok(())
     }
 
-    /// Maps the application into virtual memory and passes control to it.
+    /// Maps the application into virtual memory and returns the entrypoint.
     ///
     /// # Safety
     ///
     /// The application must be built from a valid ELF file representing an Oak Restricted
-    /// Application, and there must not be an active application as we alter the virtual memory
-    /// mappings.
-    pub unsafe fn run(&self) -> ! {
+    /// Application.
+    pub(self) unsafe fn map_into_memory(&self) -> VirtAddr {
         for phdr in self
             .program_headers()
             .iter()
@@ -128,21 +133,86 @@ impl Application {
             self.load_segment(phdr).unwrap();
         }
 
-        // Set up the userspace stack at the end of the lower half of the virtual address space.
-        // Well... almost. It's one page lower than the very end, as otherwise the initial stack
-        // pointer would need to be a noncanonical address, so let's avoid that whole mess
-        // by moving down a bit.
-        let rsp = VirtAddr::new(0x8000_0000_0000 - Size2MiB::SIZE);
         mmap(
-            Some(rsp - Size2MiB::SIZE),
+            Some(VirtAddr::new(APPLICATION_STACK_VIRT_ADDR) - Size2MiB::SIZE),
             Size2MiB::SIZE as usize,
             MmapProtection::PROT_READ | MmapProtection::PROT_WRITE,
             MmapFlags::MAP_ANONYMOUS | MmapFlags::MAP_PRIVATE | MmapFlags::MAP_FIXED,
         )
         .expect("failed to allocate memory for user stack");
 
-        log::info!("Running application");
+        self.entry()
+    }
+}
 
+pub fn identify_pml4_frame(
+    pml4: &x86_64::structures::paging::PageTable,
+) -> Result<x86_64::structures::paging::PhysFrame, anyhow::Error> {
+    let phys_addr = {
+        let addr = pml4 as *const x86_64::structures::paging::PageTable;
+        let pt_guard = crate::PAGE_TABLES.lock();
+        let pt = pt_guard.get().context("failed to get page tables")?;
+        crate::mm::Translator::translate_virtual(pt, VirtAddr::from_ptr(addr))
+            .context("failed to translate virtual page table address")?
+    };
+    x86_64::structures::paging::PhysFrame::from_start_address(phys_addr)
+        .map_err(anyhow::Error::msg)
+        .context("couldn't get the physical frame for page table address")
+}
+
+pub struct Process {
+    pml4: x86_64::structures::paging::PageTable,
+    entry: VirtAddr,
+}
+
+impl Process {
+    /// Creates a process from the application, without executing it.
+    ///
+    /// # Safety
+    ///
+    /// The application must be built from a valid ELF file representing an Oak Restricted
+    /// Application.
+    pub unsafe fn from_application(application: &Application) -> Result<Self, anyhow::Error> {
+        let pml4 = crate::BASE_L4_PAGE_TABLE
+            .get()
+            .context("base l4 table should be set")?
+            .clone();
+        // Load the process's page table, so the application can be loaded into its memory. Hold
+        // onto the previous PT, so we can revert to it once the application has been mapped
+        // into the process pt.
+        let mut outer_prev_page_table = {
+            let pml4_frame = identify_pml4_frame(&pml4).context("could not get pml4 frame")?;
+            // Safety: the new page table maintains the same mappings for kernel space.
+            unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) }
+                .context("at this point there should be a previous root pt")?
+                .into_inner()
+        };
+
+        // Safety: caller ensured the application is a valid ELF file representing an Oak Restricted
+        // Application.
+        let entry = unsafe { application.map_into_memory() };
+
+        // We've mapped the memory into the process page tables. Let's revert to the previous page
+        // table.
+        {
+            let mut mapped_prev_pt = outer_prev_page_table.inner().lock();
+            let prev_page_table = mapped_prev_pt.level_4_table();
+            let pml4_frame =
+                identify_pml4_frame(prev_page_table).context("could not get pml4 frame")?;
+            // Safety: the new page table maintains the same mappings for kernel space.
+            unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) };
+        }
+
+        Ok(Self { pml4, entry })
+    }
+    /// Executes the process.
+    pub fn execute(&self) -> ! {
+        let pml4_frame = identify_pml4_frame(&self.pml4).expect("could not get pml4 frame");
+        // Safety: the new page table maintains the same mappings for kernel space.
+        unsafe { crate::PAGE_TABLES.lock().replace(pml4_frame) };
+
+        let entry = self.entry;
+        log::info!("Running application");
         // Enter Ring 3 and jump to user code.
         // Safety: by now, if we're here, we've loaded a valid ELF file. It's up to the user to
         // guarantee that the file made sense.
@@ -150,8 +220,8 @@ impl Application {
             asm! {
                 "mov rsp, {}", // user stack
                 "sysretq",
-                in(reg) rsp.as_u64() - 8,
-                in("rcx") self.entry().as_u64(), // initial RIP
+                in(reg) APPLICATION_STACK_VIRT_ADDR - 8,
+                in("rcx") entry.as_u64(), // initial RIP
                 in("r11") 0x202, // initial RFLAGS (interrupts enabled)
                 options(noreturn)
             }

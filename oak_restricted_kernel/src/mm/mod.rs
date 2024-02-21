@@ -269,6 +269,18 @@ pub fn ramdisk_range(ramdisk: &Ramdisk) -> PhysFrameRange<Size2MiB> {
     )
 }
 
+pub fn encryption() -> MemoryEncryption {
+    // Should we set the C-bit (encrypted memory for SEV)? For now, let's assume it's bit 51.
+    if get_sev_status()
+        .unwrap_or(SevStatus::empty())
+        .contains(SevStatus::SEV_ENABLED)
+    {
+        MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION)
+    } else {
+        MemoryEncryption::NoEncryption
+    }
+}
+
 /// Creates the initial page tables used by the kernel.
 ///
 /// The memory layout we follow is largely based on the Linux layout
@@ -284,9 +296,7 @@ pub fn ramdisk_range(ramdisk: &Ramdisk) -> PhysFrameRange<Size2MiB> {
 /// |                     |          |                     |         | physical memory             |
 /// | FFFF_8820_0000_0000 | ~-120 TB | FFFF_FFFF_7FFF_FFFF | ~120 TB | ... unused hole             |
 /// | FFFF_FFFF_8000_0000 |    -2 GB | FFFF_FFFF_FFFF_FFFF |    2 GB | Kernel code                 |
-pub fn initial_pml4(
-    program_headers: &[ProgramHeader],
-) -> Result<(PhysFrame, MemoryEncryption), &'static str> {
+pub fn initial_pml4(program_headers: &[ProgramHeader]) -> Result<PhysFrame, &'static str> {
     // Safety: this expects the frame allocator to be initialized and the memory region it's handing
     // memory out of to be identity mapped. This is true for the lower 2 GiB after we boot.
     // This reference will no longer be valid after we reload the page tables!
@@ -296,16 +306,6 @@ pub fn initial_pml4(
         .ok_or("couldn't allocate a frame for PML4")?;
     let pml4 = unsafe { &mut *(pml4_frame.start_address().as_u64() as *mut PageTable) };
     pml4.zero();
-
-    // Should we set the C-bit (encrypted memory for SEV)? For now, let's assume it's bit 51.
-    let encrypted = if get_sev_status()
-        .unwrap_or(SevStatus::empty())
-        .contains(SevStatus::SEV_ENABLED)
-    {
-        MemoryEncryption::Encrypted(ENCRYPTED_BIT_POSITION)
-    } else {
-        MemoryEncryption::NoEncryption
-    };
 
     // Populate all the kernel space entries of the level 4 page table. This means that these
     // entries should never change, memory allocation will happen on lower level page tables. This
@@ -324,7 +324,7 @@ pub fn initial_pml4(
         }
     };
 
-    let mut page_table = EncryptedPageTable::new(pml4, VirtAddr::new(0), encrypted);
+    let mut page_table = EncryptedPageTable::new(pml4, VirtAddr::new(0), encryption());
 
     // Safety: these operations are safe as they're not done on active page tables.
     unsafe {
@@ -351,7 +351,7 @@ pub fn initial_pml4(
             .map_err(|_| "couldn't set up paging for the kernel")?;
     }
 
-    Ok((pml4_frame, encrypted))
+    Ok(pml4_frame)
 }
 
 /// Allocates memory usable as a stack.

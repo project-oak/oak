@@ -74,6 +74,15 @@ const SEV_MEATADATA_GUID: u128 = u128::from_le_bytes([
     0x66, 0x65, 0x88, 0xdc, 0x4a, 0x98, 0x98, 0x47, 0xA7, 0x5e, 0x55, 0x85, 0xa7, 0xbf, 0x67, 0xcc,
 ]);
 
+/// The GUID identifying the SEV ES reset block GUID table entry.
+///
+/// This matches the SEV ES reset block GUID used in OVMF (00f771de-1a7e-4fcb-890e-68c77e2fb44e).
+///
+/// See <https://github.com/tianocore/edk2/blob/fff6d81270b57ee786ea18ad74f43149b9f03494/OvmfPkg/ResetVector/Ia16/ResetVectorVtf0.asm>.
+const SEV_ES_RESET_GUID: u128 = u128::from_le_bytes([
+    0xde, 0x71, 0xf7, 0x00, 0x7e, 0x1a, 0xcb, 0x4f, 0x89, 0x0e, 0x68, 0xc7, 0x7e, 0x2f, 0xb4, 0x4e,
+]);
+
 /// The expected first 4 bytes of the SEV metadata section header.
 const SEV_SECTION_SIGNATURE: &[u8] = b"ASEV";
 
@@ -138,6 +147,26 @@ impl Stage0Info {
             .chunks(SEV_METADATA_ENTRY_SIZE)
             .map(SevMetadataPageInfo::parse)
             .collect()
+    }
+
+    /// Gets the SEV-ES reset block from the firmware image.
+    pub fn get_sev_es_reset_block(&self) -> SevEsResetBlock {
+        let sev_es_reset_block_content = *self
+            .parse_firmware_guid_table()
+            .get(&SEV_ES_RESET_GUID)
+            .expect("couldn't find SEV-ES reset block entry in GUID table");
+        assert_eq!(
+            sev_es_reset_block_content.len(),
+            size_of::<u32>(),
+            "invalid length for SEV-ES reset block entry"
+        );
+        // We expect the SEV-ES reset block entry in the GUID table to contain only 4 bytes that
+        // represent the 32-bit unsigned little-endian encoding of the reset address.
+        let mut sev_es_reset_address: u32 = 0;
+        sev_es_reset_address
+            .as_bytes_mut()
+            .copy_from_slice(sev_es_reset_block_content);
+        sev_es_reset_address.into()
     }
 
     /// Parses the GUID table from the firmware image as a map.
@@ -294,6 +323,22 @@ impl From<SevMetadataPageType> for PageType {
             SevMetadataPageType::Secrets => PageType::Secrets,
             SevMetadataPageType::Unmeasured => PageType::Unmeasured,
         }
+    }
+}
+
+/// The instruction pointer and code segment base that will be set when a non-boot vCPU is reset.
+pub struct SevEsResetBlock {
+    pub rip: u64,
+    pub segment_base: u64,
+}
+
+impl From<u32> for SevEsResetBlock {
+    fn from(value: u32) -> Self {
+        // The instruction pointer is the two least significant bytes of the address.
+        let rip = (value & 0x0000ffff) as u64;
+        // The code segment base is the address with the two least significant bytes zeroed out.
+        let segment_base = (value & 0xffff0000) as u64;
+        Self { rip, segment_base }
     }
 }
 

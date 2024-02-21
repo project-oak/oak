@@ -41,7 +41,7 @@ fn try_source_path() -> Result<PathBuf, &'static str> {
 }
 
 fn main() {
-    println!("cargo:rerun-if-changed=cargo:rerun-if-env-changed=OAK_RESTRICTED_KERNEL_FILE_NAME");
+    println!("cargo:rerun-if-env-changed=OAK_RESTRICTED_KERNEL_FILE_NAME");
     println!("cargo:rerun-if-changed=layout.ld");
     println!("cargo:rustc-link-arg=--script=layout.ld");
     let mut destination_path = PathBuf::from(std::env::var("OUT_DIR").unwrap());

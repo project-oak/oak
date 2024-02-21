@@ -16,6 +16,7 @@
 
 workspace(name = "oak")
 
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # The `name` argument in all `http_archive` rules should be equal to the
@@ -184,17 +185,25 @@ load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_depende
 # https://bazelbuild.github.io/rules_foreign_cc/0.9.0/flatten.html#rules_foreign_cc_dependencies
 rules_foreign_cc_dependencies()
 
+# C++ CBOR support.
+# https://android.googlesource.com/platform/external/libcppbor
+git_repository(
+    name = "libcppbor",
+    build_file = "@//:third_party/google/libcppbor/BUILD",
+    # Head commit on 2023-12-04.
+    commit = "20d2be8672d24bfb441d075f82cc317d17d601f8",
+    patches = [
+        "@//:third_party/google/libcppbor/remove_macro.patch",
+    ],
+    remote = "https://android.googlesource.com/platform/external/libcppbor",
+)
+
 http_archive(
     name = "cose_lib",
     build_file = "@//:third_party/BUILD.cose_lib",
     sha256 = "e41a068b573bb07ed2a50cb3c39ae10995977cad82e24a7873223277e7fdb4e5",
     strip_prefix = "cose-lib-2023.09.08",
     url = "https://github.com/android/cose-lib/archive/refs/tags/v2023.09.08.tar.gz",
-)
-
-load(
-    "@bazel_tools//tools/build_defs/repo:git.bzl",
-    "git_repository",
 )
 
 # Run clang-tidy on C++ code with the following command:

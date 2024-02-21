@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Project Oak Authors
+// Copyright 2024 The Project Oak Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +14,22 @@
 // limitations under the License.
 //
 
-use std::env;
+syntax = "proto3";
 
-fn main() {
-    println!("cargo:rerun-if-env-changed=PROFILE");
-    println!("cargo:rerun-if-changed=layout.ld");
-    println!("cargo:rustc-link-arg=--script=layout.ld");
+package oak.functions.config;
 
-    if env::var("PROFILE").unwrap() == "release" {
-        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=256K");
-    } else {
-        println!("cargo:rustc-link-arg=--defsym=BIOS_SIZE=2048K");
-    }
+enum HandlerType {
+  // Defaults to WASM.
+  HANDLER_UNSPECIFIED = 0;
+
+  // Use a wasm interpreter to load the module.
+  HANDLER_WASM = 1;
+
+  // Interpret the module as a native .so file. Only supported when running on Oak Containers.
+  HANDLER_NATIVE = 2;
+}
+
+message ApplicationConfig {
+  // How to load the provided module.
+  HandlerType handler_type = 1;
 }

@@ -426,6 +426,7 @@ where
             .max_decoding_message_size(MAX_DECODING_MESSAGE_SIZE)
             .accept_compressed(CompressionEncoding::Gzip),
         )
+        .add_service(oak_debug_service::Service::new_server())
         .serve_with_incoming(TcpListenerStream::new(listener))
         .await
         .context("failed to start up the service")

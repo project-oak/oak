@@ -18,7 +18,10 @@ use micro_rpc_build::ReceiverType;
 
 fn main() {
     micro_rpc_build::compile(
-        &["../proto/oak_functions/service/oak_functions.proto"],
+        &[
+            "../proto/oak_functions/application_config.proto",
+            "../proto/oak_functions/service/oak_functions.proto",
+        ],
         &[".."],
         micro_rpc_build::CompileOptions {
             receiver_type: ReceiverType::RefSelf,
