@@ -38,6 +38,12 @@ class Cwt {
 
   static absl::StatusOr<Cwt> Deserialize(absl::string_view data);
 
+  // Transforms HPKE public key into a CWT and serializes it.
+  // TODO(#4818): This function is currently used for tests only. We need to
+  // refactor CWT class to support both serialization and deserialization.
+  static absl::StatusOr<std::vector<uint8_t>>
+  SerializeHpkePublicKey(const std::vector<uint8_t>& public_key);
+
  private:
   // CBOR map keys.
   // <https://datatracker.ietf.org/doc/html/rfc8392#section-4>

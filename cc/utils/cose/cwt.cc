@@ -42,7 +42,7 @@ absl::StatusOr<Cwt> Cwt::Deserialize(absl::string_view data) {
     return absl::InvalidArgumentError(absl::StrCat("couldn't deserialize CWT: ", error));
   }
   if (item->type() != cppbor::MAP) {
-    return UnexpectedCborTypeError("CWT", cppbor::ARRAY, item->type());
+    return UnexpectedCborTypeError("CWT", cppbor::MAP, item->type());
   }
   const cppbor::Map* map = item->asMap();
   if (map->size() < 3) {
@@ -82,6 +82,25 @@ absl::StatusOr<Cwt> Cwt::Deserialize(absl::string_view data) {
   }
 
   return Cwt(iss->asTstr(), sub->asTstr(), std::move(*subject_public_key), std::move(item));
+}
+
+absl::StatusOr<std::vector<uint8_t>>
+Cwt::SerializeHpkePublicKey(const std::vector<uint8_t>& public_key) {
+  auto serialized_public_key_certificate = CoseKey::SerializeHpkePublicKey(public_key);
+  if (!serialized_public_key_certificate.ok()) {
+    return serialized_public_key_certificate.status();
+  }
+
+  cppbor::Map map;
+  // TODO(#4818): Implement assigning ISS and SUB public fields.
+  map.add(ISS, cppbor::Tstr(""));
+  map.add(SUB, cppbor::Tstr(""));
+  map.add(SUBJECT_PUBLIC_KEY_ID, cppbor::Bstr(*serialized_public_key_certificate));
+
+  std::vector<uint8_t> encoded_map(map.encodedSize());
+  map.encode(encoded_map.data(), encoded_map.data() + encoded_map.size());
+
+  return CoseSign1::Serialize(encoded_map);
 }
 
 }  // namespace oak::utils::cose
