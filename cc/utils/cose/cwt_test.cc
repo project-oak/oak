@@ -55,7 +55,6 @@ class CertificateTest : public testing::Test {
     ASSERT_TRUE(parse_success);
 
     public_key_certificate_ = test_evidence->application_keys().encryption_public_key_certificate();
-    test_public_key_ = std::vector<uint8_t>
   }
 
   std::string public_key_certificate_;
@@ -71,10 +70,12 @@ TEST_F(CertificateTest, CwtSerializeDeserializeSuccess) {
   std::vector<uint8_t> test_public_key = {1, 2, 3, 4};
   auto serialized_cwt = Cwt::SerializeHpkePublicKey(test_public_key);
   EXPECT_TRUE(serialized_cwt.ok()) << serialized_cwt.status();
+  auto serialized_cwt_string = std::string(serialized_cwt->begin(), serialized_cwt->end());
 
-  auto deserialized_cwt = Cwt::Deserialize(*serialized_cwt);
+  auto deserialized_cwt = Cwt::Deserialize(serialized_cwt_string);
   EXPECT_TRUE(deserialized_cwt.ok()) << deserialized_cwt.status();
-  EXPECT_THAT(deserialized_cwt->subject_public_key.GetPublicKey(), ElementsAreArray(test_public_key));
+  EXPECT_THAT(deserialized_cwt->subject_public_key.GetPublicKey(),
+              ElementsAreArray(test_public_key));
 }
 
 }  // namespace

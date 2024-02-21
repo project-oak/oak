@@ -87,8 +87,8 @@ class CoseKey {
   // Transforms HPKE public key into a COSE_Key and serializes it.
   // TODO(#4818): This function is currently used for tests only. We need to
   // refactor COSE classes to support both serialization and deserialization.
-  static absl::StatusOr<std::vector<uint8_t>>
-  SerializeHpkePublicKey(const std::vector<uint8_t>& public_key);
+  static absl::StatusOr<std::vector<uint8_t>> SerializeHpkePublicKey(
+      const std::vector<uint8_t>& public_key);
 
   const std::vector<uint8_t>& GetPublicKey() const { return x->value(); }
 
@@ -111,30 +111,30 @@ class CoseKey {
   // Key Object parameters.
   // <https://datatracker.ietf.org/doc/html/rfc8152#section-13>
   enum KeyObjectParameter : int {
-    Reserved = 0,  // This value is reserved.
-    OKP = 1,  // Octet Key Pair.
-    EC2 = 2,  // Elliptic Curve Keys with x- and y-coordinate pair.
+    Reserved = 0,   // This value is reserved.
+    OKP = 1,        // Octet Key Pair.
+    EC2 = 2,        // Elliptic Curve Keys with x- and y-coordinate pair.
     Symmetric = 4,  // Symmetric Keys.
   };
 
   // COSE Algorithms.
   // <https://www.iana.org/assignments/cose/cose.xhtml#algorithms>
   enum CoseAlgorithm : int {
-    ES256 = -7,  // ECDSA with SHA-256.
+    ES256 = -7,     // ECDSA with SHA-256.
     ECDH_ES = -25,  // ECDH ES with HKDF.
   };
 
   // Key Operation Values.
   // <https://datatracker.ietf.org/doc/html/rfc8152#section-7.1>
   enum KeyOperationValues : int {
-    SIGN = 1, // The key is used to create signatures.
+    SIGN = 1,    // The key is used to create signatures.
     VERIFY = 2,  // The key is used for verification of signatures.
   };
 
   // COSE Elliptic Curve parameters.
   // <https://www.iana.org/assignments/cose/cose.xhtml#elliptic-curves>
   enum CoseEllipticCurveParameter : int {
-    P256 = 1,  // NIST P-256 also known as secp256r1.
+    P256 = 1,    // NIST P-256 also known as secp256r1.
     X25519 = 4,  // X25519 for use with ECDH only.
   };
 

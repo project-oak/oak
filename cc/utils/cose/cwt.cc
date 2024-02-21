@@ -84,8 +84,8 @@ absl::StatusOr<Cwt> Cwt::Deserialize(absl::string_view data) {
   return Cwt(iss->asTstr(), sub->asTstr(), std::move(*subject_public_key), std::move(item));
 }
 
-absl::StatusOr<std::vector<uint8_t>>
-Cwt::SerializeHpkePublicKey(const std::vector<uint8_t>& public_key) {
+absl::StatusOr<std::vector<uint8_t>> Cwt::SerializeHpkePublicKey(
+    const std::vector<uint8_t>& public_key) {
   auto serialized_public_key_certificate = CoseKey::SerializeHpkePublicKey(public_key);
   if (!serialized_public_key_certificate.ok()) {
     return serialized_public_key_certificate.status();

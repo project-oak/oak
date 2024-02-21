@@ -32,8 +32,8 @@ TEST(CoseTest, CoseSign1SerializeDeserializeSuccess) {
   std::vector<uint8_t> test_payload = {1, 2, 3, 4};
   auto serialized_cose_sign1 = CoseSign1::Serialize(test_payload);
   EXPECT_TRUE(serialized_cose_sign1.ok()) << serialized_cose_sign1.status();
-  auto serialized_cose_sign1_string = std::string(
-      serialized_cose_sign1->begin(), serialized_cose_sign1->end());
+  auto serialized_cose_sign1_string =
+      std::string(serialized_cose_sign1->begin(), serialized_cose_sign1->end());
 
   auto deserialized_cose_sign1 = CoseSign1::Deserialize(serialized_cose_sign1_string);
   EXPECT_TRUE(deserialized_cose_sign1.ok()) << deserialized_cose_sign1.status();

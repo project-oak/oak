@@ -150,8 +150,8 @@ absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(std::unique_ptr<cppbor
                  std::move(item));
 }
 
-absl::StatusOr<std::vector<uint8_t>>
-CoseKey::SerializeHpkePublicKey(const std::vector<uint8_t>& public_key) {
+absl::StatusOr<std::vector<uint8_t>> CoseKey::SerializeHpkePublicKey(
+    const std::vector<uint8_t>& public_key) {
   cppbor::Map map;
   map.add(KTY, cppbor::Uint(OKP));
   map.add(ALG, cppbor::Nint(ECDH_ES));
