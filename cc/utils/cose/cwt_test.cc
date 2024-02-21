@@ -61,7 +61,7 @@ class CertificateTest : public testing::Test {
 
 TEST_F(CertificateTest, CwtDeserializeSuccess) {
   auto cwt = Cwt::Deserialize(public_key_certificate_);
-  ASSERT_TRUE(cwt.ok()) << cwt.status();
+  EXPECT_TRUE(cwt.ok()) << cwt.status();
   EXPECT_THAT(cwt->subject_public_key.GetPublicKey(), ElementsAreArray(kTestPublicKey));
 }
 

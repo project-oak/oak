@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -66,6 +67,21 @@ absl::StatusOr<CoseSign1> CoseSign1::Deserialize(absl::string_view data) {
                    signature->asBstr(), std::move(item));
 }
 
+absl::StatusOr<std::vector<uint8_t>> CoseSign1::Serialize(const std::vector<uint8_t>& payload) {
+  cppbor::Array array;
+  // TODO(#4818): Implement headers and signature.
+  std::vector<uint8_t> protected_headers;
+  std::vector<uint8_t> signature;
+  array.add(cppbor::Bstr(protected_headers));
+  array.add(cppbor::Map());
+  array.add(cppbor::Bstr(payload));
+  array.add(cppbor::Bstr(signature));
+
+  std::vector<uint8_t> encoded_array(array.encodedSize());
+  array.encode(encoded_array.data(), encoded_array.data() + encoded_array.size());
+  return encoded_array;
+}
+
 absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(absl::string_view data) {
   auto [item, end, error] =
       cppbor::parse(reinterpret_cast<const uint8_t*>(data.data()), data.size());
@@ -100,13 +116,6 @@ absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(std::unique_ptr<cppbor
   if (kty->type() != cppbor::UINT) {
     return UnexpectedCborTypeError("KTY", cppbor::UINT, kty->type());
   }
-  const auto& kid = map->get<int, int>(KID);
-  if (kid == nullptr) {
-    return absl::InvalidArgumentError("KID not found");
-  }
-  if (kid->type() != cppbor::BSTR) {
-    return UnexpectedCborTypeError("KID", cppbor::BSTR, kid->type());
-  }
   const auto& alg = map->get<int, int>(ALG);
   if (alg == nullptr) {
     return absl::InvalidArgumentError("ALG not found");
@@ -137,8 +146,53 @@ absl::StatusOr<CoseKey> CoseKey::DeserializeHpkePublicKey(std::unique_ptr<cppbor
     return UnexpectedCborTypeError("X", cppbor::BSTR, x->type());
   }
 
-  return CoseKey(kty->asUint(), kid->asBstr(), alg->asNint(), key_ops->asArray(), crv->asUint(),
-                 x->asBstr(), std::move(item));
+  return CoseKey(kty->asUint(), alg->asNint(), key_ops->asArray(), crv->asUint(), x->asBstr(),
+                 std::move(item));
+}
+
+absl::StatusOr<std::vector<uint8_t>>
+CoseKey::SerializeHpkePublicKey(const std::vector<uint8_t>& public_key) {
+  cppbor::Map map;
+  map.add(KTY, cppbor::Uint(OKP));
+  map.add(ALG, cppbor::Nint(ECDH_ES));
+  // TODO(#4818): Add correct key ops.
+  map.add(KEY_OPS, cppbor::Array());
+  map.add(CRV, cppbor::Uint(X25519));
+  map.add(X, cppbor::Bstr(public_key));
+
+  std::vector<uint8_t> encoded_map(map.encodedSize());
+  map.encode(encoded_map.data(), encoded_map.data() + encoded_map.size());
+  return encoded_map;
+}
+
+std::string CborTypeToString(cppbor::MajorType cbor_type) {
+  switch (cbor_type) {
+    case cppbor::MajorType::UINT:
+      return "UINT";
+    case cppbor::MajorType::NINT:
+      return "NINT";
+    case cppbor::MajorType::BSTR:
+      return "BSTR";
+    case cppbor::MajorType::TSTR:
+      return "TSTR";
+    case cppbor::MajorType::ARRAY:
+      return "ARRAY";
+    case cppbor::MajorType::MAP:
+      return "MAP";
+    case cppbor::MajorType::SEMANTIC:
+      return "SEMANTIC";
+    case cppbor::MajorType::SIMPLE:
+      return "SIMPLE";
+    default:
+      return absl::StrCat("UNKNOWN(", cbor_type, ")");
+  }
+}
+
+absl::Status UnexpectedCborTypeError(std::string_view name, cppbor::MajorType expected,
+                                     cppbor::MajorType found) {
+  return absl::InvalidArgumentError(absl::StrCat("expected ", name, " to have ",
+                                                 CborTypeToString(expected), " CBOR type, found ",
+                                                 CborTypeToString(found)));
 }
 
 }  // namespace oak::utils::cose

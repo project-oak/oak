@@ -49,6 +49,16 @@ cc_library(
 # Tests
 
 cc_test(
+    name = "cose_test",
+    size = "small",
+    srcs = ["cose_test.cc"],
+    deps = [
+        ":cose",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "cwt_test",
     size = "small",
     srcs = ["cwt_test.cc"],
