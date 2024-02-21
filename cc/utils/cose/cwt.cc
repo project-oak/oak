@@ -16,7 +16,9 @@
 
 #include "cc/utils/cose/cwt.h"
 
+#include <cstdint>
 #include <memory>
+#include <vector>
 #include <utility>
 
 #include "absl/status/status.h"

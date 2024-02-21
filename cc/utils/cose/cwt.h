@@ -17,7 +17,8 @@
 #ifndef CC_UTILS_COSE_CWT_H_
 #define CC_UTILS_COSE_CWT_H_
 
-#include <string>
+#include <cstdint>
+#include <vector>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
