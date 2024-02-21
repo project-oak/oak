@@ -195,34 +195,4 @@ absl::Status UnexpectedCborTypeError(std::string_view name, cppbor::MajorType ex
                                                  CborTypeToString(found)));
 }
 
-std::string CborTypeToString(cppbor::MajorType cbor_type) {
-  switch (cbor_type) {
-    case cppbor::MajorType::UINT:
-      return "UINT";
-    case cppbor::MajorType::NINT:
-      return "NINT";
-    case cppbor::MajorType::BSTR:
-      return "BSTR";
-    case cppbor::MajorType::TSTR:
-      return "TSTR";
-    case cppbor::MajorType::ARRAY:
-      return "ARRAY";
-    case cppbor::MajorType::MAP:
-      return "MAP";
-    case cppbor::MajorType::SEMANTIC:
-      return "SEMANTIC";
-    case cppbor::MajorType::SIMPLE:
-      return "SIMPLE";
-    default:
-      return absl::StrCat("UNKNOWN(", cbor_type, ")");
-  }
-}
-
-absl::Status UnexpectedCborTypeError(std::string_view name, cppbor::MajorType expected,
-                                     cppbor::MajorType found) {
-  return absl::InvalidArgumentError(absl::StrCat("expected ", name, " to have ",
-                                                 CborTypeToString(expected), " CBOR type, found ",
-                                                 CborTypeToString(found)));
-}
-
 }  // namespace oak::utils::cose
