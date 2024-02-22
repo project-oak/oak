@@ -190,7 +190,6 @@ impl LookupHtbl {
         match self.lookup(key) {
             LookupResult::Found(table_index, old_data_index) => {
                 write_index(&mut self.table, table_index + 1, data_index);
-                self.used_entries += 1;
                 Some(self.get_data(old_data_index))
             }
             LookupResult::NotFound(table_index, hash_byte) => {
@@ -438,7 +437,7 @@ mod tests {
                 let mut value = [key_bytes[1]; AVE_VALUE_SIZE];
                 value[0] = key_bytes[0];
                 value[AVE_VALUE_SIZE - 1] = key_bytes[7];
-                table.insert(&key_bytes, &value).unwrap();
+                table.insert(&key_bytes, &value);
                 num_keys += 1;
             } else {
                 panic!("Should not already have this key");
@@ -472,7 +471,7 @@ mod tests {
         let mut table = LookupHtbl::default();
         table.reserve(3);
         for i in 0..3 {
-            table.insert(keys[i], values[i]).unwrap();
+            table.insert(keys[i], values[i]);
         }
         let mut found = [false, false, false];
         for (key, value) in &table {
@@ -532,7 +531,7 @@ mod tests {
             loop {
                 let kv_pair = r.rand_kv_pair(100, 1000);
                 if !table.contains_key(&kv_pair.0) {
-                    table.insert(&kv_pair.0, &kv_pair.1).unwrap();
+                    table.insert(&kv_pair.0, &kv_pair.1);
                     kv_pairs.push(kv_pair);
                     break;
                 }
