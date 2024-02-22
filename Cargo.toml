@@ -6,6 +6,7 @@ members = [
   "micro_rpc_build",
   "micro_rpc_tests",
   "oak_attestation",
+  "oak_attestation_integration_tests",
   "oak_attestation_verification",
   "oak_channel",
   "oak_client",
