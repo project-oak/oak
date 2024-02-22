@@ -25,7 +25,7 @@ use hashbrown::HashMap;
 use oak_functions_abi::Request;
 use oak_functions_service::{
     logger::StandaloneLogger,
-    lookup::{Data, LookupDataManager},
+    lookup::LookupDataManager,
     wasm::{wasmtime::WasmtimeHandler, WasmHandler},
     Handler,
 };
@@ -183,7 +183,7 @@ fn bench_invoke_lookup_multi(c: &mut Criterion) {
     group.finish();
 }
 
-fn create_test_data(start: i32, end: i32) -> Data {
+fn create_test_data(start: i32, end: i32) -> Vec<(Bytes, Bytes)> {
     HashMap::from_iter((start..end).map(|i| {
         (
             format!("key{}", i).into_bytes().into(),

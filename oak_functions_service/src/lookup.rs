@@ -21,18 +21,15 @@ use alloc::{
 };
 
 use bytes::Bytes;
-use hashbrown::HashMap;
 use log::{info, Level};
 use spinning_top::{RwSpinlock, Spinlock};
+use alloc::vec::Vec;
 
 use crate::{logger::OakLogger, lookup_htbl::LookupHtbl};
 
-// This is used to pass data to the lookup data module for tests.
-pub type Data = HashMap<Bytes, Bytes>;
-
 // Data maintains the invariant on lookup data to have [at most one
 // value](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md#invariant-at-most-one-value)
-type DataInternal = LookupHtbl;
+type Data = LookupHtbl;
 
 #[derive(Default)]
 enum BuilderState {
@@ -44,13 +41,13 @@ enum BuilderState {
 // Incrementally build next lookup data keeping track of the state.
 #[derive(Default)]
 struct DataBuilder {
-    data: DataInternal,
+    data: Data,
     state: BuilderState,
 }
 
 impl DataBuilder {
     /// Build data from the builder and set the builder back to the initial state.
-    fn build(&mut self) -> DataInternal {
+    fn build(&mut self) -> Data {
         self.state = BuilderState::Empty;
         core::mem::take(&mut self.data)
     }
@@ -87,7 +84,7 @@ impl DataBuilder {
 ///
 /// In the future we may replace both the mutex and the hash map with something like RCU.
 pub struct LookupDataManager {
-    data: RwSpinlock<Arc<DataInternal>>,
+    data: RwSpinlock<Arc<Data>>,
     // Behind a lock, because we have multiple references to LookupDataManager and need to mutate
     // data builder.
     data_builder: Spinlock<DataBuilder>,
@@ -98,7 +95,7 @@ impl LookupDataManager {
     /// Creates a new instance with empty backing data.
     pub fn new_empty(logger: Arc<dyn OakLogger>) -> Self {
         Self {
-            data: RwSpinlock::new(Arc::new(DataInternal::default())),
+            data: RwSpinlock::new(Arc::new(Data::default())),
             // Incrementally builds the backing data that will be used by new `LookupData`
             // instances when finished.
             data_builder: Spinlock::new(DataBuilder::default()),
@@ -107,7 +104,7 @@ impl LookupDataManager {
     }
 
     /// Creates an instance of LookupData populated with the given entries.
-    pub fn for_test(data: Data, logger: Arc<dyn OakLogger>) -> Self {
+    pub fn for_test(data: Vec<(Bytes, Bytes)>, logger: Arc<dyn OakLogger>) -> Self {
         let test_manager = Self::new_empty(logger);
         test_manager.reserve(data.len() as u64).unwrap();
         test_manager.extend_next_lookup_data(data).unwrap();
@@ -179,12 +176,12 @@ impl LookupDataManager {
 /// Provides access to shared lookup data.
 #[derive(Clone)]
 pub struct LookupData {
-    data: Arc<DataInternal>,
+    data: Arc<Data>,
     logger: Arc<dyn OakLogger>,
 }
 
 impl LookupData {
-    fn new(data: Arc<DataInternal>, logger: Arc<dyn OakLogger>) -> Self {
+    fn new(data: Arc<Data>, logger: Arc<dyn OakLogger>) -> Self {
         Self { data, logger }
     }
 
