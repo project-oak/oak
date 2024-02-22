@@ -90,10 +90,7 @@ impl<H: Handler> OakFunctionsInstance<H> {
         self.lookup_data_manager
             .extend_next_lookup_data(to_data(chunk))
             .map_err(|err| {
-                micro_rpc::Status::new_with_message(
-                    micro_rpc::StatusCode::InvalidArgument,
-                    format!("Was there a duplicate key?: {:?}", err),
-                )
+                micro_rpc::Status::new_with_message(micro_rpc::StatusCode::InvalidArgument, err)
             })
     }
 
