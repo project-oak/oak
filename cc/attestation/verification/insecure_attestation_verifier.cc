@@ -36,8 +36,8 @@ using ::oak::utils::cose::Cwt;
 }  // namespace
 
 absl::StatusOr<AttestationResults> InsecureAttestationVerifier::Verify(
-    std::chrono::time_point<std::chrono::system_clock> now, Evidence evidence,
-    Endorsements endorsements) const {
+    std::chrono::time_point<std::chrono::system_clock> now, const Evidence& evidence,
+    const Endorsements& endorsements) const {
   absl::StatusOr<std::string> encryption_public_key =
       ExtractEncryptionPublicKey(evidence.application_keys().encryption_public_key_certificate());
   if (!encryption_public_key.ok()) {
