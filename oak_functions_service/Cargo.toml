@@ -13,7 +13,6 @@ std = ["anyhow/std", "wasmi/std", "wasmtime"]
 
 [[bench]]
 name = "wasm_benchmark"
-harness = false
 required-features = ["wasmtime"]
 
 [dependencies]
@@ -37,7 +36,9 @@ wasmtime = { version = "*", optional = true }
 micro_rpc_build = { workspace = true }
 
 [dev-dependencies]
-criterion = "*"
+criterion = "0.5"
+criterion-macro = "0.4"
 oak_functions_test_utils = { workspace = true }
+pprof = { version = "*", features = ["flamegraph", "criterion"] }
 rand = "*"
 tokio = { workspace = true, features = ["rt", "macros"] }

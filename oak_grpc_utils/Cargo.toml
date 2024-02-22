@@ -7,7 +7,6 @@ license = "Apache-2.0"
 
 [dependencies]
 prost = { workspace = true }
-prost-build = { workspace = true }
 tempfile = "*"
 # Disable the `rustfmt` feature, as it requires `rustfmt` which may not be supported for custom
 # toolchains.

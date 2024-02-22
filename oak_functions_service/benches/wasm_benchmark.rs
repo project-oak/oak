@@ -16,11 +16,16 @@
 
 #![feature(never_type)]
 #![feature(unwrap_infallible)]
+#![feature(custom_test_frameworks)]
+#![test_runner(criterion::runner)]
+
+mod perf;
 
 use std::sync::Arc;
 
 use bytes::Bytes;
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkId, Criterion, Throughput};
+use criterion_macro::criterion;
 use hashbrown::HashMap;
 use oak_functions_abi::Request;
 use oak_functions_service::{
@@ -33,6 +38,7 @@ use oak_proto_rust::oak::oak_functions::testing::{
     lookup_request::Mode, LookupRequest, LookupResponse, TestModuleClient,
 };
 
+#[criterion]
 fn bench_invoke_echo(c: &mut Criterion) {
     let test_state = create_test_state_with_wasm_module_name::<WasmHandler>("echo");
 
@@ -56,6 +62,7 @@ fn bench_invoke_echo(c: &mut Criterion) {
     group.finish();
 }
 
+#[criterion]
 fn bench_invoke_lookup(c: &mut Criterion) {
     let test_state = create_test_state_with_wasm_module_name::<WasmHandler>("key_value_lookup");
 
@@ -109,6 +116,7 @@ impl<'a, H: Handler> micro_rpc::Transport for Transport<'a, H> {
     }
 }
 
+#[criterion]
 fn bench_invoke_lookup_multi(c: &mut Criterion) {
     let mut test_state_wasmi =
         create_test_state_with_wasm_module_name::<WasmHandler>("oak_functions_test_module");
@@ -180,6 +188,53 @@ fn bench_invoke_lookup_multi(c: &mut Criterion) {
     group.finish();
 }
 
+#[criterion(perf::flamegraph())]
+fn flamegraph(c: &mut Criterion) {
+    let mut test_state =
+        create_test_state_with_wasm_module_name::<WasmtimeHandler>("oak_functions_test_module");
+
+    const MAX_DATA_SIZE: i32 = 1_000_000;
+    const START_KEY_INDEX: i32 = 100;
+
+    let test_data = create_test_data(0, MAX_DATA_SIZE);
+    test_state
+        .lookup_data_manager
+        .extend_next_lookup_data(test_data.clone());
+    test_state.lookup_data_manager.finish_next_lookup_data();
+
+    fn run_lookup_with_items<H: Handler>(
+        b: &mut criterion::Bencher,
+        test_state: &mut TestState<H>,
+        items: i32,
+        mode: Mode,
+    ) {
+        let lookup_request = LookupRequest {
+            keys: (START_KEY_INDEX..START_KEY_INDEX + items)
+                .map(|i| format!("key{}", i).into_bytes())
+                .collect(),
+            mode: mode.into(),
+        };
+
+        let expected_response = LookupResponse {
+            values: (START_KEY_INDEX..START_KEY_INDEX + items)
+                .map(|i| format!("value{}", i).into_bytes())
+                .collect(),
+        };
+
+        let mut client = TestModuleClient::new(Transport {
+            wasm_handler: &mut test_state.wasm_handler,
+        });
+
+        b.iter(|| {
+            let response = client.lookup(&lookup_request).into_ok().unwrap();
+            assert_eq!(response, expected_response);
+        })
+    }
+    c.bench_function("flamegraph", |b| {
+        run_lookup_with_items(b, &mut test_state, 1000, Mode::Individual)
+    });
+}
+
 fn create_test_data(start: i32, end: i32) -> Data {
     HashMap::from_iter((start..end).map(|i| {
         (
@@ -209,11 +264,3 @@ fn create_test_state_with_wasm_module_name<H: Handler>(wasm_module_name: &str) -
         lookup_data_manager,
     }
 }
-
-criterion_group!(
-    benches,
-    bench_invoke_echo,
-    bench_invoke_lookup,
-    bench_invoke_lookup_multi
-);
-criterion_main!(benches);
