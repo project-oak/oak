@@ -84,7 +84,7 @@ pub struct LookupHtbl {
 }
 
 enum LookupResult {
-    Found(usize),        // (data_index: u40)
+    Found(usize, usize), // (table_index: u40, data_index: u40)
     NotFound(usize, u8), // (table_index: u40, hash_byte: u8)
 }
 
@@ -104,8 +104,8 @@ impl LookupHtbl {
         self.used_entries = 0usize;
     }
 
-    // Lookup the key/value pair.  If found, return LookupFound(data_index).  Otherwise, return the
-    // table index that contains 0 which can be used during insert, as NotFound(table_index).
+    // Lookup the key/value pair.  If found, return LookupResult::Found(table_index, data_index).
+    // Otherwise, return the LookupResult::NotFound(table index, hash_byte).
     fn lookup(&self, key: &[u8]) -> LookupResult {
         if self.allocated_entries == 0 {
             panic!("Don't call lookup on empty table");
@@ -142,7 +142,7 @@ impl LookupHtbl {
             let key_index = index + key_len_size;
             let entry_key: &[u8] = &chunk[key_index..key_index + key_len];
             if entry_key == key {
-                return LookupResult::Found(data_index);
+                return LookupResult::Found(table_index, data_index);
             }
             table_index += ENTRY_SIZE;
             if table_index == self.table.len() {
@@ -155,47 +155,51 @@ impl LookupHtbl {
         if self.table.is_empty() {
             return false;
         }
-        matches!(self.lookup(key), LookupResult::Found(_))
+        matches!(self.lookup(key), LookupResult::Found(_, _))
     }
 
     pub fn get(&self, key: &[u8]) -> Option<&[u8]> {
         if self.used_entries == 0 {
             return None;
         }
-        let result = self.lookup(key);
-        match result {
-            LookupResult::Found(data_index) => {
-                let chunk: &[u8] = &self.data_chunks[data_index >> CHUNK_BITS];
-                let index = data_index & CHUNK_MASK;
-                let (key_len, key_len_size) = read_len(chunk, index);
-                let value_len_index = index + key_len_size + key_len;
-                let (value_len, value_len_size) = read_len(chunk, value_len_index);
-                let value_index = value_len_index + value_len_size;
-                Some(&chunk[value_index..value_index + value_len])
-            }
+        match self.lookup(key) {
+            LookupResult::Found(_, data_index) => Some(self.get_data(data_index)),
             LookupResult::NotFound(_, _) => None,
         }
     }
 
+    fn get_data(&self, data_index: usize) -> &[u8] {
+        let chunk: &[u8] = &self.data_chunks[data_index >> CHUNK_BITS];
+        let index = data_index & CHUNK_MASK;
+        let (key_len, key_len_size) = read_len(chunk, index);
+        let value_len_index = index + key_len_size + key_len;
+        let (value_len, value_len_size) = read_len(chunk, value_len_index);
+        let value_index = value_len_index + value_len_size;
+        &chunk[value_index..value_index + value_len]
+    }
+
     // Insert a k/v pair into the table.  Returns Err(()) if it is already in the table.
-    pub fn insert(&mut self, key: &[u8], value: &[u8]) -> Result<(), &'static str> {
+    pub fn insert(&mut self, key: &[u8], value: &[u8]) -> Option<&[u8]> {
         if self.table.is_empty() {
             self.reserve(1);
         } else if self.used_entries >= self.max_entries {
             // This should never happen if the needed space is reserved first.
             self.grow_table();
         }
-        let result = self.lookup(key);
-        match result {
-            LookupResult::Found(_) => return Err("Key already in hash table"),
+        let data_index = self.new_data(key, value);
+        match self.lookup(key) {
+            LookupResult::Found(table_index, old_data_index) => {
+                write_index(&mut self.table, table_index + 1, data_index);
+                self.used_entries += 1;
+                Some(self.get_data(old_data_index))
+            }
             LookupResult::NotFound(table_index, hash_byte) => {
-                let data_index = self.new_data(key, value);
                 self.table[table_index] = hash_byte;
                 write_index(&mut self.table, table_index + 1, data_index);
                 self.used_entries += 1;
+                None
             }
         }
-        Ok(())
     }
 
     // This increases memory for the table temporarily increase 3X, and permanently by 2X.
@@ -257,14 +261,10 @@ impl LookupHtbl {
         used_data
     }
 
-    pub fn extend<T: IntoIterator<Item = (Bytes, Bytes)>>(
-        &mut self,
-        new_data: T,
-    ) -> Result<(), &'static str> {
+    pub fn extend<T: IntoIterator<Item = (Bytes, Bytes)>>(&mut self, new_data: T) {
         for (key, value) in new_data {
-            self.insert(&key, &value)?;
+            self.insert(&key, &value);
         }
-        Ok(())
     }
 
     pub fn len(&self) -> usize {
@@ -567,9 +567,9 @@ mod tests {
     #[test]
     fn test_dumplicate_key() {
         let mut table = LookupHtbl::default();
-        table.insert("key".as_bytes(), "value1".as_bytes()).unwrap();
-        table
-            .insert("key".as_bytes(), "value2".as_bytes())
-            .expect_err("Expected an error");
+        table.insert("key".as_bytes(), "value1".as_bytes());
+        assert!(table.get("key".as_bytes()) == Some("value1".as_bytes()));
+        table.insert("key".as_bytes(), "value2".as_bytes());
+        assert!(table.get("key".as_bytes()) == Some("value2".as_bytes()));
     }
 }

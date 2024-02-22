@@ -76,10 +76,7 @@ impl<H: Handler> OakFunctionsInstance<H> {
                     micro_rpc::StatusCode::InvalidArgument,
                     "no chunk in extend request",
                 ),
-            )?))
-            .map_err(|msg| {
-                micro_rpc::Status::new_with_message(micro_rpc::StatusCode::InvalidArgument, msg)
-            })?;
+            )?));
         Ok(ExtendNextLookupDataResponse {})
     }
 
@@ -88,10 +85,8 @@ impl<H: Handler> OakFunctionsInstance<H> {
         chunk: LookupDataChunk,
     ) -> Result<(), micro_rpc::Status> {
         self.lookup_data_manager
-            .extend_next_lookup_data(to_data(chunk))
-            .map_err(|err| {
-                micro_rpc::Status::new_with_message(micro_rpc::StatusCode::InvalidArgument, err)
-            })
+            .extend_next_lookup_data(to_data(chunk));
+        Ok(())
     }
 
     /// See [`crate::proto::oak::functions::OakFunctions::finish_next_lookup_data`].
