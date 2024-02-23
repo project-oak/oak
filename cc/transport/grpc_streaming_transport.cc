@@ -35,8 +35,8 @@ namespace oak::transport {
 namespace {
 using ::oak::crypto::v1::EncryptedRequest;
 using ::oak::crypto::v1::EncryptedResponse;
-using ::oak::session::v1::AttestationBundle;
-using ::oak::session::v1::GetPublicKeyRequest;
+using ::oak::session::v1::EndorsedEvidence;
+using ::oak::session::v1::GetEndorsedEvidenceRequest;
 using ::oak::session::v1::RequestWrapper;
 using ::oak::session::v1::ResponseWrapper;
 }  // namespace
@@ -46,11 +46,11 @@ absl::Status to_absl_status(const grpc::Status& grpc_status) {
                       grpc_status.error_message());
 }
 
-absl::StatusOr<AttestationBundle> GrpcStreamingTransport::GetEvidence() {
+absl::StatusOr<EndorsedEvidence> GrpcStreamingTransport::GetEndorsedEvidence() {
   // Create request.
   RequestWrapper request;
-  GetPublicKeyRequest get_public_key_request;
-  *request.mutable_get_public_key_request() = get_public_key_request;
+  GetEndorsedEvidenceRequest get_endorsed_evidence_request;
+  *request.mutable_get_endorsed_evidence_request() = get_endorsed_evidence_request;
 
   // Send request.
   auto response = Send(request);
@@ -60,10 +60,10 @@ absl::StatusOr<AttestationBundle> GrpcStreamingTransport::GetEvidence() {
 
   // Process response.
   switch (response->response_case()) {
-    case ResponseWrapper::kGetPublicKeyResponseFieldNumber:
-      return response->get_public_key_response().attestation_bundle();
+    case ResponseWrapper::kGetEndorsedEvidenceResponseFieldNumber:
+      return response->get_endorsed_evidence_response().endorsed_evidence();
     case ResponseWrapper::kInvokeResponseFieldNumber:
-      return absl::InternalError("received InvokeResponse instead of GetPublicKeyResponse");
+      return absl::InternalError("received InvokeResponse instead of GetEndorsedEvidenceResponse");
     case ResponseWrapper::RESPONSE_NOT_SET:
     default:
       return absl::InternalError("received unsupported response: " + absl::StrCat(*response));

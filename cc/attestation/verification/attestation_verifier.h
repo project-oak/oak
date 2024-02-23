@@ -18,7 +18,6 @@
 #define CC_ATTESTATION_VERIFICATION_ATTESTATION_VERIFIER_H_
 
 #include <chrono>
-#include <string>
 
 #include "absl/status/statusor.h"
 #include "proto/attestation/endorsement.pb.h"
@@ -36,8 +35,8 @@ class AttestationVerifier {
 
   virtual absl::StatusOr<::oak::attestation::v1::AttestationResults> Verify(
       std::chrono::time_point<std::chrono::system_clock> now,
-      ::oak::attestation::v1::Evidence evidence,
-      ::oak::attestation::v1::Endorsements endorsements) const = 0;
+      const ::oak::attestation::v1::Evidence& evidence,
+      const ::oak::attestation::v1::Endorsements& endorsements) const = 0;
 };
 
 }  // namespace oak::attestation::verification

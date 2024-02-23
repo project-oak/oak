@@ -33,7 +33,7 @@
 
 using oak::crypto::v1::EncryptedRequest;
 using oak::crypto::v1::EncryptedResponse;
-using oak::session::v1::AttestationBundle;
+using oak::session::v1::EndorsedEvidence;
 using oak::session::v1::RequestWrapper;
 using oak::session::v1::ResponseWrapper;
 using oak::transport::GrpcStreamingTransport;
@@ -82,14 +82,14 @@ TEST_F(GrpcStreamingTransportTest, InvokePropagatesSendError) {
                                             "while writing request: fake error"));
 }
 
-TEST_F(GrpcStreamingTransportTest, GetEvidencePropagatesSendError) {
+TEST_F(GrpcStreamingTransportTest, GetEndorsedEvidencePropagatesSendError) {
   GrpcStreamingTransport transport(stub_->Stream(&context_));
 
   EXPECT_CALL(mock_service_, Stream(_, _)).WillOnce([](grpc::ServerContext*, ServerStream* stream) {
     return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION, "fake error");
   });
 
-  absl::StatusOr<AttestationBundle> response = transport.GetEvidence();
+  absl::StatusOr<EndorsedEvidence> response = transport.GetEndorsedEvidence();
   ASSERT_EQ(response.status(), absl::Status(absl::StatusCode::kFailedPrecondition,
                                             "while writing request: fake error"));
 }
@@ -108,7 +108,7 @@ TEST_F(GrpcStreamingTransportTest, InvokePropagatesWeirdError) {
   EXPECT_THAT(response.status().message(), testing::StartsWith("failed to read request"));
 }
 
-TEST_F(GrpcStreamingTransportTest, GetEvidencePropagatesWeirdError) {
+TEST_F(GrpcStreamingTransportTest, GetEndorsedEvidencePropagatesWeirdError) {
   ::grpc::ClientContext context;
   GrpcStreamingTransport transport(stub_->Stream(&context));
 
@@ -116,7 +116,7 @@ TEST_F(GrpcStreamingTransportTest, GetEvidencePropagatesWeirdError) {
     return grpc::Status::OK;
   });
 
-  absl::StatusOr<AttestationBundle> response = transport.GetEvidence();
+  absl::StatusOr<EndorsedEvidence> response = transport.GetEndorsedEvidence();
 
   ASSERT_EQ(response.status().code(), absl::StatusCode::kInternal);
   EXPECT_THAT(response.status().message(), testing::StartsWith("failed to read request"));

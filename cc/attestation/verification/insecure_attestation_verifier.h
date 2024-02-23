@@ -35,8 +35,8 @@ class InsecureAttestationVerifier : public AttestationVerifier {
   // Doesn't perform attestation verification and just returns a success value.
   absl::StatusOr<::oak::attestation::v1::AttestationResults> Verify(
       std::chrono::time_point<std::chrono::system_clock> now,
-      ::oak::attestation::v1::Evidence evidence,
-      ::oak::attestation::v1::Endorsements endorsements) const override;
+      const ::oak::attestation::v1::Evidence& evidence,
+      const ::oak::attestation::v1::Endorsements& endorsements) const override;
 
  private:
   absl::StatusOr<std::string> ExtractEncryptionPublicKey(absl::string_view certificate) const;

@@ -44,6 +44,11 @@ class CoseSign1 {
 
   static absl::StatusOr<CoseSign1> Deserialize(absl::string_view data);
 
+  // Puts payload into a COSE_Sign1 and serializes it.
+  // TODO(#4818): This function is currently used for tests only. We need to
+  // refactor COSE classes to support both serialization and deserialization.
+  static absl::StatusOr<std::vector<uint8_t>> Serialize(const std::vector<uint8_t>& payload);
+
  private:
   // Parsed CBOR item containing COSE_Sign1 object.
   std::unique_ptr<cppbor::Item> item_;
@@ -64,8 +69,6 @@ class CoseKey {
  public:
   // Identification of the key type.
   const cppbor::Uint* kty;
-  // Key identification value.
-  const cppbor::Bstr* kid;
   // Key usage restriction to this algorithm.
   const cppbor::Nint* alg;
   // Restrict set of permissible operations.
@@ -81,10 +84,18 @@ class CoseKey {
   static absl::StatusOr<CoseKey> DeserializeHpkePublicKey(absl::string_view data);
   static absl::StatusOr<CoseKey> DeserializeHpkePublicKey(const std::vector<uint8_t>& data);
 
+  // Transforms HPKE public key into a COSE_Key and serializes it.
+  // TODO(#4818): This function is currently used for tests only. We need to
+  // refactor COSE classes to support both serialization and deserialization.
+  static absl::StatusOr<std::vector<uint8_t>> SerializeHpkePublicKey(
+      const std::vector<uint8_t>& public_key);
+
   const std::vector<uint8_t>& GetPublicKey() const { return x->value(); }
 
  private:
-  enum Parameter : int {
+  // COSE Key Common parameters.
+  // <https://datatracker.ietf.org/doc/html/rfc8152#section-7.1>
+  enum CoseKeyCommonParameter : int {
     KTY = 1,
     KID = 2,
     ALG = 3,
@@ -97,46 +108,50 @@ class CoseKey {
     X = -2,    // Public key.
   };
 
+  // Key Object parameters.
+  // <https://datatracker.ietf.org/doc/html/rfc8152#section-13>
+  enum KeyObjectParameter : int {
+    Reserved = 0,   // This value is reserved.
+    OKP = 1,        // Octet Key Pair.
+    EC2 = 2,        // Elliptic Curve Keys with x- and y-coordinate pair.
+    Symmetric = 4,  // Symmetric Keys.
+  };
+
+  // COSE Algorithms.
+  // <https://www.iana.org/assignments/cose/cose.xhtml#algorithms>
+  enum CoseAlgorithm : int {
+    ES256 = -7,     // ECDSA with SHA-256.
+    ECDH_ES = -25,  // ECDH ES with HKDF.
+  };
+
+  // Key Operation Values.
+  // <https://datatracker.ietf.org/doc/html/rfc8152#section-7.1>
+  enum KeyOperationValues : int {
+    SIGN = 1,    // The key is used to create signatures.
+    VERIFY = 2,  // The key is used for verification of signatures.
+  };
+
+  // COSE Elliptic Curve parameters.
+  // <https://www.iana.org/assignments/cose/cose.xhtml#elliptic-curves>
+  enum CoseEllipticCurveParameter : int {
+    P256 = 1,    // NIST P-256 also known as secp256r1.
+    X25519 = 4,  // X25519 for use with ECDH only.
+  };
+
   // Parsed CBOR item containing COSE_Key object.
   std::unique_ptr<cppbor::Item> item_;
 
-  CoseKey(const cppbor::Uint* kty, const cppbor::Bstr* kid, const cppbor::Nint* alg,
-          const cppbor::Array* key_ops, const cppbor::Uint* crv, const cppbor::Bstr* x,
-          std::unique_ptr<cppbor::Item>&& item)
-      : kty(kty), kid(kid), alg(alg), key_ops(key_ops), crv(crv), x(x), item_(std::move(item)) {}
+  CoseKey(const cppbor::Uint* kty, const cppbor::Nint* alg, const cppbor::Array* key_ops,
+          const cppbor::Uint* crv, const cppbor::Bstr* x, std::unique_ptr<cppbor::Item>&& item)
+      : kty(kty), alg(alg), key_ops(key_ops), crv(crv), x(x), item_(std::move(item)) {}
 
   static absl::StatusOr<CoseKey> DeserializeHpkePublicKey(std::unique_ptr<cppbor::Item>&& item);
 };
 
-std::string CborTypeToString(cppbor::MajorType cbor_type) {
-  switch (cbor_type) {
-    case cppbor::MajorType::UINT:
-      return "UINT";
-    case cppbor::MajorType::NINT:
-      return "NINT";
-    case cppbor::MajorType::BSTR:
-      return "BSTR";
-    case cppbor::MajorType::TSTR:
-      return "TSTR";
-    case cppbor::MajorType::ARRAY:
-      return "ARRAY";
-    case cppbor::MajorType::MAP:
-      return "MAP";
-    case cppbor::MajorType::SEMANTIC:
-      return "SEMANTIC";
-    case cppbor::MajorType::SIMPLE:
-      return "SIMPLE";
-    default:
-      return absl::StrCat("UNKNOWN(", cbor_type, ")");
-  }
-}
+std::string CborTypeToString(cppbor::MajorType cbor_type);
 
 absl::Status UnexpectedCborTypeError(std::string_view name, cppbor::MajorType expected,
-                                     cppbor::MajorType found) {
-  return absl::InvalidArgumentError(absl::StrCat("expected ", name, " to have ",
-                                                 CborTypeToString(expected), " CBOR type, found ",
-                                                 CborTypeToString(found)));
-}
+                                     cppbor::MajorType found);
 
 }  // namespace oak::utils::cose
 
