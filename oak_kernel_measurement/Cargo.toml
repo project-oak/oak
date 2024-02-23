@@ -12,6 +12,4 @@ env_logger = "*"
 hex = "*"
 log = "*"
 sha2 = "*"
-static_assertions = "*"
-strum = { version = "*", default-features = false, features = ["derive"] }
 zerocopy = "*"
