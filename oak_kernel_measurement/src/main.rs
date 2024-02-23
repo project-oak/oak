@@ -46,14 +46,14 @@ fn main() -> anyhow::Result<()> {
     let mut kernel_hasher = Sha256::new();
     kernel_hasher.update(&kernel_info.kernel_image);
     println!(
-        "Kernel Image Measurement: {}",
+        "Kernel Image Measurement: sha2-256:{}",
         hex::encode(kernel_hasher.finalize())
     );
 
     let mut setup_hasher = Sha256::new();
     setup_hasher.update(&kernel_info.setup_data);
     println!(
-        "Kernel Setup Data Measurement: {}",
+        "Kernel Setup Data Measurement: sha2-256:{}",
         hex::encode(setup_hasher.finalize())
     );
 
