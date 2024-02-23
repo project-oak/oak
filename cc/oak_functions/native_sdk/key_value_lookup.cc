@@ -15,7 +15,7 @@
  */
 
 #include "absl/log/check.h"
-#include "cc/native_sdk/native_sdk.h"
+#include "cc/oak_functions/native_sdk/native_sdk.h"
 
 OAK_MAIN {
   auto request = ::oak::functions::sdk::read_request().value();
