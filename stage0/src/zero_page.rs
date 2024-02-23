@@ -83,7 +83,7 @@ impl ZeroPage {
                 .read_file(&file, buf)
                 .expect("could not read setup data");
             assert_eq!(actual_size, size, "setup data did not match expected size");
-            // The initial ram disk location and size are not constant. We will overwrite is later
+            // The initial ram disk location and size are not constant. We will overwrite it later
             // anyway, so we overwrite it with zeros before measuring so we can get consistent
             // measurement. See <https://www.kernel.org/doc/html/v6.7/arch/x86/boot.html> for
             // information on the  field offsets.
