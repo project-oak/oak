@@ -428,7 +428,7 @@ fn write_len(data: &mut [u8], index: usize, mut len: usize) -> usize {
 #[inline]
 fn hash_u64(v: u64) -> u64 {
     let v1 =
-        u64::wrapping_mul(u64::wrapping_add(v, v >> 32), 0xcafebabedeadbeefu64) ^ 0x013456789abcdef;
+        u64::wrapping_mul(u64::wrapping_add(v ^ 0xae47cb4bcc70f561, v >> 32), 0x9d460858ea81ac79);
     u64::wrapping_add(v1, v1 >> 32)
 }
 
@@ -578,27 +578,6 @@ mod tests {
         }
     }
 
-    // The hash function should act like a random oracle, in which case the odds of seeing the same
-    // value as one that came before is determined by the Birthday Problem.  Using the rule of
-    // thumb for how large the sequence needs to be to have a .5 probability of collision: sqrt(0.5
-    // * ln(2) * 2^64) = 2.5e9.  This test just checks that one seed leads to a sequence longer
-    // than 2^30 without collisions.
-    #[test]
-    fn test_rng_sequence_len() {
-        // If the sequence length < 2^30, we can find it by stepping 2^30, and then stepping
-        // another 2^30 looking for the value we saw at 2^30.
-        let mut r = Rand { seed: 0u64 };
-        for _ in 0usize..1usize << 30 {
-            r.rand64();
-        }
-        let target = r.rand64();
-        for _ in 0usize..1usize << 26 {
-            if r.rand64() == target {
-                panic!("RNG sequence too short");
-            }
-        }
-    }
-
     #[test]
     fn test_dumplicate_key() {
         let mut table = LookupHtbl::default();
@@ -606,5 +585,25 @@ mod tests {
         assert!(table.get("key".as_bytes()) == Some("value1".as_bytes()));
         table.insert("key".as_bytes(), "value2".as_bytes());
         assert!(table.get("key".as_bytes()) == Some("value2".as_bytes()));
+    }
+
+    // The hash function should act like a random oracle, in which case the odds of seeing the same
+    // value as one that came before is determined by the Birthday Problem.  Using the rule of
+    // thumb for how large the sequence needs to be to have a .5 probability of collision: sqrt(0.5
+    // * ln(2) * 2^64) = 2.5e9.  This test just checks that one seed leads to a sequence longer
+    // than 2^30 without collisions.
+    //
+    // This is a linear-time algorithm for finding the cycle length of an RNG.
+    #[test]
+    fn test_rng_sequence_len() {
+        let mut r = Rand { seed: 0u64 };
+        for loop_power in 0..28 {
+            let target = r.rand64();
+            for i in 0usize..(1usize << loop_power) {
+                if r.rand64() == target {
+                    panic!("Rand sequence length =  {}", i + 1);
+                }
+            }
+        }
     }
 }
