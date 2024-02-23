@@ -244,6 +244,7 @@ impl LookupHtbl {
         let old_table = mem::take(&mut self.table);
         self.table = vec![Entry::default(); old_table.len() << 1];
         self.max_entries <<= 1;
+        #[allow(clippy::all)]
         for i in 0..old_table.len() {
             let raw_index = read_index(&old_table[i].data_index);
             if raw_index != 0 {
