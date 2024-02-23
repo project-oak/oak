@@ -62,10 +62,10 @@ public class OakClient<T extends Transport> implements AutoCloseable {
     // TODO(#3641): Implement client-side attestation verification.
     return transport.getEndorsedEvidence()
         .mapError(Exception::new)
-        .andThen(endorsed_evidence
+        .andThen(endorsedEvidence
             -> verifier
-                   .verify(clock.instant(), endorsed_evidence.getEvidence(),
-                       endorsed_evidence.getEndorsements())
+                   .verify(clock.instant(), endorsedEvidence.getEvidence(),
+                       endorsedEvidence.getEndorsements())
                    .map(
                        b -> new OakClient<E>(transport, b.getEncryptionPublicKey().toByteArray())));
   }
