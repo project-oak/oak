@@ -18,18 +18,18 @@ use alloc::{
     format,
     string::{String, ToString},
     sync::Arc,
+    vec::Vec,
 };
 
 use bytes::Bytes;
-use hashbrown::HashMap;
 use log::{info, Level};
 use spinning_top::{RwSpinlock, Spinlock};
 
-use crate::logger::OakLogger;
+use crate::{logger::OakLogger, lookup_htbl::LookupHtbl};
 
 // Data maintains the invariant on lookup data to have [at most one
 // value](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md#invariant-at-most-one-value)
-pub type Data = HashMap<Bytes, Bytes>;
+type Data = LookupHtbl;
 
 #[derive(Default)]
 enum BuilderState {
@@ -58,13 +58,11 @@ impl DataBuilder {
     /// overwrites the value.
     fn extend<T: IntoIterator<Item = (Bytes, Bytes)>>(&mut self, new_data: T) {
         self.state = BuilderState::Extending;
-        self.data.extend(new_data);
+        self.data.extend(new_data)
     }
 
-    fn reserve(&mut self, additional: usize) -> anyhow::Result<()> {
-        self.data
-            .try_reserve(additional)
-            .map_err(|err| anyhow::anyhow!("failed to reserve memory: {:?}", err))
+    fn reserve(&mut self, additional_entries: usize) {
+        self.data.reserve(additional_entries)
     }
 }
 
@@ -94,7 +92,7 @@ impl LookupDataManager {
     /// Creates a new instance with empty backing data.
     pub fn new_empty(logger: Arc<dyn OakLogger>) -> Self {
         Self {
-            data: RwSpinlock::new(Arc::new(Data::new())),
+            data: RwSpinlock::new(Arc::new(Data::default())),
             // Incrementally builds the backing data that will be used by new `LookupData`
             // instances when finished.
             data_builder: Spinlock::new(DataBuilder::default()),
@@ -103,19 +101,18 @@ impl LookupDataManager {
     }
 
     /// Creates an instance of LookupData populated with the given entries.
-    pub fn for_test(data: Data, logger: Arc<dyn OakLogger>) -> Self {
+    pub fn for_test(data: Vec<(Bytes, Bytes)>, logger: Arc<dyn OakLogger>) -> Self {
         let test_manager = Self::new_empty(logger);
-        *test_manager.data.write() = Arc::new(data);
+        test_manager.reserve(data.len() as u64).unwrap();
+        test_manager.extend_next_lookup_data(data);
+        test_manager.finish_next_lookup_data();
         test_manager
     }
 
-    pub fn reserve(&self, additional: u64) -> anyhow::Result<()> {
+    pub fn reserve(&self, additional_entries: u64) -> anyhow::Result<()> {
         let mut data_builder = self.data_builder.lock();
-        data_builder.reserve(
-            additional
-                .try_into()
-                .map_err(|err| anyhow::anyhow!("error converting integer: {:?}", err))?,
-        )
+        data_builder.reserve(additional_entries as usize);
+        Ok(())
     }
 
     pub fn extend_next_lookup_data<T: IntoIterator<Item = (Bytes, Bytes)>>(&self, new_data: T) {
@@ -182,7 +179,7 @@ impl LookupData {
     }
 
     /// Gets an individual entry from the backing data.
-    pub fn get(&self, key: &[u8]) -> Option<&Bytes> {
+    pub fn get(&self, key: &[u8]) -> Option<&[u8]> {
         self.data.get(key)
     }
 
@@ -226,6 +223,8 @@ pub fn format_bytes(v: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
+    use alloc::{vec, vec::Vec};
+
     use super::*;
 
     #[derive(Clone)]
@@ -244,15 +243,13 @@ mod tests {
         let lookup_data_0 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
 
-        manager.extend_next_lookup_data(create_test_data(0, 1));
-        manager.finish_next_lookup_data();
+        reserve_and_extend_test_data(&manager, 0, 1);
         let lookup_data_1 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
         assert_eq!(lookup_data_1.len(), 1);
 
         // Creating test data in the same range replaces some keys.
-        manager.extend_next_lookup_data(create_test_data(0, 2));
-        manager.finish_next_lookup_data();
+        reserve_and_extend_test_data(&manager, 0, 2);
 
         let lookup_data_2 = manager.create_lookup_data();
         assert_eq!(lookup_data_0.len(), 0);
@@ -263,8 +260,7 @@ mod tests {
     #[test]
     fn test_update_lookup_data_one_chunk() {
         let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
-        manager.extend_next_lookup_data(create_test_data(0, 2));
-        manager.finish_next_lookup_data();
+        reserve_and_extend_test_data(&manager, 0, 2);
         let lookup_data = manager.create_lookup_data();
         assert_eq!(lookup_data.len(), 2);
     }
@@ -274,6 +270,7 @@ mod tests {
         let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
         let lookup_data_0 = manager.create_lookup_data();
 
+        manager.reserve(4).unwrap();
         manager.extend_next_lookup_data(create_test_data(0, 2));
         let lookup_data_1 = manager.create_lookup_data();
 
@@ -290,9 +287,10 @@ mod tests {
     fn test_update_lookup_four_chunks() {
         let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
 
+        manager.reserve(7).unwrap();
         manager.extend_next_lookup_data(create_test_data(0, 2));
         manager.extend_next_lookup_data(create_test_data(2, 3));
-        // We have one key overlapping here.
+        // Note the overlap which results in a bit of wasted space.
         manager.extend_next_lookup_data(create_test_data(2, 6));
         manager.extend_next_lookup_data(create_test_data(6, 7));
         manager.finish_next_lookup_data();
@@ -307,10 +305,12 @@ mod tests {
         let manager = LookupDataManager::new_empty(Arc::new(TestLogger));
         let lookup_data_0 = manager.create_lookup_data();
 
+        manager.reserve(2).unwrap();
         manager.extend_next_lookup_data(create_test_data(0, 2));
         manager.abort_next_lookup_data();
         let lookup_data_1 = manager.create_lookup_data();
 
+        manager.reserve(1).unwrap();
         manager.extend_next_lookup_data(create_test_data(0, 1));
         manager.finish_next_lookup_data();
         let lookup_data_2 = manager.create_lookup_data();
@@ -329,12 +329,20 @@ mod tests {
     }
 
     // Create test data with size distinct keys between inclusive start and exclusive end.
-    fn create_test_data(start: i32, end: i32) -> Data {
-        HashMap::from_iter((start..end).map(|i| {
-            (
+    fn create_test_data(start: i32, end: i32) -> Vec<(Bytes, Bytes)> {
+        let mut vec: Vec<(Bytes, Bytes)> = vec![];
+        for i in start..end {
+            vec.push((
                 format!("key{}", i).into_bytes().into(),
                 format!("value{}", i).into_bytes().into(),
-            )
-        }))
+            ));
+        }
+        vec
+    }
+
+    fn reserve_and_extend_test_data(manager: &LookupDataManager, start: i32, end: i32) {
+        manager.reserve((end - start) as u64).unwrap();
+        manager.extend_next_lookup_data(create_test_data(start, end));
+        manager.finish_next_lookup_data();
     }
 }

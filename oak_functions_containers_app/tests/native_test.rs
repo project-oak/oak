@@ -45,6 +45,7 @@ async fn test_native_handler() {
     lookup_data_manager.extend_next_lookup_data(
         [("key_0".as_bytes().into(), "value_0".as_bytes().into())].into_iter(),
     );
+
     lookup_data_manager.finish_next_lookup_data();
 
     // This test fails right now because the library links in too many other libraries.

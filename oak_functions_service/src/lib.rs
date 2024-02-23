@@ -16,6 +16,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![feature(never_type)]
+#![feature(new_uninit)]
 #![feature(unwrap_infallible)]
 // Required for enabling benchmark tests.
 #![feature(test)]
@@ -47,6 +48,7 @@ pub mod proto {
 pub mod instance;
 pub mod logger;
 pub mod lookup;
+pub mod lookup_htbl;
 pub mod wasm;
 
 pub trait Observer {

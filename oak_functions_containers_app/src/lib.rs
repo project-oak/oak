@@ -217,7 +217,9 @@ where
 
         let instance = self.get_instance()?;
         while let Some(chunk) = request.next().await {
-            instance.extend_lookup_data_chunk(chunk?);
+            instance
+                .extend_lookup_data_chunk(chunk?)
+                .map_err(map_status)?;
         }
         instance
             .finish_next_lookup_data(FinishNextLookupDataRequest {})

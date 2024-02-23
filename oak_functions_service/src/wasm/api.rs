@@ -124,7 +124,7 @@ impl StdWasmApi for StdWasmApiImpl {
         );
 
         Ok(LookupDataResponse {
-            value: value.cloned().map(Into::into),
+            value: value.map(Into::into),
         })
     }
 
@@ -145,7 +145,7 @@ impl StdWasmApi for StdWasmApiImpl {
             .map(|key| match self.lookup_data.get(key) {
                 Some(value) => BytesValue {
                     found: true,
-                    value: value.clone().into(),
+                    value: value.into(),
                 },
                 None => BytesValue {
                     found: false,

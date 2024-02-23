@@ -30,7 +30,7 @@ use hashbrown::HashMap;
 use oak_functions_abi::Request;
 use oak_functions_service::{
     logger::StandaloneLogger,
-    lookup::{Data, LookupDataManager},
+    lookup::LookupDataManager,
     wasm::{wasmtime::WasmtimeHandler, WasmHandler},
     Handler,
 };
@@ -235,7 +235,7 @@ fn flamegraph(c: &mut Criterion) {
     });
 }
 
-fn create_test_data(start: i32, end: i32) -> Data {
+fn create_test_data(start: i32, end: i32) -> HashMap<Bytes, Bytes> {
     HashMap::from_iter((start..end).map(|i| {
         (
             format!("key{}", i).into_bytes().into(),
@@ -251,7 +251,7 @@ struct TestState<H: Handler> {
 
 fn create_test_state_with_wasm_module_name<H: Handler>(wasm_module_name: &str) -> TestState<H> {
     let logger = Arc::new(StandaloneLogger);
-    let lookup_data_manager = Arc::new(LookupDataManager::for_test(HashMap::new(), logger.clone()));
+    let lookup_data_manager = Arc::new(LookupDataManager::for_test(Vec::new(), logger.clone()));
     let wasm_module_path =
         oak_functions_test_utils::build_rust_crate_wasm(wasm_module_name).unwrap();
     let wasm_module_bytes = std::fs::read(wasm_module_path).unwrap();

@@ -80,9 +80,13 @@ impl<H: Handler> OakFunctionsInstance<H> {
         Ok(ExtendNextLookupDataResponse {})
     }
 
-    pub fn extend_lookup_data_chunk(&self, chunk: LookupDataChunk) {
+    pub fn extend_lookup_data_chunk(
+        &self,
+        chunk: LookupDataChunk,
+    ) -> Result<(), micro_rpc::Status> {
         self.lookup_data_manager
-            .extend_next_lookup_data(to_data(chunk))
+            .extend_next_lookup_data(to_data(chunk));
+        Ok(())
     }
 
     /// See [`crate::proto::oak::functions::OakFunctions::finish_next_lookup_data`].

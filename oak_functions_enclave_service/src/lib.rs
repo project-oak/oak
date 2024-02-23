@@ -220,7 +220,7 @@ where
         request: LookupDataChunk,
     ) -> Result<FinishNextLookupDataResponse, micro_rpc::Status> {
         let instance = self.get_instance()?;
-        instance.extend_lookup_data_chunk(request);
+        instance.extend_lookup_data_chunk(request)?;
         instance.finish_next_lookup_data(FinishNextLookupDataRequest {})
     }
 
