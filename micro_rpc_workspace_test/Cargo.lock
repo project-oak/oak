@@ -851,7 +851,6 @@ name = "oak_grpc_utils"
 version = "0.1.0"
 dependencies = [
  "prost",
- "prost-build",
  "tempfile",
  "tonic-build",
 ]
