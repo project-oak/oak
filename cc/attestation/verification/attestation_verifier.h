@@ -18,7 +18,6 @@
 #define CC_ATTESTATION_VERIFICATION_ATTESTATION_VERIFIER_H_
 
 #include <chrono>
-#include <string>
 
 #include "absl/status/statusor.h"
 #include "proto/attestation/endorsement.pb.h"

@@ -68,10 +68,8 @@ public class OakClientTest {
 
   private static class TestTransport implements EvidenceProvider, Transport {
     private final ServerEncryptor serverEncryptor;
-    private final KeyPair keyPair;
 
     public TestTransport(KeyPair keyPair) {
-      this.keyPair = keyPair;
       this.serverEncryptor = new ServerEncryptor(keyPair);
     }
 

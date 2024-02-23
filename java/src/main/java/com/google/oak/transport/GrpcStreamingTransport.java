@@ -22,7 +22,6 @@ import com.google.oak.session.v1.EndorsedEvidence;
 import com.google.oak.session.v1.GetEndorsedEvidenceRequest;
 import com.google.oak.session.v1.GetEndorsedEvidenceResponse;
 import com.google.oak.session.v1.InvokeRequest;
-import com.google.oak.session.v1.InvokeResponse;
 import com.google.oak.session.v1.RequestWrapper;
 import com.google.oak.session.v1.ResponseWrapper;
 import com.google.oak.util.Result;
