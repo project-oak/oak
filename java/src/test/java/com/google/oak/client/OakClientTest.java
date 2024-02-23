@@ -27,9 +27,7 @@ import com.google.oak.crypto.hpke.KeyPair;
 import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
 import com.google.oak.remote_attestation.AttestationVerifier;
-import com.google.oak.session.v1.AttestationBundle;
-import com.google.oak.session.v1.AttestationEndorsement;
-import com.google.oak.session.v1.AttestationEvidence;
+import com.google.oak.session.v1.EndorsedEvidence;
 import com.google.oak.transport.EvidenceProvider;
 import com.google.oak.transport.Transport;
 import com.google.oak.util.Result;
@@ -78,23 +76,13 @@ public class OakClientTest {
     }
 
     @Override
-    public Result<AttestationBundle, String> getEvidence() {
-      AttestationEvidence attestationEvidence =
-          AttestationEvidence.newBuilder()
-              .setEncryptionPublicKey(ByteString.copyFrom(keyPair.publicKey))
-              .build();
-
-      AttestationEndorsement attestationEndorsement = AttestationEndorsement.getDefaultInstance();
+    public Result<EndorsedEvidence, String> getEndorsedEvidence() {
       Evidence evidence = Evidence.getDefaultInstance();
       Endorsements endorsements = Endorsements.getDefaultInstance();
-      AttestationBundle attestationBundle = AttestationBundle.newBuilder()
-                                                .setAttestationEvidence(attestationEvidence)
-                                                .setAttestationEndorsement(attestationEndorsement)
-                                                .setEvidence(evidence)
-                                                .setEndorsements(endorsements)
-                                                .build();
+      EndorsedEvidence endorsedEvidence =
+          EndorsedEvidence.newBuilder().setEvidence(evidence).setEndorsements(endorsements).build();
 
-      return Result.success(attestationBundle);
+      return Result.success(endorsedEvidence);
     }
 
     @Override

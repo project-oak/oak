@@ -145,8 +145,8 @@ public class GrpcStreamingTransportTest {
   public void testGrpcStreamingTransport() throws Exception {
     GrpcStreamingTransport transport = new GrpcStreamingTransport(client::stream);
 
-    Result<AttestationBundle, String> getEvidenceResult = transport.getEvidence();
-    Assert.assertTrue(getEvidenceResult.isSuccess());
+    Result<EndorsedEvidence, String> getEndorsedEvidenceResult = transport.getEndorsedEvidence();
+    Assert.assertTrue(getEndorsedEvidenceResult.isSuccess());
 
     Result<EncryptedResponse, String> invokeResult =
         transport.invoke(EncryptedRequest.getDefaultInstance());
