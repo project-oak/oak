@@ -94,7 +94,7 @@ struct Entry {
 pub struct LookupHtbl {
     table: Vec<Entry>, // Contains fixed-size entries with index of k/v data in data_chunks.
     data_chunks: Vec<Box<[u8]>>,
-    max_entries: usize,       // The number at which we must grow the table.
+    max_entries: usize, // The number at which we must grow the table.
     used_data: usize,
     used_entries: usize,
 }
@@ -111,7 +111,7 @@ impl LookupHtbl {
     /// storing anything in the table.
     pub fn reserve(&mut self, max_entries: usize) {
         if self.used_entries != 0 {
-            return;  // Too late to reserve memory.
+            return; // Too late to reserve memory.
         }
         // Use a load factor of 60%.
         let allocated_entries = (5 * max_entries + 1) / 3;
