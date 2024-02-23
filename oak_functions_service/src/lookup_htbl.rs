@@ -131,9 +131,11 @@ impl LookupHtbl {
             panic!("Check for emtpy before calling lookup");
         }
         let key_hash: u64 = hash(key);
-        let key_hash_byte = key_hash as u8;
+        // The lower 32-bites are used in reduce to compute the table index, and values next to
+        // each other in the table will have their lower-32 bits close to each other.  The next
+        // higher byte should have no significant correlation for unequal keys.
+        let key_hash_byte = (key_hash >> 32) as u8; 
         let mut table_index = reduce(key_hash as u32, self.table.len() as u32);
-        let mut data_index: usize;
         // To quickly find the correct entry, we skip entries that have hash_byte values that don't
         // match the key's hash.  This avoids 99.6% of cache misses caused comparing the key to the
         // wrong key.  Once we found an entry with a matching hash byte, we then compare the two
@@ -142,25 +144,18 @@ impl LookupHtbl {
             // We try to load only the hash byte to save time.  Once we have a matching hash byte,
             // the loop ends and we compare keys.
             let mut entry = &self.table[table_index];
-            while entry.hash_byte != key_hash_byte {
-                if entry.hash_byte == 0 {
-                    data_index = read_index(&entry.data_index);
-                    if data_index == 0usize {
-                        return LookupResult::NotFound(table_index, key_hash_byte);
-                    }
-                }
+            while entry.hash_byte != key_hash_byte && entry.hash_byte != 0 {
                 table_index += 1;
                 if table_index == self.table.len() {
                     table_index = 0;
                 }
                 entry = &self.table[table_index];
             }
-            data_index = read_index(&entry.data_index);
+            let data_index = read_index(&entry);
             if data_index == 0usize {
-                // This only happens if the key hash byte is 0.
                 return LookupResult::NotFound(table_index, key_hash_byte);
             }
-            if key == self.read_key(data_index) {
+            if entry.hash_byte == key_hash_byte && key == self.read_key(data_index) {
                 return LookupResult::Found(table_index, data_index);
             }
             table_index += 1;
@@ -171,6 +166,7 @@ impl LookupHtbl {
     }
 
     // Read the key from its data chunk.
+    #[inline]
     fn read_key(&self, data_index: usize) -> &[u8] {
         let chunk: &[u8] = &self.data_chunks[data_index >> CHUNK_BITS];
         let index = data_index & CHUNK_MASK;
@@ -193,13 +189,13 @@ impl LookupHtbl {
             return None;
         }
         match self.lookup(key) {
-            LookupResult::Found(_, data_index) => Some(self.get_value(data_index)),
+            LookupResult::Found(_, data_index) => Some(self.read_value(data_index)),
             LookupResult::NotFound(_, _) => None,
         }
     }
 
     // Return the value associated with the k/v pair at data_index.
-    fn get_value(&self, data_index: usize) -> &[u8] {
+    fn read_value(&self, data_index: usize) -> &[u8] {
         let chunk: &[u8] = &self.data_chunks[data_index >> CHUNK_BITS];
         let index = data_index & CHUNK_MASK;
         let (key_len, key_len_size) = read_len(chunk, index);
@@ -221,14 +217,14 @@ impl LookupHtbl {
         let data_index = self.new_data(key, value);
         match self.lookup(key) {
             LookupResult::Found(table_index, old_data_index) => {
-                let entry = &mut self.table[table_index];
-                write_index(&mut entry.data_index, data_index);
-                Some(self.get_value(old_data_index))
+                let mut entry = &mut self.table[table_index];
+                write_index(&mut entry, data_index);
+                Some(self.read_value(old_data_index))
             }
             LookupResult::NotFound(table_index, hash_byte) => {
-                let entry = &mut self.table[table_index];
+                let mut entry = &mut self.table[table_index];
                 entry.hash_byte = hash_byte;
-                write_index(&mut entry.data_index, data_index);
+                write_index(&mut entry, data_index);
                 self.used_entries += 1;
                 None
             }
@@ -246,18 +242,13 @@ impl LookupHtbl {
         self.max_entries <<= 1;
         #[allow(clippy::all)]
         for i in 0..old_table.len() {
-            let raw_index = read_index(&old_table[i].data_index);
+            let raw_index = read_index(&old_table[i]);
             if raw_index != 0 {
-                let chunk: &[u8] = &self.data_chunks[raw_index >> CHUNK_BITS];
-                let index = raw_index & CHUNK_MASK;
-                let (key_len, key_len_size) = read_len(chunk, index);
-                let key_index = index + key_len_size;
-                let key: &[u8] = &chunk[key_index..key_index + key_len];
-                match self.lookup(key) {
+                match self.lookup(self.read_key(raw_index)) {
                     LookupResult::NotFound(table_index, hash_byte) => {
-                        let entry = &mut self.table[table_index];
+                        let mut entry = &mut self.table[table_index];
                         entry.hash_byte = hash_byte;
-                        write_index(&mut entry.data_index, raw_index);
+                        write_index(&mut entry, raw_index);
                     }
                     _ => panic!("New table should not already have this key"),
                 }
@@ -337,7 +328,7 @@ impl<'a> Iterator for LookupHtblIter<'a> {
             if self.table_index >= self.htbl.table.len() {
                 return None;
             }
-            let raw_index = read_index(&self.htbl.table[self.table_index].data_index);
+            let raw_index = read_index(&self.htbl.table[self.table_index]);
             self.table_index += 1;
             if raw_index != 0usize {
                 let chunk: &[u8] = &self.htbl.data_chunks[raw_index >> CHUNK_BITS];
@@ -377,16 +368,16 @@ fn reduce(x: u32, n: u32) -> usize {
 
 // Read a u40 index from unaligned memory LE, and return it as a usize.
 #[inline]
-fn read_index(data: &[u8; 5]) -> usize {
+fn read_index(entry: &Entry) -> usize {
     let mut val = [0u8; 8];
-    val[0..INDEX_SIZE].copy_from_slice(data);
+    val[0..INDEX_SIZE].copy_from_slice(&entry.data_index);
     u64::from_le_bytes(val) as usize
 }
 
 // Write a u40 index to unaligned memory LE.
 #[inline]
-fn write_index(data: &mut [u8; 5], value: usize) {
-    data.copy_from_slice(&value.to_le_bytes()[0..INDEX_SIZE]);
+fn write_index(entry: &mut Entry, value: usize) {
+    entry.data_index.copy_from_slice(&value.to_le_bytes()[0..INDEX_SIZE]);
 }
 
 // Read a compressed integer length.  Returns (length, num bytes of length) Compressed integers for
