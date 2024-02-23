@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "cc/native_sdk/native_sdk.h"
+#include "cc/oak_functions/native_sdk/native_sdk.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -23,7 +23,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "cc/native_sdk/native_sdk_ffi.h"
+#include "cc/oak_functions/native_sdk/native_sdk_ffi.h"
 
 namespace oak::functions::sdk {
 

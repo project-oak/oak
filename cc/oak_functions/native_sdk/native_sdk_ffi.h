@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef THIRD_PARTY_OAK_CC_NATIVE_SDK_NATIVE_SDK_FFI_H_
-#define THIRD_PARTY_OAK_CC_NATIVE_SDK_NATIVE_SDK_FFI_H_
+#ifndef THIRD_PARTY_OAK_CC_OAK_FUNCTIONS_NATIVE_SDK_NATIVE_SDK_FFI_H_
+#define THIRD_PARTY_OAK_CC_OAK_FUNCTIONS_NATIVE_SDK_NATIVE_SDK_FFI_H_
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -40,4 +40,4 @@ void oak_main();
 }  // extern "C"
 #endif  // __cplusplus
 
-#endif  // THIRD_PARTY_OAK_CC_NATIVE_SDK_NATIVE_SDK_FFI_H_
+#endif  // THIRD_PARTY_OAK_CC_OAK_FUNCTIONS_NATIVE_SDK_NATIVE_SDK_FFI_H_
