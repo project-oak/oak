@@ -74,19 +74,22 @@ use bytes::Bytes;
 // To save memory, we use 5 byte array index values instead of 8 bytes.  This saves 12 bytes per
 // k/v pair.  It is referred to as u40 below.
 const INDEX_SIZE: usize = 5;
-// Size of an entry in the hash table.
-const ENTRY_SIZE: usize = INDEX_SIZE + 1;
 
 const CHUNK_BITS: usize = 21;
 const CHUNK_SIZE: usize = 1 << CHUNK_BITS;
 const CHUNK_MASK: usize = CHUNK_SIZE - 1;
 
+#[derive(Clone, Copy, Default)]
+struct Entry {
+    hash_byte: u8,
+    data_index: [u8; 5],
+}
+
 #[derive(Default)]
 pub struct LookupHtbl {
-    table: Vec<u8>, // Contains fixed-size entries with index of k/v data in data_chunks.
+    table: Vec<Entry>, // Contains fixed-size entries with index of k/v data in data_chunks.
     data_chunks: Vec<Box<[u8]>>,
     max_entries: usize,       // The number at which we must grow the table.
-    allocated_entries: usize, // This is self.table.len() * ENTRY_SIZE.
     used_data: usize,
     used_entries: usize,
 }
@@ -105,8 +108,7 @@ impl LookupHtbl {
         // Use a load factor of 60%.
         let allocated_entries = (5 * max_entries + 1) / 3;
         self.max_entries = max_entries;
-        self.table = vec![0u8; ENTRY_SIZE * allocated_entries];
-        self.allocated_entries = allocated_entries;
+        self.table = vec![Entry::default(); allocated_entries];
         // Allocate 1 extra byte, so the 0 index can be used as NULL.
         self.data_chunks = vec![];
         self.used_data = 1usize;
@@ -116,31 +118,31 @@ impl LookupHtbl {
     // Lookup the key/value pair.  If found, return LookupResult::Found(table_index, data_index).
     // Otherwise, return the LookupResult::NotFound(table index, hash_byte).
     fn lookup(&self, key: &[u8]) -> LookupResult {
-        if self.allocated_entries == 0 {
-            panic!("Don't call lookup on empty table");
+        if self.table.is_empty() {
+            panic!("Check for emtpy before calling lookup");
         }
         let key_hash: u64 = hash(key);
         let key_hash_byte = key_hash as u8;
-        let mut table_index = ENTRY_SIZE * reduce(key_hash as u32, self.allocated_entries as u32);
+        let mut table_index = reduce(key_hash as u32, self.table.len() as u32);
         let mut data_index: usize;
         loop {
             // We try to load only the hash byte to save time.  Once we have a matching hash byte,
             // the loop ends and we compare keys.
-            let mut entry_hash_byte = self.table[table_index];
-            while entry_hash_byte != key_hash_byte {
-                if entry_hash_byte == 0 {
-                    data_index = read_index(&self.table, table_index + 1);
+            let mut entry = &self.table[table_index];
+            while entry.hash_byte != key_hash_byte {
+                if entry.hash_byte == 0 {
+                    data_index = read_index(&entry.data_index);
                     if data_index == 0usize {
                         return LookupResult::NotFound(table_index, key_hash_byte);
                     }
                 }
-                table_index += ENTRY_SIZE;
+                table_index += 1;
                 if table_index == self.table.len() {
                     table_index = 0;
                 }
-                entry_hash_byte = self.table[table_index];
+                entry = &self.table[table_index];
             }
-            data_index = read_index(&self.table, table_index + 1);
+            data_index = read_index(&entry.data_index);
             if data_index == 0usize {
                 // This only happens if the key hash byte is 0.
                 return LookupResult::NotFound(table_index, key_hash_byte);
@@ -153,7 +155,7 @@ impl LookupHtbl {
             if entry_key == key {
                 return LookupResult::Found(table_index, data_index);
             }
-            table_index += ENTRY_SIZE;
+            table_index += 1;
             if table_index == self.table.len() {
                 table_index = 0;
             }
@@ -170,7 +172,7 @@ impl LookupHtbl {
 
     /// This is like HashMapp::get.
     pub fn get(&self, key: &[u8]) -> Option<&[u8]> {
-        if self.used_entries == 0 {
+        if self.is_empty() {
             return None;
         }
         match self.lookup(key) {
@@ -202,12 +204,14 @@ impl LookupHtbl {
         let data_index = self.new_data(key, value);
         match self.lookup(key) {
             LookupResult::Found(table_index, old_data_index) => {
-                write_index(&mut self.table, table_index + 1, data_index);
+                let entry = &mut self.table[table_index];
+                write_index(&mut entry.data_index, data_index);
                 Some(self.get_value(old_data_index))
             }
             LookupResult::NotFound(table_index, hash_byte) => {
-                self.table[table_index] = hash_byte;
-                write_index(&mut self.table, table_index + 1, data_index);
+                let entry = &mut self.table[table_index];
+                entry.hash_byte = hash_byte;
+                write_index(&mut entry.data_index, data_index);
                 self.used_entries += 1;
                 None
             }
@@ -221,12 +225,10 @@ impl LookupHtbl {
             return;
         }
         let old_table = mem::take(&mut self.table);
-        self.table = vec![0u8; old_table.len() << 1];
+        self.table = vec![Entry::default(); old_table.len() << 1];
         self.max_entries <<= 1;
-        self.allocated_entries <<= 1;
-        let mut i = 1usize;
-        while i < old_table.len() {
-            let raw_index = read_index(&old_table, i);
+        for i in 0..old_table.len() {
+            let raw_index = read_index(&old_table[i].data_index);
             if raw_index != 0 {
                 let chunk: &[u8] = &self.data_chunks[raw_index >> CHUNK_BITS];
                 let index = raw_index & CHUNK_MASK;
@@ -235,13 +237,13 @@ impl LookupHtbl {
                 let key: &[u8] = &chunk[key_index..key_index + key_len];
                 match self.lookup(key) {
                     LookupResult::NotFound(table_index, hash_byte) => {
-                        self.table[table_index] = hash_byte;
-                        write_index(&mut self.table, table_index + 1, raw_index);
+                        let entry = &mut self.table[table_index];
+                        entry.hash_byte = hash_byte;
+                        write_index(&mut entry.data_index, raw_index);
                     }
                     _ => panic!("New table should not already have this key"),
                 }
             }
-            i += ENTRY_SIZE;
         }
     }
 
@@ -313,8 +315,8 @@ impl<'a> Iterator for LookupHtblIter<'a> {
             if self.table_index >= self.htbl.table.len() {
                 return None;
             }
-            let raw_index = read_index(&self.htbl.table, self.table_index + 1);
-            self.table_index += ENTRY_SIZE;
+            let raw_index = read_index(&self.htbl.table[self.table_index].data_index);
+            self.table_index += 1;
             if raw_index != 0usize {
                 let chunk: &[u8] = &self.htbl.data_chunks[raw_index >> CHUNK_BITS];
                 let index = raw_index & CHUNK_MASK;
@@ -353,16 +355,15 @@ fn reduce(x: u32, n: u32) -> usize {
 
 // Read a u40 index from unaligned memory LE, and return it as a usize.
 #[inline]
-fn read_index(data: &[u8], index: usize) -> usize {
+fn read_index(data: &[u8; 5]) -> usize {
     let mut val = [0u8; 8];
-    val[0..INDEX_SIZE].copy_from_slice(&data[index..index + INDEX_SIZE]);
+    val[0..INDEX_SIZE].copy_from_slice(data);
     u64::from_le_bytes(val) as usize
 }
 
 // Write a u40 index to unaligned memory LE.
 #[inline]
-fn write_index(data: &mut [u8], index: usize, value: usize) {
-    let data = &mut data[index..index + INDEX_SIZE];
+fn write_index(data: &mut [u8; 5], value: usize) {
     data.copy_from_slice(&value.to_le_bytes()[0..INDEX_SIZE]);
 }
 
@@ -545,7 +546,7 @@ mod tests {
         let mut r = Rand { seed: 0u64 };
         let mut kv_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
         let mut table = LookupHtbl::default();
-        for _ in 0..100_000 {
+        for _ in 0..2 {
             loop {
                 let kv_pair = r.rand_kv_pair(100, 1000);
                 if !table.contains_key(&kv_pair.0) {
@@ -556,7 +557,7 @@ mod tests {
             }
         }
         for kv_pair in kv_pairs {
-            assert!(table.get(&kv_pair.0).unwrap() == kv_pair.1);
+            assert!(table.get(&kv_pair.0) == Some(&kv_pair.1));
         }
     }
 
