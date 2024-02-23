@@ -532,7 +532,9 @@ mod tests {
 
     impl Rand {
         fn rand64(&mut self) -> u64 {
-            self.seed = hash_u64(self.seed);
+            // Mask off the MSB to force this to disrupt the group structure.  Hour "hash" function
+            // is a permutation, and group structure comes into play otherwise.
+            self.seed = hash_u64(self.seed) & (!0u64 >> 1);
             self.seed
         }
 
@@ -587,11 +589,11 @@ mod tests {
         assert!(table.get("key".as_bytes()) == Some("value2".as_bytes()));
     }
 
-    // The hash function should act like a random oracle, in which case the odds of seeing the same
+    // The RNG function should act like a random oracle, in which case the odds of seeing the same
     // value as one that came before is determined by the Birthday Problem.  Using the rule of
     // thumb for how large the sequence needs to be to have a .5 probability of collision: sqrt(0.5
     // * ln(2) * 2^64) = 2.5e9.  This test just checks that one seed leads to a sequence longer
-    // than 2^30 without collisions.
+    // than 2^28 without collisions.
     //
     // This is a linear-time algorithm for finding the cycle length of an RNG.
     #[test]
