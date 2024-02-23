@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef THIRD_PARTY_OAK_CC_NATIVE_SDK_NATIVE_SDK_H_
-#define THIRD_PARTY_OAK_CC_NATIVE_SDK_NATIVE_SDK_H_
+#ifndef THIRD_PARTY_OAK_CC_OAK_FUNCTIONS_NATIVE_SDK_NATIVE_SDK_H_
+#define THIRD_PARTY_OAK_CC_OAK_FUNCTIONS_NATIVE_SDK_NATIVE_SDK_H_
 
 #include <string>
 
@@ -45,4 +45,4 @@ absl::StatusOr<std::string> storage_get_item(absl::string_view key);
 
 }  // namespace oak::functions::sdk
 
-#endif  // THIRD_PARTY_OAK_CC_NATIVE_SDK_NATIVE_SDK_H_
+#endif  // THIRD_PARTY_OAK_CC_OAK_FUNCTIONS_NATIVE_SDK_NATIVE_SDK_H_

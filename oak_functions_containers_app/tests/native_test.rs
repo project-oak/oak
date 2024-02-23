@@ -24,7 +24,7 @@ use xtask::workspace_path;
 async fn test_native_handler() {
     let status = Command::new("bazel")
         .arg("build")
-        .arg("//cc/native_sdk:key_value_lookup")
+        .arg("//cc/oak_functions/native_sdk:key_value_lookup")
         .current_dir(workspace_path(&[]))
         .spawn()
         .expect("failed to spawn bazel")
@@ -34,10 +34,11 @@ async fn test_native_handler() {
     eprintln!("bazel status: {:?}", status);
     assert!(status.success());
 
-    let _library =
-        fs::read(workspace_path(&[]).join("bazel-bin/cc/native_sdk/libkey_value_lookup.so"))
-            .await
-            .expect("failed to read test library");
+    let _library = fs::read(
+        workspace_path(&[]).join("bazel-bin/cc/oak_functions/native_sdk/libkey_value_lookup.so"),
+    )
+    .await
+    .expect("failed to read test library");
 
     let logger = Arc::new(StandaloneLogger);
     let lookup_data_manager = Arc::new(LookupDataManager::new_empty(logger));

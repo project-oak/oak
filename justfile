@@ -48,6 +48,12 @@ oak_containers_kernel:
 oak_containers_system_image:
     env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 bash build.sh
 
+# Profile the Wasm execution and generate a flamegraph.
+profile_wasm:
+    # If it fails with SIGSEGV, try running again.
+    cargo bench --package=oak_functions_service --bench=wasm_benchmark --features=wasmtime flamegraph -- --profile-time=5
+    google-chrome ./target/criterion/flamegraph/profile/flamegraph.svg
+
 # Oak Containers Hello World entry point.
 
 oak_containers_hello_world_container_bundle_tar:
