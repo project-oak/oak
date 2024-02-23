@@ -67,6 +67,8 @@
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -85,6 +87,7 @@
 
 </span><span class="attr">#![cfg_attr(not(feature = <span class="string">&quot;std&quot;</span>), no_std)]
 #![feature(never_type)]
+#![feature(new_uninit)]
 #![feature(unwrap_infallible)]
 </span><span class="comment">// Required for enabling benchmark tests.
 </span><span class="attr">#![feature(test)]
@@ -116,6 +119,7 @@
 <span class="kw">pub mod </span>instance;
 <span class="kw">pub mod </span>logger;
 <span class="kw">pub mod </span>lookup;
+<span class="kw">pub mod </span>lookup_htbl;
 <span class="kw">pub mod </span>wasm;
 
 <span class="kw">pub trait </span>Observer {

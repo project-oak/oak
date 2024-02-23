@@ -296,7 +296,7 @@
         );
 
         <span class="prelude-val">Ok</span>(LookupDataResponse {
-            value: value.cloned().map(Into::into),
+            value: value.map(Into::into),
         })
     }
 
@@ -317,7 +317,7 @@
             .map(|key| <span class="kw">match </span><span class="self">self</span>.lookup_data.get(key) {
                 <span class="prelude-val">Some</span>(value) =&gt; BytesValue {
                     found: <span class="bool-val">true</span>,
-                    value: value.clone().into(),
+                    value: value.into(),
                 },
                 <span class="prelude-val">None </span>=&gt; BytesValue {
                     found: <span class="bool-val">false</span>,

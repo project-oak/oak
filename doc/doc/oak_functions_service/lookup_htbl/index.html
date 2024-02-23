@@ -1,0 +1,40 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="This is a key/value hash table optimized for large numbers of small k/v pairs.  We assume we bust out of on-chip cache, so speed is limited by cache misses, not the actual operations such as hashing and bit manipulation."><title>oak_functions_service::lookup_htbl - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-9ee3a5e31a2afa3e.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oak_functions_service" data-themes="" data-resource-suffix="" data-rustdoc-version="1.76.0-nightly (dd430bc8c 2023-11-14)" data-channel="nightly" data-search-js="search-8fbf244ebcf71464.js" data-settings-js="settings-74424d7eec62a23e.js" ><script src="../../static.files/storage-fec3eaa3851e447d.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-f06f02fd918e3bb3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-5d8b3c7633ad77ba.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle">&#9776;</button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../oak_functions_service/index.html">oak_functions_service</a><span class="version">0.1.0</span></h2></div><h2 class="location"><a href="#">Module lookup_htbl</a></h2><div class="sidebar-elems"><section><ul class="block"><li><a href="#structs">Structs</a></li></ul></section><h2><a href="../index.html">In crate oak_functions_service</a></h2></div></nav><main><div class="width-limiter"><nav class="sub"><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="main-heading"><h1>Module <a href="../index.html">oak_functions_service</a>::<wbr><a class="mod" href="#">lookup_htbl</a><button id="copy-path" title="Copy item path to clipboard"><img src="../../static.files/clipboard-7571035ce49a181d.svg" width="19" height="18" alt="Copy item path"></button></h1><span class="out-of-band"><a class="src" href="../../src/oak_functions_service/lookup_htbl.rs.html#17-615">source</a> · <button id="toggle-all-docs" title="collapse all docs">[<span>&#x2212;</span>]</button></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>This is a key/value hash table optimized for large numbers of small k/v pairs.  We assume we
+bust out of on-chip cache, so speed is limited by cache misses, not the actual operations such
+as hashing and bit manipulation.</p>
+<p>The k/v pairs are loaded before any are read, and once they are loaded cannot be modified.  We
+take advantage of these restrictions to build a hash table with far less memory overhead per
+k/v pair (21 bytes vs ~128 bytes for hashbrown&lt;Bytes, Bytes&gt;).  Speed for k/v lookups is ~90ns
+on manual tests.</p>
+<p>The hash table consists of 2 vectors.  The first is a table of “entries”, which is a packed
+array of entries with the following layout:</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code>   hash_byte: u8,
+   data_index: u40,  <span class="comment">// A 5-byte index, so we support up to 1TiB of data.</span></code></pre></div>
+<p>This is a “swiss” table meaning that instead of the usual “buckets” of entries, the entries are
+collapsed into the hash table itself.  By adding a 1-byte hash, we can eliminate 99.6% of key
+comparisons to the wrong keys.  This is important for speed because comparing keys causes a
+page fault usually, while comparing the 1-byte hash is usually an L1 cache hit.  The number of
+cache misses per lookup should be close to 2 for values found in the table, and 1 for values
+not in the table.</p>
+<p>The storage for k/v pairs is chunked into 2MiB vectors:</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code>    data_chunks: Vec&lt;Box&lt;[u8]&gt;&gt;,</code></pre></div>
+<p><code>data_chunks</code> starts empty, and as data is added to the table, we allocate another chunk.  The
+format for each k/v pair of data in each chunk is:</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code>    key_len: &lt;compressed u30&gt;
+    key: [u8]
+    value_len: &lt;compressed u30&gt;
+    value: [u8]</code></pre></div>
+<p>Another memory savings comes from using a swiss table with exactly a 60% load factor.  Swiss
+tables require a significant portion of the table be empty, and normally as the table grows,
+they dynamically double the size.  At least when using the alloc crate, this resize causes a
+new table to be allocated at 2X the size, data is copied from the old table to the new, and the
+old table is freed.  This results in a 3X expansion in memory usage vs the prior array size.
+In contrast, this scheme has only 40% of the table empty and is never resized.</p>
+<p>There are certain limits imposed by this structure:</p>
+<ul>
+<li>Every k/v pair must fit into a 2MiB chunk.</li>
+<li>The total memory allocated to keys and values, and their compressed lengths, is &lt; 1TiB.</li>
+</ul>
+</div></details><h2 id="structs" class="small-section-header"><a href="#structs">Structs</a></h2><ul class="item-table"><li><div class="item-name"><a class="struct" href="struct.LookupHtbl.html" title="struct oak_functions_service::lookup_htbl::LookupHtbl">LookupHtbl</a></div></li><li><div class="item-name"><a class="struct" href="struct.LookupHtblIter.html" title="struct oak_functions_service::lookup_htbl::LookupHtblIter">LookupHtblIter</a></div></li></ul></section></div></main></body></html>

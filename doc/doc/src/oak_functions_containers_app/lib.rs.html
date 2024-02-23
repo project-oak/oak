@@ -429,6 +429,8 @@
 <a href="#429" id="429">429</a>
 <a href="#430" id="430">430</a>
 <a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -648,7 +650,9 @@
 
         <span class="kw">let </span>instance = <span class="self">self</span>.get_instance()<span class="question-mark">?</span>;
         <span class="kw">while let </span><span class="prelude-val">Some</span>(chunk) = request.next().<span class="kw">await </span>{
-            instance.extend_lookup_data_chunk(chunk<span class="question-mark">?</span>);
+            instance
+                .extend_lookup_data_chunk(chunk<span class="question-mark">?</span>)
+                .map_err(map_status)<span class="question-mark">?</span>;
         }
         instance
             .finish_next_lookup_data(FinishNextLookupDataRequest {})

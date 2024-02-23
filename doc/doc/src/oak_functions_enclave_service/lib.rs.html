@@ -450,7 +450,7 @@
         request: LookupDataChunk,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;FinishNextLookupDataResponse, micro_rpc::Status&gt; {
         <span class="kw">let </span>instance = <span class="self">self</span>.get_instance()<span class="question-mark">?</span>;
-        instance.extend_lookup_data_chunk(request);
+        instance.extend_lookup_data_chunk(request)<span class="question-mark">?</span>;
         instance.finish_next_lookup_data(FinishNextLookupDataRequest {})
     }
 

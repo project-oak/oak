@@ -338,6 +338,14 @@
 <a href="#338" id="338">338</a>
 <a href="#339" id="339">339</a>
 <a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -358,18 +366,18 @@
     format,
     string::{String, ToString},
     sync::Arc,
+    vec::Vec,
 };
 
 <span class="kw">use </span>bytes::Bytes;
-<span class="kw">use </span>hashbrown::HashMap;
 <span class="kw">use </span>log::{info, Level};
 <span class="kw">use </span>spinning_top::{RwSpinlock, Spinlock};
 
-<span class="kw">use </span><span class="kw">crate</span>::logger::OakLogger;
+<span class="kw">use crate</span>::{logger::OakLogger, lookup_htbl::LookupHtbl};
 
 <span class="comment">// Data maintains the invariant on lookup data to have [at most one
 // value](https://github.com/project-oak/oak/tree/main/oak/oak_functions_service/README.md#invariant-at-most-one-value)
-</span><span class="kw">pub type </span>Data = HashMap&lt;Bytes, Bytes&gt;;
+</span><span class="kw">type </span>Data = LookupHtbl;
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">enum </span>BuilderState {
@@ -398,13 +406,11 @@
     /// overwrites the value.
     </span><span class="kw">fn </span>extend&lt;T: IntoIterator&lt;Item = (Bytes, Bytes)&gt;&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, new_data: T) {
         <span class="self">self</span>.state = BuilderState::Extending;
-        <span class="self">self</span>.data.extend(new_data);
+        <span class="self">self</span>.data.extend(new_data)
     }
 
-    <span class="kw">fn </span>reserve(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional: usize) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="self">self</span>.data
-            .try_reserve(additional)
-            .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;failed to reserve memory: {:?}&quot;</span>, err))
+    <span class="kw">fn </span>reserve(<span class="kw-2">&amp;mut </span><span class="self">self</span>, additional_entries: usize) {
+        <span class="self">self</span>.data.reserve(additional_entries)
     }
 }
 
@@ -434,7 +440,7 @@
     <span class="doccomment">/// Creates a new instance with empty backing data.
     </span><span class="kw">pub fn </span>new_empty(logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            data: RwSpinlock::new(Arc::new(Data::new())),
+            data: RwSpinlock::new(Arc::new(Data::default())),
             <span class="comment">// Incrementally builds the backing data that will be used by new `LookupData`
             // instances when finished.
             </span>data_builder: Spinlock::new(DataBuilder::default()),
@@ -443,19 +449,18 @@
     }
 
     <span class="doccomment">/// Creates an instance of LookupData populated with the given entries.
-    </span><span class="kw">pub fn </span>for_test(data: Data, logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>for_test(data: Vec&lt;(Bytes, Bytes)&gt;, logger: Arc&lt;<span class="kw">dyn </span>OakLogger&gt;) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>test_manager = <span class="self">Self</span>::new_empty(logger);
-        <span class="kw-2">*</span>test_manager.data.write() = Arc::new(data);
+        test_manager.reserve(data.len() <span class="kw">as </span>u64).unwrap();
+        test_manager.extend_next_lookup_data(data);
+        test_manager.finish_next_lookup_data();
         test_manager
     }
 
-    <span class="kw">pub fn </span>reserve(<span class="kw-2">&amp;</span><span class="self">self</span>, additional: u64) -&gt; anyhow::Result&lt;()&gt; {
+    <span class="kw">pub fn </span>reserve(<span class="kw-2">&amp;</span><span class="self">self</span>, additional_entries: u64) -&gt; anyhow::Result&lt;()&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>data_builder = <span class="self">self</span>.data_builder.lock();
-        data_builder.reserve(
-            additional
-                .try_into()
-                .map_err(|err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;error converting integer: {:?}&quot;</span>, err))<span class="question-mark">?</span>,
-        )
+        data_builder.reserve(additional_entries <span class="kw">as </span>usize);
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">pub fn </span>extend_next_lookup_data&lt;T: IntoIterator&lt;Item = (Bytes, Bytes)&gt;&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, new_data: T) {
@@ -522,7 +527,7 @@
     }
 
     <span class="doccomment">/// Gets an individual entry from the backing data.
-    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Bytes&gt; {
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[u8]&gt; {
         <span class="self">self</span>.data.get(key)
     }
 
@@ -566,6 +571,8 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>alloc::{vec, vec::Vec};
+
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
     <span class="attr">#[derive(Clone)]
@@ -584,15 +591,13 @@
         <span class="kw">let </span>lookup_data_0 = manager.create_lookup_data();
         <span class="macro">assert_eq!</span>(lookup_data_0.len(), <span class="number">0</span>);
 
-        manager.extend_next_lookup_data(create_test_data(<span class="number">0</span>, <span class="number">1</span>));
-        manager.finish_next_lookup_data();
+        reserve_and_extend_test_data(<span class="kw-2">&amp;</span>manager, <span class="number">0</span>, <span class="number">1</span>);
         <span class="kw">let </span>lookup_data_1 = manager.create_lookup_data();
         <span class="macro">assert_eq!</span>(lookup_data_0.len(), <span class="number">0</span>);
         <span class="macro">assert_eq!</span>(lookup_data_1.len(), <span class="number">1</span>);
 
         <span class="comment">// Creating test data in the same range replaces some keys.
-        </span>manager.extend_next_lookup_data(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
-        manager.finish_next_lookup_data();
+        </span>reserve_and_extend_test_data(<span class="kw-2">&amp;</span>manager, <span class="number">0</span>, <span class="number">2</span>);
 
         <span class="kw">let </span>lookup_data_2 = manager.create_lookup_data();
         <span class="macro">assert_eq!</span>(lookup_data_0.len(), <span class="number">0</span>);
@@ -603,8 +608,7 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_update_lookup_data_one_chunk() {
         <span class="kw">let </span>manager = LookupDataManager::new_empty(Arc::new(TestLogger));
-        manager.extend_next_lookup_data(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
-        manager.finish_next_lookup_data();
+        reserve_and_extend_test_data(<span class="kw-2">&amp;</span>manager, <span class="number">0</span>, <span class="number">2</span>);
         <span class="kw">let </span>lookup_data = manager.create_lookup_data();
         <span class="macro">assert_eq!</span>(lookup_data.len(), <span class="number">2</span>);
     }
@@ -614,6 +618,7 @@
         <span class="kw">let </span>manager = LookupDataManager::new_empty(Arc::new(TestLogger));
         <span class="kw">let </span>lookup_data_0 = manager.create_lookup_data();
 
+        manager.reserve(<span class="number">4</span>).unwrap();
         manager.extend_next_lookup_data(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
         <span class="kw">let </span>lookup_data_1 = manager.create_lookup_data();
 
@@ -630,9 +635,10 @@
     </span><span class="kw">fn </span>test_update_lookup_four_chunks() {
         <span class="kw">let </span>manager = LookupDataManager::new_empty(Arc::new(TestLogger));
 
+        manager.reserve(<span class="number">7</span>).unwrap();
         manager.extend_next_lookup_data(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
         manager.extend_next_lookup_data(create_test_data(<span class="number">2</span>, <span class="number">3</span>));
-        <span class="comment">// We have one key overlapping here.
+        <span class="comment">// Note the overlap which results in a bit of wasted space.
         </span>manager.extend_next_lookup_data(create_test_data(<span class="number">2</span>, <span class="number">6</span>));
         manager.extend_next_lookup_data(create_test_data(<span class="number">6</span>, <span class="number">7</span>));
         manager.finish_next_lookup_data();
@@ -647,10 +653,12 @@
         <span class="kw">let </span>manager = LookupDataManager::new_empty(Arc::new(TestLogger));
         <span class="kw">let </span>lookup_data_0 = manager.create_lookup_data();
 
+        manager.reserve(<span class="number">2</span>).unwrap();
         manager.extend_next_lookup_data(create_test_data(<span class="number">0</span>, <span class="number">2</span>));
         manager.abort_next_lookup_data();
         <span class="kw">let </span>lookup_data_1 = manager.create_lookup_data();
 
+        manager.reserve(<span class="number">1</span>).unwrap();
         manager.extend_next_lookup_data(create_test_data(<span class="number">0</span>, <span class="number">1</span>));
         manager.finish_next_lookup_data();
         <span class="kw">let </span>lookup_data_2 = manager.create_lookup_data();
@@ -669,13 +677,21 @@
     }
 
     <span class="comment">// Create test data with size distinct keys between inclusive start and exclusive end.
-    </span><span class="kw">fn </span>create_test_data(start: i32, end: i32) -&gt; Data {
-        HashMap::from_iter((start..end).map(|i| {
-            (
+    </span><span class="kw">fn </span>create_test_data(start: i32, end: i32) -&gt; Vec&lt;(Bytes, Bytes)&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>vec: Vec&lt;(Bytes, Bytes)&gt; = <span class="macro">vec!</span>[];
+        <span class="kw">for </span>i <span class="kw">in </span>start..end {
+            vec.push((
                 <span class="macro">format!</span>(<span class="string">&quot;key{}&quot;</span>, i).into_bytes().into(),
                 <span class="macro">format!</span>(<span class="string">&quot;value{}&quot;</span>, i).into_bytes().into(),
-            )
-        }))
+            ));
+        }
+        vec
+    }
+
+    <span class="kw">fn </span>reserve_and_extend_test_data(manager: <span class="kw-2">&amp;</span>LookupDataManager, start: i32, end: i32) {
+        manager.reserve((end - start) <span class="kw">as </span>u64).unwrap();
+        manager.extend_next_lookup_data(create_test_data(start, end));
+        manager.finish_next_lookup_data();
     }
 }
 </code></pre></div></section></main></body></html>
