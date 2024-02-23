@@ -87,7 +87,7 @@ const CHUNK_MASK: usize = CHUNK_SIZE - 1;
 #[derive(Clone, Copy, Default)]
 struct Entry {
     hash_byte: u8,
-    data_index: [u8; 5],
+    data_index: [u8; INDEX_SIZE],
 }
 
 #[derive(Default)]
