@@ -28,7 +28,6 @@ jobs:
           - check-format
           - run-cargo-deny
           - run-cargo-udeps
-          - run-cargo-tests
           - run-bazel-tests
           - run-cargo-fuzz -- -max_total_time=2
           - completion
