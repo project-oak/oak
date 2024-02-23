@@ -182,7 +182,7 @@ pub fn cose_key_to_verifying_key(cose_key: &CoseKey) -> Result<VerifyingKey, &'s
     if cose_key.kty != KeyType::Assigned(iana::KeyType::EC2) {
         return Err("invalid key type");
     }
-    if cose_key.alg != Some(Algorithm::Assigned(iana::Algorithm::ES256)) {
+    if cose_key.alg != Some(Algorithm::Assigned(iana::Algorithm::ES256K)) {
         return Err("invalid algorithm");
     }
     if !cose_key
@@ -238,7 +238,7 @@ pub fn verifying_key_to_cose_key(public_key: &VerifyingKey) -> CoseKey {
     CoseKey {
         kty: KeyType::Assigned(iana::KeyType::EC2),
         key_id: Vec::from(derive_verifying_key_id(public_key)),
-        alg: Some(Algorithm::Assigned(iana::Algorithm::ES256)),
+        alg: Some(Algorithm::Assigned(iana::Algorithm::ES256K)),
         key_ops: vec![KeyOperation::Assigned(iana::KeyOperation::Verify)]
             .into_iter()
             .collect(),
@@ -338,7 +338,7 @@ fn generate_certificate(
     }
 
     let protected = coset::HeaderBuilder::new()
-        .algorithm(iana::Algorithm::ES256)
+        .algorithm(iana::Algorithm::ES256K)
         .build();
     let unprotected = coset::HeaderBuilder::new()
         .key_id((*b"AsymmetricECDSA256").into())
