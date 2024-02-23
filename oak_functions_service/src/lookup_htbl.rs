@@ -134,7 +134,7 @@ impl LookupHtbl {
         // The lower 32-bites are used in reduce to compute the table index, and values next to
         // each other in the table will have their lower-32 bits close to each other.  The next
         // higher byte should have no significant correlation for unequal keys.
-        let key_hash_byte = (key_hash >> 32) as u8; 
+        let key_hash_byte = (key_hash >> 32) as u8;
         let mut table_index = reduce(key_hash as u32, self.table.len() as u32);
         // To quickly find the correct entry, we skip entries that have hash_byte values that don't
         // match the key's hash.  This avoids 99.6% of cache misses caused comparing the key to the
@@ -151,7 +151,7 @@ impl LookupHtbl {
                 }
                 entry = &self.table[table_index];
             }
-            let data_index = read_index(&entry);
+            let data_index = read_index(entry);
             if data_index == 0usize {
                 return LookupResult::NotFound(table_index, key_hash_byte);
             }
@@ -217,14 +217,14 @@ impl LookupHtbl {
         let data_index = self.new_data(key, value);
         match self.lookup(key) {
             LookupResult::Found(table_index, old_data_index) => {
-                let mut entry = &mut self.table[table_index];
-                write_index(&mut entry, data_index);
+                let entry = &mut self.table[table_index];
+                write_index(entry, data_index);
                 Some(self.read_value(old_data_index))
             }
             LookupResult::NotFound(table_index, hash_byte) => {
-                let mut entry = &mut self.table[table_index];
+                let entry = &mut self.table[table_index];
                 entry.hash_byte = hash_byte;
-                write_index(&mut entry, data_index);
+                write_index(entry, data_index);
                 self.used_entries += 1;
                 None
             }
@@ -377,7 +377,9 @@ fn read_index(entry: &Entry) -> usize {
 // Write a u40 index to unaligned memory LE.
 #[inline]
 fn write_index(entry: &mut Entry, value: usize) {
-    entry.data_index.copy_from_slice(&value.to_le_bytes()[0..INDEX_SIZE]);
+    entry
+        .data_index
+        .copy_from_slice(&value.to_le_bytes()[0..INDEX_SIZE]);
 }
 
 // Read a compressed integer length.  Returns (length, num bytes of length) Compressed integers for
@@ -427,8 +429,10 @@ fn write_len(data: &mut [u8], index: usize, mut len: usize) -> usize {
 // include a random value in this hash, with constant-time processing.
 #[inline]
 fn hash_u64(v: u64) -> u64 {
-    let v1 =
-        u64::wrapping_mul(u64::wrapping_add(v ^ 0xae47cb4bcc70f561, v >> 32), 0x9d460858ea81ac79);
+    let v1 = u64::wrapping_mul(
+        u64::wrapping_add(v ^ 0xae47cb4bcc70f561, v >> 32),
+        0x9d460858ea81ac79,
+    );
     u64::wrapping_add(v1, v1 >> 32)
 }
 
