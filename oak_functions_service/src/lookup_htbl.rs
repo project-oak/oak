@@ -75,6 +75,11 @@ use bytes::Bytes;
 // k/v pair.  It is referred to as u40 below.
 const INDEX_SIZE: usize = 5;
 
+// A "data index" is a 5-byte value where the upper bits select the chunk, and the lower bits index
+// into the chunk to find a k/v pair.  The chunk index is data_index >> CHUNK_BITS.  The index
+// within the chunk is data_index & CHUNK_MASK.  CHUNK_BITS defines how large a chunk is, which is
+// computed as 2^CHUNK_BITS.  To change the chunk size, just change CHUNK_BITS.  This could be
+// important for performance as the data_chunk array grows beyond what fits in cache.
 const CHUNK_BITS: usize = 21;
 const CHUNK_SIZE: usize = 1 << CHUNK_BITS;
 const CHUNK_MASK: usize = CHUNK_SIZE - 1;
@@ -102,15 +107,19 @@ enum LookupResult {
 
 impl LookupHtbl {
     /// Set the initial size of self.table.  For best speed and memory use, this should be as large
-    /// as the number of key/value entries that will be loaded.
+    /// as the number of key/value entries that will be loaded.  NOTE: Only call this once, before
+    /// storing anything in the table.
     pub fn reserve(&mut self, max_entries: usize) {
-        assert!(self.used_entries == 0 && self.used_data == 0);
+        if self.used_entries != 0 {
+            return;  // Too late to reserve memory.
+        }
         // Use a load factor of 60%.
         let allocated_entries = (5 * max_entries + 1) / 3;
         self.max_entries = max_entries;
         self.table = vec![Entry::default(); allocated_entries];
-        // Allocate 1 extra byte, so the 0 index can be used as NULL.
         self.data_chunks = vec![];
+        // Initialized used_data to 1, so that we can use 0 as the null value.  The first byte of
+        // the first chunk will never be used as a result.
         self.used_data = 1usize;
         self.used_entries = 0usize;
     }
@@ -125,6 +134,10 @@ impl LookupHtbl {
         let key_hash_byte = key_hash as u8;
         let mut table_index = reduce(key_hash as u32, self.table.len() as u32);
         let mut data_index: usize;
+        // To quickly find the correct entry, we skip entries that have hash_byte values that don't
+        // match the key's hash.  This avoids 99.6% of cache misses caused comparing the key to the
+        // wrong key.  Once we found an entry with a matching hash byte, we then compare the two
+        // keys, and return Found if they match.  Otherwise, we start back at the top of the loop.
         loop {
             // We try to load only the hash byte to save time.  Once we have a matching hash byte,
             // the loop ends and we compare keys.
@@ -147,12 +160,7 @@ impl LookupHtbl {
                 // This only happens if the key hash byte is 0.
                 return LookupResult::NotFound(table_index, key_hash_byte);
             }
-            let chunk: &[u8] = &self.data_chunks[data_index >> CHUNK_BITS];
-            let index = data_index & CHUNK_MASK;
-            let (key_len, key_len_size) = read_len(chunk, index);
-            let key_index = index + key_len_size;
-            let entry_key: &[u8] = &chunk[key_index..key_index + key_len];
-            if entry_key == key {
+            if key == self.read_key(data_index) {
                 return LookupResult::Found(table_index, data_index);
             }
             table_index += 1;
@@ -160,6 +168,15 @@ impl LookupHtbl {
                 table_index = 0;
             }
         }
+    }
+
+    // Read the key from its data chunk.
+    fn read_key(&self, data_index: usize) -> &[u8] {
+        let chunk: &[u8] = &self.data_chunks[data_index >> CHUNK_BITS];
+        let index = data_index & CHUNK_MASK;
+        let (key_len, key_len_size) = read_len(chunk, index);
+        let key_index = index + key_len_size;
+        &chunk[key_index..key_index + key_len]
     }
 
     /// This is like HashMapp::contains_key.
@@ -256,6 +273,10 @@ impl LookupHtbl {
         let chunk_index = end_index >> CHUNK_BITS;
         if self.data_chunks.len() <= chunk_index {
             let values = Box::<[u8]>::new_zeroed_slice(CHUNK_SIZE);
+            // Safety:
+            //     This is safe because we allocated these values as a zero-ed slice, which
+            //     initializes our u8 values to 0.  The assumption here is that the zero value for
+            //     u8 is zero, a safe assumption: what would happen if 0u8 != 0x00u8?
             let values = unsafe { values.assume_init() };
             self.data_chunks.push(values);
             if chunk_index == 0 {
@@ -386,19 +407,18 @@ fn read_len(data: &[u8], index: usize) -> (usize, usize) {
 
 // Write a compressed length to data.  Return the number of bytes used to represent the length.
 #[inline]
-fn write_len(data: &mut [u8], index: usize, len: usize) -> usize {
+fn write_len(data: &mut [u8], index: usize, mut len: usize) -> usize {
     if len < 64 {
         data[index] = len as u8;
         return 1usize;
     }
-    let mut l = len;
     let mut num_bytes = 1usize;
-    while l >= 64 {
-        data[index + num_bytes] = l as u8;
-        l >>= 8;
+    while len >= 64 {
+        data[index + num_bytes] = len as u8;
+        len >>= 8;
         num_bytes += 1;
     }
-    let first_byte = ((num_bytes - 1) << 6 | l) as u8;
+    let first_byte = ((num_bytes - 1) << 6 | len) as u8;
     data[index] = first_byte;
     num_bytes
 }
@@ -408,6 +428,11 @@ fn write_len(data: &mut [u8], index: usize, len: usize) -> usize {
 // multiplication has a good mix from the lower 32 bits, but the upper 32 bits of the input do not
 // effect the result's lower 32 bits.  Therefore, multiply by v + (v >> 32), so that high and low
 // bits influence the high bits of the result.  Then, mix the upper 32 bits into the lower 32.
+//
+// We don't have to use this, but it does help us gain back some performance lost in all the bit
+// manipulation.  It also reduces dependencies.  Finally, this is something we will need to do
+// ourselves in any case once we start defending against side-channel attacks.  We'll want to
+// include a random value in this hash, with constant-time processing.
 #[inline]
 fn hash_u64(v: u64) -> u64 {
     let v1 =
