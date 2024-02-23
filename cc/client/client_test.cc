@@ -99,8 +99,8 @@ class TestAttestationVerifier : public AttestationVerifier {
       : encryption_key_(encryption_key) {}
 
   absl::StatusOr<::oak::attestation::v1::AttestationResults> Verify(
-      std::chrono::time_point<std::chrono::system_clock> now, Evidence evidence,
-      Endorsements endorsements) const override {
+      std::chrono::time_point<std::chrono::system_clock> now, const Evidence& evidence,
+      const Endorsements& endorsements) const override {
     AttestationResults attestation_results;
     *attestation_results.mutable_encryption_public_key() =
         encryption_key_->GetSerializedPublicKey();
