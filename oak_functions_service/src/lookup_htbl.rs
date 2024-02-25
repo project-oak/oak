@@ -423,7 +423,8 @@ fn write_len(data: &mut [u8], index: usize, mut len: usize) -> usize {
     num_bytes
 }
 
-// This hash both defends against DDoS attacks and passes dieharder tests.
+// This hash both defends against DDoS attacks and passes dieharder tests.  It is 2 rounds of
+// hashing in order to pass the dieharder tests.
 #[inline]
 fn hash_u64(v: u64, hash_secret: u64) -> u64 {
     let v1 = u64::wrapping_mul((v ^ hash_secret) ^ (v >> 32), 0x9d46_0858_ea81_ac79);
