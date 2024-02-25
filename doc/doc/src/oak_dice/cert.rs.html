@@ -562,7 +562,7 @@
     <span class="kw">if </span>cose_key.kty != KeyType::Assigned(iana::KeyType::EC2) {
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid key type&quot;</span>);
     }
-    <span class="kw">if </span>cose_key.alg != <span class="prelude-val">Some</span>(Algorithm::Assigned(iana::Algorithm::ES256K)) {
+    <span class="kw">if </span>cose_key.alg != <span class="prelude-val">Some</span>(Algorithm::Assigned(iana::Algorithm::ES256)) {
         <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">&quot;invalid algorithm&quot;</span>);
     }
     <span class="kw">if </span>!cose_key
@@ -618,7 +618,7 @@
     CoseKey {
         kty: KeyType::Assigned(iana::KeyType::EC2),
         key_id: Vec::from(derive_verifying_key_id(public_key)),
-        alg: <span class="prelude-val">Some</span>(Algorithm::Assigned(iana::Algorithm::ES256K)),
+        alg: <span class="prelude-val">Some</span>(Algorithm::Assigned(iana::Algorithm::ES256)),
         key_ops: <span class="macro">vec!</span>[KeyOperation::Assigned(iana::KeyOperation::Verify)]
             .into_iter()
             .collect(),
@@ -718,7 +718,7 @@
     }
 
     <span class="kw">let </span>protected = coset::HeaderBuilder::new()
-        .algorithm(iana::Algorithm::ES256K)
+        .algorithm(iana::Algorithm::ES256)
         .build();
     <span class="kw">let </span>unprotected = coset::HeaderBuilder::new()
         .key_id((<span class="kw-2">*</span><span class="string">b&quot;AsymmetricECDSA256&quot;</span>).into())
