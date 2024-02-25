@@ -175,6 +175,7 @@ fn verify_succeeds() {
     let reference_values = create_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    panic!("{:?}", r.unwrap());
     let p = to_attestation_results(&r);
 
     eprintln!("======================================");
