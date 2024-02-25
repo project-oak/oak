@@ -28,6 +28,9 @@ oak_dice = { workspace = true }
 oak_functions_abi = { workspace = true }
 oak_functions_sdk = { workspace = true }
 oak_proto_rust = { workspace = true }
+rand_core = { version = "*", default-features = false, features = [
+  "getrandom",
+] }
 spinning_top = "*"
 wasmi = { version = "*", default-features = false }
 wasmtime = { version = "*", optional = true }

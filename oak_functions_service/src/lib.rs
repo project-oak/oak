@@ -27,6 +27,7 @@ use lookup::LookupDataManager;
 use oak_functions_abi::{Request, Response};
 
 extern crate alloc;
+extern crate rand_core;
 
 #[cfg(test)]
 extern crate std;
