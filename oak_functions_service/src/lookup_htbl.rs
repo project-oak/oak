@@ -75,15 +75,6 @@ use bytes::Bytes;
 // k/v pair.  It is referred to as u40 below.
 const INDEX_SIZE: usize = 5;
 
-// A "data index" is a 5-byte value where the upper bits select the chunk, and the lower bits index
-// into the chunk to find a k/v pair.  The chunk index is data_index >> CHUNK_BITS.  The index
-// within the chunk is data_index & CHUNK_MASK.  CHUNK_BITS defines how large a chunk is, which is
-// computed as 2^CHUNK_BITS.  To change the chunk size, just change CHUNK_BITS.  This could be
-// important for performance as the data_chunk array grows beyond what fits in cache.
-const CHUNK_BITS: usize = 21;
-const CHUNK_SIZE: usize = 1 << CHUNK_BITS;
-const CHUNK_MASK: usize = CHUNK_SIZE - 1;
-
 #[derive(Clone, Copy, Default)]
 struct Entry {
     hash_byte: u8,
@@ -97,6 +88,14 @@ pub struct LookupHtbl {
     max_entries: usize, // The number at which we must grow the table.
     used_data: usize,
     used_entries: usize,
+// A "data index" is a 5-byte value where the upper bits select the chunk, and the lower bits index
+// into the chunk to find a k/v pair.  The chunk index is data_index >> CHUNK_BITS.  The index
+// within the chunk is data_index & CHUNK_MASK.  CHUNK_BITS defines how large a chunk is, which is
+// computed as 2^CHUNK_BITS.  To change the chunk size, just change CHUNK_BITS.  This could be
+// important for performance as the data_chunk array grows beyond what fits in cache.
+    chunk_bits: usize,
+    chunk_size: usize,
+    chunk_mask: usize,
 }
 
 // Retured by LookupHtbl::lookup.
@@ -122,6 +121,15 @@ impl LookupHtbl {
         // the first chunk will never be used as a result.
         self.used_data = 1usize;
         self.used_entries = 0usize;
+        // Set chunk size such that we have chunk sizes about 1/10th the size of the entries table.
+        let mut chunk_size = allocated_entries.next_power_of_two();
+        if chunk_size < 1 << 21 {
+            // The minimum chunk size is 2MiB.
+            chunk_size = 1 << 21;
+        }
+        self.chunk_size = chunk_size;
+        self.chunk_mask = chunk_size - 1;
+        self.chunk_bits = self.chunk_size.ilog2() as usize + 1;
     }
 
     // Lookup the key/value pair.  If found, return LookupResult::Found(table_index, data_index).
@@ -168,8 +176,8 @@ impl LookupHtbl {
     // Read the key from its data chunk.
     #[inline]
     fn read_key(&self, data_index: usize) -> &[u8] {
-        let chunk: &[u8] = &self.data_chunks[data_index >> CHUNK_BITS];
-        let index = data_index & CHUNK_MASK;
+        let chunk: &[u8] = &self.data_chunks[data_index >> self.chunk_bits];
+        let index = data_index & self.chunk_mask;
         let (key_len, key_len_size) = read_len(chunk, index);
         let key_index = index + key_len_size;
         &chunk[key_index..key_index + key_len]
@@ -196,8 +204,8 @@ impl LookupHtbl {
 
     // Return the value associated with the k/v pair at data_index.
     fn read_value(&self, data_index: usize) -> &[u8] {
-        let chunk: &[u8] = &self.data_chunks[data_index >> CHUNK_BITS];
-        let index = data_index & CHUNK_MASK;
+        let chunk: &[u8] = &self.data_chunks[data_index >> self.chunk_bits];
+        let index = data_index & self.chunk_mask;
         let (key_len, key_len_size) = read_len(chunk, index);
         let value_len_index = index + key_len_size + key_len;
         let (value_len, value_len_size) = read_len(chunk, value_len_index);
@@ -260,11 +268,11 @@ impl LookupHtbl {
     fn new_data(&mut self, key: &[u8], value: &[u8]) -> usize {
         // Check to see if we need a new chunk.  INDEX_SIZE is also the max for compressed ints.
         let additional_data_len = 2 * INDEX_SIZE + key.len() + value.len();
-        assert!(additional_data_len < CHUNK_SIZE);
+        assert!(additional_data_len < self.chunk_size);
         let end_index = self.used_data + additional_data_len;
-        let chunk_index = end_index >> CHUNK_BITS;
+        let chunk_index = end_index >> self.chunk_bits;
         if self.data_chunks.len() <= chunk_index {
-            let values = Box::<[u8]>::new_zeroed_slice(CHUNK_SIZE);
+            let values = Box::<[u8]>::new_zeroed_slice(self.chunk_size);
             // Safety:
             //     This is safe because we allocated these values as a zero-ed slice, which
             //     initializes our u8 values to 0.  The assumption here is that the zero value for
@@ -274,11 +282,11 @@ impl LookupHtbl {
             if chunk_index == 0 {
                 self.used_data = 1; // Address 0 is NULL.
             } else {
-                self.used_data = CHUNK_SIZE * chunk_index;
+                self.used_data = self.chunk_size * chunk_index;
             }
         }
         let chunk: &mut [u8] = &mut self.data_chunks[chunk_index];
-        let index = self.used_data & CHUNK_MASK;
+        let index = self.used_data & self.chunk_mask;
         let key_index = index + write_len(chunk, index, key.len());
         chunk[key_index..key_index + key.len()].copy_from_slice(key);
         let value_len_index = key_index + key.len();
@@ -331,8 +339,8 @@ impl<'a> Iterator for LookupHtblIter<'a> {
             let raw_index = read_index(&self.htbl.table[self.table_index]);
             self.table_index += 1;
             if raw_index != 0usize {
-                let chunk: &[u8] = &self.htbl.data_chunks[raw_index >> CHUNK_BITS];
-                let index = raw_index & CHUNK_MASK;
+                let chunk: &[u8] = &self.htbl.data_chunks[raw_index >> self.htbl.chunk_bits];
+                let index = raw_index & self.htbl.chunk_mask;
                 let (key_len, key_len_size) = read_len(chunk, index);
                 let key_index = index + key_len_size;
                 let value_len_index = key_index + key_len;
