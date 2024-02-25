@@ -129,7 +129,7 @@ impl LookupHtbl {
         }
         self.chunk_size = chunk_size;
         self.chunk_mask = chunk_size - 1;
-        self.chunk_bits = self.chunk_size.ilog2() as usize + 1;
+        self.chunk_bits = self.chunk_size.ilog2() as usize;
     }
 
     // Lookup the key/value pair.  If found, return LookupResult::Found(table_index, data_index).
