@@ -88,11 +88,12 @@ pub struct LookupHtbl {
     max_entries: usize, // The number at which we must grow the table.
     used_data: usize,
     used_entries: usize,
-// A "data index" is a 5-byte value where the upper bits select the chunk, and the lower bits index
-// into the chunk to find a k/v pair.  The chunk index is data_index >> CHUNK_BITS.  The index
-// within the chunk is data_index & CHUNK_MASK.  CHUNK_BITS defines how large a chunk is, which is
-// computed as 2^CHUNK_BITS.  To change the chunk size, just change CHUNK_BITS.  This could be
-// important for performance as the data_chunk array grows beyond what fits in cache.
+    // A "data index" is a 5-byte value where the upper bits select the chunk, and the lower bits
+    // index into the chunk to find a k/v pair.  The chunk index is data_index >> CHUNK_BITS.
+    // The index within the chunk is data_index & CHUNK_MASK.  CHUNK_BITS defines how large a
+    // chunk is, which is computed as 2^CHUNK_BITS.  To change the chunk size, just change
+    // CHUNK_BITS.  This could be important for performance as the data_chunk array grows
+    // beyond what fits in cache.
     chunk_bits: usize,
     chunk_size: usize,
     chunk_mask: usize,
