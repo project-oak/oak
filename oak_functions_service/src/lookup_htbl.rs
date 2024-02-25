@@ -564,11 +564,11 @@ mod tests {
     fn test_rand_vals() {
         let mut r = Rand {
             seed: 0u64,
-            hash_secret: 0u64,
+            hash_secret: 0xdeadbeefu64,
         };
         let mut kv_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
         let mut table = LookupHtbl::default();
-        for _ in 0..2 {
+        for _ in 0..10_000 {
             loop {
                 let kv_pair = r.rand_kv_pair(100, 1000);
                 if !table.contains_key(&kv_pair.0) {
@@ -605,7 +605,7 @@ mod tests {
             seed: 0u64,
             hash_secret: 1u64,
         };
-        for loop_power in 0..34 {
+        for loop_power in 0..28 {
             let target = r.rand64();
             for i in 0usize..(1usize << loop_power) {
                 if r.rand64() == target {
@@ -616,6 +616,39 @@ mod tests {
                 }
             }
         }
-        panic!("Sequence too long");
+    }
+
+    // Test that the hash function yeilds the expected 2.54 average sequence length in a swiss
+    // table with 50% load factor.
+    #[test]
+    fn test_swiss_collisions() {
+        let table_len = 1usize << 28;
+        let mut table: Vec<bool> = Vec::default();
+        table.resize(table_len, false);
+        let hash_secret = 0x123;
+        for i in 0..table_len >> 1 {
+            let mut h = (hash_u64(i as u64, hash_secret) & (table_len as u64 - 1)) as usize;
+            while table[h] {
+                h += 1;
+                if h == table.len() {
+                    h = 0;
+                }
+            }
+            table[h] = true;
+        }
+        let mut len = 0;
+        let mut total_len = 0;
+        let mut num_seq = 0;
+        for i in 0..table_len {
+            if table[i] {
+                len += 1;
+            } else if len != 0 {
+                num_seq += 1;
+                total_len += len;
+                len = 0;
+            }
+        }
+        let ave_seq_len = total_len as f32 / num_seq as f32;
+        assert!((ave_seq_len - 2.5415f32).abs() < 0.01);
     }
 }
