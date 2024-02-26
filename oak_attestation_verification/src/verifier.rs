@@ -94,65 +94,41 @@ pub fn verify(
     endorsements: &Endorsements,
     reference_values: &ReferenceValues,
 ) -> anyhow::Result<ExtractedEvidence> {
-    let root_layer = evidence
-        .root_layer
-        .as_ref()
-        .context("no root layer evidence")?;
+    // Ensure the Attestation report is properly signed by the platform and that it includes the
+    // root public key used in the DICE chain.
+    {
+        let tee_certificate = match endorsements.r#type.as_ref().context("no endorsements")? {
+            endorsements::Type::OakRestrictedKernel(endorsements) => endorsements
+                .root_layer
+                .as_ref()
+                .context("no root layer endorsements")?
+                .tee_certificate
+                .as_ref(),
+            endorsements::Type::OakContainers(endorsements) => endorsements
+                .root_layer
+                .as_ref()
+                .context("no root layer endorsements")?
+                .tee_certificate
+                .as_ref(),
+            endorsements::Type::Cb(endorsements) => endorsements
+                .root_layer
+                .as_ref()
+                .context("no root layer endorsements")?
+                .tee_certificate
+                .as_ref(),
+        };
+        let root_layer = evidence
+            .root_layer
+            .as_ref()
+            .context("no root layer evidence")?;
+        verify_root_attestation_signature(now_utc_millis, root_layer, tee_certificate)?;
+    };
+
     // Ensure the DICE chain signatures are valid and extract the measurements, public keys and
     // other attestation-related data from the DICE chain.
     let extracted_evidence = verify_dice_chain(evidence).context("invalid DICE chain")?;
-    // Ensure the Attestation report is properly signed by the platform.
-    let tee_certificate = match endorsements.r#type.as_ref().context("no endorsements")? {
-        endorsements::Type::OakRestrictedKernel(endorsements) => endorsements
-            .root_layer
-            .as_ref()
-            .context("no root layer endorsements")?
-            .tee_certificate
-            .as_ref(),
-        endorsements::Type::OakContainers(endorsements) => endorsements
-            .root_layer
-            .as_ref()
-            .context("no root layer endorsements")?
-            .tee_certificate
-            .as_ref(),
-        endorsements::Type::Cb(endorsements) => endorsements
-            .root_layer
-            .as_ref()
-            .context("no root layer endorsements")?
-            .tee_certificate
-            .as_ref(),
-    };
-    verify_root_attestation_signature(now_utc_millis, root_layer, tee_certificate)?;
-    // Check that the root ECA public key for the DICE chain is bound to the attestation report to
-    // ensure that the entire chain is valid.
-    let expected = &hash_sha2_256(&root_layer.eca_public_key[..])[..];
-    let root_layer = match extracted_evidence
-        .evidence_values
-        .as_ref()
-        .context("no evidence values")?
-    {
-        EvidenceValues::OakRestrictedKernel(values) => values.root_layer.as_ref(),
-        EvidenceValues::OakContainers(values) => values.root_layer.as_ref(),
-        EvidenceValues::Cb(values) => values.root_layer.as_ref(),
-    }
-    .context("no root layer evidence values")?;
-    let actual: &[u8] = match root_layer
-        .report
-        .as_ref()
-        .context("no attestation report")?
-    {
-        Report::SevSnp(values) => values.report_data.as_ref(),
-        Report::Tdx(values) => values.report_data.as_ref(),
-        Report::Fake(values) => values.report_data.as_ref(),
-    };
-    // The report data contains 64 bytes by default, but we only use the first 32 bytes at the
-    // moment.
-    if expected.len() > actual.len() || expected != &actual[..expected.len()] {
-        anyhow::bail!("DICE chain is not bound to the attestation report");
-    }
 
-    // Evidence, endorsements and reference values must reflect the same chain
-    // type.
+    // Ensure the extracted measurements match the endorsements.
     match (
         endorsements.r#type.as_ref(),
         reference_values.r#type.as_ref(),
@@ -173,6 +149,7 @@ pub fn verify(
             Some(reference_values::Type::Cb(rvs)),
             Some(EvidenceValues::Cb(values)),
         ) => verify_cb(now_utc_millis, values, ends, rvs),
+        // Evidence, endorsements and reference values must exist and reflect the same chain type.
         (None, _, _) => anyhow::bail!("Endorsements are empty"),
         (_, None, _) => anyhow::bail!("Reference values are empty"),
         (_, _, None) => anyhow::bail!("Extracted evidence values are empty"),
@@ -448,7 +425,19 @@ fn verify_root_attestation_signature(
             report.validate().map_err(|msg| anyhow::anyhow!(msg))?;
 
             // Ensure that the attestation report is signed by the VCEK public key.
-            verify_attestation_report_signature(&vcek, report)
+            verify_attestation_report_signature(&vcek, report)?;
+
+            // Check that the root ECA public key for the DICE chain is bound to the attestation
+            // report to ensure that the entire chain is valid.
+            let expected = &hash_sha2_256(&root_layer.eca_public_key[..])[..];
+            let actual = report.data.report_data;
+
+            anyhow::ensure!(
+                expected.len() > actual.len() && expected != &actual[..expected.len()],
+                "The root layer's ECA public key is not bound to the attestation report"
+            );
+
+            Ok(())
         }
         TeePlatform::IntelTdx => anyhow::bail!("not supported"),
         TeePlatform::None => Ok(()),
