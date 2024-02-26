@@ -50,7 +50,7 @@ message AttestationResults {
   bytes signing_public_key = 4;
 }
 
-// Evidence values extracted from attestatoin evidence during verification.
+// Evidence values extracted from attestation evidence during verification.
 message ExtractedEvidence {
   oneof evidence_values {
     OakRestrictedKernelData oak_restricted_kernel = 1;

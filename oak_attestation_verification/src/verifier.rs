@@ -187,59 +187,69 @@ pub fn verify(
 /// Verifies signatures of the certificates in the DICE chain and extracts the evidence values from
 /// the certificates if the verification is successful.
 pub fn verify_dice_chain(evidence: &Evidence) -> anyhow::Result<ExtractedEvidence> {
-    let root_layer = evidence
-        .root_layer
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no root layer evidence"))?;
-    let cose_key = CoseKey::from_slice(&root_layer.eca_public_key)
-        .map_err(|_cose_err| anyhow::anyhow!("couldn't deserialize root layer public key"))?;
-    let mut verifying_key =
-        cose_key_to_verifying_key(&cose_key).map_err(|msg| anyhow::anyhow!(msg))?;
+    let root_layer_verifying_key = {
+        let cose_key = {
+            let root_layer = evidence
+                .root_layer
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("no root layer evidence"))?;
+            CoseKey::from_slice(&root_layer.eca_public_key).map_err(|_cose_err| {
+                anyhow::anyhow!("couldn't deserialize root layer public key")
+            })?
+        };
+        cose_key_to_verifying_key(&cose_key).map_err(|msg| anyhow::anyhow!(msg))?
+    };
 
-    for layer in evidence.layers.iter() {
-        let cert = coset::CoseSign1::from_slice(&layer.eca_certificate)
-            .map_err(|_cose_err| anyhow::anyhow!("could not parse certificate"))?;
-        cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
-            let sig = Signature::from_slice(signature)?;
-            verifying_key.verify(contents, &sig)
-        })
-        .map_err(|error| anyhow::anyhow!(error))?;
-        let payload = cert
-            .payload
-            .ok_or_else(|| anyhow::anyhow!("no cert payload"))?;
-        let claims = ClaimsSet::from_slice(&payload)
-            .map_err(|_cose_err| anyhow::anyhow!("could not parse claims set"))?;
-        let cose_key =
-            get_public_key_from_claims_set(&claims).map_err(|msg| anyhow::anyhow!(msg))?;
-        verifying_key = cose_key_to_verifying_key(&cose_key).map_err(|msg| anyhow::anyhow!(msg))?;
-    }
+    // Sequentially verify the layers, eventually retrieving the verifying key of the last layer.
+    let last_layer_verifying_key = evidence.layers.iter().try_fold(
+        root_layer_verifying_key,
+        |previous_layer_verifying_key, current_layer| {
+            let cert = coset::CoseSign1::from_slice(&current_layer.eca_certificate)
+                .map_err(|_cose_err| anyhow::anyhow!("could not parse certificate"))?;
+            cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
+                let sig = Signature::from_slice(signature)?;
+                previous_layer_verifying_key.verify(contents, &sig)
+            })
+            .map_err(|error| anyhow::anyhow!(error))?;
+            let payload = cert
+                .payload
+                .ok_or_else(|| anyhow::anyhow!("no cert payload"))?;
+            let claims = ClaimsSet::from_slice(&payload)
+                .map_err(|_cose_err| anyhow::anyhow!("could not parse claims set"))?;
+            let cose_key =
+                get_public_key_from_claims_set(&claims).map_err(|msg| anyhow::anyhow!(msg))?;
+            cose_key_to_verifying_key(&cose_key).map_err(|msg| anyhow::anyhow!(msg))
+        },
+    )?;
 
-    // Verify application keys. The verifying key comes from the last entry in `Evidence::layers`.
-    let appl_keys = evidence
-        .application_keys
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("no application keys in evidence"))?;
+    // Finally, use the last layer's verification key to verify the application keys.
+    {
+        let appl_keys = evidence
+            .application_keys
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("no application keys in evidence"))?;
 
-    // Process encryption certificate.
-    let encryption_cert =
-        coset::CoseSign1::from_slice(&appl_keys.encryption_public_key_certificate)
+        // Verify encryption certificate.
+        let encryption_cert =
+            coset::CoseSign1::from_slice(&appl_keys.encryption_public_key_certificate)
+                .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
+        encryption_cert
+            .verify_signature(ADDITIONAL_DATA, |signature, contents| {
+                let sig = Signature::from_slice(signature)?;
+                last_layer_verifying_key.verify(contents, &sig)
+            })
+            .map_err(|error| anyhow::anyhow!(error))?;
+
+        // Verify signing certificate.
+        let signing_cert = coset::CoseSign1::from_slice(&appl_keys.signing_public_key_certificate)
             .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
-    encryption_cert
-        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
-            let sig = Signature::from_slice(signature)?;
-            verifying_key.verify(contents, &sig)
-        })
-        .map_err(|error| anyhow::anyhow!(error))?;
-
-    // Process signing certificate.
-    let signing_cert = coset::CoseSign1::from_slice(&appl_keys.signing_public_key_certificate)
-        .map_err(|_cose_err| anyhow::anyhow!("could not parse encryption certificate"))?;
-    signing_cert
-        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
-            let sig = Signature::from_slice(signature)?;
-            verifying_key.verify(contents, &sig)
-        })
-        .map_err(|error| anyhow::anyhow!(error))?;
+        signing_cert
+            .verify_signature(ADDITIONAL_DATA, |signature, contents| {
+                let sig = Signature::from_slice(signature)?;
+                last_layer_verifying_key.verify(contents, &sig)
+            })
+            .map_err(|error| anyhow::anyhow!(error))?;
+    }
 
     extract_evidence(evidence)
 }
