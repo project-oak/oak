@@ -39,7 +39,7 @@ constexpr absl::string_view kEmptyAssociatedData = "";
 
 grpc::Status TrustedApplicationImpl::Hello(grpc::ServerContext* context,
                                            const HelloRequest* request, HelloResponse* response) {
-  ServerEncryptor server_encryptor(orchestrator_client_);
+  ServerEncryptor server_encryptor(*encryption_key_handle_);
   absl::StatusOr<DecryptionResult> decrypted_request =
       server_encryptor.Decrypt(request->encrypted_request());
   if (!decrypted_request.ok()) {
