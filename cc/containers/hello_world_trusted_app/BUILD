@@ -25,7 +25,8 @@ cc_library(
     srcs = ["app_service.cc"],
     hdrs = ["app_service.h"],
     deps = [
-        ":orchestrator_client",
+        "//cc/containers/sdk:encryption_key_handle",
+        "//cc/containers/sdk:orchestrator_client",
         "//cc/crypto:common",
         "//cc/crypto:server_encryptor",
         "//oak_containers_hello_world_trusted_app/proto:interface_cc_grpc",
@@ -36,32 +37,13 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "orchestrator_client",
-    srcs = ["orchestrator_client.cc"],
-    hdrs = ["orchestrator_client.h"],
-    deps = [
-        "//cc/crypto:encryption_key",
-        "//cc/crypto/hpke:recipient_context",
-        "//oak_containers/proto:interfaces_cc_grpc",
-        "//oak_containers/proto:interfaces_cc_proto",
-        "//proto/containers:orchestrator_crypto_cc_grpc",
-        "//proto/containers:orchestrator_crypto_cc_proto",
-        "//proto/crypto:crypto_cc_proto",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/status",
-        "@com_google_absl//absl/status:statusor",
-        "@com_google_absl//absl/strings",
-        "@com_google_protobuf//:protobuf",
-    ],
-)
-
 cc_binary(
     name = "main",
     srcs = ["main.cc"],
     deps = [
         ":app_service",
-        ":orchestrator_client",
+        "//cc/containers/sdk:encryption_key_handle",
+        "//cc/containers/sdk:orchestrator_client",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/log:check",
         "@com_google_absl//absl/log:initialize",
