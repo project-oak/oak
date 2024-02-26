@@ -38,6 +38,7 @@ var srcIndex = JSON.parse('{\
 "oak_functions_test_utils":["",[],["lib.rs"]],\
 "oak_grpc_utils":["",[],["lib.rs"]],\
 "oak_hello_world_linux_init":["",[],["init.rs","main.rs"]],\
+"oak_kernel_measurement":["",[],["main.rs"]],\
 "oak_launcher_utils":["",[],["channel.rs","launcher.rs","lib.rs"]],\
 "oak_linux_boot_params":["",[],["lib.rs"]],\
 "oak_proto_rust":["",[],["lib.rs"]],\

@@ -462,6 +462,16 @@
 <a href="#462" id="462">462</a>
 <a href="#463" id="463">463</a>
 <a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -483,7 +493,7 @@
 
 <span class="kw">use </span>oak_linux_boot_params::{BootE820Entry, BootParams, E820EntryType};
 <span class="kw">use </span>x86_64::PhysAddr;
-<span class="kw">use </span>zerocopy::AsBytes;
+<span class="kw">use </span>zerocopy::{AsBytes, FromBytes};
 
 <span class="kw">use crate</span>::{
     cmos::Cmos,
@@ -539,11 +549,21 @@
                 .expect(<span class="string">&quot;no suitable DMA address available&quot;</span>);
             <span class="kw">let </span>address = <span class="kw">crate</span>::phys_to_virt(start);
 
-            <span class="kw">let </span>buf = <span class="kw">unsafe </span>{ slice::from_raw_parts_mut::&lt;u8&gt;(address.as_mut_ptr(), size) };
+            <span class="comment">// Safety: we have confirmed that the memory is backed by physical RAM and not currently
+            // used for anything else. We will overwrite all of it, so it does not have to be
+            // initialized.
+            </span><span class="kw">let </span>buf = <span class="kw">unsafe </span>{ slice::from_raw_parts_mut::&lt;u8&gt;(address.as_mut_ptr(), size) };
             <span class="kw">let </span>actual_size = fw_cfg
                 .read_file(<span class="kw-2">&amp;</span>file, buf)
                 .expect(<span class="string">&quot;could not read setup data&quot;</span>);
             <span class="macro">assert_eq!</span>(actual_size, size, <span class="string">&quot;setup data did not match expected size&quot;</span>);
+            <span class="comment">// The initial ram disk location and size are not constant. We will overwrite it later
+            // anyway, so we overwrite it with zeros before measuring so we can get consistent
+            // measurement. See &lt;https://www.kernel.org/doc/html/v6.7/arch/x86/boot.html&gt; for
+            // information on the  field offsets.
+            </span><span class="kw-2">*</span>u32::mut_from(<span class="kw-2">&amp;mut </span>buf[<span class="number">0x218</span>..<span class="number">0x21C</span>]).expect(<span class="string">&quot;invalid slice for initrd location&quot;</span>) = <span class="number">0</span>;
+            <span class="kw-2">*</span>u32::mut_from(<span class="kw-2">&amp;mut </span>buf[<span class="number">0x21C</span>..<span class="number">0x220</span>]).expect(<span class="string">&quot;invalid slice for initrd size&quot;</span>) = <span class="number">0</span>;
+
             <span class="kw">let </span>measurement = <span class="kw">crate</span>::measure_byte_slice(buf);
 
             <span class="comment">// The header information starts at offset 0x01F1 from the start of the setup data.
