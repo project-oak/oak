@@ -2869,6 +2869,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_kernel_measurement"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "env_logger",
+ "hex",
+ "log",
+ "sha2",
+ "zerocopy",
+]
+
+[[package]]
 name = "oak_launcher_utils"
 version = "0.1.0"
 dependencies = [
