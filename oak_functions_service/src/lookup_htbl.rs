@@ -637,6 +637,7 @@ mod tests {
         let mut len = 0;
         let mut total_len = 0;
         let mut num_seq = 0;
+        #[allow(clippy::all)]
         for i in 0..table_len {
             if table[i] {
                 len += 1;
