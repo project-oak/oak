@@ -21,7 +21,6 @@
 #include <string>
 
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "cc/attestation/verification/attestation_verifier.h"
 #include "proto/attestation/endorsement.pb.h"
 #include "proto/attestation/evidence.pb.h"
@@ -37,9 +36,6 @@ class InsecureAttestationVerifier : public AttestationVerifier {
       std::chrono::time_point<std::chrono::system_clock> now,
       const ::oak::attestation::v1::Evidence& evidence,
       const ::oak::attestation::v1::Endorsements& endorsements) const override;
-
- private:
-  absl::StatusOr<std::string> ExtractEncryptionPublicKey(absl::string_view certificate) const;
 };
 
 }  // namespace oak::attestation::verification

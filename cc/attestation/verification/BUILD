@@ -36,10 +36,21 @@ cc_library(
     hdrs = ["insecure_attestation_verifier.h"],
     deps = [
         ":attestation_verifier",
-        "//cc/utils/cose:cwt",
+        ":utils",
         "//proto/attestation:endorsement_cc_proto",
         "//proto/attestation:evidence_cc_proto",
         "//proto/attestation:verification_cc_proto",
+        "@com_google_absl//absl/status:statusor",
+    ],
+)
+
+cc_library(
+    name = "utils",
+    srcs = ["utils.cc"],
+    hdrs = ["utils.h"],
+    deps = [
+        "//cc/utils/cose:cwt",
+        "//proto/attestation:evidence_cc_proto",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],
