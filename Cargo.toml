@@ -6,6 +6,7 @@ members = [
   "micro_rpc_build",
   "micro_rpc_tests",
   "oak_attestation",
+  "oak_attestation_integration_tests",
   "oak_attestation_verification",
   "oak_channel",
   "oak_client",
@@ -40,6 +41,7 @@ members = [
   "oak_functions_test_module",
   "oak_functions_test_utils",
   "oak_hello_world_linux_init",
+  "oak_kernel_measurement",
   "oak_launcher_utils",
   "oak_proto_rust",
   "oak_restricted_kernel",
@@ -59,7 +61,7 @@ members = [
   "stage0_dice",
   "testing/oak_echo_service",
   "xtask",
-  "oak_restricted_kernel_sdk_proc_macro"
+  "oak_restricted_kernel_sdk_proc_macro",
 ]
 exclude = [
   "fuzz",

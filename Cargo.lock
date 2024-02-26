@@ -2287,6 +2287,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "oak_attestation_integration_tests"
+version = "0.1.0"
+dependencies = [
+ "oak_attestation",
+ "oak_attestation_verification",
+ "oak_proto_rust",
+ "oak_restricted_kernel_sdk",
+]
+
+[[package]]
 name = "oak_attestation_verification"
 version = "0.1.0"
 dependencies = [
@@ -2296,10 +2306,8 @@ dependencies = [
  "ecdsa",
  "getrandom",
  "hex",
- "oak_attestation",
  "oak_dice",
  "oak_proto_rust",
- "oak_restricted_kernel_sdk",
  "oak_sev_snp_attestation_report",
  "p256",
  "p384",
@@ -2867,6 +2875,19 @@ dependencies = [
  "log",
  "nix 0.27.1",
  "simple_logger",
+]
+
+[[package]]
+name = "oak_kernel_measurement"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "env_logger",
+ "hex",
+ "log",
+ "sha2",
+ "zerocopy",
 ]
 
 [[package]]

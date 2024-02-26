@@ -20,8 +20,7 @@
 #include <string>
 
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
-#include "cc/utils/cose/cwt.h"
+#include "cc/attestation/verification/utils.h"
 #include "proto/attestation/endorsement.pb.h"
 #include "proto/attestation/evidence.pb.h"
 #include "proto/attestation/verification.pb.h"
@@ -32,32 +31,26 @@ namespace {
 using ::oak::attestation::v1::AttestationResults;
 using ::oak::attestation::v1::Endorsements;
 using ::oak::attestation::v1::Evidence;
-using ::oak::utils::cose::Cwt;
 }  // namespace
 
 absl::StatusOr<AttestationResults> InsecureAttestationVerifier::Verify(
     std::chrono::time_point<std::chrono::system_clock> now, const Evidence& evidence,
     const Endorsements& endorsements) const {
-  absl::StatusOr<std::string> encryption_public_key =
-      ExtractEncryptionPublicKey(evidence.application_keys().encryption_public_key_certificate());
+  absl::StatusOr<std::string> encryption_public_key = ExtractEncryptionPublicKey(evidence);
   if (!encryption_public_key.ok()) {
     return encryption_public_key.status();
   }
 
+  absl::StatusOr<std::string> signing_public_key = ExtractSigningPublicKey(evidence);
+  if (!signing_public_key.ok()) {
+    return signing_public_key.status();
+  }
+
   AttestationResults attestation_results;
   *attestation_results.mutable_encryption_public_key() = *encryption_public_key;
+  *attestation_results.mutable_signing_public_key() = *signing_public_key;
 
   return attestation_results;
-}
-
-absl::StatusOr<std::string> InsecureAttestationVerifier::ExtractEncryptionPublicKey(
-    absl::string_view certificate) const {
-  auto cwt = Cwt::Deserialize(certificate);
-  if (!cwt.ok()) {
-    return cwt.status();
-  }
-  auto public_key = cwt->subject_public_key.GetPublicKey();
-  return std::string(public_key.begin(), public_key.end());
 }
 
 }  // namespace oak::attestation::verification
