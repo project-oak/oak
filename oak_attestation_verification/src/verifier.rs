@@ -433,6 +433,8 @@ fn verify_root_attestation_signature(
             let actual = report.data.report_data;
 
             anyhow::ensure!(
+                // The report data contains 64 bytes by default, but we only use the first 32 bytes
+                // at the
                 expected.len() > actual.len() && expected != &actual[..expected.len()],
                 "The root layer's ECA public key is not bound to the attestation report"
             );
