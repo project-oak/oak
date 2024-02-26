@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+load("//cc/oak_functions/native_sdk:native_rules.bzl", "oak_functions_native_module")
+
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
@@ -33,14 +35,10 @@ cc_library(
     ],
 )
 
-cc_binary(
+oak_functions_native_module(
     name = "key_value_lookup",
     srcs = ["key_value_lookup.cc"],
-    linkopts = ["-Wl,--version-script,$(location symbols.map.ld)"],
-    linkshared = True,
     deps = [
-        "symbols.map.ld",
-        ":native_sdk",
         "@com_google_absl//absl/log:check",
     ],
 )
