@@ -613,6 +613,15 @@
 <a href="#613" id="613">613</a>
 <a href="#614" id="614">614</a>
 <a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -690,15 +699,6 @@
 // k/v pair.  It is referred to as u40 below.
 </span><span class="kw">const </span>INDEX_SIZE: usize = <span class="number">5</span>;
 
-<span class="comment">// A &quot;data index&quot; is a 5-byte value where the upper bits select the chunk, and the lower bits index
-// into the chunk to find a k/v pair.  The chunk index is data_index &gt;&gt; CHUNK_BITS.  The index
-// within the chunk is data_index &amp; CHUNK_MASK.  CHUNK_BITS defines how large a chunk is, which is
-// computed as 2^CHUNK_BITS.  To change the chunk size, just change CHUNK_BITS.  This could be
-// important for performance as the data_chunk array grows beyond what fits in cache.
-</span><span class="kw">const </span>CHUNK_BITS: usize = <span class="number">21</span>;
-<span class="kw">const </span>CHUNK_SIZE: usize = <span class="number">1 </span>&lt;&lt; CHUNK_BITS;
-<span class="kw">const </span>CHUNK_MASK: usize = CHUNK_SIZE - <span class="number">1</span>;
-
 <span class="attr">#[derive(Clone, Copy, Default)]
 </span><span class="kw">struct </span>Entry {
     hash_byte: u8,
@@ -712,6 +712,15 @@
     max_entries: usize, <span class="comment">// The number at which we must grow the table.
     </span>used_data: usize,
     used_entries: usize,
+    <span class="comment">// A &quot;data index&quot; is a 5-byte value where the upper bits select the chunk, and the lower bits
+    // index into the chunk to find a k/v pair.  The chunk index is data_index &gt;&gt; CHUNK_BITS.
+    // The index within the chunk is data_index &amp; CHUNK_MASK.  CHUNK_BITS defines how large a
+    // chunk is, which is computed as 2^CHUNK_BITS.  To change the chunk size, just change
+    // CHUNK_BITS.  This could be important for performance as the data_chunk array grows
+    // beyond what fits in cache.
+    </span>chunk_bits: usize,
+    chunk_size: usize,
+    chunk_mask: usize,
 }
 
 <span class="comment">// Retured by LookupHtbl::lookup.
@@ -737,6 +746,15 @@
         // the first chunk will never be used as a result.
         </span><span class="self">self</span>.used_data = <span class="number">1usize</span>;
         <span class="self">self</span>.used_entries = <span class="number">0usize</span>;
+        <span class="comment">// Set chunk size such that we have chunk sizes about 1/10th the size of the entries table.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>chunk_size = allocated_entries.next_power_of_two();
+        <span class="kw">if </span>chunk_size &lt; <span class="number">1 </span>&lt;&lt; <span class="number">21 </span>{
+            <span class="comment">// The minimum chunk size is 2MiB.
+            </span>chunk_size = <span class="number">1 </span>&lt;&lt; <span class="number">21</span>;
+        }
+        <span class="self">self</span>.chunk_size = chunk_size;
+        <span class="self">self</span>.chunk_mask = chunk_size - <span class="number">1</span>;
+        <span class="self">self</span>.chunk_bits = <span class="self">self</span>.chunk_size.ilog2() <span class="kw">as </span>usize;
     }
 
     <span class="comment">// Lookup the key/value pair.  If found, return LookupResult::Found(table_index, data_index).
@@ -783,8 +801,8 @@
     <span class="comment">// Read the key from its data chunk.
     </span><span class="attr">#[inline]
     </span><span class="kw">fn </span>read_key(<span class="kw-2">&amp;</span><span class="self">self</span>, data_index: usize) -&gt; <span class="kw-2">&amp;</span>[u8] {
-        <span class="kw">let </span>chunk: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span><span class="self">self</span>.data_chunks[data_index &gt;&gt; CHUNK_BITS];
-        <span class="kw">let </span>index = data_index &amp; CHUNK_MASK;
+        <span class="kw">let </span>chunk: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span><span class="self">self</span>.data_chunks[data_index &gt;&gt; <span class="self">self</span>.chunk_bits];
+        <span class="kw">let </span>index = data_index &amp; <span class="self">self</span>.chunk_mask;
         <span class="kw">let </span>(key_len, key_len_size) = read_len(chunk, index);
         <span class="kw">let </span>key_index = index + key_len_size;
         <span class="kw-2">&amp;</span>chunk[key_index..key_index + key_len]
@@ -811,8 +829,8 @@
 
     <span class="comment">// Return the value associated with the k/v pair at data_index.
     </span><span class="kw">fn </span>read_value(<span class="kw-2">&amp;</span><span class="self">self</span>, data_index: usize) -&gt; <span class="kw-2">&amp;</span>[u8] {
-        <span class="kw">let </span>chunk: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span><span class="self">self</span>.data_chunks[data_index &gt;&gt; CHUNK_BITS];
-        <span class="kw">let </span>index = data_index &amp; CHUNK_MASK;
+        <span class="kw">let </span>chunk: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span><span class="self">self</span>.data_chunks[data_index &gt;&gt; <span class="self">self</span>.chunk_bits];
+        <span class="kw">let </span>index = data_index &amp; <span class="self">self</span>.chunk_mask;
         <span class="kw">let </span>(key_len, key_len_size) = read_len(chunk, index);
         <span class="kw">let </span>value_len_index = index + key_len_size + key_len;
         <span class="kw">let </span>(value_len, value_len_size) = read_len(chunk, value_len_index);
@@ -875,11 +893,11 @@
     </span><span class="kw">fn </span>new_data(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8], value: <span class="kw-2">&amp;</span>[u8]) -&gt; usize {
         <span class="comment">// Check to see if we need a new chunk.  INDEX_SIZE is also the max for compressed ints.
         </span><span class="kw">let </span>additional_data_len = <span class="number">2 </span>* INDEX_SIZE + key.len() + value.len();
-        <span class="macro">assert!</span>(additional_data_len &lt; CHUNK_SIZE);
+        <span class="macro">assert!</span>(additional_data_len &lt; <span class="self">self</span>.chunk_size);
         <span class="kw">let </span>end_index = <span class="self">self</span>.used_data + additional_data_len;
-        <span class="kw">let </span>chunk_index = end_index &gt;&gt; CHUNK_BITS;
+        <span class="kw">let </span>chunk_index = end_index &gt;&gt; <span class="self">self</span>.chunk_bits;
         <span class="kw">if </span><span class="self">self</span>.data_chunks.len() &lt;= chunk_index {
-            <span class="kw">let </span>values = Box::&lt;[u8]&gt;::new_zeroed_slice(CHUNK_SIZE);
+            <span class="kw">let </span>values = Box::&lt;[u8]&gt;::new_zeroed_slice(<span class="self">self</span>.chunk_size);
             <span class="comment">// Safety:
             //     This is safe because we allocated these values as a zero-ed slice, which
             //     initializes our u8 values to 0.  The assumption here is that the zero value for
@@ -889,11 +907,11 @@
             <span class="kw">if </span>chunk_index == <span class="number">0 </span>{
                 <span class="self">self</span>.used_data = <span class="number">1</span>; <span class="comment">// Address 0 is NULL.
             </span>} <span class="kw">else </span>{
-                <span class="self">self</span>.used_data = CHUNK_SIZE * chunk_index;
+                <span class="self">self</span>.used_data = <span class="self">self</span>.chunk_size * chunk_index;
             }
         }
         <span class="kw">let </span>chunk: <span class="kw-2">&amp;mut </span>[u8] = <span class="kw-2">&amp;mut </span><span class="self">self</span>.data_chunks[chunk_index];
-        <span class="kw">let </span>index = <span class="self">self</span>.used_data &amp; CHUNK_MASK;
+        <span class="kw">let </span>index = <span class="self">self</span>.used_data &amp; <span class="self">self</span>.chunk_mask;
         <span class="kw">let </span>key_index = index + write_len(chunk, index, key.len());
         chunk[key_index..key_index + key.len()].copy_from_slice(key);
         <span class="kw">let </span>value_len_index = key_index + key.len();
@@ -946,8 +964,8 @@
             <span class="kw">let </span>raw_index = read_index(<span class="kw-2">&amp;</span><span class="self">self</span>.htbl.table[<span class="self">self</span>.table_index]);
             <span class="self">self</span>.table_index += <span class="number">1</span>;
             <span class="kw">if </span>raw_index != <span class="number">0usize </span>{
-                <span class="kw">let </span>chunk: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span><span class="self">self</span>.htbl.data_chunks[raw_index &gt;&gt; CHUNK_BITS];
-                <span class="kw">let </span>index = raw_index &amp; CHUNK_MASK;
+                <span class="kw">let </span>chunk: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span><span class="self">self</span>.htbl.data_chunks[raw_index &gt;&gt; <span class="self">self</span>.htbl.chunk_bits];
+                <span class="kw">let </span>index = raw_index &amp; <span class="self">self</span>.htbl.chunk_mask;
                 <span class="kw">let </span>(key_len, key_len_size) = read_len(chunk, index);
                 <span class="kw">let </span>key_index = index + key_len_size;
                 <span class="kw">let </span>value_len_index = key_index + key_len;
