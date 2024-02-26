@@ -20,7 +20,7 @@
 
 #include "absl/log/die_if_null.h"
 #include "absl/strings/string_view.h"
-#include "cc/containers/hello_world_trusted_app/orchestrator_client.h"
+#include "cc/containers/sdk/orchestrator_client.h"
 #include "grpcpp/server_context.h"
 #include "grpcpp/support/status.h"
 #include "oak_containers_hello_world_trusted_app/proto/interface.grpc.pb.h"
@@ -30,7 +30,7 @@ namespace oak::oak_containers_hello_world_trusted_app {
 
 class TrustedApplicationImpl : public containers::example::TrustedApplication::Service {
  public:
-  TrustedApplicationImpl(OrchestratorClient* orchestrator_client,
+  TrustedApplicationImpl(::oak::containers::sdk::OrchestratorClient* orchestrator_client,
                          absl::string_view application_config)
       : orchestrator_client_(*ABSL_DIE_IF_NULL(orchestrator_client)),
         application_config_(application_config) {}
@@ -39,7 +39,7 @@ class TrustedApplicationImpl : public containers::example::TrustedApplication::S
                      containers::example::HelloResponse* response) override;
 
  private:
-  OrchestratorClient& orchestrator_client_;
+  ::oak::containers::sdk::OrchestratorClient& orchestrator_client_;
   const std::string application_config_;
 };
 

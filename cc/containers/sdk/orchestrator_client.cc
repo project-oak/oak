@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "cc/containers/hello_world_trusted_app/orchestrator_client.h"
+#include "cc/containers/sdk/orchestrator_client.h"
 
 #include <memory>
 #include <string>
@@ -33,7 +33,7 @@
 #include "proto/containers/orchestrator_crypto.pb.h"
 #include "proto/crypto/crypto.pb.h"
 
-namespace oak::oak_containers_hello_world_trusted_app {
+namespace oak::containers::sdk {
 
 using ::oak::containers::GetApplicationConfigResponse;
 using ::oak::containers::v1::DeriveSessionKeysRequest;
@@ -79,4 +79,4 @@ absl::StatusOr<std::unique_ptr<RecipientContext>> OrchestratorClient::GenerateRe
   return RecipientContext::Deserialize(response.session_keys());
 }
 
-}  // namespace oak::oak_containers_hello_world_trusted_app
+}  // namespace oak::containers::sdk

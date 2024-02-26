@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef CC_OAK_CONTAINERS_HELLO_WORLD_TRUSTED_APP_ORCHESTRATOR_CLIENT_H_
-#define CC_OAK_CONTAINERS_HELLO_WORLD_TRUSTED_APP_ORCHESTRATOR_CLIENT_H_
+#ifndef CC_OAK_CONTAINERS_SDK_ORCHESTRATOR_CLIENT_H_
+#define CC_OAK_CONTAINERS_SDK_ORCHESTRATOR_CLIENT_H_
 
 #include <memory>
 #include <string>
@@ -29,7 +29,7 @@
 #include "proto/containers/orchestrator_crypto.grpc.pb.h"
 #include "proto/crypto/crypto.pb.h"
 
-namespace oak::oak_containers_hello_world_trusted_app {
+namespace oak::containers::sdk {
 
 class OrchestratorClient : public crypto::EncryptionKeyHandle {
  public:
