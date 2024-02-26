@@ -848,6 +848,7 @@ dependencies = [
  "oak_functions_sdk",
  "oak_proto_rust",
  "prost",
+ "rand_core",
  "spinning_top",
  "wasmi",
 ]

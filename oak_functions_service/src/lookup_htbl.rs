@@ -70,6 +70,7 @@ use alloc::{boxed::Box, vec, vec::Vec};
 use core::mem;
 
 use bytes::Bytes;
+use rand_core::{OsRng, RngCore};
 
 // To save memory, we use 5 byte array index values instead of 8 bytes.  This saves 12 bytes per
 // k/v pair.  It is referred to as u40 below.
@@ -88,6 +89,7 @@ pub struct LookupHtbl {
     max_entries: usize, // The number at which we must grow the table.
     used_data: usize,
     used_entries: usize,
+    hash_secret: u64, // For defense against DDoS, and some defense vs cache timing.
     // A "data index" is a 5-byte value where the upper bits select the chunk, and the lower bits
     // index into the chunk to find a k/v pair.  The chunk index is data_index >> CHUNK_BITS.
     // The index within the chunk is data_index & CHUNK_MASK.  CHUNK_BITS defines how large a
@@ -122,6 +124,10 @@ impl LookupHtbl {
         // the first chunk will never be used as a result.
         self.used_data = 1usize;
         self.used_entries = 0usize;
+        self.hash_secret = OsRng.next_u64();
+        if self.hash_secret == 0u64 {
+            panic!("There is something very wrong with OsRng");
+        }
         // Set chunk size such that we have chunk sizes about 1/10th the size of the entries table.
         let mut chunk_size = allocated_entries.next_power_of_two();
         if chunk_size < 1 << 21 {
@@ -139,7 +145,7 @@ impl LookupHtbl {
         if self.table.is_empty() {
             panic!("Check for emtpy before calling lookup");
         }
-        let key_hash: u64 = hash(key);
+        let key_hash: u64 = hash(key, self.hash_secret);
         // The lower 32-bites are used in reduce to compute the table index, and values next to
         // each other in the table will have their lower-32 bits close to each other.  The next
         // higher byte should have no significant correlation for unequal keys.
@@ -426,40 +432,29 @@ fn write_len(data: &mut [u8], index: usize, mut len: usize) -> usize {
     num_bytes
 }
 
-// Multiplication is our best fast mixing primitive, and with XOR, we have a non-linear hash.  We
-// multiply by odd numbers so it is reversible.  The upper 32 bits of the result of a 64x64->64
-// multiplication has a good mix from the lower 32 bits, but the upper 32 bits of the input do not
-// effect the result's lower 32 bits.  Therefore, multiply by v + (v >> 32), so that high and low
-// bits influence the high bits of the result.  Then, mix the upper 32 bits into the lower 32.
-//
-// We don't have to use this, but it does help us gain back some performance lost in all the bit
-// manipulation.  It also reduces dependencies.  Finally, this is something we will need to do
-// ourselves in any case once we start defending against side-channel attacks.  We'll want to
-// include a random value in this hash, with constant-time processing.
+// This hash both defends against DDoS attacks and passes dieharder tests.  It is 2 rounds of
+// hashing in order to pass the dieharder tests.
 #[inline]
-fn hash_u64(v: u64) -> u64 {
-    let v1 = u64::wrapping_mul(
-        u64::wrapping_add(v ^ 0xae47cb4bcc70f561, v >> 32),
-        0x9d460858ea81ac79,
-    );
-    u64::wrapping_add(v1, v1 >> 32)
+fn hash_u64(v: u64, hash_secret: u64) -> u64 {
+    let v1 = u64::wrapping_mul((v ^ hash_secret) ^ (v >> 32), 0x9d46_0858_ea81_ac79);
+    u64::wrapping_add(v1 ^ v, v1 >> 32)
 }
 
 #[inline]
-fn hash(v: &[u8]) -> u64 {
+fn hash(v: &[u8], hash_secret: u64) -> u64 {
     let mut i = 0usize;
     let mut val = 0u64;
     let mut bytes = [0u8; 8];
     while i + 8 <= v.len() {
         bytes.copy_from_slice(&v[i..i + 8]);
         let digit = u64::from_le_bytes(bytes);
-        val = hash_u64(val ^ digit);
+        val = hash_u64(val ^ digit, hash_secret);
         i += 8;
     }
     if i < v.len() {
         bytes[0..v.len() - i].copy_from_slice(&v[i..v.len()]);
         let digit: u64 = u64::from_le_bytes(bytes);
-        val = hash_u64(val ^ digit);
+        val = hash_u64(val ^ digit, hash_secret);
     }
     val
 }
@@ -496,7 +491,7 @@ mod tests {
         let mut misses = 0;
         let mut total = 0u64;
         for i in 0u64..NUM_LOOKUPS as u64 {
-            let key = hash_u64(i) & mask;
+            let key = hash_u64(i, 0) & mask;
             match table.get(&key.to_le_bytes()) {
                 Some(val) => {
                     hits += 1;
@@ -541,13 +536,12 @@ mod tests {
     // This further tests the hash function.
     struct Rand {
         seed: u64,
+        hash_secret: u64,
     }
 
     impl Rand {
         fn rand64(&mut self) -> u64 {
-            // Mask off the MSB to force this to disrupt the group structure.  Hour "hash" function
-            // is a permutation, and group structure comes into play otherwise.
-            self.seed = hash_u64(self.seed) & (!0u64 >> 1);
+            self.seed = hash_u64(self.seed, self.hash_secret);
             self.seed
         }
 
@@ -559,7 +553,7 @@ mod tests {
             let mut v = vec![];
             for _ in 0..len {
                 v.push(self.seed as u8);
-                self.seed = hash_u64(self.seed);
+                self.seed = hash_u64(self.seed, self.hash_secret);
             }
             v
         }
@@ -575,10 +569,13 @@ mod tests {
 
     #[test]
     fn test_rand_vals() {
-        let mut r = Rand { seed: 0u64 };
+        let mut r = Rand {
+            seed: 0u64,
+            hash_secret: 0xdeadbeefu64,
+        };
         let mut kv_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
         let mut table = LookupHtbl::default();
-        for _ in 0..2 {
+        for _ in 0..10_000 {
             loop {
                 let kv_pair = r.rand_kv_pair(100, 1000);
                 if !table.contains_key(&kv_pair.0) {
@@ -611,14 +608,55 @@ mod tests {
     // This is a linear-time algorithm for finding the cycle length of an RNG.
     #[test]
     fn test_rng_sequence_len() {
-        let mut r = Rand { seed: 0u64 };
+        let mut r = Rand {
+            seed: 0u64,
+            hash_secret: 1u64,
+        };
         for loop_power in 0..28 {
             let target = r.rand64();
             for i in 0usize..(1usize << loop_power) {
                 if r.rand64() == target {
-                    panic!("Rand sequence length =  {}", i + 1);
+                    if i < 1 << 28 {
+                        panic!("Sequence too short");
+                    }
+                    return;
                 }
             }
         }
+    }
+
+    // Test that the hash function yeilds the expected 2.54 average sequence length in a swiss
+    // table with 50% load factor.
+    #[test]
+    fn test_swiss_collisions() {
+        let table_len = 1usize << 28;
+        let mut table: Vec<bool> = Vec::default();
+        table.resize(table_len, false);
+        let hash_secret = 0x123;
+        for i in 0..table_len >> 1 {
+            let mut h = (hash_u64(i as u64, hash_secret) & (table_len as u64 - 1)) as usize;
+            while table[h] {
+                h += 1;
+                if h == table.len() {
+                    h = 0;
+                }
+            }
+            table[h] = true;
+        }
+        let mut len = 0;
+        let mut total_len = 0;
+        let mut num_seq = 0;
+        #[allow(clippy::all)]
+        for i in 0..table_len {
+            if table[i] {
+                len += 1;
+            } else if len != 0 {
+                num_seq += 1;
+                total_len += len;
+                len = 0;
+            }
+        }
+        let ave_seq_len = total_len as f32 / num_seq as f32;
+        assert!((ave_seq_len - 2.5415f32).abs() < 0.01);
     }
 }
