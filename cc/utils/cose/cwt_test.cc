@@ -69,7 +69,7 @@ TEST_F(CertificateTest, CwtDeserializeSuccess) {
 TEST_F(CertificateTest, CwtSerializeDeserializeSuccess) {
   std::vector<uint8_t> test_public_key = {1, 2, 3, 4};
   auto serialized_cwt = Cwt::SerializeHpkePublicKey(test_public_key);
-  EXPECT_OK(serialized_cwt) << serialized_cwt.status();
+  EXPECT_TRUE(serialized_cwt.ok()) << serialized_cwt.status();
   auto serialized_cwt_string = std::string(serialized_cwt->begin(), serialized_cwt->end());
 
   auto deserialized_cwt = Cwt::Deserialize(serialized_cwt_string);
