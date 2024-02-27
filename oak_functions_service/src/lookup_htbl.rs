@@ -433,11 +433,14 @@ fn write_len(data: &mut [u8], index: usize, mut len: usize) -> usize {
 }
 
 // This hash both defends against DDoS attacks and passes dieharder tests.  It is 2 rounds of
-// hashing in order to pass the dieharder tests.
+// hashing in order to pass the dieharder tests.  It also passes distribution checks when used to
+// produce indexes into swiss hash tables in the way we do here, with reduce.
 #[inline]
 fn hash_u64(v: u64, hash_secret: u64) -> u64 {
-    let v1 = u64::wrapping_mul((v ^ hash_secret) ^ (v >> 32), 0x9d46_0858_ea81_ac79);
-    u64::wrapping_add(v1 ^ v, v1 >> 32)
+    let v1 = u64::wrapping_mul((v + hash_secret) ^ (v >> 32), 0x9d46_0858_ea81_ac79);
+    let v2 = u64::wrapping_add(v1 ^ v, v1 >> 32);
+    let v3 = u64::wrapping_mul((v2 + hash_secret) ^ (v2 >> 32), 0xe177_d33d_28e7_10c9);
+    u64::wrapping_add(v3 ^ v, v3 >> 32)
 }
 
 #[inline]
@@ -629,34 +632,41 @@ mod tests {
     // table with 50% load factor.
     #[test]
     fn test_swiss_collisions() {
-        let table_len = 1usize << 28;
-        let mut table: Vec<bool> = Vec::default();
-        table.resize(table_len, false);
-        let hash_secret = 0x123;
-        for i in 0..table_len >> 1 {
-            let mut h = (hash_u64(i as u64, hash_secret) & (table_len as u64 - 1)) as usize;
-            while table[h] {
-                h += 1;
-                if h == table.len() {
-                    h = 0;
+        let table_len = 1usize << 25;
+        for tweak in 0..8 {
+            let in_shift = hash_u64(hash_u64(tweak, 0xdeadbeef), 0xcafebabe) & 0x1f;
+            let out_shift = hash_u64(hash_u64(tweak, 0xdeadbeef), 0xcafebabe) & 0x1f;
+            let mut table: Vec<bool> = Vec::default();
+            table.resize(table_len, false);
+            let hash_secret = 0x123;
+            for i in 0..table_len >> 1 {
+                let mut h = reduce(
+                    (hash_u64((i as u64) << in_shift, hash_secret) >> out_shift) as u32,
+                    table_len as u32,
+                );
+                while table[h] {
+                    h += 1;
+                    if h == table.len() {
+                        h = 0;
+                    }
+                }
+                table[h] = true;
+            }
+            let mut len = 0;
+            let mut total_len = 0;
+            let mut num_seq = 0;
+            #[allow(clippy::all)]
+            for i in 0..table_len {
+                if table[i] {
+                    len += 1;
+                } else if len != 0 {
+                    num_seq += 1;
+                    total_len += len;
+                    len = 0;
                 }
             }
-            table[h] = true;
+            let ave_seq_len = total_len as f32 / num_seq as f32;
+            assert!((ave_seq_len - 2.5415f32).abs() < 0.002);
         }
-        let mut len = 0;
-        let mut total_len = 0;
-        let mut num_seq = 0;
-        #[allow(clippy::all)]
-        for i in 0..table_len {
-            if table[i] {
-                len += 1;
-            } else if len != 0 {
-                num_seq += 1;
-                total_len += len;
-                len = 0;
-            }
-        }
-        let ave_seq_len = total_len as f32 / num_seq as f32;
-        assert!((ave_seq_len - 2.5415f32).abs() < 0.01);
     }
 }
