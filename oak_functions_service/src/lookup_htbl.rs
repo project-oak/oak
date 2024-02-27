@@ -438,8 +438,8 @@ fn write_len(data: &mut [u8], index: usize, mut len: usize) -> usize {
 #[inline]
 fn hash_u64(v: u64, hash_secret: u64) -> u64 {
     let v1 = u64::wrapping_mul((v + hash_secret) ^ (v >> 32), 0x9d46_0858_ea81_ac79);
-    let v2 = u64::wrapping_add(v1 ^ v, v1 >> 32);
-    let v3 = u64::wrapping_mul((v2 + hash_secret) ^ (v2 >> 32), 0xe177_d33d_28e7_10c9);
+    let v2 = u64::wrapping_add(v1, v1 >> 32);
+    let v3 = u64::wrapping_mul((v2 + hash_secret) ^ (v2 >> 32), 0xe177_d33d_28e7_10c5);
     u64::wrapping_add(v3 ^ v, v3 >> 32)
 }
 
