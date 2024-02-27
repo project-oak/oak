@@ -41,14 +41,8 @@ absl::StatusOr<AttestationResults> InsecureAttestationVerifier::Verify(
     return encryption_public_key.status();
   }
 
-  absl::StatusOr<std::string> signing_public_key = ExtractSigningPublicKey(evidence);
-  if (!signing_public_key.ok()) {
-    return signing_public_key.status();
-  }
-
   AttestationResults attestation_results;
   *attestation_results.mutable_encryption_public_key() = *encryption_public_key;
-  *attestation_results.mutable_signing_public_key() = *signing_public_key;
 
   return attestation_results;
 }
