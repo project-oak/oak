@@ -394,8 +394,11 @@ fn verify_amd_sev_attestation_report(
         anyhow::bail!("debug mode not allowed");
     }
 
-    let fw = reference_values.firmware_version.as_ref();
-    if fw.is_some_and(|a| a.values.len() > 0) {
+    if reference_values
+        .firmware_version
+        .as_ref()
+        .is_some_and(|a| a.values.len() > 0)
+    {
         anyhow::bail!("firmware version check needs implementation");
     }
 
