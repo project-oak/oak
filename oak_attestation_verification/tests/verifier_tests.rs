@@ -166,7 +166,7 @@ fn create_reference_values() -> ReferenceValues {
 fn verify_succeeds() {
     let evidence = create_evidence();
     let endorsements = create_endorsements();
-    let mut reference_values = create_reference_values();
+    let reference_values = create_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);

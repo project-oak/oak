@@ -461,6 +461,8 @@ fn verify_root_layer(
     reference_values: &RootLayerReferenceValues,
 ) -> anyhow::Result<()> {
     match values.report.as_ref() {
+        // TODO: Verify stage0 based on the number of configured vCPUs (WIP). We don't
+        //       have an endorsement to compare against.
         Some(Report::SevSnp(report_values)) => verify_amd_sev_attestation_report(
             report_values,
             reference_values
