@@ -20,7 +20,7 @@
 use core::{
     ffi::CStr,
     fmt::{Debug, Formatter, Result as FmtResult},
-    mem::{size_of, zeroed, MaybeUninit},
+    mem::{size_of, size_of_val, zeroed, MaybeUninit},
 };
 
 use sha2::{Digest, Sha256};
@@ -61,12 +61,20 @@ fn get_file(name: &CStr) -> Result<&'static mut [u8], &'static str> {
 }
 
 #[repr(u32)]
-#[derive(Debug, FromRepr)]
+#[derive(Debug, Eq, FromRepr, Ord, PartialEq, PartialOrd)]
 enum CommandTag {
     Allocate = 1,
     AddPointer = 2,
     AddChecksum = 3,
     WritePointer = 4,
+
+    // Extended VMM-specific commands
+    AddPciHoles = 0x80000001,
+}
+
+impl CommandTag {
+    /// VMM-specific commands that are not supported by QEMU should have the highest bit set.
+    const VMM_SPECIFIC: u32 = 0x80000000;
 }
 
 #[repr(u8)]
@@ -311,6 +319,121 @@ impl Debug for WritePointer {
     }
 }
 
+#[repr(C)]
+#[derive(Copy, Clone)]
+struct AddPciHoles {
+    file: RomfileName,
+    pci_start_offset_32: u32,
+    pci_end_offset_32: u32,
+    pci_valid_offset_64: u32,
+    pci_start_offset_64: u32,
+    pci_end_offset_64: u32,
+    pci_length_offset_64: u32,
+    _padding: [u8; 42],
+}
+static_assertions::assert_eq_size!(AddPciHoles, Pad);
+
+struct Window<T> {
+    base: T,
+    end: T,
+}
+
+impl<T: core::ops::Sub<Output = T> + Copy> Window<T> {
+    fn len(&self) -> T {
+        self.end - self.base
+    }
+}
+
+struct FirmwareData {
+    pci_window_32: Window<u32>,
+    pci_window_64: Window<u64>,
+}
+
+fn populate_firmware_data() -> Result<FirmwareData, &'static str> {
+    // There may be a way how to dynamically determine these values, but for now, hard-code the
+    // expected values as it's unlikely they will ever change.
+
+    Ok(FirmwareData {
+        pci_window_32: Window {
+            base: 0xE0000000u32,
+            end: 0xFEBFF000u32,
+        },
+        pci_window_64: Window {
+            base: 0x8000000000u64,
+            end: 0x10000000000u64,
+        },
+    })
+}
+
+impl AddPciHoles {
+    pub fn file(&self) -> &CStr {
+        CStr::from_bytes_until_nul(&self.file).unwrap()
+    }
+
+    fn invoke(&self) -> Result<(), &'static str> {
+        let file = get_file(self.file())?;
+
+        if file.len() < self.pci_start_offset_32 as usize
+            || file.len() - 4 < self.pci_start_offset_32 as usize
+            || file.len() < self.pci_end_offset_32 as usize
+            || file.len() - 4 < self.pci_end_offset_32 as usize
+            || file.len() < self.pci_valid_offset_64 as usize
+            || file.len() - 1 < self.pci_valid_offset_64 as usize
+            || file.len() < self.pci_start_offset_64 as usize
+            || file.len() - 8 < self.pci_start_offset_64 as usize
+            || file.len() < self.pci_end_offset_64 as usize
+            || file.len() - 8 < self.pci_end_offset_64 as usize
+            || file.len() < self.pci_length_offset_64 as usize
+            || file.len() - 8 < self.pci_length_offset_64 as usize
+            || file.len() < (4 + 4 + 1 + 8 + 8 + 8)
+        {
+            return Err("ADD_PCI_HOLES invalid; offsets would overflow file");
+        }
+
+        let data: FirmwareData = populate_firmware_data()?;
+
+        // 32 bit
+        file[self.pci_start_offset_32 as usize
+            ..(self.pci_start_offset_32 as usize + size_of_val(&data.pci_window_32.base))]
+            .copy_from_slice(&data.pci_window_32.base.to_le_bytes());
+        file[self.pci_end_offset_32 as usize
+            ..(self.pci_end_offset_32 as usize + size_of_val(&data.pci_window_32.end))]
+            .copy_from_slice(&data.pci_window_32.end.to_le_bytes());
+
+        // 64-bit
+        if data.pci_window_64.base != 0 {
+            file[self.pci_valid_offset_64 as usize] = 1;
+            file[self.pci_start_offset_64 as usize
+                ..(self.pci_start_offset_64 as usize + size_of_val(&data.pci_window_64.base))]
+                .copy_from_slice(&data.pci_window_64.base.to_le_bytes());
+            file[self.pci_end_offset_64 as usize
+                ..(self.pci_end_offset_64 as usize + size_of_val(&data.pci_window_64.end))]
+                .copy_from_slice(&data.pci_window_64.end.to_le_bytes());
+            file[self.pci_length_offset_64 as usize
+                ..(self.pci_length_offset_64 as usize + size_of_val(&data.pci_window_64.len()))]
+                .copy_from_slice(&data.pci_window_64.len().to_le_bytes());
+        } else {
+            file[self.pci_valid_offset_64 as usize] = 0;
+        }
+
+        Ok(())
+    }
+}
+
+impl Debug for AddPciHoles {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.debug_struct("AddPciHoles")
+            .field("file", &self.file())
+            .field("pci_start_offset_32", &self.pci_start_offset_32)
+            .field("pci_end_offset_32", &self.pci_end_offset_32)
+            .field("pci_valid_offset_64", &self.pci_valid_offset_64)
+            .field("pci_start_offset_64", &self.pci_start_offset_64)
+            .field("pci_end_offset_64", &self.pci_end_offset_64)
+            .field("pci_length_offset_64", &self.pci_length_offset_64)
+            .finish()
+    }
+}
+
 type Pad = [u8; 124];
 
 #[repr(C)]
@@ -319,6 +442,7 @@ union Body {
     pointer: AddPointer,
     checksum: AddChecksum,
     wr_pointer: WritePointer,
+    pci_holes: AddPciHoles,
     padding: Pad,
 }
 
@@ -343,6 +467,7 @@ enum Command<'a> {
     AddPointer(&'a AddPointer),
     AddChecksum(&'a AddChecksum),
     WritePointer(&'a WritePointer),
+    AddPciHoles(&'a AddPciHoles),
 }
 
 impl Command<'_> {
@@ -352,6 +477,7 @@ impl Command<'_> {
             Command::AddPointer(add_pointer) => add_pointer.invoke(),
             Command::AddChecksum(add_checksum) => add_checksum.invoke(),
             Command::WritePointer(write_pointer) => write_pointer.invoke(),
+            Command::AddPciHoles(add_pci_holes) => add_pci_holes.invoke(),
         }
     }
 }
@@ -373,12 +499,15 @@ impl RomfileCommand {
             Some(CommandTag::WritePointer) => {
                 Ok(Command::WritePointer(unsafe { &self.body.wr_pointer }))
             }
+            Some(CommandTag::AddPciHoles) => {
+                Ok(Command::AddPciHoles(unsafe { &self.body.pci_holes }))
+            }
             _ => Err("Invalid command tag in table-loader"),
         }
     }
 
     fn invoke(&self, fwcfg: &mut FwCfg, acpi_digest: &mut Sha256) -> Result<(), &'static str> {
-        if self.tag > 0x80000000 {
+        if self.tag > CommandTag::VMM_SPECIFIC && self.tag().is_none() {
             log::warn!(
                 "ignoring proprietary ACPI linker command with tag {:#x}",
                 self.tag
