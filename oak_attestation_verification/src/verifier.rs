@@ -397,7 +397,7 @@ fn verify_amd_sev_attestation_report(
     if reference_values
         .firmware_version
         .as_ref()
-        .is_some_and(|a| a.values.len() > 0)
+        .is_some_and(|a| !a.values.is_empty())
     {
         anyhow::bail!("firmware version check needs implementation");
     }
