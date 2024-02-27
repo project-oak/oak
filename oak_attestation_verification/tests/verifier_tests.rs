@@ -124,13 +124,13 @@ fn create_reference_values() -> ReferenceValues {
             oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Endorsement(erv),
         ),
     };
-    let srv = StringReferenceValue {
+    let _srv = StringReferenceValue {
         values: ["whatever".to_owned()].to_vec(),
     };
 
     let amd_sev = AmdSevReferenceValues {
         amd_root_public_key: b"".to_vec(),
-        firmware_version: Some(srv.clone()),
+        firmware_version: None,
         allow_debug: false,
         stage0: Some(brv.clone()),
     };
