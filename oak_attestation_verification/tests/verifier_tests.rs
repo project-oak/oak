@@ -124,9 +124,6 @@ fn create_reference_values() -> ReferenceValues {
             oak_proto_rust::oak::attestation::v1::binary_reference_value::Type::Endorsement(erv),
         ),
     };
-    let _srv = StringReferenceValue {
-        values: ["whatever".to_owned()].to_vec(),
-    };
 
     let amd_sev = AmdSevReferenceValues {
         amd_root_public_key: b"".to_vec(),
@@ -169,7 +166,7 @@ fn create_reference_values() -> ReferenceValues {
 fn verify_succeeds() {
     let evidence = create_evidence();
     let endorsements = create_endorsements();
-    let reference_values = create_reference_values();
+    let mut reference_values = create_reference_values();
 
     let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
     let p = to_attestation_results(&r);
@@ -204,6 +201,39 @@ fn verify_fake_evidence() {
     eprintln!("======================================");
     assert!(r.is_ok());
     assert!(p.status() == Status::Success);
+}
+
+#[test]
+fn verify_fails_with_firmware_reference_value_set() {
+    let evidence = create_evidence();
+    let endorsements = create_endorsements();
+    let mut reference_values = create_reference_values();
+    // Set the firmware version to something.
+    let srv = StringReferenceValue {
+        values: ["whatever".to_owned()].to_vec(),
+    };
+    match reference_values.r#type.as_mut() {
+        Some(reference_values::Type::OakContainers(rfs)) => {
+            rfs.root_layer
+                .as_mut()
+                .unwrap()
+                .amd_sev
+                .as_mut()
+                .unwrap()
+                .firmware_version = Some(srv);
+        }
+        Some(_) => {}
+        None => {}
+    };
+
+    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
+    let p = to_attestation_results(&r);
+
+    eprintln!("======================================");
+    eprintln!("code={} reason={}", p.status as i32, p.reason);
+    eprintln!("======================================");
+    assert!(r.is_err());
+    assert!(p.status() == Status::GenericFailure);
 }
 
 #[test]
