@@ -110,7 +110,7 @@ fn create_reference_values() -> ReferenceValues {
         amd_root_public_key: b"".to_vec(),
         firmware_version: None,
         allow_debug: false,
-        // TODO: b/327069120 - This should not be skipped.
+        // See b/327069120: Do not skip over stage0.
         stage0: Some(skip.clone()),
     };
 
@@ -185,7 +185,7 @@ fn verify_fake_evidence() {
     assert!(p.status() == Status::Success);
 }
 
-// TODO: b/327069120 - This test can go once we properly endorse stage0.
+// See b/327069120: This test can go once we properly endorse stage0.
 #[test]
 fn verify_fails_with_stage0_reference_value_set() {
     let evidence = create_evidence();

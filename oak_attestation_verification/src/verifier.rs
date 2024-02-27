@@ -462,8 +462,8 @@ fn verify_root_layer(
 ) -> anyhow::Result<()> {
     match values.report.as_ref() {
         Some(Report::SevSnp(report_values)) => {
-            // TODO: b/327069120 - We don't have the correct digest in the endorsement
-            // to compare the stage0 measurement. This will fail UNLESS the stage0
+            // See b/327069120: We don't have the correct digest in the endorsement
+            // to compare the stage0 measurement yet. This will fail UNLESS the stage0
             // reference value is set to `skip {}`.
             let measurement = RawDigest {
                 sha2_384: report_values.initial_measurement.to_vec(),
