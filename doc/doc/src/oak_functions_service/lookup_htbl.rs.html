@@ -666,6 +666,16 @@
 <a href="#666" id="666">666</a>
 <a href="#667" id="667">667</a>
 <a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -818,7 +828,7 @@
         // each other in the table will have their lower-32 bits close to each other.  The next
         // higher byte should have no significant correlation for unequal keys.
         </span><span class="kw">let </span>key_hash_byte = (key_hash &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>u8;
-        <span class="kw">let </span><span class="kw-2">mut </span>table_index = reduce(key_hash <span class="kw">as </span>u32, <span class="self">self</span>.table.len() <span class="kw">as </span>u32);
+        <span class="kw">let </span><span class="kw-2">mut </span>table_index = reduce(key_hash, <span class="self">self</span>.table.len());
         <span class="comment">// To quickly find the correct entry, we skip entries that have hash_byte values that don&#39;t
         // match the key&#39;s hash.  This avoids 99.6% of cache misses caused comparing the key to the
         // wrong key.  Once we found an entry with a matching hash byte, we then compare the two
@@ -1043,10 +1053,12 @@
     }
 }
 
-<span class="comment">// Reduce maps a random value in the range [0..2^32] to [0..N], which is used to compute the index
-// into the hash table.  This is faster than computing x % M.
-</span><span class="kw">fn </span>reduce(x: u32, n: u32) -&gt; usize {
-    (((x <span class="kw">as </span>u64) * (n <span class="kw">as </span>u64)) &gt;&gt; <span class="number">32</span>) <span class="kw">as </span>usize
+<span class="comment">// Reduce maps a 64-bit hash in the range [0..2^64] to [0..N], which is used as the index into the
+// hash table.  This is faster than computing x % N, and avoids the wasted space of requiring the
+// hash table to be a power of 2 in size.
+</span><span class="attr">#[inline]
+</span><span class="kw">fn </span>reduce(hash: u64, table_len: usize) -&gt; usize {
+    (((hash <span class="kw">as </span>u128) * (table_len <span class="kw">as </span>u128)) &gt;&gt; <span class="number">64</span>) <span class="kw">as </span>usize
 }
 
 <span class="comment">// Read a u40 index from unaligned memory LE, and return it as a usize.
@@ -1106,7 +1118,7 @@
 </span><span class="attr">#[inline(always)]
 </span><span class="kw">fn </span>hash_u64(v: u64, hash_secret: u64) -&gt; u64 {
     <span class="kw">let </span>v1 = v.wrapping_add(hash_secret) ^ v.rotate_left(<span class="number">32</span>);
-    <span class="kw">let </span>v2 = (v1 <span class="kw">as </span>u128).wrapping_mul(<span class="number">0x9d46_0858_ea81_ac79</span>);
+    <span class="kw">let </span>v2 = (v1 <span class="kw">as </span>u128) * <span class="number">0x9d46_0858_ea81_ac79</span>;
     v ^ (v2 <span class="kw">as </span>u64) ^ ((v2 &gt;&gt; <span class="number">64</span>) <span class="kw">as </span>u64)
 }
 
@@ -1241,7 +1253,7 @@
     </span><span class="kw">fn </span>test_rand_vals() {
         <span class="kw">let </span><span class="kw-2">mut </span>r = Rand {
             seed: <span class="number">0u64</span>,
-            hash_secret: <span class="number">0xdeadbeefu64</span>,
+            hash_secret: <span class="number">0x54d3_582e_5012_b464</span>,
         };
         <span class="kw">let </span><span class="kw-2">mut </span>kv_pairs: Vec&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; = <span class="macro">vec!</span>[];
         <span class="kw">let </span><span class="kw-2">mut </span>table = LookupHtbl::default();
@@ -1298,15 +1310,15 @@
     </span><span class="kw">fn </span>test_swiss_collisions() {
         <span class="kw">let </span>table_len = <span class="number">1usize </span>&lt;&lt; <span class="number">25</span>;
         <span class="kw">for </span>tweak <span class="kw">in </span><span class="number">0</span>..<span class="number">8 </span>{
-            <span class="kw">let </span>in_shift = hash_u64(hash_u64(tweak, <span class="number">0xdeadbeef</span>), <span class="number">0xcafebabe</span>) &amp; <span class="number">0x1f</span>;
-            <span class="kw">let </span>out_shift = hash_u64(hash_u64(tweak, <span class="number">0xdeadbeef</span>), <span class="number">0xcafebabe</span>) &amp; <span class="number">0x1f</span>;
+            <span class="kw">let </span>in_shift = hash_u64(hash_u64(tweak, <span class="number">0x123</span>), <span class="number">0x456</span>) &amp; <span class="number">0x1f</span>;
+            <span class="kw">let </span>out_shift = hash_u64(hash_u64(tweak, <span class="number">0x789</span>), <span class="number">0xabc</span>) &amp; <span class="number">0x1f</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>table: Vec&lt;bool&gt; = Vec::default();
             table.resize(table_len, <span class="bool-val">false</span>);
-            <span class="kw">let </span>hash_secret = <span class="number">0x123</span>;
+            <span class="kw">let </span>hash_secret = <span class="number">0x1244_c6a7_9ba6_d769</span>;
             <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..table_len &gt;&gt; <span class="number">1 </span>{
                 <span class="kw">let </span><span class="kw-2">mut </span>h = reduce(
-                    (hash_u64((i <span class="kw">as </span>u64) &lt;&lt; in_shift, hash_secret) &gt;&gt; out_shift) <span class="kw">as </span>u32,
-                    table_len <span class="kw">as </span>u32,
+                    hash_u64((i <span class="kw">as </span>u64) &lt;&lt; in_shift, hash_secret).rotate_right(out_shift <span class="kw">as </span>u32),
+                    table_len,
                 );
                 <span class="kw">while </span>table[h] {
                     h += <span class="number">1</span>;
@@ -1330,7 +1342,15 @@
                 }
             }
             <span class="kw">let </span>ave_seq_len = total_len <span class="kw">as </span>f32 / num_seq <span class="kw">as </span>f32;
-            <span class="macro">assert!</span>((ave_seq_len - <span class="number">2.5415f32</span>).abs() &lt; <span class="number">0.01</span>);
+            <span class="kw">if </span>(ave_seq_len - <span class="number">2.5415f32</span>).abs() &gt;= <span class="number">0.02 </span>{
+                <span class="comment">// When SHA256(counter) is used to randomly fill a swiss hash table to 50%, then
+                // average sequence length of used entries in the table is (experimentally) 25415.
+                // A good hash function needs to distribute keys well enough to achieve a similar
+                // behavior to that of a cryptographic strength hash function.  For example, with
+                // the old ahash function, I was seeing sequence lengths of 3.5, and this
+                // significantly slowed down lookups.
+                </span><span class="macro">panic!</span>(<span class="string">&quot;tweak {}: ave seq len = {}&quot;</span>, tweak, ave_seq_len);
+            }
         }
     }
 }
