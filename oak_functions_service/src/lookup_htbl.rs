@@ -150,7 +150,7 @@ impl LookupHtbl {
         // each other in the table will have their lower-32 bits close to each other.  The next
         // higher byte should have no significant correlation for unequal keys.
         let key_hash_byte = (key_hash >> 32) as u8;
-        let mut table_index = reduce(key_hash, self.table.len() as u64);
+        let mut table_index = reduce(key_hash, self.table.len());
         // To quickly find the correct entry, we skip entries that have hash_byte values that don't
         // match the key's hash.  This avoids 99.6% of cache misses caused comparing the key to the
         // wrong key.  Once we found an entry with a matching hash byte, we then compare the two
@@ -379,7 +379,7 @@ impl<'a> IntoIterator for &'a LookupHtbl {
 // hash table.  This is faster than computing x % N, and avoids the wasted space of requiring the
 // hash table to be a power of 2 in size.
 #[inline]
-fn reduce(hash: u64, table_len: u64) -> usize {
+fn reduce(hash: u64, table_len: usize) -> usize {
     (((hash as u128) * (table_len as u128)) >> 64) as usize
 }
 
@@ -640,7 +640,7 @@ mod tests {
             for i in 0..table_len >> 1 {
                 let mut h = reduce(
                     hash_u64((i as u64) << in_shift, hash_secret).rotate_right(out_shift as u32),
-                    table_len as u64,
+                    table_len,
                 );
                 while table[h] {
                     h += 1;
