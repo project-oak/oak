@@ -394,6 +394,14 @@ fn verify_amd_sev_attestation_report(
         anyhow::bail!("debug mode not allowed");
     }
 
+    if reference_values
+        .firmware_version
+        .as_ref()
+        .is_some_and(|a| !a.values.is_empty())
+    {
+        anyhow::bail!("firmware version check needs implementation");
+    }
+
     Ok(())
 }
 
@@ -447,19 +455,40 @@ fn verify_root_attestation_signature(
 
 /// Verifies the measurement values of the root layer containing the attestation report.
 fn verify_root_layer(
-    _now_utc_millis: i64,
+    now_utc_millis: i64,
     values: &RootLayerData,
-    _endorsements: Option<&RootLayerEndorsements>,
+    endorsements: Option<&RootLayerEndorsements>,
     reference_values: &RootLayerReferenceValues,
 ) -> anyhow::Result<()> {
     match values.report.as_ref() {
-        Some(Report::SevSnp(report_values)) => verify_amd_sev_attestation_report(
-            report_values,
-            reference_values
-                .amd_sev
-                .as_ref()
-                .context("AMD SEV-SNP reference values not found")?,
-        ),
+        Some(Report::SevSnp(report_values)) => {
+            // See b/327069120: We don't have the correct digest in the endorsement
+            // to compare the stage0 measurement yet. This will fail UNLESS the stage0
+            // reference value is set to `skip {}`.
+            let measurement = RawDigest {
+                sha2_384: report_values.initial_measurement.to_vec(),
+                ..Default::default()
+            };
+            verify_measurement_digest(
+                &measurement,
+                now_utc_millis,
+                endorsements.and_then(|value| value.stage0.as_ref()),
+                reference_values
+                    .amd_sev
+                    .as_ref()
+                    .context("AMD SEV-SNP reference values not found")?
+                    .stage0
+                    .as_ref()
+                    .context("stage0 binary reference values not found")?,
+            )?;
+            verify_amd_sev_attestation_report(
+                report_values,
+                reference_values
+                    .amd_sev
+                    .as_ref()
+                    .context("AMD SEV-SNP reference values not found")?,
+            )
+        }
         Some(Report::Tdx(report_values)) => verify_intel_tdx_attestation_report(
             report_values,
             reference_values
