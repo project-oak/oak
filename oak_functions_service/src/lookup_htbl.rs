@@ -380,7 +380,6 @@ impl<'a> IntoIterator for &'a LookupHtbl {
 // hash table to be a power of 2 in size.
 fn reduce(x: u64, n: u64) -> usize {
     (((x as u128) * (n as u128)) >> 64) as usize
-
 }
 
 // Read a u40 index from unaligned memory LE, and return it as a usize.
