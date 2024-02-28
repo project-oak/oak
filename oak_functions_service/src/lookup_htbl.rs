@@ -375,11 +375,12 @@ impl<'a> IntoIterator for &'a LookupHtbl {
     }
 }
 
-// Reduce maps a random value in the range [0..2^64] to [0..N], which is used as the index into the
-// hash table.  This is faster than computing x % M, and avoids the wasted space of requiring the
+// Reduce maps a 64-bit hash in the range [0..2^64] to [0..N], which is used as the index into the
+// hash table.  This is faster than computing x % N, and avoids the wasted space of requiring the
 // hash table to be a power of 2 in size.
-fn reduce(x: u64, n: u64) -> usize {
-    (((x as u128) * (n as u128)) >> 64) as usize
+#[inline]
+fn reduce(hash: u64, table_len: u64) -> usize {
+    (((hash as u128) * (table_len as u128)) >> 64) as usize
 }
 
 // Read a u40 index from unaligned memory LE, and return it as a usize.
