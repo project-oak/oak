@@ -1024,6 +1024,35 @@
 <a href="#1024" id="1024">1024</a>
 <a href="#1025" id="1025">1025</a>
 <a href="#1026" id="1026">1026</a>
+<a href="#1027" id="1027">1027</a>
+<a href="#1028" id="1028">1028</a>
+<a href="#1029" id="1029">1029</a>
+<a href="#1030" id="1030">1030</a>
+<a href="#1031" id="1031">1031</a>
+<a href="#1032" id="1032">1032</a>
+<a href="#1033" id="1033">1033</a>
+<a href="#1034" id="1034">1034</a>
+<a href="#1035" id="1035">1035</a>
+<a href="#1036" id="1036">1036</a>
+<a href="#1037" id="1037">1037</a>
+<a href="#1038" id="1038">1038</a>
+<a href="#1039" id="1039">1039</a>
+<a href="#1040" id="1040">1040</a>
+<a href="#1041" id="1041">1041</a>
+<a href="#1042" id="1042">1042</a>
+<a href="#1043" id="1043">1043</a>
+<a href="#1044" id="1044">1044</a>
+<a href="#1045" id="1045">1045</a>
+<a href="#1046" id="1046">1046</a>
+<a href="#1047" id="1047">1047</a>
+<a href="#1048" id="1048">1048</a>
+<a href="#1049" id="1049">1049</a>
+<a href="#1050" id="1050">1050</a>
+<a href="#1051" id="1051">1051</a>
+<a href="#1052" id="1052">1052</a>
+<a href="#1053" id="1053">1053</a>
+<a href="#1054" id="1054">1054</a>
+<a href="#1055" id="1055">1055</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1420,6 +1449,14 @@
         <span class="macro">anyhow::bail!</span>(<span class="string">&quot;debug mode not allowed&quot;</span>);
     }
 
+    <span class="kw">if </span>reference_values
+        .firmware_version
+        .as_ref()
+        .is_some_and(|a| !a.values.is_empty())
+    {
+        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;firmware version check needs implementation&quot;</span>);
+    }
+
     <span class="prelude-val">Ok</span>(())
 }
 
@@ -1473,19 +1510,40 @@
 
 <span class="doccomment">/// Verifies the measurement values of the root layer containing the attestation report.
 </span><span class="kw">fn </span>verify_root_layer(
-    _now_utc_millis: i64,
+    now_utc_millis: i64,
     values: <span class="kw-2">&amp;</span>RootLayerData,
-    _endorsements: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>RootLayerEndorsements&gt;,
+    endorsements: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>RootLayerEndorsements&gt;,
     reference_values: <span class="kw-2">&amp;</span>RootLayerReferenceValues,
 ) -&gt; anyhow::Result&lt;()&gt; {
     <span class="kw">match </span>values.report.as_ref() {
-        <span class="prelude-val">Some</span>(Report::SevSnp(report_values)) =&gt; verify_amd_sev_attestation_report(
-            report_values,
-            reference_values
-                .amd_sev
-                .as_ref()
-                .context(<span class="string">&quot;AMD SEV-SNP reference values not found&quot;</span>)<span class="question-mark">?</span>,
-        ),
+        <span class="prelude-val">Some</span>(Report::SevSnp(report_values)) =&gt; {
+            <span class="comment">// See b/327069120: We don&#39;t have the correct digest in the endorsement
+            // to compare the stage0 measurement yet. This will fail UNLESS the stage0
+            // reference value is set to `skip {}`.
+            </span><span class="kw">let </span>measurement = RawDigest {
+                sha2_384: report_values.initial_measurement.to_vec(),
+                ..Default::default()
+            };
+            verify_measurement_digest(
+                <span class="kw-2">&amp;</span>measurement,
+                now_utc_millis,
+                endorsements.and_then(|value| value.stage0.as_ref()),
+                reference_values
+                    .amd_sev
+                    .as_ref()
+                    .context(<span class="string">&quot;AMD SEV-SNP reference values not found&quot;</span>)<span class="question-mark">?
+                    </span>.stage0
+                    .as_ref()
+                    .context(<span class="string">&quot;stage0 binary reference values not found&quot;</span>)<span class="question-mark">?</span>,
+            )<span class="question-mark">?</span>;
+            verify_amd_sev_attestation_report(
+                report_values,
+                reference_values
+                    .amd_sev
+                    .as_ref()
+                    .context(<span class="string">&quot;AMD SEV-SNP reference values not found&quot;</span>)<span class="question-mark">?</span>,
+            )
+        }
         <span class="prelude-val">Some</span>(Report::Tdx(report_values)) =&gt; verify_intel_tdx_attestation_report(
             report_values,
             reference_values
