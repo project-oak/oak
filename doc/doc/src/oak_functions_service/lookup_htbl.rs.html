@@ -660,6 +660,12 @@
 <a href="#660" id="660">660</a>
 <a href="#661" id="661">661</a>
 <a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2024 The Project Oak Authors
 //
@@ -1095,11 +1101,13 @@
 }
 
 <span class="comment">// This hash both defends against DDoS attacks and passes dieharder tests.  It is 2 rounds of
-// hashing in order to pass the dieharder tests.
-</span><span class="attr">#[inline]
+// hashing in order to pass the dieharder tests.  It also passes distribution checks when used to
+// produce indexes into swiss hash tables in the way we do here, with reduce.
+</span><span class="attr">#[inline(always)]
 </span><span class="kw">fn </span>hash_u64(v: u64, hash_secret: u64) -&gt; u64 {
-    <span class="kw">let </span>v1 = u64::wrapping_mul((v ^ hash_secret) ^ (v &gt;&gt; <span class="number">32</span>), <span class="number">0x9d46_0858_ea81_ac79</span>);
-    u64::wrapping_add(v1 ^ v, v1 &gt;&gt; <span class="number">32</span>)
+    <span class="kw">let </span>v1 = v.wrapping_add(hash_secret) ^ v.rotate_left(<span class="number">32</span>);
+    <span class="kw">let </span>v2 = (v1 <span class="kw">as </span>u128).wrapping_mul(<span class="number">0x9d46_0858_ea81_ac79</span>);
+    v ^ (v2 <span class="kw">as </span>u64) ^ ((v2 &gt;&gt; <span class="number">64</span>) <span class="kw">as </span>u64)
 }
 
 <span class="attr">#[inline]
@@ -1272,16 +1280,13 @@
     </span><span class="kw">fn </span>test_rng_sequence_len() {
         <span class="kw">let </span><span class="kw-2">mut </span>r = Rand {
             seed: <span class="number">0u64</span>,
-            hash_secret: <span class="number">1u64</span>,
+            hash_secret: <span class="number">0x5b97_8fda_47ab_926d</span>,
         };
         <span class="kw">for </span>loop_power <span class="kw">in </span><span class="number">0</span>..<span class="number">28 </span>{
             <span class="kw">let </span>target = r.rand64();
             <span class="kw">for </span>i <span class="kw">in </span><span class="number">0usize</span>..(<span class="number">1usize </span>&lt;&lt; loop_power) {
                 <span class="kw">if </span>r.rand64() == target {
-                    <span class="kw">if </span>i &lt; <span class="number">1 </span>&lt;&lt; <span class="number">28 </span>{
-                        <span class="macro">panic!</span>(<span class="string">&quot;Sequence too short&quot;</span>);
-                    }
-                    <span class="kw">return</span>;
+                    <span class="macro">panic!</span>(<span class="string">&quot;Sequence too short {:#x}&quot;</span>, i);
                 }
             }
         }
@@ -1291,35 +1296,42 @@
     // table with 50% load factor.
     </span><span class="attr">#[test]
     </span><span class="kw">fn </span>test_swiss_collisions() {
-        <span class="kw">let </span>table_len = <span class="number">1usize </span>&lt;&lt; <span class="number">28</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>table: Vec&lt;bool&gt; = Vec::default();
-        table.resize(table_len, <span class="bool-val">false</span>);
-        <span class="kw">let </span>hash_secret = <span class="number">0x123</span>;
-        <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..table_len &gt;&gt; <span class="number">1 </span>{
-            <span class="kw">let </span><span class="kw-2">mut </span>h = (hash_u64(i <span class="kw">as </span>u64, hash_secret) &amp; (table_len <span class="kw">as </span>u64 - <span class="number">1</span>)) <span class="kw">as </span>usize;
-            <span class="kw">while </span>table[h] {
-                h += <span class="number">1</span>;
-                <span class="kw">if </span>h == table.len() {
-                    h = <span class="number">0</span>;
+        <span class="kw">let </span>table_len = <span class="number">1usize </span>&lt;&lt; <span class="number">25</span>;
+        <span class="kw">for </span>tweak <span class="kw">in </span><span class="number">0</span>..<span class="number">8 </span>{
+            <span class="kw">let </span>in_shift = hash_u64(hash_u64(tweak, <span class="number">0xdeadbeef</span>), <span class="number">0xcafebabe</span>) &amp; <span class="number">0x1f</span>;
+            <span class="kw">let </span>out_shift = hash_u64(hash_u64(tweak, <span class="number">0xdeadbeef</span>), <span class="number">0xcafebabe</span>) &amp; <span class="number">0x1f</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>table: Vec&lt;bool&gt; = Vec::default();
+            table.resize(table_len, <span class="bool-val">false</span>);
+            <span class="kw">let </span>hash_secret = <span class="number">0x123</span>;
+            <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..table_len &gt;&gt; <span class="number">1 </span>{
+                <span class="kw">let </span><span class="kw-2">mut </span>h = reduce(
+                    (hash_u64((i <span class="kw">as </span>u64) &lt;&lt; in_shift, hash_secret) &gt;&gt; out_shift) <span class="kw">as </span>u32,
+                    table_len <span class="kw">as </span>u32,
+                );
+                <span class="kw">while </span>table[h] {
+                    h += <span class="number">1</span>;
+                    <span class="kw">if </span>h == table.len() {
+                        h = <span class="number">0</span>;
+                    }
+                }
+                table[h] = <span class="bool-val">true</span>;
+            }
+            <span class="kw">let </span><span class="kw-2">mut </span>len = <span class="number">0</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>total_len = <span class="number">0</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>num_seq = <span class="number">0</span>;
+            <span class="attr">#[allow(clippy::all)]
+            </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..table_len {
+                <span class="kw">if </span>table[i] {
+                    len += <span class="number">1</span>;
+                } <span class="kw">else if </span>len != <span class="number">0 </span>{
+                    num_seq += <span class="number">1</span>;
+                    total_len += len;
+                    len = <span class="number">0</span>;
                 }
             }
-            table[h] = <span class="bool-val">true</span>;
+            <span class="kw">let </span>ave_seq_len = total_len <span class="kw">as </span>f32 / num_seq <span class="kw">as </span>f32;
+            <span class="macro">assert!</span>((ave_seq_len - <span class="number">2.5415f32</span>).abs() &lt; <span class="number">0.01</span>);
         }
-        <span class="kw">let </span><span class="kw-2">mut </span>len = <span class="number">0</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>total_len = <span class="number">0</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>num_seq = <span class="number">0</span>;
-        <span class="attr">#[allow(clippy::all)]
-        </span><span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..table_len {
-            <span class="kw">if </span>table[i] {
-                len += <span class="number">1</span>;
-            } <span class="kw">else if </span>len != <span class="number">0 </span>{
-                num_seq += <span class="number">1</span>;
-                total_len += len;
-                len = <span class="number">0</span>;
-            }
-        }
-        <span class="kw">let </span>ave_seq_len = total_len <span class="kw">as </span>f32 / num_seq <span class="kw">as </span>f32;
-        <span class="macro">assert!</span>((ave_seq_len - <span class="number">2.5415f32</span>).abs() &lt; <span class="number">0.01</span>);
     }
 }
 </code></pre></div></section></main></body></html>
