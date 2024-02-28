@@ -1053,6 +1053,7 @@
 <a href="#1053" id="1053">1053</a>
 <a href="#1054" id="1054">1054</a>
 <a href="#1055" id="1055">1055</a>
+<a href="#1056" id="1056">1056</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -1149,65 +1150,41 @@
     endorsements: <span class="kw-2">&amp;</span>Endorsements,
     reference_values: <span class="kw-2">&amp;</span>ReferenceValues,
 ) -&gt; anyhow::Result&lt;ExtractedEvidence&gt; {
-    <span class="kw">let </span>root_layer = evidence
-        .root_layer
-        .as_ref()
-        .context(<span class="string">&quot;no root layer evidence&quot;</span>)<span class="question-mark">?</span>;
+    <span class="comment">// Ensure the Attestation report is properly signed by the platform and that it includes the
+    // root public key used in the DICE chain.
+    </span>{
+        <span class="kw">let </span>tee_certificate = <span class="kw">match </span>endorsements.r#type.as_ref().context(<span class="string">&quot;no endorsements&quot;</span>)<span class="question-mark">? </span>{
+            endorsements::Type::OakRestrictedKernel(endorsements) =&gt; endorsements
+                .root_layer
+                .as_ref()
+                .context(<span class="string">&quot;no root layer endorsements&quot;</span>)<span class="question-mark">?
+                </span>.tee_certificate
+                .as_ref(),
+            endorsements::Type::OakContainers(endorsements) =&gt; endorsements
+                .root_layer
+                .as_ref()
+                .context(<span class="string">&quot;no root layer endorsements&quot;</span>)<span class="question-mark">?
+                </span>.tee_certificate
+                .as_ref(),
+            endorsements::Type::Cb(endorsements) =&gt; endorsements
+                .root_layer
+                .as_ref()
+                .context(<span class="string">&quot;no root layer endorsements&quot;</span>)<span class="question-mark">?
+                </span>.tee_certificate
+                .as_ref(),
+        };
+        <span class="kw">let </span>root_layer = evidence
+            .root_layer
+            .as_ref()
+            .context(<span class="string">&quot;no root layer evidence&quot;</span>)<span class="question-mark">?</span>;
+        verify_root_attestation_signature(now_utc_millis, root_layer, tee_certificate)<span class="question-mark">?</span>;
+    };
+
     <span class="comment">// Ensure the DICE chain signatures are valid and extract the measurements, public keys and
     // other attestation-related data from the DICE chain.
     </span><span class="kw">let </span>extracted_evidence = verify_dice_chain(evidence).context(<span class="string">&quot;invalid DICE chain&quot;</span>)<span class="question-mark">?</span>;
-    <span class="comment">// Ensure the Attestation report is properly signed by the platform.
-    </span><span class="kw">let </span>tee_certificate = <span class="kw">match </span>endorsements.r#type.as_ref().context(<span class="string">&quot;no endorsements&quot;</span>)<span class="question-mark">? </span>{
-        endorsements::Type::OakRestrictedKernel(endorsements) =&gt; endorsements
-            .root_layer
-            .as_ref()
-            .context(<span class="string">&quot;no root layer endorsements&quot;</span>)<span class="question-mark">?
-            </span>.tee_certificate
-            .as_ref(),
-        endorsements::Type::OakContainers(endorsements) =&gt; endorsements
-            .root_layer
-            .as_ref()
-            .context(<span class="string">&quot;no root layer endorsements&quot;</span>)<span class="question-mark">?
-            </span>.tee_certificate
-            .as_ref(),
-        endorsements::Type::Cb(endorsements) =&gt; endorsements
-            .root_layer
-            .as_ref()
-            .context(<span class="string">&quot;no root layer endorsements&quot;</span>)<span class="question-mark">?
-            </span>.tee_certificate
-            .as_ref(),
-    };
-    verify_root_attestation_signature(now_utc_millis, root_layer, tee_certificate)<span class="question-mark">?</span>;
-    <span class="comment">// Check that the root ECA public key for the DICE chain is bound to the attestation report to
-    // ensure that the entire chain is valid.
-    </span><span class="kw">let </span>expected = <span class="kw-2">&amp;</span>hash_sha2_256(<span class="kw-2">&amp;</span>root_layer.eca_public_key[..])[..];
-    <span class="kw">let </span>root_layer = <span class="kw">match </span>extracted_evidence
-        .evidence_values
-        .as_ref()
-        .context(<span class="string">&quot;no evidence values&quot;</span>)<span class="question-mark">?
-    </span>{
-        EvidenceValues::OakRestrictedKernel(values) =&gt; values.root_layer.as_ref(),
-        EvidenceValues::OakContainers(values) =&gt; values.root_layer.as_ref(),
-        EvidenceValues::Cb(values) =&gt; values.root_layer.as_ref(),
-    }
-    .context(<span class="string">&quot;no root layer evidence values&quot;</span>)<span class="question-mark">?</span>;
-    <span class="kw">let </span>actual: <span class="kw-2">&amp;</span>[u8] = <span class="kw">match </span>root_layer
-        .report
-        .as_ref()
-        .context(<span class="string">&quot;no attestation report&quot;</span>)<span class="question-mark">?
-    </span>{
-        Report::SevSnp(values) =&gt; values.report_data.as_ref(),
-        Report::Tdx(values) =&gt; values.report_data.as_ref(),
-        Report::Fake(values) =&gt; values.report_data.as_ref(),
-    };
-    <span class="comment">// The report data contains 64 bytes by default, but we only use the first 32 bytes at the
-    // moment.
-    </span><span class="kw">if </span>expected.len() &gt; actual.len() || expected != <span class="kw-2">&amp;</span>actual[..expected.len()] {
-        <span class="macro">anyhow::bail!</span>(<span class="string">&quot;DICE chain is not bound to the attestation report&quot;</span>);
-    }
 
-    <span class="comment">// Evidence, endorsements and reference values must reflect the same chain
-    // type.
+    <span class="comment">// Ensure the extracted measurements match the endorsements.
     </span><span class="kw">match </span>(
         endorsements.r#type.as_ref(),
         reference_values.r#type.as_ref(),
@@ -1228,7 +1205,8 @@
             <span class="prelude-val">Some</span>(reference_values::Type::Cb(rvs)),
             <span class="prelude-val">Some</span>(EvidenceValues::Cb(values)),
         ) =&gt; verify_cb(now_utc_millis, values, ends, rvs),
-        (<span class="prelude-val">None</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Endorsements are empty&quot;</span>),
+        <span class="comment">// Evidence, endorsements and reference values must exist and reflect the same chain type.
+        </span>(<span class="prelude-val">None</span>, <span class="kw">_</span>, <span class="kw">_</span>) =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Endorsements are empty&quot;</span>),
         (<span class="kw">_</span>, <span class="prelude-val">None</span>, <span class="kw">_</span>) =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Reference values are empty&quot;</span>),
         (<span class="kw">_</span>, <span class="kw">_</span>, <span class="prelude-val">None</span>) =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">&quot;Extracted evidence values are empty&quot;</span>),
         (<span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="prelude-val">Some</span>(<span class="kw">_</span>)) =&gt; {
@@ -1242,59 +1220,69 @@
 <span class="doccomment">/// Verifies signatures of the certificates in the DICE chain and extracts the evidence values from
 /// the certificates if the verification is successful.
 </span><span class="kw">pub fn </span>verify_dice_chain(evidence: <span class="kw-2">&amp;</span>Evidence) -&gt; anyhow::Result&lt;ExtractedEvidence&gt; {
-    <span class="kw">let </span>root_layer = evidence
-        .root_layer
-        .as_ref()
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no root layer evidence&quot;</span>))<span class="question-mark">?</span>;
-    <span class="kw">let </span>cose_key = CoseKey::from_slice(<span class="kw-2">&amp;</span>root_layer.eca_public_key)
-        .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialize root layer public key&quot;</span>))<span class="question-mark">?</span>;
-    <span class="kw">let </span><span class="kw-2">mut </span>verifying_key =
-        cose_key_to_verifying_key(<span class="kw-2">&amp;</span>cose_key).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
+    <span class="kw">let </span>root_layer_verifying_key = {
+        <span class="kw">let </span>cose_key = {
+            <span class="kw">let </span>root_layer = evidence
+                .root_layer
+                .as_ref()
+                .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no root layer evidence&quot;</span>))<span class="question-mark">?</span>;
+            CoseKey::from_slice(<span class="kw-2">&amp;</span>root_layer.eca_public_key).map_err(|_cose_err| {
+                <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;couldn&#39;t deserialize root layer public key&quot;</span>)
+            })<span class="question-mark">?
+        </span>};
+        cose_key_to_verifying_key(<span class="kw-2">&amp;</span>cose_key).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?
+    </span>};
 
-    <span class="kw">for </span>layer <span class="kw">in </span>evidence.layers.iter() {
-        <span class="kw">let </span>cert = coset::CoseSign1::from_slice(<span class="kw-2">&amp;</span>layer.eca_certificate)
-            .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse certificate&quot;</span>))<span class="question-mark">?</span>;
-        cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
-            <span class="kw">let </span>sig = Signature::from_slice(signature)<span class="question-mark">?</span>;
-            verifying_key.verify(contents, <span class="kw-2">&amp;</span>sig)
-        })
-        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;
-        <span class="kw">let </span>payload = cert
-            .payload
-            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no cert payload&quot;</span>))<span class="question-mark">?</span>;
-        <span class="kw">let </span>claims = ClaimsSet::from_slice(<span class="kw-2">&amp;</span>payload)
-            .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse claims set&quot;</span>))<span class="question-mark">?</span>;
-        <span class="kw">let </span>cose_key =
-            get_public_key_from_claims_set(<span class="kw-2">&amp;</span>claims).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
-        verifying_key = cose_key_to_verifying_key(<span class="kw-2">&amp;</span>cose_key).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
-    }
+    <span class="comment">// Sequentially verify the layers, eventually retrieving the verifying key of the last layer.
+    </span><span class="kw">let </span>last_layer_verifying_key = evidence.layers.iter().try_fold(
+        root_layer_verifying_key,
+        |previous_layer_verifying_key, current_layer| {
+            <span class="kw">let </span>cert = coset::CoseSign1::from_slice(<span class="kw-2">&amp;</span>current_layer.eca_certificate)
+                .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse certificate&quot;</span>))<span class="question-mark">?</span>;
+            cert.verify_signature(ADDITIONAL_DATA, |signature, contents| {
+                <span class="kw">let </span>sig = Signature::from_slice(signature)<span class="question-mark">?</span>;
+                previous_layer_verifying_key.verify(contents, <span class="kw-2">&amp;</span>sig)
+            })
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;
+            <span class="kw">let </span>payload = cert
+                .payload
+                .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no cert payload&quot;</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>claims = ClaimsSet::from_slice(<span class="kw-2">&amp;</span>payload)
+                .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse claims set&quot;</span>))<span class="question-mark">?</span>;
+            <span class="kw">let </span>cose_key =
+                get_public_key_from_claims_set(<span class="kw-2">&amp;</span>claims).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
+            cose_key_to_verifying_key(<span class="kw-2">&amp;</span>cose_key).map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))
+        },
+    )<span class="question-mark">?</span>;
 
-    <span class="comment">// Verify application keys. The verifying key comes from the last entry in `Evidence::layers`.
-    </span><span class="kw">let </span>appl_keys = evidence
-        .application_keys
-        .as_ref()
-        .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no application keys in evidence&quot;</span>))<span class="question-mark">?</span>;
+    <span class="comment">// Finally, use the last layer&#39;s verification key to verify the application keys.
+    </span>{
+        <span class="kw">let </span>appl_keys = evidence
+            .application_keys
+            .as_ref()
+            .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no application keys in evidence&quot;</span>))<span class="question-mark">?</span>;
 
-    <span class="comment">// Process encryption certificate.
-    </span><span class="kw">let </span>encryption_cert =
-        coset::CoseSign1::from_slice(<span class="kw-2">&amp;</span>appl_keys.encryption_public_key_certificate)
+        <span class="comment">// Verify encryption certificate.
+        </span><span class="kw">let </span>encryption_cert =
+            coset::CoseSign1::from_slice(<span class="kw-2">&amp;</span>appl_keys.encryption_public_key_certificate)
+                .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse encryption certificate&quot;</span>))<span class="question-mark">?</span>;
+        encryption_cert
+            .verify_signature(ADDITIONAL_DATA, |signature, contents| {
+                <span class="kw">let </span>sig = Signature::from_slice(signature)<span class="question-mark">?</span>;
+                last_layer_verifying_key.verify(contents, <span class="kw-2">&amp;</span>sig)
+            })
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;
+
+        <span class="comment">// Verify signing certificate.
+        </span><span class="kw">let </span>signing_cert = coset::CoseSign1::from_slice(<span class="kw-2">&amp;</span>appl_keys.signing_public_key_certificate)
             .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse encryption certificate&quot;</span>))<span class="question-mark">?</span>;
-    encryption_cert
-        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
-            <span class="kw">let </span>sig = Signature::from_slice(signature)<span class="question-mark">?</span>;
-            verifying_key.verify(contents, <span class="kw-2">&amp;</span>sig)
-        })
-        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;
-
-    <span class="comment">// Process signing certificate.
-    </span><span class="kw">let </span>signing_cert = coset::CoseSign1::from_slice(<span class="kw-2">&amp;</span>appl_keys.signing_public_key_certificate)
-        .map_err(|_cose_err| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;could not parse encryption certificate&quot;</span>))<span class="question-mark">?</span>;
-    signing_cert
-        .verify_signature(ADDITIONAL_DATA, |signature, contents| {
-            <span class="kw">let </span>sig = Signature::from_slice(signature)<span class="question-mark">?</span>;
-            verifying_key.verify(contents, <span class="kw-2">&amp;</span>sig)
-        })
-        .map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;
+        signing_cert
+            .verify_signature(ADDITIONAL_DATA, |signature, contents| {
+                <span class="kw">let </span>sig = Signature::from_slice(signature)<span class="question-mark">?</span>;
+                last_layer_verifying_key.verify(contents, <span class="kw-2">&amp;</span>sig)
+            })
+            .map_err(|error| <span class="macro">anyhow::anyhow!</span>(error))<span class="question-mark">?</span>;
+    }
 
     extract_evidence(evidence)
 }
@@ -1501,7 +1489,21 @@
             report.validate().map_err(|msg| <span class="macro">anyhow::anyhow!</span>(msg))<span class="question-mark">?</span>;
 
             <span class="comment">// Ensure that the attestation report is signed by the VCEK public key.
-            </span>verify_attestation_report_signature(<span class="kw-2">&amp;</span>vcek, report)
+            </span>verify_attestation_report_signature(<span class="kw-2">&amp;</span>vcek, report)<span class="question-mark">?</span>;
+
+            <span class="comment">// Check that the root ECA public key for the DICE chain is bound to the attestation
+            // report to ensure that the entire chain is valid.
+            </span><span class="kw">let </span>expected = <span class="kw-2">&amp;</span>hash_sha2_256(<span class="kw-2">&amp;</span>root_layer.eca_public_key[..])[..];
+            <span class="kw">let </span>actual = report.data.report_data;
+
+            <span class="macro">anyhow::ensure!</span>(
+                <span class="comment">// The report data contains 64 bytes by default, but we only use the first 32 bytes
+                // at the moment.
+                </span>expected.len() &lt; actual.len() &amp;&amp; expected == <span class="kw-2">&amp;</span>actual[..expected.len()],
+                <span class="string">&quot;The root layer&#39;s ECA public key is not bound to the attestation report&quot;
+            </span>);
+
+            <span class="prelude-val">Ok</span>(())
         }
         TeePlatform::IntelTdx =&gt; <span class="macro">anyhow::bail!</span>(<span class="string">&quot;not supported&quot;</span>),
         TeePlatform::None =&gt; <span class="prelude-val">Ok</span>(()),
