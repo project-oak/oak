@@ -665,6 +665,12 @@ mod tests {
             }
             let ave_seq_len = total_len as f32 / num_seq as f32;
             if (ave_seq_len - 2.5415f32).abs() >= 0.02 {
+                // When SHA256(counter) is used to randomly fill a swiss hash table to 50%, then
+                // average sequence length of used entries in the table is (experimentally) 25415.
+                // A good hash function needs to distribute keys well enough to achieve a similar
+                // behavior to that of a cryptographic strength hash function.  For example, with
+                // the old ahash function, I was seeing sequence lengths of 3.5, and this
+                // significantly slowed down lookups.
                 panic!("tweak {}: ave seq len = {}", tweak, ave_seq_len);
             }
         }
