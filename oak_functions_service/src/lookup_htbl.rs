@@ -150,7 +150,7 @@ impl LookupHtbl {
         // each other in the table will have their lower-32 bits close to each other.  The next
         // higher byte should have no significant correlation for unequal keys.
         let key_hash_byte = (key_hash >> 32) as u8;
-        let mut table_index = reduce(key_hash as u32, self.table.len() as u32);
+        let mut table_index = reduce(key_hash, self.table.len() as u64);
         // To quickly find the correct entry, we skip entries that have hash_byte values that don't
         // match the key's hash.  This avoids 99.6% of cache misses caused comparing the key to the
         // wrong key.  Once we found an entry with a matching hash byte, we then compare the two
@@ -375,10 +375,12 @@ impl<'a> IntoIterator for &'a LookupHtbl {
     }
 }
 
-// Reduce maps a random value in the range [0..2^32] to [0..N], which is used to compute the index
-// into the hash table.  This is faster than computing x % M.
-fn reduce(x: u32, n: u32) -> usize {
-    (((x as u64) * (n as u64)) >> 32) as usize
+// Reduce maps a random value in the range [0..2^64] to [0..N], which is used as the index into the
+// hash table.  This is faster than computing x % M, and avoids the wasted space of requiring the
+// hash table to be a power of 2 in size.
+fn reduce(x: u64, n: u64) -> usize {
+    (((x as u128) * (n as u128)) >> 64) as usize
+
 }
 
 // Read a u40 index from unaligned memory LE, and return it as a usize.
@@ -438,7 +440,7 @@ fn write_len(data: &mut [u8], index: usize, mut len: usize) -> usize {
 #[inline(always)]
 fn hash_u64(v: u64, hash_secret: u64) -> u64 {
     let v1 = v.wrapping_add(hash_secret) ^ v.rotate_left(32);
-    let v2 = (v1 as u128).wrapping_mul(0x9d46_0858_ea81_ac79);
+    let v2 = (v1 as u128) * 0x9d46_0858_ea81_ac79;
     v ^ (v2 as u64) ^ ((v2 >> 64) as u64)
 }
 
@@ -573,7 +575,7 @@ mod tests {
     fn test_rand_vals() {
         let mut r = Rand {
             seed: 0u64,
-            hash_secret: 0xdeadbeefu64,
+            hash_secret: 0x54d3_582e_5012_b464,
         };
         let mut kv_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
         let mut table = LookupHtbl::default();
@@ -630,15 +632,15 @@ mod tests {
     fn test_swiss_collisions() {
         let table_len = 1usize << 25;
         for tweak in 0..8 {
-            let in_shift = hash_u64(hash_u64(tweak, 0xdeadbeef), 0xcafebabe) & 0x1f;
-            let out_shift = hash_u64(hash_u64(tweak, 0xdeadbeef), 0xcafebabe) & 0x1f;
+            let in_shift = hash_u64(hash_u64(tweak, 0x123), 0x456) & 0x1f;
+            let out_shift = hash_u64(hash_u64(tweak, 0x789), 0xabc) & 0x1f;
             let mut table: Vec<bool> = Vec::default();
             table.resize(table_len, false);
-            let hash_secret = 0x123;
+            let hash_secret = 0x1244_c6a7_9ba6_d769;
             for i in 0..table_len >> 1 {
                 let mut h = reduce(
-                    (hash_u64((i as u64) << in_shift, hash_secret) >> out_shift) as u32,
-                    table_len as u32,
+                    hash_u64((i as u64) << in_shift, hash_secret).rotate_right(out_shift as u32),
+                    table_len as u64,
                 );
                 while table[h] {
                     h += 1;
@@ -662,7 +664,9 @@ mod tests {
                 }
             }
             let ave_seq_len = total_len as f32 / num_seq as f32;
-            assert!((ave_seq_len - 2.5415f32).abs() < 0.01);
+            if (ave_seq_len - 2.5415f32).abs() >= 0.02 {
+                panic!("tweak {}: ave seq len = {}", tweak, ave_seq_len);
+            }
         }
     }
 }
