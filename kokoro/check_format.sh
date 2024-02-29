@@ -13,5 +13,5 @@ export XDG_RUNTIME_DIR=/var/run
 # Make sure we're in the root of the repository.
 cd "$(dirname "$0")/.."
 
-./scripts/docker_pull
-./scripts/docker_run nix develop .#ci --command ./scripts/xtask check-format
+time ./scripts/docker_pull
+time ./scripts/docker_run nix develop .#ci --command time ./scripts/xtask check-format

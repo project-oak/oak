@@ -85,6 +85,7 @@
               packages = [
                 just
                 ps
+                time
                 which
               ];
               shellHook = ''
