@@ -23,9 +23,7 @@ use futures::{Future, Stream, StreamExt};
 use oak_functions_launcher::proto::oak::session::v1::{
     request_wrapper, response_wrapper,
     streaming_session_server::{StreamingSession, StreamingSessionServer},
-    EndorsedEvidence,
-    GetEndorsedEvidenceResponse, InvokeResponse, RequestWrapper,
-    ResponseWrapper,
+    EndorsedEvidence, GetEndorsedEvidenceResponse, InvokeResponse, RequestWrapper, ResponseWrapper,
 };
 use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
 use tonic::{transport::Server, Request, Response, Status, Streaming};
@@ -38,8 +36,6 @@ pub struct SessionProxy {
     connector_handle: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
     evidence: Evidence,
     endorsements: Endorsements,
-    encryption_public_key: Vec<u8>,
-    attestation: Vec<u8>,
 }
 
 #[tonic::async_trait]
@@ -59,7 +55,7 @@ impl StreamingSession for SessionProxy {
             endorsements: Some(self.endorsements.clone()),
         };
         let mut connector_handle = self.connector_handle.clone();
-        
+
         let response_stream = async_stream::try_stream! {
             while let Some(request) = request_stream.next().await {
                 let request = request
@@ -111,15 +107,11 @@ pub fn new(
     connector_handle: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
     evidence: Evidence,
     endorsements: Endorsements,
-    encryption_public_key: Vec<u8>,
-    attestation: Vec<u8>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
     let server_impl = SessionProxy {
         connector_handle,
         evidence,
         endorsements,
-        encryption_public_key,
-        attestation,
     };
 
     Server::builder()

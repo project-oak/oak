@@ -17,6 +17,7 @@
 
 use std::sync::Once;
 
+use oak_client::verifier::{AttestationVerifier, InsecureAttestationVerifier};
 use oak_containers_launcher::{proto::oak::key_provisioning::v1::GetGroupKeysRequest, Args};
 use oak_crypto::encryptor::ClientEncryptor;
 use once_cell::sync::Lazy;
@@ -80,14 +81,17 @@ async fn run_hello_world_test(container_bundle: std::path::PathBuf) {
         .await
         .expect("couldn't get group keys for key provisioning");
 
-    #[allow(deprecated)]
-    let encryption_public_key = endorsed_evidence
-        .attestation_evidence
-        .expect("no attestation evidence provided")
-        .encryption_public_key;
+    let evidence = endorsed_evidence.evidence.expect("no evidence provided");
+    let endorsements = endorsed_evidence
+        .endorsements
+        .expect("no endorsements provided");
+    let attestation_verifier = InsecureAttestationVerifier {};
+    let attestation_results = attestation_verifier
+        .verify(&evidence, &endorsements)
+        .expect("couldn't verify endorsed evidence");
 
-    let mut client_encryptor =
-        ClientEncryptor::create(&encryption_public_key).expect("couldn't create client encryptor");
+    let mut client_encryptor = ClientEncryptor::create(&attestation_results.encryption_public_key)
+        .expect("couldn't create client encryptor");
     let encrypted_request = client_encryptor
         .encrypt("fancy test".as_bytes(), EMPTY_ASSOCIATED_DATA)
         .expect("couldn't encrypt request");

@@ -36,3 +36,9 @@ impl AttestationVerifier for InsecureAttestationVerifier {
         verify_dice_chain(evidence).context("couldn't verify the DICE chain")
     }
 }
+
+pub fn extract_encryption_public_key(evidence: &Evidence) -> anyhow::Result<Vec<u8>> {
+    let attestation_results =
+        verify_dice_chain(evidence).context("couldn't verify the DICE chain")?;
+    Ok(attestation_results.encryption_public_key)
+}

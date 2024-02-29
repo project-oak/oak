@@ -27,8 +27,7 @@ use crate::{
         session::v1::{
             request_wrapper, response_wrapper,
             streaming_session_server::{StreamingSession, StreamingSessionServer},
-            EndorsedEvidence,
-            GetEndorsedEvidenceResponse, InvokeResponse, RequestWrapper,
+            EndorsedEvidence, GetEndorsedEvidenceResponse, InvokeResponse, RequestWrapper,
             ResponseWrapper,
         },
     },
@@ -38,8 +37,6 @@ pub struct SessionProxy {
     connector_handle: ConnectorHandle,
     evidence: Evidence,
     endorsements: Endorsements,
-    encryption_public_key: Vec<u8>,
-    attestation: Vec<u8>,
 }
 
 #[tonic::async_trait]
@@ -114,15 +111,11 @@ pub fn new(
     connector_handle: ConnectorHandle,
     evidence: Evidence,
     endorsements: Endorsements,
-    encryption_public_key: Vec<u8>,
-    attestation: Vec<u8>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
     let server_impl = SessionProxy {
         connector_handle,
         evidence,
         endorsements,
-        encryption_public_key,
-        attestation,
     };
 
     Server::builder()

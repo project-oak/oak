@@ -25,7 +25,6 @@ use crate::proto::oak::{
         SendAttestationEvidenceRequest,
     },
     key_provisioning::v1::GroupKeys,
-    session::v1::AttestationEvidence,
 };
 
 /// Utility struct used to interface with the launcher
@@ -83,13 +82,11 @@ impl LauncherClient {
 
     pub async fn send_attestation_evidence(
         &self,
-        evidence: AttestationEvidence,
-        dice_evidence: Evidence,
+        evidence: Evidence,
     ) -> Result<(), Box<dyn std::error::Error>> {
         #[allow(deprecated)]
         let request = tonic::Request::new(SendAttestationEvidenceRequest {
-            evidence: Some(evidence),
-            dice_evidence: Some(dice_evidence),
+            dice_evidence: Some(evidence),
         });
         self.inner
             .clone()

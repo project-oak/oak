@@ -29,7 +29,7 @@ mod app_client;
 use oak_containers_launcher::{
     proto::oak::{
         key_provisioning::v1::{GetGroupKeysRequest, GetGroupKeysResponse},
-        session::v1::AttestationBundle,
+        session::v1::EndorsedEvidence,
     },
     Launcher,
 };
@@ -56,7 +56,7 @@ impl UntrustedApp {
         })
     }
 
-    pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<AttestationBundle> {
+    pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence> {
         self.launcher.get_endorsed_evidence().await
     }
 
