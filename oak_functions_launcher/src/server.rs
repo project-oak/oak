@@ -27,8 +27,8 @@ use crate::{
         session::v1::{
             request_wrapper, response_wrapper,
             streaming_session_server::{StreamingSession, StreamingSessionServer},
-            AttestationBundle, AttestationEndorsement, AttestationEvidence, EndorsedEvidence,
-            GetEndorsedEvidenceResponse, GetPublicKeyResponse, InvokeResponse, RequestWrapper,
+            EndorsedEvidence,
+            GetEndorsedEvidenceResponse, InvokeResponse, RequestWrapper,
             ResponseWrapper,
         },
     },
@@ -54,29 +54,10 @@ impl StreamingSession for SessionProxy {
         log::info!("handling client request");
         let mut request_stream = request.into_inner();
 
-        // TODO(#3641): Initialize all evidence fields.
-        let attestation_evidence = AttestationEvidence {
-            encryption_public_key: self.encryption_public_key.to_vec(),
-            signing_public_key: vec![],
-            attestation: self.attestation.to_vec(),
-            signed_application_data: vec![],
-        };
-        let attestation_endorsement = AttestationEndorsement {
-            tee_certificates: vec![],
-            application_data: None,
-        };
-        #[allow(deprecated)]
-        let attestation_bundle = AttestationBundle {
-            attestation_evidence: Some(attestation_evidence),
-            attestation_endorsement: Some(attestation_endorsement),
-            evidence: Some(self.evidence.clone()),
-            endorsements: Some(self.endorsements.clone()),
-        };
         let endorsed_evidence = EndorsedEvidence {
             evidence: Some(self.evidence.clone()),
             endorsements: Some(self.endorsements.clone()),
         };
-
         let connector_handle = self.connector_handle.clone();
 
         let response_stream = async_stream::try_stream! {
@@ -89,11 +70,6 @@ impl StreamingSession for SessionProxy {
                     .ok_or_else(|| tonic::Status::invalid_argument("empty request message"))?;
 
                 let response = match request {
-                    request_wrapper::Request::GetPublicKeyRequest(_) => {
-                        response_wrapper::Response::GetPublicKeyResponse(GetPublicKeyResponse {
-                            attestation_bundle: Some(attestation_bundle.clone()),
-                        })
-                    }
                     request_wrapper::Request::GetEndorsedEvidenceRequest(_) => {
                         response_wrapper::Response::GetEndorsedEvidenceResponse(GetEndorsedEvidenceResponse {
                             endorsed_evidence: Some(endorsed_evidence.clone()),
