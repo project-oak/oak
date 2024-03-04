@@ -33,6 +33,7 @@ use oak_functions_service::{
 use opentelemetry::{global::set_error_handler, metrics::MeterProvider, KeyValue};
 use prost::Message;
 use tokio::{net::TcpListener, runtime::Handle};
+use tokio_stream::wrappers::TcpListenerStream;
 
 const OAK_FUNCTIONS_CONTAINERS_APP_PORT: u16 = 8080;
 
@@ -153,20 +154,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let addr = SocketAddr::new(
-        IpAddr::V4(Ipv4Addr::UNSPECIFIED),
-        OAK_FUNCTIONS_CONTAINERS_APP_PORT,
-    );
-    let listener = TcpListener::bind(addr).await?;
+    let (addr, stream) = {
+        let addr = SocketAddr::new(
+            IpAddr::V4(Ipv4Addr::UNSPECIFIED),
+            OAK_FUNCTIONS_CONTAINERS_APP_PORT,
+        );
+        let listener = TcpListener::bind(addr).await?;
+        (addr, TcpListenerStream::new(listener))
+    };
+
     let server_handle = tokio::spawn(async move {
         match application_config.handler_type() {
             HandlerType::HandlerUnspecified | HandlerType::HandlerWasm => {
-                serve::<_, WasmtimeHandler>(listener, Arc::new(encryption_key_handle), meter).await
+                serve::<_, WasmtimeHandler, _, _, _>(stream, Arc::new(encryption_key_handle), meter)
+                    .await
             }
             HandlerType::HandlerNative => {
                 if cfg!(feature = "native") {
-                    serve::<_, NativeHandler>(listener, Arc::new(encryption_key_handle), meter)
-                        .await
+                    serve::<_, NativeHandler, _, _, _>(
+                        stream,
+                        Arc::new(encryption_key_handle),
+                        meter,
+                    )
+                    .await
                 } else {
                     panic!("Application config specified `native` handler type, but this binary does not support that feature");
                 }
