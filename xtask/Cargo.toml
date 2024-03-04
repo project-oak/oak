@@ -10,7 +10,7 @@ async-recursion = "*"
 async-trait = "*"
 chrono = { version = "*", default-features = false, features = [
   "std",
-  "clock"
+  "clock",
 ] }
 clap = { version = "*", features = ["derive"] }
 clap_complete = "*"

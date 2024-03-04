@@ -22,7 +22,7 @@ tokio = { version = "*", features = [
   "fs",
   "macros",
   "sync",
-  "rt-multi-thread"
+  "rt-multi-thread",
 ] }
 xtask = { workspace = true }
 log = "*"

@@ -31,7 +31,7 @@ tokio = { version = "*", features = [
   "rt-multi-thread",
   "macros",
   "fs",
-  "sync"
+  "sync",
 ] }
 tokio-stream = { version = "*", features = ["net"] }
 tonic = { workspace = true, features = ["codegen"] }

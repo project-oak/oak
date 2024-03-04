@@ -9,7 +9,7 @@ license = "Apache-2.0"
 default = ["deny_sensitive_logging"]
 # Disable sensitive logging.
 deny_sensitive_logging = [
-  "oak_functions_enclave_service/deny_sensitive_logging"
+  "oak_functions_enclave_service/deny_sensitive_logging",
 ]
 # Feature allow_sensitive_logging is not actually used in the code. It is only used as a
 # required feature to differentiate between the two binaries.

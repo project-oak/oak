@@ -115,7 +115,7 @@
             # manually specify its fully qualified path.
             prettier = with pkgs; writeShellScriptBin "prettier" ''
               ${nodePackages.prettier}/bin/prettier \
-              --plugin "${nodePackages.prettier-plugin-toml}/lib/node_modules/prettier-plugin-toml/lib/api.js" \
+              --plugin "${nodePackages.prettier-plugin-toml}/lib/node_modules/prettier-plugin-toml/lib/index.js" \
               "$@"
             '';
             # Minimal shell with only the dependencies needed to run the format and check-format

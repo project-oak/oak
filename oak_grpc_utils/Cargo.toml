@@ -12,5 +12,5 @@ tempfile = "*"
 # toolchains.
 tonic-build = { workspace = true, default-features = false, features = [
   "prost",
-  "transport"
+  "transport",
 ] }

@@ -21,7 +21,7 @@ tokio = { version = "*", features = [
   "fs",
   "macros",
   "sync",
-  "rt-multi-thread"
+  "rt-multi-thread",
 ] }
 tonic = { version = "*", features = ["tls", "tls-roots"] }
 async-trait = "*"
