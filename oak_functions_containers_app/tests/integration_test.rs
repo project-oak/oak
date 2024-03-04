@@ -36,6 +36,7 @@ use oak_functions_service::{
 };
 use opentelemetry::metrics::{noop::NoopMeterProvider, MeterProvider};
 use tokio::net::TcpListener;
+use tokio_stream::wrappers::TcpListenerStream;
 use tonic::{codec::CompressionEncoding, transport::Endpoint};
 
 use crate::proto::oak::functions::oak_functions_client::OakFunctionsClient;
@@ -45,14 +46,17 @@ async fn test_lookup() {
     let wasm_path = oak_functions_test_utils::build_rust_crate_wasm("key_value_lookup")
         .expect("Failed to build Wasm module");
 
-    let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
-    let listener = TcpListener::bind(addr).await.unwrap();
-    let addr = listener.local_addr().unwrap();
+    let (addr, stream) = {
+        let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
+        let listener = TcpListener::bind(addr).await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        (addr, TcpListenerStream::new(listener))
+    };
 
     let (encryption_key, _) = generate_encryption_key_pair();
 
-    let server_handle = tokio::spawn(serve::<_, WasmtimeHandler>(
-        listener,
+    let server_handle = tokio::spawn(serve::<_, WasmtimeHandler, _, _, _>(
+        stream,
         Arc::new(encryption_key),
         NoopMeterProvider::new().meter(""),
     ));

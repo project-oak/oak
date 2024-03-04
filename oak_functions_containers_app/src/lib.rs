@@ -17,6 +17,7 @@
 #![feature(c_size_t)]
 
 use std::{
+    error::Error,
     future::Future,
     pin::Pin,
     sync::{Arc, OnceLock},
@@ -41,9 +42,9 @@ use opentelemetry::{
     KeyValue,
 };
 use prost::Message;
-use tokio::net::TcpListener;
-use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
-use tonic::codec::CompressionEncoding;
+use tokio::io::{AsyncRead, AsyncWrite};
+use tokio_stream::StreamExt;
+use tonic::{codec::CompressionEncoding, transport::server::Connected};
 use tracing::Span;
 
 #[cfg(feature = "native")]
@@ -390,8 +391,8 @@ const GRPC_STATUS_HEADER_CODE: &str = "grpc-status";
 const MAX_DECODING_MESSAGE_SIZE: usize = 1024 * 1024 * 1024;
 
 // Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-pub async fn serve<G, H: Handler>(
-    listener: TcpListener,
+pub async fn serve<G, H, S, IO, IE>(
+    stream: S,
     encryption_key_handle: Arc<G>,
     meter: Meter,
 ) -> anyhow::Result<()>
@@ -399,6 +400,9 @@ where
     G: AsyncEncryptionKeyHandle + Send + Sync + 'static,
     H: Handler + 'static,
     H::HandlerType: Send + Sync,
+    IO: Unpin + Connected + AsyncRead + AsyncWrite + Send + 'static,
+    IE: Error + Send + Sync + 'static,
+    S: tokio_stream::Stream<Item = Result<IO, IE>>,
 {
     tonic::transport::Server::builder()
         .layer(
@@ -427,7 +431,7 @@ where
             .accept_compressed(CompressionEncoding::Gzip),
         )
         .add_service(oak_debug_service::Service::new_server())
-        .serve_with_incoming(TcpListenerStream::new(listener))
+        .serve_with_incoming(stream)
         .await
         .context("failed to start up the service")
 }
