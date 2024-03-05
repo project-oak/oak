@@ -25,7 +25,6 @@ pub mod proto {
 use std::{
     fs,
     net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::Arc,
     time::Duration,
 };
 
@@ -50,14 +49,14 @@ async fn test_lookup() {
         let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0);
         let listener = TcpListener::bind(addr).await.unwrap();
         let addr = listener.local_addr().unwrap();
-        (addr, TcpListenerStream::new(listener))
+        (addr, Box::new(TcpListenerStream::new(listener)))
     };
 
     let (encryption_key, _) = generate_encryption_key_pair();
 
-    let server_handle = tokio::spawn(serve::<_, WasmtimeHandler, _, _, _>(
+    let server_handle = tokio::spawn(serve::<WasmtimeHandler>(
         stream,
-        Arc::new(encryption_key),
+        Box::new(encryption_key),
         NoopMeterProvider::new().meter(""),
     ));
 

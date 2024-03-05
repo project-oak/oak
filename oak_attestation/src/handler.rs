@@ -74,24 +74,25 @@ impl<H: FnOnce(Vec<u8>) -> Vec<u8>> EncryptionHandler<H> {
 /// Wraps a closure to an underlying function with request encryption and response decryption logic,
 /// based on the provided encryption key.
 /// [`AsyncEncryptionHandler`] can be used when an [`AsyncEncryptionKeyHandle`] is needed.
-pub struct AsyncEncryptionHandler<G, H, F>
+pub struct AsyncEncryptionHandler<H, F>
 where
-    G: AsyncEncryptionKeyHandle + Send + Sync,
     H: FnOnce(Vec<u8>) -> F,
     F: Future<Output = Vec<u8>>,
 {
     // TODO(#3442): Use attester to attest to the public key.
-    encryption_key_handle: Arc<G>,
+    encryption_key_handle: Arc<dyn AsyncEncryptionKeyHandle + Send + Sync>,
     request_handler: H,
 }
 
-impl<G, H, F> AsyncEncryptionHandler<G, H, F>
+impl<H, F> AsyncEncryptionHandler<H, F>
 where
-    G: AsyncEncryptionKeyHandle + Send + Sync,
     H: FnOnce(Vec<u8>) -> F,
     F: Future<Output = Vec<u8>>,
 {
-    pub fn create(encryption_key_handle: Arc<G>, request_handler: H) -> Self {
+    pub fn create(
+        encryption_key_handle: Arc<dyn AsyncEncryptionKeyHandle + Send + Sync>,
+        request_handler: H,
+    ) -> Self {
         Self {
             encryption_key_handle,
             request_handler,
