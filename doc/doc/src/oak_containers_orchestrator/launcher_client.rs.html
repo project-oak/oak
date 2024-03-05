@@ -261,7 +261,7 @@
             </span>.context(<span class="string">&quot;couldn&#39;t get key provisioning role&quot;</span>)<span class="question-mark">?
             </span>.into_inner()
             .role;
-        KeyProvisioningRole::from_i32(key_provisioning_role)
+        KeyProvisioningRole::try_from(key_provisioning_role)
             .context(<span class="string">&quot;unknown key provisioning role&quot;</span>)
     }
 
