@@ -134,9 +134,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut client = OrchestratorClient::create()
         .await
         .context("couldn't create Orchestrator client")?;
-    let encryption_key_handle = InstanceEncryptionKeyHandle::create()
-        .await
-        .map_err(|error| anyhow!("couldn't create encryption key handle: {:?}", error))?;
+    let encryption_key_handle = Box::new(
+        InstanceEncryptionKeyHandle::create()
+            .await
+            .map_err(|error| anyhow!("couldn't create encryption key handle: {:?}", error))?,
+    );
 
     // To be used when connecting trusted app to orchestrator.
     let application_config = {
@@ -160,23 +162,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             OAK_FUNCTIONS_CONTAINERS_APP_PORT,
         );
         let listener = TcpListener::bind(addr).await?;
-        (addr, TcpListenerStream::new(listener))
+        (addr, Box::new(TcpListenerStream::new(listener)))
     };
 
     let server_handle = tokio::spawn(async move {
         match application_config.handler_type() {
             HandlerType::HandlerUnspecified | HandlerType::HandlerWasm => {
-                serve::<_, WasmtimeHandler, _, _, _>(stream, Arc::new(encryption_key_handle), meter)
-                    .await
+                serve::<WasmtimeHandler>(stream, encryption_key_handle, meter).await
             }
             HandlerType::HandlerNative => {
                 if cfg!(feature = "native") {
-                    serve::<_, NativeHandler, _, _, _>(
-                        stream,
-                        Arc::new(encryption_key_handle),
-                        meter,
-                    )
-                    .await
+                    serve::<NativeHandler>(stream, encryption_key_handle, meter).await
                 } else {
                     panic!("Application config specified `native` handler type, but this binary does not support that feature");
                 }
