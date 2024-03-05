@@ -431,6 +431,10 @@
 <a href="#431" id="431">431</a>
 <a href="#432" id="432">432</a>
 <a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2022 The Project Oak Authors
 //
@@ -450,6 +454,7 @@
 </span><span class="attr">#![feature(c_size_t)]
 
 </span><span class="kw">use </span>std::{
+    error::Error,
     future::Future,
     pin::Pin,
     sync::{Arc, OnceLock},
@@ -474,9 +479,9 @@
     KeyValue,
 };
 <span class="kw">use </span>prost::Message;
-<span class="kw">use </span>tokio::net::TcpListener;
-<span class="kw">use </span>tokio_stream::{wrappers::TcpListenerStream, StreamExt};
-<span class="kw">use </span>tonic::codec::CompressionEncoding;
+<span class="kw">use </span>tokio::io::{AsyncRead, AsyncWrite};
+<span class="kw">use </span>tokio_stream::StreamExt;
+<span class="kw">use </span>tonic::{codec::CompressionEncoding, transport::server::Connected};
 <span class="kw">use </span>tracing::Span;
 
 <span class="attr">#[cfg(feature = <span class="string">&quot;native&quot;</span>)]
@@ -823,8 +828,8 @@
 </span><span class="kw">const </span>MAX_DECODING_MESSAGE_SIZE: usize = <span class="number">1024 </span>* <span class="number">1024 </span>* <span class="number">1024</span>;
 
 <span class="comment">// Starts up and serves an OakFunctionsContainersService instance from the provided TCP listener.
-</span><span class="kw">pub async fn </span>serve&lt;G, H: Handler&gt;(
-    listener: TcpListener,
+</span><span class="kw">pub async fn </span>serve&lt;G, H, S, IO, IE&gt;(
+    stream: S,
     encryption_key_handle: Arc&lt;G&gt;,
     meter: Meter,
 ) -&gt; anyhow::Result&lt;()&gt;
@@ -832,6 +837,9 @@
     </span>G: AsyncEncryptionKeyHandle + Send + Sync + <span class="lifetime">&#39;static</span>,
     H: Handler + <span class="lifetime">&#39;static</span>,
     H::HandlerType: Send + Sync,
+    IO: Unpin + Connected + AsyncRead + AsyncWrite + Send + <span class="lifetime">&#39;static</span>,
+    IE: Error + Send + Sync + <span class="lifetime">&#39;static</span>,
+    S: tokio_stream::Stream&lt;Item = <span class="prelude-ty">Result</span>&lt;IO, IE&gt;&gt;,
 {
     tonic::transport::Server::builder()
         .layer(
@@ -860,7 +868,7 @@
             .accept_compressed(CompressionEncoding::Gzip),
         )
         .add_service(oak_debug_service::Service::new_server())
-        .serve_with_incoming(TcpListenerStream::new(listener))
+        .serve_with_incoming(stream)
         .<span class="kw">await
         </span>.context(<span class="string">&quot;failed to start up the service&quot;</span>)
 }
