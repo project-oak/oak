@@ -19,6 +19,23 @@ workspace(name = "oak")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+# Google Protocol Buffers.
+# https://github.com/protocolbuffers/protobuf
+http_archive(
+    name = "com_google_protobuf",
+    sha256 = "d19643d265b978383352b3143f04c0641eea75a75235c111cc01a1350173180e",
+    strip_prefix = "protobuf-25.3",
+    urls = [
+        # Protocol Buffers v23.3 (2023-06-14).
+        "https://github.com/protocolbuffers/protobuf/releases/download/v25.3/protobuf-25.3.tar.gz",
+    ],
+)
+
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+# `protobuf_deps` should be loaded after `grpc_deps` in the WORKSPACE file.
+protobuf_deps()
+
 # The `name` argument in all `http_archive` rules should be equal to the
 # WORKSPACE name of the corresponding library.
 
@@ -26,11 +43,10 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 # https://github.com/abseil/abseil-cpp
 http_archive(
     name = "com_google_absl",
-    sha256 = "5366d7e7fa7ba0d915014d387b66d0d002c03236448e1ba9ef98122c13b35c36",
-    strip_prefix = "abseil-cpp-20230125.3",
+    sha256 = "3c743204df78366ad2eaf236d6631d83f6bc928d1705dd0000b872e53b73dc6a",
+    strip_prefix = "abseil-cpp-20240116.1",
     urls = [
-        # Abseil LTS 20230125.3.
-        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230125.3.tar.gz",
+        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20240116.1.tar.gz",
     ],
 )
 
@@ -93,23 +109,6 @@ http_archive(
 load("@io_grpc_grpc_java//:repositories.bzl", "IO_GRPC_GRPC_JAVA_ARTIFACTS", "IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS", "grpc_java_repositories")
 
 grpc_java_repositories()
-
-# Google Protocol Buffers.
-# https://github.com/protocolbuffers/protobuf
-http_archive(
-    name = "com_google_protobuf",
-    sha256 = "3a5f47ad3aa10192c5577ff086b24b9739a36937c34ceab6db912a16a3ef7f8e",
-    strip_prefix = "protobuf-23.3",
-    urls = [
-        # Protocol Buffers v23.3 (2023-06-14).
-        "https://github.com/protocolbuffers/protobuf/releases/download/v23.3/protobuf-23.3.tar.gz",
-    ],
-)
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
-
-# `protobuf_deps` should be loaded after `grpc_deps` in the WORKSPACE file.
-protobuf_deps()
 
 # External Java rules.
 # https://github.com/bazelbuild/rules_jvm_external
