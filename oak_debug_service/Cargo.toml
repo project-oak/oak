@@ -15,4 +15,4 @@ tokio = { version = "*" }
 tonic = { workspace = true }
 
 [dev-dependencies]
-tokio = { version = "*", features = ["rt-multi-thread"] }
+tokio = { version = "*", features = ["rt-multi-thread", "macros"] }

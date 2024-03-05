@@ -119,7 +119,7 @@ impl LauncherClient {
             .context("couldn't get key provisioning role")?
             .into_inner()
             .role;
-        KeyProvisioningRole::from_i32(key_provisioning_role)
+        KeyProvisioningRole::try_from(key_provisioning_role)
             .context("unknown key provisioning role")
     }
 

@@ -28,7 +28,6 @@ pub mod proto {
 use std::time::Duration;
 
 use pprof::protos::Message as _;
-use prost::Message as _;
 use proto::{
     oak::debug::{debug_service_server::DebugServiceServer, CpuProfileRequest, CpuProfileResponse},
     perftools::profiles::Profile,
