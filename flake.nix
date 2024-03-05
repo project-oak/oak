@@ -142,7 +142,7 @@
               '';
               packages = [
                 jdk11_headless
-                bazel
+                bazel_7
                 androidSdk
                 bazel-buildtools
               ];
