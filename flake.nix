@@ -25,6 +25,18 @@
               allowUnfree = true; # needed to get android stuff to compile
             };
           };
+          fff = builtins.fetchurl {
+              url = "https://raw.githubusercontent.com/project-oak/oak/d69b46b83337b1e8d78fa9ecb8a42ca06648fa8a/BUILD";
+              sha256 = "sha256:1n13phv63245l25vg1dcb7cf9bvxwavygkqmlpxgcgxxzp8199j4";
+          };
+          ddd = pkgs.stdenv.mkDerivation {
+            name = "hello";
+            src = builtins.fetchurl {
+              url = "https://raw.githubusercontent.com/project-oak/oak/d69b46b83337b1e8d78fa9ecb8a42ca06648fa8a/BUILD";
+              sha256 = "sha256:1n13phv63245l25vg1dcb7cf9bvxwavygkqmlpxgcgxxzp8199j4";
+            };
+            dontUnpack = true;
+          };
           androidSdk =
             (pkgs.androidenv.composeAndroidPackages {
               platformVersions = [ "30" ];
@@ -82,10 +94,13 @@
           devShells = rec {
             # Base shell with shared dependencies.
             base = with pkgs; mkShell {
+              FOO = fff;
               packages = [
                 just
                 ps
                 which
+                # fff
+                # ddd
               ];
               shellHook = ''
                 source .xtask_bash_completion
@@ -139,6 +154,7 @@
               shellHook = ''
                 export ANDROID_HOME="${androidSdk}/libexec/android-sdk"
                 export GRADLE_OPTS="-Dorg.gradle.project.android.aapt2FromMavenOverride=${androidSdk}/libexec/android-sdk/build-tools/28.0.3/aapt2";
+                export FOO="${fff}"
               '';
               packages = [
                 jdk11_headless
