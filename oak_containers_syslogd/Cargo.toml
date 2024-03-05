@@ -13,10 +13,10 @@ oak_containers_orchestrator = { workspace = true }
 opentelemetry = { version = "*", default-features = false, features = ["logs"] }
 opentelemetry_sdk = { version = "*", default-features = false, features = [
   "logs",
-  "rt-tokio"
+  "rt-tokio",
 ] }
 opentelemetry-otlp = { version = "*", default-features = false, features = [
-  "logs"
+  "logs",
 ] }
 nix = "*"
 signal-hook = "*"

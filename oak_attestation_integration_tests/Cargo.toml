@@ -7,7 +7,7 @@ license = "Apache-2.0"
 
 [dev-dependencies]
 oak_restricted_kernel_sdk = { workspace = true, features = [
-  "mock_attestation"
+  "mock_attestation",
 ] }
 oak_attestation = { workspace = true }
 oak_attestation_verification = { workspace = true }

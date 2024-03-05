@@ -12,7 +12,7 @@ rustflags = [
   "target-cpu=x86-64-v3",
   # Enable `tokio_unstable` so that we can access the Tokio runtime metrics.
   "--cfg",
-  "tokio_unstable"
+  "tokio_unstable",
 ]
 
 [target.x86_64-unknown-linux-musl]
@@ -29,7 +29,7 @@ rustflags = [
   "target-cpu=x86-64-v3",
   # Enable `tokio_unstable` so that we can access the Tokio runtime metrics.
   "--cfg",
-  "tokio_unstable"
+  "tokio_unstable",
 ]
 
 # Workaround for 'unable to find __addtf3, __multf3 and __subtf3'

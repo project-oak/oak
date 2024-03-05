@@ -8,7 +8,7 @@ license = "Apache-2.0"
 [dependencies]
 aes-gcm = { version = "*", default-features = false, features = [
   "aes",
-  "alloc"
+  "alloc",
 ] }
 anyhow = { version = "*", default-features = false }
 async-trait = { version = "*", default-features = false }
@@ -16,15 +16,15 @@ bytes = { version = "*", default-features = false }
 hkdf = { version = "*", default-features = false }
 hpke = { version = "*", default-features = false, features = [
   "alloc",
-  "x25519"
+  "x25519",
 ] }
 p256 = { version = "*", default-features = false, features = [
   "ecdsa",
-  "alloc"
+  "alloc",
 ] }
 prost = { version = "*", default-features = false, features = ["prost-derive"] }
 rand_core = { version = "*", default-features = false, features = [
-  "getrandom"
+  "getrandom",
 ] }
 sha2 = { version = "*", default-features = false }
 zeroize = "*"

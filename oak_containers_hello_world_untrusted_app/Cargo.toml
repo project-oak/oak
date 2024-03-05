@@ -20,7 +20,7 @@ tokio = { version = "*", features = [
   "rt-multi-thread",
   "macros",
   "sync",
-  "time"
+  "time",
 ] }
 tonic = "*"
 tower = "*"
