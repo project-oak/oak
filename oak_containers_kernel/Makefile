@@ -9,6 +9,6 @@ target/bzImage: target/linux-6.7.6 configs/6.7.6/minimal.config
 
 # LINUX_KERNEL_UPSTREAM is fetched by nix and pinned by its digest. See /flake.nix.
 target/linux-6.7.6:
-	mkdir -p target
+	mkdir --parents target
 	tar --directory=target --xz --extract --file=$${LINUX_KERNEL_UPSTREAM}
-	patch -p1 -d target/linux-6.7.6 < patches/virtio-dma.patch
+	patch --strip=1 --directory=target/linux-6.7.6 < patches/virtio-dma.patch

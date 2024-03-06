@@ -42,8 +42,8 @@ stage0_bin:
 stage1_cpio:
     env --chdir=oak_containers_stage1 make
 
-oak_containers_kernel:
-    env --chdir=oak_containers_kernel make
+# oak_containers_kernel:
+# env --chdir=oak_containers_kernel make
 
 oak_containers_system_image:
     env --chdir=oak_containers_system_image DOCKER_BUILDKIT=0 bash build.sh
@@ -65,7 +65,7 @@ cc_oak_containers_hello_world_container_bundle_tar:
 oak_containers_hello_world_untrusted_app:
     env cargo build --release --package='oak_containers_hello_world_untrusted_app'
 
-all_oak_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_containers_hello_world_container_bundle_tar cc_oak_containers_hello_world_container_bundle_tar oak_containers_hello_world_untrusted_app
+all_oak_containers_binaries: stage0_bin stage1_cpio oak_containers_system_image oak_containers_hello_world_container_bundle_tar cc_oak_containers_hello_world_container_bundle_tar oak_containers_hello_world_untrusted_app
 
 # Oak Functions Containers entry point.
 
@@ -75,7 +75,7 @@ oak_functions_containers_container_bundle_tar:
 oak_functions_containers_launcher:
     env cargo build --release --package='oak_functions_containers_launcher'
 
-all_oak_functions_containers_binaries: stage0_bin stage1_cpio oak_containers_kernel oak_containers_system_image oak_functions_containers_container_bundle_tar oak_functions_containers_launcher
+all_oak_functions_containers_binaries: stage0_bin stage1_cpio oak_containers_system_image oak_functions_containers_container_bundle_tar oak_functions_containers_launcher
 
 ensure_no_std package:
     RUSTFLAGS="-C target-feature=+sse,+sse2,+ssse3,+sse4.1,+sse4.2,+avx,+avx2,+rdrand,-soft-float" cargo build --target=x86_64-unknown-none --package='{{package}}'

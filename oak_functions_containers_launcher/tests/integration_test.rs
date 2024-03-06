@@ -21,9 +21,27 @@ use oak_client::verifier::InsecureAttestationVerifier;
 use oak_functions_client::OakFunctionsClient;
 use xtask::{launcher::MOCK_LOOKUP_DATA_PATH, workspace_path};
 
+fn init() {
+    // See https://github.com/rust-cli/env_logger/#in-tests.
+    let _ = env_logger::builder()
+        .is_test(true)
+        .filter_level(log::LevelFilter::Trace)
+        .try_init();
+}
+
 // Allow enough worker threads to collect output from background tasks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
+async fn run_all_tests() {
+    // We run the actual test cases here under a single test function because otherwise they end up
+    // stepping on each other when run via cargo nextest, since that runs each test case in a
+    // separate process, therefore making it very hard for them to synchronize on the work needed to
+    // build their respective dependencies.
+    test_launcher_key_value_lookup().await;
+    test_launcher_echo().await;
+}
+
 async fn test_launcher_key_value_lookup() {
+    init();
     if xtask::testing::skip_test() {
         log::info!("skipping test");
         return;
@@ -52,9 +70,8 @@ async fn test_launcher_key_value_lookup() {
     assert_eq!(response, b"test_value");
 }
 
-// Allow enough worker threads to collect output from background tasks.
-#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn test_launcher_echo() {
+    init();
     if xtask::testing::skip_test() {
         log::info!("skipping test");
         return;

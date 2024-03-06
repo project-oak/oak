@@ -71,7 +71,7 @@ impl Params {
         let vmm_binary = which::which("qemu-system-x86_64").expect("could not find qemu path");
         let stage0_binary =
             format!("{root}stage0_bin/target/x86_64-unknown-none/release/stage0_bin",).into();
-        let kernel = format!("{root}oak_containers_kernel/target/bzImage",).into();
+        let kernel: PathBuf = std::env::var("OAK_CONTAINERS_KERNEL").unwrap().into();
         let initrd = format!("{root}/target/stage1.cpio").into();
         Self {
             vmm_binary,

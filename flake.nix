@@ -29,32 +29,6 @@
             url = "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.7.6.tar.xz";
             sha256 = "1lrp7pwnxnqyy8c2l4n4nz997039gbnssrfm8ss8kl3h2c7fr2g4";
           };
-          # TODO: b/328294742 - This derivation does not currently compile correctly, but it is a starting point.
-          oak_containers_kernel = pkgs.stdenv.mkDerivation {
-            name = "oak_containers_kernel";
-            src = ./oak_containers_kernel;
-            buildInputs = with pkgs; [
-              cowsay
-              curl
-              flex
-              bison
-              bc
-              libelf
-              elfutils
-              glibc
-              glibc.static
-              cpio
-            ];
-            baseInputs = [
-              linux_kernel_upstream
-            ];
-            buildPhase = ''
-              make target/vmlinux
-              cp target/vmlinux $out
-            '';
-            installPhase = ''
-              '';
-          };
           androidSdk =
             (pkgs.androidenv.composeAndroidPackages {
               platformVersions = [ "30" ];
@@ -102,7 +76,47 @@
           };
         in
         {
-          packages = { };
+          packages = {
+            # TODO: b/328294742 - This derivation does not currently compile correctly, but it is a starting point.
+            oak_containers_kernel = pkgs.stdenv.mkDerivation {
+              name = "oak_containers_kernel";
+              src = ./oak_containers_kernel;
+              buildInputs = with pkgs; [
+                bc
+                bison
+                cowsay
+                cpio
+                curl
+                elfutils
+                flex
+                glibc
+                glibc.static
+                libelf
+                ncurses
+                netcat
+                umoci
+                bazel-buildtools
+                jdk11_headless
+                androidSdk
+                perl
+              ];
+              baseInputs = [
+                linux_kernel_upstream
+              ];
+              buildPhase = ''
+                export LINUX_KERNEL_UPSTREAM="${linux_kernel_upstream}"
+                make target/bzImage
+                cp target/bzImage $out
+              '';
+              installPhase = ''
+                env
+              '';
+              shellHook = ''
+                env
+                export LINUX_KERNEL_UPSTREAM="${linux_kernel_upstream}"
+              '';
+            };
+          };
           formatter = pkgs.nixpkgs-fmt;
           # We define a recursive set of shells, so that we can easily create a shell with a subset
           # of the dependencies for specific CI steps, without having to pull everything all the time.
@@ -182,11 +196,13 @@
             containers = with pkgs; mkShell {
               shellHook = ''
                 export LINUX_KERNEL_UPSTREAM="${linux_kernel_upstream}"
+                export OAK_CONTAINERS_KERNEL="${self.packages.${system}.oak_containers_kernel}"
               '';
               inputsFrom = [
                 base
                 bazelShell
                 rust
+                self.packages.${system}.oak_containers_kernel
               ];
               packages = [
                 bc

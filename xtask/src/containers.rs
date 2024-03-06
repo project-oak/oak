@@ -19,13 +19,6 @@ use crate::{
     workspace_path,
 };
 
-fn build_kernel() -> Step {
-    Step::Single {
-        name: "build kernel".to_string(),
-        command: Cmd::new("just", vec!["oak_containers_kernel"]),
-    }
-}
-
 fn build_stage1() -> Step {
     Step::Single {
         name: "build stage1".to_string(),
@@ -65,7 +58,6 @@ async fn build_prerequisites() {
         .get_or_init(async || {
             tokio::join!(
                 crate::testing::run_step(crate::launcher::build_stage0()),
-                crate::testing::run_step(build_kernel()),
                 crate::testing::run_step(build_stage1()),
                 crate::testing::run_step(build_system_image()),
                 crate::testing::run_step(build_oak_functions_bundle()),
@@ -102,9 +94,7 @@ pub fn run_oak_functions_launcher_example_with_lookup_data(
         ),
         format!(
             "--kernel={}",
-            workspace_path(&["oak_containers_kernel", "target", "bzImage"])
-                .to_str()
-                .unwrap()
+            std::env::var("OAK_CONTAINERS_KERNEL").unwrap()
         ),
         format!(
             "--initrd={}",
