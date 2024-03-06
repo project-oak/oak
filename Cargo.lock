@@ -91,6 +91,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "250f629c0161ad8107cf89319e990051fae62832fd343083bea452d93e2205fd"
 
 [[package]]
+name = "allocator-api2"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0942ffc6dcaadf03badf6e6a2d0228460359d5e34b57ccdc720b7382dfbd5ec5"
+
+[[package]]
 name = "aml"
 version = "0.16.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1528,6 +1534,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 dependencies = [
  "ahash",
+ "allocator-api2",
 ]
 
 [[package]]
@@ -1859,7 +1866,7 @@ dependencies = [
 name = "key_value_lookup"
 version = "0.1.0"
 dependencies = [
- "hashbrown 0.13.2",
+ "hashbrown 0.14.3",
  "http",
  "log",
  "maplit",
@@ -2594,7 +2601,7 @@ name = "oak_echo_service"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "hashbrown 0.13.2",
+ "hashbrown 0.14.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -2732,7 +2739,7 @@ dependencies = [
  "command-fds",
  "env_logger",
  "futures",
- "hashbrown 0.13.2",
+ "hashbrown 0.14.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -2798,7 +2805,7 @@ dependencies = [
  "bytes",
  "criterion",
  "criterion-macro",
- "hashbrown 0.13.2",
+ "hashbrown 0.14.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -2892,7 +2899,7 @@ dependencies = [
  "bmrng",
  "clap",
  "command-fds",
- "hashbrown 0.13.2",
+ "hashbrown 0.14.3",
  "log",
  "micro_rpc",
  "micro_rpc_build",
@@ -4670,9 +4677,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.35.1"
+version = "1.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c89b4efa943be685f629b149f53829423f8f5531ea21249408e8e2f8671ec104"
+checksum = "61285f6515fa018fb2d1e46eb21223fff441ee8db5d0f1435e8ab4f5cdb80931"
 dependencies = [
  "backtrace",
  "bytes",
