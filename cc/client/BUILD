@@ -36,6 +36,7 @@ cc_library(
         "//proto/crypto:crypto_cc_proto",
         "//proto/session:messages_cc_proto",
         "@com_google_absl//absl/memory",
+        "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
     ],

@@ -102,6 +102,7 @@ class TestAttestationVerifier : public AttestationVerifier {
       std::chrono::time_point<std::chrono::system_clock> now, const Evidence& evidence,
       const Endorsements& endorsements) const override {
     AttestationResults attestation_results;
+    attestation_results.set_status(AttestationResults::STATUS_SUCCESS);
     *attestation_results.mutable_encryption_public_key() =
         encryption_key_->GetSerializedPublicKey();
     return attestation_results;
