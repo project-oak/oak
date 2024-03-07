@@ -23,9 +23,7 @@ use futures::{Future, Stream, StreamExt};
 use oak_functions_launcher::proto::oak::session::v1::{
     request_wrapper, response_wrapper,
     streaming_session_server::{StreamingSession, StreamingSessionServer},
-    AttestationBundle, AttestationEndorsement, AttestationEvidence, EndorsedEvidence,
-    GetEndorsedEvidenceResponse, GetPublicKeyResponse, InvokeResponse, RequestWrapper,
-    ResponseWrapper,
+    EndorsedEvidence, GetEndorsedEvidenceResponse, InvokeResponse, RequestWrapper, ResponseWrapper,
 };
 use oak_proto_rust::oak::attestation::v1::{Endorsements, Evidence};
 use tonic::{transport::Server, Request, Response, Status, Streaming};
@@ -38,8 +36,6 @@ pub struct SessionProxy {
     connector_handle: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
     evidence: Evidence,
     endorsements: Endorsements,
-    encryption_public_key: Vec<u8>,
-    attestation: Vec<u8>,
 }
 
 #[tonic::async_trait]
@@ -54,29 +50,10 @@ impl StreamingSession for SessionProxy {
         log::info!("handling client request");
         let mut request_stream = request.into_inner();
 
-        // TODO(#3641): Initialize all evidence fields.
-        let attestation_evidence = AttestationEvidence {
-            encryption_public_key: self.encryption_public_key.to_vec(),
-            signing_public_key: vec![],
-            attestation: self.attestation.to_vec(),
-            signed_application_data: vec![],
-        };
-        let attestation_endorsement = AttestationEndorsement {
-            tee_certificates: vec![],
-            application_data: None,
-        };
-        #[allow(deprecated)]
-        let attestation_bundle = AttestationBundle {
-            attestation_evidence: Some(attestation_evidence),
-            attestation_endorsement: Some(attestation_endorsement),
-            evidence: Some(self.evidence.clone()),
-            endorsements: Some(self.endorsements.clone()),
-        };
         let endorsed_evidence = EndorsedEvidence {
             evidence: Some(self.evidence.clone()),
             endorsements: Some(self.endorsements.clone()),
         };
-
         let mut connector_handle = self.connector_handle.clone();
 
         let response_stream = async_stream::try_stream! {
@@ -89,11 +66,6 @@ impl StreamingSession for SessionProxy {
                     .ok_or_else(|| tonic::Status::invalid_argument("empty request message"))?;
 
                 let response = match request {
-                    request_wrapper::Request::GetPublicKeyRequest(_) => {
-                        response_wrapper::Response::GetPublicKeyResponse(GetPublicKeyResponse {
-                            attestation_bundle: Some(attestation_bundle.clone()),
-                        })
-                    }
                     request_wrapper::Request::GetEndorsedEvidenceRequest(_) => {
                         response_wrapper::Response::GetEndorsedEvidenceResponse(GetEndorsedEvidenceResponse {
                             endorsed_evidence: Some(endorsed_evidence.clone()),
@@ -135,15 +107,11 @@ pub fn new(
     connector_handle: GrpcOakFunctionsClient<tonic::transport::channel::Channel>,
     evidence: Evidence,
     endorsements: Endorsements,
-    encryption_public_key: Vec<u8>,
-    attestation: Vec<u8>,
 ) -> impl Future<Output = Result<(), tonic::transport::Error>> {
     let server_impl = SessionProxy {
         connector_handle,
         evidence,
         endorsements,
-        encryption_public_key,
-        attestation,
     };
 
     Server::builder()

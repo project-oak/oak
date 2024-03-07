@@ -57,7 +57,7 @@ use crate::proto::oak::{
     key_provisioning::v1::{
         key_provisioning_client::KeyProvisioningClient, GetGroupKeysRequest, GetGroupKeysResponse,
     },
-    session::v1::{AttestationBundle, AttestationEndorsement, AttestationEvidence},
+    session::v1::EndorsedEvidence,
 };
 
 /// The local IP address assigned to the VM guest.
@@ -120,12 +120,11 @@ pub struct Launcher {
     server: JoinHandle<Result<(), anyhow::Error>>,
     host_proxy_port: u16,
     host_orchestrator_proxy_port: u16,
-    attestation_endorsement: AttestationEndorsement,
     // Endorsed Attestation Evidence consists of Attestation Evidence (initialized by the
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
-    endorsed_attestation_evidence: Option<AttestationBundle>,
+    endorsed_evidence: Option<EndorsedEvidence>,
     // Receiver that is used to get the Attestation Evidence from the server implementation.
-    attestation_evidence_receiver: Option<Receiver<(AttestationEvidence, Evidence)>>,
+    evidence_receiver: Option<Receiver<Evidence>>,
     app_ready_notifier: Option<Receiver<()>>,
     orchestrator_key_provisioning_client: Option<KeyProvisioningClient<TonicChannel>>,
     trusted_app_address: Option<SocketAddr>,
@@ -140,8 +139,7 @@ impl Launcher {
         let listener = TcpListener::bind(sockaddr).await?;
         let port = listener.local_addr()?.port();
         log::info!("Launcher service listening on port {port}");
-        let (attestation_evidence_sender, attestation_evidence_receiver) =
-            channel::<(AttestationEvidence, Evidence)>();
+        let (evidence_sender, evidence_receiver) = channel::<Evidence>();
         let (shutdown_sender, shutdown_receiver) = channel::<()>();
         let (app_notifier_sender, app_notifier_receiver) = channel::<()>();
         let server = tokio::spawn(server::new(
@@ -149,7 +147,7 @@ impl Launcher {
             args.system_image,
             args.container_bundle,
             args.application_config,
-            attestation_evidence_sender,
+            evidence_sender,
             app_notifier_sender,
             shutdown_receiver,
         ));
@@ -177,16 +175,11 @@ impl Launcher {
             server,
             host_proxy_port,
             host_orchestrator_proxy_port,
-            // TODO(#3640): Provide hardware manufacturer's certificates.
-            attestation_endorsement: AttestationEndorsement {
-                tee_certificates: vec![],
-                application_data: None,
-            },
             // Attestation Evidence will be sent by the Orchestrator once generated.
             // And after the Evidence is received it will be endorsed by the Launcher (it will
             // provide corresponding hardware manufacturer's certificates).
-            endorsed_attestation_evidence: None,
-            attestation_evidence_receiver: Some(attestation_evidence_receiver),
+            endorsed_evidence: None,
+            evidence_receiver: Some(evidence_receiver),
             app_ready_notifier: Some(app_notifier_receiver),
             orchestrator_key_provisioning_client: None,
             trusted_app_address: None,
@@ -218,16 +211,15 @@ impl Launcher {
 
     /// Gets the endorsed attestation evidence that the untrusted application can send to remote
     /// clients, which will verify it before connecting.
-    pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<AttestationBundle> {
+    pub async fn get_endorsed_evidence(&mut self) -> anyhow::Result<EndorsedEvidence> {
         // If we haven't received an attestation evidence, wait for it.
         #[allow(deprecated)]
-        if let Some(receiver) = self.attestation_evidence_receiver.take() {
+        if let Some(receiver) = self.evidence_receiver.take() {
             // Set a timeout since we don't want to wait forever if the VM didn't start properly.
-            let (deprecated_evidence, evidence) =
-                timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
-                    .await
-                    .context("couldn't get attestation evidence before timeout")?
-                    .context("no attestation evidence available")?;
+            let evidence = timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
+                .await
+                .context("couldn't get attestation evidence before timeout")?
+                .context("no attestation evidence available")?;
 
             // Initialize attestation endorsements.
             // TODO(#4074): Add layer endorsements.
@@ -242,17 +234,13 @@ impl Launcher {
                 )),
             };
 
-            #[allow(deprecated)]
-            let endorsed_attestation_evidence = AttestationBundle {
-                attestation_evidence: Some(deprecated_evidence),
-                attestation_endorsement: Some(self.attestation_endorsement.clone()),
+            let endorsed_evidence = EndorsedEvidence {
                 evidence: Some(evidence),
                 endorsements: Some(endorsements),
             };
-            self.endorsed_attestation_evidence
-                .replace(endorsed_attestation_evidence);
+            self.endorsed_evidence.replace(endorsed_evidence);
         }
-        self.endorsed_attestation_evidence
+        self.endorsed_evidence
             .clone()
             .ok_or_else(|| anyhow::anyhow!("endorsed evidence is not set"))
     }

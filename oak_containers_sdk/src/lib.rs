@@ -22,7 +22,7 @@ mod proto {
                 tonic::include_proto!("oak.containers.v1");
             }
         }
-        pub use oak_attestation::proto::oak::{attestation, session};
+        pub use oak_attestation::proto::oak::attestation;
         pub use oak_crypto::proto::oak::crypto;
     }
 }

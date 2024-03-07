@@ -23,10 +23,8 @@ import com.google.oak.attestation.v1.Endorsements;
 import com.google.oak.attestation.v1.Evidence;
 import com.google.oak.crypto.v1.EncryptedRequest;
 import com.google.oak.crypto.v1.EncryptedResponse;
-import com.google.oak.session.v1.AttestationBundle;
 import com.google.oak.session.v1.EndorsedEvidence;
 import com.google.oak.session.v1.GetEndorsedEvidenceResponse;
-import com.google.oak.session.v1.GetPublicKeyResponse;
 import com.google.oak.session.v1.InvokeResponse;
 import com.google.oak.session.v1.RequestWrapper;
 import com.google.oak.session.v1.ResponseWrapper;
@@ -60,14 +58,6 @@ public class GrpcStreamingTransportTest {
       ResponseWrapper responseWrapper;
       RequestWrapper.RequestCase requestCase = request.getRequestCase();
       switch (requestCase) {
-        case GET_PUBLIC_KEY_REQUEST:
-          responseWrapper =
-              ResponseWrapper.newBuilder()
-                  .setGetPublicKeyResponse(GetPublicKeyResponse.newBuilder().setAttestationBundle(
-                      AttestationBundle.getDefaultInstance()))
-                  .build();
-          responseObserver.onNext(responseWrapper);
-          break;
         case GET_ENDORSED_EVIDENCE_REQUEST:
           responseWrapper = ResponseWrapper.newBuilder()
                                 .setGetEndorsedEvidenceResponse(

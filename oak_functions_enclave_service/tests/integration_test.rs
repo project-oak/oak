@@ -23,6 +23,7 @@ extern crate alloc;
 use alloc::sync::Arc;
 use core::assert_matches::assert_matches;
 
+use oak_client::verifier::extract_encryption_public_key;
 use oak_crypto::{encryptor::ClientEncryptor, proto::oak::crypto::v1::EncryptedRequest};
 use oak_functions_enclave_service::{
     proto::oak::functions::{
@@ -99,11 +100,11 @@ fn it_should_handle_user_requests_after_initialization() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
-    #[allow(deprecated)]
-    let server_encryption_public_key = initialize_response
-        .public_key_info
-        .expect("no public key info returned")
-        .public_key;
+    let evidence = initialize_response
+        .evidence
+        .expect("initialize response doesn't have public key info");
+    let server_encryption_public_key =
+        extract_encryption_public_key(&evidence).expect("couldn't extract encryption public key");
 
     // Encrypt request.
     let mut client_encryptor =
@@ -161,11 +162,11 @@ fn it_should_error_on_invalid_wasm_module() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
-    #[allow(deprecated)]
-    let server_encryption_public_key = initialize_response
-        .public_key_info
-        .expect("no public key info returned")
-        .public_key;
+    let evidence = initialize_response
+        .evidence
+        .expect("initialize response doesn't have public key info");
+    let server_encryption_public_key =
+        extract_encryption_public_key(&evidence).expect("couldn't extract encryption public key");
 
     // TODO(#4274): Deduplicate this logic with Oak Client library.
 
@@ -235,11 +236,11 @@ fn it_should_support_lookup_data() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
-    #[allow(deprecated)]
-    let server_encryption_public_key = initialize_response
-        .public_key_info
-        .expect("no public key info returned")
-        .public_key;
+    let evidence = initialize_response
+        .evidence
+        .expect("initialize response doesn't have public key info");
+    let server_encryption_public_key =
+        extract_encryption_public_key(&evidence).expect("couldn't extract encryption public key");
 
     let chunk = LookupDataChunk {
         items: vec![LookupDataEntry {
@@ -317,11 +318,11 @@ fn it_should_handle_wasm_panic() {
     };
 
     let initialize_response = client.initialize(&request).into_ok().unwrap();
-    #[allow(deprecated)]
-    let server_encryption_public_key = initialize_response
-        .public_key_info
-        .expect("no public key info returned")
-        .public_key;
+    let evidence = initialize_response
+        .evidence
+        .expect("initialize response doesn't have public key info");
+    let server_encryption_public_key =
+        extract_encryption_public_key(&evidence).expect("couldn't extract encryption public key");
 
     struct Transport<'a> {
         oak_functions_client: &'a mut OakFunctionsClient<

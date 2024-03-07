@@ -81,15 +81,6 @@ async fn main() -> Result<(), anyhow::Error> {
         .endorsements
         .context("endorsed evidence message doesn't contain endorsements")?;
 
-    // TODO(#4627): Remove deprecated attestation evidence.
-    #[allow(deprecated)]
-    let deprecated_evidence = endorsed_evidence.attestation_evidence.unwrap();
-
-    log::info!(
-        "obtained public key ({} bytes)",
-        deprecated_evidence.encryption_public_key.len()
-    );
-
     untrusted_app.setup_lookup_data(lookup_data_config).await?;
 
     let server_future = oak_functions_containers_launcher::server::new(
@@ -97,8 +88,6 @@ async fn main() -> Result<(), anyhow::Error> {
         untrusted_app.oak_functions_client.clone(),
         evidence,
         endorsements,
-        deprecated_evidence.encryption_public_key.clone(),
-        deprecated_evidence.attestation.clone(),
     );
 
     // Wait until something dies or we get a signal to terminate.

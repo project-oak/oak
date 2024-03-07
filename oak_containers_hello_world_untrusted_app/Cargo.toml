@@ -13,6 +13,7 @@ anyhow = "*"
 clap = { version = "*", features = ["derive"] }
 env_logger = "*"
 log = "*"
+oak_client = { workspace = true }
 oak_containers_launcher = { workspace = true }
 oak_crypto = { workspace = true }
 prost = "*"

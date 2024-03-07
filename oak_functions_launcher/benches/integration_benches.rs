@@ -21,6 +21,7 @@ extern crate test;
 
 use std::path::PathBuf;
 
+use oak_client::verifier::extract_encryption_public_key;
 use oak_crypto::encryptor::ClientEncryptor;
 use oak_functions_launcher::{
     proto::oak::functions::{InvokeRequest, OakFunctionsAsyncClient},
@@ -97,11 +98,11 @@ fn run_bench(b: &mut Bencher, config: &OakFunctionsTestConfig) {
         .expect("Failed to create launcher");
     log::info!("created launcher instance");
 
-    #[allow(deprecated)]
-    let serialized_server_public_key = initialize_response
-        .public_key_info
-        .expect("initialize response doesn't have public key info")
-        .public_key;
+    let evidence = initialize_response
+        .evidence
+        .expect("initialize response doesn't have public key info");
+    let serialized_server_public_key =
+        extract_encryption_public_key(&evidence).expect("couldn't extract encryption public key");
 
     let mut client_encryptor = ClientEncryptor::create(&serialized_server_public_key)
         .expect("couldn't create client encryptor");

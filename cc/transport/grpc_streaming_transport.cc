@@ -84,8 +84,8 @@ absl::StatusOr<EncryptedResponse> GrpcStreamingTransport::Invoke(
 
   // Process response.
   switch (response->response_case()) {
-    case ResponseWrapper::kGetPublicKeyResponseFieldNumber:
-      return absl::InternalError("received GetPublicKeyResponse instead of InvokeResponse");
+    case ResponseWrapper::kGetEndorsedEvidenceResponseFieldNumber:
+      return absl::InternalError("received GetEndorsedEvidenceResponse instead of InvokeResponse");
     case ResponseWrapper::kInvokeResponseFieldNumber:
       return response->invoke_response().encrypted_response();
     case ResponseWrapper::RESPONSE_NOT_SET:
