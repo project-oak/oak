@@ -27,7 +27,10 @@ use oak_containers_sdk::{InstanceEncryptionKeyHandle, OrchestratorClient};
 use oak_functions_containers_app::native_handler::NativeHandler;
 use oak_functions_containers_app::serve;
 use oak_functions_service::{
-    proto::oak::functions::config::{ApplicationConfig, HandlerType},
+    proto::oak::functions::config::{
+        application_config::CommunicationChannel, ApplicationConfig, HandlerType,
+        TcpCommunicationChannel,
+    },
     wasm::wasmtime::WasmtimeHandler,
 };
 use opentelemetry::{global::set_error_handler, metrics::MeterProvider, KeyValue};
@@ -156,13 +159,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let (addr, stream) = {
-        let addr = SocketAddr::new(
-            IpAddr::V4(Ipv4Addr::UNSPECIFIED),
-            OAK_FUNCTIONS_CONTAINERS_APP_PORT,
-        );
-        let listener = TcpListener::bind(addr).await?;
-        (addr, Box::new(TcpListenerStream::new(listener)))
+    let default_channel = CommunicationChannel::TcpChannel(TcpCommunicationChannel::default());
+    let communication_config = application_config
+        .communication_channel
+        .as_ref()
+        .unwrap_or(&default_channel);
+
+    let (addr, stream) = match communication_config {
+        CommunicationChannel::TcpChannel(config) => {
+            let mut config = config.clone();
+            if config.port == 0 {
+                config.port = OAK_FUNCTIONS_CONTAINERS_APP_PORT.into();
+            }
+            let addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), config.port.try_into()?);
+            let listener = TcpListener::bind(addr).await?;
+            (addr, Box::new(TcpListenerStream::new(listener)))
+        }
     };
 
     let server_handle = tokio::spawn(async move {
