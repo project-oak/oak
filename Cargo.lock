@@ -2188,6 +2188,7 @@ dependencies = [
  "bitflags 2.4.1",
  "cfg-if",
  "libc",
+ "memoffset",
 ]
 
 [[package]]
@@ -2676,6 +2677,7 @@ dependencies = [
  "tikv-jemallocator",
  "tokio",
  "tokio-stream",
+ "tokio-vsock",
  "tonic",
  "tower",
  "tower-http",
@@ -4754,6 +4756,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-vsock"
+version = "0.5.0"
+dependencies = [
+ "bytes",
+ "futures",
+ "libc",
+ "tokio",
+ "tonic",
+ "vsock",
+]
+
+[[package]]
 name = "toml"
 version = "0.5.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5053,6 +5067,16 @@ name = "volatile"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "442887c63f2c839b346c192d047a7c87e73d0689c9157b00b53dcc27dd5ea793"
+
+[[package]]
+name = "vsock"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2dfb6e7a74830912f1f4a7655227c9ded1ea4e9136676311fedf54bedb412f35"
+dependencies = [
+ "libc",
+ "nix 0.27.1",
+]
 
 [[package]]
 name = "walkdir"
