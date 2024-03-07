@@ -64,8 +64,8 @@ absl::StatusOr<std::unique_ptr<OakClient>> OakClient::Create(
     return attestation_results.status();
   }
   if (attestation_results->status() != AttestationResults::STATUS_SUCCESS) {
-    return absl::InvalidArgumentError(absl::StrCat(
-        "couldn't verify endorsed evidence: ", attestation_results->reason()));
+    return absl::InvalidArgumentError(
+        absl::StrCat("couldn't verify endorsed evidence: ", attestation_results->reason()));
   }
 
   return absl::WrapUnique(
