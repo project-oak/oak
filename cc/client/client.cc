@@ -22,7 +22,9 @@
 #include <utility>
 
 #include "absl/memory/memory.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "cc/attestation/verification/attestation_verifier.h"
 #include "cc/crypto/client_encryptor.h"
@@ -60,6 +62,10 @@ absl::StatusOr<std::unique_ptr<OakClient>> OakClient::Create(
                       endorsed_evidence->endorsements());
   if (!attestation_results.ok()) {
     return attestation_results.status();
+  }
+  if (attestation_results->status() != AttestationResults::STATUS_SUCCESS) {
+    return absl::InvalidArgumentError(absl::StrCat(
+        "couldn't verify endorsed evidence: ", attestation_results->reason()));
   }
 
   return absl::WrapUnique(
