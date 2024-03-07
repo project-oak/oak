@@ -43,6 +43,7 @@ tempfile = { version = "*", optional = true }
 tikv-jemallocator = "*"
 tokio = { version = "*", features = ["rt-multi-thread", "macros", "sync"] }
 tokio-stream = { version = "*", features = ["net"] }
+tokio-vsock = { version = "*", features = ["tonic-conn"] }
 tonic = { workspace = true, features = ["gzip"] }
 tower = { version = "*", features = ["load-shed"] }
 tower-http = { version = "*", features = ["trace"] }

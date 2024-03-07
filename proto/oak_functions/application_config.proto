@@ -34,6 +34,11 @@ message TcpCommunicationChannel {
   uint32 port = 1;
 }
 
+message VsockCommunicationChannel {
+  // Port to listen on. If not specified, defaults to 8080.
+  uint32 port = 1;
+}
+
 message ApplicationConfig {
   // How to load the provided module.
   HandlerType handler_type = 1;
@@ -45,5 +50,6 @@ message ApplicationConfig {
   //   - on Oak Containers, if not specified, the default communication channel is TCP.
   oneof communication_channel {
     TcpCommunicationChannel tcp_channel = 2;
+    VsockCommunicationChannel vsock_channel = 3;
   }
 }
