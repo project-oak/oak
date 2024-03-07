@@ -67,9 +67,25 @@
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
 </pre></div><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>TcpCommunicationChannel {
+    <span class="doccomment">/// Port to listen on. If not specified, defaults to 8080.
+    </span><span class="attr">#[prost(uint32, tag = <span class="string">&quot;1&quot;</span>)]
+    </span><span class="kw">pub </span>port: u32,
+}
+<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+</span><span class="kw">pub struct </span>VsockCommunicationChannel {
     <span class="doccomment">/// Port to listen on. If not specified, defaults to 8080.
     </span><span class="attr">#[prost(uint32, tag = <span class="string">&quot;1&quot;</span>)]
     </span><span class="kw">pub </span>port: u32,
@@ -85,7 +101,7 @@
     ///    - when running on Restricted Kernel this setting is ignored completely as the communication
     ///      channel is abstracted away by Restricted Kernel itself.
     ///    - on Oak Containers, if not specified, the default communication channel is TCP.
-    </span><span class="attr">#[prost(oneof = <span class="string">&quot;application_config::CommunicationChannel&quot;</span>, tags = <span class="string">&quot;2&quot;</span>)]
+    </span><span class="attr">#[prost(oneof = <span class="string">&quot;application_config::CommunicationChannel&quot;</span>, tags = <span class="string">&quot;2, 3&quot;</span>)]
     </span><span class="kw">pub </span>communication_channel: ::core::option::Option&lt;
         application_config::CommunicationChannel,
     &gt;,
@@ -102,6 +118,8 @@
     </span><span class="kw">pub enum </span>CommunicationChannel {
         <span class="attr">#[prost(message, tag = <span class="string">&quot;2&quot;</span>)]
         </span>TcpChannel(<span class="kw">super</span>::TcpCommunicationChannel),
+        <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
+        </span>VsockChannel(<span class="kw">super</span>::VsockCommunicationChannel),
     }
 }
 <span class="attr">#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
