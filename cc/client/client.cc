@@ -63,13 +63,18 @@ absl::StatusOr<std::unique_ptr<OakClient>> OakClient::Create(
   if (!attestation_results.ok()) {
     return attestation_results.status();
   }
-  if (attestation_results->status() != AttestationResults::STATUS_SUCCESS) {
-    return absl::InvalidArgumentError(
-        absl::StrCat("couldn't verify endorsed evidence: ", attestation_results->reason()));
-  }
 
-  return absl::WrapUnique(
-      new OakClient(std::move(transport), attestation_results->encryption_public_key()));
+  switch (attestation_results->status()) {
+    case AttestationResults::STATUS_SUCCESS:
+      return absl::WrapUnique(
+          new OakClient(std::move(transport), attestation_results->encryption_public_key()));
+    case AttestationResults::STATUS_GENERIC_FAILURE:
+      return absl::FailedPreconditionError(
+          absl::StrCat("couldn't verify endorsed evidence: ", attestation_results->reason()));
+    case AttestationResults::STATUS_UNSPECIFIED:
+    default:
+      return absl::InternalError("illegal status code in attestation results");
+  }
 }
 
 absl::StatusOr<std::string> OakClient::Invoke(absl::string_view request_body) {
