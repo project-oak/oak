@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["ApplicationData","AttestationBundle","AttestationEndorsement","AttestationEvidence","EndorsedEvidence","GetEncryptionKeyRequest","GetEncryptionKeyResponse","GetEndorsedEvidenceRequest","GetEndorsedEvidenceResponse","GetPublicKeyRequest","GetPublicKeyResponse","InvokeRequest","InvokeResponse"]};

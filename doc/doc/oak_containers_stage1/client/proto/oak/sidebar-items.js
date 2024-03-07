@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["attestation","containers","session"]};
+window.SIDEBAR_ITEMS = {"mod":["attestation","containers"]};

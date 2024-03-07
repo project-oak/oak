@@ -340,17 +340,6 @@
 <a href="#340" id="340">340</a>
 <a href="#341" id="341">341</a>
 <a href="#342" id="342">342</a>
-<a href="#343" id="343">343</a>
-<a href="#344" id="344">344</a>
-<a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
-<a href="#347" id="347">347</a>
-<a href="#348" id="348">348</a>
-<a href="#349" id="349">349</a>
-<a href="#350" id="350">350</a>
-<a href="#351" id="351">351</a>
-<a href="#352" id="352">352</a>
-<a href="#353" id="353">353</a>
 </pre></div><pre class="rust"><code><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InitializeRequest {
@@ -362,19 +351,8 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>InitializeResponse {
-    <span class="attr">#[deprecated]
-    #[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>public_key_info: ::core::option::Option&lt;PublicKeyInfo&gt;,
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>evidence: ::core::option::Option&lt;<span class="kw">super</span>::attestation::v1::Evidence&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>PublicKeyInfo {
-    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
-    </span><span class="kw">pub </span>attestation: ::prost::alloc::vec::Vec&lt;u8&gt;,
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]

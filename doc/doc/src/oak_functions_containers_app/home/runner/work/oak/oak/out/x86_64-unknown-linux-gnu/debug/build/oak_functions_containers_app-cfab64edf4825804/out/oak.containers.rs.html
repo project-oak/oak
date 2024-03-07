@@ -393,9 +393,6 @@
 <a href="#393" id="393">393</a>
 <a href="#394" id="394">394</a>
 <a href="#395" id="395">395</a>
-<a href="#396" id="396">396</a>
-<a href="#397" id="397">397</a>
-<a href="#398" id="398">398</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// As images can be large (hundreds of megabytes), the launcher chunks up the response into smaller
 /// pieces to respect proto/gRPC limits. The image needs to be reassembled in the stage1 or the
 /// orchestrator.
@@ -416,9 +413,6 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>SendAttestationEvidenceRequest {
-    <span class="attr">#[deprecated]
-    #[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>evidence: ::core::option::Option&lt;<span class="kw">super</span>::session::v1::AttestationEvidence&gt;,
     <span class="attr">#[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
     </span><span class="kw">pub </span>dice_evidence: ::core::option::Option&lt;<span class="kw">super</span>::attestation::v1::Evidence&gt;,
 }

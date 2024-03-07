@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["AsyncEncryptionHandler","EncryptionHandler","PublicKeyInfo"]};
+window.SIDEBAR_ITEMS = {"struct":["AsyncEncryptionHandler","EncryptionHandler"]};

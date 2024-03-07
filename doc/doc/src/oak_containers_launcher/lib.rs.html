@@ -288,18 +288,6 @@
 <a href="#288" id="288">288</a>
 <a href="#289" id="289">289</a>
 <a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -359,7 +347,7 @@
     key_provisioning::v1::{
         key_provisioning_client::KeyProvisioningClient, GetGroupKeysRequest, GetGroupKeysResponse,
     },
-    session::v1::{AttestationBundle, AttestationEndorsement, AttestationEvidence},
+    session::v1::EndorsedEvidence,
 };
 
 <span class="doccomment">/// The local IP address assigned to the VM guest.
@@ -422,12 +410,11 @@
     server: JoinHandle&lt;<span class="prelude-ty">Result</span>&lt;(), anyhow::Error&gt;&gt;,
     host_proxy_port: u16,
     host_orchestrator_proxy_port: u16,
-    attestation_endorsement: AttestationEndorsement,
     <span class="comment">// Endorsed Attestation Evidence consists of Attestation Evidence (initialized by the
     // Orchestrator) and Attestation Endorsement (initialized by the Launcher).
-    </span>endorsed_attestation_evidence: <span class="prelude-ty">Option</span>&lt;AttestationBundle&gt;,
+    </span>endorsed_evidence: <span class="prelude-ty">Option</span>&lt;EndorsedEvidence&gt;,
     <span class="comment">// Receiver that is used to get the Attestation Evidence from the server implementation.
-    </span>attestation_evidence_receiver: <span class="prelude-ty">Option</span>&lt;Receiver&lt;(AttestationEvidence, Evidence)&gt;&gt;,
+    </span>evidence_receiver: <span class="prelude-ty">Option</span>&lt;Receiver&lt;Evidence&gt;&gt;,
     app_ready_notifier: <span class="prelude-ty">Option</span>&lt;Receiver&lt;()&gt;&gt;,
     orchestrator_key_provisioning_client: <span class="prelude-ty">Option</span>&lt;KeyProvisioningClient&lt;TonicChannel&gt;&gt;,
     trusted_app_address: <span class="prelude-ty">Option</span>&lt;SocketAddr&gt;,
@@ -442,8 +429,7 @@
         <span class="kw">let </span>listener = TcpListener::bind(sockaddr).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>port = listener.local_addr()<span class="question-mark">?</span>.port();
         <span class="macro">log::info!</span>(<span class="string">&quot;Launcher service listening on port {port}&quot;</span>);
-        <span class="kw">let </span>(attestation_evidence_sender, attestation_evidence_receiver) =
-            channel::&lt;(AttestationEvidence, Evidence)&gt;();
+        <span class="kw">let </span>(evidence_sender, evidence_receiver) = channel::&lt;Evidence&gt;();
         <span class="kw">let </span>(shutdown_sender, shutdown_receiver) = channel::&lt;()&gt;();
         <span class="kw">let </span>(app_notifier_sender, app_notifier_receiver) = channel::&lt;()&gt;();
         <span class="kw">let </span>server = tokio::spawn(server::new(
@@ -451,7 +437,7 @@
             args.system_image,
             args.container_bundle,
             args.application_config,
-            attestation_evidence_sender,
+            evidence_sender,
             app_notifier_sender,
             shutdown_receiver,
         ));
@@ -479,16 +465,11 @@
             server,
             host_proxy_port,
             host_orchestrator_proxy_port,
-            <span class="comment">// TODO(#3640): Provide hardware manufacturer&#39;s certificates.
-            </span>attestation_endorsement: AttestationEndorsement {
-                tee_certificates: <span class="macro">vec!</span>[],
-                application_data: <span class="prelude-val">None</span>,
-            },
             <span class="comment">// Attestation Evidence will be sent by the Orchestrator once generated.
             // And after the Evidence is received it will be endorsed by the Launcher (it will
             // provide corresponding hardware manufacturer&#39;s certificates).
-            </span>endorsed_attestation_evidence: <span class="prelude-val">None</span>,
-            attestation_evidence_receiver: <span class="prelude-val">Some</span>(attestation_evidence_receiver),
+            </span>endorsed_evidence: <span class="prelude-val">None</span>,
+            evidence_receiver: <span class="prelude-val">Some</span>(evidence_receiver),
             app_ready_notifier: <span class="prelude-val">Some</span>(app_notifier_receiver),
             orchestrator_key_provisioning_client: <span class="prelude-val">None</span>,
             trusted_app_address: <span class="prelude-val">None</span>,
@@ -520,16 +501,15 @@
 
     <span class="doccomment">/// Gets the endorsed attestation evidence that the untrusted application can send to remote
     /// clients, which will verify it before connecting.
-    </span><span class="kw">pub async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;AttestationBundle&gt; {
+    </span><span class="kw">pub async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;EndorsedEvidence&gt; {
         <span class="comment">// If we haven&#39;t received an attestation evidence, wait for it.
         </span><span class="attr">#[allow(deprecated)]
-        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(receiver) = <span class="self">self</span>.attestation_evidence_receiver.take() {
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(receiver) = <span class="self">self</span>.evidence_receiver.take() {
             <span class="comment">// Set a timeout since we don&#39;t want to wait forever if the VM didn&#39;t start properly.
-            </span><span class="kw">let </span>(deprecated_evidence, evidence) =
-                timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
-                    .<span class="kw">await
-                    </span>.context(<span class="string">&quot;couldn&#39;t get attestation evidence before timeout&quot;</span>)<span class="question-mark">?
-                    </span>.context(<span class="string">&quot;no attestation evidence available&quot;</span>)<span class="question-mark">?</span>;
+            </span><span class="kw">let </span>evidence = timeout(Duration::from_secs(VM_START_TIMEOUT), receiver)
+                .<span class="kw">await
+                </span>.context(<span class="string">&quot;couldn&#39;t get attestation evidence before timeout&quot;</span>)<span class="question-mark">?
+                </span>.context(<span class="string">&quot;no attestation evidence available&quot;</span>)<span class="question-mark">?</span>;
 
             <span class="comment">// Initialize attestation endorsements.
             // TODO(#4074): Add layer endorsements.
@@ -544,17 +524,13 @@
                 )),
             };
 
-            <span class="attr">#[allow(deprecated)]
-            </span><span class="kw">let </span>endorsed_attestation_evidence = AttestationBundle {
-                attestation_evidence: <span class="prelude-val">Some</span>(deprecated_evidence),
-                attestation_endorsement: <span class="prelude-val">Some</span>(<span class="self">self</span>.attestation_endorsement.clone()),
+            <span class="kw">let </span>endorsed_evidence = EndorsedEvidence {
                 evidence: <span class="prelude-val">Some</span>(evidence),
                 endorsements: <span class="prelude-val">Some</span>(endorsements),
             };
-            <span class="self">self</span>.endorsed_attestation_evidence
-                .replace(endorsed_attestation_evidence);
+            <span class="self">self</span>.endorsed_evidence.replace(endorsed_evidence);
         }
-        <span class="self">self</span>.endorsed_attestation_evidence
+        <span class="self">self</span>.endorsed_evidence
             .clone()
             .ok_or_else(|| <span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;endorsed evidence is not set&quot;</span>))
     }

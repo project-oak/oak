@@ -137,9 +137,6 @@
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
 </pre></div><pre class="rust"><code><span class="comment">//
 // Copyright 2023 The Project Oak Authors
 //
@@ -167,7 +164,6 @@
         SendAttestationEvidenceRequest,
     },
     key_provisioning::v1::GroupKeys,
-    session::v1::AttestationEvidence,
 };
 
 <span class="doccomment">/// Utility struct used to interface with the launcher
@@ -225,13 +221,11 @@
 
     <span class="kw">pub async fn </span>send_attestation_evidence(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        evidence: AttestationEvidence,
-        dice_evidence: Evidence,
+        evidence: Evidence,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
         <span class="attr">#[allow(deprecated)]
         </span><span class="kw">let </span>request = tonic::Request::new(SendAttestationEvidenceRequest {
-            evidence: <span class="prelude-val">Some</span>(evidence),
-            dice_evidence: <span class="prelude-val">Some</span>(dice_evidence),
+            dice_evidence: <span class="prelude-val">Some</span>(evidence),
         });
         <span class="self">self</span>.inner
             .clone()

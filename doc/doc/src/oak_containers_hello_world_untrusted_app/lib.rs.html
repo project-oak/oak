@@ -109,7 +109,7 @@
 <span class="kw">use </span>oak_containers_launcher::{
     proto::oak::{
         key_provisioning::v1::{GetGroupKeysRequest, GetGroupKeysResponse},
-        session::v1::AttestationBundle,
+        session::v1::EndorsedEvidence,
     },
     Launcher,
 };
@@ -136,7 +136,7 @@
         })
     }
 
-    <span class="kw">pub async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;AttestationBundle&gt; {
+    <span class="kw">pub async fn </span>get_endorsed_evidence(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; anyhow::Result&lt;EndorsedEvidence&gt; {
         <span class="self">self</span>.launcher.get_endorsed_evidence().<span class="kw">await
     </span>}
 

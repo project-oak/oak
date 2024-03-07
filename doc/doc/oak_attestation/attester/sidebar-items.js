@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["Attester","EmptyAttestationReportGenerator"],"trait":["AttestationReportGenerator"]};

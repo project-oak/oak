@@ -199,194 +199,7 @@
 <a href="#199" id="199">199</a>
 <a href="#200" id="200">200</a>
 <a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
-<a href="#213" id="213">213</a>
-<a href="#214" id="214">214</a>
-<a href="#215" id="215">215</a>
-<a href="#216" id="216">216</a>
-<a href="#217" id="217">217</a>
-<a href="#218" id="218">218</a>
-<a href="#219" id="219">219</a>
-<a href="#220" id="220">220</a>
-<a href="#221" id="221">221</a>
-<a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
-<a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
-<a href="#243" id="243">243</a>
-<a href="#244" id="244">244</a>
-<a href="#245" id="245">245</a>
-<a href="#246" id="246">246</a>
-<a href="#247" id="247">247</a>
-<a href="#248" id="248">248</a>
-<a href="#249" id="249">249</a>
-<a href="#250" id="250">250</a>
-<a href="#251" id="251">251</a>
-<a href="#252" id="252">252</a>
-<a href="#253" id="253">253</a>
-<a href="#254" id="254">254</a>
-<a href="#255" id="255">255</a>
-<a href="#256" id="256">256</a>
-<a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
-<a href="#260" id="260">260</a>
-<a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
-<a href="#266" id="266">266</a>
-<a href="#267" id="267">267</a>
-<a href="#268" id="268">268</a>
-<a href="#269" id="269">269</a>
-<a href="#270" id="270">270</a>
-<a href="#271" id="271">271</a>
-<a href="#272" id="272">272</a>
-<a href="#273" id="273">273</a>
-<a href="#274" id="274">274</a>
-<a href="#275" id="275">275</a>
-<a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
-<a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a>
-<a href="#285" id="285">285</a>
-<a href="#286" id="286">286</a>
-<a href="#287" id="287">287</a>
-<a href="#288" id="288">288</a>
-<a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
-<a href="#303" id="303">303</a>
-<a href="#304" id="304">304</a>
-<a href="#305" id="305">305</a>
-</pre></div><pre class="rust"><code><span class="doccomment">/// AttestationEvidence contains all the information that originates in the TEE and can serve as
-/// claims about the Target Environment. The name is chosen to match the RATS terminology
-/// (see &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-evidence&gt;).
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>AttestationEvidence {
-    <span class="doccomment">/// The serialized public key part of the enclave encryption key.
-    /// TODO(#3442): Specify key format.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>encryption_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// The serialized public key part of the enclave signing key. This field is optional, and can be
-    /// left empty if the protocol does not require it, e.g., if no application data is present.
-    /// TODO(#3442): Specify key format.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
-    </span><span class="kw">pub </span>signing_public_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// The serialized attestation report binding the public key.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;3&quot;</span>)]
-    </span><span class="kw">pub </span>attestation: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// The signature over the application_data, signed by the enclave using its signing key. This
-    /// field is optional, and must be left empty if application_data is not provided.
-    /// TODO(#3442): Specify the signing details, or link to a specification.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;4&quot;</span>)]
-    </span><span class="kw">pub </span>signed_application_data: ::prost::alloc::vec::Vec&lt;u8&gt;,
-}
-<span class="doccomment">/// AttestationBundle contains the information that the untrusted launcher provides to the client
-/// in response to its request for the enclave&#39;s public key(s).
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>AttestationBundle {
-    <span class="doccomment">/// Attestation evidence from the enclave.
-    </span><span class="attr">#[deprecated]
-    #[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>attestation_evidence: ::core::option::Option&lt;AttestationEvidence&gt;,
-    <span class="doccomment">/// Supporting evidence required for verifying the integrity of attestation evidence.
-    </span><span class="attr">#[deprecated]
-    #[prost(message, optional, tag = <span class="string">&quot;2&quot;</span>)]
-    </span><span class="kw">pub </span>attestation_endorsement: ::core::option::Option&lt;AttestationEndorsement&gt;,
-    <span class="doccomment">/// The DICE attestation evidence.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
-    </span><span class="kw">pub </span>evidence: ::core::option::Option&lt;<span class="kw">super</span>::<span class="kw">super</span>::attestation::v1::Evidence&gt;,
-    <span class="doccomment">/// The DICE attestation endorsements.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;4&quot;</span>)]
-    </span><span class="kw">pub </span>endorsements: ::core::option::Option&lt;
-        <span class="kw">super</span>::<span class="kw">super</span>::attestation::v1::Endorsements,
-    &gt;,
-}
-<span class="doccomment">/// AttestationEndorsement contains statements that some entity (e.g., a hardware provider) vouches
-/// for the integrity of claims about the TEE or the software running on it.
-/// (see &lt;https://www.rfc-editor.org/rfc/rfc9334.html#name-endorsements&gt;).
-</span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>AttestationEndorsement {
-    <span class="doccomment">/// The serialized TEE certificate(s). The details of the format and how the certificate(s) are
-    /// encoded into this byte array are implementation-specific. In case of AMD-SEV-SNP, as described
-    /// in &lt;https://www.amd.com/system/files/TechDocs/57230.pdf,&gt; there are three different certificates
-    /// packaged in two different files.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>tee_certificates: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// The optional application-specific data.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;3&quot;</span>)]
-    </span><span class="kw">pub </span>application_data: ::core::option::Option&lt;ApplicationData&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>ApplicationData {
-    <span class="doccomment">/// The cryptographic digest of the application, of the form `&lt;algorithm&gt;:&lt;value&gt;`.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>digest: ::prost::alloc::vec::Vec&lt;u8&gt;,
-    <span class="doccomment">/// The serialized application configuration. The format of the configuration is
-    /// application-specific. This field is optional and can be empty.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
-    </span><span class="kw">pub </span>config: ::prost::alloc::vec::Vec&lt;u8&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>GetPublicKeyRequest {}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>GetPublicKeyResponse {
-    <span class="doccomment">/// The enclave&#39;s signing and encryption public keys and attestation evidence about them.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>attestation_bundle: ::core::option::Option&lt;AttestationBundle&gt;,
-}
-<span class="doccomment">/// Endorsed evidence contains an attestation evidence provided by the enclave and the corresponding
+</pre></div><pre class="rust"><code><span class="doccomment">/// Endorsed evidence contains an attestation evidence provided by the enclave and the corresponding
 /// attestation endorsements provided by the hostlib.
 </span><span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -429,25 +242,8 @@
 }
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>GetEncryptionKeyRequest {
-    <span class="doccomment">/// Encrypted attestation evidence of the dependent enclave.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>encrypted_attestation_bundle: ::prost::alloc::vec::Vec&lt;u8&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-</span><span class="kw">pub struct </span>GetEncryptionKeyResponse {
-    <span class="doccomment">/// Attestation evidence and public key.
-    </span><span class="attr">#[prost(message, optional, tag = <span class="string">&quot;1&quot;</span>)]
-    </span><span class="kw">pub </span>endorsed_evidence: ::core::option::Option&lt;AttestationBundle&gt;,
-    <span class="doccomment">/// Encrypted private key of the leader enclave.
-    </span><span class="attr">#[prost(bytes = <span class="string">&quot;vec&quot;</span>, tag = <span class="string">&quot;2&quot;</span>)]
-    </span><span class="kw">pub </span>encrypted_encryption_key: ::prost::alloc::vec::Vec&lt;u8&gt;,
-}
-<span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>RequestWrapper {
-    <span class="attr">#[prost(oneof = <span class="string">&quot;request_wrapper::Request&quot;</span>, tags = <span class="string">&quot;1, 2, 3&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">&quot;request_wrapper::Request&quot;</span>, tags = <span class="string">&quot;2, 3&quot;</span>)]
     </span><span class="kw">pub </span>request: ::core::option::Option&lt;request_wrapper::Request&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `RequestWrapper`.
@@ -455,8 +251,6 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>Request {
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;1&quot;</span>)]
-        </span>GetPublicKeyRequest(<span class="kw">super</span>::GetPublicKeyRequest),
         <span class="attr">#[prost(message, tag = <span class="string">&quot;2&quot;</span>)]
         </span>InvokeRequest(<span class="kw">super</span>::InvokeRequest),
         <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
@@ -466,7 +260,7 @@
 <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 </span><span class="kw">pub struct </span>ResponseWrapper {
-    <span class="attr">#[prost(oneof = <span class="string">&quot;response_wrapper::Response&quot;</span>, tags = <span class="string">&quot;1, 2, 3&quot;</span>)]
+    <span class="attr">#[prost(oneof = <span class="string">&quot;response_wrapper::Response&quot;</span>, tags = <span class="string">&quot;2, 3&quot;</span>)]
     </span><span class="kw">pub </span>response: ::core::option::Option&lt;response_wrapper::Response&gt;,
 }
 <span class="doccomment">/// Nested message and enum types in `ResponseWrapper`.
@@ -474,8 +268,6 @@
     <span class="attr">#[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     </span><span class="kw">pub enum </span>Response {
-        <span class="attr">#[prost(message, tag = <span class="string">&quot;1&quot;</span>)]
-        </span>GetPublicKeyResponse(<span class="kw">super</span>::GetPublicKeyResponse),
         <span class="attr">#[prost(message, tag = <span class="string">&quot;2&quot;</span>)]
         </span>InvokeResponse(<span class="kw">super</span>::InvokeResponse),
         <span class="attr">#[prost(message, tag = <span class="string">&quot;3&quot;</span>)]
@@ -575,12 +367,12 @@
         /// messages exchanged by client and server, giving it a minimal amount of structure and type
         /// safety.
         ///
-        /// The expected message sequence starts with the client sending a `GetPublicKeyRequest` message
-        /// in order to fetch the public key of the enclave. This method may be handled by the untrusted
-        /// launcher or by the enclave, depending on the server implementation.
+        /// The expected message sequence starts with the client sending a `GetEndorsedEvidenceRequest`
+        /// message in order to fetch the evidence of the enclave. This method may be handled by the
+        /// untrusted launcher or by the enclave, depending on the server implementation.
         ///
-        /// Then the client encrypts the payload with that public key via a hybrid encryption protocol, and
-        /// sends the encrypted payload as part of a `InvokeRequest` message.
+        /// Then the client encrypts the payload with the public key contained in the evidence via a hybrid
+        /// encryption protocol, and sends the encrypted payload as part of a `InvokeRequest` message.
         </span><span class="kw">pub async fn </span>stream(
             <span class="kw-2">&amp;mut </span><span class="self">self</span>,
             request: <span class="kw">impl </span>tonic::IntoStreamingRequest&lt;Message = <span class="kw">super</span>::RequestWrapper&gt;,
