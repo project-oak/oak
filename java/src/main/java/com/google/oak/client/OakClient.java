@@ -16,6 +16,7 @@
 
 package com.google.oak.client;
 
+import com.google.oak.attestation.v1.AttestationResults;
 import com.google.oak.crypto.ClientEncryptor;
 import com.google.oak.remote_attestation.AttestationVerifier;
 import com.google.oak.transport.EvidenceProvider;
@@ -66,8 +67,18 @@ public class OakClient<T extends Transport> implements AutoCloseable {
             -> verifier
                    .verify(clock.instant(), endorsedEvidence.getEvidence(),
                        endorsedEvidence.getEndorsements())
-                   .map(
-                       b -> new OakClient<E>(transport, b.getEncryptionPublicKey().toByteArray())));
+                   .andThen(
+                        b -> {
+                          if (b.getStatus() == AttestationResults.Status.STATUS_SUCCESS) {
+                            return Result.success(
+                                new OakClient<E>(
+                                    transport, b.getEncryptionPublicKey().toByteArray()));
+                          } else {
+                            return Result.error(
+                                new IllegalStateException(
+                                    "Couldn't verify attestation results: " + b.getReason()));
+                          }
+                        }));
   }
 
   private OakClient(T transport, byte[] serverEncryptionPublicKey) {
