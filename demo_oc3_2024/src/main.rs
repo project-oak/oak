@@ -13,29 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use anyhow::Context;
-use clap::Parser;
-use oak_attestation_verification::{
-    util::convert_pem_to_raw,
-    verifier::{to_attestation_results, verify},
-};
+use std::fs;
+
+use oak_attestation_verification::verifier::{to_attestation_results, verify};
 use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, binary_reference_value, endorsements, reference_values, AmdSevReferenceValues,
-    BinaryReferenceValue, ContainerLayerEndorsements, ContainerLayerReferenceValues,
-    EndorsementReferenceValue, Endorsements, Evidence, InsecureReferenceValues,
-    KernelLayerEndorsements, KernelLayerReferenceValues, OakContainersEndorsements,
-    OakContainersReferenceValues, ReferenceValues, RootLayerEndorsements, RootLayerReferenceValues,
-    SkipVerification, StringReferenceValue, SystemLayerEndorsements, SystemLayerReferenceValues,
-    TransparentReleaseEndorsement, ApplicationLayerReferenceValues, OakRestrictedKernelReferenceValues,
-    OakRestrictedKernelEndorsements,
+    attestation_results::Status, binary_reference_value, reference_values, AmdSevReferenceValues,
+    ApplicationLayerReferenceValues, BinaryReferenceValue, Endorsements, Evidence,
+    KernelLayerReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
+    RootLayerReferenceValues, SkipVerification,
 };
 use prost::Message;
-use std::fs;
 
 // Timestamp taken for the purpose of demo: 5 Mar 2024, 12:27 UTC.
 const NOW_UTC_MILLIS: i64 = 1709641620000;
-const EVIDENCE_PATH: &str = "demo_oc3_2024/testdata/demo_evidence.binarypb";
-const ENDORSEMENTS_PATH: &str = "demo_oc3_2024/testdata/demo_endorsements.binarypb";
+const EVIDENCE_PATH: &str = "demo_oc3_2024/testdata/evidence.binarypb";
+const ENDORSEMENTS_PATH: &str = "demo_oc3_2024/testdata/endorsements.binarypb";
 
 fn create_reference_values() -> ReferenceValues {
     let skip = BinaryReferenceValue {
@@ -53,13 +45,9 @@ fn create_reference_values() -> ReferenceValues {
     };
 
     let root_layer = RootLayerReferenceValues {
-        insecure: Some(InsecureReferenceValues::default()),
+        amd_sev: Some(amd_sev),
         ..Default::default()
     };
-    // let root_layer = RootLayerReferenceValues {
-    //     amd_sev: Some(amd_sev),
-    //     ..Default::default()
-    // };
     let kernel_layer = KernelLayerReferenceValues {
         kernel_image: Some(skip.clone()),
         kernel_cmd_line: Some(skip.clone()),
@@ -79,38 +67,38 @@ fn create_reference_values() -> ReferenceValues {
         application_layer: Some(application_layer),
     };
     ReferenceValues {
-        r#type: Some(reference_values::Type::OakRestrictedKernel(reference_values)),
+        r#type: Some(reference_values::Type::OakRestrictedKernel(
+            reference_values,
+        )),
     }
 }
 
 fn main() {
-    let serialized_evidence = fs::read(EVIDENCE_PATH)
-        .expect("couldn't read evidence");
-    let evidence = Evidence::decode(serialized_evidence.as_slice())
-        .expect("couldn't decode evidence");
+    let serialized_evidence = fs::read(EVIDENCE_PATH).expect("couldn't read evidence");
+    let evidence =
+        Evidence::decode(serialized_evidence.as_slice()).expect("couldn't decode evidence");
 
-    let serialized_endorsements = fs::read(ENDORSEMENTS_PATH)
-        .expect("couldn't read endorsements");
+    let serialized_endorsements = fs::read(ENDORSEMENTS_PATH).expect("couldn't read endorsements");
     let endorsements = Endorsements::decode(serialized_endorsements.as_slice())
         .expect("couldn't decode endorsements");
 
-    let endorsements = Endorsements {
-        r#type: Some(endorsements::Type::OakRestrictedKernel(
-            OakRestrictedKernelEndorsements {
-                root_layer: Some(RootLayerEndorsements::default()),
-                ..Default::default()
-            },
-        )),
-    };
-
     let reference_values = create_reference_values();
 
-    let r = verify(NOW_UTC_MILLIS, &evidence, &endorsements, &reference_values);
-    let p = to_attestation_results(&r);
+    let attestation_results = to_attestation_results(&verify(
+        NOW_UTC_MILLIS,
+        &evidence,
+        &endorsements,
+        &reference_values,
+    ));
 
-    eprintln!("======================================");
-    eprintln!("code={} reason={}", p.status as i32, p.reason);
-    eprintln!("======================================");
-    assert!(r.is_ok());
-    assert!(p.status() == Status::Success);
+    match attestation_results.status() {
+        Status::Success => println!("Verification successful"),
+        Status::GenericFailure => {
+            eprintln!(
+                "Couldn't verify endorsed evidence: code={} reason={}",
+                attestation_results.status as i32, attestation_results.reason
+            );
+        }
+        Status::Unspecified => eprintln!("Illegal status code in attestation results"),
+    }
 }
