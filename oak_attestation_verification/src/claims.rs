@@ -85,6 +85,7 @@ pub struct ClaimPredicate<S> {
     pub claim_spec: Option<S>,
     // Whether the binary or an attachment is endorsed. If it is the
     // attachment, provides a hint how to parse it.
+    // The `default` option should be removed once this is in operation.
     #[serde(default, rename = "usage")]
     pub usage: String,
     /// The timestamp (encoded as an Epoch time) when the claim was issued.
