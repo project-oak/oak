@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
     let mut config = prost_build::Config::new();
     config
-        .btree_map(&["."]) // Support std-less proto maps
+        .btree_map(["."]) // Support no-std proto maps
         .compile_protos(&proto_paths, &[".."])
         .expect("proto compilation failed");
 
