@@ -27,9 +27,7 @@ option java_package = "com.google.oak.attestation.v1";
 // The Transparent Release attachment for Oak Stage 0.
 message FirmwareAttachment {
   // Maps number of vCPUs to measurement of the modified firmware binary.
-  // We cannot use map<int32, HexDigest> because it requires Rust std.
-  repeated int32 vcpu_counts = 1;
-  repeated HexDigest digests = 2;
+  map<int32, HexDigest> configs = 1;
 }
 
 // The Transparent Release attachment for Oak Containers Linux kernel.
