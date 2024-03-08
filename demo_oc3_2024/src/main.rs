@@ -13,8 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fs;
-
+use clap::Parser;
 use oak_attestation_verification::verifier::{to_attestation_results, verify};
 use oak_proto_rust::oak::attestation::v1::{
     attestation_results::Status, binary_reference_value, reference_values, AmdSevReferenceValues,
@@ -23,11 +22,33 @@ use oak_proto_rust::oak::attestation::v1::{
     RootLayerReferenceValues, SkipVerification,
 };
 use prost::Message;
+use std::{fs, path::PathBuf};
 
 // Timestamp taken for the purpose of demo: 5 Mar 2024, 12:27 UTC.
 const NOW_UTC_MILLIS: i64 = 1709641620000;
-const EVIDENCE_PATH: &str = "demo_oc3_2024/testdata/evidence.binarypb";
-const ENDORSEMENTS_PATH: &str = "demo_oc3_2024/testdata/endorsements.binarypb";
+
+#[derive(clap::Parser, Clone, Debug, PartialEq)]
+pub struct Params {
+    /// Path to the evidence to verify.
+    #[arg(long, value_parser = path_exists, default_value = "./demo_oc3_2024/testdata/demo_evidence.binarypb")]
+    pub evidence: PathBuf,
+
+    /// Path VCEK endorsing the TEE.
+    #[arg(long, value_parser = path_exists, default_value = "./demo_oc3_2024/testdata/demo_endorsements.binarypb")]
+    pub endorsements: PathBuf,
+}
+
+pub fn path_exists(s: &str) -> Result<std::path::PathBuf, String> {
+    let path = std::path::PathBuf::from(s);
+    if !std::fs::metadata(s)
+        .map_err(|err| err.to_string())?
+        .is_file()
+    {
+        Err(String::from("path does not represent a file"))
+    } else {
+        Ok(path)
+    }
+}
 
 fn create_reference_values() -> ReferenceValues {
     let skip = BinaryReferenceValue {
@@ -74,11 +95,16 @@ fn create_reference_values() -> ReferenceValues {
 }
 
 fn main() {
-    let serialized_evidence = fs::read(EVIDENCE_PATH).expect("couldn't read evidence");
+    let Params {
+        evidence,
+        endorsements,
+    } = Params::parse();
+
+    let serialized_evidence = fs::read(evidence).expect("couldn't read evidence");
     let evidence =
         Evidence::decode(serialized_evidence.as_slice()).expect("couldn't decode evidence");
 
-    let serialized_endorsements = fs::read(ENDORSEMENTS_PATH).expect("couldn't read endorsements");
+    let serialized_endorsements = fs::read(endorsements).expect("couldn't read endorsements");
     let endorsements = Endorsements::decode(serialized_endorsements.as_slice())
         .expect("couldn't decode endorsements");
 
