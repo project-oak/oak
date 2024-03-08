@@ -17,11 +17,14 @@ use std::{fs, path::PathBuf};
 
 use clap::Parser;
 use oak_attestation_verification::verifier::{to_attestation_results, verify};
-use oak_proto_rust::oak::attestation::v1::{
-    attestation_results::Status, binary_reference_value, reference_values, AmdSevReferenceValues,
-    ApplicationLayerReferenceValues, BinaryReferenceValue, Endorsements, Evidence,
-    KernelLayerReferenceValues, OakRestrictedKernelReferenceValues, ReferenceValues,
-    RootLayerReferenceValues, SkipVerification,
+use oak_proto_rust::oak::{
+    attestation::v1::{
+        attestation_results::Status, binary_reference_value, reference_values,
+        AmdSevReferenceValues, ApplicationLayerReferenceValues, BinaryReferenceValue, Digests,
+        Endorsements, Evidence, KernelLayerReferenceValues, OakRestrictedKernelReferenceValues,
+        ReferenceValues, RootLayerReferenceValues, SkipVerification,
+    },
+    RawDigest,
 };
 use prost::Message;
 
@@ -78,8 +81,18 @@ fn create_reference_values() -> ReferenceValues {
         memory_map: Some(skip.clone()),
         acpi: Some(skip.clone()),
     };
+
+    let digests = {
+        let vec = Vec::new();
+        vec.push(RawDigest { sha2_256: [] });
+        vec
+    }
     let application_layer = ApplicationLayerReferenceValues {
-        binary: Some(skip.clone()),
+        binary: Some(BinaryReferenceValue {
+            r#type: Some(binary_reference_value::Type::Digests(Digests {
+                digests,
+            })),
+        }),
         configuration: Some(skip.clone()),
     };
 
