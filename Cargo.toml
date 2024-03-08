@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "demo_oc3_2024",
   "linux_boot_params",
   "micro_rpc",
   "micro_rpc_build",
