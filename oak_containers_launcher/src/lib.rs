@@ -82,8 +82,8 @@ pub struct Args {
     pub system_image: std::path::PathBuf,
     #[arg(long, required = true, value_parser = path_exists,)]
     pub container_bundle: std::path::PathBuf,
-    #[arg(long, value_parser = path_exists,)]
-    pub application_config: Option<std::path::PathBuf>,
+    #[clap(skip)]
+    pub application_config: Vec<u8>,
     #[command(flatten)]
     pub qemu_params: qemu::Params,
 }
@@ -97,7 +97,7 @@ impl Args {
         Self {
             system_image,
             container_bundle,
-            application_config: None,
+            application_config: Vec::new(),
             qemu_params: qemu::Params::default_for_root(root),
         }
     }

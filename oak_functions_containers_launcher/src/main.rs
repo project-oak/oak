@@ -17,8 +17,11 @@ use std::net::{Ipv6Addr, SocketAddr};
 
 use anyhow::Context;
 use clap::Parser;
-use oak_functions_containers_launcher::proto::oak::functions::InitializeRequest;
+use oak_functions_containers_launcher::proto::oak::functions::{
+    config::ApplicationConfig, InitializeRequest,
+};
 use oak_functions_launcher::LookupDataConfig;
+use prost::Message;
 use ubyte::ByteUnit;
 
 #[derive(Parser, Debug)]
@@ -33,7 +36,7 @@ struct Args {
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     env_logger::init();
-    let args = Args::parse();
+    let mut args = Args::parse();
 
     let lookup_data_config = LookupDataConfig {
         lookup_data_path: args.functions_args.lookup_data,
@@ -42,6 +45,9 @@ async fn main() -> Result<(), anyhow::Error> {
         // gRPC messages are limited to 4 MiB.
         max_chunk_size: ByteUnit::Mebibyte(4),
     };
+
+    let config = ApplicationConfig::default();
+    args.containers_args.application_config = config.encode_to_vec();
 
     let mut untrusted_app =
         oak_functions_containers_launcher::UntrustedApp::create(args.containers_args)

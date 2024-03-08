@@ -22,6 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &[
             "../proto/crypto/crypto.proto",
             "../proto/attestation/evidence.proto",
+            "../proto/oak_functions/application_config.proto",
             "../proto/oak_functions/service/oak_functions.proto",
         ],
         "..",
