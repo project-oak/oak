@@ -42,6 +42,7 @@ absl::StatusOr<AttestationResults> InsecureAttestationVerifier::Verify(
   }
 
   AttestationResults attestation_results;
+  attestation_results.set_status(AttestationResults::STATUS_SUCCESS);
   *attestation_results.mutable_encryption_public_key() = *encryption_public_key;
 
   return attestation_results;

@@ -29,7 +29,27 @@ enum HandlerType {
   HANDLER_NATIVE = 2;
 }
 
+message TcpCommunicationChannel {
+  // Port to listen on. If not specified, defaults to 8080.
+  uint32 port = 1;
+}
+
+message VsockCommunicationChannel {
+  // Port to listen on. If not specified, defaults to 8080.
+  uint32 port = 1;
+}
+
 message ApplicationConfig {
   // How to load the provided module.
   HandlerType handler_type = 1;
+
+  // Communication channel parameters.
+  // The default behaviour depends on the flavour of Oak Functions:
+  //   - when running on Restricted Kernel this setting is ignored completely as the communication
+  //     channel is abstracted away by Restricted Kernel itself.
+  //   - on Oak Containers, if not specified, the default communication channel is TCP.
+  oneof communication_channel {
+    TcpCommunicationChannel tcp_channel = 2;
+    VsockCommunicationChannel vsock_channel = 3;
+  }
 }

@@ -22,7 +22,9 @@
 #include <utility>
 
 #include "absl/memory/memory.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "cc/attestation/verification/attestation_verifier.h"
 #include "cc/crypto/client_encryptor.h"
@@ -62,8 +64,17 @@ absl::StatusOr<std::unique_ptr<OakClient>> OakClient::Create(
     return attestation_results.status();
   }
 
-  return absl::WrapUnique(
-      new OakClient(std::move(transport), attestation_results->encryption_public_key()));
+  switch (attestation_results->status()) {
+    case AttestationResults::STATUS_SUCCESS:
+      return absl::WrapUnique(
+          new OakClient(std::move(transport), attestation_results->encryption_public_key()));
+    case AttestationResults::STATUS_GENERIC_FAILURE:
+      return absl::FailedPreconditionError(
+          absl::StrCat("couldn't verify endorsed evidence: ", attestation_results->reason()));
+    case AttestationResults::STATUS_UNSPECIFIED:
+    default:
+      return absl::InternalError("illegal status code in attestation results");
+  }
 }
 
 absl::StatusOr<std::string> OakClient::Invoke(absl::string_view request_body) {
