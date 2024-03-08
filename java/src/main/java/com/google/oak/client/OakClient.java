@@ -67,18 +67,15 @@ public class OakClient<T extends Transport> implements AutoCloseable {
             -> verifier
                    .verify(clock.instant(), endorsedEvidence.getEvidence(),
                        endorsedEvidence.getEndorsements())
-                   .andThen(
-                        b -> {
-                          if (b.getStatus() == AttestationResults.Status.STATUS_SUCCESS) {
-                            return Result.success(
-                                new OakClient<E>(
-                                    transport, b.getEncryptionPublicKey().toByteArray()));
-                          } else {
-                            return Result.error(
-                                new IllegalStateException(
-                                    "Couldn't verify attestation results: " + b.getReason()));
-                          }
-                        }));
+                   .andThen(b -> {
+                     if (b.getStatus() == AttestationResults.Status.STATUS_SUCCESS) {
+                       return Result.success(
+                           new OakClient<E>(transport, b.getEncryptionPublicKey().toByteArray()));
+                     } else {
+                       return Result.error(new IllegalStateException(
+                           "Couldn't verify attestation results: " + b.getReason()));
+                     }
+                   }));
   }
 
   private OakClient(T transport, byte[] serverEncryptionPublicKey) {
