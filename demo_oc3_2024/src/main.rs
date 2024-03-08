@@ -13,6 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::{fs, path::PathBuf};
+
 use clap::Parser;
 use oak_attestation_verification::verifier::{to_attestation_results, verify};
 use oak_proto_rust::oak::attestation::v1::{
@@ -22,7 +24,6 @@ use oak_proto_rust::oak::attestation::v1::{
     RootLayerReferenceValues, SkipVerification,
 };
 use prost::Message;
-use std::{fs, path::PathBuf};
 
 // Timestamp taken for the purpose of demo: 5 Mar 2024, 12:27 UTC.
 const NOW_UTC_MILLIS: i64 = 1709641620000;
@@ -30,11 +31,11 @@ const NOW_UTC_MILLIS: i64 = 1709641620000;
 #[derive(clap::Parser, Clone, Debug, PartialEq)]
 pub struct Params {
     /// Path to the evidence to verify.
-    #[arg(long, value_parser = path_exists, default_value = "./demo_oc3_2024/testdata/demo_evidence.binarypb")]
+    #[arg(long, value_parser = path_exists, default_value = "demo_oc3_2024/testdata/demo_evidence.binarypb")]
     pub evidence: PathBuf,
 
     /// Path VCEK endorsing the TEE.
-    #[arg(long, value_parser = path_exists, default_value = "./demo_oc3_2024/testdata/demo_endorsements.binarypb")]
+    #[arg(long, value_parser = path_exists, default_value = "demo_oc3_2024/testdata/demo_endorsements.binarypb")]
     pub endorsements: PathBuf,
 }
 
